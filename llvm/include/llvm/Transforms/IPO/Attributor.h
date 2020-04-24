@@ -1837,13 +1837,10 @@ struct IRAttributeManifest {
 };
 
 /// Helper to tie a abstract state implementation to an abstract attribute.
-template <typename StateTy, typename Base, class... Ts>
-struct StateWrapper : public Base, public StateTy {
+template <typename StateTy, typename Base>
+struct StateWrapper : public StateTy, public Base {
   /// Provide static access to the type of the state.
   using StateType = StateTy;
-
-  StateWrapper(const IRPosition &IRP, Ts... Args)
-      : Base(IRP), StateTy(Args...) {}
 
   /// See AbstractAttribute::getState(...).
   StateType &getState() override { return *this; }
@@ -1854,15 +1851,15 @@ struct StateWrapper : public Base, public StateTy {
 
 /// Helper class that provides common functionality to manifest IR attributes.
 template <Attribute::AttrKind AK, typename Base>
-struct IRAttribute : public Base {
-  IRAttribute(const IRPosition &IRP) : Base(IRP) {}
+struct IRAttribute : public IRPosition, public Base {
+  IRAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
+  ~IRAttribute() {}
 
   /// See AbstractAttribute::initialize(...).
   virtual void initialize(Attributor &A) override {
     const IRPosition &IRP = this->getIRPosition();
     if (isa<UndefValue>(IRP.getAssociatedValue()) ||
-        this->hasAttr(getAttrKind(), /* IgnoreSubsumingPositions */ false,
-                      &A)) {
+        hasAttr(getAttrKind(), /* IgnoreSubsumingPositions */ false, &A)) {
       this->getState().indicateOptimisticFixpoint();
       return;
     }
@@ -1882,12 +1879,11 @@ struct IRAttribute : public Base {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (isa<UndefValue>(this->getIRPosition().getAssociatedValue()))
+    if (isa<UndefValue>(getIRPosition().getAssociatedValue()))
       return ChangeStatus::UNCHANGED;
     SmallVector<Attribute, 4> DeducedAttrs;
-    getDeducedAttributes(this->getAnchorValue().getContext(), DeducedAttrs);
-    return IRAttributeManifest::manifestAttrs(A, this->getIRPosition(),
-                                              DeducedAttrs);
+    getDeducedAttributes(getAnchorValue().getContext(), DeducedAttrs);
+    return IRAttributeManifest::manifestAttrs(A, getIRPosition(), DeducedAttrs);
   }
 
   /// Return the kind that identifies the abstract attribute implementation.
@@ -1898,6 +1894,9 @@ struct IRAttribute : public Base {
                                     SmallVectorImpl<Attribute> &Attrs) const {
     Attrs.emplace_back(Attribute::get(Ctx, getAttrKind()));
   }
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
 };
 
 /// Base struct for all "concrete attribute" deductions.
@@ -1943,10 +1942,8 @@ struct IRAttribute : public Base {
 ///       both directions will be added in the future.
 /// NOTE: The mechanics of adding a new "concrete" abstract attribute are
 ///       described in the file comment.
-struct AbstractAttribute : public IRPosition {
+struct AbstractAttribute {
   using StateType = AbstractState;
-
-  AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
   virtual ~AbstractAttribute() {}
@@ -1966,8 +1963,7 @@ struct AbstractAttribute : public IRPosition {
   virtual const StateType &getState() const = 0;
 
   /// Return an IR position, see struct IRPosition.
-  const IRPosition &getIRPosition() const { return *this; };
-  IRPosition &getIRPosition() { return *this; };
+  virtual const IRPosition &getIRPosition() const = 0;
 
   /// Helper functions, for debug purposes only.
   ///{
@@ -2183,9 +2179,9 @@ struct AAWillReturn
 
 /// An abstract attribute for undefined behavior.
 struct AAUndefinedBehavior
-    : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAUndefinedBehavior(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+    : public StateWrapper<BooleanState, AbstractAttribute>,
+      public IRPosition {
+  AAUndefinedBehavior(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Return true if "undefined behavior" is assumed.
   bool isAssumedToCauseUB() const { return getAssumed(); }
@@ -2199,6 +2195,9 @@ struct AAUndefinedBehavior
   /// Return true if "undefined behavior" is known for a specific instruction.
   virtual bool isKnownToCauseUB(Instruction *I) const = 0;
 
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAUndefinedBehavior &createForPosition(const IRPosition &IRP,
                                                 Attributor &A);
@@ -2208,9 +2207,9 @@ struct AAUndefinedBehavior
 };
 
 /// An abstract interface to determine reachability of point A to B.
-struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute>,
+                        public IRPosition {
+  AAReachability(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if 'From' instruction is assumed to reach, 'To' instruction.
   /// Users should provide two positions they are interested in, and the class
@@ -2226,6 +2225,9 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
   bool isKnownReachable(const Instruction *From, const Instruction *To) const {
     return isPotentiallyReachable(From, To);
   }
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAReachability &createForPosition(const IRPosition &IRP,
@@ -2293,9 +2295,9 @@ struct AANoReturn
 };
 
 /// An abstract interface for liveness abstract attribute.
-struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAIsDead(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
+                  public IRPosition {
+  AAIsDead(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
 protected:
   /// The query functions are protected such that other attributes need to go
@@ -2334,6 +2336,9 @@ protected:
   }
 
 public:
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAIsDead &createForPosition(const IRPosition &IRP, Attributor &A);
 
@@ -2609,9 +2614,12 @@ struct AANoCapture
 };
 
 /// An abstract interface for value simplify abstract attribute.
-struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAValueSimplify(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
+                         public IRPosition {
+  AAValueSimplify(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const { return *this; }
 
   /// Return an assumed simplified value if a single candidate is found. If
   /// there cannot be one, return original value. If it is not clear yet, return
@@ -2626,15 +2634,18 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
   static const char ID;
 };
 
-struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAHeapToStack(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
+                       public IRPosition {
+  AAHeapToStack(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if HeapToStack conversion is assumed to be possible.
   bool isAssumedHeapToStack() const { return getAssumed(); }
 
   /// Returns true if HeapToStack conversion is known to be possible.
   bool isKnownHeapToStack() const { return getKnown(); }
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const { return *this; }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
@@ -2653,10 +2664,9 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
 /// (=nocapture), it is (for now) not written (=readonly & noalias), we know
 /// what values are necessary to make the private copy look like the original
 /// one, and the values we need can be loaded (=dereferenceable).
-struct AAPrivatizablePtr
-    : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAPrivatizablePtr : public StateWrapper<BooleanState, AbstractAttribute>,
+                           public IRPosition {
+  AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : IRPosition(IRP) {}
 
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
@@ -2667,6 +2677,13 @@ struct AAPrivatizablePtr
   /// Return the type we can choose for a private copy of the underlying
   /// value. None means it is not clear yet, nullptr means there is none.
   virtual Optional<Type *> getPrivatizableType() const = 0;
+
+  /// Return an IR position, see struct IRPosition.
+  ///
+  ///{
+  IRPosition &getIRPosition() { return *this; }
+  const IRPosition &getIRPosition() const { return *this; }
+  ///}
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAPrivatizablePtr &createForPosition(const IRPosition &IRP,
@@ -2886,11 +2903,15 @@ struct AAMemoryLocation
 };
 
 /// An abstract interface for range value analysis.
-struct AAValueConstantRange
-    : public StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t> {
-  using Base = StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t>;
+struct AAValueConstantRange : public IntegerRangeState,
+                              public AbstractAttribute,
+                              public IRPosition {
   AAValueConstantRange(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, IRP.getAssociatedType()->getIntegerBitWidth()) {}
+      : IntegerRangeState(IRP.getAssociatedType()->getIntegerBitWidth()),
+        IRPosition(IRP) {}
+
+  /// Return an IR position, see struct IRPosition.
+  const IRPosition &getIRPosition() const override { return *this; }
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
