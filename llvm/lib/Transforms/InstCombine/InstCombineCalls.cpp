@@ -2298,8 +2298,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
           llvm_unreachable("unexpected intrinsic ID");
         }
         Instruction *NewCall = Builder.CreateBinaryIntrinsic(
-            IID, X, ConstantFP::get(Arg0->getType(), Res));
-        NewCall->copyIRFlags(II);
+            IID, X, ConstantFP::get(Arg0->getType(), Res), II);
+        // TODO: Conservatively intersecting FMF. If Res == C2, the transform
+        //       was a simplification (so Arg0 and its original flags could
+        //       propagate?)
+        NewCall->andIRFlags(M);
         return replaceInstUsesWith(*II, NewCall);
       }
     }
