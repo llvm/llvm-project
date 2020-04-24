@@ -617,7 +617,6 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
   if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
     ++NumCmps;
     return true;
   }

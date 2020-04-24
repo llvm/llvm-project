@@ -1172,9 +1172,10 @@ static bool areCFlagsAccessedBetweenInstrs(
                         return MI.getIterator() == From;
                       }) != To->getParent()->rend());
 
-  // We iterate backward starting at \p To until we hit \p From.
-  for (const MachineInstr &Instr :
-       reversedInstructionsWithoutDebug(std::prev(To), From)) {
+  // We iterate backward starting \p To until we hit \p From.
+  for (--To; To != From; --To) {
+    const MachineInstr &Instr = *To;
+
     if (((AccessToCheck & AK_Write) &&
          Instr.modifiesRegister(AArch64::NZCV, TRI)) ||
         ((AccessToCheck & AK_Read) && Instr.readsRegister(AArch64::NZCV, TRI)))
