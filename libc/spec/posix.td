@@ -158,6 +158,12 @@ def POSIX : StandardSpec<"POSIX"> {
            ArgSpec<RestrictStructSigactionPtr>]
         >,
         FunctionSpec<
+          "sigdelset",
+          RetValSpec<IntType>,
+          [ArgSpec<SigSetPtrType>,
+           ArgSpec<IntType>]
+        >,
+        FunctionSpec<
           "sigprocmask",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<ConstRestrictSigSetType>, ArgSpec<RestrictSigSetType>]
@@ -169,6 +175,12 @@ def POSIX : StandardSpec<"POSIX"> {
         >,
         FunctionSpec<
           "sigaddset",
+          RetValSpec<IntType>,
+          [ArgSpec<SigSetPtrType>,
+           ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "sigfillset",
           RetValSpec<IntType>,
           [ArgSpec<SigSetPtrType>]
         >,

@@ -1831,6 +1831,12 @@ public:
   /// which is split (or expanded) into two not necessarily identical pieces.
   std::pair<EVT, EVT> GetSplitDestVTs(const EVT &VT) const;
 
+  /// Compute the VTs needed for the low/hi parts of a type, dependent on an
+  /// enveloping VT that has been split into two identical pieces. Sets the
+  /// HisIsEmpty flag when hi type has zero storage size.
+  std::pair<EVT, EVT> GetDependentSplitDestVTs(const EVT &VT, const EVT &EnvVT,
+                                               bool *HiIsEmpty) const;
+
   /// Split the vector with EXTRACT_SUBVECTOR using the provides
   /// VTs and return the low/high part.
   std::pair<SDValue, SDValue> SplitVector(const SDValue &N, const SDLoc &DL,

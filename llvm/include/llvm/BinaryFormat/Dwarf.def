@@ -898,7 +898,8 @@ HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
 
 // Apple Objective-C Property Attributes.
-// Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
+// Keep this list in sync with clang's DeclObjCCommon.h
+// ObjCPropertyAttribute::Kind!
 HANDLE_DW_APPLE_PROPERTY(0x01, readonly)
 HANDLE_DW_APPLE_PROPERTY(0x02, getter)
 HANDLE_DW_APPLE_PROPERTY(0x04, assign)

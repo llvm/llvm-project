@@ -4482,8 +4482,7 @@ bool SROA::runOnAlloca(AllocaInst &AI) {
 
   // Skip alloca forms that this analysis can't handle.
   auto *AT = AI.getAllocatedType();
-  if (AI.isArrayAllocation() || !AT->isSized() ||
-      (isa<VectorType>(AT) && cast<VectorType>(AT)->isScalable()) ||
+  if (AI.isArrayAllocation() || !AT->isSized() || isa<ScalableVectorType>(AT) ||
       DL.getTypeAllocSize(AT).getFixedSize() == 0)
     return false;
 
@@ -4605,8 +4604,7 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
   for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
        I != E; ++I) {
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
-      if (isa<VectorType>(AI->getAllocatedType()) &&
-          cast<VectorType>(AI->getAllocatedType())->isScalable()) {
+      if (isa<ScalableVectorType>(AI->getAllocatedType())) {
         if (isAllocaPromotable(AI))
           PromotableAllocas.push_back(AI);
       } else {

@@ -198,8 +198,8 @@ static void generateCreationChecks(Instruction &I,
     break;
   case Instruction::ExtractElement: {
     Value *Vec = I.getOperand(0);
-    auto *VecVTy = cast<VectorType>(Vec->getType());
-    if (VecVTy->isScalable())
+    auto *VecVTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecVTy)
       break;
     Value *Idx = I.getOperand(1);
     unsigned NumElts = VecVTy->getNumElements();
@@ -211,8 +211,8 @@ static void generateCreationChecks(Instruction &I,
   }
   case Instruction::InsertElement: {
     Value *Vec = I.getOperand(0);
-    auto *VecVTy = cast<VectorType>(Vec->getType());
-    if (VecVTy->isScalable())
+    auto *VecVTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecVTy)
       break;
     Value *Idx = I.getOperand(2);
     unsigned NumElts = VecVTy->getNumElements();

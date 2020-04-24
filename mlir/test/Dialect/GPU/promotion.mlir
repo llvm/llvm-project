@@ -1,6 +1,7 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-gpu-memory-promotion -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-gpu-memory-promotion -pass-pipeline='gpu.module(gpu.func(test-gpu-memory-promotion))' -split-input-file %s | FileCheck %s
 
-module @foo attributes {gpu.kernel_module} {
+gpu.module @foo {
+
   // Verify that the attribution was indeed introduced
   // CHECK-LABEL: @memref3d
   // CHECK-SAME: (%[[arg:.*]]: memref<5x4xf32>
@@ -49,7 +50,8 @@ module @foo attributes {gpu.kernel_module} {
 
 // -----
 
-module @foo attributes {gpu.kernel_module} {
+gpu.module @foo {
+
   // Verify that the attribution was indeed introduced
   // CHECK-LABEL: @memref5d
   // CHECK-SAME: (%[[arg:.*]]: memref<8x7x6x5x4xf32>
@@ -101,7 +103,8 @@ module @foo attributes {gpu.kernel_module} {
 
 // -----
 
-module @foo attributes {gpu.kernel_module} {
+gpu.module @foo {
+
   // Check that attribution insertion works fine.
   // CHECK-LABEL: @insert
   // CHECK-SAME: (%{{.*}}: memref<4xf32>

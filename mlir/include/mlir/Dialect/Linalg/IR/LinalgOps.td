@@ -172,6 +172,10 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
     RankedTensorType getResultType() {
       return result().getType().cast<RankedTensorType>();
     }
+    SmallVector<AffineMap, 4> getReassociationMaps() {
+      return llvm::to_vector<4>(llvm::map_range(reassociation(),
+        [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
+    }
   }];
 }
 

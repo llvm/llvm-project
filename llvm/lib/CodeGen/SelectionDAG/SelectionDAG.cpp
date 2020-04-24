@@ -9461,6 +9461,37 @@ std::pair<EVT, EVT> SelectionDAG::GetSplitDestVTs(const EVT &VT) const {
   return std::make_pair(LoVT, HiVT);
 }
 
+/// GetDependentSplitDestVTs - Compute the VTs needed for the low/hi parts of a
+/// type, dependent on an enveloping VT that has been split into two identical
+/// pieces. Sets the HiIsEmpty flag when hi type has zero storage size.
+std::pair<EVT, EVT>
+SelectionDAG::GetDependentSplitDestVTs(const EVT &VT, const EVT &EnvVT,
+                                       bool *HiIsEmpty) const {
+  EVT EltTp = VT.getVectorElementType();
+  bool IsScalable = VT.isScalableVector();
+  // Examples:
+  //   custom VL=8  with enveloping VL=8/8 yields 8/0 (hi empty)
+  //   custom VL=9  with enveloping VL=8/8 yields 8/1
+  //   custom VL=10 with enveloping VL=8/8 yields 8/2
+  //   etc.
+  unsigned VTNumElts = VT.getVectorNumElements();
+  unsigned EnvNumElts = EnvVT.getVectorNumElements();
+  EVT LoVT, HiVT;
+  if (VTNumElts > EnvNumElts) {
+    LoVT = EnvVT;
+    HiVT = EVT::getVectorVT(*getContext(), EltTp, VTNumElts - EnvNumElts,
+                            IsScalable);
+    *HiIsEmpty = false;
+  } else {
+    // Flag that hi type has zero storage size, but return split envelop type
+    // (this would be easier if vector types with zero elements were allowed).
+    LoVT = EVT::getVectorVT(*getContext(), EltTp, VTNumElts, IsScalable);
+    HiVT = EnvVT;
+    *HiIsEmpty = true;
+  }
+  return std::make_pair(LoVT, HiVT);
+}
+
 /// SplitVector - Split the vector with EXTRACT_SUBVECTOR and return the
 /// low/high part.
 std::pair<SDValue, SDValue>

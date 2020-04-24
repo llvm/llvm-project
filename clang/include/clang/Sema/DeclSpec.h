@@ -23,6 +23,7 @@
 #define LLVM_CLANG_SEMA_DECLSPEC_H
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjCCommon.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/Lambda.h"
@@ -841,31 +842,10 @@ public:
     DQ_CSNullability = 0x40
   };
 
-  /// PropertyAttributeKind - list of property attributes.
-  /// Keep this list in sync with LLVM's Dwarf.h ApplePropertyAttributes.
-  enum ObjCPropertyAttributeKind {
-    DQ_PR_noattr = 0x0,
-    DQ_PR_readonly = 0x01,
-    DQ_PR_getter = 0x02,
-    DQ_PR_assign = 0x04,
-    DQ_PR_readwrite = 0x08,
-    DQ_PR_retain = 0x10,
-    DQ_PR_copy = 0x20,
-    DQ_PR_nonatomic = 0x40,
-    DQ_PR_setter = 0x80,
-    DQ_PR_atomic = 0x100,
-    DQ_PR_weak =   0x200,
-    DQ_PR_strong = 0x400,
-    DQ_PR_unsafe_unretained = 0x800,
-    DQ_PR_nullability = 0x1000,
-    DQ_PR_null_resettable = 0x2000,
-    DQ_PR_class = 0x4000,
-    DQ_PR_direct = 0x8000,
-  };
-
   ObjCDeclSpec()
-    : objcDeclQualifier(DQ_None), PropertyAttributes(DQ_PR_noattr),
-      Nullability(0), GetterName(nullptr), SetterName(nullptr) { }
+      : objcDeclQualifier(DQ_None),
+        PropertyAttributes(ObjCPropertyAttribute::kind_noattr), Nullability(0),
+        GetterName(nullptr), SetterName(nullptr) {}
 
   ObjCDeclQualifier getObjCDeclQualifier() const {
     return (ObjCDeclQualifier)objcDeclQualifier;
@@ -877,32 +857,35 @@ public:
     objcDeclQualifier = (ObjCDeclQualifier) (objcDeclQualifier & ~DQVal);
   }
 
-  ObjCPropertyAttributeKind getPropertyAttributes() const {
-    return ObjCPropertyAttributeKind(PropertyAttributes);
+  ObjCPropertyAttribute::Kind getPropertyAttributes() const {
+    return ObjCPropertyAttribute::Kind(PropertyAttributes);
   }
-  void setPropertyAttributes(ObjCPropertyAttributeKind PRVal) {
+  void setPropertyAttributes(ObjCPropertyAttribute::Kind PRVal) {
     PropertyAttributes =
-      (ObjCPropertyAttributeKind)(PropertyAttributes | PRVal);
+        (ObjCPropertyAttribute::Kind)(PropertyAttributes | PRVal);
   }
 
   NullabilityKind getNullability() const {
-    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
-            (getPropertyAttributes() & DQ_PR_nullability)) &&
-           "Objective-C declspec doesn't have nullability");
+    assert(
+        ((getObjCDeclQualifier() & DQ_CSNullability) ||
+         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
+        "Objective-C declspec doesn't have nullability");
     return static_cast<NullabilityKind>(Nullability);
   }
 
   SourceLocation getNullabilityLoc() const {
-    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
-            (getPropertyAttributes() & DQ_PR_nullability)) &&
-           "Objective-C declspec doesn't have nullability");
+    assert(
+        ((getObjCDeclQualifier() & DQ_CSNullability) ||
+         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
+        "Objective-C declspec doesn't have nullability");
     return NullabilityLoc;
   }
 
   void setNullability(SourceLocation loc, NullabilityKind kind) {
-    assert(((getObjCDeclQualifier() & DQ_CSNullability) ||
-            (getPropertyAttributes() & DQ_PR_nullability)) &&
-           "Set the nullability declspec or property attribute first");
+    assert(
+        ((getObjCDeclQualifier() & DQ_CSNullability) ||
+         (getPropertyAttributes() & ObjCPropertyAttribute::kind_nullability)) &&
+        "Set the nullability declspec or property attribute first");
     Nullability = static_cast<unsigned>(kind);
     NullabilityLoc = loc;
   }
@@ -929,8 +912,8 @@ private:
   // (space saving is negligible).
   unsigned objcDeclQualifier : 7;
 
-  // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttributeKind
-  unsigned PropertyAttributes : 16;
+  // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttribute::Kind
+  unsigned PropertyAttributes : NumObjCPropertyAttrsBits;
 
   unsigned Nullability : 2;
 
