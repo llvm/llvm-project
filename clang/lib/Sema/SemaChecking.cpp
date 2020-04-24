@@ -2042,6 +2042,10 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 31))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck0_13:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 13))
+        HasError = true;
+      break;
     case SVETypeFlags::ImmCheck1_16:
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 16))
         HasError = true;
