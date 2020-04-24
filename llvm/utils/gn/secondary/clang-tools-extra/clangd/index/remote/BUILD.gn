@@ -1,0 +1,10 @@
+source_set("remote") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clangd",
+    "//llvm/lib/Support",
+  ]
+  public_deps = [ "//clang-tools-extra/clangd:features" ]
+  include_dirs = [ "../.." ]
+  sources = [ "unimplemented/UnimplementedClient.cpp" ]
+}
