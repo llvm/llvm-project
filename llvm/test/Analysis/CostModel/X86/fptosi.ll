@@ -219,12 +219,26 @@ define i32 @fptosi_float_i64(i32 %arg) {
 }
 
 define i32 @fptosi_float_i32(i32 %arg) {
-; CHECK-LABEL: 'fptosi_float_i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptosi float undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptosi <4 x float> undef to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = fptosi <8 x float> undef to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I32 = fptosi <16 x float> undef to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE-LABEL: 'fptosi_float_i32'
+; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptosi float undef to i32
+; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptosi <4 x float> undef to <4 x i32>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = fptosi <8 x float> undef to <8 x i32>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = fptosi <16 x float> undef to <16 x i32>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX-LABEL: 'fptosi_float_i32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptosi float undef to i32
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptosi <4 x float> undef to <4 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = fptosi <8 x float> undef to <8 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = fptosi <16 x float> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'fptosi_float_i32'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptosi float undef to i32
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptosi <4 x float> undef to <4 x i32>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = fptosi <8 x float> undef to <8 x i32>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I32 = fptosi <16 x float> undef to <16 x i32>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I32 = fptosi float undef to i32
   %V4I32 = fptosi <4 x float> undef to <4 x i32>
