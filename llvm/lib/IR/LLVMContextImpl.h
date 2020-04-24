@@ -1380,9 +1380,6 @@ public:
   /// instructions in different blocks at the same location.
   DenseMap<std::pair<const char *, unsigned>, unsigned> DiscriminatorTable;
 
-  int getOrAddScopeRecordIdxEntry(MDNode *N, int ExistingIdx);
-  int getOrAddScopeInlinedAtIdxEntry(MDNode *Scope, MDNode *IA,int ExistingIdx);
-
   /// A set of interned tags for operand bundles.  The StringMap maps
   /// bundle tags to their IDs.
   ///
