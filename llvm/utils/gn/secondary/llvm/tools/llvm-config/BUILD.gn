@@ -7,6 +7,15 @@ import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
+action("write_extension_dependencies") {
+  script = "//llvm/utils/gn/secondary/llvm/tools/llvm-config/write_extension_dependencies.py"
+  outputs = [ "$target_gen_dir/ExtensionDependencies.inc" ]
+  args = [
+    "-o",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 write_cmake_config("BuildVariables.inc") {
   input = "BuildVariables.inc.in"
   output = "$target_gen_dir/BuildVariables.inc"
@@ -108,6 +117,7 @@ executable("llvm-config") {
   deps = [
     ":BuildVariables.inc",
     ":LibraryDependencies.inc",
+    ":write_extension_dependencies",
     "//llvm/include/llvm/Config:config",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Support",

@@ -27,3 +27,8 @@ set(LLVM_TARGET_DEFINITIONS SideEffects.td)
 mlir_tablegen(SideEffectInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(SideEffectInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRSideEffectOpInterfacesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS ViewLikeInterface.td)
+mlir_tablegen(ViewLikeInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(ViewLikeInterface.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRViewLikeInterfaceIncGen)

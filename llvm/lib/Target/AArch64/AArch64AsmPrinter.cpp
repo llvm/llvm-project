@@ -313,7 +313,7 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
 
   OutStreamer->emitLabel(Target);
-  recordSled(CurSled, MI, Kind);
+  recordSled(CurSled, MI, Kind, 2);
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {

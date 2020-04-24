@@ -37,22 +37,17 @@ Value Aliases::find(Value v) {
   while (true) {
     if (v.isa<BlockArgument>())
       return v;
-    if (auto alloc = dyn_cast_or_null<AllocOp>(v.getDefiningOp())) {
+    Operation *defOp = v.getDefiningOp();
+    if (auto alloc = dyn_cast_or_null<AllocOp>(defOp)) {
       if (isStrided(alloc.getType()))
         return alloc.getResult();
     }
-    if (auto slice = dyn_cast_or_null<SliceOp>(v.getDefiningOp())) {
-      auto it = aliases.insert(std::make_pair(v, find(slice.view())));
+    if (auto viewLikeOp = dyn_cast_or_null<ViewLikeOpInterface>(defOp)) {
+      auto it =
+          aliases.insert(std::make_pair(v, find(viewLikeOp.getViewSource())));
       return it.first->second;
     }
-    if (auto view = dyn_cast_or_null<ViewOp>(v.getDefiningOp())) {
-      auto it = aliases.insert(std::make_pair(v, view.source()));
-      return it.first->second;
-    }
-    if (auto view = dyn_cast_or_null<SubViewOp>(v.getDefiningOp())) {
-      v = view.source();
-      continue;
-    }
+
     llvm::errs() << "View alias analysis reduces to: " << v << "\n";
     llvm_unreachable("unsupported view alias case");
   }

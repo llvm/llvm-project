@@ -373,13 +373,21 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
 def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
     "true", "Enable BFloat16 Extension" >;
 
+def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
+    "true", "Enable Matrix Multiply Int8 Extension">;
+
+def FeatureMatMulFP32 : SubtargetFeature<"f32mm", "HasMatMulFP32",
+    "true", "Enable Matrix Multiply FP32 Extension", [FeatureSVE]>;
+
+def FeatureMatMulFP64 : SubtargetFeature<"f64mm", "HasMatMulFP64",
+    "true", "Enable Matrix Multiply FP64 Extension", [FeatureSVE]>;
+
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
     "true", "Enable fine grained virtualization traps extension">;
 
 def FeatureEnhancedCounterVirtualization :
       SubtargetFeature<"ecv", "HasEnhancedCounterVirtualization",
       "true", "Enable enhanced counter virtualization extension">;
-
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -413,7 +421,7 @@ def HasV8_6aOps : SubtargetFeature<
   "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
 
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
-   FeatureEnhancedCounterVirtualization]>;
+   FeatureEnhancedCounterVirtualization, FeatureMatMulInt8]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

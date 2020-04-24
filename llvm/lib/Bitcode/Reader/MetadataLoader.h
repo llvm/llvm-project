@@ -23,7 +23,6 @@ namespace llvm {
 class BitcodeReaderValueList;
 class BitstreamCursor;
 class DISubprogram;
-class Error;
 class Function;
 class Instruction;
 class Metadata;

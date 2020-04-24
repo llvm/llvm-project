@@ -2324,6 +2324,8 @@ SubViewOp::getStaticStrides(SmallVectorImpl<int64_t> &staticStrides) {
   return success();
 }
 
+Value SubViewOp::getViewSource() { return source(); }
+
 namespace {
 
 /// Pattern to rewrite a subview op with constant size arguments.
@@ -2668,6 +2670,8 @@ static LogicalResult verify(ViewOp op) {
            << viewType;
   return success();
 }
+
+Value ViewOp::getViewSource() { return source(); }
 
 namespace {
 

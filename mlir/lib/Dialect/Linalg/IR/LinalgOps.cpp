@@ -680,6 +680,8 @@ static LogicalResult verify(SliceOp op) {
   return success();
 }
 
+Value SliceOp::getViewSource() { return view(); }
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//

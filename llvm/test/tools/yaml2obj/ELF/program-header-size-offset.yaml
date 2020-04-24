@@ -30,7 +30,8 @@
 # CHECK:    MemSize: 2
 
 # CHECK:    Offset: 0x2004
-# CHECK:    FileSize: 4
+## Offset of .nobits2 (0x2009) - offset of .data (0x2004) == 0x5.
+# CHECK:    FileSize: 5
 # CHECK:    MemSize: 6
 # CHECK: ]
 
