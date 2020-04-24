@@ -78,10 +78,10 @@ body:             |
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
     liveins: $x3, $x30
 
-    ; bc should be converted into b, but creqv (CRSET) should not be removed since it is used in a predecessor.
+    ; bc should be converted into b, and creqv (CRSET) should be removed since it isn't used.
     ; CHECK-LABEL: func
     ; CHECK: # %bb.1
-    ; CHECK: creqv
+    ; CHECK-NOT: creqv
     ; CHECK-NOT: bc
     ; CHECK: .LBB0_2
 
@@ -112,7 +112,7 @@ body:             |
     BL8_NOP @callee, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
   
   bb.5.if.end:
-    liveins: $x30, $cr0gt
+    liveins: $x30
   
     renamable $x3 = EXTSW_32_64 killed renamable $r30, implicit $x30
     $x30 = LD 32, $x1 :: (load 8 from %fixed-stack.0, align 16)

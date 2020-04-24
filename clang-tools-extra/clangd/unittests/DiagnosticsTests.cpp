@@ -272,6 +272,33 @@ TEST(DiagnosticsTest, ClangTidy) {
                   "use a trailing return type for this function")))));
 }
 
+TEST(DiagnosticTest, NoMultipleDiagnosticInFlight) {
+  Annotations Main(R"cpp(
+    template <typename T> struct Foo {
+      T *begin();
+      T *end();
+    };
+    struct LabelInfo {
+      int a;
+      bool b;
+    };
+
+    void f() {
+      Foo<LabelInfo> label_info_map;
+      [[for]] (auto it = label_info_map.begin(); it != label_info_map.end(); ++it) {
+        auto S = *it;
+      }
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "modernize-loop-convert";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Main.range(), "use range-based for loop instead"),
+          DiagSource(Diag::ClangTidy), DiagName("modernize-loop-convert"))));
+}
+
 TEST(DiagnosticTest, ClangTidySuppressionComment) {
   Annotations Main(R"cpp(
     int main() {

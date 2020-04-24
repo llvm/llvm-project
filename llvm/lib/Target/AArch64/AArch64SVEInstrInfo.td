@@ -145,6 +145,14 @@ def AArch64andv_pred       :  SDNode<"AArch64ISD::ANDV_PRED", SDT_AArch64Reduce>
 def AArch64lasta           :  SDNode<"AArch64ISD::LASTA",     SDT_AArch64Reduce>;
 def AArch64lastb           :  SDNode<"AArch64ISD::LASTB",     SDT_AArch64Reduce>;
 
+def SDT_AArch64DIV : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameAs<2,3>
+]>;
+
+def AArch64sdiv_pred      :  SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64DIV>;
+def AArch64udiv_pred      :  SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64DIV>;
+
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3, [SDTCisVec<1>, SDTCisVec<3>]>;
 def AArch64clasta_n   : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
 def AArch64clastb_n   : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithInit>;
@@ -239,8 +247,8 @@ let Predicates = [HasSVE] in {
   def : Pat<(mul nxv2i64:$Op1, nxv2i64:$Op2),
             (MUL_ZPmZ_D (PTRUE_D 31), $Op1, $Op2)>;
 
-  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv", int_aarch64_sve_sdiv>;
-  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv", int_aarch64_sve_udiv>;
+  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv",  AArch64sdiv_pred>;
+  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv",  AArch64udiv_pred>;
   defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr", int_aarch64_sve_sdivr>;
   defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr", int_aarch64_sve_udivr>;
 
@@ -1759,6 +1767,37 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   // 16-element contiguous store
   defm : st1<ST1B, ST1B_IMM,   nxv16i8, AArch64st1, nxv16i1, nxv16i8, am_sve_regreg_lsl0>;
 
+}
+
+let Predicates = [HasSVE, HasMatMulInt8] in {
+  def  SMMLA_ZZZ : sve_int_matmul<0b00, "smmla">;
+  def  UMMLA_ZZZ : sve_int_matmul<0b11, "ummla">;
+  def USMMLA_ZZZ : sve_int_matmul<0b10, "usmmla">;
+  def USDOT_ZZZ  : sve_int_dot_mixed<"usdot">;
+  def USDOT_ZZZI : sve_int_dot_mixed_indexed<0, "usdot">;
+  def SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot">;
+}
+
+let Predicates = [HasSVE, HasMatMulFP32] in {
+  def FMMLA_ZZZ_S : sve_fp_matrix_mla<0, "fmmla", ZPR32>;
+}
+
+let Predicates = [HasSVE, HasMatMulFP64] in {
+  def FMMLA_ZZZ_D : sve_fp_matrix_mla<1, "fmmla", ZPR64>;
+  defm LD1RO_B_IMM  : sve_mem_ldor_si<0b00, "ld1rob", Z_b, ZPR8>;
+  defm LD1RO_H_IMM  : sve_mem_ldor_si<0b01, "ld1roh", Z_h, ZPR16>;
+  defm LD1RO_W_IMM  : sve_mem_ldor_si<0b10, "ld1row", Z_s, ZPR32>;
+  defm LD1RO_D_IMM  : sve_mem_ldor_si<0b11, "ld1rod", Z_d, ZPR64>;
+  defm LD1RO_B      : sve_mem_ldor_ss<0b00, "ld1rob", Z_b, ZPR8,  GPR64NoXZRshifted8>;
+  defm LD1RO_H      : sve_mem_ldor_ss<0b01, "ld1roh", Z_h, ZPR16, GPR64NoXZRshifted16>;
+  defm LD1RO_W      : sve_mem_ldor_ss<0b10, "ld1row", Z_s, ZPR32, GPR64NoXZRshifted32>;
+  defm LD1RO_D      : sve_mem_ldor_ss<0b11, "ld1rod", Z_d, ZPR64, GPR64NoXZRshifted64>;
+  def ZIP1_ZZZ_128 : sve_int_perm_bin_perm_128_zz<0b00, 0, "zip1">;
+  def ZIP2_ZZZ_128 : sve_int_perm_bin_perm_128_zz<0b00, 1, "zip2">;
+  def UZP1_ZZZ_128 : sve_int_perm_bin_perm_128_zz<0b01, 0, "uzp1">;
+  def UZP2_ZZZ_128 : sve_int_perm_bin_perm_128_zz<0b01, 1, "uzp2">;
+  def TRN1_ZZZ_128 : sve_int_perm_bin_perm_128_zz<0b11, 0, "trn1">;
+  def TRN2_ZZZ_128 : sve_int_perm_bin_perm_128_zz<0b11, 1, "trn2">;
 }
 
 let Predicates = [HasSVE2] in {

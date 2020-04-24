@@ -254,6 +254,9 @@ protected:
 
   IsaVersion IV;
 
+  /// Whether to insert cache invalidation instructions.
+  bool InsertCacheInv;
+
   SICacheControl(const GCNSubtarget &ST);
 
 public:
@@ -650,6 +653,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 SICacheControl::SICacheControl(const GCNSubtarget &ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
+  InsertCacheInv = !ST.isAmdPalOS();
 }
 
 /* static */
@@ -714,6 +718,9 @@ bool SIGfx6CacheControl::insertCacheInvalidate(MachineBasicBlock::iterator &MI,
                                                SIAtomicScope Scope,
                                                SIAtomicAddrSpace AddrSpace,
                                                Position Pos) const {
+  if (!InsertCacheInv)
+    return false;
+
   bool Changed = false;
 
   MachineBasicBlock &MBB = *MI->getParent();
@@ -852,6 +859,9 @@ bool SIGfx7CacheControl::insertCacheInvalidate(MachineBasicBlock::iterator &MI,
                                                SIAtomicScope Scope,
                                                SIAtomicAddrSpace AddrSpace,
                                                Position Pos) const {
+  if (!InsertCacheInv)
+    return false;
+
   bool Changed = false;
 
   MachineBasicBlock &MBB = *MI->getParent();
@@ -954,6 +964,9 @@ bool SIGfx10CacheControl::insertCacheInvalidate(MachineBasicBlock::iterator &MI,
                                                 SIAtomicScope Scope,
                                                 SIAtomicAddrSpace AddrSpace,
                                                 Position Pos) const {
+  if (!InsertCacheInv)
+    return false;
+
   bool Changed = false;
 
   MachineBasicBlock &MBB = *MI->getParent();

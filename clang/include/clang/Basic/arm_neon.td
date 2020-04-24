@@ -221,6 +221,21 @@ def OP_FMLAL_LN_Hi  : Op<(call "vfmlal_high", $p0, $p1,
 def OP_FMLSL_LN_Hi  : Op<(call "vfmlsl_high", $p0, $p1,
                            (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
 
+def OP_USDOT_LN
+    : Op<(call "vusdot", $p0, $p1,
+          (cast "8", "S", (call_mangled "splat_lane", (bitcast "int32x2_t", $p2), $p3)))>;
+def OP_USDOT_LNQ
+    : Op<(call "vusdot", $p0, $p1,
+          (cast "8", "S", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)))>;
+
+// sudot splats the second vector and then calls vusdot
+def OP_SUDOT_LN
+    : Op<(call "vusdot", $p0,
+          (cast "8", "U", (call_mangled "splat_lane", (bitcast "int32x2_t", $p2), $p3)), $p1)>;
+def OP_SUDOT_LNQ
+    : Op<(call "vusdot", $p0,
+          (cast "8", "U", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)), $p1)>;
+
 //===----------------------------------------------------------------------===//
 // Auxiliary Instructions
 //===----------------------------------------------------------------------===//
@@ -1789,6 +1804,23 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16FML) && defined(__aarch64__)" in {
   }
   def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN_Hi> {
     let isLaneQ = 1;
+  }
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_MATMUL_INT8)" in {
+  def VMMLA   : SInst<"vmmla", "..(<<)(<<)", "QUiQi">;
+  def VUSMMLA : SInst<"vusmmla", "..(<<U)(<<)", "Qi">;
+
+  def VUSDOT  : SInst<"vusdot", "..(<<U)(<<)", "iQi">;
+
+  def VUSDOT_LANE  : SOpInst<"vusdot_lane", "..(<<U)(<<q)I", "iQi", OP_USDOT_LN>;
+  def VSUDOT_LANE  : SOpInst<"vsudot_lane", "..(<<)(<<qU)I", "iQi", OP_SUDOT_LN>;
+
+  let ArchGuard = "defined(__aarch64__)" in {
+    let isLaneQ = 1 in {
+      def VUSDOT_LANEQ  : SOpInst<"vusdot_laneq", "..(<<U)(<<Q)I", "iQi", OP_USDOT_LNQ>;
+      def VSUDOT_LANEQ  : SOpInst<"vsudot_laneq", "..(<<)(<<QU)I", "iQi", OP_SUDOT_LNQ>;
+    }
   }
 }
 

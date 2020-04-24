@@ -4807,6 +4807,7 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vminnm_v, arm_neon_vminnm, Add1ArgType),
   NEONMAP1(vminnmq_v, arm_neon_vminnm, Add1ArgType),
   NEONMAP2(vminq_v, arm_neon_vminu, arm_neon_vmins, Add1ArgType | UnsignedAlts),
+  NEONMAP2(vmmlaq_v, arm_neon_ummla, arm_neon_smmla, 0),
   NEONMAP0(vmovl_v),
   NEONMAP0(vmovn_v),
   NEONMAP1(vmul_v, arm_neon_vmulp, Add1ArgType),
@@ -4914,6 +4915,9 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP0(vtrnq_v),
   NEONMAP0(vtst_v),
   NEONMAP0(vtstq_v),
+  NEONMAP1(vusdot_v, arm_neon_usdot, 0),
+  NEONMAP1(vusdotq_v, arm_neon_usdot, 0),
+  NEONMAP1(vusmmlaq_v, arm_neon_usmmla, 0),
   NEONMAP0(vuzp_v),
   NEONMAP0(vuzpq_v),
   NEONMAP0(vzip_v),
@@ -5009,6 +5013,7 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vld1q_x2_v, aarch64_neon_ld1x2, 0),
   NEONMAP1(vld1q_x3_v, aarch64_neon_ld1x3, 0),
   NEONMAP1(vld1q_x4_v, aarch64_neon_ld1x4, 0),
+  NEONMAP2(vmmlaq_v, aarch64_neon_ummla, aarch64_neon_smmla, 0),
   NEONMAP0(vmovl_v),
   NEONMAP0(vmovn_v),
   NEONMAP1(vmul_v, aarch64_neon_pmul, Add1ArgType),
@@ -5091,6 +5096,9 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vsubhn_v),
   NEONMAP0(vtst_v),
   NEONMAP0(vtstq_v),
+  NEONMAP1(vusdot_v, aarch64_neon_usdot, 0),
+  NEONMAP1(vusdotq_v, aarch64_neon_usdot, 0),
+  NEONMAP1(vusmmlaq_v, aarch64_neon_usmmla, 0),
 };
 
 static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
@@ -6075,6 +6083,26 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
            llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlsl_high");
+  }
+  case NEON::BI__builtin_neon_vmmlaq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    Int = Usgn ? LLVMIntrinsic : AltLLVMIntrinsic;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vmmla");
+  }
+  case NEON::BI__builtin_neon_vusmmlaq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vusmmla");
+  }
+  case NEON::BI__builtin_neon_vusdot_v:
+  case NEON::BI__builtin_neon_vusdotq_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vusdot");
   }
   }
 
@@ -7568,6 +7596,13 @@ llvm::VectorType *CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   }
 }
 
+constexpr unsigned SVEBitsPerBlock = 128;
+
+static llvm::VectorType* getSVEVectorForElementType(llvm::Type *EltTy) {
+  unsigned NumElts = SVEBitsPerBlock / EltTy->getScalarSizeInBits();
+  return llvm::VectorType::get(EltTy, { NumElts, true });
+}
+
 // Reinterpret the input predicate so that it can be used to correctly isolate
 // the elements of the specified datatype.
 Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
@@ -7707,6 +7742,30 @@ Value *CodeGenFunction::EmitSVEScatterStore(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, Ops);
 }
 
+Value *CodeGenFunction::EmitSVEPrefetchLoad(SVETypeFlags TypeFlags,
+                                            SmallVectorImpl<Value *> &Ops,
+                                            unsigned BuiltinID) {
+  auto *MemEltTy = SVEBuiltinMemEltTy(TypeFlags);
+  auto *VectorTy = getSVEVectorForElementType(MemEltTy);
+  auto *MemoryTy = llvm::VectorType::get(MemEltTy, VectorTy->getElementCount());
+
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  Value *BasePtr = Ops[1];
+
+  // Implement the index operand if not omitted.
+  if (Ops.size() > 3) {
+    BasePtr = Builder.CreateBitCast(BasePtr, MemoryTy->getPointerTo());
+    BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
+  }
+
+  // Prefetch intriniscs always expect an i8*
+  BasePtr = Builder.CreateBitCast(BasePtr, llvm::PointerType::getUnqual(Int8Ty));
+  Value *PrfOp = Ops.back();
+
+  Function *F = CGM.getIntrinsic(BuiltinID, Predicate->getType());
+  return Builder.CreateCall(F, {Predicate, BasePtr, PrfOp});
+}
+
 Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           llvm::Type *ReturnTy,
                                           SmallVectorImpl<Value *> &Ops,
@@ -7757,13 +7816,6 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   BasePtr = Builder.CreateBitCast(BasePtr, MemEltTy->getPointerTo());
   Function *F = CGM.getIntrinsic(BuiltinID, MemoryTy);
   return Builder.CreateCall(F, {Val, Predicate, BasePtr});
-}
-
-constexpr unsigned SVEBitsPerBlock = 128;
-
-static llvm::VectorType* getSVEVectorForElementType(llvm::Type *EltTy) {
-  unsigned NumElts = SVEBitsPerBlock / EltTy->getScalarSizeInBits();
-  return llvm::VectorType::get(EltTy, { NumElts, true });
 }
 
 // Limit the usage of scalable llvm IR generated by the ACLE by using the
@@ -7847,6 +7899,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return EmitSVEGatherLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isScatterStore())
     return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isPrefetch())
+    return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
@@ -7865,6 +7919,9 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       unsigned OpNo = TypeFlags.getSplatOperand();
       Ops[OpNo] = EmitSVEDupX(Ops[OpNo]);
     }
+
+    if (TypeFlags.isReverseCompare())
+      std::swap(Ops[1], Ops[2]);
 
     // Predicated intrinsics with _z suffix need a select w/ zeroinitializer.
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZero) {

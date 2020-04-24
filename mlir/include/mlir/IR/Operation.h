@@ -508,6 +508,8 @@ public:
     /// use.
     explicit UseIterator(Operation *op, bool end = false);
 
+    using llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
+                                     OpOperand>::operator++;
     UseIterator &operator++();
     OpOperand *operator->() const { return use.getOperand(); }
     OpOperand &operator*() const { return *use.getOperand(); }

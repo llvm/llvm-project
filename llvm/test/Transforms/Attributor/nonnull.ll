@@ -1030,40 +1030,6 @@ define void @PR43833(i32* %0, i32 %1) {
 
 ; Adjusted from PR43833
 define void @PR43833_simple(i32* %0, i32 %1) {
-; CHECK_OPM-LABEL: define {{[^@]+}}@PR43833_simple
-; CHECK_OPM-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; CHECK_OPM-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK_OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
-; CHECK_OPM:       4:
-; CHECK_OPM-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK_OPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP5]]
-; CHECK_OPM-NEXT:    br label [[TMP8:%.*]]
-; CHECK_OPM:       7:
-; CHECK_OPM-NEXT:    ret void
-; CHECK_OPM:       8:
-; CHECK_OPM-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
-; CHECK_OPM-NEXT:    tail call void @sink(i32* [[TMP6]])
-; CHECK_OPM-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
-; CHECK_OPM-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
-; CHECK_OPM-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
-;
-; CHECK_NPM-LABEL: define {{[^@]+}}@PR43833_simple
-; CHECK_NPM-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; CHECK_NPM-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK_NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
-; CHECK_NPM:       4:
-; CHECK_NPM-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK_NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP5]]
-; CHECK_NPM-NEXT:    br label [[TMP8:%.*]]
-; CHECK_NPM:       7:
-; CHECK_NPM-NEXT:    ret void
-; CHECK_NPM:       8:
-; CHECK_NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
-; CHECK_NPM-NEXT:    tail call void @sink(i32* nonnull [[TMP6]])
-; CHECK_NPM-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
-; CHECK_NPM-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
-; CHECK_NPM-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
-;
 ; IS________OPM-LABEL: define {{[^@]+}}@PR43833_simple
 ; IS________OPM-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]])
 ; IS________OPM-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], 0

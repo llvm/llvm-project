@@ -141,3 +141,163 @@ void test_svst1b_vnum_u64(svbool_t pg, uint8_t *base, int64_t vnum, svuint64_t d
   // CHECK: ret void
   return SVE_ACLE_FUNC(svst1b_vnum,_u64,,)(pg, base, vnum, data);
 }
+
+void test_svst1b_scatter_u32base_s32(svbool_t pg, svuint32_t bases, svint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u32base_s32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv4i8.nxv4i32(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], <vscale x 4 x i32> %bases, i64 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u32base,,_s32)(pg, bases, data);
+}
+
+void test_svst1b_scatter_u64base_s64(svbool_t pg, svuint64_t bases, svint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u64base_s64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv2i8.nxv2i64(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u64base,,_s64)(pg, bases, data);
+}
+
+void test_svst1b_scatter_u32base_u32(svbool_t pg, svuint32_t bases, svuint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u32base_u32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv4i8.nxv4i32(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], <vscale x 4 x i32> %bases, i64 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u32base,,_u32)(pg, bases, data);
+}
+
+void test_svst1b_scatter_u64base_u64(svbool_t pg, svuint64_t bases, svuint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u64base_u64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv2i8.nxv2i64(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u64base,,_u64)(pg, bases, data);
+}
+
+void test_svst1b_scatter_s32offset_s32(svbool_t pg, int8_t *base, svint32_t offsets, svint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_s32offset_s32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.sxtw.nxv4i8(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], i8* %base, <vscale x 4 x i32> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,s32,offset,_s32)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_s64offset_s64(svbool_t pg, int8_t *base, svint64_t offsets, svint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_s64offset_s64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.nxv2i8(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], i8* %base, <vscale x 2 x i64> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,s64,offset,_s64)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_s32offset_u32(svbool_t pg, uint8_t *base, svint32_t offsets, svuint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_s32offset_u32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.sxtw.nxv4i8(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], i8* %base, <vscale x 4 x i32> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,s32,offset,_u32)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_s64offset_u64(svbool_t pg, uint8_t *base, svint64_t offsets, svuint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_s64offset_u64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.nxv2i8(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], i8* %base, <vscale x 2 x i64> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,s64,offset,_u64)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_u32offset_s32(svbool_t pg, int8_t *base, svuint32_t offsets, svint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u32offset_s32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.uxtw.nxv4i8(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], i8* %base, <vscale x 4 x i32> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,u32,offset,_s32)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_u64offset_s64(svbool_t pg, int8_t *base, svuint64_t offsets, svint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u64offset_s64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.nxv2i8(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], i8* %base, <vscale x 2 x i64> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,u64,offset,_s64)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_u32offset_u32(svbool_t pg, uint8_t *base, svuint32_t offsets, svuint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u32offset_u32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.uxtw.nxv4i8(<vscale x 4 x i8> %0, <vscale x 4 x i1> %1, i8* %base, <vscale x 4 x i32> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,u32,offset,_u32)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_u64offset_u64(svbool_t pg, uint8_t *base, svuint64_t offsets, svuint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u64offset_u64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.nxv2i8(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], i8* %base, <vscale x 2 x i64> %offsets)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter_,u64,offset,_u64)(pg, base, offsets, data);
+}
+
+void test_svst1b_scatter_u32base_offset_s32(svbool_t pg, svuint32_t bases, int64_t offset, svint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u32base_offset_s32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv4i8.nxv4i32(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], <vscale x 4 x i32> %bases, i64 %offset)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u32base,_offset,_s32)(pg, bases, offset, data);
+}
+
+void test_svst1b_scatter_u64base_offset_s64(svbool_t pg, svuint64_t bases, int64_t offset, svint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u64base_offset_s64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv2i8.nxv2i64(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 %offset)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u64base,_offset,_s64)(pg, bases, offset, data);
+}
+
+void test_svst1b_scatter_u32base_offset_u32(svbool_t pg, svuint32_t bases, int64_t offset, svuint32_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u32base_offset_u32
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 4 x i32> %data to <vscale x 4 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv4i8.nxv4i32(<vscale x 4 x i8> %[[TRUNC]], <vscale x 4 x i1> %[[PG]], <vscale x 4 x i32> %bases, i64 %offset)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u32base,_offset,_u32)(pg, bases, offset, data);
+}
+
+void test_svst1b_scatter_u64base_offset_u64(svbool_t pg, svuint64_t bases, int64_t offset, svuint64_t data)
+{
+  // CHECK-LABEL: test_svst1b_scatter_u64base_offset_u64
+  // CHECK-DAG: %[[TRUNC:.*]] = trunc <vscale x 2 x i64> %data to <vscale x 2 x i8>
+  // CHECK-DAG: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv2i8.nxv2i64(<vscale x 2 x i8> %[[TRUNC]], <vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 %offset)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svst1b_scatter,_u64base,_offset,_u64)(pg, bases, offset, data);
+}

@@ -636,6 +636,34 @@
 // RUN: %clang -target aarch64 -march=armv8.5a+bf16+sve -### -c %s 2>&1 | FileCheck -check-prefixes=GENERICV85A-BF16-SVE %s
 // GENERICV85A-BF16-SVE: "-target-feature" "+bf16" "-target-feature" "+sve"
 
+// The 8-bit integer matrix multiply extension is a mandatory component of the
+// Armv8.6-A extensions, but is permitted as an optional feature for any
+// implementation of Armv8.2-A to Armv8.5-A (inclusive)
+// RUN: %clang -target aarch64 -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=NO-I8MM %s
+// RUN: %clang -target aarch64 -march=armv8.5a+i8mm -### -c %s 2>&1 | FileCheck -check-prefix=I8MM %s
+// NO-I8MM-NOT: "-target-feature" "+i8mm"
+// I8MM: "-target-feature" "+i8mm"
+
+// The 32-bit floating point matrix multiply extension is enabled by default
+// for armv8.6-a targets (or later) with SVE, and can optionally be enabled for
+// any target from armv8.2a onwards (we don't enforce not using it with earlier
+// targets).
+// RUN: %clang -target aarch64 -march=armv8.6a       -### -c %s 2>&1 | FileCheck -check-prefix=NO-F32MM %s
+// RUN: %clang -target aarch64 -march=armv8.6a+sve   -### -c %s 2>&1 | FileCheck -check-prefix=F32MM %s
+// RUN: %clang -target aarch64 -march=armv8.5a+f32mm -### -c %s 2>&1 | FileCheck -check-prefix=F32MM %s
+// NO-F32MM-NOT: "-target-feature" "+f32mm"
+// F32MM: "-target-feature" "+f32mm"
+
+// The 64-bit floating point matrix multiply extension is not currently enabled
+// by default for any targets, because it requires an SVE vector length >= 256
+// bits. When we add a CPU which has that, then it can be enabled by default,
+// but for now it can only be used by adding the +f64mm feature.
+// RUN: %clang -target aarch64 -march=armv8.6a       -### -c %s 2>&1 | FileCheck -check-prefix=NO-F64MM %s
+// RUN: %clang -target aarch64 -march=armv8.6a+sve   -### -c %s 2>&1 | FileCheck -check-prefix=NO-F64MM %s
+// RUN: %clang -target aarch64 -march=armv8.6a+f64mm -### -c %s 2>&1 | FileCheck -check-prefix=F64MM %s
+// NO-F64MM-NOT: "-target-feature" "+f64mm"
+// F64MM: "-target-feature" "+f64mm"
+
 // fullfp16 is off by default for v8a, feature must not be mentioned
 // RUN: %clang -target aarch64 -march=armv8a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s

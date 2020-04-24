@@ -157,7 +157,7 @@ define float @maximum_f32_1_maximum_val_p0(float %x) {
 
 define float @maximum_f32_1_maximum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call float @llvm.maximum.f32(float 0.0, float %x)
@@ -167,7 +167,7 @@ define float @maximum_f32_1_maximum_p0_val_fast(float %x) {
 
 define float @maximum_f32_1_maximum_p0_val_fmf1(float %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fmf1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf arcp float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan arcp float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call arcp nnan float @llvm.maximum.f32(float 0.0, float %x)
@@ -187,7 +187,7 @@ define float @maximum_f32_1_maximum_p0_val_fmf2(float %x) {
 
 define float @maximum_f32_1_maximum_p0_val_fmf3(float %x) {
 ; CHECK-LABEL: @maximum_f32_1_maximum_p0_val_fmf3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf arcp float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.maximum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call nnan ninf float @llvm.maximum.f32(float 0.0, float %x)

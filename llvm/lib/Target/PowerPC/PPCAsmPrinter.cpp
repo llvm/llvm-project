@@ -1181,7 +1181,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
                            OutContext)));
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR8).addReg(PPC::X0));
     OutStreamer->emitLabel(EndOfSled);
-    recordSled(BeginOfSled, *MI, SledKind::FUNCTION_ENTER);
+    recordSled(BeginOfSled, *MI, SledKind::FUNCTION_ENTER, 2);
     break;
   }
   case TargetOpcode::PATCHABLE_RET: {
@@ -1269,7 +1269,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, RetInst);
     if (IsConditional)
       OutStreamer->emitLabel(FallthroughLabel);
-    recordSled(BeginOfSled, *MI, SledKind::FUNCTION_EXIT);
+    recordSled(BeginOfSled, *MI, SledKind::FUNCTION_EXIT, 2);
     break;
   }
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:

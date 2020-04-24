@@ -11,9 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Features.inc"
 #include "SourceCode.h"
 #include "index/Serialization.h"
 #include "index/dex/Dex.h"
+#include "index/remote/Client.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,8 +28,9 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
-                                     llvm::cl::Positional, llvm::cl::Required);
+llvm::cl::opt<std::string> IndexLocation(
+    llvm::cl::desc("<path to index file | remote:server.address>"),
+    llvm::cl::Positional);
 
 llvm::cl::opt<std::string>
     ExecCommand("c", llvm::cl::desc("Command to execute and then exit"));
@@ -37,6 +40,10 @@ This is an **experimental** interactive tool to process user-provided search
 queries over given symbol collection obtained via clangd-indexer. The
 tool can be used to evaluate search quality of existing index implementations
 and manually construct non-trivial test cases.
+
+You can connect to remote index by passing remote:address to dexp. Example:
+
+$ dexp remote:0.0.0.0:9000
 
 Type use "help" request to get information about the details.
 )";
@@ -150,7 +157,7 @@ class FuzzyFind : public Command {
     }
     Request.AnyScope = Request.Scopes.empty();
     // FIXME(kbobyrev): Print symbol final scores to see the distribution.
-    static const auto OutputFormat = "{0,-4} | {1,-40} | {2,-25}\n";
+    static const auto *OutputFormat = "{0,-4} | {1,-40} | {2,-25}\n";
     llvm::outs() << llvm::formatv(OutputFormat, "Rank", "Symbol ID",
                                   "Symbol Name");
     size_t Rank = 0;
@@ -279,9 +286,9 @@ public:
   void run() {
     using namespace clang::clangd;
     // Read input file (as specified in global option)
-    auto Buffer = llvm::MemoryBuffer::getFile(IndexPath);
+    auto Buffer = llvm::MemoryBuffer::getFile(IndexLocation);
     if (!Buffer) {
-      llvm::errs() << llvm::formatv("Can't open {0}", IndexPath) << "\n";
+      llvm::errs() << llvm::formatv("Can't open {0}", IndexLocation) << "\n";
       return;
     }
 
@@ -316,13 +323,14 @@ struct {
     {"find", "Search for symbols with fuzzyFind", std::make_unique<FuzzyFind>},
     {"lookup", "Dump symbol details by ID or qualified name",
      std::make_unique<Lookup>},
-    {"refs", "Find references by ID or qualified name",
-     std::make_unique<Refs>},
+    {"refs", "Find references by ID or qualified name", std::make_unique<Refs>},
     {"export", "Export index", std::make_unique<Export>},
 };
 
 std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
-  return loadIndex(Index, /*UseDex=*/true);
+  return Index.startswith("remote:")
+             ? remote::getClient(Index.drop_front(strlen("remote:")))
+             : loadIndex(Index, /*UseDex=*/true);
 }
 
 bool runCommand(std::string Request, const SymbolIndex &Index) {
@@ -365,9 +373,10 @@ int main(int argc, const char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   std::unique_ptr<SymbolIndex> Index;
-  reportTime("Dex build", [&]() {
-    Index = openIndex(IndexPath);
-  });
+  reportTime(llvm::StringRef(IndexLocation).startswith("remote:")
+                 ? "Remote index client creation"
+                 : "Dex build",
+             [&]() { Index = openIndex(IndexLocation); });
 
   if (!Index) {
     llvm::outs() << "Failed to open the index.\n";

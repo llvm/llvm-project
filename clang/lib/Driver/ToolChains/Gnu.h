@@ -314,6 +314,16 @@ protected:
   /// Check whether the target triple's architecture is 32-bits.
   bool isTarget32Bit() const { return getTriple().isArch32Bit(); }
 
+  void PushPPaths(ToolChain::path_list &PPaths);
+  void AddMultilibPaths(const Driver &D, const std::string &SysRoot,
+                        const std::string &OSLibDir,
+                        const std::string &MultiarchTriple,
+                        path_list &Paths);
+  void AddMultiarchPaths(const Driver &D, const std::string &SysRoot,
+                         const std::string &OSLibDir, path_list &Paths);
+  void AddMultilibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const;
+
   // FIXME: This should be final, but the CrossWindows toolchain does weird
   // things that can't be easily generalized.
   void AddClangCXXStdlibIncludeArgs(

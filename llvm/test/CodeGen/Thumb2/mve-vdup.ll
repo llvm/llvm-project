@@ -75,6 +75,36 @@ entry:
   ret <4 x float> %out
 }
 
+define arm_aapcs_vfpcc <4 x float> @vdup_f32_1bc(float %src) {
+; CHECK-LABEL: vdup_f32_1bc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %srcbc = bitcast float %src to i32
+  %0 = insertelement <4 x i32> undef, i32 %srcbc, i32 0
+  %out = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> zeroinitializer
+  %outbc = bitcast <4 x i32> %out to <4 x float>
+  ret <4 x float> %outbc
+}
+
+define arm_aapcs_vfpcc <4 x float> @vdup_f32_2bc(float %src1, float %src2) {
+; CHECK-LABEL: vdup_f32_2bc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = fadd float %src1, %src2
+  %bc = bitcast float %0 to i32
+  %1 = insertelement <4 x i32> undef, i32 %bc, i32 0
+  %out = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> zeroinitializer
+  %outbc = bitcast <4 x i32> %out to <4 x float>
+  ret <4 x float> %outbc
+}
+
 ; TODO: Calling convention needs fixing to pass half types directly to functions
 define arm_aapcs_vfpcc <8 x half> @vdup_f16(half* %src1, half* %src2) {
 ; CHECK-LABEL: vdup_f16:
@@ -92,6 +122,30 @@ entry:
   %3 = insertelement <8 x half> undef, half %2, i32 0
   %out = shufflevector <8 x half> %3, <8 x half> undef, <8 x i32> zeroinitializer
   ret <8 x half> %out
+}
+
+define arm_aapcs_vfpcc <8 x half> @vdup_f16_bc(half* %src1, half* %src2) {
+; CHECK-LABEL: vdup_f16_bc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vldr.16 s0, [r1]
+; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NEXT:    vstr.16 s0, [sp, #2]
+; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = load half, half *%src1, align 2
+  %1 = load half, half *%src2, align 2
+  %2 = fadd half %0, %1
+  %bc = bitcast half %2 to i16
+  %3 = insertelement <8 x i16> undef, i16 %bc, i32 0
+  %out = shufflevector <8 x i16> %3, <8 x i16> undef, <8 x i32> zeroinitializer
+  %outbc = bitcast <8 x i16> %out to <8 x half>
+  ret <8 x half> %outbc
 }
 
 define arm_aapcs_vfpcc <2 x double> @vdup_f64(double %src) {
@@ -184,4 +238,47 @@ define arm_aapcs_vfpcc <2 x double> @vduplane_f64(<2 x double> %src) {
 entry:
   %out = shufflevector <2 x double> %src, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   ret <2 x double> %out
+}
+
+
+define arm_aapcs_vfpcc float @vdup_f32_extract(float %src) {
+; CHECK-LABEL: vdup_f32_extract:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    vmov.f32 s0, s2
+; CHECK-NEXT:    bx lr
+entry:
+  %srcbc = bitcast float %src to i32
+  %0 = insertelement <4 x i32> undef, i32 %srcbc, i32 0
+  %out = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> zeroinitializer
+  %outbc = bitcast <4 x i32> %out to <4 x float>
+  %ext = extractelement <4 x float> %outbc, i32 2
+  ret float %ext
+}
+
+define arm_aapcs_vfpcc half @vdup_f16_extract(half* %src1, half* %src2) {
+; CHECK-LABEL: vdup_f16_extract:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vldr.16 s0, [r2]
+; CHECK-NEXT:    vldr.16 s2, [r1]
+; CHECK-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NEXT:    vstr.16 s0, [sp, #2]
+; CHECK-NEXT:    ldrh.w r1, [sp, #2]
+; CHECK-NEXT:    vdup.16 q0, r1
+; CHECK-NEXT:    vstr.16 s1, [r0]
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = load half, half *%src1, align 2
+  %1 = load half, half *%src2, align 2
+  %2 = fadd half %0, %1
+  %bc = bitcast half %2 to i16
+  %3 = insertelement <8 x i16> undef, i16 %bc, i32 0
+  %out = shufflevector <8 x i16> %3, <8 x i16> undef, <8 x i32> zeroinitializer
+  %outbc = bitcast <8 x i16> %out to <8 x half>
+  %ext = extractelement <8 x half> %outbc, i32 2
+  ret half %ext
 }

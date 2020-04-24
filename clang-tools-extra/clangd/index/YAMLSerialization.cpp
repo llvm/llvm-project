@@ -517,5 +517,40 @@ std::string toYAML(const Relation &R) {
   return Buf;
 }
 
+std::string toYAML(const Ref &R) {
+  std::string Buf;
+  {
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
+    Ref Reference = R; // copy: Yout<< requires mutability.
+    Yout << Reference;
+  }
+  return Buf;
+}
+
+llvm::Expected<clangd::Symbol>
+symbolFromYAML(StringRef YAML, llvm::UniqueStringSaver *Strings) {
+  clangd::Symbol Deserialized;
+  llvm::yaml::Input YAMLInput(YAML, Strings);
+  if (YAMLInput.error())
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Unable to deserialize Symbol from YAML: {0}", YAML),
+        llvm::inconvertibleErrorCode());
+  YAMLInput >> Deserialized;
+  return Deserialized;
+}
+
+llvm::Expected<clangd::Ref> refFromYAML(StringRef YAML,
+                                        llvm::UniqueStringSaver *Strings) {
+  clangd::Ref Deserialized;
+  llvm::yaml::Input YAMLInput(YAML, Strings);
+  if (YAMLInput.error())
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Unable to deserialize Symbol from YAML: {0}", YAML),
+        llvm::inconvertibleErrorCode());
+  YAMLInput >> Deserialized;
+  return Deserialized;
+}
+
 } // namespace clangd
 } // namespace clang

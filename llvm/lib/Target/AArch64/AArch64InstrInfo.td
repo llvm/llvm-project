@@ -146,6 +146,12 @@ def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
                        AssemblerPredicate<(all_of FeatureTRBE), "trbe">;
 def HasBF16          : Predicate<"Subtarget->hasBF16()">,
                        AssemblerPredicate<(all_of FeatureBF16), "bf16">;
+def HasMatMulInt8    : Predicate<"Subtarget->hasMatMulInt8()">,
+                       AssemblerPredicate<(all_of FeatureMatMulInt8), "i8mm">;
+def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
+                       AssemblerPredicate<(all_of FeatureMatMulFP32), "f32mm">;
+def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
+                       AssemblerPredicate<(all_of FeatureMatMulFP64), "f64mm">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -745,10 +751,10 @@ def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
 
 // ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
-defm SDOT : SIMDThreeSameVectorDot<0, "sdot", int_aarch64_neon_sdot>;
-defm UDOT : SIMDThreeSameVectorDot<1, "udot", int_aarch64_neon_udot>;
-defm SDOTlane : SIMDThreeSameVectorDotIndex<0, "sdot", int_aarch64_neon_sdot>;
-defm UDOTlane : SIMDThreeSameVectorDotIndex<1, "udot", int_aarch64_neon_udot>;
+defm SDOT : SIMDThreeSameVectorDot<0, 0, "sdot", int_aarch64_neon_sdot>;
+defm UDOT : SIMDThreeSameVectorDot<1, 0, "udot", int_aarch64_neon_udot>;
+defm SDOTlane : SIMDThreeSameVectorDotIndex<0, 0, 0b10, "sdot", int_aarch64_neon_sdot>;
+defm UDOTlane : SIMDThreeSameVectorDotIndex<1, 0, 0b10, "udot", int_aarch64_neon_udot>;
 }
 
 // ARMv8.6-A BFloat
@@ -763,6 +769,40 @@ def BFMLALTIdx   : SIMDBF16MLALIndex<1, "bfmlalt">;
 def BFCVTN       : SIMD_BFCVTN;
 def BFCVTN2      : SIMD_BFCVTN2;
 def BFCVT        : BF16ToSinglePrecision<"bfcvt">;
+}
+
+// ARMv8.6A AArch64 matrix multiplication
+let Predicates = [HasMatMulInt8] in {
+def  SMMLA : SIMDThreeSameVectorMatMul<0, 0, "smmla", int_aarch64_neon_smmla>;
+def  UMMLA : SIMDThreeSameVectorMatMul<0, 1, "ummla", int_aarch64_neon_ummla>;
+def USMMLA : SIMDThreeSameVectorMatMul<1, 0, "usmmla", int_aarch64_neon_usmmla>;
+defm USDOT : SIMDThreeSameVectorDot<0, 1, "usdot", int_aarch64_neon_usdot>;
+defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", int_aarch64_neon_usdot>;
+
+// sudot lane has a pattern where usdot is expected (there is no sudot).
+// The second operand is used in the dup operation to repeat the indexed
+// element.
+class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
+                         string rhs_kind, RegisterOperand RegType,
+                         ValueType AccumType, ValueType InputType>
+      : BaseSIMDThreeSameVectorDotIndex<Q, 0, 1, 0b00, "sudot", dst_kind,
+                                        lhs_kind, rhs_kind, RegType, AccumType,
+                                        InputType, null_frag> {
+  let Pattern = [(set (AccumType RegType:$dst),
+                      (AccumType (int_aarch64_neon_usdot (AccumType RegType:$Rd),
+                                 (InputType (bitconvert (AccumType
+                                    (AArch64duplane32 (v4i32 V128:$Rm),
+                                        VectorIndexS:$idx)))),
+                                 (InputType RegType:$Rn))))];
+}
+
+multiclass SIMDSUDOTIndex {
+  def v8i8  : BaseSIMDSUDOTIndex<0, ".2s", ".8b", ".4b", V64, v2i32, v8i8>;
+  def v16i8 : BaseSIMDSUDOTIndex<1, ".4s", ".16b", ".4b", V128, v4i32, v16i8>;
+}
+
+defm SUDOTlane : SIMDSUDOTIndex;
+
 }
 
 // ARMv8.2-A FP16 Fused Multiply-Add Long
@@ -875,10 +915,28 @@ let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
   def XPACLRI   : SystemNoOperands<0b111, "hint\t#7">;
 }
 
+// In order to be able to write readable assembly, LLVM should accept assembly
+// inputs that use pointer authentication mnemonics, even with PA disabled.
+// However, in order to be compatible with other assemblers (e.g. GAS), LLVM
+// should not emit these mnemonics unless PA is enabled.
+def : InstAlias<"paciaz", (PACIAZ), 0>;
+def : InstAlias<"pacibz", (PACIBZ), 0>;
+def : InstAlias<"autiaz", (AUTIAZ), 0>;
+def : InstAlias<"autibz", (AUTIBZ), 0>;
+def : InstAlias<"paciasp", (PACIASP), 0>;
+def : InstAlias<"pacibsp", (PACIBSP), 0>;
+def : InstAlias<"autiasp", (AUTIASP), 0>;
+def : InstAlias<"autibsp", (AUTIBSP), 0>;
+def : InstAlias<"pacia1716", (PACIA1716), 0>;
+def : InstAlias<"pacib1716", (PACIB1716), 0>;
+def : InstAlias<"autia1716", (AUTIA1716), 0>;
+def : InstAlias<"autib1716", (AUTIB1716), 0>;
+def : InstAlias<"xpaclri", (XPACLRI), 0>;
+
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPA] in {
 
-  // When compiling with PA, there is a better mnemonic for these instructions.
+  // When PA is enabled, a better mnemonic should be emitted.
   def : InstAlias<"paciaz", (PACIAZ), 1>;
   def : InstAlias<"pacibz", (PACIBZ), 1>;
   def : InstAlias<"autiaz", (AUTIAZ), 1>;

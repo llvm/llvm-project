@@ -3201,8 +3201,9 @@ void AsmPrinter::emitXRayTable() {
   MCSection *InstMap = nullptr;
   MCSection *FnSledIndex = nullptr;
   const Triple &TT = TM.getTargetTriple();
-  // Version 2 uses a PC-relative address on all supported targets.
-  bool PCRel = TT.isX86();
+  // Use PC-relative addresses on all targets except MIPS (MIPS64 cannot use
+  // PC-relative addresses because R_MIPS_PC64 does not exist).
+  bool PCRel = !TT.isMIPS();
   if (TT.isOSBinFormatELF()) {
     auto LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
     auto Flags = ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;

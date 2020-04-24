@@ -536,6 +536,15 @@ void SVEType::applyModifier(char Mod) {
     Immediate = true;
     PredicatePattern = true;
     break;
+  case 'J':
+    Predicate = false;
+    Float = false;
+    ElementBitwidth = Bitwidth = 32;
+    NumVectors = 0;
+    Signed = true;
+    Immediate = true;
+    PrefetchOp = true;
+    break;
   case 'k':
     Predicate = false;
     Signed = true;
@@ -561,6 +570,13 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    ElementBitwidth = Bitwidth = 64;
+    NumVectors = 0;
+    break;
+  case 'w':
+    ElementBitwidth = 64;
+    break;
+  case 'j':
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -703,6 +719,9 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
       if (T.isPredicatePattern())
         ImmChecks.emplace_back(
             I - 1, Emitter.getEnumValueForImmCheck("ImmCheck0_31"));
+      else if (T.isPrefetchOp())
+        ImmChecks.emplace_back(
+            I - 1, Emitter.getEnumValueForImmCheck("ImmCheck0_13"));
     }
   }
 
@@ -1004,6 +1023,22 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "  SV_MUL3 = 30,\n";
   OS << "  SV_ALL = 31\n";
   OS << "} sv_pattern;\n\n";
+
+  OS << "typedef enum\n";
+  OS << "{\n";
+  OS << "  SV_PLDL1KEEP = 0,\n";
+  OS << "  SV_PLDL1STRM = 1,\n";
+  OS << "  SV_PLDL2KEEP = 2,\n";
+  OS << "  SV_PLDL2STRM = 3,\n";
+  OS << "  SV_PLDL3KEEP = 4,\n";
+  OS << "  SV_PLDL3STRM = 5,\n";
+  OS << "  SV_PSTL1KEEP = 8,\n";
+  OS << "  SV_PSTL1STRM = 9,\n";
+  OS << "  SV_PSTL2KEEP = 10,\n";
+  OS << "  SV_PSTL2STRM = 11,\n";
+  OS << "  SV_PSTL3KEEP = 12,\n";
+  OS << "  SV_PSTL3STRM = 13\n";
+  OS << "} sv_prfop;\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __aio static inline __attribute__((__always_inline__, "

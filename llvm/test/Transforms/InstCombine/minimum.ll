@@ -159,7 +159,7 @@ define float @minimum_f32_1_minimum_val_p0(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call float @llvm.minimum.f32(float 0.0, float %x)
@@ -169,7 +169,7 @@ define float @minimum_f32_1_minimum_p0_val_fast(float %x) {
 
 define float @minimum_f32_1_minimum_p0_val_fmf1(float %x) {
 ; CHECK-LABEL: @minimum_f32_1_minimum_p0_val_fmf1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call float @llvm.minimum.f32(float 0.0, float %x)

@@ -508,7 +508,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 #include <__functional_base>
 
-#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS) && !defined(_LIBCPP_HAS_OBJC_ARC) && __has_include(<Block.h>)
+#if defined(_LIBCPP_HAS_BLOCKS_RUNTIME) && !defined(_LIBCPP_HAS_OBJC_ARC)
 #include <Block.h>
 #endif
 
@@ -2255,7 +2255,7 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
 #endif // _LIBCPP_NO_RTTI
 };
 
-#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS) && !defined(_LIBCPP_HAS_OBJC_ARC) && __has_include(<Block.h>)
+#if defined(_LIBCPP_HAS_BLOCKS_RUNTIME) && !defined(_LIBCPP_HAS_OBJC_ARC)
 
 template<class _Rp1, class ..._ArgTypes1, class _Alloc, class _Rp, class ..._ArgTypes>
 class __func<_Rp1(^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)>

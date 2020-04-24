@@ -356,8 +356,6 @@ public:
 // Pattern handling code.
 //===----------------------------------------------------------------------===//
 
-struct FileCheckDiag;
-
 /// Class holding the Pattern global state, shared by all patterns: tables
 /// holding values of variables and whether they are defined or not at any
 /// given time in the matching process.

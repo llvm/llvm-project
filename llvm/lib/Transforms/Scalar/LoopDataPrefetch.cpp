@@ -25,7 +25,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -286,8 +285,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     // what they are doing and don't add any more.
     for (auto &I : *BB) {
       if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
-        ImmutableCallSite CS(&I);
-        if (const Function *F = CS.getCalledFunction()) {
+        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
           if (F->getIntrinsicID() == Intrinsic::prefetch)
             return MadeChange;
           if (TTI->isLoweredToCall(F))
