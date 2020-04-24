@@ -152,6 +152,8 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
   let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs,
                    OptionalAttr<StrAttr>:$error);
   let results = (outs Shape_ShapeType:$result);
+
+  let hasFolder = 1;
 }
 
 def Shape_ConstShapeOp : Shape_Op<"const_shape",
@@ -225,6 +227,8 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", []> {
 
   let arguments = (ins Shape_ShapeType:$input);
   let results = (outs IndexTensor:$result);
+
+  let hasFolder = 1;
 }
 
 def Shape_JoinOp : Shape_Op<"join", []> {
@@ -376,6 +380,7 @@ def Shape_SplitAtOp : Shape_Op<"split_at",
 
   let arguments = (ins Shape_ShapeType:$operand, I32:$index);
   let results = (outs Shape_ShapeType:$head, Shape_ShapeType:$tail);
+  let hasFolder = 1;
 }
 
 def Shape_ConcatOp : Shape_Op<"concat",
@@ -393,6 +398,8 @@ def Shape_ConcatOp : Shape_Op<"concat",
 
   let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
   let results = (outs Shape_ShapeType:$result);
+
+  let hasFolder = 1;
 }
 
 #endif // SHAPE_OPS
