@@ -467,14 +467,31 @@ private:
 } // end namespace detail
 
 //===----------------------------------------------------------------------===//
-// TrailingOpResult
+// ResultStorage
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-/// This class provides the implementation for a trailing operation result.
-struct TrailingOpResult {
-  /// The only element is the trailing result number, or the offset from the
-  /// beginning of the trailing array.
+/// This class provides the implementation for an in-line operation result. This
+/// is an operation result whose number can be stored inline inside of the bits
+/// of an Operation*.
+struct InLineOpResult : public IRObjectWithUseList<OpOperand> {};
+/// This class provides the implementation for an out-of-line operation result.
+/// This is an operation result whose number cannot be stored inline inside of
+/// the bits of an Operation*.
+struct TrailingOpResult : public IRObjectWithUseList<OpOperand> {
+  TrailingOpResult(uint64_t trailingResultNumber)
+      : trailingResultNumber(trailingResultNumber) {}
+
+  /// Returns the parent operation of this trailing result.
+  Operation *getOwner();
+
+  /// Return the proper result number of this op result.
+  unsigned getResultNumber() {
+    return trailingResultNumber + OpResult::getMaxInlineResults();
+  }
+
+  /// The trailing result number, or the offset from the beginning of the
+  /// trailing array.
   uint64_t trailingResultNumber;
 };
 } // end namespace detail
