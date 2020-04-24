@@ -4641,7 +4641,7 @@ bool llvm::canCreatePoison(const Instruction *I) {
   case Instruction::CallBr:
   case Instruction::Invoke:
     // Function calls can return a poison value even if args are non-poison
-    // values. CallBr returns poison when jumping to indirect labels.
+    // values.
     return true;
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
