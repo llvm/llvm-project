@@ -58,6 +58,7 @@
 // -------------------
 // prototype: return (arg, arg, ...)
 //
+// v: void
 // x: vector of signed integers
 // u: vector of unsigned integers
 // d: default
@@ -82,6 +83,7 @@
 // M: svfloat32_t
 // N: svfloat64_t
 
+// J: Prefetch type (sv_prfop)
 // A: pointer to int8_t
 // B: pointer to int16_t
 // C: pointer to int32_t
@@ -176,6 +178,7 @@ def IsOverloadWhileRW         : FlagType<0x00400000>; // Use {pred(default type)
 def IsOverloadCvt             : FlagType<0x00800000>; // Use {typeof(operand0), typeof(last operand)} as overloaded types.
 def OverloadKindMask          : FlagType<0x00E00000>; // When the masked values are all '0', the default type is used as overload type.
 def IsByteIndexed             : FlagType<0x01000000>;
+def IsPrefetch                : FlagType<0x08000000>; // Contiguous prefetches.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -193,6 +196,7 @@ def ImmCheckLaneIndexCompRotate : ImmCheckType<8>;  // 0..(128/(2*sizeinbits(elt
 def ImmCheckLaneIndexDot        : ImmCheckType<9>;  // 0..(128/(4*sizeinbits(elt)) - 1)
 def ImmCheckComplexRot90_270    : ImmCheckType<10>; // [90,270]
 def ImmCheckComplexRotAll90     : ImmCheckType<11>; // [0, 90, 180,270]
+def ImmCheck0_13                : ImmCheckType<12>; // 0..13
 
 class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   int Arg = arg;
@@ -542,6 +546,21 @@ def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore], MemEl
 
 // Store one vector, with no truncation, non-temporal (scalar base, VL displacement)
 def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsStore], MemEltTyDefault, "aarch64_sve_stnt1">;
+
+////////////////////////////////////////////////////////////////////////////////
+// Prefetches
+
+// Prefetch (Scalar base)
+def SVPRFB : MInst<"svprfb", "vPcJ", "c", [IsPrefetch], MemEltTyInt8,  "aarch64_sve_prf">;
+def SVPRFH : MInst<"svprfh", "vPcJ", "s", [IsPrefetch], MemEltTyInt16, "aarch64_sve_prf">;
+def SVPRFW : MInst<"svprfw", "vPcJ", "i", [IsPrefetch], MemEltTyInt32, "aarch64_sve_prf">;
+def SVPRFD : MInst<"svprfd", "vPcJ", "l", [IsPrefetch], MemEltTyInt64, "aarch64_sve_prf">;
+
+// Prefetch (Scalar base, VL displacement)
+def SVPRFB_VNUM : MInst<"svprfb_vnum", "vPclJ", "c", [IsPrefetch], MemEltTyInt8,  "aarch64_sve_prf">;
+def SVPRFH_VNUM : MInst<"svprfh_vnum", "vPclJ", "s", [IsPrefetch], MemEltTyInt16, "aarch64_sve_prf">;
+def SVPRFW_VNUM : MInst<"svprfw_vnum", "vPclJ", "i", [IsPrefetch], MemEltTyInt32, "aarch64_sve_prf">;
+def SVPRFD_VNUM : MInst<"svprfd_vnum", "vPclJ", "l", [IsPrefetch], MemEltTyInt64, "aarch64_sve_prf">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer arithmetic
