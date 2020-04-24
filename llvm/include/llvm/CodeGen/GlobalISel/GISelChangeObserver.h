@@ -101,7 +101,7 @@ public:
   void MF_HandleRemoval(MachineInstr &MI) override { erasingInstr(MI); }
 };
 
-/// A simple RAII based CSEInfo installer.
+/// A simple RAII based Delegate installer.
 /// Use this in a scope to install a delegate to the MachineFunction and reset
 /// it at the end of the scope.
 class RAIIDelegateInstaller {
@@ -111,6 +111,28 @@ class RAIIDelegateInstaller {
 public:
   RAIIDelegateInstaller(MachineFunction &MF, MachineFunction::Delegate *Del);
   ~RAIIDelegateInstaller();
+};
+
+/// A simple RAII based Observer installer.
+/// Use this in a scope to install the Observer to the MachineFunction and reset
+/// it at the end of the scope.
+class RAIIMFObserverInstaller {
+  MachineFunction &MF;
+
+public:
+  RAIIMFObserverInstaller(MachineFunction &MF, GISelChangeObserver &Observer);
+  ~RAIIMFObserverInstaller();
+};
+
+/// Class to install both of the above.
+class RAIIMFObsDelInstaller {
+  RAIIDelegateInstaller DelI;
+  RAIIMFObserverInstaller ObsI;
+
+public:
+  RAIIMFObsDelInstaller(MachineFunction &MF, GISelObserverWrapper &Wrapper)
+      : DelI(MF, &Wrapper), ObsI(MF, Wrapper) {}
+  ~RAIIMFObsDelInstaller() = default;
 };
 
 } // namespace llvm
