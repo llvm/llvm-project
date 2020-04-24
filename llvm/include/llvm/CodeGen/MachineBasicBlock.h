@@ -1046,7 +1046,7 @@ public:
 template<typename IterT>
 inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
   while (It != End && It->isDebugInstr())
-    It++;
+    ++It;
   return It;
 }
 
@@ -1057,7 +1057,7 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
 template<class IterT>
 inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
   while (It != Begin && It->isDebugInstr())
-    It--;
+    --It;
   return It;
 }
 
