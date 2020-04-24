@@ -175,15 +175,30 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    if (VA.getLocInfo() == CCValAssign::LocInfo::AExt) {
-      Size = VA.getLocVT().getSizeInBits() / 8;
-      ValVReg = MIRBuilder.buildAnyExt(LLT::scalar(Size * 8), ValVReg)
-                    ->getOperand(0)
-                    .getReg();
-    }
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, Size, 1);
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
+  }
+
+  void assignValueToAddress(const CallLowering::ArgInfo &Arg, Register Addr,
+                            uint64_t Size, MachinePointerInfo &MPO,
+                            CCValAssign &VA) override {
+    unsigned MaxSize = Size * 8;
+    // For varargs, we always want to extend them to 8 bytes, in which case
+    // we disable setting a max.
+    if (!Arg.IsFixed)
+      MaxSize = 0;
+
+    Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
+                           ? extendRegister(Arg.Regs[0], VA, MaxSize)
+                           : Arg.Regs[0];
+
+    // If we extended we might need to adjust the MMO's Size.
+    const LLT RegTy = MRI.getType(ValVReg);
+    if (RegTy.getSizeInBytes() > Size)
+      Size = RegTy.getSizeInBytes();
+
+    assignValueToAddress(ValVReg, Addr, Size, MPO, VA);
   }
 
   bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
