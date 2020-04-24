@@ -280,7 +280,7 @@ public:
     const class Function *Fn;
     uint8_t Version;
 
-    void emit(int, MCStreamer *, const MCExpr *, const MCSymbol *) const;
+    void emit(int, MCStreamer *) const;
   };
 
   // All the sleds to be emitted.

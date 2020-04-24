@@ -265,8 +265,11 @@ private:
                                   SmallPtrSet<MachineInstr *, 4> &Promoted) const;
   void addInstToMergeableList(const CombineInfo &CI,
                   std::list<std::list<CombineInfo> > &MergeableInsts) const;
-  bool collectMergeableInsts(MachineBasicBlock &MBB,
-                  std::list<std::list<CombineInfo> > &MergeableInsts) const;
+
+  std::pair<MachineBasicBlock::iterator, bool> collectMergeableInsts(
+      MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
+      MemInfoMap &Visited, SmallPtrSet<MachineInstr *, 4> &AnchorList,
+      std::list<std::list<CombineInfo>> &MergeableInsts) const;
 
 public:
   static char ID;
@@ -1944,29 +1947,36 @@ void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
   MergeableInsts.emplace_back(1, CI);
 }
 
-bool SILoadStoreOptimizer::collectMergeableInsts(MachineBasicBlock &MBB,
-                 std::list<std::list<CombineInfo> > &MergeableInsts) const {
+std::pair<MachineBasicBlock::iterator, bool>
+SILoadStoreOptimizer::collectMergeableInsts(
+    MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
+    MemInfoMap &Visited, SmallPtrSet<MachineInstr *, 4> &AnchorList,
+    std::list<std::list<CombineInfo>> &MergeableInsts) const {
   bool Modified = false;
-  // Contain the list
-  MemInfoMap Visited;
-  // Contains the list of instructions for which constant offsets are being
-  // promoted to the IMM.
-  SmallPtrSet<MachineInstr *, 4> AnchorList;
 
   // Sort potential mergeable instructions into lists.  One list per base address.
   unsigned Order = 0;
-  for (MachineInstr &MI : MBB.instrs()) {
+  MachineBasicBlock::iterator BlockI = Begin;
+  for (; BlockI != End; ++BlockI) {
+    MachineInstr &MI = *BlockI;
+
     // We run this before checking if an address is mergeable, because it can produce
     // better code even if the instructions aren't mergeable.
     if (promoteConstantOffsetToImm(MI, Visited, AnchorList))
       Modified = true;
 
+    // Don't combine if volatile. We also won't be able to merge across this, so
+    // break the search. We can look after this barrier for separate merges.
+    if (MI.hasOrderedMemoryRef()) {
+      LLVM_DEBUG(dbgs() << "Breaking search on memory fence: " << MI);
+
+      // Search will resume after this instruction in a separate merge list.
+      ++BlockI;
+      break;
+    }
+
     const InstClassEnum InstClass = getInstClass(MI.getOpcode(), *TII);
     if (InstClass == UNKNOWN)
-      continue;
-
-    // Don't combine if volatile.
-    if (MI.hasOrderedMemoryRef())
       continue;
 
     CombineInfo CI;
@@ -2008,7 +2018,7 @@ bool SILoadStoreOptimizer::collectMergeableInsts(MachineBasicBlock &MBB,
     ++I;
   }
 
-  return Modified;
+  return std::make_pair(BlockI, Modified);
 }
 
 // Scan through looking for adjacent LDS operations with constant offsets from
@@ -2161,15 +2171,33 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   bool Modified = false;
 
+  // Contains the list of instructions for which constant offsets are being
+  // promoted to the IMM. This is tracked for an entire block at time.
+  SmallPtrSet<MachineInstr *, 4> AnchorList;
+  MemInfoMap Visited;
 
   for (MachineBasicBlock &MBB : MF) {
-    std::list<std::list<CombineInfo> > MergeableInsts;
-    // First pass: Collect list of all instructions we know how to merge.
-    Modified |= collectMergeableInsts(MBB, MergeableInsts);
-    do {
-      OptimizeAgain = false;
-      Modified |= optimizeBlock(MergeableInsts);
-    } while (OptimizeAgain);
+    MachineBasicBlock::iterator SectionEnd;
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
+         I = SectionEnd) {
+      bool CollectModified;
+      std::list<std::list<CombineInfo>> MergeableInsts;
+
+      // First pass: Collect list of all instructions we know how to merge in a
+      // subset of the block.
+      std::tie(SectionEnd, CollectModified) =
+          collectMergeableInsts(I, E, Visited, AnchorList, MergeableInsts);
+
+      Modified |= CollectModified;
+
+      do {
+        OptimizeAgain = false;
+        Modified |= optimizeBlock(MergeableInsts);
+      } while (OptimizeAgain);
+    }
+
+    Visited.clear();
+    AnchorList.clear();
   }
 
   return Modified;

@@ -59,8 +59,12 @@ void MCObjectStreamer::addPendingLabel(MCSymbol* S) {
     CurSection->addPendingLabel(S, CurSubsectionIdx);
 
     // Add this Section to the list of PendingLabelSections.
-    PendingLabelSections.insert(CurSection);
-  } else
+    auto SecIt = std::find(PendingLabelSections.begin(),
+                           PendingLabelSections.end(), CurSection);
+    if (SecIt == PendingLabelSections.end())
+      PendingLabelSections.push_back(CurSection);
+  }
+  else
     // There is no Section / Subsection for this label yet.
     PendingLabels.push_back(S);
 }

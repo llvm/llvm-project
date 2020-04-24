@@ -1767,6 +1767,8 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurExceptionSym = nullptr;
   bool NeedsLocalForSize = MAI->needsLocalForSize();
   if (F.hasFnAttribute("patchable-function-entry") ||
+      F.hasFnAttribute("function-instrument") ||
+      F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabelsForEHOrDebugInfo(MF, MMI) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection) {
     CurrentFnBegin = createTempSymbol("func_begin");
@@ -3174,14 +3176,7 @@ void AsmPrinterHandler::markFunctionEnd() {}
 // In the binary's "xray_instr_map" section, an array of these function entries
 // describes each instrumentation point.  When XRay patches your code, the index
 // into this table will be given to your handler as a patch point identifier.
-void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
-                                         const MCExpr *Location,
-                                         const MCSymbol *CurrentFnSym) const {
-  if (Location)
-    Out->emitValueImpl(Location, Bytes);
-  else
-    Out->emitSymbolValue(Sled, Bytes);
-  Out->emitSymbolValue(CurrentFnSym, Bytes);
+void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out) const {
   auto Kind8 = static_cast<uint8_t>(Kind);
   Out->emitBinaryData(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
   Out->emitBinaryData(
@@ -3234,19 +3229,31 @@ void AsmPrinter::emitXRayTable() {
   // Now we switch to the instrumentation map section. Because this is done
   // per-function, we are able to create an index entry that will represent the
   // range of sleds associated with a function.
+  auto &Ctx = OutContext;
   MCSymbol *SledsStart = OutContext.createTempSymbol("xray_sleds_start", true);
   OutStreamer->SwitchSection(InstMap);
   OutStreamer->emitLabel(SledsStart);
   for (const auto &Sled : Sleds) {
-    const MCExpr *Location = nullptr;
     if (PCRel) {
-      MCSymbol *Dot = OutContext.createTempSymbol();
+      MCSymbol *Dot = Ctx.createTempSymbol();
       OutStreamer->emitLabel(Dot);
-      Location = MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(Sled.Sled, OutContext),
-          MCSymbolRefExpr::create(Dot, OutContext), OutContext);
+      OutStreamer->emitValueImpl(
+          MCBinaryExpr::createSub(MCSymbolRefExpr::create(Sled.Sled, Ctx),
+                                  MCSymbolRefExpr::create(Dot, Ctx), Ctx),
+          WordSizeBytes);
+      OutStreamer->emitValueImpl(
+          MCBinaryExpr::createSub(
+              MCSymbolRefExpr::create(CurrentFnBegin, Ctx),
+              MCBinaryExpr::createAdd(
+                  MCSymbolRefExpr::create(Dot, Ctx),
+                  MCConstantExpr::create(WordSizeBytes, Ctx), Ctx),
+              Ctx),
+          WordSizeBytes);
+    } else {
+      OutStreamer->emitSymbolValue(Sled.Sled, WordSizeBytes);
+      OutStreamer->emitSymbolValue(CurrentFnSym, WordSizeBytes);
     }
-    Sled.emit(WordSizeBytes, OutStreamer.get(), Location, CurrentFnSym);
+    Sled.emit(WordSizeBytes, OutStreamer.get());
   }
   MCSymbol *SledsEnd = OutContext.createTempSymbol("xray_sleds_end", true);
   OutStreamer->emitLabel(SledsEnd);

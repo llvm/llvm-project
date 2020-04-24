@@ -22,6 +22,9 @@ class XcodeSDK {
 
 public:
   XcodeSDK() = default;
+  /// Initialize an XcodeSDK object with an SDK name. The SDK name is the last
+  /// directory component of a path one would pass to clang's -isysroot
+  /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
@@ -38,7 +41,6 @@ public:
     numSDKTypes,
     unknown = -1
   };
-  static llvm::StringRef GetNameForType(Type type);
 
   /// The merge function follows a strict order to maintain monotonicity:
   /// 1. SDK with the higher SDKType wins.
@@ -49,15 +51,27 @@ public:
   XcodeSDK(const XcodeSDK&) = default;
   bool operator==(XcodeSDK other);
 
-  /// Return parsed SDK number, and SDK version number.
-  std::tuple<Type, llvm::VersionTuple> Parse() const;
+  /// A parsed SDK directory name.
+  struct Info {
+    Type type = unknown;
+    llvm::VersionTuple version;
+    bool internal = false;
+
+    Info() = default;
+    bool operator<(const Info &other) const;
+  };
+
+  /// Return parsed SDK type and version number.
+  Info Parse() const;
+  bool IsAppleInternalSDK() const;
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
 
   static bool SDKSupportsModules(Type type, llvm::VersionTuple version);
   static bool SDKSupportsModules(Type desired_type, const FileSpec &sdk_path);
-  static llvm::StringRef GetSDKNameForType(Type type);
+  /// Return the canonical SDK name, such as "macosx" for the macOS SDK.
+  static std::string GetCanonicalName(Info info);
 };
 
 } // namespace lldb_private

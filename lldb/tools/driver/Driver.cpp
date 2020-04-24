@@ -592,57 +592,54 @@ int Driver::MainLoop() {
   bool quit_requested = false;
   bool stopped_for_crash = false;
   if ((commands_data != nullptr) && (commands_size != 0u)) {
-    bool success = true;
     FILE *commands_file =
         PrepareCommandsForSourcing(commands_data, commands_size);
-    if (commands_file != nullptr) {
-      m_debugger.SetInputFileHandle(commands_file, true);
 
-      // Set the debugger into Sync mode when running the command file.
-      // Otherwise command files
-      // that run the target won't run in a sensible way.
-      bool old_async = m_debugger.GetAsync();
-      m_debugger.SetAsync(false);
-      int num_errors = 0;
-
-      SBCommandInterpreterRunOptions options;
-      options.SetStopOnError(true);
-      if (m_option_data.m_batch)
-        options.SetStopOnCrash(true);
-
-      m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
-                                       num_errors, quit_requested,
-                                       stopped_for_crash);
-
-      if (m_option_data.m_batch && stopped_for_crash &&
-          !m_option_data.m_after_crash_commands.empty()) {
-        SBStream crash_commands_stream;
-        WriteCommandsForSourcing(eCommandPlacementAfterCrash,
-                                 crash_commands_stream);
-        const char *crash_commands_data = crash_commands_stream.GetData();
-        const size_t crash_commands_size = crash_commands_stream.GetSize();
-        commands_file = PrepareCommandsForSourcing(crash_commands_data,
-                                                   crash_commands_size);
-        if (commands_file != nullptr) {
-          bool local_quit_requested;
-          bool local_stopped_for_crash;
-          m_debugger.SetInputFileHandle(commands_file, true);
-
-          m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
-                                           num_errors, local_quit_requested,
-                                           local_stopped_for_crash);
-          if (local_quit_requested)
-            quit_requested = true;
-        }
-      }
-      m_debugger.SetAsync(old_async);
-    } else
-      success = false;
-
-    // Something went wrong with command pipe
-    if (!success) {
+    if (commands_file == nullptr) {
+      // We should have already printed an error in PrepareCommandsForSourcing.
       exit(1);
     }
+
+    m_debugger.SetInputFileHandle(commands_file, true);
+
+    // Set the debugger into Sync mode when running the command file.
+    // Otherwise command files
+    // that run the target won't run in a sensible way.
+    bool old_async = m_debugger.GetAsync();
+    m_debugger.SetAsync(false);
+    int num_errors = 0;
+
+    SBCommandInterpreterRunOptions options;
+    options.SetStopOnError(true);
+    if (m_option_data.m_batch)
+      options.SetStopOnCrash(true);
+
+    m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
+                                     num_errors, quit_requested,
+                                     stopped_for_crash);
+
+    if (m_option_data.m_batch && stopped_for_crash &&
+        !m_option_data.m_after_crash_commands.empty()) {
+      SBStream crash_commands_stream;
+      WriteCommandsForSourcing(eCommandPlacementAfterCrash,
+                               crash_commands_stream);
+      const char *crash_commands_data = crash_commands_stream.GetData();
+      const size_t crash_commands_size = crash_commands_stream.GetSize();
+      commands_file =
+          PrepareCommandsForSourcing(crash_commands_data, crash_commands_size);
+      if (commands_file != nullptr) {
+        bool local_quit_requested;
+        bool local_stopped_for_crash;
+        m_debugger.SetInputFileHandle(commands_file, true);
+
+        m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
+                                         num_errors, local_quit_requested,
+                                         local_stopped_for_crash);
+        if (local_quit_requested)
+          quit_requested = true;
+      }
+    }
+    m_debugger.SetAsync(old_async);
   }
 
   // Now set the input file handle to STDIN and run the command

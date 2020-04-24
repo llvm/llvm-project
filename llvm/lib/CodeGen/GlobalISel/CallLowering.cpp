@@ -373,7 +373,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       unsigned Offset = VA.getLocMemOffset();
       MachinePointerInfo MPO;
       Register StackAddr = Handler.getStackAddress(Size, Offset, MPO);
-      Handler.assignValueToAddress(ArgReg, StackAddr, Size, MPO, VA);
+      Handler.assignValueToAddress(Args[i], StackAddr, Size, MPO, VA);
     } else {
       // FIXME: Support byvals and other weirdness
       return false;
@@ -458,10 +458,19 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
 }
 
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
-                                                    CCValAssign &VA) {
+                                                    CCValAssign &VA,
+                                                    unsigned MaxSizeBits) {
   LLT LocTy{VA.getLocVT()};
-  if (LocTy.getSizeInBits() == MRI.getType(ValReg).getSizeInBits())
+  LLT ValTy = MRI.getType(ValReg);
+  if (LocTy.getSizeInBits() == ValTy.getSizeInBits())
     return ValReg;
+
+  if (LocTy.isScalar() && MaxSizeBits && MaxSizeBits < LocTy.getSizeInBits()) {
+    if (MaxSizeBits <= ValTy.getSizeInBits())
+      return ValReg;
+    LocTy = LLT::scalar(MaxSizeBits);
+  }
+
   switch (VA.getLocInfo()) {
   default: break;
   case CCValAssign::Full:

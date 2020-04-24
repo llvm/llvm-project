@@ -295,7 +295,7 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
 
   for (std::size_t I = 0; I < InstrMap.Entries; ++I) {
     auto &Sled = InstrMap.Sleds[I];
-    auto F = Sled.Function;
+    auto F = Sled.function();
     if (CurFun == 0)
       CurFun = F;
     if (F != CurFun) {
@@ -466,7 +466,7 @@ uintptr_t __xray_function_address(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Guard(&XRayInstrMapMutex);
   if (FuncId <= 0 || static_cast<size_t>(FuncId) > XRayInstrMap.Functions)
     return 0;
-  return XRayInstrMap.SledsIndex[FuncId - 1].Begin->Function
+  return XRayInstrMap.SledsIndex[FuncId - 1].Begin->function()
 // On PPC, function entries are always aligned to 16 bytes. The beginning of a
 // sled might be a local entry, which is always +8 based on the global entry.
 // Always return the global entry.
