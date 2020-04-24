@@ -128,11 +128,11 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
       // If the decl is actually an accessor, use the property name instead.
       swift::AbstractFunctionDecl *decl = funcs.front();
       if (auto accessor = llvm::dyn_cast<swift::AccessorDecl>(decl)) {
-        result = accessor->getStorage()->getFullName();
+        result = accessor->getStorage()->getName();
         return;
       }
 
-      result = decl->getFullName();
+      result = decl->getName();
     }
   };
 
