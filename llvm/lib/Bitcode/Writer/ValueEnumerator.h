@@ -17,8 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/UseListOrder.h"
 #include <cassert>
 #include <cstdint>
