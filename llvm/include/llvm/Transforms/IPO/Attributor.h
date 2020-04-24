@@ -153,24 +153,29 @@ enum class DepClassTy {
 /// are floating values that do not have a corresponding attribute list
 /// position.
 struct IRPosition {
+  virtual ~IRPosition() {}
 
   /// The positions we distinguish in the IR.
-  enum Kind : char {
-    IRP_INVALID,  ///< An invalid position.
-    IRP_FLOAT,    ///< A position that is not associated with a spot suitable
-                  ///< for attributes. This could be any value or instruction.
-    IRP_RETURNED, ///< An attribute for the function return value.
-    IRP_CALL_SITE_RETURNED, ///< An attribute for a call site return value.
-    IRP_FUNCTION,           ///< An attribute for a function (scope).
-    IRP_CALL_SITE,          ///< An attribute for a call site (function scope).
-    IRP_ARGUMENT,           ///< An attribute for a function argument.
-    IRP_CALL_SITE_ARGUMENT, ///< An attribute for a call site argument.
+  ///
+  /// The values are chosen such that the KindOrArgNo member has a value >= 0
+  /// if it is an argument or call site argument while a value < 0 indicates the
+  /// respective kind of that value.
+  enum Kind : int {
+    IRP_INVALID = -6, ///< An invalid position.
+    IRP_FLOAT = -5, ///< A position that is not associated with a spot suitable
+                    ///< for attributes. This could be any value or instruction.
+    IRP_RETURNED = -4, ///< An attribute for the function return value.
+    IRP_CALL_SITE_RETURNED = -3, ///< An attribute for a call site return value.
+    IRP_FUNCTION = -2,           ///< An attribute for a function (scope).
+    IRP_CALL_SITE = -1, ///< An attribute for a call site (function scope).
+    IRP_ARGUMENT = 0,   ///< An attribute for a function argument.
+    IRP_CALL_SITE_ARGUMENT = 1, ///< An attribute for a call site argument.
   };
 
   /// Default constructor available to create invalid positions implicitly. All
   /// other positions need to be created explicitly through the appropriate
   /// static member function.
-  IRPosition() : Enc(nullptr, ENC_VALUE) { verify(); }
+  IRPosition() : AnchorVal(nullptr), KindOrArgNo(IRP_INVALID) { verify(); }
 
   /// Create a position describing the value of \p V.
   static const IRPosition value(const Value &V) {
@@ -193,7 +198,7 @@ struct IRPosition {
 
   /// Create a position describing the argument \p Arg.
   static const IRPosition argument(const Argument &Arg) {
-    return IRPosition(const_cast<Argument &>(Arg), IRP_ARGUMENT);
+    return IRPosition(const_cast<Argument &>(Arg), Kind(Arg.getArgNo()));
   }
 
   /// Create a position describing the function scope of \p CB.
@@ -209,8 +214,7 @@ struct IRPosition {
   /// Create a position describing the argument of \p CB at position \p ArgNo.
   static const IRPosition callsite_argument(const CallBase &CB,
                                             unsigned ArgNo) {
-    return IRPosition(const_cast<Use &>(CB.getArgOperandUse(ArgNo)),
-                      IRP_CALL_SITE_ARGUMENT);
+    return IRPosition(const_cast<CallBase &>(CB), Kind(ArgNo));
   }
 
   /// Create a position describing the argument of \p ACS at position \p ArgNo.
@@ -238,7 +242,9 @@ struct IRPosition {
     return IRPosition::function(*IRP.getAssociatedFunction());
   }
 
-  bool operator==(const IRPosition &RHS) const { return Enc == RHS.Enc; }
+  bool operator==(const IRPosition &RHS) const {
+    return (AnchorVal == RHS.AnchorVal) && (KindOrArgNo == RHS.KindOrArgNo);
+  }
   bool operator!=(const IRPosition &RHS) const { return !(*this == RHS); }
 
   /// Return the value this abstract attribute is anchored with.
@@ -248,21 +254,16 @@ struct IRPosition {
   /// far, only the case for call site arguments as the value is not sufficient
   /// to pinpoint them. Instead, we can use the call site as an anchor.
   Value &getAnchorValue() const {
-    switch (getEncodingBits()) {
-    case ENC_VALUE:
-    case ENC_RETURNED_VALUE:
-    case ENC_FLOATING_FUNCTION:
-      return *getAsValuePtr();
-    case ENC_CALL_SITE_ARGUMENT_USE:
-      return *(getAsUsePtr()->getUser());
-    default:
-      llvm_unreachable("Unkown encoding!");
-    };
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an anchor value!");
+    return *AnchorVal;
   }
 
   /// Return the associated function, if any.
   Function *getAssociatedFunction() const {
-    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an anchor scope!");
+    if (auto *CB = dyn_cast<CallBase>(AnchorVal))
       return CB->getCalledFunction();
     return getAnchorScope();
   }
@@ -311,14 +312,18 @@ struct IRPosition {
 
   /// Return the value this abstract attribute is associated with.
   Value &getAssociatedValue() const {
-    if (getArgNo() < 0 || isa<Argument>(&getAnchorValue()))
-      return getAnchorValue();
-    assert(isa<CallBase>(&getAnchorValue()) && "Expected a call base!");
-    return *cast<CallBase>(&getAnchorValue())->getArgOperand(getArgNo());
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an associated value!");
+    if (getArgNo() < 0 || isa<Argument>(AnchorVal))
+      return *AnchorVal;
+    assert(isa<CallBase>(AnchorVal) && "Expected a call base!");
+    return *cast<CallBase>(AnchorVal)->getArgOperand(getArgNo());
   }
 
   /// Return the type this abstract attribute is associated with.
   Type *getAssociatedType() const {
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an associated type!");
     if (getPositionKind() == IRPosition::IRP_RETURNED)
       return getAssociatedFunction()->getReturnType();
     return getAssociatedValue().getType();
@@ -326,18 +331,7 @@ struct IRPosition {
 
   /// Return the argument number of the associated value if it is an argument or
   /// call site argument, otherwise a negative value.
-  int getArgNo() const {
-    switch (getPositionKind()) {
-    case IRPosition::IRP_ARGUMENT:
-      return cast<Argument>(getAsValuePtr())->getArgNo();
-    case IRPosition::IRP_CALL_SITE_ARGUMENT: {
-      Use &U = *getAsUsePtr();
-      return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
-    }
-    default:
-      return -1;
-    }
-  }
+  int getArgNo() const { return KindOrArgNo; }
 
   /// Return the index in the attribute list for this position.
   unsigned getAttrIdx() const {
@@ -353,7 +347,7 @@ struct IRPosition {
       return AttributeList::ReturnIndex;
     case IRPosition::IRP_ARGUMENT:
     case IRPosition::IRP_CALL_SITE_ARGUMENT:
-      return getArgNo() + AttributeList::FirstArgIndex;
+      return KindOrArgNo + AttributeList::FirstArgIndex;
     }
     llvm_unreachable(
         "There is no attribute index for a floating or invalid position!");
@@ -361,23 +355,19 @@ struct IRPosition {
 
   /// Return the associated position kind.
   Kind getPositionKind() const {
-    char EncodingBits = getEncodingBits();
-    if (EncodingBits == ENC_CALL_SITE_ARGUMENT_USE)
-      return IRP_CALL_SITE_ARGUMENT;
-    if (EncodingBits == ENC_FLOATING_FUNCTION)
-      return IRP_FLOAT;
-
-    Value *V = getAsValuePtr();
-    if (!V)
-      return IRP_INVALID;
-    if (isa<Argument>(V))
+    if (getArgNo() >= 0) {
+      assert(((isa<Argument>(getAnchorValue()) &&
+               isa<Argument>(getAssociatedValue())) ||
+              isa<CallBase>(getAnchorValue())) &&
+             "Expected argument or call base due to argument number!");
+      if (isa<CallBase>(getAnchorValue()))
+        return IRP_CALL_SITE_ARGUMENT;
       return IRP_ARGUMENT;
-    if (isa<Function>(V))
-      return isReturnPosition(EncodingBits) ? IRP_RETURNED : IRP_FUNCTION;
-    if (isa<CallBase>(V))
-      return isReturnPosition(EncodingBits) ? IRP_CALL_SITE_RETURNED
-                                            : IRP_CALL_SITE;
-    return IRP_FLOAT;
+    }
+
+    assert(KindOrArgNo < 0 &&
+           "Expected (call site) arguments to never reach this point!");
+    return Kind(KindOrArgNo);
   }
 
   /// TODO: Figure out if the attribute related helper functions should live
@@ -445,52 +435,14 @@ struct IRPosition {
   static const IRPosition TombstoneKey;
   ///}
 
-  /// Conversion into a void * to allow reuse of pointer hashing.
-  operator void *() const { return Enc.getOpaqueValue(); }
-
 private:
   /// Private constructor for special values only!
-  explicit IRPosition(void *Ptr) { Enc.setFromOpaqueValue(Ptr); }
+  explicit IRPosition(int KindOrArgNo)
+      : AnchorVal(0), KindOrArgNo(KindOrArgNo) {}
 
   /// IRPosition anchored at \p AnchorVal with kind/argument numbet \p PK.
-  explicit IRPosition(Value &AnchorVal, Kind PK) {
-    switch (PK) {
-    case IRPosition::IRP_INVALID:
-      llvm_unreachable("Cannot create invalid IRP with an anchor value!");
-      break;
-    case IRPosition::IRP_FLOAT:
-      // Special case for floating functions.
-      if (isa<Function>(AnchorVal))
-        Enc = {&AnchorVal, ENC_FLOATING_FUNCTION};
-      else
-        Enc = {&AnchorVal, ENC_VALUE};
-      break;
-    case IRPosition::IRP_FUNCTION:
-    case IRPosition::IRP_CALL_SITE:
-      Enc = {&AnchorVal, ENC_VALUE};
-      break;
-    case IRPosition::IRP_RETURNED:
-    case IRPosition::IRP_CALL_SITE_RETURNED:
-      Enc = {&AnchorVal, ENC_RETURNED_VALUE};
-      break;
-    case IRPosition::IRP_ARGUMENT:
-      Enc = {&AnchorVal, ENC_VALUE};
-      break;
-    case IRPosition::IRP_CALL_SITE_ARGUMENT:
-      llvm_unreachable(
-          "Cannot create call site argument IRP with an anchor value!");
-      break;
-    }
-    verify();
-  }
-
-  /// IRPosition for the use \p U. The position kind \p PK needs to be
-  /// IRP_CALL_SITE_ARGUMENT, the anchor value is the user, the associated value
-  /// the used value.
-  explicit IRPosition(Use &U, Kind PK) {
-    assert(PK == IRP_CALL_SITE_ARGUMENT &&
-           "Use constructor is for call site arguments only!");
-    Enc = {&U, ENC_CALL_SITE_ARGUMENT_USE};
+  explicit IRPosition(Value &AnchorVal, Kind PK)
+      : AnchorVal(&AnchorVal), KindOrArgNo(PK) {
     verify();
   }
 
@@ -507,64 +459,29 @@ private:
                            SmallVectorImpl<Attribute> &Attrs,
                            Attributor &A) const;
 
-  /// Return the underlying pointer as Value *, valid for all positions but
-  /// IRP_CALL_SITE_ARGUMENT.
-  Value *getAsValuePtr() const {
-    assert(getEncodingBits() != ENC_CALL_SITE_ARGUMENT_USE &&
-           "Not a value pointer!");
-    return reinterpret_cast<Value *>(Enc.getPointer());
-  }
+protected:
+  /// The value this position is anchored at.
+  Value *AnchorVal;
 
-  /// Return the underlying pointer as Use *, valid only for
-  /// IRP_CALL_SITE_ARGUMENT positions.
-  Use *getAsUsePtr() const {
-    assert(getEncodingBits() == ENC_CALL_SITE_ARGUMENT_USE &&
-           "Not a value pointer!");
-    return reinterpret_cast<Use *>(Enc.getPointer());
-  }
-
-  /// Return true if \p EncodingBits describe a returned or call site returned
-  /// position.
-  static bool isReturnPosition(char EncodingBits) {
-    return EncodingBits == ENC_RETURNED_VALUE;
-  }
-
-  /// Return true if the encoding bits describe a returned or call site returned
-  /// position.
-  bool isReturnPosition() const { return isReturnPosition(getEncodingBits()); }
-
-  /// The encoding of the IRPosition is a combination of a pointer and two
-  /// encoding bits. The values of the encoding bits are defined in the enum
-  /// below. The pointer is either a Value* (for the first three encoding bit
-  /// combinations) or Use* (for ENC_CALL_SITE_ARGUMENT_USE).
-  ///
-  ///{
-  enum {
-    ENC_VALUE = 0b00,
-    ENC_RETURNED_VALUE = 0b01,
-    ENC_FLOATING_FUNCTION = 0b10,
-    ENC_CALL_SITE_ARGUMENT_USE = 0b11,
-  };
-
-  // Reserve the maximal amount of bits so there is no need to mask out the
-  // remaining ones. We will not encode anything else in the pointer anyway.
-  static constexpr int NumEncodingBits =
-      PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-  static_assert(NumEncodingBits >= 2, "At least two bits are required!");
-
-  /// The pointer with the encoding bits.
-  PointerIntPair<void *, NumEncodingBits, char> Enc;
-  ///}
-
-  /// Return the encoding bits.
-  char getEncodingBits() const { return Enc.getInt(); }
+  /// If AnchorVal is Argument or CallBase then this number should be
+  /// non-negative and it denotes the argument or call site argument index
+  /// respectively. Otherwise, it denotes the kind of this IRPosition according
+  /// to Kind above.
+  int KindOrArgNo;
 };
 
 /// Helper that allows IRPosition as a key in a DenseMap.
-template <> struct DenseMapInfo<IRPosition> : DenseMapInfo<void *> {
+template <> struct DenseMapInfo<IRPosition> {
   static inline IRPosition getEmptyKey() { return IRPosition::EmptyKey; }
   static inline IRPosition getTombstoneKey() {
     return IRPosition::TombstoneKey;
+  }
+  static unsigned getHashValue(const IRPosition &IRP) {
+    return (DenseMapInfo<Value *>::getHashValue(&IRP.getAnchorValue()) << 4) ^
+           (unsigned(IRP.getArgNo()));
+  }
+  static bool isEqual(const IRPosition &LHS, const IRPosition &RHS) {
+    return LHS == RHS;
   }
 };
 

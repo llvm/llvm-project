@@ -258,9 +258,8 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   return HasChanged;
 }
 
-const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-const IRPosition
-    IRPosition::TombstoneKey(DenseMapInfo<void *>::getTombstoneKey());
+const IRPosition IRPosition::EmptyKey(255);
+const IRPosition IRPosition::TombstoneKey(256);
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
@@ -402,60 +401,52 @@ bool IRPosition::getAttrsFromAssumes(Attribute::AttrKind AK,
 
 void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
-  switch (getPositionKind()) {
+  switch (KindOrArgNo) {
+  default:
+    assert(KindOrArgNo >= 0 && "Expected argument or call site argument!");
+    assert((isa<CallBase>(AnchorVal) || isa<Argument>(AnchorVal)) &&
+           "Expected call base or argument for positive attribute index!");
+    if (isa<Argument>(AnchorVal)) {
+      assert(cast<Argument>(AnchorVal)->getArgNo() == unsigned(getArgNo()) &&
+             "Argument number mismatch!");
+      assert(cast<Argument>(AnchorVal) == &getAssociatedValue() &&
+             "Associated value mismatch!");
+    } else {
+      assert(cast<CallBase>(*AnchorVal).arg_size() > unsigned(getArgNo()) &&
+             "Call site argument number mismatch!");
+      assert(cast<CallBase>(*AnchorVal).getArgOperand(getArgNo()) ==
+                 &getAssociatedValue() &&
+             "Associated value mismatch!");
+    }
+    break;
   case IRP_INVALID:
-    assert(!Enc.getOpaqueValue() &&
-           "Expected a nullptr for an invalid position!");
-    return;
+    assert(!AnchorVal && "Expected no value for an invalid position!");
+    break;
   case IRP_FLOAT:
     assert((!isa<CallBase>(&getAssociatedValue()) &&
             !isa<Argument>(&getAssociatedValue())) &&
            "Expected specialized kind for call base and argument values!");
-    return;
+    break;
   case IRP_RETURNED:
-    assert(isa<Function>(getAsValuePtr()) &&
+    assert(isa<Function>(AnchorVal) &&
            "Expected function for a 'returned' position!");
-    assert(getAsValuePtr() == &getAssociatedValue() &&
-           "Associated value mismatch!");
-    return;
+    assert(AnchorVal == &getAssociatedValue() && "Associated value mismatch!");
+    break;
   case IRP_CALL_SITE_RETURNED:
-    assert((isa<CallBase>(getAsValuePtr())) &&
+    assert((isa<CallBase>(AnchorVal)) &&
            "Expected call base for 'call site returned' position!");
-    assert(getAsValuePtr() == &getAssociatedValue() &&
-           "Associated value mismatch!");
-    return;
+    assert(AnchorVal == &getAssociatedValue() && "Associated value mismatch!");
+    break;
   case IRP_CALL_SITE:
-    assert((isa<CallBase>(getAsValuePtr())) &&
+    assert((isa<CallBase>(AnchorVal)) &&
            "Expected call base for 'call site function' position!");
-    assert(getAsValuePtr() == &getAssociatedValue() &&
-           "Associated value mismatch!");
-    return;
+    assert(AnchorVal == &getAssociatedValue() && "Associated value mismatch!");
+    break;
   case IRP_FUNCTION:
-    assert(isa<Function>(getAsValuePtr()) &&
+    assert(isa<Function>(AnchorVal) &&
            "Expected function for a 'function' position!");
-    assert(getAsValuePtr() == &getAssociatedValue() &&
-           "Associated value mismatch!");
-    return;
-  case IRP_ARGUMENT:
-    assert(isa<Argument>(getAsValuePtr()) &&
-           "Expected argument for a 'argument' position!");
-    assert(getAsValuePtr() == &getAssociatedValue() &&
-           "Associated value mismatch!");
-    return;
-  case IRP_CALL_SITE_ARGUMENT: {
-    Use *U = getAsUsePtr();
-    assert(U && "Expected use for a 'call site argument' position!");
-    assert(isa<CallBase>(U->getUser()) &&
-           "Expected call base user for a 'call site argument' position!");
-    assert(cast<CallBase>(U->getUser())->isArgOperand(U) &&
-           "Expected call base argument operand for a 'call site argument' "
-           "position");
-    assert(cast<CallBase>(U->getUser())->getArgOperandNo(U) ==
-               unsigned(getArgNo()) &&
-           "Argument number mismatch!");
-    assert(U->get() == &getAssociatedValue() && "Associated value mismatch!");
-    return;
-  }
+    assert(AnchorVal == &getAssociatedValue() && "Associated value mismatch!");
+    break;
   }
 #endif
 }
