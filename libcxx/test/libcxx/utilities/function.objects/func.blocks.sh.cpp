@@ -11,6 +11,7 @@
 // UNSUPPORTED: c++98, c++03
 // REQUIRES: has-fblocks
 
+// FILE_DEPENDENCIES: %t.exe
 // RUN: %{build} -fblocks
 // RUN: %{run}
 
