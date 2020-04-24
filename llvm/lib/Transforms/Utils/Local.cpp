@@ -41,7 +41,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -2933,37 +2932,38 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     return true;
   case Instruction::Call:
   case Instruction::Invoke: {
-    ImmutableCallSite CS(I);
+    const auto &CB = cast<CallBase>(*I);
 
     // Can't handle inline asm. Skip it.
-    if (CS.isInlineAsm())
+    if (CB.isInlineAsm())
       return false;
 
     // Constant bundle operands may need to retain their constant-ness for
     // correctness.
-    if (CS.isBundleOperand(OpIdx))
+    if (CB.isBundleOperand(OpIdx))
       return false;
 
-    if (OpIdx < CS.getNumArgOperands()) {
+    if (OpIdx < CB.getNumArgOperands()) {
       // Some variadic intrinsics require constants in the variadic arguments,
       // which currently aren't markable as immarg.
-      if (CS.isIntrinsic() && OpIdx >= CS.getFunctionType()->getNumParams()) {
+      if (isa<IntrinsicInst>(CB) &&
+          OpIdx >= CB.getFunctionType()->getNumParams()) {
         // This is known to be OK for stackmap.
-        return CS.getIntrinsicID() == Intrinsic::experimental_stackmap;
+        return CB.getIntrinsicID() == Intrinsic::experimental_stackmap;
       }
 
       // gcroot is a special case, since it requires a constant argument which
       // isn't also required to be a simple ConstantInt.
-      if (CS.getIntrinsicID() == Intrinsic::gcroot)
+      if (CB.getIntrinsicID() == Intrinsic::gcroot)
         return false;
 
       // Some intrinsic operands are required to be immediates.
-      return !CS.paramHasAttr(OpIdx, Attribute::ImmArg);
+      return !CB.paramHasAttr(OpIdx, Attribute::ImmArg);
     }
 
     // It is never allowed to replace the call argument to an intrinsic, but it
     // may be possible for a call.
-    return !CS.isIntrinsic();
+    return !isa<IntrinsicInst>(CB);
   }
   case Instruction::ShuffleVector:
     // Shufflevector masks are constant.

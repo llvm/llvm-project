@@ -35,7 +35,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -428,8 +427,8 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         bool HasConvergent = false;
         for (auto &BB : L->blocks())
           for (auto &I : *BB)
-            if (auto CS = CallSite(&I))
-              HasConvergent |= CS.isConvergent();
+            if (auto *CB = dyn_cast<CallBase>(&I))
+              HasConvergent |= CB->isConvergent();
         assert((!HasConvergent || ULO.TripMultiple % ULO.Count == 0) &&
                "Unroll count must divide trip multiple if loop contains a "
                "convergent operation.");
