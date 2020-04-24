@@ -28,7 +28,6 @@
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
@@ -191,13 +190,12 @@ inline bool IsPotentialRetainableObjPtr(const Value *Op,
 
 /// Helper for GetARCInstKind. Determines what kind of construct CS
 /// is.
-inline ARCInstKind GetCallSiteClass(ImmutableCallSite CS) {
-  for (ImmutableCallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end();
-       I != E; ++I)
+inline ARCInstKind GetCallSiteClass(const CallBase &CB) {
+  for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I)
     if (IsPotentialRetainableObjPtr(*I))
-      return CS.onlyReadsMemory() ? ARCInstKind::User : ARCInstKind::CallOrUser;
+      return CB.onlyReadsMemory() ? ARCInstKind::User : ARCInstKind::CallOrUser;
 
-  return CS.onlyReadsMemory() ? ARCInstKind::None : ARCInstKind::Call;
+  return CB.onlyReadsMemory() ? ARCInstKind::None : ARCInstKind::Call;
 }
 
 /// Return true if this value refers to a distinct and identifiable
