@@ -39,7 +39,6 @@ enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
 class DependencyTracker;
 class DWARFImporterDelegate;
-struct ImplicitImportInfo;
 class IRGenOptions;
 class NominalTypeDecl;
 class SearchPathOptions;
@@ -596,13 +595,7 @@ public:
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
 
-  /// Attempt to create a Swift module, returning \c nullptr and setting
-  /// \p error if unsuccessful.
-  ///
-  /// \param importInfo Information about which modules should be implicitly
-  /// imported by each file of the module.
-  swift::ModuleDecl *CreateModule(const SourceModule &module, Status &error,
-                                  swift::ImplicitImportInfo importInfo);
+  swift::ModuleDecl *CreateModule(const SourceModule &module, Status &error);
 
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
@@ -1071,30 +1064,16 @@ public:
 
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
 
-  /// Retrieves the modules that need to be implicitly imported in a given
-  /// execution scope. This includes the modules imported by both the compile
-  /// unit as well as any imports from previous expression evaluations.
-  static bool
-  GetImplicitImports(SwiftASTContext &swift_ast_context, SymbolContext &sc,
-                     ExecutionContextScope &exe_scope,
-                     lldb::StackFrameWP &stack_frame_wp,
-                     llvm::SmallVectorImpl<swift::ModuleDecl *> &modules,
-                     Status &error);
+  static bool PerformUserImport(SwiftASTContext &swift_ast_context,
+                                SymbolContext &sc,
+                                ExecutionContextScope &exe_scope,
+                                lldb::StackFrameWP &stack_frame_wp,
+                                swift::SourceFile &source_file, Status &error);
 
-  /// Cache the user's imports from a SourceFile in a given execution scope such
-  /// that they are carried over into future expression evaluations.
-  static bool CacheUserImports(SwiftASTContext &swift_ast_context,
-                               SymbolContext &sc,
-                               ExecutionContextScope &exe_scope,
-                               lldb::StackFrameWP &stack_frame_wp,
-                               swift::SourceFile &source_file, Status &error);
-
-  /// Retrieve the modules imported by the compilation unit.
-  static bool
-  GetCompileUnitImports(SwiftASTContext &swift_ast_context, SymbolContext &sc,
-                        lldb::StackFrameWP &stack_frame_wp,
-                        llvm::SmallVectorImpl<swift::ModuleDecl *> &modules,
-                        Status &error);
+  static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
+                                SymbolContext &sc,
+                                lldb::StackFrameWP &stack_frame_wp,
+                                swift::SourceFile *source_file, Status &error);
 
 protected:
   /// This map uses the string value of ConstStrings as the key, and the
