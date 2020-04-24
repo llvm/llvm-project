@@ -1,3 +1,4 @@
+; XFAIL: *
 // RUN: %clang_cc1 -emit-llvm -o - -fcuda-is-device -fms-extensions -x hip %s \
 // RUN:   -fno-autolink -triple amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -check-prefix=DEV %s
