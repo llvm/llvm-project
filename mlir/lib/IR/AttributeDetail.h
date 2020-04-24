@@ -372,6 +372,17 @@ struct TypeAttributeStorage : public AttributeStorage {
 // Elements Attributes
 //===----------------------------------------------------------------------===//
 
+/// Return the bit width which DenseElementsAttr should use for this type.
+inline size_t getDenseElementBitWidth(Type eltType) {
+  // FIXME(b/121118307): using 64 bits for BF16 because it is currently stored
+  // with double semantics.
+  if (eltType.isBF16())
+    return 64;
+  if (eltType.isIndex())
+    return IndexType::kInternalStorageBitWidth;
+  return eltType.getIntOrFloatBitWidth();
+}
+
 /// An attribute representing a reference to a dense vector or tensor object.
 struct DenseElementsAttributeStorage : public AttributeStorage {
   struct KeyTy {
@@ -405,7 +416,7 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
     // same. Boolean values are packed at the bit level, and even though a splat
     // is detected the rest of the bits in the first byte may differ from the
     // splat value.
-    if (key.type.getElementTypeBitWidth() == 1) {
+    if (key.type.getElementType().isInteger(1)) {
       if (key.isSplat != isSplat)
         return false;
       if (isSplat)
@@ -437,15 +448,10 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
     assert(numElements != 1 && "splat of 1 element should already be detected");
 
     // Handle boolean values directly as they are packed to 1-bit.
-    size_t elementWidth = ty.getElementTypeBitWidth();
-    if (elementWidth == 1)
+    if (ty.getElementType().isInteger(1) == 1)
       return getKeyForBoolData(ty, data, numElements);
 
-    // FIXME(b/121118307): using 64 bits for BF16 because it is currently stored
-    // with double semantics.
-    if (ty.getElementType().isBF16())
-      elementWidth = 64;
-
+    size_t elementWidth = getDenseElementBitWidth(ty.getElementType());
     // Non 1-bit dense elements are padded to 8-bits.
     size_t storageSize = llvm::divideCeil(elementWidth, CHAR_BIT);
     assert(((data.size() / storageSize) == numElements) &&
@@ -517,7 +523,7 @@ struct DenseElementsAttributeStorage : public AttributeStorage {
       std::memcpy(rawData, data.data(), data.size());
 
       // If this is a boolean splat, make sure only the first bit is used.
-      if (key.isSplat && key.type.getElementTypeBitWidth() == 1)
+      if (key.isSplat && key.type.getElementType().isInteger(1))
         rawData[0] &= 1;
       copy = ArrayRef<char>(rawData, data.size());
     }
