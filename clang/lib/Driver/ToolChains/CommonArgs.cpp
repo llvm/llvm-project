@@ -1327,7 +1327,7 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
   llvm::raw_string_ostream LksStream(LksBuffer);
 
   // Get the HIP offload tool chain.
-  auto *HIPTC = static_cast<const toolchains::CudaToolChain *>(
+  auto *HIPTC = static_cast<const toolchains::HIPToolChain *>(
       C.getSingleOffloadToolChain<Action::OFK_HIP>());
   assert(HIPTC->getTriple().getArch() == llvm::Triple::amdgcn &&
          "Wrong platform");
