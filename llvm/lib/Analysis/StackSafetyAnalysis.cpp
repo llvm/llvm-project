@@ -10,7 +10,6 @@
 
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
@@ -340,7 +339,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
 
       case Instruction::Call:
       case Instruction::Invoke: {
-        ImmutableCallSite CS(I);
+        const auto &CB = cast<CallBase>(*I);
 
         if (I->isLifetimeStartOrEnd())
           break;
@@ -354,7 +353,7 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
         // Do not follow aliases, otherwise we could inadvertently follow
         // dso_preemptable aliases or aliases with interposable linkage.
         const GlobalValue *Callee =
-            dyn_cast<GlobalValue>(CS.getCalledValue()->stripPointerCasts());
+            dyn_cast<GlobalValue>(CB.getCalledValue()->stripPointerCasts());
         if (!Callee) {
           US.updateRange(UnknownRange);
           return false;
@@ -362,8 +361,8 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
 
-        ImmutableCallSite::arg_iterator B = CS.arg_begin(), E = CS.arg_end();
-        for (ImmutableCallSite::arg_iterator A = B; A != E; ++A) {
+        auto B = CB.arg_begin(), E = CB.arg_end();
+        for (auto A = B; A != E; ++A) {
           if (A->get() == V) {
             ConstantRange Offset = offsetFromAlloca(UI, Ptr);
             US.Calls.emplace_back(Callee, A - B, Offset);
