@@ -943,19 +943,21 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       (SourceFiles.size() != 1) || ViewOpts.hasOutputDirectory() ||
       (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML);
 
-  auto NumThreads = ViewOpts.NumThreads;
+  ThreadPoolStrategy S = hardware_concurrency(ViewOpts.NumThreads);
+  if (ViewOpts.NumThreads == 0) {
+    // If NumThreads is not specified, create one thread for each input, up to
+    // the number of hardware cores.
+    S = heavyweight_hardware_concurrency(SourceFiles.size());
+    S.Limit = true;
+  }
 
-  // If NumThreads is not specified, auto-detect a good default.
-  if (NumThreads == 0)
-    NumThreads = SourceFiles.size();
-
-  if (!ViewOpts.hasOutputDirectory() || NumThreads == 1) {
+  if (!ViewOpts.hasOutputDirectory() || S.ThreadsRequested == 1) {
     for (const std::string &SourceFile : SourceFiles)
       writeSourceFileView(SourceFile, Coverage.get(), Printer.get(),
                           ShowFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
-    ThreadPool Pool(heavyweight_hardware_concurrency(NumThreads));
+    ThreadPool Pool(S);
     for (const std::string &SourceFile : SourceFiles)
       Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
                  Coverage.get(), Printer.get(), ShowFilenames);
