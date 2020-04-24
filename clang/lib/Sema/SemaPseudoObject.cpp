@@ -580,7 +580,7 @@ bool ObjCPropertyOpBuilder::isWeakProperty() const {
   QualType T;
   if (RefExpr->isExplicitProperty()) {
     const ObjCPropertyDecl *Prop = RefExpr->getExplicitProperty();
-    if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
+    if (Prop->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak)
       return true;
 
     T = Prop->getType();

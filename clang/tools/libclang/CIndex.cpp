@@ -22,6 +22,7 @@
 #include "CursorVisitor.h"
 #include "clang-c/FatalErrorHandler.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclObjCCommon.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtVisitor.h"
@@ -8146,11 +8147,10 @@ unsigned clang_Cursor_getObjCPropertyAttributes(CXCursor C, unsigned reserved) {
 
   unsigned Result = CXObjCPropertyAttr_noattr;
   const ObjCPropertyDecl *PD = dyn_cast<ObjCPropertyDecl>(getCursorDecl(C));
-  ObjCPropertyDecl::PropertyAttributeKind Attr =
-      PD->getPropertyAttributesAsWritten();
+  ObjCPropertyAttribute::Kind Attr = PD->getPropertyAttributesAsWritten();
 
 #define SET_CXOBJCPROP_ATTR(A)                                                 \
-  if (Attr & ObjCPropertyDecl::OBJC_PR_##A)                                    \
+  if (Attr & ObjCPropertyAttribute::kind_##A)                                  \
   Result |= CXObjCPropertyAttr_##A
   SET_CXOBJCPROP_ATTR(readonly);
   SET_CXOBJCPROP_ATTR(getter);
