@@ -29,7 +29,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -53,8 +52,7 @@
 
 namespace llvm {
 
-class ConstantFP;
-class ConstantInt;
+class StringRef;
 class Type;
 class Value;
 class ValueHandleBase;
