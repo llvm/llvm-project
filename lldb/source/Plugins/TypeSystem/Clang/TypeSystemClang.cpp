@@ -1221,11 +1221,6 @@ void TypeSystemClang::SetOwningModule(clang::Decl *decl,
   decl->setFromASTFile();
   decl->setOwningModuleID(owning_module.GetValue());
   decl->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
-  if (auto *decl_ctx = llvm::dyn_cast<clang::DeclContext>(decl)) {
-    decl_ctx->setHasExternalVisibleStorage();
-    if (auto *ns = llvm::dyn_cast<NamespaceDecl>(decl_ctx))
-      ns->getPrimaryContext()->setMustBuildLookupTable();
-  }
 }
 
 OptionalClangModuleID
