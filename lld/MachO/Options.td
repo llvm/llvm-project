@@ -23,6 +23,9 @@ def l: Joined<["-"], "l">, MetaVarName<"<libname>">,
 def o: Separate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def sub_library: Separate<["-"], "sub_library">, MetaVarName<"<libname>">,
+  HelpText<"Re-export the specified dylib">;
+
 def v: Flag<["-"], "v">, HelpText<"Display the version number and exit">;
 
 // Ignored options
