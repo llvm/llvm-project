@@ -30934,7 +30934,8 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
            (NextMIIt->getOperand(3).getImm() == CC ||
             NextMIIt->getOperand(3).getImm() == OppCC)) {
       LastCMOV = &*NextMIIt;
-      NextMIIt = next_nodbg(NextMIIt, ThisMBB->end());
+      ++NextMIIt;
+      NextMIIt = skipDebugInstructionsForward(NextMIIt, ThisMBB->end());
     }
   }
 

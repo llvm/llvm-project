@@ -615,9 +615,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
     return false;
 
   // Attempt to optimize the comparison instruction.
-  LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
   if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
     ++NumCmps;
     return true;
   }
@@ -638,7 +636,6 @@ bool PeepholeOptimizer::optimizeSelect(MachineInstr &MI,
     return false;
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
-  LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
   MI.eraseFromParent();
   ++NumSelects;
   return true;
@@ -1303,7 +1300,6 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   }
 
   // MI is now dead.
-  LLVM_DEBUG(dbgs() << "Deleting uncoalescable copy: " << MI);
   MI.eraseFromParent();
   ++NumUncoalescableCopies;
   return true;
@@ -1728,7 +1724,6 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
           (foldRedundantCopy(*MI, CopySrcRegs, CopySrcMIs) ||
            foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
         LocalMIs.erase(MI);
-        LLVM_DEBUG(dbgs() << "Deleting redundant copy: " << *MI << "\n");
         MI->eraseFromParent();
         Changed = true;
         continue;

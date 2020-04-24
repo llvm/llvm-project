@@ -159,7 +159,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
 
   // Now find the instruction controlling the terminator.
   for (MachineBasicBlock::iterator B = MBB->begin(); I != B;) {
-    I = prev_nodbg(I, MBB->begin());
+    --I;
     assert(!I->isTerminator() && "Spurious terminator");
     // Check if there is any use of NZCV between CMP and Bcc.
     if (I->readsRegister(AArch64::NZCV))
@@ -179,7 +179,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
         LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << *I
                           << '\n');
         return nullptr;
-      } else if (!MRI->use_nodbg_empty(I->getOperand(0).getReg())) {
+      } else if (!MRI->use_empty(I->getOperand(0).getReg())) {
         LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << *I << '\n');
         return nullptr;
       }

@@ -410,8 +410,9 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
   MachineInstr *StInst = StoreInst;
-  auto PrevInstrIt = prev_nodbg(MachineBasicBlock::instr_iterator(StoreInst),
-                                MBB->instr_begin());
+  auto PrevInstrIt = skipDebugInstructionsBackward(
+      std::prev(MachineBasicBlock::instr_iterator(StoreInst)),
+      MBB->instr_begin());
   if (PrevInstrIt.getNodePtr() == LoadInst)
     StInst = LoadInst;
   MachineInstr *NewStore =
@@ -497,10 +498,9 @@ void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,
 static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
   MachineOperand &LoadBase = getBaseOperand(LoadInst);
   MachineOperand &StoreBase = getBaseOperand(StoreInst);
-  auto StorePrevNonDbgInstr =
-      prev_nodbg(MachineBasicBlock::instr_iterator(StoreInst),
-                 LoadInst->getParent()->instr_begin())
-          .getNodePtr();
+  auto StorePrevNonDbgInstr = skipDebugInstructionsBackward(
+          std::prev(MachineBasicBlock::instr_iterator(StoreInst)),
+          LoadInst->getParent()->instr_begin()).getNodePtr();
   if (LoadBase.isReg()) {
     MachineInstr *LastLoad = LoadInst->getPrevNode();
     // If the original load and store to xmm/ymm were consecutive
