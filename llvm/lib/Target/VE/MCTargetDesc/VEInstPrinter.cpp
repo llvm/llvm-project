@@ -182,3 +182,9 @@ void VEInstPrinter::printCCOperand(const MCInst *MI, int OpNum,
   int CC = (int)MI->getOperand(OpNum).getImm();
   O << VECondCodeToString((VECC::CondCode)CC);
 }
+
+void VEInstPrinter::printRDOperand(const MCInst *MI, int OpNum,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  int RD = (int)MI->getOperand(OpNum).getImm();
+  O << VERDToString((VERD::RoundingMode)RD);
+}
