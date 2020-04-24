@@ -8027,7 +8027,6 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
 }
 
 void SwiftASTContext::DumpTypeDescription(void *type,
-                                          lldb::DescriptionLevel level,
                                           bool print_help_if_available,
                                           bool print_extensions_if_available,
                                           lldb::DescriptionLevel level) {
@@ -8064,7 +8063,7 @@ static void PrintSwiftNominalType(swift::NominalTypeDecl *nominal_type_decl,
   }
 }
 
-void SwiftASTContext::DumpTypeDescription(void *type, Stream *s, lldb::DescriptionLevel level,
+void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
                                           bool print_help_if_available,
                                           bool print_extensions_if_available,
                                           lldb::DescriptionLevel level) {
@@ -8091,7 +8090,7 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s, lldb::Descripti
                 type_decl->getDeclaredInterfaceType().getPointer()));
             if (clang_type) {
               Flags clang_type_flags(clang_type.GetTypeInfo());
-              DumpTypeDescription(clang_type.GetOpaqueQualType(), s, level,
+              DumpTypeDescription(clang_type.GetOpaqueQualType(), s,
                                   print_help_if_available,
                                   print_extensions_if_available, level);
             }
@@ -8142,7 +8141,7 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s, lldb::Descripti
       s->PutCString("metatype ");
       swift::MetatypeType *metatype_type =
           swift_can_type->castTo<swift::MetatypeType>();
-      DumpTypeDescription(metatype_type->getInstanceType().getPointer(), level,
+      DumpTypeDescription(metatype_type->getInstanceType().getPointer(),
                           print_help_if_available,
                           print_extensions_if_available, level);
     } break;
