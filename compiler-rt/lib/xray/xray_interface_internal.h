@@ -30,16 +30,10 @@ struct XRaySledEntry {
   unsigned char Version;
   unsigned char Padding[13]; // Need 32 bytes
   uint64_t address() const {
-#ifndef __x86_64__
-    // R_MIPS_PC64 does not exist. Use absolute address even for version 2.
-    return Address;
-#else
-    // TODO Eventually all targets but MIPS64 should take this branch.
     if (Version < 2)
       return Address;
     // The target address is relative to the location of the Address variable.
     return reinterpret_cast<uint64_t>(&Address) + Address;
-#endif
   }
 #elif SANITIZER_WORDSIZE == 32
   uint32_t Address;
@@ -48,7 +42,12 @@ struct XRaySledEntry {
   unsigned char AlwaysInstrument;
   unsigned char Version;
   unsigned char Padding[5]; // Need 16 bytes
-  uint32_t address() const { return Address; }
+  uint32_t address() const {
+    if (Version < 2)
+      return Address;
+    // The target address is relative to the location of the Address variable.
+    return reinterpret_cast<uint32_t>(&Address) + Address;
+  }
 #else
 #error "Unsupported word size."
 #endif
