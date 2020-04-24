@@ -157,7 +157,7 @@ define float @maxnum_f32_1_maxnum_val_p0(float %x) {
 
 define float @maxnum_f32_1_maxnum_p0_val_fast(float %x) {
 ; CHECK-LABEL: @maxnum_f32_1_maxnum_p0_val_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call float @llvm.maxnum.f32(float 0.0, float %x)
@@ -167,7 +167,7 @@ define float @maxnum_f32_1_maxnum_p0_val_fast(float %x) {
 
 define float @minnum_f32_1_maxnum_p0_val_fmf1(float %x) {
 ; CHECK-LABEL: @minnum_f32_1_maxnum_p0_val_fmf1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %y = call nnan float @llvm.maxnum.f32(float 0.0, float %x)
