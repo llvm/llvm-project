@@ -5,6 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
   SideEffects.cpp
+  ViewLikeInterface.cpp
   )
 
 add_mlir_library(MLIRCallInterfaces
@@ -87,6 +88,20 @@ add_mlir_library(MLIRSideEffects
   MLIRSideEffectOpInterfacesIncGen
   )
 target_link_libraries(MLIRSideEffects
+  PUBLIC
+  MLIRIR
+  )
+
+add_mlir_library(MLIRViewLikeInterface
+  ViewLikeInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRViewLikeInterfaceIncGen
+  )
+target_link_libraries(MLIRLoopLikeInterface
   PUBLIC
   MLIRIR
   )

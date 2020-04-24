@@ -17,5 +17,6 @@ target_link_libraries(MLIRLinalgOps
   PUBLIC
   MLIRIR
   MLIRSideEffects
+  MLIRViewLikeInterface
   MLIRStandardOps
   )
