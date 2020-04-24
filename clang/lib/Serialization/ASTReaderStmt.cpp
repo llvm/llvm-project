@@ -2308,6 +2308,7 @@ void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2317,6 +2318,7 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2329,6 +2331,7 @@ void ASTStmtReader::VisitOMPSectionsDirective(OMPSectionsDirective *D) {
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2360,6 +2363,7 @@ void ASTStmtReader::VisitOMPCriticalDirective(OMPCriticalDirective *D) {
 
 void ASTStmtReader::VisitOMPParallelForDirective(OMPParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2374,6 +2378,7 @@ void ASTStmtReader::VisitOMPParallelMasterDirective(
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
 }
 
 void ASTStmtReader::VisitOMPParallelSectionsDirective(
@@ -2382,6 +2387,7 @@ void ASTStmtReader::VisitOMPParallelSectionsDirective(
   // The NumClauses field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2489,12 +2495,14 @@ void ASTStmtReader::VisitOMPTargetParallelDirective(
   VisitStmt(D);
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPTargetParallelForDirective(
     OMPTargetParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2564,6 +2572,7 @@ void ASTStmtReader::VisitOMPTargetUpdateDirective(OMPTargetUpdateDirective *D) {
 void ASTStmtReader::VisitOMPDistributeParallelForDirective(
     OMPDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2604,6 +2613,7 @@ void ASTStmtReader::VisitOMPTeamsDistributeParallelForSimdDirective(
 void ASTStmtReader::VisitOMPTeamsDistributeParallelForDirective(
     OMPTeamsDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
@@ -2622,6 +2632,7 @@ void ASTStmtReader::VisitOMPTargetTeamsDistributeDirective(
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForDirective(
     OMPTargetTeamsDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setTaskReductionRefExpr(Record.readSubExpr());
   D->setHasCancel(Record.readInt());
 }
 
