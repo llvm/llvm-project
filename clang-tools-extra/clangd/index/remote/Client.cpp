@@ -61,21 +61,18 @@ public:
 
   void lookup(const clangd::LookupRequest &Request,
               llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
-    streamRPC<LookupRequest, LookupReply>(
-        Request, &remote::SymbolIndex::Stub::Lookup, Callback);
+    streamRPC(Request, &remote::SymbolIndex::Stub::Lookup, Callback);
   }
 
   bool
   fuzzyFind(const clangd::FuzzyFindRequest &Request,
             llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
-    return streamRPC<FuzzyFindRequest, FuzzyFindReply>(
-        Request, &remote::SymbolIndex::Stub::FuzzyFind, Callback);
+    return streamRPC(Request, &remote::SymbolIndex::Stub::FuzzyFind, Callback);
   }
 
   bool refs(const clangd::RefsRequest &Request,
             llvm::function_ref<void(const clangd::Ref &)> Callback) const {
-    return streamRPC<RefsRequest, RefsReply>(
-        Request, &remote::SymbolIndex::Stub::Refs, Callback);
+    return streamRPC(Request, &remote::SymbolIndex::Stub::Refs, Callback);
   }
 
   // FIXME(kirillbobyrev): Implement this.
