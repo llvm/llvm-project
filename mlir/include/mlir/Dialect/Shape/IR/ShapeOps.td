@@ -130,7 +130,8 @@ def Shape_AddOp : Shape_Op<"add", [SameOperandsAndResultType]> {
   let results = (outs Shape_SizeType:$result);
 }
 
-def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
+def Shape_BroadcastOp : Shape_Op<"broadcast",
+    [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Returns the broadcasted output shape of two inputs";
   let description = [{
     Computes the broadcasted output shape following:
@@ -317,7 +318,8 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
   let regions = (region SizedRegion<1>:$body);
 }
 
-def Shape_ShapeOfOp : Shape_Op<"shape_of", []> {
+def Shape_ShapeOfOp : Shape_Op<"shape_of",
+    [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Returns shape of a value or shaped type operand";
 
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
