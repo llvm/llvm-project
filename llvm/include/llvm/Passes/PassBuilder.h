@@ -343,6 +343,12 @@ public:
                                     ThinLTOPhase Phase,
                                     bool DebugLogging = false);
 
+  /// Construct the module pipeline that performs inlining as well as
+  /// the inlining-driven cleanups.
+  ModulePassManager buildInlinerPipeline(OptimizationLevel Level,
+                                         ThinLTOPhase Phase,
+                                         bool DebugLogging = false);
+
   /// Construct the core LLVM module optimization pipeline.
   ///
   /// This pipeline focuses on optimizing the execution speed of the IR. It
