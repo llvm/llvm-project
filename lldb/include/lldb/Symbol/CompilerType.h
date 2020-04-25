@@ -237,11 +237,13 @@ public:
   // an invalid type.
   CompilerType AddRestrictModifier() const;
 
-  // Create a typedef to this type using "name" as the name of the typedef this
-  // type is valid and the type system supports typedefs, else return an
-  // invalid type.
+  /// Create a typedef to this type using "name" as the name of the typedef this
+  /// type is valid and the type system supports typedefs, else return an
+  /// invalid type.
+  /// \param payload   The typesystem-specific \p lldb::Type payload.
   CompilerType CreateTypedef(const char *name,
-                             const CompilerDeclContext &decl_ctx) const;
+                             const CompilerDeclContext &decl_ctx,
+                             uint32_t payload) const;
 
   // If the current object represents a typedef type, get the underlying type
   CompilerType GetTypedefedType() const;
@@ -364,9 +366,17 @@ public:
                    const DataExtractor &data, lldb::offset_t data_offset,
                    size_t data_byte_size);
 
-  void DumpTypeDescription() const; // Dump to stdout
+  /// Dump to stdout.
+  void DumpTypeDescription(lldb::DescriptionLevel level =
+                           lldb::eDescriptionLevelFull) const;
 
-  void DumpTypeDescription(Stream *s) const;
+  /// Print a description of the type to a stream. The exact implementation
+  /// varies, but the expectation is that eDescriptionLevelFull returns a
+  /// source-like representation of the type, whereas eDescriptionLevelVerbose
+  /// does a dump of the underlying AST if applicable.
+  void DumpTypeDescription(Stream *s, lldb::DescriptionLevel level =
+                                          lldb::eDescriptionLevelFull) const;
+  /// \}
 
   bool GetValueAsScalar(const DataExtractor &data, lldb::offset_t data_offset,
                         size_t data_byte_size, Scalar &value) const;
