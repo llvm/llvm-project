@@ -78,7 +78,7 @@ void LostDebugLocObserver::createdInstr(MachineInstr &MI) {
   PotentialMIsForDebugLocs.insert(&MI);
 }
 
-bool irTranslatorNeverAddsLocations(unsigned Opcode) {
+static bool irTranslatorNeverAddsLocations(unsigned Opcode) {
   switch (Opcode) {
   default:
     return false;

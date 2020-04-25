@@ -6016,6 +6016,7 @@ std::string AAMemoryLocation::getMemoryLocationsAsStr(
   return S;
 }
 
+namespace {
 struct AAMemoryLocationImpl : public AAMemoryLocation {
 
   AAMemoryLocationImpl(const IRPosition &IRP, Attributor &A)
@@ -6978,6 +6979,7 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
     STATS_DECLTRACK_CSARG_ATTR(value_range)
   }
 };
+} // namespace
 
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;

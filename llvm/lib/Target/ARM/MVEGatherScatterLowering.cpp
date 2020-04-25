@@ -515,7 +515,7 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
 }
 
 // Return true if the given intrinsic is a gather or scatter
-bool isGatherScatter(IntrinsicInst *IntInst) {
+static bool isGatherScatter(IntrinsicInst *IntInst) {
   if (IntInst == nullptr)
     return false;
   unsigned IntrinsicID = IntInst->getIntrinsicID();
@@ -537,7 +537,7 @@ bool isGatherScatter(IntrinsicInst *IntInst) {
 
 // Check whether all usages of this instruction are as offsets of
 // gathers/scatters or simple arithmetics only used by gathers/scatters
-bool hasAllGatScatUsers(Instruction *I) {
+static bool hasAllGatScatUsers(Instruction *I) {
   if (I->hasNUses(0)) {
     return false;
   }
