@@ -404,11 +404,17 @@ class VectorType : public Type {
   /// The element type of the vector.
   Type *ContainedType;
 
-  /// The element count of this vector
-  ElementCount EC;
-
 protected:
-  VectorType(Type *ElType, ElementCount EC, Type::TypeID TID);
+  /// The element quantity of this vector. The meaning of this value depends
+  /// on the type of vector:
+  /// - For FixedVectorType = <ElementQuantity x ty>, there are
+  ///   exactly ElementQuantity elements in this vector.
+  /// - For ScalableVectorType = <vscale x ElementQuantity x ty>,
+  ///   there are vscale * ElementQuantity elements in this vector, where
+  ///   vscale is a runtime-constant integer greater than 0.
+  const unsigned ElementQuantity;
+
+  VectorType(Type *ElType, unsigned EQ, Type::TypeID TID);
 
 public:
   VectorType(const VectorType &) = delete;
@@ -523,7 +529,7 @@ public:
 
   /// Return an ElementCount instance to represent the (possibly scalable)
   /// number of elements in the vector.
-  ElementCount getElementCount() const { return EC; }
+  inline ElementCount getElementCount() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
@@ -538,7 +544,7 @@ bool Type::isVectorTy() const { return isa<VectorType>(this); }
 class FixedVectorType : public VectorType {
 protected:
   FixedVectorType(Type *ElTy, unsigned NumElts)
-      : VectorType(ElTy, {NumElts, false}, FixedVectorTyID) {}
+      : VectorType(ElTy, NumElts, FixedVectorTyID) {}
 
 public:
   static FixedVectorType *get(Type *ElementType, unsigned NumElts);
@@ -552,19 +558,23 @@ public:
 class ScalableVectorType : public VectorType {
 protected:
   ScalableVectorType(Type *ElTy, unsigned MinNumElts)
-      : VectorType(ElTy, {MinNumElts, true}, ScalableVectorTyID) {}
+      : VectorType(ElTy, MinNumElts, ScalableVectorTyID) {}
 
 public:
   static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
 
   /// Get the minimum number of elements in this vector. The actual number of
   /// elements in the vector is an integer multiple of this value.
-  uint64_t getMinNumElements() const { return getElementCount().Min; }
+  uint64_t getMinNumElements() const { return ElementQuantity; }
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableVectorTyID;
   }
 };
+
+inline ElementCount VectorType::getElementCount() const {
+  return ElementCount(ElementQuantity, isa<ScalableVectorType>(this));
+}
 
 /// Class to represent pointers.
 class PointerType : public Type {
