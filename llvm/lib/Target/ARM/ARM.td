@@ -428,6 +428,9 @@ def FeatureSB       : SubtargetFeature<"sb", "HasSB", "true",
 def FeatureBF16     : SubtargetFeature<"bf16", "HasBF16", "true",
   "Enable support for BFloat16 instructions",  [FeatureNEON]>;
 
+def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
+    "true", "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
+
 // Armv8.1-M extensions
 
 def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
@@ -529,7 +532,8 @@ def HasV8_5aOps   : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
 
 def HasV8_6aOps   : SubtargetFeature<"v8.6a", "HasV8_6aOps", "true",
                                    "Support ARM v8.6a instructions",
-                                   [HasV8_5aOps, FeatureBF16]>;
+                                   [HasV8_5aOps, FeatureBF16,
+                                    FeatureMatMulInt8]>;
 
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",

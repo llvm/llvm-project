@@ -773,6 +773,19 @@ class Neon_Dot_Intrinsic
 def int_arm_neon_udot : Neon_Dot_Intrinsic;
 def int_arm_neon_sdot : Neon_Dot_Intrinsic;
 
+// v8.6-A Matrix Multiply Intrinsics
+class Neon_MatMul_Intrinsic
+  : Intrinsic<[llvm_anyvector_ty],
+              [LLVMMatchType<0>, llvm_anyvector_ty,
+               LLVMMatchType<1>],
+              [IntrNoMem]>;
+def int_arm_neon_ummla  : Neon_MatMul_Intrinsic;
+def int_arm_neon_smmla  : Neon_MatMul_Intrinsic;
+def int_arm_neon_usmmla : Neon_MatMul_Intrinsic;
+def int_arm_neon_usdot  : Neon_Dot_Intrinsic;
+
+// v8.6-A Bfloat Intrinsics
+
 def int_arm_cls: Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
