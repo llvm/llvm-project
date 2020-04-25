@@ -1,4 +1,4 @@
-//===- CallSite.h - Abstract Call & Invoke instrs ---------------*- C++ -*-===//
+//===- AbstractCallSite.h - Abstract call sites -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the AbstractCallSite class, which is a is a wrapper that 
+// This file defines the AbstractCallSite class, which is a is a wrapper that
 // allows treating direct, indirect, and callback calls the same.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_CALLSITE_H
-#define LLVM_IR_CALLSITE_H
+#ifndef LLVM_IR_ABSTRACTCALLSITE_H
+#define LLVM_IR_ABSTRACTCALLSITE_H
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
-#include <cstdint>
-#include <iterator>
 
 namespace llvm {
 
@@ -220,4 +217,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_IR_CALLSITE_H
+#endif // LLVM_IR_ABSTRACTCALLSITE_H
