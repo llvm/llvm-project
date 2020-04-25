@@ -875,6 +875,11 @@ public:
 
   std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
 
+  /// Return the Xcode SDK this module was compiled against.  This
+  /// is computed by merging the SDKs from each compilation unit in
+  /// the module.
+  XcodeSDK GetXcodeSDK() const { return m_xcode_sdk; }
+
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
