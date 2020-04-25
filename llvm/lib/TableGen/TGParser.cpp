@@ -1827,11 +1827,6 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   Init *R = nullptr;
   switch (Lex.getCode()) {
   default: TokError("Unknown token when parsing a value"); break;
-  case tgtok::paste:
-    // This is a leading paste operation.  This is deprecated but
-    // still exists in some .td files.  Ignore it.
-    Lex.Lex();  // Skip '#'.
-    return ParseSimpleValue(CurRec, ItemType, Mode);
   case tgtok::IntVal: R = IntInit::get(Lex.getCurIntVal()); Lex.Lex(); break;
   case tgtok::BinaryIntVal: {
     auto BinaryVal = Lex.getCurBinaryIntVal();
