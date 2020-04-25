@@ -34,7 +34,7 @@ declare i32 @_Z3foov() #1
 ; Check that the basic block with id 1 doesn't get a section.
 ; LINUX-SECTIONS-NOT: .section        .text._Z3bazb.r.BB._Z3bazb,"ax",@progbits,unique
 ; Check that a single cold section is started here and id 1 and 2 blocks are placed here.
-; LINUX-SECTIONS: .section	.text._Z3bazb.unlikely,"ax",@progbits
+; LINUX-SECTIONS: .section	.text.unlikely._Z3bazb,"ax",@progbits
 ; LINUX-SECTIONS: r.BB._Z3bazb:
 ; LINUX-SECTIONS-NOT: .section        .text._Z3bazb.rr.BB._Z3bazb,"ax",@progbits,unique
 ; LINUX-SECTIONS: .LBB0_2:

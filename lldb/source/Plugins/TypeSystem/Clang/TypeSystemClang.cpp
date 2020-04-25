@@ -344,6 +344,13 @@ static void SetMemberOwningModule(clang::Decl *member,
   member->setFromASTFile();
   member->setOwningModuleID(id.GetValue());
   member->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
+  if (auto *nd = llvm::dyn_cast<clang::NamedDecl>(member))
+    if (auto *dc = llvm::dyn_cast<clang::DeclContext>(parent)) {
+      dc->setHasExternalVisibleStorage(true);
+      // This triggers ExternalASTSource::FindExternalVisibleDeclsByName() to be
+      // called when searching for members.
+      dc->setHasExternalLexicalStorage(true);
+    }
 }
 
 char TypeSystemClang::ID;
@@ -1224,11 +1231,6 @@ void TypeSystemClang::SetOwningModule(clang::Decl *decl,
   decl->setFromASTFile();
   decl->setOwningModuleID(owning_module.GetValue());
   decl->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
-  if (auto *decl_ctx = llvm::dyn_cast<clang::DeclContext>(decl)) {
-    decl_ctx->setHasExternalVisibleStorage();
-    if (auto *ns = llvm::dyn_cast<NamespaceDecl>(decl_ctx))
-      ns->getPrimaryContext()->setMustBuildLookupTable();
-  }
 }
 
 OptionalClangModuleID

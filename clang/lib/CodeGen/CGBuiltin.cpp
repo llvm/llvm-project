@@ -10961,10 +10961,8 @@ static Value *EmitX86CvtF16ToFloatExpr(CodeGenFunction &CGF,
 
   // If the SAE intrinsic doesn't use default rounding then we can't upgrade.
   if (Ops.size() == 4 && cast<llvm::ConstantInt>(Ops[3])->getZExtValue() != 4) {
-    Intrinsic::ID IID = Intrinsic::x86_avx512_mask_vcvtph2ps_512;
     Function *F =
-        CGF.CGM.getIntrinsic(IID, {DstTy, Ops[0]->getType(), Ops[1]->getType(),
-                                   Ops[2]->getType(), Ops[3]->getType()});
+        CGF.CGM.getIntrinsic(Intrinsic::x86_avx512_mask_vcvtph2ps_512);
     return CGF.Builder.CreateCall(F, {Ops[0], Ops[1], Ops[2], Ops[3]});
   }
 

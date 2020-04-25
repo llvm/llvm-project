@@ -604,14 +604,22 @@ class raw_ostream;
     }
 
     /// Add the given MachineBasicBlock into the maps.
-    void insertMBBInMaps(MachineBasicBlock *mbb) {
+    /// If \p InsertionPoint is specified then the block will be placed
+    /// before the given machine instr, otherwise it will be placed
+    /// before the next block in MachineFunction insertion order.
+    void insertMBBInMaps(MachineBasicBlock *mbb,
+                         MachineInstr *InsertionPoint = nullptr) {
       MachineFunction::iterator nextMBB =
         std::next(MachineFunction::iterator(mbb));
 
       IndexListEntry *startEntry = nullptr;
       IndexListEntry *endEntry = nullptr;
       IndexList::iterator newItr;
-      if (nextMBB == mbb->getParent()->end()) {
+      if (InsertionPoint) {
+        startEntry = createEntry(nullptr, 0);
+        endEntry = getInstructionIndex(*InsertionPoint).listEntry();
+        newItr = indexList.insert(endEntry->getIterator(), startEntry);
+      } else if (nextMBB == mbb->getParent()->end()) {
         startEntry = &indexList.back();
         endEntry = createEntry(nullptr, 0);
         newItr = indexList.insertAfter(startEntry->getIterator(), endEntry);

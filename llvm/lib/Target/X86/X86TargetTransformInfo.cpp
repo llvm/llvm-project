@@ -1406,7 +1406,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 },
     { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  1 },
     { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,  1 },
-    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i64, 7 },// 2*vpmovqd+concat+vpmovdb
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i64, 5 },// 2*vpmovqd+concat+vpmovdb
 
     { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  9 }, // FIXME
 
@@ -3845,11 +3845,22 @@ bool X86TTIImpl::areFunctionArgsABICompatible(
   // If we get here, we know the target features match. If one function
   // considers 512-bit vectors legal and the other does not, consider them
   // incompatible.
-  // FIXME Look at the arguments and only consider 512 bit or larger vectors?
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
-  return TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
-         TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs();
+  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
+      TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs())
+    return true;
+
+  // Consider the arguments compatible if they aren't vectors or aggregates.
+  // FIXME: Look at the size of vectors.
+  // FIXME: Look at the element types of aggregates to see if there are vectors.
+  // FIXME: The API of this function seems intended to allow arguments
+  // to be removed from the set, but the caller doesn't check if the set
+  // becomes empty so that may not work in practice.
+  return llvm::none_of(Args, [](Argument *A) {
+    auto *EltTy = cast<PointerType>(A->getType())->getElementType();
+    return EltTy->isVectorTy() || EltTy->isAggregateType();
+  });
 }
 
 X86TTIImpl::TTI::MemCmpExpansionOptions

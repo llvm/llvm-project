@@ -10,6 +10,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 
 #include "lldb/lldb-types.h"
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -64,13 +65,24 @@ static llvm::VersionTuple ParseSDKVersion(llvm::StringRef &name) {
   return version;
 }
 
+static bool ParseAppleInternalSDK(llvm::StringRef &name) {
+  return name.consume_front("Internal.");
+}
 
-std::tuple<XcodeSDK::Type, llvm::VersionTuple> XcodeSDK::Parse() const {
+XcodeSDK::Info XcodeSDK::Parse() const {
+  XcodeSDK::Info info;
   llvm::StringRef input(m_name);
-  XcodeSDK::Type sdk = ParseSDKName(input);
-  llvm::VersionTuple version = ParseSDKVersion(input);
-  return std::make_tuple<XcodeSDK::Type, llvm::VersionTuple>(
-      std::move(sdk), std::move(version));
+  info.type = ParseSDKName(input);
+  info.version = ParseSDKVersion(input);
+  info.internal = ParseAppleInternalSDK(input);
+  return info;
+}
+
+bool XcodeSDK::IsAppleInternalSDK() const {
+  llvm::StringRef input(m_name);
+  ParseSDKName(input);
+  ParseSDKVersion(input);
+  return ParseAppleInternalSDK(input);
 }
 
 llvm::VersionTuple XcodeSDK::GetVersion() const {
@@ -86,37 +98,64 @@ XcodeSDK::Type XcodeSDK::GetType() const {
 
 llvm::StringRef XcodeSDK::GetString() const { return m_name; }
 
+bool XcodeSDK::Info::operator<(const Info &other) const {
+  return std::tie(type, version, internal) <
+         std::tie(other.type, other.version, other.internal);
+}
 void XcodeSDK::Merge(XcodeSDK other) {
   // The "bigger" SDK always wins.
-  if (Parse() < other.Parse())
+  auto l = Parse();
+  auto r = other.Parse();
+  if (l < r)
     *this = other;
+  else {
+    // The Internal flag always wins.
+    if (llvm::StringRef(m_name).endswith(".sdk"))
+      if (!l.internal && r.internal)
+        m_name =
+            m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
+  }
 }
 
-llvm::StringRef XcodeSDK::GetSDKNameForType(XcodeSDK::Type type) {
-  switch (type) {
+std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
+  std::string name;
+  switch (info.type) {
   case MacOSX:
-    return "macosx";
+    name = "macosx";
+    break;
   case iPhoneSimulator:
-    return "iphonesimulator";
+    name = "iphonesimulator";
+    break;
   case iPhoneOS:
-    return "iphoneos";
+    name = "iphoneos";
+    break;
   case AppleTVSimulator:
-    return "appletvsimulator";
+    name = "appletvsimulator";
+    break;
   case AppleTVOS:
-    return "appletvos";
+    name = "appletvos";
+    break;
   case WatchSimulator:
-    return "watchsimulator";
+    name = "watchsimulator";
+    break;
   case watchOS:
-    return "watchos";
+    name = "watchos";
+    break;
   case bridgeOS:
-    return "bridgeos";
+    name = "bridgeos";
+    break;
   case Linux:
-    return "linux";
+    name = "linux";
+    break;
   case numSDKTypes:
   case unknown:
-    return "";
+    return {};
   }
-  llvm_unreachable("unhandled switch case");
+  if (!info.version.empty())
+    name += info.version.getAsString();
+  if (info.internal)
+    name += ".internal";
+  return name;
 }
 
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
@@ -147,12 +186,15 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
     const llvm::StringRef sdk_name = last_path_component.GetStringRef();
 
     const std::string sdk_name_lower = sdk_name.lower();
-    const llvm::StringRef sdk_string = GetSDKNameForType(desired_type);
+    Info info;
+    info.type = desired_type;
+    const std::string sdk_string = GetCanonicalName(info);
     if (!llvm::StringRef(sdk_name_lower).startswith(sdk_string))
       return false;
 
     auto version_part = sdk_name.drop_front(sdk_string.size());
     version_part.consume_back(".sdk");
+    version_part.consume_back(".Internal");
 
     llvm::VersionTuple version;
     if (version.tryParse(version_part))

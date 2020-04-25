@@ -1145,7 +1145,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                           InstCombiner::BuilderTy &Builder,
                                           const SimplifyQuery &Q) {
   bool IsAnd = Logic.getOpcode() == Instruction::And;
-  assert(IsAnd || Logic.getOpcode() == Instruction::Or && "Wrong logic op");
+  assert((IsAnd || Logic.getOpcode() == Instruction::Or) && "Wrong logic op");
 
   // Match an equality compare with a non-poison constant as Cmp0.
   ICmpInst::Predicate Pred0;

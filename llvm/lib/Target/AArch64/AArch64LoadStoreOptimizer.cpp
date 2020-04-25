@@ -1144,24 +1144,11 @@ static int alignTo(int Num, int PowOf2) {
   return (Num + PowOf2 - 1) & ~(PowOf2 - 1);
 }
 
-static bool mayAlias(MachineInstr &MIa, MachineInstr &MIb,
-                     AliasAnalysis *AA) {
-  // One of the instructions must modify memory.
-  if (!MIa.mayStore() && !MIb.mayStore())
-    return false;
-
-  // Both instructions must be memory operations.
-  if (!MIa.mayLoadOrStore() && !MIb.mayLoadOrStore())
-    return false;
-
-  return MIa.mayAlias(AA, MIb, /*UseTBAA*/false);
-}
-
 static bool mayAlias(MachineInstr &MIa,
                      SmallVectorImpl<MachineInstr *> &MemInsns,
                      AliasAnalysis *AA) {
   for (MachineInstr *MIb : MemInsns)
-    if (mayAlias(MIa, *MIb, AA))
+    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false))
       return true;
 
   return false;
@@ -1219,7 +1206,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
       return false;
 
     // If we encounter a store aliased with the load, return early.
-    if (MI.mayStore() && mayAlias(LoadMI, MI, AA))
+    if (MI.mayStore() && LoadMI.mayAlias(AA, MI, /*UseTBAA*/ false))
       return false;
   } while (MBBI != B && Count < Limit);
   return false;

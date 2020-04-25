@@ -580,8 +580,9 @@ bool ArrayType::isValidElementType(Type *ElemTy) {
 //                          VectorType Implementation
 //===----------------------------------------------------------------------===//
 
-VectorType::VectorType(Type *ElType, ElementCount EC, Type::TypeID TID)
-    : Type(ElType->getContext(), TID), ContainedType(ElType), EC(EC) {
+VectorType::VectorType(Type *ElType, unsigned EQ, Type::TypeID TID)
+    : Type(ElType->getContext(), TID), ContainedType(ElType),
+      ElementQuantity(EQ) {
   ContainedTys = &ContainedType;
   NumContainedTys = 1;
 }

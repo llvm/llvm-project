@@ -11,11 +11,13 @@
 
 #ifndef FORTRAN_RUNTIME_CHARACTER_H_
 #define FORTRAN_RUNTIME_CHARACTER_H_
-#include "descriptor.h"
 #include "entry-names.h"
 #include <cstddef>
 
 namespace Fortran::runtime {
+
+class Descriptor;
+
 extern "C" {
 
 // Appends the corresponding (or expanded) characters of 'operand'
@@ -26,8 +28,8 @@ extern "C" {
 void RTNAME(CharacterConcatenate)(Descriptor &temp, const Descriptor &operand,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Convenience specialization for character scalars.
-void RTNAME(CharacterConcatenateScalar)(
+// Convenience specialization for ASCII scalars.
+void RTNAME(CharacterConcatenateScalar1)(
     Descriptor &temp, const char *, std::size_t byteLength);
 
 // Assigns the value(s) of 'rhs' to 'lhs'.  Handles reallocation,
@@ -38,16 +40,36 @@ void RTNAME(CharacterConcatenateScalar)(
 void RTNAME(CharacterAssign)(Descriptor &lhs, const Descriptor &rhs,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Special-case support for optimized scalar CHARACTER concatenation
-// expressions.
+// CHARACTER comparisons.  The kinds must match.  Like std::memcmp(),
+// the result is less than zero, zero, or greater than zero if the first
+// argument is less than the second, equal to the second, or greater than
+// the second, respectively.  The shorter argument is treated as if it were
+// padded on the right with blanks.
+// N.B.: Calls to the restricted specific intrinsic functions LGE, LGT, LLE,
+// & LLT are converted into calls to these during lowering; they don't have
+// to be able to be passed as actual procedure arguments.
+int RTNAME(CharacterCompareScalar)(const Descriptor &, const Descriptor &);
+int RTNAME(CharacterCompareScalar1)(
+    const char *x, const char *y, std::size_t xBytes, std::size_t yBytes);
+int RTNAME(CharacterCompareScalar2)(const char16_t *x, const char16_t *y,
+    std::size_t xBytes, std::size_t yBytes);
+int RTNAME(CharacterCompareScalar4)(const char32_t *x, const char32_t *y,
+    std::size_t xBytes, std::size_t yBytes);
+
+// General CHARACTER comparison; the result is a LOGICAL(KIND=1) array that
+// is established and populated.
+void RTNAME(CharacterCompare)(
+    Descriptor &result, const Descriptor &, const Descriptor &);
+
+// Special-case support for optimized ASCII scalar expressions.
 
 // Copies data from 'rhs' to the remaining space (lhsLength - offset)
 // in 'lhs', if any.  Returns the new offset.  Assumes independence.
-std::size_t RTNAME(CharacterAppend)(char *lhs, std::size_t lhsLength,
-    std::size_t offset, const char *rhs, std::size_t rhsLength);
+std::size_t RTNAME(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
+    std::size_t offset, const char *rhs, std::size_t rhsBytes);
 
 // Appends any necessary spaces to a CHARACTER(KIND=1) scalar.
-void RTNAME(CharacterPad)(char *lhs, std::size_t length, std::size_t offset);
+void RTNAME(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset);
 }
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_CHARACTER_H_
