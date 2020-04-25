@@ -1668,6 +1668,8 @@ struct DSEState {
       dbgs() << "  Checking for reads of " << *DomAccess;
       if (isa<MemoryDef>(DomAccess))
         dbgs() << " (" << *cast<MemoryDef>(DomAccess)->getMemoryInst() << ")\n";
+      else
+        dbgs() << ")\n";
     });
 
     SmallSetVector<MemoryAccess *, 32> WorkList;
@@ -1681,13 +1683,14 @@ struct DSEState {
     for (unsigned I = 0; I < WorkList.size(); I++) {
       MemoryAccess *UseAccess = WorkList[I];
 
-      LLVM_DEBUG(dbgs() << "   Checking use " << *UseAccess);
+      LLVM_DEBUG(dbgs() << "   " << *UseAccess);
       if (--ScanLimit == 0) {
-        LLVM_DEBUG(dbgs() << "  ...  hit scan limit\n");
+        LLVM_DEBUG(dbgs() << "\n    ...  hit scan limit\n");
         return None;
       }
 
       if (isa<MemoryPhi>(UseAccess)) {
+        LLVM_DEBUG(dbgs() << "\n    ... adding PHI uses\n");
         PushMemUses(UseAccess);
         continue;
       }
@@ -1696,6 +1699,7 @@ struct DSEState {
       LLVM_DEBUG(dbgs() << " (" << *UseInst << ")\n");
 
       if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess))) {
+        LLVM_DEBUG(dbgs() << "    ... adding uses of intrinsic\n");
         PushMemUses(UseAccess);
         continue;
       }
@@ -1703,7 +1707,7 @@ struct DSEState {
       // Uses which may read the original MemoryDef mean we cannot eliminate the
       // original MD. Stop walk.
       if (isReadClobber(DefLoc, UseInst)) {
-        LLVM_DEBUG(dbgs() << "  ... found read clobber\n");
+        LLVM_DEBUG(dbgs() << "    ... found read clobber\n");
         return None;
       }
 
@@ -1711,8 +1715,10 @@ struct DSEState {
       // memory location.
       // TODO: It would probably be better to check for self-reads before
       // calling the function.
-      if (KillingDef == UseAccess || DomAccess == UseAccess)
+      if (KillingDef == UseAccess || DomAccess == UseAccess) {
+        LLVM_DEBUG(dbgs() << "    ... skipping killing def/dom access\n");
         continue;
+      }
 
       // Check all uses for MemoryDefs, except for defs completely overwriting
       // the original location. Otherwise we have to check uses of *all*
@@ -1874,8 +1880,9 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       }
 
       MemoryAccess *DomAccess = *Next;
-      LLVM_DEBUG(dbgs() << " Checking if we can kill " << *DomAccess << "\n");
+      LLVM_DEBUG(dbgs() << " Checking if we can kill " << *DomAccess);
       if (isa<MemoryPhi>(DomAccess)) {
+        LLVM_DEBUG(dbgs() << "\n  ... adding incoming values to worklist\n");
         for (Value *V : cast<MemoryPhi>(DomAccess)->incoming_values()) {
           MemoryAccess *IncomingAccess = cast<MemoryAccess>(V);
           BasicBlock *IncomingBlock = IncomingAccess->getBlock();
@@ -1892,15 +1899,15 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       }
       MemoryDef *NextDef = dyn_cast<MemoryDef>(DomAccess);
       Instruction *NI = NextDef->getMemoryInst();
-      LLVM_DEBUG(dbgs() << "  def " << *NI << "\n");
+      LLVM_DEBUG(dbgs() << " (" << *NI << ")\n");
 
       if (!hasAnalyzableMemoryWrite(NI, TLI)) {
-        LLVM_DEBUG(dbgs() << " skip, cannot analyze def\n");
+        LLVM_DEBUG(dbgs() << "  ... skip, cannot analyze def\n");
         continue;
       }
 
       if (!isRemovable(NI)) {
-        LLVM_DEBUG(dbgs() << " skip, cannot remove def\n");
+        LLVM_DEBUG(dbgs() << "  ... skip, cannot remove def\n");
         continue;
       }
 
@@ -1908,14 +1915,14 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       // Check for anything that looks like it will be a barrier to further
       // removal
       if (State.isDSEBarrier(SI, SILoc, SILocUnd, NI, NILoc)) {
-        LLVM_DEBUG(dbgs() << "  skip, barrier\n");
+        LLVM_DEBUG(dbgs() << "  ... skip, barrier\n");
         continue;
       }
 
       // Before we try to remove anything, check for any extra throwing
       // instructions that block us from DSEing
       if (State.mayThrowBetween(SI, NI, SILocUnd)) {
-        LLVM_DEBUG(dbgs() << " skip, may throw!\n");
+        LLVM_DEBUG(dbgs() << "  ... skip, may throw!\n");
         break;
       }
 
