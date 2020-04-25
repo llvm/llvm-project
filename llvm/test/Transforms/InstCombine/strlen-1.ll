@@ -219,4 +219,4 @@ define i32 @test2(i8* %str) #0 {
   ret i32 %len
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

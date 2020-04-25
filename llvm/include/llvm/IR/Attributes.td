@@ -127,6 +127,9 @@ def NoCfCheck : EnumAttr<"nocf_check">;
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind">;
 
+/// Null pointer in address space zero is valid.
+def NullPointerIsValid : EnumAttr<"null_pointer_is_valid">;
+
 /// Select optimizations for best fuzzing signal.
 def OptForFuzzing : EnumAttr<"optforfuzzing">;
 

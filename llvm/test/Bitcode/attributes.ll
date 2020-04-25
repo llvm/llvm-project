@@ -380,6 +380,12 @@ define void @f64(i32* preallocated(i32) %a)
   ret void
 }
 
+; CHECK: define void @f65() #40
+define void @f65() null_pointer_is_valid
+{
+  ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -420,4 +426,5 @@ define void @f64(i32* preallocated(i32) %a)
 ; CHECK: attributes #37 = { nofree }
 ; CHECK: attributes #38 = { nosync }
 ; CHECK: attributes #39 = { sanitize_memtag }
+; CHECK: attributes #40 = { null_pointer_is_valid }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

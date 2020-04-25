@@ -92,9 +92,8 @@ namespace llvm {
   /// pointers.
   std::string UpgradeDataLayoutString(StringRef DL, StringRef Triple);
 
-  /// Upgrade function attributes "no-frame-pointer-elim" and
-  /// "no-frame-pointer-elim-non-leaf" to "frame-pointer".
-  void UpgradeFramePointerAttributes(AttrBuilder &B);
+  /// Upgrade attributes that changed format or kind.
+  void UpgradeAttributes(AttrBuilder &B);
 
 } // End llvm namespace
 
