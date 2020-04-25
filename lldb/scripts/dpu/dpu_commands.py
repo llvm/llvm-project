@@ -174,9 +174,9 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
         if dpu_to_attach is None:
             print("Could not find the dpu to attach to")
             return None
-        dpus_booting = filter(
+        dpus_booting = list(filter(
             lambda dpu: dpu == dpu_to_attach.GetValueAsUnsigned(),
-            dpus_booting)
+            dpus_booting))
         while len(dpus_booting) == 0:
             dpus_booting, host_frame =\
                 break_to_next_boot_and_get_dpus(debugger, target)
