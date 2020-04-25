@@ -38,7 +38,8 @@ class ShapedTypeComponents {
 public:
   /// Default construction is an unranked shape.
   ShapedTypeComponents() : ranked(false), elementType(nullptr), attr(nullptr){};
-
+  ShapedTypeComponents(Type elementType)
+      : ranked(false), elementType(elementType), attr(nullptr) {}
   template <typename Arg, typename = typename std::enable_if_t<
                               std::is_constructible<ShapeStorageT, Arg>::value>>
   ShapedTypeComponents(Arg &&arg, Type elementType = nullptr,
