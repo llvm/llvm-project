@@ -1707,11 +1707,11 @@ struct DSEState {
         return None;
       }
 
-      // For the KillingDef we only have to check if it reads the memory
-      // location.
+      // For the KillingDef and DomAccess we only have to check if it reads the
+      // memory location.
       // TODO: It would probably be better to check for self-reads before
       // calling the function.
-      if (KillingDef == UseAccess)
+      if (KillingDef == UseAccess || DomAccess == UseAccess)
         continue;
 
       // Check all uses for MemoryDefs, except for defs completely overwriting
