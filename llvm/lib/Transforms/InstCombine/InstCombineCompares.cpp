@@ -1886,20 +1886,24 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, BinaryOperator *Or,
   }
 
   Value *OrOp0 = Or->getOperand(0), *OrOp1 = Or->getOperand(1);
-  if (Cmp.isEquality() && Cmp.getOperand(1) == OrOp1) {
-    // X | C == C --> X <=u C
-    // X | C != C --> X  >u C
-    //   iff C+1 is a power of 2 (C is a bitmask of the low bits)
-    if ((C + 1).isPowerOf2()) {
+  const APInt *MaskC;
+  if (match(OrOp1, m_APInt(MaskC)) && Cmp.isEquality()) {
+    if (*MaskC == C && (C + 1).isPowerOf2()) {
+      // X | C == C --> X <=u C
+      // X | C != C --> X  >u C
+      //   iff C+1 is a power of 2 (C is a bitmask of the low bits)
       Pred = (Pred == CmpInst::ICMP_EQ) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
       return new ICmpInst(Pred, OrOp0, OrOp1);
     }
-    // More general: are all bits outside of a mask constant set or not set?
-    // X | C == C --> (X & ~C) == 0
-    // X | C != C --> (X & ~C) != 0
+
+    // More general: canonicalize 'equality with set bits mask' to
+    // 'equality with clear bits mask'.
+    // (X | MaskC) == C --> (X & ~MaskC) == C ^ MaskC
+    // (X | MaskC) != C --> (X & ~MaskC) != C ^ MaskC
     if (Or->hasOneUse()) {
-      Value *A = Builder.CreateAnd(OrOp0, ~C);
-      return new ICmpInst(Pred, A, ConstantInt::getNullValue(OrOp0->getType()));
+      Value *And = Builder.CreateAnd(OrOp0, ~(*MaskC));
+      Constant *NewC = ConstantInt::get(Or->getType(), C ^ (*MaskC));
+      return new ICmpInst(Pred, And, NewC);
     }
   }
 

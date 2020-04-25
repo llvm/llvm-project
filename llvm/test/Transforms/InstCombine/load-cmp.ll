@@ -156,8 +156,8 @@ define i1 @test7(i32 %X) {
 
 define i1 @test8(i32 %X) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %P = getelementptr inbounds [10 x i16], [10 x i16]* @G16, i32 0, i32 %X

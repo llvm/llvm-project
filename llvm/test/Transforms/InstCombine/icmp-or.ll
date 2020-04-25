@@ -3,8 +3,8 @@
 
 define i1 @set_low_bit_mask_eq(i8 %x) {
 ; CHECK-LABEL: @set_low_bit_mask_eq(
-; CHECK-NEXT:    [[SUB:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SUB]], 19
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 18
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = or i8 %x, 1
@@ -14,8 +14,8 @@ define i1 @set_low_bit_mask_eq(i8 %x) {
 
 define <2 x i1> @set_low_bit_mask_ne(<2 x i8> %x) {
 ; CHECK-LABEL: @set_low_bit_mask_ne(
-; CHECK-NEXT:    [[SUB:%.*]] = or <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[SUB]], <i8 19, i8 19>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -4>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 16, i8 16>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = or <2 x i8> %x, <i8 3, i8 3>
