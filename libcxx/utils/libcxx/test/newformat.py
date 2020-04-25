@@ -148,7 +148,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             assert s in substitutions, "Required substitution {} was not provided".format(s)
 
     # Determine whether clang-verify is supported.
-    def _supportsVerify(self, test, litConfig):
+    def _supportsVerify(self, test):
         command = "echo | %{cxx} -xc++ - -Werror -fsyntax-only -Xclang -verify-ignore-unexpected"
         command = lit.TestRunner.applySubstitutions([command], test.config.substitutions,
                                                     recursion_limit=test.config.recursiveExpansionLimit)[0]
@@ -156,7 +156,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         result = subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
         return result == 0
 
-    def _disableWithModules(self, test, litConfig):
+    def _disableWithModules(self, test):
         with open(test.getSourcePath(), 'rb') as f:
             contents = f.read()
         return b'#define _LIBCPP_ASSERT' in contents
@@ -170,7 +170,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         #                split the part that does a death test outside of the
         #                test, and only disable that part when modules are
         #                enabled.
-        if '-fmodules' in test.config.available_features and self._disableWithModules(test, litConfig):
+        if '-fmodules' in test.config.available_features and self._disableWithModules(test):
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
 
         # TODO(ldionne): Enable -Werror with all supported compilers.
@@ -224,7 +224,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         # otherwise it's like a .compile.fail.cpp test. This is only provided
         # for backwards compatibility with the test suite.
         elif filename.endswith('.fail.cpp'):
-            if self._supportsVerify(test, litConfig):
+            if self._supportsVerify(test):
                 steps = [
                     "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only %{verify}"
                 ]
@@ -257,7 +257,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         substitutions.append(('%{run}', '%{exec} %t.exe'))
 
         # Add the %{verify} substitution and the verify-support feature if Clang-verify is supported
-        if self._supportsVerify(test, litConfig):
+        if self._supportsVerify(test):
             test.config.available_features.add('verify-support')
             substitutions.append(('%{verify}', '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'))
 
