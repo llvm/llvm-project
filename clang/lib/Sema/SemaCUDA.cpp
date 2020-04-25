@@ -718,6 +718,11 @@ void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
   FunctionDecl *CurFn = dyn_cast<FunctionDecl>(CurContext);
   if (!CurFn)
     return;
+  if (getLangOpts().HIP) {
+    Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    Method->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    return;
+  }
   CUDAFunctionTarget Target = IdentifyCUDATarget(CurFn);
   if (Target == CFT_Global || Target == CFT_Device) {
     Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
