@@ -1781,7 +1781,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     XcodeSDK sdk = module.GetXcodeSDK();
     PlatformSP platform =
       Platform::GetPlatformForArchitecture(module.GetArchitecture(), nullptr);
-    std::string sdk_path = platform->GetSDKPath(sdk);
+    std::string sdk_path = platform->GetSDKPath(sdk).str();
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path is %s.", sdk_path.c_str());
     if (FileSystem::Instance().Exists(sdk_path)) {
       swift_ast_sp->SetPlatformSDKPath(sdk_path);
