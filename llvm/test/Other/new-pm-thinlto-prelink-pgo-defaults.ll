@@ -96,6 +96,8 @@
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
+; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
+; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}LazyCallGraph{{.*}}>
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
@@ -215,6 +217,7 @@
 ; CHECK-O3-NEXT: Running analysis: DominanceFrontierAnalysis on foo
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
+; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar
