@@ -6,21 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
+#include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "lldb/Core/PluginManager.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-#ifndef __APPLE__
+#ifdef __APPLE__
 namespace {
 class XcodeSDKModuleTests : public testing::Test {
-  void SetUp() override { PlatformDarwin::Initialize(); }
-  void TearDown() override { PlatformDarwin::Terminate(); }
+  void SetUp() override {
+    HostInfoBase::Initialize();
+    PlatformMacOSX::Initialize();
+  }
+  void TearDown() override {
+    PlatformMacOSX::Terminate();
+    HostInfoBase::Terminate();
+  }
 };
 } // namespace
 
@@ -54,13 +62,14 @@ debug_info:
 ...
 )";
 
-  YAMLModuleTester t(yamldata, "x86_64-apple-macosx");
+  auto triple = "x86_64-apple-macosx";
+  YAMLModuleTester t(yamldata, triple);
+  auto module = t.GetModule();
   auto dwarf_unit_sp = t.GetDwarfUnit();
   auto *dwarf_cu = llvm::cast<DWARFCompileUnit>(dwarf_unit_sp.get());
   ASSERT_TRUE((bool)dwarf_cu);
   ASSERT_TRUE((bool)dwarf_cu->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(
       *dwarf_cu));
-  auto module = t.GetModule();
   XcodeSDK sdk = module->GetXcodeSDK();
   ASSERT_EQ(sdk.GetType(), XcodeSDK::Type::MacOSX);
 }
