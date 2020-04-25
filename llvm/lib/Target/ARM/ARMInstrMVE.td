@@ -285,7 +285,7 @@ class MVEVectorVTInfo<ValueType vec, ValueType dblvec,
                           !cast<string>(LaneBits));
 
   // The suffix used on an instruction that mentions the whole type.
-  string Suffix = suffixletter ## BitsSuffix;
+  string Suffix = suffixletter # BitsSuffix;
 
   // The letter part of the suffix only.
   string SuffixLetter = suffixletter;

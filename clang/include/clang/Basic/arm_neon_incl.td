@@ -35,7 +35,7 @@ class LOp<list<dag> ops> : Operation<ops>;
 // These defs and classes are used internally to implement the SetTheory
 // expansion and should be ignored.
 foreach Index = 0-63 in
-  def sv##Index;
+  def sv#Index;
 class MaskExpand;
 
 //===----------------------------------------------------------------------===//
