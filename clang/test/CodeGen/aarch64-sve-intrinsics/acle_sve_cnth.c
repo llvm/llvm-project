@@ -2,6 +2,14 @@
 
 #include <arm_sve.h>
 
+uint64_t test_svcnth()
+{
+  // CHECK-LABEL: test_svcnth
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 31)
+  // CHECK: ret i64 %[[INTRINSIC]]
+  return svcnth();
+}
+
 uint64_t test_svcnth_pat()
 {
   // CHECK-LABEL: test_svcnth_pat

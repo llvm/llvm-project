@@ -642,8 +642,10 @@ InputFunction *SymbolTable::replaceWithUnreachable(Symbol *sym,
   auto *func = make<SyntheticFunction>(sig, sym->getName(), debugName);
   func->setBody(unreachableFn);
   syntheticFunctions.emplace_back(func);
-  replaceSymbol<DefinedFunction>(sym, sym->getName(), sym->flags, nullptr,
-                                 func);
+  // Mark new symbols as local. For relocatable output we don't want them
+  // to be exported outside the object file.
+  replaceSymbol<DefinedFunction>(sym, debugName, WASM_SYMBOL_BINDING_LOCAL,
+                                 nullptr, func);
   return func;
 }
 

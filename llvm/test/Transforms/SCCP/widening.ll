@@ -744,11 +744,10 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[C_2:%.*]] = icmp eq i32 [[TMP11]], 8
 ; IPSCCP-NEXT:    br i1 [[C_2]], label [[BB39:%.*]], label [[BB58:%.*]]
 ; IPSCCP:       bb39:
-; IPSCCP-NEXT:    [[TMP40:%.*]] = add nsw i32 [[TMP11]], -1
 ; IPSCCP-NEXT:    [[TMP41:%.*]] = trunc i32 [[TMP3]] to i16
 ; IPSCCP-NEXT:    store i16 [[TMP41]], i16* bitcast ([4 x i8]* @global.11 to i16*), align 1
 ; IPSCCP-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
-; IPSCCP-NEXT:    [[TMP43:%.*]] = add i32 [[TMP7]], [[TMP40]]
+; IPSCCP-NEXT:    [[TMP43:%.*]] = add i32 [[TMP7]], 7
 ; IPSCCP-NEXT:    [[TMP44:%.*]] = mul i32 [[TMP43]], 4
 ; IPSCCP-NEXT:    [[TMP45:%.*]] = add i32 [[TMP44]], 2
 ; IPSCCP-NEXT:    [[TMP46:%.*]] = call dereferenceable(1) i8* @spam(%struct.baz.1* [[TMP42]], i32 [[TMP45]])
@@ -763,14 +762,13 @@ define i8* @wobble(%struct.blam.2* %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP55:%.*]] = icmp sgt i32 [[TMP48]], [[TMP54]]
 ; IPSCCP-NEXT:    br i1 [[TMP55]], label [[BB56:%.*]], label [[BB60:%.*]]
 ; IPSCCP:       bb56:
-; IPSCCP-NEXT:    [[TMP57:%.*]] = add nsw i32 [[TMP40]], -1
 ; IPSCCP-NEXT:    br label [[BB60]]
 ; IPSCCP:       bb58:
 ; IPSCCP-NEXT:    [[TMP59:%.*]] = bitcast i16* [[TMP33]] to i8*
 ; IPSCCP-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @global.11, i64 0, i64 0), i8* align 2 [[TMP59]], i64 4, i1 false)
 ; IPSCCP-NEXT:    br label [[BB60]]
 ; IPSCCP:       bb60:
-; IPSCCP-NEXT:    [[TMP61:%.*]] = phi i32 [ [[TMP57]], [[BB56]] ], [ [[TMP40]], [[BB39]] ], [ [[TMP11]], [[BB58]] ]
+; IPSCCP-NEXT:    [[TMP61:%.*]] = phi i32 [ 6, [[BB56]] ], [ 7, [[BB39]] ], [ [[TMP11]], [[BB58]] ]
 ; IPSCCP-NEXT:    [[TMP62:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2]], %struct.blam.2* [[ARG]], i32 0, i32 0
 ; IPSCCP-NEXT:    [[TMP63:%.*]] = add i32 [[TMP7]], 1
 ; IPSCCP-NEXT:    [[TMP64:%.*]] = mul i32 [[TMP63]], 4

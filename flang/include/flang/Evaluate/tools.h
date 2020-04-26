@@ -28,31 +28,6 @@ namespace Fortran::evaluate {
 
 // Some expression predicates and extractors.
 
-// When an Expr holds something that is a Variable (i.e., a Designator
-// or pointer-valued FunctionRef), return a copy of its contents in
-// a Variable.
-template <typename A>
-std::optional<Variable<A>> AsVariable(const Expr<A> &expr) {
-  using Variant = decltype(Variable<A>::u);
-  return std::visit(
-      [](const auto &x) -> std::optional<Variable<A>> {
-        if constexpr (common::HasMember<std::decay_t<decltype(x)>, Variant>) {
-          return Variable<A>{x};
-        }
-        return std::nullopt;
-      },
-      expr.u);
-}
-
-template <typename A>
-std::optional<Variable<A>> AsVariable(const std::optional<Expr<A>> &expr) {
-  if (expr) {
-    return AsVariable(*expr);
-  } else {
-    return std::nullopt;
-  }
-}
-
 // Predicate: true when an expression is a variable reference, not an
 // operation.  Be advised: a call to a function that returns an object
 // pointer is a "variable" in Fortran (it can be the left-hand side of

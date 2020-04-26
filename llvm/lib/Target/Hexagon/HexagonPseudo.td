@@ -112,7 +112,7 @@ let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
 class LOOP_iBase<string mnemonic, InstHexagon rootInst>
          : InstHexagon <(outs), (ins b30_2Imm:$offset, u10_0Imm:$src2),
-           #mnemonic#"($offset,#$src2)",
+           mnemonic#"($offset,#$src2)",
            [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<9> offset;
     bits<10> src2;
@@ -132,7 +132,7 @@ let isExtendable = 1, isExtentSigned = 1, opExtentBits = 9, opExtentAlign = 2,
     opExtendable = 0, hasSideEffects = 0 in
 class LOOP_rBase<string mnemonic, InstHexagon rootInst>
          : InstHexagon<(outs), (ins b30_2Imm:$offset, IntRegs:$src2),
-           #mnemonic#"($offset,$src2)",
+           mnemonic#"($offset,$src2)",
            [], "", rootInst.Itinerary, rootInst.Type>, OpcodeHexagon {
     bits<9> offset;
     bits<5> src2;

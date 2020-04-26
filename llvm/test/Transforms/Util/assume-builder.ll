@@ -22,7 +22,7 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; BASIC-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
 ; BASIC-NEXT:    call void @func_strbool(i32* [[P1]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 16) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 16) ]
 ; BASIC-NEXT:    call void @func(i32* dereferenceable(16) [[P]], i32* dereferenceable(8) [[P]])
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8) ]
 ; BASIC-NEXT:    call void @func_many(i32* align 8 [[P1]])
@@ -42,11 +42,10 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
 ; ALL-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; ALL-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "no-jump-tables"() ]
 ; ALL-NEXT:    call void @func_strbool(i32* [[P1]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 16) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 16) ]
 ; ALL-NEXT:    call void @func(i32* dereferenceable(16) [[P]], i32* dereferenceable(8) [[P]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "less-precise-fpmad"(), "no-jump-tables"(), "norecurse"(), "nounwind"(), "willreturn"() ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "norecurse"(), "nounwind"(), "willreturn"() ]
 ; ALL-NEXT:    call void @func_many(i32* align 8 [[P1]])
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2:%.*]], i64 8), "nonnull"(i32* [[P3:%.*]]), "nounwind"() ]
 ; ALL-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])

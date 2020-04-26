@@ -87,5 +87,11 @@ template <typename A, typename B> A *Unwrap(B &x) {
 const CoindexedNamedObject *GetCoindexedNamedObject(const AllocateObject &);
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &);
 
+// Detects parse tree nodes with "source" members.
+template <typename A, typename = int> struct HasSource : std::false_type {};
+template <typename A>
+struct HasSource<A, decltype(static_cast<void>(A::source), 0)>
+    : std::true_type {};
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_

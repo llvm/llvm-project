@@ -202,6 +202,13 @@ public:
     if (CR.isFullSet())
       return getOverdefined();
 
+    if (CR.isEmptySet()) {
+      ValueLatticeElement Res;
+      if (MayIncludeUndef)
+        Res.markUndef();
+      return Res;
+    }
+
     ValueLatticeElement Res;
     Res.markConstantRange(std::move(CR),
                           MergeOptions().setMayIncludeUndef(MayIncludeUndef));
@@ -325,6 +332,8 @@ public:
   /// range may include undef.
   bool markConstantRange(ConstantRange NewR,
                          MergeOptions Opts = MergeOptions()) {
+    assert(!NewR.isEmptySet() && "should only be called for non-empty sets");
+
     if (NewR.isFullSet())
       return markOverdefined();
 
@@ -334,9 +343,6 @@ public:
             ? constantrange_including_undef
             : constantrange;
     if (isConstantRange()) {
-      if (NewR.isEmptySet())
-        return markOverdefined();
-
       Tag = NewTag;
       if (getConstantRange() == NewR)
         return Tag != OldTag;
@@ -353,8 +359,6 @@ public:
     }
 
     assert(isUnknown() || isUndef());
-    if (NewR.isEmptySet())
-      return markOverdefined();
 
     NumRangeExtensions = 0;
     Tag = NewTag;

@@ -256,6 +256,9 @@ ParsedAST::build(llvm::StringRef Version,
   // Recovery expression currently only works for C++.
   if (CI->getLangOpts()->CPlusPlus)
     CI->getLangOpts()->RecoveryAST = Opts.BuildRecoveryAST;
+  // This is on-by-default in windows to allow parsing SDK headers, but it
+  // breaks many features. Disable it for the main-file (not preamble).
+  CI->getLangOpts()->DelayedTemplateParsing = false;
 
   StoreDiags ASTDiags;
   std::string Content = std::string(Buffer->getBuffer());

@@ -35,7 +35,8 @@ extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
-bool IsInitialDataTarget(const Expr<SomeType> &, parser::ContextualMessages &);
+bool IsInitialDataTarget(
+    const Expr<SomeType> &, parser::ContextualMessages * = nullptr);
 
 // Check whether an expression is a specification expression
 // (10.1.11(2), C1010).  Constant expressions are always valid

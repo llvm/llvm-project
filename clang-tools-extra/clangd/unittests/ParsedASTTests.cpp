@@ -175,6 +175,17 @@ TEST(ParsedASTTest,
                         AllOf(DeclNamed("foo"), WithTemplateArgs("<bool>"))}));
 }
 
+TEST(ParsedASTTest, IgnoresDelayedTemplateParsing) {
+  auto TU = TestTU::withCode(R"cpp(
+    template <typename T> void xxx() {
+      int yyy = 0;
+    }
+  )cpp");
+  TU.ExtraArgs.push_back("-fdelayed-template-parsing");
+  auto AST = TU.build();
+  EXPECT_EQ(Decl::Var, findUnqualifiedDecl(AST, "yyy").getKind());
+}
+
 TEST(ParsedASTTest, TokensAfterPreamble) {
   TestTU TU;
   TU.AdditionalFiles["foo.h"] = R"(

@@ -230,6 +230,9 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
 void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
                                 unsigned MaxUsesToExplore) {
   assert(V->getType()->isPointerTy() && "Capture is for pointers only!");
+  if (MaxUsesToExplore == 0)
+    MaxUsesToExplore = DefaultMaxUsesToExplore;
+
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
   SmallSet<const Use *, 20> Visited;

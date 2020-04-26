@@ -44,6 +44,18 @@ public:
       return false;
     }
   }
+  bool operator()(const StructureConstructor &constructor) const {
+    for (const auto &[symRef, expr] : constructor) {
+      if (IsAllocatable(*symRef)) {
+        return IsNullPointer(expr.value());
+      } else if (IsPointer(*symRef)) {
+        return IsNullPointer(expr.value()) || IsInitialDataTarget(expr.value());
+      } else if (!(*this)(expr.value())) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   // Forbid integer division by zero in constants.
   template <int KIND>
@@ -68,11 +80,14 @@ template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static
 // data address used to initialize a pointer with "=> x".  See C765.
-struct IsInitialDataTargetHelper
+// If messages are requested, errors may be generated without returning
+// a false result.
+class IsInitialDataTargetHelper
     : public AllTraverse<IsInitialDataTargetHelper, true> {
+public:
   using Base = AllTraverse<IsInitialDataTargetHelper, true>;
   using Base::operator();
-  explicit IsInitialDataTargetHelper(parser::ContextualMessages &m)
+  explicit IsInitialDataTargetHelper(parser::ContextualMessages *m)
       : Base{*this}, messages_{m} {}
 
   bool operator()(const BOZLiteralConstant &) const { return false; }
@@ -83,21 +98,37 @@ struct IsInitialDataTargetHelper
   bool operator()(const semantics::Symbol &symbol) const {
     const Symbol &ultimate{symbol.GetUltimate()};
     if (IsAllocatable(ultimate)) {
-      messages_.Say(
-          "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-          ultimate.name());
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
+            ultimate.name());
+      } else {
+        return false;
+      }
     } else if (ultimate.Corank() > 0) {
-      messages_.Say(
-          "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-          ultimate.name());
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
+            ultimate.name());
+      } else {
+        return false;
+      }
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
-      messages_.Say(
-          "An initial data target may not be a reference to an object '%s' that lacks the TARGET attribute"_err_en_US,
-          ultimate.name());
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to an object '%s' that lacks the TARGET attribute"_err_en_US,
+            ultimate.name());
+      } else {
+        return false;
+      }
     } else if (!IsSaved(ultimate)) {
-      messages_.Say(
-          "An initial data target may not be a reference to an object '%s' that lacks the SAVE attribute"_err_en_US,
-          ultimate.name());
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to an object '%s' that lacks the SAVE attribute"_err_en_US,
+            ultimate.name());
+      } else {
+        return false;
+      }
     }
     return true;
   }
@@ -140,13 +171,12 @@ struct IsInitialDataTargetHelper
     return (*this)(x.left());
   }
   bool operator()(const Relational<SomeType> &) const { return false; }
-
 private:
-  parser::ContextualMessages &messages_;
+  parser::ContextualMessages *messages_;
 };
 
 bool IsInitialDataTarget(
-    const Expr<SomeType> &x, parser::ContextualMessages &messages) {
+    const Expr<SomeType> &x, parser::ContextualMessages *messages) {
   return IsInitialDataTargetHelper{messages}(x);
 }
 
