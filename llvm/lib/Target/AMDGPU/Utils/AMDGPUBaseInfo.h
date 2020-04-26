@@ -12,7 +12,6 @@
 #include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
@@ -26,17 +25,13 @@
 namespace llvm {
 
 class Argument;
-class AMDGPUSubtarget;
-class FeatureBitset;
 class Function;
 class GCNSubtarget;
 class GlobalValue;
-class MCContext;
 class MCRegisterClass;
 class MCRegisterInfo;
-class MCSection;
 class MCSubtargetInfo;
-class MachineMemOperand;
+class StringRef;
 class Triple;
 
 namespace AMDGPU {
