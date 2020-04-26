@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define clz(a) (sizeof(a) == sizeof(unsigned long long) ? __builtin_clzll(a) : __builtin_clz(a))
+#define clz(a) (sizeof(a) == sizeof(unsigned long long) ? __builtin_clzll(a) : clzsi(a))
 
 // Adapted from Figure 3-40 of The PowerPC Compiler Writer's Guide
 static __inline fixuint_t __udivXi3(fixuint_t n, fixuint_t d) {
