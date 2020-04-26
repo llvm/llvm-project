@@ -149,7 +149,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     # Determine whether clang-verify is supported.
     def _supportsVerify(self, test):
-        command = "echo | %{cxx} -xc++ - -Werror -fsyntax-only -Xclang -verify-ignore-unexpected"
+        command = "%{{cxx}} -xc++ {} -Werror -fsyntax-only -Xclang -verify-ignore-unexpected".format(os.devnull)
         command = lit.TestRunner.applySubstitutions([command], test.config.substitutions,
                                                     recursion_limit=test.config.recursiveExpansionLimit)[0]
         devNull = open(os.devnull, 'w')
