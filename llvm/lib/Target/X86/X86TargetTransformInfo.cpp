@@ -1369,10 +1369,28 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i8, 1 },
 
     // Mask sign extend has an instruction.
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1, 1 },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1, 1 },
+    { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v32i1, 1 },
     { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i1, 1 },
     { ISD::SIGN_EXTEND, MVT::v64i8,  MVT::v64i1, 1 },
 
-    // Mask zero extend is a load + broadcast.
+    // Mask zero extend is a sext + shift.
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1, 2 },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1, 2 },
+    { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v64i8,  MVT::v64i1, 2 },
 
@@ -1410,9 +1428,44 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
     { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  9 }, // FIXME
 
-    // v16i1 -> v16i32 - load + broadcast
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  2 },
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  2 },
+    // Sign extend is zmm vpternlogd+vptruncdb.
+    // Zero extend is zmm broadcast load+vptruncdw.
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   3 },
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   4 },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   3 },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   4 },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   3 },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   4 },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1,  3 },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1,  4 },
+
+    // Sign extend is zmm vpternlogd+vptruncdw.
+    // Zero extend is zmm vpternlogd+vptruncdw+vpsrlw.
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   3 },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   4 },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   3 },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   4 },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   3 },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   4 },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  3 },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
+
+    { ISD::SIGN_EXTEND, MVT::v2i32,  MVT::v2i1,   1 }, // zmm vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v2i32,  MVT::v2i1,   2 }, // zmm vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 }, // zmm vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 }, // zmm vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 }, // zmm vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 }, // zmm vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 }, // zmm vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 }, // zmm vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // zmm vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 }, // zmm vpternlogq+psrlq
+
+    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i1,  1 }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i1,  2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i1,   1 }, // vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i1,   2 }, // vpternlogq+psrlq
+
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8,  1 },
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8,  1 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 1 },
@@ -1457,12 +1510,22 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
   static const TypeConversionCostTblEntry AVX512BWVLConversionTbl[] {
     // Mask sign extend has an instruction.
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,  1 },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,  1 },
     { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,  1 },
     { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1, 1 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1, 1 },
     { ISD::SIGN_EXTEND, MVT::v32i8,  MVT::v32i1, 1 },
 
-    // Mask zero extend is a load + broadcast.
+    // Mask zero extend is a sext + shift.
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,  2 },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,  2 },
     { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,  2 },
     { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1, 2 },
@@ -1492,6 +1555,39 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   };
 
   static const TypeConversionCostTblEntry AVX512VLConversionTbl[] = {
+    // sign extend is vpcmpeq+maskedmove+vpmovdw+vpacksswb
+    // zero extend is vpcmpeq+maskedmove+vpmovdw+vpsrlw+vpackuswb
+    { ISD::SIGN_EXTEND, MVT::v2i8,   MVT::v2i1,   5 },
+    { ISD::ZERO_EXTEND, MVT::v2i8,   MVT::v2i1,   6 },
+    { ISD::SIGN_EXTEND, MVT::v4i8,   MVT::v4i1,   5 },
+    { ISD::ZERO_EXTEND, MVT::v4i8,   MVT::v4i1,   6 },
+    { ISD::SIGN_EXTEND, MVT::v8i8,   MVT::v8i1,   5 },
+    { ISD::ZERO_EXTEND, MVT::v8i8,   MVT::v8i1,   6 },
+    { ISD::SIGN_EXTEND, MVT::v16i8,  MVT::v16i1, 10 },
+    { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1, 12 },
+
+    // sign extend is vpcmpeq+maskedmove+vpmovdw
+    // zero extend is vpcmpeq+maskedmove+vpmovdw+vpsrlw
+    { ISD::SIGN_EXTEND, MVT::v2i16,  MVT::v2i1,   4 },
+    { ISD::ZERO_EXTEND, MVT::v2i16,  MVT::v2i1,   5 },
+    { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i1,   4 },
+    { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i1,   5 },
+    { ISD::SIGN_EXTEND, MVT::v8i16,  MVT::v8i1,   4 },
+    { ISD::ZERO_EXTEND, MVT::v8i16,  MVT::v8i1,   5 },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1, 10 },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1, 12 },
+
+    { ISD::SIGN_EXTEND, MVT::v2i32,  MVT::v2i1,   1 }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v2i32,  MVT::v2i1,   2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v4i32,  MVT::v4i1,   1 }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 }, // vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 }, // vpternlogq+psrlq
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // vpternlogq
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 }, // vpternlogq+psrlq
+
     { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i8,   2 },
     { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i8,   2 },
     { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i8,   2 },
