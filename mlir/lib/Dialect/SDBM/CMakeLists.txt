@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRSDBM
   SDBM.cpp
+  SDBMDialect.cpp
   SDBMExpr.cpp
 
   ADDITIONAL_HEADER_DIRS
