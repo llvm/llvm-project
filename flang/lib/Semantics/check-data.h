@@ -11,20 +11,23 @@
 
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 
 namespace Fortran::semantics {
 class DataChecker : public virtual BaseChecker {
 public:
-  DataChecker(SemanticsContext &context) : context_{context} {}
+  explicit DataChecker(SemanticsContext &context) : exprAnalyzer_{context} {}
   void Leave(const parser::DataStmtRepeat &);
   void Leave(const parser::DataStmtConstant &);
   void Leave(const parser::DataStmtObject &);
+  void Enter(const parser::DataImpliedDo &);
   void Leave(const parser::DataImpliedDo &);
+  void Leave(const parser::DataIDoObject &);
 
 private:
-  SemanticsContext &context_;
+  evaluate::ExpressionAnalyzer exprAnalyzer_;
   template <typename T> void CheckIfConstantSubscript(const T &);
   void CheckSubscript(const parser::SectionSubscript &);
   bool CheckAllSubscriptsInDataRef(const parser::DataRef &, parser::CharBlock);

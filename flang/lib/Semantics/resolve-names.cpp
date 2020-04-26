@@ -5499,7 +5499,7 @@ void DeclarationVisitor::CheckInitialDataTarget(
     const Symbol &pointer, const SomeExpr &expr, SourceName source) {
   auto &messages{GetFoldingContext().messages()};
   auto restorer{messages.SetLocation(source)};
-  if (!evaluate::IsInitialDataTarget(expr, messages)) {
+  if (!evaluate::IsInitialDataTarget(expr, &messages)) {
     Say(source,
         "Pointer '%s' cannot be initialized with a reference to a designator with non-constant subscripts"_err_en_US,
         pointer.name());
