@@ -781,16 +781,21 @@ AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
 
 AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
                                         ArrayRef<Attribute> Attrs) {
-  if (Attrs.empty())
+  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
+  llvm::sort(SortedAttrs);
+  return getSorted(C, SortedAttrs);
+}
+
+AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
+                                              ArrayRef<Attribute> SortedAttrs) {
+  if (SortedAttrs.empty())
     return nullptr;
 
-  // Otherwise, build a key to look up the existing attributes.
+  // Build a key to look up the existing attributes.
   LLVMContextImpl *pImpl = C.pImpl;
   FoldingSetNodeID ID;
 
-  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
-  llvm::sort(SortedAttrs);
-
+  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
   for (const auto &Attr : SortedAttrs)
     Attr.Profile(ID);
 
@@ -855,7 +860,7 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
   for (const auto &TDA : B.td_attrs())
     Attrs.emplace_back(Attribute::get(C, TDA.first, TDA.second));
 
-  return get(C, Attrs);
+  return getSorted(C, Attrs);
 }
 
 bool AttributeSetNode::hasAttribute(StringRef Kind) const {
