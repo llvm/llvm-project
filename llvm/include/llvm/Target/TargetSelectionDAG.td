@@ -1421,56 +1421,56 @@ def any_uint_to_fp : PatFrags<(ops node:$src),
                                (uint_to_fp node:$src)]>;
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
-  def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$val)> {
+  def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingMonotonic = 1;
   }
-  def #NAME#_acquire : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$val)> {
+  def NAME#_acquire : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingAcquire = 1;
   }
-  def #NAME#_release : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$val)> {
+  def NAME#_release : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingRelease = 1;
   }
-  def #NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$val)> {
+  def NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingAcquireRelease = 1;
   }
-  def #NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$val)> {
+  def NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingSequentiallyConsistent = 1;
   }
 }
 
 multiclass ternary_atomic_op_ord<SDNode atomic_op> {
-  def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+  def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingMonotonic = 1;
   }
-  def #NAME#_acquire : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+  def NAME#_acquire : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingAcquire = 1;
   }
-  def #NAME#_release : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+  def NAME#_release : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingRelease = 1;
   }
-  def #NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+  def NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingAcquireRelease = 1;
   }
-  def #NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDPatternOperator>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+  def NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val)> {
     let IsAtomic = 1;
     let IsAtomicOrderingSequentiallyConsistent = 1;
   }

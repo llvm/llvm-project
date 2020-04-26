@@ -205,12 +205,12 @@ def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred_timm, I32>;
 
 multiclass MaskedStore <InstHexagon MI, Intrinsic IntID> {
   def : Pat<(IntID HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
-            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>,
+            (MI HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>,
         Requires<[UseHVX]>;
 
   def : Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, IntRegs:$src2,
                                              HvxVR:$src3),
-            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>,
+            (MI HvxQR:$src1, IntRegs:$src2, 0, HvxVR:$src3)>,
         Requires<[UseHVX]>;
 }
 
