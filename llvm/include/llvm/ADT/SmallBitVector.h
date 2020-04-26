@@ -287,11 +287,11 @@ public:
   /// Returns -1 if the next unset bit is not found.
   int find_next_unset(unsigned Prev) const {
     if (isSmall()) {
-      ++Prev;
       uintptr_t Bits = getSmallBits();
       // Mask in previous bits.
-      uintptr_t Mask = (uintptr_t(1) << Prev) - 1;
-      Bits |= Mask;
+      Bits |= (uintptr_t(1) << (Prev + 1)) - 1;
+      // Mask in unused bits.
+      Bits |= ~uintptr_t(0) << getSmallSize();
 
       if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
         return -1;
