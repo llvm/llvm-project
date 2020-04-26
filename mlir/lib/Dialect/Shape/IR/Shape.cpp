@@ -10,6 +10,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -27,6 +28,19 @@ ShapeDialect::ShapeDialect(MLIRContext *context)
   // still evolving it makes it simple to start with an unregistered ops and
   // try different variants before actually defining the op.
   allowUnknownOperations();
+}
+
+Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
+                                             Attribute value, Type type,
+                                             Location loc) {
+  if (auto shapeType = type.dyn_cast<ShapeType>()) {
+    return builder.create<ConstShapeOp>(loc, type,
+                                        value.cast<DenseIntElementsAttr>());
+  }
+  if (auto sizeType = type.dyn_cast<SizeType>()) {
+    return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
+  }
+  return nullptr;
 }
 
 /// Parse a type registered to this dialect.
@@ -74,37 +88,79 @@ void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
 }
 
 //===----------------------------------------------------------------------===//
-// Constant*Op
+// ConstShapeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, ConstantOp &op) {
-  p << "shape.constant ";
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"value"});
-
-  if (op.getAttrs().size() > 1)
-    p << ' ';
-  p.printAttributeWithoutType(op.value());
-  p << " : " << op.getType();
+static void print(OpAsmPrinter &p, ConstShapeOp &op) {
+  p << "shape.const_shape ";
+  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"shape"});
+  p << "[";
+  interleaveComma(op.shape().getValues<int64_t>(), p,
+                  [&](int64_t i) { p << i; });
+  p << "]";
 }
 
-static ParseResult parseConstantOp(OpAsmParser &parser,
-                                   OperationState &result) {
-  Attribute valueAttr;
+static ParseResult parseConstShapeOp(OpAsmParser &parser,
+                                     OperationState &result) {
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
-  Type i64Type = parser.getBuilder().getIntegerType(64);
-  if (parser.parseAttribute(valueAttr, i64Type, "value", result.attributes))
+  // We piggy-back on ArrayAttr parsing, though we don't internally store the
+  // shape as an ArrayAttr.
+  // TODO: Implement custom parser and maybe make syntax a bit more concise.
+  Attribute extentsRaw;
+  SmallVector<NamedAttribute, 6> dummy;
+  if (parser.parseAttribute(extentsRaw, "dummy", dummy))
     return failure();
-
-  Type type;
-  if (parser.parseColonType(type))
+  auto extentsArray = extentsRaw.dyn_cast<ArrayAttr>();
+  if (!extentsArray)
     return failure();
+  SmallVector<int64_t, 6> ints;
+  for (Attribute extent : extentsArray) {
+    IntegerAttr attr = extent.dyn_cast<IntegerAttr>();
+    if (!attr)
+      return failure();
+    ints.push_back(attr.getInt());
+  }
+  Builder &builder = parser.getBuilder();
+  result.addAttribute("shape", builder.getI64TensorAttr(ints));
 
-  // Add the attribute type to the list.
-  return parser.addTypeToList(type, result.types);
+  result.types.push_back(ShapeType::get(builder.getContext()));
+  return success();
 }
 
-static LogicalResult verify(ConstantOp &op) { return success(); }
+OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shape(); }
+
+LogicalResult ConstShapeOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(ShapeType::get(context));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConstSizeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConstSizeOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(SizeType::get(context));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ShapeOfOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
+  auto type = getOperand().getType().dyn_cast<ShapedType>();
+  if (!type || !type.hasStaticShape())
+    return nullptr;
+  Builder builder(getContext());
+  return builder.getI64TensorAttr(type.getShape());
+}
 
 //===----------------------------------------------------------------------===//
 // SplitAtOp
