@@ -8,14 +8,10 @@ declare void @use(i1)
 define void @test1a() {
 ; CHECK-LABEL: @test1a(
 ; CHECK-NEXT:    [[X:%.*]] = load i32, i32* @G
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i32 [[X]], 123
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[X]], 20
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
@@ -59,14 +55,10 @@ F:
 define void @test2a() {
 ; CHECK-LABEL: @test2a(
 ; CHECK-NEXT:    [[X:%.*]] = load i32, i32* @H
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i32 [[X]], 123
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[X]], 20
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
@@ -123,14 +115,10 @@ F:
 define void @test3a() {
 ; CHECK-LABEL: @test3a(
 ; CHECK-NEXT:    [[X:%.*]] = load i32, i32* @I
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[X]], 124
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i32 [[X]], 123
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[X]], 20
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
@@ -245,19 +233,15 @@ exit:
 
 ; Same as test1, but storing 4 different values.
 
-@K = internal global i32 0
+@K = internal global i32 501
 
 define void @test5a() {
 ; CHECK-LABEL: @test5a(
 ; CHECK-NEXT:    [[X:%.*]] = load i32, i32* @K
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i32 [[X]], 499
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 600
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[X]], 600
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i32 [[X]], 600
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[X]], 510
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
@@ -319,5 +303,4 @@ T.3:
 F.3:
   store i32 530, i32* @K
   ret void
-
 }
