@@ -2336,6 +2336,19 @@ the configuration (without a prefix: ``Auto``).
          }
        }
 
+  * ``SBPO_ControlStatementsExceptForEachMacros`` (in configuration: ``ControlStatementsExceptForEachMacros``)
+    Same as ``SBPO_ControlStatements`` except this option doesn't apply to
+    ForEach macros. This is useful in projects where ForEach macros are
+    treated as function calls instead of control statements.
+
+    .. code-block:: c++
+
+       void f() {
+         Q_FOREACH(...) {
+           f();
+         }
+       }
+
   * ``SBPO_NonEmptyParentheses`` (in configuration: ``NonEmptyParentheses``)
     Put a space before opening parentheses only if the parentheses are not
     empty i.e. '()'

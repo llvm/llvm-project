@@ -972,6 +972,17 @@ TEST_F(FormatTest, ForEachLoops) {
                "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
                "}");
 
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeParens =
+      FormatStyle::SBPO_ControlStatementsExceptForEachMacros;
+  verifyFormat("void f() {\n"
+               "  foreach(Item *item, itemlist) {}\n"
+               "  Q_FOREACH(Item *item, itemlist) {}\n"
+               "  BOOST_FOREACH(Item *item, itemlist) {}\n"
+               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "}",
+               Style);
+
   // As function-like macros.
   verifyFormat("#define foreach(x, y)\n"
                "#define Q_FOREACH(x, y)\n"

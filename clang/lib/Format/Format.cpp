@@ -329,6 +329,8 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensOptions> {
     IO.enumCase(Value, "Never", FormatStyle::SBPO_Never);
     IO.enumCase(Value, "ControlStatements",
                 FormatStyle::SBPO_ControlStatements);
+    IO.enumCase(Value, "ControlStatementsExceptForEachMacros",
+                FormatStyle::SBPO_ControlStatementsExceptForEachMacros);
     IO.enumCase(Value, "NonEmptyParentheses",
                 FormatStyle::SBPO_NonEmptyParentheses);
     IO.enumCase(Value, "Always", FormatStyle::SBPO_Always);
