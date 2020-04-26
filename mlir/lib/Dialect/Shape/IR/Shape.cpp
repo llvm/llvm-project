@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
+#include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -85,6 +86,26 @@ void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
   default:
     llvm_unreachable("unexpected 'shape' type kind");
   }
+}
+
+//===----------------------------------------------------------------------===//
+// BroadcastOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0] || !operands[1])
+    return nullptr;
+  auto lhsShape = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  auto rhsShape = llvm::to_vector<6>(
+      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape;
+  // If the shapes are not compatible, we can't fold it.
+  // TODO: Fold to an "error".
+  if (!OpTrait::util::getBroadcastedShape(lhsShape, rhsShape, resultShape))
+    return nullptr;
+  Builder builder(getContext());
+  return builder.getI64TensorAttr(resultShape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -176,6 +197,27 @@ LogicalResult SplitAtOp::inferReturnTypes(
   return success();
 }
 
+LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
+                              SmallVectorImpl<OpFoldResult> &results) {
+  if (!operands[0] || !operands[1])
+    return failure();
+  auto shapeVec = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  auto shape = llvm::makeArrayRef(shapeVec);
+  auto splitPoint = operands[1].cast<IntegerAttr>().getInt();
+  // Verify that the split point is in the correct range.
+  // TODO: Constant fold to an "error".
+  int64_t rank = shape.size();
+  if (!(-rank <= splitPoint && splitPoint <= rank))
+    return failure();
+  if (splitPoint < 0)
+    splitPoint += shape.size();
+  Builder builder(operands[0].getContext());
+  results.push_back(builder.getI64TensorAttr(shape.take_front(splitPoint)));
+  results.push_back(builder.getI64TensorAttr(shape.drop_front(splitPoint)));
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ConcatOp
 //===----------------------------------------------------------------------===//
@@ -187,6 +229,35 @@ LogicalResult ConcatOp::inferReturnTypes(
   auto shapeType = ShapeType::get(context);
   inferredReturnTypes.push_back(shapeType);
   return success();
+}
+
+OpFoldResult ConcatOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0] || !operands[1])
+    return nullptr;
+  auto lhsShape = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  auto rhsShape = llvm::to_vector<6>(
+      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape;
+  resultShape.append(lhsShape.begin(), lhsShape.end());
+  resultShape.append(rhsShape.begin(), rhsShape.end());
+  Builder builder(getContext());
+  return builder.getI64TensorAttr(resultShape);
+}
+
+//===----------------------------------------------------------------------===//
+// ToExtentTensorOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ToExtentTensorOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0])
+    return nullptr;
+  Builder builder(getContext());
+  auto shape = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
+                                    builder.getIndexType());
+  return DenseIntElementsAttr::get(type, shape);
 }
 
 namespace mlir {
