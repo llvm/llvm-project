@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -687,6 +688,16 @@ static bool isKnownNonZeroFromAssume(const Value *V, const Query &Q) {
         ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
     return !TrueValues.contains(APInt::getNullValue(CI->getBitWidth()));
   };
+
+  if (Q.CxtI && V->getType()->isPointerTy()) {
+    SmallVector<Attribute::AttrKind, 2> AttrKinds{Attribute::NonNull};
+    if (!NullPointerIsDefined(Q.CxtI->getFunction(),
+                              V->getType()->getPointerAddressSpace()))
+      AttrKinds.push_back(Attribute::Dereferenceable);
+
+    if (getKnowledgeValidInContext(V, AttrKinds, Q.CxtI, Q.DT, Q.AC))
+      return true;
+  }
 
   for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
     if (!AssumeVH)

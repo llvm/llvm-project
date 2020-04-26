@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -1581,8 +1582,15 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
       F ? llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()) : true;
   const DataLayout &DL = A.getInfoCache().getDL();
   if (const auto *CB = dyn_cast<CallBase>(I)) {
-    if (CB->isBundleOperand(U))
+    if (CB->isBundleOperand(U)) {
+      if (RetainedKnowledge RK = getKnowledgeFromUse(
+              U, {Attribute::NonNull, Attribute::Dereferenceable})) {
+        IsNonNull |=
+            (RK.AttrKind == Attribute::NonNull || !NullPointerIsDefined);
+        return RK.ArgValue;
+      }
       return 0;
+    }
 
     if (CB->isCallee(U)) {
       IsNonNull |= !NullPointerIsDefined;
