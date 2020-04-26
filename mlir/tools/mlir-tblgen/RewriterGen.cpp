@@ -612,8 +612,15 @@ void PatternEmitter::emitRewriteLogic() {
       auto val = handleResultPattern(resultTree, offsets[i], 0);
       os.indent(4) << "\n";
       // Resolve each symbol for all range use so that we can loop over them.
+      // We need an explicit cast to `SmallVector` to capture the cases where
+      // `{0}` resolves to an `Operation::result_range` as well as cases that
+      // are not iterable (e.g. vector that gets wrapped in additional braces by
+      // RewriterGen).
+      // TODO(b/147096809): Revisit the need for materializing a vector.
       os << symbolInfoMap.getAllRangeUse(
-          val, "    for (Value v : {0}) {{ tblgen_repl_values.push_back(v); }",
+          val,
+          "    for (auto v : SmallVector<Value, 4>{ {0} }) {{ "
+          "tblgen_repl_values.push_back(v); }",
           "\n");
     }
     os.indent(4) << "\n";
