@@ -996,11 +996,10 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
   // index table (in a package file). In a .dwo file it is simply
   // the length of the string offsets section.
   if (!IndexEntry)
-    return {
-        Optional<StrOffsetsContributionDescriptor>(
-            {0, StringOffsetSection.Data.size(), 4, DWARF32})};
+    return {Optional<StrOffsetsContributionDescriptor>(
+        {0, StringOffsetSection.Data.size(), 4, Header.getFormat()})};
   if (C)
     return {Optional<StrOffsetsContributionDescriptor>(
-        {C->Offset, C->Length, 4, DWARF32})};
+        {C->Offset, C->Length, 4, Header.getFormat()})};
   return None;
 }
