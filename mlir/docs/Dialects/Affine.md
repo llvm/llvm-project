@@ -71,7 +71,9 @@ operation](Standard.md#dim-operation) on either a memref that is a function
 argument or a memref where the corresponding dimension is either static or a
 dynamic one in turn bound to a symbolic identifier.  Dimensions may be bound not
 only to anything that a symbol is bound to, but also to induction variables of
-enclosing [`affine.for` operations](#affinefor-operation), and the result of an
+enclosing [`affine.for`](#affinefor-affineforop) and
+[`afffine.parallel`](#affineparallel-affineparallelop) operations, and the
+result of an
 [`affine.apply` operation](#affineapply-operation) (which recursively may use
 other dimensions and symbols).
 
