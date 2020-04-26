@@ -145,13 +145,6 @@ class CombinationGenerator {
       assert(!Range.empty() && "The range must not be empty.");
       rewind();
     }
-
-    // Only allow using our custom constructor.
-    WrappingIterator() = delete;
-    WrappingIterator(const WrappingIterator &) = delete;
-    WrappingIterator(WrappingIterator &&) = delete;
-    WrappingIterator &operator=(const WrappingIterator &) = delete;
-    WrappingIterator &operator=(WrappingIterator &&) = delete;
   };
 
   const ArrayRef<choices_storage_type> VariablesChoices;
