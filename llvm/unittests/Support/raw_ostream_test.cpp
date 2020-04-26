@@ -18,9 +18,11 @@ namespace {
 
 template<typename T> std::string printToString(const T &Value) {
   std::string res;
-  llvm::raw_string_ostream OS(res);
-  OS.SetBuffered();
-  OS << Value;
+  {
+    llvm::raw_string_ostream OS(res);
+    OS.SetBuffered();
+    OS << Value;
+  }
   return res;
 }
 
