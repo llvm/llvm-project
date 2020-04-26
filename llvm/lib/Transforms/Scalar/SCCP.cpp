@@ -1071,8 +1071,9 @@ void SCCPSolver::visitStoreInst(StoreInst &SI) {
     return;
 
   // Get the value we are storing into the global, then merge it.
-  mergeInValue(I->second, GV, getValueState(SI.getOperand(0)));
-  if (isOverdefined(I->second))
+  mergeInValue(I->second, GV, getValueState(SI.getOperand(0)),
+               ValueLatticeElement::MergeOptions().setCheckWiden(false));
+  if (I->second.isOverdefined())
     TrackedGlobals.erase(I);      // No need to keep tracking this!
 }
 
@@ -1085,7 +1086,7 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
 
   // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
-  if (isOverdefined(ValueState[&I]))
+  if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
 
   ValueLatticeElement PtrVal = getValueState(I.getOperand(0));
@@ -1113,7 +1114,8 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
       // If we are tracking this global, merge in the known value for it.
       auto It = TrackedGlobals.find(GV);
       if (It != TrackedGlobals.end()) {
-        mergeInValue(IV, &I, It->second);
+        mergeInValue(IV, &I, It->second,
+                     ValueLatticeElement::MergeOptions().setCheckWiden(false));
         return;
       }
     }
