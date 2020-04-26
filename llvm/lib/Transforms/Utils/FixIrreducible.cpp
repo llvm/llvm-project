@@ -241,8 +241,8 @@ template <> struct GraphTraits<Loop> : LoopBodyTraits {};
 } // namespace llvm
 
 // Overloaded wrappers to go with the function template below.
-BasicBlock *unwrapBlock(BasicBlock *B) { return B; }
-BasicBlock *unwrapBlock(LoopBodyTraits::NodeRef &N) { return N.second; }
+static BasicBlock *unwrapBlock(BasicBlock *B) { return B; }
+static BasicBlock *unwrapBlock(LoopBodyTraits::NodeRef &N) { return N.second; }
 
 static void createNaturalLoop(LoopInfo &LI, DominatorTree &DT, Function *F,
                               SetVector<BasicBlock *> &Blocks,
