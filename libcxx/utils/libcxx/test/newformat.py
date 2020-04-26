@@ -241,10 +241,24 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         string = ' '.join(flags)
         config.substitutions = [(s, x + ' ' + string) if s == '%{compile_flags}' else (s, x) for (s, x) in config.substitutions]
 
-    # Modified version of lit.TestRunner.executeShTest to handle custom parsers correctly.
-    def _executeShTest(self, test, litConfig, steps, fileDependencies=None):
-        if test.config.unsupported:
-            return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')
+    def _parseScript(self, test, preamble, fileDependencies):
+        """
+        Extract the script from a test, with substitutions applied.
+
+        Returns a list of commands ready to be executed.
+
+        - test
+            The lit.Test to parse.
+
+        - preamble
+            A list of commands to perform before any command in the test.
+            These commands can contain unexpanded substitutions, but they
+            must not be of the form 'RUN:' -- they must be proper commands
+            once substituted.
+
+        - fileDependencies
+            A list of additional file dependencies for the test.
+        """
 
         # Get the default substitutions
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
@@ -263,7 +277,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
         # Parse the test file, including custom directives
         additionalCompileFlags = []
-        fileDependencies = fileDependencies or []
+        fileDependencies = list(fileDependencies)
         parsers = [
             lit.TestRunner.IntegratedTestKeywordParser('FILE_DEPENDENCIES:',
                                                        lit.TestRunner.ParserKind.LIST,
@@ -273,7 +287,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                                                        initial_value=additionalCompileFlags)
         ]
 
-        script = list(steps)
+        script = list(preamble)
         parsed = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
                                                                 require_script=not script)
         if isinstance(parsed, lit.Test.Result):
@@ -297,11 +311,23 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         fileDependencies = [f if os.path.isabs(f) else os.path.join(testDir, f) for f in fileDependencies]
         substitutions.append(('%{file_dependencies}', ' '.join(map(pipes.quote, fileDependencies))))
 
-        # Perform substitution in the script itself.
+        # Perform substitutions in the script itself.
         script = lit.TestRunner.applySubstitutions(script, substitutions,
                                                    recursion_limit=test.config.recursiveExpansionLimit)
+
+        return script
+
+    def _executeShTest(self, test, litConfig, steps, fileDependencies=None):
+        if test.config.unsupported:
+            return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')
+
+        script = self._parseScript(test, steps, fileDependencies or [])
+        if isinstance(script, lit.Test.Result):
+            return script
 
         if litConfig.noExecute:
             return lit.Test.Result(lit.Test.PASS)
         else:
+            _, tmpBase = lit.TestRunner.getTempPaths(test)
+            useExternalSh = True
             return lit.TestRunner._runShTest(test, litConfig, useExternalSh, script, tmpBase)
