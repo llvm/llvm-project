@@ -3845,11 +3845,22 @@ bool X86TTIImpl::areFunctionArgsABICompatible(
   // If we get here, we know the target features match. If one function
   // considers 512-bit vectors legal and the other does not, consider them
   // incompatible.
-  // FIXME Look at the arguments and only consider 512 bit or larger vectors?
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
-  return TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
-         TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs();
+  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
+      TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs())
+    return true;
+
+  // Consider the arguments compatible if they aren't vectors or aggregates.
+  // FIXME: Look at the size of vectors.
+  // FIXME: Look at the element types of aggregates to see if there are vectors.
+  // FIXME: The API of this function seems intended to allow arguments
+  // to be removed from the set, but the caller doesn't check if the set
+  // becomes empty so that may not work in practice.
+  return llvm::none_of(Args, [](Argument *A) {
+    auto *EltTy = cast<PointerType>(A->getType())->getElementType();
+    return EltTy->isVectorTy() || EltTy->isAggregateType();
+  });
 }
 
 X86TTIImpl::TTI::MemCmpExpansionOptions
