@@ -31,14 +31,6 @@ enum AssumeBundleArg {
   ABA_Argument = 1,
 };
 
-/// It is possible to have multiple Value for the argument of an attribute in
-/// the same llvm.assume on the same llvm::Value. This is rare but need to be
-/// dealt with.
-enum class AssumeQuery {
-  Highest, ///< Take the highest value available.
-  Lowest,  ///< Take the lowest value available.
-};
-
 /// Query the operand bundle of an llvm.assume to find a single attribute of
 /// the specified kind applied on a specified Value.
 ///
@@ -48,14 +40,12 @@ enum class AssumeQuery {
 /// Return true iff the queried attribute was found.
 /// If ArgVal is set. the argument will be stored to ArgVal.
 bool hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn, StringRef AttrName,
-                          uint64_t *ArgVal = nullptr,
-                          AssumeQuery AQR = AssumeQuery::Highest);
+                          uint64_t *ArgVal = nullptr);
 inline bool hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
                                  Attribute::AttrKind Kind,
-                                 uint64_t *ArgVal = nullptr,
-                                 AssumeQuery AQR = AssumeQuery::Highest) {
-  return hasAttributeInAssume(
-      AssumeCI, IsOn, Attribute::getNameFromAttrKind(Kind), ArgVal, AQR);
+                                 uint64_t *ArgVal = nullptr) {
+  return hasAttributeInAssume(AssumeCI, IsOn,
+                              Attribute::getNameFromAttrKind(Kind), ArgVal);
 }
 
 template<> struct DenseMapInfo<Attribute::AttrKind> {
