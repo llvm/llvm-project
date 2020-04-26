@@ -352,12 +352,15 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
     ArrayRef<std::string> Files, const CoverageViewOptions &Options,
     const CoverageFilter &Filters) {
   unsigned LCP = getRedundantPrefixLen(Files);
-  auto NumThreads = Options.NumThreads;
 
-  // If NumThreads is not specified, auto-detect a good default.
-  if (NumThreads == 0)
-    NumThreads = Files.size();
-  ThreadPool Pool(heavyweight_hardware_concurrency(NumThreads));
+  ThreadPoolStrategy S = hardware_concurrency(Options.NumThreads);
+  if (Options.NumThreads == 0) {
+    // If NumThreads is not specified, create one thread for each input, up to
+    // the number of hardware cores.
+    S = heavyweight_hardware_concurrency(Files.size());
+    S.Limit = true;
+  }
+  ThreadPool Pool(S);
 
   std::vector<FileCoverageSummary> FileReports;
   FileReports.reserve(Files.size());
