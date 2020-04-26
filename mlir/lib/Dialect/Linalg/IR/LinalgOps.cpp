@@ -204,7 +204,6 @@ template <typename GenericOpType>
 struct BlockArgsVerifier {
   static LogicalResult verify(GenericOpType op, Block &block);
 };
-} // namespace
 
 template <typename GenericOpType>
 LogicalResult BlockArgsVerifier<GenericOpType>::verify(GenericOpType op,
@@ -257,6 +256,7 @@ LogicalResult BlockArgsVerifier<IndexedGenericOp>::verify(IndexedGenericOp op,
   }
   return success();
 }
+} // namespace
 
 template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
