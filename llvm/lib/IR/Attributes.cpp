@@ -504,19 +504,19 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   //
   if (isStringAttribute()) {
     std::string Result;
-    Result += (Twine('"') + getKindAsString() + Twine('"')).str();
-
-    std::string AttrVal = std::string(pImpl->getValueAsString());
-    if (AttrVal.empty()) return Result;
-
-    // Since some attribute strings contain special characters that cannot be
-    // printable, those have to be escaped to make the attribute value printable
-    // as is.  e.g. "\01__gnu_mcount_nc"
     {
       raw_string_ostream OS(Result);
-      OS << "=\"";
-      printEscapedString(AttrVal, OS);
-      OS << "\"";
+      OS << '"' << getKindAsString() << '"';
+
+      // Since some attribute strings contain special characters that cannot be
+      // printable, those have to be escaped to make the attribute value
+      // printable as is.  e.g. "\01__gnu_mcount_nc"
+      const auto &AttrVal = pImpl->getValueAsString();
+      if (!AttrVal.empty()) {
+        OS << "=\"";
+        printEscapedString(AttrVal, OS);
+        OS << "\"";
+      }
     }
     return Result;
   }
