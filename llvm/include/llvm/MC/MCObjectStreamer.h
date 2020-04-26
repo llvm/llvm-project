@@ -38,7 +38,7 @@ class MCObjectStreamer : public MCStreamer {
   bool EmitEHFrame;
   bool EmitDebugFrame;
   SmallVector<MCSymbol *, 2> PendingLabels;
-  SmallPtrSet<MCSection *, 4> PendingLabelSections;
+  SmallVector<MCSection*, 2> PendingLabelSections;
   unsigned CurSubsectionIdx;
   struct PendingMCFixup {
     const MCSymbol *Sym;
