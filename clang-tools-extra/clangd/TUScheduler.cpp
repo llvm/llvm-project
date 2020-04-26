@@ -665,9 +665,9 @@ void ASTWorker::runWithAST(
       // return a compatible preamble as ASTWorker::update blocks.
       llvm::Optional<ParsedAST> NewAST;
       if (Invocation) {
-        NewAST = buildAST(FileName, std::move(Invocation),
-                          CompilerInvocationDiagConsumer.take(), FileInputs,
-                          getPossiblyStalePreamble());
+        NewAST = ParsedAST::build(FileName, FileInputs, std::move(Invocation),
+                                  CompilerInvocationDiagConsumer.take(),
+                                  getPossiblyStalePreamble());
         ++ASTBuildCount;
       }
       AST = NewAST ? std::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
@@ -804,8 +804,8 @@ void ASTWorker::generateDiagnostics(
   llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
   if (!AST || !InputsAreLatest) {
     auto RebuildStartTime = DebouncePolicy::clock::now();
-    llvm::Optional<ParsedAST> NewAST = buildAST(
-        FileName, std::move(Invocation), CIDiags, Inputs, LatestPreamble);
+    llvm::Optional<ParsedAST> NewAST = ParsedAST::build(
+        FileName, Inputs, std::move(Invocation), CIDiags, LatestPreamble);
     auto RebuildDuration = DebouncePolicy::clock::now() - RebuildStartTime;
     ++ASTBuildCount;
     // Try to record the AST-build time, to inform future update debouncing.
