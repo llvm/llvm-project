@@ -101,7 +101,7 @@ add_mlir_library(MLIRViewLikeInterface
   DEPENDS
   MLIRViewLikeInterfaceIncGen
   )
-target_link_libraries(MLIRLoopLikeInterface
+target_link_libraries(MLIRViewLikeInterface
   PUBLIC
   MLIRIR
   )
