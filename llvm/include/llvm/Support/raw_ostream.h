@@ -524,7 +524,9 @@ class raw_string_ostream : public raw_ostream {
   uint64_t current_pos() const override { return OS.size(); }
 
 public:
-  explicit raw_string_ostream(std::string &O) : OS(O) {}
+  explicit raw_string_ostream(std::string &O) : OS(O) {
+    SetUnbuffered();
+  }
   ~raw_string_ostream() override;
 
   /// Flushes the stream contents to the target string and returns  the string's
