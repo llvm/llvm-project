@@ -725,7 +725,7 @@ public:
     // If the cast is marked as legal (or promote) then assume low cost.
     if (SrcLT.first == DstLT.first &&
         TLI->isOperationLegalOrPromote(ISD, DstLT.second))
-      return 1;
+      return SrcLT.first;
 
     // Handle scalar conversions.
     if (!Src->isVectorTy() && !Dst->isVectorTy()) {
