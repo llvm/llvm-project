@@ -51,8 +51,7 @@ public:
       lldb::SectionType sect_type =
           llvm::StringSwitch<lldb::SectionType>(name)
               .Case("debug_info", lldb::eSectionTypeDWARFDebugInfo)
-              .Case("debug_abbrev", lldb::eSectionTypeDWARFDebugAbbrev)
-              .Case("debug_str", lldb::eSectionTypeDWARFDebugStr);
+              .Case("debug_abbrev", lldb::eSectionTypeDWARFDebugAbbrev);
       auto &membuf = entry.getValue();
       lldb::addr_t file_vm_addr = 0;
       lldb::addr_t vm_size = 0;
