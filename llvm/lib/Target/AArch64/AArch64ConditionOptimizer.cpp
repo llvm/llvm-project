@@ -158,9 +158,9 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
       return nullptr;
 
   // Now find the instruction controlling the terminator.
-  auto B = MBB->begin();
-  for (MachineInstr &I : reversedInstructionsWithoutDebug(
-           Term == B ? Term : std::prev(Term), B)) {
+  for (MachineBasicBlock::iterator B = MBB->begin(), It = Term; It != B;) {
+    It = prev_nodbg(It, B);
+    MachineInstr &I = *It;
     assert(!I.isTerminator() && "Spurious terminator");
     // Check if there is any use of NZCV between CMP and Bcc.
     if (I.readsRegister(AArch64::NZCV))
