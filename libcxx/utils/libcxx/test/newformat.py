@@ -7,6 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 import lit
+import lit.formats
 import os
 import pipes
 import re
