@@ -59,6 +59,7 @@ TEST(XcodeSDKTest, MergeTest) {
   EXPECT_EQ(empty.GetString(), llvm::StringRef("MacOSX10.14.Internal.sdk"));
 }
 
+#ifndef _WIN32
 TEST(XcodeSDKTest, SDKSupportsModules) {
   std::string base = "/Applications/Xcode.app/Contents/Developer/Platforms/";
   EXPECT_TRUE(XcodeSDK::SDKSupportsModules(
@@ -82,6 +83,7 @@ TEST(XcodeSDKTest, SDKSupportsModules) {
       XcodeSDK::Type::MacOSX,
       FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk")));
 }
+#endif
 
 TEST(XcodeSDKTest, GetCanonicalName) {
   XcodeSDK::Info info;
