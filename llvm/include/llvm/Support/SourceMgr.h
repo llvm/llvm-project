@@ -15,19 +15,9 @@
 #ifndef LLVM_SUPPORT_SOURCEMGR_H
 #define LLVM_SUPPORT_SOURCEMGR_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
-#include <algorithm>
-#include <cassert>
-#include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -57,21 +47,17 @@ private:
     /// The memory buffer for the file.
     std::unique_ptr<MemoryBuffer> Buffer;
 
-    /// Helper type for OffsetCache below: since we're storing many offsets
-    /// into relatively small files (often smaller than 2^8 or 2^16 bytes),
-    /// we select the offset vector element type dynamically based on the
-    /// size of Buffer.
-    using VariableSizeOffsets =
-        PointerUnion<std::vector<uint8_t> *, std::vector<uint16_t> *,
-                     std::vector<uint32_t> *, std::vector<uint64_t> *>;
-
     /// Vector of offsets into Buffer at which there are line-endings
     /// (lazily populated). Once populated, the '\n' that marks the end of
     /// line number N from [1..] is at Buffer[OffsetCache[N-1]]. Since
     /// these offsets are in sorted (ascending) order, they can be
     /// binary-searched for the first one after any given offset (eg. an
     /// offset corresponding to a particular SMLoc).
-    mutable VariableSizeOffsets OffsetCache;
+    ///
+    /// Since we're storing offsets into relatively small files (often smaller
+    /// than 2^8 or 2^16 bytes), we select the offset vector element type
+    /// dynamically based on the size of Buffer.
+    mutable void *OffsetCache = nullptr;
 
     /// Look up a given \p Ptr in in the buffer, determining which line it came
     /// from.
@@ -196,14 +182,14 @@ public:
   /// \param ShowColors Display colored messages if output is a terminal and
   /// the default error handler is used.
   void PrintMessage(raw_ostream &OS, SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = None,
-                    ArrayRef<SMFixIt> FixIts = None,
+                    ArrayRef<SMRange> Ranges = {},
+                    ArrayRef<SMFixIt> FixIts = {},
                     bool ShowColors = true) const;
 
   /// Emits a diagnostic to llvm::errs().
   void PrintMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = None,
-                    ArrayRef<SMFixIt> FixIts = None,
+                    ArrayRef<SMRange> Ranges = {},
+                    ArrayRef<SMFixIt> FixIts = {},
                     bool ShowColors = true) const;
 
   /// Emits a manually-constructed diagnostic to the given output stream.
@@ -219,8 +205,8 @@ public:
   /// \param Msg If non-null, the kind of message (e.g., "error") which is
   /// prefixed to the message.
   SMDiagnostic GetMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                          ArrayRef<SMRange> Ranges = None,
-                          ArrayRef<SMFixIt> FixIts = None) const;
+                          ArrayRef<SMRange> Ranges = {},
+                          ArrayRef<SMFixIt> FixIts = {}) const;
 
   /// Prints the names of included files and the line of the file they were
   /// included from. A diagnostic handler can use this before printing its
@@ -238,17 +224,10 @@ class SMFixIt {
   std::string Text;
 
 public:
-  // FIXME: Twine.str() is not very efficient.
-  SMFixIt(SMLoc Loc, const Twine &Insertion)
-      : Range(Loc, Loc), Text(Insertion.str()) {
-    assert(Loc.isValid());
-  }
+  SMFixIt(SMRange R, const Twine &Replacement);
 
-  // FIXME: Twine.str() is not very efficient.
-  SMFixIt(SMRange R, const Twine &Replacement)
-      : Range(R), Text(Replacement.str()) {
-    assert(R.isValid());
-  }
+  SMFixIt(SMLoc Loc, const Twine &Replacement)
+      : SMFixIt(SMRange(Loc, Loc), Replacement) {}
 
   StringRef getText() const { return Text; }
   SMRange getRange() const { return Range; }
@@ -286,7 +265,7 @@ public:
   SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line, int Col,
                SourceMgr::DiagKind Kind, StringRef Msg, StringRef LineStr,
                ArrayRef<std::pair<unsigned, unsigned>> Ranges,
-               ArrayRef<SMFixIt> FixIts = None);
+               ArrayRef<SMFixIt> FixIts = {});
 
   const SourceMgr *getSourceMgr() const { return SM; }
   SMLoc getLoc() const { return Loc; }

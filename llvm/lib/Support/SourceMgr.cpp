@@ -69,16 +69,13 @@ unsigned SourceMgr::FindBufferContainingLoc(SMLoc Loc) const {
 }
 
 template <typename T>
-static std::vector<T> &GetOrCreateOffsetCache(
-    PointerUnion<std::vector<uint8_t> *, std::vector<uint16_t> *,
-                 std::vector<uint32_t> *, std::vector<uint64_t> *> &OffsetCache,
-    MemoryBuffer *Buffer) {
-  if (!OffsetCache.isNull())
-    return *OffsetCache.get<std::vector<T> *>();
+static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
+                                              MemoryBuffer *Buffer) {
+  if (OffsetCache)
+    return *static_cast<std::vector<T> *>(OffsetCache);
 
   // Lazily fill in the offset cache.
   auto *Offsets = new std::vector<T>();
-  OffsetCache = Offsets;
   size_t Sz = Buffer->getBufferSize();
   assert(Sz <= std::numeric_limits<T>::max());
   StringRef S = Buffer->getBuffer();
@@ -87,6 +84,7 @@ static std::vector<T> &GetOrCreateOffsetCache(
       Offsets->push_back(static_cast<T>(N));
   }
 
+  OffsetCache = Offsets;
   return *Offsets;
 }
 
@@ -164,15 +162,16 @@ SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
 }
 
 SourceMgr::SrcBuffer::~SrcBuffer() {
-  if (!OffsetCache.isNull()) {
-    if (OffsetCache.is<std::vector<uint8_t> *>())
-      delete OffsetCache.get<std::vector<uint8_t> *>();
-    else if (OffsetCache.is<std::vector<uint16_t> *>())
-      delete OffsetCache.get<std::vector<uint16_t> *>();
-    else if (OffsetCache.is<std::vector<uint32_t> *>())
-      delete OffsetCache.get<std::vector<uint32_t> *>();
+  if (OffsetCache) {
+    size_t Sz = Buffer->getBufferSize();
+    if (Sz <= std::numeric_limits<uint8_t>::max())
+      delete static_cast<std::vector<uint8_t> *>(OffsetCache);
+    else if (Sz <= std::numeric_limits<uint16_t>::max())
+      delete static_cast<std::vector<uint16_t> *>(OffsetCache);
+    else if (Sz <= std::numeric_limits<uint32_t>::max())
+      delete static_cast<std::vector<uint32_t> *>(OffsetCache);
     else
-      delete OffsetCache.get<std::vector<uint64_t> *>();
+      delete static_cast<std::vector<uint64_t> *>(OffsetCache);
     OffsetCache = nullptr;
   }
 }
@@ -326,6 +325,15 @@ void SourceMgr::PrintMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
                              const Twine &Msg, ArrayRef<SMRange> Ranges,
                              ArrayRef<SMFixIt> FixIts, bool ShowColors) const {
   PrintMessage(errs(), Loc, Kind, Msg, Ranges, FixIts, ShowColors);
+}
+
+//===----------------------------------------------------------------------===//
+// SMFixIt Implementation
+//===----------------------------------------------------------------------===//
+
+SMFixIt::SMFixIt(SMRange R, const Twine &Replacement)
+    : Range(R), Text(Replacement.str()) {
+  assert(R.isValid());
 }
 
 //===----------------------------------------------------------------------===//
