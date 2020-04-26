@@ -7462,16 +7462,18 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
 
     // Peek through trunc/aext/zext.
-    // TODO: handle elements smaller than VT.
     // TODO: aext shouldn't require SM_SentinelZero padding.
     // TODO: handle shift of scalars.
+    unsigned MinBitsPerElt = Scl.getScalarValueSizeInBits();
     while (Scl.getOpcode() == ISD::TRUNCATE ||
            Scl.getOpcode() == ISD::ANY_EXTEND ||
            Scl.getOpcode() == ISD::ZERO_EXTEND) {
       Scl = Scl.getOperand(0);
-      if (Scl.getScalarValueSizeInBits() < NumBitsPerElt)
-        return false;
+      if (MinBitsPerElt > Scl.getScalarValueSizeInBits())
+        MinBitsPerElt = Scl.getScalarValueSizeInBits();
     }
+    if ((MinBitsPerElt % 8) != 0)
+      return false;
 
     // Attempt to find the source vector the scalar was extracted from.
     SDValue SrcExtract;
@@ -7486,31 +7488,29 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
 
     SDValue SrcVec = SrcExtract.getOperand(0);
     EVT SrcVT = SrcVec.getValueType();
-    unsigned NumSrcElts = SrcVT.getVectorNumElements();
-    unsigned NumZeros =
-        std::max<int>((NumBitsPerElt / SrcVT.getScalarSizeInBits()) - 1, 0);
-
-    if ((NumSrcElts % NumElts) != 0)
+    if (!SrcVT.getScalarType().isByteSized())
       return false;
-
     unsigned SrcIdx = SrcExtract.getConstantOperandVal(1);
-    if (NumSrcElts <= SrcIdx)
-      return false;
+    unsigned SrcByte = SrcIdx * (SrcVT.getScalarSizeInBits() / 8);
+    unsigned DstByte = DstIdx * NumBytesPerElt;
 
+    // Create 'identity' byte level shuffle mask and then add inserted bytes.
     if (Opcode == ISD::SCALAR_TO_VECTOR) {
       Ops.push_back(SrcVec);
-      Mask.append(NumSrcElts, SM_SentinelUndef);
+      Mask.append(NumSizeInBytes, SM_SentinelUndef);
     } else {
       Ops.push_back(SrcVec);
       Ops.push_back(N.getOperand(0));
-      for (int i = 0; i != (int)NumSrcElts; ++i)
-        Mask.push_back(NumSrcElts + i);
+      for (int i = 0; i != (int)NumSizeInBytes; ++i)
+        Mask.push_back(NumSizeInBytes + i);
     }
 
-    int Scale = NumSrcElts / NumElts;
-    Mask[Scale * DstIdx] = SrcIdx;
-    for (int i = 0; i != (int)NumZeros; ++i)
-      Mask[(Scale * DstIdx) + i + 1] = SM_SentinelZero;
+    unsigned MinBytesPerElts = MinBitsPerElt / 8;
+    MinBytesPerElts = std::min(MinBytesPerElts, NumBytesPerElt);
+    for (unsigned i = 0; i != MinBytesPerElts; ++i)
+      Mask[DstByte + i] = SrcByte + i;
+    for (unsigned i = MinBytesPerElts; i < NumBytesPerElt; ++i)
+      Mask[DstByte + i] = SM_SentinelZero;
     return true;
   }
   case X86ISD::PACKSS:

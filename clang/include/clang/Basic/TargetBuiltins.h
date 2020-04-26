@@ -240,6 +240,7 @@ namespace clang {
     bool isOverloadCvt() const { return Flags & IsOverloadCvt; }
     bool isPrefetch() const { return Flags & IsPrefetch; }
     bool isReverseCompare() const { return Flags & ReverseCompare; }
+    bool isAppendSVALL() const { return Flags & IsAppendSVALL; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

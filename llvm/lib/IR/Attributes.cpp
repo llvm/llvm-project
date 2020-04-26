@@ -504,19 +504,19 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   //
   if (isStringAttribute()) {
     std::string Result;
-    Result += (Twine('"') + getKindAsString() + Twine('"')).str();
-
-    std::string AttrVal = std::string(pImpl->getValueAsString());
-    if (AttrVal.empty()) return Result;
-
-    // Since some attribute strings contain special characters that cannot be
-    // printable, those have to be escaped to make the attribute value printable
-    // as is.  e.g. "\01__gnu_mcount_nc"
     {
       raw_string_ostream OS(Result);
-      OS << "=\"";
-      printEscapedString(AttrVal, OS);
-      OS << "\"";
+      OS << '"' << getKindAsString() << '"';
+
+      // Since some attribute strings contain special characters that cannot be
+      // printable, those have to be escaped to make the attribute value
+      // printable as is.  e.g. "\01__gnu_mcount_nc"
+      const auto &AttrVal = pImpl->getValueAsString();
+      if (!AttrVal.empty()) {
+        OS << "=\"";
+        printEscapedString(AttrVal, OS);
+        OS << "\"";
+      }
     }
     return Result;
   }
@@ -770,7 +770,9 @@ AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
                 "Too many attributes");
 
   for (const auto &I : *this) {
-    if (!I.isStringAttribute()) {
+    if (I.isStringAttribute()) {
+      StringAttrs.insert({ I.getKindAsString(), I });
+    } else {
       Attribute::AttrKind Kind = I.getKindAsEnum();
       AvailableAttrs[Kind / 8] |= 1ULL << (Kind % 8);
     }
@@ -779,16 +781,21 @@ AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
 
 AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
                                         ArrayRef<Attribute> Attrs) {
-  if (Attrs.empty())
+  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
+  llvm::sort(SortedAttrs);
+  return getSorted(C, SortedAttrs);
+}
+
+AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
+                                              ArrayRef<Attribute> SortedAttrs) {
+  if (SortedAttrs.empty())
     return nullptr;
 
-  // Otherwise, build a key to look up the existing attributes.
+  // Build a key to look up the existing attributes.
   LLVMContextImpl *pImpl = C.pImpl;
   FoldingSetNodeID ID;
 
-  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
-  llvm::sort(SortedAttrs);
-
+  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
   for (const auto &Attr : SortedAttrs)
     Attr.Profile(ID);
 
@@ -853,14 +860,11 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
   for (const auto &TDA : B.td_attrs())
     Attrs.emplace_back(Attribute::get(C, TDA.first, TDA.second));
 
-  return get(C, Attrs);
+  return getSorted(C, Attrs);
 }
 
 bool AttributeSetNode::hasAttribute(StringRef Kind) const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Kind))
-      return true;
-  return false;
+  return StringAttrs.count(Kind);
 }
 
 Attribute AttributeSetNode::getAttribute(Attribute::AttrKind Kind) const {
@@ -873,10 +877,7 @@ Attribute AttributeSetNode::getAttribute(Attribute::AttrKind Kind) const {
 }
 
 Attribute AttributeSetNode::getAttribute(StringRef Kind) const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Kind))
-      return I;
-  return {};
+  return StringAttrs.lookup(Kind);
 }
 
 MaybeAlign AttributeSetNode::getAlignment() const {

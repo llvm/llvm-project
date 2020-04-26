@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
-#include "llvm/Support/DataTypes.h"
 #include <memory>
 #include <string>
 

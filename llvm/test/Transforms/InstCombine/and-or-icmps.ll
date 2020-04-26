@@ -38,7 +38,7 @@ define i1 @PR2330(i32 %a, i32 %b) {
 }
 
 ; if LHSC and RHSC differ only by one bit:
-; (X == C1 || X == C2) -> (X | (C1 ^ C2)) == C2
+; (X == C1 || X == C2) -> (X & ~(C1 ^ C2)) == C1 (C1 has 1 less set bit)
 ; PR14708: https://bugs.llvm.org/show_bug.cgi?id=14708
 
 define i1 @or_eq_with_one_bit_diff_constants1(i32 %x) {
@@ -53,7 +53,7 @@ define i1 @or_eq_with_one_bit_diff_constants1(i32 %x) {
   ret i1 %or
 }
 
-; (X != C1 && X != C2) -> (X | (C1 ^ C2)) != C2
+; (X != C1 && X != C2) -> (X & ~(C1 ^ C2)) != C1 (C1 has 1 less set bit)
 
 define i1 @and_ne_with_one_bit_diff_constants1(i32 %x) {
 ; CHECK-LABEL: @and_ne_with_one_bit_diff_constants1(
