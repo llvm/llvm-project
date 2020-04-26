@@ -186,6 +186,9 @@ class AttributeSetNode final
 
   AttributeSetNode(ArrayRef<Attribute> Attrs);
 
+  static AttributeSetNode *getSorted(LLVMContext &C,
+                                     ArrayRef<Attribute> SortedAttrs);
+
 public:
   // AttributesSetNode is uniqued, these should not be available.
   AttributeSetNode(const AttributeSetNode &) = delete;
