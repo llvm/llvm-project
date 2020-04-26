@@ -43,8 +43,8 @@ define i1 @PR2330(i32 %a, i32 %b) {
 
 define i1 @or_eq_with_one_bit_diff_constants1(i32 %x) {
 ; CHECK-LABEL: @or_eq_with_one_bit_diff_constants1(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 51
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 50
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp eq i32 %x, 50
@@ -57,8 +57,8 @@ define i1 @or_eq_with_one_bit_diff_constants1(i32 %x) {
 
 define i1 @and_ne_with_one_bit_diff_constants1(i32 %x) {
 ; CHECK-LABEL: @and_ne_with_one_bit_diff_constants1(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 51
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 50
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i32 %x, 51
@@ -71,8 +71,8 @@ define i1 @and_ne_with_one_bit_diff_constants1(i32 %x) {
 
 define i1 @or_eq_with_one_bit_diff_constants2(i32 %x) {
 ; CHECK-LABEL: @or_eq_with_one_bit_diff_constants2(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 97
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -33
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 65
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp eq i32 %x, 97
@@ -83,8 +83,8 @@ define i1 @or_eq_with_one_bit_diff_constants2(i32 %x) {
 
 define i1 @and_ne_with_one_bit_diff_constants2(i19 %x) {
 ; CHECK-LABEL: @and_ne_with_one_bit_diff_constants2(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i19 [[X:%.*]], 128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i19 [[TMP1]], 193
+; CHECK-NEXT:    [[TMP1:%.*]] = and i19 [[X:%.*]], -129
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i19 [[TMP1]], 65
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i19 %x, 65
@@ -97,8 +97,8 @@ define i1 @and_ne_with_one_bit_diff_constants2(i19 %x) {
 
 define i1 @or_eq_with_one_bit_diff_constants3(i8 %x) {
 ; CHECK-LABEL: @or_eq_with_one_bit_diff_constants3(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 126
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp eq i8 %x, 254
@@ -109,8 +109,8 @@ define i1 @or_eq_with_one_bit_diff_constants3(i8 %x) {
 
 define i1 @and_ne_with_one_bit_diff_constants3(i8 %x) {
 ; CHECK-LABEL: @and_ne_with_one_bit_diff_constants3(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], -63
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 65
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i8 %x, 65
@@ -179,8 +179,8 @@ define i1 @and_ne_with_diff_one_signed(i64 %x) {
 
 define <2 x i1> @or_eq_with_one_bit_diff_constants2_splatvec(<2 x i32> %x) {
 ; CHECK-LABEL: @or_eq_with_one_bit_diff_constants2_splatvec(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X:%.*]], <i32 32, i32 32>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 97, i32 97>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 -33, i32 -33>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 65, i32 65>
 ; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %cmp1 = icmp eq <2 x i32> %x, <i32 97, i32 97>
