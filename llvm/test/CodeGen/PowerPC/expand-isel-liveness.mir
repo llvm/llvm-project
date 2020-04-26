@@ -2,7 +2,7 @@
 # RUN:   - %s -verify-machineinstrs | FileCheck %s
 
 ---
-name:           expand_isel_liveness
+name:           expand_isel_liveness1
 tracksRegLiveness: true
 registers:       []
 liveins:
@@ -36,7 +36,7 @@ body:             |
     renamable $x5 = ISEL8 $zero8, killed renamable $x7, killed renamable $cr5lt
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3, implicit killed $x4, implicit killed $x5
 
-  ; CHECK-LABEL: expand_isel_liveness
+  ; CHECK-LABEL: name: expand_isel_liveness1
   ; CHECK: bb.1:
   ; CHECK:   liveins: $x7
   ; CHECK:   renamable $x5 = ORI8 killed renamable $x7, 0
@@ -48,3 +48,33 @@ body:             |
   ; CHECK:   liveins: $x3, $x4, $x5, $x6, $cr1lt, $cr1gt, $x3, $cr6lt, $cr0eq, $r3, $cr5un, $cr1eq, $cr1un, $cr6un, $cr0lt, $cr0gt, $cr6gt, $cr0un, $cr1, $cr6, $cr5eq, $x8, $r8, $cr6eq, $x4, $r4, $cr0, $cr5gt, $cr5, $cr5lt, $x7, $r7, $x5, $r5, $x5, $zero8, $x7, $cr5lt
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit killed $x3, implicit killed $x4, implicit killed $x5
 ...
+
+---
+name:            expand_isel_liveness2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r3' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r3
+
+    $r5 = ADDI $r3, 1
+    $cr0 = CMPWI $r3, 0
+    $r3 = ISEL $zero, $r0, $cr0gt
+
+  ; CHECK-LABEL: name: expand_isel_liveness2
+  ; CHECK: bb.0.entry:
+  ; CHECK:   liveins: $r0, $r3
+  ; CHECK:   $r5 = ADDI $r3, 1
+  ; CHECK:   $cr0 = CMPWI $r3, 0
+  ; CHECK:   BC $cr0gt, %bb.2
+  ; CHECK: bb.1.entry:
+  ; CHECK:   liveins: $r0
+  ; CHECK:   $r3 = ORI $r0, 0
+  ; CHECK:   B %bb.3
+  ; CHECK: bb.2.entry:
+  ; CHECK:   liveins: $zero
+  ; CHECK:   $r3 = ADDI $zero, 0
+...
+
