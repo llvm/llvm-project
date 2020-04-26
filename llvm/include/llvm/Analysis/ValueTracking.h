@@ -601,7 +601,8 @@ class Value;
   /// immediately before the CtxI.
   bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                         const Instruction *CtxI = nullptr,
-                                        const DominatorTree *DT = nullptr);
+                                        const DominatorTree *DT = nullptr,
+                                        unsigned Depth = 0);
 
   /// Specific patterns of select instructions we can match.
   enum SelectPatternFlavor {

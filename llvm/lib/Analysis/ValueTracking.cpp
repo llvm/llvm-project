@@ -4693,7 +4693,11 @@ bool llvm::canCreatePoison(const Instruction *I) {
 
 bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                             const Instruction *CtxI,
-                                            const DominatorTree *DT) {
+                                            const DominatorTree *DT,
+                                            unsigned Depth) {
+  if (Depth >= MaxDepth)
+    return false;
+
   // If the value is a freeze instruction, then it can never
   // be undef or poison.
   if (isa<FreezeInst>(V))
@@ -4707,9 +4711,8 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     if (isa<UndefValue>(C) || isa<ConstantExpr>(C))
       return false;
 
-    // TODO: Add ConstantFP.
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) ||
-        isa<ConstantPointerNull>(C))
+    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(V) ||
+        isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
     if (C->getType()->isVectorTy())
@@ -4719,21 +4722,48 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     return false;
   }
 
-  if (auto PN = dyn_cast<PHINode>(V)) {
-    if (llvm::all_of(PN->incoming_values(), [](const Use &U) {
-          return isa<ConstantInt>(U.get());
-        }))
-      return true;
-  }
+  // Strip cast operations from a pointer value.
+  // Note that stripPointerCastsSameRepresentation can strip off getelementptr
+  // inbounds with zero offset. To guarantee that the result isn't poison, the
+  // stripped pointer is checked as it has to be pointing into an allocated
+  // object or be null `null` to ensure `inbounds` getelement pointers with a
+  // zero offset could not produce poison.
+  // It can strip off addrspacecast that do not change bit representation as
+  // well. We believe that such addrspacecast is equivalent to no-op.
+  auto *StrippedV = V->stripPointerCastsSameRepresentation();
+  if (isa<AllocaInst>(StrippedV) || isa<GlobalVariable>(StrippedV) ||
+      isa<Function>(StrippedV) || isa<ConstantPointerNull>(StrippedV))
+    return true;
 
-  if (auto II = dyn_cast<ICmpInst>(V)) {
-    if (llvm::all_of(II->operands(), [](const Value *V) {
-          return isGuaranteedNotToBeUndefOrPoison(V);
-        }))
-      return true;
-  }
+  auto OpCheck = [&](const Value *V) {
+    return isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth + 1);
+  };
 
-  if (auto I = dyn_cast<Instruction>(V)) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    switch (I->getOpcode()) {
+    case Instruction::GetElementPtr: {
+      auto *GEPI = dyn_cast<GetElementPtrInst>(I);
+      if (!GEPI->isInBounds() && llvm::all_of(GEPI->operands(), OpCheck))
+        return true;
+      break;
+    }
+    case Instruction::FCmp: {
+      auto *FI = dyn_cast<FCmpInst>(I);
+      if (FI->getFastMathFlags().none() &&
+          llvm::all_of(FI->operands(), OpCheck))
+        return true;
+      break;
+    }
+    case Instruction::BitCast:
+    case Instruction::PHI:
+    case Instruction::ICmp:
+      if (llvm::all_of(I->operands(), OpCheck))
+        return true;
+      break;
+    default:
+      break;
+    }
+
     if (programUndefinedIfPoison(I) && I->getType()->isIntegerTy(1))
       // Note: once we have an agreement that poison is a value-wise concept,
       // we can remove the isIntegerTy(1) constraint.
