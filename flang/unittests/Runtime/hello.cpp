@@ -3,7 +3,6 @@
 #include "testing.h"
 #include "../../runtime/descriptor.h"
 #include "../../runtime/io-api.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstring>
 
 using namespace Fortran::runtime;
