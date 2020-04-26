@@ -442,7 +442,9 @@ void VPlan::execute(VPTransformState *State) {
     IRBuilder<> Builder(State->CFG.PrevBB->getTerminator());
     auto *TCMO = Builder.CreateSub(TC, ConstantInt::get(TC->getType(), 1),
                                    "trip.count.minus.1");
-    Value2VPValue[TCMO] = BackedgeTakenCount;
+    Value *VTCMO = Builder.CreateVectorSplat(State->VF, TCMO, "broadcast");
+    for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part)
+      State->set(BackedgeTakenCount, VTCMO, Part);
   }
 
   // 0. Set the reverse mapping from VPValues to Values for code generation.
