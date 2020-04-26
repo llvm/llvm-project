@@ -238,6 +238,24 @@ struct TestCreateIllegalBlock : public RewritePattern {
   }
 };
 
+/// A simple pattern that tests the undo mechanism when replacing the uses of a
+/// block argument.
+struct TestUndoBlockArgReplace : public ConversionPattern {
+  TestUndoBlockArgReplace(MLIRContext *ctx)
+      : ConversionPattern("test.undo_block_arg_replace", /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto illegalOp =
+        rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    rewriter.replaceUsesOfBlockArgument(op->getRegion(0).front().getArgument(0),
+                                        illegalOp);
+    rewriter.updateRootInPlace(op, [] {});
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
 
@@ -449,12 +467,14 @@ struct TestLegalizePatternDriver
     TestTypeConverter converter;
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
-    patterns.insert<
-        TestRegionRewriteBlockMovement, TestRegionRewriteUndo, TestCreateBlock,
-        TestCreateIllegalBlock, TestPassthroughInvalidOp, TestSplitReturnType,
-        TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
-        TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-        TestNonRootReplacement, TestBoundedRecursiveRewrite>(&getContext());
+    patterns.insert<TestRegionRewriteBlockMovement, TestRegionRewriteUndo,
+                    TestCreateBlock, TestCreateIllegalBlock,
+                    TestUndoBlockArgReplace, TestPassthroughInvalidOp,
+                    TestSplitReturnType, TestChangeProducerTypeI32ToF32,
+                    TestChangeProducerTypeF32ToF64,
+                    TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
+                    TestNonRootReplacement, TestBoundedRecursiveRewrite>(
+        &getContext());
     patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);

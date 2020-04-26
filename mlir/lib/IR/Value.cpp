@@ -125,6 +125,15 @@ void Value::replaceAllUsesExcept(
   }
 }
 
+/// Replace all uses of 'this' value with 'newValue' if the given callback
+/// returns true.
+void Value::replaceUsesWithIf(Value newValue,
+                              function_ref<bool(OpOperand &)> shouldReplace) {
+  for (OpOperand &use : llvm::make_early_inc_range(getUses()))
+    if (shouldReplace(use))
+      use.set(newValue);
+}
+
 //===--------------------------------------------------------------------===//
 // Uses
 
