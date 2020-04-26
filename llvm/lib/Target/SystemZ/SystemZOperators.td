@@ -374,7 +374,7 @@ def z_vstrsz_cc         : SDNode<"SystemZISD::VSTRSZ_CC",
 def z_vftci             : SDNode<"SystemZISD::VFTCI", SDT_ZVecBinaryConvIntCC>;
 
 class AtomicWOp<string name, SDTypeProfile profile = SDT_ZAtomicLoadBinaryW>
-  : SDNode<"SystemZISD::"##name, profile,
+  : SDNode<"SystemZISD::"#name, profile,
            [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def z_atomic_swapw      : AtomicWOp<"ATOMIC_SWAPW">;

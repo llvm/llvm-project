@@ -610,8 +610,8 @@ struct DenseStringElementsAttributeStorage
       if (!firstElt.equals(data[i]))
         return KeyTy(ty, data, llvm::hash_combine(hashVal, data.drop_front(i)));
 
-    // Otherwise, this is a splat so just return the hash of the first element.
-    return KeyTy(ty, {firstElt}, hashVal, /*isSplat=*/true);
+    // Otherwise, this is a splat.
+    return KeyTy(ty, data, hashVal, /*isSplat=*/true);
   }
 
   /// Hash the key for the storage.

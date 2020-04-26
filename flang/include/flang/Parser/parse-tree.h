@@ -1393,12 +1393,18 @@ WRAPPER_CLASS(ContiguousStmt, std::list<ObjectName>);
 // R846 int-constant-subobject -> constant-subobject
 using ConstantSubobject = Constant<common::Indirection<Designator>>;
 
+// Represents an analyzed expression
+using TypedExpr = std::unique_ptr<evaluate::GenericExprWrapper,
+    common::Deleter<evaluate::GenericExprWrapper>>;
+
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
 //        signed-int-literal-constant | signed-real-literal-constant |
 //        null-init | initial-data-target | structure-constructor
 struct DataStmtConstant {
   UNION_CLASS_BOILERPLATE(DataStmtConstant);
+  CharBlock source;
+  mutable TypedExpr typedExpr;
   std::variant<Scalar<ConstantValue>, Scalar<ConstantSubobject>,
       SignedIntLiteralConstant, SignedRealLiteralConstant,
       SignedComplexLiteralConstant, NullInit, InitialDataTarget,
@@ -1699,9 +1705,6 @@ struct Expr {
   explicit Expr(Designator &&);
   explicit Expr(FunctionReference &&);
 
-  // Filled in with expression after successful semantic analysis.
-  using TypedExpr = std::unique_ptr<evaluate::GenericExprWrapper,
-      common::Deleter<evaluate::GenericExprWrapper>>;
   mutable TypedExpr typedExpr;
 
   CharBlock source;
@@ -1768,7 +1771,7 @@ struct Designator {
 // R902 variable -> designator | function-reference
 struct Variable {
   UNION_CLASS_BOILERPLATE(Variable);
-  mutable Expr::TypedExpr typedExpr;
+  mutable TypedExpr typedExpr;
   parser::CharBlock GetSource() const;
   std::variant<common::Indirection<Designator>,
       common::Indirection<FunctionReference>>

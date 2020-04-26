@@ -43,7 +43,7 @@ subroutine s3
   !ERROR: Left-hand side of assignment is not modifiable
   y%a(i) = 2
   x%b = 4
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Assignment to constant 'y%b' is not allowed
   y%b = 5
 end
 

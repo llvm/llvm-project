@@ -19,9 +19,9 @@
 
 // Precondition:  0 <= b < bits_in_dword
 
-COMPILER_RT_ABI di_int __lshrdi3(di_int a, si_int b);
+COMPILER_RT_ABI di_int __lshrdi3(di_int a, int b);
 
-int test__lshrdi3(di_int a, si_int b, di_int expected)
+int test__lshrdi3(di_int a, int b, di_int expected)
 {
     di_int x = __lshrdi3(a, b);
     if (x != expected)

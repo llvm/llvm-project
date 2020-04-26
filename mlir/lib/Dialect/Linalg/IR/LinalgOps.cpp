@@ -199,6 +199,7 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
+namespace {
 template <typename GenericOpType>
 struct BlockArgsVerifier {
   static LogicalResult verify(GenericOpType op, Block &block);
@@ -255,6 +256,7 @@ LogicalResult BlockArgsVerifier<IndexedGenericOp>::verify(IndexedGenericOp op,
   }
   return success();
 }
+} // namespace
 
 template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
@@ -492,7 +494,8 @@ void mlir::linalg::ReshapeOp::build(
 // Common verifier for reshape-like types. Fills `expandedType` and
 // `collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
-LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType, T &collapsedType) {
+static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
+                                            T &collapsedType) {
   expandedType = op.getSrcType();
   collapsedType = op.getResultType();
   unsigned expandedRank = expandedType.getRank();

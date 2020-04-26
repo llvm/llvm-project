@@ -210,6 +210,7 @@ private: // Semantic analysis methods.
   bool addDefOne(std::unique_ptr<Record> Rec);
 
 private:  // Parser methods.
+  bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);
   bool ParseClass();

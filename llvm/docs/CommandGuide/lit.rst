@@ -165,7 +165,7 @@ SELECTION OPTIONS
 .. option:: --max-time=N
 
  Spend at most ``N`` seconds (approximately) running tests and then terminate.
- Note that this is not an alias for :option:``--timeout``; the two are
+ Note that this is not an alias for :option:`--timeout`; the two are
  different kinds of maximums.
 
 .. option:: --num-shards=M
@@ -193,7 +193,7 @@ SELECTION OPTIONS
 
  Spend at most ``N`` seconds (approximately) running each individual test.
  ``0`` means no time limit, and ``0`` is the default. Note that this is not an
- alias for :option:``--max-time``; the two are different kinds of maximums.
+ alias for :option:`--max-time`; the two are different kinds of maximums.
 
 .. option:: --filter=REGEXP
 

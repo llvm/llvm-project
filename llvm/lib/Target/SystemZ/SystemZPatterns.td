@@ -57,10 +57,10 @@ multiclass RMWIByte<SDPatternOperator operator, AddressingMode mode,
 // The inserted operand is loaded using LOAD from an address of mode MODE.
 multiclass InsertMem<string type, Instruction insn, RegisterOperand cls,
                      SDPatternOperator load, AddressingMode mode> {
-  def : Pat<(!cast<SDPatternOperator>("or_as_"##type)
+  def : Pat<(!cast<SDPatternOperator>("or_as_"#type)
               cls:$src1, (load mode:$src2)),
             (insn cls:$src1, mode:$src2)>;
-  def : Pat<(!cast<SDPatternOperator>("or_as_rev"##type)
+  def : Pat<(!cast<SDPatternOperator>("or_as_rev"#type)
               (load mode:$src2), cls:$src1),
             (insn cls:$src1, mode:$src2)>;
 }
