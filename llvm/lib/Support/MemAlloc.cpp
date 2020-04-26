@@ -10,7 +10,8 @@
 
 // These are out of line to have __cpp_aligned_new not affect ABI.
 
-void *llvm::allocate_buffer(size_t Size, size_t Alignment) {
+LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
+llvm::allocate_buffer(size_t Size, size_t Alignment) {
   return ::operator new(Size
 #ifdef __cpp_aligned_new
                         ,
