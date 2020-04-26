@@ -55,6 +55,8 @@ template <typename T> class Optional;
 class raw_ostream;
 class Type;
 class User;
+class BranchProbabilityInfo;
+class BlockFrequencyInfo;
 
 class Function : public GlobalObject, public ilist_node<Function> {
 public:
@@ -792,12 +794,20 @@ public:
   ///
   void viewCFG() const;
 
+  /// Extended form to print edge weights.
+  void viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
+               const BranchProbabilityInfo *BPI) const;
+
   /// viewCFGOnly - This function is meant for use from the debugger.  It works
   /// just like viewCFG, but it does not include the contents of basic blocks
   /// into the nodes, just the label.  If you are only interested in the CFG
   /// this can make the graph smaller.
   ///
   void viewCFGOnly() const;
+
+  /// Extended form to print edge weights.
+  void viewCFGOnly(const BlockFrequencyInfo *BFI,
+                   const BranchProbabilityInfo *BPI) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
