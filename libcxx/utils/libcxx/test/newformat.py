@@ -13,6 +13,97 @@ import pipes
 import re
 import subprocess
 
+def _supportsVerify(test):
+    """
+    Determine whether clang-verify is supported for that test.
+
+    This is done by checking whether the %{cxx} substitution supports certain
+    compiler flags.
+    """
+    command = "%{{cxx}} -xc++ {} -Werror -fsyntax-only -Xclang -verify-ignore-unexpected".format(os.devnull)
+    command = lit.TestRunner.applySubstitutions([command], test.config.substitutions,
+                                                recursion_limit=test.config.recursiveExpansionLimit)[0]
+    devNull = open(os.devnull, 'w')
+    result = subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
+    return result == 0
+
+def parseScript(test, preamble, fileDependencies):
+    """
+    Extract the script from a test, with substitutions applied.
+
+    Returns a list of commands ready to be executed.
+
+    - test
+        The lit.Test to parse.
+
+    - preamble
+        A list of commands to perform before any command in the test.
+        These commands can contain unexpanded substitutions, but they
+        must not be of the form 'RUN:' -- they must be proper commands
+        once substituted.
+
+    - fileDependencies
+        A list of additional file dependencies for the test.
+    """
+
+    # Get the default substitutions
+    tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
+    useExternalSh = True
+    substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase,
+                                                           normalize_slashes=useExternalSh)
+
+    # Add the %{build} and %{run} convenience substitutions
+    substitutions.append(('%{build}', '%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe'))
+    substitutions.append(('%{run}', '%{exec} %t.exe'))
+
+    # Add the %{verify} substitution and the verify-support feature if Clang-verify is supported
+    if _supportsVerify(test):
+        test.config.available_features.add('verify-support')
+        substitutions.append(('%{verify}', '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'))
+
+    # Parse the test file, including custom directives
+    additionalCompileFlags = []
+    fileDependencies = list(fileDependencies)
+    parsers = [
+        lit.TestRunner.IntegratedTestKeywordParser('FILE_DEPENDENCIES:',
+                                                   lit.TestRunner.ParserKind.LIST,
+                                                   initial_value=fileDependencies),
+        lit.TestRunner.IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS:',
+                                                   lit.TestRunner.ParserKind.LIST,
+                                                   initial_value=additionalCompileFlags)
+    ]
+
+    script = list(preamble)
+    parsed = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
+                                                            require_script=not script)
+    if isinstance(parsed, lit.Test.Result):
+        return parsed
+    script += parsed
+
+    # Add compile flags specified with ADDITIONAL_COMPILE_FLAGS.
+    substitutions = [(s, x + ' ' + ' '.join(additionalCompileFlags)) if s == '%{compile_flags}'
+                            else (s, x) for (s, x) in substitutions]
+
+    # Perform substitutions inside FILE_DEPENDENCIES lines (or injected dependencies).
+    # This allows using variables like %t in file dependencies. Also note that we really
+    # need to resolve %{file_dependencies} now, because otherwise we won't be able to
+    # make all paths absolute below.
+    fileDependencies = lit.TestRunner.applySubstitutions(fileDependencies, substitutions,
+                                                         recursion_limit=test.config.recursiveExpansionLimit)
+
+    # Add the %{file_dependencies} substitution before we perform substitutions
+    # inside the script.
+    testDir = os.path.dirname(test.getSourcePath())
+    fileDependencies = [f if os.path.isabs(f) else os.path.join(testDir, f) for f in fileDependencies]
+    substitutions.append(('%{file_dependencies}', ' '.join(map(pipes.quote, fileDependencies))))
+
+    # Perform substitutions in the script itself.
+    script = lit.TestRunner.applySubstitutions(script, substitutions,
+                                               recursion_limit=test.config.recursiveExpansionLimit)
+
+    return script
+
+
 class CxxStandardLibraryTest(lit.formats.TestFormat):
     """
     Lit test format for the C++ Standard Library conformance test suite.
@@ -148,15 +239,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
             assert s in substitutions, "Required substitution {} was not provided".format(s)
 
-    # Determine whether clang-verify is supported.
-    def _supportsVerify(self, test):
-        command = "%{{cxx}} -xc++ {} -Werror -fsyntax-only -Xclang -verify-ignore-unexpected".format(os.devnull)
-        command = lit.TestRunner.applySubstitutions([command], test.config.substitutions,
-                                                    recursion_limit=test.config.recursiveExpansionLimit)[0]
-        devNull = open(os.devnull, 'w')
-        result = subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
-        return result == 0
-
     def _disableWithModules(self, test):
         with open(test.getSourcePath(), 'rb') as f:
             contents = f.read()
@@ -225,7 +307,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         # otherwise it's like a .compile.fail.cpp test. This is only provided
         # for backwards compatibility with the test suite.
         elif filename.endswith('.fail.cpp'):
-            if self._supportsVerify(test):
+            if _supportsVerify(test):
                 steps = [
                     "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only %{verify}"
                 ]
@@ -242,87 +324,11 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         string = ' '.join(flags)
         config.substitutions = [(s, x + ' ' + string) if s == '%{compile_flags}' else (s, x) for (s, x) in config.substitutions]
 
-    def _parseScript(self, test, preamble, fileDependencies):
-        """
-        Extract the script from a test, with substitutions applied.
-
-        Returns a list of commands ready to be executed.
-
-        - test
-            The lit.Test to parse.
-
-        - preamble
-            A list of commands to perform before any command in the test.
-            These commands can contain unexpanded substitutions, but they
-            must not be of the form 'RUN:' -- they must be proper commands
-            once substituted.
-
-        - fileDependencies
-            A list of additional file dependencies for the test.
-        """
-
-        # Get the default substitutions
-        tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
-        useExternalSh = True
-        substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase,
-                                                               normalize_slashes=useExternalSh)
-
-        # Add the %{build} and %{run} convenience substitutions
-        substitutions.append(('%{build}', '%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe'))
-        substitutions.append(('%{run}', '%{exec} %t.exe'))
-
-        # Add the %{verify} substitution and the verify-support feature if Clang-verify is supported
-        if self._supportsVerify(test):
-            test.config.available_features.add('verify-support')
-            substitutions.append(('%{verify}', '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'))
-
-        # Parse the test file, including custom directives
-        additionalCompileFlags = []
-        fileDependencies = list(fileDependencies)
-        parsers = [
-            lit.TestRunner.IntegratedTestKeywordParser('FILE_DEPENDENCIES:',
-                                                       lit.TestRunner.ParserKind.LIST,
-                                                       initial_value=fileDependencies),
-            lit.TestRunner.IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS:',
-                                                       lit.TestRunner.ParserKind.LIST,
-                                                       initial_value=additionalCompileFlags)
-        ]
-
-        script = list(preamble)
-        parsed = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
-                                                                require_script=not script)
-        if isinstance(parsed, lit.Test.Result):
-            return parsed
-        script += parsed
-
-        # Add compile flags specified with ADDITIONAL_COMPILE_FLAGS.
-        substitutions = [(s, x + ' ' + ' '.join(additionalCompileFlags)) if s == '%{compile_flags}'
-                                else (s, x) for (s, x) in substitutions]
-
-        # Perform substitutions inside FILE_DEPENDENCIES lines (or injected dependencies).
-        # This allows using variables like %t in file dependencies. Also note that we really
-        # need to resolve %{file_dependencies} now, because otherwise we won't be able to
-        # make all paths absolute below.
-        fileDependencies = lit.TestRunner.applySubstitutions(fileDependencies, substitutions,
-                                                             recursion_limit=test.config.recursiveExpansionLimit)
-
-        # Add the %{file_dependencies} substitution before we perform substitutions
-        # inside the script.
-        testDir = os.path.dirname(test.getSourcePath())
-        fileDependencies = [f if os.path.isabs(f) else os.path.join(testDir, f) for f in fileDependencies]
-        substitutions.append(('%{file_dependencies}', ' '.join(map(pipes.quote, fileDependencies))))
-
-        # Perform substitutions in the script itself.
-        script = lit.TestRunner.applySubstitutions(script, substitutions,
-                                                   recursion_limit=test.config.recursiveExpansionLimit)
-
-        return script
-
     def _executeShTest(self, test, litConfig, steps, fileDependencies=None):
         if test.config.unsupported:
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')
 
-        script = self._parseScript(test, steps, fileDependencies or [])
+        script = parseScript(test, steps, fileDependencies or [])
         if isinstance(script, lit.Test.Result):
             return script
 
