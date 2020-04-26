@@ -10,6 +10,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 
 #include "lldb/lldb-types.h"
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -187,7 +188,7 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
     const std::string sdk_name_lower = sdk_name.lower();
     Info info;
     info.type = desired_type;
-    const llvm::StringRef sdk_string = GetCanonicalName(info);
+    const std::string sdk_string = GetCanonicalName(info);
     if (!llvm::StringRef(sdk_name_lower).startswith(sdk_string))
       return false;
 
