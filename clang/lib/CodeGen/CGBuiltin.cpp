@@ -7956,6 +7956,25 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return nullptr;
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
+
+  case SVE::BI__builtin_sve_svlen_f16:
+  case SVE::BI__builtin_sve_svlen_f32:
+  case SVE::BI__builtin_sve_svlen_f64:
+  case SVE::BI__builtin_sve_svlen_s8:
+  case SVE::BI__builtin_sve_svlen_s16:
+  case SVE::BI__builtin_sve_svlen_s32:
+  case SVE::BI__builtin_sve_svlen_s64:
+  case SVE::BI__builtin_sve_svlen_u8:
+  case SVE::BI__builtin_sve_svlen_u16:
+  case SVE::BI__builtin_sve_svlen_u32:
+  case SVE::BI__builtin_sve_svlen_u64: {
+    SVETypeFlags TF(Builtin->TypeModifier);
+    auto VTy = cast<llvm::VectorType>(getSVEType(TF));
+    auto NumEls = llvm::ConstantInt::get(Ty, VTy->getElementCount().Min);
+
+    Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
+    return Builder.CreateMul(NumEls, Builder.CreateCall(F));
+  }
   }
 
   /// Should not happen
