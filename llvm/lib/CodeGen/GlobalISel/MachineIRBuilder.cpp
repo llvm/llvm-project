@@ -290,6 +290,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
   }
 
   auto Const = buildInstr(TargetOpcode::G_CONSTANT);
+  Const->setDebugLoc(DebugLoc());
   Res.addDefToMIB(*getMRI(), Const);
   Const.addCImm(&Val);
   return Const;
