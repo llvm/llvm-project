@@ -1789,14 +1789,14 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
       }
     }
   }
+#ifdef LLDB_CONFIGURATION_DEBUG
+  VerifyDecl(namespace_decl);
+#endif
 
   // Note: namespaces can span multiple modules, so perhaps this isn't a good
   // idea.
   SetOwningModule(namespace_decl, owning_module);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
-  VerifyDecl(namespace_decl);
-#endif
   return namespace_decl;
 }
 
