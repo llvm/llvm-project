@@ -20382,17 +20382,22 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
     // trying to avoid 512-bit vectors. If we are avoiding 512-bit vectors
     // we need to split into two 8 element vectors which we can extend to v8i32,
     // truncate and concat the results. There's an additional complication if
-    // the original type is v16i8. In that case we can't split the v16i8 so
-    // first we pre-extend it to v16i16 which we can split to v8i16, then extend
-    // to v8i32, truncate that to v8i1 and concat the two halves.
+    // the original type is v16i8. In that case we can't split the v16i8
+    // directly, so we need to shuffle high elements to low and use
+    // sign_extend_vector_inreg.
     if (NumElts == 16 && !Subtarget.canExtendTo512DQ()) {
+      SDValue Lo, Hi;
       if (InVT == MVT::v16i8) {
-        // First we need to sign extend up to 256-bits so we can split that.
-        InVT = MVT::v16i16;
-        In = DAG.getNode(ISD::SIGN_EXTEND, DL, InVT, In);
+        Lo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, MVT::v8i32, In);
+        Hi = DAG.getVectorShuffle(
+            InVT, DL, In, In,
+            {8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1});
+        Hi = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, MVT::v8i32, Hi);
+      } else {
+        assert(InVT == MVT::v16i16 && "Unexpected VT!");
+        Lo = extract128BitVector(In, 0, DAG, DL);
+        Hi = extract128BitVector(In, 8, DAG, DL);
       }
-      SDValue Lo = extract128BitVector(In, 0, DAG, DL);
-      SDValue Hi = extract128BitVector(In, 8, DAG, DL);
       // We're split now, just emit two truncates and a concat. The two
       // truncates will trigger legalization to come back to this function.
       Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i1, Lo);
