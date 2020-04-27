@@ -1030,7 +1030,6 @@ func @cmpxchg(%F : memref<10xf32>, %fval : f32, %i : index) -> f32 {
 // -----
 
 // CHECK-LABEL: func @generic_atomic_rmw
-// CHECK32-LABEL: func @generic_atomic_rmw
 func @generic_atomic_rmw(%I : memref<10xf32>, %i : index) -> f32 {
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
     ^bb0(%old_value : f32):
@@ -1047,8 +1046,12 @@ func @generic_atomic_rmw(%I : memref<10xf32>, %i : index) -> f32 {
   // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
   // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : !llvm.float)
   // CHECK-NEXT: ^bb2:
-  return %x : f32
-  // CHECK-NEXT: llvm.return [[new]]
+  %c2 = constant 2.0 : f32
+  %add = addf %c2, %x : f32
+  return %add : f32
+  // CHECK-NEXT: [[c2:%.*]] = llvm.mlir.constant(2.000000e+00 : f32)
+  // CHECK-NEXT: [[add:%.*]] = llvm.fadd [[c2]], [[new]] : !llvm.float
+  // CHECK-NEXT: llvm.return [[add]]
 }
 
 // -----
