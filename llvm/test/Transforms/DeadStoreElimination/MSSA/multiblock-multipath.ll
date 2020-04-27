@@ -133,6 +133,308 @@ bb5:
   ret void
 }
 
+; Cannot remove the store in entry, as it is not overwritten on all paths to an
+; exit (patch including bb4).
+define void @accessible_after_return5(i32* %P, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @accessible_after_return5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 0, i32* %P
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  br i1 %c.2, label %bb3, label %bb4
+
+bb2:
+  store i32 1, i32* %P
+  br label %bb5
+
+bb3:
+  store i32 2, i32* %P
+  br label %bb5
+
+bb4:
+  br label %bb5
+
+bb5:
+  ret void
+}
+
+; Can remove store in entry block, because it is overwritten before each return.
+define void @accessible_after_return6(i32* %P, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @accessible_after_return6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       bb4:
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 0, i32* %P
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  br i1 %c.2, label %bb3, label %bb4
+
+bb2:
+  store i32 1, i32* %P
+  ret void
+
+bb3:
+  store i32 2, i32* %P
+  ret void
+
+bb4:
+  store i32 3, i32* %P
+  ret void
+}
+
+; Can remove store in bb1, because it is overwritten along each path
+; from bb1 to the exit.
+define void @accessible_after_return7(i32* %P, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @accessible_after_return7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  store i32 0, i32* %P
+  br i1 %c.2, label %bb3, label %bb4
+
+bb3:
+  store i32 2, i32* %P
+  br label %bb5
+
+bb4:
+  store i32 1, i32* %P
+  br label %bb5
+
+bb2:
+  br label %bb5
+
+bb5:
+  ret void
+}
+
+
+; Cannot remove store in entry block, because it is overwritten along each path to
+; the exit (entry->bb1->bb5->bb5).
+define void @accessible_after_return8(i32* %P, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @accessible_after_return8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 0, i32* %P
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  br i1 %c.2, label %bb3, label %bb4
+
+bb2:
+  store i32 1, i32* %P
+  br label %bb5
+
+bb3:
+  store i32 2, i32* %P
+  br label %bb5
+
+bb4:
+  br label %bb5
+
+bb5:
+  ret void
+}
+
+; Make sure no stores are removed here. In particular, the store in if.then
+; should not be removed.
+define void @accessible_after_return9(i8* noalias %ptr) {
+; CHECK-LABEL: @accessible_after_return9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i8 99, i8* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i8 20, i8* [[PTR]], align 8
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_2]], label [[IF_THEN10:%.*]], label [[FOR_INC:%.*]]
+; CHECK:       if.then10:
+; CHECK-NEXT:    store i8 0, i8* [[PTR]], align 8
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_3]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %for.body, label %for.end
+
+for.body:
+  store i8 99, i8* %ptr, align 8
+  %c.1 = call i1 @cond()
+  br i1 %c.1, label %if.end, label %if.then
+
+if.then:
+  store i8 20, i8* %ptr, align 8
+  br label %if.end
+
+if.end:
+  %c.2 = call i1 @cond()
+  br i1 %c.2, label %if.then10, label %for.inc
+
+if.then10:
+  store i8 0, i8* %ptr, align 8
+  br label %for.inc
+
+for.inc:
+  %c.3 = call i1 @cond()
+  br i1 %c.3, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define void @accessible_after_return10_dead_block(i32* %P, i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @accessible_after_return10_dead_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       bb4:
+; CHECK-NEXT:    ret void
+; CHECK:       bb5:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 0, i32* %P
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  br i1 %c.2, label %bb3, label %bb4
+
+bb2:
+  store i32 1, i32* %P
+  ret void
+
+bb3:
+  store i32 2, i32* %P
+  ret void
+
+bb4:
+  ret void
+
+bb5:
+  ret void
+}
+
+@linenum = external local_unnamed_addr global i32, align 4
+
+define void @accessible_after_return11_loop() {
+; CHECK-LABEL: @accessible_after_return11_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
+; CHECK:       for.body.i:
+; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_1]], label [[FOR_BODY_I]], label [[INIT_PARSE_EXIT:%.*]]
+; CHECK:       init_parse.exit:
+; CHECK-NEXT:    store i32 0, i32* @linenum, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull undef)
+; CHECK-NEXT:    store i32 0, i32* @linenum, align 4
+; CHECK-NEXT:    br label [[FOR_BODY_I20:%.*]]
+; CHECK:       for.body.i20:
+; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_2]], label [[FOR_BODY_I20]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i, %entry
+  %c.1 = call i1 @cond()
+  br i1 %c.1, label %for.body.i, label %init_parse.exit
+
+init_parse.exit:                                  ; preds = %for.body.i
+  store i32 0, i32* @linenum, align 4
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull undef) #2
+  store i32 0, i32* @linenum, align 4
+  br label %for.body.i20
+
+for.body.i20:                                     ; preds = %for.body.i20, %init_parse.exit
+  %c.2 = call i1 @cond()
+  br i1 %c.2, label %for.body.i20, label %exit
+
+exit:
+  ret void
+}
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare i1 @cond() readnone nounwind
 
 ; Tests where the pointer/object is *NOT* accessible after the function returns.
 
@@ -140,7 +442,7 @@ bb5:
 ; on all paths to the exit.
 define void @alloca_1(i1 %c1) {
 ; CHECK-LABEL: @alloca_1(
-; CHECK-NEXT:    [[P:%.*]] = alloca i32
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
@@ -172,7 +474,7 @@ bb5:
 ; on all paths to the exit.
 define void @alloca_2(i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @alloca_2(
-; CHECK-NEXT:    [[P:%.*]] = alloca i32
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
@@ -217,7 +519,7 @@ bb5:
 ; first store to the read in bb5, where the location is not overwritten.
 define void @alloca_3(i1 %c1) {
 ; CHECK-LABEL: @alloca_3(
-; CHECK-NEXT:    [[P:%.*]] = alloca i32
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -249,7 +551,7 @@ bb5:
 ; object cannot be accessed by the caller.
 define void @alloca_4(i1 %c1) {
 ; CHECK-LABEL: @alloca_4(
-; CHECK-NEXT:    [[P:%.*]] = alloca i32
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
