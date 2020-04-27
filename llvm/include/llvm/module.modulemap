@@ -212,8 +212,8 @@ module LLVM_Pass {
     // PassSupport.h and PassAnalysisSupport.h are made available only through
     // Pass.h.
     header "Pass.h"
-    header "PassSupport.h"
-    header "PassAnalysisSupport.h"
+    textual header "PassSupport.h"
+    textual header "PassAnalysisSupport.h"
     export *
   }
 
