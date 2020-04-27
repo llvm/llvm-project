@@ -98,7 +98,7 @@ ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
       StringRef Arg = Args[i];
       // All dependency-file options begin with -M. These include -MM,
       // -MF, -MG, -MP, -MT, -MQ, -MD, and -MMD.
-      if (!Arg.startswith("-M")) {
+      if (!Arg.startswith("-M") && !Arg.startswith("/showIncludes")) {
         AdjustedArgs.push_back(Args[i]);
         continue;
       }
