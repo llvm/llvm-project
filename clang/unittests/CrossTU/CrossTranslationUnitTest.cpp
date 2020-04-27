@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CrossTU/CrossTranslationUnit.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -163,7 +162,7 @@ TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
   IndexFile.os().flush();
   EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
   llvm::Expected<llvm::StringMap<std::string>> IndexOrErr =
-      parseCrossTUIndex(IndexFileName);
+      parseCrossTUIndex(IndexFileName, "");
   EXPECT_TRUE((bool)IndexOrErr);
   llvm::StringMap<std::string> ParsedIndex = IndexOrErr.get();
   for (const auto &E : Index) {
@@ -172,6 +171,26 @@ TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
   }
   for (const auto &E : ParsedIndex)
     EXPECT_TRUE(Index.count(E.getKey()));
+}
+
+TEST(CrossTranslationUnit, CTUDirIsHandledCorrectly) {
+  llvm::StringMap<std::string> Index;
+  Index["a"] = "/b/c/d";
+  std::string IndexText = createCrossTUIndexString(Index);
+
+  int IndexFD;
+  llvm::SmallString<256> IndexFileName;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("index", "txt", IndexFD,
+                                                  IndexFileName));
+  llvm::ToolOutputFile IndexFile(IndexFileName, IndexFD);
+  IndexFile.os() << IndexText;
+  IndexFile.os().flush();
+  EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
+  llvm::Expected<llvm::StringMap<std::string>> IndexOrErr =
+      parseCrossTUIndex(IndexFileName, "/ctudir");
+  EXPECT_TRUE((bool)IndexOrErr);
+  llvm::StringMap<std::string> ParsedIndex = IndexOrErr.get();
+  EXPECT_EQ(ParsedIndex["a"], "/ctudir/b/c/d");
 }
 
 } // end namespace cross_tu

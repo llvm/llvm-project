@@ -10,6 +10,4 @@ add_clang_library(clangCrossTU
   clangBasic
   clangFrontend
   clangIndex
-  clangTooling
-  clangSerialization
   )

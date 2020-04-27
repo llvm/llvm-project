@@ -381,21 +381,6 @@ ANALYZER_OPTION(StringRef, CTUIndexName, "ctu-index-name",
                 "the name of the file containing the CTU index of definitions.",
                 "externalDefMap.txt")
 
-ANALYZER_OPTION(bool, CTUOnDemandParsing, "ctu-on-demand-parsing",
-                "Whether to parse function definitions from external TUs in "
-                "an on-demand manner during analysis. When using on-demand "
-                "parsing there is no need for pre-dumping ASTs. External "
-                "definition mapping is still needed, and a valid compilation "
-                "database with compile commands for the external TUs is also "
-                "necessary. Disabled by default.",
-                false)
-
-ANALYZER_OPTION(StringRef, CTUOnDemandParsingDatabase,
-                "ctu-on-demand-parsing-database",
-                "The path to the compilation database used for on-demand "
-                "parsing of ASTs during CTU analysis.",
-                "compile_commands.json")
-
 ANALYZER_OPTION(
     StringRef, ModelPath, "model-path",
     "The analyzer can inline an alternative implementation written in C at the "
