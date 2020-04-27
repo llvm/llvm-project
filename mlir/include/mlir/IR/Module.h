@@ -31,7 +31,8 @@ class ModuleOp
     : public Op<
           ModuleOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
           OpTrait::IsIsolatedFromAbove, OpTrait::SymbolTable,
-          OpTrait::SingleBlockImplicitTerminator<ModuleTerminatorOp>::Impl> {
+          OpTrait::SingleBlockImplicitTerminator<ModuleTerminatorOp>::Impl,
+          SymbolOpInterface::Trait> {
 public:
   using Op::Op;
   using Op::print;
@@ -95,6 +96,13 @@ public:
       insertPt = Block::iterator(body->getTerminator());
     body->getOperations().insert(insertPt, op);
   }
+
+  //===--------------------------------------------------------------------===//
+  // SymbolOpInterface Methods
+  //===--------------------------------------------------------------------===//
+
+  /// A ModuleOp may optionally define a symbol.
+  bool isOptionalSymbol() { return true; }
 };
 
 /// The ModuleTerminatorOp is a special terminator operation for the body of a

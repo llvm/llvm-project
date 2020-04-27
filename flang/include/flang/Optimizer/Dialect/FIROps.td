@@ -14,6 +14,7 @@
 #ifndef FIR_DIALECT_FIR_OPS
 #define FIR_DIALECT_FIR_OPS
 
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffects.td"
 

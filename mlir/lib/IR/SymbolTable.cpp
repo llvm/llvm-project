@@ -146,11 +146,6 @@ void SymbolTable::insert(Operation *symbol, Block::iterator insertPt) {
   setSymbolName(symbol, nameBuffer);
 }
 
-/// Returns true if the given operation defines a symbol.
-bool SymbolTable::isSymbol(Operation *op) {
-  return op->hasTrait<OpTrait::Symbol>() || getNameIfSymbol(op).hasValue();
-}
-
 /// Returns the name of the given symbol operation.
 StringRef SymbolTable::getSymbolName(Operation *symbol) {
   Optional<StringRef> name = getNameIfSymbol(symbol);
@@ -286,7 +281,7 @@ Operation *SymbolTable::lookupNearestSymbolFrom(Operation *from,
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpTrait::impl::verifySymbolTable(Operation *op) {
+LogicalResult detail::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one region";
@@ -316,7 +311,7 @@ LogicalResult OpTrait::impl::verifySymbolTable(Operation *op) {
   return success();
 }
 
-LogicalResult OpTrait::impl::verifySymbol(Operation *op) {
+LogicalResult detail::verifySymbol(Operation *op) {
   // Verify the name attribute.
   if (!op->getAttrOfType<StringAttr>(mlir::SymbolTable::getSymbolAttrName()))
     return op->emitOpError() << "requires string attribute '"
@@ -866,3 +861,10 @@ LogicalResult SymbolTable::replaceAllSymbolUses(Operation *oldSymbol,
                                                 Region *from) {
   return replaceAllSymbolUsesImpl(oldSymbol, newSymbol, from);
 }
+
+//===----------------------------------------------------------------------===//
+// Symbol Interfaces
+//===----------------------------------------------------------------------===//
+
+/// Include the generated symbol interfaces.
+#include "mlir/IR/SymbolInterfaces.cpp.inc"
