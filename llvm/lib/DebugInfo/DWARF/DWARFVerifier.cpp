@@ -307,7 +307,7 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
         Unit = TypeUnitVector.addUnit(std::make_unique<DWARFTypeUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangesSection(),
             &DObj.getLocSection(), DObj.getStrSection(),
-            DObj.getStrOffsetsSection(), &DObj.getAppleObjCSection(),
+            DObj.getStrOffsetsSection(), &DObj.getAddrSection(),
             DObj.getLineSection(), DCtx.isLittleEndian(), false,
             TypeUnitVector));
         break;
@@ -321,7 +321,7 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
         Unit = CompileUnitVector.addUnit(std::make_unique<DWARFCompileUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangesSection(),
             &DObj.getLocSection(), DObj.getStrSection(),
-            DObj.getStrOffsetsSection(), &DObj.getAppleObjCSection(),
+            DObj.getStrOffsetsSection(), &DObj.getAddrSection(),
             DObj.getLineSection(), DCtx.isLittleEndian(), false,
             CompileUnitVector));
         break;
