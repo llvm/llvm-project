@@ -841,7 +841,8 @@ template <typename T> struct alignas(alignof(T)) SmallVectorStorage<T, 0> {};
 /// Note that this does not attempt to be exception safe.
 ///
 template <typename T, unsigned N>
-class SmallVector : public SmallVectorImpl<T>, SmallVectorStorage<T, N> {
+class LLVM_GSL_OWNER SmallVector : public SmallVectorImpl<T>,
+                                   SmallVectorStorage<T, N> {
 public:
   SmallVector() : SmallVectorImpl<T>(N) {}
 

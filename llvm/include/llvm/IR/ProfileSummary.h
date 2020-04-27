@@ -64,15 +64,16 @@ public:
   ProfileSummary(Kind K, SummaryEntryVector DetailedSummary,
                  uint64_t TotalCount, uint64_t MaxCount,
                  uint64_t MaxInternalCount, uint64_t MaxFunctionCount,
-                 uint32_t NumCounts, uint32_t NumFunctions)
+                 uint32_t NumCounts, uint32_t NumFunctions,
+                 bool Partial = false)
       : PSK(K), DetailedSummary(std::move(DetailedSummary)),
         TotalCount(TotalCount), MaxCount(MaxCount),
         MaxInternalCount(MaxInternalCount), MaxFunctionCount(MaxFunctionCount),
-        NumCounts(NumCounts), NumFunctions(NumFunctions) {}
+        NumCounts(NumCounts), NumFunctions(NumFunctions), Partial(Partial) {}
 
   Kind getKind() const { return PSK; }
   /// Return summary information as metadata.
-  Metadata *getMD(LLVMContext &Context);
+  Metadata *getMD(LLVMContext &Context, bool AddPartialField = true);
   /// Construct profile summary from metdata.
   static ProfileSummary *getFromMD(Metadata *MD);
   SummaryEntryVector &getDetailedSummary() { return DetailedSummary; }

@@ -25,35 +25,54 @@
 
 // Forward declarations.
 namespace llvm {
-// Containers.
+// String types
+template <unsigned N>
+class SmallString;
 class StringRef;
 class StringLiteral;
 class Twine;
-template <typename T> class SmallPtrSetImpl;
-template <typename T, unsigned N> class SmallPtrSet;
-template <typename T> class SmallVectorImpl;
-template <typename T, unsigned N> class SmallVector;
-template <unsigned N> class SmallString;
+
+// Containers.
 template <typename T> class ArrayRef;
-template <typename T> class MutableArrayRef;
-template <typename T> class TinyPtrVector;
-template <typename T> class Optional;
-template <typename... PT> class PointerUnion;
 namespace detail {
 template <typename KeyT, typename ValueT> struct DenseMapPair;
-}
-template <typename T> struct DenseMapInfo;
-template <typename ValueT, typename ValueInfoT> class DenseSet;
+} // namespace detail
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
-template <typename Fn> class function_ref;
-template <typename IteratorT> class iterator_range;
-template <typename T, typename ResultT> class TypeSwitch;
+template <typename T>
+struct DenseMapInfo;
+template <typename ValueT, typename ValueInfoT>
+class DenseSet;
+class MallocAllocator;
+template <typename T>
+class MutableArrayRef;
+template <typename T>
+class Optional;
+template <typename... PT>
+class PointerUnion;
+template <typename T, unsigned N>
+class SmallPtrSet;
+template <typename T>
+class SmallPtrSetImpl;
+template <typename T, unsigned N>
+class SmallVector;
+template <typename T>
+class SmallVectorImpl;
+template <typename AllocatorTy>
+class StringSet;
+template <typename T>
+class TinyPtrVector;
+template <typename T, typename ResultT>
+class TypeSwitch;
 
 // Other common classes.
-class raw_ostream;
 class APInt;
 class APFloat;
+template <typename Fn>
+class function_ref;
+template <typename IteratorT>
+class iterator_range;
+class raw_ostream;
 } // end namespace llvm
 
 namespace mlir {
@@ -65,6 +84,14 @@ using llvm::dyn_cast_or_null;
 using llvm::isa;
 using llvm::isa_and_nonnull;
 
+// String types
+using llvm::SmallString;
+using llvm::StringLiteral;
+using llvm::StringRef;
+using llvm::Twine;
+
+// Container Related types
+//
 // Containers.
 using llvm::ArrayRef;
 using llvm::DenseMapInfo;
@@ -74,27 +101,26 @@ template <typename KeyT, typename ValueT,
 using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
-template <typename Fn> using function_ref = llvm::function_ref<Fn>;
-using llvm::iterator_range;
+template <typename AllocatorTy = llvm::MallocAllocator>
+using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
 using llvm::None;
 using llvm::Optional;
 using llvm::PointerUnion;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
-using llvm::SmallString;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
-using llvm::StringLiteral;
-using llvm::StringRef;
 using llvm::TinyPtrVector;
-using llvm::Twine;
 template <typename T, typename ResultT = void>
 using TypeSwitch = llvm::TypeSwitch<T, ResultT>;
 
 // Other common classes.
 using llvm::APFloat;
 using llvm::APInt;
+template <typename Fn>
+using function_ref = llvm::function_ref<Fn>;
+using llvm::iterator_range;
 using llvm::raw_ostream;
 } // namespace mlir
 

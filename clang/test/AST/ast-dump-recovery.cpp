@@ -156,3 +156,22 @@ void InvalidInitalizer(int x) {
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b6 = Bar{invalid()};
 }
+void InitializerForAuto() {
+  // CHECK:     `-VarDecl {{.*}} invalid a 'auto'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   `-UnresolvedLookupExpr {{.*}} 'invalid'
+  auto a = invalid();
+
+  // CHECK:     `-VarDecl {{.*}} invalid b 'auto'
+  // CHECK-NEXT: `-CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   |-UnresolvedLookupExpr {{.*}} 'some_func'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
+  auto b = some_func(invalid());
+
+  decltype(ned);
+  // very bad initailizer: there is an unresolved typo expr internally, we just
+  // drop it.
+  // CHECK: `-VarDecl {{.*}} invalid unresolved_typo 'auto'
+  auto unresolved_typo = gned.*[] {};
+}

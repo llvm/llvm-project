@@ -7913,6 +7913,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     // pattern, which is expected to be expanded to an SV_ALL pattern.
     if (TypeFlags.isAppendSVALL())
       Ops.push_back(Builder.getInt32(/*SV_ALL*/ 31));
+    if (TypeFlags.isInsertOp1SVALL())
+      Ops.insert(&Ops[1], Builder.getInt32(/*SV_ALL*/ 31));
 
     // Predicates must match the main datatype.
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
