@@ -81,6 +81,8 @@ TEST_F(TarWriterTest, Basics) {
 }
 
 TEST_F(TarWriterTest, LongFilename) {
+  // The prefix is prefixed by an additional '/' so it's one longer than the
+  // number of x's here.
   std::string x136(136, 'x');
   std::string x137(137, 'x');
   std::string y99(99, 'y');
