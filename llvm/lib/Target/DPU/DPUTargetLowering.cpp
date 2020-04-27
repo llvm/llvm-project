@@ -1870,7 +1870,7 @@ SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
                               DAG.getConstant(3, dl, MVT::i32));
     tmp =
         DAG.getNode(ISD::SUB, dl, raVT, tmp, DAG.getConstant(1, dl, MVT::i32));
-    ra = DAG.getNode(DPUISD::LslAdd, dl, raVT, chain, ra, tmp,
+    ra = DAG.getNode(DPUISD::LslAdd, dl, raVT, ra, tmp,
                      DAG.getConstant(24, dl, MVT::i32));
     immDma = DAG.getConstant(0, dl, MVT::i32);
   }

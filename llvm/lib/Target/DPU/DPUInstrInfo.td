@@ -32,7 +32,7 @@ def SDT_Lsr1            : SDNode<"DPUISD::Lsr1" , SDT_SHIFT, [SDNPHasChain]>;
 def SDT_Lsr1x           : SDNode<"DPUISD::Lsr1x", SDT_SHIFT, [SDNPHasChain]>;
 
 def SDT_SHIFT_ADD : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisInt<3>]>;
-def SDT_Lsl_add         : SDNode<"DPUISD::LslAdd", SDT_SHIFT_ADD, [SDNPHasChain]>;
+def SDT_Lsl_add         : SDNode<"DPUISD::LslAdd", SDT_SHIFT_ADD, []>;
 
 def SDT_Mul8            : SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>]>;
 def SDT_Mul8UU          : SDNode<"DPUISD::MUL8_UU", SDT_Mul8, [SDNPInGlue]>;
