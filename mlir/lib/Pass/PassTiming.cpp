@@ -160,7 +160,8 @@ struct Timer {
 };
 
 struct PassTiming : public PassInstrumentation {
-  PassTiming(PassDisplayMode displayMode) : displayMode(displayMode) {}
+  PassTiming(std::unique_ptr<PassManager::PassTimingConfig> config)
+      : config(std::move(config)) {}
   ~PassTiming() override { print(); }
 
   /// Setup the instrumentation hooks.
@@ -231,8 +232,8 @@ struct PassTiming : public PassInstrumentation {
   /// A stack of the currently active pass timers per thread.
   DenseMap<uint64_t, SmallVector<Timer *, 4>> activeThreadTimers;
 
-  /// The display mode to use when printing the timing results.
-  PassDisplayMode displayMode;
+  /// The configuration object to use when printing the timing results.
+  std::unique_ptr<PassManager::PassTimingConfig> config;
 
   /// A mapping of pipeline timers that need to be merged into the parent
   /// collection. The timers are mapped to the parent info to merge into.
@@ -353,28 +354,37 @@ void PassTiming::print() {
     return;
 
   assert(rootTimers.size() == 1 && "expected one remaining root timer");
-  auto &rootTimer = rootTimers.begin()->second;
-  auto os = llvm::CreateInfoOutputFile();
 
-  // Print the timer header.
-  TimeRecord totalTime = rootTimer->getTotalTime();
-  printTimerHeader(*os, totalTime);
+  auto printCallback = [&](raw_ostream &os) {
+    auto &rootTimer = rootTimers.begin()->second;
+    // Print the timer header.
+    TimeRecord totalTime = rootTimer->getTotalTime();
+    printTimerHeader(os, totalTime);
+    // Defer to a specialized printer for each display mode.
+    switch (config->getDisplayMode()) {
+    case PassDisplayMode::List:
+      printResultsAsList(os, rootTimer.get(), totalTime);
+      break;
+    case PassDisplayMode::Pipeline:
+      printResultsAsPipeline(os, rootTimer.get(), totalTime);
+      break;
+    }
+    printTimeEntry(os, 0, "Total", totalTime, totalTime);
+    os.flush();
 
-  // Defer to a specialized printer for each display mode.
-  switch (displayMode) {
-  case PassDisplayMode::List:
-    printResultsAsList(*os, rootTimer.get(), totalTime);
-    break;
-  case PassDisplayMode::Pipeline:
-    printResultsAsPipeline(*os, rootTimer.get(), totalTime);
-    break;
-  }
-  printTimeEntry(*os, 0, "Total", totalTime, totalTime);
-  os->flush();
+    // Reset root timers.
+    rootTimers.clear();
+    activeThreadTimers.clear();
+  };
 
-  // Reset root timers.
-  rootTimers.clear();
-  activeThreadTimers.clear();
+  config->printTiming(printCallback);
+}
+
+// The default implementation for printTiming uses
+// `llvm::CreateInfoOutputFile()` as stream, it can be overridden by clients
+// to customize the output.
+void PassManager::PassTimingConfig::printTiming(PrintCallbackFn printCallback) {
+  printCallback(*llvm::CreateInfoOutputFile());
 }
 
 /// Print the timing result in list mode.
@@ -449,16 +459,21 @@ void PassTiming::printResultsAsPipeline(raw_ostream &os, Timer *root,
     printTimer(0, topLevelTimer.second.get());
 }
 
+// Out-of-line as key function.
+PassManager::PassTimingConfig::~PassTimingConfig() {}
+
 //===----------------------------------------------------------------------===//
 // PassManager
 //===----------------------------------------------------------------------===//
 
 /// Add an instrumentation to time the execution of passes and the computation
 /// of analyses.
-void PassManager::enableTiming(PassDisplayMode displayMode) {
+void PassManager::enableTiming(std::unique_ptr<PassTimingConfig> config) {
   // Check if pass timing is already enabled.
   if (passTiming)
     return;
-  addInstrumentation(std::make_unique<PassTiming>(displayMode));
+  if (!config)
+    config = std::make_unique<PassManager::PassTimingConfig>();
+  addInstrumentation(std::make_unique<PassTiming>(std::move(config)));
   passTiming = true;
 }

@@ -229,12 +229,38 @@ public:
   //===--------------------------------------------------------------------===//
   // Pass Timing
 
+  /// A configuration struct provided to the pass timing feature.
+  class PassTimingConfig {
+  public:
+    using PrintCallbackFn = function_ref<void(raw_ostream &)>;
+
+    /// Initialize the configuration.
+    /// * 'displayMode' switch between list or pipeline display (see the
+    /// `PassDisplayMode` enum documentation).
+    explicit PassTimingConfig(
+        PassDisplayMode displayMode = PassDisplayMode::Pipeline)
+        : displayMode(displayMode) {}
+
+    virtual ~PassTimingConfig();
+
+    /// A hook that may be overridden by a derived config to control the
+    /// printing. The callback is supplied by the framework and the config is
+    /// responsible to call it back with a stream for the output.
+    virtual void printTiming(PrintCallbackFn printCallback);
+
+    /// Return the `PassDisplayMode` this config was created with.
+    PassDisplayMode getDisplayMode() { return displayMode; }
+
+  private:
+    PassDisplayMode displayMode;
+  };
+
   /// Add an instrumentation to time the execution of passes and the computation
   /// of analyses.
   /// Note: Timing should be enabled after all other instrumentations to avoid
   /// any potential "ghost" timing from other instrumentations being
   /// unintentionally included in the timing results.
-  void enableTiming(PassDisplayMode displayMode = PassDisplayMode::Pipeline);
+  void enableTiming(std::unique_ptr<PassTimingConfig> config = nullptr);
 
   /// Prompts the pass manager to print the statistics collected for each of the
   /// held passes after each call to 'run'.
