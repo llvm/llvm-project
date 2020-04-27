@@ -310,26 +310,26 @@ func @xor_self_tensor(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
 }
 
 // CHECK-LABEL: func @memref_cast_folding
-func @memref_cast_folding(%arg0: memref<4 x f32>, %arg1: f32) -> f32 {
-  %1 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
+func @memref_cast_folding(%arg0: memref<4 x f32>, %arg1: f32) -> (f32, f32) {
+  %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>
   // CHECK-NEXT: %c0 = constant 0 : index
   %c0 = constant 0 : index
-  %dim = dim %1, 0 : memref<? x f32>
+  %dim = dim %0, 0 : memref<? x f32>
 
   // CHECK-NEXT: affine.load %arg0[3]
-  affine.load %1[%dim - 1] : memref<?xf32>
+  %1 = affine.load %0[%dim - 1] : memref<?xf32>
 
   // CHECK-NEXT: store %arg1, %arg0[%c0] : memref<4xf32>
-  store %arg1, %1[%c0] : memref<?xf32>
+  store %arg1, %0[%c0] : memref<?xf32>
 
   // CHECK-NEXT: %{{.*}} = load %arg0[%c0] : memref<4xf32>
-  %0 = load %1[%c0] : memref<?xf32>
+  %2 = load %0[%c0] : memref<?xf32>
 
   // CHECK-NEXT: dealloc %arg0 : memref<4xf32>
-  dealloc %1: memref<?xf32>
+  dealloc %0: memref<?xf32>
 
   // CHECK-NEXT: return %{{.*}}
-  return %0 : f32
+  return %1, %2 : f32, f32
 }
 
 // CHECK-LABEL: func @alloc_const_fold
@@ -869,7 +869,8 @@ func @remove_dead_else(%M : memref<100 x i32>) {
     affine.load %M[%i] : memref<100xi32>
     affine.if affine_set<(d0) : (d0 - 2 >= 0)>(%i) {
       affine.for %j = 0 to 100 {
-        affine.load %M[%j] : memref<100xi32>
+        %1 = affine.load %M[%j] : memref<100xi32>
+        "prevent.dce"(%1) : (i32) -> ()
       }
     } else {
       // Nothing
@@ -881,9 +882,9 @@ func @remove_dead_else(%M : memref<100 x i32>) {
 // CHECK:      affine.if
 // CHECK-NEXT:   affine.for
 // CHECK-NEXT:     affine.load
+// CHECK-NEXT:     "prevent.dce"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
-// CHECK-NEXT: affine.load
 
 // -----
 
