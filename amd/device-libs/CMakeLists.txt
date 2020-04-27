@@ -40,26 +40,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(Clang REQUIRED PATHS ${Clang_DIR} ${LLVM_DIR}/../clang "/opt/rocm/llvm")
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 
-  find_program(CLANG "clang" ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
-  find_program(LLVM_LINK "llvm-link" ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
-  find_program(LLVM_OBJDUMP "llvm-objdump" ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
-  find_program(LLVM_OPT "opt" ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
-
   if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/dist CACHE INTERNAL "Prefix prepended to install directories")
   endif()
 
   set(ROCM_DEVICELIB_STANDALONE_BUILD ON)
-else()
-  # Included as part of llvm build with -DLLVM_EXTERNAL_PROJECTS.
-  set(CLANG $<TARGET_FILE:clang>)
-  set(LLVM_LINK $<TARGET_FILE:llvm-link>)
-  set(LLVM_OBJDUMP $<TARGET_FILE:llvm-objdump>)
-  set(LLVM_OPT $<TARGET_FILE:opt>)
 endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 

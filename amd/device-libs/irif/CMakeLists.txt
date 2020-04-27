@@ -12,7 +12,7 @@ file(GLOB sources
 set(irif_lib_file ${CMAKE_CURRENT_BINARY_DIR}/irif.amdgcn.bc)
 
 add_custom_command(OUTPUT ${irif_lib_file}
-  COMMAND ${LLVM_LINK} ${sources} -o ${irif_lib_file}
+  COMMAND $<TARGET_FILE:llvm-link> ${sources} -o ${irif_lib_file}
   DEPENDS ${sources})
 
 add_custom_target(irif DEPENDS ${irif_lib_file}
