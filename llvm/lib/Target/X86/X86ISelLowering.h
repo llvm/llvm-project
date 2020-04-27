@@ -822,9 +822,9 @@ namespace llvm {
 
     /// If getNegatibleCost returns Neutral/Cheaper, return the newly negated
     /// expression.
-    SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
-                                 bool LegalOperations, bool ForCodeSize,
-                                 unsigned Depth) const override;
+    SDValue negateExpression(SDValue Op, SelectionDAG &DAG,
+                             bool LegalOperations, bool ForCodeSize,
+                             unsigned Depth) const override;
 
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
