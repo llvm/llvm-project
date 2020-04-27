@@ -9,6 +9,7 @@
 #include "SyntheticSections.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
 
@@ -126,6 +127,59 @@ void BindingSection::finalizeContents() {
 
 void BindingSection::writeTo(uint8_t *buf) {
   memcpy(buf, contents.data(), contents.size());
+}
+
+SymtabSection::SymtabSection(StringTableSection &stringTableSection)
+    : stringTableSection(stringTableSection) {
+  segname = segment_names::linkEdit;
+  name = section_names::symbolTable;
+}
+
+size_t SymtabSection::getSize() const {
+  return symbols.size() * sizeof(nlist_64);
+}
+
+void SymtabSection::finalizeContents() {
+  // TODO: We should filter out some symbols.
+  for (Symbol *sym : symtab->getSymbols())
+    symbols.push_back({sym, stringTableSection.addString(sym->getName())});
+}
+
+void SymtabSection::writeTo(uint8_t *buf) {
+  auto *nList = reinterpret_cast<nlist_64 *>(buf);
+  for (const SymtabEntry &entry : symbols) {
+    // TODO support other symbol types
+    // TODO populate n_desc
+    if (auto defined = dyn_cast<Defined>(entry.sym)) {
+      nList->n_strx = entry.strx;
+      nList->n_type = N_EXT | N_SECT;
+      nList->n_sect = defined->isec->sectionIndex;
+      // For the N_SECT symbol type, n_value is the address of the symbol
+      nList->n_value = defined->value + defined->isec->addr;
+    }
+
+    ++nList;
+  }
+}
+
+StringTableSection::StringTableSection() {
+  segname = segment_names::linkEdit;
+  name = section_names::stringTable;
+}
+
+uint32_t StringTableSection::addString(StringRef str) {
+  uint32_t strx = size;
+  strings.push_back(str);
+  size += str.size() + 1; // account for null terminator
+  return strx;
+}
+
+void StringTableSection::writeTo(uint8_t *buf) {
+  uint32_t off = 0;
+  for (StringRef str : strings) {
+    memcpy(buf + off, str.data(), str.size());
+    off += str.size() + 1; // account for null terminator
+  }
 }
 
 InStruct in;
