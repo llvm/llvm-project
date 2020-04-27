@@ -58,25 +58,11 @@ bool hasMatchesExactlyAttributes(IntrinsicInst *Assume, Value *WasOn,
 }
 
 bool hasTheRightValue(IntrinsicInst *Assume, Value *WasOn,
-                            Attribute::AttrKind Kind, unsigned Value, bool Both,
-                            AssumeQuery AQ = AssumeQuery::Highest) {
-  if (!Both) {
-    uint64_t ArgVal = 0;
-    if (!hasAttributeInAssume(*Assume, WasOn, Kind, &ArgVal, AQ))
-      return false;
-    if (ArgVal != Value)
-      return false;
-    return true;
-  }
-  uint64_t ArgValLow = 0;
-  uint64_t ArgValHigh = 0;
-  bool ResultLow = hasAttributeInAssume(*Assume, WasOn, Kind, &ArgValLow,
-                                        AssumeQuery::Lowest);
-  bool ResultHigh = hasAttributeInAssume(*Assume, WasOn, Kind, &ArgValHigh,
-                                         AssumeQuery::Highest);
-  if (ResultLow != ResultHigh || ResultHigh == false)
+                      Attribute::AttrKind Kind, unsigned Value) {
+  uint64_t ArgVal = 0;
+  if (!hasAttributeInAssume(*Assume, WasOn, Kind, &ArgVal))
     return false;
-  if (ArgValLow != Value || ArgValLow != ArgValHigh)
+  if (ArgVal != Value)
     return false;
   return true;
 }
@@ -105,11 +91,11 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(1),
                                        "(align)"));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Dereferenceable, 16, true));
+                                     Attribute::AttrKind::Dereferenceable, 16));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Alignment, 4, true));
+                                     Attribute::AttrKind::Alignment, 4));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Alignment, 4, true));
+                                     Attribute::AttrKind::Alignment, 4));
       }));
   Tests.push_back(std::make_pair(
       "call void @func1(i32* nonnull align 32 dereferenceable(48) %P, i32* "
@@ -129,23 +115,11 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(3),
                                        "(nonnull|align|dereferenceable)"));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Dereferenceable, 48, false,
-                               AssumeQuery::Highest));
+                                     Attribute::AttrKind::Dereferenceable, 48));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Alignment, 64, false,
-                               AssumeQuery::Highest));
+                                     Attribute::AttrKind::Alignment, 64));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(1),
-                               Attribute::AttrKind::Alignment, 64, false,
-                               AssumeQuery::Highest));
-        ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Dereferenceable, 4, false,
-                               AssumeQuery::Lowest));
-        ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Alignment, 8, false,
-                               AssumeQuery::Lowest));
-        ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(1),
-                               Attribute::AttrKind::Alignment, 8, false,
-                               AssumeQuery::Lowest));
+                                     Attribute::AttrKind::Alignment, 64));
       }));
   Tests.push_back(std::make_pair(
       "call void @func_many(i32* align 8 %P1) cold\n", [](Instruction *I) {
@@ -153,9 +127,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
         IntrinsicInst *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         ASSERT_TRUE(hasMatchesExactlyAttributes(
-            Assume, nullptr,
-            "(align|no-jump-tables|less-precise-fpmad|"
-            "nounwind|norecurse|willreturn|cold)"));
+            Assume, nullptr, "(align|nounwind|norecurse|willreturn|cold)"));
         ShouldPreserveAllAttributes.setValue(false);
       }));
   Tests.push_back(
@@ -182,21 +154,21 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(3),
                                        "(nonnull|align|dereferenceable)"));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Alignment, 32, true));
+                                     Attribute::AttrKind::Alignment, 32));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Dereferenceable, 48, true));
+                                     Attribute::AttrKind::Dereferenceable, 48));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(1),
-                               Attribute::AttrKind::Dereferenceable, 28, true));
+                                     Attribute::AttrKind::Dereferenceable, 28));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(1),
-                               Attribute::AttrKind::Alignment, 8, true));
+                                     Attribute::AttrKind::Alignment, 8));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(2),
-                               Attribute::AttrKind::Alignment, 64, true));
+                                     Attribute::AttrKind::Alignment, 64));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(2),
-                               Attribute::AttrKind::Dereferenceable, 4, true));
+                                     Attribute::AttrKind::Dereferenceable, 4));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(3),
-                               Attribute::AttrKind::Alignment, 16, true));
+                                     Attribute::AttrKind::Alignment, 16));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(3),
-                               Attribute::AttrKind::Dereferenceable, 12, true));
+                                     Attribute::AttrKind::Dereferenceable, 12));
       }));
 
   Tests.push_back(std::make_pair(
@@ -221,9 +193,9 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(3),
                                        ""));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Alignment, 32, true));
+                                     Attribute::AttrKind::Alignment, 32));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(0),
-                               Attribute::AttrKind::Dereferenceable, 48, true));
+                                     Attribute::AttrKind::Dereferenceable, 48));
       }));
   Tests.push_back(std::make_pair(
       "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
@@ -323,9 +295,10 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
         ASSERT_TRUE(FindExactlyAttributes(Map, I->getOperand(3),
                                        "(nonnull|align|dereferenceable)"));
         ASSERT_TRUE(MapHasRightValue(
-            Map, Assume, {I->getOperand(0), Attribute::Dereferenceable}, {4, 48}));
-        ASSERT_TRUE(MapHasRightValue(Map, Assume, {I->getOperand(0), Attribute::Alignment},
-                               {8, 64}));
+            Map, Assume, {I->getOperand(0), Attribute::Dereferenceable},
+            {48, 48}));
+        ASSERT_TRUE(MapHasRightValue(
+            Map, Assume, {I->getOperand(0), Attribute::Alignment}, {64, 64}));
       }));
   Tests.push_back(std::make_pair(
       "call void @func_many(i32* align 8 %P1) cold\n", [](Instruction *I) {
