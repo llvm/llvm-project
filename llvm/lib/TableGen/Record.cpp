@@ -2156,11 +2156,6 @@ void Record::resolveReferences() {
   resolveReferences(R);
 }
 
-void Record::resolveReferencesTo(const RecordVal *RV) {
-  RecordValResolver R(*this, RV);
-  resolveReferences(R, RV);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
 #endif
