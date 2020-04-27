@@ -14,13 +14,13 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-static Operation *createOp(MLIRContext *context, bool resizableOperands,
+static Operation *createOp(MLIRContext *context,
                            ArrayRef<Value> operands = llvm::None,
                            ArrayRef<Type> resultTypes = llvm::None) {
   context->allowUnregisteredDialects();
-  return Operation::create(
-      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
-      operands, llvm::None, llvm::None, 0, resizableOperands);
+  return Operation::create(UnknownLoc::get(context),
+                           OperationName("foo.bar", context), resultTypes,
+                           operands, llvm::None, llvm::None, 0);
 }
 
 namespace {
@@ -29,16 +29,11 @@ TEST(OperandStorageTest, NonResizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*resizableOperands=*/false, /*operands=*/llvm::None,
-               builder.getIntegerType(16));
+      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
-  Operation *user = createOp(&context, /*resizableOperands=*/false, operand,
-                             builder.getIntegerType(16));
-
-  // Sanity check the storage.
-  EXPECT_EQ(user->hasResizableOperandsList(), false);
+  Operation *user = createOp(&context, operand, builder.getIntegerType(16));
 
   // The same number of operands is okay.
   user->setOperands(operand);
@@ -53,41 +48,16 @@ TEST(OperandStorageTest, NonResizable) {
   useOp->destroy();
 }
 
-TEST(OperandStorageDeathTest, AddToNonResizable) {
-  MLIRContext context;
-  Builder builder(&context);
-
-  Operation *useOp =
-      createOp(&context, /*resizableOperands=*/false, /*operands=*/llvm::None,
-               builder.getIntegerType(16));
-  Value operand = useOp->getResult(0);
-
-  // Create a non-resizable operation with one operand.
-  Operation *user = createOp(&context, /*resizableOperands=*/false, operand,
-                             builder.getIntegerType(16));
-
-  // Sanity check the storage.
-  EXPECT_EQ(user->hasResizableOperandsList(), false);
-
-  // Adding operands to a non resizable operation should result in a failure.
-  ASSERT_DEATH(user->setOperands({operand, operand}), "");
-}
-
 TEST(OperandStorageTest, Resizable) {
   MLIRContext context;
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*resizableOperands=*/false, /*operands=*/llvm::None,
-               builder.getIntegerType(16));
+      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
-  Operation *user = createOp(&context, /*resizableOperands=*/true, operand,
-                             builder.getIntegerType(16));
-
-  // Sanity check the storage.
-  EXPECT_EQ(user->hasResizableOperandsList(), true);
+  Operation *user = createOp(&context, operand, builder.getIntegerType(16));
 
   // The same number of operands is okay.
   user->setOperands(operand);

@@ -332,9 +332,7 @@ def AffineIfOp : Affine_Op<"if",
     IntegerSet getIntegerSet();
     void setIntegerSet(IntegerSet newSet);
 
-    /// Sets the integer set with its operands. The size of 'operands' must not
-    /// exceed the current number of operands for this instance, as the operands
-    /// list of AffineIf is not resizable.
+    /// Sets the integer set with its operands.
     void setConditional(IntegerSet set, ValueRange operands);
 
     /// Returns true if an else block exists.
