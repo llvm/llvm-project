@@ -18,16 +18,12 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Tooling/JSONCompilationDatabase.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -104,8 +100,6 @@ public:
       return "Failed to import the definition.";
     case index_error_code::failed_to_get_external_ast:
       return "Failed to load external AST source.";
-    case index_error_code::failed_to_load_compilation_database:
-      return "Failed to load compilation database.";
     case index_error_code::failed_to_generate_usr:
       return "Failed to generate USR.";
     case index_error_code::triple_mismatch:
@@ -116,9 +110,6 @@ public:
       return "Language dialect mismatch";
     case index_error_code::load_threshold_reached:
       return "Load threshold reached";
-    case index_error_code::ambiguous_compilation_database:
-      return "Compilation database contains multiple references to the same "
-             "source file.";
     }
     llvm_unreachable("Unrecognized index_error_code.");
   }
@@ -138,7 +129,7 @@ std::error_code IndexError::convertToErrorCode() const {
 }
 
 llvm::Expected<llvm::StringMap<std::string>>
-parseCrossTUIndex(StringRef IndexPath) {
+parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
   std::ifstream ExternalMapFile{std::string(IndexPath)};
   if (!ExternalMapFile)
     return llvm::make_error<IndexError>(index_error_code::missing_index_file,
@@ -156,7 +147,9 @@ parseCrossTUIndex(StringRef IndexPath) {
         return llvm::make_error<IndexError>(
             index_error_code::multiple_definitions, IndexPath.str(), LineNo);
       StringRef FileName = LineRef.substr(Pos + 1);
-      Result[LookupName] = FileName.str();
+      SmallString<256> FilePath = CrossTUDir;
+      llvm::sys::path::append(FilePath, FileName);
+      Result[LookupName] = std::string(FilePath);
     } else
       return llvm::make_error<IndexError>(
           index_error_code::invalid_index_format, IndexPath.str(), LineNo);
@@ -348,46 +341,30 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
   }
 }
 
-CrossTranslationUnitContext::ASTFileLoader::ASTFileLoader(CompilerInstance &CI,
-                                                          StringRef CTUDir)
-    : CI(CI), CTUDir(CTUDir) {}
+CrossTranslationUnitContext::ASTFileLoader::ASTFileLoader(
+    const CompilerInstance &CI)
+    : CI(CI) {}
 
-CrossTranslationUnitContext::LoadResultTy
-CrossTranslationUnitContext::ASTFileLoader::load(StringRef Identifier) {
+std::unique_ptr<ASTUnit>
+CrossTranslationUnitContext::ASTFileLoader::operator()(StringRef ASTFilePath) {
   // Load AST from ast-dump.
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
 
-  auto LoadFromFile = [this](StringRef Path) {
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-    TextDiagnosticPrinter *DiagClient =
-        new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-    IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
-    return ASTUnit::LoadFromASTFile(
-        std::string(Path.str()), CI.getPCHContainerOperations()->getRawReader(),
-        ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts());
-  };
-
-  if (llvm::sys::path::is_absolute(Identifier))
-    return LoadFromFile(Identifier);
-
-  llvm::SmallString<256> PrefixedPath = CTUDir;
-  llvm::sys::path::append(PrefixedPath, Identifier);
-
-  return LoadFromFile(PrefixedPath);
+  return ASTUnit::LoadFromASTFile(
+      std::string(ASTFilePath), CI.getPCHContainerOperations()->getRawReader(),
+      ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts());
 }
 
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
-    CompilerInstance &CI)
-    : LoadGuard(CI.getAnalyzerOpts()->CTUImportThreshold) {
-
-  AnalyzerOptionsRef Opts = CI.getAnalyzerOpts();
-  if (Opts->CTUOnDemandParsing)
-    Loader =
-        std::make_unique<ASTOnDemandLoader>(Opts->CTUOnDemandParsingDatabase);
-  else
-    Loader = std::make_unique<ASTFileLoader>(CI, Opts->CTUDir);
-}
+    const CompilerInstance &CI)
+    : FileAccessor(CI), LoadGuard(const_cast<CompilerInstance &>(CI)
+                                      .getAnalyzerOpts()
+                                      ->CTUImportThreshold) {}
 
 llvm::Expected<ASTUnit *>
 CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
@@ -403,12 +380,8 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
           index_error_code::load_threshold_reached);
     }
 
-    auto LoadAttempt = Loader->load(FileName);
-
-    if (!LoadAttempt)
-      return LoadAttempt.takeError();
-
-    std::unique_ptr<ASTUnit> LoadedUnit = std::move(LoadAttempt.get());
+    // Load the ASTUnit from the pre-dumped AST file specified by ASTFileName.
+    std::unique_ptr<ASTUnit> LoadedUnit = FileAccessor(FileName);
 
     // Need the raw pointer and the unique_ptr as well.
     ASTUnit *Unit = LoadedUnit.get();
@@ -488,7 +461,7 @@ llvm::Error CrossTranslationUnitContext::ASTUnitStorage::ensureCTUIndexLoaded(
   else
     llvm::sys::path::append(IndexFile, IndexName);
 
-  if (auto IndexMapping = parseCrossTUIndex(IndexFile)) {
+  if (auto IndexMapping = parseCrossTUIndex(IndexFile, CrossTUDir)) {
     // Initialize member map.
     NameFileMap = *IndexMapping;
     return llvm::Error::success();
@@ -497,10 +470,6 @@ llvm::Error CrossTranslationUnitContext::ASTUnitStorage::ensureCTUIndexLoaded(
     return IndexMapping.takeError();
   };
 }
-
-CrossTranslationUnitContext::ASTOnDemandLoader::ASTOnDemandLoader(
-    StringRef OnDemandParsingDatabase)
-    : OnDemandParsingDatabase(OnDemandParsingDatabase) {}
 
 llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
     StringRef LookupName, StringRef CrossTUDir, StringRef IndexName,
@@ -523,117 +492,6 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
         index_error_code::failed_to_get_external_ast);
 
   return Unit;
-}
-
-/// Load the AST from a source-file, which is supposed to be located inside the
-/// compilation database \p CompileCommands. The compilation database
-/// can contain the path of the file under the key "file" as an absolute path,
-/// or as a relative path. When emitting diagnostics, plist files may contain
-/// references to a location in a TU, that is different from the main TU. In
-/// such cases, the file path emitted by the DiagnosticEngine is based on how
-/// the exact invocation is assembled inside the ClangTool, which performs the
-/// building of the ASTs. In order to ensure absolute paths inside the
-/// diagnostics, we use the ArgumentsAdjuster API of ClangTool to make sure that
-/// the invocation inside ClangTool is always made with an absolute path. \p
-/// Identifier is assumed to be the lookup-name of the file, which comes from
-/// the Index. The Index is built by the \p clang-extdef-mapping tool, which is
-/// supposed to generate absolute paths.
-///
-/// We must have absolute paths inside the plist, because otherwise we would
-/// not be able to parse the bug, because we could not find the files with
-/// relative paths. The directory of one entry in the compilation db may be
-/// different from the directory where the plist is interpreted.
-///
-/// Note that as the ClangTool is instantiated with a lookup-vector, which
-/// contains a single entry; the supposedly absolute path of the source file.
-/// So, the ArgumentAdjuster will only be used on the single corresponding
-/// invocation. This guarantees that even if two files match in name, but
-/// differ in location, only the correct one's invocation will be handled. This
-/// is due to the fact that the lookup is done correctly inside the
-/// OnDemandParsingDatabase, so it works for already absolute paths given under
-/// the "file" entry of the compilation database, but also if a relative path is
-/// given. In such a case, the lookup uses the "directory" entry as well to
-/// identify the correct file.
-CrossTranslationUnitContext::LoadResultTy
-CrossTranslationUnitContext::ASTOnDemandLoader::load(StringRef Identifier) {
-
-  if (auto InitError = lazyInitCompileCommands())
-    return std::move(InitError);
-
-  using namespace tooling;
-
-  SmallVector<std::string, 1> Files;
-  Files.push_back(std::string(Identifier));
-  ClangTool Tool(*CompileCommands, Files);
-
-  /// Lambda filter designed to find the source file argument inside an
-  /// invocation used to build the ASTs, and replace it with its absolute path
-  /// equivalent.
-  auto SourcePathNormalizer = [Identifier](const CommandLineArguments &Args,
-                                           StringRef FileName) {
-    /// Match the argument to the absolute path by checking whether it is a
-    /// postfix.
-    auto IsPostfixOfLookup = [Identifier](const std::string &Arg) {
-      return Identifier.rfind(Arg) != llvm::StringRef::npos;
-    };
-
-    /// Commandline arguments are modified, and the API dictates the return of
-    /// a new instance, so copy the original.
-    CommandLineArguments Result{Args};
-
-    /// Search for the source file argument. Start from the end as a heuristic,
-    /// as most invocations tend to contain the source file argument in their
-    /// latter half. Only the first match is replaced.
-    auto SourceFilePath =
-        std::find_if(Result.rbegin(), Result.rend(), IsPostfixOfLookup);
-
-    /// If source file argument could not been found, return the original
-    /// CommandlineArgumentsInstance.
-    if (SourceFilePath == Result.rend())
-      return Result;
-
-    /// Overwrite the argument with the \p ASTSourcePath, as it is assumed to
-    /// be the absolute path of the file.
-    *SourceFilePath = Identifier.str();
-
-    return Result;
-  };
-
-  Tool.appendArgumentsAdjuster(std::move(SourcePathNormalizer));
-
-  std::vector<std::unique_ptr<ASTUnit>> ASTs;
-  Tool.buildASTs(ASTs);
-
-  /// There is an assumption that the compilation database does not contain
-  /// multiple entries for the same source file.
-  if (ASTs.size() > 1)
-    return llvm::make_error<IndexError>(
-        index_error_code::ambiguous_compilation_database);
-
-  /// Ideally there is exactly one entry in the compilation database that
-  /// matches the source file.
-  if (ASTs.size() != 1)
-    return llvm::make_error<IndexError>(
-        index_error_code::failed_to_get_external_ast);
-
-  ASTs[0]->enableSourceFileDiagnostics();
-  return std::move(ASTs[0]);
-}
-
-llvm::Error
-CrossTranslationUnitContext::ASTOnDemandLoader::lazyInitCompileCommands() {
-  // Lazily initialize the compilation database.
-
-  if (CompileCommands)
-    return llvm::Error::success();
-
-  std::string LoadError;
-  CompileCommands = tooling::JSONCompilationDatabase::loadFromFile(
-      OnDemandParsingDatabase, LoadError,
-      tooling::JSONCommandLineSyntax::AutoDetect);
-  return CompileCommands ? llvm::Error::success()
-                         : llvm::make_error<IndexError>(
-                               index_error_code::failed_to_get_external_ast);
 }
 
 template <typename T>
