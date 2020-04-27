@@ -225,8 +225,16 @@ int main (int argc, char **argv) {
 
 #pragma omp target parallel defaultmap(tofrom: scalar) reduction(task, +:argc)
 // CHECK-NEXT: #pragma omp target parallel defaultmap(tofrom: scalar) reduction(task, +: argc)
+  {
   foo();
+#pragma omp cancellation point parallel
+#pragma omp cancel parallel
+  }
+// CHECK-NEXT: {
 // CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp cancellation point parallel
+// CHECK-NEXT: #pragma omp cancel parallel
+// CHECK-NEXT: }
 
   return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
 }
