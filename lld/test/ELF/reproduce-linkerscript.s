@@ -7,8 +7,7 @@
 # RUN: echo "INCLUDE \"%t.dir/build/bar.script\"" >> %t.dir/build/foo.script
 # RUN: echo "/* empty */" > %t.dir/build/bar.script
 # RUN: cd %t.dir
-# RUN: ld.lld build/foo.script --verbose --reproduce repro.tar
-# RUN: tar tf repro.tar
+# RUN: ld.lld build/foo.script -o /dev/null --reproduce repro.tar
 # RUN: tar tf repro.tar | FileCheck -DPATH='%:t.dir' %s
 
 # CHECK: [[PATH]]/build/foo.script
