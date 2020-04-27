@@ -1726,7 +1726,7 @@ bool UnwrappedLineParser::tryToParseBracedList() {
 bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
                                           tok::TokenKind ClosingBraceKind) {
   bool HasError = false;
-  
+
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
   // replace this by using parseAssigmentExpression() inside.
   do {
