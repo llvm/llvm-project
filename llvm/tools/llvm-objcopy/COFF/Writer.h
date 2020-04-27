@@ -45,6 +45,7 @@ class COFFWriter {
   Error write(bool IsBigObj);
 
   Error patchDebugDirectory();
+  Expected<uint32_t> virtualAddressToFileAddress(uint32_t RVA);
 
 public:
   virtual ~COFFWriter() {}
