@@ -3543,9 +3543,39 @@ public:
 
   /// If getNegatibleCost returns Neutral/Cheaper, return the newly negated
   /// expression.
-  virtual SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
-                                       bool LegalOperations, bool ForCodeSize,
-                                       unsigned Depth = 0) const;
+  virtual SDValue negateExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
+                                   bool OptForSize, unsigned Depth = 0) const;
+
+  /// Return the newly negated expression if the cost is not expensive and
+  /// set the cost in \p Cost to indicate that if it is cheaper or neutral to
+  /// do the negation.
+  SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
+                               bool OptForSize, NegatibleCost &Cost,
+                               unsigned Depth = 0) const {
+    Cost = getNegatibleCost(Op, DAG, LegalOps, OptForSize, Depth);
+    if (Cost != NegatibleCost::Expensive)
+      return negateExpression(Op, DAG, LegalOps, OptForSize, Depth);
+    return SDValue();
+  }
+
+  /// This is the helper function to return the newly negated expression only
+  /// when the cost is cheaper.
+  SDValue getCheaperNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                      bool LegalOps, bool OptForSize,
+                                      unsigned Depth = 0) const {
+    if (getNegatibleCost(Op, DAG, LegalOps, OptForSize, Depth) ==
+        NegatibleCost::Cheaper)
+      return negateExpression(Op, DAG, LegalOps, OptForSize, Depth);
+    return SDValue();
+  }
+
+  /// This is the helper function to return the newly negated expression if
+  /// the cost is not expensive.
+  SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
+                               bool OptForSize, unsigned Depth = 0) const {
+    NegatibleCost Cost = NegatibleCost::Expensive;
+    return getNegatedExpression(Op, DAG, LegalOps, OptForSize, Cost, Depth);
+  }
 
   //===--------------------------------------------------------------------===//
   // Lowering methods - These methods must be implemented by targets so that

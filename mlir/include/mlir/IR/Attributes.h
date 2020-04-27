@@ -896,6 +896,8 @@ public:
             ElementIterator<T>(rawData, splat, getNumElements())};
   }
 
+  template <typename T, typename = typename std::enable_if<
+                            std::is_same<T, StringRef>::value>::type>
   llvm::iterator_range<ElementIterator<StringRef>> getValues() const {
     auto stringRefs = getRawStringData();
     const char *ptr = reinterpret_cast<const char *>(stringRefs.data());

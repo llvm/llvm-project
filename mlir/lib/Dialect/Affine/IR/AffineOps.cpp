@@ -1085,9 +1085,6 @@ void AffineForOp::build(Builder *builder, OperationState &result,
   body->addArgument(IndexType::get(builder->getContext()));
   bodyRegion->push_back(body);
   ensureTerminator(*bodyRegion, *builder, result.location);
-
-  // Set the operands list as resizable so that we can freely modify the bounds.
-  result.setOperandListToResizable();
 }
 
 void AffineForOp::build(Builder *builder, OperationState &result, int64_t lb,
@@ -1259,12 +1256,7 @@ static ParseResult parseAffineForOp(OpAsmParser &parser,
   AffineForOp::ensureTerminator(*body, builder, result.location);
 
   // Parse the optional attribute list.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  // Set the operands list as resizable so that we can freely modify the bounds.
-  result.setOperandListToResizable();
-  return success();
+  return parser.parseOptionalAttrDict(result.attributes);
 }
 
 static void printBound(AffineMapAttr boundMap,

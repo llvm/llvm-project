@@ -5571,8 +5571,7 @@ TargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
     // to negate it even it has multiple uses.
     bool IsFreeConstant =
         Op.getOpcode() == ISD::ConstantFP &&
-        !getNegatedExpression(Op, DAG, LegalOperations, ForCodeSize)
-             .use_empty();
+        !negateExpression(Op, DAG, LegalOperations, ForCodeSize).use_empty();
 
     if (!IsFreeExtend && !IsFreeConstant)
       return NegatibleCost::Expensive;
@@ -5687,15 +5686,15 @@ TargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
   return NegatibleCost::Expensive;
 }
 
-SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
-                                             bool LegalOps, bool OptForSize,
-                                             unsigned Depth) const {
+SDValue TargetLowering::negateExpression(SDValue Op, SelectionDAG &DAG,
+                                         bool LegalOps, bool OptForSize,
+                                         unsigned Depth) const {
   // fneg is removable even if it has multiple uses.
   if (Op.getOpcode() == ISD::FNEG)
     return Op.getOperand(0);
 
   assert(Depth <= SelectionDAG::MaxRecursionDepth &&
-         "getNegatedExpression doesn't match getNegatibleCost");
+         "negateExpression doesn't match getNegatibleCost");
 
   // Pre-increment recursion depth for use in recursive calls.
   ++Depth;
@@ -5732,14 +5731,14 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     // fold (fneg (fadd X, Y)) -> (fsub (fneg X), Y)
     NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
     if (CostX != NegatibleCost::Expensive)
-      return DAG.getNode(
-          ISD::FSUB, DL, VT,
-          getNegatedExpression(X, DAG, LegalOps, OptForSize, Depth), Y, Flags);
+      return DAG.getNode(ISD::FSUB, DL, VT,
+                         negateExpression(X, DAG, LegalOps, OptForSize, Depth),
+                         Y, Flags);
 
     // fold (fneg (fadd X, Y)) -> (fsub (fneg Y), X)
-    return DAG.getNode(
-        ISD::FSUB, DL, VT,
-        getNegatedExpression(Y, DAG, LegalOps, OptForSize, Depth), X, Flags);
+    return DAG.getNode(ISD::FSUB, DL, VT,
+                       negateExpression(Y, DAG, LegalOps, OptForSize, Depth), X,
+                       Flags);
   }
   case ISD::FSUB: {
     SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
@@ -5757,14 +5756,14 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
     NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
     if (CostX != NegatibleCost::Expensive)
-      return DAG.getNode(
-          Opcode, DL, VT,
-          getNegatedExpression(X, DAG, LegalOps, OptForSize, Depth), Y, Flags);
+      return DAG.getNode(Opcode, DL, VT,
+                         negateExpression(X, DAG, LegalOps, OptForSize, Depth),
+                         Y, Flags);
 
     // fold (fneg (fmul X, Y)) -> (fmul X, (fneg Y))
-    return DAG.getNode(
-        Opcode, DL, VT, X,
-        getNegatedExpression(Y, DAG, LegalOps, OptForSize, Depth), Flags);
+    return DAG.getNode(Opcode, DL, VT, X,
+                       negateExpression(Y, DAG, LegalOps, OptForSize, Depth),
+                       Flags);
   }
   case ISD::FMA:
   case ISD::FMAD: {
@@ -5773,30 +5772,30 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
            "Expected NSZ fp-flag");
 
     SDValue X = Op.getOperand(0), Y = Op.getOperand(1), Z = Op.getOperand(2);
-    SDValue NegZ = getNegatedExpression(Z, DAG, LegalOps, OptForSize, Depth);
+    SDValue NegZ = negateExpression(Z, DAG, LegalOps, OptForSize, Depth);
     NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
     NegatibleCost CostY = getNegatibleCost(Y, DAG, LegalOps, OptForSize, Depth);
     if (CostX <= CostY) {
       // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
-      SDValue NegX = getNegatedExpression(X, DAG, LegalOps, OptForSize, Depth);
+      SDValue NegX = negateExpression(X, DAG, LegalOps, OptForSize, Depth);
       return DAG.getNode(Opcode, DL, VT, NegX, Y, NegZ, Flags);
     }
 
     // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
-    SDValue NegY = getNegatedExpression(Y, DAG, LegalOps, OptForSize, Depth);
+    SDValue NegY = negateExpression(Y, DAG, LegalOps, OptForSize, Depth);
     return DAG.getNode(Opcode, DL, VT, X, NegY, NegZ, Flags);
   }
 
   case ISD::FP_EXTEND:
   case ISD::FSIN:
-    return DAG.getNode(Opcode, DL, VT,
-                       getNegatedExpression(Op.getOperand(0), DAG, LegalOps,
-                                            OptForSize, Depth));
+    return DAG.getNode(
+        Opcode, DL, VT,
+        negateExpression(Op.getOperand(0), DAG, LegalOps, OptForSize, Depth));
   case ISD::FP_ROUND:
-    return DAG.getNode(ISD::FP_ROUND, DL, VT,
-                       getNegatedExpression(Op.getOperand(0), DAG, LegalOps,
-                                            OptForSize, Depth),
-                       Op.getOperand(1));
+    return DAG.getNode(
+        ISD::FP_ROUND, DL, VT,
+        negateExpression(Op.getOperand(0), DAG, LegalOps, OptForSize, Depth),
+        Op.getOperand(1));
   }
 
   llvm_unreachable("Unknown code");

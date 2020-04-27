@@ -62,19 +62,17 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
                              ArrayRef<NamedAttribute> attributes,
-                             ArrayRef<Block *> successors, unsigned numRegions,
-                             bool resizableOperandList) {
+                             ArrayRef<Block *> successors,
+                             unsigned numRegions) {
   return create(location, name, resultTypes, operands,
-                NamedAttributeList(attributes), successors, numRegions,
-                resizableOperandList);
+                NamedAttributeList(attributes), successors, numRegions);
 }
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
   return Operation::create(state.location, state.name, state.types,
                            state.operands, NamedAttributeList(state.attributes),
-                           state.successors, state.regions,
-                           state.resizableOperandList);
+                           state.successors, state.regions);
 }
 
 /// Create a new Operation with the specific fields.
@@ -82,11 +80,11 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
                              NamedAttributeList attributes,
-                             ArrayRef<Block *> successors, RegionRange regions,
-                             bool resizableOperandList) {
+                             ArrayRef<Block *> successors,
+                             RegionRange regions) {
   unsigned numRegions = regions.size();
   Operation *op = create(location, name, resultTypes, operands, attributes,
-                         successors, numRegions, resizableOperandList);
+                         successors, numRegions);
   for (unsigned i = 0; i < numRegions; ++i)
     if (regions[i])
       op->getRegion(i).takeBody(*regions[i]);
@@ -99,28 +97,37 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
                              NamedAttributeList attributes,
-                             ArrayRef<Block *> successors, unsigned numRegions,
-                             bool resizableOperandList) {
+                             ArrayRef<Block *> successors,
+                             unsigned numRegions) {
   // We only need to allocate additional memory for a subset of results.
   unsigned numTrailingResults = OpResult::getNumTrailing(resultTypes.size());
   unsigned numInlineResults = OpResult::getNumInline(resultTypes.size());
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
 
+  // If the operation is known to have no operands, don't allocate an operand
+  // storage.
+  bool needsOperandStorage = true;
+  if (operands.empty()) {
+    if (const AbstractOperation *abstractOp = name.getAbstractOperation())
+      needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
+  }
+
   // Compute the byte size for the operation and the operand storage.
   auto byteSize =
       totalSizeToAlloc<detail::InLineOpResult, detail::TrailingOpResult,
                        BlockOperand, Region, detail::OperandStorage>(
           numInlineResults, numTrailingResults, numSuccessors, numRegions,
-          /*detail::OperandStorage*/ 1);
-  byteSize += llvm::alignTo(detail::OperandStorage::additionalAllocSize(
-                                numOperands, resizableOperandList),
-                            alignof(Operation));
+          needsOperandStorage ? 1 : 0);
+  byteSize +=
+      llvm::alignTo(detail::OperandStorage::additionalAllocSize(numOperands),
+                    alignof(Operation));
   void *rawMem = malloc(byteSize);
 
   // Create the new Operation.
-  auto op = ::new (rawMem) Operation(location, name, resultTypes, numSuccessors,
-                                     numRegions, attributes);
+  Operation *op =
+      ::new (rawMem) Operation(location, name, resultTypes, numSuccessors,
+                               numRegions, attributes, needsOperandStorage);
 
   assert((numSuccessors == 0 || !op->isKnownNonTerminator()) &&
          "unexpected successors in a non-terminator operation");
@@ -136,11 +143,8 @@ Operation *Operation::create(Location location, OperationName name,
     new (&op->getRegion(i)) Region(op);
 
   // Initialize the operands.
-  new (&op->getOperandStorage())
-      detail::OperandStorage(numOperands, resizableOperandList);
-  auto opOperands = op->getOpOperands();
-  for (unsigned i = 0; i != numOperands; ++i)
-    new (&opOperands[i]) OpOperand(op, operands[i]);
+  if (needsOperandStorage)
+    new (&op->getOperandStorage()) detail::OperandStorage(op, operands);
 
   // Initialize the successors.
   auto blockOperands = op->getBlockOperands();
@@ -152,9 +156,11 @@ Operation *Operation::create(Location location, OperationName name,
 
 Operation::Operation(Location location, OperationName name,
                      ArrayRef<Type> resultTypes, unsigned numSuccessors,
-                     unsigned numRegions, const NamedAttributeList &attributes)
+                     unsigned numRegions, const NamedAttributeList &attributes,
+                     bool hasOperandStorage)
     : location(location), numSuccs(numSuccessors), numRegions(numRegions),
-      hasSingleResult(false), name(name), attrs(attributes) {
+      hasOperandStorage(hasOperandStorage), hasSingleResult(false), name(name),
+      attrs(attributes) {
   if (!resultTypes.empty()) {
     // If there is a single result it is stored in-place, otherwise use a tuple.
     hasSingleResult = resultTypes.size() == 1;
@@ -170,8 +176,9 @@ Operation::Operation(Location location, OperationName name,
 Operation::~Operation() {
   assert(block == nullptr && "operation destroyed but still in a block");
 
-  // Explicitly run the destructors for the operands and results.
-  getOperandStorage().~OperandStorage();
+  // Explicitly run the destructors for the operands.
+  if (hasOperandStorage)
+    getOperandStorage().~OperandStorage();
 
   // Explicitly run the destructors for the successors.
   for (auto &successor : getBlockOperands())
@@ -229,10 +236,11 @@ void Operation::replaceUsesOfWith(Value from, Value to) {
 }
 
 /// Replace the current operands of this operation with the ones provided in
-/// 'operands'. If the operands list is not resizable, the size of 'operands'
-/// must be less than or equal to the current number of operands.
+/// 'operands'.
 void Operation::setOperands(ValueRange operands) {
-  getOperandStorage().setOperands(this, operands);
+  if (LLVM_LIKELY(hasOperandStorage))
+    return getOperandStorage().setOperands(this, operands);
+  assert(operands.empty() && "setting operands without an operand storage");
 }
 
 //===----------------------------------------------------------------------===//
@@ -558,8 +566,7 @@ Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
 
   // Create the new operation.
   auto *newOp = Operation::create(getLoc(), getName(), getResultTypes(),
-                                  operands, attrs, successors, getNumRegions(),
-                                  hasResizableOperandsList());
+                                  operands, attrs, successors, getNumRegions());
 
   // Remember the mapping of any results.
   for (unsigned i = 0, e = getNumResults(); i != e; ++i)

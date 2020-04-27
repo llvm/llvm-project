@@ -30,8 +30,7 @@ OperationState::OperationState(Location location, StringRef name,
                                ValueRange operands, ArrayRef<Type> types,
                                ArrayRef<NamedAttribute> attributes,
                                ArrayRef<Block *> successors,
-                               MutableArrayRef<std::unique_ptr<Region>> regions,
-                               bool resizableOperandList)
+                               MutableArrayRef<std::unique_ptr<Region>> regions)
     : location(location), name(name, location->getContext()),
       operands(operands.begin(), operands.end()),
       types(types.begin(), types.end()),
@@ -62,74 +61,106 @@ void OperationState::addRegion(std::unique_ptr<Region> &&region) {
 // OperandStorage
 //===----------------------------------------------------------------------===//
 
+detail::OperandStorage::OperandStorage(Operation *owner, ValueRange values)
+    : representation(0) {
+  auto &inlineStorage = getInlineStorage();
+  inlineStorage.numOperands = inlineStorage.capacity = values.size();
+  auto *operandPtrBegin = getTrailingObjects<OpOperand>();
+  for (unsigned i = 0, e = inlineStorage.numOperands; i < e; ++i)
+    new (&operandPtrBegin[i]) OpOperand(owner, values[i]);
+}
+
+detail::OperandStorage::~OperandStorage() {
+  // Destruct the current storage container.
+  if (isDynamicStorage()) {
+    TrailingOperandStorage &storage = getDynamicStorage();
+    storage.~TrailingOperandStorage();
+    free(&storage);
+  } else {
+    getInlineStorage().~TrailingOperandStorage();
+  }
+}
+
 /// Replace the operands contained in the storage with the ones provided in
-/// 'operands'.
-void detail::OperandStorage::setOperands(Operation *owner,
-                                         ValueRange operands) {
+/// 'values'.
+void detail::OperandStorage::setOperands(Operation *owner, ValueRange values) {
+  MutableArrayRef<OpOperand> storageOperands = resize(owner, values.size());
+  for (unsigned i = 0, e = values.size(); i != e; ++i)
+    storageOperands[i].set(values[i]);
+}
+
+/// Resize the storage to the given size. Returns the array containing the new
+/// operands.
+MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
+                                                          unsigned newSize) {
+  TrailingOperandStorage &storage = getStorage();
+
   // If the number of operands is less than or equal to the current amount, we
   // can just update in place.
-  if (operands.size() <= numOperands) {
-    auto opOperands = getOperands();
-
-    // If the number of new operands is less than the current count, then remove
-    // any extra operands.
-    for (unsigned i = operands.size(); i != numOperands; ++i)
-      opOperands[i].~OpOperand();
-
-    // Set the operands in place.
-    numOperands = operands.size();
-    for (unsigned i = 0; i != numOperands; ++i)
-      opOperands[i].set(operands[i]);
-    return;
+  unsigned &numOperands = storage.numOperands;
+  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  if (newSize <= numOperands) {
+    // If the number of new size is less than the current, remove any extra
+    // operands.
+    for (unsigned i = newSize; i != numOperands; ++i)
+      operands[i].~OpOperand();
+    numOperands = newSize;
+    return operands.take_front(newSize);
   }
 
-  // Otherwise, we need to be resizable.
-  assert(resizable && "Only resizable operations may add operands");
+  // If the new size is within the original inline capacity, grow inplace.
+  if (newSize <= storage.capacity) {
+    OpOperand *opBegin = operands.data();
+    for (unsigned e = newSize; numOperands != e; ++numOperands)
+      new (&opBegin[numOperands]) OpOperand(owner);
+    return MutableArrayRef<OpOperand>(opBegin, newSize);
+  }
 
-  // Grow the capacity if necessary.
-  auto &resizeUtil = getResizableStorage();
-  if (resizeUtil.capacity < operands.size())
-    grow(resizeUtil, operands.size());
+  // Otherwise, we need to allocate a new storage.
+  unsigned newCapacity =
+      std::max(unsigned(llvm::NextPowerOf2(storage.capacity + 2)), newSize);
+  auto *newStorageMem =
+      malloc(TrailingOperandStorage::totalSizeToAlloc<OpOperand>(newCapacity));
+  auto *newStorage = ::new (newStorageMem) TrailingOperandStorage();
+  newStorage->numOperands = newSize;
+  newStorage->capacity = newCapacity;
 
-  // Set the operands.
-  OpOperand *opBegin = getRawOperands();
-  for (unsigned i = 0; i != numOperands; ++i)
-    opBegin[i].set(operands[i]);
-  for (unsigned e = operands.size(); numOperands != e; ++numOperands)
-    new (&opBegin[numOperands]) OpOperand(owner, operands[numOperands]);
+  // Move the current operands to the new storage.
+  MutableArrayRef<OpOperand> newOperands = newStorage->getOperands();
+  std::uninitialized_copy(std::make_move_iterator(operands.begin()),
+                          std::make_move_iterator(operands.end()),
+                          newOperands.begin());
+
+  // Destroy the original operands.
+  for (auto &operand : operands)
+    operand.~OpOperand();
+
+  // Initialize any new operands.
+  for (unsigned e = newSize; numOperands != e; ++numOperands)
+    new (&newOperands[numOperands]) OpOperand(owner);
+
+  // If the current storage is also dynamic, free it.
+  if (isDynamicStorage())
+    free(&storage);
+
+  // Update the storage representation to use the new dynamic storage.
+  representation = reinterpret_cast<intptr_t>(newStorage);
+  representation |= DynamicStorageBit;
+  return newOperands;
 }
 
 /// Erase an operand held by the storage.
 void detail::OperandStorage::eraseOperand(unsigned index) {
   assert(index < size());
-  auto operands = getOperands();
-  --numOperands;
+  TrailingOperandStorage &storage = getStorage();
+  MutableArrayRef<OpOperand> operands = storage.getOperands();
+  --storage.numOperands;
 
   // Shift all operands down by 1 if the operand to remove is not at the end.
   auto indexIt = std::next(operands.begin(), index);
-  if (index != numOperands)
+  if (index != storage.numOperands)
     std::rotate(indexIt, std::next(indexIt), operands.end());
-  operands[numOperands].~OpOperand();
-}
-
-/// Grow the internal operand storage.
-void detail::OperandStorage::grow(ResizableStorage &resizeUtil,
-                                  size_t minSize) {
-  // Allocate a new storage array.
-  resizeUtil.capacity =
-      std::max(size_t(llvm::NextPowerOf2(resizeUtil.capacity + 2)), minSize);
-  OpOperand *newStorage = static_cast<OpOperand *>(
-      llvm::safe_malloc(resizeUtil.capacity * sizeof(OpOperand)));
-
-  // Move the current operands to the new storage.
-  auto operands = getOperands();
-  std::uninitialized_copy(std::make_move_iterator(operands.begin()),
-                          std::make_move_iterator(operands.end()), newStorage);
-
-  // Destroy the original operands and update the resizable storage pointer.
-  for (auto &operand : operands)
-    operand.~OpOperand();
-  resizeUtil.setDynamicStorage(newStorage);
+  operands[storage.numOperands].~OpOperand();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1055,8 +1055,7 @@ static Operation *vectorizeOneOperation(Operation *opInst,
   OpBuilder b(opInst);
   OperationState newOp(opInst->getLoc(), opInst->getName().getStringRef(),
                        vectorOperands, vectorTypes, opInst->getAttrs(),
-                       /*successors=*/{},
-                       /*regions=*/{}, opInst->hasResizableOperandsList());
+                       /*successors=*/{}, /*regions=*/{});
   return b.createOperation(newOp);
 }
 

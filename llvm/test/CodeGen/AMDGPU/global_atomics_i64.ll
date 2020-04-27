@@ -1147,6 +1147,21 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_load_f64_addr64_offset:
+; CI: buffer_load_dwordx2 [[RET:v\[[0-9]+:[0-9]+\]]], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:32 glc{{$}}
+; VI: flat_load_dwordx2 [[RET:v\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; CIVI: buffer_store_dwordx2 [[RET]]
+
+; GFX9: global_load_dwordx2 [[RET:v\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], off offset:32 glc{{$}}
+define amdgpu_kernel void @atomic_load_f64_addr64_offset(double addrspace(1)* %in, double addrspace(1)* %out, i64 %index) {
+entry:
+  %ptr = getelementptr double, double addrspace(1)* %in, i64 %index
+  %gep = getelementptr double, double addrspace(1)* %ptr, i64 4
+  %val = load atomic double, double addrspace(1)* %gep seq_cst, align 8
+  store double %val, double addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}atomic_store_i64_offset:
 ; CI: buffer_store_dwordx2 [[RET:v\[[0-9]+:[0-9]+\]]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:32{{$}}
 ; VI: flat_store_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
@@ -1188,5 +1203,17 @@ define amdgpu_kernel void @atomic_store_i64_addr64(i64 %in, i64 addrspace(1)* %o
 entry:
   %ptr = getelementptr i64, i64 addrspace(1)* %out, i64 %index
   store atomic i64 %in, i64 addrspace(1)* %ptr seq_cst, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_f64_addr64_offset:
+; CI: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:32{{$}}
+; VI: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}]{{$}}
+; GFX9: global_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}], off offset:32{{$}}
+define amdgpu_kernel void @atomic_store_f64_addr64_offset(double %in, double addrspace(1)* %out, i64 %index) {
+entry:
+  %ptr = getelementptr double, double addrspace(1)* %out, i64 %index
+  %gep = getelementptr double, double addrspace(1)* %ptr, i64 4
+  store atomic double %in, double addrspace(1)* %gep seq_cst, align 8
   ret void
 }

@@ -188,6 +188,7 @@ class AttributeSetNode final
 
   static AttributeSetNode *getSorted(LLVMContext &C,
                                      ArrayRef<Attribute> SortedAttrs);
+  Optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
 
 public:
   // AttributesSetNode is uniqued, these should not be available.

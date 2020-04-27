@@ -39,3 +39,36 @@ while.end.loopexit:
 while.end:
   ret void
 }
+
+; Make sure a loop is successfully vectorized with fold-tail when the backedge
+; taken count is constant and used inside the loop. Issue revealed by D76992.
+;
+define void @reuse_const_btc(i8* %A) optsize {
+; CHECK-LABEL: @reuse_const_btc
+; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, <i32 13, i32 13, i32 13, i32 13>
+; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> <i32 12, i32 12, i32 12, i32 12>, <4 x i32> <i32 13, i32 13, i32 13, i32 13>
+;
+entry:
+  br label %loop
+
+loop:
+  %riv = phi i32 [ 13, %entry ], [ %rivMinus1, %merge ]
+  %sub = sub nuw nsw i32 20, %riv
+  %arrayidx = getelementptr inbounds i8, i8* %A, i32 %sub
+  %cond0 = icmp eq i32 %riv, 7
+  br i1 %cond0, label %then, label %else
+then:
+  br label %merge
+else:
+  br label %merge
+merge:
+  %blend = phi i32 [ 13, %then ], [ 12, %else ]
+  %trunc = trunc i32 %blend to i8
+  store i8 %trunc, i8* %arrayidx, align 1
+  %rivMinus1 = add nuw nsw i32 %riv, -1
+  %cond = icmp eq i32 %riv, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  ret void
+}
