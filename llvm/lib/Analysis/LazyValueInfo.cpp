@@ -122,9 +122,8 @@ static ValueLatticeElement intersect(const ValueLatticeElement &A,
   // Intersect two constant ranges
   ConstantRange Range =
       A.getConstantRange().intersectWith(B.getConstantRange());
-  // Note: An empty range is implicitly converted to overdefined internally.
-  // TODO: We could instead use Undefined here since we've proven a conflict
-  // and thus know this path must be unreachable.
+  // Note: An empty range is implicitly converted to unknown or undef depending
+  // on MayIncludeUndef internally.
   return ValueLatticeElement::getRange(
       std::move(Range), /*MayIncludeUndef=*/A.isConstantRangeIncludingUndef() |
                             B.isConstantRangeIncludingUndef());
