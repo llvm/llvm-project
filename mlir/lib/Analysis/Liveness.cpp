@@ -297,7 +297,7 @@ void Liveness::print(raw_ostream &os) const {
 
   // Local printing helpers
   auto printValueRef = [&](Value value) {
-    if (Operation *defOp = value.getDefiningOp())
+    if (value.getDefiningOp())
       os << "val_" << valueIds[value];
     else {
       auto blockArg = value.cast<BlockArgument>();
