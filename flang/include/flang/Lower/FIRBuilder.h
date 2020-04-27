@@ -89,10 +89,6 @@ public:
                             llvm::ArrayRef<mlir::Value> shape,
                             bool asTarget = false);
 
-  mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
-                            llvm::StringRef nm,
-                            llvm::ArrayRef<mlir::Value> shape);
-
   /// Create a temporary. A temp is allocated using `fir.alloca` and can be read
   /// and written using `fir.load` and `fir.store`, resp.  The temporary can be
   /// given a name via a front-end `Symbol` or a `StringRef`.

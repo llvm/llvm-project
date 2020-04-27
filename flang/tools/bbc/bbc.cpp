@@ -197,8 +197,9 @@ static void convertFortranSourceToMLIR(
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule.getContext());
   mlir::applyPassManagerCLOptions(pm);
+  pm.addPass(fir::createPromoteToAffinePass());
   pm.addPass(fir::createLowerToLoopPass());
-  pm.addPass(fir::createFIRToStdPass(burnside.getKindMap()));
+  pm.addPass(fir::createControlFlowLoweringPass());
   pm.addPass(mlir::createLowerToCFGPass());
   // pm.addPass(fir::createMemToRegPass());
   pm.addPass(fir::createCSEPass());

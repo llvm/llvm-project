@@ -107,7 +107,7 @@ subroutine assign_constant(lhs)
   ! CHECK: }
 end subroutine
 
-! CHECK-LABEL: fir.global @_QQ48656C6C6F20576F726C64
+! CHECK-LABEL: fir.global @_QQcl.48656C6C6F20576F726C64
 ! CHECK: %[[lit:.*]] = fir.string_lit "Hello World"(11) : !fir.char<1>
 ! CHECK: fir.has_value %[[lit]] : !fir.array<11x!fir.char<1>>
 ! CHECK: }

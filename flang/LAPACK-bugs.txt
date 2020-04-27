@@ -13,14 +13,13 @@ ______________
   Intrinsics lowering problems
   . bbc: Lower/Intrinsics.cpp:763: Assertion `false && "LEN_TRIM TODO"' failed.
 
-  lapack/BLAS/SRC/zhemm.f:304:27: 'fir.convert' op invalid type conversion
-  . bbc: This looks like the intrinsic lowering is not converting between floats and complex quite right.
-
   
 FIXED
 _____
 
 unexpected character type [xerbla]
+
+intrinsics: 'fir.convert' op invalid type conversion
 
 error: 'fir.convert' related to assignments
 

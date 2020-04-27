@@ -1790,7 +1790,8 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
   }
 };
 
-// FIXME: how do we want to enforce this in LLVM-IR?
+// FIXME: how do we want to enforce this in LLVM-IR? Can we manipulate the fast
+// math flags?
 struct NoReassocOpConversion : public FIROpConversion<fir::NoReassocOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -1798,7 +1799,7 @@ struct NoReassocOpConversion : public FIROpConversion<fir::NoReassocOp> {
   matchAndRewrite(fir::NoReassocOp noreassoc, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     noreassoc.replaceAllUsesWith(operands[0]);
-    rewriter.replaceOp(noreassoc, {});
+    rewriter.eraseOp(noreassoc);
     return success();
   }
 };
