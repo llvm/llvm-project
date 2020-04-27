@@ -181,7 +181,8 @@ public:
 
   int getIntImmCost(const APInt &Imm, Type *Ty);
 
-  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
+  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                       TTI::TargetCostKind);
 
   int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,

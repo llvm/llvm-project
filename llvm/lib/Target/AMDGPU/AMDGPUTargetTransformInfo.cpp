@@ -949,11 +949,12 @@ void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   CommonTTI.getUnrollingPreferences(L, SE, UP);
 }
 
-unsigned GCNTTIImpl::getUserCost(const User *U,
-                                 ArrayRef<const Value *> Operands) {
+unsigned
+GCNTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                        TTI::TargetCostKind CostKind) {
   const Instruction *I = dyn_cast<Instruction>(U);
   if (!I)
-    return BaseT::getUserCost(U, Operands);
+    return BaseT::getUserCost(U, Operands, CostKind);
 
   // Estimate different operations to be optimized out
   switch (I->getOpcode()) {
@@ -980,7 +981,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
       return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
                                    FMF, 1, II);
     } else {
-      return BaseT::getUserCost(U, Operands);
+      return BaseT::getUserCost(U, Operands, CostKind);
     }
   }
   case Instruction::ShuffleVector: {
@@ -994,7 +995,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
       return getShuffleCost(TTI::SK_ExtractSubvector, SrcTy, SubIndex, Ty);
 
     if (Shuffle->changesLength())
-      return BaseT::getUserCost(U, Operands);
+      return BaseT::getUserCost(U, Operands, CostKind);
 
     if (Shuffle->isIdentity())
       return 0;
@@ -1059,7 +1060,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
     break;
   }
 
-  return BaseT::getUserCost(U, Operands);
+  return BaseT::getUserCost(U, Operands, CostKind);
 }
 
 unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {

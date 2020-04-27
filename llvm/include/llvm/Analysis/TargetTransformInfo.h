@@ -153,7 +153,8 @@ public:
   enum TargetCostKind {
     TCK_RecipThroughput, ///< Reciprocal throughput.
     TCK_Latency,         ///< The latency of instruction.
-    TCK_CodeSize         ///< Instruction code size.
+    TCK_CodeSize,        ///< Instruction code size.
+    TCK_SizeAndLatency   ///< The weighted sum of size and latency.
   };
 
   /// Query the cost of a specified instruction.
@@ -172,7 +173,8 @@ public:
       return getInstructionLatency(I);
 
     case TCK_CodeSize:
-      return getUserCost(I);
+    case TCK_SizeAndLatency:
+      return getUserCost(I, kind);
     }
     llvm_unreachable("Unknown instruction cost kind");
   }
@@ -263,14 +265,15 @@ public:
   ///
   /// The returned cost is defined in terms of \c TargetCostConstants, see its
   /// comments for a detailed explanation of the cost values.
-  int getUserCost(const User *U, ArrayRef<const Value *> Operands) const;
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                  TargetCostKind CostKind) const;
 
   /// This is a helper function which calls the two-argument getUserCost
   /// with \p Operands which are the current operands U has.
-  int getUserCost(const User *U) const {
+  int getUserCost(const User *U, TargetCostKind CostKind) const {
     SmallVector<const Value *, 4> Operands(U->value_op_begin(),
                                            U->value_op_end());
-    return getUserCost(U, Operands);
+    return getUserCost(U, Operands, CostKind);
   }
 
   /// Return true if branch divergence exists.
@@ -1170,7 +1173,8 @@ public:
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
                                    ProfileSummaryInfo *PSI,
                                    BlockFrequencyInfo *BFI) = 0;
-  virtual int getUserCost(const User *U, ArrayRef<const Value *> Operands) = 0;
+  virtual int getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                          TargetCostKind CostKind) = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool useGPUDivergenceAnalysis() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
@@ -1422,8 +1426,9 @@ public:
   int getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
   }
-  int getUserCost(const User *U, ArrayRef<const Value *> Operands) override {
-    return Impl.getUserCost(U, Operands);
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                  TargetCostKind CostKind) override {
+    return Impl.getUserCost(U, Operands, CostKind);
   }
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
   bool useGPUDivergenceAnalysis() override {

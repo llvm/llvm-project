@@ -242,7 +242,8 @@ public:
   int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                              bool IsPairwiseForm,
                              bool IsUnsigned);
-  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
+  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                       TTI::TargetCostKind CostKind);
 };
 
 class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
