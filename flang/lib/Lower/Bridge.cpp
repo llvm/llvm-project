@@ -468,34 +468,36 @@ private:
     builder->create<mlir::ReturnOp>(toLocation(), retval);
   }
 
+  /// Argument \p funit is a subroutine that has alternate return specifiers.
+  /// Return the variable that contains the result value of a call to \p funit.
+  const mlir::Value
+  getAltReturnResult(const Fortran::lower::pft::FunctionLikeUnit &funit) {
+    const auto &symbol = funit.getSubprogramSymbol();
+    assert(Fortran::semantics::HasAlternateReturns(symbol) &&
+           "subroutine does not have alternate returns");
+    const auto returnValue = lookupSymbol(symbol);
+    assert(returnValue && "missing alternate return value");
+    return returnValue;
+  }
+
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
                            const Fortran::semantics::Symbol &symbol) {
-    // Make sure we end the current block with a terminator.
     if (auto *finalBlock = funit.finalBlock) {
+      // The current block must end with a terminator.
       if (blockIsUnterminated())
         builder->create<mlir::BranchOp>(toLocation(), finalBlock);
       // Set insertion point to final block.
       builder->setInsertionPoint(finalBlock, finalBlock->end());
     }
-
     if (Fortran::semantics::IsFunction(symbol)) {
-      // FUNCTION
       genReturnSymbol(symbol);
-      return;
+    } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
+      mlir::Value retval =
+          builder->create<fir::LoadOp>(toLocation(), getAltReturnResult(funit));
+      builder->create<mlir::ReturnOp>(toLocation(), retval);
+    } else {
+      genExitRoutine();
     }
-
-    // SUBROUTINE
-    if (Fortran::semantics::HasAlternateReturns(symbol)) {
-      // lower to a the constant expression (or zero); the return value will
-      // drive a SelectOp in the calling context to branch to the alternate
-      // return LABEL block
-      TODO();
-      mlir::Value intExpr{};
-      builder->create<mlir::ReturnOp>(toLocation(), intExpr);
-      return;
-    }
-
-    genExitRoutine();
   }
 
   //
@@ -532,12 +534,27 @@ private:
               const Fortran::parser::CallStmt &stmt) {
     setCurrentPosition(stmt.v.source);
     assert(stmt.typedCall && "Call was not analyzed");
-    // The actual lowering is forwarded to expression lowering
-    // where the code is shared with function reference.
     Fortran::semantics::SomeExpr expr{*stmt.typedCall};
+    // Call statement lowering shares code with function call lowering.
     auto res = createFIRExpr(toLocation(), &expr);
-    if (res)
-      TODO(); // Alternate returns
+    if (!res)
+      return; // "Normal" subroutine call.
+    // Call with alternate return specifiers.
+    // The call returns an index that selects an alternate return branch target.
+    llvm::SmallVector<int64_t, 5> indexList;
+    llvm::SmallVector<mlir::Block *, 5> blockList;
+    int64_t index = 0;
+    for (const auto &arg :
+         std::get<std::list<Fortran::parser::ActualArgSpec>>(stmt.v.t)) {
+      const auto &actual = std::get<Fortran::parser::ActualArg>(arg.t);
+      if (const auto *altReturn =
+              std::get_if<Fortran::parser::AltReturnSpec>(&actual.u)) {
+        indexList.push_back(++index);
+        blockList.push_back(blockOfLabel(eval, altReturn->v));
+      }
+    }
+    blockList.push_back(eval.lexicalSuccessor->block); // default = fallthrough
+    builder->create<fir::SelectOp>(toLocation(), res, indexList, blockList);
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -569,9 +586,8 @@ private:
               const Fortran::parser::ComputedGotoStmt &stmt) {
     mlir::Value selectExpr = genExprValue(*Fortran::semantics::GetExpr(
         std::get<Fortran::parser::ScalarIntExpr>(stmt.t)));
-    constexpr int vSize = 10;
-    llvm::SmallVector<int64_t, vSize> indexList;
-    llvm::SmallVector<mlir::Block *, vSize> blockList;
+    llvm::SmallVector<int64_t, 10> indexList;
+    llvm::SmallVector<mlir::Block *, 10> blockList;
     int64_t index = 0;
     for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
       indexList.push_back(++index);
@@ -656,9 +672,8 @@ private:
       return;
     }
     auto labelSet = iter->second;
-    constexpr int vSize = 10;
-    llvm::SmallVector<int64_t, vSize> indexList;
-    llvm::SmallVector<mlir::Block *, vSize> blockList;
+    llvm::SmallVector<int64_t, 10> indexList;
+    llvm::SmallVector<mlir::Block *, 10> blockList;
     auto addLabel = [&](Fortran::parser::Label label) {
       indexList.push_back(label);
       blockList.push_back(blockOfLabel(eval, label));
@@ -1009,10 +1024,9 @@ private:
     const auto selectExpr = genExprValue(
         *Fortran::semantics::GetExpr(std::get<ScalarExpr>(stmt.t)));
     const auto selectType = selectExpr.getType();
-    constexpr int vSize = 10;
-    llvm::SmallVector<mlir::Attribute, vSize> attrList;
-    llvm::SmallVector<mlir::Value, vSize> valueList;
-    llvm::SmallVector<mlir::Block *, vSize> blockList;
+    llvm::SmallVector<mlir::Attribute, 10> attrList;
+    llvm::SmallVector<mlir::Value, 10> valueList;
+    llvm::SmallVector<mlir::Block *, 10> blockList;
     auto *defaultBlock = eval.parentConstruct->constructExit->block;
     using CaseValue = Fortran::parser::Scalar<Fortran::parser::ConstantExpr>;
     auto addValue = [&](const CaseValue &caseValue) {
@@ -1470,26 +1484,28 @@ private:
   // gen expression, if any; share code with END of procedure
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ReturnStmt &stmt) {
-    const auto *funit = eval.getOwningProcedure();
-    assert(funit && "not inside main program or a procedure");
+    auto *funit = eval.getOwningProcedure();
+    assert(funit && "not inside main program, function or subroutine");
     if (funit->isMainProgram()) {
       genExitRoutine();
-    } else {
-      if (stmt.v) {
-        // Alternate return
-        TODO();
-      }
-      // an ordinary RETURN should be lowered as a GOTO to the last block of the
-      // SUBROUTINE
-      auto *subr = eval.getOwningProcedure();
-      assert(subr && "RETURN not in a PROCEDURE");
-      if (!subr->finalBlock) {
-        auto insPt = builder->saveInsertionPoint();
-        subr->finalBlock = builder->createBlock(&builder->getRegion());
-        builder->restoreInsertionPoint(insPt);
-      }
-      builder->create<mlir::BranchOp>(toLocation(), subr->finalBlock);
+      return;
     }
+    if (stmt.v) {
+      // Alternate return statement -- assign alternate return index.
+      auto expr = Fortran::semantics::GetExpr(*stmt.v);
+      assert(expr && "missing alternate return expression");
+      auto altReturnIndex = builder->createHere<fir::ConvertOp>(
+          builder->getIndexType(), genExprValue(*expr));
+      builder->create<fir::StoreOp>(toLocation(), altReturnIndex,
+                                    getAltReturnResult(*funit));
+    }
+    // Branch to the last block of the SUBROUTINE, which has the actual return.
+    if (!funit->finalBlock) {
+      const auto insPt = builder->saveInsertionPoint();
+      funit->finalBlock = builder->createBlock(&builder->getRegion());
+      builder->restoreInsertionPoint(insPt);
+    }
+    builder->create<mlir::BranchOp>(toLocation(), funit->finalBlock);
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -1894,7 +1910,6 @@ private:
     std::string name = funit.isMainProgram()
                            ? uniquer.doProgramEntry().str()
                            : mangleName(funit.getSubprogramSymbol());
-
     // FIXME: do NOT use unknown for the anonymous PROGRAM case. We probably
     // should just stash the location in the funit regardless.
     mlir::Location loc = toLocation(funit.getStartingSourceLoc());
@@ -1906,6 +1921,7 @@ private:
     assert(builder && "FirOpBuilder did not instantiate");
     func.addEntryBlock();
     builder->setInsertionPointToStart(&func.front());
+    bool hasAlternateReturns = false;
 
     if (useOldInitializerCode) {
       Fortran::lower::SymMap dummyAssociations;
@@ -1919,7 +1935,7 @@ private:
           if (std::get<0>(v)) {
             dummyAssociations.addSymbol(*std::get<0>(v), std::get<1>(v));
           } else {
-            TODO(); // handle alternate return
+            TODO(); // [alt return; code under useOldInitializerCode is dead]
           }
         }
 
@@ -1944,12 +1960,12 @@ private:
       if (funit.symbol && !funit.isMainProgram()) {
         const auto &details =
             funit.symbol->get<Fortran::semantics::SubprogramDetails>();
-        for (const auto &v :
-             llvm::zip(details.dummyArgs(), entryBlock->getArguments())) {
-          if (std::get<0>(v)) {
-            addSymbol(*std::get<0>(v), std::get<1>(v));
+        auto blockIter = entryBlock->getArguments().begin();
+        for (const auto &dummy : details.dummyArgs()) {
+          if (dummy) {
+            addSymbol(*dummy, *blockIter++);
           } else {
-            TODO(); // handle alternate return
+            hasAlternateReturns = true;
           }
         }
       }
@@ -1962,6 +1978,20 @@ private:
 
     // Reinstate entry block as the current insertion point.
     builder->setInsertionPointToEnd(&func.front());
+
+    if (hasAlternateReturns) {
+      // Create a local temp to hold the alternate return index.
+      // Give it an integer index type and the subroutine name (for dumps).
+      // Attach it to the subroutine symbol in the localSymbols map.
+      // Initialize it to zero, the "fallthrough" alternate return value.
+      const auto &symbol = funit.getSubprogramSymbol();
+      const auto altResult = builder->createTemporary(
+          toLocation(), builder->getIndexType(), symbol.name().ToString());
+      addSymbol(symbol, altResult);
+      const auto zero =
+          builder->createIntegerConstant(builder->getIndexType(), 0);
+      builder->create<fir::StoreOp>(toLocation(), zero, altResult);
+    }
   }
 
   /// Create empty blocks for the current function.
