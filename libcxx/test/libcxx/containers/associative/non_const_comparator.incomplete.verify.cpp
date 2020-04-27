@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
-// REQUIRES: verify-support
 
 // Test that libc++ does not generate a warning diagnostic about the comparator
 // too early for containers of incomplete types.

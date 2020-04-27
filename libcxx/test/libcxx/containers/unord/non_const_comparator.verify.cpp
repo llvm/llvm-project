@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
-// REQUIRES: diagnose-if-support, verify-support
+// REQUIRES: diagnose-if-support
 
 // Test that libc++ generates a warning diagnostic when the container is
 // provided a non-const callable comparator or a non-const hasher.
