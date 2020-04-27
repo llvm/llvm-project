@@ -49,6 +49,9 @@ class DenseMap;
 template <typename Fn> class function_ref;
 template <typename IteratorT> class iterator_range;
 template <typename T, typename ResultT> class TypeSwitch;
+class MallocAllocator;
+template <typename AllocatorTy>
+class StringSet;
 
 // Other common classes.
 class raw_ostream;
@@ -74,6 +77,8 @@ template <typename KeyT, typename ValueT,
 using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
+template <typename AllocatorTy = llvm::MallocAllocator>
+using StringSet = llvm::StringSet<AllocatorTy>;
 template <typename Fn> using function_ref = llvm::function_ref<Fn>;
 using llvm::iterator_range;
 using llvm::MutableArrayRef;
