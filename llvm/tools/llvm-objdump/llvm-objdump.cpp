@@ -1513,13 +1513,22 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         Comments.clear();
 
         // If disassembly has failed, avoid analysing invalid/incomplete
-        // instruction information. Otherwise, try to resolve the target of a
-        // call, tail call, etc. to a specific symbol.
-        if (Disassembled && MIA &&
-            (MIA->isCall(Inst) || MIA->isUnconditionalBranch(Inst) ||
-             MIA->isConditionalBranch(Inst))) {
+        // instruction information. Otherwise, try to resolve the target address
+        // (jump target or memory operand address) and print it on the right of
+        // the instruction.
+        if (Disassembled && MIA) {
           uint64_t Target;
-          if (MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target)) {
+          bool PrintTarget =
+              MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
+          if (!PrintTarget)
+            if (Optional<uint64_t> MaybeTarget =
+                    MIA->evaluateMemoryOperandAddress(Inst, SectionAddr + Index,
+                                                      Size)) {
+              Target = *MaybeTarget;
+              PrintTarget = true;
+              outs() << "  # " << Twine::utohexstr(Target);
+            }
+          if (PrintTarget) {
             // In a relocatable object, the target's section must reside in
             // the same section as the call instruction or it is accessed
             // through a relocation.
