@@ -30,10 +30,6 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
 
-#if _MSC_VER
-#include <intrin.h>
-#endif
-
 using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
