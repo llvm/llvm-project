@@ -120,7 +120,7 @@ for arch in ${architectures}; do
             -DCMAKE_INSTALL_NAME_DIR="${install_name_dir}" \
             -DCMAKE_OSX_ARCHITECTURES="${arch}" \
             -DLIBCXXABI_LIBRARY_VERSION="${version}" \
-            -DLIBCXXABI_LIBCXX_INCLUDES="$(xcrun --sdk "${sdk}" c++ -print-resource-dir)/../../../include/c++/v1"
+            -DLIBCXXABI_LIBCXX_PATH="${llvm_root}/libcxx"
     )
 
     xcrun --sdk "${sdk}" cmake --build "${build_dir}/${arch}" --target install-cxxabi -- -v
