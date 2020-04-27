@@ -856,7 +856,6 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 //   CHECKLOOP-NOT: loop.for
 //   CHECKLOOP-DAG: load %[[ARG0]][]
 //   CHECKLOOP-DAG: load %[[ARG1]][]
-//   CHECKLOOP-DAG: load %[[ARG2]][]
 //       CHECKLOOP: addf
 //       CHECKLOOP: store %{{.*}}, %[[ARG2]][]
 
@@ -867,6 +866,5 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 //   CHECKPARALLEL-NOT: loop.for
 //   CHECKPARALLEL-DAG: load %[[ARG0]][]
 //   CHECKPARALLEL-DAG: load %[[ARG1]][]
-//   CHECKPARALLEL-DAG: load %[[ARG2]][]
 //       CHECKPARALLEL: addf
 //       CHECKPARALLEL: store %{{.*}}, %[[ARG2]][]

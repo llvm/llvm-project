@@ -273,8 +273,6 @@ struct OperationState {
   SmallVector<Block *, 1> successors;
   /// Regions that the op will hold.
   SmallVector<std::unique_ptr<Region>, 1> regions;
-  /// If the operation has a resizable operand list.
-  bool resizableOperandList = false;
 
 public:
   OperationState(Location location, StringRef name);
@@ -284,8 +282,7 @@ public:
   OperationState(Location location, StringRef name, ValueRange operands,
                  ArrayRef<Type> types, ArrayRef<NamedAttribute> attributes,
                  ArrayRef<Block *> successors = {},
-                 MutableArrayRef<std::unique_ptr<Region>> regions = {},
-                 bool resizableOperandList = false);
+                 MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
   void addOperands(ValueRange newOperands);
 
@@ -330,11 +327,6 @@ public:
   /// region is null, a new empty region will be attached to the Operation.
   void addRegion(std::unique_ptr<Region> &&region);
 
-  /// Sets the operand list of the operation as resizable.
-  void setOperandListToResizable(bool isResizable = true) {
-    resizableOperandList = isResizable;
-  }
-
   /// Get the context held by this operation state.
   MLIRContext *getContext() { return location->getContext(); }
 };
@@ -344,125 +336,99 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-/// A utility class holding the information necessary to dynamically resize
-/// operands.
-struct ResizableStorage {
-  ResizableStorage(OpOperand *opBegin, unsigned numOperands)
-      : firstOpAndIsDynamic(opBegin, false), capacity(numOperands) {}
-
-  ~ResizableStorage() { cleanupStorage(); }
-
-  /// Cleanup any allocated storage.
-  void cleanupStorage() {
-    // If the storage is dynamic, then we need to free the storage.
-    if (isStorageDynamic())
-      free(firstOpAndIsDynamic.getPointer());
+/// This class contains the information for a trailing operand storage.
+struct TrailingOperandStorage final
+    : public llvm::TrailingObjects<TrailingOperandStorage, OpOperand> {
+  ~TrailingOperandStorage() {
+    for (auto &operand : getOperands())
+      operand.~OpOperand();
   }
 
-  /// Sets the storage pointer to a new dynamically allocated block.
-  void setDynamicStorage(OpOperand *opBegin) {
-    /// Cleanup the old storage if necessary.
-    cleanupStorage();
-    firstOpAndIsDynamic.setPointerAndInt(opBegin, true);
+  /// Return the operands held by this storage.
+  MutableArrayRef<OpOperand> getOperands() {
+    return {getTrailingObjects<OpOperand>(), numOperands};
   }
 
-  /// Returns the current storage pointer.
-  OpOperand *getPointer() { return firstOpAndIsDynamic.getPointer(); }
-
-  /// Returns if the current storage of operands is in the trailing objects is
-  /// in a dynamically allocated memory block.
-  bool isStorageDynamic() const { return firstOpAndIsDynamic.getInt(); }
-
-  /// A pointer to the first operand element. This is either to the trailing
-  /// objects storage, or a dynamically allocated block of memory.
-  llvm::PointerIntPair<OpOperand *, 1, bool> firstOpAndIsDynamic;
-
-  // The maximum number of operands that can be currently held by the storage.
-  unsigned capacity;
+  /// The number of operands within the storage.
+  unsigned numOperands;
+  /// The total capacity number of operands that the storage can hold.
+  unsigned capacity : 31;
+  /// We reserve a range of bits for use by the operand storage.
+  unsigned reserved : 1;
 };
 
 /// This class handles the management of operation operands. Operands are
-/// stored similarly to the elements of a SmallVector except for two key
-/// differences. The first is the inline storage, which is a trailing objects
-/// array. The second is that being able to dynamically resize the operand list
-/// is optional.
+/// stored either in a trailing array, or a dynamically resizable vector.
 class OperandStorage final
-    : private llvm::TrailingObjects<OperandStorage, ResizableStorage,
-                                    OpOperand> {
+    : private llvm::TrailingObjects<OperandStorage, OpOperand> {
 public:
-  OperandStorage(unsigned numOperands, bool resizable)
-      : numOperands(numOperands), resizable(resizable) {
-    // Initialize the resizable storage.
-    if (resizable) {
-      new (&getResizableStorage())
-          ResizableStorage(getTrailingObjects<OpOperand>(), numOperands);
-    }
-  }
-
-  ~OperandStorage() {
-    // Manually destruct the operands.
-    for (auto &operand : getOperands())
-      operand.~OpOperand();
-
-    // If the storage is resizable then destruct the utility.
-    if (resizable)
-      getResizableStorage().~ResizableStorage();
-  }
+  OperandStorage(Operation *owner, ValueRange values);
+  ~OperandStorage();
 
   /// Replace the operands contained in the storage with the ones provided in
-  /// 'operands'.
-  void setOperands(Operation *owner, ValueRange operands);
+  /// 'values'.
+  void setOperands(Operation *owner, ValueRange values);
 
   /// Erase an operand held by the storage.
   void eraseOperand(unsigned index);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() {
-    return {getRawOperands(), size()};
+    return getStorage().getOperands();
   }
 
   /// Return the number of operands held in the storage.
-  unsigned size() const { return numOperands; }
+  unsigned size() { return getStorage().numOperands; }
 
   /// Returns the additional size necessary for allocating this object.
-  static size_t additionalAllocSize(unsigned numOperands, bool resizable) {
-    return additionalSizeToAlloc<ResizableStorage, OpOperand>(resizable ? 1 : 0,
-                                                              numOperands);
+  static size_t additionalAllocSize(unsigned numOperands) {
+    return additionalSizeToAlloc<OpOperand>(numOperands);
   }
-
-  /// Returns if this storage is resizable.
-  bool isResizable() const { return resizable; }
 
 private:
-  /// Clear the storage and destroy the current operands held by the storage.
-  void clear() { numOperands = 0; }
+  enum : uint64_t {
+    /// The bit used to mark the storage as dynamic.
+    DynamicStorageBit = 1ull << 63ull
+  };
 
-  /// Returns the current pointer for the raw operands array.
-  OpOperand *getRawOperands() {
-    return resizable ? getResizableStorage().getPointer()
-                     : getTrailingObjects<OpOperand>();
+  /// Resize the storage to the given size. Returns the array containing the new
+  /// operands.
+  MutableArrayRef<OpOperand> resize(Operation *owner, unsigned newSize);
+
+  /// Returns the current internal storage instance.
+  TrailingOperandStorage &getStorage() {
+    return LLVM_UNLIKELY(isDynamicStorage()) ? getDynamicStorage()
+                                             : getInlineStorage();
   }
 
-  /// Returns the resizable operand utility class.
-  ResizableStorage &getResizableStorage() {
-    assert(resizable);
-    return *getTrailingObjects<ResizableStorage>();
+  /// Returns the storage container if the storage is inline.
+  TrailingOperandStorage &getInlineStorage() {
+    assert(!isDynamicStorage() && "expected storage to be inline");
+    static_assert(sizeof(TrailingOperandStorage) == sizeof(uint64_t),
+                  "inline storage representation must match the opaque "
+                  "representation");
+    return inlineStorage;
   }
 
-  /// Grow the internal resizable operand storage.
-  void grow(ResizableStorage &resizeUtil, size_t minSize);
-
-  /// The current number of operands, and the current max operand capacity.
-  unsigned numOperands : 31;
-
-  /// Whether this storage is resizable or not.
-  bool resizable : 1;
-
-  // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<OperandStorage, ResizableStorage, OpOperand>;
-  size_t numTrailingObjects(OverloadToken<ResizableStorage>) const {
-    return resizable ? 1 : 0;
+  /// Returns the storage container if this storage is dynamic.
+  TrailingOperandStorage &getDynamicStorage() {
+    assert(isDynamicStorage() && "expected dynamic storage");
+    uint64_t maskedRepresentation = representation & ~DynamicStorageBit;
+    return *reinterpret_cast<TrailingOperandStorage *>(maskedRepresentation);
   }
+
+  /// Returns true if the storage is currently dynamic.
+  bool isDynamicStorage() const { return representation & DynamicStorageBit; }
+
+  /// The current representation of the storage. This is either a
+  /// InlineOperandStorage, or a pointer to a InlineOperandStorage.
+  union {
+    TrailingOperandStorage inlineStorage;
+    uint64_t representation;
+  };
+
+  /// This stuff is used by the TrailingObjects template.
+  friend llvm::TrailingObjects<OperandStorage, OpOperand>;
 };
 } // end namespace detail
 

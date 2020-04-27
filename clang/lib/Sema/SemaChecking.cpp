@@ -1920,6 +1920,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
         if (CheckPPCBuiltinFunctionCall(BuiltinID, TheCall))
           return ExprError();
         break;
+      case llvm::Triple::amdgcn:
+        if (CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall))
+          return ExprError();
+        break;
       default:
         break;
     }
@@ -3031,6 +3035,46 @@ bool Sema::CheckPPCBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return SemaVSXCheck(TheCall);
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
+}
+
+bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
+                                          CallExpr *TheCall) {
+  switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_fence: {
+    ExprResult Arg = TheCall->getArg(0);
+    auto ArgExpr = Arg.get();
+    Expr::EvalResult ArgResult;
+
+    if (!ArgExpr->EvaluateAsInt(ArgResult, Context))
+      return Diag(ArgExpr->getExprLoc(), diag::err_typecheck_expect_int)
+             << ArgExpr->getType();
+    int ord = ArgResult.Val.getInt().getZExtValue();
+
+    // Check valididty of memory ordering as per C11 / C++11's memody model.
+    switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
+    case llvm::AtomicOrderingCABI::acquire:
+    case llvm::AtomicOrderingCABI::release:
+    case llvm::AtomicOrderingCABI::acq_rel:
+    case llvm::AtomicOrderingCABI::seq_cst:
+      break;
+    default: {
+      return Diag(ArgExpr->getBeginLoc(),
+                  diag::warn_atomic_op_has_invalid_memory_order)
+             << ArgExpr->getSourceRange();
+    }
+    }
+
+    Arg = TheCall->getArg(1);
+    ArgExpr = Arg.get();
+    Expr::EvalResult ArgResult1;
+    // Check that sync scope is a constant literal
+    if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Expr::EvaluateForCodeGen,
+                                         Context))
+      return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
+             << ArgExpr->getType();
+  } break;
+  }
+  return false;
 }
 
 bool Sema::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,

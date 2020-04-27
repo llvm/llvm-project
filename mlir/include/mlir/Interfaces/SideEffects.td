@@ -118,6 +118,9 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
   /// The name of the base effects class.
   string baseEffectName = interface.baseEffectName;
 
+  /// The parent interface that the effect belongs to.
+  string interfaceTrait = interface.trait;
+
   /// The derived effect that is being applied.
   string effect = effectName;
 

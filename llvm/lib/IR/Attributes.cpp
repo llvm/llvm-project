@@ -781,16 +781,21 @@ AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
 
 AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
                                         ArrayRef<Attribute> Attrs) {
-  if (Attrs.empty())
+  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
+  llvm::sort(SortedAttrs);
+  return getSorted(C, SortedAttrs);
+}
+
+AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
+                                              ArrayRef<Attribute> SortedAttrs) {
+  if (SortedAttrs.empty())
     return nullptr;
 
-  // Otherwise, build a key to look up the existing attributes.
+  // Build a key to look up the existing attributes.
   LLVMContextImpl *pImpl = C.pImpl;
   FoldingSetNodeID ID;
 
-  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
-  llvm::sort(SortedAttrs);
-
+  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
   for (const auto &Attr : SortedAttrs)
     Attr.Profile(ID);
 
@@ -855,19 +860,33 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
   for (const auto &TDA : B.td_attrs())
     Attrs.emplace_back(Attribute::get(C, TDA.first, TDA.second));
 
-  return get(C, Attrs);
+  return getSorted(C, Attrs);
 }
 
 bool AttributeSetNode::hasAttribute(StringRef Kind) const {
   return StringAttrs.count(Kind);
 }
 
+Optional<Attribute>
+AttributeSetNode::findEnumAttribute(Attribute::AttrKind Kind) const {
+  // Do a quick presence check.
+  if (!hasAttribute(Kind))
+    return None;
+
+  // Attributes in a set are sorted by enum value, followed by string
+  // attributes. Binary search the one we want.
+  const Attribute *I =
+      std::lower_bound(begin(), end() - StringAttrs.size(), Kind,
+                       [](Attribute A, Attribute::AttrKind Kind) {
+                         return A.getKindAsEnum() < Kind;
+                       });
+  assert(I != end() && I->hasAttribute(Kind) && "Presence check failed?");
+  return *I;
+}
+
 Attribute AttributeSetNode::getAttribute(Attribute::AttrKind Kind) const {
-  if (hasAttribute(Kind)) {
-    for (const auto &I : *this)
-      if (I.hasAttribute(Kind))
-        return I;
-  }
+  if (auto A = findEnumAttribute(Kind))
+    return *A;
   return {};
 }
 
@@ -876,45 +895,39 @@ Attribute AttributeSetNode::getAttribute(StringRef Kind) const {
 }
 
 MaybeAlign AttributeSetNode::getAlignment() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::Alignment))
-      return I.getAlignment();
+  if (auto A = findEnumAttribute(Attribute::Alignment))
+    return A->getAlignment();
   return None;
 }
 
 MaybeAlign AttributeSetNode::getStackAlignment() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::StackAlignment))
-      return I.getStackAlignment();
+  if (auto A = findEnumAttribute(Attribute::StackAlignment))
+    return A->getStackAlignment();
   return None;
 }
 
 Type *AttributeSetNode::getByValType() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::ByVal))
-      return I.getValueAsType();
+  if (auto A = findEnumAttribute(Attribute::ByVal))
+    return A->getValueAsType();
   return 0;
 }
 
 uint64_t AttributeSetNode::getDereferenceableBytes() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::Dereferenceable))
-      return I.getDereferenceableBytes();
+  if (auto A = findEnumAttribute(Attribute::Dereferenceable))
+    return A->getDereferenceableBytes();
   return 0;
 }
 
 uint64_t AttributeSetNode::getDereferenceableOrNullBytes() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::DereferenceableOrNull))
-      return I.getDereferenceableOrNullBytes();
+  if (auto A = findEnumAttribute(Attribute::DereferenceableOrNull))
+    return A->getDereferenceableOrNullBytes();
   return 0;
 }
 
 std::pair<unsigned, Optional<unsigned>>
 AttributeSetNode::getAllocSizeArgs() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::AllocSize))
-      return I.getAllocSizeArgs();
+  if (auto A = findEnumAttribute(Attribute::AllocSize))
+    return A->getAllocSizeArgs();
   return std::make_pair(0, 0);
 }
 

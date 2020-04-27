@@ -293,24 +293,19 @@ define <2 x i64> @extract2_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 define <2 x i64> @extract2_i32_zext_insert1_i64_zero(<4 x i32> %x) {
 ; SSE2-LABEL: extract2_i32_zext_insert1_i64_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extract2_i32_zext_insert1_i64_zero:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $2, %xmm0, %eax
-; SSE41-NEXT:    movq %rax, %xmm0
-; SSE41-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: extract2_i32_zext_insert1_i64_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $2, %xmm0, %eax
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3]
 ; AVX-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 2
   %z = zext i32 %e to i64
@@ -386,16 +381,22 @@ define <2 x i64> @extract0_i16_zext_insert0_i64_undef(<8 x i16> %x) {
 }
 
 define <2 x i64> @extract0_i16_zext_insert0_i64_zero(<8 x i16> %x) {
-; SSE-LABEL: extract0_i16_zext_insert0_i64_zero:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pextrw $0, %xmm0, %eax
-; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: extract0_i16_zext_insert0_i64_zero:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: extract0_i16_zext_insert0_i64_zero:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: extract0_i16_zext_insert0_i64_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX-NEXT:    retq
   %e = extractelement <8 x i16> %x, i32 0
   %z = zext i16 %e to i64

@@ -43,21 +43,15 @@ static StringRef TrySuggestPPC(StringRef Name) {
   if (!Name.consume_front("vec_"))
     return {};
 
-  static const llvm::StringMap<StringRef> Mapping{
-    // [simd.alg]
-    {"max", "$std::max"},
-    {"min", "$std::min"},
-
-    // [simd.binary]
-    {"add", "operator+ on $simd objects"},
-    {"sub", "operator- on $simd objects"},
-    {"mul", "operator* on $simd objects"},
-  };
-
-  auto It = Mapping.find(Name);
-  if (It != Mapping.end())
-    return It->second;
-  return {};
+  return llvm::StringSwitch<StringRef>(Name)
+      // [simd.alg]
+      .Case("max", "$std::max")
+      .Case("min", "$std::min")
+      // [simd.binary]
+      .Case("add", "operator+ on $simd objects")
+      .Case("sub", "operator- on $simd objects")
+      .Case("mul", "operator* on $simd objects")
+      .Default({});
 }
 
 static StringRef TrySuggestX86(StringRef Name) {

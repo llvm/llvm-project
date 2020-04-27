@@ -23,19 +23,14 @@ namespace abseil {
 // `FactoryName`, return `None`.
 static llvm::Optional<DurationScale>
 getScaleForFactory(llvm::StringRef FactoryName) {
-  static const std::unordered_map<std::string, DurationScale> ScaleMap(
-      {{"Nanoseconds", DurationScale::Nanoseconds},
-       {"Microseconds", DurationScale::Microseconds},
-       {"Milliseconds", DurationScale::Milliseconds},
-       {"Seconds", DurationScale::Seconds},
-       {"Minutes", DurationScale::Minutes},
-       {"Hours", DurationScale::Hours}});
-
-  auto ScaleIter = ScaleMap.find(std::string(FactoryName));
-  if (ScaleIter == ScaleMap.end())
-    return llvm::None;
-
-  return ScaleIter->second;
+  return llvm::StringSwitch<llvm::Optional<DurationScale>>(FactoryName)
+      .Case("Nanoseconds", DurationScale::Nanoseconds)
+      .Case("Microseconds", DurationScale::Microseconds)
+      .Case("Milliseconds", DurationScale::Milliseconds)
+      .Case("Seconds", DurationScale::Seconds)
+      .Case("Minutes", DurationScale::Minutes)
+      .Case("Hours", DurationScale::Hours)
+      .Default(llvm::None);
 }
 
 // Given either an integer or float literal, return its value.

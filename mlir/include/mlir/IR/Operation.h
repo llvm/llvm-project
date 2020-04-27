@@ -34,16 +34,14 @@ public:
   static Operation *create(Location location, OperationName name,
                            ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            ArrayRef<NamedAttribute> attributes,
-                           ArrayRef<Block *> successors, unsigned numRegions,
-                           bool resizableOperandList);
+                           ArrayRef<Block *> successors, unsigned numRegions);
 
   /// Overload of create that takes an existing NamedAttributeList to avoid
   /// unnecessarily uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            NamedAttributeList attributes,
-                           ArrayRef<Block *> successors, unsigned numRegions,
-                           bool resizableOperandList);
+                           ArrayRef<Block *> successors, unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -53,8 +51,7 @@ public:
                            ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            NamedAttributeList attributes,
                            ArrayRef<Block *> successors = {},
-                           RegionRange regions = {},
-                           bool resizableOperandList = false);
+                           RegionRange regions = {});
 
   /// The name of an operation is the key identifier for it.
   OperationName getName() { return name; }
@@ -204,16 +201,13 @@ public:
   // Operands
   //===--------------------------------------------------------------------===//
 
-  /// Returns if the operation has a resizable operation list, i.e. operands can
-  /// be added.
-  bool hasResizableOperandsList() { return getOperandStorage().isResizable(); }
-
   /// Replace the current operands of this operation with the ones provided in
-  /// 'operands'. If the operands list is not resizable, the size of 'operands'
-  /// must be less than or equal to the current number of operands.
+  /// 'operands'.
   void setOperands(ValueRange operands);
 
-  unsigned getNumOperands() { return getOperandStorage().size(); }
+  unsigned getNumOperands() {
+    return LLVM_LIKELY(hasOperandStorage) ? getOperandStorage().size() : 0;
+  }
 
   Value getOperand(unsigned idx) { return getOpOperand(idx).get(); }
   void setOperand(unsigned idx, Value value) {
@@ -234,7 +228,8 @@ public:
   void eraseOperand(unsigned idx) { getOperandStorage().eraseOperand(idx); }
 
   MutableArrayRef<OpOperand> getOpOperands() {
-    return getOperandStorage().getOperands();
+    return LLVM_LIKELY(hasOperandStorage) ? getOperandStorage().getOperands()
+                                          : MutableArrayRef<OpOperand>();
   }
 
   OpOperand &getOpOperand(unsigned idx) { return getOpOperands()[idx]; }
@@ -601,7 +596,7 @@ private:
 private:
   Operation(Location location, OperationName name, ArrayRef<Type> resultTypes,
             unsigned numSuccessors, unsigned numRegions,
-            const NamedAttributeList &attributes);
+            const NamedAttributeList &attributes, bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
@@ -609,6 +604,7 @@ private:
 
   /// Returns the operand storage object.
   detail::OperandStorage &getOperandStorage() {
+    assert(hasOperandStorage && "expected operation to have operand storage");
     return *getTrailingObjects<detail::OperandStorage>();
   }
 
@@ -641,7 +637,12 @@ private:
   mutable unsigned orderIndex = 0;
 
   const unsigned numSuccs;
-  const unsigned numRegions : 31;
+  const unsigned numRegions : 30;
+
+  /// This bit signals whether this operation has an operand storage or not. The
+  /// operand storage may be elided for operations that are known to never have
+  /// operands.
+  bool hasOperandStorage : 1;
 
   /// This holds the result types of the operation. There are three different
   /// states recorded here:
