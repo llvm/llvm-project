@@ -32,8 +32,14 @@ struct Reloc {
 class InputSection {
 public:
   virtual ~InputSection() = default;
-  virtual void writeTo(uint8_t *buf);
   virtual size_t getSize() const { return data.size(); }
+  virtual uint64_t getFileSize() const { return getSize(); }
+  uint64_t getFileOffset() const;
+  // Don't emit section_64 headers for hidden sections.
+  virtual bool isHidden() const { return false; }
+  // Unneeded sections are omitted entirely (header and body).
+  virtual bool isNeeded() const { return true; }
+  virtual void writeTo(uint8_t *buf);
 
   InputFile *file = nullptr;
   OutputSegment *parent = nullptr;
@@ -41,8 +47,12 @@ public:
   StringRef segname;
 
   ArrayRef<uint8_t> data;
+
+  // TODO these properties ought to live in an OutputSection class.
+  // Move them once available.
   uint64_t addr = 0;
   uint32_t align = 1;
+  uint32_t sectionIndex = 0;
   uint32_t flags = 0;
 
   std::vector<Reloc> relocs;

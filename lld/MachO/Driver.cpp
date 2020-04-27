@@ -139,10 +139,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     return !errorCount();
   }
 
-  getOrCreateOutputSegment("__TEXT", VM_PROT_READ | VM_PROT_EXECUTE);
-  getOrCreateOutputSegment("__DATA", VM_PROT_READ | VM_PROT_WRITE);
-  getOrCreateOutputSegment("__DATA_CONST", VM_PROT_READ | VM_PROT_WRITE);
-
   for (opt::Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_INPUT:
@@ -166,14 +162,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   for (InputFile *file : inputFiles)
     for (InputSection *sec : file->sections)
       inputSections.push_back(sec);
-
-  // Add input sections to output segments.
-  for (InputSection *isec : inputSections) {
-    OutputSegment *os =
-        getOrCreateOutputSegment(isec->segname, VM_PROT_READ | VM_PROT_WRITE);
-    isec->parent = os;
-    os->sections[isec->name].push_back(isec);
-  }
 
   // Write to an output file.
   writeResult();
