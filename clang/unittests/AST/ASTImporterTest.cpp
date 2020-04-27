@@ -6023,10 +6023,6 @@ struct SourceWithCompletedTagList : clang::ExternalASTSource {
     Record->completeDefinition();
     CompletedTags.push_back(Tag);
   }
-  void
-  FindExternalLexicalDecls(const DeclContext *DC,
-                           llvm::function_ref<bool(Decl::Kind)> IsKindWeWant,
-                           SmallVectorImpl<Decl *> &Result) override {}
 };
 
 TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
