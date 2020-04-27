@@ -1805,16 +1805,8 @@ def fir_LoopOp : fir_Op<"loop", [ImplicitFirTerminator]> {
     /// Does loop set (and return) the final value of the control variable?
     bool hasLastValue() { return lastVal().size(); }
 
-    /// Get the body of the loop
-    mlir::Block *getBody() { return &region().front(); }
-
     /// Get the block argument corresponding to the loop control value (PHI)
     mlir::Value getInductionVar() { return getBody()->getArgument(0); }
-
-    /// Get a builder to insert operations into the LoopOp
-    mlir::OpBuilder getBodyBuilder() {
-      return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
-    }
 
     void setLowerBound(mlir::Value bound) {
       getOperation()->setOperand(0, bound);
