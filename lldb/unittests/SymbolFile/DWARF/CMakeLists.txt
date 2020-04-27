@@ -12,6 +12,7 @@ add_lldb_unittest(SymbolFileDWARFTests
     lldbPluginSymbolFilePDB
     lldbPluginTypeSystemClang
     lldbUtilityHelpers
+    lldbPluginPlatformMacOSX
   LINK_COMPONENTS
     Support
     DebugInfoPDB
