@@ -289,3 +289,16 @@ typedef enum { ea2, eb2 } EnumT2_CheckTypedefImpactFromAnotherFile;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using EnumT2_CheckTypedefImpactFromAnotherFile = enum { ea2, eb2 };
 
+template <int A>
+struct InjectedClassName {
+  typedef InjectedClassName b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using b = InjectedClassName;
+};
+
+template <int>
+struct InjectedClassNameWithUnnamedArgument {
+  typedef InjectedClassNameWithUnnamedArgument b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using b = InjectedClassNameWithUnnamedArgument;
+};
