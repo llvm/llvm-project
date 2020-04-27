@@ -7980,6 +7980,11 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
       InsertExplicitUndefOperand(Builder, Ty, Ops);
 
+    // Some ACLE builtins leave out the argument to specify the predicate
+    // pattern, which is expected to be expanded to an SV_ALL pattern.
+    if (TypeFlags.isAppendSVALL())
+      Ops.push_back(Builder.getInt32(/*SV_ALL*/ 31));
+
     // Predicates must match the main datatype.
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
       if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
