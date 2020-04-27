@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 class SystemZUnaryConv<string name, LLVMType result, LLVMType arg>
-  : GCCBuiltin<"__builtin_s390_" ## name>,
+  : GCCBuiltin<"__builtin_s390_" # name>,
     Intrinsic<[result], [arg], [IntrNoMem]>;
 
 class SystemZUnary<string name, LLVMType type>
@@ -24,14 +24,14 @@ class SystemZUnaryCC<LLVMType type>
   : SystemZUnaryConvCC<type, type>;
 
 class SystemZBinaryConv<string name, LLVMType result, LLVMType arg>
-  : GCCBuiltin<"__builtin_s390_" ## name>,
+  : GCCBuiltin<"__builtin_s390_" # name>,
     Intrinsic<[result], [arg, arg], [IntrNoMem]>;
 
 class SystemZBinary<string name, LLVMType type>
   : SystemZBinaryConv<name, type, type>;
 
 class SystemZBinaryInt<string name, LLVMType type>
-  : GCCBuiltin<"__builtin_s390_" ## name>,
+  : GCCBuiltin<"__builtin_s390_" # name>,
     Intrinsic<[type], [type, llvm_i32_ty], [IntrNoMem]>;
 
 class SystemZBinaryConvCC<LLVMType result, LLVMType arg>
@@ -45,7 +45,7 @@ class SystemZBinaryCC<LLVMType type>
   : SystemZBinaryConvCC<type, type>;
 
 class SystemZTernaryConv<string name, LLVMType result, LLVMType arg>
-  : GCCBuiltin<"__builtin_s390_" ## name>,
+  : GCCBuiltin<"__builtin_s390_" # name>,
     Intrinsic<[result], [arg, arg, result], [IntrNoMem]>;
 
 class SystemZTernaryConvCC<LLVMType result, LLVMType arg>
@@ -55,7 +55,7 @@ class SystemZTernary<string name, LLVMType type>
   : SystemZTernaryConv<name, type, type>;
 
 class SystemZTernaryInt<string name, LLVMType type>
-  : GCCBuiltin<"__builtin_s390_" ## name>,
+  : GCCBuiltin<"__builtin_s390_" # name>,
     Intrinsic<[type], [type, type, llvm_i32_ty], [IntrNoMem, ImmArg<2>]>;
 
 class SystemZTernaryIntCC<LLVMType type>
@@ -63,7 +63,7 @@ class SystemZTernaryIntCC<LLVMType type>
               [IntrNoMem, ImmArg<2>]>;
 
 class SystemZQuaternaryInt<string name, LLVMType type>
-  : GCCBuiltin<"__builtin_s390_" ## name>,
+  : GCCBuiltin<"__builtin_s390_" # name>,
     Intrinsic<[type], [type, type, type, llvm_i32_ty],
     [IntrNoMem, ImmArg<3>]>;
 
@@ -72,25 +72,25 @@ class SystemZQuaternaryIntCC<LLVMType type>
               [IntrNoMem, ImmArg<3>]>;
 
 multiclass SystemZUnaryExtBHF<string name> {
-  def b : SystemZUnaryConv<name##"b", llvm_v8i16_ty, llvm_v16i8_ty>;
-  def h : SystemZUnaryConv<name##"h", llvm_v4i32_ty, llvm_v8i16_ty>;
-  def f : SystemZUnaryConv<name##"f", llvm_v2i64_ty, llvm_v4i32_ty>;
+  def b : SystemZUnaryConv<name#"b", llvm_v8i16_ty, llvm_v16i8_ty>;
+  def h : SystemZUnaryConv<name#"h", llvm_v4i32_ty, llvm_v8i16_ty>;
+  def f : SystemZUnaryConv<name#"f", llvm_v2i64_ty, llvm_v4i32_ty>;
 }
 
 multiclass SystemZUnaryExtBHWF<string name> {
-  def b  : SystemZUnaryConv<name##"b",  llvm_v8i16_ty, llvm_v16i8_ty>;
-  def hw : SystemZUnaryConv<name##"hw", llvm_v4i32_ty, llvm_v8i16_ty>;
-  def f  : SystemZUnaryConv<name##"f",  llvm_v2i64_ty, llvm_v4i32_ty>;
+  def b  : SystemZUnaryConv<name#"b",  llvm_v8i16_ty, llvm_v16i8_ty>;
+  def hw : SystemZUnaryConv<name#"hw", llvm_v4i32_ty, llvm_v8i16_ty>;
+  def f  : SystemZUnaryConv<name#"f",  llvm_v2i64_ty, llvm_v4i32_ty>;
 }
 
 multiclass SystemZUnaryBHF<string name> {
-  def b : SystemZUnary<name##"b", llvm_v16i8_ty>;
-  def h : SystemZUnary<name##"h", llvm_v8i16_ty>;
-  def f : SystemZUnary<name##"f", llvm_v4i32_ty>;
+  def b : SystemZUnary<name#"b", llvm_v16i8_ty>;
+  def h : SystemZUnary<name#"h", llvm_v8i16_ty>;
+  def f : SystemZUnary<name#"f", llvm_v4i32_ty>;
 }
 
 multiclass SystemZUnaryBHFG<string name> : SystemZUnaryBHF<name> {
-  def g : SystemZUnary<name##"g", llvm_v2i64_ty>;
+  def g : SystemZUnary<name#"g", llvm_v2i64_ty>;
 }
 
 multiclass SystemZUnaryCCBHF {
@@ -100,9 +100,9 @@ multiclass SystemZUnaryCCBHF {
 }
 
 multiclass SystemZBinaryTruncHFG<string name> {
-  def h : SystemZBinaryConv<name##"h", llvm_v16i8_ty, llvm_v8i16_ty>;
-  def f : SystemZBinaryConv<name##"f", llvm_v8i16_ty, llvm_v4i32_ty>;
-  def g : SystemZBinaryConv<name##"g", llvm_v4i32_ty, llvm_v2i64_ty>;
+  def h : SystemZBinaryConv<name#"h", llvm_v16i8_ty, llvm_v8i16_ty>;
+  def f : SystemZBinaryConv<name#"f", llvm_v8i16_ty, llvm_v4i32_ty>;
+  def g : SystemZBinaryConv<name#"g", llvm_v4i32_ty, llvm_v2i64_ty>;
 }
 
 multiclass SystemZBinaryTruncCCHFG {
@@ -112,30 +112,30 @@ multiclass SystemZBinaryTruncCCHFG {
 }
 
 multiclass SystemZBinaryExtBHF<string name> {
-  def b : SystemZBinaryConv<name##"b", llvm_v8i16_ty, llvm_v16i8_ty>;
-  def h : SystemZBinaryConv<name##"h", llvm_v4i32_ty, llvm_v8i16_ty>;
-  def f : SystemZBinaryConv<name##"f", llvm_v2i64_ty, llvm_v4i32_ty>;
+  def b : SystemZBinaryConv<name#"b", llvm_v8i16_ty, llvm_v16i8_ty>;
+  def h : SystemZBinaryConv<name#"h", llvm_v4i32_ty, llvm_v8i16_ty>;
+  def f : SystemZBinaryConv<name#"f", llvm_v2i64_ty, llvm_v4i32_ty>;
 }
 
 multiclass SystemZBinaryExtBHFG<string name> : SystemZBinaryExtBHF<name> {
-  def g : SystemZBinaryConv<name##"g", llvm_v16i8_ty, llvm_v2i64_ty>;
+  def g : SystemZBinaryConv<name#"g", llvm_v16i8_ty, llvm_v2i64_ty>;
 }
 
 multiclass SystemZBinaryBHF<string name> {
-  def b : SystemZBinary<name##"b", llvm_v16i8_ty>;
-  def h : SystemZBinary<name##"h", llvm_v8i16_ty>;
-  def f : SystemZBinary<name##"f", llvm_v4i32_ty>;
+  def b : SystemZBinary<name#"b", llvm_v16i8_ty>;
+  def h : SystemZBinary<name#"h", llvm_v8i16_ty>;
+  def f : SystemZBinary<name#"f", llvm_v4i32_ty>;
 }
 
 multiclass SystemZBinaryBHFG<string name> : SystemZBinaryBHF<name> {
-  def g : SystemZBinary<name##"g", llvm_v2i64_ty>;
+  def g : SystemZBinary<name#"g", llvm_v2i64_ty>;
 }
 
 multiclass SystemZBinaryIntBHFG<string name> {
-  def b : SystemZBinaryInt<name##"b", llvm_v16i8_ty>;
-  def h : SystemZBinaryInt<name##"h", llvm_v8i16_ty>;
-  def f : SystemZBinaryInt<name##"f", llvm_v4i32_ty>;
-  def g : SystemZBinaryInt<name##"g", llvm_v2i64_ty>;
+  def b : SystemZBinaryInt<name#"b", llvm_v16i8_ty>;
+  def h : SystemZBinaryInt<name#"h", llvm_v8i16_ty>;
+  def f : SystemZBinaryInt<name#"f", llvm_v4i32_ty>;
+  def g : SystemZBinaryInt<name#"g", llvm_v2i64_ty>;
 }
 
 multiclass SystemZBinaryCCBHF {
@@ -152,25 +152,25 @@ multiclass SystemZCompareBHFG<string name> {
 }
 
 multiclass SystemZTernaryExtBHF<string name> {
-  def b : SystemZTernaryConv<name##"b", llvm_v8i16_ty, llvm_v16i8_ty>;
-  def h : SystemZTernaryConv<name##"h", llvm_v4i32_ty, llvm_v8i16_ty>;
-  def f : SystemZTernaryConv<name##"f", llvm_v2i64_ty, llvm_v4i32_ty>;
+  def b : SystemZTernaryConv<name#"b", llvm_v8i16_ty, llvm_v16i8_ty>;
+  def h : SystemZTernaryConv<name#"h", llvm_v4i32_ty, llvm_v8i16_ty>;
+  def f : SystemZTernaryConv<name#"f", llvm_v2i64_ty, llvm_v4i32_ty>;
 }
 
 multiclass SystemZTernaryExtBHFG<string name> : SystemZTernaryExtBHF<name> {
-  def g : SystemZTernaryConv<name##"g", llvm_v16i8_ty, llvm_v2i64_ty>;
+  def g : SystemZTernaryConv<name#"g", llvm_v16i8_ty, llvm_v2i64_ty>;
 }
 
 multiclass SystemZTernaryBHF<string name> {
-  def b : SystemZTernary<name##"b", llvm_v16i8_ty>;
-  def h : SystemZTernary<name##"h", llvm_v8i16_ty>;
-  def f : SystemZTernary<name##"f", llvm_v4i32_ty>;
+  def b : SystemZTernary<name#"b", llvm_v16i8_ty>;
+  def h : SystemZTernary<name#"h", llvm_v8i16_ty>;
+  def f : SystemZTernary<name#"f", llvm_v4i32_ty>;
 }
 
 multiclass SystemZTernaryIntBHF<string name> {
-  def b : SystemZTernaryInt<name##"b", llvm_v16i8_ty>;
-  def h : SystemZTernaryInt<name##"h", llvm_v8i16_ty>;
-  def f : SystemZTernaryInt<name##"f", llvm_v4i32_ty>;
+  def b : SystemZTernaryInt<name#"b", llvm_v16i8_ty>;
+  def h : SystemZTernaryInt<name#"h", llvm_v8i16_ty>;
+  def f : SystemZTernaryInt<name#"f", llvm_v4i32_ty>;
 }
 
 multiclass SystemZTernaryIntCCBHF {
@@ -180,14 +180,14 @@ multiclass SystemZTernaryIntCCBHF {
 }
 
 multiclass SystemZQuaternaryIntBHF<string name> {
-  def b : SystemZQuaternaryInt<name##"b", llvm_v16i8_ty>;
-  def h : SystemZQuaternaryInt<name##"h", llvm_v8i16_ty>;
-  def f : SystemZQuaternaryInt<name##"f", llvm_v4i32_ty>;
+  def b : SystemZQuaternaryInt<name#"b", llvm_v16i8_ty>;
+  def h : SystemZQuaternaryInt<name#"h", llvm_v8i16_ty>;
+  def f : SystemZQuaternaryInt<name#"f", llvm_v4i32_ty>;
 }
 
 multiclass SystemZQuaternaryIntBHFG<string name> :
   SystemZQuaternaryIntBHF<name> {
-  def g : SystemZQuaternaryInt<name##"g", llvm_v2i64_ty>;
+  def g : SystemZQuaternaryInt<name#"g", llvm_v2i64_ty>;
 }
 
 multiclass SystemZQuaternaryIntCCBHF {
