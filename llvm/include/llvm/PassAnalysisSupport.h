@@ -15,10 +15,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(LLVM_PASS_H) || defined(LLVM_PASSANALYSISSUPPORT_H)
+#error "Do not include <PassAnalysisSupport.h>; include <Pass.h> instead"
+#endif 
+
 #ifndef LLVM_PASSANALYSISSUPPORT_H
 #define LLVM_PASSANALYSISSUPPORT_H
 
-#include "Pass.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <utility>

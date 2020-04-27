@@ -59,7 +59,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
 
 namespace llvm {
 
