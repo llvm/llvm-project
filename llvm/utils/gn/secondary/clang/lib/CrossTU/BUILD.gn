@@ -6,6 +6,10 @@ static_library("CrossTU") {
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
     "//clang/lib/Index",
+    "//clang/lib/Serialization",
+
+    # FIXME: This shouldn't be here, https://reviews.llvm.org/D75665#2004891
+    "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]
   sources = [
