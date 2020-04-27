@@ -129,12 +129,14 @@ class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //   %0 = alloclike(%m)[%s] : memref<8x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1)>
 //
-class AllocLikeOp<string mnemonic, list<OpTrait> traits = []> :
+class AllocLikeOp<string mnemonic,
+                  list<OpVariableDecorator> resultDecorators = [],
+                  list<OpTrait> traits = []> :
     Std_Op<mnemonic, traits> {
 
   let arguments = (ins Variadic<Index>:$value,
                    Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
-  let results = (outs AnyMemRef);
+  let results = (outs Arg<AnyMemRef, "", resultDecorators>);
 
   let builders = [OpBuilder<
     "Builder *builder, OperationState &result, MemRefType memrefType", [{
@@ -276,7 +278,7 @@ def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
 // AllocOp
 //===----------------------------------------------------------------------===//
 
-def AllocOp : AllocLikeOp<"alloc"> {
+def AllocOp : AllocLikeOp<"alloc", [MemAlloc], [MemoryEffects<[MemAlloc]>]> {
   let summary = "memory allocation operation";
   let description = [{
     The `alloc` operation allocates a region of memory, as specified by its
@@ -1253,7 +1255,7 @@ def CosOp : FloatUnaryOp<"cos"> {
 // DeallocOp
 //===----------------------------------------------------------------------===//
 
-def DeallocOp : Std_Op<"dealloc"> {
+def DeallocOp : Std_Op<"dealloc", [MemoryEffects<[MemFree]>]> {
   let summary = "memory deallocation operation";
   let description = [{
     The `dealloc` operation frees the region of memory referenced by a memref
@@ -1269,7 +1271,7 @@ def DeallocOp : Std_Op<"dealloc"> {
     ```
   }];
 
-  let arguments = (ins AnyMemRef:$memref);
+  let arguments = (ins Arg<AnyMemRef, "", [MemFree]>:$memref);
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
