@@ -128,3 +128,14 @@ void test_ds_fmaxf(local float *out, float src, int a) {
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, a, false); // expected-error {{argument to '__builtin_amdgcn_ds_fmaxf' must be a constant integer}}
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 0, a); // expected-error {{argument to '__builtin_amdgcn_ds_fmaxf' must be a constant integer}}
 }
+
+void test_fence() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __builtin_amdgcn_fence(4); // expected-error {{too few arguments to function call, expected 2}}
+  __builtin_amdgcn_fence(4, 4, 4); // expected-error {{too many arguments to function call, expected 2}}
+  __builtin_amdgcn_fence(3.14, ""); // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, 5); // expected-warning {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
+  const char ptr[] = "workgroup";
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, ptr); // expected-error {{expression is not a string literal}}
+}

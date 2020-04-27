@@ -57,6 +57,7 @@ BUILTIN(__builtin_amdgcn_ds_gws_barrier, "vUiUi", "n")
 BUILTIN(__builtin_amdgcn_ds_gws_sema_v, "vUi", "n")
 BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n")
 BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n")
+BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
 
 // FIXME: Need to disallow constant address space.
 BUILTIN(__builtin_amdgcn_div_scale, "dddbb*", "n")
