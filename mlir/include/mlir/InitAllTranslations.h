@@ -17,6 +17,7 @@
 namespace mlir {
 
 void registerFromLLVMIRTranslation();
+void registerFromSPIRVTranslation();
 void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
 void registerToNVVMIRTranslation();
@@ -29,6 +30,7 @@ void registerAVX512ToLLVMIRTranslation();
 inline void registerAllTranslations() {
   static bool init_once = []() {
     registerFromLLVMIRTranslation();
+    registerFromSPIRVTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
     registerToNVVMIRTranslation();
