@@ -238,7 +238,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     m_listen_sockets[fd] = address;
   }
 
-  if (m_listen_sockets.size() == 0) {
+  if (m_listen_sockets.empty()) {
     assert(error.Fail());
     return error;
   }
