@@ -343,7 +343,7 @@ int main_platform(int argc, char *argv[]) {
       // connections while a connection is active.
       acceptor_up.reset();
     }
-    platform.SetConnection(conn);
+    platform.SetConnection(std::unique_ptr<Connection>(conn));
 
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {

@@ -869,7 +869,7 @@ Status GDBRemoteCommunication::StartListenThread(const char *hostname,
   else
     snprintf(listen_url, sizeof(listen_url), "listen://%i", port);
   m_listen_url = listen_url;
-  SetConnection(new ConnectionFileDescriptor());
+  SetConnection(std::make_unique<ConnectionFileDescriptor>());
   llvm::Expected<HostThread> listen_thread = ThreadLauncher::LaunchThread(
       listen_url, GDBRemoteCommunication::ListenThread, this);
   if (!listen_thread)
@@ -1252,11 +1252,12 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Unable to connect: %s", status.AsCString());
 
-  client.SetConnection(conn_up.release());
+  client.SetConnection(std::move(conn_up));
   if (llvm::Error error = accept_status.get().ToError())
     return error;
 
-  server.SetConnection(new ConnectionFileDescriptor(accept_socket));
+  server.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(accept_socket));
   return llvm::Error::success();
 }
 

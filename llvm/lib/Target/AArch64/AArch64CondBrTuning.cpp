@@ -194,8 +194,12 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
 
       // There must not be any instruction between DefMI and MI that clobbers or
       // reads NZCV.
-      if (isNZCVTouchedInInstructionRange(DefMI, MI, TRI))
-        return false;
+      MachineBasicBlock::iterator I(DefMI), E(MI);
+      for (I = std::next(I); I != E; ++I) {
+        if (I->modifiesRegister(AArch64::NZCV, TRI) ||
+            I->readsRegister(AArch64::NZCV, TRI))
+          return false;
+      }
       LLVM_DEBUG(dbgs() << "  Replacing instructions:\n    ");
       LLVM_DEBUG(DefMI.print(dbgs()));
       LLVM_DEBUG(dbgs() << "    ");
@@ -249,8 +253,12 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
         return false;
       // There must not be any instruction between DefMI and MI that clobbers or
       // reads NZCV.
-      if (isNZCVTouchedInInstructionRange(DefMI, MI, TRI))
-        return false;
+      MachineBasicBlock::iterator I(DefMI), E(MI);
+      for (I = std::next(I); I != E; ++I) {
+        if (I->modifiesRegister(AArch64::NZCV, TRI) ||
+            I->readsRegister(AArch64::NZCV, TRI))
+          return false;
+      }
       LLVM_DEBUG(dbgs() << "  Replacing instructions:\n    ");
       LLVM_DEBUG(DefMI.print(dbgs()));
       LLVM_DEBUG(dbgs() << "    ");
