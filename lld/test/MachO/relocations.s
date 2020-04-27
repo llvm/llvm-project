@@ -12,9 +12,12 @@
 # CHECK-LABEL: <_main>:
 ## Test X86_64_RELOC_BRANCH
 # CHECK:       callq 0x[[#%x, F_ADDR]] <_f>
-## Test X86_64_RELOC_SIGNED
+## Test extern (symbol) X86_64_RELOC_SIGNED
 # CHECK:       leaq [[#%u, STR_OFF:]](%rip), %rsi
 # CHECK-NEXT:  [[#%x, CSTRING_ADDR - STR_OFF]]
+## Test non-extern (section) X86_64_RELOC_SIGNED
+# CHECK:       leaq [[#%u, LSTR_OFF:]](%rip), %rsi
+# CHECK-NEXT:  [[#%x, CSTRING_ADDR + 22 - LSTR_OFF]]
 
 .section __TEXT,__text
 .globl _main, _f
@@ -26,11 +29,21 @@ _main:
 _f:
   movl $0x2000004, %eax # write() syscall
   mov $1, %rdi # stdout
-  leaq str(%rip), %rsi
-  mov $13, %rdx # length of str
+  leaq _str(%rip), %rsi
+  mov $21, %rdx # length of str
+  syscall
+
+  movl $0x2000004, %eax # write() syscall
+  mov $1, %rdi # stdout
+  leaq L_.str(%rip), %rsi
+  mov $15, %rdx # length of str
   syscall
   ret
 
 .section __TEXT,__cstring
-str:
-  .asciz "Hello world!\n"
+## References to this generate a symbol relocation
+_str:
+  .asciz "Local defined symbol\n"
+## References to this generate a section relocation
+L_.str:
+  .asciz "Private symbol\n"
