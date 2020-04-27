@@ -19,9 +19,8 @@
 #ifndef LLVM_ADT_CACHED_HASH_STRING_H
 #define LLVM_ADT_CACHED_HASH_STRING_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
