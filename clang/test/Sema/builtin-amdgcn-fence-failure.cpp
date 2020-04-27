@@ -1,6 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: not %clang_cc1 %s -S \
-// RUN:   -triple=amdgcn-amd-amdhsa 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 %s -o - -S -triple=amdgcn-amd-amdhsa 2>&1 | FileCheck %s
 
 void test_amdgcn_fence_failure() {
 
