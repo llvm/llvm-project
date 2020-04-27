@@ -1154,7 +1154,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       }
 
       LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
-                        << "Old Instr: " << MI << '\n'
+                        << "Old Instr: " << MI
                         << "New Instr: " << *II << '\n');
 
       if (!Wait.hasWait())
@@ -1171,7 +1171,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
-                      << "Old Instr: " << MI << '\n'
+                      << "Old Instr: " << MI
                       << "New Instr: " << *SWaitInst << '\n');
   }
 
@@ -1187,7 +1187,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
-                      << "Old Instr: " << MI << '\n'
+                      << "Old Instr: " << MI
                       << "New Instr: " << *SWaitInst << '\n');
   }
 
