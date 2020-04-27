@@ -21,6 +21,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 endif()
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Optionally, build Device Libs with ccache.
 set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
@@ -73,7 +74,7 @@ if (NOT PREPARE_BUILTINS)
   set (PREPARE_BUILTINS $<TARGET_FILE:prepare-builtins>)
 endif()
 
-include(OCL.cmake)
+include(OCL)
 
 set(AMDGCN_LIB_LIST)
 set(AMDGCN_DEP_LIST)
@@ -96,7 +97,7 @@ if(AMDGCN_TARGETS_LIB_DEPS)
   set(${AMDGCN_TARGETS_LIB_DEPS} ${AMDGCN_DEP_LIST} PARENT_SCOPE)
 endif()
 
-include(Packages.cmake)
+include(Packages)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   ## CPack standard variables
