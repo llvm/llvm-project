@@ -12,6 +12,7 @@
 
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 #include "clang/AST/DeclContextInternals.h"
 #include "gtest/gtest.h"
@@ -5894,6 +5895,61 @@ TEST_P(ImportSourceLocations, PreserveFileIDTreeStructure) {
   // be the order in which the declarations are imported.
   EXPECT_TRUE(ToSM.isBeforeInTranslationUnit(Location1, Location2));
   EXPECT_FALSE(ToSM.isBeforeInTranslationUnit(Location2, Location1));
+}
+
+TEST_P(ImportSourceLocations, NormalFileBuffer) {
+  // Test importing normal file buffers.
+
+  std::string Path = "input0.c";
+  std::string Source = "int X;";
+  TranslationUnitDecl *FromTU = getTuDecl(Source, Lang_C, Path);
+
+  SourceLocation ImportedLoc;
+  {
+    // Import the VarDecl to trigger the importing of the FileID.
+    auto Pattern = varDecl(hasName("X"));
+    VarDecl *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+    ImportedLoc = Import(FromD, Lang_C)->getLocation();
+  }
+
+  // Make sure the imported buffer has the original contents.
+  SourceManager &ToSM = ToAST->getSourceManager();
+  FileID ImportedID = ToSM.getFileID(ImportedLoc);
+  EXPECT_EQ(Source, ToSM.getBuffer(ImportedID, SourceLocation())->getBuffer());
+}
+
+TEST_P(ImportSourceLocations, OverwrittenFileBuffer) {
+  // Test importing overwritten file buffers.
+
+  std::string Path = "input0.c";
+  TranslationUnitDecl *FromTU = getTuDecl("int X;", Lang_C, Path);
+
+  // Overwrite the file buffer for our input file with new content.
+  const std::string Contents = "overwritten contents";
+  SourceLocation ImportedLoc;
+  {
+    SourceManager &FromSM = FromTU->getASTContext().getSourceManager();
+    clang::FileManager &FM = FromSM.getFileManager();
+    const clang::FileEntry &FE =
+        *FM.getVirtualFile(Path, static_cast<off_t>(Contents.size()), 0);
+
+    llvm::SmallVector<char, 64> Buffer;
+    Buffer.append(Contents.begin(), Contents.end());
+    auto FileContents =
+        std::make_unique<llvm::SmallVectorMemoryBuffer>(std::move(Buffer), Path);
+    FromSM.overrideFileContents(&FE, std::move(FileContents));
+
+    // Import the VarDecl to trigger the importing of the FileID.
+    auto Pattern = varDecl(hasName("X"));
+    VarDecl *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+    ImportedLoc = Import(FromD, Lang_C)->getLocation();
+  }
+
+  // Make sure the imported buffer has the overwritten contents.
+  SourceManager &ToSM = ToAST->getSourceManager();
+  FileID ImportedID = ToSM.getFileID(ImportedLoc);
+  EXPECT_EQ(Contents,
+            ToSM.getBuffer(ImportedID, SourceLocation())->getBuffer());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
