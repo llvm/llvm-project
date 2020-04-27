@@ -13,6 +13,7 @@ Clang Language Extensions
    BlockLanguageSpec
    Block-ABI-Apple
    AutomaticReferenceCounting
+   MatrixTypes
 
 Introduction
 ============
@@ -491,6 +492,24 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
 .. [#] While OpenCL and GCC vectors both implement the comparison operator(?:) as a
   'select', they operate somewhat differently. OpenCL selects based on signedness of
   the condition operands, but GCC vectors use normal bool conversions (that is, != 0).
+
+Matrix Types
+============
+
+Clang provides an extension for matrix types, which is currently being
+implemented. See :ref:`the draft specification <matrixtypes>` for more details.
+
+For example, the code below uses the matrix types extension to multiply two 4x4
+float matrices and add the result to a third 4x4 matrix.
+
+.. code-block:: c++
+
+  typedef float m4x4_t __attribute__((matrix_type(4, 4)));
+
+  m4x4_t f(m4x4_t a, m4x4_t b, m4x4_t c) {
+    return a + b * c;
+  }
+
 
 Half-Precision Floating Point
 =============================
