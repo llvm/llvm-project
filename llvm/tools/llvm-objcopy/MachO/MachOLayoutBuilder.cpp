@@ -144,6 +144,9 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     uint64_t SegFileSize = 0;
     uint64_t VMSize = 0;
     for (std::unique_ptr<Section> &Sec : LC.Sections) {
+      assert(SegmentVmAddr <= Sec->Addr &&
+             "Section's address cannot be smaller than Segment's one");
+      uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
       if (IsObjectFile) {
         if (Sec->isVirtualSection()) {
           Sec->Offset = 0;
@@ -154,19 +157,16 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           Sec->Size = Sec->Content.size();
           SegFileSize += PaddingSize + Sec->Size;
         }
-        VMSize = std::max(VMSize, Sec->Addr + Sec->Size);
       } else {
         if (Sec->isVirtualSection()) {
           Sec->Offset = 0;
-          VMSize += Sec->Size;
         } else {
-          uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
           Sec->Offset = SegOffset + SectOffset;
           Sec->Size = Sec->Content.size();
           SegFileSize = std::max(SegFileSize, SectOffset + Sec->Size);
-          VMSize = std::max(VMSize, SegFileSize);
         }
       }
+      VMSize = std::max(VMSize, SectOffset + Sec->Size);
     }
 
     if (IsObjectFile) {
