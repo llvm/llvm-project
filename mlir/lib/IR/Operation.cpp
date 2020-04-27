@@ -105,20 +105,29 @@ Operation *Operation::create(Location location, OperationName name,
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
 
+  // If the operation is known to have no operands, don't allocate an operand
+  // storage.
+  bool needsOperandStorage = true;
+  if (operands.empty()) {
+    if (const AbstractOperation *abstractOp = name.getAbstractOperation())
+      needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
+  }
+
   // Compute the byte size for the operation and the operand storage.
   auto byteSize =
       totalSizeToAlloc<detail::InLineOpResult, detail::TrailingOpResult,
                        BlockOperand, Region, detail::OperandStorage>(
           numInlineResults, numTrailingResults, numSuccessors, numRegions,
-          /*detail::OperandStorage*/ 1);
+          needsOperandStorage ? 1 : 0);
   byteSize +=
       llvm::alignTo(detail::OperandStorage::additionalAllocSize(numOperands),
                     alignof(Operation));
   void *rawMem = malloc(byteSize);
 
   // Create the new Operation.
-  auto op = ::new (rawMem) Operation(location, name, resultTypes, numSuccessors,
-                                     numRegions, attributes);
+  Operation *op =
+      ::new (rawMem) Operation(location, name, resultTypes, numSuccessors,
+                               numRegions, attributes, needsOperandStorage);
 
   assert((numSuccessors == 0 || !op->isKnownNonTerminator()) &&
          "unexpected successors in a non-terminator operation");
@@ -134,7 +143,8 @@ Operation *Operation::create(Location location, OperationName name,
     new (&op->getRegion(i)) Region(op);
 
   // Initialize the operands.
-  new (&op->getOperandStorage()) detail::OperandStorage(op, operands);
+  if (needsOperandStorage)
+    new (&op->getOperandStorage()) detail::OperandStorage(op, operands);
 
   // Initialize the successors.
   auto blockOperands = op->getBlockOperands();
@@ -146,9 +156,11 @@ Operation *Operation::create(Location location, OperationName name,
 
 Operation::Operation(Location location, OperationName name,
                      ArrayRef<Type> resultTypes, unsigned numSuccessors,
-                     unsigned numRegions, const NamedAttributeList &attributes)
+                     unsigned numRegions, const NamedAttributeList &attributes,
+                     bool hasOperandStorage)
     : location(location), numSuccs(numSuccessors), numRegions(numRegions),
-      hasSingleResult(false), name(name), attrs(attributes) {
+      hasOperandStorage(hasOperandStorage), hasSingleResult(false), name(name),
+      attrs(attributes) {
   if (!resultTypes.empty()) {
     // If there is a single result it is stored in-place, otherwise use a tuple.
     hasSingleResult = resultTypes.size() == 1;
@@ -164,8 +176,9 @@ Operation::Operation(Location location, OperationName name,
 Operation::~Operation() {
   assert(block == nullptr && "operation destroyed but still in a block");
 
-  // Explicitly run the destructors for the operands and results.
-  getOperandStorage().~OperandStorage();
+  // Explicitly run the destructors for the operands.
+  if (hasOperandStorage)
+    getOperandStorage().~OperandStorage();
 
   // Explicitly run the destructors for the successors.
   for (auto &successor : getBlockOperands())
@@ -225,7 +238,9 @@ void Operation::replaceUsesOfWith(Value from, Value to) {
 /// Replace the current operands of this operation with the ones provided in
 /// 'operands'.
 void Operation::setOperands(ValueRange operands) {
-  getOperandStorage().setOperands(this, operands);
+  if (LLVM_LIKELY(hasOperandStorage))
+    return getOperandStorage().setOperands(this, operands);
+  assert(operands.empty() && "setting operands without an operand storage");
 }
 
 //===----------------------------------------------------------------------===//
