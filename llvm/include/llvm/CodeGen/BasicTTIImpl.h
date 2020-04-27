@@ -702,24 +702,25 @@ public:
     case Instruction::ZExt:
       if (TLI->isZExtFree(SrcLT.second, DstLT.second))
         return 0;
-      break;
-    case Instruction::AddrSpaceCast:
-      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
-                                   Dst->getPointerAddressSpace()))
-        return 0;
-      break;
-    }
-
-    // If this is a zext/sext of a load, return 0 if the corresponding
-    // extending load exists on target.
-    if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
-        I && isa<LoadInst>(I->getOperand(0))) {
+      LLVM_FALLTHROUGH;
+    case Instruction::SExt: {
+      // If this is a zext/sext of a load, return 0 if the corresponding
+      // extending load exists on target.
+      if (I && isa<LoadInst>(I->getOperand(0))) {
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
           ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
         if (TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
           return 0;
+      }
+      break;
+    }
+    case Instruction::AddrSpaceCast:
+      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
+                                   Dst->getPointerAddressSpace()))
+        return 0;
+      break;
     }
 
     // If the cast is marked as legal (or promote) then assume low cost.
