@@ -1274,6 +1274,14 @@ private:
   getZeroValue() const {
     return getZeroAPFloat();
   }
+
+  /// Get a zero for a StringRef.
+  template <typename T>
+  typename std::enable_if<std::is_same<StringRef, T>::value, T>::type
+  getZeroValue() const {
+    return StringRef();
+  }
+
   /// Get a zero for an C++ integer or float type.
   template <typename T>
   typename std::enable_if<std::numeric_limits<T>::is_integer ||
