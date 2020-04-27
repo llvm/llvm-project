@@ -33,10 +33,6 @@ class VarDecl;
 class NamedDecl;
 class TranslationUnitDecl;
 
-namespace tooling {
-class JSONCompilationDatabase;
-}
-
 namespace cross_tu {
 
 enum class index_error_code {
@@ -46,14 +42,12 @@ enum class index_error_code {
   multiple_definitions,
   missing_definition,
   failed_import,
-  failed_to_load_compilation_database,
   failed_to_get_external_ast,
   failed_to_generate_usr,
   triple_mismatch,
   lang_mismatch,
   lang_dialect_mismatch,
-  load_threshold_reached,
-  ambiguous_compilation_database
+  load_threshold_reached
 };
 
 class IndexError : public llvm::ErrorInfo<IndexError> {
@@ -84,8 +78,7 @@ private:
 };
 
 /// This function parses an index file that determines which
-/// translation unit contains which definition. The IndexPath is not prefixed
-/// with CTUDir, so an absolute path is expected for consistent results.
+///        translation unit contains which definition.
 ///
 /// The index file format is the following:
 /// each line consists of an USR and a filepath separated by a space.
@@ -93,7 +86,7 @@ private:
 /// \return Returns a map where the USR is the key and the filepath is the value
 ///         or an error.
 llvm::Expected<llvm::StringMap<std::string>>
-parseCrossTUIndex(StringRef IndexPath);
+parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir);
 
 std::string createCrossTUIndexString(const llvm::StringMap<std::string> &Index);
 
@@ -216,47 +209,14 @@ private:
   /// imported the FileID.
   ImportedFileIDMap ImportedFileIDs;
 
-  using LoadResultTy = llvm::Expected<std::unique_ptr<ASTUnit>>;
-
-  class ASTLoader {
+  /// Functor for loading ASTUnits from AST-dump files.
+  class ASTFileLoader {
   public:
-    /// Load the ASTUnit by an identifier. Subclasses should determine what this
-    /// would be. The function is used with a string read from the CTU index,
-    /// and the method used for loading determines the semantic meaning of
-    /// Identifier.
-    virtual LoadResultTy load(StringRef Identifier) = 0;
-    virtual ~ASTLoader() = default;
-  };
-
-  /// Implementation for loading ASTUnits from AST-dump files.
-  class ASTFileLoader : public ASTLoader {
-  public:
-    explicit ASTFileLoader(CompilerInstance &CI, StringRef CTUDir);
-
-    /// ASTFileLoader uses a the path of the dump file as Identifier.
-    LoadResultTy load(StringRef Identifier) override;
+    ASTFileLoader(const CompilerInstance &CI);
+    std::unique_ptr<ASTUnit> operator()(StringRef ASTFilePath);
 
   private:
-    CompilerInstance &CI;
-    StringRef CTUDir;
-  };
-
-  /// Implementation for loading ASTUnits by parsing them on-demand.
-  class ASTOnDemandLoader : public ASTLoader {
-  public:
-    ASTOnDemandLoader(StringRef OnDemandParsingDatabase);
-
-    /// ASTOnDemandLoader uses the path of the source file to be parsed as
-    /// Identifier.
-    LoadResultTy load(StringRef Identifier) override;
-
-    llvm::Error lazyInitCompileCommands();
-
-  private:
-    StringRef OnDemandParsingDatabase;
-    /// In case of on-demand parsing, the compilation database is parsed and
-    /// stored.
-    std::unique_ptr<tooling::JSONCompilationDatabase> CompileCommands;
+    const CompilerInstance &CI;
   };
 
   /// Maintain number of AST loads and check for reaching the load limit.
@@ -282,7 +242,7 @@ private:
   /// are the concerns of ASTUnitStorage class.
   class ASTUnitStorage {
   public:
-    ASTUnitStorage(CompilerInstance &CI);
+    ASTUnitStorage(const CompilerInstance &CI);
     /// Loads an ASTUnit for a function.
     ///
     /// \param FunctionName USR name of the function.
@@ -327,16 +287,18 @@ private:
     using IndexMapTy = BaseMapTy<std::string>;
     IndexMapTy NameFileMap;
 
-    std::unique_ptr<ASTLoader> Loader;
+    ASTFileLoader FileAccessor;
 
-    /// Limit the number of loaded ASTs. It is used to limit the  memory usage
-    /// of the CrossTranslationUnitContext. The ASTUnitStorage has the
-    /// information whether the AST to load is actually loaded or returned from
-    /// cache. This information is needed to maintain the counter.
+    /// Limit the number of loaded ASTs. Used to limit the  memory usage of the
+    /// CrossTranslationUnitContext.
+    /// The ASTUnitStorage has the knowledge about if the AST to load is
+    /// actually loaded or returned from cache. This information is needed to
+    /// maintain the counter.
     ASTLoadGuard LoadGuard;
   };
 
   ASTUnitStorage ASTStorage;
+
 };
 
 } // namespace cross_tu
