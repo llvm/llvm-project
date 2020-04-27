@@ -86,13 +86,25 @@ void detail::OperandStorage::setOperands(Operation *owner,
   // Otherwise, we need to be resizable.
   assert(resizable && "Only resizable operations may add operands");
 
-  // Grow the capacity if necessary.
-  auto &resizeUtil = getResizableStorage();
-  if (resizeUtil.capacity < operands.size())
-    grow(resizeUtil, operands.size());
+  // If the storage isn't already dynamic, we need to allocate a new buffer for
+  // it.
+  OpOperand *opBegin = nullptr;
+  if (!storageIsDynamic) {
+    // Grow a new storage first to avoid overwriting the existing operands.
+    ResizableStorage newStorage;
+    grow(newStorage, operands.size());
+    opBegin = newStorage.firstOp;
+    storageIsDynamic = true;
+    new (&getResizableStorage()) ResizableStorage(std::move(newStorage));
+  } else {
+    // Otherwise, grow the existing storage if necessary.
+    auto &resizeUtil = getResizableStorage();
+    if (resizeUtil.capacity < operands.size())
+      grow(resizeUtil, operands.size());
+    opBegin = resizeUtil.firstOp;
+  }
 
   // Set the operands.
-  OpOperand *opBegin = getRawOperands();
   for (unsigned i = 0; i != numOperands; ++i)
     opBegin[i].set(operands[i]);
   for (unsigned e = operands.size(); numOperands != e; ++numOperands)

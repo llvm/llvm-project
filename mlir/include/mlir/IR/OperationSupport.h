@@ -347,37 +347,27 @@ namespace detail {
 /// A utility class holding the information necessary to dynamically resize
 /// operands.
 struct ResizableStorage {
-  ResizableStorage(OpOperand *opBegin, unsigned numOperands)
-      : firstOpAndIsDynamic(opBegin, false), capacity(numOperands) {}
-
+  ResizableStorage() : firstOp(nullptr), capacity(0) {}
+  ResizableStorage(ResizableStorage &&other)
+      : firstOp(other.firstOp), capacity(other.capacity) {
+    other.firstOp = nullptr;
+  }
   ~ResizableStorage() { cleanupStorage(); }
 
   /// Cleanup any allocated storage.
-  void cleanupStorage() {
-    // If the storage is dynamic, then we need to free the storage.
-    if (isStorageDynamic())
-      free(firstOpAndIsDynamic.getPointer());
-  }
+  void cleanupStorage() { free(firstOp); }
 
   /// Sets the storage pointer to a new dynamically allocated block.
   void setDynamicStorage(OpOperand *opBegin) {
     /// Cleanup the old storage if necessary.
     cleanupStorage();
-    firstOpAndIsDynamic.setPointerAndInt(opBegin, true);
+    firstOp = opBegin;
   }
 
-  /// Returns the current storage pointer.
-  OpOperand *getPointer() { return firstOpAndIsDynamic.getPointer(); }
+  /// A pointer to the first operand element in a dynamically allocated block.
+  OpOperand *firstOp;
 
-  /// Returns if the current storage of operands is in the trailing objects is
-  /// in a dynamically allocated memory block.
-  bool isStorageDynamic() const { return firstOpAndIsDynamic.getInt(); }
-
-  /// A pointer to the first operand element. This is either to the trailing
-  /// objects storage, or a dynamically allocated block of memory.
-  llvm::PointerIntPair<OpOperand *, 1, bool> firstOpAndIsDynamic;
-
-  // The maximum number of operands that can be currently held by the storage.
+  /// The maximum number of operands that can be currently held by the storage.
   unsigned capacity;
 };
 
@@ -387,25 +377,20 @@ struct ResizableStorage {
 /// array. The second is that being able to dynamically resize the operand list
 /// is optional.
 class OperandStorage final
-    : private llvm::TrailingObjects<OperandStorage, ResizableStorage,
-                                    OpOperand> {
+    : private llvm::TrailingObjects<OperandStorage, OpOperand> {
 public:
   OperandStorage(unsigned numOperands, bool resizable)
-      : numOperands(numOperands), resizable(resizable) {
-    // Initialize the resizable storage.
-    if (resizable) {
-      new (&getResizableStorage())
-          ResizableStorage(getTrailingObjects<OpOperand>(), numOperands);
-    }
-  }
+      : numOperands(numOperands), resizable(resizable),
+        storageIsDynamic(false) {}
 
   ~OperandStorage() {
     // Manually destruct the operands.
     for (auto &operand : getOperands())
       operand.~OpOperand();
 
-    // If the storage is resizable then destruct the utility.
-    if (resizable)
+    // If the storage is currently in a dynamic allocation, then destruct the
+    // resizable storage.
+    if (storageIsDynamic)
       getResizableStorage().~ResizableStorage();
   }
 
@@ -426,8 +411,10 @@ public:
 
   /// Returns the additional size necessary for allocating this object.
   static size_t additionalAllocSize(unsigned numOperands, bool resizable) {
-    return additionalSizeToAlloc<ResizableStorage, OpOperand>(resizable ? 1 : 0,
-                                                              numOperands);
+    // The trailing storage must be able to hold enough space for the number of
+    // operands, or at least the resizable storage if necessary.
+    return std::max(additionalSizeToAlloc<OpOperand>(numOperands),
+                    sizeof(ResizableStorage));
   }
 
   /// Returns if this storage is resizable.
@@ -439,30 +426,34 @@ private:
 
   /// Returns the current pointer for the raw operands array.
   OpOperand *getRawOperands() {
-    return resizable ? getResizableStorage().getPointer()
-                     : getTrailingObjects<OpOperand>();
+    return storageIsDynamic ? getResizableStorage().firstOp
+                            : getTrailingObjects<OpOperand>();
   }
 
   /// Returns the resizable operand utility class.
   ResizableStorage &getResizableStorage() {
-    assert(resizable);
-    return *getTrailingObjects<ResizableStorage>();
+    // We represent the resizable storage in the same location as the first
+    // operand.
+    assert(storageIsDynamic);
+    return *reinterpret_cast<ResizableStorage *>(
+        getTrailingObjects<OpOperand>());
   }
 
   /// Grow the internal resizable operand storage.
   void grow(ResizableStorage &resizeUtil, size_t minSize);
 
   /// The current number of operands, and the current max operand capacity.
-  unsigned numOperands : 31;
+  unsigned numOperands : 30;
 
   /// Whether this storage is resizable or not.
   bool resizable : 1;
 
-  // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<OperandStorage, ResizableStorage, OpOperand>;
-  size_t numTrailingObjects(OverloadToken<ResizableStorage>) const {
-    return resizable ? 1 : 0;
-  }
+  /// If the storage is resizable, this indicates if the operands array is
+  /// currently in the resizable storage or the trailing array.
+  bool storageIsDynamic : 1;
+
+  /// This stuff is used by the TrailingObjects template.
+  friend llvm::TrailingObjects<OperandStorage, OpOperand>;
 };
 } // end namespace detail
 
