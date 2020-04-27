@@ -329,7 +329,8 @@ public:
     return Fortran::lower::mangle::mangleName(uniquer, symbol);
   }
 
-  std::string uniqueCGIdent(llvm::StringRef name) override final {
+  std::string uniqueCGIdent(llvm::StringRef prefix,
+                            llvm::StringRef name) override final {
     // For "long" identifiers use a hash value
     if (name.size() > nameLengthHashSize) {
       llvm::MD5 hash;
@@ -338,12 +339,13 @@ public:
       hash.final(result);
       llvm::SmallString<32> str;
       llvm::MD5::stringifyResult(result, str);
-      std::string hashName = "h.";
-      hashName.append(str.c_str());
+      std::string hashName = prefix.str();
+      hashName.append(".").append(str.c_str());
       return uniquer.doGenerated(hashName);
     }
     // "Short" identifiers use a reversible hex string
-    return uniquer.doGenerated(llvm::toHex(name));
+    std::string nm = prefix.str();
+    return uniquer.doGenerated(nm.append(".").append(llvm::toHex(name)));
   }
 
 private:
@@ -434,8 +436,10 @@ private:
 
   void genFIRConditionalBranch(mlir::Value &cond, mlir::Block *trueTarget,
                                mlir::Block *falseTarget) {
-    builder->create<mlir::CondBranchOp>(toLocation(), cond, trueTarget,
-                                        llvm::None, falseTarget, llvm::None);
+    auto loc = toLocation();
+    auto bcc = builder->create<fir::ConvertOp>(loc, builder->getI1Type(), cond);
+    builder->create<mlir::CondBranchOp>(loc, bcc, trueTarget, llvm::None,
+                                        falseTarget, llvm::None);
   }
 
   void genFIRConditionalBranch(const Fortran::parser::ScalarLogicalExpr &expr,
@@ -509,7 +513,9 @@ private:
   genWhereCondition(const A *stmt, bool withElse = true) {
     auto cond = genExprValue(*Fortran::semantics::GetExpr(
         std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t)));
-    auto where = builder->create<fir::WhereOp>(toLocation(), cond, withElse);
+    auto bcc = builder->create<fir::ConvertOp>(toLocation(),
+                                               builder->getI1Type(), cond);
+    auto where = builder->create<fir::WhereOp>(toLocation(), bcc, withElse);
     auto insPt = builder->saveInsertionPoint();
     builder->setInsertionPointToStart(&where.whereRegion().front());
     return {insPt, where};
@@ -1281,33 +1287,6 @@ private:
     noRuntimeSupport("LOCK");
   }
 
-  /// The LHS and RHS on assignments are not always in agreement in terms of
-  /// type. In some cases, the disagreement is between COMPLEX and REAL types.
-  /// In that case, the assignment must insert/extract out of a COMPLEX value to
-  /// be correct and strongly typed.
-  mlir::Value convertOnAssign(mlir::Location loc, mlir::Type toTy,
-                              mlir::Value val) {
-    assert(toTy && "store location must be typed");
-    auto fromTy = val.getType();
-    if (fromTy == toTy)
-      return val;
-    if (fir::isa_real(fromTy) && fir::isa_complex(toTy)) {
-      // imaginary part is zero
-      auto eleTy = builder->getComplexPartType(toTy);
-      auto cast = builder->create<fir::ConvertOp>(loc, eleTy, val);
-      llvm::APFloat zero{
-          kindMap.getFloatSemantics(toTy.cast<fir::CplxType>().getFKind()), 0};
-      auto imag = builder->createRealConstant(loc, eleTy, zero);
-      return builder->createComplex(loc, toTy, cast, imag);
-    }
-    if (fir::isa_complex(fromTy) && fir::isa_real(toTy)) {
-      // drop the imaginary part
-      auto rp = builder->extractComplexPart(val, /*isImagPart=*/false);
-      return builder->create<fir::ConvertOp>(loc, toTy, rp);
-    }
-    return builder->create<fir::ConvertOp>(loc, toTy, val);
-  }
-
   /// Shared for both assignments and pointer assignments.
   void genFIR(const Fortran::evaluate::Assignment &assignment) {
     std::visit(
@@ -1329,7 +1308,7 @@ private:
                   auto val = genExprValue(assignment.rhs);
                   auto addr = genExprValue(assignment.lhs);
                   auto toTy = fir::dyn_cast_ptrEleTy(addr.getType());
-                  auto cast = convertOnAssign(toLocation(), toTy, val);
+                  auto cast = builder->convertOnAssign(toLocation(), toTy, val);
                   builder->create<fir::StoreOp>(toLocation(), cast, addr);
                 } else if (isCharacterCategory(lhsType->category())) {
                   TODO();
@@ -1354,7 +1333,7 @@ private:
                   auto addr = genExprAddr(assignment.lhs);
                   auto val = genExprValue(assignment.rhs);
                   auto toTy = fir::dyn_cast_ptrEleTy(addr.getType());
-                  auto cast = convertOnAssign(loc, toTy, val);
+                  auto cast = builder->convertOnAssign(loc, toTy, val);
                   builder->create<fir::StoreOp>(loc, cast, addr);
                 } else if (isCharacterCategory(lhsType->category())) {
                   // Fortran 2018 10.2.1.3 p10 and p11
@@ -1917,7 +1896,7 @@ private:
         Fortran::lower::FirOpBuilder::getNamedFunction(module, name);
     if (!func)
       func = createNewFunction(loc, name, funit.symbol);
-    builder = new Fortran::lower::FirOpBuilder(func);
+    builder = new Fortran::lower::FirOpBuilder(func, kindMap);
     assert(builder && "FirOpBuilder did not instantiate");
     func.addEntryBlock();
     builder->setInsertionPointToStart(&func.front());

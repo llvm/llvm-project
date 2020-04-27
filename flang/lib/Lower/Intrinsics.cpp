@@ -545,8 +545,8 @@ IntrinsicLibrary::outlineInWrapper(Generator generator, llvm::StringRef name,
     // Create local context to emit code into the newly created function
     // This new function is not linked to a source file location, only
     // its calls will be.
-    auto localBuilder =
-        std::make_unique<Fortran::lower::FirOpBuilder>(function);
+    auto localBuilder = std::make_unique<Fortran::lower::FirOpBuilder>(
+        function, builder.getKindMap());
     localBuilder->setInsertionPointToStart(&function.front());
     llvm::SmallVector<mlir::Value, 2> localArguments;
     for (mlir::BlockArgument bArg : function.front().getArguments())
@@ -589,8 +589,9 @@ mlir::Value IntrinsicLibrary::genRuntimeCall(llvm::StringRef name,
     for (mlir::Value arg : args) {
       auto actualType = actualFuncType.getInput(i);
       if (soughtFuncType.getInput(i) != actualType) {
-        auto castedArg = builder.createHere<fir::ConvertOp>(actualType, arg);
-        convertedArguments.push_back(castedArg.getResult());
+        auto castedArg =
+            builder.convertOnAssign(builder.getLoc(), actualType, arg);
+        convertedArguments.push_back(castedArg);
       } else {
         convertedArguments.push_back(arg);
       }
@@ -600,8 +601,9 @@ mlir::Value IntrinsicLibrary::genRuntimeCall(llvm::StringRef name,
     mlir::Type soughtType = soughtFuncType.getResult(0);
     mlir::Value res = call.getResult(0);
     if (actualFuncType.getResult(0) != soughtType) {
-      auto castedRes = builder.createHere<fir::ConvertOp>(soughtType, res);
-      return castedRes.getResult();
+      auto castedRes =
+          builder.convertOnAssign(builder.getLoc(), soughtType, res);
+      return castedRes;
     } else {
       return res;
     }
@@ -619,7 +621,7 @@ mlir::Value IntrinsicLibrary::genConversion(mlir::Type resultType,
                                             llvm::ArrayRef<mlir::Value> args) {
   // There can be an optional kind in second argument.
   assert(args.size() >= 1);
-  return builder.createHere<fir::ConvertOp>(resultType, args[0]);
+  return builder.convertOnAssign(builder.getLoc(), resultType, args[0]);
 }
 
 // ABS

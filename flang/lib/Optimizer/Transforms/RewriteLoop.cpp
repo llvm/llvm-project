@@ -10,18 +10,10 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/CommandLine.h"
-#include <memory>
-
-/// disable FIR to affine dialect conversion
-static llvm::cl::opt<bool>
-    disableAffinePromo("disable-affine-promotion",
-                       llvm::cl::desc("disable FIR to Affine pass"),
-                       llvm::cl::init(false));
 
 /// disable FIR to loop dialect conversion
 static llvm::cl::opt<bool>
@@ -29,55 +21,9 @@ static llvm::cl::opt<bool>
                           llvm::cl::desc("disable FIR to Loop pass"),
                           llvm::cl::init(false));
 
-namespace fir {
+using namespace fir;
+
 namespace {
-
-template <typename FROM>
-class OpRewrite : public mlir::RewritePattern {
-public:
-  explicit OpRewrite(mlir::MLIRContext *ctx)
-      : RewritePattern(FROM::getOperationName(), 1, ctx) {}
-};
-
-/// Convert `fir.loop` to `affine.for`
-class AffineLoopConv : public OpRewrite<LoopOp> {
-public:
-  using OpRewrite::OpRewrite;
-};
-
-/// Convert `fir.where` to `affine.if`
-class AffineWhereConv : public OpRewrite<WhereOp> {
-public:
-  using OpRewrite::OpRewrite;
-};
-
-/// Promote fir.loop and fir.where to affine.for and affine.if, in the cases
-/// where such a promotion is possible.
-class AffineDialectPromotion
-    : public mlir::PassWrapper<AffineDialectPromotion, mlir::FunctionPass> {
-public:
-  void runOnFunction() override {
-    if (disableAffinePromo)
-      return;
-
-    auto *context = &getContext();
-    mlir::OwningRewritePatternList patterns;
-    patterns.insert<AffineLoopConv, AffineWhereConv>(context);
-    mlir::ConversionTarget target = *context;
-    target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
-                           mlir::loop::LoopOpsDialect,
-                           mlir::StandardOpsDialect>();
-    // target.addDynamicallyLegalOp<LoopOp, WhereOp>();
-
-    // apply the patterns
-    if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
-                                                  std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
-                      "error in converting to affine dialect\n");
-      signalPassFailure();
-    }
-  }
-};
 
 // Conversion to the MLIR loop dialect
 //
@@ -86,7 +32,7 @@ public:
 // includes a pass to lower `loop.for` operations to a CFG.
 
 /// Convert `fir.loop` to `loop.for`
-class LoopLoopConv : public mlir::OpRewritePattern<LoopOp> {
+class LoopLoopConv : public mlir::OpRewritePattern<fir::LoopOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
@@ -108,7 +54,7 @@ public:
 };
 
 /// Convert `fir.where` to `loop.if`
-class LoopWhereConv : public mlir::OpRewritePattern<WhereOp> {
+class LoopWhereConv : public mlir::OpRewritePattern<fir::WhereOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
@@ -132,7 +78,7 @@ public:
 };
 
 /// Replace FirEndOp with TerminatorOp
-class LoopResultConv : public mlir::OpRewritePattern<ResultOp> {
+class LoopResultConv : public mlir::OpRewritePattern<fir::ResultOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
@@ -257,12 +203,6 @@ public:
   }
 };
 } // namespace
-} // namespace fir
-
-/// Convert FIR loop constructs to the Affine dialect
-std::unique_ptr<mlir::Pass> fir::createPromoteToAffinePass() {
-  return std::make_unique<AffineDialectPromotion>();
-}
 
 /// Convert `fir.loop` and `fir.where` to `loop.for` and `loop.if`.  This
 /// conversion enables the `createLowerToCFGPass` to transform these to CFG

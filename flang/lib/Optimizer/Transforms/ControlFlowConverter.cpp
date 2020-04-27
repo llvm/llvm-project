@@ -1,8 +1,16 @@
-//===-- StdConverter.cpp --------------------------------------------------===//
+//===-- ControlFlowConverter.cpp - convert high-level control flow --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Convert affine dialect operations to loop/standard dialect operations.
+// Also convert the fir.select_type Op to more primitive operations.
+//
+// TODO: this needs either a deeper understanding of how types will be
+// represented by F18 or at least a couple of runtime calls to be completed.
 //
 //===----------------------------------------------------------------------===//
 
@@ -10,7 +18,6 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -19,79 +26,25 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 
-// This module performs the conversion of some FIR operations.
-// Convert some FIR types to standard dialect?
-
-static llvm::cl::opt<bool> disableFirToStd(
-    "disable-fir-to-std",
-    llvm::cl::desc("disable conversion of fir.select_type and affine dialect "
-                   "to the standard dialect pass"),
+static llvm::cl::opt<bool> disableControlFlowLowering(
+    "disable-control-flow-lowering",
+    llvm::cl::desc("disable the pass to convert fir.select_type and affine "
+                   "dialect operations to more primitive operations"),
     llvm::cl::init(false), llvm::cl::Hidden);
-
-namespace fir {
-namespace {
 
 using SmallVecResult = llvm::SmallVector<mlir::Value, 4>;
 using OperandTy = llvm::ArrayRef<mlir::Value>;
 using AttributeTy = llvm::ArrayRef<mlir::NamedAttribute>;
+using namespace fir;
 
-/// FIR to standard type converter
-/// This converts a subset of FIR types to standard types
-class FIRToStdTypeConverter : public mlir::TypeConverter {
-public:
-  using TypeConverter::TypeConverter;
-
-  explicit FIRToStdTypeConverter(KindMapping &map) : kindMap{map} {
-    addConversion([&](CplxType type) {
-      return mlir::ComplexType::get(toFloatType(type.getFKind()));
-    });
-    addConversion([&](RealType type) { return toFloatType(type.getFKind()); });
-    addConversion([&](IntType type) { return toIntegerType(type.getFKind()); });
-  }
-
-private:
-  mlir::Type toFloatType(KindTy kind) {
-    auto *ctx = kindMap.getContext();
-    switch (kindMap.getRealTypeID(kind)) {
-    case llvm::Type::TypeID::HalfTyID:
-      return mlir::FloatType::getF16(ctx);
-#if 0
-    // TODO: there is no BF16 type in LLVM yet, so add this when one becomes
-    // available
-    case llvm::Type::TypeID:: FIXME TyID:
-      return mlir::FloatType::getBF16(ctx);
-#endif
-    case llvm::Type::TypeID::FloatTyID:
-      return mlir::FloatType::getF32(ctx);
-    case llvm::Type::TypeID::DoubleTyID:
-      return mlir::FloatType::getF64(ctx);
-    case llvm::Type::TypeID::X86_FP80TyID: // MLIR does not support yet
-      [[fallthrough]];
-    case llvm::Type::TypeID::FP128TyID: // MLIR does not support yet
-      [[fallthrough]];
-    default:
-      return RealType::get(ctx, kind);
-    }
-  }
-
-  mlir::Type toIntegerType(KindTy kind) {
-    return mlir::IntegerType::get(kindMap.getIntegerBitsize(kind),
-                                  kindMap.getContext());
-  }
-
-  // clang++ erroneously complains this variable is unused (see CMakeLists.txt)
-  KindMapping &kindMap;
-};
+namespace {
 
 /// FIR conversion pattern template
 template <typename FromOp>
 class FIROpConversion : public mlir::ConversionPattern {
 public:
-  explicit FIROpConversion(
-      mlir::MLIRContext *ctx /*, FIRToStdTypeConverter &lowering*/)
-      : ConversionPattern(FromOp::getOperationName(), 1,
-                          ctx) /*, lowering(lowering)*/
-  {}
+  explicit FIROpConversion(mlir::MLIRContext *ctx)
+      : ConversionPattern(FromOp::getOperationName(), 1, ctx) {}
 
   static Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
                             Block *insertBefore) {
@@ -99,12 +52,6 @@ public:
     return rewriter.createBlock(insertBefore->getParent(),
                                 mlir::Region::iterator(insertBefore));
   }
-
-protected:
-  // mlir::Type convertType(mlir::Type ty) const { return
-  // lowering.convertType(ty); }
-
-  // FIRToStdTypeConverter &lowering;
 };
 
 /// SelectTypeOp converted to an if-then-else chain
@@ -188,45 +135,30 @@ struct SelectTypeOpConversion : public FIROpConversion<SelectTypeOp> {
 };
 
 /// Convert affine dialect, fir.select_type to standard dialect
-class FIRToStdLoweringPass
-    : public mlir::PassWrapper<FIRToStdLoweringPass, mlir::FunctionPass> {
+class ControlFlowLoweringPass
+    : public mlir::PassWrapper<ControlFlowLoweringPass, mlir::FunctionPass> {
 public:
-  explicit FIRToStdLoweringPass(const KindMapping &kindMap)
-      : kindMap{kindMap} {}
+  explicit ControlFlowLoweringPass() {}
 
   void runOnFunction() override {
-    if (disableFirToStd)
+    if (disableControlFlowLowering)
       return;
 
-    // FIRToStdTypeConverter tyConv{kindMap};
     mlir::OwningRewritePatternList patterns;
-    // patterns.insert<SelectTypeOpConversion>(context, tyConv);
     patterns.insert<SelectTypeOpConversion>(&getContext());
     mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
-    // mlir::populateFuncOpTypeConversionPattern(patterns, context, tyConv);
     mlir::ConversionTarget target(getContext());
-    target.addLegalDialect<FIROpsDialect, mlir::loop::LoopOpsDialect,
+    target.addLegalDialect<fir::FIROpsDialect, mlir::loop::LoopOpsDialect,
                            mlir::StandardOpsDialect>();
-    // target.addDynamicallyLegalOp<mlir::FuncOp>([&](mlir::FuncOp op) {
-    //  return tyConv.isSignatureLegal(op.getType());
-    //});
-    target.addIllegalOp<SelectTypeOp>();
+    target.addIllegalOp<fir::SelectTypeOp>();
 
     if (mlir::failed(
             mlir::applyPartialConversion(getFunction(), target, patterns)))
       signalPassFailure();
   }
-
-  mlir::ModuleOp getModule() {
-    return getFunction().getParentOfType<mlir::ModuleOp>();
-  }
-
-private:
-  const KindMapping &kindMap;
 };
 } // namespace
 
-std::unique_ptr<mlir::Pass> createFIRToStdPass(const KindMapping &kindMap) {
-  return std::make_unique<FIRToStdLoweringPass>(kindMap);
+std::unique_ptr<mlir::Pass> fir::createControlFlowLoweringPass() {
+  return std::make_unique<ControlFlowLoweringPass>();
 }
-} // namespace fir
