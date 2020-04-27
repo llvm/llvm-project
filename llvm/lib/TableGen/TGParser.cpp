@@ -1900,11 +1900,10 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       ParseValueList(Vals, CurRec);
       if (Vals.empty()) return nullptr;
     }
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of bit list value");
       return nullptr;
     }
-    Lex.Lex();  // eat the '}'
 
     SmallVector<Init *, 16> NewBits;
 
@@ -2566,9 +2565,8 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     if (!ParseDeclaration(CurRec, false))
       return true;
 
-    if (Lex.getCode() != tgtok::semi)
+    if (!consume(tgtok::semi))
       return TokError("expected ';' after declaration");
-    Lex.Lex();
     return false;
   }
 
@@ -2585,9 +2583,8 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return true;
   std::reverse(BitList.begin(), BitList.end());
 
-  if (Lex.getCode() != tgtok::equal)
+  if (!consume(tgtok::equal))
     return TokError("expected '=' in let expression");
-  Lex.Lex();  // eat the '='.
 
   RecordVal *Field = CurRec->getValue(FieldName);
   if (!Field)
@@ -2603,9 +2600,8 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
   Init *Val = ParseValue(CurRec, Type);
   if (!Val) return true;
 
-  if (Lex.getCode() != tgtok::semi)
+  if (!consume(tgtok::semi))
     return TokError("expected ';' after let expression");
-  Lex.Lex();
 
   return SetValue(CurRec, IdLoc, FieldName, BitList, Val);
 }
@@ -2684,8 +2680,8 @@ bool TGParser::ParseObjectBody(Record *CurRec) {
       if (AddSubClass(CurRec, SubClass))
         return true;
 
-      if (Lex.getCode() != tgtok::comma) break;
-      Lex.Lex(); // eat ','.
+      if (!consume(tgtok::comma))
+        break;
       SubClass = ParseSubClassReference(CurRec, false);
     }
   }
@@ -2760,11 +2756,10 @@ bool TGParser::ParseDefset() {
   if (Err)
     return true;
 
-  if (Lex.getCode() != tgtok::r_brace) {
+  if (!consume(tgtok::r_brace)) {
     TokError("expected '}' at end of defset");
     return Error(BraceLoc, "to match this '{'");
   }
-  Lex.Lex();  // Eat the '}'
 
   Records.addExtraGlobal(DeclName->getValue(),
                          ListInit::get(Defset.Elements, Defset.EltTy));
@@ -2790,17 +2785,16 @@ bool TGParser::ParseDefvar() {
       return TokError("def or global variable of this name already exists");
   }
 
-  if (Lex.Lex() != tgtok::equal) // Eat the identifier
+  Lex.Lex();
+  if (!consume(tgtok::equal))
     return TokError("expected '='");
-  Lex.Lex(); // Eat the '='
 
   Init *Value = ParseValue(nullptr);
   if (!Value)
     return true;
 
-  if (Lex.getCode() != tgtok::semi)
+  if (!consume(tgtok::semi))
     return TokError("expected ';'");
-  Lex.Lex(); // Eat the ';'
 
   if (CurLocalScope)
     CurLocalScope->addVar(DeclName->getValue(), Value);
@@ -2828,9 +2822,8 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
   if (!IterName)
     return TokError("expected declaration in for");
 
-  if (Lex.getCode() != tgtok::In)
+  if (!consume(tgtok::In))
     return TokError("Unknown tok");
-  Lex.Lex();  // Eat the in
 
   // Create a loop object and remember it.
   Loops.push_back(std::make_unique<ForeachLoop>(Loc, IterName, ListValue));
@@ -2851,11 +2844,10 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     if (ParseObjectList(CurMultiClass))
       return true;
 
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of foreach command");
       return Error(BraceLoc, "to match this '{'");
     }
-    Lex.Lex();  // Eat the }
   }
 
   PopLocalScope(ForeachScope);
@@ -2883,9 +2875,8 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
   if (!Condition)
     return true;
 
-  if (Lex.getCode() != tgtok::Then)
+  if (!consume(tgtok::Then))
     return TokError("Unknown tok");
-  Lex.Lex(); // Eat the 'then'
 
   // We have to be able to save if statements to execute later, and they have
   // to live on the same stack as foreach loops. The simplest implementation
@@ -2962,12 +2953,10 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
     if (ParseObjectList(CurMultiClass))
       return true;
 
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of '" + Kind + "' clause");
       return Error(BraceLoc, "to match this '{'");
     }
-
-    Lex.Lex(); // Eat the }
   }
 
   PopLocalScope(BodyScope);
@@ -3018,7 +3007,7 @@ bool TGParser::ParseClass() {
 ///   LetItem ::= ID OptionalRangeList '=' Value
 ///
 void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
-  while (true) {
+  do {
     if (Lex.getCode() != tgtok::Id) {
       TokError("expected identifier in let definition");
       Result.clear();
@@ -3037,12 +3026,11 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
     }
     std::reverse(Bits.begin(), Bits.end());
 
-    if (Lex.getCode() != tgtok::equal) {
+    if (!consume(tgtok::equal)) {
       TokError("expected '=' in let expression");
       Result.clear();
       return;
     }
-    Lex.Lex();  // eat the '='.
 
     Init *Val = ParseValue(nullptr);
     if (!Val) {
@@ -3052,11 +3040,7 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
 
     // Now that we have everything, add the record.
     Result.emplace_back(Name, Bits, Val, NameLoc);
-
-    if (Lex.getCode() != tgtok::comma)
-      return;
-    Lex.Lex();  // eat the comma.
-  }
+  } while (consume(tgtok::comma));
 }
 
 /// ParseTopLevelLet - Parse a 'let' at top level.  This can be a couple of
@@ -3075,9 +3059,8 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
   if (LetInfo.empty()) return true;
   LetStack.push_back(std::move(LetInfo));
 
-  if (Lex.getCode() != tgtok::In)
+  if (!consume(tgtok::In))
     return TokError("expected 'in' at end of top-level 'let'");
-  Lex.Lex();
 
   TGLocalVarScope *LetScope = PushLocalScope();
 
@@ -3095,11 +3078,10 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     if (ParseObjectList(CurMultiClass))
       return true;
 
-    if (Lex.getCode() != tgtok::r_brace) {
+    if (!consume(tgtok::r_brace)) {
       TokError("expected '}' at end of top level let command");
       return Error(BraceLoc, "to match this '{'");
     }
-    Lex.Lex();
   }
 
   PopLocalScope(LetScope);
