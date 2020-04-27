@@ -12,6 +12,7 @@
 #include "format-specification.h"
 #include "parse-tree-visitor.h"
 #include "parse-tree.h"
+#include "tools.h"
 #include "unparse.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
@@ -20,14 +21,6 @@
 #include <type_traits>
 
 namespace Fortran::parser {
-
-// When SHOW_ALL_SOURCE_MEMBERS is defined, HasSource<T>::value is true if T has
-// a member named source
-template <typename T, typename = int> struct HasSource : std::false_type {};
-#ifdef SHOW_ALL_SOURCE_MEMBERS
-template <typename T>
-struct HasSource<T, decltype((void)T::source, 0)> : std::true_type {};
-#endif
 
 //
 // Dump the Parse Tree hierarchy of any node 'x' of the parse tree.
@@ -789,8 +782,12 @@ protected:
     if (ss.tell()) {
       return ss.str();
     }
-    if constexpr (std::is_same_v<T, Name> || HasSource<T>::value) {
+    if constexpr (std::is_same_v<T, Name>) {
       return x.source.ToString();
+#ifdef SHOW_ALL_SOURCE_MEMBERS
+    } else if constexpr (HasSource<T>::value) {
+      return x.source.ToString();
+#endif
     } else if constexpr (std::is_same_v<T, std::string>) {
       return x;
     } else {
@@ -838,10 +835,11 @@ private:
 };
 
 template <typename T>
-void DumpTree(llvm::raw_ostream &out, const T &x,
+llvm::raw_ostream &DumpTree(llvm::raw_ostream &out, const T &x,
     const AnalyzedObjectsAsFortran *asFortran = nullptr) {
   ParseTreeDumper dumper{out, asFortran};
   Walk(x, dumper);
+  return out;
 }
 
 } // namespace Fortran::parser

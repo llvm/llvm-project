@@ -7,61 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-data.h"
+#include "flang/Evaluate/traverse.h"
+#include "flang/Semantics/expression.h"
 
 namespace Fortran::semantics {
-
-template <typename T> void DataChecker::CheckIfConstantSubscript(const T &x) {
-  evaluate::ExpressionAnalyzer exprAnalyzer{context_};
-  if (MaybeExpr checked{exprAnalyzer.Analyze(x)}) {
-    if (!evaluate::IsConstantExpr(*checked)) { // C875,C881
-      context_.Say(parser::FindSourceLocation(x),
-          "Data object must have constant bounds"_err_en_US);
-    }
-  }
-}
-
-void DataChecker::CheckSubscript(const parser::SectionSubscript &subscript) {
-  std::visit(common::visitors{
-                 [&](const parser::SubscriptTriplet &triplet) {
-                   CheckIfConstantSubscript(std::get<0>(triplet.t));
-                   CheckIfConstantSubscript(std::get<1>(triplet.t));
-                   CheckIfConstantSubscript(std::get<2>(triplet.t));
-                 },
-                 [&](const parser::IntExpr &intExpr) {
-                   CheckIfConstantSubscript(intExpr);
-                 },
-             },
-      subscript.u);
-}
-
-// Returns false if  DataRef has no subscript
-bool DataChecker::CheckAllSubscriptsInDataRef(
-    const parser::DataRef &dataRef, parser::CharBlock source) {
-  return std::visit(
-      common::visitors{
-          [&](const parser::Name &) { return false; },
-          [&](const common::Indirection<parser::StructureComponent>
-                  &structureComp) {
-            return CheckAllSubscriptsInDataRef(
-                structureComp.value().base, source);
-          },
-          [&](const common::Indirection<parser::ArrayElement> &arrayElem) {
-            for (auto &subscript : arrayElem.value().subscripts) {
-              CheckSubscript(subscript);
-            }
-            CheckAllSubscriptsInDataRef(arrayElem.value().base, source);
-            return true;
-          },
-          [&](const common::Indirection<parser::CoindexedNamedObject>
-                  &coindexedObj) { // C874
-            context_.Say(source,
-                "Data object must not be a coindexed variable"_err_en_US);
-            CheckAllSubscriptsInDataRef(coindexedObj.value().base, source);
-            return true;
-          },
-      },
-      dataRef.u);
-}
 
 void DataChecker::Leave(const parser::DataStmtConstant &dataConst) {
   if (auto *structure{
@@ -72,7 +21,7 @@ void DataChecker::Leave(const parser::DataStmtConstant &dataConst) {
           std::get<parser::ComponentDataSource>(component.t).v.value()};
       if (const auto *expr{GetExpr(parsedExpr)}) {
         if (!evaluate::IsConstantExpr(*expr)) { // C884
-          context_.Say(parsedExpr.source,
+          exprAnalyzer_.Say(parsedExpr.source,
               "Structure constructor in data value must be a constant expression"_err_en_US);
         }
       }
@@ -80,23 +29,103 @@ void DataChecker::Leave(const parser::DataStmtConstant &dataConst) {
   }
 }
 
+// Ensures that references to an implied DO loop control variable are
+// represented as such in the "body" of the implied DO loop.
+void DataChecker::Enter(const parser::DataImpliedDo &x) {
+  auto name{std::get<parser::DataImpliedDo::Bounds>(x.t).name.thing.thing};
+  int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
+  if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
+    kind = dynamicType->kind();
+  }
+  exprAnalyzer_.AddImpliedDo(name.source, kind);
+}
+
+void DataChecker::Leave(const parser::DataImpliedDo &x) {
+  auto name{std::get<parser::DataImpliedDo::Bounds>(x.t).name.thing.thing};
+  exprAnalyzer_.RemoveImpliedDo(name.source);
+}
+
+class DataVarChecker : public evaluate::AllTraverse<DataVarChecker, true> {
+public:
+  using Base = evaluate::AllTraverse<DataVarChecker, true>;
+  DataVarChecker(SemanticsContext &c, parser::CharBlock src)
+      : Base{*this}, context_{c}, source_{src} {}
+  using Base::operator();
+  bool HasComponentWithoutSubscripts() const {
+    return hasComponent_ && !hasSubscript_;
+  }
+  bool operator()(const evaluate::Component &component) {
+    hasComponent_ = true;
+    return (*this)(component.base());
+  }
+  bool operator()(const evaluate::Subscript &subs) {
+    hasSubscript_ = true;
+    return std::visit(
+        common::visitors{
+            [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
+              return CheckSubscriptExpr(expr);
+            },
+            [&](const evaluate::Triplet &triplet) {
+              return CheckSubscriptExpr(triplet.lower()) &&
+                  CheckSubscriptExpr(triplet.upper()) &&
+                  CheckSubscriptExpr(triplet.stride());
+            },
+        },
+        subs.u);
+  }
+  template <typename T>
+  bool operator()(const evaluate::FunctionRef<T> &) const { // C875
+    context_.Say(source_,
+        "Data object variable must not be a function reference"_err_en_US);
+    return false;
+  }
+  bool operator()(const evaluate::CoarrayRef &) const { // C874
+    context_.Say(
+        source_, "Data object must not be a coindexed variable"_err_en_US);
+    return false;
+  }
+
+private:
+  bool CheckSubscriptExpr(
+      const std::optional<evaluate::IndirectSubscriptIntegerExpr> &x) const {
+    return !x || CheckSubscriptExpr(*x);
+  }
+  bool CheckSubscriptExpr(
+      const evaluate::IndirectSubscriptIntegerExpr &expr) const {
+    return CheckSubscriptExpr(expr.value());
+  }
+  bool CheckSubscriptExpr(
+      const evaluate::Expr<evaluate::SubscriptInteger> &expr) const {
+    if (!evaluate::IsConstantExpr(expr)) { // C875,C881
+      context_.Say(
+          source_, "Data object must have constant subscripts"_err_en_US);
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  SemanticsContext &context_;
+  parser::CharBlock source_;
+  bool hasComponent_{false};
+  bool hasSubscript_{false};
+};
+
 // TODO: C876, C877, C879
-void DataChecker::Leave(const parser::DataImpliedDo &dataImpliedDo) {
-  for (const auto &object :
-      std::get<std::list<parser::DataIDoObject>>(dataImpliedDo.t)) {
-    if (const auto *designator{parser::Unwrap<parser::Designator>(object)}) {
-      if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
-        evaluate::ExpressionAnalyzer exprAnalyzer{context_};
-        if (MaybeExpr checked{exprAnalyzer.Analyze(*dataRef)}) {
-          if (evaluate::IsConstantExpr(*checked)) { // C878
-            context_.Say(designator->source,
-                "Data implied do object must be a variable"_err_en_US);
-          }
-        }
-        if (!CheckAllSubscriptsInDataRef(*dataRef,
-                designator->source)) { // C880
-          context_.Say(designator->source,
-              "Data implied do object must be subscripted"_err_en_US);
+void DataChecker::Leave(const parser::DataIDoObject &object) {
+  if (const auto *designator{
+          std::get_if<parser::Scalar<common::Indirection<parser::Designator>>>(
+              &object.u)}) {
+    if (MaybeExpr expr{exprAnalyzer_.Analyze(*designator)}) {
+      auto source{designator->thing.value().source};
+      if (evaluate::IsConstantExpr(*expr)) { // C878
+        exprAnalyzer_.Say(
+            source, "Data implied do object must be a variable"_err_en_US);
+      } else {
+        DataVarChecker checker{exprAnalyzer_.context(), source};
+        if (checker(*expr) && checker.HasComponentWithoutSubscripts()) { // C880
+          exprAnalyzer_.Say(source,
+              "Data implied do structure component must be subscripted"_err_en_US);
         }
       }
     }
@@ -104,15 +133,11 @@ void DataChecker::Leave(const parser::DataImpliedDo &dataImpliedDo) {
 }
 
 void DataChecker::Leave(const parser::DataStmtObject &dataObject) {
-  if (std::get_if<common::Indirection<parser::Variable>>(&dataObject.u)) {
-    if (const auto *designator{
-            parser::Unwrap<parser::Designator>(dataObject)}) {
-      if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
-        CheckAllSubscriptsInDataRef(*dataRef, designator->source);
-      }
-    } else { // C875
-      context_.Say(parser::FindSourceLocation(dataObject),
-          "Data object variable must not be a function reference"_err_en_US);
+  if (const auto *var{
+          std::get_if<common::Indirection<parser::Variable>>(&dataObject.u)}) {
+    if (auto expr{exprAnalyzer_.Analyze(*var)}) {
+      DataVarChecker{exprAnalyzer_.context(),
+          parser::FindSourceLocation(dataObject)}(expr);
     }
   }
 }
@@ -120,13 +145,12 @@ void DataChecker::Leave(const parser::DataStmtObject &dataObject) {
 void DataChecker::Leave(const parser::DataStmtRepeat &dataRepeat) {
   if (const auto *designator{parser::Unwrap<parser::Designator>(dataRepeat)}) {
     if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
-      evaluate::ExpressionAnalyzer exprAnalyzer{context_};
-      if (MaybeExpr checked{exprAnalyzer.Analyze(*dataRef)}) {
-        auto expr{
-            evaluate::Fold(context_.foldingContext(), std::move(checked))};
+      if (MaybeExpr checked{exprAnalyzer_.Analyze(*dataRef)}) {
+        auto expr{evaluate::Fold(
+            exprAnalyzer_.GetFoldingContext(), std::move(checked))};
         if (auto i64{ToInt64(expr)}) {
           if (*i64 < 0) { // C882
-            context_.Say(designator->source,
+            exprAnalyzer_.Say(designator->source,
                 "Repeat count for data value must not be negative"_err_en_US);
           }
         }
