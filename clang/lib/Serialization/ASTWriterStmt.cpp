@@ -702,10 +702,16 @@ void ASTStmtWriter::VisitParenListExpr(ParenListExpr *E) {
 
 void ASTStmtWriter::VisitUnaryOperator(UnaryOperator *E) {
   VisitExpr(E);
+  bool HasFPFeatures = E->hasStoredFPFeatures();
+  // Write this first for easy access when deserializing, as they affect the
+  // size of the UnaryOperator.
+  Record.push_back(HasFPFeatures);
   Record.AddStmt(E->getSubExpr());
   Record.push_back(E->getOpcode()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getOperatorLoc());
   Record.push_back(E->canOverflow());
+  if (HasFPFeatures)
+    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
   Code = serialization::EXPR_UNARY_OPERATOR;
 }
 

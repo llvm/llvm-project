@@ -3365,6 +3365,14 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     // are complete and we can parse the delayed portions of method
     // declarations and the lexed inline method definitions, along with any
     // delayed attributes.
+
+    // Save the state of Sema.FPFeatures, and change the setting
+    // to the levels specified on the command line.  Previous level
+    // will be restored when the RAII object is destroyed.
+    Sema::FPFeaturesStateRAII SaveFPFeaturesState(Actions);
+    FPOptions fpOptions(getLangOpts());
+    Actions.CurFPFeatures.getFromOpaqueInt(fpOptions.getAsOpaqueInt());
+
     SourceLocation SavedPrevTokLocation = PrevTokLocation;
     ParseLexedPragmas(getCurrentClass());
     ParseLexedAttributes(getCurrentClass());
