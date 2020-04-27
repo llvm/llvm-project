@@ -1679,10 +1679,6 @@ class HasParent<string op>
 def FirstAttrDerivedResultType :
   GenInternalOpTrait<"FirstAttrDerivedResultType">;
 
-// Op has a resizable operand list. Auto-generated build and parse functions
-// should construct it as such.
-def ResizableOperandList : GenInternalOpTrait<"ResizableOperandList">;
-
 // TODO(antiagainst): Turn the following into normal traits and generate
 // verification for them.
 

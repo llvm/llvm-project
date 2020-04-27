@@ -3788,8 +3788,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   auto name = OperationName("placeholder", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
-      /*attributes=*/llvm::None, /*successors=*/{}, /*numRegions=*/0,
-      /*resizableOperandList=*/false);
+      /*attributes=*/llvm::None, /*successors=*/{}, /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
   return op->getResult(0);
 }
@@ -3949,9 +3948,6 @@ Operation *OperationParser::parseGenericOperation() {
   consumeToken(Token::string);
 
   OperationState result(srcLocation, name);
-
-  // Generic operations have a resizable operation list.
-  result.setOperandListToResizable();
 
   // Parse the operand list.
   SmallVector<SSAUseInfo, 8> operandInfos;

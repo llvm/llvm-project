@@ -62,19 +62,17 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
                              ArrayRef<NamedAttribute> attributes,
-                             ArrayRef<Block *> successors, unsigned numRegions,
-                             bool resizableOperandList) {
+                             ArrayRef<Block *> successors,
+                             unsigned numRegions) {
   return create(location, name, resultTypes, operands,
-                NamedAttributeList(attributes), successors, numRegions,
-                resizableOperandList);
+                NamedAttributeList(attributes), successors, numRegions);
 }
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
   return Operation::create(state.location, state.name, state.types,
                            state.operands, NamedAttributeList(state.attributes),
-                           state.successors, state.regions,
-                           state.resizableOperandList);
+                           state.successors, state.regions);
 }
 
 /// Create a new Operation with the specific fields.
@@ -82,11 +80,11 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
                              NamedAttributeList attributes,
-                             ArrayRef<Block *> successors, RegionRange regions,
-                             bool resizableOperandList) {
+                             ArrayRef<Block *> successors,
+                             RegionRange regions) {
   unsigned numRegions = regions.size();
   Operation *op = create(location, name, resultTypes, operands, attributes,
-                         successors, numRegions, resizableOperandList);
+                         successors, numRegions);
   for (unsigned i = 0; i < numRegions; ++i)
     if (regions[i])
       op->getRegion(i).takeBody(*regions[i]);
@@ -99,8 +97,8 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
                              NamedAttributeList attributes,
-                             ArrayRef<Block *> successors, unsigned numRegions,
-                             bool resizableOperandList) {
+                             ArrayRef<Block *> successors,
+                             unsigned numRegions) {
   // We only need to allocate additional memory for a subset of results.
   unsigned numTrailingResults = OpResult::getNumTrailing(resultTypes.size());
   unsigned numInlineResults = OpResult::getNumInline(resultTypes.size());
@@ -113,9 +111,9 @@ Operation *Operation::create(Location location, OperationName name,
                        BlockOperand, Region, detail::OperandStorage>(
           numInlineResults, numTrailingResults, numSuccessors, numRegions,
           /*detail::OperandStorage*/ 1);
-  byteSize += llvm::alignTo(detail::OperandStorage::additionalAllocSize(
-                                numOperands, resizableOperandList),
-                            alignof(Operation));
+  byteSize +=
+      llvm::alignTo(detail::OperandStorage::additionalAllocSize(numOperands),
+                    alignof(Operation));
   void *rawMem = malloc(byteSize);
 
   // Create the new Operation.
@@ -136,11 +134,7 @@ Operation *Operation::create(Location location, OperationName name,
     new (&op->getRegion(i)) Region(op);
 
   // Initialize the operands.
-  new (&op->getOperandStorage())
-      detail::OperandStorage(numOperands, resizableOperandList);
-  auto opOperands = op->getOpOperands();
-  for (unsigned i = 0; i != numOperands; ++i)
-    new (&opOperands[i]) OpOperand(op, operands[i]);
+  new (&op->getOperandStorage()) detail::OperandStorage(op, operands);
 
   // Initialize the successors.
   auto blockOperands = op->getBlockOperands();
@@ -229,8 +223,7 @@ void Operation::replaceUsesOfWith(Value from, Value to) {
 }
 
 /// Replace the current operands of this operation with the ones provided in
-/// 'operands'. If the operands list is not resizable, the size of 'operands'
-/// must be less than or equal to the current number of operands.
+/// 'operands'.
 void Operation::setOperands(ValueRange operands) {
   getOperandStorage().setOperands(this, operands);
 }
@@ -558,8 +551,7 @@ Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
 
   // Create the new operation.
   auto *newOp = Operation::create(getLoc(), getName(), getResultTypes(),
-                                  operands, attrs, successors, getNumRegions(),
-                                  hasResizableOperandsList());
+                                  operands, attrs, successors, getNumRegions());
 
   // Remember the mapping of any results.
   for (unsigned i = 0, e = getNumResults(); i != e; ++i)

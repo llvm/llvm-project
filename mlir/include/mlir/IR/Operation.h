@@ -34,16 +34,14 @@ public:
   static Operation *create(Location location, OperationName name,
                            ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            ArrayRef<NamedAttribute> attributes,
-                           ArrayRef<Block *> successors, unsigned numRegions,
-                           bool resizableOperandList);
+                           ArrayRef<Block *> successors, unsigned numRegions);
 
   /// Overload of create that takes an existing NamedAttributeList to avoid
   /// unnecessarily uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            NamedAttributeList attributes,
-                           ArrayRef<Block *> successors, unsigned numRegions,
-                           bool resizableOperandList);
+                           ArrayRef<Block *> successors, unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -53,8 +51,7 @@ public:
                            ArrayRef<Type> resultTypes, ArrayRef<Value> operands,
                            NamedAttributeList attributes,
                            ArrayRef<Block *> successors = {},
-                           RegionRange regions = {},
-                           bool resizableOperandList = false);
+                           RegionRange regions = {});
 
   /// The name of an operation is the key identifier for it.
   OperationName getName() { return name; }
@@ -204,13 +201,8 @@ public:
   // Operands
   //===--------------------------------------------------------------------===//
 
-  /// Returns if the operation has a resizable operation list, i.e. operands can
-  /// be added.
-  bool hasResizableOperandsList() { return getOperandStorage().isResizable(); }
-
   /// Replace the current operands of this operation with the ones provided in
-  /// 'operands'. If the operands list is not resizable, the size of 'operands'
-  /// must be less than or equal to the current number of operands.
+  /// 'operands'.
   void setOperands(ValueRange operands);
 
   unsigned getNumOperands() { return getOperandStorage().size(); }
