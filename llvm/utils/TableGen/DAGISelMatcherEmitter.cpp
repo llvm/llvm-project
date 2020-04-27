@@ -291,6 +291,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     unsigned StartIdx = CurrentIdx;
 
     // Emit all of the children.
+    SmallString<128> TmpBuf;
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
       if (i == 0) {
         OS << "OPC_Scope, ";
@@ -308,7 +309,6 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       // string while we get the size.  Unfortunately, the offset of the
       // children depends on the VBR size of the child, so for large children we
       // have to iterate a bit.
-      SmallString<128> TmpBuf;
       unsigned ChildSize = 0;
       unsigned VBRSize = 0;
       do {
@@ -450,6 +450,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     ++CurrentIdx;
 
     // For each case we emit the size, then the opcode, then the matcher.
+    SmallString<128> TmpBuf;
     for (unsigned i = 0, e = NumCases; i != e; ++i) {
       const Matcher *Child;
       unsigned IdxSize;
@@ -466,7 +467,6 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       // string while we get the size.  Unfortunately, the offset of the
       // children depends on the VBR size of the child, so for large children we
       // have to iterate a bit.
-      SmallString<128> TmpBuf;
       unsigned ChildSize = 0;
       unsigned VBRSize = 0;
       do {
