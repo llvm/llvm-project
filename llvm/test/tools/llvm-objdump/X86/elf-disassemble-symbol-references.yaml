@@ -2,10 +2,12 @@
 # RUN: yaml2obj %s --docnum=1 -o %t
 # RUN: llvm-objdump %t -d | FileCheck %s --check-prefix=EXEC
 
-# EXEC: Disassembly of section .text1:
-# EXEC:     4000: e8 00 00 00 00                callq   0x4005 <third>
-# EXEC: Disassembly of section .text2:
-# EXEC:     4005: e8 12 34 56 78                callq   0x7856741c <fourth+0x78563412>
+# EXEC-LABEL: <first>:
+# EXEC-NEXT:   4000: e8 00 00 00 00                callq   0x4005 <third>
+# EXEC-LABEL: <third>:
+# EXEC-NEXT:   4005: e8 12 34 56 78                callq   0x7856741c <data1+0x7856241c>
+# EXEC-LABEL: <fourth>:
+# EXEC-NEXT:   400a: 8b 05 f0 0f 00 00             movl    4080(%rip), %eax  # 5000 <data1>
 
 --- !ELF
 FileHeader:
@@ -28,6 +30,11 @@ Sections:
     Type:    SHT_PROGBITS
     Flags:   [SHF_ALLOC, SHF_EXECINSTR]
     Address: 0x400A
+    Content: '8b05f00f0000' # Case 3: Memory operands
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x5000
 Symbols:
   - Name:    first
     Section: .text1
@@ -41,6 +48,9 @@ Symbols:
   - Name:    fourth
     Section: .text3
     Value:   0x400A
+  - Name:    data1
+    Section: .data
+    Value:   0x5000
 
 # RUN: yaml2obj %s --docnum=2 -o %t.o
 # RUN: llvm-objdump %t.o -d | FileCheck %s --check-prefix=REL
