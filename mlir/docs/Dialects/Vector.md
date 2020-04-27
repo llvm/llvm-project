@@ -365,7 +365,7 @@ unsurprising because historically, the vast majority of HW only supports `1-D`
 vector registers. We note that multiple HW vendors are in the process of
 evolving to higher-dimensional physical vectors.
 
-In the following discussion, let's assume the HW vector size is `1-D and the
+In the following discussion, let's assume the HW vector size is `1-D` and the
 SW vector size is `n-D`, with `n >= 1`. The same discussion would apply with
 `2-D` HW `vector` size and `n >= 2`. In this context, most HW exhibit a vector
 register file. The number of such vectors is fixed.
