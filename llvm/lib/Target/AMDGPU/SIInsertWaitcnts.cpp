@@ -245,8 +245,7 @@ public:
 
   RegInterval getRegInterval(const MachineInstr *MI, const SIInstrInfo *TII,
                              const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI, unsigned OpNo,
-                             bool Def) const;
+                             const SIRegisterInfo *TRI, unsigned OpNo) const;
 
   bool counterOutOfOrder(InstCounterType T) const;
   bool simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
@@ -439,10 +438,10 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
                                             const SIInstrInfo *TII,
                                             const MachineRegisterInfo *MRI,
                                             const SIRegisterInfo *TRI,
-                                            unsigned OpNo, bool Def) const {
+                                            unsigned OpNo) const {
   const MachineOperand &Op = MI->getOperand(OpNo);
-  if (!Op.isReg() || !TRI->isInAllocatableClass(Op.getReg()) ||
-      (Def && !Op.isDef()) || TRI->isAGPR(*MRI, Op.getReg()))
+  assert(Op.isReg());
+  if (!TRI->isInAllocatableClass(Op.getReg()) || TRI->isAGPR(*MRI, Op.getReg()))
     return {-1, -1};
 
   // A use via a PW operand does not need a waitcnt.
@@ -480,7 +479,7 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
                                   const SIRegisterInfo *TRI,
                                   const MachineRegisterInfo *MRI, unsigned OpNo,
                                   uint32_t Val) {
-  RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo, false);
+  RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo);
   assert(TRI->isVGPR(*MRI, MI->getOperand(OpNo).getReg()));
   for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
@@ -606,7 +605,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
        Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX4) {
     MachineOperand *MO = TII->getNamedOperand(Inst, AMDGPU::OpName::data);
     unsigned OpNo;//TODO: find the OpNo for this operand;
-    RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, OpNo, false);
+    RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, OpNo);
     for (signed RegNo = Interval.first; RegNo < Interval.second;
     ++RegNo) {
       setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
@@ -615,7 +614,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   } else {
     // Match the score to the destination registers.
     for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-      RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, I, true);
+      auto &Op = Inst.getOperand(I);
+      if (!Op.isReg() || !Op.isDef())
+        continue;
+      RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, I);
       if (T == VM_CNT && Interval.first >= NUM_ALL_VGPRS)
         continue;
       for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
@@ -918,8 +920,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
       int CallAddrOpIdx =
           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-      RegInterval CallAddrOpInterval = ScoreBrackets.getRegInterval(
-          &MI, TII, MRI, TRI, CallAddrOpIdx, false);
+      RegInterval CallAddrOpInterval =
+          ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, CallAddrOpIdx);
 
       for (signed RegNo = CallAddrOpInterval.first;
            RegNo < CallAddrOpInterval.second; ++RegNo)
@@ -929,8 +931,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       int RtnAddrOpIdx =
             AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
       if (RtnAddrOpIdx != -1) {
-        RegInterval RtnAddrOpInterval = ScoreBrackets.getRegInterval(
-            &MI, TII, MRI, TRI, RtnAddrOpIdx, false);
+        RegInterval RtnAddrOpInterval =
+            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, RtnAddrOpIdx);
 
         for (signed RegNo = RtnAddrOpInterval.first;
              RegNo < RtnAddrOpInterval.second; ++RegNo)
@@ -958,8 +960,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
+        if (!Op.isReg())
+          continue;
         RegInterval Interval =
-            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, false);
+            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
         for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (TRI->isVGPR(*MRI, Op.getReg())) {
             // VM_CNT is only relevant to vgpr or LDS.
@@ -998,10 +1002,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
               EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
         }
       }
+
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         MachineOperand &Def = MI.getOperand(I);
+        if (!Def.isReg() || !Def.isDef())
+          continue;
         RegInterval Interval =
-            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, true);
+            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
         for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (TRI->isVGPR(*MRI, Def.getReg())) {
             ScoreBrackets.determineWait(
