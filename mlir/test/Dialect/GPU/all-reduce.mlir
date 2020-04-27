@@ -175,7 +175,6 @@ gpu.module @kernels {
     // CHECK:   br ^bb42
     // CHECK: ^bb42:
     // CHECK:   gpu.barrier
-    // CHECK:   [[VAL_114:%.*]] = load [[VAL_1]]{{\[}}[[VAL_4]]] : memref<32xf32, 3>
     %sum = "gpu.all_reduce"(%arg0) ({}) {op = "add"} : (f32) -> (f32)
     gpu.return
   }

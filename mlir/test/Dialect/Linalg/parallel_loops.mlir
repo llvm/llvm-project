@@ -24,7 +24,6 @@ func @linalg_generic_sum(%lhs: memref<2x2xf32>,
 // CHECK: loop.parallel (%[[I:.*]], %[[J:.*]]) = {{.*}}
 // CHECK:   %[[LHS_ELEM:.*]] = load %[[LHS]][%[[I]], %[[J]]]
 // CHECK:   %[[RHS_ELEM:.*]] = load %[[RHS]][%[[I]], %[[J]]]
-// CHECK:   %[[SUM_ELEM:.*]] = load %[[SUM]][%[[I]], %[[J]]]
 // CHECK:   %[[SUM:.*]] = addf %[[LHS_ELEM]], %[[RHS_ELEM]] : f32
 // CHECK:   store %[[SUM]], %{{.*}}[%[[I]], %[[J]]]
 // CHECK:   loop.yield

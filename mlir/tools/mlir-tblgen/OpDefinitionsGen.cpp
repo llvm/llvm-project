@@ -1286,9 +1286,11 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   auto resolveDecorators = [&](Operator::var_decorator_range decorators,
                                unsigned index, unsigned kind) {
     for (auto decorator : decorators)
-      if (SideEffect *effect = dyn_cast<SideEffect>(&decorator))
+      if (SideEffect *effect = dyn_cast<SideEffect>(&decorator)) {
+        opClass.addTrait(effect->getInterfaceTrait());
         interfaceEffects[effect->getBaseEffectName()].push_back(
             EffectLocation{*effect, index, kind});
+      }
   };
 
   // Collect effects that were specified via:
