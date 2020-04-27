@@ -289,6 +289,14 @@
 #define LLVM_REQUIRE_CONSTANT_INITIALIZATION
 #endif
 
+/// LLVM_GSL_OWNER - Apply this to owning classes like SmallVector to enable
+/// lifetime warnings.
+#if LLVM_HAS_CPP_ATTRIBUTE(gsl::Owner)
+#define LLVM_GSL_OWNER [[gsl::Owner]]
+#else
+#define LLVM_GSL_OWNER
+#endif
+
 /// LLVM_GSL_POINTER - Apply this to non-owning classes like
 /// StringRef to enable lifetime warnings.
 #if LLVM_HAS_CPP_ATTRIBUTE(gsl::Pointer)
