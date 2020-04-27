@@ -175,7 +175,6 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 
   // Construct the new operation using this memref.
   OperationState state(op->getLoc(), op->getName());
-  state.setOperandListToResizable(op->hasResizableOperandsList());
   state.operands.reserve(op->getNumOperands() + extraIndices.size());
   // Insert the non-memref operands.
   state.operands.append(op->operand_begin(),

@@ -809,8 +809,6 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
   // Operands
   body << "  " << builderOpState << ".addOperands(operands);\n";
-  if (op.hasResizableOperandList())
-    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -892,8 +890,6 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
 
   // Operands
   body << "  " << builderOpState << ".addOperands(operands);\n";
-  if (op.hasResizableOperandList())
-    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -981,8 +977,6 @@ void OpEmitter::genCollectiveParamBuilder() {
          << numNonVariadicOperands
          << "u && \"mismatched number of parameters\");\n";
   body << "  " << builderOpState << ".addOperands(operands);\n";
-  if (op.hasResizableOperandList())
-    body << formatv("  {0}.setOperandListToResizable();\n\n", builderOpState);
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -1152,8 +1146,6 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
       body << "  if (" << argName << ")\n  ";
     body << "  " << builderOpState << ".addOperands(" << argName << ");\n";
   }
-  if (op.hasResizableOperandList())
-    body << formatv("  {0}.setOperandListToResizable();\n", builderOpState);
 
   // If the operation has the operand segment size attribute, add it here.
   if (op.getTrait("OpTrait::AttrSizedOperandSegments")) {
