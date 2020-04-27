@@ -96,3 +96,31 @@ add_math_unittest(
     libc.src.math.fabsf
     libc.utils.FPUtil.fputil
 )
+
+add_math_unittest(
+  expf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    expf_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.math.expf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  exp2f_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    exp2f_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.math.exp2f
+    libc.utils.FPUtil.fputil
+)
