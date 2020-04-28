@@ -356,3 +356,150 @@ define i64 @load64le_nop_shift(i8* %arg) {
   %o7 = or i64 %o6, %s7
   ret i64 %o7
 }
+
+define void @PR39538(i8* %t0, i32* %t1) {
+; CHECK-LABEL: @PR39538(
+; CHECK-NEXT:    [[T6:%.*]] = getelementptr inbounds i8, i8* [[T0:%.*]], i64 1
+; CHECK-NEXT:    [[T11:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 2
+; CHECK-NEXT:    [[T16:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 3
+; CHECK-NEXT:    [[T20:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 4
+; CHECK-NEXT:    [[T24:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 5
+; CHECK-NEXT:    [[T29:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 6
+; CHECK-NEXT:    [[T34:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 7
+; CHECK-NEXT:    [[T39:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
+; CHECK-NEXT:    [[T43:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 9
+; CHECK-NEXT:    [[T48:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 10
+; CHECK-NEXT:    [[T53:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 11
+; CHECK-NEXT:    [[T58:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 12
+; CHECK-NEXT:    [[T62:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 13
+; CHECK-NEXT:    [[T67:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 14
+; CHECK-NEXT:    [[T72:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 15
+; CHECK-NEXT:    [[T38:%.*]] = getelementptr inbounds i32, i32* [[T1:%.*]], i64 1
+; CHECK-NEXT:    [[T57:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 2
+; CHECK-NEXT:    [[T76:%.*]] = getelementptr inbounds i32, i32* [[T1]], i64 3
+; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[T0]], align 1
+; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[T6]], align 1
+; CHECK-NEXT:    [[T12:%.*]] = load i8, i8* [[T11]], align 1
+; CHECK-NEXT:    [[T17:%.*]] = load i8, i8* [[T16]], align 1
+; CHECK-NEXT:    [[T21:%.*]] = load i8, i8* [[T20]], align 1
+; CHECK-NEXT:    [[T25:%.*]] = load i8, i8* [[T24]], align 1
+; CHECK-NEXT:    [[T30:%.*]] = load i8, i8* [[T29]], align 1
+; CHECK-NEXT:    [[T35:%.*]] = load i8, i8* [[T34]], align 1
+; CHECK-NEXT:    [[T40:%.*]] = load i8, i8* [[T39]], align 1
+; CHECK-NEXT:    [[T44:%.*]] = load i8, i8* [[T43]], align 1
+; CHECK-NEXT:    [[T49:%.*]] = load i8, i8* [[T48]], align 1
+; CHECK-NEXT:    [[T54:%.*]] = load i8, i8* [[T53]], align 1
+; CHECK-NEXT:    [[T59:%.*]] = load i8, i8* [[T58]], align 1
+; CHECK-NEXT:    [[T63:%.*]] = load i8, i8* [[T62]], align 1
+; CHECK-NEXT:    [[T68:%.*]] = load i8, i8* [[T67]], align 1
+; CHECK-NEXT:    [[T73:%.*]] = load i8, i8* [[T72]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> undef, i8 [[T3]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[T21]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[T40]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[T59]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i8> undef, i8 [[T7]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> [[TMP6]], i8 [[T25]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> [[TMP7]], i8 [[T44]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i8> [[TMP8]], i8 [[T63]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i8> [[TMP9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> undef, i8 [[T12]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i8> [[TMP11]], i8 [[T30]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP12]], i8 [[T49]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[T68]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i8> [[TMP14]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> undef, i8 [[T17]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[T35]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[T54]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[T73]], i32 3
+; CHECK-NEXT:    [[TMP20:%.*]] = zext <4 x i8> [[TMP19]] to <4 x i32>
+; CHECK-NEXT:    [[TMP21:%.*]] = shl nuw <4 x i32> [[TMP5]], <i32 24, i32 24, i32 24, i32 24>
+; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw nsw <4 x i32> [[TMP10]], <i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw <4 x i32> [[TMP15]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[TMP24:%.*]] = or <4 x i32> [[TMP22]], [[TMP21]]
+; CHECK-NEXT:    [[TMP25:%.*]] = or <4 x i32> [[TMP24]], [[TMP23]]
+; CHECK-NEXT:    [[TMP26:%.*]] = or <4 x i32> [[TMP25]], [[TMP20]]
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i32* [[T1]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP26]], <4 x i32>* [[TMP27]], align 4
+; CHECK-NEXT:    ret void
+;
+  %t6 = getelementptr inbounds i8, i8* %t0, i64 1
+  %t11 = getelementptr inbounds i8, i8* %t0, i64 2
+  %t16 = getelementptr inbounds i8, i8* %t0, i64 3
+  %t20 = getelementptr inbounds i8, i8* %t0, i64 4
+  %t24 = getelementptr inbounds i8, i8* %t0, i64 5
+  %t29 = getelementptr inbounds i8, i8* %t0, i64 6
+  %t34 = getelementptr inbounds i8, i8* %t0, i64 7
+  %t39 = getelementptr inbounds i8, i8* %t0, i64 8
+  %t43 = getelementptr inbounds i8, i8* %t0, i64 9
+  %t48 = getelementptr inbounds i8, i8* %t0, i64 10
+  %t53 = getelementptr inbounds i8, i8* %t0, i64 11
+  %t58 = getelementptr inbounds i8, i8* %t0, i64 12
+  %t62 = getelementptr inbounds i8, i8* %t0, i64 13
+  %t67 = getelementptr inbounds i8, i8* %t0, i64 14
+  %t72 = getelementptr inbounds i8, i8* %t0, i64 15
+  %t38 = getelementptr inbounds i32, i32* %t1, i64 1
+  %t57 = getelementptr inbounds i32, i32* %t1, i64 2
+  %t76 = getelementptr inbounds i32, i32* %t1, i64 3
+  %t3 = load i8, i8* %t0, align 1
+  %t7 = load i8, i8* %t6, align 1
+  %t12 = load i8, i8* %t11, align 1
+  %t17 = load i8, i8* %t16, align 1
+  %t21 = load i8, i8* %t20, align 1
+  %t25 = load i8, i8* %t24, align 1
+  %t30 = load i8, i8* %t29, align 1
+  %t35 = load i8, i8* %t34, align 1
+  %t40 = load i8, i8* %t39, align 1
+  %t44 = load i8, i8* %t43, align 1
+  %t49 = load i8, i8* %t48, align 1
+  %t54 = load i8, i8* %t53, align 1
+  %t59 = load i8, i8* %t58, align 1
+  %t63 = load i8, i8* %t62, align 1
+  %t68 = load i8, i8* %t67, align 1
+  %t73 = load i8, i8* %t72, align 1
+  %t4 = zext i8 %t3 to i32
+  %t8 = zext i8 %t7 to i32
+  %t13 = zext i8 %t12 to i32
+  %t18 = zext i8 %t17 to i32
+  %t22 = zext i8 %t21 to i32
+  %t26 = zext i8 %t25 to i32
+  %t31 = zext i8 %t30 to i32
+  %t36 = zext i8 %t35 to i32
+  %t41 = zext i8 %t40 to i32
+  %t45 = zext i8 %t44 to i32
+  %t50 = zext i8 %t49 to i32
+  %t55 = zext i8 %t54 to i32
+  %t60 = zext i8 %t59 to i32
+  %t64 = zext i8 %t63 to i32
+  %t69 = zext i8 %t68 to i32
+  %t74 = zext i8 %t73 to i32
+  %t5 = shl nuw i32 %t4, 24
+  %t23 = shl nuw i32 %t22, 24
+  %t42 = shl nuw i32 %t41, 24
+  %t61 = shl nuw i32 %t60, 24
+  %t9 = shl nuw nsw i32 %t8, 16
+  %t27 = shl nuw nsw i32 %t26, 16
+  %t46 = shl nuw nsw i32 %t45, 16
+  %t65 = shl nuw nsw i32 %t64, 16
+  %t14 = shl nuw nsw i32 %t13, 8
+  %t32 = shl nuw nsw i32 %t31, 8
+  %t51 = shl nuw nsw i32 %t50, 8
+  %t70 = shl nuw nsw i32 %t69, 8
+  %t10 = or i32 %t9, %t5
+  %t15 = or i32 %t10, %t14
+  %t19 = or i32 %t15, %t18
+  %t28 = or i32 %t27, %t23
+  %t33 = or i32 %t28, %t32
+  %t37 = or i32 %t33, %t36
+  %t47 = or i32 %t46, %t42
+  %t52 = or i32 %t47, %t51
+  %t56 = or i32 %t52, %t55
+  %t66 = or i32 %t65, %t61
+  %t71 = or i32 %t66, %t70
+  %t75 = or i32 %t71, %t74
+  store i32 %t19, i32* %t1, align 4
+  store i32 %t37, i32* %t38, align 4
+  store i32 %t56, i32* %t57, align 4
+  store i32 %t75, i32* %t76, align 4
+  ret void
+}
