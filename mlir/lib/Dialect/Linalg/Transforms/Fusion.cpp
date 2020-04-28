@@ -161,17 +161,6 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
   assert(consumer.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
 
-  if (auto convOp = dyn_cast<linalg::ConvOp>(producer.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      llvm_unreachable("Unexpected conv with padding");
-  }
-  if (auto convOp = dyn_cast<linalg::ConvOp>(consumer.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
-    if (convOp.padding())
-      llvm_unreachable("Unexpected conv with padding");
-  }
-
   auto subView = dyn_cast_or_null<SubViewOp>(
       consumer.getBuffer(consumerIdx).getDefiningOp());
   auto slice = dyn_cast_or_null<SliceOp>(
@@ -286,6 +275,16 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
     LLVM_DEBUG(dbgs() << "\n***Not fusable due to an interleaved dependence:\t"
                       << *producer.getOperation());
     return false;
+  }
+  if (auto convOp = dyn_cast<linalg::ConvOp>(producer.getOperation())) {
+    // TODO(ntv): add a level of indirection to linalg.generic.
+    if (convOp.padding())
+      return false;
+  }
+  if (auto convOp = dyn_cast<linalg::ConvOp>(consumer.getOperation())) {
+    // TODO(ntv): add a level of indirection to linalg.generic.
+    if (convOp.padding())
+      return false;
   }
   return true;
 }
