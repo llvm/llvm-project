@@ -192,7 +192,7 @@ static AffineForOp generateShiftedLoop(
 
   BlockAndValueMapping operandMap;
 
-  OpBuilder bodyBuilder = loopChunk.getBodyBuilder();
+  auto bodyBuilder = OpBuilder::atBlockTerminator(loopChunk.getBody());
   for (auto it = opGroupQueue.begin() + offset, e = opGroupQueue.end(); it != e;
        ++it) {
     uint64_t shift = it->first;
@@ -470,7 +470,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
 
   // Builder to insert unrolled bodies just before the terminator of the body of
   // 'forOp'.
-  OpBuilder builder = forOp.getBodyBuilder();
+  auto builder = OpBuilder::atBlockTerminator(forOp.getBody());
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
@@ -906,7 +906,7 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
   SmallVector<AffineForOp, 8> innerLoops;
   for (auto t : targets) {
     // Insert newForOp before the terminator of `t`.
-    OpBuilder b = t.getBodyBuilder();
+    auto b = OpBuilder::atBlockTerminator(t.getBody());
     auto newForOp = b.create<AffineForOp>(t.getLoc(), lbOperands, lbMap,
                                           ubOperands, ubMap, originalStep);
     auto begin = t.getBody()->begin();
@@ -938,7 +938,7 @@ static Loops stripmineSink(loop::ForOp forOp, Value factor,
     auto nOps = t.getBody()->getOperations().size();
 
     // Insert newForOp before the terminator of `t`.
-    OpBuilder b(t.getBodyBuilder());
+    auto b = OpBuilder::atBlockTerminator((t.getBody()));
     Value stepped = b.create<AddIOp>(t.getLoc(), iv, forOp.step());
     Value less = b.create<CmpIOp>(t.getLoc(), CmpIPredicate::slt,
                                   forOp.upperBound(), stepped);
@@ -1510,7 +1510,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
     if (d == 0)
       copyNestRoot = forOp;
 
-    b = forOp.getBodyBuilder();
+    b = OpBuilder::atBlockTerminator(forOp.getBody());
 
     auto fastBufOffsetMap =
         AffineMap::get(lbOperands.size(), 0, fastBufOffsets[d]);
@@ -2309,7 +2309,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
     AffineForOp fullTileLoop = createCanonicalizedAffineForOp(
         b, loop.getLoc(), lbVmap.getOperands(), lbVmap.getAffineMap(),
         ubVmap.getOperands(), ubVmap.getAffineMap());
-    b = fullTileLoop.getBodyBuilder();
+    b = OpBuilder::atBlockTerminator(fullTileLoop.getBody());
     fullTileLoops.push_back(fullTileLoop);
   }
 
@@ -2318,7 +2318,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
   for (auto loopEn : llvm::enumerate(inputNest))
     operandMap.map(loopEn.value().getInductionVar(),
                    fullTileLoops[loopEn.index()].getInductionVar());
-  b = fullTileLoops.back().getBodyBuilder();
+  b = OpBuilder::atBlockTerminator(fullTileLoops.back().getBody());
   for (auto &op : inputNest.back().getBody()->without_terminator())
     b.clone(op, operandMap);
   return success();
