@@ -24,13 +24,13 @@ define void @nothing() #0 {
   ret void
 }
 
-; CHECK-DAG: special_regs Clobbered Registers: $scc $m0 {{$}}
+; CHECK-DAG: special_regs Clobbered Registers: $scc $m0 $m0_hi16 $m0_lo16 {{$}}
 define void @special_regs() #0 {
   call void asm sideeffect "", "~{m0},~{scc}"() #0
   ret void
 }
 
-; CHECK-DAG: vcc Clobbered Registers: $vcc $vcc_hi $vcc_lo {{$}}
+; CHECK-DAG: vcc Clobbered Registers: $vcc $vcc_hi $vcc_lo $vcc_hi_hi16 $vcc_hi_lo16 $vcc_lo_hi16 $vcc_lo_lo16 {{$}}
 define void @vcc() #0 {
   call void asm sideeffect "", "~{vcc}"() #0
   ret void
