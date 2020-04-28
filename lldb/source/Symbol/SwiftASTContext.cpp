@@ -995,8 +995,8 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
 
 /// Return the name of the OS-specific subdirectory containing the
 /// Swift stdlib needed for \p target.
-StringRef SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
-                                               const llvm::Triple &host) {
+std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
+                                                 const llvm::Triple &host) {
   auto sdk = GetSDKType(target, host);
   XcodeSDK::Info sdk_info;
   sdk_info.type = sdk.sdk_type;
