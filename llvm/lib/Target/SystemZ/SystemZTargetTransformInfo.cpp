@@ -30,7 +30,8 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
-int SystemZTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
+int SystemZTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                  TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -63,7 +64,8 @@ int SystemZTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
 }
 
 int SystemZTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                  const APInt &Imm, Type *Ty) {
+                                  const APInt &Imm, Type *Ty,
+                                  TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -177,11 +179,12 @@ int SystemZTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     break;
   }
 
-  return SystemZTTIImpl::getIntImmCost(Imm, Ty);
+  return SystemZTTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
 int SystemZTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                        const APInt &Imm, Type *Ty) {
+                                        const APInt &Imm, Type *Ty,
+                                        TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -226,7 +229,7 @@ int SystemZTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   }
-  return SystemZTTIImpl::getIntImmCost(Imm, Ty);
+  return SystemZTTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
 TargetTransformInfo::PopcntSupportKind
@@ -258,7 +261,8 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       }
       if (isa<StoreInst>(&I)) {
         Type *MemAccessTy = I.getOperand(0)->getType();
-        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, None, 0);
+        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, None, 0,
+                                     TTI::TCK_RecipThroughput);
       }
     }
 
@@ -365,7 +369,8 @@ static unsigned getNumVectorRegs(Type *Ty) {
 }
 
 int SystemZTTIImpl::getArithmeticInstrCost(
-    unsigned Opcode, Type *Ty, TTI::OperandValueKind Op1Info,
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueKind Op1Info,
     TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
@@ -494,7 +499,7 @@ int SystemZTTIImpl::getArithmeticInstrCost(
         // Return the cost of multiple scalar invocation plus the cost of
         // inserting and extracting the values.
         unsigned ScalarCost =
-            getArithmeticInstrCost(Opcode, Ty->getScalarType());
+            getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind);
         unsigned Cost = (VF * ScalarCost) + getScalarizationOverhead(Ty, Args);
         // FIXME: VF 2 for these FP operations are currently just as
         // expensive as for VF 4.
@@ -521,7 +526,7 @@ int SystemZTTIImpl::getArithmeticInstrCost(
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info,
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
@@ -684,6 +689,7 @@ getBoolVecToIntConversionCost(unsigned Opcode, Type *Dst,
 }
 
 int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                     TTI::TargetCostKind CostKind,
                                      const Instruction *I) {
   unsigned DstScalarBits = Dst->getScalarSizeInBits();
   unsigned SrcScalarBits = Src->getScalarSizeInBits();
@@ -764,7 +770,7 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       // inserting and extracting the values. Base implementation does not
       // realize float->int gets scalarized.
       unsigned ScalarCost = getCastInstrCost(Opcode, Dst->getScalarType(),
-                                             Src->getScalarType());
+                                             Src->getScalarType(), CostKind);
       unsigned TotCost = VF * ScalarCost;
       bool NeedsInserts = true, NeedsExtracts = true;
       // FP128 registers do not get inserted or extracted.
@@ -804,7 +810,7 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src, I);
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
 }
 
 // Scalar i8 / i16 operations will typically be made after first extending
@@ -820,7 +826,9 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
 }
 
 int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                       Type *CondTy, const Instruction *I) {
+                                       Type *CondTy,
+                                       TTI::TargetCostKind CostKind,
+                                       const Instruction *I) {
   if (!ValTy->isVectorTy()) {
     switch (Opcode) {
     case Instruction::ICmp: {
@@ -895,7 +903,7 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     }
   }
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, nullptr);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind);
 }
 
 int SystemZTTIImpl::
@@ -1009,6 +1017,7 @@ static bool isBswapIntrinsicCall(const Value *V) {
 
 int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                     MaybeAlign Alignment, unsigned AddressSpace,
+                                    TTI::TargetCostKind CostKind,
                                     const Instruction *I) {
   assert(!Src->isVoidTy() && "Invalid type");
 
@@ -1077,11 +1086,12 @@ int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                                ArrayRef<unsigned> Indices,
                                                unsigned Alignment,
                                                unsigned AddressSpace,
+                                               TTI::TargetCostKind CostKind,
                                                bool UseMaskForCond,
                                                bool UseMaskForGaps) {
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
+                                             Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");
@@ -1142,21 +1152,23 @@ static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy) {
 int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                           ArrayRef<Value *> Args,
                                           FastMathFlags FMF, unsigned VF,
+                                          TTI::TargetCostKind CostKind,
                                           const Instruction *I) {
   int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
   if (Cost != -1)
     return Cost;
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, I);
+  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
 }
 
 int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                           ArrayRef<Type *> Tys,
                                           FastMathFlags FMF,
                                           unsigned ScalarizationCostPassed,
+                                          TTI::TargetCostKind CostKind,
                                           const Instruction *I) {
   int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
   if (Cost != -1)
     return Cost;
   return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed, I);
+                                      ScalarizationCostPassed, CostKind, I);
 }

@@ -363,10 +363,12 @@ void ConstantHoistingPass::collectConstantCandidates(
   // instruction and operand index.
   if (auto IntrInst = dyn_cast<IntrinsicInst>(Inst))
     Cost = TTI->getIntImmCostIntrin(IntrInst->getIntrinsicID(), Idx,
-                                    ConstInt->getValue(), ConstInt->getType());
+                                    ConstInt->getValue(), ConstInt->getType(),
+                                    TargetTransformInfo::TCK_SizeAndLatency);
   else
     Cost = TTI->getIntImmCostInst(Inst->getOpcode(), Idx, ConstInt->getValue(),
-                                  ConstInt->getType());
+                                  ConstInt->getType(),
+                                  TargetTransformInfo::TCK_SizeAndLatency);
 
   // Ignore cheap integer constants.
   if (Cost > TargetTransformInfo::TCC_Basic) {
@@ -416,7 +418,8 @@ void ConstantHoistingPass::collectConstantCandidates(
   // usually lowered to a load from constant pool. Such operation is unlikely
   // to be cheaper than compute it by <Base + Offset>, which can be lowered to
   // an ADD instruction or folded into Load/Store instruction.
-  int Cost = TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy);
+  int Cost = TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy,
+                                    TargetTransformInfo::TCK_SizeAndLatency);
   ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
   ConstCandMapType::iterator Itr;
   bool Inserted;
@@ -582,7 +585,8 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
     for (auto User : ConstCand->Uses) {
       unsigned Opcode = User.Inst->getOpcode();
       unsigned OpndIdx = User.OpndIdx;
-      Cost += TTI->getIntImmCostInst(Opcode, OpndIdx, Value, Ty);
+      Cost += TTI->getIntImmCostInst(Opcode, OpndIdx, Value, Ty,
+                                     TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
