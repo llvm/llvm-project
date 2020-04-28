@@ -1093,6 +1093,12 @@ template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
       ::mlir::impl::template ensureRegionTerminator<TerminatorOpType>(
           region, builder, loc);
     }
+
+    Block *getBody(unsigned idx = 0) {
+      Region &region = this->getOperation()->getRegion(idx);
+      assert(!region.empty() && "unexpected empty region");
+      return &region.front();
+    }
   };
 };
 

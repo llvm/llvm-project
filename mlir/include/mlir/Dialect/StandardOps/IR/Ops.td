@@ -533,11 +533,6 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   ];
 
   let extraClassDeclaration = [{
-    OpBuilder getBodyBuilder() {
-      assert(!body().empty() && "Unexpected empty 'body' region.");
-      Block &block = body().front();
-      return OpBuilder(&block, block.end());
-    }
     // The value stored in memref[ivs].
     Value getCurrentValue() {
       return body().front().getArgument(0);
