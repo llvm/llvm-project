@@ -222,7 +222,7 @@ void MachOReader::setSymbolInRelocationInfo(Object &O) const {
             // if we encounter an invalid relocation.
             assert(SymbolNum >= 1 && SymbolNum <= Sections.size() &&
                    "Invalid section index.");
-            Reloc.Section = Sections[SymbolNum - 1];
+            Reloc.Sec = Sections[SymbolNum - 1];
           }
         }
 }
