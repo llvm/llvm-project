@@ -1044,13 +1044,13 @@ bool SampleProfileLoader::inlineHotFunctions(
               R->getValue()->getSubprogram() &&
               isLegalToPromote(*I, R->getValue(), &Reason)) {
             uint64_t C = FS->getEntrySamples();
-            Instruction *DI =
-                pgo::promoteIndirectCall(I, R->getValue(), C, Sum, false, ORE);
+            auto &DI =
+                pgo::promoteIndirectCall(*I, R->getValue(), C, Sum, false, ORE);
             Sum -= C;
             PromotedInsns.insert(I);
             // If profile mismatches, we should not attempt to inline DI.
             if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
-                inlineCallInstruction(*cast<CallBase>(DI))) {
+                inlineCallInstruction(cast<CallBase>(DI))) {
               localNotInlinedCallSites.erase(I);
               LocalChanged = true;
               ++NumCSInlined;

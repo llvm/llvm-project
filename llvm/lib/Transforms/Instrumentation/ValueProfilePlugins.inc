@@ -57,7 +57,7 @@ public:
   IndirectCallPromotionPlugin(Function &Fn) : F(Fn) {}
 
   void run(std::vector<CandidateInfo> &Candidates) {
-    std::vector<Instruction *> Result = findIndirectCalls(F);
+    std::vector<CallBase *> Result = findIndirectCalls(F);
     for (Instruction *I : Result) {
       Value *Callee = cast<CallBase>(I)->getCalledOperand();
       Instruction *InsertPt = I;
