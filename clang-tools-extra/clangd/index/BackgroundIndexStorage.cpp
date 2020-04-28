@@ -36,13 +36,18 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
   return std::string(ShardRootSS.str());
 }
 
-// Uses disk as a storage for index shards.
+// Uses disk as a storage for index shards. Creates a directory called
+// ".clangd/index/" under the path provided during construction.
 class DiskBackedIndexStorage : public BackgroundIndexStorage {
   std::string DiskShardRoot;
 
 public:
-  // Creates `DiskShardRoot` and any parents during construction.
-  DiskBackedIndexStorage(llvm::StringRef Directory) : DiskShardRoot(Directory) {
+  // Sets DiskShardRoot to (Directory + ".clangd/index/") which is the base
+  // directory for all shard files.
+  DiskBackedIndexStorage(llvm::StringRef Directory) {
+    llvm::SmallString<128> CDBDirectory(Directory);
+    llvm::sys::path::append(CDBDirectory, ".clangd", "index");
+    DiskShardRoot = std::string(CDBDirectory.str());
     std::error_code OK;
     std::error_code EC = llvm::sys::fs::create_directories(DiskShardRoot);
     if (EC != OK) {
@@ -95,31 +100,26 @@ public:
 };
 
 // Creates and owns IndexStorages for multiple CDBs.
-// When a CDB root is found, shards are stored in $ROOT/.clangd/index.
-// When no root is found, the fallback path is ~/.cache/clangd/index.
 class DiskBackedIndexStorageManager {
 public:
   DiskBackedIndexStorageManager(
       std::function<llvm::Optional<ProjectInfo>(PathRef)> GetProjectInfo)
       : IndexStorageMapMu(std::make_unique<std::mutex>()),
         GetProjectInfo(std::move(GetProjectInfo)) {
-    llvm::SmallString<128> FallbackDir;
-    if (llvm::sys::path::cache_directory(FallbackDir))
-      llvm::sys::path::append(FallbackDir, "clangd", "index");
-    this->FallbackDir = FallbackDir.str().str();
+    llvm::SmallString<128> HomeDir;
+    llvm::sys::path::home_directory(HomeDir);
+    this->HomeDir = HomeDir.str().str();
   }
 
   // Creates or fetches to storage from cache for the specified project.
   BackgroundIndexStorage *operator()(PathRef File) {
     std::lock_guard<std::mutex> Lock(*IndexStorageMapMu);
-    llvm::SmallString<128> StorageDir(FallbackDir);
-    if (auto PI = GetProjectInfo(File)) {
-      StorageDir = PI->SourceRoot;
-      llvm::sys::path::append(StorageDir, ".clangd", "index");
-    }
-    auto &IndexStorage = IndexStorageMap[StorageDir];
+    Path CDBDirectory = HomeDir;
+    if (auto PI = GetProjectInfo(File))
+      CDBDirectory = PI->SourceRoot;
+    auto &IndexStorage = IndexStorageMap[CDBDirectory];
     if (!IndexStorage)
-      IndexStorage = create(StorageDir);
+      IndexStorage = create(CDBDirectory);
     return IndexStorage.get();
   }
 
@@ -132,7 +132,7 @@ private:
     return std::make_unique<DiskBackedIndexStorage>(CDBDirectory);
   }
 
-  Path FallbackDir;
+  Path HomeDir;
 
   llvm::StringMap<std::unique_ptr<BackgroundIndexStorage>> IndexStorageMap;
   std::unique_ptr<std::mutex> IndexStorageMapMu;
