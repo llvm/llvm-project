@@ -24,13 +24,14 @@ How to build libc++ with DFSan
 ==============================
 
 DFSan requires either all of your code to be instrumented or for uninstrumented
-functions to be listed as``uninstrumented`` in the `ABI list`_.
+functions to be listed as ``uninstrumented`` in the `ABI list`_.
 
 If you'd like to have instrumented libc++ functions, then you need to build it
 with DFSan instrumentation from source. Here is an example of how to build
 libc++ and the libc++ ABI with data flow sanitizer instrumentation.
 
 .. code-block:: console
+
   cd libcxx-build
 
   # An example using ninja
