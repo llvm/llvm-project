@@ -245,13 +245,11 @@ TEST_F(FormatTestCSharp, Attributes) {
                "}");
 
   verifyFormat("[TestMethod]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat("[TestMethod(\"start\", HelpText = \"Starts the server "
                "listening on provided host\")]\n"
-               "public string Host\n"
-               "{ set; get; }");
+               "public string Host { set; get; }");
 
   verifyFormat(
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
@@ -671,32 +669,6 @@ class MyClass {
     set => veryLongNamedField = value;
   } = VeryLongNamedTypeIndeed.Create(DefaultFirstArgument, DefaultSecondArgument,
                                      DefaultThirdArgument);
-})",
-               Style);
-
-  // Brace wrapping and single-lining of accessor can be controlled by config.
-  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
-  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-  Style.BraceWrapping.AfterFunction = true;
-
-  verifyFormat(R"(//
-public class SaleItem {
-  public decimal Price
-  { get; set; }
-})",
-               Style);
-
-  verifyFormat(R"(//
-class TimePeriod {
-  public double Hours
-  {
-    get {
-      return _seconds / 3600;
-    }
-    set {
-      _seconds = value * 3600;
-    }
-  }
 })",
                Style);
 }
