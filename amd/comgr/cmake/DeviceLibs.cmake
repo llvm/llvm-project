@@ -2,10 +2,45 @@ set(INC_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 file(WRITE ${INC_DIR}/libraries.inc "// Automatically generated file; DO NOT EDIT.\n")
 
+# cmake does not provide a way to query targets produced by a project,
+# so we have to make one up. Ordinarily, individual library target
+# names are usable. In this case, we don't want to have to maintain a
+# list of bitcode libraries, since they change (e.g. when a new
+# subtarget specific device library is added)
+#
+# If we found the device libraries through find_package, we were
+# already provided a list of targets. If not, we tracked this in a
+# global property. This is the same technique used for LLVM_LIBS in
+# AddLLVM.
+
+if(NOT DEFINED AMD_DEVICE_LIBS_TARGETS)
+  get_property(AMD_DEVICE_LIBS_TARGETS GLOBAL PROPERTY AMD_DEVICE_LIBS)
+endif()
+
+if(NOT AMD_DEVICE_LIBS_TARGETS)
+  message(FATAL_ERROR "Could not find list of device libraries")
+endif()
+
 foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   set(header ${AMDGCN_LIB_TARGET}.inc)
+
+  # FIXME: It's very awkward to deal with the device library
+  # build. Really, they are custom targets that do not nicely fit into
+  # any of cmake's library concepts. However, they are artificially
+  # exported as static libraries. The custom target has the
+  # OUTPUT_NAME property, but imported libraries have the LOCATION
+  # property.
+  get_target_property(bc_lib_path ${AMDGCN_LIB_TARGET} LOCATION)
+  if(NOT bc_lib_path)
+    get_target_property(bc_lib_path ${AMDGCN_LIB_TARGET} OUTPUT_NAME)
+  endif()
+
+  if(NOT bc_lib_path)
+    message(FATAL_ERROR "Could not find path to bitcode library")
+  endif()
+
   add_custom_command(OUTPUT ${INC_DIR}/${header}
-    COMMAND bc2h $<TARGET_FILE:${AMDGCN_LIB_TARGET}>
+    COMMAND bc2h ${bc_lib_path}
                  ${INC_DIR}/${header}
                  "${AMDGCN_LIB_TARGET}_lib"
     DEPENDS bc2h ${AMDGCN_LIB_TARGET}
