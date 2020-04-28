@@ -78,6 +78,7 @@ if(BUILD_HC_LIB)
   add_subdirectory(hc)
 endif()
 
+# FIXME: Deprecate this method of passing a target list.
 if(AMDGCN_TARGETS_LIB_LIST)
   set(${AMDGCN_TARGETS_LIB_LIST} ${AMDGCN_LIB_LIST} PARENT_SCOPE)
 endif()

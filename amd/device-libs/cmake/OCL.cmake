@@ -134,6 +134,8 @@ macro(opencl_bc_lib)
   list(APPEND clean_files
     "${OUT_NAME}${LIB_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}")
 
+  set_property(GLOBAL APPEND PROPERTY AMD_DEVICE_LIBS ${name})
+
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
     add_dependencies("${name}" llvm-link clang opt llvm-objdump)
   endif()
