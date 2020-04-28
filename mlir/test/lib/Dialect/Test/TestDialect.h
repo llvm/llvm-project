@@ -30,6 +30,7 @@
 
 namespace mlir {
 
+#include "TestOpStructs.h.inc"
 #include "TestOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
