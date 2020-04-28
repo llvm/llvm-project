@@ -44,10 +44,10 @@ define i32 @add(i32 %arg) {
 ; AVX512-LABEL: 'add'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A = zext <4 x i1> undef to <4 x i32>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %B = sext <4 x i1> undef to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %C = trunc <4 x i32> undef to <4 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C = trunc <4 x i32> undef to <4 x i1>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D = zext <8 x i1> undef to <8 x i32>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = sext <8 x i1> undef to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F = trunc <8 x i32> undef to <8 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F = trunc <8 x i32> undef to <8 x i1>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %G = zext i1 undef to i32
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %H = trunc i32 undef to i1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
