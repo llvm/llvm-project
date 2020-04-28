@@ -2219,7 +2219,7 @@ InlineCost llvm::getInlineCost(
                        GetAssumptionCache, GetBFI, GetTLI, PSI, ORE);
 }
 
-Optional<int> getInliningCostEstimate(
+Optional<int> llvm::getInliningCostEstimate(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
