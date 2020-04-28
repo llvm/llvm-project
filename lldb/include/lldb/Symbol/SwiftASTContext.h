@@ -1348,7 +1348,7 @@ protected:
   void RemapClangImporterOptions(const PathMappingList &path_map);
 
   /// Infer the appropriate Swift resource directory for a target triple.
-  llvm::StringRef GetResourceDir(const llvm::Triple &target);
+  std::string GetResourceDir(const llvm::Triple &target);
 
   /// Implementation of \c GetResourceDir.
   static std::string GetResourceDir(llvm::StringRef platform_sdk_path,
