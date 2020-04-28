@@ -38,14 +38,14 @@ body:             |
 
   ; CHECK-LABEL: name: expand_isel_liveness1
   ; CHECK: bb.1:
-  ; CHECK:   liveins: $x7
+  ; CHECK:   liveins: $x3, $x4, $x7
   ; CHECK:   renamable $x5 = ORI8 killed renamable $x7, 0
   ; CHECK:   B %bb.3
   ; CHECK: bb.2:
-  ; CHECK:   liveins: $zero8
+  ; CHECK:   liveins: $x3, $x4
   ; CHECK:   renamable $x5 = ADDI8 $zero8, 0
   ; CHECK: bb.3:
-  ; CHECK:   liveins: $x3, $x4, $x5, $x6, $cr1lt, $cr1gt, $x3, $cr6lt, $cr0eq, $r3, $cr5un, $cr1eq, $cr1un, $cr6un, $cr0lt, $cr0gt, $cr6gt, $cr0un, $cr1, $cr6, $cr5eq, $x8, $r8, $cr6eq, $x4, $r4, $cr0, $cr5gt, $cr5, $cr5lt, $x7, $r7, $x5, $r5, $x5, $zero8, $x7, $cr5lt
+  ; CHECK:   liveins: $x3, $x4, $x5
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit killed $x3, implicit killed $x4, implicit killed $x5
 ...
 
@@ -74,7 +74,7 @@ body:             |
   ; CHECK:   $r3 = ORI killed $r0, 0
   ; CHECK:   B %bb.3
   ; CHECK: bb.2.entry:
-  ; CHECK:   liveins: $zero
+  ; CHECK-NOT:   liveins: $zero
   ; CHECK:   $r3 = ADDI $zero, 0
 ...
 
