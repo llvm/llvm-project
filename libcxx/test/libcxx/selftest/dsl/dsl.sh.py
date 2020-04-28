@@ -5,11 +5,11 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
-# RUN: %{python} %s '%S' '%T' '%{escaped_exec}' \
-# RUN:                        '%{escaped_cxx}' \
-# RUN:                        '%{escaped_flags}' \
-# RUN:                        '%{escaped_compile_flags}' \
-# RUN:                        '%{escaped_link_flags}'
+# RUN: "%{python}" '%s' '%S' '%T' '%{escaped_exec}' \
+# RUN:                            '%{escaped_cxx}' \
+# RUN:                            '%{escaped_flags}' \
+# RUN:                            '%{escaped_compile_flags}' \
+# RUN:                            '%{escaped_link_flags}'
 # END.
 
 import base64
