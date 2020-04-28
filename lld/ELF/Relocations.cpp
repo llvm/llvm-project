@@ -1344,8 +1344,11 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
         addend &= ~0x8000;
       // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
       // call __tls_get_addr even if the symbol is non-preemptible.
-      if (!(config->emachine == EM_HEXAGON && type == R_HEX_GD_PLT_B22_PCREL))
-        expr = fromPlt(expr);
+      if (!(config->emachine == EM_HEXAGON &&
+           (type == R_HEX_GD_PLT_B22_PCREL ||
+            type == R_HEX_GD_PLT_B22_PCREL_X ||
+            type == R_HEX_GD_PLT_B32_PCREL_X)))
+      expr = fromPlt(expr);
     }
   }
 
