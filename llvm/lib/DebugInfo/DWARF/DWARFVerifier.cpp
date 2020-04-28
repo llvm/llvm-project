@@ -458,7 +458,8 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
       if (*SectionOffset >= DObj.getRangesSection().Data.size())
-        ReportError("DW_AT_ranges offset is beyond .debug_ranges bounds:");
+        ReportError("DW_AT_ranges offset is beyond .debug_ranges bounds: " +
+                    llvm::formatv("{0:x8}", *SectionOffset));
       break;
     }
     ReportError("DIE has invalid DW_AT_ranges encoding:");
