@@ -23,6 +23,8 @@ namespace section_names {
 constexpr const char *pageZero = "__pagezero";
 constexpr const char *header = "__mach_header";
 constexpr const char *binding = "__binding";
+constexpr const char *symbolTable = "__symbol_table";
+constexpr const char *stringTable = "__string_table";
 
 } // namespace section_names
 
@@ -91,6 +93,49 @@ public:
   void writeTo(uint8_t *buf) override;
 
   SmallVector<char, 128> contents;
+};
+
+// Stores the strings referenced by the symbol table.
+class StringTableSection : public InputSection {
+public:
+  StringTableSection();
+  // Returns the start offset of the added string.
+  uint32_t addString(StringRef);
+  size_t getSize() const override { return size; }
+  // Like other sections in __LINKEDIT, the string table section is special: its
+  // offsets are recorded in the LC_SYMTAB load command, instead of in section
+  // headers.
+  bool isHidden() const override { return true; }
+  void writeTo(uint8_t *buf) override;
+
+private:
+  // An n_strx value of 0 always indicates the empty string, so we must locate
+  // our non-empty string values at positive offsets in the string table.
+  // Therefore we insert a dummy value at position zero.
+  std::vector<StringRef> strings{"\0"};
+  size_t size = 1;
+};
+
+struct SymtabEntry {
+  Symbol *sym;
+  size_t strx;
+};
+
+class SymtabSection : public InputSection {
+public:
+  SymtabSection(StringTableSection &);
+  void finalizeContents();
+  size_t getNumSymbols() const { return symbols.size(); }
+  size_t getSize() const override;
+  // Like other sections in __LINKEDIT, the symtab section is special: its
+  // offsets are recorded in the LC_SYMTAB load command, instead of in section
+  // headers.
+  bool isHidden() const override { return true; }
+  void writeTo(uint8_t *buf) override;
+
+private:
+  StringTableSection &stringTableSection;
+  std::vector<SymtabEntry> symbols;
 };
 
 struct InStruct {
