@@ -25,15 +25,15 @@ entry:
 ;CHECK:         .csect .rodata[RO]
 ;CHECK-NEXT:         .align  4
 ;CHECK-NEXT: .L__const.main.cnst32:
-;CHECK-NEXT:         .llong  4611686018427387954     # 0x4000000000000032
+;CHECK-NEXT:         .llong  4611686018427387954
 ;CHECK-NEXT:         .long   0                       # 0x0
 ;CHECK-NEXT:         .space  4
-;CHECK-NEXT:         .llong  0                       # 0x0
+;CHECK-NEXT:         .llong  0
 ;CHECK-NEXT:         .long   0                       # 0x0
 ;CHECK-NEXT:         .space  4
 ;CHECK-NEXT:         .align  3
 ;CHECK-NEXT: .L__const.main.cnst16:
-;CHECK-NEXT:         .llong  4611686018427387926     # 0x4000000000000016
+;CHECK-NEXT:         .llong  4611686018427387926
 ;CHECK-NEXT:         .long   0                       # 0x0
 ;CHECK-NEXT:         .space  4
 ;CHECK-NEXT:         .align  3
