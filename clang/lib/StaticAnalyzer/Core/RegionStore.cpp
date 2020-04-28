@@ -1628,10 +1628,6 @@ RegionStoreManager::findLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
                                               const ElementRegion* R) {
-  // We do not currently model bindings of the CompoundLiteralregion.
-  if (isa<CompoundLiteralRegion>(R->getBaseRegion()))
-    return UnknownVal();
-
   // Check if the region has a binding.
   if (const Optional<SVal> &V = B.getDirectBinding(R))
     return *V;
