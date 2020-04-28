@@ -207,6 +207,35 @@ Operation *SymbolTable::getNearestSymbolTable(Operation *from) {
   return from;
 }
 
+/// Walks all symbol table operations nested within, and including, `op`. For
+/// each symbol table operation, the provided callback is invoked with the op
+/// and a boolean signifying if the symbols within that symbol table can be
+/// treated as if all uses are visible. `allSymUsesVisible` identifies whether
+/// all of the symbol uses of symbols within `op` are visible.
+void SymbolTable::walkSymbolTables(
+    Operation *op, bool allSymUsesVisible,
+    function_ref<void(Operation *, bool)> callback) {
+  bool isSymbolTable = op->hasTrait<OpTrait::SymbolTable>();
+  if (isSymbolTable) {
+    SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op);
+    allSymUsesVisible |= !symbol || symbol.isPrivate();
+  } else {
+    // Otherwise if 'op' is not a symbol table, any nested symbols are
+    // guaranteed to be hidden.
+    allSymUsesVisible = true;
+  }
+
+  for (Region &region : op->getRegions())
+    for (Block &block : region)
+      for (Operation &nestedOp : block)
+        walkSymbolTables(&nestedOp, allSymUsesVisible, callback);
+
+  // If 'op' had the symbol table trait, visit it after any nested symbol
+  // tables.
+  if (isSymbolTable)
+    callback(op, allSymUsesVisible);
+}
+
 /// Returns the operation registered with the given symbol name with the
 /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
 /// with the 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol
