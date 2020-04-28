@@ -3,9 +3,13 @@
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=inline -print-after-all | FileCheck %s -check-prefix=INL
 ; RUN: opt < %s 2>&1 -disable-output \
+; RUN: 	   -passes=inliner-wrapper -print-after-all | FileCheck %s -check-prefix=INL
+; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -inline -print-after-all -print-module-scope | FileCheck %s -check-prefix=INL-MOD
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=inline -print-after-all -print-module-scope | FileCheck %s -check-prefix=INL-MOD
+; RUN: opt < %s 2>&1 -disable-output \
+; RUN: 	   -passes=inliner-wrapper -print-after-all -print-module-scope | FileCheck %s -check-prefix=INL-MOD
 
 ; INL: IR Dump After {{Function Integration/Inlining|InlinerPass .*scc: .bar, foo}}
 ; INL: define void @bar()
