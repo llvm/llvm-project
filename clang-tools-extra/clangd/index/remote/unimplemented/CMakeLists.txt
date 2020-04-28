@@ -7,4 +7,5 @@ add_clang_library(clangdRemoteIndex
 
   LINK_LIBS
   clangDaemon
+  clangdSupport
   )

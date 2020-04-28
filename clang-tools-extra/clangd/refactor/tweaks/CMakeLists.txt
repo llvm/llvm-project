@@ -30,6 +30,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   clangAST
   clangBasic
   clangDaemon
+  clangdSupport
   clangFormat
   clangLex
   clangToolingCore

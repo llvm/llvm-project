@@ -54,10 +54,10 @@
 //        Measuring the start -> cancel -> acknowledge -> finish timeline would
 //        help find where libraries' cancellation should be improved.
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CANCELLATION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CANCELLATION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CANCELLATION_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CANCELLATION_H
 
-#include "Context.h"
+#include "support/Context.h"
 #include "llvm/Support/Error.h"
 #include <functional>
 #include <system_error>

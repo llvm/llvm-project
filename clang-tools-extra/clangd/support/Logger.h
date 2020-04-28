@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_LOGGER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_LOGGER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_LOGGER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_LOGGER_H
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"

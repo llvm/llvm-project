@@ -8,7 +8,7 @@
 
 #include "FindTarget.h"
 #include "AST.h"
-#include "Logger.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"

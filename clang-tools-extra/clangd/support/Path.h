@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATH_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATH_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_PATH_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_PATH_H
 
 #include "llvm/ADT/StringRef.h"
 #include <string>

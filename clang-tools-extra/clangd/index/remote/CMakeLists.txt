@@ -18,6 +18,7 @@ if (CLANGD_ENABLE_REMOTE)
     protobuf
     grpc++
     clangDaemon
+    clangdSupport
     )
 
   add_subdirectory(marshalling)

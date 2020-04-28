@@ -9,11 +9,11 @@
 #include "Dex.h"
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
-#include "Logger.h"
 #include "Quality.h"
-#include "Trace.h"
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
+#include "support/Logger.h"
+#include "support/Trace.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>

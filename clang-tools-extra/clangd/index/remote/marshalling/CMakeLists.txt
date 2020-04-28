@@ -6,4 +6,5 @@ add_clang_library(clangdRemoteMarshalling
 
   protobuf
   clangDaemon
+  clangdSupport
   )

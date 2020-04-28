@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Marshalling.h"
-#include "Logger.h"
 #include "index/Serialization.h"
+#include "support/Logger.h"
 
 namespace clang {
 namespace clangd {

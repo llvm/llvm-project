@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
-#include "Context.h"
 #include "Diagnostics.h"
 #include "DraftStore.h"
 #include "FormattedString.h"
@@ -16,9 +15,10 @@
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
-#include "Trace.h"
 #include "URI.h"
 #include "refactor/Tweak.h"
+#include "support/Context.h"
+#include "support/Trace.h"
 #include "clang/Basic/Version.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"

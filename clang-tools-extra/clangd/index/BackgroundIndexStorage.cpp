@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalCompilationDatabase.h"
-#include "Logger.h"
-#include "Path.h"
 #include "index/Background.h"
+#include "support/Logger.h"
+#include "support/Path.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"

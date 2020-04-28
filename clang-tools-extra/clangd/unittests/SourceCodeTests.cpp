@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
-#include "Context.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TestTU.h"
+#include "support/Context.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"

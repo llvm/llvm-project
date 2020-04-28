@@ -8,8 +8,8 @@
 
 #include "AST.h"
 #include "FindTarget.h"
-#include "Logger.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 

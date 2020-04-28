@@ -9,8 +9,8 @@
 #include "GlobalCompilationDatabase.h"
 
 #include "Matchers.h"
-#include "Path.h"
 #include "TestFS.h"
+#include "support/Path.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
