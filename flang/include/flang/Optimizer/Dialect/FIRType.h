@@ -24,6 +24,8 @@ class hash_code;
 namespace mlir {
 class DialectAsmParser;
 class DialectAsmPrinter;
+class ComplexType;
+class FloatType;
 } // namespace mlir
 
 namespace fir {
@@ -89,6 +91,19 @@ bool isa_fir_or_std_type(mlir::Type t);
 /// Is `t` a FIR dialect type that implies a memory (de)reference?
 bool isa_ref_type(mlir::Type t);
 
+/// Is `t` a type that is always trivially pass-by-reference?
+bool isa_passbyref_type(mlir::Type t);
+
+/// Is `t` a boxed type?
+bool isa_box_type(mlir::Type t);
+
+/// Is `t` a type that can conform to be pass-by-reference? Depending on the
+/// context, these types may simply demote to pass-by-reference or a reference
+/// to them may have to be passed instead.
+inline bool conformsWithPassByRef(mlir::Type t) {
+  return isa_ref_type(t) || isa_box_type(t);
+}
+
 /// Is `t` a FIR dialect aggregate type?
 bool isa_aggregate(mlir::Type t);
 
@@ -127,6 +142,10 @@ class CplxType : public mlir::Type::TypeBase<CplxType, mlir::Type,
 public:
   using Base::Base;
   static CplxType get(mlir::MLIRContext *ctxt, KindTy kind);
+
+  /// Get the corresponding fir.real<k> type.
+  mlir::Type getElementType() const;
+
   KindTy getFKind() const;
 };
 
@@ -324,6 +343,21 @@ public:
   /// The number of dimensions of the sequence
   unsigned getDimension() const { return getShape().size(); }
 
+  /// Number of rows of constant extent
+  unsigned getConstantRows() const;
+
+  /// Is the shape of the sequence constant?
+  bool hasConstantShape() const { return getConstantRows() == getDimension(); }
+
+  /// Does the sequence have unknown shape? (`array<* x T>`)
+  bool hasUnknownShape() const { return getShape().empty(); }
+
+  /// Is the interior of the sequence constant? Check if the array is
+  /// one of constant shape (`array<C...xCxT>`), unknown shape
+  /// (`array<*xT>`), or rows with shape and ending with column(s) of
+  /// unknown extent (`array<C...xCx?...x?xT>`).
+  bool hasConstantInterior() const;
+
   /// The value `-1` represents an unknown extent for a dimension
   static constexpr Extent getUnknownExtent() { return -1; }
 
@@ -393,6 +427,20 @@ public:
 mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
 
 void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
+
+/// Guarantee `type` is a scalar integral type (standard Integer, standard
+/// Index, or FIR Int). Aborts execution if condition is false.
+void verifyIntegralType(mlir::Type type);
+
+/// Is `t` a FIR Real or MLIR Float type?
+inline bool isa_real(mlir::Type t) {
+  return t.isa<fir::RealType>() || t.isa<mlir::FloatType>();
+}
+
+/// Is `t` a FIR or MLIR Complex type?
+inline bool isa_complex(mlir::Type t) {
+  return t.isa<fir::CplxType>() || t.isa<mlir::ComplexType>();
+}
 
 } // namespace fir
 
