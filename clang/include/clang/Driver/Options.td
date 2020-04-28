@@ -609,9 +609,9 @@ def fcuda_short_ptr : Flag<["-"], "fcuda-short-ptr">, Flags<[CC1Option]>,
   HelpText<"Use 32-bit pointers for accessing const/local/shared address spaces.">;
 def fno_cuda_short_ptr : Flag<["-"], "fno-cuda-short-ptr">;
 def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
-  HelpText<"ROCm installation path">;
+  HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_device_lib_path_EQ : Joined<["--"], "hip-device-lib-path=">, Group<Link_Group>,
-  HelpText<"HIP device library path">;
+  HelpText<"HIP device library path. Alternative to rocm-path.">;
 def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<Link_Group>,
   HelpText<"HIP device library">;
 def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-script">,
