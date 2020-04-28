@@ -168,20 +168,14 @@ namespace {
 
       // Same for a full set.
       bool addRequired(const RegSet &RS) {
-        bool changed = false;
-        for (RegSet::const_iterator I = RS.begin(), E = RS.end(); I != E; ++I)
-          if (addRequired(*I))
-            changed = true;
-        return changed;
+        return llvm::any_of(
+            RS, [this](unsigned Reg) { return this->addRequired(Reg); });
       }
 
       // Same for a full map.
       bool addRequired(const RegMap &RM) {
-        bool changed = false;
-        for (RegMap::const_iterator I = RM.begin(), E = RM.end(); I != E; ++I)
-          if (addRequired(I->first))
-            changed = true;
-        return changed;
+        return llvm::any_of(
+            RM, [this](const auto &P) { return this->addRequired(P.first); });
       }
 
       // Live-out registers are either in regsLiveOut or vregsPassed.
@@ -379,43 +373,40 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
   verifyProperties(MF);
 
   visitMachineFunctionBefore();
-  for (MachineFunction::const_iterator MFI = MF.begin(), MFE = MF.end();
-       MFI!=MFE; ++MFI) {
-    visitMachineBasicBlockBefore(&*MFI);
+  for (const MachineBasicBlock &MBB : MF) {
+    visitMachineBasicBlockBefore(&MBB);
     // Keep track of the current bundle header.
     const MachineInstr *CurBundle = nullptr;
     // Do we expect the next instruction to be part of the same bundle?
     bool InBundle = false;
 
-    for (MachineBasicBlock::const_instr_iterator MBBI = MFI->instr_begin(),
-           MBBE = MFI->instr_end(); MBBI != MBBE; ++MBBI) {
-      if (MBBI->getParent() != &*MFI) {
-        report("Bad instruction parent pointer", &*MFI);
-        errs() << "Instruction: " << *MBBI;
+    for (const MachineInstr &MI : MBB.instrs()) {
+      if (MI.getParent() != &MBB) {
+        report("Bad instruction parent pointer", &MBB);
+        errs() << "Instruction: " << MI;
         continue;
       }
 
       // Check for consistent bundle flags.
-      if (InBundle && !MBBI->isBundledWithPred())
+      if (InBundle && !MI.isBundledWithPred())
         report("Missing BundledPred flag, "
                "BundledSucc was set on predecessor",
-               &*MBBI);
-      if (!InBundle && MBBI->isBundledWithPred())
+               &MI);
+      if (!InBundle && MI.isBundledWithPred())
         report("BundledPred flag is set, "
                "but BundledSucc not set on predecessor",
-               &*MBBI);
+               &MI);
 
       // Is this a bundle header?
-      if (!MBBI->isInsideBundle()) {
+      if (!MI.isInsideBundle()) {
         if (CurBundle)
           visitMachineBundleAfter(CurBundle);
-        CurBundle = &*MBBI;
+        CurBundle = &MI;
         visitMachineBundleBefore(CurBundle);
       } else if (!CurBundle)
-        report("No bundle header", &*MBBI);
-      visitMachineInstrBefore(&*MBBI);
-      for (unsigned I = 0, E = MBBI->getNumOperands(); I != E; ++I) {
-        const MachineInstr &MI = *MBBI;
+        report("No bundle header", &MI);
+      visitMachineInstrBefore(&MI);
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
         if (Op.getParent() != &MI) {
           // Make sure to use correct addOperand / RemoveOperand / ChangeTo
@@ -426,16 +417,16 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
         visitMachineOperand(&Op, I);
       }
 
-      visitMachineInstrAfter(&*MBBI);
+      visitMachineInstrAfter(&MI);
 
       // Was this the last bundled instruction?
-      InBundle = MBBI->isBundledWithSucc();
+      InBundle = MI.isBundledWithSucc();
     }
     if (CurBundle)
       visitMachineBundleAfter(CurBundle);
     if (InBundle)
-      report("BundledSucc flag set on last instruction in block", &MFI->back());
-    visitMachineBasicBlockAfter(&*MFI);
+      report("BundledSucc flag set on last instruction in block", &MBB.back());
+    visitMachineBasicBlockAfter(&MBB);
   }
   visitMachineFunctionAfter();
 
@@ -546,9 +537,8 @@ void MachineVerifier::markReachable(const MachineBasicBlock *MBB) {
   BBInfo &MInfo = MBBInfoMap[MBB];
   if (!MInfo.reachable) {
     MInfo.reachable = true;
-    for (MachineBasicBlock::const_succ_iterator SuI = MBB->succ_begin(),
-           SuE = MBB->succ_end(); SuI != SuE; ++SuI)
-      markReachable(*SuI);
+    for (const MachineBasicBlock *Succ : MBB->successors())
+      markReachable(Succ);
   }
 }
 
@@ -640,14 +630,13 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   }
 
   // Check the predecessor list.
-  for (MachineBasicBlock::const_pred_iterator I = MBB->pred_begin(),
-       E = MBB->pred_end(); I != E; ++I) {
-    if (!FunctionBlocks.count(*I))
+  for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+    if (!FunctionBlocks.count(Pred))
       report("MBB has predecessor that isn't part of the function.", MBB);
-    if (!MBBInfoMap[*I].Succs.count(MBB)) {
+    if (!MBBInfoMap[Pred].Succs.count(MBB)) {
       report("Inconsistent CFG", MBB);
       errs() << "MBB is not in the successor list of the predecessor "
-             << printMBBReference(*(*I)) << ".\n";
+             << printMBBReference(*Pred) << ".\n";
     }
   }
 
@@ -670,8 +659,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {
       // Block falls through to its successor.
-      MachineFunction::const_iterator MBBI = MBB->getIterator();
-      ++MBBI;
+      MachineFunction::const_iterator MBBI = std::next(MBB->getIterator());
       if (MBBI == MF->end()) {
         // It's possible that the block legitimately ends with a noreturn
         // call or an unreachable, in which case it won't actually fall
@@ -728,8 +716,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       }
     } else if (TBB && !FBB && !Cond.empty()) {
       // Block conditionally branches somewhere, otherwise falls through.
-      MachineFunction::const_iterator MBBI = MBB->getIterator();
-      ++MBBI;
+      MachineFunction::const_iterator MBBI = std::next(MBB->getIterator());
       if (MBBI == MF->end()) {
         report("MBB conditionally falls through out of function!", MBB);
       } else if (MBB->succ_size() == 1) {
@@ -1485,12 +1472,10 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     verifyInlineAsm(MI);
 
   // Check the MachineMemOperands for basic consistency.
-  for (MachineInstr::mmo_iterator I = MI->memoperands_begin(),
-                                  E = MI->memoperands_end();
-       I != E; ++I) {
-    if ((*I)->isLoad() && !MI->mayLoad())
+  for (MachineMemOperand *Op : MI->memoperands()) {
+    if (Op->isLoad() && !MI->mayLoad())
       report("Missing mayLoad flag", MI);
-    if ((*I)->isStore() && !MI->mayStore())
+    if (Op->isStore() && !MI->mayStore())
       report("Missing mayStore flag", MI);
   }
 
@@ -2101,10 +2086,10 @@ void MachineVerifier::visitMachineBundleAfter(const MachineInstr *MI) {
   // Kill any masked registers.
   while (!regMasks.empty()) {
     const uint32_t *Mask = regMasks.pop_back_val();
-    for (RegSet::iterator I = regsLive.begin(), E = regsLive.end(); I != E; ++I)
-      if (Register::isPhysicalRegister(*I) &&
-          MachineOperand::clobbersPhysReg(Mask, *I))
-        regsDead.push_back(*I);
+    for (unsigned Reg : regsLive)
+      if (Register::isPhysicalRegister(Reg) &&
+          MachineOperand::clobbersPhysReg(Mask, Reg))
+        regsDead.push_back(Reg);
   }
   set_subtract(regsLive, regsDead);   regsDead.clear();
   set_union(regsLive, regsDefined);   regsDefined.clear();
@@ -2301,11 +2286,10 @@ void MachineVerifier::calcRegsRequired() {
   SmallPtrSet<const MachineBasicBlock*, 8> todo;
   for (const auto &MBB : *MF) {
     BBInfo &MInfo = MBBInfoMap[&MBB];
-    for (MachineBasicBlock::const_pred_iterator PrI = MBB.pred_begin(),
-           PrE = MBB.pred_end(); PrI != PrE; ++PrI) {
-      BBInfo &PInfo = MBBInfoMap[*PrI];
+    for (const MachineBasicBlock *Pred : MBB.predecessors()) {
+      BBInfo &PInfo = MBBInfoMap[Pred];
       if (PInfo.addRequired(MInfo.vregsLiveIn))
-        todo.insert(*PrI);
+        todo.insert(Pred);
     }
   }
 
@@ -2315,13 +2299,12 @@ void MachineVerifier::calcRegsRequired() {
     const MachineBasicBlock *MBB = *todo.begin();
     todo.erase(MBB);
     BBInfo &MInfo = MBBInfoMap[MBB];
-    for (MachineBasicBlock::const_pred_iterator PrI = MBB->pred_begin(),
-           PrE = MBB->pred_end(); PrI != PrE; ++PrI) {
-      if (*PrI == MBB)
+    for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+      if (Pred == MBB)
         continue;
-      BBInfo &SInfo = MBBInfoMap[*PrI];
+      BBInfo &SInfo = MBBInfoMap[Pred];
       if (SInfo.addRequired(MInfo.vregsRequired))
-        todo.insert(*PrI);
+        todo.insert(Pred);
     }
   }
 }
@@ -2405,23 +2388,19 @@ void MachineVerifier::visitMachineFunctionAfter() {
   // Check for killed virtual registers that should be live out.
   for (const auto &MBB : *MF) {
     BBInfo &MInfo = MBBInfoMap[&MBB];
-    for (RegSet::iterator
-         I = MInfo.vregsRequired.begin(), E = MInfo.vregsRequired.end(); I != E;
-         ++I)
-      if (MInfo.regsKilled.count(*I)) {
+    for (unsigned VReg : MInfo.vregsRequired)
+      if (MInfo.regsKilled.count(VReg)) {
         report("Virtual register killed in block, but needed live out.", &MBB);
-        errs() << "Virtual register " << printReg(*I)
+        errs() << "Virtual register " << printReg(VReg)
                << " is used after the block.\n";
       }
   }
 
   if (!MF->empty()) {
     BBInfo &MInfo = MBBInfoMap[&MF->front()];
-    for (RegSet::iterator
-         I = MInfo.vregsRequired.begin(), E = MInfo.vregsRequired.end(); I != E;
-         ++I) {
+    for (unsigned VReg : MInfo.vregsRequired) {
       report("Virtual register defs don't dominate all uses.", MF);
-      report_context_vreg(*I);
+      report_context_vreg(VReg);
     }
   }
 
@@ -2783,9 +2762,8 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       VNI->def == LiveInts->getMBBStartIdx(&*MFI);
 
     // Check that VNI is live-out of all predecessors.
-    for (MachineBasicBlock::const_pred_iterator PI = MFI->pred_begin(),
-         PE = MFI->pred_end(); PI != PE; ++PI) {
-      SlotIndex PEnd = LiveInts->getMBBEndIdx(*PI);
+    for (const MachineBasicBlock *Pred : MFI->predecessors()) {
+      SlotIndex PEnd = LiveInts->getMBBEndIdx(Pred);
       const VNInfo *PVNI = LR.getVNInfoBefore(PEnd);
 
       // All predecessors must have a live-out value. However for a phi
@@ -2793,9 +2771,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       // only one of the subregisters (not necessarily the current one) needs to
       // be defined.
       if (!PVNI && (LaneMask.none() || !IsPHI)) {
-        if (LiveRangeCalc::isJointlyDominated(*PI, Undefs, *Indexes))
+        if (LiveRangeCalc::isJointlyDominated(Pred, Undefs, *Indexes))
           continue;
-        report("Register not marked live out of predecessor", *PI);
+        report("Register not marked live out of predecessor", Pred);
         report_context(LR, Reg, LaneMask);
         report_context(*VNI);
         errs() << " live into " << printMBBReference(*MFI) << '@'
@@ -2806,10 +2784,10 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
 
       // Only PHI-defs can take different predecessor values.
       if (!IsPHI && PVNI != VNI) {
-        report("Different value live out of predecessor", *PI);
+        report("Different value live out of predecessor", Pred);
         report_context(LR, Reg, LaneMask);
         errs() << "Valno #" << PVNI->id << " live out of "
-               << printMBBReference(*(*PI)) << '@' << PEnd << "\nValno #"
+               << printMBBReference(*Pred) << '@' << PEnd << "\nValno #"
                << VNI->id << " live into " << printMBBReference(*MFI) << '@'
                << LiveInts->getMBBStartIdx(&*MFI) << '\n';
       }
@@ -2865,10 +2843,9 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
     report_context(LI);
     for (unsigned comp = 0; comp != NumComp; ++comp) {
       errs() << comp << ": valnos";
-      for (LiveInterval::const_vni_iterator I = LI.vni_begin(),
-           E = LI.vni_end(); I!=E; ++I)
-        if (comp == ConEQ.getEqClass(*I))
-          errs() << ' ' << (*I)->id;
+      for (const VNInfo *I : LI.valnos)
+        if (comp == ConEQ.getEqClass(I))
+          errs() << ' ' << I->id;
       errs() << '\n';
     }
   }
@@ -2955,15 +2932,14 @@ void MachineVerifier::verifyStackFrame() {
 
     // Make sure the exit state of any predecessor is consistent with the entry
     // state.
-    for (MachineBasicBlock::const_pred_iterator I = MBB->pred_begin(),
-         E = MBB->pred_end(); I != E; ++I) {
-      if (Reachable.count(*I) &&
-          (SPState[(*I)->getNumber()].ExitValue != BBState.EntryValue ||
-           SPState[(*I)->getNumber()].ExitIsSetup != BBState.EntryIsSetup)) {
+    for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+      if (Reachable.count(Pred) &&
+          (SPState[Pred->getNumber()].ExitValue != BBState.EntryValue ||
+           SPState[Pred->getNumber()].ExitIsSetup != BBState.EntryIsSetup)) {
         report("The exit stack state of a predecessor is inconsistent.", MBB);
-        errs() << "Predecessor " << printMBBReference(*(*I))
-               << " has exit state (" << SPState[(*I)->getNumber()].ExitValue
-               << ", " << SPState[(*I)->getNumber()].ExitIsSetup << "), while "
+        errs() << "Predecessor " << printMBBReference(*Pred)
+               << " has exit state (" << SPState[Pred->getNumber()].ExitValue
+               << ", " << SPState[Pred->getNumber()].ExitIsSetup << "), while "
                << printMBBReference(*MBB) << " has entry state ("
                << BBState.EntryValue << ", " << BBState.EntryIsSetup << ").\n";
       }
@@ -2971,15 +2947,14 @@ void MachineVerifier::verifyStackFrame() {
 
     // Make sure the entry state of any successor is consistent with the exit
     // state.
-    for (MachineBasicBlock::const_succ_iterator I = MBB->succ_begin(),
-         E = MBB->succ_end(); I != E; ++I) {
-      if (Reachable.count(*I) &&
-          (SPState[(*I)->getNumber()].EntryValue != BBState.ExitValue ||
-           SPState[(*I)->getNumber()].EntryIsSetup != BBState.ExitIsSetup)) {
+    for (const MachineBasicBlock *Succ : MBB->successors()) {
+      if (Reachable.count(Succ) &&
+          (SPState[Succ->getNumber()].EntryValue != BBState.ExitValue ||
+           SPState[Succ->getNumber()].EntryIsSetup != BBState.ExitIsSetup)) {
         report("The entry stack state of a successor is inconsistent.", MBB);
-        errs() << "Successor " << printMBBReference(*(*I))
-               << " has entry state (" << SPState[(*I)->getNumber()].EntryValue
-               << ", " << SPState[(*I)->getNumber()].EntryIsSetup << "), while "
+        errs() << "Successor " << printMBBReference(*Succ)
+               << " has entry state (" << SPState[Succ->getNumber()].EntryValue
+               << ", " << SPState[Succ->getNumber()].EntryIsSetup << "), while "
                << printMBBReference(*MBB) << " has exit state ("
                << BBState.ExitValue << ", " << BBState.ExitIsSetup << ").\n";
       }

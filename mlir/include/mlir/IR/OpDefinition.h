@@ -1093,6 +1093,12 @@ template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
       ::mlir::impl::template ensureRegionTerminator<TerminatorOpType>(
           region, builder, loc);
     }
+
+    Block *getBody(unsigned idx = 0) {
+      Region &region = this->getOperation()->getRegion(idx);
+      assert(!region.empty() && "unexpected empty region");
+      return &region.front();
+    }
   };
 };
 
@@ -1353,6 +1359,7 @@ class OpInterface : public Op<ConcreteType> {
 public:
   using Concept = typename Traits::Concept;
   template <typename T> using Model = typename Traits::template Model<T>;
+  using Base = OpInterface<ConcreteType, Traits>;
 
   OpInterface(Operation *op = nullptr)
       : Op<ConcreteType>(op), impl(op ? getInterfaceFor(op) : nullptr) {

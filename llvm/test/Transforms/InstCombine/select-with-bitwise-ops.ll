@@ -3,6 +3,9 @@
 
 target datalayout = "n8:16:32:64"
 
+declare void @use(i8)
+declare void @use_vec(<2 x i8>)
+
 define i32 @select_icmp_eq_and_1_0_or_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_eq_and_1_0_or_2(
 ; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 1
@@ -1448,4 +1451,116 @@ define i32 @shift_xor_multiuse_cmp_and(i32 %x, i32 %y, i32 %z, i32 %w) {
   %res = mul i32 %select, %select2
   %res2 = mul i32 %res, %and2 ; to bump up the use count of the and
   ret i32 %res2
+}
+
+define i8 @set_bits(i8 %x, i1 %b)  {
+; CHECK-LABEL: @set_bits(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 5
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[B:%.*]], i8 [[OR]], i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %and = and i8 %x, 250
+  %or = or i8 %x, 5
+  %cond = select i1 %b, i8 %or, i8 %and
+  ret i8 %cond
+}
+
+define i8 @set_bits_not_inverse_constant(i8 %x, i1 %b)  {
+; CHECK-LABEL: @set_bits_not_inverse_constant(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 7
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[B:%.*]], i8 [[OR]], i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %and = and i8 %x, 250
+  %or = or i8 %x, 7
+  %cond = select i1 %b, i8 %or, i8 %and
+  ret i8 %cond
+}
+
+define i8 @set_bits_extra_use1(i8 %x, i1 %b)  {
+; CHECK-LABEL: @set_bits_extra_use1(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 5
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[B:%.*]], i8 [[OR]], i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %and = and i8 %x, 250
+  call void @use(i8 %and)
+  %or = or i8 %x, 5
+  %cond = select i1 %b, i8 %or, i8 %and
+  ret i8 %cond
+}
+
+define i8 @set_bits_extra_use2(i8 %x, i1 %b)  {
+; CHECK-LABEL: @set_bits_extra_use2(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 5
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[B:%.*]], i8 [[OR]], i8 [[AND]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %and = and i8 %x, 250
+  %or = or i8 %x, 5
+  call void @use(i8 %or)
+  %cond = select i1 %b, i8 %or, i8 %and
+  ret i8 %cond
+}
+
+define <2 x i8> @clear_bits(<2 x i8> %x, <2 x i1> %b)  {
+; CHECK-LABEL: @clear_bits(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 37, i8 37>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[X]], <i8 -38, i8 -38>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> [[AND]], <2 x i8> [[OR]]
+; CHECK-NEXT:    ret <2 x i8> [[COND]]
+;
+  %and = and <2 x i8> %x, <i8 37, i8 37>
+  %or = or <2 x i8> %x, <i8 218, i8 218>
+  %cond = select <2 x i1> %b, <2 x i8> %and, <2 x i8> %or
+  ret <2 x i8> %cond
+}
+
+define <2 x i8> @clear_bits_not_inverse_constant(<2 x i8> %x, <2 x i1> %b)  {
+; CHECK-LABEL: @clear_bits_not_inverse_constant(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 undef, i8 37>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[X]], <i8 -38, i8 -38>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> [[AND]], <2 x i8> [[OR]]
+; CHECK-NEXT:    ret <2 x i8> [[COND]]
+;
+  %and = and <2 x i8> %x, <i8 undef, i8 37>
+  %or = or <2 x i8> %x, <i8 218, i8 218>
+  %cond = select <2 x i1> %b, <2 x i8> %and, <2 x i8> %or
+  ret <2 x i8> %cond
+}
+
+define <2 x i8> @clear_bits_extra_use1(<2 x i8> %x, i1 %b)  {
+; CHECK-LABEL: @clear_bits_extra_use1(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 37, i8 37>
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[AND]])
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[X]], <i8 -38, i8 -38>
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[B:%.*]], <2 x i8> [[AND]], <2 x i8> [[OR]]
+; CHECK-NEXT:    ret <2 x i8> [[COND]]
+;
+  %and = and <2 x i8> %x, <i8 37, i8 37>
+  call void @use_vec(<2 x i8> %and)
+  %or = or <2 x i8> %x, <i8 218, i8 218>
+  %cond = select i1 %b, <2 x i8> %and, <2 x i8> %or
+  ret <2 x i8> %cond
+}
+
+define i8 @clear_bits_extra_use2(i8 %x, i1 %b)  {
+; CHECK-LABEL: @clear_bits_extra_use2(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 5
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[B:%.*]], i8 [[AND]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %and = and i8 %x, 250
+  %or = or i8 %x, 5
+  call void @use(i8 %or)
+  %cond = select i1 %b, i8 %and, i8 %or
+  ret i8 %cond
 }

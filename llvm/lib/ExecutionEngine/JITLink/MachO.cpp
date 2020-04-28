@@ -65,7 +65,7 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
     uint32_t CPUType;
     memcpy(&CPUType, Data.data() + 4, sizeof(uint32_t));
     if (Magic == MachO::MH_CIGAM_64)
-      ByteSwap_32(CPUType);
+      CPUType = ByteSwap_32(CPUType);
 
     LLVM_DEBUG({
       dbgs() << "jitLink_MachO: cputype = " << format("0x%08" PRIx32, CPUType)

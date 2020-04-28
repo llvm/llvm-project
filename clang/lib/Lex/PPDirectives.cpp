@@ -2802,7 +2802,9 @@ void Preprocessor::HandleDefineDirective(
   // warn-because-unused-macro set. If it gets used it will be removed from set.
   if (getSourceManager().isInMainFile(MI->getDefinitionLoc()) &&
       !Diags->isIgnored(diag::pp_macro_not_used, MI->getDefinitionLoc()) &&
-      !MacroExpansionInDirectivesOverride) {
+      !MacroExpansionInDirectivesOverride &&
+      getSourceManager().getFileID(MI->getDefinitionLoc()) !=
+          getPredefinesFileID()) {
     MI->setIsWarnIfUnused(true);
     WarnUnusedMacroLocs.insert(MI->getDefinitionLoc());
   }

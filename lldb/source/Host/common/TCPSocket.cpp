@@ -18,6 +18,7 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 
 #if LLDB_ENABLE_POSIX
@@ -237,7 +238,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     m_listen_sockets[fd] = address;
   }
 
-  if (m_listen_sockets.size() == 0) {
+  if (m_listen_sockets.empty()) {
     assert(error.Fail());
     return error;
   }

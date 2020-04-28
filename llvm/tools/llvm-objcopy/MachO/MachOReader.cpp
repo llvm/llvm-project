@@ -103,6 +103,7 @@ extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
       R.Symbol = nullptr; // We'll fill this field later.
       R.Info = MachOObj.getRelocation(RI->getRawDataRefImpl());
       R.Scattered = MachOObj.isRelocationScattered(R.Info);
+      R.Extern = !R.Scattered && MachOObj.getPlainRelocationExternal(R.Info);
       S.Relocations.push_back(R);
     }
 
@@ -203,12 +204,27 @@ void MachOReader::readSymbolTable(Object &O) const {
 }
 
 void MachOReader::setSymbolInRelocationInfo(Object &O) const {
+  std::vector<const Section *> Sections;
+  for (auto &LC : O.LoadCommands)
+    for (std::unique_ptr<Section> &Sec : LC.Sections)
+      Sections.push_back(Sec.get());
+
   for (LoadCommand &LC : O.LoadCommands)
     for (std::unique_ptr<Section> &Sec : LC.Sections)
       for (auto &Reloc : Sec->Relocations)
-        if (!Reloc.Scattered)
-          Reloc.Symbol = O.SymTable.getSymbolByIndex(
-              Reloc.getPlainRelocationSymbolNum(MachOObj.isLittleEndian()));
+        if (!Reloc.Scattered) {
+          const uint32_t SymbolNum =
+              Reloc.getPlainRelocationSymbolNum(MachOObj.isLittleEndian());
+          if (Reloc.Extern) {
+            Reloc.Symbol = O.SymTable.getSymbolByIndex(SymbolNum);
+          } else {
+            // FIXME: Refactor error handling in MachOReader and report an error
+            // if we encounter an invalid relocation.
+            assert(SymbolNum >= 1 && SymbolNum <= Sections.size() &&
+                   "Invalid section index.");
+            Reloc.Sec = Sections[SymbolNum - 1];
+          }
+        }
 }
 
 void MachOReader::readRebaseInfo(Object &O) const {

@@ -1676,6 +1676,7 @@ Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
   if (parseToken(Token::l_brace, "expected '{' in attribute dictionary"))
     return failure();
 
+  llvm::SmallDenseSet<Identifier> seenKeys;
   auto parseElt = [&]() -> ParseResult {
     // The name of an attribute can either be a bare identifier, or a string.
     Optional<Identifier> nameId;
@@ -1686,6 +1687,8 @@ Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
       nameId = builder.getIdentifier(getTokenSpelling());
     else
       return emitError("expected attribute name");
+    if (!seenKeys.insert(*nameId).second)
+      return emitError("duplicate key in dictionary attribute");
     consumeToken();
 
     // Try to parse the '=' for the attribute value.

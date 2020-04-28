@@ -83,11 +83,21 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
     /// Returns the affine value map computed from this operation.
     AffineValueMap getAffineValueMap();
 
-    /// Returns true if the result of this operation can be used as dimension id.
+    /// Returns true if the result of this operation can be used as dimension id
+    /// in the region of the closest surrounding op with trait PolyhedralScope.
     bool isValidDim();
 
-    /// Returns true if the result of this operation is a symbol.
+    /// Returns true if the result of this operation can be used as dimension id
+    /// within 'region', i.e., for all its uses with `region`.
+    bool isValidDim(Region *region);
+
+    /// Returns true if the result of this operation is a symbol in the region
+    /// of the closest surrounding op that has the trait PolyhedralScope.
     bool isValidSymbol();
+
+    /// Returns true if the result of this operation is a symbol for all its
+    /// uses in `region`.
+    bool isValidSymbol(Region *region);
 
     operand_range getMapOperands() { return getOperands(); }
   }];
@@ -180,11 +190,7 @@ def AffineForOp : Affine_Op<"for",
     static StringRef getLowerBoundAttrName() { return "lower_bound"; }
     static StringRef getUpperBoundAttrName() { return "upper_bound"; }
 
-    Block *getBody() { return &region().front(); }
     Value getInductionVar() { return getBody()->getArgument(0); }
-    OpBuilder getBodyBuilder() {
-      return OpBuilder(getBody(), std::prev(getBody()->end()));
-    }
 
     // TODO: provide iterators for the lower and upper bound operands
     // if the current access via getLowerBound(), getUpperBound() is too slow.

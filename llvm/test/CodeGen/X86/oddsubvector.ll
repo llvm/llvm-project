@@ -190,7 +190,7 @@ define void @PR42833() {
 ; SSE2-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    addl {{.*}}(%rip), %eax
+; SSE2-NEXT:    addl .Lb${{.*}}(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    movaps {{.*#+}} xmm3 = <u,1,1,1>
 ; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm2[0],xmm3[1,2,3]
@@ -237,7 +237,7 @@ define void @PR42833() {
 ; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm1
 ; SSE42-NEXT:    movdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; SSE42-NEXT:    movd %xmm0, %eax
-; SSE42-NEXT:    addl {{.*}}(%rip), %eax
+; SSE42-NEXT:    addl .Lb${{.*}}(%rip), %eax
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = <u,1,1,1>
 ; SSE42-NEXT:    pinsrd $0, %eax, %xmm2
 ; SSE42-NEXT:    movdqa %xmm0, %xmm3
@@ -275,7 +275,7 @@ define void @PR42833() {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    addl {{.*}}(%rip), %eax
+; AVX1-NEXT:    addl .Lb${{.*}}(%rip), %eax
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,1,1,1>
 ; AVX1-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
@@ -312,7 +312,7 @@ define void @PR42833() {
 ;
 ; AVX2-LABEL: PR42833:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl {{.*}}(%rip), %eax
+; AVX2-NEXT:    movl .Lb${{.*}}(%rip), %eax
 ; AVX2-NEXT:    vmovdqu .Lc$local+{{.*}}(%rip), %ymm0
 ; AVX2-NEXT:    addl .Lc$local+{{.*}}(%rip), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
@@ -336,7 +336,7 @@ define void @PR42833() {
 ;
 ; AVX512-LABEL: PR42833:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movl {{.*}}(%rip), %eax
+; AVX512-NEXT:    movl .Lb${{.*}}(%rip), %eax
 ; AVX512-NEXT:    vmovdqu .Lc$local+{{.*}}(%rip), %ymm0
 ; AVX512-NEXT:    vmovdqu64 .Lc$local+{{.*}}(%rip), %zmm1
 ; AVX512-NEXT:    addl .Lc$local+{{.*}}(%rip), %eax
@@ -363,7 +363,7 @@ define void @PR42833() {
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa .Lc$local+{{.*}}(%rip), %xmm0
 ; XOP-NEXT:    vmovd %xmm0, %eax
-; XOP-NEXT:    addl {{.*}}(%rip), %eax
+; XOP-NEXT:    addl .Lb${{.*}}(%rip), %eax
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,1,1,1>
 ; XOP-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
 ; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm2

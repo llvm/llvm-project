@@ -1489,3 +1489,10 @@ func @really_large_bound() {
   } : () -> ()
   return
 }
+
+// -----
+
+func @duplicate_dictionary_attr_key() {
+  // expected-error @+1 {{duplicate key in dictionary attribute}}
+  "foo.op"() {a, a} : () -> ()
+}

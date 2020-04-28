@@ -9,20 +9,10 @@
 define dso_local void @IndirectCallExternFuncPtr(void ()* nocapture %ptrfunc) {
 ; CHECK-LABEL: IndirectCallExternFuncPtr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
-; CHECK-NEXT:    stdu r1, -32(r1)
-
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    mr r12, r3
-; CHECK-NEXT:    bctrl
-
-; CHECK-NEXT:    addi r1, r1, 32
-; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    mtlr r0
-; CHECK-NEXT:    blr
+; CHECK-NEXT:    bctr
+; CHECK-NEXT:    #TC_RETURNr8 ctr
 entry:
   tail call void %ptrfunc()
   ret void

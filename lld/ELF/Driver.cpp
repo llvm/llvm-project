@@ -917,6 +917,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
   config->ltoNewPassManager = args.hasArg(OPT_lto_new_pass_manager);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
@@ -1949,13 +1950,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
   // in addCombinedLTOObject, so we are done if that's the case.
-  if (config->thinLTOIndexOnly)
-    return;
-
-  // Likewise, --plugin-opt=emit-llvm is an option to make LTO create
-  // an output file in bitcode and exit, so that you can just get a
-  // combined bitcode file.
-  if (config->emitLLVM)
+  // Likewise, --plugin-opt=emit-llvm and --plugin-opt=emit-asm are the
+  // options to create output files in bitcode or assembly code
+  // repsectively. No object files are generated.
+  if (config->thinLTOIndexOnly || config->emitLLVM || config->ltoEmitAsm)
     return;
 
   // Apply symbol renames for -wrap.

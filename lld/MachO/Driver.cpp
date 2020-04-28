@@ -128,7 +128,10 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"));
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
+  config->installName =
+      args.getLastArgValue(OPT_install_name, config->outputFile);
   config->searchPaths = getSearchPaths(args);
+  config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -138,10 +141,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     freeArena();
     return !errorCount();
   }
-
-  getOrCreateOutputSegment("__TEXT", VM_PROT_READ | VM_PROT_EXECUTE);
-  getOrCreateOutputSegment("__DATA", VM_PROT_READ | VM_PROT_WRITE);
-  getOrCreateOutputSegment("__DATA_CONST", VM_PROT_READ | VM_PROT_WRITE);
 
   for (opt::Arg *arg : args) {
     switch (arg->getOption().getID()) {
@@ -155,7 +154,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     }
   }
 
-  if (!isa<Defined>(config->entry)) {
+  if (config->outputType == MH_EXECUTE && !isa<Defined>(config->entry)) {
     error("undefined symbol: " + config->entry->getName());
     return false;
   }
@@ -166,14 +165,6 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   for (InputFile *file : inputFiles)
     for (InputSection *sec : file->sections)
       inputSections.push_back(sec);
-
-  // Add input sections to output segments.
-  for (InputSection *isec : inputSections) {
-    OutputSegment *os =
-        getOrCreateOutputSegment(isec->segname, VM_PROT_READ | VM_PROT_WRITE);
-    isec->parent = os;
-    os->sections[isec->name].push_back(isec);
-  }
 
   // Write to an output file.
   writeResult();

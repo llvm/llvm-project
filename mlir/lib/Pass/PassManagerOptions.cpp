@@ -141,7 +141,8 @@ void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
 /// Add a pass timing instrumentation if enabled by 'pass-timing' flags.
 void PassManagerOptions::addTimingInstrumentation(PassManager &pm) {
   if (passTiming)
-    pm.enableTiming(passTimingDisplayMode);
+    pm.enableTiming(
+        std::make_unique<PassManager::PassTimingConfig>(passTimingDisplayMode));
 }
 
 void mlir::registerPassManagerCLOptions() {

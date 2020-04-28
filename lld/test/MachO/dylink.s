@@ -1,7 +1,13 @@
 # REQUIRES: x86
 # RUN: mkdir -p %t
-# RUN: yaml2obj %p/Inputs/hello-dylib.yaml -o %t/libhello.dylib
-# RUN: yaml2obj %p/Inputs/goodbye-dylib.yaml -o %t/libgoodbye.dylib
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libhello.s \
+# RUN:   -o %t/libhello.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libgoodbye.s \
+# RUN:   -o %t/libgoodbye.o
+# RUN: lld -flavor darwinnew -dylib -install_name \
+# RUN:   @executable_path/libhello.dylib %t/libhello.o -o %t/libhello.dylib
+# RUN: lld -flavor darwinnew -dylib -install_name \
+# RUN:   @executable_path/libgoodbye.dylib %t/libgoodbye.o -o %t/libgoodbye.dylib
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink.o
 # RUN: lld -flavor darwinnew -o %t/dylink -Z -L%t -lhello -lgoodbye %t/dylink.o
 # RUN: llvm-objdump --bind -d %t/dylink | FileCheck %s

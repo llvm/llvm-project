@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_FUNCTION_H
 #define MLIR_IR_FUNCTION_H
 
+#include "mlir/Dialect/Affine/Traits.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/FunctionSupport.h"
 #include "mlir/IR/OpDefinition.h"
@@ -32,9 +33,9 @@ namespace mlir {
 /// symbols referenced by name via a string attribute).
 class FuncOp
     : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-                OpTrait::IsIsolatedFromAbove, OpTrait::Symbol,
-                OpTrait::FunctionLike, OpTrait::AutomaticAllocationScope,
-                CallableOpInterface::Trait> {
+                OpTrait::IsIsolatedFromAbove, OpTrait::FunctionLike,
+                OpTrait::AutomaticAllocationScope, OpTrait::PolyhedralScope,
+                CallableOpInterface::Trait, SymbolOpInterface::Trait> {
 public:
   using Op::Op;
   using Op::print;

@@ -25,7 +25,6 @@ namespace llvm {
 class BasicBlock;
 class BlockFrequencyInfo;
 class CallBase;
-class Instruction;
 class ProfileSummary;
 /// Analysis providing profile information.
 ///
@@ -97,7 +96,7 @@ public:
   }
 
   /// Returns the profile count for \p CallInst.
-  Optional<uint64_t> getProfileCount(const Instruction *CallInst,
+  Optional<uint64_t> getProfileCount(const CallBase &CallInst,
                                      BlockFrequencyInfo *BFI,
                                      bool AllowSynthetic = false);
   /// Returns true if the working set size of the code is considered huge.
