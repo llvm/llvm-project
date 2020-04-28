@@ -243,7 +243,7 @@ void MachOWriter::writeSections() {
         if (!RelocInfo.Scattered) {
           const uint32_t SymbolNum = RelocInfo.Extern
                                          ? (*RelocInfo.Symbol)->Index
-                                         : (*RelocInfo.Section)->Index;
+                                         : (*RelocInfo.Sec)->Index;
           RelocInfo.setPlainRelocationSymbolNum(SymbolNum, IsLittleEndian);
         }
         if (IsLittleEndian != sys::IsLittleEndianHost)
