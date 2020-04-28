@@ -371,7 +371,13 @@ define void @f62() nosync
 ; CHECK: define void @f63() #39
 define void @f63() sanitize_memtag
 {
-  ret void;
+  ret void
+}
+
+; CHECK: define void @f64(i32* preallocated(i32) %a)
+define void @f64(i32* preallocated(i32) %a)
+{
+  ret void
 }
 
 ; CHECK: attributes #0 = { noreturn }
