@@ -3694,10 +3694,10 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
       (void)CanonCheck;
       DependentVectorTypes.InsertNode(New, InsertPos);
     } else {
-      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                           SourceLocation());
+      QualType CanonTy = getDependentVectorType(CanonVecTy, SizeExpr,
+                                                SourceLocation(), VecKind);
       New = new (*this, TypeAlignment) DependentVectorType(
-          *this, VecType, CanonExtTy, SizeExpr, AttrLoc, VecKind);
+          *this, VecType, CanonTy, SizeExpr, AttrLoc, VecKind);
     }
   }
 
