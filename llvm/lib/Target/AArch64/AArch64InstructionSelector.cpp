@@ -736,7 +736,6 @@ getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
-
   Register DstReg = I.getOperand(0).getReg();
   Register SrcReg = I.getOperand(1).getReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
@@ -769,13 +768,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
             (!Register::isPhysicalRegister(I.getOperand(0).getReg()) &&
              !Register::isPhysicalRegister(I.getOperand(1).getReg()))) &&
            "No phys reg on generic operator!");
-    assert(KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI));
-    (void)KnownValid;
-    return true;
+    bool ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
+    assert(ValidCopy && "Invalid copy.");
+    return ValidCopy;
   };
 
-  // Is this a copy? If so, then we may need to insert a subregister copy, or
-  // a SUBREG_TO_REG.
+  // Is this a copy? If so, then we may need to insert a subregister copy.
   if (I.isCopy()) {
     // Yes. Check if there's anything to fix up.
     if (!SrcRC) {
@@ -785,51 +783,43 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
     unsigned SrcSize = TRI.getRegSizeInBits(*SrcRC);
     unsigned DstSize = TRI.getRegSizeInBits(*DstRC);
+    unsigned SubReg;
 
-    // If the source register is bigger than the destination we need to perform
-    // a subregister copy.
-    if (SrcSize > DstSize) {
-      unsigned SubReg = 0;
+    // If the source bank doesn't support a subregister copy small enough,
+    // then we first need to copy to the destination bank.
+    if (getMinSizeForRegBank(SrcRegBank) > DstSize) {
+      const TargetRegisterClass *DstTempRC =
+          getMinClassForRegBank(DstRegBank, SrcSize, /* GetAllRegSet */ true);
+      getSubRegForClass(DstRC, TRI, SubReg);
 
-      // If the source bank doesn't support a subregister copy small enough,
-      // then we first need to copy to the destination bank.
-      if (getMinSizeForRegBank(SrcRegBank) > DstSize) {
-        const TargetRegisterClass *SubregRC = getMinClassForRegBank(
-            DstRegBank, SrcSize, /* GetAllRegSet = */ true);
-        getSubRegForClass(DstRC, TRI, SubReg);
+      MachineIRBuilder MIB(I);
+      auto Copy = MIB.buildCopy({DstTempRC}, {SrcReg});
+      copySubReg(I, MRI, RBI, Copy.getReg(0), DstRC, SubReg);
+    } else if (SrcSize > DstSize) {
+      // If the source register is bigger than the destination we need to
+      // perform a subregister copy.
+      const TargetRegisterClass *SubRegRC =
+          getMinClassForRegBank(SrcRegBank, DstSize, /* GetAllRegSet */ true);
+      getSubRegForClass(SubRegRC, TRI, SubReg);
+      copySubReg(I, MRI, RBI, SrcReg, DstRC, SubReg);
+    } else if (DstSize > SrcSize) {
+      // If the destination register is bigger than the source we need to do
+      // a promotion using SUBREG_TO_REG.
+      const TargetRegisterClass *PromotionRC =
+          getMinClassForRegBank(SrcRegBank, DstSize, /* GetAllRegSet */ true);
+      getSubRegForClass(SrcRC, TRI, SubReg);
 
-        MachineIRBuilder MIB(I);
-        auto Copy = MIB.buildCopy({SubregRC}, {SrcReg});
-        copySubReg(I, MRI, RBI, Copy.getReg(0), DstRC, SubReg);
-      } else {
-        const TargetRegisterClass *SubregRC = getMinClassForRegBank(
-            SrcRegBank, DstSize, /* GetAllRegSet = */ true);
-        getSubRegForClass(SubregRC, TRI, SubReg);
-        copySubReg(I, MRI, RBI, SrcReg, DstRC, SubReg);
-      }
+      Register PromoteReg = MRI.createVirtualRegister(PromotionRC);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(AArch64::SUBREG_TO_REG), PromoteReg)
+          .addImm(0)
+          .addUse(SrcReg)
+          .addImm(SubReg);
+      MachineOperand &RegOp = I.getOperand(1);
+      RegOp.setReg(PromoteReg);
 
-      return CheckCopy();
-    }
-
-    // Is this a cross-bank copy?
-    if (DstRegBank.getID() != SrcRegBank.getID()) {
-      if (DstRegBank.getID() == AArch64::GPRRegBankID && DstSize == 32 &&
-          SrcSize == 16) {
-        // Special case for FPR16 to GPR32.
-        // FIXME: This can probably be generalized like the above case.
-        Register PromoteReg =
-            MRI.createVirtualRegister(&AArch64::FPR32RegClass);
-        BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                TII.get(AArch64::SUBREG_TO_REG), PromoteReg)
-            .addImm(0)
-            .addUse(SrcReg)
-            .addImm(AArch64::hsub);
-        MachineOperand &RegOp = I.getOperand(1);
-        RegOp.setReg(PromoteReg);
-
-        // Promise that the copy is implicitly validated by the SUBREG_TO_REG.
-        KnownValid = true;
-      }
+      // Promise that the copy is implicitly validated by the SUBREG_TO_REG.
+      KnownValid = true;
     }
 
     // If the destination is a physical register, then there's nothing to
