@@ -70,6 +70,47 @@ def mimm : Operand<i32>, PatLeaf<(imm), [{
   let PrintMethod = "printMImmOperand";
 }
 
+// simm7fp - Generic fp immediate value.
+def LO7FP : SDNodeXForm<fpimm, [{
+  // Get a integer immediate from fpimm
+  const APInt& imm = N->getValueAPF().bitcastToAPInt();
+  uint64_t val = imm.getSExtValue();
+  if (imm.getBitWidth() == 32)
+    val <<= 32; // Immediate value of float place at higher bits on VE.
+  return CurDAG->getTargetConstant(SignExtend32(val, 7), SDLoc(N), MVT::i32);
+}]>;
+def simm7fp : Operand<i32>, PatLeaf<(fpimm), [{
+    const APInt& imm = N->getValueAPF().bitcastToAPInt();
+    uint64_t val = imm.getSExtValue();
+    if (imm.getBitWidth() == 32)
+      val <<= 32; // Immediate value of float place at higher bits on VE.
+    return isInt<7>(val);
+  }], LO7FP> {
+  let DecoderMethod = "DecodeSIMM7";
+}
+
+// mimm - Special fp immediate value of sequential bit stream of 0 or 1.
+def MIMMFP : SDNodeXForm<fpimm, [{
+  const APInt& Imm = N->getValueAPF().bitcastToAPInt();
+  uint64_t Val = Imm.getSExtValue();
+  bool M0Flag = isMask_64(Val);
+  if (Imm.getBitWidth() == 32)
+    Val <<= 32; // Immediate value of float place at higher bits on VE.
+  if (M0Flag) {
+    //   bit 6  : If `(m)0`, 1.  Otherwise, 0.
+    Val = countLeadingZeros(Val) | 0x40;
+  } else
+    Val = countLeadingOnes(Val);
+  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
+}]>;
+def mimmfp : Operand<i32>, PatLeaf<(fpimm), [{
+    const APInt& Imm = N->getValueAPF().bitcastToAPInt();
+    uint64_t Val = Imm.getSExtValue();
+    return isMask_64(Val) ||
+           ((Val & (1UL << 63)) && isShiftedMask_64(Val)); }], MIMMFP> {
+  let PrintMethod = "printMImmOperand";
+}
+
 def simm32      : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 def uimm32      : PatLeaf<(imm), [{ return isUInt<32>(N->getZExtValue()); }]>;
 def lomsbzero   : PatLeaf<(imm), [{ return (N->getZExtValue() & 0x80000000)
@@ -357,94 +398,79 @@ def RD_RA    : RD_VAL<12>;  // Round to Nearest (ties to Away)
 // VE Multiclasses for common instruction formats
 //===----------------------------------------------------------------------===//
 
-multiclass RRmrr<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi,
-                 SDPatternOperator OpNode=null_frag> {
+// Multiclass for generic RR type instructions
+let hasSideEffects = 0 in
+multiclass RRbm<string opcStr, bits<8>opc,
+                RegisterClass RCo, ValueType Tyo,
+                RegisterClass RCi, ValueType Tyi,
+                SDPatternOperator OpNode = null_frag,
+                Operand immOp = simm7, Operand mOp = mimm> {
   def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>
-           { let cy = 1; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRmri<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp,
-                 SDPatternOperator OpNode=null_frag> {
+              [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>;
   // VE calculates (OpNode $sy, $sz), but llvm requires to have immediate
   // in RHS, so we use following definition.
+  let cy = 0 in
   def ri : RR<opc, (outs RCo:$sx), (ins RCi:$sz, immOp:$sy),
               !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode Tyi:$sz, (Tyi simm7:$sy)))]>
-           { let cy = 0; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRmir<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp,
-                 SDPatternOperator OpNode=null_frag> {
-  def ri : RR<opc, (outs RCo:$sx), (ins immOp:$sy, RCi:$sz),
-              !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode (Tyi simm7:$sy), Tyi:$sz))]>
-           { let cy = 0; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRNDmrm<string opcStr, bits<8>opc,
-                   RegisterClass RCo, ValueType Tyo,
-                   RegisterClass RCi, ValueType Tyi, Operand mOp,
-                   SDPatternOperator OpNode=null_frag> {
-  let cy = 1, cz = 0, hasSideEffects = 0 in
+              [(set Tyo:$sx, (OpNode Tyi:$sz, (Tyi immOp:$sy)))]>;
+  let cz = 0 in
   def rm : RR<opc, (outs RCo:$sx), (ins RCi:$sy, mOp:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
               [(set Tyo:$sx, (OpNode Tyi:$sy, (Tyi mOp:$sz)))]>;
-}
-
-multiclass RRNDmim<string opcStr, bits<8>opc,
-                   RegisterClass RCo, ValueType Tyo,
-                   RegisterClass RCi, ValueType Tyi,
-                   Operand immOp, Operand mOp,
-                   SDPatternOperator OpNode=null_frag> {
-  let cy = 0, cz = 0, hasSideEffects = 0 in
+  let cy = 0, cz = 0 in
   def im : RR<opc, (outs RCo:$sx), (ins immOp:$sy, mOp:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
               [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), (Tyi mOp:$sz)))]>;
 }
 
-// Used by add, mul, div, and similar commutative instructions
-//   The order of operands are "$sx, $sy, $sz"
+// Multiclass for non-commutative RR type instructions
+let hasSideEffects = 0 in
+multiclass RRNCbm<string opcStr, bits<8>opc,
+                RegisterClass RCo, ValueType Tyo,
+                RegisterClass RCi, ValueType Tyi,
+                SDPatternOperator OpNode = null_frag,
+                Operand immOp = simm7, Operand mOp = mimm> {
+  def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>;
+  let cy = 0 in
+  def ir : RR<opc, (outs RCo:$sx), (ins immOp:$sy, RCi:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), Tyi:$sz))]>;
+  let cz = 0 in
+  def rm : RR<opc, (outs RCo:$sx), (ins RCi:$sy, mOp:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode Tyi:$sy, (Tyi mOp:$sz)))]>;
+  let cy = 0, cz = 0 in
+  def im : RR<opc, (outs RCo:$sx), (ins immOp:$sy, mOp:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), (Tyi mOp:$sz)))]>;
+}
 
+// Generic RR multiclass with 2 arguments.
+//   e.g. ADDUL, ADDSWSX, ADDSWZX, and etc.
 multiclass RRm<string opcStr, bits<8>opc,
                RegisterClass RC, ValueType Ty,
                SDPatternOperator OpNode = null_frag,
                Operand immOp = simm7, Operand mOp = mimm> :
-  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
-  RRmri<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, OpNode>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, OpNode>;
+  RRbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
 
-// Used by sub, and similar not commutative instructions
-//   The order of operands are "$sx, $sy, $sz"
-
+// Generic RR multiclass for non-commutative instructions with 2 arguments.
+//   e.g. SUBUL, SUBUW, SUBSWSX, and etc.
 multiclass RRNCm<string opcStr, bits<8>opc,
-               RegisterClass RC, ValueType Ty,
-               SDPatternOperator OpNode = null_frag,
-               Operand immOp = simm7, Operand mOp = mimm> :
-  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
-  RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, OpNode>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, OpNode>;
+                 RegisterClass RC, ValueType Ty,
+                 SDPatternOperator OpNode = null_frag,
+                 Operand immOp = simm7, Operand mOp = mimm> :
+  RRNCbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
 
-// Used by fadd, fsub, and similar floating point instructions
-//   The order of operands are "$sx, $sy, $sz"
-
+// Generic RR multiclass for floating point instructions with 2 arguments.
+//   e.g. FADDD, FADDS, FSUBD, and etc.
 multiclass RRFm<string opcStr, bits<8>opc,
-               RegisterClass RC, ValueType Ty,
-               SDPatternOperator OpNode = null_frag,
-               Operand immOp = simm7, Operand mOp = mimm> :
-  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
-  RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, null_frag>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, null_frag>;
+                RegisterClass RC, ValueType Ty,
+                SDPatternOperator OpNode = null_frag,
+                Operand immOp = simm7fp, Operand mOp = mimmfp> :
+  RRNCbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
 
 // Generic RR multiclass for shift instructions with 2 arguments.
 //   e.g. SLL, SRL, SLAWSX, and etc.
