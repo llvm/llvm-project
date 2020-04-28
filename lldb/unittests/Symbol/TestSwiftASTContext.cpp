@@ -71,8 +71,8 @@ struct SwiftASTContextTester : public SwiftASTContext {
         platform_sdk_path, swift_dir, swift_stdlib_os_dir, xcode_contents_path,
         toolchain_path, cl_tools_path);
   }
-  static llvm::StringRef GetSwiftStdlibOSDir(const llvm::Triple &target,
-                                             const llvm::Triple &host) {
+  static std::string GetSwiftStdlibOSDir(const llvm::Triple &target,
+                                         const llvm::Triple &host) {
     return SwiftASTContext::GetSwiftStdlibOSDir(target, host);
   }
 };

@@ -1263,8 +1263,8 @@ protected:
 
   /// Return the name of the OS-specific subdirectory containing the
   /// Swift stdlib needed for \p target.
-  static llvm::StringRef GetSwiftStdlibOSDir(const llvm::Triple &target,
-                                             const llvm::Triple &host);
+  static std::string GetSwiftStdlibOSDir(const llvm::Triple &target,
+                                         const llvm::Triple &host);
 };
 
 class SwiftASTContextForExpressions : public SwiftASTContext {
