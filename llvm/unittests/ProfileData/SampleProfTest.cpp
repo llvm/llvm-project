@@ -121,8 +121,6 @@ struct SampleProfTest : ::testing::Test {
     delete PS;
 
     // Test that summary can be attached to and read back from module.
-    PS = ProfileSummary::getFromMD(MD);
-
     M.eraseNamedMetadata(M.getOrInsertModuleFlagsMetadata());
     M.setProfileSummary(MD, ProfileSummary::PSK_Sample);
     MD = M.getProfileSummary(/* IsCS */ false);
