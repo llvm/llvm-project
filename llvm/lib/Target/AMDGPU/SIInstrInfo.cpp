@@ -678,20 +678,21 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RI.getRegSizeInBits(*RC) == 16) {
+  if (RC == &AMDGPU::VGPR_LO16RegClass || RC == &AMDGPU::VGPR_HI16RegClass ||
+      RC == &AMDGPU::SGPR_LO16RegClass) {
     assert(AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
            AMDGPU::VGPR_HI16RegClass.contains(SrcReg) ||
-           AMDGPU::SReg_LO16RegClass.contains(SrcReg));
+           AMDGPU::SGPR_LO16RegClass.contains(SrcReg));
 
-    bool IsSGPRDst = AMDGPU::SReg_LO16RegClass.contains(DestReg);
-    bool IsSGPRSrc = AMDGPU::SReg_LO16RegClass.contains(SrcReg);
-    bool DstLow = AMDGPU::VGPR_LO16RegClass.contains(DestReg) ||
-                  AMDGPU::SReg_LO16RegClass.contains(DestReg);
+    bool IsSGPRDst = AMDGPU::SGPR_LO16RegClass.contains(DestReg);
+    bool IsSGPRSrc = AMDGPU::SGPR_LO16RegClass.contains(SrcReg);
+    bool DstLow = (RC == &AMDGPU::VGPR_LO16RegClass ||
+                   RC == &AMDGPU::SGPR_LO16RegClass);
     bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
-                  AMDGPU::SReg_LO16RegClass.contains(SrcReg);
-    const TargetRegisterClass *DstRC = IsSGPRDst ? &AMDGPU::SReg_32RegClass
+                  AMDGPU::SGPR_LO16RegClass.contains(SrcReg);
+    const TargetRegisterClass *DstRC = IsSGPRDst ? &AMDGPU::SGPR_32RegClass
                                                  : &AMDGPU::VGPR_32RegClass;
-    const TargetRegisterClass *SrcRC = IsSGPRSrc ? &AMDGPU::SReg_32RegClass
+    const TargetRegisterClass *SrcRC = IsSGPRSrc ? &AMDGPU::SGPR_32RegClass
                                                  : &AMDGPU::VGPR_32RegClass;
     MCRegister NewDestReg =
       RI.getMatchingSuperReg(DestReg, DstLow ? AMDGPU::lo16 : AMDGPU::hi16,
