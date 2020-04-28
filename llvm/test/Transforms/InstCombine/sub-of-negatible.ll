@@ -827,8 +827,8 @@ nonneg_bb:
 define i8 @negation_of_increment_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negation_of_increment_via_or_with_no_common_bits_set(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = or i8 [[T0]], 1
-; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    [[T1_NEG:%.*]] = xor i8 [[T0]], -1
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[T2]]
 ;
   %t0 = shl i8 %y, 1
@@ -868,9 +868,9 @@ define i8 @add_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_via_or_with_no_common_bits_set(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 2
-; CHECK-NEXT:    [[T2:%.*]] = or i8 [[T1]], 3
-; CHECK-NEXT:    [[T3:%.*]] = sub i8 [[X:%.*]], [[T2]]
+; CHECK-NEXT:    [[T1_NEG:%.*]] = shl i8 [[Y]], 2
+; CHECK-NEXT:    [[T2_NEG:%.*]] = add i8 [[T1_NEG]], -3
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[T2_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t0 = sub i8 0, %y
