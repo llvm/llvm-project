@@ -606,6 +606,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   lldb_private::formatters::NSSetSyntheticFrontEndCreator,
                   "__NSSetM synthetic children", ConstString("__NSSetM"),
                   ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
+                  "__NSCFSet synthetic children", ConstString("__NSCFSet"),
+                  ScriptedSyntheticChildren::Flags());
+
   AddCXXSynthetic(
       objc_category_sp, lldb_private::formatters::NSSetSyntheticFrontEndCreator,
       "NSMutableSet synthetic children", ConstString("NSMutableSet"),
