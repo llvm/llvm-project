@@ -305,7 +305,6 @@ public:
                                  const X86InstrFMA3Group &FMA3Group) const;
 
   // Branch analysis.
-  bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
   bool isUnconditionalTailCall(const MachineInstr &MI) const override;
   bool canMakeTailCallConditional(SmallVectorImpl<MachineOperand> &Cond,
                                   const MachineInstr &TailCall) const override;
