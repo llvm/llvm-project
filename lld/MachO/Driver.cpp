@@ -128,10 +128,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"));
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
-  config->installName =
-      args.getLastArgValue(OPT_install_name, config->outputFile);
   config->searchPaths = getSearchPaths(args);
-  config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -154,7 +151,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     }
   }
 
-  if (config->outputType == MH_EXECUTE && !isa<Defined>(config->entry)) {
+  if (!isa<Defined>(config->entry)) {
     error("undefined symbol: " + config->entry->getName());
     return false;
   }
