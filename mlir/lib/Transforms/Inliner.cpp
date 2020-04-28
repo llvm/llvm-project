@@ -31,26 +31,6 @@ using namespace mlir;
 // Symbol Use Tracking
 //===----------------------------------------------------------------------===//
 
-/// Returns true if this operation can be discarded if it is a symbol and has no
-/// uses. 'allUsesVisible' corresponds to if the parent symbol table is hidden
-/// from above.
-static bool canDiscardSymbolOnUseEmpty(Operation *op, bool allUsesVisible) {
-  if (!SymbolTable::isSymbol(op))
-    return false;
-
-  // TODO: This is essentially the same logic from SymbolDCE. Remove this when
-  // we have a 'Symbol' interface.
-  // Private symbols are always initially considered dead.
-  SymbolTable::Visibility visibility = SymbolTable::getSymbolVisibility(op);
-  if (visibility == mlir::SymbolTable::Visibility::Private)
-    return true;
-  // We only include nested visibility here if all uses are visible.
-  if (allUsesVisible && visibility == SymbolTable::Visibility::Nested)
-    return true;
-  // Otherwise, public symbols are never removable.
-  return false;
-}
-
 /// Walk all of the symbol table operations nested with 'op' along with a
 /// boolean signifying if the symbols within can be treated as if all uses are
 /// visible. The provided callback is invoked with the symbol table operation,
@@ -59,9 +39,8 @@ static bool canDiscardSymbolOnUseEmpty(Operation *op, bool allUsesVisible) {
 static void walkSymbolTables(Operation *op, bool allSymUsesVisible,
                              function_ref<void(Operation *, bool)> callback) {
   if (op->hasTrait<OpTrait::SymbolTable>()) {
-    allSymUsesVisible = allSymUsesVisible || !SymbolTable::isSymbol(op) ||
-                        SymbolTable::getSymbolVisibility(op) ==
-                            SymbolTable::Visibility::Private;
+    SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op);
+    allSymUsesVisible = allSymUsesVisible || !symbol || symbol.isPrivate();
     callback(op, allSymUsesVisible);
   } else {
     // Otherwise if 'op' is not a symbol table, any nested symbols are
@@ -171,8 +150,11 @@ CGUseList::CGUseList(Operation *op, CallGraph &cg) {
         // If this is a callgraph operation, check to see if it is discardable.
         if (auto callable = dyn_cast<CallableOpInterface>(&op)) {
           if (auto *node = cg.lookupNode(callable.getCallableRegion())) {
-            if (canDiscardSymbolOnUseEmpty(&op, allUsesVisible))
+            SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(&op);
+            if (symbol && (allUsesVisible || symbol.isPrivate()) &&
+                symbol.canDiscardOnUseEmpty()) {
               discardableSymNodeUses.try_emplace(node, 0);
+            }
             continue;
           }
         }
@@ -224,7 +206,7 @@ void CGUseList::eraseNode(CallGraphNode *node) {
 bool CGUseList::isDead(CallGraphNode *node) const {
   // If the parent operation isn't a symbol, simply check normal SSA deadness.
   Operation *nodeOp = node->getCallableRegion()->getParentOp();
-  if (!SymbolTable::isSymbol(nodeOp))
+  if (!isa<SymbolOpInterface>(nodeOp))
     return MemoryEffectOpInterface::hasNoEffect(nodeOp) && nodeOp->use_empty();
 
   // Otherwise, check the number of symbol uses.
@@ -235,7 +217,7 @@ bool CGUseList::isDead(CallGraphNode *node) const {
 bool CGUseList::hasOneUseAndDiscardable(CallGraphNode *node) const {
   // If this isn't a symbol node, check for side-effects and SSA use count.
   Operation *nodeOp = node->getCallableRegion()->getParentOp();
-  if (!SymbolTable::isSymbol(nodeOp))
+  if (!isa<SymbolOpInterface>(nodeOp))
     return MemoryEffectOpInterface::hasNoEffect(nodeOp) && nodeOp->hasOneUse();
 
   // Otherwise, check the number of symbol uses.

@@ -16,6 +16,7 @@
 #define SPIRV_STRUCTURE_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/SideEffects.td"
 
