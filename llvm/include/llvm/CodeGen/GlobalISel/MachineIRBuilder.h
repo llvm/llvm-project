@@ -313,6 +313,13 @@ public:
   void setInstr(MachineInstr &MI);
   /// @}
 
+  /// Set the insertion point to before MI, and set the debug loc to MI's loc.
+  /// \pre MI must be in getMF().
+  void setInstrAndDebugLoc(MachineInstr &MI) {
+    setInstr(MI);
+    setDebugLoc(MI.getDebugLoc());
+  }
+
   void setChangeObserver(GISelChangeObserver &Observer);
   void stopObservingChanges();
   /// @}
