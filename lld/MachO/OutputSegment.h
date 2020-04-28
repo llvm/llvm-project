@@ -15,6 +15,14 @@
 namespace lld {
 namespace macho {
 
+namespace segment_names {
+
+constexpr const char *text = "__TEXT";
+constexpr const char *pageZero = "__PAGEZERO";
+constexpr const char *linkEdit = "__LINKEDIT";
+
+} // namespace segment_names
+
 class InputSection;
 
 class OutputSegment {
@@ -23,15 +31,32 @@ public:
 
   InputSection *lastSection() const { return sections.back().second.back(); }
 
+  bool isNeeded() const {
+    return !sections.empty() || name == segment_names::linkEdit;
+  }
+
+  void addSection(InputSection *);
+
+  const llvm::MapVector<StringRef, std::vector<InputSection *>> &
+  getSections() const {
+    return sections;
+  }
+
+  uint64_t fileOff = 0;
   StringRef name;
-  uint32_t perms;
+  uint32_t numNonHiddenSections = 0;
+  uint32_t maxProt = 0;
+  uint32_t initProt = 0;
   uint8_t index;
+
+private:
   llvm::MapVector<StringRef, std::vector<InputSection *>> sections;
 };
 
 extern std::vector<OutputSegment *> outputSegments;
 
-OutputSegment *getOrCreateOutputSegment(StringRef name, uint32_t perms);
+OutputSegment *getOutputSegment(StringRef name);
+OutputSegment *getOrCreateOutputSegment(StringRef name);
 
 } // namespace macho
 } // namespace lld
