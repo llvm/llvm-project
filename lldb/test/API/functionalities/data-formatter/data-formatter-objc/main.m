@@ -376,13 +376,19 @@ int main (int argc, const char * argv[])
 	    [newMutableDictionary setObject:@"foo" forKey:@"bar19"];
 	    [newMutableDictionary setObject:@"foo" forKey:@"bar20"];
 
-	    id cfKeys[2] = { @"foo", @"bar", @"baz", @"quux" };
-	    id cfValues[2] = { @"foo", @"bar", @"baz", @"quux" };
-	    NSDictionary *nsDictionary = CFBridgingRelease(CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 2, nil, nil));
-	    CFDictionaryRef cfDictionaryRef = CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 3, nil, nil);
+            id cfKeys[4] = {@"foo", @"bar", @"baz", @"quux"};
+            id cfValues[4] = {@"foo", @"bar", @"baz", @"quux"};
+            NSDictionary *nsDictionary = CFBridgingRelease(CFDictionaryCreate(
+                nil, (void *)cfKeys, (void *)cfValues, 2, nil, nil));
+            NSDictionary *nscfDictionary = CFBridgingRelease(CFDictionaryCreate(
+                nil, (void *)cfKeys, (void *)cfValues, 4, nil, nil));
+            CFDictionaryRef cfDictionaryRef = CFDictionaryCreate(
+                nil, (void *)cfKeys, (void *)cfValues, 3, nil, nil);
 
-	    NSAttributedString* attrString = [[NSAttributedString alloc] initWithString:@"hello world from foo" attributes:newDictionary];
-	    [attrString isEqual:nil];
+            NSAttributedString *attrString = [[NSAttributedString alloc]
+                initWithString:@"hello world from foo"
+                    attributes:newDictionary];
+            [attrString isEqual:nil];
 	    NSAttributedString* mutableAttrString = [[NSMutableAttributedString alloc] initWithString:@"hello world from foo" attributes:newDictionary];
 	    [mutableAttrString isEqual:nil];
 
@@ -411,9 +417,11 @@ int main (int argc, const char * argv[])
 
 	    NSSet* nsset = [[NSSet alloc] initWithObjects:str1,str2,str3,nil];
 	    NSSet *nsmutableset = [[NSMutableSet alloc] initWithObjects:str1,str2,str3,nil];
-	    [nsmutableset addObject:str4];
+            [nsmutableset addObject:str4];
+            NSSet *nscfSet =
+                CFBridgingRelease(CFSetCreate(nil, (void *)cfValues, 2, nil));
 
-	    CFDataRef data_ref = CFDataCreate(kCFAllocatorDefault, [immutableData bytes], 5);
+            CFDataRef data_ref = CFDataCreate(kCFAllocatorDefault, [immutableData bytes], 5);
 
 	    CFMutableDataRef mutable_data_ref = CFDataCreateMutable(kCFAllocatorDefault, 8);
 	    CFDataAppendBytes(mutable_data_ref, [mutableData bytes], 5);

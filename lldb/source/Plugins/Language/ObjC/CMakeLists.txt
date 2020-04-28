@@ -16,6 +16,7 @@ endif()
 add_lldb_library(lldbPluginObjCLanguage
   ObjCLanguage.cpp
   CF.cpp
+  CFBasicHash.cpp
   Cocoa.cpp
   CoreMedia.cpp
   NSArray.cpp
