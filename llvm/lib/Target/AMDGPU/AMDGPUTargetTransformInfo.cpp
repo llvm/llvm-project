@@ -782,7 +782,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Assume all function calls are a source of divergence.
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue()))
+    if (CI->isInlineAsm())
       return isInlineAsmSourceOfDivergence(CI);
     return true;
   }
@@ -810,7 +810,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   }
 
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue()))
+    if (CI->isInlineAsm())
       return !isInlineAsmSourceOfDivergence(CI);
     return false;
   }
@@ -838,7 +838,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   // If we have inline asm returning mixed SGPR and VGPR results, we inferred
   // divergent for the overall struct return. We need to override it in the
   // case we're extracting an SGPR component here.
-  if (isa<InlineAsm>(CI->getCalledValue()))
+  if (CI->isInlineAsm())
     return !isInlineAsmSourceOfDivergence(CI, ExtValue->getIndices());
 
   return false;

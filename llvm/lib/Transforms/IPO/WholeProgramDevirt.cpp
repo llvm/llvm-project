@@ -1028,7 +1028,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       VCallSite.CB.setCalledOperand(ConstantExpr::getBitCast(
-          TheFn, VCallSite.CB.getCalledValue()->getType()));
+          TheFn, VCallSite.CB.getCalledOperand()->getType()));
       // This use is no longer unsafe.
       if (VCallSite.NumUnsafeUses)
         --*VCallSite.NumUnsafeUses;

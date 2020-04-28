@@ -2701,10 +2701,10 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
 
   bool doRetainAutorelease;
 
-  if (call->getCalledValue() == CGF.CGM.getObjCEntrypoints().objc_retain) {
+  if (call->getCalledOperand() == CGF.CGM.getObjCEntrypoints().objc_retain) {
     doRetainAutorelease = true;
-  } else if (call->getCalledValue() == CGF.CGM.getObjCEntrypoints()
-                                          .objc_retainAutoreleasedReturnValue) {
+  } else if (call->getCalledOperand() ==
+             CGF.CGM.getObjCEntrypoints().objc_retainAutoreleasedReturnValue) {
     doRetainAutorelease = false;
 
     // If we emitted an assembly marker for this call (and the
@@ -2720,8 +2720,8 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
         assert(prev);
       }
       assert(isa<llvm::CallInst>(prev));
-      assert(cast<llvm::CallInst>(prev)->getCalledValue() ==
-               CGF.CGM.getObjCEntrypoints().retainAutoreleasedReturnValueMarker);
+      assert(cast<llvm::CallInst>(prev)->getCalledOperand() ==
+             CGF.CGM.getObjCEntrypoints().retainAutoreleasedReturnValueMarker);
       InstsToKill.push_back(prev);
     }
   } else {
@@ -2764,8 +2764,8 @@ static llvm::Value *tryRemoveRetainOfSelf(CodeGenFunction &CGF,
   // Look for a retain call.
   llvm::CallInst *retainCall =
     dyn_cast<llvm::CallInst>(result->stripPointerCasts());
-  if (!retainCall ||
-      retainCall->getCalledValue() != CGF.CGM.getObjCEntrypoints().objc_retain)
+  if (!retainCall || retainCall->getCalledOperand() !=
+                         CGF.CGM.getObjCEntrypoints().objc_retain)
     return nullptr;
 
   // Look for an ordinary load of 'self'.

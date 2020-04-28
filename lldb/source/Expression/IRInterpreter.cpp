@@ -1371,7 +1371,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       // Find the address of the callee function
       lldb_private::Scalar I;
-      const llvm::Value *val = call_inst->getCalledValue();
+      const llvm::Value *val = call_inst->getCalledOperand();
 
       if (!frame.EvaluateValue(I, val, module)) {
         error.SetErrorToGenericError();

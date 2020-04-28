@@ -3905,7 +3905,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       PrintCallingConv(CI->getCallingConv(), Out);
     }
 
-    Operand = CI->getCalledValue();
+    Operand = CI->getCalledOperand();
     FunctionType *FTy = CI->getFunctionType();
     Type *RetTy = FTy->getReturnType();
     const AttributeList &PAL = CI->getAttributes();
@@ -3944,7 +3944,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     writeOperandBundles(CI);
   } else if (const InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
-    Operand = II->getCalledValue();
+    Operand = II->getCalledOperand();
     FunctionType *FTy = II->getFunctionType();
     Type *RetTy = FTy->getReturnType();
     const AttributeList &PAL = II->getAttributes();
@@ -3987,7 +3987,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << " unwind ";
     writeOperand(II->getUnwindDest(), true);
   } else if (const CallBrInst *CBI = dyn_cast<CallBrInst>(&I)) {
-    Operand = CBI->getCalledValue();
+    Operand = CBI->getCalledOperand();
     FunctionType *FTy = CBI->getFunctionType();
     Type *RetTy = FTy->getReturnType();
     const AttributeList &PAL = CBI->getAttributes();

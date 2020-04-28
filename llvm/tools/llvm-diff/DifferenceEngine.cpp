@@ -224,7 +224,7 @@ class FunctionDifferenceEngine {
 
   bool diffCallSites(CallBase &L, CallBase &R, bool Complain) {
     // FIXME: call attributes
-    if (!equivalentAsOperands(L.getCalledValue(), R.getCalledValue())) {
+    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand())) {
       if (Complain) Engine.log("called functions differ");
       return true;
     }
@@ -638,7 +638,8 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::iterator LStart,
     if (!isa<CallInst>(*I)) return;
     CallInst *LCall = cast<CallInst>(&*I);
     InvokeInst *RInvoke = cast<InvokeInst>(RTerm);
-    if (!equivalentAsOperands(LCall->getCalledValue(), RInvoke->getCalledValue()))
+    if (!equivalentAsOperands(LCall->getCalledOperand(),
+                              RInvoke->getCalledOperand()))
       return;
     if (!LCall->use_empty())
       Values[LCall] = RInvoke;
@@ -651,7 +652,8 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::iterator LStart,
     if (!isa<CallInst>(*I)) return;
     CallInst *RCall = cast<CallInst>(I);
     InvokeInst *LInvoke = cast<InvokeInst>(LTerm);
-    if (!equivalentAsOperands(LInvoke->getCalledValue(), RCall->getCalledValue()))
+    if (!equivalentAsOperands(LInvoke->getCalledOperand(),
+                              RCall->getCalledOperand()))
       return;
     if (!LInvoke->use_empty())
       Values[LInvoke] = RCall;

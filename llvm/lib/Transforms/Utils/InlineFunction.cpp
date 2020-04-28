@@ -534,7 +534,7 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     // instructions require no special handling.
     CallInst *CI = dyn_cast<CallInst>(I);
 
-    if (!CI || CI->doesNotThrow() || isa<InlineAsm>(CI->getCalledValue()))
+    if (!CI || CI->doesNotThrow() || CI->isInlineAsm())
       continue;
 
     // We do not need to (and in fact, cannot) convert possibly throwing calls
@@ -2149,7 +2149,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
         // Skip call sites which are nounwind intrinsics.
         auto *CalledFn =
-            dyn_cast<Function>(I->getCalledValue()->stripPointerCasts());
+            dyn_cast<Function>(I->getCalledOperand()->stripPointerCasts());
         if (CalledFn && CalledFn->isIntrinsic() && I->doesNotThrow())
           continue;
 
