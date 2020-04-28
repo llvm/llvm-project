@@ -18,6 +18,7 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 
 #if LLDB_ENABLE_POSIX
