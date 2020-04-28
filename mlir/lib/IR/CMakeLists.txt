@@ -8,6 +8,7 @@ add_mlir_library(MLIRIR
   DEPENDS
   MLIRCallInterfacesIncGen
   MLIROpAsmInterfacesIncGen
+  MLIRSymbolInterfacesIncGen
   )
 target_link_libraries(MLIRIR
   PUBLIC

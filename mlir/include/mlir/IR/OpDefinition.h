@@ -1359,6 +1359,7 @@ class OpInterface : public Op<ConcreteType> {
 public:
   using Concept = typename Traits::Concept;
   template <typename T> using Model = typename Traits::template Model<T>;
+  using Base = OpInterface<ConcreteType, Traits>;
 
   OpInterface(Operation *op = nullptr)
       : Op<ConcreteType>(op), impl(op ? getInterfaceFor(op) : nullptr) {
