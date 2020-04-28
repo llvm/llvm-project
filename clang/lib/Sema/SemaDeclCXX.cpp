@@ -2821,13 +2821,13 @@ void Sema::BuildBasePathArray(const CXXBasePaths &Paths,
 /// if there is an error, and Range is the source range to highlight
 /// if there is an error.
 ///
-/// If either InaccessibleBaseID or AmbigiousBaseConvID are 0, then the
+/// If either InaccessibleBaseID or AmbiguousBaseConvID are 0, then the
 /// diagnostic for the respective type of error will be suppressed, but the
 /// check for ill-formed code will still be performed.
 bool
 Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
                                    unsigned InaccessibleBaseID,
-                                   unsigned AmbigiousBaseConvID,
+                                   unsigned AmbiguousBaseConvID,
                                    SourceLocation Loc, SourceRange Range,
                                    DeclarationName Name,
                                    CXXCastPath *BasePath,
@@ -2853,7 +2853,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
     for (const CXXBasePath &PossiblePath : Paths) {
       if (PossiblePath.size() == 1) {
         Path = &PossiblePath;
-        if (AmbigiousBaseConvID)
+        if (AmbiguousBaseConvID)
           Diag(Loc, diag::ext_ms_ambiguous_direct_base)
               << Base << Derived << Range;
         break;
@@ -2881,7 +2881,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
     return false;
   }
 
-  if (AmbigiousBaseConvID) {
+  if (AmbiguousBaseConvID) {
     // We know that the derived-to-base conversion is ambiguous, and
     // we're going to produce a diagnostic. Perform the derived-to-base
     // search just one more time to compute all of the possible paths so
@@ -2900,7 +2900,7 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
     // to each base class subobject.
     std::string PathDisplayStr = getAmbiguousPathsDisplayString(Paths);
 
-    Diag(Loc, AmbigiousBaseConvID)
+    Diag(Loc, AmbiguousBaseConvID)
     << Derived << Base << PathDisplayStr << Range << Name;
   }
   return true;
