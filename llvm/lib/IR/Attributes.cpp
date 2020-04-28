@@ -169,6 +169,10 @@ Attribute Attribute::getWithByValType(LLVMContext &Context, Type *Ty) {
   return get(Context, ByVal, Ty);
 }
 
+Attribute Attribute::getWithPreallocatedType(LLVMContext &Context, Type *Ty) {
+  return get(Context, Preallocated, Ty);
+}
+
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const Optional<unsigned> &NumElemsArg) {
@@ -443,6 +447,17 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       OS.flush();
       Result += ')';
     }
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::Preallocated)) {
+    std::string Result;
+    Result += "preallocated";
+    raw_string_ostream OS(Result);
+    Result += '(';
+    getValueAsType()->print(OS, false, true);
+    OS.flush();
+    Result += ')';
     return Result;
   }
 
@@ -731,6 +746,10 @@ Type *AttributeSet::getByValType() const {
   return SetNode ? SetNode->getByValType() : nullptr;
 }
 
+Type *AttributeSet::getPreallocatedType() const {
+  return SetNode ? SetNode->getPreallocatedType() : nullptr;
+}
+
 std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
   return SetNode ? SetNode->getAllocSizeArgs()
                  : std::pair<unsigned, Optional<unsigned>>(0, 0);
@@ -829,6 +848,9 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
     case Attribute::ByVal:
       Attr = Attribute::getWithByValType(C, B.getByValType());
       break;
+    case Attribute::Preallocated:
+      Attr = Attribute::getWithPreallocatedType(C, B.getPreallocatedType());
+      break;
     case Attribute::Alignment:
       assert(B.getAlignment() && "Alignment must be set");
       Attr = Attribute::getWithAlignment(C, *B.getAlignment());
@@ -909,6 +931,13 @@ MaybeAlign AttributeSetNode::getStackAlignment() const {
 Type *AttributeSetNode::getByValType() const {
   if (auto A = findEnumAttribute(Attribute::ByVal))
     return A->getValueAsType();
+  return 0;
+}
+
+Type *AttributeSetNode::getPreallocatedType() const {
+  for (const auto &I : *this)
+    if (I.hasAttribute(Attribute::Preallocated))
+      return I.getValueAsType();
   return 0;
 }
 
@@ -1495,6 +1524,7 @@ void AttrBuilder::clear() {
   DerefBytes = DerefOrNullBytes = 0;
   AllocSizeArgs = 0;
   ByValType = nullptr;
+  PreallocatedType = nullptr;
 }
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
@@ -1520,6 +1550,8 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
     StackAlignment = Attr.getStackAlignment();
   else if (Kind == Attribute::ByVal)
     ByValType = Attr.getValueAsType();
+  else if (Kind == Attribute::Preallocated)
+    PreallocatedType = Attr.getValueAsType();
   else if (Kind == Attribute::Dereferenceable)
     DerefBytes = Attr.getDereferenceableBytes();
   else if (Kind == Attribute::DereferenceableOrNull)
@@ -1544,6 +1576,8 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
     StackAlignment.reset();
   else if (Val == Attribute::ByVal)
     ByValType = nullptr;
+  else if (Val == Attribute::Preallocated)
+    PreallocatedType = nullptr;
   else if (Val == Attribute::Dereferenceable)
     DerefBytes = 0;
   else if (Val == Attribute::DereferenceableOrNull)
@@ -1632,6 +1666,12 @@ AttrBuilder &AttrBuilder::addByValAttr(Type *Ty) {
   return *this;
 }
 
+AttrBuilder &AttrBuilder::addPreallocatedAttr(Type *Ty) {
+  Attrs[Attribute::Preallocated] = true;
+  PreallocatedType = Ty;
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // FIXME: What if both have alignments, but they don't match?!
   if (!Alignment)
@@ -1651,6 +1691,9 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 
   if (!ByValType)
     ByValType = B.ByValType;
+
+  if (!PreallocatedType)
+    PreallocatedType = B.PreallocatedType;
 
   Attrs |= B.Attrs;
 
@@ -1679,6 +1722,9 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
 
   if (B.ByValType)
     ByValType = nullptr;
+
+  if (B.PreallocatedType)
+    PreallocatedType = nullptr;
 
   Attrs &= ~B.Attrs;
 
@@ -1739,7 +1785,8 @@ bool AttrBuilder::operator==(const AttrBuilder &B) {
       return false;
 
   return Alignment == B.Alignment && StackAlignment == B.StackAlignment &&
-         DerefBytes == B.DerefBytes && ByValType == B.ByValType;
+         DerefBytes == B.DerefBytes && ByValType == B.ByValType &&
+         PreallocatedType == B.PreallocatedType;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1757,17 +1804,18 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
 
   if (!Ty->isPointerTy())
     // Attribute that only apply to pointers.
-    Incompatible.addAttribute(Attribute::ByVal)
-      .addAttribute(Attribute::Nest)
-      .addAttribute(Attribute::NoAlias)
-      .addAttribute(Attribute::NoCapture)
-      .addAttribute(Attribute::NonNull)
-      .addDereferenceableAttr(1) // the int here is ignored
-      .addDereferenceableOrNullAttr(1) // the int here is ignored
-      .addAttribute(Attribute::ReadNone)
-      .addAttribute(Attribute::ReadOnly)
-      .addAttribute(Attribute::StructRet)
-      .addAttribute(Attribute::InAlloca);
+    Incompatible.addAttribute(Attribute::Nest)
+        .addAttribute(Attribute::NoAlias)
+        .addAttribute(Attribute::NoCapture)
+        .addAttribute(Attribute::NonNull)
+        .addDereferenceableAttr(1)       // the int here is ignored
+        .addDereferenceableOrNullAttr(1) // the int here is ignored
+        .addAttribute(Attribute::ReadNone)
+        .addAttribute(Attribute::ReadOnly)
+        .addAttribute(Attribute::StructRet)
+        .addAttribute(Attribute::InAlloca)
+        .addPreallocatedAttr(Ty)
+        .addByValAttr(Ty);
 
   return Incompatible;
 }

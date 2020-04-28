@@ -68,6 +68,12 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "cfguardtarget operand bundle id drifted!");
   (void)CFGuardTargetEntry;
 
+
+  auto *PreallocatedEntry = pImpl->getOrInsertBundleTag("preallocated");
+  assert(PreallocatedEntry->second == LLVMContext::OB_preallocated &&
+         "preallocated operand bundle id drifted!");
+  (void)PreallocatedEntry;
+
   auto *PtrauthEntry = pImpl->getOrInsertBundleTag("ptrauth");
   assert(PtrauthEntry->second == LLVMContext::OB_ptrauth &&
          "ptrauth operand bundle id drifted!");
