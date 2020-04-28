@@ -913,23 +913,10 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_anyvector_ty],
                 [IntrNoMem]>;
 
-  class AdvSIMD_SVE_FP_Reduce_Intrinsic
-    : Intrinsic<[llvm_anyfloat_ty],
-                [LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
-                 llvm_anyvector_ty],
-                [IntrNoMem]>;
-
   class AdvSIMD_SVE_ReduceWithInit_Intrinsic
     : Intrinsic<[LLVMVectorElementType<0>],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                  LLVMVectorElementType<0>,
-                 llvm_anyvector_ty],
-                [IntrNoMem]>;
-
-  class AdvSIMD_SVE_FP_ReduceWithInit_Intrinsic
-    : Intrinsic<[llvm_anyfloat_ty],
-                [LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
-                 LLVMMatchType<0>,
                  llvm_anyvector_ty],
                 [IntrNoMem]>;
 
@@ -1699,12 +1686,12 @@ def int_aarch64_sve_ftssel_x   : AdvSIMD_SVE_TSMUL_Intrinsic;
 // Floating-point reductions
 //
 
-def int_aarch64_sve_fadda   : AdvSIMD_SVE_FP_ReduceWithInit_Intrinsic;
-def int_aarch64_sve_faddv   : AdvSIMD_SVE_FP_Reduce_Intrinsic;
-def int_aarch64_sve_fmaxv   : AdvSIMD_SVE_FP_Reduce_Intrinsic;
-def int_aarch64_sve_fmaxnmv : AdvSIMD_SVE_FP_Reduce_Intrinsic;
-def int_aarch64_sve_fminv   : AdvSIMD_SVE_FP_Reduce_Intrinsic;
-def int_aarch64_sve_fminnmv : AdvSIMD_SVE_FP_Reduce_Intrinsic;
+def int_aarch64_sve_fadda   : AdvSIMD_SVE_ReduceWithInit_Intrinsic;
+def int_aarch64_sve_faddv   : AdvSIMD_SVE_Reduce_Intrinsic;
+def int_aarch64_sve_fmaxv   : AdvSIMD_SVE_Reduce_Intrinsic;
+def int_aarch64_sve_fmaxnmv : AdvSIMD_SVE_Reduce_Intrinsic;
+def int_aarch64_sve_fminv   : AdvSIMD_SVE_Reduce_Intrinsic;
+def int_aarch64_sve_fminnmv : AdvSIMD_SVE_Reduce_Intrinsic;
 
 //
 // Floating-point conversions
