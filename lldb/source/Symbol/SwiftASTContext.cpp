@@ -1006,7 +1006,7 @@ StringRef SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
   return target.getOSName();
 }
 
-std::string SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
+StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
   static std::mutex g_mutex;
   std::lock_guard<std::mutex> locker(g_mutex);
   StringRef platform_sdk_path = GetPlatformSDKPath();
@@ -1706,7 +1706,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   triple = swift_ast_sp->GetTriple();
-  std::string resource_dir = swift_ast_sp->GetResourceDir(triple);
+  StringRef resource_dir = swift_ast_sp->GetResourceDir(triple);
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
 
@@ -2014,7 +2014,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   llvm::Triple triple = swift_ast_sp->GetTriple();
-  std::string resource_dir = swift_ast_sp->GetResourceDir(triple);
+  StringRef resource_dir = swift_ast_sp->GetResourceDir(triple);
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
 
@@ -2679,7 +2679,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
   }
 
   llvm::Triple triple(GetTriple());
-  std::string resource_dir = GetResourceDir(triple);
+  StringRef resource_dir = GetResourceDir(triple);
   ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
                         triple);
 
@@ -3437,7 +3437,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   // Compute the prebuilt module cache path to use:
   // <resource-dir>/<platform>/prebuilt-modules
   llvm::Triple triple(GetTriple());
-  llvm::SmallString<128> prebuiltModuleCachePath(GetResourceDir(triple));
+  llvm::SmallString<128> prebuiltModuleCachePath = GetResourceDir(triple);
   StringRef platform;
   if (swift::tripleIsMacCatalystEnvironment(triple)) {
     // The prebuilt cache for macCatalyst is the same as the one for macOS,
