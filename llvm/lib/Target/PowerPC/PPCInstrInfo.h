@@ -248,6 +248,10 @@ public:
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
 
+  void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
+                             MachineInstr &NewMI1,
+                             MachineInstr &NewMI2) const override;
+
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              Register &SrcReg, Register &DstReg,
                              unsigned &SubIdx) const override;
