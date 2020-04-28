@@ -66,6 +66,11 @@ struct Config {
   /// link.
   bool HasWholeProgramVisibility = false;
 
+  /// Always emit a Regular LTO object even when it is empty because no Regular
+  /// LTO modules were linked. This option is useful for some build system which
+  /// want to know a priori all possible output files.
+  bool AlwaysEmitRegularLTOObj = false;
+
   /// If this field is set, the set of passes run in the middle-end optimizer
   /// will be the one specified by the string. Only works with the new pass
   /// manager as the old one doesn't have this ability.
