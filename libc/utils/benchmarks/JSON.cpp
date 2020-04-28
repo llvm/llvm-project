@@ -17,9 +17,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
+
 #include <chrono>
 #include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace llvm {
@@ -48,7 +50,7 @@ static Error fromJson(const json::Value &V, double &Out) {
 
 static Error fromJson(const json::Value &V, std::string &Out) {
   if (auto S = V.getAsString()) {
-    Out = *S;
+    Out = std::string(*S);
     return Error::success();
   }
   return createStringError(errc::io_error, "Can't parse String");
