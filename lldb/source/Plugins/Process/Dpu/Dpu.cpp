@@ -170,8 +170,7 @@ bool Dpu::Boot() {
   if (res != DPU_OK)
     return false;
 
-  bool ignored;
-  res = dpu_launch_thread_on_dpu(m_dpu, DPU_BOOT_THREAD, false, &ignored);
+  res = dpu_launch_thread_on_dpu(m_dpu, DPU_BOOT_THREAD, false);
   if (res != DPU_OK)
     return false;
 
