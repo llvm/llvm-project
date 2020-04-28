@@ -31,29 +31,6 @@ using namespace mlir;
 // Symbol Use Tracking
 //===----------------------------------------------------------------------===//
 
-/// Walk all of the symbol table operations nested with 'op' along with a
-/// boolean signifying if the symbols within can be treated as if all uses are
-/// visible. The provided callback is invoked with the symbol table operation,
-/// and a boolean signaling if all of the uses within the symbol table are
-/// visible.
-static void walkSymbolTables(Operation *op, bool allSymUsesVisible,
-                             function_ref<void(Operation *, bool)> callback) {
-  if (op->hasTrait<OpTrait::SymbolTable>()) {
-    SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op);
-    allSymUsesVisible = allSymUsesVisible || !symbol || symbol.isPrivate();
-    callback(op, allSymUsesVisible);
-  } else {
-    // Otherwise if 'op' is not a symbol table, any nested symbols are
-    // guaranteed to be hidden.
-    allSymUsesVisible = true;
-  }
-
-  for (Region &region : op->getRegions())
-    for (Block &block : region)
-      for (Operation &nested : block)
-        walkSymbolTables(&nested, allSymUsesVisible, callback);
-}
-
 /// Walk all of the used symbol callgraph nodes referenced with the given op.
 static void walkReferencedSymbolNodes(
     Operation *op, CallGraph &cg,
@@ -164,7 +141,8 @@ CGUseList::CGUseList(Operation *op, CallGraph &cg) {
       }
     }
   };
-  walkSymbolTables(op, /*allSymUsesVisible=*/!op->getBlock(), walkFn);
+  SymbolTable::walkSymbolTables(op, /*allSymUsesVisible=*/!op->getBlock(),
+                                walkFn);
 
   // Drop the use information for any discardable nodes that are always live.
   for (auto &it : alwaysLiveNodes)

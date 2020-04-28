@@ -86,6 +86,15 @@ public:
   /// nullptr if no valid parent symbol table could be found.
   static Operation *getNearestSymbolTable(Operation *from);
 
+  /// Walks all symbol table operations nested within, and including, `op`. For
+  /// each symbol table operation, the provided callback is invoked with the op
+  /// and a boolean signifying if the symbols within that symbol table can be
+  /// treated as if all uses within the IR are visible to the caller.
+  /// `allSymUsesVisible` identifies whether all of the symbol uses of symbols
+  /// within `op` are visible.
+  static void walkSymbolTables(Operation *op, bool allSymUsesVisible,
+                               function_ref<void(Operation *, bool)> callback);
+
   /// Returns the operation registered with the given symbol name with the
   /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
   /// with the 'OpTrait::SymbolTable' trait.
