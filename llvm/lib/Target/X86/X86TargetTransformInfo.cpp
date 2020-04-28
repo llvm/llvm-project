@@ -1394,7 +1394,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v64i8,  MVT::v64i1, 2 },
 
-    { ISD::TRUNCATE,    MVT::v32i8,  MVT::v32i16, 1 },
+    { ISD::TRUNCATE,    MVT::v32i8,  MVT::v32i16, 2 },
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 }, // widen to zmm
   };
 
   static const TypeConversionCostTblEntry AVX512DQConversionTbl[] = {
@@ -1419,14 +1420,15 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32, 3 },
     { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,  1 },
 
-    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 1 },
-    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 1 },
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 2 },
+    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 2 },
     { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 },
-    { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  1 },
+    { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  2 },
     { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,  1 },
     { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i64, 5 },// 2*vpmovqd+concat+vpmovdb
 
-    { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  9 }, // FIXME
+    { ISD::TRUNCATE,  MVT::v16i8,  MVT::v16i16,  3 }, // extend to v16i32
+    { ISD::TRUNCATE,  MVT::v32i8,  MVT::v32i16,  8 },
 
     // Sign extend is zmm vpternlogd+vptruncdb.
     // Zero extend is zmm broadcast load+vptruncdw.
@@ -1535,6 +1537,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v16i8,  MVT::v16i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1, 2 },
+
+    { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 },
   };
 
   static const TypeConversionCostTblEntry AVX512DQVLConversionTbl[] = {
