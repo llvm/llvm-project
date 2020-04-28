@@ -199,4 +199,182 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
   EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 
+TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, false);
+  // Create a BUILD_VECTOR
+  SDValue Op = DAG->getConstant(1, Loc, VecVT);
+  EXPECT_EQ(Op->getOpcode(), ISD::BUILD_VECTOR);
+  EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
+
+  APInt UndefElts;
+  APInt DemandedElts;
+  EXPECT_FALSE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+
+  // Width=16, Mask=3
+  DemandedElts = APInt(16, 3);
+  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+}
+
+TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, false);
+
+  // Should create BUILD_VECTORs
+  SDValue Val1 = DAG->getConstant(1, Loc, VecVT);
+  SDValue Val2 = DAG->getConstant(3, Loc, VecVT);
+  EXPECT_EQ(Val1->getOpcode(), ISD::BUILD_VECTOR);
+  SDValue Op = DAG->getNode(ISD::ADD, Loc, VecVT, Val1, Val2);
+
+  EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
+
+  APInt UndefElts;
+  APInt DemandedElts;
+  EXPECT_FALSE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+
+  // Width=16, Mask=3
+  DemandedElts = APInt(16, 3);
+  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+}
+
+TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, true);
+  // Create a SPLAT_VECTOR
+  SDValue Op = DAG->getConstant(1, Loc, VecVT);
+  EXPECT_EQ(Op->getOpcode(), ISD::SPLAT_VECTOR);
+  EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
+
+  APInt UndefElts;
+  APInt DemandedElts;
+  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+
+  // Width=16, Mask=3. These bits should be ignored.
+  DemandedElts = APInt(16, 3);
+  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+}
+
+TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, true);
+
+  // Should create SPLAT_VECTORS
+  SDValue Val1 = DAG->getConstant(1, Loc, VecVT);
+  SDValue Val2 = DAG->getConstant(3, Loc, VecVT);
+  EXPECT_EQ(Val1->getOpcode(), ISD::SPLAT_VECTOR);
+  SDValue Op = DAG->getNode(ISD::ADD, Loc, VecVT, Val1, Val2);
+
+  EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
+
+  APInt UndefElts;
+  APInt DemandedElts;
+  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+
+  // Width=16, Mask=3. These bits should be ignored.
+  DemandedElts = APInt(16, 3);
+  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
+}
+
+TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, false);
+  // Create a BUILD_VECTOR
+  SDValue Op = DAG->getConstant(1, Loc, VecVT);
+  EXPECT_EQ(Op->getOpcode(), ISD::BUILD_VECTOR);
+
+  int SplatIdx = -1;
+  EXPECT_EQ(DAG->getSplatSourceVector(Op, SplatIdx), Op);
+  EXPECT_EQ(SplatIdx, 0);
+}
+
+TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, false);
+
+  // Should create BUILD_VECTORs
+  SDValue Val1 = DAG->getConstant(1, Loc, VecVT);
+  SDValue Val2 = DAG->getConstant(3, Loc, VecVT);
+  EXPECT_EQ(Val1->getOpcode(), ISD::BUILD_VECTOR);
+  SDValue Op = DAG->getNode(ISD::ADD, Loc, VecVT, Val1, Val2);
+
+  int SplatIdx = -1;
+  EXPECT_EQ(DAG->getSplatSourceVector(Op, SplatIdx), Op);
+  EXPECT_EQ(SplatIdx, 0);
+}
+
+TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, true);
+  // Create a SPLAT_VECTOR
+  SDValue Op = DAG->getConstant(1, Loc, VecVT);
+  EXPECT_EQ(Op->getOpcode(), ISD::SPLAT_VECTOR);
+
+  int SplatIdx = -1;
+  EXPECT_EQ(DAG->getSplatSourceVector(Op, SplatIdx), Op);
+  EXPECT_EQ(SplatIdx, 0);
+}
+
+TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTOR) {
+  if (!TM)
+    return;
+
+  TargetLowering TL(*TM);
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, IntVT, 16, true);
+
+  // Should create SPLAT_VECTORS
+  SDValue Val1 = DAG->getConstant(1, Loc, VecVT);
+  SDValue Val2 = DAG->getConstant(3, Loc, VecVT);
+  EXPECT_EQ(Val1->getOpcode(), ISD::SPLAT_VECTOR);
+  SDValue Op = DAG->getNode(ISD::ADD, Loc, VecVT, Val1, Val2);
+
+  int SplatIdx = -1;
+  EXPECT_EQ(DAG->getSplatSourceVector(Op, SplatIdx), Op);
+  EXPECT_EQ(SplatIdx, 0);
+}
+
 } // end anonymous namespace
