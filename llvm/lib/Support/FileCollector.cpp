@@ -150,6 +150,8 @@ copyAccessAndModificationTime(StringRef Filename,
 }
 
 std::error_code FileCollector::copyFiles(bool StopOnError) {
+  std::lock_guard<std::mutex> lock(Mutex);
+
   for (auto &entry : VFSWriter.getMappings()) {
     // Create directory tree.
     if (std::error_code EC =
