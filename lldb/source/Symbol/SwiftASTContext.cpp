@@ -1000,7 +1000,7 @@ std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
   auto sdk = GetSDKType(target, host);
   XcodeSDK::Info sdk_info;
   sdk_info.type = sdk.sdk_type;
-  llvm::StringRef sdk_name = XcodeSDK::GetCanonicalName(sdk_info);
+  std::string sdk_name = XcodeSDK::GetCanonicalName(sdk_info);
   if (!sdk_name.empty())
     return sdk_name;
   return target.getOSName();
@@ -1010,7 +1010,7 @@ StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
   static std::mutex g_mutex;
   std::lock_guard<std::mutex> locker(g_mutex);
   StringRef platform_sdk_path = GetPlatformSDKPath();
-  auto swift_stdlib_os_dir =
+  std::string swift_stdlib_os_dir =
       GetSwiftStdlibOSDir(triple, HostInfo::GetArchitecture().GetTriple());
 
   // The resource dir depends on the SDK path and the expected os name.
