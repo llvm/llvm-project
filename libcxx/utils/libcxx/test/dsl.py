@@ -6,7 +6,6 @@
 #
 #===----------------------------------------------------------------------===##
 
-import distutils.util
 import libcxx.test.newformat
 import lit
 import lit.util
@@ -195,6 +194,24 @@ class Feature(object):
     config.available_features.add(name)
 
 
+def _str_to_bool(s):
+  """
+  Convert a string value to a boolean.
+
+  True values are "y", "yes", "t", "true", "on" and "1", regardless of capitalization.
+  False values are "n", "no", "f", "false", "off" and "0", regardless of capitalization.
+  """
+  trueVals = ["y", "yes", "t", "true", "on", "1"]
+  falseVals = ["n", "no", "f", "false", "off", "0"]
+  lower = s.lower()
+  if lower in trueVals:
+    return True
+  elif lower in falseVals:
+    return False
+  else:
+    raise ValueError("Got string '{}', which isn't a valid boolean".format(s))
+
+
 class Parameter(object):
   """
   Represents a parameter of a Lit test suite.
@@ -265,8 +282,8 @@ class Parameter(object):
     if len(self._choices) == 0:
       raise ValueError("Parameter '{}' must be given at least one possible value".format(self._name))
 
-    self._parse = lambda x: (distutils.util.strtobool(x) if type is bool and isinstance(x, str)
-                                                         else type(x))
+    self._parse = lambda x: (_str_to_bool(x) if type is bool and isinstance(x, str)
+                                             else type(x))
     self._help = help
     self._feature = feature
     self._default = default
