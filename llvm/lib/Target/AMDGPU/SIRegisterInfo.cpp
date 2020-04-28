@@ -271,6 +271,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       Reserved.set(Low);
   }
 
+  for (auto Reg : AMDGPU::AGPR_32RegClass) {
+    Reserved.set(getSubReg(Reg, AMDGPU::hi16));
+  }
+
   // Reserve all the rest AGPRs if there are no instructions to use it.
   if (!ST.hasMAIInsts()) {
     for (unsigned i = 0; i < MaxNumVGPRs; ++i) {
@@ -1315,6 +1319,8 @@ SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) {
 const TargetRegisterClass *
 SIRegisterInfo::getAGPRClassForBitWidth(unsigned BitWidth) {
   switch (BitWidth) {
+  case 16:
+    return &AMDGPU::AGPR_LO16RegClass;
   case 32:
     return &AMDGPU::AGPR_32RegClass;
   case 64:
@@ -1374,6 +1380,7 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
     &AMDGPU::VGPR_LO16RegClass,
     &AMDGPU::VGPR_HI16RegClass,
     &AMDGPU::SReg_LO16RegClass,
+    &AMDGPU::AGPR_LO16RegClass,
     &AMDGPU::VGPR_32RegClass,
     &AMDGPU::SReg_32RegClass,
     &AMDGPU::AGPR_32RegClass,
@@ -1432,7 +1439,7 @@ bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
 
 bool SIRegisterInfo::hasAGPRs(const TargetRegisterClass *RC) const {
   unsigned Size = getRegSizeInBits(*RC);
-  if (Size < 32)
+  if (Size < 16)
     return false;
   const TargetRegisterClass *ARC = getAGPRClassForBitWidth(Size);
   if (!ARC) {
