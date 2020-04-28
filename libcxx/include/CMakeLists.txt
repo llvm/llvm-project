@@ -187,7 +187,7 @@ if (LIBCXX_NEEDS_SITE_CONFIG)
   # Generate a custom __config header. The new header is created
   # by prepending __config_site to the current __config header.
   add_custom_command(OUTPUT ${LIBCXX_BINARY_DIR}/__generated_config
-    COMMAND ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/cat_files.py
+    COMMAND ${Python3_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/cat_files.py
       ${LIBCXX_BINARY_DIR}/__config_site
       ${LIBCXX_SOURCE_DIR}/include/__config
       -o ${LIBCXX_BINARY_DIR}/__generated_config

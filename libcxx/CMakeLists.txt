@@ -41,11 +41,35 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
 endif()
 
 if (LIBCXX_STANDALONE_BUILD)
-  include(FindPythonInterp)
-  if( NOT PYTHONINTERP_FOUND )
-    message(WARNING "Failed to find python interpreter. "
-                    "The libc++ test suite will be disabled.")
-    set(LLVM_INCLUDE_TESTS OFF)
+  if(CMAKE_VERSION VERSION_LESS 3.12)
+    include(FindPythonInterp)
+    if( NOT PYTHONINTERP_FOUND )
+      if(LIBCXX_ENABLE_STATIC)
+        message(FATAL_ERROR "Python is required for building the static library")
+      endif()
+      message(WARNING "Failed to find python interpreter. "
+                      "The libc++ test suite will be disabled.")
+      set(LLVM_INCLUDE_TESTS OFF)
+    else()
+      add_executable(Python3::Interpreter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+    endif()
+  else()
+    find_package(Python3 COMPONENTS Interpreter)
+    if(NOT Python3_Interpreter_FOUND)
+      message(WARNING "Python3 not found, using python2 as a fallback")
+      find_package(Python2 COMPONENTS Interpreter REQUIRED)
+      if(Python2_VERSION VERSION_LESS 2.7)
+        message(SEND_ERROR "Python 2.7 or newer is required")
+      endif()
+
+      # Treat python2 as python3
+      add_executable(Python3::Interpreter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${Python2_EXECUTABLE})
+      set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+    endif()
   endif()
 endif()
 
