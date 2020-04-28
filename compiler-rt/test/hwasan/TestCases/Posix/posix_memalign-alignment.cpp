@@ -14,7 +14,7 @@ int main() {
   int res = posix_memalign(&p, 17, 100);
   // CHECK: ERROR: HWAddressSanitizer: invalid alignment requested in posix_memalign: 17
   // CHECK: {{#0 0x.* in .*posix_memalign}}
-  // CHECK: {{#1 0x.* in main .*posix_memalign-alignment.cpp:}}[[@LINE-3]]
+  // CHECK: {{#[12] 0x.* in main .*posix_memalign-alignment.cpp:}}[[@LINE-3]]
   // CHECK: SUMMARY: HWAddressSanitizer: invalid-posix-memalign-alignment
 
   untag_printf("pointer after failed posix_memalign: %zd\n", (size_t)p);
