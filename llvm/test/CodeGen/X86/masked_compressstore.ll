@@ -15,7 +15,7 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; SSE-LABEL: compressstore_v8f64_v8i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    psllw $15, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    jne LBB0_1
@@ -84,7 +84,7 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX1-LABEL: compressstore_v8f64_v8i1:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    je LBB0_2
@@ -152,7 +152,7 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX2-LABEL: compressstore_v8f64_v8i1:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX2-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    je LBB0_2
@@ -845,7 +845,7 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; SSE2-LABEL: compressstore_v8f32_v8i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm2
-; SSE2-NEXT:    packsswb %xmm0, %xmm2
+; SSE2-NEXT:    packsswb %xmm2, %xmm2
 ; SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB4_1
@@ -924,7 +924,7 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; SSE42-LABEL: compressstore_v8f32_v8i1:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    psllw $15, %xmm2
-; SSE42-NEXT:    packsswb %xmm0, %xmm2
+; SSE42-NEXT:    packsswb %xmm2, %xmm2
 ; SSE42-NEXT:    pmovmskb %xmm2, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    jne LBB4_1
@@ -993,7 +993,7 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; AVX1-LABEL: compressstore_v8f32_v8i1:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpsllw $15, %xmm1, %xmm1
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    jne LBB4_1
@@ -1064,7 +1064,7 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; AVX2-LABEL: compressstore_v8f32_v8i1:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm1, %xmm1
+; AVX2-NEXT:    vpacksswb %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne LBB4_1
@@ -2729,7 +2729,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; SSE2-LABEL: compressstore_v8i64_v8i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm4
-; SSE2-NEXT:    packsswb %xmm0, %xmm4
+; SSE2-NEXT:    packsswb %xmm4, %xmm4
 ; SSE2-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB9_1
@@ -2802,7 +2802,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; SSE42-LABEL: compressstore_v8i64_v8i1:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    psllw $15, %xmm4
-; SSE42-NEXT:    packsswb %xmm0, %xmm4
+; SSE42-NEXT:    packsswb %xmm4, %xmm4
 ; SSE42-NEXT:    pmovmskb %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    jne LBB9_1
@@ -2871,7 +2871,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; AVX1-LABEL: compressstore_v8i64_v8i1:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    je LBB9_2
@@ -2939,7 +2939,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; AVX2-LABEL: compressstore_v8i64_v8i1:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX2-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    je LBB9_2
@@ -3182,7 +3182,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm2
-; SSE2-NEXT:    packsswb %xmm0, %xmm2
+; SSE2-NEXT:    packsswb %xmm2, %xmm2
 ; SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB11_1
@@ -3260,7 +3260,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
 ; SSE42-NEXT:    pcmpeqw %xmm1, %xmm2
-; SSE42-NEXT:    packsswb %xmm0, %xmm2
+; SSE42-NEXT:    packsswb %xmm2, %xmm2
 ; SSE42-NEXT:    pmovmskb %xmm2, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    jne LBB11_1
@@ -3330,7 +3330,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; AVX1OR2:       ## %bb.0:
 ; AVX1OR2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1OR2-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpacksswb %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    jne LBB11_1

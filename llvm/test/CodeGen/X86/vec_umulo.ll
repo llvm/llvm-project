@@ -1050,11 +1050,11 @@ define <16 x i32> @umulo_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %p2)
 ; AVX2-NEXT:    vpxor %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm6
 ; AVX2-NEXT:    vpackssdw %xmm6, %xmm5, %xmm5
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm5, %xmm5
+; AVX2-NEXT:    vpacksswb %xmm5, %xmm5, %xmm5
 ; AVX2-NEXT:    vpmulld %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpmulld %ymm3, %ymm1, %ymm3
 ; AVX2-NEXT:    vpmovsxbd %xmm5, %ymm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm4, %xmm1
+; AVX2-NEXT:    vpacksswb %xmm4, %xmm4, %xmm1
 ; AVX2-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX2-NEXT:    vmovdqa %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm2, (%rdi)

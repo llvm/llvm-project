@@ -354,7 +354,7 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b) {
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm4
 ; SSE-NEXT:    packssdw %xmm5, %xmm4
 ; SSE-NEXT:    packssdw %xmm6, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
@@ -608,7 +608,7 @@ define void @bitcast_8i64_store(i8* %p, <8 x i64> %a0) {
 ; SSE-NEXT:    pcmpgtq %xmm0, %xmm4
 ; SSE-NEXT:    packssdw %xmm2, %xmm4
 ; SSE-NEXT:    packssdw %xmm3, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    movb %al, (%rdi)
 ; SSE-NEXT:    retq
