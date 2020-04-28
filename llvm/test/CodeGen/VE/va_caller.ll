@@ -38,7 +38,7 @@ define i32 @caller() {
 ; CHECK-NEXT:    stl %s18, 176(, %s11)
 ; CHECK-NEXT:    or %s6, 0, %s0
 ; CHECK-NEXT:    or %s0, 0, %s18
-; CHECK-NEXT:    bsic %lr, (,%s12)
+; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 0, %s18
 ; CHECK-NEXT:    ld %s18, 48(, %s9) # 8-byte Folded Reload
 ; CHECK-NEXT:    or %s11, 0, %s9
