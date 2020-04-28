@@ -133,6 +133,9 @@ def OptimizeForSize : EnumAttr<"optsize">;
 /// Function must not be optimized.
 def OptimizeNone : EnumAttr<"optnone">;
 
+/// Similar to byval but without a copy.
+def Preallocated : TypeAttr<"preallocated">;
+
 /// Function does not access memory.
 def ReadNone : EnumAttr<"readnone">;
 

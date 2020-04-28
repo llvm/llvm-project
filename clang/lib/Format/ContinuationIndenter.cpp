@@ -1466,10 +1466,11 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       ParenState(&Current, NewIndent, LastSpace, AvoidBinPacking, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = BreakBeforeParameter;
-  State.Stack.back().HasMultipleNestedBlocks = (Current.BlockParameterCount > 1);
+  State.Stack.back().HasMultipleNestedBlocks =
+      (Current.BlockParameterCount > 1);
 
-  if (Style.BraceWrapping.BeforeLambdaBody &&
-      Current.Next != nullptr && Current.Tok.is(tok::l_paren)) {
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.Next != nullptr &&
+      Current.Tok.is(tok::l_paren)) {
     // Search for any parameter that is a lambda
     FormatToken const *next = Current.Next;
     while (next != nullptr) {

@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffects.td"
 
 // Type constraint accepting standard integers, indices and wrapped LLVM integer

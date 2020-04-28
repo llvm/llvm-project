@@ -37,11 +37,9 @@ func @parallel_many_dims() {
 // CHECK:         [[C2:%.*]] = constant 2 : index
 // CHECK:         loop.parallel ([[NEW_I0:%.*]], [[NEW_I1:%.*]], [[NEW_I2:%.*]]) = ([[C0]], [[C0]], [[C0]]) to ([[C2]], [[C1]], [[C1]]) step ([[C1]], [[C1]], [[C1]]) {
 // CHECK:           [[I0:%.*]] = remi_signed [[NEW_I0]], [[C2]] : index
-// CHECK:           [[I3_COUNT:%.*]] = divi_signed [[NEW_I0]], [[C1]] : index
-// CHECK:           [[I4_COUNT:%.*]] = divi_signed [[NEW_I1]], [[C1]] : index
-// CHECK:           [[VAL_16:%.*]] = muli [[I4_COUNT]], [[C13]] : index
+// CHECK:           [[VAL_16:%.*]] = muli [[NEW_I1]], [[C13]] : index
 // CHECK:           [[I4:%.*]] = addi [[VAL_16]], [[C12]] : index
-// CHECK:           [[VAL_18:%.*]] = muli [[I3_COUNT]], [[C10]] : index
+// CHECK:           [[VAL_18:%.*]] = muli [[NEW_I0]], [[C10]] : index
 // CHECK:           [[I3:%.*]] = addi [[VAL_18]], [[C9]] : index
 // CHECK:           [[VAL_20:%.*]] = muli [[NEW_I2]], [[C7]] : index
 // CHECK:           [[I2:%.*]] = addi [[VAL_20]], [[C6]] : index

@@ -530,9 +530,11 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   EXPECT_TRUE(HasFlag("-w"));
 }
 
-// Check getClangStripDependencyFileAdjuster strips /showIncludes
+// Check getClangStripDependencyFileAdjuster strips /showIncludes and variants
 TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
-  FixedCompilationDatabase Compilations("/", {"/showIncludes", "-c"});
+  FixedCompilationDatabase Compilations(
+      "/", {"/showIncludes", "/showIncludes:user", "-showIncludes",
+            "-showIncludes:user", "-c"});
 
   ClangTool Tool(Compilations, std::vector<std::string>(1, "/a.cc"));
   Tool.mapVirtualFile("/a.cc", "void a() {}");
@@ -555,34 +557,9 @@ TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
     return llvm::find(FinalArgs, Flag) != FinalArgs.end();
   };
   EXPECT_FALSE(HasFlag("/showIncludes"));
-  EXPECT_TRUE(HasFlag("-c"));
-}
-
-// Check getClangStripDependencyFileAdjuster strips /showIncludes:user
-TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludesUser) {
-  FixedCompilationDatabase Compilations("/", {"/showIncludes:user", "-c"});
-
-  ClangTool Tool(Compilations, std::vector<std::string>(1, "/a.cc"));
-  Tool.mapVirtualFile("/a.cc", "void a() {}");
-
-  std::unique_ptr<FrontendActionFactory> Action(
-      newFrontendActionFactory<SyntaxOnlyAction>());
-
-  CommandLineArguments FinalArgs;
-  ArgumentsAdjuster CheckFlagsAdjuster =
-      [&FinalArgs](const CommandLineArguments &Args, StringRef /*unused*/) {
-        FinalArgs = Args;
-        return Args;
-      };
-  Tool.clearArgumentsAdjusters();
-  Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
-  Tool.appendArgumentsAdjuster(CheckFlagsAdjuster);
-  Tool.run(Action.get());
-
-  auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
-  };
   EXPECT_FALSE(HasFlag("/showIncludes:user"));
+  EXPECT_FALSE(HasFlag("-showIncludes"));
+  EXPECT_FALSE(HasFlag("-showIncludes:user"));
   EXPECT_TRUE(HasFlag("-c"));
 }
 
