@@ -46,7 +46,7 @@ class TestSwiftExpressionObjCContext(TestBase):
         # This is expected to fail because we can't yet import ObjC
         # modules into a Swift context.
         self.expect("expr -lang Swift -- Bar()", "failure",
-                    substrs=["unresolved identifier 'Bar'"],
+                    substrs=["cannot find 'Bar' in scope"],
                     error=True)
         self.expect("expr -lang Swift -- [1, 2, 3]",
                     "context-less swift expression works",

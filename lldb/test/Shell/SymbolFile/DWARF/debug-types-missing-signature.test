@@ -15,10 +15,10 @@ RUN: %lldb %t -b -o "type lookup EC" | FileCheck --check-prefix=LOOKUPEC %s
 LOOKUPEC: no type was found matching 'EC'
 
 RUN: %lldb %t -b -o "print (E) 1" 2>&1 | FileCheck --check-prefix=PRINTE %s
-PRINTE: use of undeclared identifier 'E'
+PRINTE: cannot find 'E' in scope
 
 RUN: %lldb %t -b -o "print (EC) 1" 2>&1 | FileCheck --check-prefix=PRINTEC %s
-PRINTEC: use of undeclared identifier 'EC'
+PRINTEC: cannot find 'EC' in scope
 
 RUN: %lldb %t -b -o "target variable a e ec" | FileCheck --check-prefix=VARS %s
 VARS: (const (anonymous struct)) a = {}
