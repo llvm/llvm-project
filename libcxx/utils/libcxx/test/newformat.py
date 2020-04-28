@@ -333,7 +333,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             return script
 
         if litConfig.noExecute:
-            return lit.Test.Result(lit.Test.PASS)
+            return lit.Test.Result(lit.Test.XFAIL if test.isExpectedToFail() else lit.Test.PASS)
         else:
             _, tmpBase = lit.TestRunner.getTempPaths(test)
             useExternalSh = True
