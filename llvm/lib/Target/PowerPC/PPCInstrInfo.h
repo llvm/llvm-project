@@ -364,8 +364,6 @@ public:
   // Predication support.
   bool isPredicated(const MachineInstr &MI) const override;
 
-  bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
-
   bool PredicateInstruction(MachineInstr &MI,
                             ArrayRef<MachineOperand> Pred) const override;
 
