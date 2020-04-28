@@ -7609,15 +7609,14 @@ static llvm::ScalableVectorType *getSVEVectorForElementType(llvm::Type *EltTy) {
 // Reinterpret the input predicate so that it can be used to correctly isolate
 // the elements of the specified datatype.
 Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
-                                             llvm::VectorType *VTy) {
-  llvm::VectorType *RTy = llvm::VectorType::get(
-      IntegerType::get(getLLVMContext(), 1), VTy->getElementCount());
+                                             llvm::ScalableVectorType *VTy) {
+  auto *RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), VTy);
   if (Pred->getType() == RTy)
     return Pred;
 
   unsigned IntID;
   llvm::Type *IntrinsicTy;
-  switch (VTy->getNumElements()) {
+  switch (VTy->getMinNumElements()) {
   default:
     llvm_unreachable("unsupported element count!");
   case 2:
@@ -7948,7 +7947,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     // Predicate results must be converted to svbool_t.
     if (auto PredTy = dyn_cast<llvm::VectorType>(Call->getType()))
       if (PredTy->getScalarType()->isIntegerTy(1))
-        Call = EmitSVEPredicateCast(Call, cast<llvm::VectorType>(Ty));
+        Call = EmitSVEPredicateCast(Call, cast<llvm::ScalableVectorType>(Ty));
 
     return Call;
   }
