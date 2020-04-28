@@ -1396,8 +1396,8 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
 
   bool isPPC64 = DL.getPointerSizeInBits() == 64;
 
-  PPCTargetStreamer &TS =
-      static_cast<PPCTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  PPCTargetStreamer *TS =
+      static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
   if (!TOC.empty()) {
     const char *Name = isPPC64 ? ".toc" : ".got2";
@@ -1412,8 +1412,8 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
       MCSymbol *const TOCEntryLabel = TOCMapPair.second;
 
       OutStreamer->emitLabel(TOCEntryLabel);
-      if (isPPC64)
-        TS.emitTCEntry(*TOCEntryTarget);
+      if (isPPC64 && TS != nullptr)
+        TS->emitTCEntry(*TOCEntryTarget);
       else
         OutStreamer->emitSymbolValue(TOCEntryTarget, 4);
     }
@@ -1687,8 +1687,8 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Switch to section to emit TOC base.
   OutStreamer->SwitchSection(getObjFileLowering().getTOCBaseSection());
 
-  PPCTargetStreamer &TS =
-      static_cast<PPCTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  PPCTargetStreamer *TS =
+      static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
   const unsigned EntryByteSize = Subtarget->isPPC64() ? 8 : 4;
   const unsigned TOCEntriesByteSize = TOC.size() * EntryByteSize;
@@ -1707,7 +1707,8 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     OutStreamer->SwitchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
-    TS.emitTCEntry(*I.first);
+    if (TS != nullptr)
+      TS->emitTCEntry(*I.first);
   }
 }
 
