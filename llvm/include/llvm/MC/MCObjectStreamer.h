@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCOBJECTSTREAMER_H
 #define LLVM_MC_MCOBJECTSTREAMER_H
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCSection.h"
@@ -39,7 +38,7 @@ class MCObjectStreamer : public MCStreamer {
   bool EmitEHFrame;
   bool EmitDebugFrame;
   SmallVector<MCSymbol *, 2> PendingLabels;
-  SmallSetVector<MCSection *, 4> PendingLabelSections;
+  SmallVector<MCSection*, 2> PendingLabelSections;
   unsigned CurSubsectionIdx;
   struct PendingMCFixup {
     const MCSymbol *Sym;
