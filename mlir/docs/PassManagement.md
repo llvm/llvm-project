@@ -382,7 +382,7 @@ static PassPipelineRegistration<> pipeline(
 ```
 
 Pipeline registration also allows for simplified registration of
-specifializations for existing passes:
+specializations for existing passes:
 
 ```c++
 static PassPipelineRegistration<> foo10(

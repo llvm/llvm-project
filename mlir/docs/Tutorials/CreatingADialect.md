@@ -134,8 +134,8 @@ using target_link_libraries() and the PUBLIC keyword.  For instance:
 add_mlir_conversion_library(MLIRBarToFoo
 	BarToFoo.cpp
 
-   ADDITIONAL_HEADER_DIRS
-   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/BarToFoo
+        ADDITIONAL_HEADER_DIRS
+        ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/BarToFoo
 	)
 target_link_libraries(MLIRBarToFoo
 	PUBLIC
