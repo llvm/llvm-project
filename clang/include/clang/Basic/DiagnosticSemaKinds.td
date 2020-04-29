@@ -3182,6 +3182,10 @@ def warn_weak_identifier_undeclared : Warning<
 def warn_attribute_cmse_entry_static : Warning<
   "'cmse_nonsecure_entry' cannot be applied to functions with internal linkage">,
   InGroup<IgnoredAttributes>;
+def warn_cmse_nonsecure_union : Warning<
+  "passing union across security boundary via %select{parameter %1|return value}0 "
+  "may leak information">,
+  InGroup<DiagGroup<"cmse-union-leak">>;
 def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
 def err_attribute_selectany_non_extern_data : Error<
