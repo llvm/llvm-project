@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_SYNTHETIC_SECTIONS_H
 #define LLD_MACHO_SYNTHETIC_SECTIONS_H
 
+#include "ExportTrie.h"
 #include "InputSection.h"
 #include "Target.h"
 #include "llvm/ADT/SetVector.h"
@@ -101,14 +102,16 @@ class ExportSection : public InputSection {
 public:
   ExportSection();
   void finalizeContents();
-  size_t getSize() const override { return contents.size(); }
+  size_t getSize() const override { return size; }
   // Like other sections in __LINKEDIT, the export section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
   bool isHidden() const override { return true; }
   void writeTo(uint8_t *buf) override;
 
-  SmallVector<char, 128> contents;
+private:
+  TrieBuilder trieBuilder;
+  size_t size = 0;
 };
 
 // Stores the strings referenced by the symbol table.
