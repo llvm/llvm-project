@@ -609,6 +609,23 @@ defm SVMULH_S : SInstZPZZ<"svmulh", "csil",         "aarch64_sve_smulh">;
 defm SVMULH_U : SInstZPZZ<"svmulh", "UcUsUiUl",     "aarch64_sve_umulh">;
 defm SVSUB    : SInstZPZZ<"svsub",  "csilUcUsUiUl", "aarch64_sve_sub">;
 defm SVSUBR   : SInstZPZZ<"svsubr", "csilUcUsUiUl", "aarch64_sve_subr">;
+
+//------------------------------------------------------------------------------
+
+multiclass SInstZPZZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]",   "dPddd", types, MergeOp1,  intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]",   "dPddd", types, MergeAny,  intrinsic, flags>;
+  def _Z   : SInst<name # "[_{d}]",   "dPddd", types, MergeZero, intrinsic, flags>;
+
+  def _N_M : SInst<name # "[_n_{d}]", "dPdda", types, MergeOp1,  intrinsic, flags>;
+  def _N_X : SInst<name # "[_n_{d}]", "dPdda", types, MergeAny,  intrinsic, flags>;
+  def _N_Z : SInst<name # "[_n_{d}]", "dPdda", types, MergeZero, intrinsic, flags>;
+}
+
+defm SVMAD : SInstZPZZZ<"svmad", "csilUcUsUiUl", "aarch64_sve_mad">;
+defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla">;
+defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls">;
+defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb">;
 ////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
@@ -696,9 +713,19 @@ defm SVNEG_F : SInstZPZ<"svneg", "hfd", "aarch64_sve_fneg">;
 
 def SVTMAD  : SInst<"svtmad[_{d}]",  "dddi", "hfd", MergeNone, "aarch64_sve_ftmad_x", [], [ImmCheck<2, ImmCheck0_7>]>;
 
-def SVMLA_LANE  : SInst<"svmla_lane[_{d}]",  "ddddi",  "hfd", MergeNone, "aarch64_sve_fmla_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+defm SVMAD_F  : SInstZPZZZ<"svmad",  "hfd", "aarch64_sve_fmad">;
+defm SVMLA_F  : SInstZPZZZ<"svmla",  "hfd", "aarch64_sve_fmla">;
+defm SVMLS_F  : SInstZPZZZ<"svmls",  "hfd", "aarch64_sve_fmls">;
+defm SVMSB_F  : SInstZPZZZ<"svmsb",  "hfd", "aarch64_sve_fmsb">;
+defm SVNMAD_F : SInstZPZZZ<"svnmad", "hfd", "aarch64_sve_fnmad">;
+defm SVNMLA_F : SInstZPZZZ<"svnmla", "hfd", "aarch64_sve_fnmla">;
+defm SVNMLS_F : SInstZPZZZ<"svnmls", "hfd", "aarch64_sve_fnmls">;
+defm SVNMSB_F : SInstZPZZZ<"svnmsb", "hfd", "aarch64_sve_fnmsb">;
+
 def SVCMLA_LANE : SInst<"svcmla_lane[_{d}]", "ddddii", "hf",  MergeNone, "aarch64_sve_fcmla_lane", [], [ImmCheck<3, ImmCheckLaneIndexCompRotate, 2>,
                                                                                                         ImmCheck<4, ImmCheckComplexRotAll90>]>;
+def SVMLA_LANE  : SInst<"svmla_lane[_{d}]",  "ddddi",  "hfd", MergeNone, "aarch64_sve_fmla_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLS_LANE  : SInst<"svmls_lane[_{d}]",  "ddddi",  "hfd", MergeNone, "aarch64_sve_fmls_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Floating-point comparisons
