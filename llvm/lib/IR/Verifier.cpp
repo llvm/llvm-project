@@ -4507,8 +4507,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         }
         Assert(NumArgs->equalsInt(NumPreallocatedArgs),
                "llvm.call.preallocated.setup arg size must be equal to number "
-               "of arguments "
-               "at call site");
+               "of preallocated arguments "
+               "at call site",
+               Call, *UseCall);
         // getOperandBundle() cannot be called if more than one of the operand
         // bundle exists. There is already a check elsewhere for this, so skip
         // here if we see more than one.
