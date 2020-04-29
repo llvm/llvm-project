@@ -23,6 +23,7 @@ class FileCollectorFileSystem;
 /// the VFS.
 class FileCollector {
 public:
+  /// \p Root directory gets created in copyFiles unless it already exists.
   FileCollector(std::string Root, std::string OverlayRoot);
 
   void addFile(const Twine &file);
