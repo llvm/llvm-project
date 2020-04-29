@@ -3053,6 +3053,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(TT_CSharpNullConditionalLSquare))
       return Style.SpacesInSquareBrackets;
 
+    // space after var in `var (key, value)`
+    if (Left.is(Keywords.kw_var) && Right.is(tok::l_paren))
+      return true;
+
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
       if (Left.isOneOf(tok::kw_using, Keywords.kw_async, Keywords.kw_when))
