@@ -10,11 +10,11 @@
 #define MLIR_DIALECT_LOOPOPS_EDSC_INTRINSICS_H_
 
 #include "mlir/Dialect/LoopOps/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
 
 namespace mlir {
 namespace edsc {
 namespace intrinsics {
+
 using loop_yield = OperationBuilder<loop::YieldOp>;
 
 } // namespace intrinsics

@@ -547,10 +547,6 @@ public:
     // TODO(ravishankarm): Generate loop.parallel for all "parallel" iterator
     // types, not just the outer most ones. Also handle "reduction" iterator
     // types.
-    auto nPar = linalgOp.getNumParallelLoops();
-    auto nRed = linalgOp.getNumReductionLoops();
-    auto nWin = linalgOp.getNumWindowLoops();
-    auto nLoops = nPar + nRed + nWin;
     auto nOuterPar = linalgOp.iterator_types()
                          .getValue()
                          .take_while([](Attribute attr) {
@@ -560,14 +556,6 @@ public:
                          .size();
     // If there are no outer parallel loops, then number of loop ops is same as
     // the number of loops, and they are all loop.for ops.
-    auto nLoopOps = (nOuterPar ? nLoops - nOuterPar + 1 : nLoops);
-    SmallVector<OperationHandle, 4> allLoops(nLoopOps, OperationHandle());
-    SmallVector<OperationHandle *, 4> allPLoops;
-    allPLoops.reserve(allLoops.size());
-    for (OperationHandle &loop : allLoops)
-      allPLoops.push_back(&loop);
-    ArrayRef<OperationHandle *> allPLoopsRef(allPLoops);
-
     if (nOuterPar) {
       GenericLoopNestRangeBuilder<loop::ParallelOp>(
           allIvs.take_front(nOuterPar), loopRanges.take_front(nOuterPar))([&] {
