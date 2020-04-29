@@ -28,6 +28,7 @@ class FunctionPass;
 class ModulePass;
 class OptimizationRemarkEmitter;
 class Comdat;
+class CallBase;
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -106,7 +107,7 @@ FunctionPass *createPGOMemOPSizeOptLegacyPass();
 // generic utilities.
 namespace pgo {
 
-// Helper function that transforms Inst (either an indirect-call instruction, or
+// Helper function that transforms CB (either an indirect-call instruction, or
 // an invoke instruction , to a conditional call to F. This is like:
 //     if (Inst.CalledValue == F)
 //        F(...);
@@ -119,10 +120,9 @@ namespace pgo {
 // If \p AttachProfToDirectCall is true, a prof metadata is attached to the
 // new direct call to contain \p Count.
 // Returns the promoted direct call instruction.
-Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
-                                 uint64_t TotalCount,
-                                 bool AttachProfToDirectCall,
-                                 OptimizationRemarkEmitter *ORE);
+CallBase &promoteIndirectCall(CallBase &CB, Function *F, uint64_t Count,
+                              uint64_t TotalCount, bool AttachProfToDirectCall,
+                              OptimizationRemarkEmitter *ORE);
 } // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.
