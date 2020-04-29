@@ -493,9 +493,6 @@ Attributor::~Attributor() {
   // the destructor manually.
   for (auto &It : QueryMap)
     It.getSecond()->~QueryMapValueTy();
-
-  for (auto &It : ArgumentReplacementMap)
-    DeleteContainerPointers(It.second);
 }
 
 bool Attributor::isAssumedDead(const AbstractAttribute &AA,
@@ -1390,13 +1387,14 @@ bool Attributor::registerFunctionSignatureRewrite(
          "Cannot register an invalid rewrite");
 
   Function *Fn = Arg.getParent();
-  SmallVectorImpl<ArgumentReplacementInfo *> &ARIs = ArgumentReplacementMap[Fn];
+  SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs =
+      ArgumentReplacementMap[Fn];
   if (ARIs.empty())
     ARIs.resize(Fn->arg_size());
 
   // If we have a replacement already with less than or equal new arguments,
   // ignore this request.
-  ArgumentReplacementInfo *&ARI = ARIs[Arg.getArgNo()];
+  std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[Arg.getArgNo()];
   if (ARI && ARI->getNumReplacementArgs() <= ReplacementTypes.size()) {
     LLVM_DEBUG(dbgs() << "[Attributor] Existing rewrite is preferred\n");
     return false;
@@ -1404,17 +1402,16 @@ bool Attributor::registerFunctionSignatureRewrite(
 
   // If we have a replacement already but we like the new one better, delete
   // the old.
-  if (ARI)
-    delete ARI;
+  ARI.reset();
 
   LLVM_DEBUG(dbgs() << "[Attributor] Register new rewrite of " << Arg << " in "
                     << Arg.getParent()->getName() << " with "
                     << ReplacementTypes.size() << " replacements\n");
 
   // Remember the replacement.
-  ARI = new ArgumentReplacementInfo(*this, Arg, ReplacementTypes,
-                                    std::move(CalleeRepairCB),
-                                    std::move(ACSRepairCB));
+  ARI.reset(new ArgumentReplacementInfo(*this, Arg, ReplacementTypes,
+                                        std::move(CalleeRepairCB),
+                                        std::move(ACSRepairCB)));
 
   return true;
 }
@@ -1430,7 +1427,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     if (ToBeDeletedFunctions.count(OldFn))
       continue;
 
-    const SmallVectorImpl<ArgumentReplacementInfo *> &ARIs = It.getSecond();
+    const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs = It.getSecond();
     assert(ARIs.size() == OldFn->arg_size() && "Inconsistent state!");
 
     SmallVector<Type *, 16> NewArgumentTypes;
@@ -1439,7 +1436,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // Collect replacement argument types and copy over existing attributes.
     AttributeList OldFnAttributeList = OldFn->getAttributes();
     for (Argument &Arg : OldFn->args()) {
-      if (ArgumentReplacementInfo *ARI = ARIs[Arg.getArgNo()]) {
+      if (const std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[Arg.getArgNo()]) {
         NewArgumentTypes.append(ARI->ReplacementTypes.begin(),
                                 ARI->ReplacementTypes.end());
         NewArgumentAttributes.append(ARI->getNumReplacementArgs(),
@@ -1501,7 +1498,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       for (unsigned OldArgNum = 0; OldArgNum < ARIs.size(); ++OldArgNum) {
         unsigned NewFirstArgNum = NewArgOperands.size();
         (void)NewFirstArgNum; // only used inside assert.
-        if (ArgumentReplacementInfo *ARI = ARIs[OldArgNum]) {
+        if (const std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[OldArgNum]) {
           if (ARI->ACSRepairCB)
             ARI->ACSRepairCB(*ARI, ACS, NewArgOperands);
           assert(ARI->getNumReplacementArgs() + NewFirstArgNum ==
@@ -1566,7 +1563,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     auto NewFnArgIt = NewFn->arg_begin();
     for (unsigned OldArgNum = 0; OldArgNum < ARIs.size();
          ++OldArgNum, ++OldFnArgIt) {
-      if (ArgumentReplacementInfo *ARI = ARIs[OldArgNum]) {
+      if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =
+              ARIs[OldArgNum]) {
         if (ARI->CalleeRepairCB)
           ARI->CalleeRepairCB(*ARI, *NewFn, NewFnArgIt);
         NewFnArgIt += ARI->ReplacementTypes.size();
