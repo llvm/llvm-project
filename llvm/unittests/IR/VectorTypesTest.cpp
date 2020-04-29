@@ -257,7 +257,6 @@ TEST(VectorTypesTest, BaseVectorType) {
     for (size_t J = I + 1, JEnd = VTys.size(); J < JEnd; ++J) {
       // test I < J
       VectorType *VJ = VTys[J];
-      ElementCount ECJ = VJ->getElementCount();
       EXPECT_VTY_NE(VI, VJ);
 
       VectorType *VJPrime = VectorType::get(VI->getElementType(), VJ);
