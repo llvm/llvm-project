@@ -430,12 +430,11 @@ void PPCExpandISEL::populateBlocks(BlockISELList &BIL) {
                                                        // condition is true
     MachineOperand &FalseValue = MI->getOperand(2); // Value to store if
                                                        // condition is false
-    MachineOperand &ConditionRegister = MI->getOperand(3); // Condition
 
     LLVM_DEBUG(dbgs() << "Dest: " << Dest << "\n");
     LLVM_DEBUG(dbgs() << "TrueValue: " << TrueValue << "\n");
     LLVM_DEBUG(dbgs() << "FalseValue: " << FalseValue << "\n");
-    LLVM_DEBUG(dbgs() << "ConditionRegister: " << ConditionRegister << "\n");
+    LLVM_DEBUG(dbgs() << "ConditionRegister: " << MI->getOperand(3) << "\n");
 
     // If the Dest Register and True Value Register are not the same one, we
     // need the True Block.
