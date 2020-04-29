@@ -23,7 +23,7 @@ template("write_lit_cfg") {
       "LLVM_RUNTIME_OUTPUT_INTDIR=" + rebase_path("$root_out_dir/bin"),
       "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),
       "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
-      "PYTHON_EXECUTABLE=$python_path",
+      "Python3_EXECUTABLE=$python_path",
       "TARGET_TRIPLE=$llvm_target_triple",
     ]
     values += invoker.extra_values
