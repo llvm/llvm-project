@@ -356,7 +356,7 @@ DWARFDie::find(ArrayRef<dwarf::Attribute> Attrs) const {
 
 Optional<DWARFFormValue>
 DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
-  std::vector<DWARFDie> Worklist;
+  SmallVector<DWARFDie, 3> Worklist;
   Worklist.push_back(*this);
 
   // Keep track if DIEs already seen to prevent infinite recursion.
