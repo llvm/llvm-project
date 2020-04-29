@@ -178,8 +178,9 @@ unsigned TargetTransformInfo::getEstimatedNumberOfCaseClusters(
 }
 
 int TargetTransformInfo::getUserCost(const User *U,
-                                     ArrayRef<const Value *> Operands) const {
-  int Cost = TTIImpl->getUserCost(U, Operands);
+                                     ArrayRef<const Value *> Operands,
+                                     enum TargetCostKind CostKind) const {
+  int Cost = TTIImpl->getUserCost(U, Operands, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1152,7 +1153,7 @@ matchVectorSplittingReduction(const ExtractElementInst *ReduxRoot,
 int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr:
-    return getUserCost(I);
+    return getUserCost(I, TCK_RecipThroughput);
 
   case Instruction::Ret:
   case Instruction::PHI:

@@ -298,8 +298,10 @@ unsigned HexagonTTIImpl::getCacheLineSize() const {
   return ST.getL1CacheLineSize();
 }
 
-int HexagonTTIImpl::getUserCost(const User *U,
-                                ArrayRef<const Value *> Operands) {
+int
+HexagonTTIImpl::getUserCost(const User *U,
+                            ArrayRef<const Value *> Operands,
+                            TTI::TargetCostKind CostKind) {
   auto isCastFoldedIntoLoad = [this](const CastInst *CI) -> bool {
     if (!CI->isIntegerCast())
       return false;
@@ -321,7 +323,7 @@ int HexagonTTIImpl::getUserCost(const User *U,
   if (const CastInst *CI = dyn_cast<const CastInst>(U))
     if (isCastFoldedIntoLoad(CI))
       return TargetTransformInfo::TCC_Free;
-  return BaseT::getUserCost(U, Operands);
+  return BaseT::getUserCost(U, Operands, CostKind);
 }
 
 bool HexagonTTIImpl::shouldBuildLookupTables() const {
