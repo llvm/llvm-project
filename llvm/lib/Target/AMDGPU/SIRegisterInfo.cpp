@@ -1800,8 +1800,7 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
 }
 
 MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
-  const TargetRegisterClass *RC = getPhysRegClass(Reg);
-  assert(getRegSizeInBits(*RC) <= 32);
+  assert(getRegSizeInBits(*getPhysRegClass(Reg)) <= 32);
 
   for (const TargetRegisterClass &RC : { AMDGPU::VGPR_32RegClass,
                                          AMDGPU::SReg_32RegClass,
