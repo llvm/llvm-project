@@ -803,7 +803,7 @@ bool SoftPointerAuth::transformPointerAuthCall(CallBase *oldCall,
   IRBuilderTy builder(oldCall);
 
   // Authenticate the callee.
-  Value *oldCallee = oldCall->getCalledValue();
+  Value *oldCallee = oldCall->getCalledOperand();
   Value *callee = builder.CreateBitCast(oldCallee, getType(VoidPtr));
   callee = emitAuth(builder, callee, bundle.Inputs[0], bundle.Inputs[1]);
   callee = builder.CreateBitCast(callee, oldCallee->getType());
