@@ -860,7 +860,7 @@ vec_gather_element(__vector signed int __vec,
                    const signed int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
   __vec[__index] = *(const signed int *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -870,7 +870,7 @@ vec_gather_element(__vector __bool int __vec,
                    const unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
   __vec[__index] = *(const unsigned int *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -880,7 +880,7 @@ vec_gather_element(__vector unsigned int __vec,
                    const unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
   __vec[__index] = *(const unsigned int *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -890,7 +890,7 @@ vec_gather_element(__vector signed long long __vec,
                    const signed long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
   __vec[__index] = *(const signed long long *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -900,7 +900,7 @@ vec_gather_element(__vector __bool long long __vec,
                    const unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
   __vec[__index] = *(const unsigned long long *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -910,7 +910,7 @@ vec_gather_element(__vector unsigned long long __vec,
                    const unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
   __vec[__index] = *(const unsigned long long *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -921,7 +921,7 @@ vec_gather_element(__vector float __vec,
                    const float *__ptr, int __index)
   __constant_range(__index, 0, 3) {
   __vec[__index] = *(const float *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 #endif
@@ -932,7 +932,7 @@ vec_gather_element(__vector double __vec,
                    const double *__ptr, int __index)
   __constant_range(__index, 0, 1) {
   __vec[__index] = *(const double *)(
-    (__INTPTR_TYPE__)__ptr + (__INTPTR_TYPE__)__offset[__index]);
+    (const char *)__ptr + __offset[__index]);
   return __vec;
 }
 
@@ -943,7 +943,7 @@ vec_scatter_element(__vector signed int __vec,
                     __vector unsigned int __offset,
                     signed int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(signed int *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(signed int *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -952,7 +952,7 @@ vec_scatter_element(__vector __bool int __vec,
                     __vector unsigned int __offset,
                     unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(unsigned int *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(unsigned int *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -961,7 +961,7 @@ vec_scatter_element(__vector unsigned int __vec,
                     __vector unsigned int __offset,
                     unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(unsigned int *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(unsigned int *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -970,7 +970,7 @@ vec_scatter_element(__vector signed long long __vec,
                     __vector unsigned long long __offset,
                     signed long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(signed long long *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(signed long long *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -979,7 +979,7 @@ vec_scatter_element(__vector __bool long long __vec,
                     __vector unsigned long long __offset,
                     unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(unsigned long long *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(unsigned long long *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -988,7 +988,7 @@ vec_scatter_element(__vector unsigned long long __vec,
                     __vector unsigned long long __offset,
                     unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(unsigned long long *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(unsigned long long *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -998,7 +998,7 @@ vec_scatter_element(__vector float __vec,
                     __vector unsigned int __offset,
                     float *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(float *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(float *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 #endif
@@ -1008,7 +1008,7 @@ vec_scatter_element(__vector double __vec,
                     __vector unsigned long long __offset,
                     double *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(double *)((__INTPTR_TYPE__)__ptr + __offset[__index]) =
+  *(double *)((char *)__ptr + __offset[__index]) =
     __vec[__index];
 }
 
@@ -1017,63 +1017,63 @@ vec_scatter_element(__vector double __vec,
 static inline __ATTRS_o_ai __vector signed char
 vec_xl(long __offset, const signed char *__ptr) {
   return *(const __vector signed char *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_xl(long __offset, const unsigned char *__ptr) {
   return *(const __vector unsigned char *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector signed short
 vec_xl(long __offset, const signed short *__ptr) {
   return *(const __vector signed short *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector unsigned short
 vec_xl(long __offset, const unsigned short *__ptr) {
   return *(const __vector unsigned short *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector signed int
 vec_xl(long __offset, const signed int *__ptr) {
   return *(const __vector signed int *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector unsigned int
 vec_xl(long __offset, const unsigned int *__ptr) {
   return *(const __vector unsigned int *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector signed long long
 vec_xl(long __offset, const signed long long *__ptr) {
   return *(const __vector signed long long *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_xl(long __offset, const unsigned long long *__ptr) {
   return *(const __vector unsigned long long *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 #if __ARCH__ >= 12
 static inline __ATTRS_o_ai __vector float
 vec_xl(long __offset, const float *__ptr) {
   return *(const __vector float *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 #endif
 
 static inline __ATTRS_o_ai __vector double
 vec_xl(long __offset, const double *__ptr) {
   return *(const __vector double *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 /*-- vec_xld2 ---------------------------------------------------------------*/
@@ -1082,63 +1082,63 @@ vec_xl(long __offset, const double *__ptr) {
 static inline __ATTRS_o_ai __vector signed char
 vec_xld2(long __offset, const signed char *__ptr) {
   return *(const __vector signed char *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned char
 vec_xld2(long __offset, const unsigned char *__ptr) {
   return *(const __vector unsigned char *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector signed short
 vec_xld2(long __offset, const signed short *__ptr) {
   return *(const __vector signed short *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned short
 vec_xld2(long __offset, const unsigned short *__ptr) {
   return *(const __vector unsigned short *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector signed int
 vec_xld2(long __offset, const signed int *__ptr) {
   return *(const __vector signed int *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned int
 vec_xld2(long __offset, const unsigned int *__ptr) {
   return *(const __vector unsigned int *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector signed long long
 vec_xld2(long __offset, const signed long long *__ptr) {
   return *(const __vector signed long long *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_xld2(long __offset, const unsigned long long *__ptr) {
   return *(const __vector unsigned long long *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector double
 vec_xld2(long __offset, const double *__ptr) {
   return *(const __vector double *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 /*-- vec_xlw4 ---------------------------------------------------------------*/
@@ -1147,99 +1147,98 @@ vec_xld2(long __offset, const double *__ptr) {
 static inline __ATTRS_o_ai __vector signed char
 vec_xlw4(long __offset, const signed char *__ptr) {
   return *(const __vector signed char *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned char
 vec_xlw4(long __offset, const unsigned char *__ptr) {
   return *(const __vector unsigned char *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector signed short
 vec_xlw4(long __offset, const signed short *__ptr) {
   return *(const __vector signed short *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned short
 vec_xlw4(long __offset, const unsigned short *__ptr) {
   return *(const __vector unsigned short *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector signed int
 vec_xlw4(long __offset, const signed int *__ptr) {
   return *(const __vector signed int *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai __vector unsigned int
 vec_xlw4(long __offset, const unsigned int *__ptr) {
   return *(const __vector unsigned int *)
-          ((__INTPTR_TYPE__)__ptr + __offset);
+          ((const char *)__ptr + __offset);
 }
 
 /*-- vec_xst ----------------------------------------------------------------*/
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector signed char __vec, long __offset, signed char *__ptr) {
-  *(__vector signed char *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed char *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector unsigned char __vec, long __offset, unsigned char *__ptr) {
-  *(__vector unsigned char *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned char *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector signed short __vec, long __offset, signed short *__ptr) {
-  *(__vector signed short *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed short *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector unsigned short __vec, long __offset, unsigned short *__ptr) {
-  *(__vector unsigned short *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned short *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector signed int __vec, long __offset, signed int *__ptr) {
-  *(__vector signed int *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed int *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector unsigned int __vec, long __offset, unsigned int *__ptr) {
-  *(__vector unsigned int *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned int *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector signed long long __vec, long __offset,
           signed long long *__ptr) {
-  *(__vector signed long long *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed long long *)((char *)__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector unsigned long long __vec, long __offset,
           unsigned long long *__ptr) {
-  *(__vector unsigned long long *)((__INTPTR_TYPE__)__ptr + __offset) =
-    __vec;
+  *(__vector unsigned long long *)((char *)__ptr + __offset) = __vec;
 }
 
 #if __ARCH__ >= 12
 static inline __ATTRS_o_ai void
 vec_xst(__vector float __vec, long __offset, float *__ptr) {
-  *(__vector float *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector float *)((char *)__ptr + __offset) = __vec;
 }
 #endif
 
 static inline __ATTRS_o_ai void
 vec_xst(__vector double __vec, long __offset, double *__ptr) {
-  *(__vector double *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector double *)((char *)__ptr + __offset) = __vec;
 }
 
 /*-- vec_xstd2 --------------------------------------------------------------*/
@@ -1247,58 +1246,57 @@ vec_xst(__vector double __vec, long __offset, double *__ptr) {
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector signed char __vec, long __offset, signed char *__ptr) {
-  *(__vector signed char *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed char *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector unsigned char __vec, long __offset, unsigned char *__ptr) {
-  *(__vector unsigned char *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned char *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector signed short __vec, long __offset, signed short *__ptr) {
-  *(__vector signed short *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed short *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector unsigned short __vec, long __offset, unsigned short *__ptr) {
-  *(__vector unsigned short *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned short *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector signed int __vec, long __offset, signed int *__ptr) {
-  *(__vector signed int *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed int *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector unsigned int __vec, long __offset, unsigned int *__ptr) {
-  *(__vector unsigned int *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned int *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector signed long long __vec, long __offset,
           signed long long *__ptr) {
-  *(__vector signed long long *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed long long *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector unsigned long long __vec, long __offset,
           unsigned long long *__ptr) {
-  *(__vector unsigned long long *)((__INTPTR_TYPE__)__ptr + __offset) =
-    __vec;
+  *(__vector unsigned long long *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstd2(__vector double __vec, long __offset, double *__ptr) {
-  *(__vector double *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector double *)((char *)__ptr + __offset) = __vec;
 }
 
 /*-- vec_xstw4 --------------------------------------------------------------*/
@@ -1306,37 +1304,37 @@ vec_xstd2(__vector double __vec, long __offset, double *__ptr) {
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstw4(__vector signed char __vec, long __offset, signed char *__ptr) {
-  *(__vector signed char *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed char *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstw4(__vector unsigned char __vec, long __offset, unsigned char *__ptr) {
-  *(__vector unsigned char *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned char *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstw4(__vector signed short __vec, long __offset, signed short *__ptr) {
-  *(__vector signed short *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed short *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstw4(__vector unsigned short __vec, long __offset, unsigned short *__ptr) {
-  *(__vector unsigned short *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned short *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstw4(__vector signed int __vec, long __offset, signed int *__ptr) {
-  *(__vector signed int *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector signed int *)((char *)__ptr + __offset) = __vec;
 }
 
 // This prototype is deprecated.
 static inline __ATTRS_o_ai void
 vec_xstw4(__vector unsigned int __vec, long __offset, unsigned int *__ptr) {
-  *(__vector unsigned int *)((__INTPTR_TYPE__)__ptr + __offset) = __vec;
+  *(__vector unsigned int *)((char *)__ptr + __offset) = __vec;
 }
 
 /*-- vec_load_bndry ---------------------------------------------------------*/
