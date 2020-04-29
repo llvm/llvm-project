@@ -7744,6 +7744,39 @@ Value *CodeGenFunction::EmitSVEScatterStore(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, Ops);
 }
 
+Value *CodeGenFunction::EmitSVEGatherPrefetch(SVETypeFlags TypeFlags,
+                                              SmallVectorImpl<Value *> &Ops,
+                                              unsigned IntID) {
+  // The gather prefetches are overloaded on the vector input - this can either
+  // be the vector of base addresses or vector of offsets.
+  auto *OverloadedTy = dyn_cast<llvm::ScalableVectorType>(Ops[1]->getType());
+  if (!OverloadedTy)
+    OverloadedTy = cast<llvm::ScalableVectorType>(Ops[2]->getType());
+
+  // Cast the predicate from svbool_t to the right number of elements.
+  Ops[0] = EmitSVEPredicateCast(Ops[0], OverloadedTy);
+
+  // vector + imm addressing modes
+  if (Ops[1]->getType()->isVectorTy()) {
+    if (Ops.size() == 3) {
+      // Pass 0 for 'vector+imm' when the index is omitted.
+      Ops.push_back(ConstantInt::get(Int64Ty, 0));
+
+      // The sv_prfop is the last operand in the builtin and IR intrinsic.
+      std::swap(Ops[2], Ops[3]);
+    } else {
+      // Index needs to be passed as scaled offset.
+      llvm::Type *MemEltTy = SVEBuiltinMemEltTy(TypeFlags);
+      unsigned BytesPerElt = MemEltTy->getPrimitiveSizeInBits() / 8;
+      Value *Scale = ConstantInt::get(Int64Ty, BytesPerElt);
+      Ops[2] = Builder.CreateMul(Ops[2], Scale);
+    }
+  }
+
+  Function *F = CGM.getIntrinsic(IntID, OverloadedTy);
+  return Builder.CreateCall(F, Ops);
+}
+
 Value *CodeGenFunction::EmitSVEPrefetchLoad(SVETypeFlags TypeFlags,
                                             SmallVectorImpl<Value *> &Ops,
                                             unsigned BuiltinID) {
@@ -7903,6 +7936,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isPrefetch())
     return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isGatherPrefetch())
+    return EmitSVEGatherPrefetch(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
