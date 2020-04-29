@@ -123,41 +123,25 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 class SIReg <string n, bits<16> regIdx = 0> :
   Register<n> {
   let Namespace = "AMDGPU";
+
+  // This is the not yet the complete register encoding. An additional
+  // bit is set for VGPRs.
   let HWEncoding = regIdx;
 }
 
-class SIRegWithSubRegs <string n, list<Register> subregs, bits<16> regIdx> :
+class SIRegWithSubRegs <string n, list<Register> subregs, bits<16> regIdx = 0> :
   RegisterWithSubRegs<n, subregs> {
-}
+  let Namespace = "AMDGPU";
 
-multiclass SIRegLoHi16 <string n, bits<16> regIdx, bit ArtificialHigh = 1,
-                        bit HWEncodingHigh = 0> {
-  // There is no special encoding for 16 bit subregs, these are not real
-  // registers but rather operands for instructions preserving other 16 bits
-  // of the result or reading just 16 bits of a 32 bit VGPR.
-  // It is encoded as a corresponding 32 bit register.
-  // Non-VGPR register classes use it as we need to have matching subregisters
-  // to move instructions and data between ALUs.
-  def _LO16 : SIReg<n#".l", regIdx> {
-    let HWEncoding{8} = HWEncodingHigh;
-  }
-  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx> {
-    let isArtificial = ArtificialHigh;
-    let HWEncoding{8} = HWEncodingHigh;
-  }
-  def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
-                                   !cast<Register>(NAME#"_HI16")]> {
-    let Namespace = "AMDGPU";
-    let SubRegIndices = [lo16, hi16];
-    let CoveredBySubRegs = 1;
-    let HWEncoding = regIdx;
-    let HWEncoding{8} = HWEncodingHigh;
-  }
+  // This is the not yet the complete register encoding. An additional
+  // bit is set for VGPRs.
+  let HWEncoding = regIdx;
+  let CoveredBySubRegs = 1;
 }
 
 // Special Registers
-defm VCC_LO : SIRegLoHi16<"vcc_lo", 106>;
-defm VCC_HI : SIRegLoHi16<"vcc_hi", 107>;
+def VCC_LO : SIReg<"vcc_lo", 106>;
+def VCC_HI : SIReg<"vcc_hi", 107>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
 // replaced, never seeing the verifier.
@@ -180,8 +164,8 @@ def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let HWEncoding = 106;
 }
 
-defm EXEC_LO : SIRegLoHi16<"exec_lo", 126>, DwarfRegNum<[1, 1]>;
-defm EXEC_HI : SIRegLoHi16<"exec_hi", 127>;
+def EXEC_LO : SIReg<"exec_lo", 126>, DwarfRegNum<[1, 1]>;
+def EXEC_HI : SIReg<"exec_hi", 127>;
 
 def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
   let Namespace = "AMDGPU";
@@ -191,22 +175,22 @@ def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]>
 
 // 32-bit real registers, for MC only.
 // May be used with both 32-bit and 64-bit operands.
-defm SRC_VCCZ : SIRegLoHi16<"src_vccz", 251>;
-defm SRC_EXECZ : SIRegLoHi16<"src_execz", 252>;
-defm SRC_SCC : SIRegLoHi16<"src_scc", 253>;
+def SRC_VCCZ : SIReg<"src_vccz", 251>;
+def SRC_EXECZ : SIReg<"src_execz", 252>;
+def SRC_SCC : SIReg<"src_scc", 253>;
 
 // 1-bit pseudo register, for codegen only.
 // Should never be emitted.
 def SCC : SIReg<"scc">;
 
-defm M0 : SIRegLoHi16 <"m0", 124>;
-defm SGPR_NULL : SIRegLoHi16 <"null", 125>;
+def M0 : SIReg <"m0", 124>;
+def SGPR_NULL : SIReg<"null", 125>;
 
-defm SRC_SHARED_BASE : SIRegLoHi16<"src_shared_base", 235>;
-defm SRC_SHARED_LIMIT : SIRegLoHi16<"src_shared_limit", 236>;
-defm SRC_PRIVATE_BASE : SIRegLoHi16<"src_private_base", 237>;
-defm SRC_PRIVATE_LIMIT : SIRegLoHi16<"src_private_limit", 238>;
-defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
+def SRC_SHARED_BASE : SIReg<"src_shared_base", 235>;
+def SRC_SHARED_LIMIT : SIReg<"src_shared_limit", 236>;
+def SRC_PRIVATE_BASE : SIReg<"src_private_base", 237>;
+def SRC_PRIVATE_LIMIT : SIReg<"src_private_limit", 238>;
+def SRC_POPS_EXITING_WAVE_ID : SIReg<"src_pops_exiting_wave_id", 239>;
 
 def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   // There is no physical register corresponding to this. This is an
@@ -215,8 +199,8 @@ def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   let isArtificial = 1;
 }
 
-defm XNACK_MASK_LO : SIRegLoHi16<"xnack_mask_lo", 104>;
-defm XNACK_MASK_HI : SIRegLoHi16<"xnack_mask_hi", 105>;
+def XNACK_MASK_LO : SIReg<"xnack_mask_lo", 104>;
+def XNACK_MASK_HI : SIReg<"xnack_mask_hi", 105>;
 
 def XNACK_MASK :
     RegisterWithSubRegs<"xnack_mask", [XNACK_MASK_LO, XNACK_MASK_HI]> {
@@ -226,8 +210,8 @@ def XNACK_MASK :
 }
 
 // Trap handler registers
-defm TBA_LO : SIRegLoHi16<"tba_lo", 108>;
-defm TBA_HI : SIRegLoHi16<"tba_hi", 109>;
+def TBA_LO : SIReg<"tba_lo", 108>;
+def TBA_HI : SIReg<"tba_hi", 109>;
 
 def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]> {
   let Namespace = "AMDGPU";
@@ -235,8 +219,8 @@ def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]> {
   let HWEncoding = 108;
 }
 
-defm TMA_LO : SIRegLoHi16<"tma_lo", 110>;
-defm TMA_HI : SIRegLoHi16<"tma_hi", 111>;
+def TMA_LO : SIReg<"tma_lo", 110>;
+def TMA_HI : SIReg<"tma_hi", 111>;
 
 def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]> {
   let Namespace = "AMDGPU";
@@ -245,15 +229,15 @@ def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]> {
 }
 
 foreach Index = 0-15 in {
-  defm TTMP#Index#_vi         : SIRegLoHi16<"ttmp"#Index, !add(112, Index)>;
-  defm TTMP#Index#_gfx9_gfx10 : SIRegLoHi16<"ttmp"#Index, !add(108, Index)>;
-  defm TTMP#Index             : SIRegLoHi16<"ttmp"#Index, 0>;
+  def TTMP#Index#_vi         : SIReg<"ttmp"#Index, !add(112, Index)>;
+  def TTMP#Index#_gfx9_gfx10 : SIReg<"ttmp"#Index, !add(108, Index)>;
+  def TTMP#Index             : SIReg<"ttmp"#Index, 0>;
 }
 
 multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
-  defm _ci : SIRegLoHi16<n, ci_e>;
-  defm _vi : SIRegLoHi16<n, vi_e>;
-  defm "" : SIRegLoHi16<n, 0>;
+  def _ci : SIReg<n, ci_e>;
+  def _vi : SIReg<n, vi_e>;
+  def "" : SIReg<n, 0>;
 }
 
 class FlatReg <Register lo, Register hi, bits<16> encoding> :
@@ -272,17 +256,50 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
 foreach Index = 0-105 in {
-  defm SGPR#Index :
-     SIRegLoHi16 <"s"#Index, Index>,
-     DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
-                  !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
+  def SGPR#Index#_LO16 : SIReg <"s"#Index#".l", Index>,
+    DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
+                 !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
+
+  // This is a placeholder to fill high lane in mask.
+  def SGPR#Index#_HI16 : SIReg <"", Index> {
+    let isArtificial = 1;
+  }
+
+  def SGPR#Index :
+    SIRegWithSubRegs <"s"#Index, [!cast<Register>("SGPR"#Index#"_LO16"),
+                                  !cast<Register>("SGPR"#Index#"_HI16")],
+                      Index>,
+    DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
+                 !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]> {
+    let SubRegIndices = [lo16, hi16];
+  }
 }
 
 // VGPR registers
 foreach Index = 0-255 in {
-  defm VGPR#Index :
-    SIRegLoHi16 <"v"#Index, Index, 0, 1>,
-    DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]>;
+  // There is no special encoding for low 16 bit subreg, this not a real
+  // register but rather an operand for instructions preserving high 16 bits
+  // of the result or reading just low 16 bits of a 32 bit VGPR.
+  // It is encoded as a corresponding 32 bit register.
+  def VGPR#Index#_LO16 : SIReg <"v"#Index#".l", Index>,
+    DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]> {
+    let HWEncoding{8} = 1;
+  }
+  // There is no special encoding for low 16 bit subreg, this not a real
+  // register but rather an operand for instructions preserving low 16 bits
+  // of the result or reading just high 16 bits of a 32 bit VGPR.
+  // It is encoded as a corresponding 32 bit register.
+  def VGPR#Index#_HI16 : SIReg <"v"#Index#".h", Index>,
+    DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]> {
+    let HWEncoding{8} = 1;
+  }
+  def VGPR#Index : SIRegWithSubRegs <"v"#Index,
+    [!cast<Register>("VGPR"#Index#"_LO16"), !cast<Register>("VGPR"#Index#"_HI16")],
+    Index>,
+    DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]> {
+    let HWEncoding{8} = 1;
+    let SubRegIndices = [lo16, hi16];
+  }
 }
 
 // AccVGPR registers
@@ -308,17 +325,11 @@ def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
   let isAllocatable = 0;
 }
 
-def M0_CLASS_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16, (add M0_LO16)> {
-  let CopyCost = 1;
-  let Size = 16;
-  let isAllocatable = 0;
-}
-
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
 def SGPR_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
                               (add (sequence "SGPR%u_LO16", 0, 105))> {
-  let AllocationPriority = 9;
+  let AllocationPriority = 1;
   let Size = 16;
   let GeneratePressureSet = 0;
 }
@@ -366,12 +377,6 @@ def SGPR_1024Regs : SIRegisterTuples<getSubRegs<32>.ret, SGPR_32, 105, 4, 32, "s
 // Trap handler TMP 32-bit registers
 def TTMP_32 : RegisterClass<"AMDGPU", [i32, f32, v2i16, v2f16], 32,
                             (add (sequence "TTMP%u", 0, 15))> {
-  let isAllocatable = 0;
-}
-
-def TTMP_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
-                              (add (sequence "TTMP%u_LO16", 0, 15))> {
-  let Size = 16;
   let isAllocatable = 0;
 }
 
@@ -583,41 +588,13 @@ def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f1
   let AllocationPriority = 10;
 }
 
-def SReg_LO16_XM0_XEXEC : RegisterClass<"AMDGPU", [i16, f16], 16,
-  (add SGPR_LO16, VCC_LO_LO16, VCC_HI_LO16, FLAT_SCR_LO_LO16, FLAT_SCR_HI_LO16,
-   XNACK_MASK_LO_LO16, XNACK_MASK_HI_LO16, SGPR_NULL_LO16, TTMP_LO16, TMA_LO_LO16,
-   TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO16,
-   SRC_SHARED_LIMIT_LO16, SRC_PRIVATE_BASE_LO16, SRC_PRIVATE_LIMIT_LO16,
-   SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16, SRC_EXECZ_LO16, SRC_SCC_LO16)> {
-  let Size = 16;
-  let AllocationPriority = 10;
-}
-
 def SReg_32_XEXEC_HI : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SReg_32_XM0_XEXEC, EXEC_LO, M0_CLASS)> {
   let AllocationPriority = 10;
 }
 
-def SReg_LO16_XEXEC_HI : RegisterClass<"AMDGPU", [i16, f16], 16,
-  (add SReg_LO16_XM0_XEXEC, EXEC_LO_LO16, M0_CLASS_LO16)> {
-  let Size = 16;
-  let AllocationPriority = 10;
-}
-
 def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, i1], 32,
   (add SReg_32_XM0_XEXEC, EXEC_LO, EXEC_HI)> {
-  let AllocationPriority = 10;
-}
-
-def SReg_LO16_XM0 : RegisterClass<"AMDGPU", [i16, f16], 16,
-  (add SReg_LO16_XM0_XEXEC, EXEC_LO_LO16, EXEC_HI_LO16)> {
-  let Size = 16;
-  let AllocationPriority = 10;
-}
-
-def SReg_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
-  (add SGPR_LO16, SReg_LO16_XM0, M0_CLASS_LO16, EXEC_LO_LO16, EXEC_HI_LO16, SReg_LO16_XEXEC_HI)> {
-  let Size = 16;
   let AllocationPriority = 10;
 }
 } // End GeneratePressureSet = 0
