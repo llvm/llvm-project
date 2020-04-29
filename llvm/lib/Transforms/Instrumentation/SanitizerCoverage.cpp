@@ -786,7 +786,7 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
   for (auto I : IndirCalls) {
     IRBuilder<> IRB(I);
     CallBase &CB = cast<CallBase>(*I);
-    Value *Callee = CB.getCalledValue();
+    Value *Callee = CB.getCalledOperand();
     if (isa<InlineAsm>(Callee))
       continue;
     IRB.CreateCall(SanCovTracePCIndir, IRB.CreatePointerCast(Callee, IntptrTy));

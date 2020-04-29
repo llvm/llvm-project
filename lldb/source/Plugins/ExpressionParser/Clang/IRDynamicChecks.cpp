@@ -465,7 +465,7 @@ protected:
   }
 
   static llvm::Function *GetCalledFunction(llvm::CallInst *inst) {
-    return GetFunction(inst->getCalledValue());
+    return GetFunction(inst->getCalledOperand());
   }
 
   bool InspectInstruction(llvm::Instruction &i) override {

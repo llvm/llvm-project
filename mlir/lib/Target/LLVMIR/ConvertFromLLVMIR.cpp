@@ -720,7 +720,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       op = b.create<CallOp>(loc, tys, b.getSymbolRefAttr(callee->getName()),
                             ops);
     } else {
-      Value calledValue = processValue(ci->getCalledValue());
+      Value calledValue = processValue(ci->getCalledOperand());
       if (!calledValue)
         return failure();
       ops.insert(ops.begin(), calledValue);
@@ -766,7 +766,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
                               ops, blocks[ii->getNormalDest()], normalArgs,
                               blocks[ii->getUnwindDest()], unwindArgs);
     } else {
-      ops.insert(ops.begin(), processValue(ii->getCalledValue()));
+      ops.insert(ops.begin(), processValue(ii->getCalledOperand()));
       op = b.create<InvokeOp>(loc, tys, ops, blocks[ii->getNormalDest()],
                               normalArgs, blocks[ii->getUnwindDest()],
                               unwindArgs);

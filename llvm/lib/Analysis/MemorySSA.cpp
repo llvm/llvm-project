@@ -167,7 +167,7 @@ public:
     if (!IsCall)
       return Loc == Other.Loc;
 
-    if (Call->getCalledValue() != Other.Call->getCalledValue())
+    if (Call->getCalledOperand() != Other.Call->getCalledOperand())
       return false;
 
     return Call->arg_size() == Other.Call->arg_size() &&
@@ -203,7 +203,7 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
 
     hash_code hash =
         hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCall()->getCalledValue()));
+                                      MLOC.getCall()->getCalledOperand()));
 
     for (const Value *Arg : MLOC.getCall()->args())
       hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));

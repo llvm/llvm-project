@@ -39,7 +39,7 @@ static bool lowerLoadRelative(Function &F) {
   for (auto I = F.use_begin(), E = F.use_end(); I != E;) {
     auto CI = dyn_cast<CallInst>(I->getUser());
     ++I;
-    if (!CI || CI->getCalledValue() != &F)
+    if (!CI || CI->getCalledOperand() != &F)
       continue;
 
     IRBuilder<> B(CI);

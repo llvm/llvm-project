@@ -11009,7 +11009,7 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
 bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
                                                const Value *V) const {
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue())) {
+    if (CI->isInlineAsm()) {
       // FIXME: This cannot give a correct answer. This should only trigger in
       // the case where inline asm returns mixed SGPR and VGPR results, used
       // outside the defining block. We don't have a specific result to
