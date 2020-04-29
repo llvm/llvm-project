@@ -54,8 +54,8 @@ static cl::opt<int>
                      cl::ZeroOrMore,
                      cl::desc("Default amount of inlining to perform"));
 
-static cl::opt<bool> PrintDebugInstructionDeltas("print-instruction-deltas",
-    cl::Hidden, cl::init(false),
+static cl::opt<bool> PrintDebugInstructionDeltas(
+    "print-instruction-deltas", cl::Hidden, cl::init(false),
     cl::desc("Prints deltas of cost and threshold per instruction"));
 
 static cl::opt<int> InlineThreshold(
@@ -132,10 +132,10 @@ class CostAnnotationWriter : public AssemblyAnnotationWriter {
 public:
   // This DenseMap stores the delta change in cost and threshold after
   // accounting for the given instruction.
-  DenseMap <const Instruction *, InstructionCostDetail> CostThresholdMap;
+  DenseMap<const Instruction *, InstructionCostDetail> CostThresholdMap;
 
   virtual void emitInstructionAnnot(const Instruction *I,
-                                        formatted_raw_ostream &OS);
+                                    formatted_raw_ostream &OS);
 };
 
 class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
@@ -590,7 +590,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // This function is called to store the initial cost of inlining before
     // the given instruction was assessed.
     if (!PrintDebugInstructionDeltas)
-        return ;
+      return;
     Writer.CostThresholdMap[I].CostBefore = Cost;
     Writer.CostThresholdMap[I].ThresholdBefore = Threshold;
   }
@@ -599,7 +599,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // This function is called to find new values of cost and threshold after
     // the instruction has been assessed.
     if (!PrintDebugInstructionDeltas)
-        return ;
+      return;
     Writer.CostThresholdMap[I].CostAfter = Cost;
     Writer.CostThresholdMap[I].ThresholdAfter = Threshold;
   }
@@ -727,22 +727,24 @@ void CallAnalyzer::disableSROAForArg(AllocaInst *SROAArg) {
   disableLoadElimination();
 }
 
-void CostAnnotationWriter::emitInstructionAnnot(
-    const Instruction *I, formatted_raw_ostream &OS) {
-    // The cost of inlining of the given instruction is printed always.
-    // The threshold delta is printed only when it is non-zero. It happens
-    // when we decided to give a bonus at a particular instruction.
-    assert(CostThresholdMap.count(I) > 0 &&
-           "Expected each instruction to have an instruction annotation");
-    const auto &Record = CostThresholdMap[I];
-    OS << "; cost before = " << Record.CostBefore
-       << ", cost after = " << Record.CostAfter
-       << ", threshold before = " << Record.ThresholdBefore
-       << ", threshold after = " << Record.ThresholdAfter << ", ";
-    OS << "cost delta = " << Record.getCostDelta();
-    if (Record.hasThresholdChanged())
-      OS << ", threshold delta = " << Record.getThresholdDelta();
-    OS << "\n";
+void CostAnnotationWriter::emitInstructionAnnot(const Instruction *I,
+                                                formatted_raw_ostream &OS) {
+  // The cost of inlining of the given instruction is printed always.
+  // The threshold delta is printed only when it is non-zero. It happens
+  // when we decided to give a bonus at a particular instruction.
+  if (CostThresholdMap.count(I) == 0) {
+    OS << "; No analysis for the instruction\n";
+    return;
+  }
+  const auto &Record = CostThresholdMap[I];
+  OS << "; cost before = " << Record.CostBefore
+     << ", cost after = " << Record.CostAfter
+     << ", threshold before = " << Record.ThresholdBefore
+     << ", threshold after = " << Record.ThresholdAfter << ", ";
+  OS << "cost delta = " << Record.getCostDelta();
+  if (Record.hasThresholdChanged())
+    OS << ", threshold delta = " << Record.getThresholdDelta();
+  OS << "\n";
 }
 
 /// If 'V' maps to a SROA candidate, disable SROA for it.
@@ -804,7 +806,8 @@ bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
     else
       Operands.push_back(*I);
   return TargetTransformInfo::TCC_Free ==
-         TTI.getUserCost(&GEP, Operands, TargetTransformInfo::TCK_SizeAndLatency);
+         TTI.getUserCost(&GEP, Operands,
+                         TargetTransformInfo::TCK_SizeAndLatency);
 }
 
 bool CallAnalyzer::visitAlloca(AllocaInst &I) {
