@@ -8062,6 +8062,23 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return nullptr;
+
+  case SVE::BI__builtin_sve_svmov_b_z: {
+    // svmov_b_z(pg, op) <=> svand_b_z(pg, op, op)
+    SVETypeFlags TypeFlags(Builtin->TypeModifier);
+    llvm::Type* OverloadedTy = getSVEType(TypeFlags);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_and_z, OverloadedTy);
+    return Builder.CreateCall(F, {Ops[0], Ops[1], Ops[1]});
+  }
+
+  case SVE::BI__builtin_sve_svnot_b_z: {
+    // svnot_b_z(pg, op) <=> sveor_b_z(pg, op, pg)
+    SVETypeFlags TypeFlags(Builtin->TypeModifier);
+    llvm::Type* OverloadedTy = getSVEType(TypeFlags);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_eor_z, OverloadedTy);
+    return Builder.CreateCall(F, {Ops[0], Ops[1], Ops[0]});
+  }
+
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
 
