@@ -50,13 +50,14 @@ class DpuAttachTestCase(TestBase):
             thread.StepOut()
         thread.StepOut()
 
-        breakpoint_poll = target.BreakpointCreateByName("dpu_poll_dpu")
+        breakpoint_poll = target.BreakpointCreateByName("dpu_poll_rank")
         process.Continue()
+        thread = process.GetSelectedThread()
         self.assertTrue(thread.GetStopReason() == lldb.eStopReasonBreakpoint)
         target.BreakpointDelete(breakpoint_poll.GetID())
 
         process.GetSelectedThread().SetSelectedFrame(1)
-        dpu_commands.dpu_attach(self.dbg, "dpu", None, None)
+        dpu_commands.dpu_attach(self.dbg, "0.0.0.0", None, None)
 
         process_dpu = self.dbg.GetSelectedTarget().GetProcess()
         process_dpu.GetThreadAtIndex(0).GetFrameAtIndex(0) \
