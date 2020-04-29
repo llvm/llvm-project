@@ -239,7 +239,8 @@ public:
 
   bool useColdCCForColdCall(Function &F) { return false; }
 
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
+  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                    bool Insert, bool Extract) {
     return 0;
   }
 

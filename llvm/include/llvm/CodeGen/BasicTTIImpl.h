@@ -548,12 +548,19 @@ public:
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
-  /// are set if the result needs to be inserted and/or extracted from vectors.
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
+  /// are set if the demanded result elements need to be inserted and/or
+  /// extracted from vectors.
+  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                    bool Insert, bool Extract) {
     auto *VTy = cast<VectorType>(Ty);
+    assert(DemandedElts.getBitWidth() == VTy->getNumElements() &&
+           "Vector size mismatch");
+
     unsigned Cost = 0;
 
     for (int i = 0, e = VTy->getNumElements(); i < e; ++i) {
+      if (!DemandedElts[i])
+        continue;
       if (Insert)
         Cost += static_cast<T *>(this)->getVectorInstrCost(
             Instruction::InsertElement, VTy, i);
@@ -563,6 +570,14 @@ public:
     }
 
     return Cost;
+  }
+
+  /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
+  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
+    auto *VTy = cast<VectorType>(Ty);
+    APInt DemandedElts = APInt::getAllOnesValue(VTy->getNumElements());
+    return static_cast<T *>(this)->getScalarizationOverhead(Ty, DemandedElts,
+                                                            Insert, Extract);
   }
 
   /// Estimate the overhead of scalarizing an instructions unique

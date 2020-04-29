@@ -132,7 +132,8 @@ public:
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                          const Instruction *I = nullptr);
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract);
+  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                    bool Insert, bool Extract);
   int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
                       unsigned AddressSpace, const Instruction *I = nullptr);
   int getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
