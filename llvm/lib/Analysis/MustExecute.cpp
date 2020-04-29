@@ -357,26 +357,23 @@ ModulePass *llvm::createMustBeExecutedContextPrinter() {
 bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
   // We provide non-PM analysis here because the old PM doesn't like to query
   // function passes from a module pass.
-  SmallVector<PostDominatorTree *, 8> PDTs;
-  SmallVector<DominatorTree *, 8> DTs;
-  SmallVector<LoopInfo *, 8> LIs;
+  SmallVector<std::unique_ptr<PostDominatorTree>, 8> PDTs;
+  SmallVector<std::unique_ptr<DominatorTree>, 8> DTs;
+  SmallVector<std::unique_ptr<LoopInfo>, 8> LIs;
 
   GetterTy<LoopInfo> LIGetter = [&](const Function &F) {
-    DominatorTree *DT = new DominatorTree(const_cast<Function &>(F));
-    LoopInfo *LI = new LoopInfo(*DT);
-    DTs.push_back(DT);
-    LIs.push_back(LI);
-    return LI;
+    DTs.push_back(std::make_unique<DominatorTree>(const_cast<Function &>(F)));
+    LIs.push_back(std::make_unique<LoopInfo>(*DTs.back()));
+    return LIs.back().get();
   };
   GetterTy<DominatorTree> DTGetter = [&](const Function &F) {
-    DominatorTree *DT = new DominatorTree(const_cast<Function &>(F));
-    DTs.push_back(DT);
-    return DT;
+    DTs.push_back(std::make_unique<DominatorTree>(const_cast<Function&>(F)));
+    return DTs.back().get();
   };
   GetterTy<PostDominatorTree> PDTGetter = [&](const Function &F) {
-    PostDominatorTree *PDT = new PostDominatorTree(const_cast<Function &>(F));
-    PDTs.push_back(PDT);
-    return PDT;
+    PDTs.push_back(
+        std::make_unique<PostDominatorTree>(const_cast<Function &>(F)));
+    return PDTs.back().get();
   };
   MustBeExecutedContextExplorer Explorer(
       /* ExploreInterBlock */ true,
@@ -392,9 +389,6 @@ bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
     }
   }
 
-  DeleteContainerPointers(PDTs);
-  DeleteContainerPointers(LIs);
-  DeleteContainerPointers(DTs);
   return false;
 }
 
