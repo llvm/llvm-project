@@ -519,9 +519,8 @@ public:
   /// input type and the same element type.
   static VectorType *getDoubleElementsVectorType(VectorType *VTy) {
     auto EltCnt = VTy->getElementCount();
-    assert((VTy->getNumElements() * 2ull) <= UINT_MAX &&
-           "Too many elements in vector");
-    return VectorType::get(VTy->getElementType(), EltCnt*2);
+    assert((EltCnt.Min * 2ull) <= UINT_MAX && "Too many elements in vector");
+    return VectorType::get(VTy->getElementType(), EltCnt * 2);
   }
 
   /// Return true if the specified type is valid as a element type.
