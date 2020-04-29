@@ -1822,6 +1822,15 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     return ABIArgInfo::getExtend(Ty);
   }
 
+  if (const auto * EIT = Ty->getAs<ExtIntType>()) {
+    if (EIT->getNumBits() <= 64) {
+      if (InReg)
+        return ABIArgInfo::getDirectInReg();
+      return ABIArgInfo::getDirect();
+    }
+    return getIndirectResult(Ty, /*ByVal=*/false, State);
+  }
+
   if (InReg)
     return ABIArgInfo::getDirectInReg();
   return ABIArgInfo::getDirect();
@@ -2785,6 +2794,15 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
     return;
   }
 
+  if (const auto *EITy = Ty->getAs<ExtIntType>()) {
+    if (EITy->getNumBits() <= 64)
+      Current = Integer;
+    else if (EITy->getNumBits() <= 128)
+      Lo = Hi = Integer;
+    // Larger values need to get passed in memory.
+    return;
+  }
+
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
     // Arrays are treated like structures.
 
@@ -2959,8 +2977,9 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                          : ABIArgInfo::getDirect());
+    if (!Ty->isExtIntType())
+      return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
+                                            : ABIArgInfo::getDirect());
   }
 
   return getNaturalAlignIndirect(Ty);
@@ -2992,7 +3011,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   // the argument in the free register. This does not seem to happen currently,
   // but this code would be much safer if we could mark the argument with
   // 'onstack'. See PR12193.
-  if (!isAggregateTypeForABI(Ty) && !IsIllegalVectorType(Ty)) {
+  if (!isAggregateTypeForABI(Ty) && !IsIllegalVectorType(Ty) &&
+      !Ty->isExtIntType()) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
@@ -4081,6 +4101,17 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     default:
       break;
     }
+  }
+
+  if (Ty->isExtIntType()) {
+    // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
+    // not 1, 2, 4, or 8 bytes, must be passed by reference."
+    // However, non-power-of-two _ExtInts will be passed as 1,2,4 or 8 bytes
+    // anyway as long is it fits in them, so we don't have to check the power of
+    // 2.
+    if (Width <= 64)
+      return ABIArgInfo::getDirect();
+    return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
   }
 
   return ABIArgInfo::getDirect();

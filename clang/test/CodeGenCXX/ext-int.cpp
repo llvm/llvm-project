@@ -98,7 +98,7 @@ enum AsEnumUnderlyingType : _ExtInt(9) {
 };
 
 void UnderlyingTypeUsage(AsEnumUnderlyingType Param) {
-  // LIN: define void @_Z19UnderlyingTypeUsage20AsEnumUnderlyingType(i9 %
+  // LIN: define void @_Z19UnderlyingTypeUsage20AsEnumUnderlyingType(i16 %
   // WIN: define dso_local void @"?UnderlyingTypeUsage@@YAXW4AsEnumUnderlyingType@@@Z"(i9 %
   AsEnumUnderlyingType Var;
   // CHECK: alloca i9, align 2
@@ -106,13 +106,13 @@ void UnderlyingTypeUsage(AsEnumUnderlyingType Param) {
 }
 
 unsigned _ExtInt(33) ManglingTestRetParam(unsigned _ExtInt(33) Param) {
-// LIN: define i33 @_Z20ManglingTestRetParamU7_ExtIntILi33EEj(i33 %
+// LIN: define i64 @_Z20ManglingTestRetParamU7_ExtIntILi33EEj(i64 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_UExtInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
 }
 
 _ExtInt(33) ManglingTestRetParam(_ExtInt(33) Param) {
-// LIN: define i33 @_Z20ManglingTestRetParamU7_ExtIntILi33EEi(i33 %
+// LIN: define i64 @_Z20ManglingTestRetParamU7_ExtIntILi33EEi(i64 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_ExtInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
 }
@@ -155,13 +155,14 @@ void TakesVarargs(int i, ...) {
 
   _ExtInt(92) A = __builtin_va_arg(args, _ExtInt(92));
   // LIN: %[[AD1:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
-  // LIN: %[[OFA_P1:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD1]], i32 0, i32 2
-  // LIN: %[[OFA1:.+]] = load i8*, i8** %[[OFA_P1]]
-  // LIN: %[[BC1:.+]] = bitcast i8* %[[OFA1]] to i92*
-  // LIN: %[[OFANEXT1:.+]] = getelementptr i8, i8* %[[OFA1]], i32 16
-  // LIN: store i8* %[[OFANEXT1]], i8** %[[OFA_P1]]
+  // LIN: %[[OFA_P1:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD1]], i32 0, i32 0
+  // LIN: %[[GPOFFSET:.+]] = load i32, i32* %[[OFA_P1]]
+  // LIN: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 32
+  // LIN: br i1 %[[FITSINGP]]
+  // LIN: %[[BC1:.+]] = phi i92*
   // LIN: %[[LOAD1:.+]] = load i92, i92* %[[BC1]]
   // LIN: store i92 %[[LOAD1]], i92*
+
   // WIN: %[[CUR1:.+]] = load i8*, i8** %[[ARGS]]
   // WIN: %[[NEXT1:.+]] = getelementptr inbounds i8, i8* %[[CUR1]], i64 16
   // WIN: store i8* %[[NEXT1]], i8** %[[ARGS]]
@@ -171,15 +172,16 @@ void TakesVarargs(int i, ...) {
 
   _ExtInt(31) B = __builtin_va_arg(args, _ExtInt(31));
   // LIN: %[[AD2:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
-  // LIN: %[[OFA_P2:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD2]], i32 0, i32 2
-  // LIN: %[[OFA2:.+]] = load i8*, i8** %[[OFA_P2]]
-  // LIN: %[[BC2:.+]] = bitcast i8* %[[OFA2]] to i31*
-  // LIN: %[[OFANEXT2:.+]] = getelementptr i8, i8* %[[OFA2]], i32 8
-  // LIN: store i8* %[[OFANEXT2]], i8** %[[OFA_P2]]
-  // LIN: %[[LOAD2:.+]] = load i31, i31* %[[BC2]]
-  // LIN: store i31 %[[LOAD2]], i31*
+  // LIN: %[[OFA_P2:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD2]], i32 0, i32 0
+  // LIN: %[[GPOFFSET:.+]] = load i32, i32* %[[OFA_P2]]
+  // LIN: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 40
+  // LIN: br i1 %[[FITSINGP]]
+  // LIN: %[[BC1:.+]] = phi i31*
+  // LIN: %[[LOAD1:.+]] = load i31, i31* %[[BC1]]
+  // LIN: store i31 %[[LOAD1]], i31*
+
   // WIN: %[[CUR2:.+]] = load i8*, i8** %[[ARGS]]
-  // WIN: %[[NEXT2:.+]] = getelementptr inbounds i8, i8* %[[CUR2]], i64 8 
+  // WIN: %[[NEXT2:.+]] = getelementptr inbounds i8, i8* %[[CUR2]], i64 8
   // WIN: store i8* %[[NEXT2]], i8** %[[ARGS]]
   // WIN: %[[BC2:.+]] = bitcast i8* %[[CUR2]] to i31*
   // WIN: %[[LOADV2:.+]] = load i31, i31* %[[BC2]]
@@ -187,13 +189,14 @@ void TakesVarargs(int i, ...) {
 
   _ExtInt(16) C = __builtin_va_arg(args, _ExtInt(16));
   // LIN: %[[AD3:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
-  // LIN: %[[OFA_P3:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD3]], i32 0, i32 2
-  // LIN: %[[OFA3:.+]] = load i8*, i8** %[[OFA_P3]]
-  // LIN: %[[BC3:.+]] = bitcast i8* %[[OFA3]] to i16*
-  // LIN: %[[OFANEXT3:.+]] = getelementptr i8, i8* %[[OFA3]], i32 8
-  // LIN: store i8* %[[OFANEXT3]], i8** %[[OFA_P3]]
-  // LIN: %[[LOAD3:.+]] = load i16, i16* %[[BC3]]
-  // LIN: store i16 %[[LOAD3]], i16*
+  // LIN: %[[OFA_P3:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD3]], i32 0, i32 0
+  // LIN: %[[GPOFFSET:.+]] = load i32, i32* %[[OFA_P3]]
+  // LIN: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 40
+  // LIN: br i1 %[[FITSINGP]]
+  // LIN: %[[BC1:.+]] = phi i16*
+  // LIN: %[[LOAD1:.+]] = load i16, i16* %[[BC1]]
+  // LIN: store i16 %[[LOAD1]], i16*
+
   // WIN: %[[CUR3:.+]] = load i8*, i8** %[[ARGS]]
   // WIN: %[[NEXT3:.+]] = getelementptr inbounds i8, i8* %[[CUR3]], i64 8
   // WIN: store i8* %[[NEXT3]], i8** %[[ARGS]]
@@ -210,8 +213,9 @@ void TakesVarargs(int i, ...) {
   // LIN: store i8* %[[OFANEXT4]], i8** %[[OFA_P4]]
   // LIN: %[[LOAD4:.+]] = load i129, i129* %[[BC4]]
   // LIN: store i129 %[[LOAD4]], i129*
+
   // WIN: %[[CUR4:.+]] = load i8*, i8** %[[ARGS]]
-  // WIN: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i64 24 
+  // WIN: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i64 24
   // WIN: store i8* %[[NEXT4]], i8** %[[ARGS]]
   // WIN: %[[BC4:.+]] = bitcast i8* %[[CUR4]] to i129*
   // WIN: %[[LOADV4:.+]] = load i129, i129* %[[BC4]]
@@ -226,6 +230,7 @@ void TakesVarargs(int i, ...) {
   // LIN: store i8* %[[OFANEXT5]], i8** %[[OFA_P5]]
   // LIN: %[[LOAD5:.+]] = load i16777200, i16777200* %[[BC5]]
   // LIN: store i16777200 %[[LOAD5]], i16777200*
+
   // WIN: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
   // WIN: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i64 2097152
   // WIN: store i8* %[[NEXT5]], i8** %[[ARGS]]
@@ -268,7 +273,7 @@ void typeid_tests() {
 }
 
 void ExplicitCasts() {
-  // LIN: define void @_Z13ExplicitCastsv() 
+  // LIN: define void @_Z13ExplicitCastsv()
   // WIN: define dso_local void @"?ExplicitCasts@@YAXXZ"()
 
   _ExtInt(33) a;
@@ -292,7 +297,7 @@ struct S {
 };
 
 void OffsetOfTest() {
-  // LIN: define void @_Z12OffsetOfTestv() 
+  // LIN: define void @_Z12OffsetOfTestv()
   // WIN: define dso_local void @"?OffsetOfTest@@YAXXZ"()
 
   auto A = __builtin_offsetof(S,A);
@@ -318,7 +323,7 @@ void ShiftExtIntByConstant(_ExtInt(28) Ext) {
 
   // UB in C/C++, Defined in OpenCL.
   Ext << 29;
-  // CHECK: shl i28 %{{.+}}, 29 
+  // CHECK: shl i28 %{{.+}}, 29
   Ext >> 29;
   // CHECK: ashr i28 %{{.+}}, 29
 }
