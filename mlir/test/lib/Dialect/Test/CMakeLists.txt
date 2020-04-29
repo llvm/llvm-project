@@ -9,6 +9,8 @@ mlir_tablegen(TestOps.cpp.inc -gen-op-defs)
 mlir_tablegen(TestOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(TestOpEnums.h.inc -gen-enum-decls)
 mlir_tablegen(TestOpEnums.cpp.inc -gen-enum-defs)
+mlir_tablegen(TestOpStructs.h.inc -gen-struct-attr-decls)
+mlir_tablegen(TestOpStructs.cpp.inc -gen-struct-attr-defs)
 mlir_tablegen(TestPatterns.inc -gen-rewriters)
 add_public_tablegen_target(MLIRTestOpsIncGen)
 
