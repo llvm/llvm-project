@@ -184,6 +184,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts integer compare operation on i1 type opearnds to SPIR-V ops.
+class BoolCmpIOpPattern final : public SPIRVOpLowering<CmpIOp> {
+public:
+  using SPIRVOpLowering<CmpIOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts integer compare operation to SPIR-V ops.
 class CmpIOpPattern final : public SPIRVOpLowering<CmpIOp> {
 public:
@@ -454,9 +464,41 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
+BoolCmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
+                                   ConversionPatternRewriter &rewriter) const {
+  CmpIOpOperandAdaptor cmpIOpOperands(operands);
+
+  Type operandType = cmpIOp.lhs().getType();
+  if (!operandType.isa<IntegerType>() ||
+      operandType.cast<IntegerType>().getWidth() != 1)
+    return failure();
+
+  switch (cmpIOp.getPredicate()) {
+#define DISPATCH(cmpPredicate, spirvOp)                                        \
+  case cmpPredicate:                                                           \
+    rewriter.replaceOpWithNewOp<spirvOp>(cmpIOp, cmpIOp.getResult().getType(), \
+                                         cmpIOpOperands.lhs(),                 \
+                                         cmpIOpOperands.rhs());                \
+    return success();
+
+    DISPATCH(CmpIPredicate::eq, spirv::LogicalEqualOp);
+    DISPATCH(CmpIPredicate::ne, spirv::LogicalNotEqualOp);
+
+#undef DISPATCH
+  default:;
+  }
+  return failure();
+}
+
+LogicalResult
 CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter) const {
   CmpIOpOperandAdaptor cmpIOpOperands(operands);
+
+  Type operandType = cmpIOp.lhs().getType();
+  if (operandType.isa<IntegerType>() &&
+      operandType.cast<IntegerType>().getWidth() == 1)
+    return failure();
 
   switch (cmpIOp.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
@@ -599,9 +641,10 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       UnaryAndBinaryOpPattern<UnsignedShiftRightOp, spirv::ShiftRightLogicalOp>,
       BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
       BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
-      ConstantCompositeOpPattern, ConstantScalarOpPattern, CmpFOpPattern,
-      CmpIOpPattern, LoadOpPattern, ReturnOpPattern, SelectOpPattern,
-      StoreOpPattern, TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
+      BoolCmpIOpPattern, ConstantCompositeOpPattern, ConstantScalarOpPattern,
+      CmpFOpPattern, CmpIOpPattern, LoadOpPattern, ReturnOpPattern,
+      SelectOpPattern, StoreOpPattern,
+      TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
       TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
       TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>, XOrOpPattern>(
       context, typeConverter);
