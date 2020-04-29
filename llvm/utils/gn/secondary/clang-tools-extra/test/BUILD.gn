@@ -34,7 +34,7 @@ write_lit_config("lit_site_cfg") {
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
-    "PYTHON_EXECUTABLE=$python_path",
+    "Python3_EXECUTABLE=$python_path",
   ]
 
   if (clang_enable_static_analyzer) {
