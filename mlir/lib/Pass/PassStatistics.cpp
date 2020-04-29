@@ -60,7 +60,7 @@ static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
 static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
   llvm::StringMap<std::vector<Statistic>> mergedStats;
   std::function<void(Pass *)> addStats = [&](Pass *pass) {
-    auto *adaptor = getAdaptorPassBase(pass);
+    auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass);
 
     // If this is not an adaptor, add the stats to the list if there are any.
     if (!adaptor) {
@@ -105,13 +105,12 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
 static void printResultsAsPipeline(raw_ostream &os, OpPassManager &pm) {
   std::function<void(unsigned, Pass *)> printPass = [&](unsigned indent,
                                                         Pass *pass) {
-    // Handle the case of an adaptor pass.
-    if (auto *adaptor = getAdaptorPassBase(pass)) {
+    if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass)) {
       // If this adaptor has more than one internal pipeline, print an entry for
       // it.
       auto mgrs = adaptor->getPassManagers();
       if (mgrs.size() > 1) {
-        printPassEntry(os, indent, adaptor->getName());
+        printPassEntry(os, indent, adaptor->getAdaptorName());
         indent += 2;
       }
 
@@ -195,8 +194,8 @@ void OpPassManager::mergeStatisticsInto(OpPassManager &other) {
     Pass &pass = std::get<0>(passPair), &otherPass = std::get<1>(passPair);
 
     // If this is an adaptor, then recursively merge the pass managers.
-    if (auto *adaptorPass = getAdaptorPassBase(&pass)) {
-      auto *otherAdaptorPass = getAdaptorPassBase(&otherPass);
+    if (auto *adaptorPass = dyn_cast<OpToOpPassAdaptor>(&pass)) {
+      auto *otherAdaptorPass = cast<OpToOpPassAdaptor>(&otherPass);
       for (auto mgrs : llvm::zip(adaptorPass->getPassManagers(),
                                  otherAdaptorPass->getPassManagers()))
         std::get<0>(mgrs).mergeStatisticsInto(std::get<1>(mgrs));
@@ -217,18 +216,16 @@ void OpPassManager::mergeStatisticsInto(OpPassManager &other) {
 /// consumption(e.g. dumping).
 static void prepareStatistics(OpPassManager &pm) {
   for (Pass &pass : pm.getPasses()) {
-    OpToOpPassAdaptorBase *adaptor = getAdaptorPassBase(&pass);
+    OpToOpPassAdaptor *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
     if (!adaptor)
       continue;
     MutableArrayRef<OpPassManager> nestedPms = adaptor->getPassManagers();
 
-    // If this is a parallel adaptor, merge the statistics from the async
-    // pass managers into the main nested pass managers.
-    if (auto *parallelAdaptor = dyn_cast<OpToOpPassAdaptorParallel>(&pass)) {
-      for (auto &asyncPM : parallelAdaptor->getParallelPassManagers()) {
-        for (unsigned i = 0, e = asyncPM.size(); i != e; ++i)
-          asyncPM[i].mergeStatisticsInto(nestedPms[i]);
-      }
+    // Merge the statistics from the async pass managers into the main nested
+    // pass managers.
+    for (auto &asyncPM : adaptor->getParallelPassManagers()) {
+      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i)
+        asyncPM[i].mergeStatisticsInto(nestedPms[i]);
     }
 
     // Prepare the statistics of each of the nested passes.
