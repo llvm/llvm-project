@@ -1762,10 +1762,7 @@ PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
 }
 
 llvm::StringRef PlatformDarwin::GetSDKPath(XcodeSDK sdk) {
-  llvm::StringRef sdk_string = sdk.GetString();
-  if (sdk_string.empty())
-    return {};
-  std::string &path = m_sdk_path[sdk_string];
+  std::string &path = m_sdk_path[sdk.GetString()];
   if (path.empty())
     path = HostInfo::GetXcodeSDK(sdk);
   return path;
