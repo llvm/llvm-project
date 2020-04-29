@@ -96,9 +96,17 @@ static bool isPETarget(std::vector<const char *> &v) {
 }
 
 static Flavor parseProgname(StringRef progname) {
-  // Use GNU driver for "ld" by default.
+#if __APPLE__
+  // Use Darwin driver for "ld" on Darwin.
+  if (progname == "ld")
+    return Darwin;
+#endif
+
+#if LLVM_ON_UNIX
+  // Use GNU driver for "ld" on other Unix-like system.
   if (progname == "ld")
     return Gnu;
+#endif
 
   // Progname may be something like "lld-gnu". Parse it.
   SmallVector<StringRef, 3> v;
