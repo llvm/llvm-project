@@ -28,7 +28,7 @@ mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv, Value range) {
   auto lb = rangeOp.min();
   auto ub = rangeOp.max();
   auto step = rangeOp.step();
-  auto forOp = OperationHandle::createOp<ForOp>(lb, ub, step);
+  ForOp forOp = OperationBuilder<ForOp>(lb, ub, step);
   *iv = forOp.getInductionVar();
   auto *body = forOp.getBody();
   enter(body, /*prev=*/1);
@@ -36,8 +36,7 @@ mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv, Value range) {
 
 mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv,
                                                SubViewOp::Range range) {
-  auto forOp =
-      OperationHandle::createOp<ForOp>(range.offset, range.size, range.stride);
+  ForOp forOp = OperationBuilder<ForOp>(range.offset, range.size, range.stride);
   *iv = forOp.getInductionVar();
   auto *body = forOp.getBody();
   enter(body, /*prev=*/1);
@@ -53,18 +52,16 @@ Value mlir::edsc::LoopRangeBuilder::operator()(std::function<void(void)> fun) {
 mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
     MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
   loops.reserve(ranges.size());
-  for (unsigned i = 0, e = ranges.size(); i < e; ++i) {
+  for (unsigned i = 0, e = ranges.size(); i < e; ++i)
     loops.emplace_back(&ivs[i], ranges[i]);
-  }
   assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
 }
 
 mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
     MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
   loops.reserve(ranges.size());
-  for (unsigned i = 0, e = ranges.size(); i < e; ++i) {
+  for (unsigned i = 0, e = ranges.size(); i < e; ++i)
     loops.emplace_back(&ivs[i], ranges[i]);
-  }
   assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
 }
 
