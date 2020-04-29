@@ -1762,6 +1762,7 @@ PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
 }
 
 std::string PlatformDarwin::GetSDKPath(XcodeSDK sdk) {
+  std::lock_guard<std::mutex> guard(m_sdk_path_mutex);
   std::string &path = m_sdk_path[sdk.GetString()];
   if (!path.empty())
     return path;
