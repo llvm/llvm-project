@@ -264,6 +264,13 @@ public:
     return PendingEvents & (1 << E);
   }
 
+  bool hasMixedPendingEvents(InstCounterType T) const {
+    return false;
+    uint32_t Events = PendingEvents & WaitEventMaskForInst[T];
+    // Return true if more than one bit is set in Events.
+    return Events & (Events - 1);
+  }
+
   bool hasPendingFlat() const {
     return ((LastFlat[LGKM_CNT] > ScoreLBs[LGKM_CNT] &&
              LastFlat[LGKM_CNT] <= ScoreUBs[LGKM_CNT]) ||
@@ -323,7 +330,6 @@ private:
   uint32_t ScoreLBs[NUM_INST_CNTS] = {0};
   uint32_t ScoreUBs[NUM_INST_CNTS] = {0};
   uint32_t PendingEvents = 0;
-  bool MixedPendingEvents[NUM_INST_CNTS] = {false};
   // Remember the last flat memory operation.
   uint32_t LastFlat[NUM_INST_CNTS] = {0};
   // wait_cnt scores for every vgpr.
@@ -492,11 +498,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   // PendingEvents and ScoreUB need to be update regardless if this event
   // changes the score of a register or not.
   // Examples including vm_cnt when buffer-store or lgkm_cnt when send-message.
-  if (!hasPendingEvent(E)) {
-    if (PendingEvents & WaitEventMaskForInst[T])
-      MixedPendingEvents[T] = true;
-    PendingEvents |= 1 << E;
-  }
+  PendingEvents |= 1 << E;
   setScoreUB(T, CurrScore);
 
   if (T == EXP_CNT) {
@@ -744,7 +746,6 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    MixedPendingEvents[T] = false;
     PendingEvents &= ~WaitEventMaskForInst[T];
   }
 }
@@ -755,7 +756,7 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   // Scalar memory read always can go out of order.
   if (T == LGKM_CNT && hasPendingEvent(SMEM_ACCESS))
     return true;
-  return MixedPendingEvents[T];
+  return hasMixedPendingEvents(T);
 }
 
 INITIALIZE_PASS_BEGIN(SIInsertWaitcnts, DEBUG_TYPE, "SI Insert Waitcnts", false,
@@ -1291,9 +1292,6 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     const uint32_t OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
     if (OtherEvents & ~OldEvents)
       StrictDom = true;
-    if (Other.MixedPendingEvents[T] ||
-        (OldEvents && OtherEvents && OldEvents != OtherEvents))
-      MixedPendingEvents[T] = true;
     PendingEvents |= OtherEvents;
 
     // Merge scores for this counter
