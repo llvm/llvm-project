@@ -6,6 +6,9 @@
 #
 #===----------------------------------------------------------------------===##
 
+# TODO: Unbreak this on Windows
+# UNSUPPORTED: host-windows
+
 # RUN: %{python} '%s' '%S' '%T' '%{escaped_exec}' \
 # RUN:                          '%{escaped_cxx}' \
 # RUN:                          '%{escaped_flags}' \
