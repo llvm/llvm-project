@@ -36,6 +36,8 @@ STATISTIC(NumSubstZexts, "Number of setcc + zext pairs substituted");
 namespace {
 class X86FixupSetCCPass : public MachineFunctionPass {
 public:
+  static char ID;
+
   X86FixupSetCCPass() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Fixup SetCC"; }
@@ -47,12 +49,12 @@ private:
   const X86InstrInfo *TII = nullptr;
 
   enum { SearchBound = 16 };
-
-  static char ID;
 };
+} // end anonymous namespace
 
 char X86FixupSetCCPass::ID = 0;
-}
+
+INITIALIZE_PASS(X86FixupSetCCPass, DEBUG_TYPE, DEBUG_TYPE, false, false)
 
 FunctionPass *llvm::createX86FixupSetCC() { return new X86FixupSetCCPass(); }
 
