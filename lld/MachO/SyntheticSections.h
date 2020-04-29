@@ -23,7 +23,6 @@ namespace section_names {
 constexpr const char *pageZero = "__pagezero";
 constexpr const char *header = "__mach_header";
 constexpr const char *binding = "__binding";
-constexpr const char *export_ = "__export";
 constexpr const char *symbolTable = "__symbol_table";
 constexpr const char *stringTable = "__string_table";
 
@@ -91,21 +90,6 @@ public:
   // section headers.
   bool isHidden() const override { return true; }
   bool isNeeded() const override;
-  void writeTo(uint8_t *buf) override;
-
-  SmallVector<char, 128> contents;
-};
-
-// Stores a trie that describes the set of exported symbols.
-class ExportSection : public InputSection {
-public:
-  ExportSection();
-  void finalizeContents();
-  size_t getSize() const override { return contents.size(); }
-  // Like other sections in __LINKEDIT, the export section is special: its
-  // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
-  // section headers.
-  bool isHidden() const override { return true; }
   void writeTo(uint8_t *buf) override;
 
   SmallVector<char, 128> contents;
