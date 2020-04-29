@@ -774,6 +774,10 @@ static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
 #define CXX20_KEYWORD(NAME, FLAGS)                                             \
         .Case(#NAME, diag::warn_cxx20_keyword)
 #include "clang/Basic/TokenKinds.def"
+        // char8_t is not modeled as a CXX20_KEYWORD because it's not
+        // unconditionally enabled in C++20 mode. (It can be disabled
+        // by -fno-char8_t.)
+        .Case("char8_t", diag::warn_cxx20_keyword)
         ;
 
   llvm_unreachable(
