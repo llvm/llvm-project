@@ -3659,22 +3659,17 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
   return true;
 }
 
-bool BoUpSLP::isLoadCombineReductionCandidate(unsigned RdxOpcode) const {
-  if (RdxOpcode != Instruction::Or)
-    return false;
-
-  unsigned NumElts = VectorizableTree[0]->Scalars.size();
-  Value *FirstReduced = VectorizableTree[0]->Scalars[0];
-
-  // Look past the reduction to find a source value. Arbitrarily follow the
+static bool isLoadCombineCandidate(Value *Root, unsigned NumElts,
+                                   TargetTransformInfo *TTI) {
+  // Look past the root to find a source value. Arbitrarily follow the
   // path through operand 0 of any 'or'. Also, peek through optional
   // shift-left-by-constant.
-  Value *ZextLoad = FirstReduced;
+  Value *ZextLoad = Root;
   while (match(ZextLoad, m_Or(m_Value(), m_Value())) ||
          match(ZextLoad, m_Shl(m_Value(), m_Constant())))
     ZextLoad = cast<BinaryOperator>(ZextLoad)->getOperand(0);
 
-  // Check if the input to the reduction is an extended load.
+  // Check if the input is an extended load.
   Value *LoadPtr;
   if (!match(ZextLoad, m_ZExt(m_Load(m_Value(LoadPtr)))))
     return false;
@@ -3684,16 +3679,24 @@ bool BoUpSLP::isLoadCombineReductionCandidate(unsigned RdxOpcode) const {
   // But <16 x i8> --> i128 is not, so the backend probably can't reduce it.
   Type *SrcTy = LoadPtr->getType()->getPointerElementType();
   unsigned LoadBitWidth = SrcTy->getIntegerBitWidth() * NumElts;
-  LLVMContext &Context = FirstReduced->getContext();
-  if (!TTI->isTypeLegal(IntegerType::get(Context, LoadBitWidth)))
+  if (!TTI->isTypeLegal(IntegerType::get(Root->getContext(), LoadBitWidth)))
     return false;
 
   // Everything matched - assume that we can fold the whole sequence using
   // load combining.
-  LLVM_DEBUG(dbgs() << "SLP: Assume load combining for scalar reduction of "
-             << *(cast<Instruction>(FirstReduced)) << "\n");
+  LLVM_DEBUG(dbgs() << "SLP: Assume load combining for tree starting at "
+             << *(cast<Instruction>(Root)) << "\n");
 
   return true;
+}
+
+bool BoUpSLP::isLoadCombineReductionCandidate(unsigned RdxOpcode) const {
+  if (RdxOpcode != Instruction::Or)
+    return false;
+
+  unsigned NumElts = VectorizableTree[0]->Scalars.size();
+  Value *FirstReduced = VectorizableTree[0]->Scalars[0];
+  return isLoadCombineCandidate(FirstReduced, NumElts, TTI);
 }
 
 bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() const {

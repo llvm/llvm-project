@@ -743,7 +743,11 @@ bool SymbolCollector::isSelfContainedHeader(FileID FID) {
     const FileEntry *FE = SM.getFileEntryForID(FID);
     if (!FE)
       return false;
-    if (!PP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
+    // FIXME: Should files that have been #import'd be considered
+    // self-contained? That's really a property of the includer,
+    // not of the file.
+    if (!PP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE) &&
+        !PP->getHeaderSearchInfo().hasFileBeenImported(FE))
       return false;
     // This pattern indicates that a header can't be used without
     // particular preprocessor state, usually set up by another header.

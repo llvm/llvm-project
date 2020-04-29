@@ -534,7 +534,7 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     // instructions require no special handling.
     CallInst *CI = dyn_cast<CallInst>(I);
 
-    if (!CI || CI->doesNotThrow() || isa<InlineAsm>(CI->getCalledValue()))
+    if (!CI || CI->doesNotThrow() || CI->isInlineAsm())
       continue;
 
     // We do not need to (and in fact, cannot) convert possibly throwing calls
@@ -1559,8 +1559,7 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 /// Update the branch metadata for cloned call instructions.
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
                               const ProfileCount &CalleeEntryCount,
-                              const Instruction *TheCall,
-                              ProfileSummaryInfo *PSI,
+                              const CallBase &TheCall, ProfileSummaryInfo *PSI,
                               BlockFrequencyInfo *CallerBFI) {
   if (!CalleeEntryCount.hasValue() || CalleeEntryCount.isSynthetic() ||
       CalleeEntryCount.getCount() < 1)
@@ -1810,7 +1809,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       updateCallerBFI(OrigBB, VMap, IFI.CallerBFI, IFI.CalleeBFI,
                       CalledFunc->front());
 
-    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), &CB,
+    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), CB,
                       IFI.PSI, IFI.CallerBFI);
 
     // Inject byval arguments initialization.
@@ -2150,7 +2149,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
         // Skip call sites which are nounwind intrinsics.
         auto *CalledFn =
-            dyn_cast<Function>(I->getCalledValue()->stripPointerCasts());
+            dyn_cast<Function>(I->getCalledOperand()->stripPointerCasts());
         if (CalledFn && CalledFn->isIntrinsic() && I->doesNotThrow())
           continue;
 

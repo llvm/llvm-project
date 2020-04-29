@@ -136,7 +136,7 @@ static bool runImpl(CallGraphSCC &SCC, CallGraph &CG) {
           }
           if (CheckReturnViaAsm && !SCCMightReturn)
             if (const auto *CB = dyn_cast<CallBase>(&I))
-              if (const auto *IA = dyn_cast<InlineAsm>(CB->getCalledValue()))
+              if (const auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand()))
                 if (IA->hasSideEffects())
                   SCCMightReturn = true;
         }

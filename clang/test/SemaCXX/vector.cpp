@@ -475,3 +475,12 @@ void use() {
 #endif // __cplusplus >= 201103L
 }
 }
+
+namespace rdar60092165 {
+template <class T> void f() {
+  typedef T first_type __attribute__((vector_size(sizeof(T) * 4)));
+  typedef T second_type __attribute__((vector_size(sizeof(T) * 4)));
+
+  second_type st;
+}
+}

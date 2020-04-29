@@ -3123,6 +3123,10 @@ def warn_weak_identifier_undeclared : Warning<
 def warn_attribute_cmse_entry_static : Warning<
   "'cmse_nonsecure_entry' cannot be applied to functions with internal linkage">,
   InGroup<IgnoredAttributes>;
+def warn_cmse_nonsecure_union : Warning<
+  "passing union across security boundary via %select{parameter %1|return value}0 "
+  "may leak information">,
+  InGroup<DiagGroup<"cmse-union-leak">>;
 def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
 def err_attribute_selectany_non_extern_data : Error<
@@ -3336,7 +3340,7 @@ def warn_thread_attribute_argument_not_lockable : Warning<
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_decl_not_lockable : Warning<
   "%0 attribute can only be applied in a context annotated "
-  "with 'capability(\"mutex\")' attribute">,
+  "with 'capability' attribute">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,
@@ -10294,11 +10298,6 @@ def err_module_unimported_use : Error<
   "explicit specialization|partial specialization}0 of %1 must be imported "
   "from module '%2' before it is required">;
 def err_module_unimported_use_header : Error<
-  "missing '#include %3'; "
-  "%select{declaration|definition|default argument|"
-  "explicit specialization|partial specialization}0 of %1 must be imported "
-  "from module '%2' before it is required">;
-def err_module_unimported_use_global_module_fragment : Error<
   "%select{missing '#include'|missing '#include %3'}2; "
   "%select{||default argument of |explicit specialization of |"
   "partial specialization of }0%1 must be "
@@ -10308,6 +10307,10 @@ def err_module_unimported_use_multiple : Error<
   "%select{declaration|definition|default argument|"
   "explicit specialization|partial specialization}0 of %1 must be imported "
   "from one of the following modules before it is required:%2">;
+def note_unreachable_entity : Note<
+  "%select{declaration|definition|default argument declared|"
+  "explicit specialization declared|partial specialization declared}0 here "
+  "is not %select{visible|reachable|reachable|reachable|reachable|reachable}0">;
 def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "
   "specification">, DefaultError,

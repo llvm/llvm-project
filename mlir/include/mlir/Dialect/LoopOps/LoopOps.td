@@ -135,17 +135,13 @@ def ForOp : Loop_Op<"for",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "Value lowerBound, Value upperBound, Value step, "
               "ValueRange iterArgs = llvm::None">
   ];
 
   let extraClassDeclaration = [{
-    Block *getBody() { return &region().front(); }
     Value getInductionVar() { return getBody()->getArgument(0); }
-    OpBuilder getBodyBuilder() {
-      return OpBuilder(getBody(), std::prev(getBody()->end()));
-    }
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
@@ -234,24 +230,22 @@ def IfOp : Loop_Op<"if",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "Value cond, bool withElseRegion">,
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "TypeRange resultTypes, Value cond, bool withElseRegion">
   ];
 
   let extraClassDeclaration = [{
     OpBuilder getThenBodyBuilder() {
-      assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
-      Block &body = thenRegion().front();
-      return OpBuilder(&body,
-                       results().empty() ? std::prev(body.end()) : body.end());
+      Block* body = getBody(0);
+      return results().empty() ? OpBuilder::atBlockTerminator(body)
+                               : OpBuilder::atBlockEnd(body);
     }
     OpBuilder getElseBodyBuilder() {
-      assert(!elseRegion().empty() && "Unexpected empty 'else' region.");
-      Block &body = elseRegion().front();
-      return OpBuilder(&body,
-                       results().empty() ? std::prev(body.end()) : body.end());
+      Block* body = getBody(1);
+      return results().empty() ? OpBuilder::atBlockTerminator(body)
+                               : OpBuilder::atBlockEnd(body);
     }
   }];
 }
@@ -316,13 +310,12 @@ def ParallelOp : Loop_Op<"parallel",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "ValueRange lowerBounds, ValueRange upperBounds, "
               "ValueRange steps, ValueRange initVals = {}">,
   ];
 
   let extraClassDeclaration = [{
-    Block *getBody() { return &region().front(); }
     ValueRange getInductionVars() {
       return getBody()->getArguments();
     }
@@ -370,7 +363,7 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "Value operand">
   ];
 
@@ -412,7 +405,7 @@ def YieldOp : Loop_Op<"yield", [NoSideEffect, ReturnLike, Terminator]> {
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result",
+    OpBuilder<"OpBuilder &builder, OperationState &result",
               [{ /* nothing to do */ }]>
   ];
 }

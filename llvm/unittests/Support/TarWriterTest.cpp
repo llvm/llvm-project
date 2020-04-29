@@ -81,30 +81,32 @@ TEST_F(TarWriterTest, Basics) {
 }
 
 TEST_F(TarWriterTest, LongFilename) {
-  std::string x154(154, 'x');
-  std::string x155(155, 'x');
+  // The prefix is prefixed by an additional '/' so it's one longer than the
+  // number of x's here.
+  std::string x136(136, 'x');
+  std::string x137(137, 'x');
   std::string y99(99, 'y');
   std::string y100(100, 'y');
 
-  UstarHeader Hdr1 = createUstar("", x154 + "/" + y99);
-  EXPECT_EQ("/" + x154, StringRef(Hdr1.Prefix));
+  UstarHeader Hdr1 = createUstar("", x136 + "/" + y99);
+  EXPECT_EQ("/" + x136, StringRef(Hdr1.Prefix));
   EXPECT_EQ(y99, StringRef(Hdr1.Name));
 
-  UstarHeader Hdr2 = createUstar("", x155 + "/" + y99);
+  UstarHeader Hdr2 = createUstar("", x137 + "/" + y99);
   EXPECT_EQ("", StringRef(Hdr2.Prefix));
   EXPECT_EQ("", StringRef(Hdr2.Name));
 
-  UstarHeader Hdr3 = createUstar("", x154 + "/" + y100);
+  UstarHeader Hdr3 = createUstar("", x136 + "/" + y100);
   EXPECT_EQ("", StringRef(Hdr3.Prefix));
   EXPECT_EQ("", StringRef(Hdr3.Name));
 
-  UstarHeader Hdr4 = createUstar("", x155 + "/" + y100);
+  UstarHeader Hdr4 = createUstar("", x137 + "/" + y100);
   EXPECT_EQ("", StringRef(Hdr4.Prefix));
   EXPECT_EQ("", StringRef(Hdr4.Name));
 
   std::string yz = "yyyyyyyyyyyyyyyyyyyy/zzzzzzzzzzzzzzzzzzzz";
-  UstarHeader Hdr5 = createUstar("", x154 + "/" + yz);
-  EXPECT_EQ("/" + x154, StringRef(Hdr5.Prefix));
+  UstarHeader Hdr5 = createUstar("", x136 + "/" + yz);
+  EXPECT_EQ("/" + x136, StringRef(Hdr5.Prefix));
   EXPECT_EQ(yz, StringRef(Hdr5.Name));
 }
 

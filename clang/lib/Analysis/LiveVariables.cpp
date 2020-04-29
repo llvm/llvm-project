@@ -490,9 +490,8 @@ LiveVariables::~LiveVariables() {
   delete (LiveVariablesImpl*) impl;
 }
 
-LiveVariables *
-LiveVariables::computeLiveness(AnalysisDeclContext &AC,
-                                 bool killAtAssign) {
+std::unique_ptr<LiveVariables>
+LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
 
   // No CFG?  Bail out.
   CFG *cfg = AC.getCFG();
@@ -565,7 +564,7 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC,
     worklist.enqueuePredecessors(block);
   }
 
-  return new LiveVariables(LV);
+  return std::unique_ptr<LiveVariables>(new LiveVariables(LV));
 }
 
 void LiveVariables::dumpBlockLiveness(const SourceManager &M) {

@@ -1286,10 +1286,6 @@ public:
 
   Value *getCalledOperand() const { return Op<CalledOperandOpEndIdx>(); }
 
-  // DEPRECATED: This routine will be removed in favor of `getCalledOperand` in
-  // the near future.
-  Value *getCalledValue() const { return getCalledOperand(); }
-
   const Use &getCalledOperandUse() const { return Op<CalledOperandOpEndIdx>(); }
   Use &getCalledOperandUse() { return Op<CalledOperandOpEndIdx>(); }
 

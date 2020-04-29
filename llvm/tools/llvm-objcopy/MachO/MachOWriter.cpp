@@ -239,11 +239,13 @@ void MachOWriter::writeSections() {
       memcpy(B.getBufferStart() + Sec->Offset, Sec->Content.data(),
              Sec->Content.size());
       for (size_t Index = 0; Index < Sec->Relocations.size(); ++Index) {
-        auto RelocInfo = Sec->Relocations[Index];
-        if (!RelocInfo.Scattered)
-          RelocInfo.setPlainRelocationSymbolNum(RelocInfo.Symbol->Index,
-                                                IsLittleEndian);
-
+        RelocationInfo RelocInfo = Sec->Relocations[Index];
+        if (!RelocInfo.Scattered) {
+          const uint32_t SymbolNum = RelocInfo.Extern
+                                         ? (*RelocInfo.Symbol)->Index
+                                         : (*RelocInfo.Sec)->Index;
+          RelocInfo.setPlainRelocationSymbolNum(SymbolNum, IsLittleEndian);
+        }
         if (IsLittleEndian != sys::IsLittleEndianHost)
           MachO::swapStruct(
               reinterpret_cast<MachO::any_relocation_info &>(RelocInfo.Info));

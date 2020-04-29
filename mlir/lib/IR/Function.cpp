@@ -24,8 +24,8 @@ using namespace mlir;
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs) {
   OperationState state(location, "func");
-  Builder builder(location->getContext());
-  FuncOp::build(&builder, state, name, type, attrs);
+  OpBuilder builder(location->getContext());
+  FuncOp::build(builder, state, name, type, attrs);
   return cast<FuncOp>(Operation::create(state));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
@@ -41,16 +41,16 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
   return func;
 }
 
-void FuncOp::build(Builder *builder, OperationState &result, StringRef name,
+void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder->getStringAttr(name));
+                      builder.getStringAttr(name));
   result.addAttribute(getTypeAttrName(), TypeAttr::get(type));
   result.attributes.append(attrs.begin(), attrs.end());
   result.addRegion();
 }
 
-void FuncOp::build(Builder *builder, OperationState &result, StringRef name,
+void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
                    ArrayRef<NamedAttributeList> argAttrs) {
   build(builder, result, name, type, attrs);

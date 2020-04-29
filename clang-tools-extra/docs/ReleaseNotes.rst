@@ -113,6 +113,11 @@ New checks
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
 
+- New :doc:`llvmlibc-callee-namespace
+  <clang-tidy/checks/llvmlibc-callee-namespace>` check.
+
+  Checks all calls resolve to functions within ``__llvm_libc`` namespace.
+
 - New :doc:`llvmlibc-implementation-in-namespace
   <clang-tidy/checks/llvmlibc-implementation-in-namespace>` check.
 

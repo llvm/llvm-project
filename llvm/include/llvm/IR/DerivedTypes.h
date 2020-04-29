@@ -549,6 +549,10 @@ protected:
 public:
   static FixedVectorType *get(Type *ElementType, unsigned NumElts);
 
+  static FixedVectorType *get(Type *ElementType, const FixedVectorType *FVTy) {
+    return get(ElementType, FVTy->getNumElements());
+  }
+
   static bool classof(const Type *T) {
     return T->getTypeID() == FixedVectorTyID;
   }
@@ -562,6 +566,11 @@ protected:
 
 public:
   static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+
+  static ScalableVectorType *get(Type *ElementType,
+                                 const ScalableVectorType *SVTy) {
+    return get(ElementType, SVTy->getMinNumElements());
+  }
 
   /// Get the minimum number of elements in this vector. The actual number of
   /// elements in the vector is an integer multiple of this value.

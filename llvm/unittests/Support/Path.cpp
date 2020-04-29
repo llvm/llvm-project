@@ -13,6 +13,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -305,15 +306,45 @@ TEST(Support, AbsolutePathIteratorEnd) {
   }
 }
 
-TEST(Support, HomeDirectory) {
-  std::string expected;
 #ifdef _WIN32
-  if (wchar_t const *path = ::_wgetenv(L"USERPROFILE")) {
+std::string getEnvWin(const wchar_t *Var) {
+  std::string expected;
+  if (wchar_t const *path = ::_wgetenv(Var)) {
     auto pathLen = ::wcslen(path);
     ArrayRef<char> ref{reinterpret_cast<char const *>(path),
                        pathLen * sizeof(wchar_t)};
     convertUTF16ToUTF8String(ref, expected);
   }
+  return expected;
+}
+#else
+// RAII helper to set and restore an environment variable.
+class WithEnv {
+  const char *Var;
+  llvm::Optional<std::string> OriginalValue;
+
+public:
+  WithEnv(const char *Var, const char *Value) : Var(Var) {
+    if (const char *V = ::getenv(Var))
+      OriginalValue.emplace(V);
+    if (Value)
+      ::setenv(Var, Value, 1);
+    else
+      ::unsetenv(Var);
+  }
+  ~WithEnv() {
+    if (OriginalValue)
+      ::setenv(Var, OriginalValue->c_str(), 1);
+    else
+      ::unsetenv(Var);
+  }
+};
+#endif
+
+TEST(Support, HomeDirectory) {
+  std::string expected;
+#ifdef _WIN32
+  expected = getEnvWin(L"USERPROFILE");
 #else
   if (char const *path = ::getenv("HOME"))
     expected = path;
@@ -330,31 +361,48 @@ TEST(Support, HomeDirectory) {
 
 #ifdef LLVM_ON_UNIX
 TEST(Support, HomeDirectoryWithNoEnv) {
-  std::string OriginalStorage;
-  char const *OriginalEnv = ::getenv("HOME");
-  if (OriginalEnv) {
-    // We're going to unset it, so make a copy and save a pointer to the copy
-    // so that we can reset it at the end of the test.
-    OriginalStorage = OriginalEnv;
-    OriginalEnv = OriginalStorage.c_str();
-  }
+  WithEnv Env("HOME", nullptr);
 
   // Don't run the test if we have nothing to compare against.
   struct passwd *pw = getpwuid(getuid());
   if (!pw || !pw->pw_dir) return;
-
-  ::unsetenv("HOME");
-  EXPECT_EQ(nullptr, ::getenv("HOME"));
   std::string PwDir = pw->pw_dir;
 
   SmallString<128> HomeDir;
-  auto status = path::home_directory(HomeDir);
-  EXPECT_TRUE(status);
+  EXPECT_TRUE(path::home_directory(HomeDir));
   EXPECT_EQ(PwDir, HomeDir);
+}
 
-  // Now put the environment back to its original state (meaning that if it was
-  // unset before, we don't reset it).
-  if (OriginalEnv) ::setenv("HOME", OriginalEnv, 1);
+TEST(Support, CacheDirectoryWithEnv) {
+  WithEnv Env("XDG_CACHE_HOME", "/xdg/cache");
+
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::cache_directory(CacheDir));
+  EXPECT_EQ("/xdg/cache", CacheDir);
+}
+
+TEST(Support, CacheDirectoryNoEnv) {
+  WithEnv Env("XDG_CACHE_HOME", nullptr);
+
+  SmallString<128> Fallback;
+  ASSERT_TRUE(path::home_directory(Fallback));
+  path::append(Fallback, ".cache");
+
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::cache_directory(CacheDir));
+  EXPECT_EQ(Fallback, CacheDir);
+}
+#endif
+
+#ifdef _WIN32
+TEST(Support, CacheDirectory) {
+  std::string Expected = getEnvWin(L"LOCALAPPDATA");
+  // Do not try to test it if we don't know what to expect.
+  if (!Expected.empty()) {
+    SmallString<128> CacheDir;
+    EXPECT_TRUE(path::cache_directory(CacheDir));
+    EXPECT_EQ(Expected, CacheDir);
+  }
 }
 #endif
 

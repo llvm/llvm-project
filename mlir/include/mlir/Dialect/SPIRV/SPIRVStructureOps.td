@@ -16,6 +16,7 @@
 #define SPIRV_STRUCTURE_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/SideEffects.td"
 
@@ -59,7 +60,7 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               spirv::GlobalVariableOp var}]>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
@@ -121,9 +122,9 @@ def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
     // Creates a constant zero/one of the given `type` at the current insertion
     // point of `builder` and returns it.
     static spirv::ConstantOp getZero(Type type, Location loc,
-                                     OpBuilder *builder);
+                                     OpBuilder &builder);
     static spirv::ConstantOp getOne(Type type, Location loc,
-                                    OpBuilder *builder);
+                                    OpBuilder &builder);
   }];
 
   let hasOpcode = 0;
@@ -188,7 +189,7 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               spirv::ExecutionModel executionModel,
                               spirv::FuncOp function,
                               ArrayRef<Attribute> interfaceVars}]>];
@@ -243,7 +244,7 @@ def SPV_FuncOp : SPV_Op<"func", [
   let verifier = [{ return success(); }];
 
   let builders = [OpBuilder<[{
-    Builder *, OperationState &state,
+    OpBuilder &, OperationState &state,
     StringRef name, FunctionType type,
     spirv::FunctionControl control = spirv::FunctionControl::None,
     ArrayRef<NamedAttribute> attrs = {}
@@ -332,15 +333,15 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   let results = (outs);
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &state, "
+    OpBuilder<"OpBuilder &builder, OperationState &state, "
       "TypeAttr type, ArrayRef<NamedAttribute> namedAttrs", [{
       state.addAttribute("type", type);
       state.addAttributes(namedAttrs);
     }]>,
-    OpBuilder<[{Builder *builder, OperationState &state,
+    OpBuilder<[{OpBuilder &builder, OperationState &state,
                 Type type, StringRef name, unsigned descriptorSet,
                 unsigned binding}]>,
-    OpBuilder<[{Builder *builder, OperationState &state,
+    OpBuilder<[{OpBuilder &builder, OperationState &state,
                 Type type, StringRef name, spirv::BuiltIn builtin}]>
   ];
 
@@ -416,8 +417,8 @@ def SPV_ModuleOp : SPV_Op<"module",
   let regions = (region SizedRegion<1>:$body);
 
   let builders = [
-    OpBuilder<[{Builder *, OperationState &state}]>,
-    OpBuilder<[{Builder *, OperationState &state,
+    OpBuilder<[{OpBuilder &, OperationState &state}]>,
+    OpBuilder<[{OpBuilder &, OperationState &state,
                 spirv::AddressingModel addressing_model,
                 spirv::MemoryModel memory_model}]>
   ];

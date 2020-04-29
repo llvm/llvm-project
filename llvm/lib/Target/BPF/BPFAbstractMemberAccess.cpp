@@ -239,7 +239,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   if (!Call)
     return false;
 
-  const auto *GV = dyn_cast<GlobalValue>(Call->getCalledValue());
+  const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
   if (!GV)
     return false;
   if (GV->getName().startswith("llvm.preserve.array.access.index")) {

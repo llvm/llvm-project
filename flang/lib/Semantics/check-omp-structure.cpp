@@ -261,7 +261,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   case parser::OmpLoopDirective::Directive::TaskloopSimd: {
     PushContext(beginDir.source, OmpDirective::TASKLOOP_SIMD);
     SetContextAllowed(
-        taskloopAllowedClauses | simdAllowedClauses - OmpClause::REDUCTION);
+        (taskloopAllowedClauses | simdAllowedClauses) - OmpClause::REDUCTION);
     SetContextAllowedOnce(taskloopAllowedOnceClauses | simdAllowedOnceClauses);
     SetContextAllowedExclusive(taskloopAllowedExclusiveClauses);
   } break;

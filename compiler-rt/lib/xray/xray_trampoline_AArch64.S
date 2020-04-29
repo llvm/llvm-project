@@ -27,6 +27,10 @@ __xray_FunctionEntry:
     STP Q2, Q3, [SP, #-32]!
     STP Q4, Q5, [SP, #-32]!
     STP Q6, Q7, [SP, #-32]!
+    /* X8 is the indirect result register and needs to be preserved for the body
+     of the function to use */
+    STP X8, X0, [SP, #-16]!
+
     /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
     ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
@@ -41,6 +45,7 @@ __xray_FunctionEntry:
     BLR X2
 FunctionEntry_restore:
     /* Pop the saved registers */
+    LDP X8, X0, [SP], #16
     LDP Q6, Q7, [SP], #32
     LDP Q4, Q5, [SP], #32
     LDP Q2, Q3, [SP], #32
@@ -71,7 +76,14 @@ __xray_FunctionExit:
     STP X3, X4, [SP, #-16]!
     STP X5, X6, [SP, #-16]!
     STP X7, X30, [SP, #-16]!
-    STR Q0, [SP, #-16]!
+    STP Q0, Q1, [SP, #-32]!
+    STP Q2, Q3, [SP, #-32]!
+    STP Q4, Q5, [SP, #-32]!
+    STP Q6, Q7, [SP, #-32]!
+    /* X8 is the indirect result register and needs to be preserved for the body
+     of the function to use */
+    STP X8, X0, [SP, #-16]!
+
     /* Load the page address of _ZN6__xray19XRayPatchedFunctionE into X1 */
     ADRP X1, _ZN6__xray19XRayPatchedFunctionE
     /* Load the handler function pointer into X2 */
@@ -85,7 +97,11 @@ __xray_FunctionExit:
     /* Call the handler with 2 parameters in W0 and X1 */
     BLR X2
 FunctionExit_restore:
-    LDR Q0, [SP], #16
+    LDP X8, X0, [SP], #16
+    LDP Q6, Q7, [SP], #32
+    LDP Q4, Q5, [SP], #32
+    LDP Q2, Q3, [SP], #32
+    LDP Q0, Q1, [SP], #32
     LDP X7, X30, [SP], #16
     LDP X5, X6, [SP], #16
     LDP X3, X4, [SP], #16

@@ -65,20 +65,6 @@ MLIRContext *mlir::edsc::ScopedContext::getContext() {
   return getBuilder().getContext();
 }
 
-OperationHandle OperationHandle::create(StringRef name,
-                                        ArrayRef<Value> operands,
-                                        ArrayRef<Type> resultTypes,
-                                        ArrayRef<NamedAttribute> attributes) {
-  OperationState state(ScopedContext::getLocation(), name);
-  SmallVector<Value, 4> ops(operands.begin(), operands.end());
-  state.addOperands(ops);
-  state.addTypes(resultTypes);
-  for (const auto &attr : attributes) {
-    state.addAttribute(attr.first, attr.second);
-  }
-  return OperationHandle(ScopedContext::getBuilder().createOperation(state));
-}
-
 BlockHandle mlir::edsc::BlockHandle::create(ArrayRef<Type> argTypes) {
   auto &currentB = ScopedContext::getBuilder();
   auto *ib = currentB.getInsertionBlock();

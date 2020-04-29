@@ -1395,7 +1395,7 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
     if (func && func->getName() == "__cxa_atexit")
       remove = true;
 
-    llvm::Value *val = call->getCalledValue();
+    llvm::Value *val = call->getCalledOperand();
 
     if (val && val->getName() == "__cxa_atexit")
       remove = true;

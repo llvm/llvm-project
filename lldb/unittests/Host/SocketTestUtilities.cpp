@@ -91,13 +91,37 @@ void lldb_private::CreateDomainConnectedSockets(
 }
 #endif
 
-bool lldb_private::IsAddressFamilySupported(std::string ip) {
-  auto addresses = lldb_private::SocketAddress::GetAddressInfo(
-      ip.c_str(), NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
-  return addresses.size() > 0;
+static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
+  llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(
+      Addr, /*child_processes_inherit=*/false, /*predicate=*/nullptr);
+  if (Sock)
+    return true;
+  llvm::Error Err = Sock.takeError();
+  GTEST_LOG_(WARNING) << llvm::formatv(
+                             "Creating a canary {0} TCP socket failed: {1}.",
+                             Proto, Err)
+                             .str();
+  bool HasAddrNotAvail = false;
+  handleAllErrors(std::move(Err), [&](std::unique_ptr<llvm::ECError> ECErr) {
+    if (ECErr->convertToErrorCode() ==
+        std::make_error_code(std::errc::address_not_available))
+      HasAddrNotAvail = true;
+  });
+  if (HasAddrNotAvail) {
+    GTEST_LOG_(WARNING)
+        << llvm::formatv(
+               "Assuming the host does not support {0}. Skipping test.", Proto)
+               .str();
+    return false;
+  }
+  GTEST_LOG_(WARNING) << "Continuing anyway. The test will probably fail.";
+  return true;
 }
 
-bool lldb_private::IsIPv4(std::string ip) {
-  struct sockaddr_in sock_addr;
-  return inet_pton(AF_INET, ip.c_str(), &(sock_addr.sin_addr)) != 0;
+bool lldb_private::HostSupportsIPv4() {
+  return CheckIPSupport("IPv4", "127.0.0.1:0");
+}
+
+bool lldb_private::HostSupportsIPv6() {
+  return CheckIPSupport("IPv6", "[::1]:0");
 }

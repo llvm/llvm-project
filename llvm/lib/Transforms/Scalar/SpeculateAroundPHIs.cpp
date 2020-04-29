@@ -465,7 +465,7 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
             if (CostMapIt != SpecCostMap.end())
               Cost += CostMapIt->second;
           }
-        Cost += TTI.getUserCost(I);
+        Cost += TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
         bool Inserted = SpecCostMap.insert({I, Cost}).second;
         (void)Inserted;
         assert(Inserted && "Must not re-insert a cost during the DFS!");

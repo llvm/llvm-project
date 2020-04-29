@@ -2863,17 +2863,6 @@ unsigned X86::getSwappedVCMPImm(unsigned Imm) {
   return Imm;
 }
 
-bool X86InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
-  if (!MI.isTerminator()) return false;
-
-  // Conditional branch is a special case.
-  if (MI.isBranch() && !MI.isBarrier())
-    return true;
-  if (!MI.isPredicable())
-    return true;
-  return !isPredicated(MI);
-}
-
 bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case X86::TCRETURNdi:
@@ -4843,11 +4832,31 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
 
 // Return true for any instruction the copies the high bits of the first source
 // operand into the unused high bits of the destination operand.
+// Also returns true for instructions that have two inputs where one may
+// be undef and we want it to use the same register as the other input.
 static bool hasUndefRegUpdate(unsigned Opcode, unsigned &OpNum,
                               bool ForLoadFold = false) {
   // Set the OpNum parameter to the first source operand.
   OpNum = 1;
   switch (Opcode) {
+  case X86::PACKSSWBrr:
+  case X86::PACKUSWBrr:
+  case X86::PACKSSDWrr:
+  case X86::PACKUSDWrr:
+  case X86::VPACKSSWBrr:
+  case X86::VPACKUSWBrr:
+  case X86::VPACKSSDWrr:
+  case X86::VPACKUSDWrr:
+  case X86::VPACKSSWBZ128rr:
+  case X86::VPACKUSWBZ128rr:
+  case X86::VPACKSSDWZ128rr:
+  case X86::VPACKUSDWZ128rr:
+    // These instructions are sometimes used with an undef second source to
+    // truncate 128-bit vectors to 64-bit with undefined high bits. Return
+    // true here so BreakFalseDeps will assign this source to the same register
+    // as the first source to avoid a false dependency.
+    OpNum = 2;
+    return true;
   case X86::VCVTSI2SSrr:
   case X86::VCVTSI2SSrm:
   case X86::VCVTSI2SSrr_Int:

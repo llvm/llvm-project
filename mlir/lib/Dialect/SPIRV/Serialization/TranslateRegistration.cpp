@@ -61,7 +61,7 @@ static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
 }
 
 namespace mlir {
-void registerToSPIRVTranslation() {
+void registerFromSPIRVTranslation() {
   TranslateToMLIRRegistration fromBinary(
       "deserialize-spirv",
       [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
@@ -101,7 +101,7 @@ static LogicalResult serializeModule(ModuleOp module, raw_ostream &output) {
 }
 
 namespace mlir {
-void registerFromSPIRVTranslation() {
+void registerToSPIRVTranslation() {
   TranslateFromMLIRRegistration toBinary(
       "serialize-spirv", [](ModuleOp module, raw_ostream &output) {
         return serializeModule(module, output);

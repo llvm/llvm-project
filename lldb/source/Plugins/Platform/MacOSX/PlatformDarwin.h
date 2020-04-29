@@ -171,6 +171,7 @@ protected:
 
   std::string m_developer_directory;
   llvm::StringMap<std::string> m_sdk_path;
+  std::mutex m_sdk_path_mutex;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformDarwin);

@@ -828,3 +828,39 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //       CHECK: llvm.intr.masked.store %[[loaded]], %[[vecPtr_b]], %[[mask_b]]
 //  CHECK-SAME: {alignment = 1 : i32} :
 //  CHECK-SAME: !llvm<"<17 x float>">, !llvm<"<17 x i1>"> into !llvm<"<17 x float>*">
+
+func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: index) -> vector<17xf32> {
+  %f7 = constant 7.0: f32
+  %f = vector.transfer_read %A[%base0, %base1], %f7
+      {permutation_map = affine_map<(d0, d1) -> (d1)>} :
+    memref<?x?xf32>, vector<17xf32>
+  return %f: vector<17xf32>
+}
+// CHECK-LABEL: func @transfer_read_2d_to_1d
+//  CHECK-SAME: %[[BASE_0:[a-zA-Z0-9]*]]: !llvm.i64, %[[BASE_1:[a-zA-Z0-9]*]]: !llvm.i64) -> !llvm<"<17 x float>">
+//
+// Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm<"<17 x i64>">
+//       CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// Here we check we properly use %BASE_1
+//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[BASE_1]], %[[offsetVec]][%[[c0]] :
+//  CHECK-SAME: !llvm.i32] : !llvm<"<17 x i64>">
+//       CHECK: %[[offsetVec3:.*]] = llvm.shufflevector %[[offsetVec2]], %{{.*}} [
+//  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
+//  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
+//  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
+//
+// Let dim the memref dimension, compute the vector comparison mask:
+//    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
+// Here we check we properly use %DIM[1]
+//       CHECK: %[[DIM:.*]] = llvm.extractvalue %{{.*}}[3, 1] :
+//  CHECK-SAME: !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm<"<17 x i64>">
+//       CHECK: %[[c01:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[DIM]], %[[dimVec]][%[[c01]] :
+//  CHECK-SAME:  !llvm.i32] : !llvm<"<17 x i64>">
+//       CHECK: %[[dimVec3:.*]] = llvm.shufflevector %[[dimVec2]], %{{.*}} [
+//  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
+//  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
+//  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
+//  CHECK-SAME: !llvm<"<17 x i64>">, !llvm<"<17 x i64>">

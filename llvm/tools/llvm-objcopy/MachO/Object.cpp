@@ -60,13 +60,13 @@ Error Object::removeSections(
   for (const LoadCommand &LC : LoadCommands)
     for (const std::unique_ptr<Section> &Sec : LC.Sections)
       for (const RelocationInfo &R : Sec->Relocations)
-        if (R.Symbol && DeadSymbols.count(R.Symbol))
+        if (R.Symbol && *R.Symbol && DeadSymbols.count(*R.Symbol))
           return createStringError(std::errc::invalid_argument,
                                    "symbol '%s' defined in section with index "
                                    "'%u' cannot be removed because it is "
                                    "referenced by a relocation in section '%s'",
-                                   R.Symbol->Name.c_str(),
-                                   *(R.Symbol->section()),
+                                   (*R.Symbol)->Name.c_str(),
+                                   *((*R.Symbol)->section()),
                                    Sec->CanonicalName.c_str());
   SymTable.removeSymbols(IsDead);
   for (std::unique_ptr<SymbolEntry> &S : SymTable.Symbols)

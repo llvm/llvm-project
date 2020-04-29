@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputSection.h"
+#include "OutputSegment.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -20,8 +21,13 @@ using namespace lld::macho;
 
 std::vector<InputSection *> macho::inputSections;
 
+uint64_t InputSection::getFileOffset() const {
+  return parent->fileOff + addr - parent->firstSection()->addr;
+}
+
 void InputSection::writeTo(uint8_t *buf) {
-  memcpy(buf, data.data(), data.size());
+  if (!data.empty())
+    memcpy(buf, data.data(), data.size());
 
   for (Reloc &r : relocs) {
     uint64_t va = 0;

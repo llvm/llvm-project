@@ -9,7 +9,13 @@ def Z: Flag<["-"], "Z">,
 def arch: Separate<["-"], "arch">, MetaVarName<"<arch-name>">,
   HelpText<"Architecture to link">;
 
+def dylib: Flag<["-"], "dylib">, HelpText<"Emit a shared library">;
+
 def e: Separate<["-"], "e">, HelpText<"Name of entry point symbol">;
+
+def install_name: Separate<["-"], "install_name">,
+  MetaVarName<"<install-name>">,
+  HelpText<"Set the install path of the dynamic library.">;
 
 def l: Joined<["-"], "l">, MetaVarName<"<libname>">,
   HelpText<"Base name of library searched for in -L directories">;

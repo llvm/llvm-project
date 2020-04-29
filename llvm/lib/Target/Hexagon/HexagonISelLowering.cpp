@@ -3504,9 +3504,5 @@ bool HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
-  const DataLayout &DL = AI->getModule()->getDataLayout();
-  unsigned Size = DL.getTypeStoreSize(AI->getCompareOperand()->getType());
-  if (Size >= 4 && Size <= 8)
-    return AtomicExpansionKind::LLSC;
-  return AtomicExpansionKind::None;
+  return AtomicExpansionKind::LLSC;
 }

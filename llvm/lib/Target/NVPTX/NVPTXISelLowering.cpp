@@ -1361,19 +1361,19 @@ Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
   }
 
   unsigned Alignment = 0;
-  const Value *DirectCallee = CB->getCalledFunction();
+  const Function *DirectCallee = CB->getCalledFunction();
 
   if (!DirectCallee) {
     // We don't have a direct function symbol, but that may be because of
     // constant cast instructions in the call.
 
     // With bitcast'd call targets, the instruction will be the call
-    if (isa<CallInst>(CB)) {
+    if (const auto *CI = dyn_cast<CallInst>(CB)) {
       // Check if we have call alignment metadata
-      if (getAlign(*cast<CallInst>(CB), Idx, Alignment))
+      if (getAlign(*CI, Idx, Alignment))
         return Align(Alignment);
 
-      const Value *CalleeV = cast<CallInst>(CB)->getCalledValue();
+      const Value *CalleeV = CI->getCalledOperand();
       // Ignore any bitcast instructions
       while (isa<ConstantExpr>(CalleeV)) {
         const ConstantExpr *CE = cast<ConstantExpr>(CalleeV);
@@ -1385,15 +1385,15 @@ Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
 
       // We have now looked past all of the bitcasts.  Do we finally have a
       // Function?
-      if (isa<Function>(CalleeV))
-        DirectCallee = CalleeV;
+      if (const auto *CalleeF = dyn_cast<Function>(CalleeV))
+        DirectCallee = CalleeF;
     }
   }
 
   // Check for function alignment information if we found that the
   // ultimate target is a Function
   if (DirectCallee)
-    if (getAlign(*cast<Function>(DirectCallee), Idx, Alignment))
+    if (getAlign(*DirectCallee, Idx, Alignment))
       return Align(Alignment);
 
   // Call is indirect or alignment information is not available, fall back to

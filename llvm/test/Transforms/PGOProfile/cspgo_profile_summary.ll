@@ -142,7 +142,7 @@ entry:
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"MaxFunctionCount", i64 800000}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"NumCounts", i64 14}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"NumFunctions", i64 8}
-; CSPGOSUMMARY: {{![0-9]+}} = !{!"DetailedSummary", !10}
+; CSPGOSUMMARY: {{![0-9]+}} = !{!"DetailedSummary", !{{[0-9]+}}}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{i32 1, !"CSProfileSummary", !{{[0-9]+}}}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"ProfileFormat", !"CSInstrProf"}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"TotalCount", i64 1299950}

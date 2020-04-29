@@ -102,6 +102,68 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
+def BufferPlacement : Pass<"buffer-placement"> {
+  let summary = "Optimizes placement of alloc and dealloc operations";
+  let description = [{
+    This pass implements an algorithm to optimize the placement of alloc and
+    dealloc operations. This pass also inserts missing dealloc operations
+    automatically to reclaim memory.
+
+
+    Input
+
+    ```mlir
+    #map0 = affine_map<(d0) -> (d0)>
+    module {
+      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+        cond_br %arg0, ^bb1, ^bb2
+      ^bb1:
+        br ^bb3(%arg1 : memref<2xf32>)
+      ^bb2:
+        %0 = alloc() : memref<2xf32>
+        linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
+        ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
+          %tmp1 = exp %gen1_arg0 : f32
+          linalg.yield %tmp1 : f32
+        }: memref<2xf32>, memref<2xf32>
+        br ^bb3(%0 : memref<2xf32>)
+      ^bb3(%1: memref<2xf32>):
+        "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+        return
+      }
+    }
+
+    ```
+
+    Output
+
+    ```mlir
+    #map0 = affine_map<(d0) -> (d0)>
+    module {
+      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+        %0 = alloc() : memref<2xf32>
+        cond_br %arg0, ^bb1, ^bb2
+      ^bb1: // pred: ^bb0
+        br ^bb3(%arg1 : memref<2xf32>)
+      ^bb2: // pred: ^bb0
+        linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
+        ^bb0(%arg3: f32, %arg4: f32):       // no predecessors
+          %2 = exp %arg3 : f32
+          linalg.yield %2 : f32
+        }: memref<2xf32>, memref<2xf32>
+        br ^bb3(%0 : memref<2xf32>)
+      ^bb3(%1: memref<2xf32>):      // 2 preds: ^bb1, ^bb2
+        linalg.copy(%1, %arg2) : memref<2xf32>, memref<2xf32>
+        dealloc %0 : memref<2xf32>
+        return
+      }
+    }
+    ```
+
+  }];
+  let constructor = "mlir::createBufferPlacementPass()";
+}
+
 def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{

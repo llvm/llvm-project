@@ -484,7 +484,7 @@ static LogicalResult verify(AtomicRMWOp op) {
 // GenericAtomicRMWOp
 //===----------------------------------------------------------------------===//
 
-void GenericAtomicRMWOp::build(Builder *builder, OperationState &result,
+void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
                                Value memref, ValueRange ivs) {
   result.addOperands(memref);
   result.addOperands(ivs);
@@ -775,13 +775,12 @@ static Type getI1SameShape(Type type) {
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-static void buildCmpIOp(Builder *build, OperationState &result,
+static void buildCmpIOp(OpBuilder &build, OperationState &result,
                         CmpIPredicate predicate, Value lhs, Value rhs) {
   result.addOperands({lhs, rhs});
   result.types.push_back(getI1SameShape(lhs.getType()));
-  result.addAttribute(
-      CmpIOp::getPredicateAttrName(),
-      build->getI64IntegerAttr(static_cast<int64_t>(predicate)));
+  result.addAttribute(CmpIOp::getPredicateAttrName(),
+                      build.getI64IntegerAttr(static_cast<int64_t>(predicate)));
 }
 
 // Compute `lhs` `pred` `rhs`, where `pred` is one of the known integer
@@ -830,13 +829,12 @@ OpFoldResult CmpIOp::fold(ArrayRef<Attribute> operands) {
 // CmpFOp
 //===----------------------------------------------------------------------===//
 
-static void buildCmpFOp(Builder *build, OperationState &result,
+static void buildCmpFOp(OpBuilder &build, OperationState &result,
                         CmpFPredicate predicate, Value lhs, Value rhs) {
   result.addOperands({lhs, rhs});
   result.types.push_back(getI1SameShape(lhs.getType()));
-  result.addAttribute(
-      CmpFOp::getPredicateAttrName(),
-      build->getI64IntegerAttr(static_cast<int64_t>(predicate)));
+  result.addAttribute(CmpFOp::getPredicateAttrName(),
+                      build.getI64IntegerAttr(static_cast<int64_t>(predicate)));
 }
 
 /// Compute `lhs` `pred` `rhs`, where `pred` is one of the known floating point
@@ -1180,9 +1178,9 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
          value.isa<UnitAttr>();
 }
 
-void ConstantFloatOp::build(Builder *builder, OperationState &result,
+void ConstantFloatOp::build(OpBuilder &builder, OperationState &result,
                             const APFloat &value, FloatType type) {
-  ConstantOp::build(builder, result, type, builder->getFloatAttr(type, value));
+  ConstantOp::build(builder, result, type, builder.getFloatAttr(type, value));
 }
 
 bool ConstantFloatOp::classof(Operation *op) {
@@ -1195,21 +1193,19 @@ bool ConstantIntOp::classof(Operation *op) {
          op->getResult(0).getType().isSignlessInteger();
 }
 
-void ConstantIntOp::build(Builder *builder, OperationState &result,
+void ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                           int64_t value, unsigned width) {
-  Type type = builder->getIntegerType(width);
-  ConstantOp::build(builder, result, type,
-                    builder->getIntegerAttr(type, value));
+  Type type = builder.getIntegerType(width);
+  ConstantOp::build(builder, result, type, builder.getIntegerAttr(type, value));
 }
 
 /// Build a constant int op producing an integer with the specified type,
 /// which must be an integer type.
-void ConstantIntOp::build(Builder *builder, OperationState &result,
+void ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                           int64_t value, Type type) {
   assert(type.isSignlessInteger() &&
          "ConstantIntOp can only have signless integer type");
-  ConstantOp::build(builder, result, type,
-                    builder->getIntegerAttr(type, value));
+  ConstantOp::build(builder, result, type, builder.getIntegerAttr(type, value));
 }
 
 /// ConstantIndexOp only matches values whose result type is Index.
@@ -1217,11 +1213,10 @@ bool ConstantIndexOp::classof(Operation *op) {
   return ConstantOp::classof(op) && op->getResult(0).getType().isIndex();
 }
 
-void ConstantIndexOp::build(Builder *builder, OperationState &result,
+void ConstantIndexOp::build(OpBuilder &builder, OperationState &result,
                             int64_t value) {
-  Type type = builder->getIndexType();
-  ConstantOp::build(builder, result, type,
-                    builder->getIntegerAttr(type, value));
+  Type type = builder.getIndexType();
+  ConstantOp::build(builder, result, type, builder.getIntegerAttr(type, value));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1363,7 +1358,7 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
 // DmaStartOp
 // ---------------------------------------------------------------------------
 
-void DmaStartOp::build(Builder *builder, OperationState &result,
+void DmaStartOp::build(OpBuilder &builder, OperationState &result,
                        Value srcMemRef, ValueRange srcIndices, Value destMemRef,
                        ValueRange destIndices, Value numElements,
                        Value tagMemRef, ValueRange tagIndices, Value stride,
@@ -1506,8 +1501,9 @@ LogicalResult DmaStartOp::fold(ArrayRef<Attribute> cstOperands,
 // DmaWaitOp
 // ---------------------------------------------------------------------------
 
-void DmaWaitOp::build(Builder *builder, OperationState &result, Value tagMemRef,
-                      ValueRange tagIndices, Value numElements) {
+void DmaWaitOp::build(OpBuilder &builder, OperationState &result,
+                      Value tagMemRef, ValueRange tagIndices,
+                      Value numElements) {
   result.addOperands(tagMemRef);
   result.addOperands(tagIndices);
   result.addOperands(numElements);
@@ -2009,6 +2005,16 @@ OpFoldResult SignedDivIOp::fold(ArrayRef<Attribute> operands) {
     }
     return a.sdiv_ov(b, overflowOrDiv0);
   });
+
+  // Fold out division by one. Assumes all tensors of all ones are splats.
+  if (auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>()) {
+    if (rhs.getValue() == 1)
+      return lhs();
+  } else if (auto rhs = operands[1].dyn_cast_or_null<SplatElementsAttr>()) {
+    if (rhs.getSplatValue<IntegerAttr>().getValue() == 1)
+      return lhs();
+  }
+
   return overflowOrDiv0 ? Attribute() : result;
 }
 
@@ -2147,7 +2153,7 @@ static Type inferSubViewResultType(MemRefType memRefType) {
       .setAffineMaps(stridedLayout);
 }
 
-void mlir::SubViewOp::build(Builder *b, OperationState &result, Value source,
+void mlir::SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
                             ValueRange offsets, ValueRange sizes,
                             ValueRange strides, Type resultType,
                             ArrayRef<NamedAttribute> attrs) {
@@ -2157,8 +2163,8 @@ void mlir::SubViewOp::build(Builder *b, OperationState &result, Value source,
   result.addAttributes(attrs);
 }
 
-void mlir::SubViewOp::build(Builder *b, OperationState &result, Type resultType,
-                            Value source) {
+void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
+                            Type resultType, Value source) {
   build(b, result, source, /*offsets=*/{}, /*sizes=*/{}, /*strides=*/{},
         resultType);
 }
@@ -2537,6 +2543,16 @@ OpFoldResult UnsignedDivIOp::fold(ArrayRef<Attribute> operands) {
     }
     return a.udiv(b);
   });
+
+  // Fold out division by one. Assumes all tensors of all ones are splats.
+  if (auto rhs = operands[1].dyn_cast_or_null<IntegerAttr>()) {
+    if (rhs.getValue() == 1)
+      return lhs();
+  } else if (auto rhs = operands[1].dyn_cast_or_null<SplatElementsAttr>()) {
+    if (rhs.getSplatValue<IntegerAttr>().getValue() == 1)
+      return lhs();
+  }
+
   return div0 ? Attribute() : result;
 }
 

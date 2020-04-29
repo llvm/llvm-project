@@ -153,7 +153,7 @@ bound symbol, for example, `def : Pat<(AOp $a, F32Attr), ...>`.
 
 #### Matching DAG of operations
 
-To match an DAG of ops, use nested `dag` objects:
+To match a DAG of ops, use nested `dag` objects:
 
 ```tablegen
 
@@ -265,7 +265,7 @@ For example, for the above `AOp`, a possible builder is:
 
 ```c++
 
-void AOp::build(Builder *builder, OperationState &state,
+void AOp::build(OpBuilder &builder, OperationState &state,
                 Value input, Attribute attr) {
   state.addOperands({input});
   state.addAttribute("a_attr", attr);
@@ -530,7 +530,7 @@ the `TwoResultOp`'s two results, respectively.
 
 The above example also shows how to replace a matched multi-result op.
 
-To replace a `N`-result op, the result patterns must generate at least `N`
+To replace an `N`-result op, the result patterns must generate at least `N`
 declared values (see [Declared vs. actual value](#declared-vs-actual-value) for
 definition). If there are more than `N` declared values generated, only the
 last `N` declared values will be used to replace the matched op. Note that
@@ -668,12 +668,12 @@ directive to provide finer control.
 
 `location` is of the following syntax:
 
-```tablgen
+```tablegen
 (location $symbol0, $symbol1, ...)
 ```
 
 where all `$symbol` should be bound previously in the pattern and one optional
-string may be specified as an attribute. The following locations are creted:
+string may be specified as an attribute. The following locations are created:
 
 *   If only 1 symbol is specified then that symbol's location is used,
 *   If multiple are specified then a fused location is created;

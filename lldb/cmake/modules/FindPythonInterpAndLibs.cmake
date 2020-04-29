@@ -9,11 +9,11 @@ if(PYTHON_LIBRARIES AND PYTHON_INCLUDE_DIRS AND PYTHON_EXECUTABLE AND SWIG_EXECU
 else()
   find_package(SWIG 2.0)
   if (SWIG_FOUND)
-    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+    if(NOT CMAKE_VERSION VERSION_LESS 3.12)
       # Use PYTHON_HOME as a hint to find Python 3.
       set(Python3_ROOT_DIR "${PYTHON_HOME}")
       find_package(Python3 COMPONENTS Interpreter Development)
-      if (Python3_FOUND AND Python3_Interpreter_FOUND)
+      if(Python3_FOUND AND Python3_Interpreter_FOUND)
         set(PYTHON_LIBRARIES ${Python3_LIBRARIES})
         set(PYTHON_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
         set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
@@ -22,6 +22,20 @@ else()
           PYTHON_INCLUDE_DIRS
           PYTHON_EXECUTABLE
           SWIG_EXECUTABLE)
+      elseif(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+        # Use PYTHON_HOME as a hint to find Python 2.
+        set(Python2_ROOT_DIR "${PYTHON_HOME}")
+        find_package(Python2 COMPONENTS Interpreter Development)
+        if(Python2_FOUND AND Python2_Interpreter_FOUND)
+          set(PYTHON_LIBRARIES ${Python2_LIBRARIES})
+          set(PYTHON_INCLUDE_DIRS ${Python2_INCLUDE_DIRS})
+          set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
+          mark_as_advanced(
+            PYTHON_LIBRARIES
+            PYTHON_INCLUDE_DIRS
+            PYTHON_EXECUTABLE
+            SWIG_EXECUTABLE)
+        endif()
       endif()
     else()
       find_package(PythonInterp)

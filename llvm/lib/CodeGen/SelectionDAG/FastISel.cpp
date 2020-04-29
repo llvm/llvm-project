@@ -1290,7 +1290,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
     IsTailCall = false;
 
   CallLoweringInfo CLI;
-  CLI.setCallee(RetTy, FuncTy, CI->getCalledValue(), std::move(Args), *CI)
+  CLI.setCallee(RetTy, FuncTy, CI->getCalledOperand(), std::move(Args), *CI)
       .setTailCall(IsTailCall);
 
   return lowerCallTo(CLI);
@@ -1300,7 +1300,7 @@ bool FastISel::selectCall(const User *I) {
   const CallInst *Call = cast<CallInst>(I);
 
   // Handle simple inline asms.
-  if (const InlineAsm *IA = dyn_cast<InlineAsm>(Call->getCalledValue())) {
+  if (const InlineAsm *IA = dyn_cast<InlineAsm>(Call->getCalledOperand())) {
     // If the inline asm has side effects, then make sure that no local value
     // lives across by flushing the local value map.
     if (IA->hasSideEffects())

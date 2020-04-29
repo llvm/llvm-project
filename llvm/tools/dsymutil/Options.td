@@ -44,7 +44,7 @@ def dump_debug_map: F<"dump-debug-map">,
   HelpText<"Parse and dump the debug map to standard output. Not DWARF link will take place.">,
   Group<grp_general>;
 
-def yaml_input: F<"y">,
+def yaml_input: Flag<["-", "--"], "y">,
   HelpText<"Treat the input file is a YAML debug map rather than a binary.">,
   Group<grp_general>;
 
@@ -52,7 +52,7 @@ def papertrail: F<"papertrail">,
   HelpText<"Embed warnings in the linked DWARF debug info.">,
   Group<grp_general>;
 
-def assembly: F<"S">,
+def assembly: Flag<["-", "--"], "S">,
   HelpText<"Output textual assembly instead of a binary dSYM companion file.">,
   Group<grp_general>;
 
@@ -93,16 +93,16 @@ def: Flag<["-"], "u">,
   HelpText<"Alias for --update">,
   Group<grp_general>;
 
-def output: Separate<["--", "-"], "o">,
+def output: Separate<["-", "--"], "o">,
   MetaVarName<"<filename>">,
   HelpText<"Specify the output file. Defaults to <input file>.dwarf">,
   Group<grp_general>;
 def: Separate<["--", "-"], "out">,
   Alias<output>,
-  HelpText<"Alias for --o">,
+  HelpText<"Alias for -o">,
   Group<grp_general>;
 def: Joined<["--", "-"], "out=">, Alias<output>;
-def: Joined<["--", "-"], "o=">, Alias<output>;
+def: Joined<["-", "--"], "o=">, Alias<output>;
 
 def oso_prepend_path: Separate<["--", "-"], "oso-prepend-path">,
   MetaVarName<"<path>">,

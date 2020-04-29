@@ -174,6 +174,8 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
     os << "  static LogicalResult verifyTrait(Operation* op) {\n"
        << std::string(tblgen::tgfmt(*verify, &traitCtx)) << "\n  }\n";
   }
+  if (auto extraTraitDecls = interface.getExtraTraitClassDeclaration())
+    os << extraTraitDecls << "\n";
 
   os << "  };\n";
 }

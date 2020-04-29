@@ -381,21 +381,10 @@ void PPCExpandISEL::reorganizeBlockLayout(BlockISELList &BIL,
                          MBB->end());
     NewSuccessor->transferSuccessorsAndUpdatePHIs(MBB);
 
-    // Copy the original liveIns of MBB to NewSuccessor.
-    for (auto &LI : MBB->liveins())
-      NewSuccessor->addLiveIn(LI);
+    // Update the liveins for NewSuccessor.
+    LivePhysRegs LPR;
+    computeAndAddLiveIns(LPR, *NewSuccessor);
 
-    // After splitting the NewSuccessor block, Regs defined but not killed
-    // in MBB should be treated as liveins of NewSuccessor.
-    // Note: Cannot use stepBackward instead since we are using the Reg
-    // liveness state at the end of MBB (liveOut of MBB) as the liveIn for
-    // NewSuccessor. Otherwise, will cause cyclic dependence.
-    LivePhysRegs LPR(*MF->getSubtarget<PPCSubtarget>().getRegisterInfo());
-    SmallVector<std::pair<MCPhysReg, const MachineOperand *>, 2> Clobbers;
-    for (MachineInstr &MI : *MBB)
-      LPR.stepForward(MI, Clobbers);
-    for (auto &LI : LPR)
-      NewSuccessor->addLiveIn(LI);
   } else {
     // Remove successor from MBB.
     MBB->removeSuccessor(Successor);
@@ -441,44 +430,26 @@ void PPCExpandISEL::populateBlocks(BlockISELList &BIL) {
                                                        // condition is true
     MachineOperand &FalseValue = MI->getOperand(2); // Value to store if
                                                        // condition is false
-    MachineOperand &ConditionRegister = MI->getOperand(3); // Condition
 
     LLVM_DEBUG(dbgs() << "Dest: " << Dest << "\n");
     LLVM_DEBUG(dbgs() << "TrueValue: " << TrueValue << "\n");
     LLVM_DEBUG(dbgs() << "FalseValue: " << FalseValue << "\n");
-    LLVM_DEBUG(dbgs() << "ConditionRegister: " << ConditionRegister << "\n");
+    LLVM_DEBUG(dbgs() << "ConditionRegister: " << MI->getOperand(3) << "\n");
 
     // If the Dest Register and True Value Register are not the same one, we
     // need the True Block.
     bool IsADDIInstRequired = !useSameRegister(Dest, TrueValue);
     bool IsORIInstRequired = !useSameRegister(Dest, FalseValue);
 
-    if (IsADDIInstRequired) {
-      // Copy the result into the destination if the condition is true.
+    // Copy the result into the destination if the condition is true.
+    if (IsADDIInstRequired)
       BuildMI(*TrueBlock, TrueBlockI, dl,
               TII->get(isISEL8(*MI) ? PPC::ADDI8 : PPC::ADDI))
           .add(Dest)
           .add(TrueValue)
           .add(MachineOperand::CreateImm(0));
 
-      // Add the LiveIn registers required by true block.
-      TrueBlock->addLiveIn(TrueValue.getReg());
-    }
-
-    if (IsORIInstRequired) {
-      // Add the LiveIn registers required by false block.
-      FalseBlock->addLiveIn(FalseValue.getReg());
-    }
-
-    if (NewSuccessor) {
-      // Add the LiveIn registers required by NewSuccessor block.
-      NewSuccessor->addLiveIn(Dest.getReg());
-      NewSuccessor->addLiveIn(TrueValue.getReg());
-      NewSuccessor->addLiveIn(FalseValue.getReg());
-      NewSuccessor->addLiveIn(ConditionRegister.getReg());
-    }
-
-    // Copy the value into the destination if the condition is false.
+    // Copy the result into the destination if the condition is false.
     if (IsORIInstRequired)
       BuildMI(*FalseBlock, FalseBlockI, dl,
               TII->get(isISEL8(*MI) ? PPC::ORI8 : PPC::ORI))
@@ -489,6 +460,18 @@ void PPCExpandISEL::populateBlocks(BlockISELList &BIL) {
     MI->eraseFromParent(); // Remove the ISEL instruction.
 
     NumExpanded++;
+  }
+
+  if (IsTrueBlockRequired) {
+    // Update the liveins for TrueBlock.
+    LivePhysRegs LPR;
+    computeAndAddLiveIns(LPR, *TrueBlock);
+  }
+
+  if (IsFalseBlockRequired) {
+    // Update the liveins for FalseBlock.
+    LivePhysRegs LPR;
+    computeAndAddLiveIns(LPR, *FalseBlock);
   }
 }
 

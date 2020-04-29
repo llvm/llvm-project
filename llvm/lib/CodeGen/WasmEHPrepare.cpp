@@ -358,9 +358,9 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   Instruction *GetExnCI = nullptr, *GetSelectorCI = nullptr;
   for (auto &U : FPI->uses()) {
     if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
-      if (CI->getCalledValue() == GetExnF)
+      if (CI->getCalledOperand() == GetExnF)
         GetExnCI = CI;
-      if (CI->getCalledValue() == GetSelectorF)
+      if (CI->getCalledOperand() == GetSelectorF)
         GetSelectorCI = CI;
     }
   }

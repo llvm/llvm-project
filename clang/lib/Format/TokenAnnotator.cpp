@@ -395,7 +395,7 @@ private:
 
     if (!AttrTok)
       return false;
-    
+
     // Allow an attribute to be the only content of a file.
     AttrTok = AttrTok->Next;
     if (!AttrTok)
@@ -2837,9 +2837,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     //   operator std::Foo*()
     //   operator C<T>::D<U>*()
     // dependent on PointerAlignment style.
-    if (Previous && (Previous->endsSequence(tok::kw_operator) ||
-       Previous->endsSequence(tok::kw_const, tok::kw_operator) ||
-       Previous->endsSequence(tok::kw_volatile, tok::kw_operator)))
+    if (Previous &&
+        (Previous->endsSequence(tok::kw_operator) ||
+         Previous->endsSequence(tok::kw_const, tok::kw_operator) ||
+         Previous->endsSequence(tok::kw_volatile, tok::kw_operator)))
       return (Style.PointerAlignment != FormatStyle::PAS_Left);
   }
   const auto SpaceRequiredForArrayInitializerLSquare =
@@ -3051,6 +3052,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // Possible space inside `?[ 0 ]`.
     if (Left.is(TT_CSharpNullConditionalLSquare))
       return Style.SpacesInSquareBrackets;
+
+    // space after var in `var (key, value)`
+    if (Left.is(Keywords.kw_var) && Right.is(tok::l_paren))
+      return true;
 
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
@@ -3325,22 +3330,20 @@ static bool isOneChildWithoutMustBreakBefore(const FormatToken &Tok) {
   if (Tok.Children.size() != 1)
     return false;
   FormatToken *curElt = Tok.Children[0]->First;
-    while (curElt) {
-      if (curElt->MustBreakBefore)
-        return false;
-      curElt = curElt->Next;
-    }
+  while (curElt) {
+    if (curElt->MustBreakBefore)
+      return false;
+    curElt = curElt->Next;
+  }
   return true;
 }
-static bool
-isAllmanLambdaBrace(const FormatToken &Tok) {
+static bool isAllmanLambdaBrace(const FormatToken &Tok) {
   return (Tok.is(tok::l_brace) && Tok.BlockKind == BK_Block &&
-      !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral));
+          !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral));
 }
 
-static bool
-isAllmanBraceIncludedBreakableLambda(const FormatToken &Tok,
-                            FormatStyle::ShortLambdaStyle ShortLambdaOption) {
+static bool isAllmanBraceIncludedBreakableLambda(
+    const FormatToken &Tok, FormatStyle::ShortLambdaStyle ShortLambdaOption) {
   if (!isAllmanLambdaBrace(Tok))
     return false;
 
@@ -3497,7 +3500,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Style.BraceWrapping.BeforeLambdaBody &&
       (isAllmanBraceIncludedBreakableLambda(Left, ShortLambdaOption) ||
        isAllmanBraceIncludedBreakableLambda(Right, ShortLambdaOption))) {
-      return true;
+    return true;
   }
 
   if (isAllmanBrace(Left) || isAllmanBrace(Right))

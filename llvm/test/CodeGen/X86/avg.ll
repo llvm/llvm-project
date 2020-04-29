@@ -151,7 +151,7 @@ define void @avg_v24i8(<24 x i8>* %a, <24 x i8>* %b) nounwind {
 ; SSE2-NEXT:    pand %xmm6, %xmm5
 ; SSE2-NEXT:    pand %xmm6, %xmm1
 ; SSE2-NEXT:    packuswb %xmm5, %xmm1
-; SSE2-NEXT:    packuswb %xmm0, %xmm1
+; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    movq %xmm1, (%rax)
 ; SSE2-NEXT:    movdqu %xmm0, (%rax)
 ; SSE2-NEXT:    retq

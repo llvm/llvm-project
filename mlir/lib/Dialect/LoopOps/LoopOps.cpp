@@ -39,8 +39,8 @@ LoopOpsDialect::LoopOpsDialect(MLIRContext *context)
 // ForOp
 //===----------------------------------------------------------------------===//
 
-void ForOp::build(Builder *builder, OperationState &result, Value lb, Value ub,
-                  Value step, ValueRange iterArgs) {
+void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
+                  Value ub, Value step, ValueRange iterArgs) {
   result.addOperands({lb, ub, step});
   result.addOperands(iterArgs);
   for (Value v : iterArgs)
@@ -48,8 +48,8 @@ void ForOp::build(Builder *builder, OperationState &result, Value lb, Value ub,
   Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block());
   if (iterArgs.empty())
-    ForOp::ensureTerminator(*bodyRegion, *builder, result.location);
-  bodyRegion->front().addArgument(builder->getIndexType());
+    ForOp::ensureTerminator(*bodyRegion, builder, result.location);
+  bodyRegion->front().addArgument(builder.getIndexType());
   for (Value v : iterArgs)
     bodyRegion->front().addArgument(v.getType());
 }
@@ -233,12 +233,12 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
 // IfOp
 //===----------------------------------------------------------------------===//
 
-void IfOp::build(Builder *builder, OperationState &result, Value cond,
+void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                  bool withElseRegion) {
   build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
 }
 
-void IfOp::build(Builder *builder, OperationState &result,
+void IfOp::build(OpBuilder &builder, OperationState &result,
                  TypeRange resultTypes, Value cond, bool withElseRegion) {
   result.addOperands(cond);
   result.addTypes(resultTypes);
@@ -246,13 +246,13 @@ void IfOp::build(Builder *builder, OperationState &result,
   Region *thenRegion = result.addRegion();
   thenRegion->push_back(new Block());
   if (resultTypes.empty())
-    IfOp::ensureTerminator(*thenRegion, *builder, result.location);
+    IfOp::ensureTerminator(*thenRegion, builder, result.location);
 
   Region *elseRegion = result.addRegion();
   if (withElseRegion) {
     elseRegion->push_back(new Block());
     if (resultTypes.empty())
-      IfOp::ensureTerminator(*elseRegion, *builder, result.location);
+      IfOp::ensureTerminator(*elseRegion, builder, result.location);
   }
 }
 
@@ -371,22 +371,23 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
-void ParallelOp::build(Builder *builder, OperationState &result, ValueRange lbs,
-                       ValueRange ubs, ValueRange steps, ValueRange initVals) {
+void ParallelOp::build(OpBuilder &builder, OperationState &result,
+                       ValueRange lbs, ValueRange ubs, ValueRange steps,
+                       ValueRange initVals) {
   result.addOperands(lbs);
   result.addOperands(ubs);
   result.addOperands(steps);
   result.addOperands(initVals);
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
-      builder->getI32VectorAttr({static_cast<int32_t>(lbs.size()),
-                                 static_cast<int32_t>(ubs.size()),
-                                 static_cast<int32_t>(steps.size()),
-                                 static_cast<int32_t>(initVals.size())}));
+      builder.getI32VectorAttr({static_cast<int32_t>(lbs.size()),
+                                static_cast<int32_t>(ubs.size()),
+                                static_cast<int32_t>(steps.size()),
+                                static_cast<int32_t>(initVals.size())}));
   Region *bodyRegion = result.addRegion();
-  ParallelOp::ensureTerminator(*bodyRegion, *builder, result.location);
+  ParallelOp::ensureTerminator(*bodyRegion, builder, result.location);
   for (size_t i = 0, e = steps.size(); i < e; ++i)
-    bodyRegion->front().addArgument(builder->getIndexType());
+    bodyRegion->front().addArgument(builder.getIndexType());
   for (Value init : initVals)
     result.addTypes(init.getType());
 }
@@ -554,7 +555,8 @@ ParallelOp mlir::loop::getParallelForInductionVarOwner(Value val) {
 // ReduceOp
 //===----------------------------------------------------------------------===//
 
-void ReduceOp::build(Builder *builder, OperationState &result, Value operand) {
+void ReduceOp::build(OpBuilder &builder, OperationState &result,
+                     Value operand) {
   auto type = operand.getType();
   result.addOperands(operand);
   Region *bodyRegion = result.addRegion();

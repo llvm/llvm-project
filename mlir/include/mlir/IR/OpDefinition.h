@@ -25,6 +25,7 @@
 
 namespace mlir {
 class Builder;
+class OpBuilder;
 
 namespace OpTrait {
 template <typename ConcreteType> class OneResult;
@@ -77,14 +78,15 @@ namespace impl {
 /// region's only block if it does not have a terminator already. If the region
 /// is empty, insert a new block first. `buildTerminatorOp` should return the
 /// terminator operation to insert.
-void ensureRegionTerminator(Region &region, Location loc,
-                            function_ref<Operation *()> buildTerminatorOp);
+void ensureRegionTerminator(
+    Region &region, Location loc,
+    function_ref<Operation *(OpBuilder &)> buildTerminatorOp);
 /// Templated version that fills the generates the provided operation type.
 template <typename OpTy>
 void ensureRegionTerminator(Region &region, Builder &builder, Location loc) {
-  ensureRegionTerminator(region, loc, [&] {
+  ensureRegionTerminator(region, loc, [&](OpBuilder &b) {
     OperationState state(loc, OpTy::getOperationName());
-    OpTy::build(&builder, state);
+    OpTy::build(b, state);
     return Operation::create(state);
   });
 }
@@ -1093,6 +1095,12 @@ template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
       ::mlir::impl::template ensureRegionTerminator<TerminatorOpType>(
           region, builder, loc);
     }
+
+    Block *getBody(unsigned idx = 0) {
+      Region &region = this->getOperation()->getRegion(idx);
+      assert(!region.empty() && "unexpected empty region");
+      return &region.front();
+    }
   };
 };
 
@@ -1353,6 +1361,7 @@ class OpInterface : public Op<ConcreteType> {
 public:
   using Concept = typename Traits::Concept;
   template <typename T> using Model = typename Traits::template Model<T>;
+  using Base = OpInterface<ConcreteType, Traits>;
 
   OpInterface(Operation *op = nullptr)
       : Op<ConcreteType>(op), impl(op ? getInterfaceFor(op) : nullptr) {
@@ -1415,7 +1424,7 @@ namespace impl {
 ParseResult parseOneResultOneOperandTypeOp(OpAsmParser &parser,
                                            OperationState &result);
 
-void buildBinaryOp(Builder *builder, OperationState &result, Value lhs,
+void buildBinaryOp(OpBuilder &builder, OperationState &result, Value lhs,
                    Value rhs);
 ParseResult parseOneResultSameOperandTypeOp(OpAsmParser &parser,
                                             OperationState &result);
@@ -1429,7 +1438,7 @@ void printOneResultOp(Operation *op, OpAsmPrinter &p);
 // These functions are out-of-line implementations of the methods in CastOp,
 // which avoids them being template instantiated/duplicated.
 namespace impl {
-void buildCastOp(Builder *builder, OperationState &result, Value source,
+void buildCastOp(OpBuilder &builder, OperationState &result, Value source,
                  Type destType);
 ParseResult parseCastOp(OpAsmParser &parser, OperationState &result);
 void printCastOp(Operation *op, OpAsmPrinter &p);

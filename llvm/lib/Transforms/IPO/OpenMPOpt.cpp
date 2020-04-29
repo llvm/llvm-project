@@ -62,7 +62,6 @@ struct OpenMPOpt {
 
   /// Generic information that describes a runtime function
   struct RuntimeFunctionInfo {
-    ~RuntimeFunctionInfo() { DeleteContainerSeconds(UsesMap); }
 
     /// The kind, as described by the RuntimeFunction enum.
     RuntimeFunction Kind;
@@ -87,16 +86,19 @@ struct OpenMPOpt {
 
     /// Return the vector of uses in function \p F.
     UseVector &getOrCreateUseVector(Function *F) {
-      UseVector *&UV = UsesMap[F];
+      std::unique_ptr<UseVector> &UV = UsesMap[F];
       if (!UV)
-        UV = new UseVector();
+        UV = std::make_unique<UseVector>();
       return *UV;
     }
 
     /// Return the vector of uses in function \p F or `nullptr` if there are
     /// none.
     const UseVector *getUseVector(Function &F) const {
-      return UsesMap.lookup(&F);
+      auto I = UsesMap.find(&F);
+      if (I != UsesMap.end())
+        return I->second.get();
+      return nullptr;
     }
 
     /// Return how many functions contain uses of this runtime function.
@@ -134,7 +136,7 @@ struct OpenMPOpt {
   private:
     /// Map from functions to all uses of this runtime function contained in
     /// them.
-    DenseMap<Function *, UseVector *> UsesMap;
+    DenseMap<Function *, std::unique_ptr<UseVector>> UsesMap;
   };
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.

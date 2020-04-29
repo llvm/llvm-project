@@ -1099,7 +1099,7 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; SSE-NEXT:    pcmpeqd %xmm5, %xmm6
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm5
 ; SSE-NEXT:    packssdw %xmm5, %xmm6
-; SSE-NEXT:    packsswb %xmm0, %xmm6
+; SSE-NEXT:    packsswb %xmm6, %xmm6
 ; SSE-NEXT:    pmovmskb %xmm6, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    je .LBB4_19
@@ -1168,7 +1168,7 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; SSE-NEXT:    pcmpeqd %xmm7, %xmm2
 ; SSE-NEXT:    pcmpeqd %xmm7, %xmm3
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
-; SSE-NEXT:    packsswb %xmm0, %xmm2
+; SSE-NEXT:    packsswb %xmm2, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    je .LBB4_37

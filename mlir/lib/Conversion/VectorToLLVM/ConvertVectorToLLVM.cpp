@@ -791,6 +791,16 @@ getTransferOpAdapter(TransferWriteOp xferOp, ArrayRef<Value> operands) {
   return TransferWriteOpOperandAdaptor(operands);
 }
 
+bool isMinorIdentity(AffineMap map, unsigned rank) {
+  if (map.getNumResults() < rank)
+    return false;
+  unsigned startDim = map.getNumDims() - rank;
+  for (unsigned i = 0; i < rank; ++i)
+    if (map.getResult(i) != getAffineDimExpr(startDim + i, map.getContext()))
+      return false;
+  return true;
+}
+
 /// Conversion pattern that converts a 1-D vector transfer read/write op in a
 /// sequence of:
 /// 1. Bitcast to vector form.
@@ -810,9 +820,12 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto xferOp = cast<ConcreteOp>(op);
     auto adaptor = getTransferOpAdapter(xferOp, operands);
-    if (xferOp.getMemRefType().getRank() != 1)
+
+    if (xferOp.getVectorType().getRank() > 1 ||
+        llvm::size(xferOp.indices()) == 0)
       return failure();
-    if (!xferOp.permutation_map().isIdentity())
+    if (!isMinorIdentity(xferOp.permutation_map(),
+                         xferOp.getVectorType().getRank()))
       return failure();
 
     auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
@@ -844,17 +857,18 @@ public:
         loc, toLLVMTy(vectorCmpType), linearIndices);
 
     // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-    Value offsetIndex = *(xferOp.indices().begin());
-    offsetIndex = rewriter.create<IndexCastOp>(
-        loc, vectorCmpType.getElementType(), offsetIndex);
+    // TODO(ntv, ajcbik): when the leaf transfer rank is k > 1 we need the last
+    // `k` dimensions here.
+    unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
+    Value offsetIndex = *(xferOp.indices().begin() + lastIndex);
+    offsetIndex = rewriter.create<IndexCastOp>(loc, i64Type, offsetIndex);
     Value base = rewriter.create<SplatOp>(loc, vectorCmpType, offsetIndex);
     Value offsetVector = rewriter.create<AddIOp>(loc, base, linearIndices);
 
     // 4. Let dim the memref dimension, compute the vector comparison mask:
     //   [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-    Value dim = rewriter.create<DimOp>(loc, xferOp.memref(), 0);
-    dim =
-        rewriter.create<IndexCastOp>(loc, vectorCmpType.getElementType(), dim);
+    Value dim = rewriter.create<DimOp>(loc, xferOp.memref(), lastIndex);
+    dim = rewriter.create<IndexCastOp>(loc, i64Type, dim);
     dim = rewriter.create<SplatOp>(loc, vectorCmpType, dim);
     Value mask =
         rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, offsetVector, dim);

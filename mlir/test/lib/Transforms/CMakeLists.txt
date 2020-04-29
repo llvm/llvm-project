@@ -1,5 +1,6 @@
 add_llvm_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
+  TestBufferPlacement.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
   TestConvertGPUKernelToCubin.cpp

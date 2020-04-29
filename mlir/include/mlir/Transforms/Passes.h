@@ -26,6 +26,9 @@ class ModuleOp;
 class Pass;
 template <typename T> class OperationPass;
 
+/// Creates an instance of the BufferPlacement pass.
+std::unique_ptr<Pass> createBufferPlacementPass();
+
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();
 

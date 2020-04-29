@@ -409,8 +409,10 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   // 5. Gather the newly created loops and return them with the new op.
   SmallVector<Operation *, 8> loops;
   loops.reserve(ivs.size());
-  for (auto iv : ivs)
-    loops.push_back(loop::getForInductionVarOwner(iv));
+  for (auto iv : ivs) {
+    loops.push_back(iv.cast<BlockArgument>().getOwner()->getParentOp());
+    assert(loops.back() && "no owner found for induction variable!");
+  }
 
   return TiledLinalgOp{res, loops};
 }

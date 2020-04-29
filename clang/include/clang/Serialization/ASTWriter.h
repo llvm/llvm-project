@@ -216,7 +216,8 @@ private:
     /// indicates the index that this particular vector has in the global one.
     unsigned FirstDeclIndex;
   };
-  using FileDeclIDsTy = llvm::DenseMap<FileID, DeclIDInFileInfo *>;
+  using FileDeclIDsTy =
+      llvm::DenseMap<FileID, std::unique_ptr<DeclIDInFileInfo>>;
 
   /// Map from file SLocEntries to info about the file-level declarations
   /// that it contains.

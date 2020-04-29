@@ -862,14 +862,16 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 
 // Tokenizes and parses a given string as command line in .drective section.
 // /EXPORT options are processed in fastpath.
-std::pair<opt::InputArgList, std::vector<StringRef>>
-ArgParser::parseDirectives(StringRef s) {
-  std::vector<StringRef> exports;
+ParsedDirectives ArgParser::parseDirectives(StringRef s) {
+  ParsedDirectives result;
   SmallVector<const char *, 16> rest;
 
   for (StringRef tok : tokenize(s)) {
     if (tok.startswith_lower("/export:") || tok.startswith_lower("-export:"))
-      exports.push_back(tok.substr(strlen("/export:")));
+      result.exports.push_back(tok.substr(strlen("/export:")));
+    else if (tok.startswith_lower("/include:") ||
+             tok.startswith_lower("-include:"))
+      result.includes.push_back(tok.substr(strlen("/include:")));
     else
       rest.push_back(tok.data());
   }
@@ -878,13 +880,13 @@ ArgParser::parseDirectives(StringRef s) {
   unsigned missingIndex;
   unsigned missingCount;
 
-  opt::InputArgList args = table.ParseArgs(rest, missingIndex, missingCount);
+  result.args = table.ParseArgs(rest, missingIndex, missingCount);
 
   if (missingCount)
-    fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
-  for (auto *arg : args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + arg->getAsString(args));
-  return {std::move(args), std::move(exports)};
+    fatal(Twine(result.args.getArgString(missingIndex)) + ": missing argument");
+  for (auto *arg : result.args.filtered(OPT_UNKNOWN))
+    warn("ignoring unknown argument: " + arg->getAsString(result.args));
+  return result;
 }
 
 // link.exe has an interesting feature. If LINK or _LINK_ environment

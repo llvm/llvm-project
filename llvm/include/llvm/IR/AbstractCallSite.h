@@ -201,16 +201,16 @@ public:
   }
 
   /// Return the pointer to function that is being called.
-  Value *getCalledValue() const {
+  Value *getCalledOperand() const {
     if (isDirectCall())
-      return CB->getCalledValue();
+      return CB->getCalledOperand();
     return CB->getArgOperand(getCallArgOperandNoForCallee());
   }
 
   /// Return the function being called if this is a direct call, otherwise
   /// return null (if it's an indirect call).
   Function *getCalledFunction() const {
-    Value *V = getCalledValue();
+    Value *V = getCalledOperand();
     return V ? dyn_cast<Function>(V->stripPointerCasts()) : nullptr;
   }
 };

@@ -45,7 +45,7 @@ However, as the design of Linalg co-evolved with the design of MLIR, it became
 apparent that it could extend to larger application domains than just machine
 learning on dense tensors.
 
-The design and evolution of Linalg follows a *codegen-friendly* approach where
+The design and evolution of Linalg follow a *codegen-friendly* approach where
 the IR and the transformations evolve hand-in-hand.
 The key idea is that op semantics *declare* and transport information that is
 traditionally obtained by compiler analyses.
@@ -77,7 +77,7 @@ https://drive.google.com/drive/u/0/folders/1sRAsgsd8Bvpm_IxREmZf2agsGU2KvrK-),
 with Linalg becoming its incarnation on tensors and buffers.
 It is complemented by the
 [Vector dialect](https://mlir.llvm.org/docs/Dialects/Vector/),
-which define structured operations on vectors, following the same rationale and
+which defines structured operations on vectors, following the same rationale and
 design principles as Linalg. (Vector dialect includes the higher-level
 operations on multi-dimensional vectors and abstracts away the lowering to
 single-dimensional vectors).
@@ -191,7 +191,7 @@ Linalg builds on, and helps separate concerns in the LIFT approach as follows:
   structure abstractions) potentially reusable across different dialects in the
   MLIR's open ecosystem.
 
-LIFT is expected to further influence the design of Linalg as it evolve. In
+LIFT is expected to further influence the design of Linalg as it evolves. In
 particular, extending the data structure abstractions to support non-dense
 tensors can use the experience of LIFT abstractions for
 [sparse](https://www.lift-project.org/publications/2016/harries16sparse.pdf)
@@ -255,9 +255,9 @@ Linalg hopes to additionally address the following:
 transformations. But it's still too hard for newcomers to use or extend. The
 level of performance you get from Halide is very different depending on
 whether one is a seasoned veteran or a newcomer. This is especially true as
-the number of transformations grow.
+the number of transformations grows.
 - Halide raises rather than lowers in two ways, going counter-current to the
-design goals we set for high-level codegen abstractions in in MLIR. First,
+design goals we set for high-level codegen abstractions in MLIR. First,
 canonical Halide front-end code uses explicit indexing and math on scalar
 values, so to target BLAS/DNN libraries one needs to add pattern matching
 which is similarly brittle as in the affine case. While Halide's performance
@@ -425,7 +425,7 @@ The problem at hand is fundamentally driven by compilation of domain-specific
 workloads for high-performance and parallel hardware architectures: **this is
 an HPC compilation problem**.
 
-The selection of relevant transformations follows a codesign approach and
+The selection of relevant transformations follows a co-design approach and
 involves considerations related to:
 - concrete current and future needs of the application domain,
 - concrete current and future hardware properties and ISAs,
@@ -462,7 +462,7 @@ levels of abstraction led to the following 2 principles.
 #### Declarative Specification: Avoid Raising<a name="declarative_specification"></a>
 
 Compiler transformations need static structural information (e.g. loop-nests,
-graphs of basic blocks, pure functions etc). When that structural information
+graphs of basic blocks, pure functions, etc). When that structural information
 is lost, it needs to be reconstructed.
 
 A good illustration of this phenomenon is the notion of *raising* in polyhedral
@@ -518,7 +518,7 @@ declaratively. In turn this allows using local pattern rewrite rules in MLIR
 - Allow creating customizable passes declaratively by simply selecting rewrite
 rules. This allows mixing transformations, canonicalizations, constant folding
 and other enabling rewrites in a single pass. The result is a system where pass
-fusion is very simple to obtain and gives hope to solving certain
+fusion is very simple to obtain and gives hope for solving certain
 [phase ordering issues](https://dl.acm.org/doi/10.1145/201059.201061).
 
 ### Suitability for Search and Machine Learning<a name="ml"></a>
@@ -551,7 +551,7 @@ ragged, sparse and mixed dens/sparse tensors as well as to trees, hash tables,
 tables of records and maybe even graphs.
 
 For such more advanced data types, the control-flow required to traverse the
-data structures, termination conditions etc are much less simple to analyze and
+data structures, termination conditions, etc are much less simple to analyze and
 characterize statically. As a consequence we need to also design solutions that
 stand a chance of evolving into runtime-adaptive computations (e.g.
 inspector-executor in which an *inspector* runs a cheap runtime
@@ -582,7 +582,7 @@ occurred,
 ### The Dialect Need not be Closed Under Transformations<a name="dialect_not_closed"></a>
 This is probably the most surprising and counter-intuitive
 observation. When one designs IR for transformations, closed-ness is
-often a nonnegotiable property.
+often a non-negotiable property.
 This is a key design principle of polyhedral IRs such as
 [URUK](http://icps.u-strasbg.fr/~bastoul/research/papers/GVBCPST06-IJPP.pdf)
 and

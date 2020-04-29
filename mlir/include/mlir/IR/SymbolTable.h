@@ -72,9 +72,6 @@ public:
     Nested,
   };
 
-  /// Returns true if the given operation defines a symbol.
-  static bool isSymbol(Operation *op);
-
   /// Returns the name of the given symbol operation.
   static StringRef getSymbolName(Operation *symbol);
   /// Sets the name of the given symbol operation.
@@ -88,6 +85,15 @@ public:
   /// Returns the nearest symbol table from a given operation `from`. Returns
   /// nullptr if no valid parent symbol table could be found.
   static Operation *getNearestSymbolTable(Operation *from);
+
+  /// Walks all symbol table operations nested within, and including, `op`. For
+  /// each symbol table operation, the provided callback is invoked with the op
+  /// and a boolean signifying if the symbols within that symbol table can be
+  /// treated as if all uses within the IR are visible to the caller.
+  /// `allSymUsesVisible` identifies whether all of the symbol uses of symbols
+  /// within `op` are visible.
+  static void walkSymbolTables(Operation *op, bool allSymUsesVisible,
+                               function_ref<void(Operation *, bool)> callback);
 
   /// Returns the operation registered with the given symbol name with the
   /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
@@ -207,12 +213,12 @@ private:
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
-namespace OpTrait {
-namespace impl {
+namespace detail {
 LogicalResult verifySymbolTable(Operation *op);
 LogicalResult verifySymbol(Operation *op);
-} // namespace impl
+} // namespace detail
 
+namespace OpTrait {
 /// A trait used to provide symbol table functionalities to a region operation.
 /// This operation must hold exactly 1 region. Once attached, all operations
 /// that are directly within the region, i.e not including those within child
@@ -224,7 +230,7 @@ template <typename ConcreteType>
 class SymbolTable : public TraitBase<ConcreteType, SymbolTable> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifySymbolTable(op);
+    return ::mlir::detail::verifySymbolTable(op);
   }
 
   /// Look up a symbol with the specified name, returning null if no such
@@ -245,68 +251,11 @@ public:
   }
 };
 
-/// A trait used to define a symbol that can be used on operations within a
-/// symbol table. Operations using this trait must adhere to the following:
-///   * Have a StringAttr attribute named 'SymbolTable::getSymbolAttrName()'.
-template <typename ConcreteType>
-class Symbol : public TraitBase<ConcreteType, Symbol> {
-public:
-  using Visibility = mlir::SymbolTable::Visibility;
-
-  static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifySymbol(op);
-  }
-
-  /// Returns the name of this symbol.
-  StringRef getName() {
-    return this->getOperation()
-        ->template getAttrOfType<StringAttr>(
-            mlir::SymbolTable::getSymbolAttrName())
-        .getValue();
-  }
-
-  /// Set the name of this symbol.
-  void setName(StringRef name) {
-    this->getOperation()->setAttr(
-        mlir::SymbolTable::getSymbolAttrName(),
-        StringAttr::get(name, this->getOperation()->getContext()));
-  }
-
-  /// Returns the visibility of the current symbol.
-  Visibility getVisibility() {
-    return mlir::SymbolTable::getSymbolVisibility(this->getOperation());
-  }
-
-  /// Sets the visibility of the current symbol.
-  void setVisibility(Visibility vis) {
-    mlir::SymbolTable::setSymbolVisibility(this->getOperation(), vis);
-  }
-
-  /// Get all of the uses of the current symbol that are nested within the given
-  /// operation 'from'.
-  /// Note: See mlir::SymbolTable::getSymbolUses for more details.
-  Optional<::mlir::SymbolTable::UseRange> getSymbolUses(Operation *from) {
-    return ::mlir::SymbolTable::getSymbolUses(this->getOperation(), from);
-  }
-
-  /// Return if the current symbol is known to have no uses that are nested
-  /// within the given operation 'from'.
-  /// Note: See mlir::SymbolTable::symbolKnownUseEmpty for more details.
-  bool symbolKnownUseEmpty(Operation *from) {
-    return ::mlir::SymbolTable::symbolKnownUseEmpty(this->getOperation(), from);
-  }
-
-  /// Attempt to replace all uses of the current symbol with the provided symbol
-  /// 'newSymbol' that are nested within the given operation 'from'.
-  /// Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
-  LLVM_NODISCARD LogicalResult replaceAllSymbolUses(StringRef newSymbol,
-                                                    Operation *from) {
-    return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
-                                                     newSymbol, from);
-  }
-};
-
 } // end namespace OpTrait
+
+/// Include the generated symbol interfaces.
+#include "mlir/IR/SymbolInterfaces.h.inc"
+
 } // end namespace mlir
 
 #endif // MLIR_IR_SYMBOLTABLE_H
