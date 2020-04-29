@@ -160,23 +160,21 @@ static ParseResult parseAllocaOp(OpAsmParser &parser, OperationState &result) {
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
 
-Optional<OperandRange> BrOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+BrOp::getMutableSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return getOperands();
+  return destOperandsMutable();
 }
-
-bool BrOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // LLVM::CondBrOp
 //===----------------------------------------------------------------------===//
 
-Optional<OperandRange> CondBrOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+CondBrOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == 0 ? trueDestOperands() : falseDestOperands();
+  return index == 0 ? trueDestOperandsMutable() : falseDestOperandsMutable();
 }
-
-bool CondBrOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::LoadOp.
@@ -257,12 +255,11 @@ static ParseResult parseStoreOp(OpAsmParser &parser, OperationState &result) {
 /// LLVM::InvokeOp
 ///===---------------------------------------------------------------------===//
 
-Optional<OperandRange> InvokeOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+InvokeOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == 0 ? normalDestOperands() : unwindDestOperands();
+  return index == 0 ? normalDestOperandsMutable() : unwindDestOperandsMutable();
 }
-
-bool InvokeOp::canEraseSuccessorOperand() { return true; }
 
 static LogicalResult verify(InvokeOp op) {
   if (op.getNumResults() > 1)

@@ -287,6 +287,18 @@ MutableOperandRange::MutableOperandRange(
 MutableOperandRange::MutableOperandRange(Operation *owner)
     : MutableOperandRange(owner, /*start=*/0, owner->getNumOperands()) {}
 
+/// Slice this range into a sub range, with the additional operand segment.
+MutableOperandRange
+MutableOperandRange::slice(unsigned subStart, unsigned subLen,
+                           Optional<OperandSegment> segment) {
+  assert((subStart + subLen) <= length && "invalid sub-range");
+  MutableOperandRange subSlice(owner, start + subStart, subLen,
+                               operandSegments);
+  if (segment)
+    subSlice.operandSegments.push_back(*segment);
+  return subSlice;
+}
+
 /// Append the given values to the range.
 void MutableOperandRange::append(ValueRange values) {
   if (values.empty())
