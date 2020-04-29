@@ -181,7 +181,7 @@ define void @sext512() "min-legal-vector-width"="512" {
 
 define void @trunc256() "min-legal-vector-width"="256" {
 ; AVX-LABEL: 'trunc256'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %B = trunc <8 x i64> undef to <8 x i16>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %C = trunc <8 x i64> undef to <8 x i8>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D = trunc <16 x i32> undef to <16 x i16>
@@ -190,7 +190,7 @@ define void @trunc256() "min-legal-vector-width"="256" {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512VL256-LABEL: 'trunc256'
-; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
 ; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %B = trunc <8 x i64> undef to <8 x i16>
 ; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %C = trunc <8 x i64> undef to <8 x i8>
 ; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D = trunc <16 x i32> undef to <16 x i16>
@@ -208,7 +208,7 @@ define void @trunc256() "min-legal-vector-width"="256" {
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKX256-LABEL: 'trunc256'
-; SKX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = trunc <8 x i64> undef to <8 x i32>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %B = trunc <8 x i64> undef to <8 x i16>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %C = trunc <8 x i64> undef to <8 x i8>
 ; SKX256-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D = trunc <16 x i32> undef to <16 x i16>
