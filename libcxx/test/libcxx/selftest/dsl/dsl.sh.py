@@ -7,7 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 # TODO: Unbreak this on Windows
-# UNSUPPORTED: windows
+# UNSUPPORTED: host-windows
 
 # RUN: %{python} '%s' '%S' '%T' '%{escaped_exec}' \
 # RUN:                          '%{escaped_cxx}' \
