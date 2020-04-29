@@ -30,10 +30,11 @@ namespace mlir {
 /// implicitly capture global values, and all external references must use
 /// Function arguments or attributes that establish a symbolic connection(e.g.
 /// symbols referenced by name via a string attribute).
-class FuncOp : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-                         OpTrait::IsIsolatedFromAbove, OpTrait::FunctionLike,
-                         OpTrait::AutomaticAllocationScope,
-                         CallableOpInterface::Trait, SymbolOpInterface::Trait> {
+class FuncOp
+    : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
+                OpTrait::IsIsolatedFromAbove, OpTrait::FunctionLike,
+                OpTrait::AutomaticAllocationScope, OpTrait::PolyhedralScope,
+                CallableOpInterface::Trait, SymbolOpInterface::Trait> {
 public:
   using Op::Op;
   using Op::print;

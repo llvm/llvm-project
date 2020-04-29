@@ -1648,6 +1648,8 @@ def ConstantLike : NativeOpTrait<"ConstantLike">;
 def FunctionLike : NativeOpTrait<"FunctionLike">;
 // Op is isolated from above.
 def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
+// Op defines a polyhedral scope.
+def PolyhedralScope : NativeOpTrait<"PolyhedralScope">;
 // Op results are float or vectors/tensors thereof.
 def ResultsAreFloatLike : NativeOpTrait<"ResultsAreFloatLike">;
 // Op has the same operand type.
