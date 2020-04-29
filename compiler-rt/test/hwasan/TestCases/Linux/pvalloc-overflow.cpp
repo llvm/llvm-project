@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
 // CHECK: {{ERROR: HWAddressSanitizer: pvalloc parameters overflow: size .* rounded up to system page size .* cannot be represented in type size_t}}
 // CHECK: {{#0 0x.* in .*pvalloc}}
-// CHECK: {{#1 0x.* in main .*pvalloc-overflow.cpp:}}
+// CHECK: {{#[12] 0x.* in main .*pvalloc-overflow.cpp:}}
 // CHECK: SUMMARY: HWAddressSanitizer: pvalloc-overflow
 
 // CHECK-NULL: errno: 12
