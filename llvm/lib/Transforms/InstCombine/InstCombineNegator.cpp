@@ -46,6 +46,13 @@
 #include <tuple>
 #include <utility>
 
+namespace llvm {
+class AssumptionCache;
+class DataLayout;
+class DominatorTree;
+class LLVMContext;
+} // namespace llvm
+
 using namespace llvm;
 
 #define DEBUG_TYPE "instcombine"
@@ -87,13 +94,14 @@ static cl::opt<unsigned>
                     cl::desc("What is the maximal lookup depth when trying to "
                              "check for viability of negation sinking."));
 
-Negator::Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation_)
-    : Builder(C, TargetFolder(DL),
+Negator::Negator(LLVMContext &C, const DataLayout &DL_, AssumptionCache &AC_,
+                 const DominatorTree &DT_, bool IsTrulyNegation_)
+    : Builder(C, TargetFolder(DL_),
               IRBuilderCallbackInserter([&](Instruction *I) {
                 ++NegatorNumInstructionsCreatedTotal;
                 NewInstructions.push_back(I);
               })),
-      IsTrulyNegation(IsTrulyNegation_) {}
+      DL(DL_), AC(AC_), DT(DT_), IsTrulyNegation(IsTrulyNegation_) {}
 
 #if LLVM_ENABLE_STATS
 Negator::~Negator() {
@@ -301,6 +309,16 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
       return nullptr;
     return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
   }
+  case Instruction::Or:
+    if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL, &AC, I,
+                             &DT))
+      return nullptr; // Don't know how to handle `or` in general.
+    // `or`/`add` are interchangeable when operands have no common bits set.
+    // `inc` is always negatible.
+    if (match(I->getOperand(1), m_One()))
+      return Builder.CreateNot(I->getOperand(0), I->getName() + ".neg");
+    // Else, just defer to Instruction::Add handling.
+    LLVM_FALLTHROUGH;
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
     Value *NegOp0 = visit(I->getOperand(0), Depth + 1);
@@ -364,7 +382,8 @@ LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
   if (!NegatorEnabled || !DebugCounter::shouldExecute(NegatorCounter))
     return nullptr;
 
-  Negator N(Root->getContext(), IC.getDataLayout(), LHSIsZero);
+  Negator N(Root->getContext(), IC.getDataLayout(), IC.getAssumptionCache(),
+            IC.getDominatorTree(), LHSIsZero);
   Optional<Result> Res = N.run(Root);
   if (!Res) { // Negation failed.
     LLVM_DEBUG(dbgs() << "Negator: failed to sink negation into " << *Root
