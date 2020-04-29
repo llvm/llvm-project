@@ -703,6 +703,19 @@ def SVWHILELT_S32 : SInst<"svwhilelt_{d}[_{1}]", "Pkk", "PcPsPiPl",     MergeNon
 def SVWHILELT_S64 : SInst<"svwhilelt_{d}[_{1}]", "Pll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt", [IsOverloadWhile]>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Counting bit
+
+multiclass SInstCLS<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M : SInst<name # "[_{d}]", "uuPd", types, MergeOp1,     intrinsic, flags>;
+  def _X : SInst<name # "[_{d}]", "uPd",  types, MergeAnyExp,  intrinsic, flags>;
+  def _Z : SInst<name # "[_{d}]", "uPd",  types, MergeZeroExp, intrinsic, flags>;
+}
+
+defm SVCLS : SInstCLS<"svcls", "csil",            "aarch64_sve_cls">;
+defm SVCLZ : SInstCLS<"svclz", "csilUcUsUiUl",    "aarch64_sve_clz">;
+defm SVCNT : SInstCLS<"svcnt", "csilUcUsUiUlhfd", "aarch64_sve_cnt">;
+
+////////////////////////////////////////////////////////////////////////////////
 // Floating-point arithmetic
 
 defm SVABS_F : SInstZPZ<"svabs", "hfd", "aarch64_sve_fabs">;
