@@ -32,7 +32,7 @@ void InlineAsmLowering::anchor() {}
 bool InlineAsmLowering::lowerInlineAsm(MachineIRBuilder &MIRBuilder,
                                        const CallBase &Call) const {
 
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledValue());
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   StringRef ConstraintStr = IA->getConstraintString();
 
   bool HasOnlyMemoryClobber = false;

@@ -681,6 +681,15 @@ static bool shouldKeepInSymtab(const Defined &sym) {
   if (config->copyRelocs && sym.used)
     return true;
 
+  // Exclude local symbols pointing to .ARM.exidx sections.
+  // They are probably mapping symbols "$d", which are optional for these
+  // sections. After merging the .ARM.exidx sections, some of these symbols
+  // may become dangling. The easiest way to avoid the issue is not to add
+  // them to the symbol table from the beginning.
+  if (config->emachine == EM_ARM && sym.section &&
+      sym.section->type == SHT_ARM_EXIDX)
+    return false;
+
   if (config->discard == DiscardPolicy::None)
     return true;
   if (config->discard == DiscardPolicy::All)

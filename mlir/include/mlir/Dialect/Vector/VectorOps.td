@@ -143,10 +143,10 @@ def Vector_ContractionOp :
     ```
   }];
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value lhs, Value rhs, "
+    "OpBuilder &builder, OperationState &result, Value lhs, Value rhs, "
     "Value acc, ArrayAttr indexingMaps, ArrayAttr iteratorTypes">,
     OpBuilder<
-      "Builder *builder, OperationState &result, Value lhs, Value rhs, "
+      "OpBuilder &builder, OperationState &result, Value lhs, Value rhs, "
       "Value acc, ArrayRef<ArrayRef<AffineExpr>> indexingExprs, "
       "ArrayRef<StringRef> iteratorTypes">];
   let extraClassDeclaration = [{
@@ -304,7 +304,7 @@ def Vector_ShuffleOp :
                : vector<2xf32>, vector<2xf32>       ; yields vector<4xf32>
     ```
   }];
-  let builders = [OpBuilder<"Builder *builder, OperationState &result,"
+  let builders = [OpBuilder<"OpBuilder &builder, OperationState &result,"
                             "Value v1, Value v2, ArrayRef<int64_t>">];
   let extraClassDeclaration = [{
     static StringRef getMaskAttrName() { return "mask"; }
@@ -372,7 +372,7 @@ def Vector_ExtractOp :
     ```
   }];
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value source,"
+    "OpBuilder &builder, OperationState &result, Value source,"
     "ArrayRef<int64_t>">];
   let extraClassDeclaration = [{
     static StringRef getPositionAttrName() { return "position"; }
@@ -418,7 +418,7 @@ def Vector_ExtractSlicesOp :
     ```
   }];
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, TupleType tupleType, " #
+    "OpBuilder &builder, OperationState &result, TupleType tupleType, " #
     "Value vector, ArrayRef<int64_t> sizes, " #
     "ArrayRef<int64_t> strides">];
   let extraClassDeclaration = [{
@@ -464,7 +464,7 @@ def Vector_FMAOp :
   let verifier = ?;
   let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` type($lhs)";
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value lhs, Value rhs, Value acc",
+    "OpBuilder &b, OperationState &result, Value lhs, Value rhs, Value acc",
     "build(b, result, lhs.getType(), lhs, rhs, acc);">];
   let extraClassDeclaration = [{
     VectorType getVectorType() { return lhs().getType().cast<VectorType>(); }
@@ -535,7 +535,7 @@ def Vector_InsertOp :
   }];
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value source, " #
+    "OpBuilder &builder, OperationState &result, Value source, " #
     "Value dest, ArrayRef<int64_t>">];
   let extraClassDeclaration = [{
     static StringRef getPositionAttrName() { return "position"; }
@@ -638,7 +638,7 @@ def Vector_InsertStridedSliceOp :
   }];
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value source, Value dest, " #
+    "OpBuilder &builder, OperationState &result, Value source, Value dest, " #
     "ArrayRef<int64_t> offsets, ArrayRef<int64_t> strides">];
   let extraClassDeclaration = [{
     static StringRef getOffsetsAttrName() { return "offsets"; }
@@ -849,7 +849,7 @@ def Vector_StridedSliceOp :
     ```
   }];
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value source, " #
+    "OpBuilder &builder, OperationState &result, Value source, " #
     "ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes, " #
     "ArrayRef<int64_t> strides">];
   let extraClassDeclaration = [{
@@ -1155,7 +1155,7 @@ def Vector_TypeCastOp :
   }];
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value source">];
+    "OpBuilder &builder, OperationState &result, Value source">];
 
   let parser = [{
     return impl::parseCastOp(parser, result);
@@ -1439,13 +1439,13 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
     ```
   }];
   let builders = [
-   OpBuilder<"Builder *builder, OperationState &result, Value lhs, Value rhs, "
+   OpBuilder<"OpBuilder &builder, OperationState &result, Value lhs, Value rhs, "
              "unsigned lhsRows, unsigned lhsColumns, unsigned rhsColumns",
    [{
      result.addOperands({lhs, rhs});
-     result.addAttribute("lhs_rows", builder->getI32IntegerAttr(lhsRows));
-     result.addAttribute("lhs_columns", builder->getI32IntegerAttr(lhsColumns));
-     result.addAttribute("rhs_columns", builder->getI32IntegerAttr(rhsColumns));
+     result.addAttribute("lhs_rows", builder.getI32IntegerAttr(lhsRows));
+     result.addAttribute("lhs_columns", builder.getI32IntegerAttr(lhsColumns));
+     result.addAttribute("rhs_columns", builder.getI32IntegerAttr(rhsColumns));
      result.addTypes(VectorType::get(lhsRows * rhsColumns,
        lhs.getType().cast<VectorType>().getElementType()));
    }]>,

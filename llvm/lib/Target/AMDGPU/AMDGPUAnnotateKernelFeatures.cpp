@@ -288,7 +288,7 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
     for (Instruction &I : BB) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         const Function *Callee =
-            dyn_cast<Function>(CB->getCalledValue()->stripPointerCasts());
+            dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 
         // TODO: Do something with indirect calls.
         if (!Callee) {

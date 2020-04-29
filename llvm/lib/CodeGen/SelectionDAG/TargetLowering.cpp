@@ -4321,7 +4321,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
                                  const CallBase &Call) const {
   /// Information about all of the constraints.
   AsmOperandInfoVector ConstraintOperands;
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledValue());
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   unsigned maCount = 0; // Largest number of multiple alternative constraints.
 
   // Do a prepass over the constraints, canonicalizing them, and building up the

@@ -9,6 +9,7 @@
 import distutils.util
 import libcxx.test.newformat
 import lit
+import lit.util
 import os
 import pipes
 import subprocess
@@ -30,7 +31,7 @@ def _subprocess_call(command):
 @_memoize
 def _subprocess_check_output(command):
   devNull = open(os.devnull, 'w')
-  return subprocess.check_output(command, shell=True, stderr=devNull)
+  return lit.util.to_string(subprocess.check_output(command, shell=True, stderr=devNull))
 
 def _makeConfigTest(config):
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')

@@ -782,7 +782,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Assume all function calls are a source of divergence.
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue()))
+    if (CI->isInlineAsm())
       return isInlineAsmSourceOfDivergence(CI);
     return true;
   }
@@ -810,7 +810,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   }
 
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue()))
+    if (CI->isInlineAsm())
       return !isInlineAsmSourceOfDivergence(CI);
     return false;
   }
@@ -838,7 +838,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   // If we have inline asm returning mixed SGPR and VGPR results, we inferred
   // divergent for the overall struct return. We need to override it in the
   // case we're extracting an SGPR component here.
-  if (isa<InlineAsm>(CI->getCalledValue()))
+  if (CI->isInlineAsm())
     return !isInlineAsmSourceOfDivergence(CI, ExtValue->getIndices());
 
   return false;
@@ -949,11 +949,12 @@ void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   CommonTTI.getUnrollingPreferences(L, SE, UP);
 }
 
-unsigned GCNTTIImpl::getUserCost(const User *U,
-                                 ArrayRef<const Value *> Operands) {
+unsigned
+GCNTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                        TTI::TargetCostKind CostKind) {
   const Instruction *I = dyn_cast<Instruction>(U);
   if (!I)
-    return BaseT::getUserCost(U, Operands);
+    return BaseT::getUserCost(U, Operands, CostKind);
 
   // Estimate different operations to be optimized out
   switch (I->getOpcode()) {
@@ -980,7 +981,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
       return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
                                    FMF, 1, II);
     } else {
-      return BaseT::getUserCost(U, Operands);
+      return BaseT::getUserCost(U, Operands, CostKind);
     }
   }
   case Instruction::ShuffleVector: {
@@ -994,7 +995,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
       return getShuffleCost(TTI::SK_ExtractSubvector, SrcTy, SubIndex, Ty);
 
     if (Shuffle->changesLength())
-      return BaseT::getUserCost(U, Operands);
+      return BaseT::getUserCost(U, Operands, CostKind);
 
     if (Shuffle->isIdentity())
       return 0;
@@ -1059,7 +1060,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
     break;
   }
 
-  return BaseT::getUserCost(U, Operands);
+  return BaseT::getUserCost(U, Operands, CostKind);
 }
 
 unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {

@@ -29,11 +29,4 @@ def AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
   let constBuilderCall = "$_builder.getAffineMapArrayAttr($0)";
 }
 
-//===----------------------------------------------------------------------===//
-// OpTrait definitions
-//===----------------------------------------------------------------------===//
-
-// Op defines a polyhedral scope.
-def PolyhedralScope : NativeOpTrait<"PolyhedralScope">;
-
 #endif // AFFINE_OPS_BASE

@@ -401,11 +401,10 @@ option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
-  option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." OFF)
 else()
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." OFF)
-  option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 endif()
+option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 option(LLVM_ENABLE_LIBCXX "Use libc++ if available." OFF)
 option(LLVM_STATIC_LINK_CXX_STDLIB "Statically link the standard library." OFF)
 option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
@@ -672,16 +671,38 @@ option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default
 
 include(HandleLLVMOptions)
 
-include(FindPythonInterp)
-if( NOT PYTHONINTERP_FOUND )
-  message(FATAL_ERROR
-"Unable to find Python interpreter, required for builds and testing.
+if(CMAKE_VERSION VERSION_LESS 3.12)
+  include(FindPythonInterp)
+  if( NOT PYTHONINTERP_FOUND )
+    message(FATAL_ERROR
+  "Unable to find Python interpreter, required for builds and testing.
 
-Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-endif()
+  Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
+  endif()
 
-if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
-  message(FATAL_ERROR "Python 2.7 or newer is required")
+  if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
+    message(FATAL_ERROR "Python 2.7 or newer is required")
+  endif()
+
+  add_executable(Python3::Interpreter IMPORTED)
+  set_target_properties(Python3::Interpreter PROPERTIES
+    IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+  set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+else()
+  find_package(Python3 COMPONENTS Interpreter)
+  if(NOT Python3_Interpreter_FOUND)
+    message(WARNING "Python3 not found, using python2 as a fallback")
+    find_package(Python2 COMPONENTS Interpreter REQUIRED)
+    if(Python2_VERSION VERSION_LESS 2.7)
+      message(SEND_ERROR "Python 2.7 or newer is required")
+    endif()
+
+    # Treat python2 as python3
+    add_executable(Python3::Interpreter IMPORTED)
+    set_target_properties(Python3::Interpreter PROPERTIES
+      IMPORTED_LOCATION ${Python2_EXECUTABLE})
+    set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+  endif()
 endif()
 
 ######
@@ -717,7 +738,7 @@ endif (LLVM_USE_PERF)
 
 message(STATUS "Constructing LLVMBuild project information")
 execute_process(
-  COMMAND ${PYTHON_EXECUTABLE} -B ${LLVMBUILDTOOL}
+  COMMAND "${Python3_EXECUTABLE}" -B ${LLVMBUILDTOOL}
             --native-target "${LLVM_NATIVE_ARCH}"
             --enable-targets "${LLVM_TARGETS_TO_BUILD}"
             --enable-optional-components "${LLVMOPTIONALCOMPONENTS}"

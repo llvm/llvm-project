@@ -3877,6 +3877,11 @@ public:
   llvm::Value *EmitARMCDEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                      ReturnValueSlot ReturnValue,
                                      llvm::Triple::ArchType Arch);
+  llvm::Value *EmitCMSEClearRecord(llvm::Value *V, llvm::IntegerType *ITy,
+                                   QualType RTy);
+  llvm::Value *EmitCMSEClearRecord(llvm::Value *V, llvm::ArrayType *ATy,
+                                   QualType RTy);
+  llvm::Value *EmitCMSEClearFP16(llvm::Value *V);
 
   llvm::Value *EmitCommonNeonBuiltinExpr(unsigned BuiltinID,
                                          unsigned LLVMIntrinsic,

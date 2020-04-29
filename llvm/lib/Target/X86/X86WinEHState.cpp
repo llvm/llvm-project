@@ -754,7 +754,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
       auto *Call = dyn_cast<CallBase>(&I);
       if (!Call)
         continue;
-      if (Call->getCalledValue()->stripPointerCasts() !=
+      if (Call->getCalledOperand()->stripPointerCasts() !=
           SetJmp3.getCallee()->stripPointerCasts())
         continue;
 

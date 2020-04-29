@@ -3252,8 +3252,8 @@ LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef C);
  * This expects an LLVMValueRef that corresponds to a llvm::CallInst or
  * llvm::InvokeInst.
  *
- * @see llvm::CallInst::getCalledValue()
- * @see llvm::InvokeInst::getCalledValue()
+ * @see llvm::CallInst::getCalledOperand()
+ * @see llvm::InvokeInst::getCalledOperand()
  */
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr);
 

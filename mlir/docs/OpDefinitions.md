@@ -490,14 +490,14 @@ The following builders are generated:
 
 ```c++
 // All result-types/operands/attributes have one aggregate parameter.
-static void build(Builder *odsBuilder, OperationState &odsState,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ArrayRef<Type> resultTypes,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
 // Each result-type/operand/attribute has a separate parameter. The parameters
 // for attributes are of mlir::Attribute types.
-static void build(Builder *odsBuilder, OperationState &odsState,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   Type i32_result, Type f32_result, ...,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
@@ -506,20 +506,20 @@ static void build(Builder *odsBuilder, OperationState &odsState,
 // for attributes are raw values unwrapped with mlir::Attribute instances.
 // (Note that this builder will not always be generated. See the following
 // explanation for more details.)
-static void build(Builder *odsBuilder, OperationState &odsState,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   Type i32_result, Type f32_result, ...,
                   Value i32_operand, Value f32_operand, ...,
                   APInt i32_attr, StringRef f32_attr, ...);
 
 // Each operand/attribute has a separate parameter but result type is aggregate.
-static void build(Builder *odsBuilder, OperationState &odsState,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ArrayRef<Type> resultTypes,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
 
 // All operands/attributes have aggregate parameters.
 // Generated if InferTypeOpInterface interface is specified.
-static void build(Builder *odsBuilder, OperationState &odsState,
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
@@ -581,8 +581,8 @@ def MyOp : ... {
   ...
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &state, float val = 0.5f", [{
-      state.addAttribute("attr", builder->getF32FloatAttr(val));
+    OpBuilder<"OpBuilder &builder, OperationState &state, float val = 0.5f", [{
+      state.addAttribute("attr", builder.getF32FloatAttr(val));
     }]>
   ];
 }
@@ -591,8 +591,8 @@ def MyOp : ... {
 The generated builder will look like:
 
 ```c++
-static void build(Builder *builder, OperationState &state, float val = 0.5f) {
-  state.addAttribute("attr", builder->getF32FloatAttr(val));
+static void build(OpBuilder &builder, OperationState &state, float val = 0.5f) {
+  state.addAttribute("attr", builder.getF32FloatAttr(val));
 }
 ```
 

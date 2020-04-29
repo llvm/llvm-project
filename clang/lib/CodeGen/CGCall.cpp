@@ -16,6 +16,7 @@
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
@@ -2701,10 +2702,10 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
 
   bool doRetainAutorelease;
 
-  if (call->getCalledValue() == CGF.CGM.getObjCEntrypoints().objc_retain) {
+  if (call->getCalledOperand() == CGF.CGM.getObjCEntrypoints().objc_retain) {
     doRetainAutorelease = true;
-  } else if (call->getCalledValue() == CGF.CGM.getObjCEntrypoints()
-                                          .objc_retainAutoreleasedReturnValue) {
+  } else if (call->getCalledOperand() ==
+             CGF.CGM.getObjCEntrypoints().objc_retainAutoreleasedReturnValue) {
     doRetainAutorelease = false;
 
     // If we emitted an assembly marker for this call (and the
@@ -2720,8 +2721,8 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
         assert(prev);
       }
       assert(isa<llvm::CallInst>(prev));
-      assert(cast<llvm::CallInst>(prev)->getCalledValue() ==
-               CGF.CGM.getObjCEntrypoints().retainAutoreleasedReturnValueMarker);
+      assert(cast<llvm::CallInst>(prev)->getCalledOperand() ==
+             CGF.CGM.getObjCEntrypoints().retainAutoreleasedReturnValueMarker);
       InstsToKill.push_back(prev);
     }
   } else {
@@ -2764,8 +2765,8 @@ static llvm::Value *tryRemoveRetainOfSelf(CodeGenFunction &CGF,
   // Look for a retain call.
   llvm::CallInst *retainCall =
     dyn_cast<llvm::CallInst>(result->stripPointerCasts());
-  if (!retainCall ||
-      retainCall->getCalledValue() != CGF.CGM.getObjCEntrypoints().objc_retain)
+  if (!retainCall || retainCall->getCalledOperand() !=
+                         CGF.CGM.getObjCEntrypoints().objc_retain)
     return nullptr;
 
   // Look for an ordinary load of 'self'.
@@ -2869,6 +2870,213 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
   // Okay, the store's basic block dominates the insertion point; we
   // can do our thing.
   return store;
+}
+
+// Helper functions for EmitCMSEClearRecord
+
+// Set the bits corresponding to a field having width `BitWidth` and located at
+// offset `BitOffset` (from the least significant bit) within a storage unit of
+// `Bits.size()` bytes. Each element of `Bits` corresponds to one target byte.
+// Use little-endian layout, i.e.`Bits[0]` is the LSB.
+static void setBitRange(SmallVectorImpl<uint64_t> &Bits, int BitOffset,
+                        int BitWidth, int CharWidth) {
+  assert(CharWidth <= 64);
+  assert(static_cast<unsigned>(BitWidth) <= Bits.size() * CharWidth);
+
+  int Pos = 0;
+  if (BitOffset >= CharWidth) {
+    Pos += BitOffset / CharWidth;
+    BitOffset = BitOffset % CharWidth;
+  }
+
+  const uint64_t Used = (uint64_t(1) << CharWidth) - 1;
+  if (BitOffset + BitWidth >= CharWidth) {
+    Bits[Pos++] |= (Used << BitOffset) & Used;
+    BitWidth -= CharWidth - BitOffset;
+    BitOffset = 0;
+  }
+
+  while (BitWidth >= CharWidth) {
+    Bits[Pos++] = Used;
+    BitWidth -= CharWidth;
+  }
+
+  if (BitWidth > 0)
+    Bits[Pos++] |= (Used >> (CharWidth - BitWidth)) << BitOffset;
+}
+
+// Set the bits corresponding to a field having width `BitWidth` and located at
+// offset `BitOffset` (from the least significant bit) within a storage unit of
+// `StorageSize` bytes, located at `StorageOffset` in `Bits`. Each element of
+// `Bits` corresponds to one target byte. Use target endian layout.
+static void setBitRange(SmallVectorImpl<uint64_t> &Bits, int StorageOffset,
+                        int StorageSize, int BitOffset, int BitWidth,
+                        int CharWidth, bool BigEndian) {
+
+  SmallVector<uint64_t, 8> TmpBits(StorageSize);
+  setBitRange(TmpBits, BitOffset, BitWidth, CharWidth);
+
+  if (BigEndian)
+    std::reverse(TmpBits.begin(), TmpBits.end());
+
+  for (uint64_t V : TmpBits)
+    Bits[StorageOffset++] |= V;
+}
+
+static void setUsedBits(CodeGenModule &, QualType, int,
+                        SmallVectorImpl<uint64_t> &);
+
+// Set the bits in `Bits`, which correspond to the value representations of
+// the actual members of the record type `RTy`. Note that this function does
+// not handle base classes, virtual tables, etc, since they cannot happen in
+// CMSE function arguments or return. The bit mask corresponds to the target
+// memory layout, i.e. it's endian dependent.
+static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
+                        SmallVectorImpl<uint64_t> &Bits) {
+  ASTContext &Context = CGM.getContext();
+  int CharWidth = Context.getCharWidth();
+  const RecordDecl *RD = RTy->getDecl()->getDefinition();
+  const ASTRecordLayout &ASTLayout = Context.getASTRecordLayout(RD);
+  const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(RD);
+
+  int Idx = 0;
+  for (auto I = RD->field_begin(), E = RD->field_end(); I != E; ++I, ++Idx) {
+    const FieldDecl *F = *I;
+
+    if (F->isUnnamedBitfield() || F->isZeroLengthBitField(Context) ||
+        F->getType()->isIncompleteArrayType())
+      continue;
+
+    if (F->isBitField()) {
+      const CGBitFieldInfo &BFI = Layout.getBitFieldInfo(F);
+      setBitRange(Bits, Offset + BFI.StorageOffset.getQuantity(),
+                  BFI.StorageSize / CharWidth, BFI.Offset,
+                  BFI.Size, CharWidth,
+                  CGM.getDataLayout().isBigEndian());
+      continue;
+    }
+
+    setUsedBits(CGM, F->getType(),
+                Offset + ASTLayout.getFieldOffset(Idx) / CharWidth, Bits);
+  }
+}
+
+// Set the bits in `Bits`, which correspond to the value representations of
+// the elements of an array type `ATy`.
+static void setUsedBits(CodeGenModule &CGM, const ConstantArrayType *ATy,
+                        int Offset, SmallVectorImpl<uint64_t> &Bits) {
+  const ASTContext &Context = CGM.getContext();
+
+  QualType ETy = Context.getBaseElementType(ATy);
+  int Size = Context.getTypeSizeInChars(ETy).getQuantity();
+  SmallVector<uint64_t, 4> TmpBits(Size);
+  setUsedBits(CGM, ETy, 0, TmpBits);
+
+  for (int I = 0, N = Context.getConstantArrayElementCount(ATy); I < N; ++I) {
+    auto Src = TmpBits.begin();
+    auto Dst = Bits.begin() + Offset + I * Size;
+    for (int J = 0; J < Size; ++J)
+      *Dst++ |= *Src++;
+  }
+}
+
+// Set the bits in `Bits`, which correspond to the value representations of
+// the type `QTy`.
+static void setUsedBits(CodeGenModule &CGM, QualType QTy, int Offset,
+                        SmallVectorImpl<uint64_t> &Bits) {
+  if (const auto *RTy = QTy->getAs<RecordType>())
+    return setUsedBits(CGM, RTy, Offset, Bits);
+
+  ASTContext &Context = CGM.getContext();
+  if (const auto *ATy = Context.getAsConstantArrayType(QTy))
+    return setUsedBits(CGM, ATy, Offset, Bits);
+
+  int Size = Context.getTypeSizeInChars(QTy).getQuantity();
+  if (Size <= 0)
+    return;
+
+  std::fill_n(Bits.begin() + Offset, Size,
+              (uint64_t(1) << Context.getCharWidth()) - 1);
+}
+
+static uint64_t buildMultiCharMask(const SmallVectorImpl<uint64_t> &Bits,
+                                   int Pos, int Size, int CharWidth,
+                                   bool BigEndian) {
+  assert(Size > 0);
+  uint64_t Mask = 0;
+  if (BigEndian) {
+    for (auto P = Bits.begin() + Pos, E = Bits.begin() + Pos + Size; P != E;
+         ++P)
+      Mask = (Mask << CharWidth) | *P;
+  } else {
+    auto P = Bits.begin() + Pos + Size, End = Bits.begin() + Pos;
+    do
+      Mask = (Mask << CharWidth) | *--P;
+    while (P != End);
+  }
+  return Mask;
+}
+
+// Emit code to clear the bits in a record, which aren't a part of any user
+// declared member, when the record is a function return.
+llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
+                                                  llvm::IntegerType *ITy,
+                                                  QualType QTy) {
+  assert(Src->getType() == ITy);
+  assert(ITy->getScalarSizeInBits() <= 64);
+
+  const llvm::DataLayout &DataLayout = CGM.getDataLayout();
+  int Size = DataLayout.getTypeStoreSize(ITy);
+  SmallVector<uint64_t, 4> Bits(Size);
+  setUsedBits(CGM, QTy->getAs<RecordType>(), 0, Bits);
+
+  int CharWidth = CGM.getContext().getCharWidth();
+  uint64_t Mask =
+      buildMultiCharMask(Bits, 0, Size, CharWidth, DataLayout.isBigEndian());
+
+  return Builder.CreateAnd(Src, Mask, "cmse.clear");
+}
+
+// Emit code to clear the bits in a record, which aren't a part of any user
+// declared member, when the record is a function argument.
+llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
+                                                  llvm::ArrayType *ATy,
+                                                  QualType QTy) {
+  const llvm::DataLayout &DataLayout = CGM.getDataLayout();
+  int Size = DataLayout.getTypeStoreSize(ATy);
+  SmallVector<uint64_t, 16> Bits(Size);
+  setUsedBits(CGM, QTy->getAs<RecordType>(), 0, Bits);
+
+  // Clear each element of the LLVM array.
+  int CharWidth = CGM.getContext().getCharWidth();
+  int CharsPerElt =
+      ATy->getArrayElementType()->getScalarSizeInBits() / CharWidth;
+  int MaskIndex = 0;
+  llvm::Value *R = llvm::UndefValue::get(ATy);
+  for (int I = 0, N = ATy->getArrayNumElements(); I != N; ++I) {
+    uint64_t Mask = buildMultiCharMask(Bits, MaskIndex, CharsPerElt, CharWidth,
+                                       DataLayout.isBigEndian());
+    MaskIndex += CharsPerElt;
+    llvm::Value *T0 = Builder.CreateExtractValue(Src, I);
+    llvm::Value *T1 = Builder.CreateAnd(T0, Mask, "cmse.clear");
+    R = Builder.CreateInsertValue(R, T1, I);
+  }
+
+  return R;
+}
+
+// Emit code to clear the padding bits when returning or passing as an argument
+// a 16-bit floating-point value.
+llvm::Value *CodeGenFunction::EmitCMSEClearFP16(llvm::Value *Src) {
+  llvm::Type *RetTy = Src->getType();
+  assert(RetTy->isFloatTy() ||
+         RetTy->isIntegerTy() && RetTy->getIntegerBitWidth() == 32);
+  if (RetTy->isFloatTy()) {
+    llvm::Value *T0 = Builder.CreateBitCast(Src, Builder.getIntNTy(32));
+    llvm::Value *T1 = Builder.CreateAnd(T0, 0xffff, "cmse.clear");
+    return Builder.CreateBitCast(T1, RetTy);
+  }
+  return Builder.CreateAnd(Src, 0xffff, "cmse.clear");
 }
 
 void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
@@ -3037,6 +3245,21 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   llvm::Instruction *Ret;
   if (RV) {
+    if (CurFuncDecl && CurFuncDecl->hasAttr<CmseNSEntryAttr>()) {
+      // For certain return types, clear padding bits, as they may reveal
+      // sensitive information.
+      const Type *RTy = RetTy.getCanonicalType().getTypePtr();
+      if (RTy->isFloat16Type() || RTy->isHalfType()) {
+        // 16-bit floating-point types are passed in a 32-bit integer or float,
+        // with unspecified upper bits.
+        RV = EmitCMSEClearFP16(RV);
+      } else {
+        // Small struct/union types are passed as integers.
+        auto *ITy = dyn_cast<llvm::IntegerType>(RV->getType());
+        if (ITy != nullptr && isa<RecordType>(RetTy.getCanonicalType()))
+          RV = EmitCMSEClearRecord(RV, ITy, RetTy);
+      }
+    }
     EmitReturnValueCheck(RV);
     Ret = Builder.CreateRet(RV);
   } else {
@@ -4332,8 +4555,25 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       } else {
         // In the simple case, just pass the coerced loaded value.
         assert(NumIRArgs == 1);
-        IRCallArgs[FirstIRArg] =
-          CreateCoercedLoad(Src, ArgInfo.getCoerceToType(), *this);
+        llvm::Value *Load =
+            CreateCoercedLoad(Src, ArgInfo.getCoerceToType(), *this);
+
+        if (CallInfo.isCmseNSCall()) {
+          // For certain parameter types, clear padding bits, as they may reveal
+          // sensitive information.
+          const Type *PTy = I->Ty.getCanonicalType().getTypePtr();
+          // 16-bit floating-point types are passed in a 32-bit integer or
+          // float, with unspecified upper bits.
+          if (PTy->isFloat16Type() || PTy->isHalfType()) {
+            Load = EmitCMSEClearFP16(Load);
+          } else {
+            // Small struct/union types are passed as integer arrays.
+            auto *ATy = dyn_cast<llvm::ArrayType>(Load->getType());
+            if (ATy != nullptr && isa<RecordType>(I->Ty.getCanonicalType()))
+              Load = EmitCMSEClearRecord(Load, ATy, I->Ty);
+          }
+        }
+        IRCallArgs[FirstIRArg] = Load;
       }
 
       break;

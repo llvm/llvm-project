@@ -34,7 +34,8 @@ public:
   void visitCallBase(CallBase &CB) {
     if (CB.getCalledFunction())
       return;
-    auto *Callee = dyn_cast<Function>(CB.getCalledValue()->stripPointerCasts());
+    auto *Callee =
+        dyn_cast<Function>(CB.getCalledOperand()->stripPointerCasts());
     if (Callee && isLegalToPromote(CB, Callee)) {
       promoteCall(CB, Callee);
       Modified = true;

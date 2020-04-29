@@ -13,7 +13,6 @@
 #ifndef MLIR_IR_FUNCTION_H
 #define MLIR_IR_FUNCTION_H
 
-#include "mlir/Dialect/Affine/Traits.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/FunctionSupport.h"
 #include "mlir/IR/OpDefinition.h"
@@ -31,11 +30,10 @@ namespace mlir {
 /// implicitly capture global values, and all external references must use
 /// Function arguments or attributes that establish a symbolic connection(e.g.
 /// symbols referenced by name via a string attribute).
-class FuncOp
-    : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-                OpTrait::IsIsolatedFromAbove, OpTrait::FunctionLike,
-                OpTrait::AutomaticAllocationScope, OpTrait::PolyhedralScope,
-                CallableOpInterface::Trait, SymbolOpInterface::Trait> {
+class FuncOp : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
+                         OpTrait::IsIsolatedFromAbove, OpTrait::FunctionLike,
+                         OpTrait::AutomaticAllocationScope,
+                         CallableOpInterface::Trait, SymbolOpInterface::Trait> {
 public:
   using Op::Op;
   using Op::print;
@@ -50,9 +48,9 @@ public:
                        ArrayRef<NamedAttribute> attrs,
                        ArrayRef<NamedAttributeList> argAttrs);
 
-  static void build(Builder *builder, OperationState &result, StringRef name,
+  static void build(OpBuilder &builder, OperationState &result, StringRef name,
                     FunctionType type, ArrayRef<NamedAttribute> attrs);
-  static void build(Builder *builder, OperationState &result, StringRef name,
+  static void build(OpBuilder &builder, OperationState &result, StringRef name,
                     FunctionType type, ArrayRef<NamedAttribute> attrs,
                     ArrayRef<NamedAttributeList> argAttrs);
 

@@ -822,3 +822,95 @@ neg_bb:
 nonneg_bb:
   ret i16 0
 }
+
+; 'or' of 1 and operand with no lowest bit set is 'inc'
+define i8 @negation_of_increment_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @negation_of_increment_via_or_with_no_common_bits_set(
+; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[T1_NEG:%.*]] = xor i8 [[T0]], -1
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = shl i8 %y, 1
+  %t1 = or i8 %t0, 1
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+define i8 @negation_of_increment_via_or_with_no_common_bits_set_extrause(i8 %x, i8 %y) {
+; CHECK-LABEL: @negation_of_increment_via_or_with_no_common_bits_set_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[T1:%.*]] = or i8 [[T0]], 1
+; CHECK-NEXT:    call void @use8(i8 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = shl i8 %y, 1
+  %t1 = or i8 %t0, 1
+  call void @use8(i8 %t1)
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+define i8 @negation_of_increment_via_or_common_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @negation_of_increment_via_or_common_bits_set(
+; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[T1:%.*]] = or i8 [[T0]], 3
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = shl i8 %y, 1
+  %t1 = or i8 %t0, 3
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+
+; 'or' of operands with no common bits set is 'add'
+define i8 @add_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_via_or_with_no_common_bits_set(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1_NEG:%.*]] = shl i8 [[Y]], 2
+; CHECK-NEXT:    [[T2_NEG:%.*]] = add i8 [[T1_NEG]], -3
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[T2_NEG]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T3]]
+;
+  %t0 = sub i8 0, %y
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 2
+  %t2 = or i8 %t1, 3
+  %t3 = sub i8 %x, %t2
+  ret i8 %t3
+}
+define i8 @add_via_or_with_common_bit_maybe_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_via_or_with_common_bit_maybe_set(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 2
+; CHECK-NEXT:    [[T2:%.*]] = or i8 [[T1]], 4
+; CHECK-NEXT:    [[T3:%.*]] = sub i8 [[X:%.*]], [[T2]]
+; CHECK-NEXT:    ret i8 [[T3]]
+;
+  %t0 = sub i8 0, %y
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 2
+  %t2 = or i8 %t1, 4
+  %t3 = sub i8 %x, %t2
+  ret i8 %t3
+}
+define i8 @add_via_or_with_no_common_bits_set_extrause(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_via_or_with_no_common_bits_set_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 2
+; CHECK-NEXT:    [[T2:%.*]] = or i8 [[T1]], 3
+; CHECK-NEXT:    call void @use8(i8 [[T2]])
+; CHECK-NEXT:    [[T3:%.*]] = sub i8 [[X:%.*]], [[T2]]
+; CHECK-NEXT:    ret i8 [[T3]]
+;
+  %t0 = sub i8 0, %y
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 2
+  %t2 = or i8 %t1, 3
+  call void @use8(i8 %t2)
+  %t3 = sub i8 %x, %t2
+  ret i8 %t3
+}

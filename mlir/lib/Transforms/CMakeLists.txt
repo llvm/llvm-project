@@ -1,6 +1,7 @@
 add_subdirectory(Utils)
 
 add_mlir_library(MLIRTransforms
+  BufferPlacement.cpp
   Canonicalizer.cpp
   CSE.cpp
   DialectConversion.cpp

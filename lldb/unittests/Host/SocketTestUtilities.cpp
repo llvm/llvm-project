@@ -101,16 +101,19 @@ static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
                              "Creating a canary {0} TCP socket failed: {1}.",
                              Proto, Err)
                              .str();
-  if (Err.isA<llvm::ECError>() &&
-      errorToErrorCode(std::move(Err)) ==
-          std::make_error_code(std::errc::address_not_available)) {
+  bool HasAddrNotAvail = false;
+  handleAllErrors(std::move(Err), [&](std::unique_ptr<llvm::ECError> ECErr) {
+    if (ECErr->convertToErrorCode() ==
+        std::make_error_code(std::errc::address_not_available))
+      HasAddrNotAvail = true;
+  });
+  if (HasAddrNotAvail) {
     GTEST_LOG_(WARNING)
         << llvm::formatv(
                "Assuming the host does not support {0}. Skipping test.", Proto)
                .str();
     return false;
   }
-  consumeError(std::move(Err));
   GTEST_LOG_(WARNING) << "Continuing anyway. The test will probably fail.";
   return true;
 }

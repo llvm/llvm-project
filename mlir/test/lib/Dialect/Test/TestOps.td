@@ -9,7 +9,6 @@
 #ifndef TEST_OPS
 #define TEST_OPS
 
-include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -739,9 +738,9 @@ def OpSymbolBindingB : TEST_Op<"symbol_binding_b", []> {
 
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, Value operand",
+      "OpBuilder &builder, OperationState &state, Value operand",
       [{
-        state.types.assign({builder->getIntegerType(32)});
+        state.types.assign({builder.getIntegerType(32)});
         state.addOperands({operand});
       }]>
   ];
@@ -851,10 +850,10 @@ def TwoResultOp : TEST_Op<"two_result"> {
 
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, IntegerAttr kind",
+      "OpBuilder &builder, OperationState &state, IntegerAttr kind",
       [{
-        auto i32 = builder->getIntegerType(32);
-        auto f32 = builder->getF32Type();
+        auto i32 = builder.getIntegerType(32);
+        auto f32 = builder.getF32Type();
         state.types.assign({i32, f32});
         state.addAttribute("kind", kind);
       }]>
@@ -1007,9 +1006,9 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // result type. So need to provide a builder not requiring result types.
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, IntegerAttr count",
+      "OpBuilder &builder, OperationState &state, IntegerAttr count",
       [{
-        auto i32Type = builder->getIntegerType(32);
+        auto i32Type = builder.getIntegerType(32);
         state.addTypes(i32Type); // $output1
         SmallVector<Type, 4> types(count.getInt(), i32Type);
         state.addTypes(types); // $output2
@@ -1125,17 +1124,6 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins Index);
-  let regions = (region SizedRegion<1>:$region);
-  let parser = [{ return ::parse$cppClass(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
-}
-
-def PolyhedralScopeOp : TEST_Op<"polyhedral_scope", [PolyhedralScope]> {
-  let summary =  "polyhedral scope operation";
-  let description = [{
-    Test op that defines a new polyhedral scope.
-  }];
-
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
@@ -1269,6 +1257,16 @@ def FormatOptionalOperandResultBOp : FormatOptionalOperandResultOpBase<"b", [{
   (`(` $optional^ `:` type($optional) `)`)? `:` type($optional_res)
   (`[` $variadic^ `]`)? attr-dict
 }]>;
+
+def FormatTwoVariadicOperandsNoBuildableTypeOp
+    : TEST_Op<"format_two_variadic_operands_no_buildable_type_op",
+              [AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$a,
+                       Variadic<AnyType>:$b);
+  let assemblyFormat = [{
+    `(` $a `:` type($a) `)` `->` `(` $b `:` type($b) `)`  attr-dict
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Test SideEffects

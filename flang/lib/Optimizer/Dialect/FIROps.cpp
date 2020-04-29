@@ -228,13 +228,13 @@ mlir::CmpFPredicate fir::CmpfOp::getPredicateByName(llvm::StringRef name) {
   return pred.getValue();
 }
 
-void fir::buildCmpFOp(Builder *builder, OperationState &result,
+void fir::buildCmpFOp(OpBuilder &builder, OperationState &result,
                       CmpFPredicate predicate, Value lhs, Value rhs) {
   result.addOperands({lhs, rhs});
-  result.types.push_back(builder->getI1Type());
+  result.types.push_back(builder.getI1Type());
   result.addAttribute(
       CmpfOp::getPredicateAttrName(),
-      builder->getI64IntegerAttr(static_cast<int64_t>(predicate)));
+      builder.getI64IntegerAttr(static_cast<int64_t>(predicate)));
 }
 
 template <typename OPTY>
@@ -294,13 +294,13 @@ mlir::ParseResult fir::parseCmpfOp(mlir::OpAsmParser &parser,
 // CmpcOp
 //===----------------------------------------------------------------------===//
 
-void fir::buildCmpCOp(Builder *builder, OperationState &result,
+void fir::buildCmpCOp(OpBuilder &builder, OperationState &result,
                       CmpFPredicate predicate, Value lhs, Value rhs) {
   result.addOperands({lhs, rhs});
-  result.types.push_back(builder->getI1Type());
+  result.types.push_back(builder.getI1Type());
   result.addAttribute(
       fir::CmpcOp::getPredicateAttrName(),
-      builder->getI64IntegerAttr(static_cast<int64_t>(predicate)));
+      builder.getI64IntegerAttr(static_cast<int64_t>(predicate)));
 }
 
 static void printCmpcOp(OpAsmPrinter &p, fir::CmpcOp op) { printCmpOp(p, op); }
@@ -388,7 +388,7 @@ mlir::Type fir::CoordinateOp::getBaseType() {
   return getAttr(CoordinateOp::baseType()).cast<mlir::TypeAttr>().getValue();
 }
 
-void fir::CoordinateOp::build(Builder *, OperationState &result,
+void fir::CoordinateOp::build(OpBuilder &, OperationState &result,
                               mlir::Type resType, ValueRange operands,
                               ArrayRef<NamedAttribute> attrs) {
   assert(operands.size() >= 1u && "mismatched number of parameters");
@@ -399,7 +399,7 @@ void fir::CoordinateOp::build(Builder *, OperationState &result,
   result.addTypes({resType});
 }
 
-void fir::CoordinateOp::build(Builder *builder, OperationState &result,
+void fir::CoordinateOp::build(OpBuilder &builder, OperationState &result,
                               mlir::Type resType, mlir::Value ref,
                               ValueRange coor, ArrayRef<NamedAttribute> attrs) {
   llvm::SmallVector<mlir::Value, 16> operands{ref};
@@ -471,7 +471,7 @@ static mlir::ParseResult parseEmboxOp(mlir::OpAsmParser &parser,
 // GenTypeDescOp
 //===----------------------------------------------------------------------===//
 
-void fir::GenTypeDescOp::build(Builder *, OperationState &result,
+void fir::GenTypeDescOp::build(OpBuilder &, OperationState &result,
                                mlir::TypeAttr inty) {
   result.addAttribute("in_type", inty);
   result.addTypes(TypeDescType::get(inty.getValue()));
@@ -538,17 +538,17 @@ void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
   getBlock().getOperations().push_back(op);
 }
 
-void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
+void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           StringRef name, bool isConstant, Type type,
                           Attribute initialVal, StringAttr linkage,
                           ArrayRef<NamedAttribute> attrs) {
   result.addRegion();
   result.addAttribute(typeAttrName(), mlir::TypeAttr::get(type));
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
-                      builder->getStringAttr(name));
-  result.addAttribute(symbolAttrName(), builder->getSymbolRefAttr(name));
+                      builder.getStringAttr(name));
+  result.addAttribute(symbolAttrName(), builder.getSymbolRefAttr(name));
   if (isConstant)
-    result.addAttribute(constantAttrName(), builder->getUnitAttr());
+    result.addAttribute(constantAttrName(), builder.getUnitAttr());
   if (initialVal)
     result.addAttribute(initValAttrName(), initialVal);
   if (linkage)
@@ -556,31 +556,31 @@ void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
   result.attributes.append(attrs.begin(), attrs.end());
 }
 
-void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
+void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           StringRef name, Type type, Attribute initialVal,
                           StringAttr linkage, ArrayRef<NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, type, {}, linkage, attrs);
 }
 
-void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
+void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           StringRef name, bool isConstant, Type type,
                           StringAttr linkage, ArrayRef<NamedAttribute> attrs) {
   build(builder, result, name, isConstant, type, {}, linkage, attrs);
 }
 
-void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
+void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           StringRef name, Type type, StringAttr linkage,
                           ArrayRef<NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, type, {}, linkage, attrs);
 }
 
-void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
+void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           StringRef name, bool isConstant, Type type,
                           ArrayRef<NamedAttribute> attrs) {
   build(builder, result, name, isConstant, type, StringAttr{}, attrs);
 }
 
-void fir::GlobalOp::build(mlir::Builder *builder, OperationState &result,
+void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           StringRef name, Type type,
                           ArrayRef<NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, type, attrs);
@@ -597,7 +597,7 @@ mlir::ParseResult fir::GlobalOp::verifyValidLinkage(StringRef linkage) {
 // IterWhileOp
 //===----------------------------------------------------------------------===//
 
-void fir::IterWhileOp::build(mlir::Builder *builder,
+void fir::IterWhileOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value lb,
                              mlir::Value ub, mlir::Value step,
                              mlir::Value iterate, mlir::ValueRange iterArgs,
@@ -609,7 +609,7 @@ void fir::IterWhileOp::build(mlir::Builder *builder,
     result.addTypes(v.getType());
   mlir::Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block{});
-  bodyRegion->front().addArgument(builder->getIndexType());
+  bodyRegion->front().addArgument(builder.getIndexType());
   bodyRegion->front().addArgument(iterate.getType());
   for (auto v : iterArgs)
     bodyRegion->front().addArgument(v.getType());
@@ -786,7 +786,7 @@ mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
 // LoopOp
 //===----------------------------------------------------------------------===//
 
-void fir::LoopOp::build(mlir::Builder *builder, mlir::OperationState &result,
+void fir::LoopOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                         mlir::Value lb, mlir::Value ub, mlir::Value step,
                         bool unordered, mlir::ValueRange iterArgs,
                         llvm::ArrayRef<mlir::NamedAttribute> attributes) {
@@ -797,12 +797,12 @@ void fir::LoopOp::build(mlir::Builder *builder, mlir::OperationState &result,
   mlir::Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block{});
   if (iterArgs.empty())
-    LoopOp::ensureTerminator(*bodyRegion, *builder, result.location);
-  bodyRegion->front().addArgument(builder->getIndexType());
+    LoopOp::ensureTerminator(*bodyRegion, builder, result.location);
+  bodyRegion->front().addArgument(builder.getIndexType());
   for (auto v : iterArgs)
     bodyRegion->front().addArgument(v.getType());
   if (unordered)
-    result.addAttribute(unorderedAttrName(), builder->getUnitAttr());
+    result.addAttribute(unorderedAttrName(), builder.getUnitAttr());
   result.addAttributes(attributes);
 }
 
@@ -1162,7 +1162,7 @@ unsigned fir::SelectCaseOp::targetOffsetSize() {
       getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr()));
 }
 
-void fir::SelectCaseOp::build(mlir::Builder *builder,
+void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result,
                               mlir::Value selector,
                               llvm::ArrayRef<mlir::Attribute> compareAttrs,
@@ -1171,7 +1171,7 @@ void fir::SelectCaseOp::build(mlir::Builder *builder,
                               llvm::ArrayRef<mlir::ValueRange> destOperands,
                               llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   result.addOperands(selector);
-  result.addAttribute(getCasesAttr(), builder->getArrayAttr(compareAttrs));
+  result.addAttribute(getCasesAttr(), builder.getArrayAttr(compareAttrs));
   llvm::SmallVector<int32_t, 8> operOffs;
   int32_t operSize = 0;
   for (auto attr : compareAttrs) {
@@ -1188,7 +1188,7 @@ void fir::SelectCaseOp::build(mlir::Builder *builder,
   for (auto ops : cmpOperands)
     result.addOperands(ops);
   result.addAttribute(getCompareOffsetAttr(),
-                      builder->getI32VectorAttr(operOffs));
+                      builder.getI32VectorAttr(operOffs));
   const auto count = destinations.size();
   for (auto d : destinations)
     result.addSuccessors(d);
@@ -1206,9 +1206,8 @@ void fir::SelectCaseOp::build(mlir::Builder *builder,
     }
   }
   result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder->getI32VectorAttr({1, operSize, sumArgs}));
-  result.addAttribute(getTargetOffsetAttr(),
-                      builder->getI32VectorAttr(argOffs));
+                      builder.getI32VectorAttr({1, operSize, sumArgs}));
+  result.addAttribute(getTargetOffsetAttr(), builder.getI32VectorAttr(argOffs));
   result.addAttributes(attributes);
 }
 
@@ -1216,7 +1215,7 @@ void fir::SelectCaseOp::build(mlir::Builder *builder,
 /// operands need not be partitioned by the builder. Instead the operands are
 /// partitioned here, before being passed to the default builder. This
 /// partitioning is unchecked, so can go awry on bad input.
-void fir::SelectCaseOp::build(mlir::Builder *builder,
+void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result,
                               mlir::Value selector,
                               llvm::ArrayRef<mlir::Attribute> compareAttrs,
@@ -1394,14 +1393,14 @@ mlir::OpFoldResult fir::SubfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
 // WhereOp
 //===----------------------------------------------------------------------===//
 
-void fir::WhereOp::build(mlir::Builder *builder, OperationState &result,
+void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
                          mlir::Value cond, bool withElseRegion) {
   result.addOperands(cond);
   mlir::Region *thenRegion = result.addRegion();
   mlir::Region *elseRegion = result.addRegion();
-  WhereOp::ensureTerminator(*thenRegion, *builder, result.location);
+  WhereOp::ensureTerminator(*thenRegion, builder, result.location);
   if (withElseRegion)
-    WhereOp::ensureTerminator(*elseRegion, *builder, result.location);
+    WhereOp::ensureTerminator(*elseRegion, builder, result.location);
 }
 
 static mlir::ParseResult parseWhereOp(OpAsmParser &parser,

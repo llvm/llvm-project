@@ -39,7 +39,7 @@ class SelectAcceleratorCode : public ModulePass {
         for (auto&& BB : F) {
             for (auto&& I : BB) {
                 if (auto CI = dyn_cast<CallInst>(&I)) {
-                    auto V = CI->getCalledValue()->stripPointerCasts();
+                    auto V = CI->getCaller()->stripPointerCasts();
                     if (auto Callee = dyn_cast<Function>(V)) {
                         auto Tmp = HCCallees_.insert(Callee);
                         if (Tmp.second) findAllHCCallees_(*Callee, M);

@@ -425,6 +425,9 @@ class Configuration(object):
                 intMacroValue(macros['__cpp_concepts']) < 201811:
             self.config.available_features.add('libcpp-no-concepts')
 
+        if sys.platform.lower().strip() == 'win32':
+            self.config.available_features.add('host-windows')
+
         if self.target_info.is_windows():
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':

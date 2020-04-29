@@ -1889,7 +1889,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   // Lower inline assembly if we can.
   // If we found an inline asm expession, and if the target knows how to
   // lower it to normal LLVM code, do so now.
-  if (isa<InlineAsm>(CI->getCalledValue())) {
+  if (CI->isInlineAsm()) {
     if (TLI->ExpandInlineAsm(CI)) {
       // Avoid invalidating the iterator.
       CurInstIterator = BB->begin();
@@ -4636,7 +4636,7 @@ static bool FindAllMemoryUses(
           continue;
       }
 
-      InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue());
+      InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledOperand());
       if (!IA) return true;
 
       // If this is a memory operand, we're cool, otherwise bail out.
@@ -6103,7 +6103,8 @@ static bool sinkSelectOperand(const TargetTransformInfo *TTI, Value *V) {
   // If it's safe to speculatively execute, then it should not have side
   // effects; therefore, it's safe to sink and possibly *not* execute.
   return I && I->hasOneUse() && isSafeToSpeculativelyExecute(I) &&
-         TTI->getUserCost(I) >= TargetTransformInfo::TCC_Expensive;
+         TTI->getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency) >=
+         TargetTransformInfo::TCC_Expensive;
 }
 
 /// Returns true if a SelectInst should be turned into an explicit branch.

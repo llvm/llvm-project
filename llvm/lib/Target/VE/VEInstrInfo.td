@@ -70,6 +70,47 @@ def mimm : Operand<i32>, PatLeaf<(imm), [{
   let PrintMethod = "printMImmOperand";
 }
 
+// simm7fp - Generic fp immediate value.
+def LO7FP : SDNodeXForm<fpimm, [{
+  // Get a integer immediate from fpimm
+  const APInt& imm = N->getValueAPF().bitcastToAPInt();
+  uint64_t val = imm.getSExtValue();
+  if (imm.getBitWidth() == 32)
+    val <<= 32; // Immediate value of float place at higher bits on VE.
+  return CurDAG->getTargetConstant(SignExtend32(val, 7), SDLoc(N), MVT::i32);
+}]>;
+def simm7fp : Operand<i32>, PatLeaf<(fpimm), [{
+    const APInt& imm = N->getValueAPF().bitcastToAPInt();
+    uint64_t val = imm.getSExtValue();
+    if (imm.getBitWidth() == 32)
+      val <<= 32; // Immediate value of float place at higher bits on VE.
+    return isInt<7>(val);
+  }], LO7FP> {
+  let DecoderMethod = "DecodeSIMM7";
+}
+
+// mimm - Special fp immediate value of sequential bit stream of 0 or 1.
+def MIMMFP : SDNodeXForm<fpimm, [{
+  const APInt& Imm = N->getValueAPF().bitcastToAPInt();
+  uint64_t Val = Imm.getSExtValue();
+  bool M0Flag = isMask_64(Val);
+  if (Imm.getBitWidth() == 32)
+    Val <<= 32; // Immediate value of float place at higher bits on VE.
+  if (M0Flag) {
+    //   bit 6  : If `(m)0`, 1.  Otherwise, 0.
+    Val = countLeadingZeros(Val) | 0x40;
+  } else
+    Val = countLeadingOnes(Val);
+  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
+}]>;
+def mimmfp : Operand<i32>, PatLeaf<(fpimm), [{
+    const APInt& Imm = N->getValueAPF().bitcastToAPInt();
+    uint64_t Val = Imm.getSExtValue();
+    return isMask_64(Val) ||
+           ((Val & (1UL << 63)) && isShiftedMask_64(Val)); }], MIMMFP> {
+  let PrintMethod = "printMImmOperand";
+}
+
 def simm32      : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 def uimm32      : PatLeaf<(imm), [{ return isUInt<32>(N->getZExtValue()); }]>;
 def lomsbzero   : PatLeaf<(imm), [{ return (N->getZExtValue() & 0x80000000)
@@ -144,6 +185,24 @@ def icond2cc : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
 }]>;
 
+def icond2ccSwap : SDNodeXForm<cond, [{
+  VECC::CondCode cc;
+  switch (N->get()) {
+  default:          llvm_unreachable("Unknown integer condition code!");
+  case ISD::SETEQ:  cc = VECC::CC_IEQ; break;
+  case ISD::SETNE:  cc = VECC::CC_INE; break;
+  case ISD::SETLT:  cc = VECC::CC_IG;  break;
+  case ISD::SETGT:  cc = VECC::CC_IL;  break;
+  case ISD::SETLE:  cc = VECC::CC_IGE; break;
+  case ISD::SETGE:  cc = VECC::CC_ILE; break;
+  case ISD::SETULT: cc = VECC::CC_IG;  break;
+  case ISD::SETULE: cc = VECC::CC_IGE; break;
+  case ISD::SETUGT: cc = VECC::CC_IL;  break;
+  case ISD::SETUGE: cc = VECC::CC_ILE; break;
+  }
+  return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
+}]>;
+
 def fcond2cc : SDNodeXForm<cond, [{
   VECC::CondCode cc;
   switch (N->get()) {
@@ -169,6 +228,36 @@ def fcond2cc : SDNodeXForm<cond, [{
   case ISD::SETUGT:   cc = VECC::CC_GNAN;  break;
   case ISD::SETULE:   cc = VECC::CC_LENAN; break;
   case ISD::SETUGE:   cc = VECC::CC_GENAN; break;
+  case ISD::SETTRUE:  cc = VECC::CC_AT;    break;
+  }
+  return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
+}]>;
+
+def fcond2ccSwap : SDNodeXForm<cond, [{
+  VECC::CondCode cc;
+  switch (N->get()) {
+  default:          llvm_unreachable("Unknown float condition code!");
+  case ISD::SETFALSE: cc = VECC::CC_AF;    break;
+  case ISD::SETEQ:
+  case ISD::SETOEQ:   cc = VECC::CC_EQ;    break;
+  case ISD::SETNE:
+  case ISD::SETONE:   cc = VECC::CC_NE;    break;
+  case ISD::SETLT:
+  case ISD::SETOLT:   cc = VECC::CC_G;     break;
+  case ISD::SETGT:
+  case ISD::SETOGT:   cc = VECC::CC_L;     break;
+  case ISD::SETLE:
+  case ISD::SETOLE:   cc = VECC::CC_GE;    break;
+  case ISD::SETGE:
+  case ISD::SETOGE:   cc = VECC::CC_LE;    break;
+  case ISD::SETO:     cc = VECC::CC_NUM;   break;
+  case ISD::SETUO:    cc = VECC::CC_NAN;   break;
+  case ISD::SETUEQ:   cc = VECC::CC_EQNAN; break;
+  case ISD::SETUNE:   cc = VECC::CC_NENAN; break;
+  case ISD::SETULT:   cc = VECC::CC_GNAN;  break;
+  case ISD::SETUGT:   cc = VECC::CC_LNAN;  break;
+  case ISD::SETULE:   cc = VECC::CC_GENAN; break;
+  case ISD::SETUGE:   cc = VECC::CC_LENAN; break;
   case ISD::SETTRUE:  cc = VECC::CC_AT;    break;
   }
   return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
@@ -211,6 +300,7 @@ def MEMASri : Operand<iPTR> {
 // ASX format:
 //    MEMrri, MEMrii, MEMzri, MEMzii
 // AS format:
+//    MEMriASX, MEMziASX    : simple AS format
 //    well be added later.
 
 def ADDRrri : ComplexPattern<iPTR, 3, "selectADDRrri", [frameindex], []>;
@@ -254,6 +344,26 @@ def MEMzii : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
   let MIOperandInfo = (ops i32imm /* = 0 */, i32imm, i32imm);
   let ParserMatchClass = VEMEMziiAsmOperand;
+}
+// AS assembly instrcution format:
+def VEMEMriAsmOperand : AsmOperandClass {
+  let Name = "MEMri";
+  let ParserMethod = "parseMEMAsOperand";
+}
+def VEMEMziAsmOperand : AsmOperandClass {
+  let Name = "MEMzi";
+  let ParserMethod = "parseMEMAsOperand";
+}
+// AS generic assembly instruction format:
+def MEMriASX : Operand<iPTR> {
+  let PrintMethod = "printMemASOperandASX";
+  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let ParserMatchClass = VEMEMriAsmOperand;
+}
+def MEMziASX : Operand<iPTR> {
+  let PrintMethod = "printMemASOperandASX";
+  let MIOperandInfo = (ops i32imm /* = 0 */, i32imm);
+  let ParserMatchClass = VEMEMziAsmOperand;
 }
 
 // Branch targets have OtherVT type.
@@ -357,94 +467,79 @@ def RD_RA    : RD_VAL<12>;  // Round to Nearest (ties to Away)
 // VE Multiclasses for common instruction formats
 //===----------------------------------------------------------------------===//
 
-multiclass RRmrr<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi,
-                 SDPatternOperator OpNode=null_frag> {
+// Multiclass for generic RR type instructions
+let hasSideEffects = 0 in
+multiclass RRbm<string opcStr, bits<8>opc,
+                RegisterClass RCo, ValueType Tyo,
+                RegisterClass RCi, ValueType Tyi,
+                SDPatternOperator OpNode = null_frag,
+                Operand immOp = simm7, Operand mOp = mimm> {
   def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>
-           { let cy = 1; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRmri<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp,
-                 SDPatternOperator OpNode=null_frag> {
+              [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>;
   // VE calculates (OpNode $sy, $sz), but llvm requires to have immediate
   // in RHS, so we use following definition.
+  let cy = 0 in
   def ri : RR<opc, (outs RCo:$sx), (ins RCi:$sz, immOp:$sy),
               !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode Tyi:$sz, (Tyi simm7:$sy)))]>
-           { let cy = 0; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRmir<string opcStr, bits<8>opc,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp,
-                 SDPatternOperator OpNode=null_frag> {
-  def ri : RR<opc, (outs RCo:$sx), (ins immOp:$sy, RCi:$sz),
-              !strconcat(opcStr, " $sx, $sy, $sz"),
-              [(set Tyo:$sx, (OpNode (Tyi simm7:$sy), Tyi:$sz))]>
-           { let cy = 0; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRNDmrm<string opcStr, bits<8>opc,
-                   RegisterClass RCo, ValueType Tyo,
-                   RegisterClass RCi, ValueType Tyi, Operand mOp,
-                   SDPatternOperator OpNode=null_frag> {
-  let cy = 1, cz = 0, hasSideEffects = 0 in
+              [(set Tyo:$sx, (OpNode Tyi:$sz, (Tyi immOp:$sy)))]>;
+  let cz = 0 in
   def rm : RR<opc, (outs RCo:$sx), (ins RCi:$sy, mOp:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
               [(set Tyo:$sx, (OpNode Tyi:$sy, (Tyi mOp:$sz)))]>;
-}
-
-multiclass RRNDmim<string opcStr, bits<8>opc,
-                   RegisterClass RCo, ValueType Tyo,
-                   RegisterClass RCi, ValueType Tyi,
-                   Operand immOp, Operand mOp,
-                   SDPatternOperator OpNode=null_frag> {
-  let cy = 0, cz = 0, hasSideEffects = 0 in
+  let cy = 0, cz = 0 in
   def im : RR<opc, (outs RCo:$sx), (ins immOp:$sy, mOp:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
               [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), (Tyi mOp:$sz)))]>;
 }
 
-// Used by add, mul, div, and similar commutative instructions
-//   The order of operands are "$sx, $sy, $sz"
+// Multiclass for non-commutative RR type instructions
+let hasSideEffects = 0 in
+multiclass RRNCbm<string opcStr, bits<8>opc,
+                RegisterClass RCo, ValueType Tyo,
+                RegisterClass RCi, ValueType Tyi,
+                SDPatternOperator OpNode = null_frag,
+                Operand immOp = simm7, Operand mOp = mimm> {
+  def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>;
+  let cy = 0 in
+  def ir : RR<opc, (outs RCo:$sx), (ins immOp:$sy, RCi:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), Tyi:$sz))]>;
+  let cz = 0 in
+  def rm : RR<opc, (outs RCo:$sx), (ins RCi:$sy, mOp:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode Tyi:$sy, (Tyi mOp:$sz)))]>;
+  let cy = 0, cz = 0 in
+  def im : RR<opc, (outs RCo:$sx), (ins immOp:$sy, mOp:$sz),
+              !strconcat(opcStr, " $sx, $sy, $sz"),
+              [(set Tyo:$sx, (OpNode (Tyi immOp:$sy), (Tyi mOp:$sz)))]>;
+}
 
+// Generic RR multiclass with 2 arguments.
+//   e.g. ADDUL, ADDSWSX, ADDSWZX, and etc.
 multiclass RRm<string opcStr, bits<8>opc,
                RegisterClass RC, ValueType Ty,
                SDPatternOperator OpNode = null_frag,
                Operand immOp = simm7, Operand mOp = mimm> :
-  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
-  RRmri<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, OpNode>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, OpNode>;
+  RRbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
 
-// Used by sub, and similar not commutative instructions
-//   The order of operands are "$sx, $sy, $sz"
-
+// Generic RR multiclass for non-commutative instructions with 2 arguments.
+//   e.g. SUBUL, SUBUW, SUBSWSX, and etc.
 multiclass RRNCm<string opcStr, bits<8>opc,
-               RegisterClass RC, ValueType Ty,
-               SDPatternOperator OpNode = null_frag,
-               Operand immOp = simm7, Operand mOp = mimm> :
-  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
-  RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, OpNode>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, OpNode>;
+                 RegisterClass RC, ValueType Ty,
+                 SDPatternOperator OpNode = null_frag,
+                 Operand immOp = simm7, Operand mOp = mimm> :
+  RRNCbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
 
-// Used by fadd, fsub, and similar floating point instructions
-//   The order of operands are "$sx, $sy, $sz"
-
+// Generic RR multiclass for floating point instructions with 2 arguments.
+//   e.g. FADDD, FADDS, FSUBD, and etc.
 multiclass RRFm<string opcStr, bits<8>opc,
-               RegisterClass RC, ValueType Ty,
-               SDPatternOperator OpNode = null_frag,
-               Operand immOp = simm7, Operand mOp = mimm> :
-  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
-  RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, mOp, null_frag>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, mOp, null_frag>;
+                RegisterClass RC, ValueType Ty,
+                SDPatternOperator OpNode = null_frag,
+                Operand immOp = simm7fp, Operand mOp = mimmfp> :
+  RRNCbm<opcStr, opc, RC, Ty, RC, Ty, OpNode, immOp, mOp>;
 
 // Generic RR multiclass for shift instructions with 2 arguments.
 //   e.g. SLL, SRL, SLAWSX, and etc.
@@ -554,67 +649,62 @@ multiclass CVTm<string opcStr, bits<8> opc, RegisterClass RCo, ValueType Tyo,
              !strconcat(opcStr, " $sx, $sy")>;
 }
 
-// Branch multiclass
-let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in
-multiclass BCRm<string opcStr, string opcStrAt, bits<8> opc,
-                RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2> {
-  def rr : CF<
-    opc, (outs),
-    (ins CCOp:$cf, RC:$sy, RC:$sz, brtarget32:$imm32),
-    !strconcat(opcStr, " $sy, $sz, $imm32")> {
-    let cy = 1;
-    let cz = 1;
-    let hasSideEffects = 0;
-  }
-  def ir : CF<
-    opc, (outs),
-    (ins CCOp:$cf, immOp:$sy, RC:$sz, brtarget32:$imm32),
-    !strconcat(opcStr, " $sy, $sz, $imm32")> {
-    let cy = 0;
-    let cz = 1;
-    let hasSideEffects = 0;
-  }
-  def rm0 : CF<
-    opc, (outs), (ins CCOp:$cf, RC:$sy, immOp2:$sz, brtarget32:$imm32),
-    !strconcat(opcStr, " $sy, (${sz})0, $imm32"), []> {
-    let cy = 1;
-    let cz = 0;
-    let sz{6} = 1;
-    let hasSideEffects = 0;
-  }
-  def rm1 : CF<
-    opc, (outs), (ins CCOp:$cf, RC:$sy, immOp2:$sz, brtarget32:$imm32),
-    !strconcat(opcStr, " $sy, (${sz})1, $imm32"), []> {
-    let cy = 1;
-    let cz = 0;
-    let hasSideEffects = 0;
-  }
-  def im0 : CF<
-    opc, (outs), (ins CCOp:$cf, immOp:$sy, immOp2:$sz, brtarget32:$imm32),
-    !strconcat(opcStr, " $sy, (${sz})0, $imm32"), []> {
-    let cy = 0;
-    let cz = 0;
-    let sz{6} = 1;
-    let hasSideEffects = 0;
-  }
-  def im1 : CF<
-    opc, (outs), (ins CCOp:$cf, immOp:$sy, immOp2:$sz, brtarget32:$imm32),
-    !strconcat(opcStr, " $sy, (${sz})1, $imm32"), []> {
-    let cy = 0;
-    let cz = 0;
-    let hasSideEffects = 0;
-  }
-  def a : CF<
-    opc, (outs), (ins brtarget32:$imm32),
-    !strconcat(opcStrAt, " $imm32"), []> {
-    let cy = 0;
-    let sy = 0;
-    let cz = 0;
-    let sz = 0;
-    let cf = 15;  /* AT */
-    let isBarrier = 1;
-    let hasSideEffects = 0;
-  }
+// Multiclass for branch instructions
+//   e.g. BCFL, BCFW, BCFD, and etc.
+let isBranch = 1, isTerminator = 1, isIndirectBranch = 1, hasSideEffects = 0 in
+multiclass BCbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond,
+                  Operand ADDR> {
+  let bpf = 0 /* NONE */ in
+  def "" : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
+              !strconcat(opcStr, " ", cmpStr, "$addr")>;
+  let bpf = 2 /* NOT TaKEN */ in
+  def _nt : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
+               !strconcat(opcStr, ".nt ", cmpStr, "$addr")>;
+  let bpf = 3 /* TaKEN */ in
+  def _t : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
+              !strconcat(opcStr, ".t ", cmpStr, "$addr")>;
+}
+multiclass BCtgm<string opcStr, string cmpStr, bits<8> opc, dag cond> {
+  defm ri : BCbpfm<opcStr, cmpStr, opc, cond, MEMriASX>;
+  let cz = 0 in defm zi : BCbpfm<opcStr, cmpStr, opc, cond, MEMziASX>;
+}
+multiclass BCm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
+               RegisterClass RC, Operand immOp> {
+  let DecoderMethod = "DecodeBranchCondition" in
+  defm r : BCtgm<opcStr, "$comp, ", opc, (ins CCOp:$cond, RC:$comp)>;
+  let DecoderMethod = "DecodeBranchCondition", cy = 0 in
+  defm i : BCtgm<opcStr, "$comp, ", opc, (ins CCOp:$cond, immOp:$comp)>;
+  let DecoderMethod = "DecodeBranchConditionAlways", cy = 0, sy = 0,
+      cf = 15 /* AT */, isBarrier = 1 in
+  defm a : BCtgm<opcStrAt, "", opc, (ins)>;
+  let DecoderMethod = "DecodeBranchConditionAlways", cy = 0, sy = 0,
+      cf = 0 /* AF */ in
+  defm na : BCtgm<opcStrAf, "", opc, (ins)>;
+}
+
+// Multiclass for relative branch instructions
+//   e.g. BRCFL, BRCFW, BRCFD, and etc.
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
+multiclass BCRbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond> {
+  let bpf = 0 /* NONE */ in
+  def "" : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
+              !strconcat(opcStr, " ", cmpStr, "$imm32")>;
+  let bpf = 2 /* NOT TaKEN */ in
+  def _nt : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
+               !strconcat(opcStr, ".nt ", cmpStr, "$imm32")>;
+  let bpf = 3 /* TaKEN */ in
+  def _t : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
+              !strconcat(opcStr, ".t ", cmpStr, "$imm32")>;
+}
+multiclass BCRm<string opcStr, string opcStrAt, string opcStrAf, bits<8> opc,
+               RegisterClass RC, Operand immOp> {
+  defm rr : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, RC:$sy, RC:$sz)>;
+  let cy = 0 in
+  defm ir : BCRbpfm<opcStr, "$sy, $sz, ", opc, (ins CCOp:$cf, immOp:$sy, RC:$sz)>;
+  let cy = 0, sy = 0, cz = 0, sz = 0, cf = 15 /* AT */, isBarrier = 1 in
+  defm a : BCRbpfm<opcStrAt, "", opc, (ins)>;
+  let cy = 0, sy = 0, cz = 0, sz = 0, cf = 0 /* AF */ in
+  defm na : BCRbpfm<opcStrAf, "", opc, (ins)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -993,59 +1083,50 @@ defm CVTDS : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, fpextend>;
 
 // Section 8.7.17 - CVQ (Convert to Single-format)
 
-// Control-flow
+//-----------------------------------------------------------------------------
+// Section 8.8 - Branch instructions
+//-----------------------------------------------------------------------------
 
-// Jump instruction
-let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cy = 1, cz = 1,
-    isBranch = 1, isTerminator = 1, hasDelaySlot = 1, hasSideEffects = 0 in
-def BC : CF<
-    0x19, (outs), (ins CCOp:$cf, I64:$sy, brtarget32:$imm32),
-    "b.${cf}.l $sy, $imm32">;
+// Section 8.8.1 - BC (Branch on Codition)
+defm BCFL : BCm<"b${cond}.l", "b.l", "baf.l", 0x19, I64, simm7>;
 
-// Jump always instruction is treated as a special case of jump in order
-// to make finding unconditional jump easy.
-let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
-    cz = 1,
-    isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1,
-    hasDelaySlot = 1, isCodeGenOnly = 1, hasSideEffects = 0 in {
-def BAri : CF<
-    0x19, (outs), (ins MEMri:$addr),
-    "b.l $addr",
-    [(brind ADDRri:$addr)]>;
-}
+// Indirect branch aliases
+def : Pat<(brind I64:$reg), (BCFLari_t $reg, 0)>;
+def : Pat<(brind tblockaddress:$imm), (BCFLazi_t 0, $imm)>;
 
-// Jump never instruction is also a special case of jump.
-let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 0 /* AF */, cy = 1, sy = 0,
-    cz = 1,
-    isBranch = 1, isTerminator = 1, hasDelaySlot = 1, hasSideEffects = 0 in
-def BN : CF<
-    0x19, (outs), (ins brtarget32:$imm32),
-    "b.af.l $imm32">;
+// Return instruction is a special case of jump.
+let Uses = [SX10], bpf = 3 /* TAKEN */, cf = 15 /* AT */, cy = 0, sy = 0,
+    sz = 10 /* SX10 */, imm32 = 0, isReturn = 1, isTerminator = 1,
+    isBarrier = 1, isCodeGenOnly = 1, hasSideEffects = 0 in
+def RET : CF<0x19, (outs), (ins), "b.l.t (, %s10)", [(retflag)]>;
 
-// Return instruction is also a special case of jump.
-let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
-    cz = 1, sz = 0x10 /* SX10 */, imm32 = 0, Uses = [SX10],
-    isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
-    isCodeGenOnly = 1, hasSideEffects = 0 in
-def RET : CF<
-    0x19, (outs), (ins),
-    "b.l (,%lr)",
-    [(retflag)]>;
+// Section 8.8.2 - BCS (Branch on Condition Single)
+defm BCFW : BCm<"b${cond}.w", "b.w", "baf.w", 0x1B, I32, simm7>;
 
-// Branch and Save IC
+// Section 8.8.3 - BCF (Branch on Condition Floating Point)
+defm BCFD : BCm<"b${cond}.d", "b.d", "baf.d", 0x1C, I64, simm7fp>;
+let cx = 1 in
+defm BCFS : BCm<"b${cond}.s", "b.s", "baf.s", 0x1C, F32, simm7fp>;
 
-let cx = 0, cy = 0, cy = 0, cz = 1, hasSideEffects = 0 /* , Uses = [IC] */ in
-def BSIC : RM<0x08, (outs), (ins I64:$sx, I64:$sz), "bsic $sx, (, ${sz})">;
+// Section 8.8.4 - BCR (Branch on Condition Relative)
+let cx = 0, cx2 = 0 in
+defm BRCFL : BCRm<"br${cf}.l", "br.l", "braf.l", 0x18, I64, simm7>;
+let cx = 1, cx2 = 0 in
+defm BRCFW : BCRm<"br${cf}.w", "br.w", "braf.w", 0x18, I32, simm7>;
+let cx = 0, cx2 = 1 in
+defm BRCFD : BCRm<"br${cf}.d", "br.d", "braf.d", 0x18, I64, simm7fp>;
+let cx = 1, cx2 = 1 in
+defm BRCFS : BCRm<"br${cf}.s", "br.s", "braf.s", 0x18, F32, simm7fp>;
 
-// Branch instruction
-let cx = 0, cx2 = 0, bpf = 0 /* NONE */ in
-defm BCRL : BCRm<"br${cf}.l", "br.l", 0x18, I64, i64, simm7, uimm6>;
-let cx = 1, cx2 = 0, bpf = 0 /* NONE */ in
-defm BCRW : BCRm<"br${cf}.w", "br.w", 0x18, I32, i32, simm7, uimm6>;
-let cx = 0, cx2 = 1, bpf = 0 /* NONE */ in
-defm BCRD : BCRm<"br${cf}.d", "br.d", 0x18, I64, f64, simm7, uimm6>;
-let cx = 1, cx2 = 1, bpf = 0 /* NONE */ in
-defm BCRS : BCRm<"br${cf}.s", "br.s", 0x18, F32, f32, simm7, uimm6>;
+// Section 8.8.5 - BSIC (Branch and Save IC)
+let isCall = 1, hasSideEffects = 0, DecoderMethod = "DecodeCall" in
+defm BSIC : RMm<"bsic", 0x08, I64>;
+
+// Call instruction is a special case of BSIC.
+let Defs = [SX10], sx = 10 /* SX10 */, cy = 0, sy = 0, imm32 = 0,
+    isCall = 1, isCodeGenOnly = 1, hasSideEffects = 0 in
+def CALLr : RM<0x08, (outs), (ins I64:$sz, variable_ops),
+               "bsic %s10, (, $sz)", [(call i64:$sz)]>;
 
 let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
 let sy = 3 in
@@ -1067,23 +1148,6 @@ def SIC : RR<0x28, (outs I32:$sx), (ins), "sic $sx">;
 //===----------------------------------------------------------------------===//
 // Instructions for CodeGenOnly
 //===----------------------------------------------------------------------===//
-
-let isCodeGenOnly = 1 in {
-
-// Call instruction
-let Defs = [SX10], Uses = [SX11], hasDelaySlot = 1, isCall = 1, hasSideEffects = 0 in {
-let cx = 0, sx = 10, cy = 0, sy = 0, cz = 0, sz = 0 in
-def CALL : RM<
-    0x08, (outs), (ins calltarget:$imm32, variable_ops),
-    "bsic %lr, $imm32">;
-// use sz to represent a register
-let cx = 0, sx = 10, cy = 0, sy = 0, cz = 1, imm32 = 0 in
-def CALLr : RM<
-    0x08, (outs), (ins I64:$sz, variable_ops),
-    "bsic %lr, (,$sz)">;
-}
-
-}
 
 //===----------------------------------------------------------------------===//
 // Pattern Matchings
@@ -1257,28 +1321,38 @@ def : Pat<(add (VEhi texternalsym:$in1), (VElo texternalsym:$in2)),
           (LEASLrii (ANDrm (LEAzii 0, 0, texternalsym:$in2), !add(32, 64)), 0,
                     (texternalsym:$in1))>;
 
-// Calls
-def : Pat<(call tglobaladdr:$dst),
-          (CALL tglobaladdr:$dst)>;
-def : Pat<(call i64:$dst),
-          (CALLr i64:$dst)>;
-
 // Branches
-def : Pat<(br bb:$addr), (BCRLa bb:$addr)>;
+def : Pat<(br bb:$addr), (BRCFLa bb:$addr)>;
 
 // brcc
-def : Pat<(brcc CCSIOp:$cond, i32:$l, i32:$r, bb:$addr),
-          (BCRWrr (icond2cc $cond), $l, $r, bb:$addr)>;
-def : Pat<(brcc CCUIOp:$cond, i32:$l, i32:$r, bb:$addr),
-          (BCRWir (icond2cc $cond), 0, (CMPUWrr $r, $l), bb:$addr)>;
-def : Pat<(brcc CCSIOp:$cond, i64:$l, i64:$r, bb:$addr),
-          (BCRLrr (icond2cc $cond), $l, $r, bb:$addr)>;
-def : Pat<(brcc CCUIOp:$cond, i64:$l, i64:$r, bb:$addr),
-          (BCRLir (icond2cc $cond), 0, (CMPULrr $r, $l), bb:$addr)>;
-def : Pat<(brcc cond:$cond, f32:$l, f32:$r, bb:$addr),
-          (BCRSrr (fcond2cc $cond), $l, $r, bb:$addr)>;
-def : Pat<(brcc cond:$cond, f64:$l, f64:$r, bb:$addr),
-          (BCRDrr (fcond2cc $cond), $l, $r, bb:$addr)>;
+// integer brcc
+multiclass BRCCIm<ValueType ty, SDPatternOperator BrOpNode1,
+                 SDPatternOperator BrOpNode2,
+                 SDPatternOperator CmpOpNode1,
+                 SDPatternOperator CmpOpNode2> {
+  def : Pat<(brcc CCSIOp:$cond, ty:$l, simm7:$r, bb:$addr),
+            (BrOpNode2 (icond2ccSwap $cond), (LO7 $r), $l, bb:$addr)>;
+  def : Pat<(brcc CCSIOp:$cond, ty:$l, ty:$r, bb:$addr),
+            (BrOpNode1 (icond2cc $cond), $l, $r, bb:$addr)>;
+  def : Pat<(brcc CCUIOp:$cond, ty:$l, simm7:$r, bb:$addr),
+            (BrOpNode2 (icond2cc $cond), 0, (CmpOpNode2 (LO7 $r), $l),
+                       bb:$addr)>;
+  def : Pat<(brcc CCUIOp:$cond, ty:$l, ty:$r, bb:$addr),
+            (BrOpNode2 (icond2cc $cond), 0, (CmpOpNode1 $r, $l), bb:$addr)>;
+}
+defm : BRCCIm<i32, BRCFWrr, BRCFWir, CMPUWrr, CMPUWir>;
+defm : BRCCIm<i64, BRCFLrr, BRCFLir, CMPULrr, CMPULir>;
+
+// floating point brcc
+multiclass BRCCFm<ValueType ty, SDPatternOperator BrOpNode1,
+                 SDPatternOperator BrOpNode2> {
+  def : Pat<(brcc cond:$cond, ty:$l, simm7fp:$r, bb:$addr),
+            (BrOpNode2 (fcond2ccSwap $cond), (LO7FP $r), $l, bb:$addr)>;
+  def : Pat<(brcc cond:$cond, ty:$l, ty:$r, bb:$addr),
+            (BrOpNode1 (fcond2cc $cond), $l, $r, bb:$addr)>;
+}
+defm : BRCCFm<f32, BRCFSrr, BRCFSir>;
+defm : BRCCFm<f64, BRCFDrr, BRCFDir>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions

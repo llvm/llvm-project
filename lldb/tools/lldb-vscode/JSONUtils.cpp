@@ -9,9 +9,9 @@
 #include <algorithm>
 
 #include "llvm/ADT/Optional.h"
-
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
@@ -41,8 +41,8 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 
 // Gets a string from a JSON object using the key, or returns an empty string.
 llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key) {
-  if (auto value = obj.getString(key))
-    return GetAsString(*value);
+  if (llvm::Optional<llvm::StringRef> value = obj.getString(key))
+    return *value;
   return llvm::StringRef();
 }
 
@@ -114,13 +114,9 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
       strs.push_back(value.getAsString()->str());
       break;
     case llvm::json::Value::Number:
-    case llvm::json::Value::Boolean: {
-      std::string s;
-      llvm::raw_string_ostream strm(s);
-      strm << value;
-      strs.push_back(strm.str());
+    case llvm::json::Value::Boolean:
+      strs.push_back(llvm::to_string(value));
       break;
-    }
     case llvm::json::Value::Null:
     case llvm::json::Value::Object:
     case llvm::json::Value::Array:

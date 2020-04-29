@@ -327,7 +327,7 @@ public:
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args &&... args) {
     OperationState state(location, OpTy::getOperationName());
-    OpTy::build(this, state, std::forward<Args>(args)...);
+    OpTy::build(*this, state, std::forward<Args>(args)...);
     auto *op = createOperation(state);
     auto result = dyn_cast<OpTy>(op);
     assert(result && "builder didn't return the right type");
@@ -343,7 +343,7 @@ public:
     // Create the operation without using 'createOperation' as we don't want to
     // insert it yet.
     OperationState state(location, OpTy::getOperationName());
-    OpTy::build(this, state, std::forward<Args>(args)...);
+    OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 
     // Fold the operation. If successful destroy it, otherwise insert it.

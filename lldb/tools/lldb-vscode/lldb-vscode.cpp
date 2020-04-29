@@ -531,15 +531,14 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
-  const auto debuggerRoot = GetString(arguments, "debuggerRoot");
+  const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
   // the lldb-vscode binary to have its working directory set to that relative
   // root for the .o files in order to be able to load debug info.
-  if (!debuggerRoot.empty()) {
-    llvm::sys::fs::set_current_path(debuggerRoot.data());
-  }
+  if (!debuggerRoot.empty())
+    llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
   g_vsc.RunInitCommands();
@@ -1363,15 +1362,14 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
   auto launchCommands = GetStrings(arguments, "launchCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
-  const auto debuggerRoot = GetString(arguments, "debuggerRoot");
+  const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
   // the lldb-vscode binary to have its working directory set to that relative
   // root for the .o files in order to be able to load debug info.
-  if (!debuggerRoot.empty()) {
-    llvm::sys::fs::set_current_path(debuggerRoot.data());
-  }
+  if (!debuggerRoot.empty())
+    llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
