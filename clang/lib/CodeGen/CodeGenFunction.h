@@ -3982,6 +3982,9 @@ public:
   llvm::Value *EmitSVEPrefetchLoad(SVETypeFlags TypeFlags,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    unsigned BuiltinID);
+  llvm::Value *EmitSVEGatherPrefetch(SVETypeFlags TypeFlags,
+                                     SmallVectorImpl<llvm::Value *> &Ops,
+                                     unsigned IntID);
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
