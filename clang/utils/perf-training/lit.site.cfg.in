@@ -7,7 +7,7 @@ config.perf_helper_dir = "@CMAKE_CURRENT_SOURCE_DIR@"
 config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.test_source_root = "@CLANG_PGO_TRAINING_DATA@"
 config.target_triple = "@TARGET_TRIPLE@"
-config.python_exe = "@PYTHON_EXECUTABLE@"
+config.python_exe = "@Python3_EXECUTABLE@"
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
