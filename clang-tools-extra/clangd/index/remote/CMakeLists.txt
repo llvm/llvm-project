@@ -19,6 +19,9 @@ if (CLANGD_ENABLE_REMOTE)
     grpc++
     clangDaemon
     clangdSupport
+
+    DEPENDS
+    RemoteIndexProtos
     )
 
   add_subdirectory(marshalling)
