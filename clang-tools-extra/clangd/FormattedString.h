@@ -54,6 +54,10 @@ public:
   /// \p Preserve indicates the code span must be apparent even in plaintext.
   Paragraph &appendCode(llvm::StringRef Code, bool Preserve = false);
 
+  /// Ensure there is space between the surrounding chunks.
+  /// Has no effect at the beginning or end of a paragraph.
+  Paragraph &appendSpace();
+
 private:
   struct Chunk {
     enum {
@@ -63,6 +67,11 @@ private:
     // Preserve chunk markers in plaintext.
     bool Preserve = false;
     std::string Contents;
+    // Whether this chunk should be surrounded by whitespace.
+    // Consecutive SpaceAfter and SpaceBefore will be collapsed into one space.
+    // Code spans don't usually set this: their spaces belong "inside" the span.
+    bool SpaceBefore = false;
+    bool SpaceAfter = false;
   };
   std::vector<Chunk> Chunks;
 };
