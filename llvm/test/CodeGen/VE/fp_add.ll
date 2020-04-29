@@ -61,3 +61,21 @@ define double @func8(double %a) {
   %r = fadd double %a, 0x7FEFFFFFFFFFFFFF
   ret double %r
 }
+
+define float @fadds_imm(float %a) {
+; CHECK-LABEL: fadds_imm:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    fadd.s %s0, %s0, (2)1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fadd float %a, -2.e+00
+  ret float %r
+}
+
+define double @faddd_imm(double %a) {
+; CHECK-LABEL: faddd_imm:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    fadd.d %s0, %s0, (2)1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fadd double %a, -2.e+00
+  ret double %r
+}
