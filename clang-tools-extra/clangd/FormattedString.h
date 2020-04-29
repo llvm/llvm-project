@@ -46,10 +46,10 @@ public:
   void renderPlainText(llvm::raw_ostream &OS) const override;
 
   /// Append plain text to the end of the string.
-  Paragraph &appendText(std::string Text);
+  Paragraph &appendText(llvm::StringRef Text);
 
   /// Append inline code, this translates to the ` block in markdown.
-  Paragraph &appendCode(std::string Code);
+  Paragraph &appendCode(llvm::StringRef Code);
 
 private:
   struct Chunk {
