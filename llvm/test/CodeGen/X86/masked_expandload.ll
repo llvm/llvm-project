@@ -296,7 +296,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; SSE-LABEL: expandload_v8f64_v8i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    psllw $15, %xmm4
-; SSE-NEXT:    packsswb %xmm0, %xmm4
+; SSE-NEXT:    packsswb %xmm4, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    jne LBB2_1
@@ -365,7 +365,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; AVX1-LABEL: expandload_v8f64_v8i1:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    jne LBB2_1
@@ -446,7 +446,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; AVX2-LABEL: expandload_v8f64_v8i1:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm2, %xmm2
+; AVX2-NEXT:    vpacksswb %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne LBB2_1
@@ -2954,7 +2954,7 @@ define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> 
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pcmpeqw %xmm1, %xmm2
-; SSE-NEXT:    packsswb %xmm0, %xmm2
+; SSE-NEXT:    packsswb %xmm2, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    testb $1, %al
 ; SSE-NEXT:    jne LBB11_1
@@ -3024,7 +3024,7 @@ define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> 
 ; AVX1OR2:       ## %bb.0:
 ; AVX1OR2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1OR2-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpacksswb %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    jne LBB11_1
