@@ -11,7 +11,7 @@ define void @func() {
 ; CHECK-NEXT:    and %s12, %s12, (32)0
 ; CHECK-NEXT:    sic %s16
 ; CHECK-NEXT:    lea.sl %s12, function@plt_hi(%s16, %s12)
-; CHECK-NEXT:    bsic %lr, (,%s12)
+; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
 
   call void bitcast (void (...)* @function to void ()*)()
