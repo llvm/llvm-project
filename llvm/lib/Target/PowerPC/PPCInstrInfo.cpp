@@ -1452,17 +1452,6 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
   return false;
 }
 
-bool PPCInstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
-  if (!MI.isTerminator())
-    return false;
-
-  // Conditional branch is a special case.
-  if (MI.isBranch() && !MI.isBarrier())
-    return true;
-
-  return !isPredicated(MI);
-}
-
 bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                                         ArrayRef<MachineOperand> Pred) const {
   unsigned OpC = MI.getOpcode();

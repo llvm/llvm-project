@@ -1316,7 +1316,7 @@ public:
 
   /// Returns true if the instruction is a
   /// terminator instruction that has not been predicated.
-  virtual bool isUnpredicatedTerminator(const MachineInstr &MI) const;
+  bool isUnpredicatedTerminator(const MachineInstr &MI) const;
 
   /// Returns true if MI is an unconditional tail call.
   virtual bool isUnconditionalTailCall(const MachineInstr &MI) const {
