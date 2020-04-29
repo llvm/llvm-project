@@ -26,7 +26,8 @@ uint64_t InputSection::getFileOffset() const {
 }
 
 void InputSection::writeTo(uint8_t *buf) {
-  memcpy(buf, data.data(), data.size());
+  if (!data.empty())
+    memcpy(buf, data.data(), data.size());
 
   for (Reloc &r : relocs) {
     uint64_t va = 0;
