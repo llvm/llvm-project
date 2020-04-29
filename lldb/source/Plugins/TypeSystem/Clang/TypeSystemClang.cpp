@@ -1225,11 +1225,6 @@ void TypeSystemClang::SetOwningModule(clang::Decl *decl,
   decl->setFromASTFile();
   decl->setOwningModuleID(owning_module.GetValue());
   decl->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
-  if (auto *decl_ctx = llvm::dyn_cast<clang::DeclContext>(decl)) {
-    decl_ctx->setHasExternalVisibleStorage();
-    if (auto *ns = llvm::dyn_cast<NamespaceDecl>(decl_ctx))
-      ns->getPrimaryContext()->setMustBuildLookupTable();
-  }
 }
 
 OptionalClangModuleID
@@ -1806,6 +1801,11 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
 #ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(namespace_decl);
 #endif
+
+  // Note: namespaces can span multiple modules, so perhaps this isn't a good
+  // idea.
+  SetOwningModule(namespace_decl, owning_module);
+
   return namespace_decl;
 }
 

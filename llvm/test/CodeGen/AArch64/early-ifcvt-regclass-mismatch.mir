@@ -1,0 +1,171 @@
+# RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=early-ifcvt -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64-apple-ios13.3.0"
+  define hidden void @phi_operands_regclasses_different() #0 {
+  entry:
+    br i1 undef, label %if.then139.i, label %if.else142.i
+
+  if.then139.i:                                     ; preds = %entry
+    %0 = load double, double* undef, align 8
+    br label %if.end161.i
+
+  if.else142.i:                                     ; preds = %entry
+    %tobool154.i = icmp eq i8 undef, 0
+    br i1 %tobool154.i, label %if.then155.i, label %if.end161.i
+
+  if.then155.i:                                     ; preds = %if.else142.i
+    %add158.i = fadd double undef, 0.000000e+00
+    br label %if.end161.i
+
+  if.end161.i:                                      ; preds = %if.then155.i, %if.else142.i, %if.then139.i
+    %y2.0.i = phi double [ %0, %if.then139.i ], [ 0.000000e+00, %if.else142.i ], [ 0.000000e+00, %if.then155.i ]
+    %add169.i = fadd double 0.000000e+00, %y2.0.i
+    %1 = fmul double undef, %add169.i
+    %add174.i = fsub double undef, %1
+    %2 = call double @llvm.fabs.f64(double %add174.i) #2
+    %cmp.i516.i = fcmp olt double %2, 0x3BC79CA10C924223
+    br i1 %cmp.i516.i, label %if.then.i.i, label %if.end9.i.i
+
+  if.then.i.i:                                      ; preds = %if.end161.i
+    %3 = call double @llvm.fabs.f64(double undef) #2
+    unreachable
+
+  if.end9.i.i:                                      ; preds = %if.end161.i
+    ret void
+  }
+  declare double @llvm.fabs.f64(double) #1
+  declare void @llvm.stackprotector(i8*, i8**) #2
+
+  attributes #0 = { "target-cpu"="apple-a7" }
+  attributes #1 = { nounwind readnone speculatable willreturn }
+  attributes #2 = { nounwind }
+
+  !llvm.ident = !{!0}
+
+  !0 = !{!"clang"}
+
+...
+---
+name:            phi_operands_regclasses_different
+alignment:       4
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: gpr, preferred-register: '' }
+  - { id: 4, class: gpr64, preferred-register: '' }
+  - { id: 5, class: fpr, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: gpr64, preferred-register: '' }
+  - { id: 8, class: gpr64common, preferred-register: '' }
+  - { id: 9, class: gpr64, preferred-register: '' }
+  - { id: 10, class: fpr64, preferred-register: '' }
+  - { id: 11, class: fpr64, preferred-register: '' }
+  - { id: 12, class: fpr, preferred-register: '' }
+  - { id: 13, class: fpr64, preferred-register: '' }
+  - { id: 14, class: fpr, preferred-register: '' }
+  - { id: 15, class: gpr32, preferred-register: '' }
+  - { id: 16, class: _, preferred-register: '' }
+  - { id: 17, class: gpr32, preferred-register: '' }
+  - { id: 18, class: gpr32, preferred-register: '' }
+  - { id: 19, class: gpr32, preferred-register: '' }
+  - { id: 20, class: gpr, preferred-register: '' }
+  - { id: 21, class: fpr64, preferred-register: '' }
+  - { id: 22, class: fpr64, preferred-register: '' }
+  - { id: 23, class: fpr64, preferred-register: '' }
+  - { id: 24, class: fpr64, preferred-register: '' }
+  - { id: 25, class: fpr64, preferred-register: '' }
+  - { id: 26, class: fpr64, preferred-register: '' }
+  - { id: 27, class: fpr64, preferred-register: '' }
+  - { id: 28, class: gpr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; Here we check that we don't ifcvt to a CSEL that uses GPRs, because
+  ; some operands to the PHI have the fpr64 regclass.
+  ; CHECK-LABEL: name: phi_operands_regclasses_different
+  ; CHECK-NOT: CSELXr
+  bb.1.entry:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %0:gpr32 = IMPLICIT_DEF
+    %4:gpr64 = IMPLICIT_DEF
+    %8:gpr64common = IMPLICIT_DEF
+    TBNZW %0, 0, %bb.2
+    B %bb.3
+
+  bb.2.if.then139.i:
+    successors: %bb.5(0x80000000)
+
+    %7:gpr64 = LDRXui %8, 0 :: (load 8 from `double* undef`)
+    B %bb.5
+
+  bb.3.if.else142.i:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+
+    %26:fpr64 = FMOVD0
+    %19:gpr32 = COPY $wzr
+    CBNZW %19, %bb.5
+
+  bb.4.if.then155.i:
+    successors: %bb.5(0x80000000)
+
+    %27:fpr64 = FMOVD0
+
+  bb.5.if.end161.i:
+    successors: %bb.6(0x40000000), %bb.7(0x40000000)
+
+    %9:gpr64 = PHI %7, %bb.2, %26, %bb.3, %27, %bb.4
+    %21:fpr64 = COPY %9
+    %25:fpr64 = FMOVD0
+    %10:fpr64 = FADDDrr %25, %21
+    %22:fpr64 = COPY %4
+    %11:fpr64 = FMULDrr %22, %10
+    %23:fpr64 = COPY %4
+    %13:fpr64 = FABD64 %23, %11
+    %28:gpr64 = MOVi64imm 4307583784117748259
+    %24:fpr64 = COPY %28
+    FCMPDrr %13, %24, implicit-def $nzcv
+    %17:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
+    TBNZW %17, 0, %bb.6
+    B %bb.7
+
+  bb.6.if.then.i.i:
+    successors:
+
+
+  bb.7.if.end9.i.i:
+    RET_ReallyLR
+
+...

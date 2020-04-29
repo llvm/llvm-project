@@ -380,4 +380,32 @@ TEST_F(MemoryBufferTest, writeThroughFile) {
   ASSERT_EQ(16u, MB.getBufferSize());
   EXPECT_EQ("xxxxxxxxxxxxxxxx", MB.getBuffer());
 }
+
+TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
+  // Verify that `MemoryBuffer::getOpenFile` will use mmap when
+  // `RequiresNullTerminator = false`, `IsVolatile = true`, and the file is
+  // large enough to use mmap.
+  //
+  // This is done because Clang should use this mode to open module files, and
+  // falling back to malloc for them causes a huge memory usage increase.
+
+  int FD;
+  SmallString<64> TestPath;
+  ASSERT_NO_ERROR(sys::fs::createTemporaryFile(
+      "MemoryBufferTest_mmapVolatileNoNull", "temp", FD, TestPath));
+  FileRemover Cleanup(TestPath);
+  raw_fd_ostream OF(FD, true);
+  // Create a file large enough to mmap. A 32KiB file should be enough.
+  for (unsigned i = 0; i < 0x1000; ++i)
+    OF << "01234567";
+  OF.flush();
+
+  auto MBOrError = MemoryBuffer::getOpenFile(FD, TestPath,
+      /*FileSize=*/-1, /*RequiresNullTerminator=*/false, /*IsVolatile=*/true);
+  ASSERT_NO_ERROR(MBOrError.getError())
+  OwningBuffer MB = std::move(*MBOrError);
+  EXPECT_EQ(MB->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
+  EXPECT_EQ(MB->getBufferSize(), std::size_t(0x8000));
+  EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
+}
 }

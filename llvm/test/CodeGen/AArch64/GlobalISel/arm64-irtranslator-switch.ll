@@ -182,13 +182,13 @@ define i32 @jt_test(i32 %x) {
   ; CHECK:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[ZEXT]](s64)
   ; CHECK: bb.2.sw.bb:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   %11:_(s32) = nsw G_ADD [[COPY]], [[C2]]
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY]], [[C2]]
   ; CHECK:   G_BR %bb.4
   ; CHECK: bb.3.sw.bb1:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   %9:_(s32) = nsw G_MUL [[COPY]], [[C1]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[COPY]], [[C1]]
   ; CHECK: bb.4.return:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %9(s32), %bb.3, %11(s32), %bb.2, [[C3]](s32), %bb.1, [[C3]](s32), %bb.5
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[MUL]](s32), %bb.3, [[ADD]](s32), %bb.2, [[C3]](s32), %bb.1, [[C3]](s32), %bb.5
   ; CHECK:   $w0 = COPY [[PHI]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
 entry:
@@ -780,11 +780,11 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   successors: %bb.59(0x80000000)
   ; CHECK:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[C55]](s64), %bb.1, [[C56]](s64), %bb.2, [[C57]](s64), %bb.3, [[C58]](s64), %bb.4, [[C59]](s64), %bb.5, [[C60]](s64), %bb.6, [[C61]](s64), %bb.7, [[C62]](s64), %bb.8, [[C63]](s64), %bb.9, [[C64]](s64), %bb.10, [[C65]](s64), %bb.11, [[C66]](s64), %bb.12, [[C67]](s64), %bb.13, [[C68]](s64), %bb.14, [[C69]](s64), %bb.15, [[C70]](s64), %bb.16, [[C71]](s64), %bb.17, [[C72]](s64), %bb.18, [[C73]](s64), %bb.19, [[C74]](s64), %bb.20, [[C75]](s64), %bb.21, [[C76]](s64), %bb.22, [[C77]](s64), %bb.23, [[C78]](s64), %bb.24, [[C79]](s64), %bb.25, [[C80]](s64), %bb.26, [[C81]](s64), %bb.27, [[C82]](s64), %bb.28, [[C83]](s64), %bb.29, [[C84]](s64), %bb.30, [[C85]](s64), %bb.31, [[C86]](s64), %bb.32, [[C87]](s64), %bb.33, [[C88]](s64), %bb.34, [[C89]](s64), %bb.35, [[C90]](s64), %bb.36, [[C91]](s64), %bb.37, [[C92]](s64), %bb.38, [[C93]](s64), %bb.39, [[C94]](s64), %bb.40, [[C95]](s64), %bb.41, [[C96]](s64), %bb.42, [[C97]](s64), %bb.43, [[C98]](s64), %bb.44, [[C99]](s64), %bb.45, [[C100]](s64), %bb.46, [[C101]](s64), %bb.47, [[C102]](s64), %bb.48, [[C103]](s64), %bb.49, [[C104]](s64), %bb.50, [[C105]](s64), %bb.51, [[C106]](s64), %bb.52, [[C107]](s64), %bb.53, [[C108]](s64), %bb.54, [[C109]](s64), %bb.55
   ; CHECK:   [[C110:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[C110]], [[PHI]]
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
+  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[PHI]], [[C110]]
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
   ; CHECK:   [[C111:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[GEP]], [[C111]](s64)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[GEP1]](p0) :: (load 8 from %ir.tmp59)
+  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C111]](s64)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load 8 from %ir.tmp59)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x0 = COPY [[COPY]](p0)
   ; CHECK:   $x1 = COPY [[LOAD]](p0)
@@ -1319,13 +1319,13 @@ define i32 @range_test(i32 %x) {
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2.sw.bb:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   %12:_(s32) = nsw G_ADD [[COPY]], [[C3]]
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY]], [[C3]]
   ; CHECK:   G_BR %bb.4
   ; CHECK: bb.3.sw.bb1:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   %10:_(s32) = nsw G_MUL [[COPY]], [[C2]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[COPY]], [[C2]]
   ; CHECK: bb.4.return:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %10(s32), %bb.3, %12(s32), %bb.2, [[C4]](s32), %bb.5
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[MUL]](s32), %bb.3, [[ADD]](s32), %bb.2, [[C4]](s32), %bb.5
   ; CHECK:   $w0 = COPY [[PHI]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
 entry:
