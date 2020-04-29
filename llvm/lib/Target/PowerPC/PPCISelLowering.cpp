@@ -7232,20 +7232,24 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       unsigned Offset = 0;
       HandleRegLoc(VA.getLocReg(), Offset);
       Offset += PtrByteSize;
-      for (; Offset != StackSize; Offset += PtrByteSize) {
-        assert(I != End &&
-               "Expecting enough RegLocs to copy entire ByVal arg.");
-
-        if (!ArgLocs[I].isRegLoc())
-          report_fatal_error("Passing ByVals split between registers and stack "
-                             "not yet implemented.");
-
+      for (; Offset != StackSize && ArgLocs[I].isRegLoc();
+           Offset += PtrByteSize) {
         assert(ArgLocs[I].getValNo() == VA.getValNo() &&
-               "Expecting more RegLocs for ByVal argument.");
+               "RegLocs should be for ByVal argument.");
 
         const CCValAssign RL = ArgLocs[I++];
         HandleRegLoc(RL.getLocReg(), Offset);
       }
+
+      if (Offset != StackSize) {
+        assert(ArgLocs[I].getValNo() == VA.getValNo() &&
+               "Expected MemLoc for remaining bytes.");
+        assert(ArgLocs[I].isMemLoc() && "Expected MemLoc for remaining bytes.");
+        // Consume the MemLoc.The InVal has already been emitted, so nothing
+        // more needs to be done.
+        ++I;
+      }
+
       continue;
     }
 
