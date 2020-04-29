@@ -360,6 +360,80 @@ def AffineIfOp : Affine_Op<"if",
   let hasFolder = 1;
 }
 
+def AffineLoadOp : Affine_Op<"load", []> {
+  let summary = "affine load operation";
+  let description = [{
+    The "affine.load" op reads an element from a memref, where the index
+    for each memref dimension is an affine expression of loop induction
+    variables and symbols. The output of 'affine.load' is a new value with the
+    same type as the elements of the memref. An affine expression of loop IVs
+    and symbols must be specified for each dimension of the memref. The keyword
+    'symbol' can be used to indicate SSA identifiers which are symbolic.
+
+    Example 1:
+
+    ```mlir
+    %1 = affine.load %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>
+    ```
+
+    Example 2: Uses 'symbol' keyword for symbols '%n' and '%m'.
+
+    ```mlir
+    %1 = affine.load %0[%i0 + symbol(%n), %i1 + symbol(%m)] : memref<100x100xf32>
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyMemRef, "the reference to load from",
+      [MemRead]>:$memref,
+      Variadic<Index>:$indices);
+  let results = (outs AnyType:$result);
+
+  let builders = [
+    /// Builds an affine load op with the specified map and operands.
+    OpBuilder<"OpBuilder &builder, OperationState &result, AffineMap map, "
+                      "ValueRange operands">,
+    /// Builds an affine load op with an identity map and operands.
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value memref, "
+                      "ValueRange indices = {}">,
+    /// Builds an affine load op with the specified map and its operands.
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value memref, "
+                      "AffineMap map, ValueRange mapOperands">
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns the operand index of the memref.
+    unsigned getMemRefOperandIndex() { return 0; }
+
+    /// Get memref operand.
+    Value getMemRef() { return getOperand(getMemRefOperandIndex()); }
+    void setMemRef(Value value) { setOperand(getMemRefOperandIndex(), value); }
+    MemRefType getMemRefType() {
+      return getMemRef().getType().cast<MemRefType>();
+    }
+
+    /// Get affine map operands.
+    operand_range getMapOperands() { return llvm::drop_begin(getOperands(), 1); }
+
+    /// Returns the affine map used to index the memref for this operation.
+    AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
+    AffineMapAttr getAffineMapAttr() {
+      return getAttr(getMapAttrName()).cast<AffineMapAttr>();
+    }
+
+    /// Returns the AffineMapAttr associated with 'memref'.
+    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
+      assert(memref == getMemRef());
+      return {Identifier::get(getMapAttrName(), getContext()),
+              getAffineMapAttr()};
+    }
+
+    static StringRef getMapAttrName() { return "map"; }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+}
+
 class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
     Op<Affine_Dialect, mnemonic, traits> {
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
@@ -569,6 +643,81 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
     static StringRef getLocalityHintAttrName() { return "localityHint"; }
     static StringRef getIsWriteAttrName() { return "isWrite"; }
     static StringRef getIsDataCacheAttrName() { return "isDataCache"; }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+}
+
+def AffineStoreOp : Affine_Op<"store", []> {
+  let summary = "affine store operation";
+  let description = [{
+    The "affine.store" op writes an element to a memref, where the index
+    for each memref dimension is an affine expression of loop induction
+    variables and symbols. The 'affine.store' op stores a new value which is the
+    same type as the elements of the memref. An affine expression of loop IVs
+    and symbols must be specified for each dimension of the memref. The keyword
+    'symbol' can be used to indicate SSA identifiers which are symbolic.
+
+    Example 1:
+
+    ```mlir
+    affine.store %v0, %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>
+    ```
+
+    Example 2: Uses 'symbol' keyword for symbols '%n' and '%m'.
+
+    ```mlir
+    affine.store %v0, %0[%i0 + symbol(%n), %i1 + symbol(%m)] : memref<100x100xf32>
+    ```
+  }];
+  let arguments = (ins AnyType:$value,
+      Arg<AnyMemRef, "the reference to store to",
+      [MemWrite]>:$memref,
+      Variadic<Index>:$indices);
+
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+                      "Value valueToStore, Value memref, ValueRange indices">,
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+                      "Value valueToStore, Value memref, AffineMap map, "
+                      "ValueRange mapOperands">
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get value to be stored by store operation.
+    Value getValueToStore() { return getOperand(0); }
+
+    /// Returns the operand index of the memref.
+    unsigned getMemRefOperandIndex() { return 1; }
+
+    /// Get memref operand.
+    Value getMemRef() { return getOperand(getMemRefOperandIndex()); }
+    void setMemRef(Value value) { setOperand(getMemRefOperandIndex(), value); }
+
+    MemRefType getMemRefType() {
+      return getMemRef().getType().cast<MemRefType>();
+    }
+
+    /// Get affine map operands.
+    operand_range getMapOperands() { return llvm::drop_begin(getOperands(), 2); }
+
+    /// Returns the affine map used to index the memref for this operation.
+    AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
+    AffineMapAttr getAffineMapAttr() {
+      return getAttr(getMapAttrName()).cast<AffineMapAttr>();
+    }
+
+    /// Returns the AffineMapAttr associated with 'memref'.
+    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
+      assert(memref == getMemRef());
+      return {Identifier::get(getMapAttrName(), getContext()),
+              getAffineMapAttr()};
+    }
+
+    static StringRef getMapAttrName() { return "map"; }
   }];
 
   let hasCanonicalizer = 1;
