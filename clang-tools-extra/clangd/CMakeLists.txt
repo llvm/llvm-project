@@ -1,3 +1,5 @@
+add_subdirectory(support)
+
 # Configure the Features.inc file.
 if (NOT DEFINED CLANGD_BUILD_XPC)
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -25,19 +27,8 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-if(CLANG_BUILT_STANDALONE)
-  # needed to get HAVE_CXX_ATOMICS64_WITHOUT_LIB defined
-  include(CheckAtomic)
-endif()
-
-set(CLANGD_ATOMIC_LIB "")
-if(NOT HAVE_CXX_ATOMICS_WITHOUT_LIB OR NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
-  list(APPEND CLANGD_ATOMIC_LIB "atomic")
-endif()
-
 add_clang_library(clangDaemon
   AST.cpp
-  Cancellation.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
   CodeComplete.cpp
@@ -45,7 +36,6 @@ add_clang_library(clangDaemon
   CollectMacros.cpp
   CompileCommands.cpp
   Compiler.cpp
-  Context.cpp
   Diagnostics.cpp
   DraftStore.cpp
   ExpectedTypes.cpp
@@ -54,7 +44,6 @@ add_clang_library(clangDaemon
   FileDistance.cpp
   Format.cpp
   FS.cpp
-  FSProvider.cpp
   FormattedString.cpp
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
@@ -63,7 +52,6 @@ add_clang_library(clangDaemon
   Hover.cpp
   IncludeFixer.cpp
   JSONTransport.cpp
-  Logger.cpp
   PathMapping.cpp
   Protocol.cpp
   Quality.cpp
@@ -73,11 +61,8 @@ add_clang_library(clangDaemon
   Selection.cpp
   SemanticHighlighting.cpp
   SemanticSelection.cpp
-  Shutdown.cpp
   SourceCode.cpp
   QueryDriverDatabase.cpp
-  Threading.cpp
-  Trace.cpp
   TUScheduler.cpp
   URI.cpp
   XRefs.cpp
@@ -128,8 +113,7 @@ add_clang_library(clangDaemon
   clangToolingInclusions
   clangToolingRefactoring
   clangToolingSyntax
-  ${LLVM_PTHREAD_LIB}
-  ${CLANGD_ATOMIC_LIB}
+  clangdSupport
   ${ALL_CLANG_TIDY_CHECKS}
   )
 

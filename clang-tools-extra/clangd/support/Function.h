@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_FUNCTION_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_FUNCTION_H
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/Error.h"

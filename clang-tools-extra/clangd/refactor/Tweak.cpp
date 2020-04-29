@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Tweak.h"
-#include "Logger.h"
-#include "Path.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "support/Logger.h"
+#include "support/Path.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"

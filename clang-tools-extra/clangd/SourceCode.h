@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 
-#include "Context.h"
 #include "Protocol.h"
+#include "support/Context.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"

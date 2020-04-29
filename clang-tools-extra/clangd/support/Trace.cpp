@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Trace.h"
-#include "Context.h"
+#include "support/Trace.h"
+#include "support/Context.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"
@@ -149,10 +149,10 @@ private:
   void rawEvent(llvm::StringRef Phase,
                 const llvm::json::Object &Event) /*REQUIRES(Mu)*/ {
     // PID 0 represents the clangd process.
-    Out.object([&]{
+    Out.object([&] {
       Out.attribute("pid", 0);
       Out.attribute("ph", Phase);
-      for (const auto& KV : Event)
+      for (const auto &KV : Event)
         Out.attribute(KV.first, KV.second);
     });
   }
