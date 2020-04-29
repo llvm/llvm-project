@@ -1172,7 +1172,8 @@ struct PrivateMethodKey {
   bool IsClassMethod;
 };
 
-template <> struct llvm::DenseMapInfo<PrivateMethodKey> {
+namespace llvm {
+template <> struct DenseMapInfo<PrivateMethodKey> {
   using InterfaceInfo = DenseMapInfo<const ObjCInterfaceDecl *>;
   using SelectorInfo = DenseMapInfo<Selector>;
 
@@ -1199,6 +1200,7 @@ template <> struct llvm::DenseMapInfo<PrivateMethodKey> {
            LHS.IsClassMethod == RHS.IsClassMethod;
   }
 };
+} // end namespace llvm
 
 const ObjCMethodDecl *
 lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
