@@ -39,6 +39,7 @@ def _makeConfigTest(config):
   if not os.path.exists(sourceRoot):
     os.makedirs(sourceRoot)
   tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False)
+  tmp.close()
   pathInSuite = [os.path.relpath(tmp.name, sourceRoot)]
   class TestWrapper(lit.Test.Test):
     def __enter__(self):       return self
