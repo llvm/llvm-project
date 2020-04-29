@@ -89,7 +89,7 @@ public:
   llvm::Expected<lldb_private::StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) override;
 
-  std::string GetSDKPath(lldb_private::XcodeSDK sdk) override;
+  llvm::StringRef GetSDKPath(lldb_private::XcodeSDK sdk) override;
 
   static lldb_private::FileSpec GetXcodeContentsDirectory();
   static lldb_private::FileSpec GetXcodeDeveloperDirectory();
