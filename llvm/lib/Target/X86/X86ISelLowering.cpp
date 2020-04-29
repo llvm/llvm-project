@@ -46168,7 +46168,7 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   }
 
   if (CC == X86::COND_A) {
-    SDValue EFLAGS = Y->getOperand(1);
+    SDValue EFLAGS = Y.getOperand(1);
     // Try to convert COND_A into COND_B in an attempt to facilitate
     // materializing "setb reg".
     //
@@ -46181,10 +46181,41 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
       SDValue NewSub = DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS),
                                    EFLAGS.getNode()->getVTList(),
                                    EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
+      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
       return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                          DAG.getVTList(VT, MVT::i32), X,
                          DAG.getConstant(0, DL, VT), NewEFLAGS);
+    }
+  }
+
+  if (CC == X86::COND_AE) {
+    // X + SETAE --> sbb X, -1
+    // X - SETAE --> adc X, -1
+    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
+                       DAG.getVTList(VT, MVT::i32), X,
+                       DAG.getConstant(-1, DL, VT), Y.getOperand(1));
+  }
+
+  if (CC == X86::COND_BE) {
+    // X + SETBE --> sbb X, -1
+    // X - SETBE --> adc X, -1
+    SDValue EFLAGS = Y.getOperand(1);
+    // Try to convert COND_BE into COND_AE in an attempt to facilitate
+    // materializing "setae reg".
+    //
+    // Do not flip "e <= c", where "c" is a constant, because Cmp instruction
+    // cannot take an immediate as its first operand.
+    //
+    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      SDValue NewSub = DAG.getNode(
+          X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+          EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+      return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
+                         DAG.getVTList(VT, MVT::i32), X,
+                         DAG.getConstant(-1, DL, VT), NewEFLAGS);
     }
   }
 
