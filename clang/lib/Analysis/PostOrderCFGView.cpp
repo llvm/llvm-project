@@ -29,11 +29,12 @@ PostOrderCFGView::PostOrderCFGView(const CFG *cfg) {
   }
 }
 
-PostOrderCFGView *PostOrderCFGView::create(AnalysisDeclContext &ctx) {
+std::unique_ptr<PostOrderCFGView>
+PostOrderCFGView::create(AnalysisDeclContext &ctx) {
   const CFG *cfg = ctx.getCFG();
   if (!cfg)
     return nullptr;
-  return new PostOrderCFGView(cfg);
+  return std::make_unique<PostOrderCFGView>(cfg);
 }
 
 const void *PostOrderCFGView::getTag() { static int x; return &x; }
