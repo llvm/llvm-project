@@ -27,19 +27,19 @@
 // XA_INCLUDE2: "-Ifoo_dir"
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -gdwarf-4 -gdwarf-2 2>&1 | FileCheck --check-prefix=DWARF2 %s
-// DWARF2: "-debug-info-kind=limited" "-dwarf-version=2"
+// DWARF2: "-debug-info-kind=constructor" "-dwarf-version=2"
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -gdwarf-3 2>&1 | FileCheck --check-prefix=DWARF3 %s
-// DWARF3: "-debug-info-kind=limited" "-dwarf-version=3"
+// DWARF3: "-debug-info-kind=constructor" "-dwarf-version=3"
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -gdwarf-4 2>&1 | FileCheck --check-prefix=DWARF4 %s
-// DWARF4: "-debug-info-kind=limited" "-dwarf-version=4"
+// DWARF4: "-debug-info-kind=constructor" "-dwarf-version=4"
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -Xassembler -gdwarf-2 2>&1 | FileCheck --check-prefix=DWARF2XASSEMBLER %s
-// DWARF2XASSEMBLER: "-debug-info-kind=limited" "-dwarf-version=2"
+// DWARF2XASSEMBLER: "-debug-info-kind=constructor" "-dwarf-version=2"
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -Wa,-gdwarf-2 2>&1 | FileCheck --check-prefix=DWARF2WA %s
-// DWARF2WA: "-debug-info-kind=limited" "-dwarf-version=2"
+// DWARF2WA: "-debug-info-kind=constructor" "-dwarf-version=2"
 
 // A dwarf version number that driver can't parse is just stuffed in.
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -Wa,-gdwarf-huh 2>&1 | FileCheck --check-prefix=BOGODWARF %s
