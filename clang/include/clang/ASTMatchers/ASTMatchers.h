@@ -47,6 +47,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
@@ -548,52 +549,72 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
     templateTypeParmDecl;
 
-/// Matches public C++ declarations.
+/// Matches public C++ declarations and C++ base specifers that specify public
+/// inheritance.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   class C {
-///   public:    int a;
+///   public:    int a; // fieldDecl(isPublic()) matches 'a'
 ///   protected: int b;
 ///   private:   int c;
 ///   };
 /// \endcode
-/// fieldDecl(isPublic())
-///   matches 'int a;'
-AST_MATCHER(Decl, isPublic) {
-  return Node.getAccess() == AS_public;
+///
+/// \code
+///   class Base {};
+///   class Derived1 : public Base {}; // matches 'Base'
+///   struct Derived2 : Base {}; // matches 'Base'
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isPublic,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
+                                                        CXXBaseSpecifier)) {
+  return getAccessSpecifier(Node) == AS_public;
 }
 
-/// Matches protected C++ declarations.
+/// Matches protected C++ declarations and C++ base specifers that specify
+/// protected inheritance.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   class C {
 ///   public:    int a;
-///   protected: int b;
+///   protected: int b; // fieldDecl(isProtected()) matches 'b'
 ///   private:   int c;
 ///   };
 /// \endcode
-/// fieldDecl(isProtected())
-///   matches 'int b;'
-AST_MATCHER(Decl, isProtected) {
-  return Node.getAccess() == AS_protected;
+///
+/// \code
+///   class Base {};
+///   class Derived : protected Base {}; // matches 'Base'
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isProtected,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
+                                                        CXXBaseSpecifier)) {
+  return getAccessSpecifier(Node) == AS_protected;
 }
 
-/// Matches private C++ declarations.
+/// Matches private C++ declarations and C++ base specifers that specify private
+/// inheritance.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   class C {
 ///   public:    int a;
 ///   protected: int b;
-///   private:   int c;
+///   private:   int c; // fieldDecl(isPrivate()) matches 'c'
 ///   };
 /// \endcode
-/// fieldDecl(isPrivate())
-///   matches 'int c;'
-AST_MATCHER(Decl, isPrivate) {
-  return Node.getAccess() == AS_private;
+///
+/// \code
+///   struct Base {};
+///   struct Derived1 : private Base {}; // matches 'Base'
+///   class Derived2 : Base {}; // matches 'Base'
+/// \endcode
+AST_POLYMORPHIC_MATCHER(isPrivate,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl,
+                                                        CXXBaseSpecifier)) {
+  return getAccessSpecifier(Node) == AS_private;
 }
 
 /// Matches non-static data members that are bit-fields.
@@ -2839,6 +2860,26 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
   return Matcher<ObjCInterfaceDecl>(M).matches(*InterfaceDecl, Finder, Builder);
 }
 
+/// Matches C++ classes that have a direct or indirect base matching \p
+/// BaseSpecMatcher.
+///
+/// Example:
+/// matcher hasAnyBase(hasType(cxxRecordDecl(hasName("SpecialBase")))))
+/// \code
+///   class Foo;
+///   class Bar : Foo {};
+///   class Baz : Bar {};
+///   class SpecialBase;
+///   class Proxy : SpecialBase {};  // matches Proxy
+///   class IndirectlyDerived : Proxy {};  //matches IndirectlyDerived
+/// \endcode
+///
+// FIXME: Refactor this and isDerivedFrom to reuse implementation.
+AST_MATCHER_P(CXXRecordDecl, hasAnyBase, internal::Matcher<CXXBaseSpecifier>,
+              BaseSpecMatcher) {
+  return internal::matchesAnyBase(Node, BaseSpecMatcher, Finder, Builder);
+}
+
 /// Similar to \c isDerivedFrom(), but also matches classes that directly
 /// match \c Base.
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
@@ -3469,9 +3510,19 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 ///  class Y { friend class X; };
 /// \endcode
 ///
-/// Usable as: Matcher<Expr>, Matcher<ValueDecl>
+/// Example matches class Derived
+/// (matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
+/// \code
+/// class Base {};
+/// class Derived : Base {};
+/// \endcode
+///
+/// Usable as: Matcher<Expr>, Matcher<FriendDecl>, Matcher<ValueDecl>,
+/// Matcher<CXXBaseSpecifier>
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
-    hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl),
+    hasType,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl,
+                                    CXXBaseSpecifier),
     internal::Matcher<Decl>, InnerMatcher, 1) {
   QualType QT = internal::getUnderlyingType(Node);
   if (!QT.isNull())
@@ -5177,17 +5228,28 @@ AST_MATCHER_P(CXXMethodDecl, forEachOverridden,
   return Matched;
 }
 
-/// Matches if the given method declaration is virtual.
+/// Matches declarations of virtual methods and C++ base specifers that specify
+/// virtual inheritance.
 ///
-/// Given
+/// Example:
 /// \code
 ///   class A {
 ///    public:
-///     virtual void x();
+///     virtual void x(); // matches x
 ///   };
 /// \endcode
-///   matches A::x
-AST_MATCHER(CXXMethodDecl, isVirtual) {
+///
+/// Example:
+/// \code
+///   class Base {};
+///   class DirectlyDerived : virtual Base {}; // matches Base
+///   class IndirectlyDerived : DirectlyDerived, Base {}; // matches Base
+/// \endcode
+///
+/// Usable as: Matcher<CXXMethodDecl>, Matcher<CXXBaseSpecifier>
+AST_POLYMORPHIC_MATCHER(isVirtual,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(CXXMethodDecl,
+                                                        CXXBaseSpecifier)) {
   return Node.isVirtual();
 }
 
