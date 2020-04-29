@@ -328,8 +328,8 @@ private:
   uint32_t LastFlat[NUM_INST_CNTS] = {0};
   // wait_cnt scores for every vgpr.
   // Keep track of the VgprUB and SgprUB to make merge at join efficient.
-  int32_t VgprUB = 0;
-  int32_t SgprUB = 0;
+  int32_t VgprUB = -1;
+  int32_t SgprUB = -1;
   uint32_t VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
   // Wait cnt scores for every sgpr, only lgkmcnt is relevant.
   uint32_t SgprScores[SQ_MAX_PGM_SGPRS] = {0};
