@@ -287,11 +287,9 @@ foreach Index = 0-255 in {
 
 // AccVGPR registers
 foreach Index = 0-255 in {
-  def AGPR#Index :
-      SIReg <"a"#Index, Index>,
-      DwarfRegNum<[!add(Index, 3072), !add(Index, 2048)]> {
-    let HWEncoding{8} = 1;
-  }
+  defm AGPR#Index :
+      SIRegLoHi16 <"a"#Index, Index, 1, 1>,
+      DwarfRegNum<[!add(Index, 3072), !add(Index, 2048)]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -517,6 +515,13 @@ def VGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, VGPR_32, 255, 1, 16, "v">;
 
 // VGPR 1024-bit registers
 def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 255, 1, 32, "v">;
+
+def AGPR_LO16 : RegisterClass<"AMDGPU", Reg16Types.types, 16,
+                              (add (sequence "AGPR%u_LO16", 0, 255))> {
+  let isAllocatable = 0;
+  let Size = 16;
+  let GeneratePressureSet = 0;
+}
 
 // AccVGPR 32-bit registers
 def AGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
