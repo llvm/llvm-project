@@ -7609,15 +7609,14 @@ static llvm::ScalableVectorType *getSVEVectorForElementType(llvm::Type *EltTy) {
 // Reinterpret the input predicate so that it can be used to correctly isolate
 // the elements of the specified datatype.
 Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
-                                             llvm::VectorType *VTy) {
-  llvm::VectorType *RTy = llvm::VectorType::get(
-      IntegerType::get(getLLVMContext(), 1), VTy->getElementCount());
+                                             llvm::ScalableVectorType *VTy) {
+  auto *RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), VTy);
   if (Pred->getType() == RTy)
     return Pred;
 
   unsigned IntID;
   llvm::Type *IntrinsicTy;
-  switch (VTy->getNumElements()) {
+  switch (VTy->getMinNumElements()) {
   default:
     llvm_unreachable("unsupported element count!");
   case 2:
@@ -7742,6 +7741,39 @@ Value *CodeGenFunction::EmitSVEScatterStore(SVETypeFlags TypeFlags,
     Ops[3] = Builder.CreateMul(Ops[3], Scale);
   }
 
+  return Builder.CreateCall(F, Ops);
+}
+
+Value *CodeGenFunction::EmitSVEGatherPrefetch(SVETypeFlags TypeFlags,
+                                              SmallVectorImpl<Value *> &Ops,
+                                              unsigned IntID) {
+  // The gather prefetches are overloaded on the vector input - this can either
+  // be the vector of base addresses or vector of offsets.
+  auto *OverloadedTy = dyn_cast<llvm::ScalableVectorType>(Ops[1]->getType());
+  if (!OverloadedTy)
+    OverloadedTy = cast<llvm::ScalableVectorType>(Ops[2]->getType());
+
+  // Cast the predicate from svbool_t to the right number of elements.
+  Ops[0] = EmitSVEPredicateCast(Ops[0], OverloadedTy);
+
+  // vector + imm addressing modes
+  if (Ops[1]->getType()->isVectorTy()) {
+    if (Ops.size() == 3) {
+      // Pass 0 for 'vector+imm' when the index is omitted.
+      Ops.push_back(ConstantInt::get(Int64Ty, 0));
+
+      // The sv_prfop is the last operand in the builtin and IR intrinsic.
+      std::swap(Ops[2], Ops[3]);
+    } else {
+      // Index needs to be passed as scaled offset.
+      llvm::Type *MemEltTy = SVEBuiltinMemEltTy(TypeFlags);
+      unsigned BytesPerElt = MemEltTy->getPrimitiveSizeInBits() / 8;
+      Value *Scale = ConstantInt::get(Int64Ty, BytesPerElt);
+      Ops[2] = Builder.CreateMul(Ops[2], Scale);
+    }
+  }
+
+  Function *F = CGM.getIntrinsic(IntID, OverloadedTy);
   return Builder.CreateCall(F, Ops);
 }
 
@@ -7904,6 +7936,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return EmitSVEScatterStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isPrefetch())
     return EmitSVEPrefetchLoad(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isGatherPrefetch())
+    return EmitSVEGatherPrefetch(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);
@@ -7948,7 +7982,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     // Predicate results must be converted to svbool_t.
     if (auto PredTy = dyn_cast<llvm::VectorType>(Call->getType()))
       if (PredTy->getScalarType()->isIntegerTy(1))
-        Call = EmitSVEPredicateCast(Call, cast<llvm::VectorType>(Ty));
+        Call = EmitSVEPredicateCast(Call, cast<llvm::ScalableVectorType>(Ty));
 
     return Call;
   }
@@ -7956,6 +7990,23 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return nullptr;
+
+  case SVE::BI__builtin_sve_svmov_b_z: {
+    // svmov_b_z(pg, op) <=> svand_b_z(pg, op, op)
+    SVETypeFlags TypeFlags(Builtin->TypeModifier);
+    llvm::Type* OverloadedTy = getSVEType(TypeFlags);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_and_z, OverloadedTy);
+    return Builder.CreateCall(F, {Ops[0], Ops[1], Ops[1]});
+  }
+
+  case SVE::BI__builtin_sve_svnot_b_z: {
+    // svnot_b_z(pg, op) <=> sveor_b_z(pg, op, pg)
+    SVETypeFlags TypeFlags(Builtin->TypeModifier);
+    llvm::Type* OverloadedTy = getSVEType(TypeFlags);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_eor_z, OverloadedTy);
+    return Builder.CreateCall(F, {Ops[0], Ops[1], Ops[0]});
+  }
+
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
 

@@ -9,6 +9,7 @@
 #ifndef TEST_OPS
 #define TEST_OPS
 
+include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -196,6 +197,15 @@ def I64EnumAttrOp : TEST_Op<"i64_enum_attr"> {
   let results = (outs I32:$val);
 }
 
+def SomeStructAttr : StructAttr<"SomeStructAttr", Test_Dialect, [
+  StructFieldAttr<"some_field", I64Attr>,
+  StructFieldAttr<"some_other_field", I64Attr>
+]> {}
+
+def StructAttrOp : TEST_Op<"struct_attr"> {
+  let arguments = (ins SomeStructAttr:$the_struct_attr);
+  let results = (outs);
+}
 
 def IntAttrOp : TEST_Op<"int_attrs"> {
   let arguments = (ins
@@ -1124,6 +1134,17 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins Index);
+  let regions = (region SizedRegion<1>:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
+def PolyhedralScopeOp : TEST_Op<"polyhedral_scope", [PolyhedralScope]> {
+  let summary =  "polyhedral scope operation";
+  let description = [{
+    Test op that defines a new polyhedral scope.
+  }];
+
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(p, *this); }];

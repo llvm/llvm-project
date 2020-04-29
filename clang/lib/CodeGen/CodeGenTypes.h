@@ -75,7 +75,7 @@ class CodeGenTypes {
   llvm::DenseMap<const ObjCInterfaceType*, llvm::Type *> InterfaceTypes;
 
   /// Maps clang struct type with corresponding record layout info.
-  llvm::DenseMap<const Type*, CGRecordLayout *> CGRecordLayouts;
+  llvm::DenseMap<const Type*, std::unique_ptr<CGRecordLayout>> CGRecordLayouts;
 
   /// Contains the LLVM IR type for any converted RecordDecl.
   llvm::DenseMap<const Type*, llvm::StructType *> RecordDeclTypes;
@@ -272,8 +272,8 @@ public:
                                                 RequiredArgs args);
 
   /// Compute a new LLVM record layout object for the given record.
-  CGRecordLayout *ComputeRecordLayout(const RecordDecl *D,
-                                      llvm::StructType *Ty);
+  std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,
+                                                      llvm::StructType *Ty);
 
   /// addRecordTypeName - Compute a name from the given record decl with an
   /// optional suffix and name the given LLVM type using it.

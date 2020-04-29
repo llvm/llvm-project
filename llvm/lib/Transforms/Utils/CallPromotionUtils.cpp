@@ -317,7 +317,7 @@ static CallBase &versionCallSite(CallBase &CB, Value *Callee,
   return *NewInst;
 }
 
-bool llvm::isLegalToPromote(CallBase &CB, Function *Callee,
+bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "xpc/Conversion.h"
-#include "Logger.h"
+#include "support/Logger.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <string>

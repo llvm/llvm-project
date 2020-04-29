@@ -324,9 +324,45 @@ private:
   void mergeInStatus(VectorizationSafetyStatus S);
 };
 
+class RuntimePointerChecking;
+/// A grouping of pointers. A single memcheck is required between
+/// two groups.
+struct RuntimeCheckingPtrGroup {
+  /// Create a new pointer checking group containing a single
+  /// pointer, with index \p Index in RtCheck.
+  RuntimeCheckingPtrGroup(unsigned Index, RuntimePointerChecking &RtCheck);
+
+  /// Tries to add the pointer recorded in RtCheck at index
+  /// \p Index to this pointer checking group. We can only add a pointer
+  /// to a checking group if we will still be able to get
+  /// the upper and lower bounds of the check. Returns true in case
+  /// of success, false otherwise.
+  bool addPointer(unsigned Index);
+
+  /// Constitutes the context of this pointer checking group. For each
+  /// pointer that is a member of this group we will retain the index
+  /// at which it appears in RtCheck.
+  RuntimePointerChecking &RtCheck;
+  /// The SCEV expression which represents the upper bound of all the
+  /// pointers in this group.
+  const SCEV *High;
+  /// The SCEV expression which represents the lower bound of all the
+  /// pointers in this group.
+  const SCEV *Low;
+  /// Indices of all the pointers that constitute this grouping.
+  SmallVector<unsigned, 2> Members;
+};
+
+/// A memcheck which made up of a pair of grouped pointers.
+typedef std::pair<const RuntimeCheckingPtrGroup *,
+                  const RuntimeCheckingPtrGroup *>
+    RuntimePointerCheck;
+
 /// Holds information about the memory runtime legality checks to verify
 /// that a group of pointers do not overlap.
 class RuntimePointerChecking {
+  friend struct RuntimeCheckingPtrGroup;
+
 public:
   struct PointerInfo {
     /// Holds the pointer value that we need to check.
@@ -376,59 +412,20 @@ public:
   /// No run-time memory checking is necessary.
   bool empty() const { return Pointers.empty(); }
 
-  /// A grouping of pointers. A single memcheck is required between
-  /// two groups.
-  struct CheckingPtrGroup {
-    /// Create a new pointer checking group containing a single
-    /// pointer, with index \p Index in RtCheck.
-    CheckingPtrGroup(unsigned Index, RuntimePointerChecking &RtCheck)
-        : RtCheck(RtCheck), High(RtCheck.Pointers[Index].End),
-          Low(RtCheck.Pointers[Index].Start) {
-      Members.push_back(Index);
-    }
-
-    /// Tries to add the pointer recorded in RtCheck at index
-    /// \p Index to this pointer checking group. We can only add a pointer
-    /// to a checking group if we will still be able to get
-    /// the upper and lower bounds of the check. Returns true in case
-    /// of success, false otherwise.
-    bool addPointer(unsigned Index);
-
-    /// Constitutes the context of this pointer checking group. For each
-    /// pointer that is a member of this group we will retain the index
-    /// at which it appears in RtCheck.
-    RuntimePointerChecking &RtCheck;
-    /// The SCEV expression which represents the upper bound of all the
-    /// pointers in this group.
-    const SCEV *High;
-    /// The SCEV expression which represents the lower bound of all the
-    /// pointers in this group.
-    const SCEV *Low;
-    /// Indices of all the pointers that constitute this grouping.
-    SmallVector<unsigned, 2> Members;
-  };
-
-  /// A memcheck which made up of a pair of grouped pointers.
-  ///
-  /// These *have* to be const for now, since checks are generated from
-  /// CheckingPtrGroups in LAI::addRuntimeChecks which is a const member
-  /// function.  FIXME: once check-generation is moved inside this class (after
-  /// the PtrPartition hack is removed), we could drop const.
-  typedef std::pair<const CheckingPtrGroup *, const CheckingPtrGroup *>
-      PointerCheck;
-
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
   void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
                       bool UseDependencies);
 
   /// Returns the checks that generateChecks created.
-  const SmallVector<PointerCheck, 4> &getChecks() const { return Checks; }
+  const SmallVector<RuntimePointerCheck, 4> &getChecks() const {
+    return Checks;
+  }
 
   /// Decide if we need to add a check between two groups of pointers,
   /// according to needsChecking.
-  bool needsChecking(const CheckingPtrGroup &M,
-                     const CheckingPtrGroup &N) const;
+  bool needsChecking(const RuntimeCheckingPtrGroup &M,
+                     const RuntimeCheckingPtrGroup &N) const;
 
   /// Returns the number of run-time checks required according to
   /// needsChecking.
@@ -438,7 +435,8 @@ public:
   void print(raw_ostream &OS, unsigned Depth = 0) const;
 
   /// Print \p Checks.
-  void printChecks(raw_ostream &OS, const SmallVectorImpl<PointerCheck> &Checks,
+  void printChecks(raw_ostream &OS,
+                   const SmallVectorImpl<RuntimePointerCheck> &Checks,
                    unsigned Depth = 0) const;
 
   /// This flag indicates if we need to add the runtime check.
@@ -448,7 +446,7 @@ public:
   SmallVector<PointerInfo, 2> Pointers;
 
   /// Holds a partitioning of pointers into "check groups".
-  SmallVector<CheckingPtrGroup, 2> CheckingGroups;
+  SmallVector<RuntimeCheckingPtrGroup, 2> CheckingGroups;
 
   /// Check if pointers are in the same partition
   ///
@@ -476,15 +474,14 @@ private:
                    bool UseDependencies);
 
   /// Generate the checks and return them.
-  SmallVector<PointerCheck, 4>
-  generateChecks() const;
+  SmallVector<RuntimePointerCheck, 4> generateChecks() const;
 
   /// Holds a pointer to the ScalarEvolution analysis.
   ScalarEvolution *SE;
 
   /// Set of run-time checks required to establish independence of
   /// otherwise may-aliasing pointers in the loop.
-  SmallVector<PointerCheck, 4> Checks;
+  SmallVector<RuntimePointerCheck, 4> Checks;
 };
 
 /// Drive the analysis of memory accesses in the loop
@@ -557,10 +554,9 @@ public:
   /// Returns a pair of instructions where the first element is the first
   /// instruction generated in possibly a sequence of instructions and the
   /// second value is the final comparator value or NULL if no check is needed.
-  std::pair<Instruction *, Instruction *>
-  addRuntimeChecks(Instruction *Loc,
-                   const SmallVectorImpl<RuntimePointerChecking::PointerCheck>
-                       &PointerChecks) const;
+  std::pair<Instruction *, Instruction *> addRuntimeChecks(
+      Instruction *Loc,
+      const SmallVectorImpl<RuntimePointerCheck> &PointerChecks) const;
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.

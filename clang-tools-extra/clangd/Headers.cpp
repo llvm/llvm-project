@@ -8,8 +8,8 @@
 
 #include "Headers.h"
 #include "Compiler.h"
-#include "Logger.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"

@@ -176,8 +176,6 @@ entry:
   ret void
 }
 
-declare void @test_byval_mem3(i32, float, %struct_S57* byval(%struct_S57) align 1)
-
 ; CHECK-LABEL:    name: call_test_byval_mem3
 
 ; Confirm the expected memcpy call is independent of the call to test_byval_mem3.
@@ -236,6 +234,53 @@ declare void @test_byval_mem3(i32, float, %struct_S57* byval(%struct_S57) align 
 ; ASM64BIT:       bl .test_byval_mem3
 ; ASM64BIT:       addi 1, 1, 128
 
+define void @test_byval_mem3(i32, float, %struct_S57* byval(%struct_S57) align 1 %s) {
+entry:
+  ret void
+}
+
+
+;CHECK-LABEL:  name:            test_byval_mem3
+
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 32, size: 60, alignment: 16, stack-id: default,
+
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   liveins: $r5, $r6, $r7, $r8, $r9, $r10
+
+; 32BIT-DAG:    %2:gprc = COPY $r5
+; 32BIT-DAG:    %3:gprc = COPY $r6
+; 32BIT-DAG:    %4:gprc = COPY $r7
+; 32BIT-DAG:    %5:gprc = COPY $r8
+; 32BIT-DAG:    %6:gprc = COPY $r9
+; 32BIT-DAG:    %7:gprc = COPY $r10
+; 32BIT-NEXT:   STW %2, 0, %fixed-stack.0 :: (store 4 into %fixed-stack.0
+; 32BIT-DAG:    STW %3, 4, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 4
+; 32BIT-DAG:    STW %4, 8, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 8
+; 32BIT-DAG:    STW %5, 12, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 12
+; 32BIT-DAG:    STW %6, 16, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 16
+; 32BIT-DAG:    STW %7, 20, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 20
+; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT:   - { id: 0, type: default, offset: 64, size: 64, alignment: 16, stack-id: default,
+
+; 64BIT:      bb.0.entry
+; 64BIT-NEXT:   liveins: $x5, $x6, $x7, $x8, $x9, $x10
+
+; 64BIT-DAG:    %2:g8rc = COPY $x5
+; 64BIT-DAG:    %3:g8rc = COPY $x6
+; 64BIT-DAG:    %4:g8rc = COPY $x7
+; 64BIT-DAG:    %5:g8rc = COPY $x8
+; 64BIT-DAG:    %6:g8rc = COPY $x9
+; 64BIT-DAG:    %7:g8rc = COPY $x10
+; 64BIT-NEXT:   STD %2, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
+; 64BIT-DAG:    STD %3, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8)
+; 64BIT-DAG:    STD %4, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16, align 16)
+; 64BIT-DAG:    STD %5, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24)
+; 64BIT-DAG:    STD %6, 32, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 32, align 16)
+; 64BIT-DAG:    STD %7, 40, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 40)
+; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
 
 %struct_S31 = type { [31 x i8] }
 
@@ -247,7 +292,6 @@ entry:
   ret void
 }
 
-declare void @test_byval_mem4(i32, %struct_S31* byval(%struct_S31) align 1, %struct_S256* byval(%struct_S256) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_mem4
 
@@ -340,3 +384,58 @@ declare void @test_byval_mem4(i32, %struct_S31* byval(%struct_S31) align 1, %str
 ; ASM64BIT-DAG:   ld 10, 16([[REG1]])
 ; ASM64BIT:       bl .test_byval_mem4
 ; ASM64BIT:       addi 1, 1, 352
+
+define void @test_byval_mem4(i32, %struct_S31* byval(%struct_S31) align 1, %struct_S256* byval(%struct_S256) align 1 %s) {
+entry:
+  ret void
+}
+
+; CHECK-LABEL:    name:            test_byval_mem4
+
+; 32BIT:          fixedStack:
+; 32BIT:            - { id: 0, type: default, offset: 60, size: 256, alignment: 4, stack-id: default,
+; 32BIT:            - { id: 1, type: default, offset: 28, size: 32, alignment: 4, stack-id: default,
+; 32BIT:          stack:           []
+
+; 32BIT:          bb.0.entry:
+; 32BIT-NEXT:       liveins: $r4, $r5, $r6, $r7, $r8, $r9, $r10
+
+; 32BIT-DAG:      %1:gprc = COPY $r4
+; 32BIT-DAG:      %2:gprc = COPY $r5
+; 32BIT-DAG:      %3:gprc = COPY $r6
+; 32BIT-DAG:      %4:gprc = COPY $r7
+; 32BIT-DAG:      %5:gprc = COPY $r8
+; 32BIT-DAG:      %6:gprc = COPY $r9
+; 32BIT-DAG:      %7:gprc = COPY $r10
+; 32BIT-NEXT:     STW %1, 0, %fixed-stack.1 :: (store 4 into %fixed-stack.1
+; 32BIT-DAG:      STW %2, 4, %fixed-stack.1 :: (store 4 into %fixed-stack.1 + 4
+; 32BIT-DAG:      STW %3, 8, %fixed-stack.1 :: (store 4 into %fixed-stack.1 + 8
+; 32BIT-DAG:      STW %4, 12, %fixed-stack.1 :: (store 4 into %fixed-stack.1 + 12
+; 32BIT-DAG:      STW %5, 16, %fixed-stack.1 :: (store 4 into %fixed-stack.1 + 16
+; 32BIT-DAG:      STW %6, 20, %fixed-stack.1 :: (store 4 into %fixed-stack.1 + 20
+; 32BIT-DAG:      STW %7, 24, %fixed-stack.1 :: (store 4 into %fixed-stack.1 + 24
+; 32BIT-NEXT:     BLR implicit $lr, implicit $rm
+
+; 64BIT:          fixedStack:
+; 64BIT:            - { id: 0, type: default, offset: 88, size: 256, alignment: 8, stack-id: default,
+; 64BIT:            - { id: 1, type: default, offset: 56, size: 32, alignment: 8, stack-id: default,
+; 64BIT:          stack:           []
+
+; 64BIT:          bb.0.entry:
+; 64BIT-NEXT:       liveins: $x4, $x5, $x6, $x7, $x8, $x9, $x10
+
+; 64BIT-DAG:      %1:g8rc = COPY $x4
+; 64BIT-DAG:      %2:g8rc = COPY $x5
+; 64BIT-DAG:      %3:g8rc = COPY $x6
+; 64BIT-DAG:      %4:g8rc = COPY $x7
+; 64BIT-DAG:      %5:g8rc = COPY $x8
+; 64BIT-DAG:      %6:g8rc = COPY $x9
+; 64BIT-DAG:      %7:g8rc = COPY $x10
+; 64BIT-NEXT:     STD %1, 0, %fixed-stack.1 :: (store 8 into %fixed-stack.1
+; 64BIT-DAG:      STD %2, 8, %fixed-stack.1 :: (store 8 into %fixed-stack.1 + 8
+; 64BIT-DAG:      STD %3, 16, %fixed-stack.1 :: (store 8 into %fixed-stack.1 + 16
+; 64BIT-DAG:      STD %4, 24, %fixed-stack.1 :: (store 8 into %fixed-stack.1 + 24
+; 64BIT-DAG:      STD %5, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0
+; 64BIT-DAG:      STD %6, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
+; 64BIT-DAG:      STD %7, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16
+; 64BIT-NEXT:     BLR8 implicit $lr8, implicit $rm

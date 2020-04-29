@@ -173,6 +173,9 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : stringTableSection(stringTableSection) {
   segname = segment_names::linkEdit;
   name = section_names::symbolTable;
+  // TODO: When we introduce the SyntheticSections superclass, we should make
+  // all synthetic sections aligned to WordSize by default.
+  align = WordSize;
 }
 
 size_t SymtabSection::getSize() const {

@@ -606,6 +606,12 @@ void SVEType::applyModifier(char Mod) {
     Float = true;
     ElementBitwidth = 64;
     break;
+  case 'Q':
+    Constant = true;
+    Pointer = true;
+    Void = true;
+    NumVectors = 0;
+    break;
   case 'S':
     Constant = true;
     Pointer = true;

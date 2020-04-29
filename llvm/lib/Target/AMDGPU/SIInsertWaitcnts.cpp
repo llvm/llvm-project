@@ -32,6 +32,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -57,7 +58,6 @@
 #include <cstring>
 #include <memory>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -116,8 +116,6 @@ struct {
   uint32_t ExpcntMax;
   uint32_t LgkmcntMax;
   uint32_t VscntMax;
-  int32_t NumVGPRsMax;
-  int32_t NumSGPRsMax;
 } HardwareLimits;
 
 struct {
@@ -195,10 +193,7 @@ void addWait(AMDGPU::Waitcnt &Wait, InstCounterType T, unsigned Count) {
 // "s_waitcnt 0" before use.
 class WaitcntBrackets {
 public:
-  WaitcntBrackets(const GCNSubtarget *SubTarget) : ST(SubTarget) {
-    for (auto T : inst_counter_types())
-      memset(VgprScores[T], 0, sizeof(VgprScores[T]));
-  }
+  WaitcntBrackets(const GCNSubtarget *SubTarget) : ST(SubTarget) {}
 
   static uint32_t getWaitCountMax(InstCounterType T) {
     switch (T) {
@@ -218,15 +213,11 @@ public:
 
   uint32_t getScoreLB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
-    if (T >= NUM_INST_CNTS)
-      return 0;
     return ScoreLBs[T];
   }
 
   uint32_t getScoreUB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
-    if (T >= NUM_INST_CNTS)
-      return 0;
     return ScoreUBs[T];
   }
 
@@ -250,25 +241,12 @@ public:
     return SgprScores[GprNo - NUM_ALL_VGPRS];
   }
 
-  void clear() {
-    memset(ScoreLBs, 0, sizeof(ScoreLBs));
-    memset(ScoreUBs, 0, sizeof(ScoreUBs));
-    PendingEvents = 0;
-    memset(MixedPendingEvents, 0, sizeof(MixedPendingEvents));
-    for (auto T : inst_counter_types())
-      memset(VgprScores[T], 0, sizeof(VgprScores[T]));
-    memset(SgprScores, 0, sizeof(SgprScores));
-  }
-
   bool merge(const WaitcntBrackets &Other);
 
   RegInterval getRegInterval(const MachineInstr *MI, const SIInstrInfo *TII,
                              const MachineRegisterInfo *MRI,
                              const SIRegisterInfo *TRI, unsigned OpNo,
                              bool Def) const;
-
-  int32_t getMaxVGPR() const { return VgprUB; }
-  int32_t getMaxSGPR() const { return SgprUB; }
 
   bool counterOutOfOrder(InstCounterType T) const;
   bool simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
@@ -313,15 +291,11 @@ private:
 
   void setScoreLB(InstCounterType T, uint32_t Val) {
     assert(T < NUM_INST_CNTS);
-    if (T >= NUM_INST_CNTS)
-      return;
     ScoreLBs[T] = Val;
   }
 
   void setScoreUB(InstCounterType T, uint32_t Val) {
     assert(T < NUM_INST_CNTS);
-    if (T >= NUM_INST_CNTS)
-      return;
     ScoreUBs[T] = Val;
     if (T == EXP_CNT) {
       uint32_t UB = ScoreUBs[T] - getWaitCountMax(EXP_CNT);
@@ -332,15 +306,11 @@ private:
 
   void setRegScore(int GprNo, InstCounterType T, uint32_t Val) {
     if (GprNo < NUM_ALL_VGPRS) {
-      if (GprNo > VgprUB) {
-        VgprUB = GprNo;
-      }
+      VgprUB = std::max(VgprUB, GprNo);
       VgprScores[T][GprNo] = Val;
     } else {
       assert(T == LGKM_CNT);
-      if (GprNo - NUM_ALL_VGPRS > SgprUB) {
-        SgprUB = GprNo - NUM_ALL_VGPRS;
-      }
+      SgprUB = std::max(SgprUB, GprNo - NUM_ALL_VGPRS);
       SgprScores[GprNo - NUM_ALL_VGPRS] = Val;
     }
   }
@@ -360,7 +330,7 @@ private:
   // Keep track of the VgprUB and SgprUB to make merge at join efficient.
   int32_t VgprUB = 0;
   int32_t SgprUB = 0;
-  uint32_t VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS];
+  uint32_t VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
   // Wait cnt scores for every sgpr, only lgkmcnt is relevant.
   uint32_t SgprScores[SQ_MAX_PGM_SGPRS] = {0};
 };
@@ -385,8 +355,7 @@ private:
     explicit BlockInfo(MachineBasicBlock *MBB) : MBB(MBB) {}
   };
 
-  std::vector<BlockInfo> BlockInfos; // by reverse post-order traversal index
-  DenseMap<MachineBasicBlock *, unsigned> RpotIdxMap;
+  MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
   // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
   // because of amdgpu-waitcnt-forcezero flag
@@ -475,27 +444,25 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   assert(!Op.getSubReg() || !Op.isUndef());
 
   RegInterval Result;
-  const MachineRegisterInfo &MRIA = *MRI;
 
   unsigned Reg = TRI->getEncodingValue(Op.getReg());
 
-  if (TRI->isVGPR(MRIA, Op.getReg())) {
+  if (TRI->isVGPR(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.VGPR0 && Reg <= RegisterEncoding.VGPRL);
     Result.first = Reg - RegisterEncoding.VGPR0;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(MRIA, Op.getReg())) {
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
     Result.first = Reg - RegisterEncoding.SGPR0 + NUM_ALL_VGPRS;
     assert(Result.first >= NUM_ALL_VGPRS &&
            Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
   }
   // TODO: Handle TTMP
-  // else if (TRI->isTTMP(MRIA, Reg.getReg())) ...
+  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
   else
     return {-1, -1};
 
-  const MachineInstr &MIA = *MI;
-  const TargetRegisterClass *RC = TII->getOpRegClass(MIA, OpNo);
+  const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
   unsigned Size = TRI->getRegSizeInBits(*RC);
   Result.second = Result.first + (Size / 32);
 
@@ -508,10 +475,7 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
                                   const MachineRegisterInfo *MRI, unsigned OpNo,
                                   uint32_t Val) {
   RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo, false);
-  LLVM_DEBUG({
-    const MachineOperand &Opnd = MI->getOperand(OpNo);
-    assert(TRI->isVGPR(*MRI, Opnd.getReg()));
-  });
+  assert(TRI->isVGPR(*MRI, MI->getOperand(OpNo).getReg()));
   for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
   }
@@ -521,7 +485,6 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
                                     WaitEventType E, MachineInstr &Inst) {
-  const MachineRegisterInfo &MRIA = *MRI;
   InstCounterType T = eventCounter(E);
   uint32_t CurrScore = getScoreUB(T) + 1;
   if (CurrScore == 0)
@@ -574,7 +537,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
         for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
           const MachineOperand &Op = Inst.getOperand(I);
-          if (Op.isReg() && !Op.isDef() && TRI->isVGPR(MRIA, Op.getReg())) {
+          if (Op.isReg() && !Op.isDef() && TRI->isVGPR(*MRI, Op.getReg())) {
             setExpScore(&Inst, TII, TRI, MRI, I, CurrScore);
           }
         }
@@ -622,7 +585,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
           MachineOperand &DefMO = Inst.getOperand(I);
           if (DefMO.isReg() && DefMO.isDef() &&
-              TRI->isVGPR(MRIA, DefMO.getReg())) {
+              TRI->isVGPR(*MRI, DefMO.getReg())) {
             setRegScore(TRI->getEncodingValue(DefMO.getReg()), EXP_CNT,
                         CurrScore);
           }
@@ -630,7 +593,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
       for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
         MachineOperand &MO = Inst.getOperand(I);
-        if (MO.isReg() && !MO.isDef() && TRI->isVGPR(MRIA, MO.getReg())) {
+        if (MO.isReg() && !MO.isDef() && TRI->isVGPR(*MRI, MO.getReg())) {
           setExpScore(&Inst, TII, TRI, MRI, I, CurrScore);
         }
       }
@@ -689,7 +652,7 @@ void WaitcntBrackets::print(raw_ostream &OS) {
 
     if (LB < UB) {
       // Print vgpr scores.
-      for (int J = 0; J <= getMaxVGPR(); J++) {
+      for (int J = 0; J <= VgprUB; J++) {
         uint32_t RegScore = getRegScore(J, T);
         if (RegScore <= LB)
           continue;
@@ -702,7 +665,7 @@ void WaitcntBrackets::print(raw_ostream &OS) {
       }
       // Also need to print sgpr scores for lgkm_cnt.
       if (T == LGKM_CNT) {
-        for (int J = 0; J <= getMaxSGPR(); J++) {
+        for (int J = 0; J <= SgprUB; J++) {
           uint32_t RegScore = getRegScore(J + NUM_ALL_VGPRS, LGKM_CNT);
           if (RegScore <= LB)
             continue;
@@ -994,11 +957,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
-        const MachineRegisterInfo &MRIA = *MRI;
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, false);
         for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-          if (TRI->isVGPR(MRIA, Op.getReg())) {
+          if (TRI->isVGPR(*MRI, Op.getReg())) {
             // VM_CNT is only relevant to vgpr or LDS.
             ScoreBrackets.determineWait(
                 VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
@@ -1037,11 +999,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       }
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         MachineOperand &Def = MI.getOperand(I);
-        const MachineRegisterInfo &MRIA = *MRI;
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, true);
         for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-          if (TRI->isVGPR(MRIA, Def.getReg())) {
+          if (TRI->isVGPR(*MRI, Def.getReg())) {
             ScoreBrackets.determineWait(
                 VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
             ScoreBrackets.determineWait(
@@ -1320,6 +1281,9 @@ bool WaitcntBrackets::mergeScore(const MergeInfo &M, uint32_t &Score,
 bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   bool StrictDom = false;
 
+  VgprUB = std::max(VgprUB, Other.VgprUB);
+  SgprUB = std::max(SgprUB, Other.SgprUB);
+
   for (auto T : inst_counter_types()) {
     // Merge event flags for this counter
     const bool OldOutOfOrder = counterOutOfOrder(T);
@@ -1350,14 +1314,12 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
 
     bool RegStrictDom = false;
-    for (int J = 0, E = std::max(getMaxVGPR(), Other.getMaxVGPR()) + 1; J != E;
-         J++) {
+    for (int J = 0; J <= VgprUB; J++) {
       RegStrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
     }
 
     if (T == LGKM_CNT) {
-      for (int J = 0, E = std::max(getMaxSGPR(), Other.getMaxSGPR()) + 1;
-           J != E; J++) {
+      for (int J = 0; J <= SgprUB; J++) {
         RegStrictDom |= mergeScore(M, SgprScores[J], Other.SgprScores[J]);
       }
     }
@@ -1365,9 +1327,6 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     if (RegStrictDom && !OldOutOfOrder)
       StrictDom = true;
   }
-
-  VgprUB = std::max(getMaxVGPR(), Other.getMaxVGPR());
-  SgprUB = std::max(getMaxSGPR(), Other.getMaxSGPR());
 
   return StrictDom;
 }
@@ -1507,29 +1466,23 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   HardwareLimits.LgkmcntMax = AMDGPU::getLgkmcntBitMask(IV);
   HardwareLimits.VscntMax = ST->hasVscnt() ? 63 : 0;
 
-  HardwareLimits.NumVGPRsMax = ST->getAddressableNumVGPRs();
-  HardwareLimits.NumSGPRsMax = ST->getAddressableNumSGPRs();
-  assert(HardwareLimits.NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
-  assert(HardwareLimits.NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
+  unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
+  assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
+  assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
   RegisterEncoding.VGPR0 = TRI->getEncodingValue(AMDGPU::VGPR0);
-  RegisterEncoding.VGPRL =
-      RegisterEncoding.VGPR0 + HardwareLimits.NumVGPRsMax - 1;
+  RegisterEncoding.VGPRL = RegisterEncoding.VGPR0 + NumVGPRsMax - 1;
   RegisterEncoding.SGPR0 = TRI->getEncodingValue(AMDGPU::SGPR0);
-  RegisterEncoding.SGPRL =
-      RegisterEncoding.SGPR0 + HardwareLimits.NumSGPRsMax - 1;
+  RegisterEncoding.SGPRL = RegisterEncoding.SGPR0 + NumSGPRsMax - 1;
 
   TrackedWaitcntSet.clear();
-  RpotIdxMap.clear();
   BlockInfos.clear();
 
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
-  for (MachineBasicBlock *MBB :
-       ReversePostOrderTraversal<MachineFunction *>(&MF)) {
-    RpotIdxMap[MBB] = BlockInfos.size();
-    BlockInfos.emplace_back(MBB);
-  }
+  for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
+    BlockInfos.insert({MBB, BlockInfo(MBB)});
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Modified = false;
@@ -1537,11 +1490,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   do {
     Repeat = false;
 
-    for (BlockInfo &BI : BlockInfos) {
+    for (auto BII = BlockInfos.begin(), BIE = BlockInfos.end(); BII != BIE;
+         ++BII) {
+      BlockInfo &BI = BII->second;
       if (!BI.Dirty)
         continue;
-
-      unsigned Idx = std::distance(&*BlockInfos.begin(), &BI);
 
       if (BI.Incoming) {
         if (!Brackets)
@@ -1552,7 +1505,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
         if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(ST);
         else
-          Brackets->clear();
+          *Brackets = WaitcntBrackets(ST);
       }
 
       Modified |= insertWaitcntInBlock(MF, *BI.MBB, *Brackets);
@@ -1561,11 +1514,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       if (Brackets->hasPending()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
         for (MachineBasicBlock *Succ : BI.MBB->successors()) {
-          unsigned SuccIdx = RpotIdxMap[Succ];
-          BlockInfo &SuccBI = BlockInfos[SuccIdx];
+          auto SuccBII = BlockInfos.find(Succ);
+          BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {
             SuccBI.Dirty = true;
-            if (SuccIdx <= Idx)
+            if (SuccBII <= BII)
               Repeat = true;
             if (!MoveBracketsToSucc) {
               MoveBracketsToSucc = &SuccBI;
@@ -1574,7 +1527,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
             }
           } else if (SuccBI.Incoming->merge(*Brackets)) {
             SuccBI.Dirty = true;
-            if (SuccIdx <= Idx)
+            if (SuccBII <= BII)
               Repeat = true;
           }
         }

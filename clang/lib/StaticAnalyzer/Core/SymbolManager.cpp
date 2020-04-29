@@ -341,10 +341,6 @@ QualType SymbolRegionValue::getType() const {
   return R->getValueType();
 }
 
-SymbolManager::~SymbolManager() {
-  llvm::DeleteContainerSeconds(SymbolDependencies);
-}
-
 bool SymbolManager::canSymbolicate(QualType T) {
   T = T.getCanonicalType();
 
@@ -362,13 +358,9 @@ bool SymbolManager::canSymbolicate(QualType T) {
 
 void SymbolManager::addSymbolDependency(const SymbolRef Primary,
                                         const SymbolRef Dependent) {
-  SymbolDependTy::iterator I = SymbolDependencies.find(Primary);
-  SymbolRefSmallVectorTy *dependencies = nullptr;
-  if (I == SymbolDependencies.end()) {
-    dependencies = new SymbolRefSmallVectorTy();
-    SymbolDependencies[Primary] = dependencies;
-  } else {
-    dependencies = I->second;
+  auto &dependencies = SymbolDependencies[Primary];
+  if (!dependencies) {
+    dependencies = std::make_unique<SymbolRefSmallVectorTy>();
   }
   dependencies->push_back(Dependent);
 }
@@ -378,7 +370,7 @@ const SymbolRefSmallVectorTy *SymbolManager::getDependentSymbols(
   SymbolDependTy::const_iterator I = SymbolDependencies.find(Primary);
   if (I == SymbolDependencies.end())
     return nullptr;
-  return I->second;
+  return I->second.get();
 }
 
 void SymbolReaper::markDependentsLive(SymbolRef sym) {

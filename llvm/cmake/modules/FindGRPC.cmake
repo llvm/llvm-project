@@ -45,6 +45,7 @@ function(generate_grpc_protos LibraryName ProtoFile)
           "${ProtoSourceAbsolutePath}"
           DEPENDS "${ProtoSourceAbsolutePath}")
 
-  add_library(${LibraryName} ${GeneratedProtoSource} ${GeneratedGRPCSource})
-  target_link_libraries(${LibraryName} grpc++ protobuf)
+  add_clang_library(${LibraryName} ${GeneratedProtoSource} ${GeneratedGRPCSource}
+    PARTIAL_SOURCES_INTENDED
+    LINK_LIBS grpc++ protobuf)
 endfunction()

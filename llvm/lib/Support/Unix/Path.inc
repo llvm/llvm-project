@@ -1138,6 +1138,19 @@ bool home_directory(SmallVectorImpl<char> &result) {
   return true;
 }
 
+bool cache_directory(SmallVectorImpl<char> &result) {
+  if (const char *RequestedDir = getenv("XDG_CACHE_HOME")) {
+    result.clear();
+    result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
+    return true;
+  }
+  if (!home_directory(result)) {
+    return false;
+  }
+  append(result, ".cache");
+  return true;
+}
+
 static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {
   #if defined(_CS_DARWIN_USER_TEMP_DIR) && defined(_CS_DARWIN_USER_CACHE_DIR)
   // On Darwin, use DARWIN_USER_TEMP_DIR or DARWIN_USER_CACHE_DIR.

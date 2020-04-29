@@ -1046,7 +1046,7 @@ define <4 x i16> @trunc_usat_v4i64_v4i16(<4 x i64> %a0) {
 ; SSE41-NEXT:    por %xmm5, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm2
 ; SSE41-NEXT:    packusdw %xmm6, %xmm2
-; SSE41-NEXT:    packusdw %xmm0, %xmm2
+; SSE41-NEXT:    packusdw %xmm2, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1221,7 +1221,7 @@ define void @trunc_usat_v4i64_v4i16_store(<4 x i64> %a0, <4 x i16> *%p1) {
 ; SSE41-NEXT:    por %xmm5, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
 ; SSE41-NEXT:    packusdw %xmm6, %xmm3
-; SSE41-NEXT:    packusdw %xmm0, %xmm3
+; SSE41-NEXT:    packusdw %xmm3, %xmm3
 ; SSE41-NEXT:    movq %xmm3, (%rdi)
 ; SSE41-NEXT:    retq
 ;
@@ -2127,8 +2127,8 @@ define void @trunc_usat_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8>* %p1) {
 ; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
 ; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    packuswb %xmm0, %xmm2
-; SSE2-NEXT:    packuswb %xmm0, %xmm2
+; SSE2-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-NEXT:    packuswb %xmm2, %xmm2
 ; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
 ; SSE2-NEXT:    retq
@@ -2431,8 +2431,8 @@ define void @trunc_usat_v4i64_v4i8_store(<4 x i64> %a0, <4 x i8> *%p1) {
 ; SSE2-NEXT:    pand %xmm8, %xmm0
 ; SSE2-NEXT:    pand %xmm8, %xmm3
 ; SSE2-NEXT:    packuswb %xmm0, %xmm3
-; SSE2-NEXT:    packuswb %xmm0, %xmm3
-; SSE2-NEXT:    packuswb %xmm0, %xmm3
+; SSE2-NEXT:    packuswb %xmm3, %xmm3
+; SSE2-NEXT:    packuswb %xmm3, %xmm3
 ; SSE2-NEXT:    movd %xmm3, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -2767,7 +2767,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64>* %p0) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm2
 ; SSE41-NEXT:    packusdw %xmm4, %xmm2
 ; SSE41-NEXT:    packusdw %xmm2, %xmm1
-; SSE41-NEXT:    packuswb %xmm0, %xmm1
+; SSE41-NEXT:    packuswb %xmm1, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2903,7 +2903,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) {
 ; SSE2-NEXT:    por %xmm9, %xmm0
 ; SSE2-NEXT:    packuswb %xmm3, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm5
-; SSE2-NEXT:    packuswb %xmm0, %xmm5
+; SSE2-NEXT:    packuswb %xmm5, %xmm5
 ; SSE2-NEXT:    movq %xmm5, (%rsi)
 ; SSE2-NEXT:    retq
 ;
@@ -2970,7 +2970,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) {
 ; SSSE3-NEXT:    por %xmm9, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm3, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm0, %xmm5
-; SSSE3-NEXT:    packuswb %xmm0, %xmm5
+; SSSE3-NEXT:    packuswb %xmm5, %xmm5
 ; SSSE3-NEXT:    movq %xmm5, (%rsi)
 ; SSSE3-NEXT:    retq
 ;
@@ -3027,7 +3027,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm1
 ; SSE41-NEXT:    packusdw %xmm3, %xmm1
 ; SSE41-NEXT:    packusdw %xmm1, %xmm6
-; SSE41-NEXT:    packuswb %xmm0, %xmm6
+; SSE41-NEXT:    packuswb %xmm6, %xmm6
 ; SSE41-NEXT:    movq %xmm6, (%rsi)
 ; SSE41-NEXT:    retq
 ;
@@ -3698,8 +3698,8 @@ define void @trunc_usat_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm2
 ; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
-; SSE2-NEXT:    packuswb %xmm0, %xmm2
-; SSE2-NEXT:    packuswb %xmm0, %xmm2
+; SSE2-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-NEXT:    packuswb %xmm2, %xmm2
 ; SSE2-NEXT:    movd %xmm2, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -3907,7 +3907,7 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
 ; SSE2-NEXT:    pandn %xmm2, %xmm5
 ; SSE2-NEXT:    por %xmm0, %xmm5
 ; SSE2-NEXT:    packuswb %xmm6, %xmm5
-; SSE2-NEXT:    packuswb %xmm0, %xmm5
+; SSE2-NEXT:    packuswb %xmm5, %xmm5
 ; SSE2-NEXT:    movq %xmm5, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -3929,7 +3929,7 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
 ; SSSE3-NEXT:    pandn %xmm2, %xmm5
 ; SSSE3-NEXT:    por %xmm0, %xmm5
 ; SSSE3-NEXT:    packuswb %xmm6, %xmm5
-; SSSE3-NEXT:    packuswb %xmm0, %xmm5
+; SSSE3-NEXT:    packuswb %xmm5, %xmm5
 ; SSSE3-NEXT:    movq %xmm5, (%rdi)
 ; SSSE3-NEXT:    retq
 ;

@@ -5,8 +5,8 @@
 
 ptrdiff_t pdt;
 
-size_t st; // expected-error {{must be imported}}
-// expected-note@stddef.h:* {{previous}}
+size_t st; // expected-error {{missing '#include "include_again.h"'; 'size_t' must be declared before it is used}}
+// expected-note@stddef.h:* {{here}}
 
 #include "include_again.h"
 

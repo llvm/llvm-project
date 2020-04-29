@@ -26,6 +26,7 @@ add_entrypoint_library(
     libc.src.string.memcpy
     libc.src.string.strcpy
     libc.src.string.strcat
+    libc.src.string.strlen
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap

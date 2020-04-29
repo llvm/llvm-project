@@ -4,8 +4,8 @@
 
 #include "Protocol.h"
 #include "TestFS.h"
-#include "Threading.h"
 #include "Transport.h"
+#include "support/Threading.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <queue>

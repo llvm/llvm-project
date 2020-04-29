@@ -102,3 +102,76 @@ void test_svprfb_vnum(svbool_t pg, const void *base, int64_t vnum)
   // CHECK: @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> %pg, i8* %[[GEP]], i32 0)
   return svprfb_vnum(pg, base, vnum, SV_PLDL1KEEP);
 }
+
+void test_svprfb_gather_u32base(svbool_t pg, svuint32_t bases)
+{
+  // CHECK-LABEL: test_svprfb_gather_u32base
+  // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nxv4i32(<vscale x 4 x i1> %[[PG]], <vscale x 4 x i32> %bases, i64 0, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather,_u32base,,)(pg, bases, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_u64base(svbool_t pg, svuint64_t bases)
+{
+  // CHECK-LABEL: test_svprfb_gather_u64base
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nxv2i64(<vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 0, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather,_u64base,,)(pg, bases, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_s32offset(svbool_t pg, const void *base, svint32_t offsets)
+{
+  // CHECK-LABEL: test_svprfb_gather_s32offset
+  // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.sxtw.index.nxv4i32(<vscale x 4 x i1> %[[PG]], i8* %base, <vscale x 4 x i32> %offsets, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather_,s32,offset,)(pg, base, offsets, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_s64offset(svbool_t pg, const void *base, svint64_t offsets)
+{
+  // CHECK-LABEL: test_svprfb_gather_s64offset
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.index.nxv2i64(<vscale x 2 x i1> %[[PG]], i8* %base, <vscale x 2 x i64> %offsets, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather_,s64,offset,)(pg, base, offsets, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_u32offset(svbool_t pg, const void *base, svuint32_t offsets)
+{
+  // CHECK-LABEL: test_svprfb_gather_u32offset
+  // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.uxtw.index.nxv4i32(<vscale x 4 x i1> %[[PG]], i8* %base, <vscale x 4 x i32> %offsets, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather_,u32,offset,)(pg, base, offsets, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_u64offset(svbool_t pg, const void *base, svuint64_t offsets)
+{
+  // CHECK-LABEL: test_svprfb_gather_u64offset
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.index.nxv2i64(<vscale x 2 x i1> %[[PG]], i8* %base, <vscale x 2 x i64> %offsets, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather_,u64,offset,)(pg, base, offsets, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_u32base_offset(svbool_t pg, svuint32_t bases, int64_t offset)
+{
+  // CHECK-LABEL: test_svprfb_gather_u32base_offset
+  // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nxv4i32(<vscale x 4 x i1> %[[PG]], <vscale x 4 x i32> %bases, i64 %offset, i32 0)
+  // CHECK: ret void
+  return svprfb_gather_u32base_offset(pg, bases, offset, SV_PLDL1KEEP);
+  return SVE_ACLE_FUNC(svprfb_gather,_u32base,_offset,)(pg, bases, offset, SV_PLDL1KEEP);
+}
+
+void test_svprfb_gather_u64base_offset(svbool_t pg, svuint64_t bases, int64_t offset)
+{
+  // CHECK-LABEL: test_svprfb_gather_u64base_offset
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nxv2i64(<vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 %offset, i32 0)
+  // CHECK: ret void
+  return SVE_ACLE_FUNC(svprfb_gather,_u64base,_offset,)(pg, bases, offset, SV_PLDL1KEEP);
+}

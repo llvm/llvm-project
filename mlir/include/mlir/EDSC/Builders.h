@@ -72,19 +72,26 @@ private:
 
 template <typename Op>
 struct ValueBuilder {
-  // Builder-based
   template <typename... Args>
   ValueBuilder(Args... args) {
-    Operation *op = ScopedContext::getBuilder()
-                        .create<Op>(ScopedContext::getLocation(), args...)
-                        .getOperation();
-    if (op->getNumResults() != 1)
-      llvm_unreachable("unsupported operation, use OperationBuilder instead");
-    value = op->getResult(0);
+    value = ScopedContext::getBuilder()
+                .create<Op>(ScopedContext::getLocation(), args...)
+                .getResult();
   }
-
   operator Value() { return value; }
   Value value;
+};
+
+template <typename Op>
+struct OperationBuilder {
+  template <typename... Args>
+  OperationBuilder(Args... args) {
+    op = ScopedContext::getBuilder().create<Op>(ScopedContext::getLocation(),
+                                                args...);
+  }
+  operator Op() { return op; }
+  operator Operation *() { return op.getOperation(); }
+  Op op;
 };
 
 /// A NestedBuilder is a scoping abstraction to create an idiomatic syntax
@@ -168,15 +175,13 @@ public:
 private:
   LoopBuilder() = default;
 
-  friend LoopBuilder makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbHandles,
-                                           ArrayRef<Value> ubHandles,
-                                           int64_t step);
+  friend LoopBuilder makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
+                                           ArrayRef<Value> ubs, int64_t step);
   friend LoopBuilder makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
-                                             ArrayRef<Value> lbHandles,
-                                             ArrayRef<Value> ubHandles,
+                                             ArrayRef<Value> lbs,
+                                             ArrayRef<Value> ubs,
                                              ArrayRef<Value> steps);
-  friend LoopBuilder makeLoopBuilder(Value *iv, Value lbHandle, Value ubHandle,
-                                     Value stepHandle,
+  friend LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
                                      MutableArrayRef<Value> iterArgsHandles,
                                      ValueRange iterArgsInitValues);
   Operation *op;
@@ -229,52 +234,12 @@ private:
   BlockBuilder &operator=(BlockBuilder &other) = delete;
 };
 
-/// Base class for Value, OperationHandle and BlockHandle.
-/// Not meant to be used outside of these classes.
-class CapturableHandle {
-protected:
-  CapturableHandle() = default;
-};
-
-/// An OperationHandle can be used in lieu of Value to capture the
-/// operation in cases when one does not care about, or cannot extract, a
-/// unique Value from the operation.
-/// This can be used for capturing zero result operations as well as
-/// multi-result operations that are not supported by Value.
-/// We do not distinguish further between zero and multi-result operations at
-/// this time.
-struct OperationHandle : public CapturableHandle {
-  OperationHandle() : op(nullptr) {}
-  OperationHandle(Operation *op) : op(op) {}
-
-  OperationHandle(const OperationHandle &) = default;
-  OperationHandle &operator=(const OperationHandle &) = default;
-
-  /// Generic mlir::Op create. This is the key to being extensible to the whole
-  /// of MLIR without duplicating the type system or the op definitions.
-  template <typename Op, typename... Args>
-  static OperationHandle create(Args... args);
-  template <typename Op, typename... Args>
-  static Op createOp(Args... args);
-
-  /// Generic create for a named operation.
-  static OperationHandle create(StringRef name, ArrayRef<Value> operands,
-                                ArrayRef<Type> resultTypes,
-                                ArrayRef<NamedAttribute> attributes = {});
-
-  operator Operation *() { return op; }
-  Operation *getOperation() const { return op; }
-
-private:
-  Operation *op;
-};
-
 /// A BlockHandle represents a (potentially "delayed") Block abstraction.
 /// This extra abstraction is necessary because an mlir::Block is not an
 /// mlir::Value.
 /// A BlockHandle should be captured by pointer but otherwise passed by Value
 /// everywhere.
-class BlockHandle : public CapturableHandle {
+class BlockHandle {
 public:
   /// A BlockHandle constructed without an mlir::Block* represents a "delayed"
   /// Block. A delayed Block represents the declaration (in the PL sense) of a
@@ -361,22 +326,6 @@ private:
   SmallVector<AffineExpr, 4> exprs;
 };
 
-template <typename Op, typename... Args>
-OperationHandle OperationHandle::create(Args... args) {
-  return OperationHandle(ScopedContext::getBuilder()
-                             .create<Op>(ScopedContext::getLocation(), args...)
-                             .getOperation());
-}
-
-template <typename Op, typename... Args>
-Op OperationHandle::createOp(Args... args) {
-  return cast<Op>(
-      OperationHandle(ScopedContext::getBuilder()
-                          .create<Op>(ScopedContext::getLocation(), args...)
-                          .getOperation())
-          .getOperation());
-}
-
 /// A TemplatedIndexedValue brings an index notation over the template Load and
 /// Store parameters. Assigning to an IndexedValue emits an actual `Store`
 /// operation, while converting an IndexedValue to a Value emits an actual
@@ -404,10 +353,10 @@ public:
   }
 
   /// Emits a `store`.
-  OperationHandle operator=(const TemplatedIndexedValue &rhs) {
+  Store operator=(const TemplatedIndexedValue &rhs) {
     return Store(rhs, value, indices);
   }
-  OperationHandle operator=(Value rhs) { return Store(rhs, value, indices); }
+  Store operator=(Value rhs) { return Store(rhs, value, indices); }
 
   /// Emits a `load` when converting to a Value.
   operator Value() const { return Load(value, indices); }
@@ -441,28 +390,28 @@ public:
   }
 
   /// Assignment-arithmetic operator overloadings.
-  OperationHandle operator+=(Value e);
-  OperationHandle operator-=(Value e);
-  OperationHandle operator*=(Value e);
-  OperationHandle operator/=(Value e);
-  OperationHandle operator%=(Value e);
-  OperationHandle operator^=(Value e);
-  OperationHandle operator+=(TemplatedIndexedValue e) {
+  Store operator+=(Value e);
+  Store operator-=(Value e);
+  Store operator*=(Value e);
+  Store operator/=(Value e);
+  Store operator%=(Value e);
+  Store operator^=(Value e);
+  Store operator+=(TemplatedIndexedValue e) {
     return this->operator+=(static_cast<Value>(e));
   }
-  OperationHandle operator-=(TemplatedIndexedValue e) {
+  Store operator-=(TemplatedIndexedValue e) {
     return this->operator-=(static_cast<Value>(e));
   }
-  OperationHandle operator*=(TemplatedIndexedValue e) {
+  Store operator*=(TemplatedIndexedValue e) {
     return this->operator*=(static_cast<Value>(e));
   }
-  OperationHandle operator/=(TemplatedIndexedValue e) {
+  Store operator/=(TemplatedIndexedValue e) {
     return this->operator/=(static_cast<Value>(e));
   }
-  OperationHandle operator%=(TemplatedIndexedValue e) {
+  Store operator%=(TemplatedIndexedValue e) {
     return this->operator%=(static_cast<Value>(e));
   }
-  OperationHandle operator^=(TemplatedIndexedValue e) {
+  Store operator^=(TemplatedIndexedValue e) {
     return this->operator^=(static_cast<Value>(e));
   }
 

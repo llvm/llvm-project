@@ -101,9 +101,10 @@ public:
     return true;
   }
 
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract);
-  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value*> Args,
-            unsigned VF);
+  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                    bool Insert, bool Extract);
+  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                            unsigned VF);
   unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys);
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                  ArrayRef<Value *> Args, FastMathFlags FMF,

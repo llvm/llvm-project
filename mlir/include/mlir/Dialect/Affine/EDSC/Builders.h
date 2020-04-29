@@ -127,34 +127,34 @@ Value TemplatedIndexedValue<Load, Store>::operator^(Value e) {
 
 /// Assignment-arithmetic operator overloadings.
 template <typename Load, typename Store>
-OperationHandle TemplatedIndexedValue<Load, Store>::operator+=(Value e) {
+Store TemplatedIndexedValue<Load, Store>::operator+=(Value e) {
   using op::operator+;
-  return Store(*this + e, getBase(), {indices.begin(), indices.end()});
+  return Store(*this + e, getBase(), indices);
 }
 template <typename Load, typename Store>
-OperationHandle TemplatedIndexedValue<Load, Store>::operator-=(Value e) {
+Store TemplatedIndexedValue<Load, Store>::operator-=(Value e) {
   using op::operator-;
-  return Store(*this - e, getBase(), {indices.begin(), indices.end()});
+  return Store(*this - e, getBase(), indices);
 }
 template <typename Load, typename Store>
-OperationHandle TemplatedIndexedValue<Load, Store>::operator*=(Value e) {
+Store TemplatedIndexedValue<Load, Store>::operator*=(Value e) {
   using op::operator*;
-  return Store(*this * e, getBase(), {indices.begin(), indices.end()});
+  return Store(*this * e, getBase(), indices);
 }
 template <typename Load, typename Store>
-OperationHandle TemplatedIndexedValue<Load, Store>::operator/=(Value e) {
+Store TemplatedIndexedValue<Load, Store>::operator/=(Value e) {
   using op::operator/;
-  return Store(*this / e, getBase(), {indices.begin(), indices.end()});
+  return Store(*this / e, getBase(), indices);
 }
 template <typename Load, typename Store>
-OperationHandle TemplatedIndexedValue<Load, Store>::operator%=(Value e) {
+Store TemplatedIndexedValue<Load, Store>::operator%=(Value e) {
   using op::operator%;
-  return Store(*this % e, getBase(), {indices.begin(), indices.end()});
+  return Store(*this % e, getBase(), indices);
 }
 template <typename Load, typename Store>
-OperationHandle TemplatedIndexedValue<Load, Store>::operator^=(Value e) {
+Store TemplatedIndexedValue<Load, Store>::operator^=(Value e) {
   using op::operator^;
-  return Store(*this ^ e, getBase(), {indices.begin(), indices.end()});
+  return Store(*this ^ e, getBase(), indices);
 }
 
 /// Logical operator overloadings.

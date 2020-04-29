@@ -15,67 +15,55 @@
 #endif
 
 A pre_a;
-#ifdef IMPORT_USE_2
-// expected-error-re@-2 {{must be imported from one of {{.*}}stuff.use{{.*}}stuff.use-2}}
-#elif EARLY_INDIRECT_INCLUDE
-// expected-error@-4 {{must be imported from module 'merged-defs'}}
-#else
-// expected-error@-6 {{must be imported from module 'stuff.use'}}
-#endif
+// expected-error-re@-1 {{missing '#include "{{.*}}-defs.h"'; 'A' must be declared}}
 // expected-note@defs.h:1 +{{here}}
 extern class A pre_a2;
-int pre_use_a = use_a(pre_a2); // expected-error 2{{'A' must be imported}} expected-error {{'use_a' must be imported}}
+int pre_use_a = use_a(pre_a2); // expected-error 2{{'A' must be defined}} expected-error {{'use_a' must be declared}}
 // expected-note@defs.h:2 +{{here}}
 
-B::Inner2 pre_bi; // expected-error +{{must be imported}}
+B::Inner2 pre_bi; // expected-error +{{must be declared}} expected-error +{{must be defined}}
 // expected-note@defs.h:4 +{{here}}
 // expected-note@defs.h:17 +{{here}}
-void pre_bfi(B b) { // expected-error +{{must be imported}}
+void pre_bfi(B b) { // expected-error +{{must be declared}}
   b.f<int>();
 }
 
-C_Base<1> pre_cb1; // expected-error +{{must be imported}}
+C_Base<1> pre_cb1; // expected-error +{{must be declared}} expected-error +{{must be defined}}
 // expected-note@defs.h:23 +{{here}}
-C1 pre_c1; // expected-error +{{must be imported}}
+C1 pre_c1; // expected-error +{{must be declared}}
 // expected-note@defs.h:25 +{{here}}
-C2 pre_c2; // expected-error +{{must be imported}}
+C2 pre_c2; // expected-error +{{must be declared}}
 // expected-note@defs.h:26 +{{here}}
 
-D::X pre_dx; // expected-error +{{must be imported}}
+D::X pre_dx; // expected-error +{{must be declared}} expected-error +{{must be defined}}
 // expected-note@defs.h:28 +{{here}}
 // expected-note@defs.h:29 +{{here}}
 int pre_use_dx = use_dx(pre_dx); // ignored; pre_dx is invalid
 
-int pre_e = E(0); // expected-error {{must be imported}}
+int pre_e = E(0); // expected-error {{must be declared}}
 // expected-note@defs.h:32 +{{here}}
 
-int pre_ff = F<int>().f(); // expected-error +{{must be imported}}
-int pre_fg = F<int>().g<int>(); // expected-error +{{must be imported}}
+int pre_ff = F<int>().f(); // expected-error +{{must be declared}}
+int pre_fg = F<int>().g<int>(); // expected-error +{{must be declared}}
 // expected-note@defs.h:34 +{{here}}
 
-G::A pre_ga // expected-error +{{must be imported}}
-  = G::a; // expected-error +{{must be imported}}
+G::A pre_ga // expected-error +{{must be declared}}
+  = G::a; // expected-error +{{must be declared}}
 // expected-note@defs.h:49 +{{here}}
 // expected-note@defs.h:50 +{{here}}
-decltype(G::h) pre_gh = G::h; // expected-error +{{must be imported}}
+decltype(G::h) pre_gh = G::h; // expected-error +{{must be declared}} expected-error +{{must be defined}}
 // expected-note@defs.h:51 +{{here}}
 
-int pre_h = H(); // expected-error +{{must be imported}}
+int pre_h = H(); // expected-error +{{must be declared}}
 // expected-note@defs.h:56 +{{here}}
-using pre_i = I<>; // expected-error +{{must be imported}}
+using pre_i = I<>; // expected-error +{{must be declared}} expected-error +{{default argument of 'I' must be defined}}
 // expected-note@defs.h:57 +{{here}}
 
-J<> pre_j; // expected-error {{declaration of 'J' must be imported}}
-#ifdef IMPORT_USE_2
-// expected-error-re@-2 {{default argument of 'J' must be imported from one of {{.*}}stuff.use-2{{.*}}stuff.use}}
-#elif EARLY_INDIRECT_INCLUDE
-// expected-error@-4 {{default argument of 'J' must be imported from module 'merged-defs'}}
-#else
-// expected-error@-6 {{default argument of 'J' must be imported from module 'stuff.use'}}
-#endif
+J<> pre_j; // expected-error {{'J' must be declared}}
+// expected-error-re@-1 {{missing '#include "{{.*}}.h"'; default argument of 'J' must be defined before it is used}}
 // expected-note@defs.h:58 +{{here}}
 
-ScopedEnum pre_scopedenum; // expected-error {{must be imported}}
+ScopedEnum pre_scopedenum; // expected-error {{must be declared}}
 // expected-note@defs.h:105 0-1{{here}}
 // expected-note@defs.h:106 0-1{{here}}
 enum ScopedEnum : int;

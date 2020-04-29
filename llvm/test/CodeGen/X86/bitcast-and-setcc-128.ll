@@ -12,7 +12,7 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm2
+; SSE2-SSSE3-NEXT:    packsswb %xmm2, %xmm2
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -557,7 +557,7 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm1
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq

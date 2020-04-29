@@ -219,3 +219,11 @@ svuint64_t test_svnot_u64_x(svbool_t pg, svuint64_t op)
   // CHECK: ret <vscale x 2 x i64> %[[INTRINSIC]]
   return SVE_ACLE_FUNC(svnot,_u64,_x,)(pg, op);
 }
+
+svbool_t test_svnot_b_z(svbool_t pg, svbool_t op)
+{
+  // CHECK-LABEL: test_svnot_b_z
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.eor.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %op, <vscale x 16 x i1> %pg)
+  // CHECK: ret <vscale x 16 x i1> %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svnot,_b,_z,)(pg, op);
+}

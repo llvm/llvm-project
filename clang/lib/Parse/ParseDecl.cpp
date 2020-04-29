@@ -2742,7 +2742,7 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
     default:
       // This is probably supposed to be a type. This includes cases like:
       //   int f(itn);
-      //   struct S { unsinged : 4; };
+      //   struct S { unsigned : 4; };
       break;
     }
   }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CompileCommands.h"
-#include "Logger.h"
+#include "support/Logger.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/Support/FileSystem.h"

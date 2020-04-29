@@ -27,7 +27,6 @@ add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
   ASTTests.cpp
   BackgroundIndexTests.cpp
-  CancellationTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
   ClangdLSPServerTests.cpp
@@ -35,7 +34,6 @@ add_unittest(ClangdUnitTests ClangdTests
   CodeCompletionStringsTests.cpp
   CollectMacrosTests.cpp
   CompileCommandsTests.cpp
-  ContextTests.cpp
   DexTests.cpp
   DiagnosticsTests.cpp
   DraftStoreTests.cpp
@@ -47,7 +45,6 @@ add_unittest(ClangdUnitTests ClangdTests
   FormattedStringTests.cpp
   FormatTests.cpp
   FSTests.cpp
-  FunctionTests.cpp
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
@@ -76,13 +73,17 @@ add_unittest(ClangdUnitTests ClangdTests
   TestFS.cpp
   TestIndex.cpp
   TestTU.cpp
-  ThreadingTests.cpp
-  TraceTests.cpp
   TypeHierarchyTests.cpp
   TweakTests.cpp
   TweakTesting.cpp
   URITests.cpp
   XRefsTests.cpp
+
+  support/CancellationTests.cpp
+  support/ContextTests.cpp
+  support/FunctionTests.cpp
+  support/ThreadingTests.cpp
+  support/TraceTests.cpp
 
   $<TARGET_OBJECTS:obj.clangDaemonTweaks>
   )
@@ -107,6 +108,7 @@ clang_target_link_libraries(ClangdTests
 target_link_libraries(ClangdTests
   PRIVATE
   clangDaemon
+  clangdSupport
   clangTidy
   LLVMSupport
   LLVMTestingSupport

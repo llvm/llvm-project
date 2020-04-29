@@ -416,11 +416,6 @@ struct MustBeExecutedContextExplorer {
         ExploreCFGBackward(ExploreCFGBackward), LIGetter(LIGetter),
         DTGetter(DTGetter), PDTGetter(PDTGetter), EndIterator(*this, nullptr) {}
 
-  /// Clean up the dynamically allocated iterators.
-  ~MustBeExecutedContextExplorer() {
-    DeleteContainerSeconds(InstructionIteratorMap);
-  }
-
   /// Iterator-based interface. \see MustBeExecutedIterator.
   ///{
   using iterator = MustBeExecutedIterator;
@@ -428,15 +423,15 @@ struct MustBeExecutedContextExplorer {
 
   /// Return an iterator to explore the context around \p PP.
   iterator &begin(const Instruction *PP) {
-    auto *&It = InstructionIteratorMap[PP];
+    auto &It = InstructionIteratorMap[PP];
     if (!It)
-      It = new iterator(*this, PP);
+      It.reset(new iterator(*this, PP));
     return *It;
   }
 
   /// Return an iterator to explore the cached context around \p PP.
   const_iterator &begin(const Instruction *PP) const {
-    return *InstructionIteratorMap.lookup(PP);
+    return *InstructionIteratorMap.find(PP)->second;
   }
 
   /// Return an universal end iterator.
@@ -544,7 +539,7 @@ private:
   DenseMap<const Function*, Optional<bool>> IrreducibleControlMap;
 
   /// Map from instructions to associated must be executed iterators.
-  DenseMap<const Instruction *, MustBeExecutedIterator *>
+  DenseMap<const Instruction *, std::unique_ptr<MustBeExecutedIterator>>
       InstructionIteratorMap;
 
   /// A unique end iterator.

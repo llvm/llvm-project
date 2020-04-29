@@ -459,7 +459,8 @@ public:
 
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
-  using SymbolDependTy = llvm::DenseMap<SymbolRef, SymbolRefSmallVectorTy *>;
+  using SymbolDependTy =
+      llvm::DenseMap<SymbolRef, std::unique_ptr<SymbolRefSmallVectorTy>>;
 
   DataSetTy DataSet;
 
@@ -476,7 +477,6 @@ public:
   SymbolManager(ASTContext &ctx, BasicValueFactory &bv,
                 llvm::BumpPtrAllocator& bpalloc)
       : SymbolDependencies(16), BPAlloc(bpalloc), BV(bv), Ctx(ctx) {}
-  ~SymbolManager();
 
   static bool canSymbolicate(QualType T);
 

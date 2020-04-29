@@ -148,7 +148,7 @@ void test_with_test_type() {
 }
 
 
-void test_ambigious_assign() {
+void test_ambiguous_assign() {
     using OptInt = std::optional<int>;
     {
         using T = AssignableFrom<OptInt&&>;
@@ -204,7 +204,7 @@ void test_ambigious_assign() {
 int main(int, char**)
 {
     test_with_test_type();
-    test_ambigious_assign();
+    test_ambiguous_assign();
     {
         optional<int> opt;
         optional<short> opt2;
