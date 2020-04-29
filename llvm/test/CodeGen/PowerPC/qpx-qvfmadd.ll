@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -stop-after=finalize-isel < %s -mcpu=a2q | FileCheck %s
+target triple = "powerpc64-bgq-linux"
 
 define <2 x double> @test_qvfmadd(<2 x double> %0, <2 x double> %1, <2 x double> %2) {
 ; CHECK: test_qvfmadd
