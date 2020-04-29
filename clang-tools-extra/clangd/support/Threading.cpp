@@ -1,6 +1,5 @@
-#include "Threading.h"
-#include "Trace.h"
-#include "clang/Basic/Stack.h"
+#include "support/Threading.h"
+#include "support/Trace.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
@@ -10,7 +9,7 @@
 #include <pthread.h>
 #elif defined(__APPLE__)
 #include <sys/resource.h>
-#elif defined (_WIN32)
+#elif defined(_WIN32)
 #include <windows.h>
 #endif
 
@@ -96,7 +95,8 @@ void AsyncTaskRunner::runAsync(const llvm::Twine &Name,
   };
 
   // Ensure our worker threads have big enough stacks to run clang.
-  llvm::llvm_execute_on_thread_async(std::move(Task), clang::DesiredStackSize);
+  llvm::llvm_execute_on_thread_async(std::move(Task),
+                                     /*clang::DesiredStackSize*/ 8 << 20);
 }
 
 Deadline timeoutSeconds(llvm::Optional<double> Seconds) {

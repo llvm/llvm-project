@@ -8,9 +8,7 @@
 
 #include "FileIndex.h"
 #include "CollectMacros.h"
-#include "Logger.h"
 #include "ParsedAST.h"
-#include "Path.h"
 #include "SymbolCollector.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
@@ -23,6 +21,8 @@
 #include "index/SymbolID.h"
 #include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
+#include "support/Logger.h"
+#include "support/Path.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"

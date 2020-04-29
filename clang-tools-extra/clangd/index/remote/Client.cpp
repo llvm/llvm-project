@@ -10,10 +10,10 @@
 
 #include "Client.h"
 #include "Index.grpc.pb.h"
-#include "Logger.h"
-#include "Trace.h"
 #include "index/Serialization.h"
 #include "marshalling/Marshalling.h"
+#include "support/Logger.h"
+#include "support/Trace.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace clang {

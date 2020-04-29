@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 #include "SourceCode.h"
 
-#include "Context.h"
 #include "FuzzyMatch.h"
-#include "Logger.h"
 #include "Protocol.h"
 #include "refactor/Tweak.h"
+#include "support/Context.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"

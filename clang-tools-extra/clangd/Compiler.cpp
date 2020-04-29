@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler.h"
-#include "Logger.h"
+#include "support/Logger.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"

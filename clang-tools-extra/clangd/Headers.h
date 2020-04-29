@@ -9,10 +9,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERS_H
 
-#include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Symbol.h"
+#include "support/Path.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"

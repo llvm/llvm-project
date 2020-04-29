@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"

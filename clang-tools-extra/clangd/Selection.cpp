@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
-#include "Logger.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"

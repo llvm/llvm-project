@@ -8,8 +8,8 @@
 
 #include "GlobalCompilationDatabase.h"
 #include "FS.h"
-#include "Logger.h"
-#include "Path.h"
+#include "support/Logger.h"
+#include "support/Path.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"

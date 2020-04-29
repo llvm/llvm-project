@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FSPROVIDER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FSPROVIDER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_FSPROVIDER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_FSPROVIDER_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"

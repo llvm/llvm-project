@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_THREADING_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_THREADING_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_THREADING_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_THREADING_H
 
-#include "Context.h"
+#include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Twine.h"
 #include <cassert>
