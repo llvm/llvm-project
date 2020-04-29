@@ -285,6 +285,15 @@ func @cmpi(%arg0 : i32, %arg1 : i32) {
   return
 }
 
+// CHECK-LABEL: @boolcmpi
+func @boolcmpi(%arg0 : i1, %arg1 : i1) {
+  // CHECK: spv.LogicalEqual
+  %0 = cmpi "eq", %arg0, %arg1 : i1
+  // CHECK: spv.LogicalNotEqual
+  %1 = cmpi "ne", %arg0, %arg1 : i1
+  return
+}
+
 } // end module
 
 // -----

@@ -96,6 +96,12 @@ struct VFShape {
     assert(hasValidParameterList() && "Invalid parameter list");
   }
 
+  // Retrieve the VFShape that can be used to map a (scalar) function to itself,
+  // with VF = 1.
+  static VFShape getScalarShape(const CallInst &CI) {
+    return VFShape::get(CI, /*EC*/ {1, false}, /*HasGlobalPredicate*/ false);
+  }
+
   // Retrieve the basic vectorization shape of the function, where all
   // parameters are mapped to VFParamKind::Vector with \p EC
   // lanes. Specifies whether the function has a Global Predicate
@@ -186,6 +192,8 @@ void getVectorVariantNames(const CallInst &CI,
 class VFDatabase {
   /// The Module of the CallInst CI.
   const Module *M;
+  /// The CallInst instance being queried for scalar to vector mappings.
+  const CallInst &CI;
   /// List of vector functions descritors associated to the call
   /// instruction.
   const SmallVector<VFInfo, 8> ScalarToVectorMappings;
@@ -233,13 +241,16 @@ public:
 
   /// Constructor, requires a CallInst instance.
   VFDatabase(CallInst &CI)
-      : M(CI.getModule()), ScalarToVectorMappings(VFDatabase::getMappings(CI)) {
-  }
+      : M(CI.getModule()), CI(CI),
+        ScalarToVectorMappings(VFDatabase::getMappings(CI)) {}
   /// \defgroup VFDatabase query interface.
   ///
   /// @{
   /// Retrieve the Function with VFShape \p Shape.
   Function *getVectorizedFunction(const VFShape &Shape) const {
+    if (Shape == VFShape::getScalarShape(CI))
+      return CI.getCalledFunction();
+
     for (const auto &Info : ScalarToVectorMappings)
       if (Info.Shape == Shape)
         return M->getFunction(Info.VectorName);
