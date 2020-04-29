@@ -1115,9 +1115,6 @@ public:
   /// Returns the value of the receiver at the time of this call.
   SVal getReceiverSVal() const;
 
-  /// Return the value of 'self' if available.
-  SVal getSelfSVal() const;
-
   /// Get the interface for the receiver.
   ///
   /// This works whether this is an instance message or a class message.

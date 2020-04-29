@@ -240,6 +240,13 @@ ProgramState::enterStackFrame(const CallEvent &Call,
   return makeWithStore(NewStore);
 }
 
+SVal ProgramState::getSelfSVal(const LocationContext *LCtx) const {
+  const ImplicitParamDecl *SelfDecl = LCtx->getSelfDecl();
+  if (!SelfDecl)
+    return SVal();
+  return getSVal(getRegion(SelfDecl, LCtx));
+}
+
 SVal ProgramState::getSValAsScalarOrLoc(const MemRegion *R) const {
   // We only want to do fetches from regions that we can actually bind
   // values.  For example, SymbolicRegions of type 'id<...>' cannot

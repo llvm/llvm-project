@@ -33,6 +33,8 @@ public:
   /// Returns the currently inferred upper bound on the runtime type.
   QualType getType() const { return DynTy; }
 
+  operator bool() const { return isValid(); }
+
   bool operator==(const DynamicTypeInfo &RHS) const {
     return DynTy == RHS.DynTy && CanBeASubClass == RHS.CanBeASubClass;
   }
