@@ -240,6 +240,17 @@ TEST(Document, Ruler) {
   EXPECT_EQ(D.asPlainText(), "foo\n\nfoo");
 }
 
+TEST(Document, Append) {
+  Document D;
+  D.addParagraph().appendText("foo");
+  D.addRuler();
+  Document E;
+  E.addRuler();
+  E.addParagraph().appendText("bar");
+  D.append(std::move(E));
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nbar");
+}
+
 TEST(Document, Heading) {
   Document D;
   D.addHeading(1).appendText("foo");

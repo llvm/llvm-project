@@ -434,6 +434,11 @@ Document &Document::operator=(const Document &Other) {
   return *this;
 }
 
+void Document::append(Document Other) {
+  std::move(Other.Children.begin(), Other.Children.end(),
+            std::back_inserter(Children));
+}
+
 Paragraph &Document::addParagraph() {
   Children.push_back(std::make_unique<Paragraph>());
   return *static_cast<Paragraph *>(Children.back().get());

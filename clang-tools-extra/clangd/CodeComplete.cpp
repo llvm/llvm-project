@@ -1824,6 +1824,21 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   return false;
 }
 
+// FIXME: find a home for this (that can depend on both markup and Protocol).
+static MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
+  MarkupContent Result;
+  Result.kind = Kind;
+  switch (Kind) {
+  case MarkupKind::PlainText:
+    Result.value.append(Doc.asPlainText());
+    break;
+  case MarkupKind::Markdown:
+    Result.value.append(Doc.asMarkdown());
+    break;
+  }
+  return Result;
+}
+
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   const auto *InsertInclude = Includes.empty() ? nullptr : &Includes[0];
@@ -1838,19 +1853,15 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                    ? std::string(llvm::formatv("[{0} overloads]", BundleSize))
                    : ReturnType;
   LSP.deprecated = Deprecated;
-  if (InsertInclude)
-    LSP.detail += "\n" + InsertInclude->Header;
-  if (Documentation) {
-    LSP.documentation.emplace();
-    switch (Opts.DocumentationFormat) {
-    case MarkupKind::PlainText:
-      LSP.documentation->value = Documentation->asPlainText();
-      break;
-    case MarkupKind::Markdown:
-      LSP.documentation->value = Documentation->asMarkdown();
-      break;
-    }
-    LSP.documentation->kind = Opts.DocumentationFormat;
+  // Combine header information and documentation in LSP `documentation` field.
+  // This is not quite right semantically, but tends to display well in editors.
+  if (InsertInclude || Documentation) {
+    markup::Document Doc;
+    if (InsertInclude)
+      Doc.addParagraph().appendText("From ").appendCode(InsertInclude->Header);
+    if (Documentation)
+      Doc.append(*Documentation);
+    LSP.documentation = renderDoc(Doc, Opts.DocumentationFormat);
   }
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
