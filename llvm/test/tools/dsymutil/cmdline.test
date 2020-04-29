@@ -14,17 +14,18 @@ HELP: -no-swiftmodule-timestamp
 HELP: -num-threads <threads>
 HELP: -object-prefix-map <prefix=remapped>
 HELP: -oso-prepend-path <path>
-HELP: -o <filename>
+HELP: {{ -o <filename> }}
 HELP: -papertrail
 HELP: -remarks-output-format <format>
 HELP: -remarks-prepend-path <path>
 HELP: -symbol-map
 HELP: -symtab
+HELP: {{ -S }}
 HELP: -toolchain
 HELP: -update
 HELP: -verbose
 HELP: -verify
-HELP: -y
+HELP: {{ -y }}
 HELP-NOT: -reverse-iterate
 
 RUN: dsymutil --version 2>&1 | FileCheck --check-prefix=VERSION %s
