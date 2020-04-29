@@ -748,45 +748,86 @@ bool SystemZAsmParser::parseRegister(Register &Reg, bool RestoreOnFailure) {
 // Parse a register of kind Kind and add it to Operands.
 OperandMatchResultTy
 SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterKind Kind) {
-  if (Parser.getTok().isNot(AsmToken::Percent))
+  SMLoc StartLoc, EndLoc;
+  unsigned RegNum;
+
+  // Handle register names of the form %<prefix><number>.
+  if (Parser.getTok().is(AsmToken::Percent)) {
+    Register Reg;
+    if (parseRegister(Reg))
+      return MatchOperand_ParseFail;
+
+    // Verify that a register prefix appropriate for Kind was used.
+    bool PrefixMatch;
+    switch (Kind) {
+    case GR32Reg:
+    case GRH32Reg:
+    case GR64Reg:
+    case GR128Reg:
+      PrefixMatch = Reg.Group == RegGR;
+      break;
+    case FP32Reg:
+    case FP64Reg:
+    case FP128Reg:
+      PrefixMatch = Reg.Group == RegFP;
+      break;
+    case VR32Reg:
+    case VR64Reg:
+    case VR128Reg:
+      // It is OK to use the %f prefix with vector instructions that
+      // expect some VR..Reg kind, so accept the RegFP group as well.
+      PrefixMatch = Reg.Group == RegV || Reg.Group == RegFP;
+      break;
+    case AR32Reg:
+      PrefixMatch = Reg.Group == RegAR;
+      break;
+    case CR64Reg:
+      PrefixMatch = Reg.Group == RegCR;
+      break;
+    }
+    if (!PrefixMatch) {
+      Error(Reg.StartLoc, "invalid operand for instruction");
+      return MatchOperand_ParseFail;
+    }
+
+    RegNum = Reg.Num;
+    StartLoc = Reg.StartLoc;
+    EndLoc = Reg.EndLoc;
+  }
+  // Also allow specifying just a plain register number as integer.
+  else if (Parser.getTok().is(AsmToken::Integer)) {
+    const MCExpr *Register;
+    StartLoc = Parser.getTok().getLoc();
+    if (Parser.parseExpression(Register))
+      return MatchOperand_ParseFail;
+
+    auto *CE = dyn_cast<MCConstantExpr>(Register);
+    if (!CE)
+      return MatchOperand_ParseFail;
+
+    int64_t MaxRegNum;
+    switch (Kind) {
+    case VR32Reg:
+    case VR64Reg:
+    case VR128Reg:
+      MaxRegNum = 31;
+      break;
+    default:
+      MaxRegNum = 15;
+      break;
+    }
+    int64_t Value = CE->getValue();
+    if (Value < 0 || Value > MaxRegNum) {
+      Error(StartLoc, "invalid register");
+      return MatchOperand_ParseFail;
+    }
+    RegNum = (unsigned) Value;
+
+    EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  }
+  // Otherwise we didn't match a register operand.
+  else
     return MatchOperand_NoMatch;
-
-  Register Reg;
-  if (parseRegister(Reg))
-    return MatchOperand_ParseFail;
-
-  // Verify that a register prefix appropriate for Kind was used.
-  bool PrefixMatch;
-  switch (Kind) {
-  case GR32Reg:
-  case GRH32Reg:
-  case GR64Reg:
-  case GR128Reg:
-    PrefixMatch = Reg.Group == RegGR;
-    break;
-  case FP32Reg:
-  case FP64Reg:
-  case FP128Reg:
-    PrefixMatch = Reg.Group == RegFP;
-    break;
-  case VR32Reg:
-  case VR64Reg:
-  case VR128Reg:
-    // It is OK to use the %f prefix with vector instructions that
-    // expect some VR..Reg kind, so accept the RegFP group as well.
-    PrefixMatch = Reg.Group == RegV || Reg.Group == RegFP;
-    break;
-  case AR32Reg:
-    PrefixMatch = Reg.Group == RegAR;
-    break;
-  case CR64Reg:
-    PrefixMatch = Reg.Group == RegCR;
-    break;
-  }
-  if (!PrefixMatch) {
-    Error(Reg.StartLoc, "invalid operand for instruction");
-    return MatchOperand_ParseFail;
-  }
 
   // Determine the LLVM register number according to Kind.
   const unsigned *Regs;
@@ -804,13 +845,13 @@ SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterKind Kind) {
   case AR32Reg:  Regs = SystemZMC::AR32Regs;  break;
   case CR64Reg:  Regs = SystemZMC::CR64Regs;  break;
   }
-  if (Regs[Reg.Num] == 0) {
-    Error(Reg.StartLoc, "invalid register pair");
+  if (Regs[RegNum] == 0) {
+    Error(StartLoc, "invalid register pair");
     return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(SystemZOperand::createReg(Kind, Regs[Reg.Num],
-                                               Reg.StartLoc, Reg.EndLoc));
+  Operands.push_back(SystemZOperand::createReg(Kind, Regs[RegNum],
+                                               StartLoc, EndLoc));
   return MatchOperand_Success;
 }
 
