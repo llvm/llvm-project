@@ -326,7 +326,7 @@ public:
           swift::ValueDecl *value_decl = persistent_results[idx];
           if (!value_decl)
             continue;
-          swift::DeclName value_decl_name = value_decl->getFullName();
+          swift::DeclName value_decl_name = value_decl->getName();
           swift::DeclKind value_decl_kind = value_decl->getKind();
           swift::CanType value_interface_type =
               value_decl->getInterfaceType()->getCanonicalType();
@@ -339,7 +339,7 @@ public:
             if (swift::ValueDecl *rv_decl = RV[rv_idx].getValueDecl()) {
               if (value_decl_kind == rv_decl->getKind()) {
                 if (is_function) {
-                  swift::DeclName rv_full_name = rv_decl->getFullName();
+                  swift::DeclName rv_full_name = rv_decl->getName();
                   if (rv_full_name.matchesRef(value_decl_name)) {
                     // If the full names match, make sure the
                     // interface types match:
