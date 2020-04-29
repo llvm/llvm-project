@@ -106,7 +106,6 @@ def copy_prop : GICombineRule<
   (match (COPY $d, $s):$mi,
          [{ return Helper.matchCombineCopy(*${mi}); }]),
   (apply [{ Helper.applyCombineCopy(*${mi}); }])>;
-def trivial_combines : GICombineGroup<[copy_prop]>;
 
 def extending_loads : GICombineRule<
   (defs root:$root, extending_load_matchdata:$matchinfo),
@@ -136,5 +135,14 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+def mul_to_shl_matchdata : GIDefMatchData<"unsigned">;
+def mul_to_shl : GICombineRule<
+  (defs root:$d, mul_to_shl_matchdata:$matchinfo),
+  (match (G_MUL $d, $op1, $op2):$mi,
+         [{ return Helper.matchCombineMulToShl(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineMulToShl(*${mi}, ${matchinfo}); }])>;
+
+def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store]>;
+
