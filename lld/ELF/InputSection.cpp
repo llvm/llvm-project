@@ -949,7 +949,8 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   assert(flags & SHF_ALLOC);
   const unsigned bits = config->wordsize * 8;
 
-  for (const Relocation &rel : relocations) {
+  for (size_t i = 0, e = relocations.size(); i != e; ++i) {
+    const Relocation &rel = relocations[i];
     if (rel.expr == R_NONE)
       continue;
     uint64_t offset = rel.offset;
@@ -969,10 +970,16 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     case R_RELAX_GOT_PC_NOPIC:
       target->relaxGot(bufLoc, rel, targetVA);
       break;
-    case R_PPC64_RELAX_TOC:
-      if (!tryRelaxPPC64TocIndirection(rel, bufLoc))
+    case R_PPC64_RELAX_TOC: {
+      // For R_PPC64_TOC16_HA, if it is not paired with an R_PPC64_TOC16_LO_DS,
+      // don't relax.
+      bool relax =
+          rel.type == R_PPC64_TOC16_LO_DS ||
+          (i + 1 != e && relocations[i + 1].type == R_PPC64_TOC16_LO_DS);
+      if (!relax || !tryRelaxPPC64TocIndirection(rel, bufLoc))
         target->relocate(bufLoc, rel, targetVA);
       break;
+    }
     case R_RELAX_TLS_IE_TO_LE:
       target->relaxTlsIeToLe(bufLoc, rel, targetVA);
       break;
