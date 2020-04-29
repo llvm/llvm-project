@@ -51,7 +51,7 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 /// an adaptor pass, print with the op_name(sub_pass,...) format.
 void Pass::printAsTextualPipeline(raw_ostream &os) {
   // Special case for adaptors to use the 'op_name(sub_passes)' format.
-  if (auto *adaptor = getAdaptorPassBase(this)) {
+  if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleaveComma(adaptor->getPassManagers(), os,
                           [&](OpPassManager &pm) {
                             os << pm.getOpName() << "(";
@@ -152,15 +152,15 @@ struct OpPassManagerImpl {
 void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
   // Bail out early if there are no adaptor passes.
   if (llvm::none_of(passes, [](std::unique_ptr<Pass> &pass) {
-        return isAdaptorPass(pass.get());
+        return isa<OpToOpPassAdaptor>(pass.get());
       }))
     return;
 
   // Walk the pass list and merge adjacent adaptors.
-  OpToOpPassAdaptorBase *lastAdaptor = nullptr;
+  OpToOpPassAdaptor *lastAdaptor = nullptr;
   for (auto it = passes.begin(), e = passes.end(); it != e; ++it) {
     // Check to see if this pass is an adaptor.
-    if (auto *currentAdaptor = getAdaptorPassBase(it->get())) {
+    if (auto *currentAdaptor = dyn_cast<OpToOpPassAdaptor>(it->get())) {
       // If it is the first adaptor in a possible chain, remember it and
       // continue.
       if (!lastAdaptor) {
@@ -243,16 +243,7 @@ LogicalResult OpPassManager::run(Operation *op, AnalysisManager am) {
 /// pass manager.
 OpPassManager &OpPassManager::nest(const OperationName &nestedName) {
   OpPassManager nested(nestedName, impl->disableThreads, impl->verifyPasses);
-
-  /// Create an adaptor for this pass. If multi-threading is disabled, then
-  /// create a synchronous adaptor.
-  if (impl->disableThreads || !llvm::llvm_is_multithreaded()) {
-    auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
-    addPass(std::unique_ptr<Pass>(adaptor));
-    return adaptor->getPassManagers().front();
-  }
-
-  auto *adaptor = new OpToOpPassAdaptorParallel(std::move(nested));
+  auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
   addPass(std::unique_ptr<Pass>(adaptor));
   return adaptor->getPassManagers().front();
 }
@@ -330,12 +321,12 @@ static OpPassManager *findPassManagerFor(MutableArrayRef<OpPassManager> mgrs,
   return it == mgrs.end() ? nullptr : &*it;
 }
 
-OpToOpPassAdaptorBase::OpToOpPassAdaptorBase(OpPassManager &&mgr) {
+OpToOpPassAdaptor::OpToOpPassAdaptor(OpPassManager &&mgr) {
   mgrs.emplace_back(std::move(mgr));
 }
 
 /// Merge the current pass adaptor into given 'rhs'.
-void OpToOpPassAdaptorBase::mergeInto(OpToOpPassAdaptorBase &rhs) {
+void OpToOpPassAdaptor::mergeInto(OpToOpPassAdaptor &rhs) {
   for (auto &pm : mgrs) {
     // If an existing pass manager exists, then merge the given pass manager
     // into it.
@@ -357,7 +348,7 @@ void OpToOpPassAdaptorBase::mergeInto(OpToOpPassAdaptorBase &rhs) {
 }
 
 /// Returns the adaptor pass name.
-std::string OpToOpPassAdaptorBase::getName() {
+std::string OpToOpPassAdaptor::getAdaptorName() {
   std::string name = "Pipeline Collection : [";
   llvm::raw_string_ostream os(name);
   llvm::interleaveComma(getPassManagers(), os, [&](OpPassManager &pm) {
@@ -367,11 +358,16 @@ std::string OpToOpPassAdaptorBase::getName() {
   return os.str();
 }
 
-OpToOpPassAdaptor::OpToOpPassAdaptor(OpPassManager &&mgr)
-    : OpToOpPassAdaptorBase(std::move(mgr)) {}
-
 /// Run the held pipeline over all nested operations.
 void OpToOpPassAdaptor::runOnOperation() {
+  if (mgrs.front().getImpl().disableThreads || !llvm::llvm_is_multithreaded())
+    runOnOperationImpl();
+  else
+    runOnOperationAsyncImpl();
+}
+
+/// Run this pass adaptor synchronously.
+void OpToOpPassAdaptor::runOnOperationImpl() {
   auto am = getAnalysisManager();
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         this};
@@ -397,9 +393,6 @@ void OpToOpPassAdaptor::runOnOperation() {
   }
 }
 
-OpToOpPassAdaptorParallel::OpToOpPassAdaptorParallel(OpPassManager &&mgr)
-    : OpToOpPassAdaptorBase(std::move(mgr)) {}
-
 /// Utility functor that checks if the two ranges of pass managers have a size
 /// mismatch.
 static bool hasSizeMismatch(ArrayRef<OpPassManager> lhs,
@@ -409,8 +402,8 @@ static bool hasSizeMismatch(ArrayRef<OpPassManager> lhs,
                       [&](size_t i) { return lhs[i].size() != rhs[i].size(); });
 }
 
-// Run the held pipeline asynchronously across the functions within the module.
-void OpToOpPassAdaptorParallel::runOnOperation() {
+/// Run this pass adaptor synchronously.
+void OpToOpPassAdaptor::runOnOperationAsyncImpl() {
   AnalysisManager am = getAnalysisManager();
 
   // Create the async executors if they haven't been created, or if the main
@@ -489,16 +482,6 @@ void OpToOpPassAdaptorParallel::runOnOperation() {
   // Signal a failure if any of the executors failed.
   if (passFailed)
     signalPassFailure();
-}
-
-/// Utility function to convert the given class to the base adaptor it is an
-/// adaptor pass, returns nullptr otherwise.
-OpToOpPassAdaptorBase *mlir::detail::getAdaptorPassBase(Pass *pass) {
-  if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
-    return adaptor;
-  if (auto *adaptor = dyn_cast<OpToOpPassAdaptorParallel>(pass))
-    return adaptor;
-  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
