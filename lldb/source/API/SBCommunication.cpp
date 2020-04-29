@@ -63,7 +63,7 @@ ConnectionStatus SBCommunication::Connect(const char *url) {
 
   if (m_opaque) {
     if (!m_opaque->HasConnection())
-      m_opaque->SetConnection(Host::CreateDefaultConnection(url).release());
+      m_opaque->SetConnection(Host::CreateDefaultConnection(url));
     return m_opaque->Connect(url, nullptr);
   }
   return eConnectionStatusNoConnection;
@@ -79,7 +79,8 @@ ConnectionStatus SBCommunication::AdoptFileDesriptor(int fd, bool owns_fd) {
       if (m_opaque->IsConnected())
         m_opaque->Disconnect();
     }
-    m_opaque->SetConnection(new ConnectionFileDescriptor(fd, owns_fd));
+    m_opaque->SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(fd, owns_fd));
     if (m_opaque->IsConnected())
       status = eConnectionStatusSuccess;
     else
