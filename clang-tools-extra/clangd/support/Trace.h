@@ -14,10 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRACE_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRACE_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H_
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_TRACE_H_
 
-#include "Context.h"
+#include "support/Context.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
@@ -104,4 +104,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRACE_H_
+#endif

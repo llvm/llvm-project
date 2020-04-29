@@ -40,8 +40,8 @@
 //    returns an error, etc.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SHUTDOWN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SHUTDOWN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_SHUTDOWN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_SHUTDOWN_H
 
 #include <cerrno>
 #include <chrono>

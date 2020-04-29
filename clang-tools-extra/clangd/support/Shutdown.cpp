@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Shutdown.h"
+#include "support/Shutdown.h"
 
 #include <atomic>
 #include <cstdlib>
@@ -31,10 +31,7 @@ void requestShutdown() {
     std::abort();
 }
 
-bool shutdownRequested() {
-  return ShutdownRequested;
-}
+bool shutdownRequested() { return ShutdownRequested; }
 
 } // namespace clangd
 } // namespace clang
-

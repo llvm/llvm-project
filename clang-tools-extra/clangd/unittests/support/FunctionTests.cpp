@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Function.h"
+#include "support/Function.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

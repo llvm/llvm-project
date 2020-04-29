@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONTEXT_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONTEXT_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CONTEXT_H_
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_CONTEXT_H_
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -120,20 +120,20 @@ public:
   template <class Type>
   Context derive(const Key<Type> &Key,
                  typename std::decay<Type>::type Value) const & {
-    return Context(std::make_shared<Data>(Data{
-        /*Parent=*/DataPtr, &Key,
-        std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
-            std::move(Value))}));
+    return Context(std::make_shared<Data>(
+        Data{/*Parent=*/DataPtr, &Key,
+             std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+                 std::move(Value))}));
   }
 
   template <class Type>
   Context
   derive(const Key<Type> &Key,
          typename std::decay<Type>::type Value) && /* takes ownership */ {
-    return Context(std::make_shared<Data>(Data{
-        /*Parent=*/std::move(DataPtr), &Key,
-        std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
-            std::move(Value))}));
+    return Context(std::make_shared<Data>(
+        Data{/*Parent=*/std::move(DataPtr), &Key,
+             std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+                 std::move(Value))}));
   }
 
   /// Derives a child context, using an anonymous key.
@@ -219,4 +219,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONTEXT_H_
+#endif
