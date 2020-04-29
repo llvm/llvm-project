@@ -620,7 +620,7 @@ protected:
       RegularExpression regexp(m_options.m_func_regexp);
       if (llvm::Error err = regexp.GetError()) {
         result.AppendErrorWithFormat(
-            "Function name regular expression could not be compiled: \"%s\"",
+            "Function name regular expression could not be compiled: %s",
             llvm::toString(std::move(err)).c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
