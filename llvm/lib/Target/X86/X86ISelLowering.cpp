@@ -1466,6 +1466,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i8,   Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i16,  Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i32,  Legal);
+      if (HasBWI)
+        setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8, Legal);
     }
 
     for (MVT VT : { MVT::v16f32, MVT::v8f64 }) {
@@ -1509,6 +1511,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setTruncStoreAction(MVT::v8i64,   MVT::v8i32,  Legal);
     setTruncStoreAction(MVT::v16i32,  MVT::v16i8,  Legal);
     setTruncStoreAction(MVT::v16i32,  MVT::v16i16, Legal);
+    if (HasBWI)
+      setTruncStoreAction(MVT::v32i16,  MVT::v32i8, Legal);
 
     // With 512-bit vectors and no VLX, we prefer to widen MLOAD/MSTORE
     // to 512-bit rather than use the AVX2 instructions so that we can use
@@ -1533,6 +1537,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i16, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i32, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i64, Custom);
+
+    if (HasBWI) {
+      // Extends from v64i1 masks to 512-bit vectors.
+      setOperationAction(ISD::SIGN_EXTEND,        MVT::v64i8, Custom);
+      setOperationAction(ISD::ZERO_EXTEND,        MVT::v64i8, Custom);
+      setOperationAction(ISD::ANY_EXTEND,         MVT::v64i8, Custom);
+    }
 
     for (auto VT : { MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::FFLOOR,            VT, Legal);
@@ -1662,18 +1673,23 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MGATHER,             VT, Custom);
       setOperationAction(ISD::MSCATTER,            VT, Custom);
     }
-    if (!Subtarget.hasBWI()) {
+    if (HasBWI) {
+      for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
+        setOperationAction(ISD::MLOAD,        VT, Legal);
+        setOperationAction(ISD::MSTORE,       VT, Legal);
+      }
+    } else {
       setOperationAction(ISD::STORE, MVT::v32i16, Custom);
       setOperationAction(ISD::STORE, MVT::v64i8,  Custom);
     }
 
     if (Subtarget.hasVBMI2()) {
-      for (auto VT : { MVT::v16i32, MVT::v8i64 }) {
+      for (auto VT : { MVT::v32i16, MVT::v16i32, MVT::v8i64 }) {
         setOperationAction(ISD::FSHL, VT, Custom);
         setOperationAction(ISD::FSHR, VT, Custom);
       }
     }
-  }// has  AVX-512
+  }// useAVX512Regs
 
   // This block controls legalization for operations that don't have
   // pre-AVX512 equivalents. Without VLX we use 512-bit operations for
@@ -1793,35 +1809,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
-  }
 
-  // This block controls legalization for v32i16 and v64i8. 512-bits can be
-  // disabled based on prefer-vector-width and required-vector-width function
-  // attributes.
-  if (!Subtarget.useSoftFloat() && Subtarget.useBWIRegs()) {
-    // Extends from v64i1 masks to 512-bit vectors.
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v64i8, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v64i8, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v64i8, Custom);
-
-    setTruncStoreAction(MVT::v32i16,  MVT::v32i8, Legal);
-
-    for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
-      setOperationAction(ISD::MLOAD,        VT, Legal);
-      setOperationAction(ISD::MSTORE,       VT, Legal);
-    }
-
-    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD}) {
-      setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8, Legal);
-    }
-
-    if (Subtarget.hasVBMI2()) {
-      setOperationAction(ISD::FSHL, MVT::v32i16, Custom);
-      setOperationAction(ISD::FSHR, MVT::v32i16, Custom);
-    }
-  }
-
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI()) {
     for (auto VT : { MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16 }) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
