@@ -5,10 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This test is passing in an uncontrolled manner in some Apple environment.
-// UNSUPPORTED: darwin
-//
+
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
