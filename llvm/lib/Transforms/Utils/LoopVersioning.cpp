@@ -45,7 +45,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
 }
 
 void LoopVersioning::setAliasChecks(
-    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks) {
+    SmallVector<RuntimePointerCheck, 4> Checks) {
   AliasChecks = std::move(Checks);
 }
 
@@ -194,8 +194,7 @@ void LoopVersioning::prepareNoAliasMetadata() {
 
   // Go through the checks and for each pointer group, collect the scopes for
   // each non-aliasing pointer group.
-  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *,
-           SmallVector<Metadata *, 4>>
+  DenseMap<const RuntimeCheckingPtrGroup *, SmallVector<Metadata *, 4>>
       GroupToNonAliasingScopes;
 
   for (const auto &Check : AliasChecks)
