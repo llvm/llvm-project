@@ -1179,6 +1179,35 @@ std::error_code unlockFile(int FD);
 /// means that the filesystem may have failed to perform some buffered writes.
 std::error_code closeFile(file_t &F);
 
+/// RAII class that facilitates file locking.
+class FileLocker {
+  int FD; ///< Locked file handle.
+  FileLocker(int FD) : FD(FD) {}
+  friend class llvm::raw_fd_ostream;
+
+public:
+  FileLocker(const FileLocker &L) = delete;
+  FileLocker(FileLocker &&L) : FD(L.FD) { L.FD = -1; }
+  ~FileLocker() {
+    if (FD != -1)
+      unlockFile(FD);
+  }
+  FileLocker &operator=(FileLocker &&L) {
+    FD = L.FD;
+    L.FD = -1;
+    return *this;
+  }
+  FileLocker &operator=(const FileLocker &L) = delete;
+  std::error_code unlock() {
+    if (FD != -1) {
+      std::error_code Result = unlockFile(FD);
+      FD = -1;
+      return Result;
+    }
+    return std::error_code();
+  }
+};
+
 std::error_code getUniqueID(const Twine Path, UniqueID &Result);
 
 /// Get disk space usage information.
