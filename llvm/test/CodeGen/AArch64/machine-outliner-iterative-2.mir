@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=machine-outliner \
 # RUN:   -machine-outliner-reruns=0 -verify-machineinstrs %s -o - | FileCheck --check-prefix=ITER1 %s
 
