@@ -1818,7 +1818,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       Filename, File->getSize(), getTimestampForOutput(File)
     };
     HeaderFileInfoTrait::data_type Data = {
-      *HFI, HS.getModuleMap().findAllModulesForHeader(File), {}
+      *HFI, HS.getModuleMap().findResolvedModulesForHeader(File), {}
     };
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;

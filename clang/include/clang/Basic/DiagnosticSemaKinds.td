@@ -10456,11 +10456,6 @@ def err_module_unimported_use : Error<
   "explicit specialization|partial specialization}0 of %1 must be imported "
   "from module '%2' before it is required">;
 def err_module_unimported_use_header : Error<
-  "missing '#include %3'; "
-  "%select{declaration|definition|default argument|"
-  "explicit specialization|partial specialization}0 of %1 must be imported "
-  "from module '%2' before it is required">;
-def err_module_unimported_use_global_module_fragment : Error<
   "%select{missing '#include'|missing '#include %3'}2; "
   "%select{||default argument of |explicit specialization of |"
   "partial specialization of }0%1 must be "
@@ -10470,6 +10465,10 @@ def err_module_unimported_use_multiple : Error<
   "%select{declaration|definition|default argument|"
   "explicit specialization|partial specialization}0 of %1 must be imported "
   "from one of the following modules before it is required:%2">;
+def note_unreachable_entity : Note<
+  "%select{declaration|definition|default argument declared|"
+  "explicit specialization declared|partial specialization declared}0 here "
+  "is not %select{visible|reachable|reachable|reachable|reachable|reachable}0">;
 def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "
   "specification">, DefaultError,
