@@ -52,7 +52,8 @@ public:
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                           Type *Ty);
 
-  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
+  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                       TTI::TargetCostKind CostKind);
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,

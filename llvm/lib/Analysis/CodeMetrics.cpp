@@ -172,7 +172,7 @@ void CodeMetrics::analyzeBasicBlock(const BasicBlock *BB,
       if (InvI->cannotDuplicate())
         notDuplicatable = true;
 
-    NumInsts += TTI.getUserCost(&I);
+    NumInsts += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
   }
 
   if (isa<ReturnInst>(BB->getTerminator()))
