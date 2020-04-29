@@ -127,6 +127,9 @@ Modified Compiler Flags
   ``-f[no-]sanitize-recover=undefined,integer`` and is no longer deprecated.
 - The argument to ``-f[no-]sanitize-trap=...`` is now optional and defaults to
   ``all``.
+- ``-fno-char8_t`` now disables the ``char8_t`` keyword, not just the use of
+  ``char8_t`` as the character type of ``u8`` literals. This restores the
+  Clang 8 behavior that regressed in Clang 9 and 10.
 
 New Pragmas in Clang
 --------------------
