@@ -768,8 +768,11 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
             (!Register::isPhysicalRegister(I.getOperand(0).getReg()) &&
              !Register::isPhysicalRegister(I.getOperand(1).getReg()))) &&
            "No phys reg on generic operator!");
-    bool ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
+    bool ValidCopy = true;
+#ifndef NDEBUG
+    ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
     assert(ValidCopy && "Invalid copy.");
+#endif
     return ValidCopy;
   };
 
