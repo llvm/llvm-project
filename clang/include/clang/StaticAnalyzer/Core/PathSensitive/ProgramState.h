@@ -298,6 +298,9 @@ public:
   LLVM_NODISCARD ProgramStateRef enterStackFrame(
       const CallEvent &Call, const StackFrameContext *CalleeCtx) const;
 
+  /// Return the value of 'self' if available in the given context.
+  SVal getSelfSVal(const LocationContext *LC) const;
+
   /// Get the lvalue for a base class object reference.
   Loc getLValue(const CXXBaseSpecifier &BaseSpec, const SubRegion *Super) const;
 
