@@ -210,7 +210,6 @@ namespace {
     void verifyPreISelGenericInstruction(const MachineInstr *MI);
     void visitMachineInstrBefore(const MachineInstr *MI);
     void visitMachineOperand(const MachineOperand *MO, unsigned MONum);
-    void visitMachineInstrAfter(const MachineInstr *MI);
     void visitMachineBundleAfter(const MachineInstr *MI);
     void visitMachineBasicBlockAfter(const MachineBasicBlock *MBB);
     void visitMachineFunctionAfter();
@@ -416,8 +415,6 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
 
         visitMachineOperand(&Op, I);
       }
-
-      visitMachineInstrAfter(&MI);
 
       // Was this the last bundled instruction?
       InBundle = MI.isBundledWithSucc();
@@ -2072,8 +2069,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     }
   }
 }
-
-void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {}
 
 // This function gets called after visiting all instructions in a bundle. The
 // argument points to the bundle header.
