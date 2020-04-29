@@ -13,9 +13,9 @@
 define i32 @fptoui_double_i64(i32 %arg) {
 ; SSE2-LABEL: 'fptoui_double_i64'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = fptoui double undef to i64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V2I64 = fptoui <2 x double> undef to <2 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2I64 = fptoui <2 x double> undef to <2 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 59 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fptoui_double_i64'
@@ -28,15 +28,15 @@ define i32 @fptoui_double_i64(i32 %arg) {
 ; AVX-LABEL: 'fptoui_double_i64'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = fptoui double undef to i64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = fptoui <2 x double> undef to <2 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 61 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'fptoui_double_i64'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui double undef to i64
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = fptoui <2 x double> undef to <2 x i64>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4I64 = fptoui <4 x double> undef to <4 x i64>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V8I64 = fptoui <8 x double> undef to <8 x i64>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'fptoui_double_i64'
@@ -63,9 +63,9 @@ define i32 @fptoui_double_i64(i32 %arg) {
 define i32 @fptoui_double_i32(i32 %arg) {
 ; SSE2-LABEL: 'fptoui_double_i32'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptoui double undef to i32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I32 = fptoui <2 x double> undef to <2 x i32>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V8I32 = fptoui <8 x double> undef to <8 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I32 = fptoui <2 x double> undef to <2 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %V8I32 = fptoui <8 x double> undef to <8 x i32>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fptoui_double_i32'
@@ -178,10 +178,10 @@ define i32 @fptoui_double_i8(i32 %arg) {
 define i32 @fptoui_float_i64(i32 %arg) {
 ; SSE2-LABEL: 'fptoui_float_i64'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = fptoui float undef to i64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V2I64 = fptoui <2 x float> undef to <2 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 127 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2I64 = fptoui <2 x float> undef to <2 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 59 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 119 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fptoui_float_i64'
@@ -195,17 +195,17 @@ define i32 @fptoui_float_i64(i32 %arg) {
 ; AVX-LABEL: 'fptoui_float_i64'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = fptoui float undef to i64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = fptoui <2 x float> undef to <2 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 61 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 123 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 111 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'fptoui_float_i64'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui float undef to i64
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = fptoui <2 x float> undef to <2 x i64>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 85 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4I64 = fptoui <4 x float> undef to <4 x i64>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V8I64 = fptoui <8 x float> undef to <8 x i64>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %V16I64 = fptoui <16 x float> undef to <16 x i64>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'fptoui_float_i64'
@@ -235,10 +235,10 @@ define i32 @fptoui_float_i64(i32 %arg) {
 define i32 @fptoui_float_i32(i32 %arg) {
 ; SSE2-LABEL: 'fptoui_float_i32'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptoui float undef to i32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I32 = fptoui <2 x float> undef to <2 x i32>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V4I32 = fptoui <4 x float> undef to <4 x i32>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %V8I32 = fptoui <8 x float> undef to <8 x i32>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %V16I32 = fptoui <16 x float> undef to <16 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I32 = fptoui <2 x float> undef to <2 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I32 = fptoui <4 x float> undef to <4 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V8I32 = fptoui <8 x float> undef to <8 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %V16I32 = fptoui <16 x float> undef to <16 x i32>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fptoui_float_i32'
