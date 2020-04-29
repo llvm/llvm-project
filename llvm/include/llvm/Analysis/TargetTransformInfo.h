@@ -611,8 +611,15 @@ public:
   ///  should use coldcc calling convention.
   bool useColdCCForColdCall(Function &F) const;
 
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) const;
+  /// Estimate the overhead of scalarizing an instruction. Insert and Extract
+  /// are set if the demanded result elements need to be inserted and/or
+  /// extracted from vectors.
+  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                    bool Insert, bool Extract) const;
 
+  /// Estimate the overhead of scalarizing an instructions unique
+  /// non-constant operands. The types of the arguments are ordinarily
+  /// scalar, in which case the costs are multiplied with VF.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                             unsigned VF) const;
 
@@ -1231,8 +1238,8 @@ public:
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool useColdCCForColdCall(Function &F) = 0;
-  virtual unsigned getScalarizationOverhead(Type *Ty, bool Insert,
-                                            bool Extract) = 0;
+  virtual unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                            bool Insert, bool Extract) = 0;
   virtual unsigned
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    unsigned VF) = 0;
@@ -1556,9 +1563,9 @@ public:
     return Impl.useColdCCForColdCall(F);
   }
 
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert,
-                                    bool Extract) override {
-    return Impl.getScalarizationOverhead(Ty, Insert, Extract);
+  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+                                    bool Insert, bool Extract) override {
+    return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
   }
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                             unsigned VF) override {

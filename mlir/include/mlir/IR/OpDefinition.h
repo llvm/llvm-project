@@ -1034,6 +1034,21 @@ public:
   }
 };
 
+/// A trait of region holding operations that defines a new scope for polyhedral
+/// optimization purposes. Any SSA values of 'index' type that either dominate
+/// such an operation or are used at the top-level of such an operation
+/// automatically become valid symbols for the polyhedral scope defined by that
+/// operation. For more details, see `Traits.md#PolyhedralScope`.
+template <typename ConcreteType>
+class PolyhedralScope : public TraitBase<ConcreteType, PolyhedralScope> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(!ConcreteType::template hasTrait<ZeroRegion>(),
+                  "expected operation to have one or more regions");
+    return success();
+  }
+};
+
 /// A trait of region holding operations that define a new scope for automatic
 /// allocations, i.e., allocations that are freed when control is transferred
 /// back from the operation's region. Any operations performing such allocations

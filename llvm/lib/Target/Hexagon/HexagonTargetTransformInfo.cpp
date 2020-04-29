@@ -115,9 +115,10 @@ unsigned HexagonTTIImpl::getMinimumVF(unsigned ElemWidth) const {
   return (8 * ST.getVectorLength()) / ElemWidth;
 }
 
-unsigned HexagonTTIImpl::getScalarizationOverhead(Type *Ty, bool Insert,
-      bool Extract) {
-  return BaseT::getScalarizationOverhead(Ty, Insert, Extract);
+unsigned HexagonTTIImpl::getScalarizationOverhead(Type *Ty,
+                                                  const APInt &DemandedElts,
+                                                  bool Insert, bool Extract) {
+  return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
 }
 
 unsigned HexagonTTIImpl::getOperandsScalarizationOverhead(
