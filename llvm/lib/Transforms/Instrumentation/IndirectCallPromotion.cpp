@@ -193,7 +193,7 @@ private:
   // TotalCount is the total profiled count of call executions, and
   // NumCandidates is the number of candidate entries in ValueDataRef.
   std::vector<PromotionCandidate> getPromotionCandidatesForCallSite(
-      Instruction *Inst, const ArrayRef<InstrProfValueData> &ValueDataRef,
+      const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
       uint64_t TotalCount, uint32_t NumCandidates);
 
   // Promote a list of targets for one indirect-call callsite. Return
@@ -216,14 +216,13 @@ public:
 
 // Indirect-call promotion heuristic. The direct targets are sorted based on
 // the count. Stop at the first target that is not promoted.
-// FIXME(callsite): the Instruction* parameter can be changed to CallBase
 std::vector<ICallPromotionFunc::PromotionCandidate>
 ICallPromotionFunc::getPromotionCandidatesForCallSite(
-    Instruction *Inst, const ArrayRef<InstrProfValueData> &ValueDataRef,
+    const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
     uint64_t TotalCount, uint32_t NumCandidates) {
   std::vector<PromotionCandidate> Ret;
 
-  LLVM_DEBUG(dbgs() << " \nWork on callsite #" << NumOfPGOICallsites << *Inst
+  LLVM_DEBUG(dbgs() << " \nWork on callsite #" << NumOfPGOICallsites << CB
                     << " Num_targets: " << ValueDataRef.size()
                     << " Num_candidates: " << NumCandidates << "\n");
   NumOfPGOICallsites++;
@@ -239,18 +238,18 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
                       << "  Target_func: " << Target << "\n");
 
-    if (ICPInvokeOnly && isa<CallInst>(Inst)) {
+    if (ICPInvokeOnly && isa<CallInst>(CB)) {
       LLVM_DEBUG(dbgs() << " Not promote: User options.\n");
       ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", &CB)
                << " Not promote: User options";
       });
       break;
     }
-    if (ICPCallOnly && isa<InvokeInst>(Inst)) {
+    if (ICPCallOnly && isa<InvokeInst>(CB)) {
       LLVM_DEBUG(dbgs() << " Not promote: User option.\n");
       ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", &CB)
                << " Not promote: User options";
       });
       break;
@@ -258,7 +257,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
       LLVM_DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
       ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", Inst)
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", &CB)
                << " Not promote: Cutoff reached";
       });
       break;
@@ -268,7 +267,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     if (TargetFunction == nullptr) {
       LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
       ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", Inst)
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", &CB)
                << "Cannot promote indirect call: target with md5sum "
                << ore::NV("target md5sum", Target) << " not found";
       });
@@ -276,11 +275,11 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     }
 
     const char *Reason = nullptr;
-    if (!isLegalToPromote(*cast<CallBase>(Inst), TargetFunction, &Reason)) {
+    if (!isLegalToPromote(CB, TargetFunction, &Reason)) {
       using namespace ore;
 
       ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", Inst)
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", &CB)
                << "Cannot promote indirect call to "
                << NV("TargetFunction", TargetFunction) << " with count of "
                << NV("Count", Count) << ": " << Reason;
@@ -360,7 +359,7 @@ bool ICallPromotionFunc::processFunction(ProfileSummaryInfo *PSI) {
         (PSI && PSI->hasProfileSummary() && !PSI->isHotCount(TotalCount)))
       continue;
     auto PromotionCandidates = getPromotionCandidatesForCallSite(
-        CB, ICallProfDataRef, TotalCount, NumCandidates);
+        *CB, ICallProfDataRef, TotalCount, NumCandidates);
     uint32_t NumPromoted = tryToPromote(*CB, PromotionCandidates, TotalCount);
     if (NumPromoted == 0)
       continue;
