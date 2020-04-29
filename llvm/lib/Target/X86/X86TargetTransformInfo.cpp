@@ -2868,9 +2868,62 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
-unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty, bool Insert,
-                                              bool Extract) {
-  return BaseT::getScalarizationOverhead(Ty, Insert, Extract);
+unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty,
+                                              const APInt &DemandedElts,
+                                              bool Insert, bool Extract) {
+  auto* VecTy = cast<VectorType>(Ty);
+  unsigned Cost = 0;
+
+  // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
+  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
+  if (Insert) {
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+    MVT MScalarTy = LT.second.getScalarType();
+
+    if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
+        (MScalarTy.isInteger() && ST->hasSSE41()) ||
+        (MScalarTy == MVT::f32 && ST->hasSSE41())) {
+      // For types we can insert directly, insertion into 128-bit sub vectors is
+      // cheap, followed by a cheap chain of concatenations.
+      if (LT.second.getSizeInBits() <= 128) {
+        Cost +=
+            BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, false);
+      } else {
+        unsigned NumSubVecs = LT.second.getSizeInBits() / 128;
+        Cost += (PowerOf2Ceil(NumSubVecs) - 1) * LT.first;
+        Cost += DemandedElts.countPopulation();
+
+        // For vXf32 cases, insertion into the 0'th index in each v4f32
+        // 128-bit vector is free.
+        // NOTE: This assumes legalization widens vXf32 vectors.
+        if (MScalarTy == MVT::f32)
+          for (unsigned i = 0, e = VecTy->getNumElements(); i < e; i += 4)
+            if (DemandedElts[i])
+              Cost--;
+      }
+    } else if (LT.second.isVector()) {
+      // Without fast insertion, we need to use MOVD/MOVQ to pass each demanded
+      // integer element as a SCALAR_TO_VECTOR, then we build the vector as a
+      // series of UNPCK followed by CONCAT_VECTORS - all of these can be
+      // considered cheap.
+      if (Ty->isIntOrIntVectorTy())
+        Cost += DemandedElts.countPopulation();
+
+      // Get the smaller of the legalized or original pow2-extended number of
+      // vector elements, which represents the number of unpacks we'll end up
+      // performing.
+      unsigned NumElts = LT.second.getVectorNumElements();
+      unsigned Pow2Elts = PowerOf2Ceil(VecTy->getNumElements());
+      Cost += (std::min<unsigned>(NumElts, Pow2Elts) - 1) * LT.first;
+    }
+  }
+
+  // TODO: Use default extraction for now, but we should investigate extending this
+  // to handle repeated subvector extraction.
+  if (Extract)
+    Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, false, Extract);
+
+  return Cost;
 }
 
 int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -2893,9 +2946,11 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
     // Assume that all other non-power-of-two numbers are scalarized.
     if (!isPowerOf2_32(NumElem)) {
+      APInt DemandedElts = APInt::getAllOnesValue(NumElem);
       int Cost = BaseT::getMemoryOpCost(Opcode, VTy->getScalarType(), Alignment,
                                         AddressSpace);
-      int SplitCost = getScalarizationOverhead(Src, Opcode == Instruction::Load,
+      int SplitCost = getScalarizationOverhead(Src, DemandedElts,
+                                               Opcode == Instruction::Load,
                                                Opcode == Instruction::Store);
       return NumElem * Cost + SplitCost;
     }
@@ -2935,13 +2990,15 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
       (IsStore && !isLegalMaskedStore(SrcVTy, MaybeAlign(Alignment))) ||
       !isPowerOf2_32(NumElem)) {
     // Scalarization
-    int MaskSplitCost = getScalarizationOverhead(MaskTy, false, true);
+    APInt DemandedElts = APInt::getAllOnesValue(NumElem);
+    int MaskSplitCost =
+        getScalarizationOverhead(MaskTy, DemandedElts, false, true);
     int ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr);
     int BranchCost = getCFInstrCost(Instruction::Br);
     int MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
-
-    int ValueSplitCost = getScalarizationOverhead(SrcVTy, IsLoad, IsStore);
+    int ValueSplitCost =
+        getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                          MaybeAlign(Alignment), AddressSpace);
@@ -3795,12 +3852,14 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
                                 bool VariableMask, unsigned Alignment,
                                 unsigned AddressSpace) {
   unsigned VF = cast<VectorType>(SrcVTy)->getNumElements();
+  APInt DemandedElts = APInt::getAllOnesValue(VF);
 
   int MaskUnpackCost = 0;
   if (VariableMask) {
     VectorType *MaskTy =
       VectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
-    MaskUnpackCost = getScalarizationOverhead(MaskTy, false, true);
+    MaskUnpackCost =
+        getScalarizationOverhead(MaskTy, DemandedElts, false, true);
     int ScalarCompareCost =
       getCmpSelInstrCost(Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()),
                          nullptr);

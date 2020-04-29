@@ -3877,10 +3877,13 @@ int BoUpSLP::getTreeCost() {
 
 int BoUpSLP::getGatherCost(VectorType *Ty,
                            const DenseSet<unsigned> &ShuffledIndices) const {
-  int Cost = 0;
-  for (unsigned i = 0, e = Ty->getNumElements(); i < e; ++i)
+  unsigned NumElts = Ty->getNumElements();
+  APInt DemandedElts = APInt::getNullValue(NumElts);
+  for (unsigned i = 0; i < NumElts; ++i)
     if (!ShuffledIndices.count(i))
-      Cost += TTI->getVectorInstrCost(Instruction::InsertElement, Ty, i);
+      DemandedElts.setBit(i);
+  int Cost = TTI->getScalarizationOverhead(Ty, DemandedElts, /*Insert*/ true,
+                                           /*Extract*/ false);
   if (!ShuffledIndices.empty())
     Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, Ty);
   return Cost;
@@ -7018,6 +7021,34 @@ static bool findBuildAggregate(Value *LastInsertInst, TargetTransformInfo *TTI,
          "Expected insertelement or insertvalue instruction!");
   UserCost = 0;
   do {
+    // TODO: Use TTI's getScalarizationOverhead for sequence of inserts rather
+    // than sum of single inserts as the latter may overestimate cost.
+    // This work should imply improving cost estimation for extracts that
+    // added in for external (for vectorization tree) users.
+    // For example, in following case all extracts added in order to feed
+    // into external users (inserts), which in turn form sequence to build
+    // an aggregate that we do match here:
+    //  %4 = extractelement <4 x i64> %3, i32 0
+    //  %v0 = insertelement <4 x i64> undef, i64 %4, i32 0
+    //  %5 = extractelement <4 x i64> %3, i32 1
+    //  %v1 = insertelement <4 x i64> %v0, i64 %5, i32 1
+    //  %6 = extractelement <4 x i64> %3, i32 2
+    //  %v2 = insertelement <4 x i64> %v1, i64 %6, i32 2
+    //  %7 = extractelement <4 x i64> %3, i32 3
+    //  %v3 = insertelement <4 x i64> %v2, i64 %7, i32 3
+    //
+    // Cost of this entire sequence is currently estimated as sum of single
+    // extracts (as this aggregate build sequence is an external to
+    // vectorization tree user) minus cost of the aggregate build.
+    // As this whole sequence will be optimized away we want the cost to be
+    // zero. But it is not quite possible using given approach (at least for
+    // X86) because inserts can be more expensive than extracts for longer
+    // vector lengths so the difference turns out not zero in such a case.
+    // Ideally we want to match this entire sequence and treat it as a no-op
+    // (i.e. do not count into final cost at all).
+    // Currently the difference tends to be negative thus adding a bias
+    // toward favoring vectorization. If we switch into using TTI interface
+    // the bias tendency will remain but will be lower.
     Value *InsertedOperand;
     if (auto *IE = dyn_cast<InsertElementInst>(LastInsertInst)) {
       InsertedOperand = IE->getOperand(1);
