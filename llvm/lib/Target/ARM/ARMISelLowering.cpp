@@ -5752,57 +5752,25 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   SDValue Op = N->getOperand(0);
 
-  // This function is only supposed to be called for i64 types, either as the
-  // source or destination of the bit convert.
+  // This function is only supposed to be called for i16 and i64 types, either
+  // as the source or destination of the bit convert.
   EVT SrcVT = Op.getValueType();
   EVT DstVT = N->getValueType(0);
-  const bool HasFullFP16 = Subtarget->hasFullFP16();
 
   if (SrcVT == MVT::i16 && DstVT == MVT::f16) {
-    if (!HasFullFP16)
+    if (!Subtarget->hasFullFP16())
       return SDValue();
-    // SoftFP: read half-precision arguments:
-    //
-    // t2: i32,ch = ...
-    //        t7: i16 = truncate t2 <~~~~ Op
-    //      t8: f16 = bitcast t7    <~~~~ N
-    //
-    if (Op.getOperand(0).getValueType() == MVT::i32)
-      return DAG.getNode(ARMISD::VMOVhr, SDLoc(Op),
-                         MVT::f16, Op.getOperand(0));
-
-    return SDValue();
+    // f16 bitcast i16 -> VMOVhr
+    return DAG.getNode(ARMISD::VMOVhr, SDLoc(N), MVT::f16,
+                       DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i32, Op));
   }
 
-  // Half-precision return values
   if (SrcVT == MVT::f16 && DstVT == MVT::i16) {
-    if (!HasFullFP16)
+    if (!Subtarget->hasFullFP16())
       return SDValue();
-    //
-    //          t11: f16 = fadd t8, t10
-    //        t12: i16 = bitcast t11       <~~~ SDNode N
-    //      t13: i32 = zero_extend t12
-    //    t16: ch,glue = CopyToReg t0, Register:i32 %r0, t13
-    //  t17: ch = ARMISD::RET_FLAG t16, Register:i32 %r0, t16:1
-    //
-    // transform this into:
-    //
-    //    t20: i32 = ARMISD::VMOVrh t11
-    //  t16: ch,glue = CopyToReg t0, Register:i32 %r0, t20
-    //
-    auto ZeroExtend = N->use_begin();
-    if (N->use_size() != 1 || ZeroExtend->getOpcode() != ISD::ZERO_EXTEND ||
-        ZeroExtend->getValueType(0) != MVT::i32)
-      return SDValue();
-
-    auto Copy = ZeroExtend->use_begin();
-    if (Copy->getOpcode() == ISD::CopyToReg &&
-        Copy->use_begin()->getOpcode() == ARMISD::RET_FLAG) {
-      SDValue Cvt = DAG.getNode(ARMISD::VMOVrh, SDLoc(Op), MVT::i32, Op);
-      DAG.ReplaceAllUsesWith(*ZeroExtend, &Cvt);
-      return Cvt;
-    }
-    return SDValue();
+    // i16 bitcast f16 -> VMOVrh
+    return DAG.getNode(ISD::TRUNCATE, SDLoc(N), MVT::i16,
+                       DAG.getNode(ARMISD::VMOVrh, SDLoc(N), MVT::i32, Op));
   }
 
   if (!(SrcVT == MVT::i64 || DstVT == MVT::i64))
@@ -13019,16 +12987,25 @@ static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &
   //     t2: f32,ch = CopyFromReg t0, Register:f32 %0
   //   t5: i32 = bitcast t2
   // t18: f16 = ARMISD::VMOVhr t5
-  SDValue BC = N->getOperand(0);
-  if (BC->getOpcode() != ISD::BITCAST)
-    return SDValue();
-  SDValue Copy = BC->getOperand(0);
-  if (Copy.getValueType() != MVT::f32 || Copy->getOpcode() != ISD::CopyFromReg)
-    return SDValue();
+  SDValue Op0 = N->getOperand(0);
+  if (Op0->getOpcode() == ISD::BITCAST) {
+    SDValue Copy = Op0->getOperand(0);
+    if (Copy.getValueType() == MVT::f32 &&
+        Copy->getOpcode() == ISD::CopyFromReg) {
+      SDValue Ops[] = {Copy->getOperand(0), Copy->getOperand(1)};
+      SDValue NewCopy =
+          DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N), MVT::f16, Ops);
+      return NewCopy;
+    }
+  }
 
-  SDValue Ops[] = {Copy->getOperand(0), Copy->getOperand(1)};
-  SDValue NewCopy = DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N), MVT::f16, Ops);
-  return NewCopy;
+  // Only the bottom 16 bits of the source register are used.
+  APInt DemandedMask = APInt::getLowBitsSet(32, 16);
+  const TargetLowering &TLI = DCI.DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(Op0, DemandedMask, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
 }
 
 static SDValue PerformVMOVrhCombine(SDNode *N,
@@ -16391,6 +16368,12 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known = Known.zext(DstSz);
     }
     assert(DstSz == Known.getBitWidth());
+    break;
+  }
+  case ARMISD::VMOVrh: {
+    KnownBits KnownOp = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    assert(KnownOp.getBitWidth() == 16);
+    Known = KnownOp.zext(32);
     break;
   }
   }

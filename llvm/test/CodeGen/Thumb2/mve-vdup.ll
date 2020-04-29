@@ -127,15 +127,11 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @vdup_f16_bc(half* %src1, half* %src2) {
 ; CHECK-LABEL: vdup_f16_bc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vdup.16 q0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load half, half *%src1, align 2
@@ -260,16 +256,12 @@ entry:
 define arm_aapcs_vfpcc half @vdup_f16_extract(half* %src1, half* %src2) {
 ; CHECK-LABEL: vdup_f16_extract:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vldr.16 s0, [r2]
 ; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r1, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:    vstr.16 s1, [r0]
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load half, half *%src1, align 2
