@@ -47,6 +47,7 @@ public:
   void Merge(XcodeSDK other);
 
   XcodeSDK &operator=(XcodeSDK other);
+  XcodeSDK(const XcodeSDK&) = default;
   bool operator==(XcodeSDK other);
 
   /// A parsed SDK directory name.
