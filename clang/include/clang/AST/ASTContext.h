@@ -3002,7 +3002,7 @@ public:
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
-  SmallVector<OMPTraitInfo *, 4> OMPTraitInfoVector;
+  SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
 };
 
 /// Utility function for constructing a nullary selector.
