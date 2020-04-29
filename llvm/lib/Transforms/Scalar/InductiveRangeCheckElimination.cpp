@@ -1768,12 +1768,9 @@ IntersectUnsignedRange(ScalarEvolution &SE,
 PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
+  auto &BPI = AM.getResult<BranchProbabilityAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-  TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
 
-  // TODO: Request BPI through AM directly?
-  BranchProbabilityInfo BPI(F, LI, &TLI, PDT);
   InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
 
   bool Changed = false;
