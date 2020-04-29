@@ -21,8 +21,7 @@ using namespace llvm;
 #if LLVM_ENABLE_THREADS
 
 ThreadPool::ThreadPool(ThreadPoolStrategy S)
-    : ActiveThreads(0), EnableFlag(true),
-      ThreadCount(S.compute_thread_count()) {
+    : ThreadCount(S.compute_thread_count()) {
   // Create ThreadCount threads that will loop forever, wait on QueueCondition
   // for tasks to be queued or the Pool to be destroyed.
   Threads.reserve(ThreadCount);
@@ -44,24 +43,24 @@ ThreadPool::ThreadPool(ThreadPoolStrategy S)
           // We first need to signal that we are active before popping the queue
           // in order for wait() to properly detect that even if the queue is
           // empty, there is still a task in flight.
-          {
-            std::unique_lock<std::mutex> LockGuard(CompletionLock);
-            ++ActiveThreads;
-          }
+          ++ActiveThreads;
           Task = std::move(Tasks.front());
           Tasks.pop();
         }
         // Run the task we just grabbed
         Task();
 
+        bool Notify;
         {
           // Adjust `ActiveThreads`, in case someone waits on ThreadPool::wait()
-          std::unique_lock<std::mutex> LockGuard(CompletionLock);
+          std::lock_guard<std::mutex> LockGuard(QueueLock);
           --ActiveThreads;
+          Notify = workCompletedUnlocked();
         }
-
-        // Notify task completion, in case someone waits on ThreadPool::wait()
-        CompletionCondition.notify_all();
+        // Notify task completion if this is the last active thread, in case
+        // someone waits on ThreadPool::wait().
+        if (Notify)
+          CompletionCondition.notify_all();
       }
     });
   }
@@ -69,12 +68,8 @@ ThreadPool::ThreadPool(ThreadPoolStrategy S)
 
 void ThreadPool::wait() {
   // Wait for all threads to complete and the queue to be empty
-  std::unique_lock<std::mutex> LockGuard(CompletionLock);
-  // The order of the checks for ActiveThreads and Tasks.empty() matters because
-  // any active threads might be modifying the Tasks queue, and this would be a
-  // race.
-  CompletionCondition.wait(LockGuard,
-                           [&] { return !ActiveThreads && Tasks.empty(); });
+  std::unique_lock<std::mutex> LockGuard(QueueLock);
+  CompletionCondition.wait(LockGuard, [&] { return workCompletedUnlocked(); });
 }
 
 std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
@@ -109,7 +104,7 @@ ThreadPool::~ThreadPool() {
 
 // No threads are launched, issue a warning if ThreadCount is not 0
 ThreadPool::ThreadPool(ThreadPoolStrategy S)
-    : ActiveThreads(0), ThreadCount(S.compute_thread_count()) {
+    : ThreadCount(S.compute_thread_count()) {
   if (ThreadCount != 1) {
     errs() << "Warning: request a ThreadPool with " << ThreadCount
            << " threads, but LLVM_ENABLE_THREADS has been turned off\n";
