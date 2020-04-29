@@ -516,12 +516,13 @@ private:
 
 public:
   /// Return a ConstantVector with the specified constant in each element.
+  /// Note that this might not return an instance of ConstantVector
   static Constant *getSplat(ElementCount EC, Constant *Elt);
 
-  /// Specialize the getType() method to always return a VectorType,
+  /// Specialize the getType() method to always return a FixedVectorType,
   /// which reduces the amount of casting needed in parts of the compiler.
-  inline VectorType *getType() const {
-    return cast<VectorType>(Value::getType());
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
   }
 
   /// If all elements of the vector constant have the same value, return that
@@ -801,10 +802,10 @@ public:
   /// same value, return that value. Otherwise return NULL.
   Constant *getSplatValue() const;
 
-  /// Specialize the getType() method to always return a VectorType,
+  /// Specialize the getType() method to always return a FixedVectorType,
   /// which reduces the amount of casting needed in parts of the compiler.
-  inline VectorType *getType() const {
-    return cast<VectorType>(Value::getType());
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
