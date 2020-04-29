@@ -41,6 +41,17 @@ public:
   COFFOptTable();
 };
 
+// The result of parsing the .drective section. The /export: and /include:
+// options are handled separately because they reference symbols, and the number
+// of symbols can be quite large. The LLVM Option library will perform at least
+// one memory allocation per argument, and that is prohibitively slow for
+// parsing directives.
+struct ParsedDirectives {
+  std::vector<StringRef> exports;
+  std::vector<StringRef> includes;
+  llvm::opt::InputArgList args;
+};
+
 class ArgParser {
 public:
   // Parses command line options.
@@ -52,8 +63,7 @@ public:
   // Tokenizes a given string and then parses as command line options in
   // .drectve section. /EXPORT options are returned in second element
   // to be processed in fastpath.
-  std::pair<llvm::opt::InputArgList, std::vector<StringRef>>
-  parseDirectives(StringRef s);
+  ParsedDirectives parseDirectives(StringRef s);
 
 private:
   // Concatenate LINK environment variable.
