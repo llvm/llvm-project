@@ -698,6 +698,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(Result this[Index x] => Foo(x);)", Style);
 
   verifyFormat(R"(char[,,] rawCharArray = MakeCharacterGrid();)", Style);
+  verifyFormat(R"(var (key, value))", Style);
 
   // Not seen as a C-style cast.
   verifyFormat(R"(//
