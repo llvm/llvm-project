@@ -193,3 +193,45 @@ if.end:
   br label %while.cond
 }
 
+; CHECK-LABEL: define i32 @use_not_optimized_due_to_backedge
+define i32 @use_not_optimized_due_to_backedge(i32* nocapture %m_i_strides, i32* nocapture readonly %eval_left_dims) {
+entry:
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK_NEXT: store i32 1, i32* %m_i_strides, align 4
+  store i32 1, i32* %m_i_strides, align 4
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.inc
+  ret i32 %m_i_size.1
+
+for.body:                                         ; preds = %entry, %for.inc
+; CHECK: 4 = MemoryPhi({entry,1},{for.inc,3})
+; CHECK-NEXT: %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %m_i_size.022 = phi i32 [ 1, %entry ], [ %m_i_size.1, %for.inc ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %cmp1 = icmp eq i64 %indvars.iv, 0
+  %arrayidx2 = getelementptr inbounds i32, i32* %m_i_strides, i64 %indvars.iv
+; CHECK: MemoryUse(4) MayAlias
+; CHECK-NEXT: %0 = load i32, i32* %arrayidx2, align 4
+  %0 = load i32, i32* %arrayidx2, align 4
+  %arrayidx4 = getelementptr inbounds i32, i32* %eval_left_dims, i64 %indvars.iv
+; CHECK: MemoryUse(4) MayAlias
+; CHECK-NEXT: %1 = load i32, i32* %arrayidx4, align 4
+  %1 = load i32, i32* %arrayidx4, align 4
+  %mul = mul nsw i32 %1, %0
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %arrayidx7 = getelementptr inbounds i32, i32* %m_i_strides, i64 %indvars.iv.next
+; CHECK: 2 = MemoryDef(4)
+; CHECK-NEXT: store i32 %mul, i32* %arrayidx7, align 4
+  store i32 %mul, i32* %arrayidx7, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+; CHECK: 3 = MemoryPhi({for.body,4},{if.then,2})
+; CHECK-NEXT: %m_i_size.1 = phi i32 [ %m_i_size.022, %if.then ], [ %mul, %for.body ]
+  %m_i_size.1 = phi i32 [ %m_i_size.022, %if.then ], [ %mul, %for.body ]
+  br i1 %cmp1, label %for.body, label %for.cond.cleanup
+}
