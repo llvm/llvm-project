@@ -1372,6 +1372,10 @@ bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
 }
 
+bool cache_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_LocalAppData, result);
+}
+
 static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   SmallVector<wchar_t, 1024> Buf;
   size_t Size = 1024;
