@@ -7694,7 +7694,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
     const CallBase &CB, const BasicBlock *EHPadBB) {
   auto PAB = CB.getOperandBundle("ptrauth");
-  auto *CalleeV = CB.getCalledValue();
+  auto *CalleeV = CB.getCalledOperand();
 
   // Gather the call ptrauth data from the operand bundle:
   //   [ i32 <key>, i64 <discriminator> ]
