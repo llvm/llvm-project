@@ -1803,7 +1803,7 @@ def successor;
 // The signature of the builder is always
 //
 // ```c++
-// static void build(Builder *builder, OperationState &state,
+// static void build(OpBuilder &builder, OperationState &state,
 //                   <other-parameters>...) {
 //   <body>...
 // }
@@ -1883,7 +1883,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // following signatures:
   //
   // ```c++
-  // static void build(Builder *, OperationState &odsState,
+  // static void build(OpBuilder &, OperationState &odsState,
   //                   Type <result0-name>, Type <result1-name>, ...,
   //                   Value <arg0-name>, Value <arg1-name>, ...,
   //                   Attribute <attr0-name>, Attribute <attr1-name>, ...);
@@ -1891,7 +1891,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // * where the attributes follow the same declaration order as in the op.
   //
   // ```c++
-  // static void build(Builder *, OperationState &odsState,
+  // static void build(OpBuilder &, OperationState &odsState,
   //                   ArrayRef<Type> resultTypes,
   //                   ArrayRef<Value> operands,
   //                   ArrayRef<NamedAttribute> attributes);

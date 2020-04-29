@@ -521,9 +521,9 @@ Optional<spirv::ModuleOp> Deserializer::collect() { return module; }
 //===----------------------------------------------------------------------===//
 
 spirv::ModuleOp Deserializer::createModuleOp() {
-  Builder builder(context);
+  OpBuilder builder(context);
   OperationState state(unknownLoc, spirv::ModuleOp::getOperationName());
-  spirv::ModuleOp::build(&builder, state);
+  spirv::ModuleOp::build(builder, state);
   return cast<spirv::ModuleOp>(Operation::create(state));
 }
 

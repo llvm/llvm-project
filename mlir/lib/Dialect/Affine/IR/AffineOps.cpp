@@ -920,7 +920,7 @@ static LogicalResult foldMemRefCast(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 // TODO(b/133776335) Check that map operands are loop IVs or symbols.
-void AffineDmaStartOp::build(Builder *builder, OperationState &result,
+void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
                              Value srcMemRef, AffineMap srcMap,
                              ValueRange srcIndices, Value destMemRef,
                              AffineMap dstMap, ValueRange destIndices,
@@ -1090,7 +1090,7 @@ LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
 //===----------------------------------------------------------------------===//
 
 // TODO(b/133776335) Check that map operands are loop IVs or symbols.
-void AffineDmaWaitOp::build(Builder *builder, OperationState &result,
+void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
                             Value tagMemRef, AffineMap tagMap,
                             ValueRange tagIndices, Value numElements) {
   result.addOperands(tagMemRef);
@@ -1166,7 +1166,7 @@ LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineForOp
 //===----------------------------------------------------------------------===//
 
-void AffineForOp::build(Builder *builder, OperationState &result,
+void AffineForOp::build(OpBuilder &builder, OperationState &result,
                         ValueRange lbOperands, AffineMap lbMap,
                         ValueRange ubOperands, AffineMap ubMap, int64_t step) {
   assert(((!lbMap && lbOperands.empty()) ||
@@ -1179,7 +1179,7 @@ void AffineForOp::build(Builder *builder, OperationState &result,
 
   // Add an attribute for the step.
   result.addAttribute(getStepAttrName(),
-                      builder->getIntegerAttr(builder->getIndexType(), step));
+                      builder.getIntegerAttr(builder.getIndexType(), step));
 
   // Add the lower bound.
   result.addAttribute(getLowerBoundAttrName(), AffineMapAttr::get(lbMap));
@@ -1193,15 +1193,15 @@ void AffineForOp::build(Builder *builder, OperationState &result,
   // the loop induction variable.
   Region *bodyRegion = result.addRegion();
   Block *body = new Block();
-  body->addArgument(IndexType::get(builder->getContext()));
+  body->addArgument(IndexType::get(builder.getContext()));
   bodyRegion->push_back(body);
-  ensureTerminator(*bodyRegion, *builder, result.location);
+  ensureTerminator(*bodyRegion, builder, result.location);
 }
 
-void AffineForOp::build(Builder *builder, OperationState &result, int64_t lb,
+void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
                         int64_t ub, int64_t step) {
-  auto lbMap = AffineMap::getConstantMap(lb, builder->getContext());
-  auto ubMap = AffineMap::getConstantMap(ub, builder->getContext());
+  auto lbMap = AffineMap::getConstantMap(lb, builder.getContext());
+  auto ubMap = AffineMap::getConstantMap(ub, builder.getContext());
   return build(builder, result, {}, lbMap, {}, ubMap, step);
 }
 
@@ -1806,15 +1806,15 @@ void AffineIfOp::setConditional(IntegerSet set, ValueRange operands) {
   getOperation()->setOperands(operands);
 }
 
-void AffineIfOp::build(Builder *builder, OperationState &result, IntegerSet set,
-                       ValueRange args, bool withElseRegion) {
+void AffineIfOp::build(OpBuilder &builder, OperationState &result,
+                       IntegerSet set, ValueRange args, bool withElseRegion) {
   result.addOperands(args);
   result.addAttribute(getConditionAttrName(), IntegerSetAttr::get(set));
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
-  AffineIfOp::ensureTerminator(*thenRegion, *builder, result.location);
+  AffineIfOp::ensureTerminator(*thenRegion, builder, result.location);
   if (withElseRegion)
-    AffineIfOp::ensureTerminator(*elseRegion, *builder, result.location);
+    AffineIfOp::ensureTerminator(*elseRegion, builder, result.location);
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
@@ -1845,7 +1845,7 @@ void AffineIfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 // AffineLoadOp
 //===----------------------------------------------------------------------===//
 
-void AffineLoadOp::build(Builder *builder, OperationState &result,
+void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
                          AffineMap map, ValueRange operands) {
   assert(operands.size() == 1 + map.getNumInputs() && "inconsistent operands");
   result.addOperands(operands);
@@ -1855,8 +1855,8 @@ void AffineLoadOp::build(Builder *builder, OperationState &result,
   result.types.push_back(memrefType.getElementType());
 }
 
-void AffineLoadOp::build(Builder *builder, OperationState &result, Value memref,
-                         AffineMap map, ValueRange mapOperands) {
+void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
+                         Value memref, AffineMap map, ValueRange mapOperands) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   result.addOperands(memref);
   result.addOperands(mapOperands);
@@ -1865,14 +1865,14 @@ void AffineLoadOp::build(Builder *builder, OperationState &result, Value memref,
   result.types.push_back(memrefType.getElementType());
 }
 
-void AffineLoadOp::build(Builder *builder, OperationState &result, Value memref,
-                         ValueRange indices) {
+void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
+                         Value memref, ValueRange indices) {
   auto memrefType = memref.getType().cast<MemRefType>();
   auto rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
-  auto map = rank ? builder->getMultiDimIdentityMap(rank)
-                  : builder->getEmptyAffineMap();
+  auto map =
+      rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
   build(builder, result, memref, map, indices);
 }
 
@@ -1948,7 +1948,7 @@ OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
 // AffineStoreOp
 //===----------------------------------------------------------------------===//
 
-void AffineStoreOp::build(Builder *builder, OperationState &result,
+void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
                           Value valueToStore, Value memref, AffineMap map,
                           ValueRange mapOperands) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
@@ -1959,15 +1959,15 @@ void AffineStoreOp::build(Builder *builder, OperationState &result,
 }
 
 // Use identity map.
-void AffineStoreOp::build(Builder *builder, OperationState &result,
+void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
                           Value valueToStore, Value memref,
                           ValueRange indices) {
   auto memrefType = memref.getType().cast<MemRefType>();
   auto rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
-  auto map = rank ? builder->getMultiDimIdentityMap(rank)
-                  : builder->getEmptyAffineMap();
+  auto map =
+      rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
   build(builder, result, valueToStore, memref, map, indices);
 }
 
@@ -2268,19 +2268,19 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineParallelOp
 //===----------------------------------------------------------------------===//
 
-void AffineParallelOp::build(Builder *builder, OperationState &result,
+void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
-                                     builder->getAffineConstantExpr(0));
-  auto lbMap = AffineMap::get(0, 0, lbExprs, builder->getContext());
+                                     builder.getAffineConstantExpr(0));
+  auto lbMap = AffineMap::get(0, 0, lbExprs, builder.getContext());
   SmallVector<AffineExpr, 8> ubExprs;
   for (int64_t range : ranges)
-    ubExprs.push_back(builder->getAffineConstantExpr(range));
-  auto ubMap = AffineMap::get(0, 0, ubExprs, builder->getContext());
+    ubExprs.push_back(builder.getAffineConstantExpr(range));
+  auto ubMap = AffineMap::get(0, 0, ubExprs, builder.getContext());
   build(builder, result, lbMap, {}, ubMap, {});
 }
 
-void AffineParallelOp::build(Builder *builder, OperationState &result,
+void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs) {
   auto numDims = lbMap.getNumResults();
@@ -2292,7 +2292,7 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
   build(builder, result, lbMap, lbArgs, ubMap, ubArgs, steps);
 }
 
-void AffineParallelOp::build(Builder *builder, OperationState &result,
+void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs,
                              ArrayRef<int64_t> steps) {
@@ -2303,7 +2303,7 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
   assert(numDims == steps.size() && "num dims and num steps mismatch");
   result.addAttribute(getLowerBoundsMapAttrName(), AffineMapAttr::get(lbMap));
   result.addAttribute(getUpperBoundsMapAttrName(), AffineMapAttr::get(ubMap));
-  result.addAttribute(getStepsAttrName(), builder->getI64ArrayAttr(steps));
+  result.addAttribute(getStepsAttrName(), builder.getI64ArrayAttr(steps));
   result.addOperands(lbArgs);
   result.addOperands(ubArgs);
   // Create a region and a block for the body.
@@ -2311,9 +2311,9 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
   auto body = new Block();
   // Add all the block arguments.
   for (unsigned i = 0; i < numDims; ++i)
-    body->addArgument(IndexType::get(builder->getContext()));
+    body->addArgument(IndexType::get(builder.getContext()));
   bodyRegion->push_back(body);
-  ensureTerminator(*bodyRegion, *builder, result.location);
+  ensureTerminator(*bodyRegion, builder, result.location);
 }
 
 unsigned AffineParallelOp::getNumDims() { return steps().size(); }

@@ -1467,13 +1467,13 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
       let regions = (region SizedRegion<1>:$region);
       let builders = [OpBuilder<
-        "Builder *b, OperationState &result, TypeRange outputTypes, "
+        "OpBuilder &b, OperationState &result, TypeRange outputTypes, "
         # "ValueRange views",
         [{{
           result.addOperands(views);
           result.addTypes(outputTypes);
           buildNamedStructuredOpRegion<{0}>(
-            *b, result, TypeRange(views), outputTypes);
+            b, result, TypeRange(views), outputTypes);
         }]>
       ];
       let parser = [{

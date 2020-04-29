@@ -265,7 +265,7 @@ For example, for the above `AOp`, a possible builder is:
 
 ```c++
 
-void AOp::build(Builder *builder, OperationState &state,
+void AOp::build(OpBuilder &builder, OperationState &state,
                 Value input, Attribute attr) {
   state.addOperands({input});
   state.addAttribute("a_attr", attr);

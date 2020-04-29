@@ -83,7 +83,7 @@ class AffineDmaStartOp : public Op<AffineDmaStartOp, OpTrait::VariadicOperands,
 public:
   using Op::Op;
 
-  static void build(Builder *builder, OperationState &result, Value srcMemRef,
+  static void build(OpBuilder &builder, OperationState &result, Value srcMemRef,
                     AffineMap srcMap, ValueRange srcIndices, Value destMemRef,
                     AffineMap dstMap, ValueRange destIndices, Value tagMemRef,
                     AffineMap tagMap, ValueRange tagIndices, Value numElements,
@@ -271,7 +271,7 @@ class AffineDmaWaitOp : public Op<AffineDmaWaitOp, OpTrait::VariadicOperands,
 public:
   using Op::Op;
 
-  static void build(Builder *builder, OperationState &result, Value tagMemRef,
+  static void build(OpBuilder &builder, OperationState &result, Value tagMemRef,
                     AffineMap tagMap, ValueRange tagIndices, Value numElements);
 
   static StringRef getOperationName() { return "affine.dma_wait"; }
@@ -339,13 +339,13 @@ public:
   using Op::Op;
 
   /// Builds an affine load op with the specified map and operands.
-  static void build(Builder *builder, OperationState &result, AffineMap map,
+  static void build(OpBuilder &builder, OperationState &result, AffineMap map,
                     ValueRange operands);
   /// Builds an affine load op with an identity map and operands.
-  static void build(Builder *builder, OperationState &result, Value memref,
+  static void build(OpBuilder &builder, OperationState &result, Value memref,
                     ValueRange indices = {});
   /// Builds an affine load op with the specified map and its operands.
-  static void build(Builder *builder, OperationState &result, Value memref,
+  static void build(OpBuilder &builder, OperationState &result, Value memref,
                     AffineMap map, ValueRange mapOperands);
 
   /// Returns the operand index of the memref.
@@ -408,10 +408,10 @@ public:
   using Op::Op;
 
   /// Builds an affine store operation with the provided indices (identity map).
-  static void build(Builder *builder, OperationState &result,
+  static void build(OpBuilder &builder, OperationState &result,
                     Value valueToStore, Value memref, ValueRange indices);
   /// Builds an affine store operation with the specified map and its operands.
-  static void build(Builder *builder, OperationState &result,
+  static void build(OpBuilder &builder, OperationState &result,
                     Value valueToStore, Value memref, AffineMap map,
                     ValueRange mapOperands);
 

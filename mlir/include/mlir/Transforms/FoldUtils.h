@@ -81,7 +81,7 @@ public:
     // fold). Using create methods of the builder will insert the op, so not
     // using it here.
     OperationState state(location, OpTy::getOperationName());
-    OpTy::build(&builder, state, std::forward<Args>(args)...);
+    OpTy::build(builder, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 
     if (failed(tryToFold(builder, op, results)) || op->getNumResults() == 0) {
