@@ -1104,7 +1104,7 @@ std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
   std::string sdk_name = XcodeSDK::GetCanonicalName(sdk_info);
   if (!sdk_name.empty())
     return sdk_name;
-  return target.getOSName();
+  return target.getOSName().str();
 }
 
 StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
