@@ -25,7 +25,7 @@ int testNestedUmbrellaA() {
 int testNestedUmbrellaBFail() {
   return nested_umbrella_b;
   // expected-error@-1{{declaration of 'nested_umbrella_b' must be imported from module 'nested_umbrella.b' before it is required}}
-  // expected-note@Inputs/normal-module-map/nested_umbrella/b.h:1{{previous}}
+  // expected-note@Inputs/normal-module-map/nested_umbrella/b.h:1{{here}}
 }
 
 @import nested_umbrella.b;
