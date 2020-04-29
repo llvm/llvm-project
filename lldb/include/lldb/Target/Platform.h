@@ -435,7 +435,7 @@ public:
     return lldb_private::ConstString();
   }
 
-  virtual llvm::StringRef GetSDKPath(lldb_private::XcodeSDK sdk) {
+  virtual std::string GetSDKPath(lldb_private::XcodeSDK sdk) {
     return {};
   }
 
