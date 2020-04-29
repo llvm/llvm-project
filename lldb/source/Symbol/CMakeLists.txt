@@ -4,7 +4,10 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
 endif()
 
-set(SWIFT_SOURCES SwiftASTContext.cpp)
+set(SWIFT_SOURCES
+    SwiftASTContext.cpp
+    TypeSystemSwiftTypeRef.cpp
+)
 set(SWIFT_LIBS
     swiftAST
     swiftASTSectionImporter
@@ -23,7 +26,6 @@ endif()
 add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
-  TypeSystemSwiftTypeRef.cpp
   CompactUnwindInfo.cpp
   CompileUnit.cpp
   CompilerDecl.cpp
