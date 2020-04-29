@@ -1160,19 +1160,20 @@ std::vector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
 }
 
 //===----------------------------------------------------------------------===//
-// NamedAttributeList
+// MutableDictionaryAttr
 //===----------------------------------------------------------------------===//
 
-NamedAttributeList::NamedAttributeList(ArrayRef<NamedAttribute> attributes) {
+MutableDictionaryAttr::MutableDictionaryAttr(
+    ArrayRef<NamedAttribute> attributes) {
   setAttrs(attributes);
 }
 
-ArrayRef<NamedAttribute> NamedAttributeList::getAttrs() const {
+ArrayRef<NamedAttribute> MutableDictionaryAttr::getAttrs() const {
   return attrs ? attrs.getValue() : llvm::None;
 }
 
 /// Replace the held attributes with ones provided in 'newAttrs'.
-void NamedAttributeList::setAttrs(ArrayRef<NamedAttribute> attributes) {
+void MutableDictionaryAttr::setAttrs(ArrayRef<NamedAttribute> attributes) {
   // Don't create an attribute list if there are no attributes.
   if (attributes.empty())
     attrs = nullptr;
@@ -1181,18 +1182,18 @@ void NamedAttributeList::setAttrs(ArrayRef<NamedAttribute> attributes) {
 }
 
 /// Return the specified attribute if present, null otherwise.
-Attribute NamedAttributeList::get(StringRef name) const {
+Attribute MutableDictionaryAttr::get(StringRef name) const {
   return attrs ? attrs.get(name) : nullptr;
 }
 
 /// Return the specified attribute if present, null otherwise.
-Attribute NamedAttributeList::get(Identifier name) const {
+Attribute MutableDictionaryAttr::get(Identifier name) const {
   return attrs ? attrs.get(name) : nullptr;
 }
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value.  Otherwise, add a new attribute with the specified name/value.
-void NamedAttributeList::set(Identifier name, Attribute value) {
+void MutableDictionaryAttr::set(Identifier name, Attribute value) {
   assert(value && "attributes may never be null");
 
   // Look for an existing value for the given name, and set it in-place.
@@ -1222,7 +1223,7 @@ void NamedAttributeList::set(Identifier name, Attribute value) {
 
 /// Remove the attribute with the specified name if it exists.  The return
 /// value indicates whether the attribute was present or not.
-auto NamedAttributeList::remove(Identifier name) -> RemoveResult {
+auto MutableDictionaryAttr::remove(Identifier name) -> RemoveResult {
   auto origAttrs = getAttrs();
   for (unsigned i = 0, e = origAttrs.size(); i != e; ++i) {
     if (origAttrs[i].first == name) {

@@ -514,7 +514,7 @@ void SCCPSolver::visitOperation(Operation *op) {
   // in-place. The constant passed in may not correspond to the real runtime
   // value, so in-place updates are not allowed.
   SmallVector<Value, 8> originalOperands(op->getOperands());
-  NamedAttributeList originalAttrs = op->getAttrList();
+  MutableDictionaryAttr originalAttrs = op->getMutableAttrDict();
 
   // Simulate the result of folding this operation to a constant. If folding
   // fails or was an in-place fold, mark the results as overdefined.

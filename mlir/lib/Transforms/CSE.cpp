@@ -36,7 +36,8 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     //   - Result Types
     //   - Operands
     return llvm::hash_combine(
-        op->getName(), op->getAttrList().getDictionary(), op->getResultTypes(),
+        op->getName(), op->getMutableAttrDict().getDictionary(),
+        op->getResultTypes(),
         llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
   }
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
@@ -56,7 +57,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
         lhs->getNumResults() != rhs->getNumResults())
       return false;
     // Compare attributes.
-    if (lhs->getAttrList() != rhs->getAttrList())
+    if (lhs->getMutableAttrDict() != rhs->getMutableAttrDict())
       return false;
     // Compare operands.
     if (!std::equal(lhs->operand_begin(), lhs->operand_end(),

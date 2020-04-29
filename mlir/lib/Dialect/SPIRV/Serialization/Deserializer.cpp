@@ -445,7 +445,7 @@ private:
   DenseMap<uint32_t, StringRef> nameMap;
 
   // Result <id> to decorations mapping.
-  DenseMap<uint32_t, NamedAttributeList> decorations;
+  DenseMap<uint32_t, MutableDictionaryAttr> decorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;

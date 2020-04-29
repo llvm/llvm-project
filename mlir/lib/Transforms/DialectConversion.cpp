@@ -468,7 +468,7 @@ class OperationTransactionState {
 public:
   OperationTransactionState() = default;
   OperationTransactionState(Operation *op)
-      : op(op), loc(op->getLoc()), attrs(op->getAttrList()),
+      : op(op), loc(op->getLoc()), attrs(op->getMutableAttrDict()),
         operands(op->operand_begin(), op->operand_end()),
         successors(op->successor_begin(), op->successor_end()) {}
 
@@ -488,7 +488,7 @@ public:
 private:
   Operation *op;
   LocationAttr loc;
-  NamedAttributeList attrs;
+  MutableDictionaryAttr attrs;
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 };

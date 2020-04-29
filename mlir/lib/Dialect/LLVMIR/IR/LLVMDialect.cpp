@@ -1173,7 +1173,7 @@ Block *LLVMFuncOp::addEntryBlock() {
 void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        StringRef name, LLVMType type, LLVM::Linkage linkage,
                        ArrayRef<NamedAttribute> attrs,
-                       ArrayRef<NamedAttributeList> argAttrs) {
+                       ArrayRef<MutableDictionaryAttr> argAttrs) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));

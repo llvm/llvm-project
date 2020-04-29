@@ -35,7 +35,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
-                      ArrayRef<NamedAttributeList> argAttrs) {
+                      ArrayRef<MutableDictionaryAttr> argAttrs) {
   FuncOp func = create(location, name, type, attrs);
   func.setAllArgAttrs(argAttrs);
   return func;
@@ -52,7 +52,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
 
 void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
-                   ArrayRef<NamedAttributeList> argAttrs) {
+                   ArrayRef<MutableDictionaryAttr> argAttrs) {
   build(builder, result, name, type, attrs);
   assert(type.getNumInputs() == argAttrs.size());
   SmallString<8> argAttrName;
@@ -115,7 +115,7 @@ void FuncOp::eraseArguments(ArrayRef<unsigned> argIndices) {
 
   // Update the function type and arg attrs.
   SmallVector<Type, 4> newInputTypes;
-  SmallVector<NamedAttributeList, 4> newArgAttrs;
+  SmallVector<MutableDictionaryAttr, 4> newArgAttrs;
   for (int i = 0; i < originalNumArgs; i++) {
     if (shouldEraseArg(i))
       continue;

@@ -65,21 +65,21 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Block *> successors,
                              unsigned numRegions) {
   return create(location, name, resultTypes, operands,
-                NamedAttributeList(attributes), successors, numRegions);
+                MutableDictionaryAttr(attributes), successors, numRegions);
 }
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
-  return Operation::create(state.location, state.name, state.types,
-                           state.operands, NamedAttributeList(state.attributes),
-                           state.successors, state.regions);
+  return Operation::create(
+      state.location, state.name, state.types, state.operands,
+      MutableDictionaryAttr(state.attributes), state.successors, state.regions);
 }
 
 /// Create a new Operation with the specific fields.
 Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
-                             NamedAttributeList attributes,
+                             MutableDictionaryAttr attributes,
                              ArrayRef<Block *> successors,
                              RegionRange regions) {
   unsigned numRegions = regions.size();
@@ -91,12 +91,12 @@ Operation *Operation::create(Location location, OperationName name,
   return op;
 }
 
-/// Overload of create that takes an existing NamedAttributeList to avoid
+/// Overload of create that takes an existing MutableDictionaryAttr to avoid
 /// unnecessarily uniquing a list of attributes.
 Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<Type> resultTypes,
                              ArrayRef<Value> operands,
-                             NamedAttributeList attributes,
+                             MutableDictionaryAttr attributes,
                              ArrayRef<Block *> successors,
                              unsigned numRegions) {
   // We only need to allocate additional memory for a subset of results.
@@ -156,7 +156,8 @@ Operation *Operation::create(Location location, OperationName name,
 
 Operation::Operation(Location location, OperationName name,
                      ArrayRef<Type> resultTypes, unsigned numSuccessors,
-                     unsigned numRegions, const NamedAttributeList &attributes,
+                     unsigned numRegions,
+                     const MutableDictionaryAttr &attributes,
                      bool hasOperandStorage)
     : location(location), numSuccs(numSuccessors), numRegions(numRegions),
       hasOperandStorage(hasOperandStorage), hasSingleResult(false), name(name),

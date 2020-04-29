@@ -385,7 +385,7 @@ static WalkResult walkSymbolRefs(
     Operation *op,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   // Check to see if the operation has any attributes.
-  DictionaryAttr attrDict = op->getAttrList().getDictionary();
+  DictionaryAttr attrDict = op->getMutableAttrDict().getDictionary();
   if (!attrDict)
     return WalkResult::advance();
 
@@ -803,7 +803,7 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
   // Generate a new attribute dictionary for the current operation by replacing
   // references to the old symbol.
   auto generateNewAttrDict = [&] {
-    auto oldDict = curOp->getAttrList().getDictionary();
+    auto oldDict = curOp->getMutableAttrDict().getDictionary();
     auto newDict = rebuildAttrAfterRAUW(oldDict, accessChains, /*depth=*/0);
     return newDict.cast<DictionaryAttr>();
   };
