@@ -307,7 +307,8 @@ if config.host_os == 'Darwin':
 
   osx_version = (10, 0, 0)
   try:
-    osx_version = subprocess.check_output(["sw_vers", "-productVersion"])
+    osx_version = subprocess.check_output(["sw_vers", "-productVersion"],
+                                          universal_newlines=True)
     osx_version = tuple(int(x) for x in osx_version.split('.'))
     if len(osx_version) == 2: osx_version = (osx_version[0], osx_version[1], 0)
     if osx_version >= (10, 11):
@@ -319,7 +320,7 @@ if config.host_os == 'Darwin':
       # this "feature", we can pass the test on newer OS X versions and other
       # platforms.
       config.available_features.add('osx-no-ld64-live_support')
-  except:
+  except subprocess.CalledProcessError:
     pass
 
   config.darwin_osx_version = osx_version
