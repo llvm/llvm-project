@@ -72,6 +72,13 @@ public:
            Summary->getKind() == ProfileSummary::PSK_Sample;
   }
 
+  /// Returns true if module \c M has partial-profile sample profile.
+  bool hasPartialSampleProfile() {
+    return hasProfileSummary() &&
+           Summary->getKind() == ProfileSummary::PSK_Sample &&
+           Summary->isPartialProfile();
+  }
+
   /// Returns true if module \c M has instrumentation profile.
   bool hasInstrumentationProfile() {
     return hasProfileSummary() &&
