@@ -1299,17 +1299,17 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     // Merge scores for this counter
     const uint32_t MyPending = ScoreUBs[T] - ScoreLBs[T];
     const uint32_t OtherPending = Other.ScoreUBs[T] - Other.ScoreLBs[T];
+    const uint32_t NewUB = ScoreLBs[T] + std::max(MyPending, OtherPending);
+    if (NewUB < ScoreLBs[T])
+      report_fatal_error("waitcnt score overflow");
+
     MergeInfo M;
     M.OldLB = ScoreLBs[T];
     M.OtherLB = Other.ScoreLBs[T];
-    M.MyShift = OtherPending > MyPending ? OtherPending - MyPending : 0;
-    M.OtherShift = ScoreUBs[T] - Other.ScoreUBs[T] + M.MyShift;
+    M.MyShift = NewUB - ScoreUBs[T];
+    M.OtherShift = NewUB - Other.ScoreUBs[T];
 
-    const uint32_t NewUB = ScoreUBs[T] + M.MyShift;
-    if (NewUB < ScoreUBs[T])
-      report_fatal_error("waitcnt score overflow");
     ScoreUBs[T] = NewUB;
-    ScoreLBs[T] = std::min(M.OldLB + M.MyShift, M.OtherLB + M.OtherShift);
 
     StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
 
