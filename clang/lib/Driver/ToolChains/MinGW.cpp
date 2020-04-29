@@ -18,6 +18,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <system_error>
 
 using namespace clang::diag;
@@ -198,6 +199,17 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
+
+  // Add the compiler-rt library directories if they exist to help
+  // the linker find the various sanitizer, builtin, and profiling runtimes.
+  for (const auto &LibPath : TC.getLibraryPaths()) {
+    if (TC.getVFS().exists(LibPath))
+      CmdArgs.push_back(Args.MakeArgString("-L" + LibPath));
+  }
+  auto CRTPath = TC.getCompilerRTPath();
+  if (TC.getVFS().exists(CRTPath))
+    CmdArgs.push_back(Args.MakeArgString("-L" + CRTPath));
+
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   // TODO: Add profile stuff here
