@@ -33,8 +33,9 @@ public:
       //   - Operation pointer
       addDataToHash(hasher, op);
       //   - Attributes
-      addDataToHash(hasher,
-                    op->getAttrList().getDictionary().getAsOpaquePointer());
+      addDataToHash(
+          hasher,
+          op->getMutableAttrDict().getDictionary().getAsOpaquePointer());
       //   - Blocks in Regions
       for (Region &region : op->getRegions()) {
         for (Block &block : region) {

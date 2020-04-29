@@ -5030,7 +5030,7 @@ ParseResult ModuleParser::parseModule(ModuleOp module) {
       if (nested && std::next(operations.begin(), 2) == operations.end()) {
         // Merge the data of the nested module operation into 'module'.
         module.setLoc(nested.getLoc());
-        module.setAttrs(nested.getOperation()->getAttrList());
+        module.setAttrs(nested.getOperation()->getMutableAttrDict());
         bodyBlocks.splice(bodyBlocks.end(), nested.getBodyRegion().getBlocks());
 
         // Erase the original module body.
