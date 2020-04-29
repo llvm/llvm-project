@@ -765,7 +765,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         }
 
         if (AMDGPU::SReg_32RegClass.contains(Reg) ||
-            AMDGPU::SReg_LO16RegClass.contains(Reg) ||
+            AMDGPU::SGPR_LO16RegClass.contains(Reg) ||
             AMDGPU::SGPR_HI16RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_32RegClass.contains(Reg) &&
                  "trap handler registers should not be used");
