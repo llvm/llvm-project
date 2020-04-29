@@ -303,6 +303,11 @@ public:
   bool empty() const { return size() == 0; }
   size_t size() const;
 
+  /// Sorts the NamedAttributes in the array ordered by name as expected by
+  /// getWithSorted.
+  /// Requires: uniquely named attributes.
+  static void sort(SmallVectorImpl<NamedAttribute> &array);
+
   /// Methods for supporting type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) {
     return kind == StandardAttributes::Dictionary;
