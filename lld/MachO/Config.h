@@ -10,6 +10,7 @@
 #define LLD_MACHO_CONFIG_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 
 #include <vector>
 
@@ -19,9 +20,10 @@ namespace macho {
 class Symbol;
 
 struct Configuration {
-  llvm::StringRef outputFile;
   Symbol *entry;
-
+  llvm::MachO::HeaderFileType outputType;
+  llvm::StringRef installName;
+  llvm::StringRef outputFile;
   std::vector<llvm::StringRef> searchPaths;
 };
 
