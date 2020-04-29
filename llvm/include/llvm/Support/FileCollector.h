@@ -69,7 +69,7 @@ protected:
   addDirectoryImpl(const llvm::Twine &Dir,
                    IntrusiveRefCntPtr<vfs::FileSystem> FS, std::error_code &EC);
 
-  /// Synchronizes adding files.
+  /// Synchronizes access to Seen, VFSWriter and SymlinkMap.
   std::mutex Mutex;
 
   /// The root directory where files are copied.
