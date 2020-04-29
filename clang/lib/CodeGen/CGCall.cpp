@@ -3078,7 +3078,7 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
 llvm::Value *CodeGenFunction::EmitCMSEClearFP16(llvm::Value *Src) {
   llvm::Type *RetTy = Src->getType();
   assert(RetTy->isFloatTy() ||
-         RetTy->isIntegerTy() && RetTy->getIntegerBitWidth() == 32);
+         (RetTy->isIntegerTy() && RetTy->getIntegerBitWidth() == 32));
   if (RetTy->isFloatTy()) {
     llvm::Value *T0 = Builder.CreateBitCast(Src, Builder.getIntNTy(32));
     llvm::Value *T1 = Builder.CreateAnd(T0, 0xffff, "cmse.clear");
