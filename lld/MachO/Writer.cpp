@@ -52,6 +52,8 @@ public:
   uint64_t fileOff = 0;
   MachHeaderSection *headerSection = nullptr;
   BindingSection *bindingSection = nullptr;
+  SymtabSection *symtabSection = nullptr;
+  StringTableSection *stringTableSection = nullptr;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -163,13 +165,23 @@ class LCMain : public LoadCommand {
 
 class LCSymtab : public LoadCommand {
 public:
+  LCSymtab(SymtabSection *symtabSection, StringTableSection *stringTableSection)
+      : symtabSection(symtabSection), stringTableSection(stringTableSection) {}
+
   uint32_t getSize() const override { return sizeof(symtab_command); }
 
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<symtab_command *>(buf);
     c->cmd = LC_SYMTAB;
     c->cmdsize = getSize();
+    c->symoff = symtabSection->getFileOffset();
+    c->nsyms = symtabSection->getNumSymbols();
+    c->stroff = stringTableSection->getFileOffset();
+    c->strsize = stringTableSection->getFileSize();
   }
+
+  SymtabSection *symtabSection = nullptr;
+  StringTableSection *stringTableSection = nullptr;
 };
 
 class LCLoadDylib : public LoadCommand {
@@ -238,7 +250,12 @@ public:
         {defaultPosition, {}},
         // Make sure __LINKEDIT is the last segment (i.e. all its hidden
         // sections must be ordered after other sections).
-        {segment_names::linkEdit, {section_names::binding}},
+        {segment_names::linkEdit,
+         {
+             section_names::binding,
+             section_names::symbolTable,
+             section_names::stringTable,
+         }},
     };
 
     for (uint32_t i = 0, n = ordering.size(); i < n; ++i) {
@@ -294,7 +311,8 @@ void Writer::scanRelocations() {
 void Writer::createLoadCommands() {
   headerSection->addLoadCommand(make<LCDyldInfo>(bindingSection));
   headerSection->addLoadCommand(make<LCLoadDylinker>());
-  headerSection->addLoadCommand(make<LCSymtab>());
+  headerSection->addLoadCommand(
+      make<LCSymtab>(symtabSection, stringTableSection));
   headerSection->addLoadCommand(make<LCDysymtab>());
   headerSection->addLoadCommand(make<LCMain>());
 
@@ -323,6 +341,8 @@ void Writer::createLoadCommands() {
 void Writer::createHiddenSections() {
   headerSection = createInputSection<MachHeaderSection>();
   bindingSection = createInputSection<BindingSection>();
+  stringTableSection = createInputSection<StringTableSection>();
+  symtabSection = createInputSection<SymtabSection>(*stringTableSection);
   createInputSection<PageZeroSection>();
 }
 
@@ -351,6 +371,9 @@ void Writer::assignAddresses(OutputSegment *seg) {
     ArrayRef<InputSection *> sections = p.second;
     for (InputSection *isec : sections) {
       addr = alignTo(addr, isec->align);
+      // We must align the file offsets too to avoid misaligned writes of
+      // structs.
+      fileOff = alignTo(fileOff, isec->align);
       isec->addr = addr;
       addr += isec->getSize();
       fileOff += isec->getFileSize();
@@ -376,6 +399,7 @@ void Writer::writeSections() {
     uint64_t fileOff = seg->fileOff;
     for (auto &sect : seg->getSections()) {
       for (InputSection *isec : sect.second) {
+        fileOff = alignTo(fileOff, isec->align);
         isec->writeTo(buf + fileOff);
         fileOff += isec->getFileSize();
       }
@@ -405,6 +429,7 @@ void Writer::run() {
 
   // Fill __LINKEDIT contents.
   bindingSection->finalizeContents();
+  symtabSection->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets. We don't have to recalculate the other segments
