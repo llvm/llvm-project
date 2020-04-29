@@ -694,18 +694,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
                   AMDGPU::SReg_LO16RegClass.contains(SrcReg) ||
                   AMDGPU::AGPR_LO16RegClass.contains(SrcReg);
-    const TargetRegisterClass *DstRC = IsSGPRDst ? &AMDGPU::SGPR_32RegClass
-                                     : IsAGPRDst ? &AMDGPU::AGPR_32RegClass
-                                                 : &AMDGPU::VGPR_32RegClass;
-    const TargetRegisterClass *SrcRC = IsSGPRSrc ? &AMDGPU::SGPR_32RegClass
-                                     : IsAGPRSrc ? &AMDGPU::AGPR_32RegClass
-                                                 : &AMDGPU::VGPR_32RegClass;
-    MCRegister NewDestReg =
-      RI.getMatchingSuperReg(DestReg, DstLow ? AMDGPU::lo16 : AMDGPU::hi16,
-                             DstRC);
-    MCRegister NewSrcReg =
-      RI.getMatchingSuperReg(SrcReg, SrcLow ? AMDGPU::lo16 : AMDGPU::hi16,
-                             SrcRC);
+    MCRegister NewDestReg = RI.get32BitRegister(DestReg);
+    MCRegister NewSrcReg = RI.get32BitRegister(SrcReg);
 
     if (IsSGPRDst) {
       if (!IsSGPRSrc) {

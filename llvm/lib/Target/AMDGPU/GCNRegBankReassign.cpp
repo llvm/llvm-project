@@ -280,7 +280,9 @@ unsigned GCNRegBankReassign::getPhysRegBank(unsigned Reg) const {
 
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
   unsigned Size = TRI->getRegSizeInBits(*RC);
-  if (Size > 32)
+  if (Size == 16)
+    Reg = TRI->get32BitRegister(Reg);
+  else if (Size > 32)
     Reg = TRI->getSubReg(Reg, AMDGPU::sub0);
 
   if (TRI->hasVGPRs(RC)) {
@@ -306,9 +308,16 @@ uint32_t GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
   }
 
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-  unsigned Size = TRI->getRegSizeInBits(*RC) / 32;
-  if (Size > 1)
-    Reg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+
+  if (Size == 16) {
+    Reg = TRI->get32BitRegister(Reg);
+    Size = 1;
+  } else {
+    Size /= 32;
+    if (Size > 1)
+      Reg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  }
 
   if (TRI->hasVGPRs(RC)) {
     // VGPRs have 4 banks assigned in a round-robin fashion.
@@ -440,10 +449,19 @@ bool GCNRegBankReassign::isReassignable(unsigned Reg) const {
   }
 
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysReg);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+
+  // TODO: Support 16 bit registers. Those needs to be moved with their
+  //       parent VGPR_32 and potentially a sibling 16 bit sub-register.
+  if (Size < 32)
+    return false;
+
   if (TRI->hasVGPRs(RC))
     return true;
 
-  unsigned Size = TRI->getRegSizeInBits(*RC);
+  if (Size == 16)
+    return AMDGPU::SGPR_LO16RegClass.contains(PhysReg);
+
   if (Size > 32)
     PhysReg = TRI->getSubReg(PhysReg, AMDGPU::sub0);
 
