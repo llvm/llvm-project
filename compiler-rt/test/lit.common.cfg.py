@@ -181,7 +181,7 @@ elif config.host_os == 'Darwin' and config.apple_platform != "osx":
   config.compile_wrapper = compile_wrapper
 
   try:
-    prepare_output = subprocess.check_output([prepare_script, config.apple_platform, config.clang]).strip()
+    prepare_output = subprocess.check_output([prepare_script, config.apple_platform, config.clang]).decode().strip()
   except subprocess.CalledProcessError as e:
     print("Command failed:")
     print(e.output)
