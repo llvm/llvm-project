@@ -205,6 +205,14 @@ public:
   /// 'operands'.
   void setOperands(ValueRange operands);
 
+  /// Replace the operands beginning at 'start' and ending at 'start' + 'length'
+  /// with the ones provided in 'operands'. 'operands' may be smaller or larger
+  /// than the range pointed to by 'start'+'length'.
+  void setOperands(unsigned start, unsigned length, ValueRange operands);
+
+  /// Insert the given operands into the operand list at the given 'index'.
+  void insertOperands(unsigned index, ValueRange operands);
+
   unsigned getNumOperands() {
     return LLVM_LIKELY(hasOperandStorage) ? getOperandStorage().size() : 0;
   }
@@ -214,6 +222,15 @@ public:
     return getOpOperand(idx).set(value);
   }
 
+  /// Erase the operand at position `idx`.
+  void eraseOperand(unsigned idx) { eraseOperands(idx); }
+
+  /// Erase the operands starting at position `idx` and ending at position
+  /// 'idx'+'length'.
+  void eraseOperands(unsigned idx, unsigned length = 1) {
+    getOperandStorage().eraseOperands(idx, length);
+  }
+
   // Support operand iteration.
   using operand_range = OperandRange;
   using operand_iterator = operand_range::iterator;
@@ -221,11 +238,8 @@ public:
   operand_iterator operand_begin() { return getOperands().begin(); }
   operand_iterator operand_end() { return getOperands().end(); }
 
-  /// Returns an iterator on the underlying Value's (Value ).
+  /// Returns an iterator on the underlying Value's.
   operand_range getOperands() { return operand_range(this); }
-
-  /// Erase the operand at position `idx`.
-  void eraseOperand(unsigned idx) { getOperandStorage().eraseOperand(idx); }
 
   MutableArrayRef<OpOperand> getOpOperands() {
     return LLVM_LIKELY(hasOperandStorage) ? getOperandStorage().getOperands()
