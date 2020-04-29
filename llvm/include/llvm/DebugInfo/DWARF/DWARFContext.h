@@ -394,16 +394,17 @@ public:
     return getDWARFObj().getFile()->getArch();
   }
 
-private:
-  /// Parse a macro[.dwo] or macinfo[.dwo] section.
-  std::unique_ptr<DWARFDebugMacro>
-  parseMacroOrMacinfo(MacroSecType SectionType);
-
   /// Return the compile unit which contains instruction with provided
   /// address.
   /// TODO: change input parameter from "uint64_t Address"
   ///       into "SectionedAddress Address"
   DWARFCompileUnit *getCompileUnitForAddress(uint64_t Address);
+
+private:
+  /// Parse a macro[.dwo] or macinfo[.dwo] section.
+  std::unique_ptr<DWARFDebugMacro>
+  parseMacroOrMacinfo(MacroSecType SectionType);
+
   void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,
                        std::vector<DILocal> &Result);
 };
