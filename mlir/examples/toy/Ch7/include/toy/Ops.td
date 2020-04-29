@@ -79,13 +79,13 @@ def ConstantOp : Toy_Op<"constant",
   // using `builder.create<ConstantOp>(...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
-    OpBuilder<"Builder *builder, OperationState &state, "
+    OpBuilder<"OpBuilder &builder, OperationState &state, "
               "DenseElementsAttr value", [{
       build(builder, state, value.getType(), value);
     }]>,
 
     // Build a constant with a given constant floating-point value.
-    OpBuilder<"Builder *builder, OperationState &state, double value">
+    OpBuilder<"OpBuilder &builder, OperationState &state, double value">
   ];
 
   // Invoke a static verify method to verify this constant operation.
@@ -112,7 +112,7 @@ def AddOp : Toy_Op<"add",
 
   // Allow building an AddOp with from the two input operands.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -170,7 +170,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 
   // Add custom build methods for the generic call operation.
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &state, "
+    OpBuilder<"OpBuilder &builder, OperationState &state, "
               "StringRef callee, ArrayRef<Value> arguments">
   ];
 }
@@ -192,7 +192,7 @@ def MulOp : Toy_Op<"mul",
 
   // Allow building a MulOp with from the two input operands.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
   ];
 }
 
@@ -260,7 +260,7 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
 
   // Allow building a ReturnOp with no return operand.
   let builders = [OpBuilder<
-    "Builder *b, OperationState &state", [{ build(b, state, llvm::None); }]
+    "OpBuilder &b, OperationState &state", [{ build(b, state, llvm::None); }]
   >];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -287,7 +287,7 @@ def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
 
   // Allow building a StructAccessOp with just a struct value and an index.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value input, size_t index">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value input, size_t index">
   ];
 
   let verifier = [{ return ::verify(*this); }];
@@ -335,7 +335,7 @@ def TransposeOp : Toy_Op<"transpose",
 
   // Allow building a TransposeOp with from the input operand.
   let builders = [
-    OpBuilder<"Builder *b, OperationState &state, Value input">
+    OpBuilder<"OpBuilder &b, OperationState &state, Value input">
   ];
 
   // Invoke a static verify method to verify this transpose operation.

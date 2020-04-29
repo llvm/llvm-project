@@ -21,10 +21,10 @@ class FirEndOp;
 class LoopOp;
 class RealAttr;
 
-void buildCmpFOp(mlir::Builder *builder, mlir::OperationState &result,
+void buildCmpFOp(mlir::OpBuilder &builder, mlir::OperationState &result,
                  mlir::CmpFPredicate predicate, mlir::Value lhs,
                  mlir::Value rhs);
-void buildCmpCOp(mlir::Builder *builder, mlir::OperationState &result,
+void buildCmpCOp(mlir::OpBuilder &builder, mlir::OperationState &result,
                  mlir::CmpFPredicate predicate, mlir::Value lhs,
                  mlir::Value rhs);
 unsigned getCaseArgumentOffset(llvm::ArrayRef<mlir::Attribute> cases,

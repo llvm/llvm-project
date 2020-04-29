@@ -140,7 +140,7 @@ class fir_SimpleOp<string mnemonic, list<OpTrait> traits>
 
 // Base builder for allocate operations
 def fir_AllocateOpBuilder : OpBuilder<
-  "Builder *builder, OperationState &result, Type inType,"
+  "OpBuilder &builder, OperationState &result, Type inType,"
   "ValueRange lenParams = {}, ValueRange sizes = {},"
   "ArrayRef<NamedAttribute> attributes = {}",
   [{
@@ -151,19 +151,19 @@ def fir_AllocateOpBuilder : OpBuilder<
   }]>;
 
 def fir_NamedAllocateOpBuilder : OpBuilder<
-  "Builder *builder, OperationState &result, Type inType, StringRef name,"
+  "OpBuilder &builder, OperationState &result, Type inType, StringRef name,"
   "ValueRange lenParams = {}, ValueRange sizes = {},"
   "ArrayRef<NamedAttribute> attributes = {}",
   [{
     result.addTypes(getRefTy(inType));
     result.addAttribute("in_type", TypeAttr::get(inType));
-    result.addAttribute("name", builder->getStringAttr(name));
+    result.addAttribute("name", builder.getStringAttr(name));
     result.addOperands(sizes);
     result.addAttributes(attributes);
   }]>;
 
 def fir_OneResultOpBuilder : OpBuilder<
-  "Builder *, OperationState &result, Type resultType,"
+  "OpBuilder &, OperationState &result, Type resultType,"
   "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
   [{
     if (resultType)
@@ -370,7 +370,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
   let arguments = (ins AnyReferenceLike:$memref);
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value refVal",
+    "OpBuilder &builder, OperationState &result, Value refVal",
     [{
       if (!refVal) {
         mlir::emitError(result.location, "LoadOp has null argument");
@@ -605,7 +605,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value selector,"
+    "OpBuilder &builder, OperationState &result, Value selector,"
     "ArrayRef<int64_t> compareOperands, ArrayRef<Block *> destinations,"
     "ArrayRef<ValueRange> destOperands = {},"
     "ArrayRef<NamedAttribute> attributes = {}",
@@ -613,9 +613,9 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       result.addOperands(selector);
       llvm::SmallVector<mlir::Attribute, 8> ivalues;
       for (auto iv : compareOperands)
-        ivalues.push_back(builder->getI64IntegerAttr(iv));
-      ivalues.push_back(builder->getUnitAttr());
-      result.addAttribute(getCasesAttr(), builder->getArrayAttr(ivalues));
+        ivalues.push_back(builder.getI64IntegerAttr(iv));
+      ivalues.push_back(builder.getUnitAttr());
+      result.addAttribute(getCasesAttr(), builder.getArrayAttr(ivalues));
       const auto count = destinations.size();
       for (auto d : destinations)
         result.addSuccessors(d);
@@ -633,9 +633,9 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
         }
       }
       result.addAttribute(getOperandSegmentSizeAttr(),
-                          builder->getI32VectorAttr({1, 0, sumArgs}));
+                          builder.getI32VectorAttr({1, 0, sumArgs}));
       result.addAttribute(getTargetOffsetAttr(),
-                          builder->getI32VectorAttr(argOffs));
+                          builder.getI32VectorAttr(argOffs));
       result.addAttributes(attributes);
     }]
   >];
@@ -793,11 +793,11 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, Value selector,"
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value selector,"
     "ArrayRef<mlir::Attribute> compareAttrs, ArrayRef<ValueRange> cmpOperands,"
     "ArrayRef<Block *> destinations, ArrayRef<ValueRange> destOperands = {},"
     "ArrayRef<NamedAttribute> attributes = {}">,
-    OpBuilder<"Builder *builder, OperationState &result, Value selector,"
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value selector,"
     "ArrayRef<mlir::Attribute> compareAttrs, ArrayRef<Value> cmpOpList,"
     "ArrayRef<Block *> destinations, ArrayRef<ValueRange> destOperands = {},"
     "ArrayRef<NamedAttribute> attributes = {}">];
@@ -886,13 +886,13 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
 
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value selector,"
+    "OpBuilder &builder, OperationState &result, Value selector,"
     "ArrayRef<mlir::Attribute> typeOperands,"
     "ArrayRef<Block *> destinations, ArrayRef<ValueRange> destOperands = {},"
     "ArrayRef<NamedAttribute> attributes = {}",
     [{
       result.addOperands(selector);
-      result.addAttribute(getCasesAttr(), builder->getArrayAttr(typeOperands));
+      result.addAttribute(getCasesAttr(), builder.getArrayAttr(typeOperands));
       const auto count = destinations.size();
       for (auto d : destinations)
         result.addSuccessors(d);
@@ -910,9 +910,9 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
         }
       }
       result.addAttribute(getOperandSegmentSizeAttr(),
-                          builder->getI32VectorAttr({1, 0, sumArgs}));
+                          builder.getI32VectorAttr({1, 0, sumArgs}));
       result.addAttribute(getTargetOffsetAttr(),
-                          builder->getI32VectorAttr(argOffs));
+                          builder.getI32VectorAttr(argOffs));
       result.addAttributes(attributes);
     }]
   >];
@@ -1596,10 +1596,10 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "Type type, Value ref, ValueRange coor,"
 	      "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "Type type, ValueRange operands,"
 	      "ArrayRef<NamedAttribute> attrs = {}">];
 	      
@@ -1708,10 +1708,10 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   }];
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, StringRef fieldName,"
+    "OpBuilder &builder, OperationState &result, StringRef fieldName,"
     "Type recTy, ValueRange operands = {}",
     [{
-      result.addAttribute(fieldAttrName(), builder->getStringAttr(fieldName));
+      result.addAttribute(fieldAttrName(), builder.getStringAttr(fieldName));
       result.addAttribute(typeAttrName(), TypeAttr::get(recTy));
       result.addOperands(operands);
     }]
@@ -1832,9 +1832,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
   }];
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, StringRef fieldName, Type recTy",
+    "OpBuilder &builder, OperationState &result, StringRef fieldName, Type recTy",
     [{
-      result.addAttribute(fieldAttrName(), builder->getStringAttr(fieldName));
+      result.addAttribute(fieldAttrName(), builder.getStringAttr(fieldName));
       result.addAttribute(typeAttrName(), TypeAttr::get(recTy));
     }]
   >];
@@ -1864,7 +1864,7 @@ def fir_ResultOp : fir_Op<"result", [NoSideEffect, ReturnLike, Terminator]> {
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result", "/* do nothing */">
+    OpBuilder<"OpBuilder &builder, OperationState &result", "/* do nothing */">
   ];
 
   let assemblyFormat = "($results^ `:` type($results))? attr-dict";
@@ -1919,7 +1919,7 @@ def fir_LoopOp : region_Op<"do_loop",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "mlir::Value lowerBound, mlir::Value upperBound,"
               "mlir::Value step, bool unordered = false,"
               "ValueRange iterArgs = llvm::None,"
@@ -1996,9 +1996,9 @@ def fir_WhereOp : region_Op<"if"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "Value cond, bool withOtherRegion">,
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "TypeRange resultTypes, Value cond, bool withOtherRegion">
   ];
 
@@ -2043,7 +2043,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "mlir::Value lowerBound, mlir::Value upperBound,"
 	      "mlir::Value step, mlir::Value iterate,"
               "ValueRange iterArgs = llvm::None,"
@@ -2367,7 +2367,7 @@ def fir_CmpfOp : fir_Op<"cmpf",
   let results = (outs AnyLogicalLike);
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, CmpFPredicate predicate,"
+    "OpBuilder &builder, OperationState &result, CmpFPredicate predicate,"
     "Value lhs, Value rhs", [{
       buildCmpFOp(builder, result, predicate, lhs, rhs);
   }]>];
@@ -2476,7 +2476,7 @@ def fir_CmpcOp : fir_Op<"cmpc",
   let printer = "printCmpcOp(p, *this);";
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, CmpFPredicate predicate,"
+    "OpBuilder &builder, OperationState &result, CmpFPredicate predicate,"
     "Value lhs, Value rhs", [{
       buildCmpCOp(builder, result, predicate, lhs, rhs);
   }]>];
@@ -2608,7 +2608,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
   }];
 
   let builders = [
-    OpBuilder<"Builder *, OperationState &result, mlir::TypeAttr inty">
+    OpBuilder<"OpBuilder &, OperationState &result, mlir::TypeAttr inty">
   ];
 
   let verifier = [{
@@ -2713,23 +2713,23 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "StringRef name, Type type, ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "StringRef name, bool isConstant, Type type,"
 	      "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "StringRef name, Type type, StringAttr linkage = {},"
 	      "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "StringRef name, bool isConstant, Type type,"
 	      "StringAttr linkage = {},"
 	      "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "StringRef name, Type type, Attribute initVal,"
 	      "StringAttr linkage = {},"
 	      "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"mlir::Builder *builder, OperationState &result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
               "StringRef name, bool isConstant, Type type,"
 	      "Attribute initVal, StringAttr linkage = {},"
 	      "ArrayRef<NamedAttribute> attrs = {}">,
@@ -2891,11 +2891,11 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"mlir::Builder *builder, OperationState *result,"
+    OpBuilder<"mlir::OpBuilder &builder, OperationState *result,"
               "StringRef name, Type type, ArrayRef<NamedAttribute> attrs = {}",
     [{
       result->addAttribute(mlir::SymbolTable::getSymbolAttrName(),
-                           builder->getStringAttr(name));
+                           builder.getStringAttr(name));
       result->addAttributes(attrs);
     }]>
   ];

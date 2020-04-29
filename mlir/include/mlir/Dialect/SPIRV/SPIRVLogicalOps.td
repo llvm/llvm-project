@@ -854,7 +854,7 @@ def SPV_SelectOp : SPV_Op<"Select",
     SPV_SelectType:$result
   );
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               Value cond, Value trueValue,
                               Value falseValue}]>];
 
