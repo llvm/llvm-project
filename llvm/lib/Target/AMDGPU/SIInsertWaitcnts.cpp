@@ -32,6 +32,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -57,7 +58,6 @@
 #include <cstring>
 #include <memory>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -355,8 +355,7 @@ private:
     explicit BlockInfo(MachineBasicBlock *MBB) : MBB(MBB) {}
   };
 
-  std::vector<BlockInfo> BlockInfos; // by reverse post-order traversal index
-  DenseMap<MachineBasicBlock *, unsigned> RpotIdxMap;
+  MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
   // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
   // because of amdgpu-waitcnt-forcezero flag
@@ -1478,16 +1477,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   RegisterEncoding.SGPRL = RegisterEncoding.SGPR0 + NumSGPRsMax - 1;
 
   TrackedWaitcntSet.clear();
-  RpotIdxMap.clear();
   BlockInfos.clear();
 
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
-  for (MachineBasicBlock *MBB :
-       ReversePostOrderTraversal<MachineFunction *>(&MF)) {
-    RpotIdxMap[MBB] = BlockInfos.size();
-    BlockInfos.emplace_back(MBB);
-  }
+  for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
+    BlockInfos.insert({MBB, BlockInfo(MBB)});
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Modified = false;
@@ -1495,11 +1490,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   do {
     Repeat = false;
 
-    for (BlockInfo &BI : BlockInfos) {
+    for (auto BII = BlockInfos.begin(), BIE = BlockInfos.end(); BII != BIE;
+         ++BII) {
+      BlockInfo &BI = BII->second;
       if (!BI.Dirty)
         continue;
-
-      unsigned Idx = std::distance(&*BlockInfos.begin(), &BI);
 
       if (BI.Incoming) {
         if (!Brackets)
@@ -1519,11 +1514,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       if (Brackets->hasPending()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
         for (MachineBasicBlock *Succ : BI.MBB->successors()) {
-          unsigned SuccIdx = RpotIdxMap[Succ];
-          BlockInfo &SuccBI = BlockInfos[SuccIdx];
+          auto SuccBII = BlockInfos.find(Succ);
+          BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {
             SuccBI.Dirty = true;
-            if (SuccIdx <= Idx)
+            if (SuccBII <= BII)
               Repeat = true;
             if (!MoveBracketsToSucc) {
               MoveBracketsToSucc = &SuccBI;
@@ -1532,7 +1527,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
             }
           } else if (SuccBI.Incoming->merge(*Brackets)) {
             SuccBI.Dirty = true;
-            if (SuccIdx <= Idx)
+            if (SuccBII <= BII)
               Repeat = true;
           }
         }
