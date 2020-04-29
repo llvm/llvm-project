@@ -9,6 +9,7 @@
 #ifndef TEST_OPS
 #define TEST_OPS
 
+include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -1133,6 +1134,17 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins Index);
+  let regions = (region SizedRegion<1>:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
+def PolyhedralScopeOp : TEST_Op<"polyhedral_scope", [PolyhedralScope]> {
+  let summary =  "polyhedral scope operation";
+  let description = [{
+    Test op that defines a new polyhedral scope.
+  }];
+
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
