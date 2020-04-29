@@ -83,21 +83,11 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
     /// Returns the affine value map computed from this operation.
     AffineValueMap getAffineValueMap();
 
-    /// Returns true if the result of this operation can be used as dimension id
-    /// in the region of the closest surrounding op with trait PolyhedralScope.
+    /// Returns true if the result of this operation can be used as dimension id.
     bool isValidDim();
 
-    /// Returns true if the result of this operation can be used as dimension id
-    /// within 'region', i.e., for all its uses with `region`.
-    bool isValidDim(Region *region);
-
-    /// Returns true if the result of this operation is a symbol in the region
-    /// of the closest surrounding op that has the trait PolyhedralScope.
+    /// Returns true if the result of this operation is a symbol.
     bool isValidSymbol();
-
-    /// Returns true if the result of this operation is a symbol for all its
-    /// uses in `region`.
-    bool isValidSymbol(Region *region);
 
     operand_range getMapOperands() { return getOperands(); }
   }];

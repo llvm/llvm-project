@@ -31,10 +31,9 @@ class AffineTerminatorOp;
 class FlatAffineConstraints;
 class OpBuilder;
 
-/// A utility function to check if a value is defined at the top level of an
-/// op with trait `PolyhedralScope` or is a region argument for such an op. A
-/// value of index type defined at the top level is always a valid symbol for
-/// all its uses.
+/// A utility function to check if a value is defined at the top level of a
+/// function. A value of index type defined at the top level is always a valid
+/// symbol.
 bool isTopLevelValue(Value value);
 
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
@@ -458,21 +457,11 @@ public:
                      SmallVectorImpl<OpFoldResult> &results);
 };
 
-/// Returns true if the given Value can be used as a dimension id in the region
-/// of the closest surrounding op that has the trait `PolyhedralScope`.
+/// Returns true if the given Value can be used as a dimension id.
 bool isValidDim(Value value);
 
-/// Returns true if the given Value can be used as a dimension id in `region`,
-/// i.e., for all its uses in `region`.
-bool isValidDim(Value value, Region *region);
-
-/// Returns true if the given value can be used as a symbol in the region of the
-/// closest surrounding op that has the trait `PolyhedralScope`.
+/// Returns true if the given Value can be used as a symbol.
 bool isValidSymbol(Value value);
-
-/// Returns true if the given Value can be used as a symbol for `region`, i.e.,
-/// for all its uses in `region`.
-bool isValidSymbol(Value value, Region *region);
 
 /// Modifies both `map` and `operands` in-place so as to:
 /// 1. drop duplicate operands
