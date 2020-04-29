@@ -765,16 +765,23 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 0;
 }
 
+#if defined(__aarch64__) && defined(arm_thread_state64_get_sp)
+  #define AARCH64_GET_REG(r) \
+    arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss)
+#else
+  #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
+#endif
+
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # if defined(__aarch64__)
-  *pc = ucontext->uc_mcontext->__ss.__pc;
+  *pc = AARCH64_GET_REG(pc);
 #   if defined(__IPHONE_8_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_8_0
-  *bp = ucontext->uc_mcontext->__ss.__fp;
+  *bp = AARCH64_GET_REG(fp);
 #   else
-  *bp = ucontext->uc_mcontext->__ss.__lr;
+  *bp = AARCH64_GET_REG(lr);
 #   endif
-  *sp = ucontext->uc_mcontext->__ss.__sp;
+  *sp = AARCH64_GET_REG(sp);
 # elif defined(__x86_64__)
   *pc = ucontext->uc_mcontext->__ss.__rip;
   *bp = ucontext->uc_mcontext->__ss.__rbp;
@@ -1128,6 +1135,8 @@ void SignalContext::DumpAllRegisters(void *context) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
+# define DUMPREGA64(r) \
+    Printf("%s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);
@@ -1153,7 +1162,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DUMPREG(x[16]); DUMPREG(x[17]); DUMPREG(x[18]); DUMPREG(x[19]); Printf("\n");
   DUMPREG(x[20]); DUMPREG(x[21]); DUMPREG(x[22]); DUMPREG(x[23]); Printf("\n");
   DUMPREG(x[24]); DUMPREG(x[25]); DUMPREG(x[26]); DUMPREG(x[27]); Printf("\n");
-  DUMPREG(x[28]); DUMPREG___(fp); DUMPREG___(lr); DUMPREG___(sp); Printf("\n");
+  DUMPREG(x[28]); DUMPREGA64(fp); DUMPREGA64(lr); DUMPREGA64(sp); Printf("\n");
 # elif defined(__arm__)
 #  define DUMPREG(r) DUMPREG32(r)
   DUMPREG_(r[0]); DUMPREG_(r[1]); DUMPREG_(r[2]); DUMPREG_(r[3]); Printf("\n");
