@@ -3429,8 +3429,8 @@ Status Process::Destroy(bool force_kill) {
       DidDestroy();
       StopPrivateStateThread();
     }
-    m_stdio_communication.Disconnect();
     m_stdio_communication.StopReadThread();
+    m_stdio_communication.Disconnect();
     m_stdin_forward = false;
 
     if (m_process_input_reader) {
@@ -3500,8 +3500,8 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
   case eStateExited:
   case eStateUnloaded:
     m_stdio_communication.SynchronizeWithReadThread();
-    m_stdio_communication.Disconnect();
     m_stdio_communication.StopReadThread();
+    m_stdio_communication.Disconnect();
     m_stdin_forward = false;
 
     LLVM_FALLTHROUGH;
@@ -4587,23 +4587,18 @@ protected:
 
 void Process::SetSTDIOFileDescriptor(int fd) {
   // First set up the Read Thread for reading/handling process I/O
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(fd, true));
+  if (m_stdio_communication.IsConnected()) {
+    m_stdio_communication.SetReadThreadBytesReceivedCallback(
+        STDIOReadThreadBytesReceived, this);
+    m_stdio_communication.StartReadThread();
 
-  std::unique_ptr<ConnectionFileDescriptor> conn_up(
-      new ConnectionFileDescriptor(fd, true));
+    // Now read thread is set up, set up input reader.
 
-  if (conn_up) {
-    m_stdio_communication.SetConnection(conn_up.release());
-    if (m_stdio_communication.IsConnected()) {
-      m_stdio_communication.SetReadThreadBytesReceivedCallback(
-          STDIOReadThreadBytesReceived, this);
-      m_stdio_communication.StartReadThread();
-
-      // Now read thread is set up, set up input reader.
-
-      if (!m_process_input_reader)
-        m_process_input_reader =
-            std::make_shared<IOHandlerProcessSTDIO>(this, fd);
-    }
+    if (!m_process_input_reader)
+      m_process_input_reader =
+          std::make_shared<IOHandlerProcessSTDIO>(this, fd);
   }
 }
 

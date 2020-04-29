@@ -27,7 +27,10 @@ using namespace llvm;
 namespace {
 bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
                                             DIBuilder &DIB, Function &F) {
-  MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
+  MachineFunction *MaybeMF = MMI.getMachineFunction(F);
+  if (!MaybeMF)
+    return false;
+  MachineFunction &MF = *MaybeMF;
 
   DISubprogram *SP = F.getSubprogram();
   assert(SP && "IR Debugify just created it?");

@@ -30,7 +30,7 @@ using namespace llgs_tests;
 #endif
 
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
-  SetConnection(Conn.release());
+  SetConnection(std::move(Conn));
   SetPacketTimeout(std::chrono::seconds(10));
 }
 
