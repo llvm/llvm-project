@@ -316,7 +316,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       if (HasLocalsInUsedOrAsm && CI && CI->isInlineAsm())
         HasInlineAsmMaybeReferencingInternal = true;
 
-      auto *CalledValue = CB->getCalledValue();
+      auto *CalledValue = CB->getCalledOperand();
       auto *CalledFunction = CB->getCalledFunction();
       if (CalledValue && !CalledFunction) {
         CalledValue = CalledValue->stripPointerCasts();

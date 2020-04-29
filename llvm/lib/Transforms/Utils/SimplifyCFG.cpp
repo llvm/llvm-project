@@ -6103,7 +6103,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
     // A call to null is undefined.
     if (auto *CB = dyn_cast<CallBase>(Use))
       return !NullPointerIsDefined(CB->getFunction()) &&
-             CB->getCalledValue() == I;
+             CB->getCalledOperand() == I;
   }
   return false;
 }

@@ -2288,7 +2288,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
 bool ARMFastISel::SelectCall(const Instruction *I,
                              const char *IntrMemName = nullptr) {
   const CallInst *CI = cast<CallInst>(I);
-  const Value *Callee = CI->getCalledValue();
+  const Value *Callee = CI->getCalledOperand();
 
   // Can't handle inline asm.
   if (isa<InlineAsm>(Callee)) return false;

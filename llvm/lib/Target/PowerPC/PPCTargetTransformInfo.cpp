@@ -271,7 +271,7 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
        J != JE; ++J) {
     if (CallInst *CI = dyn_cast<CallInst>(J)) {
       // Inline ASM is okay, unless it clobbers the ctr register.
-      if (InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue())) {
+      if (InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
         if (asmClobbersCTR(IA))
           return true;
         continue;

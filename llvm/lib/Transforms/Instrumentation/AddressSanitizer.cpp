@@ -1378,7 +1378,7 @@ Value *AddressSanitizer::isInterestingMemoryAccess(Instruction *I,
     *Alignment = 0;
     PtrOperand = XCHG->getPointerOperand();
   } else if (auto CI = dyn_cast<CallInst>(I)) {
-    auto *F = dyn_cast<Function>(CI->getCalledValue());
+    auto *F = CI->getCalledFunction();
     if (F && (F->getName().startswith("llvm.masked.load.") ||
               F->getName().startswith("llvm.masked.store."))) {
       unsigned OpOffset = 0;

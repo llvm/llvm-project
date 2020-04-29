@@ -381,7 +381,7 @@ static void analyzeParsePointLiveness(
       dbgs() << " " << V->getName() << " " << *V << "\n";
   }
   if (PrintLiveSetSize) {
-    dbgs() << "Safepoint For: " << Call->getCalledValue()->getName() << "\n";
+    dbgs() << "Safepoint For: " << Call->getCalledOperand()->getName() << "\n";
     dbgs() << "Number live values: " << LiveSet.size() << "\n";
   }
   Result.LiveSet = LiveSet;
@@ -1481,7 +1481,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     assert(DeoptLowering.equals("live-through") && "Unsupported value!");
   }
 
-  Value *CallTarget = Call->getCalledValue();
+  Value *CallTarget = Call->getCalledOperand();
   if (Function *F = dyn_cast<Function>(CallTarget)) {
     if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize) {
       // Calls to llvm.experimental.deoptimize are lowered to calls to the

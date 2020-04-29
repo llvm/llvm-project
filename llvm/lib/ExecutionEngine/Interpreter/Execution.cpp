@@ -1167,7 +1167,7 @@ void Interpreter::visitCallBase(CallBase &I) {
 
   // To handle indirect calls, we must get the pointer value from the argument
   // and treat it as a function pointer.
-  GenericValue SRC = getOperandValue(SF.Caller->getCalledValue(), SF);
+  GenericValue SRC = getOperandValue(SF.Caller->getCalledOperand(), SF);
   callFunction((Function*)GVTOP(SRC), ArgVals);
 }
 

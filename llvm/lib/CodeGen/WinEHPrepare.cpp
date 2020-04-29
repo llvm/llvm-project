@@ -955,7 +955,7 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
 
         // Skip call sites which are nounwind intrinsics or inline asm.
         auto *CalledFn =
-            dyn_cast<Function>(CB->getCalledValue()->stripPointerCasts());
+            dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
         if (CalledFn && ((CalledFn->isIntrinsic() && CB->doesNotThrow()) ||
                          CB->isInlineAsm()))
           continue;

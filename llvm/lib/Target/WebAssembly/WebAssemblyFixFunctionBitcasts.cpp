@@ -76,7 +76,7 @@ static void findUses(Value *V, Function &F,
       if (!CB)
         // Skip uses that aren't immediately called
         continue;
-      Value *Callee = CB->getCalledValue();
+      Value *Callee = CB->getCalledOperand();
       if (Callee != V)
         // Skip calls where the function isn't the callee
         continue;
@@ -307,7 +307,7 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
   if (CallMain) {
     Main->setName("__original_main");
     auto *MainWrapper =
-        cast<Function>(CallMain->getCalledValue()->stripPointerCasts());
+        cast<Function>(CallMain->getCalledOperand()->stripPointerCasts());
     delete CallMain;
     if (Main->isDeclaration()) {
       // The wrapper is not needed in this case as we don't need to export

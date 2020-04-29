@@ -127,7 +127,7 @@ public:
                                 const CallBase &Call,
                                 unsigned FixedArgs = ~0U) {
       RetTy = ResultTy;
-      Callee = Call.getCalledValue();
+      Callee = Call.getCalledOperand();
       Symbol = Target;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);

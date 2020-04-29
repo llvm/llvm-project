@@ -658,12 +658,12 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
         return false;  // Storing the value.
       }
     } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
-      if (CI->getCalledValue() != V) {
+      if (CI->getCalledOperand() != V) {
         //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Not calling the ptr
       }
     } else if (const InvokeInst *II = dyn_cast<InvokeInst>(U)) {
-      if (II->getCalledValue() != V) {
+      if (II->getCalledOperand() != V) {
         //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Not calling the ptr
       }
@@ -721,7 +721,7 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
       }
     } else if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
       CallBase *CB = cast<CallBase>(I);
-      if (CB->getCalledValue() == V) {
+      if (CB->getCalledOperand() == V) {
         // Calling through the pointer!  Turn into a direct call, but be careful
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);

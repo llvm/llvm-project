@@ -1553,7 +1553,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   Value *DestShadow = IRB.CreateBitCast(RawDestShadow, Int8Ptr);
   SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
   auto *MTI = cast<MemTransferInst>(
-      IRB.CreateCall(I.getFunctionType(), I.getCalledValue(),
+      IRB.CreateCall(I.getFunctionType(), I.getCalledOperand(),
                      {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
   if (ClPreserveAlignment) {
     MTI->setDestAlignment(I.getDestAlign() * DFSF.DFS.ShadowWidthBytes);
@@ -1593,7 +1593,7 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
 
 void DFSanVisitor::visitCallBase(CallBase &CB) {
   Function *F = CB.getCalledFunction();
-  if ((F && F->isIntrinsic()) || isa<InlineAsm>(CB.getCalledValue())) {
+  if ((F && F->isIntrinsic()) || CB.isInlineAsm()) {
     visitOperandShadowInst(CB);
     return;
   }
@@ -1606,7 +1606,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
   IRBuilder<> IRB(&CB);
 
   DenseMap<Value *, Function *>::iterator i =
-      DFSF.DFS.UnwrappedFnMap.find(CB.getCalledValue());
+      DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
   if (i != DFSF.DFS.UnwrappedFnMap.end()) {
     Function *F = i->second;
     switch (DFSF.DFS.getWrapperKind(F)) {
@@ -1728,8 +1728,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     }
   }
 
-  FunctionType *FT = cast<FunctionType>(
-      CB.getCalledValue()->getType()->getPointerElementType());
+  FunctionType *FT = CB.getFunctionType();
   if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
     for (unsigned i = 0, n = FT->getNumParams(); i != n; ++i) {
       IRB.CreateStore(DFSF.getShadow(CB.getArgOperand(i)),
@@ -1766,7 +1765,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
   if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_Args) {
     FunctionType *NewFT = DFSF.DFS.getArgsFunctionType(FT);
     Value *Func =
-        IRB.CreateBitCast(CB.getCalledValue(), PointerType::getUnqual(NewFT));
+        IRB.CreateBitCast(CB.getCalledOperand(), PointerType::getUnqual(NewFT));
     std::vector<Value *> Args;
 
     auto i = CB.arg_begin(), E = CB.arg_end();

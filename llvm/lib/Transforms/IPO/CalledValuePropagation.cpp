@@ -385,7 +385,7 @@ static bool runCVP(Module &M) {
   bool Changed = false;
   MDBuilder MDB(M.getContext());
   for (CallBase *C : Lattice.getIndirectCalls()) {
-    auto RegI = CVPLatticeKey(C->getCalledValue(), IPOGrouping::Register);
+    auto RegI = CVPLatticeKey(C->getCalledOperand(), IPOGrouping::Register);
     CVPLatticeVal LV = Solver.getExistingValueState(RegI);
     if (!LV.isFunctionSet() || LV.getFunctions().empty())
       continue;

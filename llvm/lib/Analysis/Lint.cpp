@@ -220,7 +220,7 @@ void Lint::visitFunction(Function &F) {
 }
 
 void Lint::visitCallBase(CallBase &I) {
-  Value *Callee = I.getCalledValue();
+  Value *Callee = I.getCalledOperand();
 
   visitMemoryReference(I, Callee, MemoryLocation::UnknownSize, 0, nullptr,
                        MemRef::Callee);

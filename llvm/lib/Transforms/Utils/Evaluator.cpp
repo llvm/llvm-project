@@ -266,7 +266,7 @@ static Function *getFunction(Constant *C) {
 Function *
 Evaluator::getCalleeWithFormalArgs(CallBase &CB,
                                    SmallVectorImpl<Constant *> &Formals) {
-  auto *V = CB.getCalledValue();
+  auto *V = CB.getCalledOperand();
   if (auto *Fn = getFunction(getVal(V)))
     return getFormalParams(CB, Fn, Formals) ? Fn : nullptr;
 
@@ -486,7 +486,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       }
 
       // Cannot handle inline asm.
-      if (isa<InlineAsm>(CB.getCalledValue())) {
+      if (CB.isInlineAsm()) {
         LLVM_DEBUG(dbgs() << "Found inline asm, can not evaluate.\n");
         return false;
       }
@@ -568,7 +568,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       if (Callee->isDeclaration()) {
         // If this is a function we can constant fold, do it.
         if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
-          InstResult = castCallResultIfNeeded(CB.getCalledValue(), C);
+          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
           if (!InstResult)
             return false;
           LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
@@ -591,7 +591,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           return false;
         }
         ValueStack.pop_back();
-        InstResult = castCallResultIfNeeded(CB.getCalledValue(), RetVal);
+        InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
         if (RetVal && !InstResult)
           return false;
 
