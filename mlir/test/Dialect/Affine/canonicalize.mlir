@@ -481,19 +481,19 @@ func @canonicalize_bounds(%M : index, %N : index) {
 
 // CHECK-LABEL: @compose_into_affine_load_store
 func @compose_into_affine_load_store(%A : memref<1024xf32>, %u : index) {
-  %cf1 = constant 1.0 : f32
   // CHECK: affine.for %[[IV:.*]] = 0 to 1024
   affine.for %i = 0 to 1024 {
     // Make sure the unused operand (%u below) gets dropped as well.
     %idx = affine.apply affine_map<(d0, d1) -> (d0 + 1)> (%i, %u)
-    affine.load %A[%idx] : memref<1024xf32>
-    affine.store %cf1, %A[%idx] : memref<1024xf32>
+    %0 = affine.load %A[%idx] : memref<1024xf32>
+    affine.store %0, %A[%idx] : memref<1024xf32>
     // CHECK-NEXT: affine.load %{{.*}}[%[[IV]] + 1]
-    // CHECK-NEXT: affine.store %cst, %{{.*}}[%[[IV]] + 1]
+    // CHECK-NEXT: affine.store %{{.*}}, %{{.*}}[%[[IV]] + 1]
 
     // Map remains the same, but operand changes on composition.
     %copy = affine.apply affine_map<(d0) -> (d0)> (%i)
-    affine.load %A[%copy] : memref<1024xf32>
+    %1 = affine.load %A[%copy] : memref<1024xf32>
+    "prevent.dce"(%1) : (f32) -> ()
     // CHECK-NEXT: affine.load %{{.*}}[%[[IV]]]
   }
   return

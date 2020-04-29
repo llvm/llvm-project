@@ -69,7 +69,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 
 AffineDialect::AffineDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
-  addOperations<AffineDmaStartOp, AffineDmaWaitOp, AffineLoadOp, AffineStoreOp,
+  addOperations<AffineDmaStartOp, AffineDmaWaitOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
@@ -1765,7 +1765,7 @@ void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, memref, map, indices);
 }
 
-ParseResult AffineLoadOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult parseAffineLoadOp(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   auto indexTy = builder.getIndexType();
 
@@ -1775,7 +1775,8 @@ ParseResult AffineLoadOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 1> mapOperands;
   return failure(
       parser.parseOperand(memrefInfo) ||
-      parser.parseAffineMapOfSSAIds(mapOperands, mapAttr, getMapAttrName(),
+      parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
+                                    AffineLoadOp::getMapAttrName(),
                                     result.attributes) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(type) ||
@@ -1784,38 +1785,40 @@ ParseResult AffineLoadOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.addTypeToList(type.getElementType(), result.types));
 }
 
-void AffineLoadOp::print(OpAsmPrinter &p) {
-  p << "affine.load " << getMemRef() << '[';
-  if (AffineMapAttr mapAttr = getAttrOfType<AffineMapAttr>(getMapAttrName()))
-    p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
+void print(OpAsmPrinter &p, AffineLoadOp op) {
+  p << "affine.load " << op.getMemRef() << '[';
+  if (AffineMapAttr mapAttr =
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
+    p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
   p << ']';
-  p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{getMapAttrName()});
-  p << " : " << getMemRefType();
+  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p << " : " << op.getMemRefType();
 }
 
-LogicalResult AffineLoadOp::verify() {
-  if (getType() != getMemRefType().getElementType())
-    return emitOpError("result type must match element type of memref");
+LogicalResult verify(AffineLoadOp op) {
+  if (op.getType() != op.getMemRefType().getElementType())
+    return op.emitOpError("result type must match element type of memref");
 
-  auto mapAttr = getAttrOfType<AffineMapAttr>(getMapAttrName());
+  auto mapAttr = op.getAttrOfType<AffineMapAttr>(op.getMapAttrName());
   if (mapAttr) {
-    AffineMap map = getAttrOfType<AffineMapAttr>(getMapAttrName()).getValue();
-    if (map.getNumResults() != getMemRefType().getRank())
-      return emitOpError("affine.load affine map num results must equal"
-                         " memref rank");
-    if (map.getNumInputs() != getNumOperands() - 1)
-      return emitOpError("expects as many subscripts as affine map inputs");
+    AffineMap map =
+        op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()).getValue();
+    if (map.getNumResults() != op.getMemRefType().getRank())
+      return op.emitOpError("affine.load affine map num results must equal"
+                            " memref rank");
+    if (map.getNumInputs() != op.getNumOperands() - 1)
+      return op.emitOpError("expects as many subscripts as affine map inputs");
   } else {
-    if (getMemRefType().getRank() != getNumOperands() - 1)
-      return emitOpError(
+    if (op.getMemRefType().getRank() != op.getNumOperands() - 1)
+      return op.emitOpError(
           "expects the number of subscripts to be equal to memref rank");
   }
 
-  for (auto idx : getMapOperands()) {
+  for (auto idx : op.getMapOperands()) {
     if (!idx.getType().isIndex())
-      return emitOpError("index to load must have 'index' type");
+      return op.emitOpError("index to load must have 'index' type");
     if (!isValidAffineIndexOperand(idx))
-      return emitOpError("index must be a dimension or symbol identifier");
+      return op.emitOpError("index must be a dimension or symbol identifier");
   }
   return success();
 }
@@ -1859,7 +1862,7 @@ void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, valueToStore, memref, map, indices);
 }
 
-ParseResult AffineStoreOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult parseAffineStoreOp(OpAsmParser &parser, OperationState &result) {
   auto indexTy = parser.getBuilder().getIndexType();
 
   MemRefType type;
@@ -1870,7 +1873,7 @@ ParseResult AffineStoreOp::parse(OpAsmParser &parser, OperationState &result) {
   return failure(parser.parseOperand(storeValueInfo) || parser.parseComma() ||
                  parser.parseOperand(memrefInfo) ||
                  parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
-                                               getMapAttrName(),
+                                               AffineStoreOp::getMapAttrName(),
                                                result.attributes) ||
                  parser.parseOptionalAttrDict(result.attributes) ||
                  parser.parseColonType(type) ||
@@ -1880,40 +1883,42 @@ ParseResult AffineStoreOp::parse(OpAsmParser &parser, OperationState &result) {
                  parser.resolveOperands(mapOperands, indexTy, result.operands));
 }
 
-void AffineStoreOp::print(OpAsmPrinter &p) {
-  p << "affine.store " << getValueToStore();
-  p << ", " << getMemRef() << '[';
-  if (AffineMapAttr mapAttr = getAttrOfType<AffineMapAttr>(getMapAttrName()))
-    p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
+void print(OpAsmPrinter &p, AffineStoreOp op) {
+  p << "affine.store " << op.getValueToStore();
+  p << ", " << op.getMemRef() << '[';
+  if (AffineMapAttr mapAttr =
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
+    p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
   p << ']';
-  p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{getMapAttrName()});
-  p << " : " << getMemRefType();
+  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p << " : " << op.getMemRefType();
 }
 
-LogicalResult AffineStoreOp::verify() {
+LogicalResult verify(AffineStoreOp op) {
   // First operand must have same type as memref element type.
-  if (getValueToStore().getType() != getMemRefType().getElementType())
-    return emitOpError("first operand must have same type memref element type");
+  if (op.getValueToStore().getType() != op.getMemRefType().getElementType())
+    return op.emitOpError(
+        "first operand must have same type memref element type");
 
-  auto mapAttr = getAttrOfType<AffineMapAttr>(getMapAttrName());
+  auto mapAttr = op.getAttrOfType<AffineMapAttr>(op.getMapAttrName());
   if (mapAttr) {
     AffineMap map = mapAttr.getValue();
-    if (map.getNumResults() != getMemRefType().getRank())
-      return emitOpError("affine.store affine map num results must equal"
-                         " memref rank");
-    if (map.getNumInputs() != getNumOperands() - 2)
-      return emitOpError("expects as many subscripts as affine map inputs");
+    if (map.getNumResults() != op.getMemRefType().getRank())
+      return op.emitOpError("affine.store affine map num results must equal"
+                            " memref rank");
+    if (map.getNumInputs() != op.getNumOperands() - 2)
+      return op.emitOpError("expects as many subscripts as affine map inputs");
   } else {
-    if (getMemRefType().getRank() != getNumOperands() - 2)
-      return emitOpError(
+    if (op.getMemRefType().getRank() != op.getNumOperands() - 2)
+      return op.emitOpError(
           "expects the number of subscripts to be equal to memref rank");
   }
 
-  for (auto idx : getMapOperands()) {
+  for (auto idx : op.getMapOperands()) {
     if (!idx.getType().isIndex())
-      return emitOpError("index to store must have 'index' type");
+      return op.emitOpError("index to store must have 'index' type");
     if (!isValidAffineIndexOperand(idx))
-      return emitOpError("index must be a dimension or symbol identifier");
+      return op.emitOpError("index must be a dimension or symbol identifier");
   }
   return success();
 }
