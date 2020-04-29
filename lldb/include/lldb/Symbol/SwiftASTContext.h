@@ -99,7 +99,7 @@ public:
                     : Flags(m_payload).Clear(FixedValueBufferBit);
   }
 };
-  
+
 /// Abstract base class for all Swift TypeSystems.
 ///
 /// Swift CompilerTypes are either a mangled name or a Swift AST
@@ -150,11 +150,14 @@ public:
   };
   virtual CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) = 0;
-  virtual void DumpTypeDescription(void *type, bool print_help_if_available,
-                                   bool print_extensions_if_available) = 0;
-  virtual void DumpTypeDescription(void *type, Stream *s,
-                                   bool print_help_if_available,
-                                   bool print_extensions_if_available) = 0;
+  virtual void DumpTypeDescription(
+      void *type, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+  virtual void DumpTypeDescription(
+      void *type, Stream *s, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
 
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{
@@ -373,8 +376,12 @@ public:
                      ExecutionContextScope *exe_scope,
                      bool is_base_class) override;
 
-  void DumpTypeDescription(void *type) override;
-  void DumpTypeDescription(void *type, Stream *s) override;
+  void DumpTypeDescription(
+      void *type,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+  void DumpTypeDescription(
+      void *type, Stream *s,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
   void DumpSummary(void *type, ExecutionContext *exe_ctx, Stream *s,
                    const DataExtractor &data, lldb::offset_t data_offset,
                    size_t data_byte_size) override;
@@ -411,10 +418,14 @@ public:
   TypeAllocationStrategy GetAllocationStrategy(CompilerType type) override;
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
-  void DumpTypeDescription(void *type, bool print_help_if_available,
-                           bool print_extensions_if_available) override;
-  void DumpTypeDescription(void *type, Stream *s, bool print_help_if_available,
-                           bool print_extensions_if_available) override;
+  void DumpTypeDescription(
+      void *type, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+  void DumpTypeDescription(
+      void *type, Stream *s, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
 private:
   /// Helper that creates an AST type from \p type.
@@ -1004,15 +1015,23 @@ public:
                      ExecutionContextScope *exe_scope,
                      bool is_base_class) override;
 
-  void DumpTypeDescription(void *type) override; // Dump to stdout
+  void
+  DumpTypeDescription(void *type,
+                      lldb::DescriptionLevel level) override; // Dump to stdout
 
-  void DumpTypeDescription(void *type, Stream *s) override;
+  void DumpTypeDescription(
+      void *type, Stream *s,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-  void DumpTypeDescription(void *type, bool print_help_if_available,
-                           bool print_extensions_if_available) override;
+  void DumpTypeDescription(
+      void *type, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-  void DumpTypeDescription(void *type, Stream *s, bool print_help_if_available,
-                           bool print_extensions_if_available) override;
+  void DumpTypeDescription(
+      void *type, Stream *s, bool print_help_if_available,
+      bool print_extensions_if_available,
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
   // TODO: These methods appear unused. Should they be removed?
 
