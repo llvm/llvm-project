@@ -47,13 +47,13 @@ public:
                        iterator_range<dialect_attr_iterator> attrs);
   static FuncOp create(Location location, StringRef name, FunctionType type,
                        ArrayRef<NamedAttribute> attrs,
-                       ArrayRef<NamedAttributeList> argAttrs);
+                       ArrayRef<MutableDictionaryAttr> argAttrs);
 
   static void build(OpBuilder &builder, OperationState &result, StringRef name,
                     FunctionType type, ArrayRef<NamedAttribute> attrs);
   static void build(OpBuilder &builder, OperationState &result, StringRef name,
                     FunctionType type, ArrayRef<NamedAttribute> attrs,
-                    ArrayRef<NamedAttributeList> argAttrs);
+                    ArrayRef<MutableDictionaryAttr> argAttrs);
 
   /// Operation hooks.
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
