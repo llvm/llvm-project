@@ -730,6 +730,10 @@ void COFFDumper::printCOFFDebugDirectory() {
     W.printHex("SizeOfData", D.SizeOfData);
     W.printHex("AddressOfRawData", D.AddressOfRawData);
     W.printHex("PointerToRawData", D.PointerToRawData);
+    // Ideally, if D.AddressOfRawData == 0, we should try to load the payload
+    // using D.PointerToRawData instead.
+    if (D.AddressOfRawData == 0)
+      continue;
     if (D.Type == COFF::IMAGE_DEBUG_TYPE_CODEVIEW) {
       const codeview::DebugInfo *DebugInfo;
       StringRef PDBFileName;
