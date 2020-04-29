@@ -5,6 +5,7 @@ add_flang_tool(f18
 
 target_link_libraries(f18
   PRIVATE
+  FortranCommon
   FortranParser
   FortranEvaluate
   FortranSemantics
