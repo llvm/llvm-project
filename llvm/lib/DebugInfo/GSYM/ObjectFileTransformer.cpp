@@ -82,8 +82,12 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
   size_t NumBefore = Gsym.getNumFunctionInfos();
   for (const object::SymbolRef &Sym : Obj.symbols()) {
     Expected<SymbolRef::Type> SymType = Sym.getType();
+    if (!SymType) {
+      consumeError(SymType.takeError());
+      continue;
+    }
     const uint64_t Addr = Sym.getValue();
-    if (!SymType || SymType.get() != SymbolRef::Type::ST_Function ||
+    if (SymType.get() != SymbolRef::Type::ST_Function ||
         !Gsym.IsValidTextAddress(Addr) || Gsym.hasFunctionInfoForAddress(Addr))
       continue;
     // Function size for MachO files will be 0
