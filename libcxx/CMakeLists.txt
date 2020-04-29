@@ -44,9 +44,6 @@ if (LIBCXX_STANDALONE_BUILD)
   if(CMAKE_VERSION VERSION_LESS 3.12)
     include(FindPythonInterp)
     if( NOT PYTHONINTERP_FOUND )
-      if(LIBCXX_ENABLE_STATIC)
-        message(FATAL_ERROR "Python is required for building the static library")
-      endif()
       message(WARNING "Failed to find python interpreter. "
                       "The libc++ test suite will be disabled.")
       set(LLVM_INCLUDE_TESTS OFF)
@@ -54,6 +51,7 @@ if (LIBCXX_STANDALONE_BUILD)
       add_executable(Python3::Interpreter IMPORTED)
       set_target_properties(Python3::Interpreter PROPERTIES
         IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     endif()
   else()
     find_package(Python3 COMPONENTS Interpreter)
@@ -214,7 +212,7 @@ set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
       AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"
       AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"
-      AND PYTHONINTERP_FOUND
+      AND Python3_EXECUTABLE
       AND LIBCXX_ENABLE_SHARED)
     set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
 endif()
@@ -373,7 +371,7 @@ endif()
 # Warn users that LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
   message(WARNING "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option")
-  if (LIBCXX_ENABLE_STATIC AND NOT PYTHONINTERP_FOUND)
+  if (LIBCXX_ENABLE_STATIC AND NOT Python3_EXECUTABLE)
     message(FATAL_ERROR "LIBCXX_ENABLE_STATIC_ABI_LIBRARY requires python but it was not found.")
   endif()
 endif()
