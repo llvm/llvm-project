@@ -475,27 +475,25 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   assert(!Op.getSubReg() || !Op.isUndef());
 
   RegInterval Result;
-  const MachineRegisterInfo &MRIA = *MRI;
 
   unsigned Reg = TRI->getEncodingValue(Op.getReg());
 
-  if (TRI->isVGPR(MRIA, Op.getReg())) {
+  if (TRI->isVGPR(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.VGPR0 && Reg <= RegisterEncoding.VGPRL);
     Result.first = Reg - RegisterEncoding.VGPR0;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(MRIA, Op.getReg())) {
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
     assert(Reg >= RegisterEncoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
     Result.first = Reg - RegisterEncoding.SGPR0 + NUM_ALL_VGPRS;
     assert(Result.first >= NUM_ALL_VGPRS &&
            Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
   }
   // TODO: Handle TTMP
-  // else if (TRI->isTTMP(MRIA, Reg.getReg())) ...
+  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
   else
     return {-1, -1};
 
-  const MachineInstr &MIA = *MI;
-  const TargetRegisterClass *RC = TII->getOpRegClass(MIA, OpNo);
+  const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
   unsigned Size = TRI->getRegSizeInBits(*RC);
   Result.second = Result.first + (Size / 32);
 
@@ -521,7 +519,6 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
                                     WaitEventType E, MachineInstr &Inst) {
-  const MachineRegisterInfo &MRIA = *MRI;
   InstCounterType T = eventCounter(E);
   uint32_t CurrScore = getScoreUB(T) + 1;
   if (CurrScore == 0)
@@ -574,7 +571,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
         for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
           const MachineOperand &Op = Inst.getOperand(I);
-          if (Op.isReg() && !Op.isDef() && TRI->isVGPR(MRIA, Op.getReg())) {
+          if (Op.isReg() && !Op.isDef() && TRI->isVGPR(*MRI, Op.getReg())) {
             setExpScore(&Inst, TII, TRI, MRI, I, CurrScore);
           }
         }
@@ -622,7 +619,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
           MachineOperand &DefMO = Inst.getOperand(I);
           if (DefMO.isReg() && DefMO.isDef() &&
-              TRI->isVGPR(MRIA, DefMO.getReg())) {
+              TRI->isVGPR(*MRI, DefMO.getReg())) {
             setRegScore(TRI->getEncodingValue(DefMO.getReg()), EXP_CNT,
                         CurrScore);
           }
@@ -630,7 +627,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
       for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
         MachineOperand &MO = Inst.getOperand(I);
-        if (MO.isReg() && !MO.isDef() && TRI->isVGPR(MRIA, MO.getReg())) {
+        if (MO.isReg() && !MO.isDef() && TRI->isVGPR(*MRI, MO.getReg())) {
           setExpScore(&Inst, TII, TRI, MRI, I, CurrScore);
         }
       }
@@ -994,11 +991,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
-        const MachineRegisterInfo &MRIA = *MRI;
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, false);
         for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-          if (TRI->isVGPR(MRIA, Op.getReg())) {
+          if (TRI->isVGPR(*MRI, Op.getReg())) {
             // VM_CNT is only relevant to vgpr or LDS.
             ScoreBrackets.determineWait(
                 VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
@@ -1037,11 +1033,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       }
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         MachineOperand &Def = MI.getOperand(I);
-        const MachineRegisterInfo &MRIA = *MRI;
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I, true);
         for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-          if (TRI->isVGPR(MRIA, Def.getReg())) {
+          if (TRI->isVGPR(*MRI, Def.getReg())) {
             ScoreBrackets.determineWait(
                 VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
             ScoreBrackets.determineWait(
