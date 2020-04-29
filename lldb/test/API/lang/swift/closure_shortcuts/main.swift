@@ -14,7 +14,7 @@ func main() -> Int {
 
   return 0 //%self.expect('expr tinky.map({$0 * 2})', substrs=['[0] = 4', '[1] = 8'])
            //%self.expect('expr [2,4].map({$0 * 2})', substrs=['[0] = 4', '[1] = 8'])
-           //%self.expect('expr $0', substrs=['unresolved identifier \'$0\''], error=True)
+           //%self.expect('expr $0', substrs=['cannot find \'$0\' in scope'], error=True)
 }
 
 _ = main()
