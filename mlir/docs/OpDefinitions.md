@@ -146,7 +146,7 @@ template parameter to the `Op` class.
 
 ### Operation documentation
 
-This includes both an one-line `summary` and a longer human-readable
+This includes both a one-line `summary` and a longer human-readable
 `description`. They will be used to drive automatic generation of dialect
 documentation. They need to be provided in the operation's definition body:
 
@@ -863,7 +863,7 @@ significantly involve writing constraints. We have the `Constraint` class in
 
 An operation's constraint can cover different range; it may
 
-* Only concern a single attribute (e.g. being an 32-bit integer greater than 5),
+* Only concern a single attribute (e.g. being a 32-bit integer greater than 5),
 * Multiple operands and results (e.g., the 1st result's shape must be the same
   as the 1st operand), or
 * Intrinsic to the operation itself (e.g., having no side effect).
@@ -1039,13 +1039,13 @@ optionality, default values, etc.:
 
 *   `DefaultValuedAttr`: specifies the
     [default value](#attributes-with-default-values) for an attribute.
-*   `OptionalAttr`: specfies an attribute as [optional](#optional-attributes).
+*   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
 *   `Confined`: adapts an attribute with
     [further constraints](#confining-attributes).
 
 ### Enum attributes
 
-Some attributes can only take values from an predefined enum, e.g., the
+Some attributes can only take values from a predefined enum, e.g., the
 comparison kind of a comparison op. To define such attributes, ODS provides
 several mechanisms: `StrEnumAttr`, `IntEnumAttr`, and `BitEnumAttr`.
 

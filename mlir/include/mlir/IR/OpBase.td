@@ -1440,7 +1440,7 @@ class DerivedAttr<code ret, code b, code convert = ""> :
   let returnType = ret;
   code body = b;
 
-  // Specify how to convert from the derived attribute to an attibute.
+  // Specify how to convert from the derived attribute to an attribute.
   //
   // ## Special placeholders
   //

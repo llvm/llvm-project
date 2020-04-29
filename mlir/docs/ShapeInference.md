@@ -117,7 +117,7 @@ impose a particular shape inference approach here.
         is, these two type systems differ and both should be supported, but the
         intersection of the two should not be required. As a particular example,
         if a compiler only wants to differentiate exact shapes vs dynamic
-        shapes, then it need not consider a more generic shape latice even
+        shapes, then it need not consider a more generic shape lattice even
         though the shape description supports it.
 
 *   Declarative (e.g., analyzable at compile time, possible to generate
