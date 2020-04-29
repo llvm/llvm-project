@@ -2040,7 +2040,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
         packet, "P packet missing '=' char after register number");
 
   // Parse out the value.
-  uint8_t reg_bytes[32]; // big enough to support up to 256 bit ymmN register
+  uint8_t reg_bytes[RegisterValue::kMaxRegisterByteSize];
   size_t reg_size = packet.GetHexBytesAvail(reg_bytes);
 
   // Get the thread to use.
