@@ -202,6 +202,22 @@ static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Test PolyhedralScopeOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parsePolyhedralScopeOp(OpAsmParser &parser,
+                                          OperationState &result) {
+  // Parse the body region, and reuse the operand info as the argument info.
+  Region *body = result.addRegion();
+  return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
+}
+
+static void print(OpAsmPrinter &p, PolyhedralScopeOp op) {
+  p << "test.polyhedral_scope ";
+  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+}
+
+//===----------------------------------------------------------------------===//
 // Test parser.
 //===----------------------------------------------------------------------===//
 
