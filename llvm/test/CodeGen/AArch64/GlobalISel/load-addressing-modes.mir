@@ -456,13 +456,12 @@ body:             |
     ; CHECK-LABEL: name: more_than_one_use_shl_lsl_slow
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 61, 60
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load 8 from %ir.addr)
-    ; CHECK: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load 8 from %ir.addr)
-    ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[LDRXui1]]
-    ; CHECK: $x2 = COPY [[ADDXrr1]]
+    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY1]], [[COPY]], 3
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[LDRXui1]]
+    ; CHECK: $x2 = COPY [[ADDXrr]]
     ; CHECK: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
@@ -493,12 +492,13 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY1]], [[UBFMXri]]
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY2]], [[COPY]], 3
     ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
     ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
-    ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
-    ; CHECK: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrr]], [[ADDXrr1]]
-    ; CHECK: $x2 = COPY [[ADDXrr2]]
+    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
+    ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrs]], [[ADDXrr]]
+    ; CHECK: $x2 = COPY [[ADDXrr1]]
     ; CHECK: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3

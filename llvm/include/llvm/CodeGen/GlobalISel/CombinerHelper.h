@@ -178,6 +178,10 @@ public:
   bool matchPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
   bool applyPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
 
+  /// Transform a multiply by a power-of-2 value to a left shift.
+  bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
+  bool applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);

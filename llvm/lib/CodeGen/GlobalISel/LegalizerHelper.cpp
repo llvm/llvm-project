@@ -428,7 +428,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   }
   const char *Name = TLI.getLibcallName(RTLibcall);
 
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
@@ -492,8 +492,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   unsigned Size = LLTy.getSizeInBits();
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   switch (MI.getOpcode()) {
   default:
@@ -598,8 +597,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
                                                               unsigned TypeIdx,
                                                               LLT NarrowTy) {
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   uint64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   uint64_t NarrowSize = NarrowTy.getSizeInBits();
@@ -1429,8 +1427,7 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   switch (MI.getOpcode()) {
   default:
@@ -1941,8 +1938,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   using namespace TargetOpcode;
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
 
   switch(MI.getOpcode()) {
   default:
@@ -2093,7 +2089,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
         // result values together, before truncating back down to the non-pow-2
         // type.
         // E.g. v1 = i24 load =>
-        // v2 = i32 load (2 byte)
+        // v2 = i32 zextload (2 byte)
         // v3 = i32 load (1 byte)
         // v4 = i32 shl v3, 16
         // v5 = i32 or v4, v2
@@ -2114,8 +2110,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
         LLT AnyExtTy = LLT::scalar(AnyExtSize);
         Register LargeLdReg = MRI.createGenericVirtualRegister(AnyExtTy);
         Register SmallLdReg = MRI.createGenericVirtualRegister(AnyExtTy);
-        auto LargeLoad =
-            MIRBuilder.buildLoad(LargeLdReg, PtrReg, *LargeMMO);
+        auto LargeLoad = MIRBuilder.buildLoadInstr(
+            TargetOpcode::G_ZEXTLOAD, LargeLdReg, PtrReg, *LargeMMO);
 
         auto OffsetCst =
             MIRBuilder.buildConstant(LLT::scalar(64), LargeSplitSize / 8);
@@ -2987,8 +2983,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                      LLT NarrowTy) {
   using namespace TargetOpcode;
 
-  MIRBuilder.setInstr(MI);
-  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.setInstrAndDebugLoc(MI);
   switch (MI.getOpcode()) {
   case G_IMPLICIT_DEF:
     return fewerElementsVectorImplicitDef(MI, TypeIdx, NarrowTy);
@@ -3305,7 +3300,7 @@ LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                     LLT MoreTy) {
-  MIRBuilder.setInstr(MI);
+  MIRBuilder.setInstrAndDebugLoc(MI);
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case TargetOpcode::G_IMPLICIT_DEF:

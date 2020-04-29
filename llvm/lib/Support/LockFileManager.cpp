@@ -17,12 +17,16 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cerrno>
+#include <chrono>
 #include <ctime>
 #include <memory>
+#include <random>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
+#include <thread>
 #include <tuple>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -295,23 +299,29 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
   if (getState() != LFS_Shared)
     return Res_Success;
 
-#ifdef _WIN32
-  unsigned long Interval = 1;
-#else
-  struct timespec Interval;
-  Interval.tv_sec = 0;
-  Interval.tv_nsec = 1000000;
-#endif
+  // Since we don't yet have an event-based method to wait for the lock file,
+  // implement randomized exponential backoff, similar to Ethernet collision
+  // algorithm. This improves performance on machines with high core counts
+  // when the file lock is heavily contended by multiple clang processes
+  const unsigned long MinWaitDurationMS = 10;
+  const unsigned long MaxWaitMultiplier = 50; // 500ms max wait
+  unsigned long WaitMultiplier = 1;
+  unsigned long ElapsedTimeSeconds = 0;
+
+  std::random_device Device;
+  std::default_random_engine Engine(Device());
+
+  auto StartTime = std::chrono::steady_clock::now();
+
   do {
+    // FIXME: implement event-based waiting
+
     // Sleep for the designated interval, to allow the owning process time to
     // finish up and remove the lock file.
-    // FIXME: Should we hook in to system APIs to get a notification when the
-    // lock file is deleted?
-#ifdef _WIN32
-    Sleep(Interval);
-#else
-    nanosleep(&Interval, nullptr);
-#endif
+    std::uniform_int_distribution<unsigned long> Distribution(1,
+                                                              WaitMultiplier);
+    unsigned long WaitDurationMS = MinWaitDurationMS * Distribution(Engine);
+    std::this_thread::sleep_for(std::chrono::milliseconds(WaitDurationMS));
 
     if (sys::fs::access(LockFileName.c_str(), sys::fs::AccessMode::Exist) ==
         errc::no_such_file_or_directory) {
@@ -325,24 +335,16 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
     if (!processStillExecuting((*Owner).first, (*Owner).second))
       return Res_OwnerDied;
 
-    // Exponentially increase the time we wait for the lock to be removed.
-#ifdef _WIN32
-    Interval *= 2;
-#else
-    Interval.tv_sec *= 2;
-    Interval.tv_nsec *= 2;
-    if (Interval.tv_nsec >= 1000000000) {
-      ++Interval.tv_sec;
-      Interval.tv_nsec -= 1000000000;
+    WaitMultiplier *= 2;
+    if (WaitMultiplier > MaxWaitMultiplier) {
+      WaitMultiplier = MaxWaitMultiplier;
     }
-#endif
-  } while (
-#ifdef _WIN32
-           Interval < MaxSeconds * 1000
-#else
-           Interval.tv_sec < (time_t)MaxSeconds
-#endif
-           );
+
+    ElapsedTimeSeconds = std::chrono::duration_cast<std::chrono::seconds>(
+                             std::chrono::steady_clock::now() - StartTime)
+                             .count();
+
+  } while (ElapsedTimeSeconds < MaxSeconds);
 
   // Give up.
   return Res_Timeout;

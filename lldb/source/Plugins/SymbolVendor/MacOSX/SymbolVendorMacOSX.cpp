@@ -293,10 +293,12 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
         }
 
         symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
-        if (repro::Generator *g =
-                repro::Reproducer::Instance().GetGenerator()) {
-          repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-          fp.recordInterestingDirectory(dsym_root);
+        if (!dsym_root.empty()) {
+          if (repro::Generator *g =
+                  repro::Reproducer::Instance().GetGenerator()) {
+            repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+            fp.recordInterestingDirectory(dsym_root);
+          }
         }
         return symbol_vendor;
       }
