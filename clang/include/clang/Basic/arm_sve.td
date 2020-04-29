@@ -716,6 +716,24 @@ defm SVCLZ : SInstCLS<"svclz", "csilUcUsUiUl",    "aarch64_sve_clz">;
 defm SVCNT : SInstCLS<"svcnt", "csilUcUsUiUlhfd", "aarch64_sve_cnt">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Conversion
+
+defm SVEXTB_S : SInstZPZ<"svextb", "sil",    "aarch64_sve_sxtb">;
+defm SVEXTB_U : SInstZPZ<"svextb", "UsUiUl", "aarch64_sve_uxtb">;
+defm SVEXTH_S : SInstZPZ<"svexth", "il",     "aarch64_sve_sxth">;
+defm SVEXTH_U : SInstZPZ<"svexth", "UiUl",   "aarch64_sve_uxth">;
+defm SVEXTW_S : SInstZPZ<"svextw", "l",      "aarch64_sve_sxtw">;
+defm SVEXTW_U : SInstZPZ<"svextw", "Ul",     "aarch64_sve_uxtw">;
+
+////////////////////////////////////////////////////////////////////////////////
+// Reversal
+
+defm SVRBIT : SInstZPZ<"svrbit", "csilUcUsUiUl", "aarch64_sve_rbit">;
+defm SVREVB : SInstZPZ<"svrevb", "silUsUiUl",    "aarch64_sve_revb">;
+defm SVREVH : SInstZPZ<"svrevh", "ilUiUl",       "aarch64_sve_revh">;
+defm SVREVW : SInstZPZ<"svrevw", "lUl",          "aarch64_sve_revw">;
+
+////////////////////////////////////////////////////////////////////////////////
 // Floating-point arithmetic
 
 defm SVABS_F : SInstZPZ<"svabs", "hfd", "aarch64_sve_fabs">;
