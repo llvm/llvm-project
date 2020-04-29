@@ -1,0 +1,52 @@
+## Check that we error out when trying to patch up debug directories that
+## point to data outside of the runtime mapped sections (as we don't try to
+## locate and copy such payloads from the padding areas of the input file).
+
+# RUN: yaml2obj %s -o %t.in.exe
+
+# RUN: not llvm-objcopy --remove-section .rdata %t.in.exe %t.out.exe 2>&1 | FileCheck %s
+
+# CHECK: error: '{{.*}}{{/|\\}}debug-dir-unmapped.test.tmp.out.exe': debug directory payload outside of mapped sections not supported
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [  ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  Debug:
+    RelativeVirtualAddress: 12288
+    Size:            28
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [  ]
+    VirtualAddress:  4096
+    VirtualSize:     16
+    SectionData:     C3909090909090909090909090909090
+  - Name:            .rdata
+    Characteristics: [  ]
+    VirtualAddress:  8192
+    VirtualSize:     32
+    SectionData:     FFFFFFFF00000000FFFFFFFF00000000
+  - Name:            .buildid
+    Characteristics: [  ]
+    VirtualAddress:  12288
+    VirtualSize:     28
+    SectionData:     0000000042EE405C00000000020000001900000000000000E4070000
+symbols:
+...
