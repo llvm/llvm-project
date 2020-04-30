@@ -568,13 +568,12 @@ TEST(FileShardedIndexTest, Sharding) {
 
   IF.Cmd = tooling::CompileCommand(testRoot(), "b.cc", {"clang"}, "out");
 
-  FileShardedIndex ShardedIndex(std::move(IF), testPath("b.cc"));
-  ASSERT_THAT(
-      ShardedIndex.getAllFiles(),
-      UnorderedElementsAre(testPath("a.h"), testPath("b.h"), testPath("b.cc")));
+  FileShardedIndex ShardedIndex(std::move(IF));
+  ASSERT_THAT(ShardedIndex.getAllSources(),
+              UnorderedElementsAre(AHeaderUri, BHeaderUri, BSourceUri));
 
   {
-    auto Shard = ShardedIndex.getShard(testPath("a.h"));
+    auto Shard = ShardedIndex.getShard(AHeaderUri).getValue();
     EXPECT_THAT(Shard.Symbols.getValue(), UnorderedElementsAre(QName("1")));
     EXPECT_THAT(Shard.Refs.getValue(), IsEmpty());
     EXPECT_THAT(
@@ -586,7 +585,7 @@ TEST(FileShardedIndexTest, Sharding) {
     EXPECT_TRUE(Shard.Cmd.hasValue());
   }
   {
-    auto Shard = ShardedIndex.getShard(testPath("b.h"));
+    auto Shard = ShardedIndex.getShard(BHeaderUri).getValue();
     EXPECT_THAT(Shard.Symbols.getValue(), UnorderedElementsAre(QName("2")));
     EXPECT_THAT(Shard.Refs.getValue(), IsEmpty());
     EXPECT_THAT(
@@ -599,7 +598,7 @@ TEST(FileShardedIndexTest, Sharding) {
     EXPECT_TRUE(Shard.Cmd.hasValue());
   }
   {
-    auto Shard = ShardedIndex.getShard(testPath("b.cc"));
+    auto Shard = ShardedIndex.getShard(BSourceUri).getValue();
     EXPECT_THAT(Shard.Symbols.getValue(), UnorderedElementsAre(QName("2")));
     EXPECT_THAT(Shard.Refs.getValue(), UnorderedElementsAre(Pair(Sym1.ID, _)));
     EXPECT_THAT(Shard.Relations.getValue(), IsEmpty());
