@@ -147,7 +147,10 @@ public:
 
     // Store some flags locally.
     Options.MayReturnNull = getFlags()->may_return_null;
-    Options.ZeroContents = getFlags()->zero_contents;
+    Options.FillContents =
+        getFlags()->zero_contents
+            ? ZeroFill
+            : (getFlags()->pattern_fill_contents ? PatternOrZeroFill : NoFill);
     Options.DeallocTypeMismatch = getFlags()->dealloc_type_mismatch;
     Options.DeleteSizeMismatch = getFlags()->delete_size_mismatch;
     Options.TrackAllocationStacks = false;
@@ -256,7 +259,8 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
-    ZeroContents |= static_cast<bool>(Options.ZeroContents);
+    FillContentsMode FillContents =
+        ZeroContents ? ZeroFill : Options.FillContents;
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (Options.MayReturnNull)
@@ -309,7 +313,7 @@ public:
     }
     if (UNLIKELY(ClassId == 0))
       Block = Secondary.allocate(NeededSize, Alignment, &SecondaryBlockEnd,
-                                 ZeroContents);
+                                 FillContents);
 
     if (UNLIKELY(!Block)) {
       if (Options.MayReturnNull)
@@ -391,10 +395,11 @@ public:
           TaggedPtr = prepareTaggedChunk(Ptr, Size, BlockEnd);
         }
         storeAllocationStackMaybe(Ptr);
-      } else if (UNLIKELY(ZeroContents)) {
+      } else if (UNLIKELY(FillContents != NoFill)) {
         // This condition is not necessarily unlikely, but since memset is
         // costly, we might as well mark it as such.
-        memset(Block, 0, PrimaryT::getSizeByClassId(ClassId));
+        memset(Block, FillContents == ZeroFill ? 0 : PatternFillByte,
+               PrimaryT::getSizeByClassId(ClassId));
       }
     }
 
@@ -725,6 +730,11 @@ public:
     Options.TrackAllocationStacks = Track;
   }
 
+  void setFillContents(FillContentsMode FillContents) {
+    initThreadMaybe();
+    Options.FillContents = FillContents;
+  }
+
   const char *getStackDepotAddress() const {
     return reinterpret_cast<const char *>(&Depot);
   }
@@ -899,7 +909,7 @@ private:
 
   struct {
     u8 MayReturnNull : 1;       // may_return_null
-    u8 ZeroContents : 1;        // zero_contents
+    FillContentsMode FillContents : 2; // zero_contents, pattern_fill_contents
     u8 DeallocTypeMismatch : 1; // dealloc_type_mismatch
     u8 DeleteSizeMismatch : 1;  // delete_size_mismatch
     u8 TrackAllocationStacks : 1;
