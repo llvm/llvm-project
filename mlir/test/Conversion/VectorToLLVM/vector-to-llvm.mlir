@@ -418,6 +418,15 @@ func @vector_type_cast(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> {
 //       CHECK:   llvm.mlir.constant(0 : index
 //       CHECK:   llvm.insertvalue {{.*}}[2] : !llvm<"{ [8 x [8 x <8 x float>]]*, [8 x [8 x <8 x float>]]*, i64 }">
 
+func @vector_print_scalar_i1(%arg0: i1) {
+  vector.print %arg0 : i1
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_i1(
+// CHECK-SAME: %[[A:.*]]: !llvm.i1)
+//       CHECK:    llvm.call @print_i1(%[[A]]) : (!llvm.i1) -> ()
+//       CHECK:    llvm.call @print_newline() : () -> ()
+
 func @vector_print_scalar_i32(%arg0: i32) {
   vector.print %arg0 : i32
   return
