@@ -397,6 +397,7 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   case GlobalValue::CommonLinkage:
     assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
            "CommonLinkage of XCOFF should not come to this path.");
+    LLVM_FALLTHROUGH;
   case GlobalValue::LinkOnceAnyLinkage:
   case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::WeakAnyLinkage:

@@ -203,6 +203,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   // defined.
   switch (Attribute) {
   case MCSA_Cold:
+  case MCSA_Extern:
   case MCSA_LazyReference:
   case MCSA_Reference:
   case MCSA_SymbolResolver:
