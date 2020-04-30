@@ -11,7 +11,7 @@ import lit
 import lit.util
 import os
 import pipes
-import subprocess
+import platform
 import tempfile
 
 def _memoize(f):
@@ -22,15 +22,23 @@ def _memoize(f):
     return cache[x]
   return memoized
 
-@_memoize
-def _subprocess_call(command):
-  devNull = open(os.devnull, 'w')
-  return subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
+def _executeScriptInternal(test, commands):
+  """
+  Returns (stdout, stderr, exitCode, timeoutInfo)
 
-@_memoize
-def _subprocess_check_output(command):
-  devNull = open(os.devnull, 'w')
-  return lit.util.to_string(subprocess.check_output(command, shell=True, stderr=devNull))
+  TODO: This really should be easier to access from Lit itself
+  """
+  class FakeLitConfig(object):
+    def __init__(self):
+      self.isWindows = platform.system() == 'Windows'
+      self.maxIndividualTestTime = 0
+  litConfig = FakeLitConfig()
+  _, tmpBase = lit.TestRunner.getTempPaths(test)
+  execdir = os.path.dirname(test.getExecPath())
+  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, commands, execdir)
+  if isinstance(res, lit.Test.Result):
+    res = ('', '', 127, None)
+  return res
 
 def _makeConfigTest(config):
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')
@@ -54,10 +62,10 @@ def hasCompileFlag(config, flag):
   checking whether that succeeds.
   """
   with _makeConfigTest(config) as test:
-    command = "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
-    command = libcxx.test.newformat.parseScript(test, preamble=[command], fileDependencies=[])[0]
-    result = _subprocess_call(command)
-    return result == 0
+    commands = ["%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)]
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=[])
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
+    return exitCode == 0
 
 def hasLocale(config, locale):
   """
@@ -82,10 +90,10 @@ def hasLocale(config, locale):
       "%{{exec}} %t.exe {}".format(pipes.quote(locale)),
     ]
     commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=['%t.exe'])
-    result = _subprocess_call(' && '.join(commands))
-    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'], fileDependencies=[])[0]
-    _subprocess_call(cleanup)
-    return result == 0
+    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
+    cleanup = libcxx.test.newformat.parseScript(test, preamble=['rm %t.exe'], fileDependencies=[])
+    _executeScriptInternal(test, cleanup)
+    return exitCode == 0
 
 def compilerMacros(config, flags=''):
   """
@@ -98,12 +106,12 @@ def compilerMacros(config, flags=''):
   be added to the compiler invocation when generating the macros.
   """
   with _makeConfigTest(config) as test:
-    command = "%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)
-    command = libcxx.test.newformat.parseScript(test, preamble=[command], fileDependencies=[])[0]
-    unparsed = _subprocess_check_output(command)
+    commands = ["%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)]
+    commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=[])
+    unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
     parsedMacros = dict()
-    for line in filter(None, map(str.strip, unparsed.split('\n'))):
-      assert line.startswith('#define ')
+    defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define'))
+    for line in defines:
       line = line[len('#define '):]
       macro, _, value = line.partition(' ')
       parsedMacros[macro] = value
