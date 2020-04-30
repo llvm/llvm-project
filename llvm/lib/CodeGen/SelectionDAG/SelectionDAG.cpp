@@ -5615,8 +5615,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     llvm_unreachable("should use getVectorShuffle constructor!");
   case ISD::INSERT_VECTOR_ELT: {
     ConstantSDNode *N3C = dyn_cast<ConstantSDNode>(N3);
-    // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF
-    if (N3C && N3C->getZExtValue() >= N1.getValueType().getVectorNumElements())
+    // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF, except
+    // for scalable vectors where we will generate appropriate code to
+    // deal with out-of-bounds cases correctly.
+    if (N3C && N1.getValueType().isFixedLengthVector() &&
+        N3C->getZExtValue() >= N1.getValueType().getVectorNumElements())
       return getUNDEF(VT);
 
     // Undefined index can be assumed out-of-bounds, so that's UNDEF too.
