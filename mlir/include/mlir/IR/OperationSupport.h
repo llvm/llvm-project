@@ -678,6 +678,10 @@ public:
                       ArrayRef<OperandSegment> operandSegments = llvm::None);
   MutableOperandRange(Operation *owner);
 
+  /// Slice this range into a sub range, with the additional operand segment.
+  MutableOperandRange slice(unsigned subStart, unsigned subLen,
+                            Optional<OperandSegment> segment = llvm::None);
+
   /// Append the given values to the range.
   void append(ValueRange values);
 
@@ -698,6 +702,9 @@ public:
 
   /// Allow implicit conversion to an OperandRange.
   operator OperandRange() const;
+
+  /// Returns the owning operation.
+  Operation *getOwner() const { return owner; }
 
 private:
   /// Update the length of this range to the one provided.

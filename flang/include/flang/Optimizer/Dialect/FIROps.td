@@ -585,6 +585,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
 
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
+    using BranchOpInterfaceTrait::getSuccessorOperands;
 
     // Helper function to deal with Optional operand forms
     void printSuccessorAtIndex(mlir::OpAsmPrinter &p, unsigned i) {
