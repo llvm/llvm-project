@@ -133,6 +133,10 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
   set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
 endif()
 
+if(PYTHON_RPATH)
+  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${PYTHON_RPATH}")
+endif()
+
 if (MSVC)
   set_source_files_properties(SBReproducer.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
