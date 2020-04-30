@@ -115,6 +115,7 @@ PIPE_OPERATOR(AAMemoryBehavior)
 PIPE_OPERATOR(AAMemoryLocation)
 PIPE_OPERATOR(AAValueConstantRange)
 PIPE_OPERATOR(AAPrivatizablePtr)
+PIPE_OPERATOR(AAUndefinedBehavior)
 
 #undef PIPE_OPERATOR
 } // namespace llvm

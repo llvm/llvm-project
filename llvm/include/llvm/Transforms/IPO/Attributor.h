@@ -1195,6 +1195,14 @@ struct Attributor {
   BumpPtrAllocator &Allocator;
 
 private:
+  /// Run `::update` on \p AA and track the dependences queried while doing so.
+  /// Also adjust the state if we know further updates are not necessary.
+  ChangeStatus updateAA(AbstractAttribute &AA);
+
+  /// Remember the dependences on the top of the dependence stack such that they
+  /// may trigger further updates. (\see DependenceStack)
+  void rememberDependences();
+
   /// Check \p Pred on all call sites of \p Fn.
   ///
   /// This method will evaluate \p Pred on call sites and return
@@ -1248,7 +1256,7 @@ private:
       return AA;
     }
 
-    AA.update(*this);
+    updateAA(AA);
 
     if (TrackDependence && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
@@ -1345,8 +1353,23 @@ private:
   /// impact the call graph.
   SmallPtrSet<Function *, 8> CGModifiedFunctions;
 
-  /// Set if the attribute currently updated did query a non-fix attribute.
-  bool QueriedNonFixAA;
+  /// Information about a dependence. If FromAA is changed ToAA needs to be
+  /// updated as well.
+  struct DepInfo {
+    const AbstractAttribute *FromAA;
+    const AbstractAttribute *ToAA;
+    DepClassTy DepClass;
+  };
+
+  /// The dependence stack is used to track dependences during an
+  /// `AbstractAttribute::update` call. As `AbstractAttribute::update` can be
+  /// recursive we might have multiple vectors of dependences in here. The stack
+  /// size, should be adjusted according to the expected recursion depth and the
+  /// inner dependence vector size to the expected number of dependences per
+  /// abstract attribute. Since the inner vectors are actually allocated on the
+  /// stack we can be generous with their size.
+  using DependenceVector = SmallVector<DepInfo, 8>;
+  SmallVector<DependenceVector *, 16> DependenceStack;
 
   /// If not null, a set limiting the attribute opportunities.
   const DenseSet<const char *> *Whitelist;

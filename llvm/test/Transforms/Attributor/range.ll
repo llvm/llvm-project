@@ -17,10 +17,15 @@ define i32 @test0(i32* %p) {
 }
 
 define i32 @test0-range-check(i32* %p) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test0-range-check
-; IS__TUNIT____-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT____-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #4, !range !0
-; IS__TUNIT____-NEXT:    ret i32 [[A]]
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test0-range-check
+; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #3, !range !0
+; IS__TUNIT_OPM-NEXT:    ret i32 [[A]]
+;
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test0-range-check
+; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #2, !range !0
+; IS__TUNIT_NPM-NEXT:    ret i32 [[A]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test0-range-check
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
@@ -45,52 +50,99 @@ define void @use3(i1, i1, i1) {
 ; TEST0 icmp test
 define void @test0-icmp-check(i32* %p){
   ; ret = [0, 10)
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test0-icmp-check
-; IS__TUNIT____-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT____-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #4, !range !0
-; IS__TUNIT____-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
-; IS__TUNIT____-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    [[CMP_EQ_5:%.*]] = icmp eq i32 [[RET]], 0
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 false, i1 [[CMP_EQ_2]], i1 [[CMP_EQ_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_EQ_4]], i1 [[CMP_EQ_5]], i1 false)
-; IS__TUNIT____-NEXT:    [[CMP_NE_2:%.*]] = icmp ne i32 [[RET]], 9
-; IS__TUNIT____-NEXT:    [[CMP_NE_3:%.*]] = icmp ne i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_NE_4:%.*]] = icmp ne i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    [[CMP_NE_5:%.*]] = icmp ne i32 [[RET]], 0
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 true, i1 [[CMP_NE_2]], i1 [[CMP_NE_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_NE_4]], i1 [[CMP_NE_5]], i1 true)
-; IS__TUNIT____-NEXT:    [[CMP_UGT_3:%.*]] = icmp ugt i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_UGT_4:%.*]] = icmp ugt i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    [[CMP_UGT_5:%.*]] = icmp ugt i32 [[RET]], 0
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_UGT_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_UGT_4]], i1 [[CMP_UGT_5]], i1 false)
-; IS__TUNIT____-NEXT:    [[CMP_UGE_2:%.*]] = icmp uge i32 [[RET]], 9
-; IS__TUNIT____-NEXT:    [[CMP_UGE_3:%.*]] = icmp uge i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_UGE_4:%.*]] = icmp uge i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 false, i1 [[CMP_UGE_2]], i1 [[CMP_UGE_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_UGE_4]], i1 true, i1 false)
-; IS__TUNIT____-NEXT:    [[CMP_SGT_3:%.*]] = icmp sgt i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_SGT_4:%.*]] = icmp sgt i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    [[CMP_SGT_5:%.*]] = icmp sgt i32 [[RET]], 0
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_SGT_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_SGT_4]], i1 [[CMP_SGT_5]], i1 true)
-; IS__TUNIT____-NEXT:    [[CMP_GTE_2:%.*]] = icmp sge i32 [[RET]], 9
-; IS__TUNIT____-NEXT:    [[CMP_GTE_3:%.*]] = icmp sge i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_GTE_4:%.*]] = icmp sge i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 false, i1 [[CMP_GTE_2]], i1 [[CMP_GTE_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_GTE_4]], i1 true, i1 true)
-; IS__TUNIT____-NEXT:    [[CMP_SLT_2:%.*]] = icmp slt i32 [[RET]], 9
-; IS__TUNIT____-NEXT:    [[CMP_SLT_3:%.*]] = icmp slt i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_SLT_4:%.*]] = icmp slt i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 true, i1 [[CMP_SLT_2]], i1 [[CMP_SLT_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_SLT_4]], i1 false, i1 false)
-; IS__TUNIT____-NEXT:    [[CMP_LTE_3:%.*]] = icmp sle i32 [[RET]], 8
-; IS__TUNIT____-NEXT:    [[CMP_LTE_4:%.*]] = icmp sle i32 [[RET]], 1
-; IS__TUNIT____-NEXT:    [[CMP_LTE_5:%.*]] = icmp sle i32 [[RET]], 0
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 true, i1 true, i1 [[CMP_LTE_3]])
-; IS__TUNIT____-NEXT:    tail call void @use3(i1 [[CMP_LTE_4]], i1 [[CMP_LTE_5]], i1 false)
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test0-icmp-check
+; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; IS__TUNIT_OPM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #3, !range !0
+; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
+; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_5:%.*]] = icmp eq i32 [[RET]], 0
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 false, i1 [[CMP_EQ_2]], i1 [[CMP_EQ_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_EQ_4]], i1 [[CMP_EQ_5]], i1 false)
+; IS__TUNIT_OPM-NEXT:    [[CMP_NE_2:%.*]] = icmp ne i32 [[RET]], 9
+; IS__TUNIT_OPM-NEXT:    [[CMP_NE_3:%.*]] = icmp ne i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_NE_4:%.*]] = icmp ne i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    [[CMP_NE_5:%.*]] = icmp ne i32 [[RET]], 0
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 true, i1 [[CMP_NE_2]], i1 [[CMP_NE_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_NE_4]], i1 [[CMP_NE_5]], i1 true)
+; IS__TUNIT_OPM-NEXT:    [[CMP_UGT_3:%.*]] = icmp ugt i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_UGT_4:%.*]] = icmp ugt i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    [[CMP_UGT_5:%.*]] = icmp ugt i32 [[RET]], 0
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_UGT_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_UGT_4]], i1 [[CMP_UGT_5]], i1 false)
+; IS__TUNIT_OPM-NEXT:    [[CMP_UGE_2:%.*]] = icmp uge i32 [[RET]], 9
+; IS__TUNIT_OPM-NEXT:    [[CMP_UGE_3:%.*]] = icmp uge i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_UGE_4:%.*]] = icmp uge i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 false, i1 [[CMP_UGE_2]], i1 [[CMP_UGE_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_UGE_4]], i1 true, i1 false)
+; IS__TUNIT_OPM-NEXT:    [[CMP_SGT_3:%.*]] = icmp sgt i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_SGT_4:%.*]] = icmp sgt i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    [[CMP_SGT_5:%.*]] = icmp sgt i32 [[RET]], 0
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_SGT_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_SGT_4]], i1 [[CMP_SGT_5]], i1 true)
+; IS__TUNIT_OPM-NEXT:    [[CMP_GTE_2:%.*]] = icmp sge i32 [[RET]], 9
+; IS__TUNIT_OPM-NEXT:    [[CMP_GTE_3:%.*]] = icmp sge i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_GTE_4:%.*]] = icmp sge i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 false, i1 [[CMP_GTE_2]], i1 [[CMP_GTE_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_GTE_4]], i1 true, i1 true)
+; IS__TUNIT_OPM-NEXT:    [[CMP_SLT_2:%.*]] = icmp slt i32 [[RET]], 9
+; IS__TUNIT_OPM-NEXT:    [[CMP_SLT_3:%.*]] = icmp slt i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_SLT_4:%.*]] = icmp slt i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 true, i1 [[CMP_SLT_2]], i1 [[CMP_SLT_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_SLT_4]], i1 false, i1 false)
+; IS__TUNIT_OPM-NEXT:    [[CMP_LTE_3:%.*]] = icmp sle i32 [[RET]], 8
+; IS__TUNIT_OPM-NEXT:    [[CMP_LTE_4:%.*]] = icmp sle i32 [[RET]], 1
+; IS__TUNIT_OPM-NEXT:    [[CMP_LTE_5:%.*]] = icmp sle i32 [[RET]], 0
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 true, i1 true, i1 [[CMP_LTE_3]])
+; IS__TUNIT_OPM-NEXT:    tail call void @use3(i1 [[CMP_LTE_4]], i1 [[CMP_LTE_5]], i1 false)
+; IS__TUNIT_OPM-NEXT:    ret void
+;
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test0-icmp-check
+; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; IS__TUNIT_NPM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #2, !range !0
+; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
+; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_5:%.*]] = icmp eq i32 [[RET]], 0
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 false, i1 [[CMP_EQ_2]], i1 [[CMP_EQ_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_EQ_4]], i1 [[CMP_EQ_5]], i1 false)
+; IS__TUNIT_NPM-NEXT:    [[CMP_NE_2:%.*]] = icmp ne i32 [[RET]], 9
+; IS__TUNIT_NPM-NEXT:    [[CMP_NE_3:%.*]] = icmp ne i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_NE_4:%.*]] = icmp ne i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    [[CMP_NE_5:%.*]] = icmp ne i32 [[RET]], 0
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 true, i1 [[CMP_NE_2]], i1 [[CMP_NE_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_NE_4]], i1 [[CMP_NE_5]], i1 true)
+; IS__TUNIT_NPM-NEXT:    [[CMP_UGT_3:%.*]] = icmp ugt i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_UGT_4:%.*]] = icmp ugt i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    [[CMP_UGT_5:%.*]] = icmp ugt i32 [[RET]], 0
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_UGT_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_UGT_4]], i1 [[CMP_UGT_5]], i1 false)
+; IS__TUNIT_NPM-NEXT:    [[CMP_UGE_2:%.*]] = icmp uge i32 [[RET]], 9
+; IS__TUNIT_NPM-NEXT:    [[CMP_UGE_3:%.*]] = icmp uge i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_UGE_4:%.*]] = icmp uge i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 false, i1 [[CMP_UGE_2]], i1 [[CMP_UGE_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_UGE_4]], i1 true, i1 false)
+; IS__TUNIT_NPM-NEXT:    [[CMP_SGT_3:%.*]] = icmp sgt i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_SGT_4:%.*]] = icmp sgt i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    [[CMP_SGT_5:%.*]] = icmp sgt i32 [[RET]], 0
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 false, i1 false, i1 [[CMP_SGT_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_SGT_4]], i1 [[CMP_SGT_5]], i1 true)
+; IS__TUNIT_NPM-NEXT:    [[CMP_GTE_2:%.*]] = icmp sge i32 [[RET]], 9
+; IS__TUNIT_NPM-NEXT:    [[CMP_GTE_3:%.*]] = icmp sge i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_GTE_4:%.*]] = icmp sge i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 false, i1 [[CMP_GTE_2]], i1 [[CMP_GTE_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_GTE_4]], i1 true, i1 true)
+; IS__TUNIT_NPM-NEXT:    [[CMP_SLT_2:%.*]] = icmp slt i32 [[RET]], 9
+; IS__TUNIT_NPM-NEXT:    [[CMP_SLT_3:%.*]] = icmp slt i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_SLT_4:%.*]] = icmp slt i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 true, i1 [[CMP_SLT_2]], i1 [[CMP_SLT_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_SLT_4]], i1 false, i1 false)
+; IS__TUNIT_NPM-NEXT:    [[CMP_LTE_3:%.*]] = icmp sle i32 [[RET]], 8
+; IS__TUNIT_NPM-NEXT:    [[CMP_LTE_4:%.*]] = icmp sle i32 [[RET]], 1
+; IS__TUNIT_NPM-NEXT:    [[CMP_LTE_5:%.*]] = icmp sle i32 [[RET]], 0
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 true, i1 true, i1 [[CMP_LTE_3]])
+; IS__TUNIT_NPM-NEXT:    tail call void @use3(i1 [[CMP_LTE_4]], i1 [[CMP_LTE_5]], i1 false)
+; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test0-icmp-check
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
@@ -259,11 +311,17 @@ define i32 @test1(i32* %p) {
 
 define i1 @test1-check(i32* %p) {
 ;
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test1-check
-; IS__TUNIT____-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT____-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #4, !range !2
-; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
-; IS__TUNIT____-NEXT:    ret i1 [[CMP]]
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test1-check
+; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; IS__TUNIT_OPM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #3, !range !2
+; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
+; IS__TUNIT_OPM-NEXT:    ret i1 [[CMP]]
+;
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test1-check
+; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
+; IS__TUNIT_NPM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #2, !range !2
+; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
+; IS__TUNIT_NPM-NEXT:    ret i1 [[CMP]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test1-check
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
@@ -566,7 +624,7 @@ define dso_local i32 @test4-g2(i32 %u) {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test4-g2
 ; IS__TUNIT_NPM-SAME: (i32 [[U:%.*]])
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]]) #2, !range !3
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]]) #1, !range !3
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
 entry:
@@ -929,8 +987,8 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ;
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@callee_range_2
 ; IS__TUNIT_OPM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
-; IS__TUNIT_OPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #2, !range !4
-; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #3, !range !4
+; IS__TUNIT_OPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #1, !range !4
+; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #1, !range !4
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; IS__TUNIT_OPM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
 ; IS__TUNIT_OPM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
@@ -939,8 +997,8 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_range_2
 ; IS__TUNIT_NPM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #2, !range !5
-; IS__TUNIT_NPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #3, !range !5
+; IS__TUNIT_NPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #1, !range !5
+; IS__TUNIT_NPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #1, !range !5
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; IS__TUNIT_NPM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
 ; IS__TUNIT_NPM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
