@@ -1472,7 +1472,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         [{{
           result.addOperands(views);
           result.addTypes(outputTypes);
-          buildNamedStructuredOpRegion<{0}>(
+          buildNamedStructuredOpRegionAndAttributes<{0}>(
             b, result, TypeRange(views), outputTypes);
         }]>
       ];
@@ -1481,7 +1481,13 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       }];
       let extraClassDeclaration = [{{
         llvm::Optional<SmallVector<StringRef, 8>> referenceIterators();
+        static SmallVector<StringRef, 8> referenceIterators(
+          TypeRange inputTypes, TypeRange outputTypes);
+
         llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps();
+        static SmallVector<AffineMap, 8> referenceIndexingMaps(
+          TypeRange inputTypes, TypeRange outputTypes);
+
         static void regionBuilder(Block &block);
       }];
   })FMT";
@@ -1503,7 +1509,13 @@ void TCParser::printReferenceIterators(llvm::raw_ostream &os,
                                        ComprehensionParsingState &state) {
   const char *referenceReferenceIteratorsFmt =
       R"FMT(
-    llvm::Optional<SmallVector<StringRef, 8>> {0}::referenceIterators() {
+    // This is temporary until we transition out of manually specified ops
+    // that should be auto-generated with linalg-ods-gen.
+    llvm::Optional<SmallVector<StringRef, 8>> {0}::referenceIterators() {{
+      llvm_unreachable("Unexpected missing `iterator_types` attribute.");
+    }
+    SmallVector<StringRef, 8> {0}::referenceIterators(
+      TypeRange inputTypes, TypeRange outputTypes) {
       return SmallVector<StringRef, 8>{{ {1} };
     })FMT";
 
@@ -1536,15 +1548,27 @@ void TCParser::printReferenceIterators(llvm::raw_ostream &os,
 void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
                                           StringRef cppOpName,
                                           ComprehensionParsingState &state) {
+  // 1. Generic string template for specifying reference indexing maps.
   const char *referenceIndexingMapsFmt =
       R"FMT(
-  llvm::Optional<SmallVector<AffineMap, 8>> {0}::referenceIndexingMaps() {
-    MLIRContext *context = getContext();
+  // This is temporary until we transition out of manually specified ops that
+  // should be auto-generated with linalg-ods-gen.
+  llvm::Optional<SmallVector<AffineMap, 8>> {0}::referenceIndexingMaps() {{
+    llvm_unreachable("Unexpected missing `indexing_maps` attribute.");
+  }
+  SmallVector<AffineMap, 8> {0}::referenceIndexingMaps(
+    TypeRange inputTypes, TypeRange outputTypes) {
+    assert(!inputTypes.empty() && "At least one input expected");
+    MLIRContext *context = (*inputTypes.begin()).getContext();
     AffineExpr {1};
     bindDims(context, {1});
     return SmallVector<AffineMap, 8>{{ {2} };
   })FMT";
 
+  // 2. Print a comma-separated list of identifiers for the AffineExpr in
+  // `state.dims`. These will replace the `{1}` placeholder in both
+  // `AffineExpr {1}` and `bindDims(context, {1})` ensuring the AffineExpr
+  // identifiers are bound in the right order to the proper AffineDimExpr.
   std::string dimsStr;
   llvm::raw_string_ostream ss(dimsStr);
   llvm::interleaveComma(
@@ -1552,10 +1576,14 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
       [&](std::pair<StringRef, AffineExpr> p) { ss << p.second; });
   ss.flush();
 
+  // 3. Print a comma-separated list of AffineMap constructors that use the
+  // identifiers from 1. The AffineExpr use the common arithmetic operators on
+  // AffineExpr. These AffineMap constructors will replace the `{2}` placeholder
+  // in return `SmallVector<AffineMap, 8>{{ {2} };`.
   std::string mapsStr;
   llvm::raw_string_ostream mapsStringStream(mapsStr);
   SmallVector<TensorUse, 4> orderedUses(state.orderedTensorArgs.size());
-  for (auto it : state.orderedTensorArgs)
+  for (const auto &it : state.orderedTensorArgs)
     orderedUses[it.second] = it.first;
   llvm::interleaveComma(orderedUses, mapsStringStream, [&](TensorUse u) {
     assert(u.indexingMap);
@@ -1576,6 +1604,7 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
   });
   mapsStringStream.flush();
 
+  // 4. Apply format to 1. using 2. and 3.
   os << llvm::formatv(referenceIndexingMapsFmt, cppOpName, dimsStr, mapsStr);
 }
 
