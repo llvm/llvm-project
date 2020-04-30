@@ -290,7 +290,7 @@ public:
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole
   /// frame section contents to be parsed.
-  void parse(DWARFDataExtractor Data);
+  Error parse(DWARFDataExtractor Data);
 
   /// Return whether the section has any entries.
   bool empty() const { return Entries.empty(); }
