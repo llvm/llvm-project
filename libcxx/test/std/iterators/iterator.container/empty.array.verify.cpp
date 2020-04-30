@@ -13,7 +13,6 @@
 // template <class T, size_t N> constexpr bool empty(const T (&array)[N]) noexcept;
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-// REQUIRES: verify-support
 
 #include <vector>
 #include <iterator>

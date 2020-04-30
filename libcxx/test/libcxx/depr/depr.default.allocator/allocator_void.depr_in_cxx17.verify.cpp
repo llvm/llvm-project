@@ -22,7 +22,6 @@
 // Deprecated in C++17
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// REQUIRES: verify-support
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
