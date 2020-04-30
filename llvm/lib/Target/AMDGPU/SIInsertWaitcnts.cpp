@@ -109,13 +109,13 @@ iterator_range<enum_iterator<InstCounterType>> inst_counter_types() {
                     enum_iterator<InstCounterType>(NUM_INST_CNTS));
 }
 
-using RegInterval = std::pair<signed, signed>;
+using RegInterval = std::pair<int, int>;
 
 struct {
-  uint32_t VmcntMax;
-  uint32_t ExpcntMax;
-  uint32_t LgkmcntMax;
-  uint32_t VscntMax;
+  unsigned VmcntMax;
+  unsigned ExpcntMax;
+  unsigned LgkmcntMax;
+  unsigned VscntMax;
 } HardwareLimits;
 
 struct {
@@ -141,7 +141,7 @@ enum WaitEventType {
   NUM_WAIT_EVENTS,
 };
 
-static const uint32_t WaitEventMaskForInst[NUM_INST_CNTS] = {
+static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
   (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
   (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
       (1 << SQ_MESSAGE),
@@ -195,7 +195,7 @@ class WaitcntBrackets {
 public:
   WaitcntBrackets(const GCNSubtarget *SubTarget) : ST(SubTarget) {}
 
-  static uint32_t getWaitCountMax(InstCounterType T) {
+  static unsigned getWaitCountMax(InstCounterType T) {
     switch (T) {
     case VM_CNT:
       return HardwareLimits.VmcntMax;
@@ -211,12 +211,12 @@ public:
     return 0;
   }
 
-  uint32_t getScoreLB(InstCounterType T) const {
+  unsigned getScoreLB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
     return ScoreLBs[T];
   }
 
-  uint32_t getScoreUB(InstCounterType T) const {
+  unsigned getScoreUB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
     return ScoreUBs[T];
   }
@@ -233,7 +233,7 @@ public:
     return EXP_CNT;
   }
 
-  uint32_t getRegScore(int GprNo, InstCounterType T) {
+  unsigned getRegScore(int GprNo, InstCounterType T) {
     if (GprNo < NUM_ALL_VGPRS) {
       return VgprScores[T][GprNo];
     }
@@ -250,7 +250,7 @@ public:
   bool counterOutOfOrder(InstCounterType T) const;
   bool simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
   bool simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  void determineWait(InstCounterType T, uint32_t ScoreToWait,
+  void determineWait(InstCounterType T, unsigned ScoreToWait,
                      AMDGPU::Waitcnt &Wait) const;
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
@@ -264,7 +264,7 @@ public:
   }
 
   bool hasMixedPendingEvents(InstCounterType T) const {
-    uint32_t Events = PendingEvents & WaitEventMaskForInst[T];
+    unsigned Events = PendingEvents & WaitEventMaskForInst[T];
     // Return true if more than one bit is set in Events.
     return Events & (Events - 1);
   }
@@ -286,30 +286,30 @@ public:
 
 private:
   struct MergeInfo {
-    uint32_t OldLB;
-    uint32_t OtherLB;
-    uint32_t MyShift;
-    uint32_t OtherShift;
+    unsigned OldLB;
+    unsigned OtherLB;
+    unsigned MyShift;
+    unsigned OtherShift;
   };
-  static bool mergeScore(const MergeInfo &M, uint32_t &Score,
-                         uint32_t OtherScore);
+  static bool mergeScore(const MergeInfo &M, unsigned &Score,
+                         unsigned OtherScore);
 
-  void setScoreLB(InstCounterType T, uint32_t Val) {
+  void setScoreLB(InstCounterType T, unsigned Val) {
     assert(T < NUM_INST_CNTS);
     ScoreLBs[T] = Val;
   }
 
-  void setScoreUB(InstCounterType T, uint32_t Val) {
+  void setScoreUB(InstCounterType T, unsigned Val) {
     assert(T < NUM_INST_CNTS);
     ScoreUBs[T] = Val;
     if (T == EXP_CNT) {
-      uint32_t UB = ScoreUBs[T] - getWaitCountMax(EXP_CNT);
+      unsigned UB = ScoreUBs[T] - getWaitCountMax(EXP_CNT);
       if (ScoreLBs[T] < UB && UB < ScoreUBs[T])
         ScoreLBs[T] = UB;
     }
   }
 
-  void setRegScore(int GprNo, InstCounterType T, uint32_t Val) {
+  void setRegScore(int GprNo, InstCounterType T, unsigned Val) {
     if (GprNo < NUM_ALL_VGPRS) {
       VgprUB = std::max(VgprUB, GprNo);
       VgprScores[T][GprNo] = Val;
@@ -322,21 +322,21 @@ private:
 
   void setExpScore(const MachineInstr *MI, const SIInstrInfo *TII,
                    const SIRegisterInfo *TRI, const MachineRegisterInfo *MRI,
-                   unsigned OpNo, uint32_t Val);
+                   unsigned OpNo, unsigned Val);
 
   const GCNSubtarget *ST = nullptr;
-  uint32_t ScoreLBs[NUM_INST_CNTS] = {0};
-  uint32_t ScoreUBs[NUM_INST_CNTS] = {0};
-  uint32_t PendingEvents = 0;
+  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
+  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
+  unsigned PendingEvents = 0;
   // Remember the last flat memory operation.
-  uint32_t LastFlat[NUM_INST_CNTS] = {0};
+  unsigned LastFlat[NUM_INST_CNTS] = {0};
   // wait_cnt scores for every vgpr.
   // Keep track of the VgprUB and SgprUB to make merge at join efficient.
-  int32_t VgprUB = -1;
-  int32_t SgprUB = -1;
-  uint32_t VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
+  int VgprUB = -1;
+  int SgprUB = -1;
+  unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
   // Wait cnt scores for every sgpr, only lgkmcnt is relevant.
-  uint32_t SgprScores[SQ_MAX_PGM_SGPRS] = {0};
+  unsigned SgprScores[SQ_MAX_PGM_SGPRS] = {0};
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -477,10 +477,10 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
                                   const SIInstrInfo *TII,
                                   const SIRegisterInfo *TRI,
                                   const MachineRegisterInfo *MRI, unsigned OpNo,
-                                  uint32_t Val) {
+                                  unsigned Val) {
   RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo);
   assert(TRI->isVGPR(*MRI, MI->getOperand(OpNo).getReg()));
-  for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+  for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
   }
 }
@@ -490,7 +490,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const MachineRegisterInfo *MRI,
                                     WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = eventCounter(E);
-  uint32_t CurrScore = getScoreUB(T) + 1;
+  unsigned CurrScore = getScoreUB(T) + 1;
   if (CurrScore == 0)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
@@ -605,7 +605,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     MachineOperand *MO = TII->getNamedOperand(Inst, AMDGPU::OpName::data);
     unsigned OpNo;//TODO: find the OpNo for this operand;
     RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, OpNo);
-    for (signed RegNo = Interval.first; RegNo < Interval.second;
+    for (int RegNo = Interval.first; RegNo < Interval.second;
     ++RegNo) {
       setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
     }
@@ -619,7 +619,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, I);
       if (T == VM_CNT && Interval.first >= NUM_ALL_VGPRS)
         continue;
-      for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
         setRegScore(RegNo, T, CurrScore);
       }
     }
@@ -632,8 +632,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
 void WaitcntBrackets::print(raw_ostream &OS) {
   OS << '\n';
   for (auto T : inst_counter_types()) {
-    uint32_t LB = getScoreLB(T);
-    uint32_t UB = getScoreUB(T);
+    unsigned LB = getScoreLB(T);
+    unsigned UB = getScoreUB(T);
 
     switch (T) {
     case VM_CNT:
@@ -656,10 +656,10 @@ void WaitcntBrackets::print(raw_ostream &OS) {
     if (LB < UB) {
       // Print vgpr scores.
       for (int J = 0; J <= VgprUB; J++) {
-        uint32_t RegScore = getRegScore(J, T);
+        unsigned RegScore = getRegScore(J, T);
         if (RegScore <= LB)
           continue;
-        uint32_t RelScore = RegScore - LB - 1;
+        unsigned RelScore = RegScore - LB - 1;
         if (J < SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS) {
           OS << RelScore << ":v" << J << " ";
         } else {
@@ -669,10 +669,10 @@ void WaitcntBrackets::print(raw_ostream &OS) {
       // Also need to print sgpr scores for lgkm_cnt.
       if (T == LGKM_CNT) {
         for (int J = 0; J <= SgprUB; J++) {
-          uint32_t RegScore = getRegScore(J + NUM_ALL_VGPRS, LGKM_CNT);
+          unsigned RegScore = getRegScore(J + NUM_ALL_VGPRS, LGKM_CNT);
           if (RegScore <= LB)
             continue;
-          uint32_t RelScore = RegScore - LB - 1;
+          unsigned RelScore = RegScore - LB - 1;
           OS << RelScore << ":s" << J << " ";
         }
       }
@@ -693,8 +693,8 @@ bool WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
 
 bool WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
                                       unsigned &Count) const {
-  const uint32_t LB = getScoreLB(T);
-  const uint32_t UB = getScoreUB(T);
+  const unsigned LB = getScoreLB(T);
+  const unsigned UB = getScoreUB(T);
   if (Count < UB && UB - Count > LB)
     return true;
 
@@ -702,12 +702,12 @@ bool WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
   return false;
 }
 
-void WaitcntBrackets::determineWait(InstCounterType T, uint32_t ScoreToWait,
+void WaitcntBrackets::determineWait(InstCounterType T, unsigned ScoreToWait,
                                     AMDGPU::Waitcnt &Wait) const {
   // If the score of src_operand falls within the bracket, we need an
   // s_waitcnt instruction.
-  const uint32_t LB = getScoreLB(T);
-  const uint32_t UB = getScoreUB(T);
+  const unsigned LB = getScoreLB(T);
+  const unsigned UB = getScoreUB(T);
   if ((UB >= ScoreToWait) && (ScoreToWait > LB)) {
     if ((T == VM_CNT || T == LGKM_CNT) &&
         hasPendingFlat() &&
@@ -724,7 +724,7 @@ void WaitcntBrackets::determineWait(InstCounterType T, uint32_t ScoreToWait,
     } else {
       // If a counter has been maxed out avoid overflow by waiting for
       // MAX(CounterType) - 1 instead.
-      uint32_t NeededWait = std::min(UB - ScoreToWait, getWaitCountMax(T) - 1);
+      unsigned NeededWait = std::min(UB - ScoreToWait, getWaitCountMax(T) - 1);
       addWait(Wait, T, NeededWait);
     }
   }
@@ -738,7 +738,7 @@ void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
 }
 
 void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
-  const uint32_t UB = getScoreUB(T);
+  const unsigned UB = getScoreUB(T);
   if (Count >= UB)
     return;
   if (Count != 0) {
@@ -922,7 +922,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       RegInterval CallAddrOpInterval =
           ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, CallAddrOpIdx);
 
-      for (signed RegNo = CallAddrOpInterval.first;
+      for (int RegNo = CallAddrOpInterval.first;
            RegNo < CallAddrOpInterval.second; ++RegNo)
         ScoreBrackets.determineWait(
             LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
@@ -933,7 +933,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         RegInterval RtnAddrOpInterval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, RtnAddrOpIdx);
 
-        for (signed RegNo = RtnAddrOpInterval.first;
+        for (int RegNo = RtnAddrOpInterval.first;
              RegNo < RtnAddrOpInterval.second; ++RegNo)
           ScoreBrackets.determineWait(
               LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
@@ -980,7 +980,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           continue;
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
-        for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (TRI->isVGPR(*MRI, Op.getReg())) {
             ScoreBrackets.determineWait(
                 VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
@@ -1245,10 +1245,10 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   }
 }
 
-bool WaitcntBrackets::mergeScore(const MergeInfo &M, uint32_t &Score,
-                                 uint32_t OtherScore) {
-  uint32_t MyShifted = Score <= M.OldLB ? 0 : Score + M.MyShift;
-  uint32_t OtherShifted =
+bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
+                                 unsigned OtherScore) {
+  unsigned MyShifted = Score <= M.OldLB ? 0 : Score + M.MyShift;
+  unsigned OtherShifted =
       OtherScore <= M.OtherLB ? 0 : OtherScore + M.OtherShift;
   Score = std::max(MyShifted, OtherShifted);
   return OtherShifted > MyShifted;
@@ -1268,16 +1268,16 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   for (auto T : inst_counter_types()) {
     // Merge event flags for this counter
     const bool OldOutOfOrder = counterOutOfOrder(T);
-    const uint32_t OldEvents = PendingEvents & WaitEventMaskForInst[T];
-    const uint32_t OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
+    const unsigned OldEvents = PendingEvents & WaitEventMaskForInst[T];
+    const unsigned OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
     if (OtherEvents & ~OldEvents)
       StrictDom = true;
     PendingEvents |= OtherEvents;
 
     // Merge scores for this counter
-    const uint32_t MyPending = ScoreUBs[T] - ScoreLBs[T];
-    const uint32_t OtherPending = Other.ScoreUBs[T] - Other.ScoreLBs[T];
-    const uint32_t NewUB = ScoreLBs[T] + std::max(MyPending, OtherPending);
+    const unsigned MyPending = ScoreUBs[T] - ScoreLBs[T];
+    const unsigned OtherPending = Other.ScoreUBs[T] - Other.ScoreLBs[T];
+    const unsigned NewUB = ScoreLBs[T] + std::max(MyPending, OtherPending);
     if (NewUB < ScoreLBs[T])
       report_fatal_error("waitcnt score overflow");
 
