@@ -9,11 +9,11 @@
 # TODO: Unbreak this on Windows
 # UNSUPPORTED: host-windows
 
-# RUN: %{python} '%s' '%S' '%T' '%{escaped_exec}' \
-# RUN:                          '%{escaped_cxx}' \
-# RUN:                          '%{escaped_flags}' \
-# RUN:                          '%{escaped_compile_flags}' \
-# RUN:                          '%{escaped_link_flags}'
+# RUN: %{python} %s %S %T %{escaped_exec} \
+# RUN:                    %{escaped_cxx} \
+# RUN:                    %{escaped_flags} \
+# RUN:                    %{escaped_compile_flags} \
+# RUN:                    %{escaped_link_flags}
 # END.
 
 import base64
@@ -36,8 +36,8 @@ import lit.util
 
 # Steal some parameters from the config running this test so that we can
 # bootstrap our own TestingConfig.
-SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = sys.argv[1:]
-sys.argv = sys.argv[:1]
+SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = sys.argv[1:8]
+sys.argv[1:8] = []
 
 class SetupConfigs(unittest.TestCase):
     """
