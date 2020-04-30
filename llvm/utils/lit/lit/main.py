@@ -252,29 +252,34 @@ def print_histogram(tests):
     lit.util.printHistogram(test_times, title='Tests')
 
 
+def add_result_category(result_code, label):
+    assert isinstance(result_code, lit.Test.ResultCode)
+    category = (result_code, "%s Tests" % label, label)
+    result_codes.append(category)
+
+
 # Status code, summary label, group label
-failure_codes = [
+result_codes = [
+    # Passes
+    (lit.Test.SKIPPED,     'Skipped Tests',       'Skipped'),
+    (lit.Test.UNSUPPORTED, 'Unsupported Tests',   'Unsupported'),
+    (lit.Test.PASS,        'Expected Passes',     ''),
+    (lit.Test.FLAKYPASS,   'Passes With Retry',   ''),
+    (lit.Test.XFAIL,       'Expected Failures',   'Expected Failing'),
+    # Failures
     (lit.Test.UNRESOLVED,  'Unresolved Tests',    'Unresolved'),
     (lit.Test.TIMEOUT,     'Individual Timeouts', 'Timed Out'),
     (lit.Test.FAIL,        'Unexpected Failures', 'Failing'),
     (lit.Test.XPASS,       'Unexpected Passes',   'Unexpected Passing')
 ]
 
-all_codes = [
-    (lit.Test.SKIPPED,     'Skipped Tests',     'Skipped'),
-    (lit.Test.UNSUPPORTED, 'Unsupported Tests', 'Unsupported'),
-    (lit.Test.PASS,        'Expected Passes',   ''),
-    (lit.Test.FLAKYPASS,   'Passes With Retry', ''),
-    (lit.Test.XFAIL,       'Expected Failures', 'Expected Failing'),
-] + failure_codes
-
 
 def print_results(tests, elapsed, opts):
-    tests_by_code = {code: [] for (code, _, _) in all_codes}
+    tests_by_code = {code: [] for (code, _, _) in result_codes}
     for test in tests:
         tests_by_code[test.result.code].append(test)
 
-    for (code, _, group_label) in all_codes:
+    for (code, _, group_label) in result_codes:
         print_group(code, group_label, tests_by_code[code], opts)
 
     print_summary(tests_by_code, opts.quiet, elapsed)
@@ -300,7 +305,7 @@ def print_summary(tests_by_code, quiet, elapsed):
     if not quiet:
         print('\nTesting Time: %.2fs' % elapsed)
 
-    codes = failure_codes if quiet else all_codes
+    codes = [c for c in result_codes if not quiet or c.isFailure]
     groups = [(label, len(tests_by_code[code])) for code, label, _ in codes]
     groups = [(label, count) for label, count in groups if count]
     if not groups:
