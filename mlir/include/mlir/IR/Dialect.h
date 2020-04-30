@@ -281,4 +281,14 @@ template <typename ConcreteDialect> struct DialectRegistration {
 
 } // namespace mlir
 
+namespace llvm {
+/// Provide isa functionality for Dialects.
+template <typename T>
+struct isa_impl<T, ::mlir::Dialect> {
+  static inline bool doit(const ::mlir::Dialect &dialect) {
+    return T::getDialectNamespace() == dialect.getNamespace();
+  }
+};
+} // namespace llvm
+
 #endif
