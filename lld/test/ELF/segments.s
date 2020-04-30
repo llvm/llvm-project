@@ -3,8 +3,8 @@
 
 # RUN: ld.lld %t -o %t1
 # RUN: llvm-readobj --program-headers %t1 | FileCheck --check-prefix=ROSEGMENT %s
-# RUN: ld.lld --omagic --no-omagic %t -o %t1
-# RUN: llvm-readobj --program-headers %t1 | FileCheck --check-prefix=ROSEGMENT %s
+# RUN: ld.lld --no-rosegment --rosegment %t -o - | cmp - %t1
+# RUN: ld.lld --omagic --no-omagic %t -o - | cmp - %t1
 
 # ROSEGMENT:      ProgramHeader {
 # ROSEGMENT:        Type: PT_LOAD
