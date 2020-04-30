@@ -120,13 +120,16 @@ protected:
   /// scoping itself, we use enter/exit pairs of operations.
   /// As a consequence we must allocate a new OpBuilder + ScopedContext and
   /// let the escape.
-  /// Step back "prev" times from the end of the block to set up the insertion
-  /// point, which is useful for non-empty blocks.
-  void enter(mlir::Block *block, int prev = 0) {
+  void enter(mlir::Block *block) {
     bodyScope = new ScopedContext(
         ScopedContext::getBuilder(),
-        OpBuilder::InsertPoint(block, std::prev(block->end(), prev)),
+        OpBuilder::InsertPoint(block, std::prev(block->end())),
         ScopedContext::getLocation());
+    if (!block->empty()) {
+      auto &termOp = block->back();
+      if (termOp.isKnownTerminator())
+        ScopedContext::getBuilder().setInsertionPoint(&termOp);
+    }
     bodyScope->nestedBuilder = this;
   }
 
@@ -199,7 +202,8 @@ class Append {};
 class BlockBuilder : public NestedBuilder {
 public:
   /// Enters the mlir::Block* previously captured by `bh` and sets the insertion
-  /// point to its end.
+  /// point to its end. If the block already contains a terminator, set the
+  /// insertion point before the terminator.
   BlockBuilder(BlockHandle bh, Append);
 
   /// Constructs a new mlir::Block with argument types derived from `args`.
