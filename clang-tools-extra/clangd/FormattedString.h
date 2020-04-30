@@ -51,7 +51,8 @@ public:
   Paragraph &appendText(llvm::StringRef Text);
 
   /// Append inline code, this translates to the ` block in markdown.
-  Paragraph &appendCode(llvm::StringRef Code);
+  /// \p Preserve indicates the code span must be apparent even in plaintext.
+  Paragraph &appendCode(llvm::StringRef Code, bool Preserve = false);
 
 private:
   struct Chunk {
@@ -59,6 +60,8 @@ private:
       PlainText,
       InlineCode,
     } Kind = PlainText;
+    // Preserve chunk markers in plaintext.
+    bool Preserve = false;
     std::string Contents;
   };
   std::vector<Chunk> Chunks;
