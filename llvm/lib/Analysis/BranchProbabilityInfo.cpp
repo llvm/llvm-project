@@ -936,8 +936,10 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const BasicBlock *Dst) const {
   auto Prob = BranchProbability::getZero();
   bool FoundProb = false;
+  uint32_t EdgeCount = 0;
   for (const_succ_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
     if (*I == Dst) {
+      ++EdgeCount;
       auto MapI = Probs.find(std::make_pair(Src, I.getSuccessorIndex()));
       if (MapI != Probs.end()) {
         FoundProb = true;
@@ -945,7 +947,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
       }
     }
   uint32_t succ_num = std::distance(succ_begin(Src), succ_end(Src));
-  return FoundProb ? Prob : BranchProbability(1, succ_num);
+  return FoundProb ? Prob : BranchProbability(EdgeCount, succ_num);
 }
 
 /// Set the edge probability for a given edge specified by PredBlock and an
