@@ -562,7 +562,8 @@ def AtomicYieldOp : Std_Op<"atomic_yield", [
 //===----------------------------------------------------------------------===//
 
 def BranchOp : Std_Op<"br",
-    [DeclareOpInterfaceMethods<BranchOpInterface>, NoSideEffect, Terminator]> {
+    [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     NoSideEffect, Terminator]> {
   let summary = "branch operation";
   let description = [{
     The `br` operation represents a branch operation in a function.
@@ -598,10 +599,6 @@ def BranchOp : Std_Op<"br",
 
     /// Erase the operand at 'index' from the operand list.
     void eraseOperand(unsigned index);
-
-    /// Returns the successor that would be chosen with the given constant
-    /// operands. Returns nullptr if a single successor could not be chosen.
-    Block *getSuccessorForOperands(ArrayRef<Attribute>);
   }];
 
   let hasCanonicalizer = 1;
@@ -991,7 +988,8 @@ def CmpIOp : Std_Op<"cmpi",
 //===----------------------------------------------------------------------===//
 
 def CondBranchOp : Std_Op<"cond_br",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      NoSideEffect, Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
@@ -1097,10 +1095,6 @@ def CondBranchOp : Std_Op<"cond_br",
     void eraseFalseOperand(unsigned index) {
       eraseSuccessorOperand(falseIndex, index);
     }
-
-    /// Returns the successor that would be chosen with the given constant
-    /// operands. Returns nullptr if a single successor could not be chosen.
-    Block *getSuccessorForOperands(ArrayRef<Attribute> operands);
 
   private:
     /// Get the index of the first true destination operand.

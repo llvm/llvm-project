@@ -1282,10 +1282,23 @@ void OpEmitter::genOpInterfaceMethods() {
     if (!opTrait || !opTrait->shouldDeclareMethods())
       continue;
     auto interface = opTrait->getOpInterface();
-    for (auto method : interface.getMethods()) {
-      // Don't declare if the method has a body or a default implementation.
-      if (method.getBody() || method.getDefaultImplementation())
+
+    // Get the set of methods that should always be declared.
+    auto alwaysDeclaredMethodsVec = opTrait->getAlwaysDeclaredMethods();
+    llvm::StringSet<> alwaysDeclaredMethods;
+    alwaysDeclaredMethods.insert(alwaysDeclaredMethodsVec.begin(),
+                                 alwaysDeclaredMethodsVec.end());
+
+    for (const OpInterfaceMethod &method : interface.getMethods()) {
+      // Don't declare if the method has a body.
+      if (method.getBody())
         continue;
+      // Don't declare if the method has a default implementation and the op
+      // didn't request that it always be declared.
+      if (method.getDefaultImplementation() &&
+          !alwaysDeclaredMethods.count(method.getName()))
+        continue;
+
       std::string args;
       llvm::raw_string_ostream os(args);
       interleaveComma(method.getArguments(), os,
