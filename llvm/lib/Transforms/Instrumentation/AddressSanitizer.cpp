@@ -213,6 +213,11 @@ static cl::opt<bool> ClInstrumentAtomics(
     cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
     cl::init(true));
 
+static cl::opt<bool>
+    ClInstrumentByval("asan-instrument-byval",
+                      cl::desc("instrument byval call arguments"), cl::Hidden,
+                      cl::init(true));
+
 static cl::opt<bool> ClAlwaysSlowPath(
     "asan-always-slow-path",
     cl::desc("use instrumentation with slow path for all accesses"), cl::Hidden,
@@ -1414,6 +1419,14 @@ void AddressSanitizer::getInterestingMemoryOperands(
         Alignment = (unsigned)AlignmentConstant->getZExtValue();
       Value *Mask = CI->getOperand(2 + OpOffset);
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
+    } else {
+      for (unsigned ArgNo = 0; ArgNo < CI->getNumArgOperands(); ArgNo++) {
+        if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
+            ignoreAccess(CI->getArgOperand(ArgNo)))
+          continue;
+        Type *Ty = CI->getParamByValType(ArgNo);
+        Interesting.emplace_back(I, ArgNo, false, Ty, 1);
+      }
     }
   }
 }
