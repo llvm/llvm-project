@@ -1,4 +1,4 @@
-//===- VectorOps.cpp - MLIR Super Vectorizer Operations -------------------===//
+//===- VectorOps.cpp - MLIR Vector Dialect Operations ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,8 +44,8 @@ VectorDialect::VectorDialect(MLIRContext *context)
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
-                                                 Attribute value, Type type,
-                                                 Location loc) {
+                                              Attribute value, Type type,
+                                              Location loc) {
   return builder.create<ConstantOp>(loc, type, value);
 }
 
@@ -1462,31 +1462,52 @@ static LogicalResult verify(ShapeCastOp op) {
 // TypeCastOp
 //===----------------------------------------------------------------------===//
 
-static MemRefType inferVectorTypeCastResultType(MemRefType t) {
-  return MemRefType::get({}, VectorType::get(t.getShape(), t.getElementType()));
+static SmallVector<int64_t, 8> extractShape(MemRefType memRefType) {
+  auto vectorType = memRefType.getElementType().dyn_cast<VectorType>();
+  SmallVector<int64_t, 8> res(memRefType.getShape().begin(),
+                              memRefType.getShape().end());
+  if (vectorType) {
+    res.reserve(memRefType.getRank() + vectorType.getRank());
+    for (auto s : vectorType.getShape())
+      res.push_back(s);
+  }
+  return res;
 }
 
+/// Build the canonical memRefType with a single vector.
+/// E.g. memref<4 x 5 x vector<6 x f32>> -> memref<vector<4 x 5 x 6 x f32>>.
 void TypeCastOp::build(OpBuilder &builder, OperationState &result,
                        Value source) {
   result.addOperands(source);
+  MemRefType memRefType = source.getType().cast<MemRefType>();
+  VectorType vectorType =
+      VectorType::get(extractShape(memRefType),
+                      getElementTypeOrSelf(getElementTypeOrSelf(memRefType)));
   result.addTypes(
-      inferVectorTypeCastResultType(source.getType().cast<MemRefType>()));
-}
-
-static void print(OpAsmPrinter &p, TypeCastOp op) {
-  auto type = op.getOperand().getType().cast<MemRefType>();
-  p << op.getOperationName() << ' ' << op.memref() << " : " << type << " to "
-    << inferVectorTypeCastResultType(type);
+      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpace()));
 }
 
 static LogicalResult verify(TypeCastOp op) {
   MemRefType canonicalType = canonicalizeStridedLayout(op.getMemRefType());
   if (!canonicalType.getAffineMaps().empty())
     return op.emitOpError("expects operand to be a memref with no layout");
+  if (!op.getResultMemRefType().getAffineMaps().empty())
+    return op.emitOpError("expects result to be a memref with no layout");
+  if (op.getResultMemRefType().getMemorySpace() !=
+      op.getMemRefType().getMemorySpace())
+    return op.emitOpError("expects result in same memory space");
 
-  auto resultType = inferVectorTypeCastResultType(op.getMemRefType());
-  if (op.getResultMemRefType() != resultType)
-    return op.emitOpError("expects result type to be: ") << resultType;
+  auto sourceType = op.getMemRefType();
+  auto resultType = op.getResultMemRefType();
+  if (getElementTypeOrSelf(getElementTypeOrSelf(sourceType)) !=
+      getElementTypeOrSelf(getElementTypeOrSelf(resultType)))
+    return op.emitOpError(
+               "expects result and operand with same underlying scalar type: ")
+           << resultType;
+  if (extractShape(sourceType) != extractShape(resultType))
+    return op.emitOpError(
+               "expects concatenated result and operand shapes to be equal: ")
+           << resultType;
   return success();
 }
 

@@ -50,7 +50,7 @@ LoopBuilder mlir::edsc::makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
   }
 
   auto *body = getForInductionVarOwner(*iv).getBody();
-  result.enter(body, /*prev=*/1);
+  result.enter(body);
   return result;
 }
 
