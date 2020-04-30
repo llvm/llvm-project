@@ -991,10 +991,12 @@ void AArch64TargetLowering::addQRTypeForNEON(MVT VT) {
   addTypeForNEON(VT, MVT::v4i32);
 }
 
-EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
-                                              EVT VT) const {
+EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &,
+                                              LLVMContext &C, EVT VT) const {
   if (!VT.isVector())
     return MVT::i32;
+  if (VT.isScalableVector())
+    return EVT::getVectorVT(C, MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
 }
 
