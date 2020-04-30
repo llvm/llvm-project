@@ -720,11 +720,6 @@ bool HWAddressSanitizer::instrumentMemAccess(Instruction *I) {
   uint64_t TypeSize = 0;
   Value *MaybeMask = nullptr;
 
-  if (ClInstrumentMemIntrinsics && isa<MemIntrinsic>(I)) {
-    instrumentMemIntrinsic(cast<MemIntrinsic>(I));
-    return true;
-  }
-
   Value *Addr =
       isInterestingMemoryAccess(I, &IsWrite, &TypeSize, &Alignment, &MaybeMask);
 
@@ -1090,6 +1085,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 
   SmallVector<Instruction*, 16> ToInstrument;
+  SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
   SmallVector<AllocaInst*, 8> AllocasToInstrument;
   SmallVector<Instruction*, 8> RetVec;
   SmallVector<Instruction*, 8> LandingPadVec;
@@ -1121,8 +1117,11 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       uint64_t TypeSize;
       Value *Addr = isInterestingMemoryAccess(&Inst, &IsWrite, &TypeSize,
                                               &Alignment, &MaybeMask);
-      if (Addr || isa<MemIntrinsic>(Inst))
+      if (Addr)
         ToInstrument.push_back(&Inst);
+
+      if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
+        IntrinToInstrument.push_back(MI);
     }
   }
 
@@ -1138,7 +1137,8 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     F.setPersonalityFn(nullptr);
   }
 
-  if (AllocasToInstrument.empty() && ToInstrument.empty())
+  if (AllocasToInstrument.empty() && ToInstrument.empty() &&
+      IntrinToInstrument.empty())
     return false;
 
   assert(!LocalDynamicShadow);
@@ -1218,6 +1218,12 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   for (auto Inst : ToInstrument)
     Changed |= instrumentMemAccess(Inst);
+
+  if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
+    for (auto Inst : IntrinToInstrument)
+      instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
+    Changed = true;
+  }
 
   LocalDynamicShadow = nullptr;
   StackBaseTag = nullptr;

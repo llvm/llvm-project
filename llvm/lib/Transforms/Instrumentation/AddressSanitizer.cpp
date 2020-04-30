@@ -2652,6 +2652,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // are calls between uses).
   SmallPtrSet<Value *, 16> TempsToInstrument;
   SmallVector<Instruction *, 16> ToInstrument;
+  SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;
   SmallVector<Instruction *, 16> PointerComparisonsOrSubtracts;
@@ -2688,8 +2689,11 @@ bool AddressSanitizer::instrumentFunction(Function &F,
                   isInterestingPointerSubtraction(&Inst))) {
         PointerComparisonsOrSubtracts.push_back(&Inst);
         continue;
-      } else if (isa<MemIntrinsic>(Inst)) {
+      } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst)) {
         // ok, take it.
+        IntrinToInstrument.push_back(MI);
+        NumInsnsPerBB++;
+        continue;
       } else {
         if (isa<AllocaInst>(Inst)) NumAllocas++;
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
@@ -2708,9 +2712,9 @@ bool AddressSanitizer::instrumentFunction(Function &F,
     }
   }
 
-  bool UseCalls =
-      (ClInstrumentationWithCallsThreshold >= 0 &&
-       ToInstrument.size() > (unsigned)ClInstrumentationWithCallsThreshold);
+  bool UseCalls = (ClInstrumentationWithCallsThreshold >= 0 &&
+                   ToInstrument.size() + IntrinToInstrument.size() >
+                       (unsigned)ClInstrumentationWithCallsThreshold);
   const DataLayout &DL = F.getParent()->getDataLayout();
   ObjectSizeOpts ObjSizeOpts;
   ObjSizeOpts.RoundToAlign = true;
@@ -2723,9 +2727,11 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       if (isInterestingMemoryAccess(Inst, &IsWrite, &TypeSize, &Alignment))
         instrumentMop(ObjSizeVis, Inst, UseCalls,
                       F.getParent()->getDataLayout());
-      else
-        instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
     }
+  }
+  for (auto Inst : IntrinToInstrument) {
+    if (!suppressInstrumentationSiteForDebug(NumInstrumented))
+      instrumentMemIntrinsic(Inst);
     FunctionModified = true;
   }
 
