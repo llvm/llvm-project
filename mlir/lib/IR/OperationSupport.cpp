@@ -395,3 +395,78 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
   Operation *operation = reinterpret_cast<Operation *>(owner.ptr.get<void *>());
   return operation->getResult(owner.startIndex + index);
 }
+
+//===----------------------------------------------------------------------===//
+// Operation Equivalency
+//===----------------------------------------------------------------------===//
+
+llvm::hash_code OperationEquivalence::computeHash(Operation *op) {
+  // Hash operations based upon their:
+  //   - Operation Name
+  //   - Attributes
+  llvm::hash_code hash = llvm::hash_combine(
+      op->getName(), op->getMutableAttrDict().getDictionary());
+
+  //   - Result Types
+  ArrayRef<Type> resultTypes = op->getResultTypes();
+  switch (resultTypes.size()) {
+  case 0:
+    // We don't need to add anything to the hash.
+    break;
+  case 1:
+    // Add in the result type.
+    hash = llvm::hash_combine(hash, resultTypes.front());
+    break;
+  default:
+    // Use the type buffer as the hash, as we can guarantee it is the same for
+    // any given range of result types. This takes advantage of the fact the
+    // result types >1 are stored in a TupleType and uniqued.
+    hash = llvm::hash_combine(hash, resultTypes.data());
+    break;
+  }
+
+  //   - Operands
+  // TODO: Allow commutative operations to have different ordering.
+  return llvm::hash_combine(
+      hash, llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
+}
+
+bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs) {
+  if (lhs == rhs)
+    return true;
+
+  // Compare the operation name.
+  if (lhs->getName() != rhs->getName())
+    return false;
+  // Check operand counts.
+  if (lhs->getNumOperands() != rhs->getNumOperands())
+    return false;
+  // Compare attributes.
+  if (lhs->getMutableAttrDict() != rhs->getMutableAttrDict())
+    return false;
+  // Compare result types.
+  ArrayRef<Type> lhsResultTypes = lhs->getResultTypes();
+  ArrayRef<Type> rhsResultTypes = rhs->getResultTypes();
+  if (lhsResultTypes.size() != rhsResultTypes.size())
+    return false;
+  switch (lhsResultTypes.size()) {
+  case 0:
+    break;
+  case 1:
+    // Compare the single result type.
+    if (lhsResultTypes.front() != rhsResultTypes.front())
+      return false;
+    break;
+  default:
+    // Use the type buffer for the comparison, as we can guarantee it is the
+    // same for any given range of result types. This takes advantage of the
+    // fact the result types >1 are stored in a TupleType and uniqued.
+    if (lhsResultTypes.data() != rhsResultTypes.data())
+      return false;
+    break;
+  }
+  // Compare operands.
+  // TODO: Allow commutative operations to have different ordering.
+  return std::equal(lhs->operand_begin(), lhs->operand_end(),
+                    rhs->operand_begin());
+}
