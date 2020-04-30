@@ -3938,7 +3938,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
          Right.isMemberAccess() ||
          Right.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow, tok::lessless,
                        tok::colon, tok::l_square, tok::at) ||
-         (Style.BraceWrapping.BeforeLambdaBody && Right.is(tok::l_brace)) ||
+         (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace)) ||
          (Left.is(tok::r_paren) &&
           Right.isOneOf(tok::identifier, tok::kw_const)) ||
          (Left.is(tok::l_paren) && !Right.is(tok::r_paren)) ||
