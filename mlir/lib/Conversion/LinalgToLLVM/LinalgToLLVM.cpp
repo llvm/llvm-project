@@ -118,7 +118,7 @@ public:
   operator Value() { return d; }
 
 private:
-  OpBuilder &rewriter() { return ScopedContext::getBuilder(); }
+  OpBuilder &rewriter() { return ScopedContext::getBuilderRef(); }
   Location loc() { return ScopedContext::getLocation(); }
 
   MemRefDescriptor d;

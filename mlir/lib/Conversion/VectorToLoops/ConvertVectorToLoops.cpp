@@ -168,7 +168,7 @@ void NDTransferOpHelper<ConcreteOp>::emitInBounds(
     inBounds = inBounds && inBounds2;
   }
 
-  auto ifOp = ScopedContext::getBuilder().create<loop::IfOp>(
+  auto ifOp = ScopedContext::getBuilderRef().create<loop::IfOp>(
       ScopedContext::getLocation(), TypeRange{}, inBounds,
       /*withElseRegion=*/std::is_same<ConcreteOp, TransferReadOp>());
   BlockBuilder(&ifOp.thenRegion().front(),

@@ -22,9 +22,9 @@ struct FoldedValueBuilder {
   // Builder-based
   template <typename... Args>
   FoldedValueBuilder(OperationFolder *folder, Args... args) {
-    value = folder ? folder->create<Op>(ScopedContext::getBuilder(),
+    value = folder ? folder->create<Op>(ScopedContext::getBuilderRef(),
                                         ScopedContext::getLocation(), args...)
-                   : ScopedContext::getBuilder().create<Op>(
+                   : ScopedContext::getBuilderRef().create<Op>(
                          ScopedContext::getLocation(), args...);
   }
 
