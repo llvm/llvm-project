@@ -267,7 +267,7 @@ def dpu_attach(debugger, command, result, internal_dict):
         .GetValueAsUnsigned()
     slice_target_dpu_group_id = slice_target.GetChildMemberWithName("dpu_id") \
         .GetValueAsUnsigned()
-    slice_target = (slice_target_type << 32) + slice_target_dpu_group_id
+    slice_target = (slice_target_dpu_group_id << 32) + slice_target_type
 
     pid = compute_dpu_pid(region_id, rank_id, slice_id, dpu_id)
 
