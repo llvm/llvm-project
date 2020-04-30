@@ -26,6 +26,7 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
+#include "Hover.h"
 #include "Preamble.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -371,12 +372,19 @@ struct CodeCompletionBuilder {
       S.SnippetSuffix = std::string(C.IndexResult->CompletionSnippetSuffix);
       S.ReturnType = std::string(C.IndexResult->ReturnType);
     }
-    if (ExtractDocumentation && Completion.Documentation.empty()) {
-      if (C.IndexResult)
-        Completion.Documentation = std::string(C.IndexResult->Documentation);
-      else if (C.SemaResult)
-        Completion.Documentation = getDocComment(*ASTCtx, *C.SemaResult,
-                                                 /*CommentsFromHeader=*/false);
+    if (ExtractDocumentation && !Completion.Documentation) {
+      auto SetDoc = [&](llvm::StringRef Doc) {
+        if (!Doc.empty()) {
+          Completion.Documentation.emplace();
+          parseDocumentation(Doc, *Completion.Documentation);
+        }
+      };
+      if (C.IndexResult) {
+        SetDoc(C.IndexResult->Documentation);
+      } else if (C.SemaResult) {
+        SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
+                             /*CommentsFromHeader=*/false));
+      }
     }
   }
 
@@ -1832,7 +1840,18 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   LSP.deprecated = Deprecated;
   if (InsertInclude)
     LSP.detail += "\n" + InsertInclude->Header;
-  LSP.documentation = Documentation;
+  if (Documentation) {
+    LSP.documentation.emplace();
+    switch (Opts.DocumentationFormat) {
+    case MarkupKind::PlainText:
+      LSP.documentation->value = Documentation->asPlainText();
+      break;
+    case MarkupKind::Markdown:
+      LSP.documentation->value = Documentation->asMarkdown();
+      break;
+    }
+    LSP.documentation->kind = Opts.DocumentationFormat;
+  }
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
   LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};

@@ -271,6 +271,9 @@ public:
     OS << "\n---\n";
   }
   void renderPlainText(llvm::raw_ostream &OS) const override { OS << '\n'; }
+  std::unique_ptr<Block> clone() const override {
+    return std::make_unique<Ruler>(*this);
+  }
   bool isRuler() const override { return true; }
 };
 
@@ -285,6 +288,10 @@ public:
   void renderPlainText(llvm::raw_ostream &OS) const override {
     // In plaintext we want one empty line before and after codeblocks.
     OS << '\n' << Contents << "\n\n";
+  }
+
+  std::unique_ptr<Block> clone() const override {
+    return std::make_unique<CodeBlock>(*this);
   }
 
   CodeBlock(std::string Contents, std::string Language)
@@ -358,6 +365,10 @@ void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
   OS << "  \n";
 }
 
+std::unique_ptr<Block> Paragraph::clone() const {
+  return std::make_unique<Paragraph>(*this);
+}
+
 void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
   llvm::StringRef Sep = "";
   for (auto &C : Chunks) {
@@ -407,9 +418,20 @@ Paragraph &Paragraph::appendCode(llvm::StringRef Code) {
   return *this;
 }
 
+std::unique_ptr<Block> BulletList::clone() const {
+  return std::make_unique<BulletList>(*this);
+}
+
 class Document &BulletList::addItem() {
   Items.emplace_back();
   return Items.back();
+}
+
+Document &Document::operator=(const Document &Other) {
+  Children.clear();
+  for (const auto &C : Other.Children)
+    Children.push_back(C->clone());
+  return *this;
 }
 
 Paragraph &Document::addParagraph() {

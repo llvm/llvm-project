@@ -9,5 +9,5 @@ entry:
   ret void
 }
 
-; CHECK: .weak   _Z3fooIiEvT_
+; CHECK: .weak   _Z3fooIiEvT_[DS]
 ; CHECK: .weak   ._Z3fooIiEvT_

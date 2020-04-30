@@ -46,11 +46,11 @@ OPTIONS
 
 .. option:: --help, -h
 
- Print a summary of command line options.
+  Print a summary of command line options.
 
 .. option:: --help-list
 
- Print an uncategorized summary of command line options.
+  Print an uncategorized summary of command line options.
 
 .. option:: --strip-underscore, -_
 

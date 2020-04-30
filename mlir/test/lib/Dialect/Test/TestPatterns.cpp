@@ -515,8 +515,12 @@ struct TestLegalizePatternDriver
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
-      (void)applyPartialConversion(getOperation(), target, patterns,
-                                   &converter);
+      DenseSet<Operation *> unlegalizedOps;
+      (void)applyPartialConversion(getOperation(), target, patterns, &converter,
+                                   &unlegalizedOps);
+      // Emit remarks for each legalizable operation.
+      for (auto *op : unlegalizedOps)
+        op->emitRemark() << "op '" << op->getName() << "' is not legalizable";
       return;
     }
 

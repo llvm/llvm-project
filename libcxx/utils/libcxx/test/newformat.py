@@ -13,16 +13,16 @@ import pipes
 import re
 import subprocess
 
-def _supportsVerify(test):
+def _supportsVerify(config):
     """
-    Determine whether clang-verify is supported for that test.
+    Determine whether clang-verify is supported by the given configuration.
 
-    This is done by checking whether the %{cxx} substitution supports certain
-    compiler flags.
+    This is done by checking whether the %{cxx} substitution in that
+    configuration supports certain compiler flags.
     """
     command = "%{{cxx}} -xc++ {} -Werror -fsyntax-only -Xclang -verify-ignore-unexpected".format(os.devnull)
-    command = lit.TestRunner.applySubstitutions([command], test.config.substitutions,
-                                                recursion_limit=test.config.recursiveExpansionLimit)[0]
+    command = lit.TestRunner.applySubstitutions([command], config.substitutions,
+                                                recursion_limit=config.recursiveExpansionLimit)[0]
     devNull = open(os.devnull, 'w')
     result = subprocess.call(command, shell=True, stdout=devNull, stderr=devNull)
     return result == 0
@@ -55,11 +55,6 @@ def parseScript(test, preamble, fileDependencies):
     # Add the %{build} and %{run} convenience substitutions
     substitutions.append(('%{build}', '%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe'))
     substitutions.append(('%{run}', '%{exec} %t.exe'))
-
-    # Add the %{verify} substitution and the verify-support feature if Clang-verify is supported
-    if _supportsVerify(test):
-        test.config.available_features.add('verify-support')
-        substitutions.append(('%{verify}', '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'))
 
     # Parse the test file, including custom directives
     additionalCompileFlags = []
@@ -125,7 +120,9 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     FOO.sh.<anything>       - A builtin Lit Shell test
 
-    FOO.verify.cpp          - Compiles with clang-verify
+    FOO.verify.cpp          - Compiles with clang-verify. This type of test is
+                              automatically marked as UNSUPPORTED if the compiler
+                              does not support Clang-verify.
 
     FOO.fail.cpp            - Compiled with clang-verify if clang-verify is
                               supported, and equivalent to a .compile.fail.cpp
@@ -176,19 +173,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     Additional provided substitutions and features
     ==============================================
-    The test format will define the following substitutions for use inside
-    tests:
-
-        %{verify}
-
-            This expands to the set of flags that must be passed to the
-            compiler in order to use Clang-verify, if that is supported.
-
-        verify-support
-
-            This Lit feature will be made available when the compiler supports
-            Clang-verify. This can be used to disable tests that require that
-            feature, such as `.verify.cpp` tests.
+    The test format will define the following substitutions for use inside tests:
 
         %{file_dependencies}
 
@@ -203,18 +188,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         %{run}
             Equivalent to `%{exec} %t.exe`. This is intended to be used
             in conjunction with the %{build} substitution.
-
-
-    Design notes
-    ============
-    This test format never implicitly disables a type of test. For example,
-    we could be tempted to automatically mark `.verify.cpp` tests as
-    UNSUPPORTED when clang-verify isn't supported by the compiler. However,
-    this sort of logic has been known to cause tests to be ignored in the
-    past, so we favour having tests mark themselves as unsupported explicitly.
-
-    This test format still needs work in the following areas:
-        - It is unknown how well it works on Windows yet.
     """
     def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
         SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$', '[.]run[.]fail[.]cpp$',
@@ -246,6 +219,8 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     def execute(self, test, litConfig):
         self._checkBaseSubstitutions(test.config.substitutions)
+        VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
+        supportsVerify = _supportsVerify(test.config)
         filename = test.path_in_suite[-1]
 
         # TODO(ldionne): We currently disable tests that re-define _LIBCPP_ASSERT
@@ -291,8 +266,11 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             ]
             return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
         elif filename.endswith('.verify.cpp'):
+            if not supportsVerify:
+                return lit.Test.Result(lit.Test.UNSUPPORTED,
+                    "Test {} requires support for Clang-verify, which isn't supported by the compiler".format(test.getFullName()))
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only %{verify}"
+                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only {}".format(VERIFY_FLAGS)
             ]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
@@ -307,9 +285,9 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         # otherwise it's like a .compile.fail.cpp test. This is only provided
         # for backwards compatibility with the test suite.
         elif filename.endswith('.fail.cpp'):
-            if _supportsVerify(test):
+            if supportsVerify:
                 steps = [
-                    "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only %{verify}"
+                    "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only {}".format(VERIFY_FLAGS)
                 ]
             else:
                 steps = [

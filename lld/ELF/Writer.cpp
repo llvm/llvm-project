@@ -1933,6 +1933,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // we can correctly decide if a dynamic relocation is needed. This is called
   // after processSymbolAssignments() because it needs to know whether a
   // linker-script-defined symbol is absolute.
+  ppc64noTocRelax.clear();
   if (!config->relocatable) {
     forEachRelSec(scanRelocations<ELFT>);
     reportUndefinedSymbols<ELFT>();

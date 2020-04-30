@@ -354,21 +354,24 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
       // Handle undefined symbol.
       UndefinedCsects.emplace_back(ContainingCsect);
       SectionMap[ContainingCsect] = &UndefinedCsects.back();
-    } else {
-      // If the symbol is the csect itself, we don't need to put the symbol
-      // into csect's Syms.
-      if (XSym == ContainingCsect->getQualNameSymbol())
-        continue;
-
-      // Only put a label into the symbol table when it is an external label.
-      if (!XSym->isExternal())
-        continue;
-
-      assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
-             "Expected containing csect to exist in map");
-      // Lookup the containing csect and add the symbol to it.
-      SectionMap[ContainingCsect]->Syms.emplace_back(XSym);
+      if (nameShouldBeInStringTable(ContainingCsect->getName()))
+        Strings.add(ContainingCsect->getName());
+      continue;
     }
+
+    // If the symbol is the csect itself, we don't need to put the symbol
+    // into csect's Syms.
+    if (XSym == ContainingCsect->getQualNameSymbol())
+      continue;
+
+    // Only put a label into the symbol table when it is an external label.
+    if (!XSym->isExternal())
+      continue;
+
+    assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
+           "Expected containing csect to exist in map");
+    // Lookup the containing csect and add the symbol to it.
+    SectionMap[ContainingCsect]->Syms.emplace_back(XSym);
 
     // If the name does not fit in the storage provided in the symbol table
     // entry, add it to the string table.

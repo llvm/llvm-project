@@ -326,6 +326,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_ELF_TypeCommon:
   case MCSA_ELF_TypeNoType:
   case MCSA_ELF_TypeGnuUniqueObject:
+  case MCSA_Extern:
   case MCSA_Hidden:
   case MCSA_IndirectSymbol:
   case MCSA_Internal:
