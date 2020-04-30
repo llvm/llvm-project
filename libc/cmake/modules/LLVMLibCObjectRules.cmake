@@ -110,6 +110,7 @@ function(add_entrypoint_object target_name)
       ${fq_target_name}
       PROPERTIES
         "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
+        "IS_ALIAS" "YES"
         "OBJECT_FILE" ""
         "OBJECT_FILE_RAW" ""
         "DEPS" "${fq_dep_name}"
