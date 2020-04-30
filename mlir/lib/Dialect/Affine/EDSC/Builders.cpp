@@ -28,7 +28,7 @@ static Optional<Value> emitStaticFor(ArrayRef<Value> lbs, ArrayRef<Value> ubs,
   auto ubConst = dyn_cast<ConstantIndexOp>(ubDef);
   if (!lbConst || !ubConst)
     return Optional<Value>();
-  return ScopedContext::getBuilder()
+  return ScopedContext::getBuilderRef()
       .create<AffineForOp>(ScopedContext::getLocation(), lbConst.getValue(),
                            ubConst.getValue(), step)
       .getInductionVar();
@@ -38,16 +38,19 @@ LoopBuilder mlir::edsc::makeAffineLoopBuilder(Value *iv, ArrayRef<Value> lbs,
                                               ArrayRef<Value> ubs,
                                               int64_t step) {
   mlir::edsc::LoopBuilder result;
-  if (auto staticForIv = emitStaticFor(lbs, ubs, step)) {
+  if (auto staticForIv = emitStaticFor(lbs, ubs, step))
     *iv = staticForIv.getValue();
-  } else {
-    auto b = ScopedContext::getBuilder();
-    *iv =
-        Value(b.create<AffineForOp>(ScopedContext::getLocation(), lbs,
-                                    b.getMultiDimIdentityMap(lbs.size()), ubs,
-                                    b.getMultiDimIdentityMap(ubs.size()), step)
-                  .getInductionVar());
-  }
+  else
+    *iv = ScopedContext::getBuilderRef()
+              .create<AffineForOp>(
+                  ScopedContext::getLocation(), lbs,
+                  ScopedContext::getBuilderRef().getMultiDimIdentityMap(
+                      lbs.size()),
+                  ubs,
+                  ScopedContext::getBuilderRef().getMultiDimIdentityMap(
+                      ubs.size()),
+                  step)
+              .getInductionVar();
 
   auto *body = getForInductionVarOwner(*iv).getBody();
   result.enter(body);
@@ -122,7 +125,7 @@ static Value createBinaryIndexHandle(
 
   // TODO: createOrFold when available.
   Operation *op =
-      makeComposedAffineApply(ScopedContext::getBuilder(),
+      makeComposedAffineApply(ScopedContext::getBuilderRef(),
                               ScopedContext::getLocation(), map, operands)
           .getOperation();
   assert(op->getNumResults() == 1 && "Expected single result AffineApply");
@@ -218,7 +221,7 @@ static Value createIComparisonExpr(CmpIPredicate predicate, Value lhs,
   assert((lhsType.isa<IndexType>() || lhsType.isSignlessInteger()) &&
          "only integer comparisons are supported");
 
-  return ScopedContext::getBuilder().create<CmpIOp>(
+  return ScopedContext::getBuilderRef().create<CmpIOp>(
       ScopedContext::getLocation(), predicate, lhs, rhs);
 }
 
@@ -231,7 +234,7 @@ static Value createFComparisonExpr(CmpFPredicate predicate, Value lhs,
   assert(lhsType == rhsType && "cannot mix types in operators");
   assert(lhsType.isa<FloatType>() && "only float comparisons are supported");
 
-  return ScopedContext::getBuilder().create<CmpFOp>(
+  return ScopedContext::getBuilderRef().create<CmpFOp>(
       ScopedContext::getLocation(), predicate, lhs, rhs);
 }
 
