@@ -83,8 +83,6 @@ def main(builtin_params={}):
 
     filtered_tests = filtered_tests[:opts.max_tests]
 
-    opts.workers = min(len(filtered_tests), opts.workers)
-
     start = time.time()
     run_tests(filtered_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
@@ -190,14 +188,16 @@ def filter_by_shard(tests, run, shards, lit_config):
 
 
 def run_tests(tests, lit_config, opts, discovered_tests):
+    workers = min(len(tests), opts.workers)
     display = lit.display.create_display(opts, len(tests), discovered_tests,
-                                         opts.workers)
+                                         workers)
+
     def progress_callback(test):
         display.update(test)
         if opts.order == 'failing-first':
             touch_file(test)
 
-    run = lit.run.Run(tests, lit_config, opts.workers, progress_callback,
+    run = lit.run.Run(tests, lit_config, workers, progress_callback,
                       opts.max_failures, opts.timeout)
 
     display.print_header()
