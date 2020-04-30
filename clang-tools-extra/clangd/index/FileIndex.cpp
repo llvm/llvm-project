@@ -379,13 +379,14 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
       indexHeaderSymbols(Version, AST, std::move(PP), Includes);
   FileShardedIndex ShardedIndex(std::move(IF));
   for (auto Uri : ShardedIndex.getAllSources()) {
+    auto IF = ShardedIndex.getShard(Uri);
     // We are using the key received from ShardedIndex, so it should always
     // exist.
-    auto IF = std::move(ShardedIndex.getShard(Uri).getValue());
+    assert(IF);
     PreambleSymbols.update(
-        Uri, std::make_unique<SymbolSlab>(std::move(*IF.Symbols)),
+        Uri, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
         std::make_unique<RefSlab>(),
-        std::make_unique<RelationSlab>(std::move(*IF.Relations)),
+        std::make_unique<RelationSlab>(std::move(*IF->Relations)),
         /*CountReferences=*/false);
   }
   PreambleIndex.reset(
