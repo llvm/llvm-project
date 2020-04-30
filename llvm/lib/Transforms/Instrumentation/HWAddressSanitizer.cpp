@@ -45,7 +45,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -96,10 +95,6 @@ static cl::opt<bool> ClInstrumentAtomics(
     "hwasan-instrument-atomics",
     cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
     cl::init(true));
-
-static cl::opt<bool> ClInstrumentByval("hwasan-instrument-byval",
-                                       cl::desc("instrument byval arguments"),
-                                       cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClRecover(
     "hwasan-recover",
@@ -216,10 +211,10 @@ public:
                                  unsigned AccessSizeIndex,
                                  Instruction *InsertBefore);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
-  bool instrumentMemAccess(InterestingMemoryOperand &O);
-  bool ignoreAccess(Value *Ptr);
-  void getInterestingMemoryOperands(
-      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
+  bool instrumentMemAccess(Instruction *I);
+  Value *isInterestingMemoryAccess(Instruction *I, bool *IsWrite,
+                                   uint64_t *TypeSize, unsigned *Alignment,
+                                   Value **MaybeMask);
 
   bool isInterestingAlloca(const AllocaInst &AI);
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
@@ -505,63 +500,62 @@ Value *HWAddressSanitizer::getDynamicShadowNonTls(IRBuilder<> &IRB) {
   }
 }
 
-bool HWAddressSanitizer::ignoreAccess(Value *Ptr) {
-  // Do not instrument acesses from different address spaces; we cannot deal
-  // with them.
-  Type *PtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
-  if (PtrTy->getPointerAddressSpace() != 0)
-    return true;
-
-  // Ignore swifterror addresses.
-  // swifterror memory addresses are mem2reg promoted by instruction
-  // selection. As such they cannot have regular uses like an instrumentation
-  // function and it makes no sense to track them as memory.
-  if (Ptr->isSwiftError())
-    return true;
-
-  return false;
-}
-
-void HWAddressSanitizer::getInterestingMemoryOperands(
-    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
+Value *HWAddressSanitizer::isInterestingMemoryAccess(Instruction *I,
+                                                     bool *IsWrite,
+                                                     uint64_t *TypeSize,
+                                                     unsigned *Alignment,
+                                                     Value **MaybeMask) {
   // Skip memory accesses inserted by another instrumentation.
-  if (I->hasMetadata("nosanitize"))
-    return;
+  if (I->hasMetadata("nosanitize")) return nullptr;
 
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)
-    return;
+    return nullptr;
 
+  Value *PtrOperand = nullptr;
+  const DataLayout &DL = I->getModule()->getDataLayout();
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(LI->getPointerOperand()))
-      return;
-    Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
-                             LI->getType(), LI->getAlignment());
+    if (!ClInstrumentReads) return nullptr;
+    *IsWrite = false;
+    *TypeSize = DL.getTypeStoreSizeInBits(LI->getType());
+    *Alignment = LI->getAlignment();
+    PtrOperand = LI->getPointerOperand();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(SI->getPointerOperand()))
-      return;
-    Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
-                             SI->getValueOperand()->getType(),
-                             SI->getAlignment());
+    if (!ClInstrumentWrites) return nullptr;
+    *IsWrite = true;
+    *TypeSize = DL.getTypeStoreSizeInBits(SI->getValueOperand()->getType());
+    *Alignment = SI->getAlignment();
+    PtrOperand = SI->getPointerOperand();
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(RMW->getPointerOperand()))
-      return;
-    Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
-                             RMW->getValOperand()->getType(), 0);
+    if (!ClInstrumentAtomics) return nullptr;
+    *IsWrite = true;
+    *TypeSize = DL.getTypeStoreSizeInBits(RMW->getValOperand()->getType());
+    *Alignment = 0;
+    PtrOperand = RMW->getPointerOperand();
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(XCHG->getPointerOperand()))
-      return;
-    Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
-                             XCHG->getCompareOperand()->getType(), 0);
-  } else if (auto CI = dyn_cast<CallInst>(I)) {
-    for (unsigned ArgNo = 0; ArgNo < CI->getNumArgOperands(); ArgNo++) {
-      if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
-          ignoreAccess(CI->getArgOperand(ArgNo)))
-        continue;
-      Type *Ty = CI->getParamByValType(ArgNo);
-      Interesting.emplace_back(I, ArgNo, false, Ty, 1);
-    }
+    if (!ClInstrumentAtomics) return nullptr;
+    *IsWrite = true;
+    *TypeSize = DL.getTypeStoreSizeInBits(XCHG->getCompareOperand()->getType());
+    *Alignment = 0;
+    PtrOperand = XCHG->getPointerOperand();
   }
+
+  if (PtrOperand) {
+    // Do not instrument accesses from different address spaces; we cannot deal
+    // with them.
+    Type *PtrTy = cast<PointerType>(PtrOperand->getType()->getScalarType());
+    if (PtrTy->getPointerAddressSpace() != 0)
+      return nullptr;
+
+    // Ignore swifterror addresses.
+    // swifterror memory addresses are mem2reg promoted by instruction
+    // selection. As such they cannot have regular uses like an instrumentation
+    // function and it makes no sense to track them as memory.
+    if (PtrOperand->isSwiftError())
+      return nullptr;
+  }
+
+  return PtrOperand;
 }
 
 static unsigned getPointerOperandIndex(Instruction *I) {
@@ -719,32 +713,45 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   MI->eraseFromParent();
 }
 
-bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
-  Value *Addr = O.getPtr();
+bool HWAddressSanitizer::instrumentMemAccess(Instruction *I) {
+  LLVM_DEBUG(dbgs() << "Instrumenting: " << *I << "\n");
+  bool IsWrite = false;
+  unsigned Alignment = 0;
+  uint64_t TypeSize = 0;
+  Value *MaybeMask = nullptr;
 
-  LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
+  if (ClInstrumentMemIntrinsics && isa<MemIntrinsic>(I)) {
+    instrumentMemIntrinsic(cast<MemIntrinsic>(I));
+    return true;
+  }
 
-  if (O.MaybeMask)
+  Value *Addr =
+      isInterestingMemoryAccess(I, &IsWrite, &TypeSize, &Alignment, &MaybeMask);
+
+  if (!Addr)
+    return false;
+
+  if (MaybeMask)
     return false; //FIXME
 
-  IRBuilder<> IRB(O.getInsn());
-  if (isPowerOf2_64(O.TypeSize) &&
-      (O.TypeSize / 8 <= (1UL << (kNumberOfAccessSizes - 1))) &&
-      (O.Alignment >= (1UL << Mapping.Scale) || O.Alignment == 0 ||
-       O.Alignment >= O.TypeSize / 8)) {
-    size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeSize);
+  IRBuilder<> IRB(I);
+  if (isPowerOf2_64(TypeSize) &&
+      (TypeSize / 8 <= (1UL << (kNumberOfAccessSizes - 1))) &&
+      (Alignment >= (1UL << Mapping.Scale) || Alignment == 0 ||
+       Alignment >= TypeSize / 8)) {
+    size_t AccessSizeIndex = TypeSizeToSizeIndex(TypeSize);
     if (ClInstrumentWithCalls) {
-      IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
+      IRB.CreateCall(HwasanMemoryAccessCallback[IsWrite][AccessSizeIndex],
                      IRB.CreatePointerCast(Addr, IntptrTy));
     } else {
-      instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
+      instrumentMemAccessInline(Addr, IsWrite, AccessSizeIndex, I);
     }
   } else {
-    IRB.CreateCall(HwasanMemoryAccessCallbackSized[O.IsWrite],
+    IRB.CreateCall(HwasanMemoryAccessCallbackSized[IsWrite],
                    {IRB.CreatePointerCast(Addr, IntptrTy),
-                    ConstantInt::get(IntptrTy, O.TypeSize / 8)});
+                    ConstantInt::get(IntptrTy, TypeSize / 8)});
   }
-  untagPointerOperand(O.getInsn(), Addr);
+  untagPointerOperand(I, Addr);
 
   return true;
 }
@@ -1082,8 +1089,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 
-  SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
-  SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
+  SmallVector<Instruction*, 16> ToInstrument;
   SmallVector<AllocaInst*, 8> AllocasToInstrument;
   SmallVector<Instruction*, 8> RetVec;
   SmallVector<Instruction*, 8> LandingPadVec;
@@ -1109,10 +1115,14 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
 
-      getInterestingMemoryOperands(&Inst, OperandsToInstrument);
-
-      if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
-        IntrinToInstrument.push_back(MI);
+      Value *MaybeMask = nullptr;
+      bool IsWrite;
+      unsigned Alignment;
+      uint64_t TypeSize;
+      Value *Addr = isInterestingMemoryAccess(&Inst, &IsWrite, &TypeSize,
+                                              &Alignment, &MaybeMask);
+      if (Addr || isa<MemIntrinsic>(Inst))
+        ToInstrument.push_back(&Inst);
     }
   }
 
@@ -1128,8 +1138,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     F.setPersonalityFn(nullptr);
   }
 
-  if (AllocasToInstrument.empty() && OperandsToInstrument.empty() &&
-      IntrinToInstrument.empty())
+  if (AllocasToInstrument.empty() && ToInstrument.empty())
     return false;
 
   assert(!LocalDynamicShadow);
@@ -1207,14 +1216,8 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     }
   }
 
-  for (auto &Operand : OperandsToInstrument)
-    Changed |= instrumentMemAccess(Operand);
-
-  if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
-    for (auto Inst : IntrinToInstrument)
-      instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
-    Changed = true;
-  }
+  for (auto Inst : ToInstrument)
+    Changed |= instrumentMemAccess(Inst);
 
   LocalDynamicShadow = nullptr;
   StackBaseTag = nullptr;
