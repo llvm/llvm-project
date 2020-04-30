@@ -814,6 +814,20 @@ private:
   /// Allow access to `offset_base` and `dereference_iterator`.
   friend RangeBaseT;
 };
+
+//===----------------------------------------------------------------------===//
+// Operation Equivalency
+//===----------------------------------------------------------------------===//
+
+/// This class provides utilities for computing if two operations are
+/// equivalent.
+struct OperationEquivalence {
+  /// Compute a hash for the given operation.
+  static llvm::hash_code computeHash(Operation *op);
+
+  /// Compare two operations and return if they are equivalent.
+  static bool isEquivalentTo(Operation *lhs, Operation *rhs);
+};
 } // end namespace mlir
 
 namespace llvm {
