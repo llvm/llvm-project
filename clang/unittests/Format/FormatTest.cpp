@@ -8395,6 +8395,17 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
             format("vector<int> SomeVector = { // aaa\n"
                    "    1, 2, };"));
 
+  // C++11 brace initializer list l-braces should not be treated any differently
+  // when breaking before lambda bodies is enabled
+  FormatStyle BreakBeforeLambdaBody = getLLVMStyle();
+  BreakBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
+  BreakBeforeLambdaBody.BraceWrapping.BeforeLambdaBody = true;
+  BreakBeforeLambdaBody.AlwaysBreakBeforeMultilineStrings = true;
+  verifyFormat(
+      "std::runtime_error{\n"
+      "    \"Long string which will force a break onto the next line...\"};",
+      BreakBeforeLambdaBody);
+
   FormatStyle ExtraSpaces = getLLVMStyle();
   ExtraSpaces.Cpp11BracedListStyle = false;
   ExtraSpaces.ColumnLimit = 75;
