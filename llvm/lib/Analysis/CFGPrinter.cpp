@@ -42,7 +42,7 @@ static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
 static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
                                          cl::init(false));
 
-static cl::opt<bool> ShowHeatColors("cfg-heat-colors", cl::init(false),
+static cl::opt<bool> ShowHeatColors("cfg-heat-colors", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Show heat colors in CFG"));
 

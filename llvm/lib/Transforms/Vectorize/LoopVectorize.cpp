@@ -4384,22 +4384,17 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
       if (VF > 1)
         TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
       VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
+      assert(VectorF && "Can't retrieve vector intrinsic.");
     } else {
       // Use vector version of the function call.
       const VFShape Shape =
           VFShape::get(*CI, {VF, false} /*EC*/, false /*HasGlobalPred*/);
 #ifndef NDEBUG
-        const SmallVector<VFInfo, 8> Infos = VFDatabase::getMappings(*CI);
-        assert(std::find_if(Infos.begin(), Infos.end(),
-                            [&Shape](const VFInfo &Info) {
-                              return Info.Shape == Shape;
-                            }) != Infos.end() &&
-               "Vector function shape is missing from the database.");
+      assert(VFDatabase(*CI).getVectorizedFunction(Shape) != nullptr &&
+             "Can't create vector function.");
 #endif
         VectorF = VFDatabase(*CI).getVectorizedFunction(Shape);
     }
-      assert(VectorF && "Can't create vector function.");
-
       SmallVector<OperandBundleDef, 1> OpBundles;
       CI->getOperandBundlesAsDefs(OpBundles);
       CallInst *V = Builder.CreateCall(VectorF, Args, OpBundles);

@@ -216,23 +216,10 @@ std::string getMarkerForCodeBlock(llvm::StringRef Input) {
 }
 
 // Trims the input and concatenates whitespace blocks into a single ` `.
-std::string canonicalizeSpaces(std::string Input) {
-  // Goes over the string and preserves only a single ` ` for any whitespace
-  // chunks, the rest is moved to the end of the string and dropped in the end.
-  auto WritePtr = Input.begin();
+std::string canonicalizeSpaces(llvm::StringRef Input) {
   llvm::SmallVector<llvm::StringRef, 4> Words;
   llvm::SplitString(Input, Words);
-  if (Words.empty())
-    return "";
-  // Go over each word and add it to the string.
-  for (llvm::StringRef Word : Words) {
-    if (WritePtr > Input.begin())
-      *WritePtr++ = ' '; // Separate from previous block.
-    llvm::for_each(Word, [&WritePtr](const char C) { *WritePtr++ = C; });
-  }
-  // Get rid of extra spaces.
-  Input.resize(WritePtr - Input.begin());
-  return Input;
+  return llvm::join(Words, " ");
 }
 
 std::string renderBlocks(llvm::ArrayRef<std::unique_ptr<Block>> Children,
@@ -398,24 +385,24 @@ void BulletList::renderPlainText(llvm::raw_ostream &OS) const {
   }
 }
 
-Paragraph &Paragraph::appendText(std::string Text) {
-  Text = canonicalizeSpaces(std::move(Text));
-  if (Text.empty())
+Paragraph &Paragraph::appendText(llvm::StringRef Text) {
+  std::string Norm = canonicalizeSpaces(Text);
+  if (Norm.empty())
     return *this;
   Chunks.emplace_back();
   Chunk &C = Chunks.back();
-  C.Contents = std::move(Text);
+  C.Contents = std::move(Norm);
   C.Kind = Chunk::PlainText;
   return *this;
 }
 
-Paragraph &Paragraph::appendCode(std::string Code) {
-  Code = canonicalizeSpaces(std::move(Code));
-  if (Code.empty())
+Paragraph &Paragraph::appendCode(llvm::StringRef Code) {
+  std::string Norm = canonicalizeSpaces(std::move(Code));
+  if (Norm.empty())
     return *this;
   Chunks.emplace_back();
   Chunk &C = Chunks.back();
-  C.Contents = std::move(Code);
+  C.Contents = std::move(Norm);
   C.Kind = Chunk::InlineCode;
   return *this;
 }

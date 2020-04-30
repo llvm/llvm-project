@@ -1443,6 +1443,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_extint: {
+    if (!S.Context.getTargetInfo().hasExtIntType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
+        << "_ExtInt";
     Result = S.BuildExtIntType(DS.getTypeSpecSign() == TSS_unsigned,
                                DS.getRepAsExpr(), DS.getBeginLoc());
     if (Result.isNull()) {

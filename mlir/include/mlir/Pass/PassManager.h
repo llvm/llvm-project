@@ -106,6 +106,9 @@ private:
 
   /// Allow access to the constructor.
   friend class PassManager;
+
+  /// Allow access.
+  friend detail::OpPassManagerImpl;
 };
 
 //===----------------------------------------------------------------------===//
@@ -145,8 +148,11 @@ public:
 
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `outputFile` is a .mlir filename used to
-  /// write the generated reproducer.
-  void enableCrashReproducerGeneration(StringRef outputFile);
+  /// write the generated reproducer. If `genLocalReproducer` is true, the pass
+  /// manager will attempt to generate a local reproducer that contains the
+  /// smallest pipeline.
+  void enableCrashReproducerGeneration(StringRef outputFile,
+                                       bool genLocalReproducer = false);
 
   //===--------------------------------------------------------------------===//
   // Instrumentations
@@ -271,8 +277,12 @@ private:
   /// Dump the statistics of the passes within this pass manager.
   void dumpStatistics();
 
-  /// Flag that specifies if pass timing is enabled.
-  bool passTiming : 1;
+  /// Run the pass manager with crash recover enabled.
+  LogicalResult runWithCrashRecovery(ModuleOp module, AnalysisManager am);
+  /// Run the given passes with crash recover enabled.
+  LogicalResult
+  runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
+                       ModuleOp module, AnalysisManager am);
 
   /// Flag that specifies if pass statistics should be dumped.
   Optional<PassDisplayMode> passStatisticsMode;
@@ -282,6 +292,12 @@ private:
 
   /// An optional filename to use when generating a crash reproducer if valid.
   Optional<std::string> crashReproducerFileName;
+
+  /// Flag that specifies if pass timing is enabled.
+  bool passTiming : 1;
+
+  /// Flag that specifies if the generated crash reproducer should be local.
+  bool localReproducer : 1;
 };
 
 /// Register a set of useful command-line options that can be used to configure

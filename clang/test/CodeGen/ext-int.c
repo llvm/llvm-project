@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_cc1 -triple x86_64-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK
-
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK64
+// RUN: %clang_cc1 -triple x86_64-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK64
+// RUN: %clang_cc1 -triple i386-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN32
+// RUN: %clang_cc1 -triple i386-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN32
 
 void GenericTest(_ExtInt(3) a, unsigned _ExtInt(3) b, _ExtInt(4) c) {
   // CHECK: define {{.*}}void @GenericTest
@@ -15,14 +16,14 @@ void GenericTest(_ExtInt(3) a, unsigned _ExtInt(3) b, _ExtInt(4) c) {
 void VLATest(_ExtInt(3) A, _ExtInt(99) B, _ExtInt(123456) C) {
   // CHECK: define {{.*}}void @VLATest
   int AR1[A];
-  // CHECK: %[[A:.+]] = zext i3 %{{.+}} to i64
-  // CHECK: %[[VLA1:.+]] = alloca i32, i64 %[[A]]
+  // CHECK: %[[A:.+]] = zext i3 %{{.+}} to i[[INDXSIZE:[0-9]+]]
+  // CHECK: %[[VLA1:.+]] = alloca i32, i[[INDXSIZE]] %[[A]]
   int AR2[B];
-  // CHECK: %[[B:.+]] = trunc i99 %{{.+}} to i64
-  // CHECK: %[[VLA2:.+]] = alloca i32, i64 %[[B]]
+  // CHECK: %[[B:.+]] = trunc i99 %{{.+}} to i[[INDXSIZE]]
+  // CHECK: %[[VLA2:.+]] = alloca i32, i[[INDXSIZE]] %[[B]]
   int AR3[C];
-  // CHECK: %[[C:.+]] = trunc i123456 %{{.+}} to i64
-  // CHECK: %[[VLA3:.+]] = alloca i32, i64 %[[C]]
+  // CHECK: %[[C:.+]] = trunc i123456 %{{.+}} to i[[INDXSIZE]]
+  // CHECK: %[[VLA3:.+]] = alloca i32, i[[INDXSIZE]] %[[C]]
 }
 
 struct S {
@@ -32,13 +33,15 @@ struct S {
 };
 
 void OffsetOfTest() {
-  // CHECK: define {{.*}}void @OffsetOfTest 
+  // CHECK: define {{.*}}void @OffsetOfTest
   int A = __builtin_offsetof(struct S,A);
   // CHECK: store i32 0, i32* %{{.+}}
   int B = __builtin_offsetof(struct S,B);
-  // CHECK: store i32 8, i32* %{{.+}}
+  // CHECK64: store i32 8, i32* %{{.+}}
+  // LIN32: store i32 4, i32* %{{.+}}
+  // WINCHECK32: store i32 8, i32* %{{.+}}
   int C = __builtin_offsetof(struct S,C);
-  // CHECK: store i32 2097160, i32* %{{.+}}
+  // CHECK64: store i32 2097160, i32* %{{.+}}
+  // LIN32: store i32 2097156, i32* %{{.+}}
+  // WIN32: store i32 2097160, i32* %{{.+}}
 }
-
-

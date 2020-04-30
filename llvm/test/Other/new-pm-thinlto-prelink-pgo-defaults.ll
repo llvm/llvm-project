@@ -81,6 +81,7 @@
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
 ; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Invalidating all non-preserved analyses for:
@@ -137,8 +138,9 @@
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
-; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
+; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -209,7 +211,6 @@
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Finished {{.*}}Function pass manager run
 ; CHECK-O-NEXT: Running pass: ADCEPass
-; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass on foo

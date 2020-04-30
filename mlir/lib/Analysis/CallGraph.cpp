@@ -179,7 +179,7 @@ void CallGraph::print(raw_ostream &os) const {
     auto *parentOp = callableRegion->getParentOp();
     os << "'" << callableRegion->getParentOp()->getName() << "' - Region #"
        << callableRegion->getRegionNumber();
-    if (auto attrs = parentOp->getAttrList().getDictionary())
+    if (auto attrs = parentOp->getMutableAttrDict().getDictionary())
       os << " : " << attrs;
   };
 

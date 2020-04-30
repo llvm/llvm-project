@@ -101,45 +101,40 @@ static bool compareNamedAttributeWithName(const NamedAttribute &attr,
   return strncmp(attr.first.data(), name.data(), name.size()) < 0;
 }
 
-DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
-                                   MLIRContext *context) {
-  assert(llvm::all_of(value,
-                      [](const NamedAttribute &attr) { return attr.second; }) &&
-         "value cannot have null entries");
-
-  // We need to sort the element list to canonicalize it, but we also don't want
-  // to do a ton of work in the super common case where the element list is
-  // already sorted.
-  SmallVector<NamedAttribute, 8> storage;
+/// Helper function that does either an in place sort or sorts from source array
+/// into destination. If inPlace then storage is both the source and the
+/// destination, else value is the source and storage destination. Returns
+/// whether source was sorted.
+template <bool inPlace>
+static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
+                               SmallVectorImpl<NamedAttribute> &storage) {
+  // Specialize for the common case.
   switch (value.size()) {
   case 0:
-    break;
   case 1:
-    // A single element is already sorted.
+    // Zero or one elements are already sorted.
     break;
   case 2:
     assert(value[0].first != value[1].first &&
            "DictionaryAttr element names must be unique");
-
-    // Don't invoke a general sort for two element case.
     if (compareNamedAttributes(&value[0], &value[1]) > 0) {
-      storage.push_back(value[1]);
-      storage.push_back(value[0]);
-      value = storage;
+      if (inPlace)
+        std::swap(storage[0], storage[1]);
+      else
+        storage.append({value[1], value[0]});
+      return true;
     }
     break;
   default:
     // Check to see they are sorted already.
-    bool isSorted = true;
-    for (unsigned i = 0, e = value.size() - 1; i != e; ++i) {
-      if (compareNamedAttributes(&value[i], &value[i + 1]) > 0) {
-        isSorted = false;
-        break;
-      }
-    }
-    // If not, do a general sort.
+    bool isSorted =
+        llvm::is_sorted(value, [](NamedAttribute l, NamedAttribute r) {
+          return compareNamedAttributes(&l, &r) < 0;
+        });
     if (!isSorted) {
-      storage.append(value.begin(), value.end());
+      // If not, do a general sort.
+      if (!inPlace)
+        storage.append(value.begin(), value.end());
       llvm::array_pod_sort(storage.begin(), storage.end(),
                            compareNamedAttributes);
       value = storage;
@@ -151,7 +146,28 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
                                 return l.first == r.first;
                               }) == value.end() &&
            "DictionaryAttr element names must be unique");
+    return !isSorted;
   }
+  return false;
+}
+
+/// Sorts the NamedAttributes in the array ordered by name as expected by
+/// getWithSorted.
+/// Requires: uniquely named attributes.
+void DictionaryAttr::sort(SmallVectorImpl<NamedAttribute> &array) {
+  dictionaryAttrSort</*inPlace=*/true>(array, array);
+}
+
+DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
+                                   MLIRContext *context) {
+  assert(llvm::all_of(value,
+                      [](const NamedAttribute &attr) { return attr.second; }) &&
+         "value cannot have null entries");
+
+  // We need to sort the element list to canonicalize it.
+  SmallVector<NamedAttribute, 8> storage;
+  if (dictionaryAttrSort</*inPlace=*/false>(value, storage))
+    value = storage;
 
   return Base::get(context, StandardAttributes::Dictionary, value);
 }
@@ -180,15 +196,26 @@ ArrayRef<NamedAttribute> DictionaryAttr::getValue() const {
 
 /// Return the specified attribute if present, null otherwise.
 Attribute DictionaryAttr::get(StringRef name) const {
-  ArrayRef<NamedAttribute> values = getValue();
-  auto it = llvm::lower_bound(values, name, compareNamedAttributeWithName);
-  return it != values.end() && it->first == name ? it->second : Attribute();
+  Optional<NamedAttribute> attr = getNamed(name);
+  return attr ? attr->second : nullptr;
 }
 Attribute DictionaryAttr::get(Identifier name) const {
+  Optional<NamedAttribute> attr = getNamed(name);
+  return attr ? attr->second : nullptr;
+}
+
+/// Return the specified named attribute if present, None otherwise.
+Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
+  ArrayRef<NamedAttribute> values = getValue();
+  auto it = llvm::lower_bound(values, name, compareNamedAttributeWithName);
+  return it != values.end() && it->first == name ? *it
+                                                 : Optional<NamedAttribute>();
+}
+Optional<NamedAttribute> DictionaryAttr::getNamed(Identifier name) const {
   for (auto elt : getValue())
     if (elt.first == name)
-      return elt.second;
-  return nullptr;
+      return elt;
+  return llvm::None;
 }
 
 DictionaryAttr::iterator DictionaryAttr::begin() const {
@@ -1144,19 +1171,20 @@ std::vector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
 }
 
 //===----------------------------------------------------------------------===//
-// NamedAttributeList
+// MutableDictionaryAttr
 //===----------------------------------------------------------------------===//
 
-NamedAttributeList::NamedAttributeList(ArrayRef<NamedAttribute> attributes) {
+MutableDictionaryAttr::MutableDictionaryAttr(
+    ArrayRef<NamedAttribute> attributes) {
   setAttrs(attributes);
 }
 
-ArrayRef<NamedAttribute> NamedAttributeList::getAttrs() const {
+ArrayRef<NamedAttribute> MutableDictionaryAttr::getAttrs() const {
   return attrs ? attrs.getValue() : llvm::None;
 }
 
 /// Replace the held attributes with ones provided in 'newAttrs'.
-void NamedAttributeList::setAttrs(ArrayRef<NamedAttribute> attributes) {
+void MutableDictionaryAttr::setAttrs(ArrayRef<NamedAttribute> attributes) {
   // Don't create an attribute list if there are no attributes.
   if (attributes.empty())
     attrs = nullptr;
@@ -1165,18 +1193,27 @@ void NamedAttributeList::setAttrs(ArrayRef<NamedAttribute> attributes) {
 }
 
 /// Return the specified attribute if present, null otherwise.
-Attribute NamedAttributeList::get(StringRef name) const {
+Attribute MutableDictionaryAttr::get(StringRef name) const {
   return attrs ? attrs.get(name) : nullptr;
 }
 
 /// Return the specified attribute if present, null otherwise.
-Attribute NamedAttributeList::get(Identifier name) const {
+Attribute MutableDictionaryAttr::get(Identifier name) const {
   return attrs ? attrs.get(name) : nullptr;
+}
+
+/// Return the specified named attribute if present, None otherwise.
+Optional<NamedAttribute> MutableDictionaryAttr::getNamed(StringRef name) const {
+  return attrs ? attrs.getNamed(name) : Optional<NamedAttribute>();
+}
+Optional<NamedAttribute>
+MutableDictionaryAttr::getNamed(Identifier name) const {
+  return attrs ? attrs.getNamed(name) : Optional<NamedAttribute>();
 }
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value.  Otherwise, add a new attribute with the specified name/value.
-void NamedAttributeList::set(Identifier name, Attribute value) {
+void MutableDictionaryAttr::set(Identifier name, Attribute value) {
   assert(value && "attributes may never be null");
 
   // Look for an existing value for the given name, and set it in-place.
@@ -1206,7 +1243,7 @@ void NamedAttributeList::set(Identifier name, Attribute value) {
 
 /// Remove the attribute with the specified name if it exists.  The return
 /// value indicates whether the attribute was present or not.
-auto NamedAttributeList::remove(Identifier name) -> RemoveResult {
+auto MutableDictionaryAttr::remove(Identifier name) -> RemoveResult {
   auto origAttrs = getAttrs();
   for (unsigned i = 0, e = origAttrs.size(); i != e; ++i) {
     if (origAttrs[i].first == name) {

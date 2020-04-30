@@ -114,6 +114,7 @@ add_clang_library(clangDaemon
   clangToolingRefactoring
   clangToolingSyntax
   clangdSupport
+  ${LLVM_PTHREAD_LIB}
   ${ALL_CLANG_TIDY_CHECKS}
   )
 

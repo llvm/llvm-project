@@ -442,7 +442,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     // Provide only a default definition of the method.
     // Note: `ConcreteOp` corresponds to the derived operation typename.
     InterfaceMethod<"/*insert doc here*/",
-      "unsigned", "getNumInputsAndOutputs", (ins), /*methodBody=*/[{}], [{
+      "unsigned", "getNumWithDefault", (ins), /*methodBody=*/[{}], [{
         ConcreteOp op = cast<ConcreteOp>(getOperation());
         return op.getNumInputs() + op.getNumOutputs();
     }]>,
@@ -455,6 +455,13 @@ def MyInterface : OpInterface<"MyInterface"> {
 // declaration but instead handled by the op interface trait directly.
 def OpWithInferTypeInterfaceOp : Op<...
     [DeclareOpInterfaceMethods<MyInterface>]> { ... }
+
+// Methods that have a default implementation do not have declarations
+// generated. If an operation wishes to override the default behavior, it can
+// explicitly specify the method that it wishes to override. This will force
+// the generation of a declaration for those methods.
+def OpWithOverrideInferTypeInterfaceOp : Op<...
+    [DeclareOpInterfaceMethods<MyInterface, ["getNumWithDefault"]>]> { ... }
 ```
 
 A verification method can also be specified on the `OpInterface` by setting

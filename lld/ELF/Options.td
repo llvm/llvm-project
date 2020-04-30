@@ -256,9 +256,6 @@ def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
 def no_omagic: F<"no-omagic">, MetaVarName<"<magic>">,
   HelpText<"Do not set the text data sections to be writable, page align sections (default)">;
 
-def no_rosegment: F<"no-rosegment">,
-  HelpText<"Do not put read-only non-executable sections in their own segment">;
-
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
@@ -297,6 +294,10 @@ defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
     "Do not list identical folded sections (default)">;
 
+def print_archive_stats: J<"print-archive-stats=">,
+  HelpText<"Write archive usage statistics to the specified file. "
+           "Print the numbers of members and fetched members for each archive">;
+
 defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 
@@ -310,6 +311,10 @@ def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
 defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+
+defm rosegment: B<"rosegment",
+  "Put read-only non-executable sections in their own segment (default)",
+  "Do not put read-only non-executable sections in their own segment">;
 
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 

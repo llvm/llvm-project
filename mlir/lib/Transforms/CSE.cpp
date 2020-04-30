@@ -26,18 +26,9 @@
 using namespace mlir;
 
 namespace {
-// TODO(riverriddle) Handle commutative operations.
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   static unsigned getHashValue(const Operation *opC) {
-    auto *op = const_cast<Operation *>(opC);
-    // Hash the operations based upon their:
-    //   - Operation Name
-    //   - Attributes
-    //   - Result Types
-    //   - Operands
-    return llvm::hash_combine(
-        op->getName(), op->getAttrList().getDictionary(), op->getResultTypes(),
-        llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
+    return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
   }
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
     auto *lhs = const_cast<Operation *>(lhsC);
@@ -47,24 +38,8 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
         rhs == getTombstoneKey() || rhs == getEmptyKey())
       return false;
-
-    // Compare the operation name.
-    if (lhs->getName() != rhs->getName())
-      return false;
-    // Check operand and result type counts.
-    if (lhs->getNumOperands() != rhs->getNumOperands() ||
-        lhs->getNumResults() != rhs->getNumResults())
-      return false;
-    // Compare attributes.
-    if (lhs->getAttrList() != rhs->getAttrList())
-      return false;
-    // Compare operands.
-    if (!std::equal(lhs->operand_begin(), lhs->operand_end(),
-                    rhs->operand_begin()))
-      return false;
-    // Compare result types.
-    return std::equal(lhs->result_type_begin(), lhs->result_type_end(),
-                      rhs->result_type_begin());
+    return OperationEquivalence::isEquivalentTo(const_cast<Operation *>(lhsC),
+                                                const_cast<Operation *>(rhsC));
   }
 };
 } // end anonymous namespace

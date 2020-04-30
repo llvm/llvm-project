@@ -536,6 +536,24 @@ TEST_F(VFShapeAPITest, API_buildVFShape) {
   EXPECT_EQ(Shape, Expected);
 }
 
+TEST_F(VFShapeAPITest, API_getScalarShape) {
+  buildShape(/*VF*/ 1, /*IsScalable*/ false, /*HasGlobalPred*/ false);
+  EXPECT_EQ(VFShape::getScalarShape(*CI), Shape);
+}
+
+TEST_F(VFShapeAPITest, API_getVectorizedFunction) {
+  VFShape ScalarShape = VFShape::getScalarShape(*CI);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(ScalarShape),
+            M->getFunction("g"));
+
+  buildShape(/*VF*/ 1, /*IsScalable*/ true, /*HasGlobalPred*/ false);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
+  buildShape(/*VF*/ 1, /*IsScalable*/ false, /*HasGlobalPred*/ true);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
+  buildShape(/*VF*/ 1, /*IsScalable*/ true, /*HasGlobalPred*/ true);
+  EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
+}
+
 TEST_F(VFShapeAPITest, API_updateVFShape) {
 
   buildShape(/*VF*/ 2, /*IsScalable*/ false, /*HasGlobalPred*/ false);

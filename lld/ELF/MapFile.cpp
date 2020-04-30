@@ -259,5 +259,23 @@ void writeCrossReferenceTable() {
   }
 }
 
+void writeArchiveStats() {
+  if (config->printArchiveStats.empty())
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os(config->printArchiveStats, ec, sys::fs::OF_None);
+  if (ec) {
+    error("--print-archive-stats=: cannot open " + config->printArchiveStats +
+          ": " + ec.message());
+    return;
+  }
+
+  os << "members\tfetched\tarchive\n";
+  for (const ArchiveFile *f : archiveFiles)
+    os << f->getMemberCount() << '\t' << f->getFetchedMemberCount() << '\t'
+       << f->getName() << '\n';
+}
+
 } // namespace elf
 } // namespace lld

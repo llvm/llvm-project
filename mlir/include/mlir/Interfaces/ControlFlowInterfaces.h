@@ -24,11 +24,6 @@ class BranchOpInterface;
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-/// Erase an operand from a branch operation that is used as a successor
-/// operand. `operandIndex` is the operand within `operands` to be erased.
-void eraseBranchSuccessorOperand(OperandRange operands, unsigned operandIndex,
-                                 Operation *op);
-
 /// Return the `BlockArgument` corresponding to operand `operandIndex` in some
 /// successor if `operandIndex` is within the range of `operands`, or None if
 /// `operandIndex` isn't a successor operand index.

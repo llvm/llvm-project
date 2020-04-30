@@ -72,6 +72,6 @@ private:
   HashType m_type;
 };
 
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_LANGUAGE_OBJC_CFBASICHASH_H

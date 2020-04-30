@@ -55,6 +55,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -1767,10 +1768,12 @@ IntersectUnsignedRange(ScalarEvolution &SE,
 PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
 
-  BranchProbabilityInfo BPI;
-  BPI.calculate(F, LI);
+  // TODO: Request BPI through AM directly?
+  BranchProbabilityInfo BPI(F, LI, &TLI, PDT);
   InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
 
   bool Changed = false;
