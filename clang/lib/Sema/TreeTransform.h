@@ -2086,6 +2086,17 @@ public:
                                                 EndLoc);
   }
 
+  /// Build a new OpenMP 'uses_allocators' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPUsesAllocatorsClause(
+      ArrayRef<Sema::UsesAllocatorsData> Data, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPUsesAllocatorClause(StartLoc, LParenLoc, EndLoc,
+                                                    Data);
+  }
+
   /// Build a new OpenMP 'order' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -9673,8 +9684,33 @@ TreeTransform<Derived>::TransformOMPExclusiveClause(OMPExclusiveClause *C) {
 }
 
 template <typename Derived>
-OMPClause *
-TreeTransform<Derived>::TransformOMPOrderClause(OMPOrderClause *C) {
+OMPClause *TreeTransform<Derived>::TransformOMPUsesAllocatorsClause(
+    OMPUsesAllocatorsClause *C) {
+  SmallVector<Sema::UsesAllocatorsData, 16> Data;
+  Data.reserve(C->getNumberOfAllocators());
+  for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
+    OMPUsesAllocatorsClause::Data D = C->getAllocatorData(I);
+    ExprResult Allocator = getDerived().TransformExpr(D.Allocator);
+    if (Allocator.isInvalid())
+      continue;
+    ExprResult AllocatorTraits;
+    if (Expr *AT = D.AllocatorTraits) {
+      AllocatorTraits = getDerived().TransformExpr(AT);
+      if (AllocatorTraits.isInvalid())
+        continue;
+    }
+    Sema::UsesAllocatorsData &NewD = Data.emplace_back();
+    NewD.Allocator = Allocator.get();
+    NewD.AllocatorTraits = AllocatorTraits.get();
+    NewD.LParenLoc = D.LParenLoc;
+    NewD.RParenLoc = D.RParenLoc;
+  }
+  return getDerived().RebuildOMPUsesAllocatorsClause(
+      Data, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPOrderClause(OMPOrderClause *C) {
   return getDerived().RebuildOMPOrderClause(C->getKind(), C->getKindKwLoc(),
                                             C->getBeginLoc(), C->getLParenLoc(),
                                             C->getEndLoc());

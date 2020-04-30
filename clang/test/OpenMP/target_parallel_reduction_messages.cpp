@@ -179,7 +179,7 @@ T tmain(T argc) {
 #pragma omp for private(fl)
   for (int i = 0; i < 10; ++i)
   {}
-#pragma omp target parallel reduction(+ : fl) allocate(omp_thread_mem_alloc: fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel' directive}}
+#pragma omp target parallel reduction(+ : fl) allocate(omp_thread_mem_alloc: fl) uses_allocators(omp_thread_mem_alloc) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target parallel'}}
     foo();
 #pragma omp target parallel
 #pragma omp for reduction(- : fl)

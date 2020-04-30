@@ -3522,6 +3522,17 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDetachClause(OMPDetachClause *C) {
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUsesAllocatorsClause(
+    OMPUsesAllocatorsClause *C) {
+  for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
+    const OMPUsesAllocatorsClause::Data Data = C->getAllocatorData(I);
+    TRY_TO(TraverseStmt(Data.Allocator));
+    TRY_TO(TraverseStmt(Data.AllocatorTraits));
+  }
+  return true;
+}
+
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods
 // returning decls or qualtypes or nestednamespecifier -- though I'm
