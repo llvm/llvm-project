@@ -30,6 +30,7 @@ class Block {
 public:
   virtual void renderMarkdown(llvm::raw_ostream &OS) const = 0;
   virtual void renderPlainText(llvm::raw_ostream &OS) const = 0;
+  virtual std::unique_ptr<Block> clone() const = 0;
   std::string asMarkdown() const;
   std::string asPlainText() const;
 
@@ -44,6 +45,7 @@ class Paragraph : public Block {
 public:
   void renderMarkdown(llvm::raw_ostream &OS) const override;
   void renderPlainText(llvm::raw_ostream &OS) const override;
+  std::unique_ptr<Block> clone() const override;
 
   /// Append plain text to the end of the string.
   Paragraph &appendText(llvm::StringRef Text);
@@ -68,6 +70,7 @@ class BulletList : public Block {
 public:
   void renderMarkdown(llvm::raw_ostream &OS) const override;
   void renderPlainText(llvm::raw_ostream &OS) const override;
+  std::unique_ptr<Block> clone() const override;
 
   class Document &addItem();
 
@@ -79,6 +82,12 @@ private:
 /// markdown and plaintext.
 class Document {
 public:
+  Document() = default;
+  Document(const Document &Other) { *this = Other; }
+  Document &operator=(const Document &);
+  Document(Document &&) = default;
+  Document &operator=(Document &&) = default;
+
   /// Adds a semantical block that will be separate from others.
   Paragraph &addParagraph();
   /// Inserts a horizontal separator to the document.

@@ -648,6 +648,7 @@ bool isHardLineBreakIndicator(llvm::StringRef Rest) {
 }
 
 bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
+  // Should we also consider whether Line is short?
   return punctuationIndicatesLineBreak(Line) || isHardLineBreakIndicator(Rest);
 }
 
