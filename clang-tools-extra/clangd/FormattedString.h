@@ -88,6 +88,8 @@ public:
   Document(Document &&) = default;
   Document &operator=(Document &&) = default;
 
+  void append(Document Other);
+
   /// Adds a semantical block that will be separate from others.
   Paragraph &addParagraph();
   /// Inserts a horizontal separator to the document.
