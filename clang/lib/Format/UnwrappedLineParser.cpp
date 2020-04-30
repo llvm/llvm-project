@@ -1745,6 +1745,7 @@ bool UnwrappedLineParser::tryToParseBracedList() {
 }
 
 bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
+                                          bool IsEnum,
                                           tok::TokenKind ClosingBraceKind) {
   bool HasError = false;
 
@@ -1785,6 +1786,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       }
     }
     if (FormatTok->Tok.getKind() == ClosingBraceKind) {
+      if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
+        addUnwrappedLine();
       nextToken();
       return !HasError;
     }
@@ -1843,6 +1846,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       break;
     case tok::comma:
       nextToken();
+      if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
+        addUnwrappedLine();
       break;
     default:
       nextToken();
@@ -2301,9 +2306,18 @@ bool UnwrappedLineParser::parseEnum() {
     return true;
   }
 
+  if (!Style.AllowShortEnumsOnASingleLine)
+    addUnwrappedLine();
   // Parse enum body.
   nextToken();
-  bool HasError = !parseBracedList(/*ContinueOnSemicolons=*/true);
+  if (!Style.AllowShortEnumsOnASingleLine) {
+    addUnwrappedLine();
+    Line->Level += 1;
+  }
+  bool HasError = !parseBracedList(/*ContinueOnSemicolons=*/true,
+                                   /*IsEnum=*/true);
+  if (!Style.AllowShortEnumsOnASingleLine)
+    Line->Level -= 1;
   if (HasError) {
     if (FormatTok->is(tok::semi))
       nextToken();
