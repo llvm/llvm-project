@@ -204,7 +204,7 @@ static void writePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
 }
 
 // Write X as a plain integer value at offset Offset in Stream.
-static void writeI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
+static void patchI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
   uint8_t Buffer[4];
   support::endian::write32le(Buffer, X);
   Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
@@ -308,6 +308,18 @@ private:
     W.OS << Str;
   }
 
+  void writeI32(int32_t val) {
+    char Buffer[4];
+    support::endian::write32le(Buffer, val);
+    W.OS.write(Buffer, sizeof(Buffer));
+  }
+
+  void writeI64(int64_t val) {
+    char Buffer[8];
+    support::endian::write64le(Buffer, val);
+    W.OS.write(Buffer, sizeof(Buffer));
+  }
+
   void writeValueType(wasm::ValType Ty) { W.OS << static_cast<char>(Ty); }
 
   void writeTypeSection(ArrayRef<WasmSignature> Signatures);
@@ -321,6 +333,7 @@ private:
                         ArrayRef<WasmFunction> Functions);
   void writeDataSection();
   void writeEventSection(ArrayRef<wasm::WasmEventType> Events);
+  void writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals);
   void writeRelocSection(uint32_t SectionIndex, StringRef Name,
                          std::vector<WasmRelocationEntry> &Relocations);
   void writeLinkingMetaDataSection(
@@ -665,7 +678,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
     case wasm::R_WASM_SECTION_OFFSET_I32:
     case wasm::R_WASM_GLOBAL_INDEX_I32:
-      writeI32(Stream, Value, Offset);
+      patchI32(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
@@ -772,6 +785,40 @@ void WasmObjectWriter::writeEventSection(ArrayRef<wasm::WasmEventType> Events) {
   for (const wasm::WasmEventType &Event : Events) {
     encodeULEB128(Event.Attribute, W.OS);
     encodeULEB128(Event.SigIndex, W.OS);
+  }
+
+  endSection(Section);
+}
+
+void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
+  if (Globals.empty())
+    return;
+
+  SectionBookkeeping Section;
+  startSection(Section, wasm::WASM_SEC_GLOBAL);
+
+  encodeULEB128(Globals.size(), W.OS);
+  for (const wasm::WasmGlobal &Global : Globals) {
+    encodeULEB128(Global.Type.Type, W.OS);
+    W.OS << char(Global.Type.Mutable);
+    W.OS << char(Global.InitExpr.Opcode);
+    switch (Global.Type.Type) {
+    case wasm::WASM_TYPE_I32:
+      encodeSLEB128(0, W.OS);
+      break;
+    case wasm::WASM_TYPE_I64:
+      encodeSLEB128(0, W.OS);
+      break;
+    case wasm::WASM_TYPE_F32:
+      writeI32(0);
+      break;
+    case wasm::WASM_TYPE_F64:
+      writeI64(0);
+      break;
+    default:
+      llvm_unreachable("unexpected type");
+    }
+    W.OS << char(wasm::WASM_OPCODE_END);
   }
 
   endSection(Section);
@@ -1118,6 +1165,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   SmallVector<wasm::WasmImport, 4> Imports;
   SmallVector<wasm::WasmExport, 4> Exports;
   SmallVector<wasm::WasmEventType, 1> Events;
+  SmallVector<wasm::WasmGlobal, 1> Globals;
   SmallVector<wasm::WasmSymbolInfo, 4> SymbolInfos;
   SmallVector<std::pair<uint16_t, uint32_t>, 2> InitFuncs;
   std::map<StringRef, std::vector<WasmComdatEntry>> Comdats;
@@ -1377,22 +1425,43 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     } else if (WS.isGlobal()) {
       // A "true" Wasm global (currently just __stack_pointer)
-      if (WS.isDefined())
-        report_fatal_error("don't yet support defined globals");
-
-      // An import; the index was assigned above
-      LLVM_DEBUG(dbgs() << "  -> global index: "
-                        << WasmIndices.find(&WS)->second << "\n");
-
+      if (WS.isDefined()) {
+        assert(WasmIndices.count(&WS) == 0);
+        wasm::WasmGlobal Global;
+        Global.Type = WS.getGlobalType();
+        Global.Index = NumGlobalImports + Globals.size();
+        switch (Global.Type.Type) {
+        case wasm::WASM_TYPE_I32:
+          Global.InitExpr.Opcode = wasm::WASM_OPCODE_I32_CONST;
+          break;
+        case wasm::WASM_TYPE_I64:
+          Global.InitExpr.Opcode = wasm::WASM_OPCODE_I64_CONST;
+          break;
+        case wasm::WASM_TYPE_F32:
+          Global.InitExpr.Opcode = wasm::WASM_OPCODE_F32_CONST;
+          break;
+        case wasm::WASM_TYPE_F64:
+          Global.InitExpr.Opcode = wasm::WASM_OPCODE_F64_CONST;
+          break;
+        default:
+          llvm_unreachable("unexpected type");
+        }
+        WasmIndices[&WS] = Global.Index;
+        Globals.push_back(Global);
+      } else {
+        // An import; the index was assigned above
+        LLVM_DEBUG(dbgs() << "  -> global index: "
+                          << WasmIndices.find(&WS)->second << "\n");
+      }
     } else if (WS.isEvent()) {
       // C++ exception symbol (__cpp_exception)
       unsigned Index;
       if (WS.isDefined()) {
+        assert(WasmIndices.count(&WS) == 0);
         Index = NumEventImports + Events.size();
         wasm::WasmEventType Event;
         Event.SigIndex = getEventType(WS);
         Event.Attribute = wasm::WASM_EVENT_ATTRIBUTE_EXCEPTION;
-        assert(WasmIndices.count(&WS) == 0);
         WasmIndices[&WS] = Index;
         Events.push_back(Event);
       } else {
@@ -1584,6 +1653,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   // Skip the "table" section; we import the table instead.
   // Skip the "memory" section; we import the memory instead.
   writeEventSection(Events);
+  writeGlobalSection(Globals);
   writeExportSection(Exports);
   writeElemSection(TableElems);
   writeDataCountSection();
