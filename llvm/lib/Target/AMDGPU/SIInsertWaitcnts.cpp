@@ -264,7 +264,6 @@ public:
   }
 
   bool hasMixedPendingEvents(InstCounterType T) const {
-    return false;
     uint32_t Events = PendingEvents & WaitEventMaskForInst[T];
     // Return true if more than one bit is set in Events.
     return Events & (Events - 1);
