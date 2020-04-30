@@ -1646,6 +1646,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::lessequal:
     case tok::question:
     case tok::colon:
+    case tok::ellipsis:
     case tok::kw_true:
     case tok::kw_false:
       if (SeenArrow) {
