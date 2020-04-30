@@ -52,7 +52,7 @@ static SmallVector<Value, 8> makeCanonicalAffineApplies(OpBuilder &b,
 
 static SmallVector<Value, 4> permuteIvs(ArrayRef<Value> ivs,
                                         Optional<AffineMap> permutation) {
-  return permutation ? applyMapToValues(ScopedContext::getBuilder(),
+  return permutation ? applyMapToValues(ScopedContext::getBuilderRef(),
                                         ScopedContext::getLocation(),
                                         permutation.getValue(), ivs)
                      : SmallVector<Value, 4>(ivs.begin(), ivs.end());
@@ -82,7 +82,7 @@ template <typename IndexedValueType, typename OpType>
 static void inlineRegionAndEmitStore(OpType op, ArrayRef<Value> indexedValues,
                                      ArrayRef<SmallVector<Value, 8>> indexing,
                                      ArrayRef<Value> outputBuffers) {
-  auto &b = ScopedContext::getBuilder();
+  auto &b = ScopedContext::getBuilderRef();
   auto &block = op.region().front();
   BlockAndValueMapping map;
   map.map(block.getArguments(), indexedValues);
@@ -110,7 +110,7 @@ struct InputAndOutputIndices {
 template <typename SingleInputPoolingOp>
 static InputAndOutputIndices getInputAndOutputIndices(ArrayRef<Value> allIvs,
                                                       SingleInputPoolingOp op) {
-  auto &b = ScopedContext::getBuilder();
+  auto &b = ScopedContext::getBuilderRef();
   auto loc = ScopedContext::getLocation();
   auto mapsRange = op.indexing_maps().template getAsRange<AffineMapAttr>();
   auto maps = llvm::to_vector<8>(
@@ -159,7 +159,7 @@ public:
                                        LinalgOpType linalgOp) {
     assert(linalgOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
-    auto b = ScopedContext::getBuilder();
+    auto &b = ScopedContext::getBuilderRef();
     auto loc = ScopedContext::getLocation();
     unsigned nInputs = linalgOp.getNumInputs();
     unsigned nOutputs = linalgOp.getNumOutputs();
@@ -331,7 +331,7 @@ public:
           affine_max(dim.getType(), maxMap, ValueRange{dim}));
     }
 
-    auto b = ScopedContext::getBuilder();
+    auto &b = ScopedContext::getBuilderRef();
     Type type = convOp.input().getType().cast<MemRefType>().getElementType();
     Value zero = std_constant(type, b.getZeroAttr(type));
     Value readInput = im(clampedImIdx);
@@ -342,7 +342,7 @@ public:
   static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
     assert(convOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
-    auto b = ScopedContext::getBuilder();
+    auto &b = ScopedContext::getBuilderRef();
     auto loc = ScopedContext::getLocation();
     auto mapsRange = convOp.indexing_maps().getAsRange<AffineMapAttr>();
     auto maps = llvm::to_vector<8>(llvm::map_range(
@@ -445,7 +445,7 @@ public:
                                        IndexedGenericOp indexedGenericOp) {
     assert(indexedGenericOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
-    auto b = ScopedContext::getBuilder();
+    auto &b = ScopedContext::getBuilderRef();
     auto loc = ScopedContext::getLocation();
     unsigned nInputs = indexedGenericOp.getNumInputs();
     unsigned nOutputs = indexedGenericOp.getNumOutputs();
@@ -606,7 +606,7 @@ LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
 
   SmallVector<Value, 4> allIvs(nLoops);
   auto loopRanges =
-      emitLoopRanges(scope.getBuilder(), scope.getLocation(), invertedMap,
+      emitLoopRanges(scope.getBuilderRef(), scope.getLocation(), invertedMap,
                      getViewSizes(rewriter, linalgOp));
   assert(loopRanges.size() == allIvs.size());
   Impl::doit(linalgOp, loopRanges, allIvs);

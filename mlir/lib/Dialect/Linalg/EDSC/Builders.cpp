@@ -128,7 +128,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
     assert(!(outputs[i].getType().isa<RankedTensorType>() &&
              outputs[i + 1].getType().isa<MemRefType>()) &&
            "output tensors must be passed after output buffers");
-  auto &builder = edsc::ScopedContext::getBuilder();
+  auto &builder = edsc::ScopedContext::getBuilderRef();
   auto *ctx = builder.getContext();
   unsigned nInputs = inputs.size();
   unsigned nOutputs = outputs.size();
@@ -157,7 +157,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
       llvm::to_vector<8>(llvm::map_range(iteratorTypes, toString));
   // clang-format off
   auto *op =
-      edsc::ScopedContext::getBuilder()
+      edsc::ScopedContext::getBuilderRef()
           .create<linalg::GenericOp>(
               edsc::ScopedContext::getLocation(),
               types,
