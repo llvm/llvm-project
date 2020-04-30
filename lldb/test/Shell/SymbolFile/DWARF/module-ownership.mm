@@ -1,6 +1,7 @@
 // RUN: %clang --target=x86_64-apple-macosx -g -gmodules \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
+// RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck %s
 // Verify that the owning module information from DWARF is preserved in the AST.
 
 @import A;
