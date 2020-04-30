@@ -137,6 +137,35 @@ void SBCommandInterpreterRunOptions::SetAddToHistory(bool add_to_history) {
   m_opaque_up->SetAddToHistory(add_to_history);
 }
 
+bool SBCommandInterpreterRunOptions::GetAutoHandleEvents() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetAutoHandleEvents);
+
+  return m_opaque_up->GetAutoHandleEvents();
+}
+
+void SBCommandInterpreterRunOptions::SetAutoHandleEvents(
+    bool auto_handle_events) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetAutoHandleEvents,
+                     (bool), auto_handle_events);
+
+  m_opaque_up->SetAutoHandleEvents(auto_handle_events);
+}
+
+bool SBCommandInterpreterRunOptions::GetSpawnThread() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetSpawnThread);
+
+  return m_opaque_up->GetSpawnThread();
+}
+
+void SBCommandInterpreterRunOptions::SetSpawnThread(bool spawn_thread) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetSpawnThread,
+                     (bool), spawn_thread);
+
+  m_opaque_up->SetSpawnThread(spawn_thread);
+}
+
 lldb_private::CommandInterpreterRunOptions *
 SBCommandInterpreterRunOptions::get() const {
   return m_opaque_up.get();
@@ -891,6 +920,14 @@ void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
   LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
                              GetAddToHistory, ());
   LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetAddToHistory,
+                       (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetAutoHandleEvents, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions,
+                       SetAutoHandleEvents, (bool));
+  LLDB_REGISTER_METHOD_CONST(bool, SBCommandInterpreterRunOptions,
+                             GetSpawnThread, ());
+  LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetSpawnThread,
                        (bool));
   LLDB_REGISTER_CONSTRUCTOR(SBCommandInterpreter,
                             (lldb_private::CommandInterpreter *));
