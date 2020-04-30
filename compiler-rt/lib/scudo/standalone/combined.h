@@ -721,6 +721,7 @@ public:
   void disableMemoryTagging() { Primary.disableMemoryTagging(); }
 
   void setTrackAllocationStacks(bool Track) {
+    initThreadMaybe();
     Options.TrackAllocationStacks = Track;
   }
 
