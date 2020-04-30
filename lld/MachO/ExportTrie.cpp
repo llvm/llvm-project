@@ -196,7 +196,7 @@ tailcall:
 
   if (isTerminal) {
     assert(j - i == 1); // no duplicate symbols
-    node->info = {pivotSymbol->getVA() + ImageBase};
+    node->info = {pivotSymbol->getVA()};
   } else {
     // This is the tail-call-optimized version of the following:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);

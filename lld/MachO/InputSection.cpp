@@ -33,7 +33,7 @@ void InputSection::writeTo(uint8_t *buf) {
     uint64_t va = 0;
     if (auto *s = r.target.dyn_cast<Symbol *>()) {
       if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s)) {
-        va = in.got->addr - ImageBase + dylibSymbol->gotIndex * WordSize;
+        va = in.got->addr + dylibSymbol->gotIndex * WordSize;
       } else {
         va = s->getVA();
       }
@@ -45,7 +45,7 @@ void InputSection::writeTo(uint8_t *buf) {
 
     uint64_t val = va + r.addend;
     if (1) // TODO: handle non-pcrel relocations
-      val -= addr - ImageBase + r.offset;
+      val -= addr + r.offset;
     target->relocateOne(buf + r.offset, r.type, val);
   }
 }
