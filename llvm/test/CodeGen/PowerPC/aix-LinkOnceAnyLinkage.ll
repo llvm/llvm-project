@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck %s
 
-define linkonce_odr void @_Z3fooIiEvT_() {
+define linkonce void @_Z3fooIiEvT_() {
 entry:
   ret void
 }
