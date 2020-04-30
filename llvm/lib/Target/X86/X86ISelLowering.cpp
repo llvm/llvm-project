@@ -41249,10 +41249,27 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  if (SDValue Not = IsNOT(N0, DAG)) {
+  auto GetNot = [&VT, &DAG](SDValue V) {
+    // Basic X = NOT(Y) detection.
+    if (SDValue Not = IsNOT(V, DAG))
+      return Not;
+    // Fold BROADCAST(NOT(Y)) -> BROADCAST(Y).
+    if (V.getOpcode() == X86ISD::VBROADCAST) {
+      SDValue Src = V.getOperand(0);
+      EVT SrcVT = Src.getValueType();
+      if (!SrcVT.isVector())
+        return SDValue();
+      if (SDValue Not = IsNOT(Src, DAG))
+        return DAG.getNode(X86ISD::VBROADCAST, SDLoc(V), VT,
+                           DAG.getBitcast(SrcVT, Not));
+    }
+    return SDValue();
+  };
+
+  if (SDValue Not = GetNot(N0)) {
     X = Not;
     Y = N1;
-  } else if (SDValue Not = IsNOT(N1, DAG)) {
+  } else if (SDValue Not = GetNot(N1)) {
     X = Not;
     Y = N0;
   } else
