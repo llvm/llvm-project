@@ -58,8 +58,6 @@ private:
       InlineCode,
     } Kind = PlainText;
     std::string Contents;
-    /// Language for code block chunks. Ignored for other chunks.
-    std::string Language;
   };
   std::vector<Chunk> Chunks;
 };
