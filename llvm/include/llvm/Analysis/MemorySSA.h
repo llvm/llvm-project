@@ -723,6 +723,8 @@ public:
     return cast_or_null<MemoryPhi>(ValueToMemoryAccess.lookup(cast<Value>(BB)));
   }
 
+  DominatorTree &getDomTree() const { return *DT; }
+
   void dump() const;
   void print(raw_ostream &) const;
 
@@ -1179,9 +1181,9 @@ class upward_defs_iterator
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info)
+  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
       : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first) {
+        OriginalAccess(Info.first), DT(DT) {
     CurrentPair.first = nullptr;
 
     WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
@@ -1220,12 +1222,13 @@ private:
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
-                                        DefIterator.getPhiArgBlock(), nullptr,
-                                        false))
+                                        DefIterator.getPhiArgBlock(), DT,
+                                        false)) {
         if (Translator.getAddr() != Location.Ptr) {
           CurrentPair.second = Location.getWithNewPtr(Translator.getAddr());
           return;
         }
+      }
     }
     CurrentPair.second = Location;
   }
@@ -1235,17 +1238,19 @@ private:
   MemoryLocation Location;
   MemoryAccess *OriginalAccess = nullptr;
   bool WalkingPhi = false;
+  DominatorTree *DT = nullptr;
 };
 
-inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair) {
-  return upward_defs_iterator(Pair);
+inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair,
+                                              DominatorTree &DT) {
+  return upward_defs_iterator(Pair, &DT);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
 
 inline iterator_range<upward_defs_iterator>
-upward_defs(const MemoryAccessPair &Pair) {
-  return make_range(upward_defs_begin(Pair), upward_defs_end());
+upward_defs(const MemoryAccessPair &Pair, DominatorTree &DT) {
+  return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
 }
 
 /// Walks the defining accesses of MemoryDefs. Stops after we hit something that
