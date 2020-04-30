@@ -14125,6 +14125,8 @@ TEST_F(FormatTest, FormatsLambdas) {
                "    -> int {\n"
                "  return 1; //\n"
                "};");
+  verifyFormat("[]() -> Void<T...> {};");
+  verifyFormat("[a, b]() -> Tuple<T...> { return {}; };");
 
   // Lambdas with explicit template argument lists.
   verifyFormat(
