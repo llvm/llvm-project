@@ -14,6 +14,14 @@ define void @preallocated() {
     ret void
 }
 
+define void @preallocated_indirect(void (i32*)* %f) {
+    %cs = call token @llvm.call.preallocated.setup(i32 1)
+    %x = call i8* @llvm.call.preallocated.arg(token %cs, i32 0) preallocated(i32)
+    %y = bitcast i8* %x to i32*
+    call void %f(i32* preallocated(i32) %y) ["preallocated"(token %cs)]
+    ret void
+}
+
 define void @preallocated_setup_without_call() {
     %cs = call token @llvm.call.preallocated.setup(i32 1)
     %a0 = call i8* @llvm.call.preallocated.arg(token %cs, i32 0) preallocated(i32)
