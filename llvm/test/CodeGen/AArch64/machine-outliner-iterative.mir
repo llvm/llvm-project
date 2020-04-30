@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outline-runs=2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix TWO-RUNS
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outline-runs=1 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix ONE-RUN
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outline-runs=4 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix FOUR-RUNS
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=1 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix TWO-RUNS
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=0 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix ONE-RUN
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outliner-reruns=3 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix FOUR-RUNS
 
 # Example of Repeated Instruction Sequence - Iterative Machine Outlining
 #
