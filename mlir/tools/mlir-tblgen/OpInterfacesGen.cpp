@@ -179,9 +179,10 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
 
   os << "  };\n";
 
-  // Emit a utility using directive for the trait class.
+  // Emit a utility wrapper trait class.
   os << "    template <typename ConcreteOp>\n    "
-     << llvm::formatv("using Trait = {0}Trait<ConcreteOp>;\n", interfaceName);
+     << llvm::formatv("struct Trait : public {0}Trait<ConcreteOp> {{};\n",
+                      interfaceName);
 }
 
 static void emitInterfaceDecl(OpInterface &interface, raw_ostream &os) {
