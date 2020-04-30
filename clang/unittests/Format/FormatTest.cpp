@@ -8526,6 +8526,20 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
   verifyFormat("vector< int > x{ };", SpaceBetweenBraces);
 }
 
+TEST_F(FormatTest, FormatSpacesInAngles) {
+  FormatStyle SpaceInAngles = getLLVMStyle();
+  SpaceInAngles.SpacesInAngles = true;
+  verifyFormat("vector< ::std::string > x1;", SpaceInAngles);
+  verifyFormat("Foo< int, Bar > x2;", SpaceInAngles);
+  verifyFormat("Foo< ::int, ::Bar > x3;", SpaceInAngles);
+
+  SpaceInAngles.SpacesInAngles = false;
+  verifyFormat("vector<::std::string> x4;", SpaceInAngles);
+  verifyFormat("vector<int> x5;", SpaceInAngles);
+  verifyFormat("Foo<int, Bar> x6;", SpaceInAngles);
+  verifyFormat("Foo<::int, ::Bar> x7;", SpaceInAngles);
+}
+
 TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
   verifyFormat("vector<int> x = {1, 22, 333, 4444, 55555, 666666, 7777777,\n"
                "                 1, 22, 333, 4444, 55555, 666666, 7777777,\n"
