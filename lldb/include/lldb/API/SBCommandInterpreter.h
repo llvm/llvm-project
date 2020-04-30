@@ -52,6 +52,14 @@ public:
 
   void SetAddToHistory(bool);
 
+  bool GetAutoHandleEvents() const;
+
+  void SetAutoHandleEvents(bool);
+
+  bool GetSpawnThread() const;
+
+  void SetSpawnThread(bool);
+
 private:
   lldb_private::CommandInterpreterRunOptions *get() const;
 
