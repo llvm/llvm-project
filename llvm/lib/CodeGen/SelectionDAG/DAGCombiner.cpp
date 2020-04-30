@@ -6098,6 +6098,7 @@ static SDValue extractShiftForRotate(SelectionDAG &DAG, SDValue OppShift,
   ConstantSDNode *OppShiftCst = isConstOrConstSplat(OppShift.getOperand(1));
 
   // (add v v) -> (shl v 1)
+  // TODO: Should this be a general DAG canonicalization?
   if (OppShift.getOpcode() == ISD::SRL && OppShiftCst &&
       ExtractFrom.getOpcode() == ISD::ADD &&
       ExtractFrom.getOperand(0) == ExtractFrom.getOperand(1) &&
