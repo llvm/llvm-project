@@ -11,7 +11,7 @@
 ## *.a:b.o matches /path/to/input-archive.s.tmp.a:b.o
 ## *b.o matches /path/to/input-archive.s.tmp.a:b.o
 # RUN: echo 'SECTIONS { \
-# RUN:   .foo : { %t.a:a.o(.data) } \
+# RUN:   .foo : { "%t.a:a.o"(.data) } \
 # RUN:   .bar : { *.a:b.o(.data) } \
 # RUN:   .qux : { *b.o(.data1) } \
 # RUN:   }' > %t.script
