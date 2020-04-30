@@ -140,12 +140,12 @@ def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
                            AssemblerPredicate<(all_of FeatureStdExtB),
                            "'B' (Bit Manipulation Instructions)">;
 
-def FeatureRVCHints
-    : SubtargetFeature<"rvc-hints", "EnableRVCHintInstrs", "true",
-                       "Enable RVC Hint Instructions.">;
+def FeatureNoRVCHints
+    : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
+                       "Disable RVC Hint Instructions.">;
 def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
-                            AssemblerPredicate<(all_of FeatureRVCHints),
-                            "RVC Hint Instructions">;
+                  AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
+                                     "RVC Hint Instructions">;
 
 def FeatureStdExtV
     : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
@@ -207,15 +207,13 @@ include "RISCVSchedRocket64.td"
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-rv32", NoSchedModel, [FeatureRVCHints]>;
+def : ProcessorModel<"generic-rv32", NoSchedModel, []>;
 
-def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit,
-                     FeatureRVCHints]>;
+def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 
-def : ProcessorModel<"rocket-rv32", Rocket32Model, [FeatureRVCHints]>;
+def : ProcessorModel<"rocket-rv32", Rocket32Model, []>;
 
-def : ProcessorModel<"rocket-rv64", Rocket64Model, [Feature64Bit,
-                     FeatureRVCHints]>;
+def : ProcessorModel<"rocket-rv64", Rocket64Model, [Feature64Bit]>;
 
 
 //===----------------------------------------------------------------------===//
