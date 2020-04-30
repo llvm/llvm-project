@@ -57,7 +57,7 @@ elif config.android:
 else:
   set_default("target_suffix", "-%s" % config.target_arch)
 
-set_default("have_zlib", "@HAVE_LIBZ@")
+set_default("have_zlib", "@LLVM_ENABLE_ZLIB@")
 set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
 
 # LLVM tools dir can be passed in lit parameters, so try to

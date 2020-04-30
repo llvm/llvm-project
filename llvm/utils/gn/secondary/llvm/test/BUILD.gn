@@ -174,9 +174,9 @@ write_lit_config("lit_site_cfg") {
   }
 
   if (llvm_enable_zlib) {
-    extra_values += [ "HAVE_LIBZ=1" ]
+    extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
-    extra_values += [ "HAVE_LIBZ=0" ]  # Must be 0.
+    extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
   }
 }
 
