@@ -10,7 +10,7 @@ void test(int *p) {
   ;
 #pragma omp parallel reduction(default, // expected-error {{expected identifier}} expected-error {{expected ')'}} expected-warning {{missing ':' after reduction identifier - ignoring}} expected-note {{to match this '('}}
   ;
-#pragma omp parallel reduction(unknown, +: a) // expected-error {{expected 'default' or 'inscan' in OpenMP clause 'reduction'}}
+#pragma omp parallel reduction(unknown, +: a) // expected-error {{expected 'default', 'inscan' or 'task' in OpenMP clause 'reduction'}}
   ;
 #pragma omp parallel reduction(default, + : a)
   ;

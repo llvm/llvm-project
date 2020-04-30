@@ -2366,7 +2366,7 @@ getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
 
 /// Check consistency of the reduction clauses.
 static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
-                                 ArrayRef<OMPClause *> Clauses) {
+                                  ArrayRef<OMPClause *> Clauses) {
   bool InscanFound = false;
   SourceLocation InscanLoc;
   // OpenMP 5.0, 2.19.5.4 reduction Clause, Restrictions.
@@ -2380,7 +2380,21 @@ static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
     if (RC->getModifier() == OMPC_REDUCTION_inscan) {
       InscanFound = true;
       InscanLoc = RC->getModifierLoc();
-      break;
+      continue;
+    }
+    if (RC->getModifier() == OMPC_REDUCTION_task) {
+      // OpenMP 5.0, 2.19.5.4 reduction Clause.
+      // A reduction clause with the task reduction-modifier may only appear on
+      // a parallel construct, a worksharing construct or a combined or
+      // composite construct for which any of the aforementioned constructs is a
+      // constituent construct and simd or loop are not constituent constructs.
+      OpenMPDirectiveKind CurDir = Stack->getCurrentDirective();
+      if (!(isOpenMPParallelDirective(CurDir) ||
+            isOpenMPWorksharingDirective(CurDir)) ||
+          isOpenMPSimdDirective(CurDir))
+        S.Diag(RC->getModifierLoc(),
+               diag::err_omp_reduction_task_not_parallel_or_worksharing);
+      continue;
     }
   }
   if (InscanFound) {
