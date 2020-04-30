@@ -37,12 +37,26 @@ Value Aliases::find(Value v) {
   while (true) {
     if (v.isa<BlockArgument>())
       return v;
+
     Operation *defOp = v.getDefiningOp();
-    if (auto alloc = dyn_cast_or_null<AllocOp>(defOp)) {
-      if (isStrided(alloc.getType()))
-        return alloc.getResult();
+    if (!defOp)
+      return v;
+
+    if (auto memEffect = dyn_cast<MemoryEffectOpInterface>(defOp)) {
+      // Collect all memory effects on `v`.
+      SmallVector<MemoryEffects::EffectInstance, 1> effects;
+      memEffect.getEffectsOnValue(v, effects);
+
+      // If we have the 'Allocate' memory effect on `v`, then `v` should be the
+      // original buffer.
+      if (llvm::any_of(
+              effects, [](const MemoryEffects::EffectInstance &instance) {
+                return isa<MemoryEffects::Allocate>(instance.getEffect());
+              }))
+        return v;
     }
-    if (auto viewLikeOp = dyn_cast_or_null<ViewLikeOpInterface>(defOp)) {
+
+    if (auto viewLikeOp = dyn_cast<ViewLikeOpInterface>(defOp)) {
       auto it =
           aliases.insert(std::make_pair(v, find(viewLikeOp.getViewSource())));
       return it.first->second;
