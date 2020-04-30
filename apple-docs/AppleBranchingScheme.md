@@ -50,7 +50,7 @@ minimize this difference, and do almost all development upstream.
 ## Downstream branches that depend on [Swift](https://github.com/apple/swift)
 
 The `swift/*` branches are downstream of `apple/*`, and include content that
-depends [Swift](https://github.com/apple/swift).  The naming scheme is
+depends on [Swift](https://github.com/apple/swift).  The naming scheme is
 `swift/<swift-branch>`, where `<swift-branch>` is the aligned Swift branch.
 
 The branches are automerged from a branch in the `apple/*` namespace.  They are
