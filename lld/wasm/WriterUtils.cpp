@@ -100,6 +100,11 @@ void writeU32(raw_ostream &os, uint32_t number, const Twine &msg) {
   support::endian::write(os, number, support::little);
 }
 
+void writeU64(raw_ostream &os, uint64_t number, const Twine &msg) {
+  debugWrite(os.tell(), msg + "[0x" + utohexstr(number) + "]");
+  support::endian::write(os, number, support::little);
+}
+
 void writeValueType(raw_ostream &os, ValType type, const Twine &msg) {
   writeU8(os, static_cast<uint8_t>(type),
           msg + "[type: " + toString(type) + "]");
@@ -140,6 +145,12 @@ void writeInitExpr(raw_ostream &os, const WasmInitExpr &initExpr) {
     break;
   case WASM_OPCODE_I64_CONST:
     writeSleb128(os, initExpr.Value.Int64, "literal (i64)");
+    break;
+  case WASM_OPCODE_F32_CONST:
+    writeU32(os, initExpr.Value.Float32, "literal (f32)");
+    break;
+  case WASM_OPCODE_F64_CONST:
+    writeU64(os, initExpr.Value.Float64, "literal (f64)");
     break;
   case WASM_OPCODE_GLOBAL_GET:
     writeUleb128(os, initExpr.Value.Global, "literal (global index)");
