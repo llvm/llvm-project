@@ -573,37 +573,42 @@ TEST(FileShardedIndexTest, Sharding) {
               UnorderedElementsAre(AHeaderUri, BHeaderUri, BSourceUri));
 
   {
-    auto Shard = *ShardedIndex.getShard(AHeaderUri);
-    EXPECT_THAT(*Shard.Symbols, UnorderedElementsAre(QName("1")));
-    EXPECT_THAT(*Shard.Refs, IsEmpty());
-    EXPECT_THAT(*Shard.Relations, UnorderedElementsAre(Relation{
-                                      Sym1.ID, RelationKind::BaseOf, Sym2.ID}));
-    ASSERT_THAT(Shard.Sources->keys(), UnorderedElementsAre(AHeaderUri));
-    EXPECT_THAT(Shard.Sources->lookup(AHeaderUri).DirectIncludes, IsEmpty());
-    EXPECT_TRUE(Shard.Cmd.hasValue());
+    auto Shard = ShardedIndex.getShard(AHeaderUri);
+    ASSERT_TRUE(Shard);
+    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(QName("1")));
+    EXPECT_THAT(*Shard->Refs, IsEmpty());
+    EXPECT_THAT(
+        *Shard->Relations,
+        UnorderedElementsAre(Relation{Sym1.ID, RelationKind::BaseOf, Sym2.ID}));
+    ASSERT_THAT(Shard->Sources->keys(), UnorderedElementsAre(AHeaderUri));
+    EXPECT_THAT(Shard->Sources->lookup(AHeaderUri).DirectIncludes, IsEmpty());
+    EXPECT_TRUE(Shard->Cmd.hasValue());
   }
   {
-    auto Shard = *ShardedIndex.getShard(BHeaderUri);
-    EXPECT_THAT(*Shard.Symbols, UnorderedElementsAre(QName("2")));
-    EXPECT_THAT(*Shard.Refs, IsEmpty());
-    EXPECT_THAT(*Shard.Relations, UnorderedElementsAre(Relation{
-                                      Sym2.ID, RelationKind::BaseOf, Sym1.ID}));
-    ASSERT_THAT(Shard.Sources->keys(),
+    auto Shard = ShardedIndex.getShard(BHeaderUri);
+    ASSERT_TRUE(Shard);
+    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(QName("2")));
+    EXPECT_THAT(*Shard->Refs, IsEmpty());
+    EXPECT_THAT(
+        *Shard->Relations,
+        UnorderedElementsAre(Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID}));
+    ASSERT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre(BHeaderUri, AHeaderUri));
-    EXPECT_THAT(Shard.Sources->lookup(BHeaderUri).DirectIncludes,
+    EXPECT_THAT(Shard->Sources->lookup(BHeaderUri).DirectIncludes,
                 UnorderedElementsAre(AHeaderUri));
-    EXPECT_TRUE(Shard.Cmd.hasValue());
+    EXPECT_TRUE(Shard->Cmd.hasValue());
   }
   {
-    auto Shard = *ShardedIndex.getShard(BSourceUri);
-    EXPECT_THAT(*Shard.Symbols, UnorderedElementsAre(QName("2")));
-    EXPECT_THAT(*Shard.Refs, UnorderedElementsAre(Pair(Sym1.ID, _)));
-    EXPECT_THAT(*Shard.Relations, IsEmpty());
-    ASSERT_THAT(Shard.Sources->keys(),
+    auto Shard = ShardedIndex.getShard(BSourceUri);
+    ASSERT_TRUE(Shard);
+    EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(QName("2")));
+    EXPECT_THAT(*Shard->Refs, UnorderedElementsAre(Pair(Sym1.ID, _)));
+    EXPECT_THAT(*Shard->Relations, IsEmpty());
+    ASSERT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre(BSourceUri, BHeaderUri));
-    EXPECT_THAT(Shard.Sources->lookup(BSourceUri).DirectIncludes,
+    EXPECT_THAT(Shard->Sources->lookup(BSourceUri).DirectIncludes,
                 UnorderedElementsAre(BHeaderUri));
-    EXPECT_TRUE(Shard.Cmd.hasValue());
+    EXPECT_TRUE(Shard->Cmd.hasValue());
   }
 }
 } // namespace

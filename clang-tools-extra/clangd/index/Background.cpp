@@ -199,19 +199,19 @@ void BackgroundIndex::update(
   // Build and store new slabs for each updated file.
   for (const auto &FileIt : FilesToUpdate) {
     auto Uri = FileIt.first();
-    // ShardedIndex should always have a shard for a file in Index.Sources.
-    auto IF = std::move(ShardedIndex.getShard(Uri).getValue());
+    auto IF = ShardedIndex.getShard(Uri);
+    assert(IF && "no shard for file in Index.Sources?");
     PathRef Path = FileIt.getValue().first;
 
     // Only store command line hash for main files of the TU, since our
     // current model keeps only one version of a header file.
     if (Path != MainFile)
-      IF.Cmd.reset();
+      IF->Cmd.reset();
 
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
     // FIXME: Also skip serializing the shard if it is already up-to-date.
-    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, IF))
+    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, *IF))
       elog("Failed to write background-index shard for file {0}: {1}", Path,
            std::move(Error));
 
@@ -231,9 +231,9 @@ void BackgroundIndex::update(
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
       IndexedSymbols.update(
-          Path, std::make_unique<SymbolSlab>(std::move(*IF.Symbols)),
-          std::make_unique<RefSlab>(std::move(*IF.Refs)),
-          std::make_unique<RelationSlab>(std::move(*IF.Relations)),
+          Path, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
+          std::make_unique<RefSlab>(std::move(*IF->Refs)),
+          std::make_unique<RelationSlab>(std::move(*IF->Relations)),
           Path == MainFile);
     }
   }
