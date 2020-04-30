@@ -32,6 +32,7 @@ sys.path = [os.path.join(monorepoRoot, 'libcxx', 'utils'),
             os.path.join(monorepoRoot, 'llvm', 'utils', 'lit')] + sys.path
 import libcxx.test.dsl as dsl
 import lit.LitConfig
+import lit.util
 
 # Steal some parameters from the config running this test so that we can
 # bootstrap our own TestingConfig.
@@ -63,7 +64,7 @@ class SetupConfigs(unittest.TestCase):
         self.config = lit.TestingConfig.TestingConfig.fromdefaults(self.litConfig)
         self.config.test_source_root = SOURCE_ROOT
         self.config.test_exec_root = EXEC_PATH
-        base64Decode = lambda s: base64.b64decode(s.encode()).decode()
+        base64Decode = lambda s: lit.util.to_string(base64.b64decode(s))
         self.config.substitutions = [
             ('%{cxx}', base64Decode(CXX)),
             ('%{flags}', base64Decode(FLAGS)),
