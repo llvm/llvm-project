@@ -528,11 +528,11 @@ TEST(FileShardedIndexTest, Sharding) {
     B.insert(Sym1);
     // Should be stored in both b.h and b.cc
     B.insert(Sym2);
-    IF.Symbols = std::move(B).build();
+    IF.Symbols.emplace(std::move(B).build());
   }
   {
     // Should be stored in b.cc
-    IF.Refs = std::move(*refSlab(Sym1.ID, BSourceUri.c_str()));
+    IF.Refs.emplace(std::move(*refSlab(Sym1.ID, BSourceUri.c_str())));
   }
   {
     RelationSlab::Builder B;
@@ -542,7 +542,7 @@ TEST(FileShardedIndexTest, Sharding) {
     B.insert(Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID});
     // Dangling relation should be dropped.
     B.insert(Relation{symbol("3").ID, RelationKind::BaseOf, Sym1.ID});
-    IF.Relations = std::move(B).build();
+    IF.Relations.emplace(std::move(B).build());
   }
 
   IF.Sources.emplace();
