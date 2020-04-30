@@ -9,3 +9,7 @@ add_lldb_unittest(ScriptInterpreterPythonTests
   LINK_COMPONENTS
     Support
   )
+
+if(PYTHON_RPATH)
+  set_property(TARGET ScriptInterpreterPythonTests APPEND PROPERTY BUILD_RPATH "${PYTHON_RPATH}")
+endif()
