@@ -9903,7 +9903,7 @@ Sema::ActOnOpenMPTargetParallelDirective(ArrayRef<OMPClause *> Clauses,
   setFunctionHasBranchProtectedScope();
 
   return OMPTargetParallelDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                            AStmt);
+                                            AStmt, DSAStack->isCancelRegion());
 }
 
 StmtResult Sema::ActOnOpenMPTargetParallelForDirective(

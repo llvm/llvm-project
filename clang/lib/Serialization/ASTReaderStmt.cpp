@@ -2489,6 +2489,7 @@ void ASTStmtReader::VisitOMPTargetParallelDirective(
   VisitStmt(D);
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPTargetParallelForDirective(
