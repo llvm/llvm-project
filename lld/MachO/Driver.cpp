@@ -119,6 +119,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  stderrOS.enable_colors(stderrOS.has_colors());
+  // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
+
   MachOOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
