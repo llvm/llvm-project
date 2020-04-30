@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-from libcxx.util import executeCommand
+from libcxx.util import executeCommand, to_string
 
 class DefaultTargetInfo(object):
     def __init__(self, full_config):
@@ -91,12 +91,12 @@ class DarwinLocalTI(DefaultTargetInfo):
         super(DarwinLocalTI, self).__init__(full_config)
 
     def is_host_macosx(self):
-        name = subprocess.check_output(['sw_vers', '-productName']).decode().strip()
+        name = to_string(subprocess.check_output(['sw_vers', '-productName'])).strip()
         return name == "Mac OS X"
 
     def get_macosx_version(self):
         assert self.is_host_macosx()
-        version = subprocess.check_output(['sw_vers', '-productVersion']).decode().strip()
+        version = to_string(subprocess.check_output(['sw_vers', '-productVersion'])).strip()
         version = re.sub(r'([0-9]+\.[0-9]+)(\..*)?', r'\1', version)
         return version
 
