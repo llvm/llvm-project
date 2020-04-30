@@ -200,7 +200,7 @@ void BackgroundIndex::update(
   for (const auto &FileIt : FilesToUpdate) {
     auto Uri = FileIt.first();
     // ShardedIndex should always have a shard for a file in Index.Sources.
-    auto IF = ShardedIndex.getShard(Uri).getValue();
+    auto IF = std::move(ShardedIndex.getShard(Uri).getValue());
     PathRef Path = FileIt.getValue().first;
 
     // Only store command line hash for main files of the TU, since our
