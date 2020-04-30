@@ -408,10 +408,38 @@ static std::string inlineCostStr(const InlineCost &IC) {
   return Remark.str();
 }
 
+static void setInlineRemark(CallBase &CB, StringRef Message) {
+  if (!InlineRemarkAttribute)
+    return;
+
+  Attribute Attr = Attribute::get(CB.getContext(), "inline-remark", Message);
+  CB.addAttribute(AttributeList::FunctionIndex, Attr);
+}
+
+class InliningDecision final {
+public:
+  operator bool() const { return Inline; }
+  const InlineCost &getCost() const { return Cost; }
+
+  static InliningDecision doInline(InlineCost Cost) {
+    return InliningDecision(Cost, true);
+  }
+
+  static InliningDecision doNotInline(InlineCost Cost) {
+    return InliningDecision(Cost, false);
+  }
+
+private:
+  InliningDecision(InlineCost Cost, bool Inline) : Cost(Cost), Inline(Inline) {}
+
+  InlineCost Cost;
+  bool Inline;
+};
+
 /// Return the cost only if the inliner should attempt to inline at the given
 /// CallSite. If we return the cost, we will emit an optimisation remark later
 /// using that cost, so we won't do so from this function.
-static Optional<InlineCost>
+static InliningDecision
 shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              OptimizationRemarkEmitter &ORE) {
   using namespace ore;
@@ -424,30 +452,29 @@ shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
   if (IC.isAlways()) {
     LLVM_DEBUG(dbgs() << "    Inlining " << inlineCostStr(IC)
                       << ", Call: " << CB << "\n");
-    return IC;
-  }
-
-  if (IC.isNever()) {
-    LLVM_DEBUG(dbgs() << "    NOT Inlining " << inlineCostStr(IC)
-                      << ", Call: " << CB << "\n");
-    ORE.emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline", Call)
-             << NV("Callee", Callee) << " not inlined into "
-             << NV("Caller", Caller) << " because it should never be inlined "
-             << IC;
-    });
-    return IC;
+    return InliningDecision::doInline(IC);
   }
 
   if (!IC) {
     LLVM_DEBUG(dbgs() << "    NOT Inlining " << inlineCostStr(IC)
                       << ", Call: " << CB << "\n");
-    ORE.emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "TooCostly", Call)
-             << NV("Callee", Callee) << " not inlined into "
-             << NV("Caller", Caller) << " because too costly to inline " << IC;
-    });
-    return IC;
+    if (IC.isNever()) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline", Call)
+               << NV("Callee", Callee) << " not inlined into "
+               << NV("Caller", Caller) << " because it should never be inlined "
+               << IC;
+      });
+    } else {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "TooCostly", Call)
+               << NV("Callee", Callee) << " not inlined into "
+               << NV("Caller", Caller) << " because too costly to inline "
+               << IC;
+      });
+    }
+    setInlineRemark(CB, inlineCostStr(IC));
+    return InliningDecision::doNotInline(IC);
   }
 
   int TotalSecondaryCost = 0;
@@ -462,15 +489,15 @@ shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              << " increases the cost of inlining " << NV("Caller", Caller)
              << " in other contexts";
     });
-
+    setInlineRemark(CB, "deferred");
     // IC does not bool() to false, so get an InlineCost that will.
     // This will not be inspected to make an error message.
-    return None;
+    return InliningDecision::doNotInline(IC);
   }
 
   LLVM_DEBUG(dbgs() << "    Inlining " << inlineCostStr(IC) << ", Call: " << CB
                     << '\n');
-  return IC;
+  return InliningDecision::doInline(IC);
 }
 
 /// Return true if the specified inline history ID
@@ -510,14 +537,6 @@ static void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc &DLoc,
            << ore::NV("Callee", &Callee) << " inlined into "
            << ore::NV("Caller", &Caller) << " with " << IC;
   });
-}
-
-static void setInlineRemark(CallBase &CB, StringRef Message) {
-  if (!InlineRemarkAttribute)
-    return;
-
-  Attribute Attr = Attribute::get(CB.getContext(), "inline-remark", Message);
-  CB.addAttribute(AttributeList::FunctionIndex, Attr);
 }
 
 static bool
@@ -643,20 +662,11 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
       // just become a regular analysis dependency.
       OptimizationRemarkEmitter ORE(Caller);
 
-      Optional<InlineCost> OIC = shouldInline(CB, GetInlineCost, ORE);
+      auto OIC = shouldInline(CB, GetInlineCost, ORE);
       // If the policy determines that we should inline this function,
       // delete the call instead.
-      if (!OIC.hasValue()) {
-        setInlineRemark(CB, "deferred");
+      if (!OIC)
         continue;
-      }
-
-      if (!OIC.getValue()) {
-        // shouldInline() call returned a negative inline cost that explains
-        // why this callsite should not be inlined.
-        setInlineRemark(CB, inlineCostStr(*OIC));
-        continue;
-      }
 
       // If this call site is dead and it is to a readonly function, we should
       // just delete the call instead of trying to inline it, regardless of
@@ -682,7 +692,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
             InsertLifetime, AARGetter, ImportedFunctionsStats);
         if (!IR.isSuccess()) {
           setInlineRemark(CB, std::string(IR.getFailureReason()) + "; " +
-                                  inlineCostStr(*OIC));
+                                  inlineCostStr(OIC.getCost()));
           ORE.emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc,
                                             Block)
@@ -694,7 +704,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         }
         ++NumInlined;
 
-        emitInlinedInto(ORE, DLoc, Block, *Callee, *Caller, *OIC);
+        emitInlinedInto(ORE, DLoc, Block, *Callee, *Caller, OIC.getCost());
 
         // If inlining this function gave us any new call sites, throw them
         // onto our worklist to process.  They are useful inline candidates.
@@ -1059,19 +1069,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         continue;
       }
 
-      Optional<InlineCost> OIC = shouldInline(*CB, GetInlineCost, ORE);
+      auto OIC = shouldInline(*CB, GetInlineCost, ORE);
       // Check whether we want to inline this callsite.
-      if (!OIC.hasValue()) {
-        setInlineRemark(*CB, "deferred");
+      if (!OIC)
         continue;
-      }
-
-      if (!OIC.getValue()) {
-        // shouldInline() call returned a negative inline cost that explains
-        // why this callsite should not be inlined.
-        setInlineRemark(*CB, inlineCostStr(*OIC));
-        continue;
-      }
 
       // Setup the data structure used to plumb customization into the
       // `InlineFunction` routine.
@@ -1089,7 +1090,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       InlineResult IR = InlineFunction(*CB, IFI);
       if (!IR.isSuccess()) {
         setInlineRemark(*CB, std::string(IR.getFailureReason()) + "; " +
-                                 inlineCostStr(*OIC));
+                                 inlineCostStr(OIC.getCost()));
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
                  << NV("Callee", &Callee) << " will not be inlined into "
@@ -1103,7 +1104,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
       ++NumInlined;
 
-      emitInlinedInto(ORE, DLoc, Block, Callee, F, *OIC);
+      emitInlinedInto(ORE, DLoc, Block, Callee, F, OIC.getCost());
 
       // Add any new callsites to defined functions to the worklist.
       if (!IFI.InlinedCallSites.empty()) {
