@@ -73,22 +73,35 @@ To create packages for the library:
 
 ## USING BITCODE LIBRARIES
 
-The ROCm language runtimes automatically add the required bitcode files during the
-LLVM linking stage invoked during the process of creating a code object.  There are options
-to display the exact commands executed, but an approximation of the command the OpenCL
-runtime might use is as follows:
+The ROCm language compilers and runtimes automatically link the
+required bitcode files invoked during the process of creating a code
+object. clang will search for these libraries by default when
+targeting amdhsa, in the default ROCm install location. To specify a
+specific set of libraries, the --rocm-path argument can point to the
+root directory where the bitcode libraries are installed, which is the
+recommended way to link the libraries.
 
     $LLVM_BUILD/bin/clang -x cl -Xclang -finclude-default-header \
-        -target amdgcn-amd-amdhsa -mcpu=gfx900 \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/opencl/opencl.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ocml/ocml.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ockl/ockl.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_daz_opt_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_finite_only_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_unsafe_math_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_wavefrontsize64_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_isa_version_900.amdgcn.bc \
+      -target amdgcn-amd-amdhsa -mcpu=gfx900 \
+      --rocm-path=/srv/git/ROCm-Device-Libs/build/dist
+
+These can be manually linked, but is generally not recommended. The
+set of libraries linked should be in sync with the corresponding
+compiler flags and target options. The default library linking can be
+disabled with -nogpulib, and a manual linking invocation might look
+like as follows:
+
+    $LLVM_BUILD/bin/clang -x cl -Xclang -finclude-default-header \
+        -nogpulib -target amdgcn-amd-amdhsa -mcpu=gfx900 \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/opencl/opencl.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/ocml/ocml.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/ockl/ockl.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_daz_opt_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_finite_only_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_unsafe_math_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_wavefrontsize64_on.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/oclc/oclc_isa_version_900.amdgcn.bc \
         test.cl -o test.so
 
 ### USING FROM CMAKE
