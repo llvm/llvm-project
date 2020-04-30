@@ -1298,6 +1298,20 @@ TEST_F(FormatTest, CaseRanges) {
                "}");
 }
 
+TEST_F(FormatTest, ShortEnums) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortEnumsOnASingleLine = true;
+  verifyFormat("enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
+  Style.AllowShortEnumsOnASingleLine = false;
+  verifyFormat("enum\n"
+               "{\n"
+               "  A,\n"
+               "  B,\n"
+               "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+}
+
 TEST_F(FormatTest, ShortCaseLabels) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortCaseLabelsOnASingleLine = true;
@@ -12959,6 +12973,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowAllConstructorInitializersOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
+  CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BinPackParameters);
