@@ -2951,7 +2951,6 @@ CommandInterpreter::GetIOHandler(bool force_create,
 }
 
 void CommandInterpreter::RunCommandInterpreter(
-    bool auto_handle_events, bool spawn_thread,
     CommandInterpreterRunOptions &options) {
   // Always re-create the command interpreter when we run it in case any file
   // handles have changed.
@@ -2959,15 +2958,15 @@ void CommandInterpreter::RunCommandInterpreter(
   m_debugger.RunIOHandlerAsync(GetIOHandler(force_create, &options));
   m_stopped_for_crash = false;
 
-  if (auto_handle_events)
+  if (options.GetAutoHandleEvents())
     m_debugger.StartEventHandlerThread();
 
-  if (spawn_thread) {
+  if (options.GetSpawnThread()) {
     m_debugger.StartIOHandlerThread();
   } else {
     m_debugger.RunIOHandlers();
 
-    if (auto_handle_events)
+    if (options.GetAutoHandleEvents())
       m_debugger.StopEventHandlerThread();
   }
 }
