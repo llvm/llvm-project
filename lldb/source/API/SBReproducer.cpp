@@ -15,6 +15,7 @@
 #include "lldb/API/SBBlock.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDeclaration.h"
@@ -40,6 +41,7 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBBreakpointLocation>(R);
   RegisterMethods<SBBreakpointName>(R);
   RegisterMethods<SBBroadcaster>(R);
+  RegisterMethods<SBCommandInterpreter>(R);
   RegisterMethods<SBCommandInterpreterRunOptions>(R);
   RegisterMethods<SBCommandReturnObject>(R);
   RegisterMethods<SBCommunication>(R);
