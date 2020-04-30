@@ -294,6 +294,10 @@ defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
     "Do not list identical folded sections (default)">;
 
+def print_archive_stats: J<"print-archive-stats=">,
+  HelpText<"Write archive usage statistics to the specified file. "
+           "Print the numbers of members and fetched members for each archive">;
+
 defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 
