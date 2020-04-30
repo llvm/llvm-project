@@ -53,10 +53,10 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
-// BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
-// END SWIFT
+#endif // LLDB_ENABLE_SWIFT
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -646,10 +646,10 @@ Module::LookupInfo::LookupInfo(ConstString name,
               Language::LanguageIsObjC(language)) &&
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
-    // BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
     else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef()))
       m_name_type_mask = eFunctionNameTypeFull;
-    // END SWIFT
+#endif // LLDB_ENABLE_SWIFT
     else if (Language::LanguageIsC(language)) {
       m_name_type_mask = eFunctionNameTypeFull;
     } else {
@@ -660,7 +660,7 @@ Module::LookupInfo::LookupInfo(ConstString name,
 
       CPlusPlusLanguage::MethodName cpp_method(name);
 
-      // BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
       SwiftLanguageRuntime::MethodName swift_method(name, true);
 
       if ((language == eLanguageTypeUnknown ||
@@ -673,7 +673,7 @@ Module::LookupInfo::LookupInfo(ConstString name,
                 language == eLanguageTypeObjC_plus_plus) &&
                cpp_method.IsValid())
         basename = cpp_method.GetBasename();
-      // END SWIFT
+#endif // LLDB_ENABLE_SWIFT
 
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
@@ -694,9 +694,11 @@ Module::LookupInfo::LookupInfo(ConstString name,
       CPlusPlusLanguage::MethodName cpp_method(name);
 
       // BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
       SwiftLanguageRuntime::MethodName swift_method(name, true);
       if (swift_method.IsValid())
         basename = swift_method.GetBasename();
+#endif // LLDB_ENABLE_SWIFT
       if (cpp_method.IsValid())
         basename = cpp_method.GetBasename();
       if (!basename.empty()) {
@@ -1572,10 +1574,11 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
       llvm::consumeError(type_system_or_err.takeError());
       return true;
     }
-
+#ifdef LLDB_ENABLE_SWIFT
     if (auto *swift_ast =
             llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
       swift_ast->SetTriple(new_arch.GetTriple());
+#endif // LLDB_ENABLE_SWIFT
     return true;
   }
   return m_arch.IsCompatibleMatch(new_arch);
@@ -1698,8 +1701,10 @@ void Module::ClearModuleDependentCaches() {
     return;
   }
 
+#ifdef LLDB_ENABLE_SWIFT
   if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
     swift_ast->ClearModuleDependentCaches();
+#endif // LLDB_ENABLE_SWIFT
 }
 
 void Module::ForEachTypeSystem(

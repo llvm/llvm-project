@@ -17,11 +17,12 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
 #include "lldb/Symbol/TypeSystem.h"
-
 #include "swift/AST/Decl.h"
 #include "swift/AST/Pattern.h"
+#endif // LLDB_ENABLE_SWIFT
 #include "clang/AST/Decl.h"
 
 #include "llvm/ADT/StringMap.h"

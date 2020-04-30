@@ -419,8 +419,12 @@ public:
     m_alignment = 8;
     m_is_reference =
         m_variable_sp->GetType()->GetForwardCompilerType().IsReferenceType();
+#ifdef LLDB_ENABLE_SWIFT
     m_is_generic = SwiftASTContext::IsGenericType(
         m_variable_sp->GetType()->GetForwardCompilerType());
+#else // !LLDB_ENABLE_SWIFT
+    m_is_generic = false;
+#endif // LLDB_ENABLE_SWIFT
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
@@ -661,9 +665,11 @@ public:
 
       CompilerType valobj_type = valobj_sp->GetCompilerType();
 
+#ifdef LLDB_ENABLE_SWIFT
       if (SwiftASTContext::IsGenericType(valobj_type)) {
         valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
       }
+#endif // LLDB_ENABLE_SWIFT
 
       lldb_private::DataExtractor data;
 
@@ -922,6 +928,7 @@ public:
     PersistentExpressionState *persistent_state = nullptr;
 
     if (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+#ifdef LLDB_ENABLE_SWIFT
       Status status;
       auto type_system =
           target_sp->GetScratchSwiftASTContext(status, *exe_scope).get();
@@ -933,6 +940,7 @@ public:
       }
       persistent_state =
           target_sp->GetSwiftPersistentExpressionState(*exe_scope);
+#endif // LLDB_ENABLE_SWIFT
     } else {
       auto type_system_or_err =
           target_sp->GetScratchTypeSystemForLanguage(m_type.GetMinimumLanguage());

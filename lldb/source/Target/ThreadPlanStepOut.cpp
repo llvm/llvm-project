@@ -175,6 +175,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
   if (frame_idx == 0) {
     StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+#ifdef LLDB_ENABLE_SWIFT
     if (frame_sp->GuessLanguage() == eLanguageTypeSwift) {
       auto *swift_runtime 
           = SwiftLanguageRuntime::Get(m_process.shared_from_this());
@@ -184,6 +185,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                 frame_sp, m_swift_error_check_after_return);
       }
     }
+#endif // LLDB_ENABLE_SWIFT
   }
 }
 
@@ -545,6 +547,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     return;
   // First check if we have an error return address, and if that pointer
   // contains a valid error return, grab it.
+#ifdef LLDB_ENABLE_SWIFT
   auto *swift_runtime = SwiftLanguageRuntime::Get(m_process.shared_from_this());
   if (swift_runtime) {
     // In some ABI's the error is in a memory location in the caller's frame
@@ -572,6 +575,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
       return;
     }
   }
+#endif // LLDB_ENABLE_SWIFT
 
   // We don't have a swift error, so let's compute the actual return:
   if (m_immediate_step_from_function != nullptr) {

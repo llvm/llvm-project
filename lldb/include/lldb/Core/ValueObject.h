@@ -582,7 +582,9 @@ public:
 
   virtual bool HasSyntheticValue();
 
+#ifdef LLDB_ENABLE_SWIFT
   SwiftASTContextReader GetScratchSwiftASTContext();
+#endif // LLDB_ENABLE_SWIFT
 
   virtual bool IsSynthetic() { return false; }
 

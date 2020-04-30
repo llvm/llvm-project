@@ -417,6 +417,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       m_objc_language_runtime->SetExceptionBreakpoints();
     }
   }
+#ifdef LLDB_ENABLE_SWIFT
   if (GetExpressionLanguage() == eLanguageTypeSwift) {
     auto *swift_runtime 
         = SwiftLanguageRuntime::Get(m_process.shared_from_this());
@@ -436,6 +437,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       }
     }
   }
+#endif // LLDB_ENABLE_SWIFT
 }
 
 void ThreadPlanCallFunction::ClearBreakpoints() {
@@ -492,6 +494,7 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
               eLanguageTypeSwift);
       if (!persistent_state)
         return false;
+#ifdef LLDB_ENABLE_SWIFT
       ConstString persistent_variable_name(
           persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
       if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
@@ -513,6 +516,7 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
         m_hit_error_backstop = true;
         return true;
       }
+#endif // LLDB_ENABLE_SWIFT
     }
   }
 

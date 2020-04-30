@@ -260,7 +260,7 @@ bool ValueObjectVariable::UpdateValue() {
         break;
       }
 
-      // BEGIN Swift
+#ifdef LLDB_ENABLE_SWIFT
       if (auto type = variable->GetType())
         if (llvm::dyn_cast_or_null<TypeSystemSwift>(
                 type->GetForwardCompilerType().GetTypeSystem()) &&
@@ -281,7 +281,7 @@ bool ValueObjectVariable::UpdateValue() {
                 }
               }
             }
-      // END Swift
+#endif // LLDB_ENABLE_SWIFT
 
       switch (value_type) {
       case Value::eValueTypeVector:
