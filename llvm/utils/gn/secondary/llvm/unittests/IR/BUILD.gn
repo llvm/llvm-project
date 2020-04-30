@@ -11,6 +11,7 @@ unittest("IRTests") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "AbstractCallSiteTest.cpp",
     "AsmWriterTest.cpp",
     "AttributesTest.cpp",
     "BasicBlockTest.cpp",
