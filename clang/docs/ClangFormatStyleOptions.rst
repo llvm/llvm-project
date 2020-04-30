@@ -395,6 +395,21 @@ the configuration (without a prefix: ``Auto``).
                                               return;
                                             }
 
+**AllowShortEnumsOnASingleLine** (``bool``)
+  Allow short enums on a single line.
+
+  .. code-block:: c++
+
+    true:
+    enum { A, B } myEnum;
+
+    false:
+    enum
+    {
+      A,
+      B
+    } myEnum;
+
 **AllowShortFunctionsOnASingleLine** (``ShortFunctionStyle``)
   Dependent on the value, ``int f() { return 0; }`` can be put on a
   single line.
