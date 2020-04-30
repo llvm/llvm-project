@@ -174,7 +174,7 @@ T tmain(T argc) {
 #pragma omp parallel reduction(min : i)
 #pragma omp target teams distribute reduction(max : j) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute allocate(omp_thread_mem_alloc: fl) reduction(+ : fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute' directive}}
+#pragma omp target teams distribute uses_allocators(omp_thread_mem_alloc) allocate(omp_thread_mem_alloc: fl) reduction(+ : fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target teams distribute'}}
     for (int j=0; j<100; j++) foo();
 
   return T();

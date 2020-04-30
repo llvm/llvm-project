@@ -341,7 +341,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
     foo();
   static int m;
-#pragma omp target parallel for allocate(omp_thread_mem_alloc: m) reduction(+ : m) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}}
+#pragma omp target parallel for allocate(omp_thread_mem_alloc: m) reduction(+ : m) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}} omp50-error {{allocator must be specified in the 'uses_allocators' clause}}
   for (int i = 0; i < 10; ++i)
     m++;
 

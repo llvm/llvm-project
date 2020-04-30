@@ -100,7 +100,7 @@ int foomain(int argc, char **argv) {
 #pragma omp target teams distribute lastprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute allocate(omp_thread_mem_alloc: argc) lastprivate(argc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute' directive}}
+#pragma omp target teams distribute allocate(omp_thread_mem_alloc: argc) lastprivate(argc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute' directive}} omp50-error {{allocator must be specified in the 'uses_allocators' clause}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute lastprivate(S1) // expected-error {{'S1' does not refer to a value}}

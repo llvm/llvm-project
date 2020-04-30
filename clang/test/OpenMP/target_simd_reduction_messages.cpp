@@ -37,7 +37,7 @@ bool foobool(int argc) {
 }
 
 void foobar(int &ref) {
-#pragma omp target simd allocate(omp_thread_mem_alloc: ref) reduction(+:ref) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target simd' directive}}
+#pragma omp target simd allocate(omp_thread_mem_alloc: ref) reduction(+:ref) uses_allocators(omp_thread_mem_alloc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target simd' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target simd'}}
   for (int i = 0; i < 10; ++i)
     foo();
 }

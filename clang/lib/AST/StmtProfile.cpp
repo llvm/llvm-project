@@ -800,6 +800,15 @@ void OMPClauseProfiler::VisitOMPInclusiveClause(const OMPInclusiveClause *C) {
 void OMPClauseProfiler::VisitOMPExclusiveClause(const OMPExclusiveClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPUsesAllocatorsClause(
+    const OMPUsesAllocatorsClause *C) {
+  for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
+    OMPUsesAllocatorsClause::Data D = C->getAllocatorData(I);
+    Profiler->VisitStmt(D.Allocator);
+    if (D.AllocatorTraits)
+      Profiler->VisitStmt(D.AllocatorTraits);
+  }
+}
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 } // namespace
 
