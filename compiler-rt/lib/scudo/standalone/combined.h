@@ -983,7 +983,9 @@ private:
     if (UNLIKELY(NewHeader.ClassId && useMemoryTagging())) {
       u8 PrevTag = extractTag(loadTag(reinterpret_cast<uptr>(Ptr)));
       uptr TaggedBegin, TaggedEnd;
-      setRandomTag(Ptr, Size, &TaggedBegin, &TaggedEnd);
+      // Exclude the previous tag so that immediate use after free is detected
+      // 100% of the time.
+      setRandomTag(Ptr, Size, 1UL << PrevTag, &TaggedBegin, &TaggedEnd);
       storeDeallocationStackMaybe(Ptr, PrevTag);
     }
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
