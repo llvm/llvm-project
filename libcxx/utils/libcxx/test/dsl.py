@@ -34,8 +34,10 @@ def _executeScriptInternal(test, commands):
       self.maxIndividualTestTime = 0
   litConfig = FakeLitConfig()
   _, tmpBase = lit.TestRunner.getTempPaths(test)
-  execdir = os.path.dirname(test.getExecPath())
-  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, commands, execdir)
+  execDir = os.path.dirname(test.getExecPath())
+  if not os.path.exists(execDir):
+    os.makedirs(execDir)
+  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, commands, execDir)
   if isinstance(res, lit.Test.Result):
     res = ('', '', 127, None)
   return res
@@ -110,7 +112,7 @@ def compilerMacros(config, flags=''):
     commands = libcxx.test.newformat.parseScript(test, preamble=commands, fileDependencies=[])
     unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, commands)
     parsedMacros = dict()
-    defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define'))
+    defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
     for line in defines:
       line = line[len('#define '):]
       macro, _, value = line.partition(' ')
