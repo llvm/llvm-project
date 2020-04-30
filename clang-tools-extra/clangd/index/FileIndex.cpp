@@ -381,7 +381,7 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
   for (auto Uri : ShardedIndex.getAllSources()) {
     // We are using the key received from ShardedIndex, so it should always
     // exist.
-    auto IF = ShardedIndex.getShard(Uri).getValue();
+    auto IF = std::move(ShardedIndex.getShard(Uri).getValue());
     PreambleSymbols.update(
         Uri, std::make_unique<SymbolSlab>(std::move(*IF.Symbols)),
         std::make_unique<RefSlab>(),
