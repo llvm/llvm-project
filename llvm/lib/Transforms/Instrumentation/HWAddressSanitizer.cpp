@@ -97,6 +97,10 @@ static cl::opt<bool> ClInstrumentAtomics(
     cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
     cl::init(true));
 
+static cl::opt<bool> ClInstrumentByval("hwasan-instrument-byval",
+                                       cl::desc("instrument byval arguments"),
+                                       cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClRecover(
     "hwasan-recover",
     cl::desc("Enable recovery mode (continue-after-error)."),
@@ -549,6 +553,14 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(), 0);
+  } else if (auto CI = dyn_cast<CallInst>(I)) {
+    for (unsigned ArgNo = 0; ArgNo < CI->getNumArgOperands(); ArgNo++) {
+      if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
+          ignoreAccess(CI->getArgOperand(ArgNo)))
+        continue;
+      Type *Ty = CI->getParamByValType(ArgNo);
+      Interesting.emplace_back(I, ArgNo, false, Ty, 1);
+    }
   }
 }
 
