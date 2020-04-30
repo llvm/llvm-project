@@ -269,6 +269,164 @@ define <4 x i64> @bitselect_v4i64_mm(<4 x i64>* nocapture readonly, <4 x i64>* n
   ret <4 x i64> %7
 }
 
+define <4 x i64> @bitselect_v4i64_broadcast_rrr(<4 x i64> %a0, <4 x i64> %a1, i64 %a2) {
+; SSE-LABEL: bitselect_v4i64_broadcast_rrr:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %xmm4
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,1,0,1]
+; SSE-NEXT:    pcmpeqd %xmm6, %xmm6
+; SSE-NEXT:    pxor %xmm4, %xmm6
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[0,1,0,1]
+; SSE-NEXT:    pand %xmm5, %xmm1
+; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; XOP-LABEL: bitselect_v4i64_broadcast_rrr:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovq %rdi, %xmm2
+; XOP-NEXT:    vmovq %rdi, %xmm3
+; XOP-NEXT:    vmovddup {{.*#+}} xmm2 = xmm2[0,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; XOP-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; XOP-NEXT:    vpxor %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,0,1]
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; XOP-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; XOP-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; XOP-NEXT:    retq
+;
+; AVX1-LABEL: bitselect_v4i64_broadcast_rrr:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq %rdi, %xmm2
+; AVX1-NEXT:    vmovq %rdi, %xmm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = xmm2[0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,0,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitselect_v4i64_broadcast_rrr:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %rdi, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm3
+; AVX2-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: bitselect_v4i64_broadcast_rrr:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovq %rdi, %xmm2
+; AVX512F-NEXT:    vmovq %rdi, %xmm3
+; AVX512F-NEXT:    vpbroadcastq %xmm3, %ymm3
+; AVX512F-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+  %1 = insertelement <4 x i64> undef, i64 %a2, i32 0
+  %2 = shufflevector <4 x i64> %1, <4 x i64> undef, <4 x i32> zeroinitializer
+  %3 = xor <4 x i64> %1, <i64 -1, i64 undef, i64 undef, i64 undef>
+  %4 = shufflevector <4 x i64> %3, <4 x i64> undef, <4 x i32> zeroinitializer
+  %5 = and <4 x i64> %a0, %2
+  %6 = and <4 x i64> %a1, %4
+  %7 = or <4 x i64> %5, %6
+  ret <4 x i64> %7
+}
+
+define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, i64* %p2) {
+; SSE-LABEL: bitselect_v4i64_broadcast_rrm:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,1,0,1]
+; SSE-NEXT:    pcmpeqd %xmm6, %xmm6
+; SSE-NEXT:    pxor %xmm4, %xmm6
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[0,1,0,1]
+; SSE-NEXT:    pand %xmm5, %xmm1
+; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; XOP-LABEL: bitselect_v4i64_broadcast_rrm:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; XOP-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,1,0,1]
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; XOP-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; XOP-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; XOP-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; XOP-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; XOP-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; XOP-NEXT:    retq
+;
+; AVX1-LABEL: bitselect_v4i64_broadcast_rrm:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,1,0,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; AVX1-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitselect_v4i64_broadcast_rrm:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm3
+; AVX2-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: bitselect_v4i64_broadcast_rrm:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movq (%rdi), %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm2
+; AVX512F-NEXT:    vmovq %rax, %xmm3
+; AVX512F-NEXT:    vpbroadcastq %xmm3, %ymm3
+; AVX512F-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+  %a2 = load i64, i64* %p2
+  %1 = insertelement <4 x i64> undef, i64 %a2, i32 0
+  %2 = shufflevector <4 x i64> %1, <4 x i64> undef, <4 x i32> zeroinitializer
+  %3 = xor <4 x i64> %1, <i64 -1, i64 undef, i64 undef, i64 undef>
+  %4 = shufflevector <4 x i64> %3, <4 x i64> undef, <4 x i32> zeroinitializer
+  %5 = and <4 x i64> %a0, %2
+  %6 = and <4 x i64> %a1, %4
+  %7 = or <4 x i64> %5, %6
+  ret <4 x i64> %7
+}
+
 ;
 ; 512-bit vectors
 ;
