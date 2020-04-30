@@ -129,14 +129,12 @@ class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //   %0 = alloclike(%m)[%s] : memref<8x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1)>
 //
-class AllocLikeOp<string mnemonic,
-                  list<OpVariableDecorator> resultDecorators = [],
-                  list<OpTrait> traits = []> :
-    Std_Op<mnemonic, traits> {
+class AllocLikeOp<string mnemonic, list<OpTrait> traits = []> :
+    Std_Op<mnemonic, !listconcat(traits, [MemoryEffects<[MemAlloc]>])> {
 
   let arguments = (ins Variadic<Index>:$value,
                    Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
-  let results = (outs Arg<AnyMemRef, "", resultDecorators>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc]>);
 
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, MemRefType memrefType", [{
@@ -278,7 +276,7 @@ def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
 // AllocOp
 //===----------------------------------------------------------------------===//
 
-def AllocOp : AllocLikeOp<"alloc", [MemAlloc], [MemoryEffects<[MemAlloc]>]> {
+def AllocOp : AllocLikeOp<"alloc"> {
   let summary = "memory allocation operation";
   let description = [{
     The `alloc` operation allocates a region of memory, as specified by its
