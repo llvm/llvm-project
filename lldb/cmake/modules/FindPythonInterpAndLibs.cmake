@@ -51,7 +51,6 @@ else()
             PYTHON_LIBRARIES
             PYTHON_INCLUDE_DIRS
             PYTHON_EXECUTABLE
-            PYTHON_RPATH
             SWIG_EXECUTABLE)
         endif()
       endif()
@@ -72,7 +71,6 @@ else()
               PYTHON_LIBRARIES
               PYTHON_INCLUDE_DIRS
               PYTHON_EXECUTABLE
-              PYTHON_RPATH
               SWIG_EXECUTABLE)
           endif()
         endif()
@@ -91,6 +89,5 @@ else()
                                       PYTHON_LIBRARIES
                                       PYTHON_INCLUDE_DIRS
                                       PYTHON_EXECUTABLE
-                                      PYTHON_RPATH
                                       SWIG_EXECUTABLE)
 endif()
