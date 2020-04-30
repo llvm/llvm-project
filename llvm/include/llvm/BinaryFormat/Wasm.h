@@ -75,8 +75,8 @@ struct WasmTable {
 struct WasmInitExpr {
   uint8_t Opcode;
   union {
-    uint32_t Int32;
-    uint64_t Int64;
+    int32_t Int32;
+    int64_t Int64;
     uint32_t Float32;
     uint64_t Float64;
     uint32_t Global;
