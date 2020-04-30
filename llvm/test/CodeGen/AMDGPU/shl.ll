@@ -742,8 +742,8 @@ define amdgpu_kernel void @shl_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> add
 ; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
 ; GCN-NEXT:    buffer_load_dwordx4 v[4:7], off, s[4:7], 0 offset:16
 ; GCN-NEXT:    buffer_load_dwordx4 v[8:11], off, s[4:7], 0 offset:32
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dwordx4 v[11:14], off, s[4:7], 0 offset:48
+; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_lshl_b64 v[2:3], v[2:3], v10
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_lshl_b64 v[6:7], v[6:7], v13
