@@ -79,9 +79,12 @@ EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
   cl::Hidden,
   cl::desc("Convert noalias attributes to metadata during inlining."));
 
+// Disabled by default, because the added alignment assumptions may increase
+// compile-time and block optimizations. This option is not suitable for use
+// with frontends that emit comprehensive parameter alignment annotations.
 static cl::opt<bool>
 PreserveAlignmentAssumptions("preserve-alignment-assumptions-during-inlining",
-  cl::init(true), cl::Hidden,
+  cl::init(false), cl::Hidden,
   cl::desc("Convert align attributes to assumptions during inlining."));
 
 static cl::opt<bool> UpdateReturnAttributes(
