@@ -30,6 +30,8 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
 
+template <typename T> class ArrayRef;
+
 /// This class emits a version of the loop where run-time checks ensure
 /// that may-alias pointers can't overlap.
 ///
@@ -74,7 +76,7 @@ public:
   Loop *getNonVersionedLoop() { return NonVersionedLoop; }
 
   /// Sets the runtime alias checks for versioning the loop.
-  void setAliasChecks(SmallVector<RuntimePointerCheck, 4> Checks);
+  void setAliasChecks(ArrayRef<RuntimePointerCheck> Checks);
 
   /// Sets the runtime SCEV checks for versioning the loop.
   void setSCEVChecks(SCEVUnionPredicate Check);
