@@ -307,6 +307,10 @@ protected:
   /// false.
   bool HasAltEntry = false;
 
+  /// True if this target supports the XCOFF .extern directive.  Defaults to
+  /// false.
+  bool HasDotExternDirective = false;
+
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
   const char *WeakDirective;
 
@@ -583,6 +587,7 @@ public:
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
   bool hasAltEntry() const { return HasAltEntry; }
+  bool hasDotExternDirective() const { return HasDotExternDirective; }
   const char *getWeakDirective() const { return WeakDirective; }
   const char *getWeakRefDirective() const { return WeakRefDirective; }
   bool hasWeakDefDirective() const { return HasWeakDefDirective; }

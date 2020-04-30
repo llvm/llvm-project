@@ -35,11 +35,16 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
 
   switch (Attribute) {
   case MCSA_Global:
+  case MCSA_Extern:
     Symbol->setStorageClass(XCOFF::C_EXT);
     Symbol->setExternal(true);
     break;
   case MCSA_LGlobal:
     Symbol->setStorageClass(XCOFF::C_HIDEXT);
+    Symbol->setExternal(true);
+    break;
+  case llvm::MCSA_Weak:
+    Symbol->setStorageClass(XCOFF::C_WEAKEXT);
     Symbol->setExternal(true);
     break;
   default:

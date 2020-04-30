@@ -1616,9 +1616,10 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   GVSym->setStorageClass(
       TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
-  // External global variables are already handled.
-  if (GV->isDeclaration())
+  if (GV->isDeclarationForLinker()) {
+    emitLinkage(GV, GVSym);
     return;
+  }
 
   SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
   if (!GVKind.isGlobalWriteableData() && !GVKind.isReadOnly())

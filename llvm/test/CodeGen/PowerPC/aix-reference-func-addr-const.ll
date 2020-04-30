@@ -20,6 +20,7 @@ entry:
 ;CHECK-NEXT:     .align  2
 ;CHECK-NEXT:     bar_ptr1:
 ;CHECK-NEXT:     .long   bar[DS]
+;CHECK-NEXT:     .extern foo[DS]
 
 ;CHECK64:         .csect .data[RW]
 ;CHECK64-NEXT:         .globl  foo_ptr
@@ -30,3 +31,4 @@ entry:
 ;CHECK64-NEXT:         .align  3
 ;CHECK64-NEXT:    bar_ptr1:
 ;CHECK64-NEXT:         .llong  bar[DS]
+;CHECK64-NEXT:         .extern foo[DS]
