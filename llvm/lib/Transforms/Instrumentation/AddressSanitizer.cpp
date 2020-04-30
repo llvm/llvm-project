@@ -638,6 +638,7 @@ struct AddressSanitizer {
                                  Value *SizeArgument, uint32_t Exp);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
+  bool suppressInstrumentationSiteForDebug(int &Instrumented);
   bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   void maybeInsertDynamicShadowAtFunctionEntry(Function &F);
@@ -2610,6 +2611,14 @@ void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
   }
 }
 
+bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
+  bool ShouldInstrument =
+      ClDebugMin < 0 || ClDebugMax < 0 ||
+      (Instrumented >= ClDebugMin && Instrumented <= ClDebugMax);
+  Instrumented++;
+  return !ShouldInstrument;
+}
+
 bool AddressSanitizer::instrumentFunction(Function &F,
                                           const TargetLibraryInfo *TLI) {
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
@@ -2710,15 +2719,14 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // Instrument.
   int NumInstrumented = 0;
   for (auto Inst : ToInstrument) {
-    if (ClDebugMin < 0 || ClDebugMax < 0 ||
-        (NumInstrumented >= ClDebugMin && NumInstrumented <= ClDebugMax)) {
+    if (!suppressInstrumentationSiteForDebug(NumInstrumented)) {
       if (isInterestingMemoryAccess(Inst, &IsWrite, &TypeSize, &Alignment))
         instrumentMop(ObjSizeVis, Inst, UseCalls,
                       F.getParent()->getDataLayout());
       else
         instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
     }
-    NumInstrumented++;
+    FunctionModified = true;
   }
 
   FunctionStackPoisoner FSP(F, *this);
@@ -2733,10 +2741,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   for (auto Inst : PointerComparisonsOrSubtracts) {
     instrumentPointerComparisonOrSubtraction(Inst);
-    NumInstrumented++;
+    FunctionModified = true;
   }
 
-  if (NumInstrumented > 0 || ChangedStack || !NoReturnCalls.empty())
+  if (ChangedStack || !NoReturnCalls.empty())
     FunctionModified = true;
 
   LLVM_DEBUG(dbgs() << "ASAN done instrumenting: " << FunctionModified << " "
