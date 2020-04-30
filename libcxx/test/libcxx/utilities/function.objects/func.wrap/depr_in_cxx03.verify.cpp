@@ -12,7 +12,6 @@
 // Check that libc++'s emulation of std::function is deprecated in C++03
 
 // REQUIRES: c++98 || c++03
-// REQUIRES: verify-support
 
 #include <functional>
 #include "test_macros.h"
