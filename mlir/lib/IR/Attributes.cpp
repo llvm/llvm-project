@@ -196,15 +196,26 @@ ArrayRef<NamedAttribute> DictionaryAttr::getValue() const {
 
 /// Return the specified attribute if present, null otherwise.
 Attribute DictionaryAttr::get(StringRef name) const {
-  ArrayRef<NamedAttribute> values = getValue();
-  auto it = llvm::lower_bound(values, name, compareNamedAttributeWithName);
-  return it != values.end() && it->first == name ? it->second : Attribute();
+  Optional<NamedAttribute> attr = getNamed(name);
+  return attr ? attr->second : nullptr;
 }
 Attribute DictionaryAttr::get(Identifier name) const {
+  Optional<NamedAttribute> attr = getNamed(name);
+  return attr ? attr->second : nullptr;
+}
+
+/// Return the specified named attribute if present, None otherwise.
+Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
+  ArrayRef<NamedAttribute> values = getValue();
+  auto it = llvm::lower_bound(values, name, compareNamedAttributeWithName);
+  return it != values.end() && it->first == name ? *it
+                                                 : Optional<NamedAttribute>();
+}
+Optional<NamedAttribute> DictionaryAttr::getNamed(Identifier name) const {
   for (auto elt : getValue())
     if (elt.first == name)
-      return elt.second;
-  return nullptr;
+      return elt;
+  return llvm::None;
 }
 
 DictionaryAttr::iterator DictionaryAttr::begin() const {
@@ -1189,6 +1200,15 @@ Attribute MutableDictionaryAttr::get(StringRef name) const {
 /// Return the specified attribute if present, null otherwise.
 Attribute MutableDictionaryAttr::get(Identifier name) const {
   return attrs ? attrs.get(name) : nullptr;
+}
+
+/// Return the specified named attribute if present, None otherwise.
+Optional<NamedAttribute> MutableDictionaryAttr::getNamed(StringRef name) const {
+  return attrs ? attrs.getNamed(name) : Optional<NamedAttribute>();
+}
+Optional<NamedAttribute>
+MutableDictionaryAttr::getNamed(Identifier name) const {
+  return attrs ? attrs.getNamed(name) : Optional<NamedAttribute>();
 }
 
 /// If the an attribute exists with the specified name, change it to the new

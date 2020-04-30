@@ -244,6 +244,25 @@ void Operation::setOperands(ValueRange operands) {
   assert(operands.empty() && "setting operands without an operand storage");
 }
 
+/// Replace the operands beginning at 'start' and ending at 'start' + 'length'
+/// with the ones provided in 'operands'. 'operands' may be smaller or larger
+/// than the range pointed to by 'start'+'length'.
+void Operation::setOperands(unsigned start, unsigned length,
+                            ValueRange operands) {
+  assert((start + length) <= getNumOperands() &&
+         "invalid operand range specified");
+  if (LLVM_LIKELY(hasOperandStorage))
+    return getOperandStorage().setOperands(this, start, length, operands);
+  assert(operands.empty() && "setting operands without an operand storage");
+}
+
+/// Insert the given operands into the operand list at the given 'index'.
+void Operation::insertOperands(unsigned index, ValueRange operands) {
+  if (LLVM_LIKELY(hasOperandStorage))
+    return setOperands(index, /*length=*/0, operands);
+  assert(operands.empty() && "inserting operands without an operand storage");
+}
+
 //===----------------------------------------------------------------------===//
 // Diagnostics
 //===----------------------------------------------------------------------===//
