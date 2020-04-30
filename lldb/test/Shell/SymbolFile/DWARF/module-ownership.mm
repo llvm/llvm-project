@@ -52,10 +52,10 @@ SomeClass *obj1;
 
 // Template specializations are not yet supported, so they lack the ownership info:
 Template<int> t2;
-// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} struct Template
+// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} imported in A struct Template
 
 Namespace::InNamespace<int> t3;
-// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} struct InNamespace
+// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} imported in A struct InNamespace
 
 Namespace::AlsoInNamespace<int> t4;
-// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} struct AlsoInNamespace
+// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} imported in A.B struct AlsoInNamespace
