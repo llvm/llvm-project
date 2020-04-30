@@ -887,7 +887,7 @@ OMPTargetDirective *OMPTargetDirective::CreateEmpty(const ASTContext &C,
 
 OMPTargetParallelDirective *OMPTargetParallelDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt) {
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, bool HasCancel) {
   unsigned Size =
       llvm::alignTo(sizeof(OMPTargetParallelDirective), alignof(OMPClause *));
   void *Mem =
@@ -896,6 +896,7 @@ OMPTargetParallelDirective *OMPTargetParallelDirective::Create(
       new (Mem) OMPTargetParallelDirective(StartLoc, EndLoc, Clauses.size());
   Dir->setClauses(Clauses);
   Dir->setAssociatedStmt(AssociatedStmt);
+  Dir->setHasCancel(HasCancel);
   return Dir;
 }
 

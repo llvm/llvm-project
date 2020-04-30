@@ -134,6 +134,7 @@ int foo(int n) {
   #pragma omp target parallel if(target: 1)
   {
     aa += 1;
+#pragma omp cancel parallel
   }
 
   // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 10
@@ -360,6 +361,12 @@ int foo(int n) {
 // CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
 // CHECK:       [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
 // CHECK:       [[AA:%.+]] = load i16, i16* [[AA_CADDR]], align
+// CHECK:       [[IS_CANCEL:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 1)
+// CHECK:       [[CMP:%.+]] = icmp ne i32 [[IS_CANCEL]], 0
+// CHECK:       br i1 [[CMP]], label %[[EXIT:.+]], label %[[CONTINUE:[^,]+]]
+// CHECK:       [[EXIT]]:
+// CHECK:       br label %[[CONTINUE]]
+// CHECK:       [[CONTINUE]]:
 // CHECK:       ret void
 // CHECK-NEXT:  }
 
