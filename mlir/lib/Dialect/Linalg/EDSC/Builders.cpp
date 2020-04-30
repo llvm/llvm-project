@@ -31,7 +31,7 @@ mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv, Value range) {
   ForOp forOp = OperationBuilder<ForOp>(lb, ub, step);
   *iv = forOp.getInductionVar();
   auto *body = forOp.getBody();
-  enter(body, /*prev=*/1);
+  enter(body);
 }
 
 mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv,
@@ -39,7 +39,7 @@ mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv,
   ForOp forOp = OperationBuilder<ForOp>(range.offset, range.size, range.stride);
   *iv = forOp.getInductionVar();
   auto *body = forOp.getBody();
-  enter(body, /*prev=*/1);
+  enter(body);
 }
 
 Value mlir::edsc::LoopRangeBuilder::operator()(std::function<void(void)> fun) {

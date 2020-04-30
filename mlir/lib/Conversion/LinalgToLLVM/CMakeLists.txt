@@ -18,6 +18,7 @@ target_link_libraries(MLIRLinalgToLLVM
   MLIRLoopToStandard
   MLIRStandardToLLVM
   MLIRVectorToLLVM
+  MLIRVectorToLoops
   MLIRTransforms
   LLVMCore
   LLVMSupport

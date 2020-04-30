@@ -1131,7 +1131,7 @@ def Vector_ShapeCastOp :
 def Vector_TypeCastOp :
   Vector_Op<"type_cast", [NoSideEffect]>,
     Arguments<(ins StaticShapeMemRefOf<[AnyType]>:$memref)>,
-    Results<(outs AnyMemRef)> {
+    Results<(outs AnyMemRef:$result)> {
   let summary = "type_cast op converts a scalar memref to a vector memref";
   let description = [{
     Performs a conversion from a memref with scalar element to a memref with a
@@ -1154,12 +1154,10 @@ def Vector_TypeCastOp :
     ```
   }];
 
+  /// Build the canonical memRefType with a single vector.
+  /// E.g. memref<4 x 5 x vector<6 x f32>> -> memref<vector<4 x 5 x 6 x f32>>.
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, Value source">];
-
-  let parser = [{
-    return impl::parseCastOp(parser, result);
-  }];
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1168,6 +1166,10 @@ def Vector_TypeCastOp :
     MemRefType getResultMemRefType() {
       return getResult().getType().cast<MemRefType>();
     }
+  }];
+
+  let assemblyFormat = [{
+    $memref attr-dict `:` type($memref) `to` type($result)
   }];
 }
 

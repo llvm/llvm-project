@@ -68,6 +68,7 @@ private:
 class VectorBoundsCapture : public BoundsCapture {
 public:
   explicit VectorBoundsCapture(Value v);
+  explicit VectorBoundsCapture(VectorType t);
   VectorBoundsCapture(const VectorBoundsCapture &) = default;
   VectorBoundsCapture &operator=(const VectorBoundsCapture &) = default;
 

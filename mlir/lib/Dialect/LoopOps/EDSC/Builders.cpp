@@ -89,7 +89,7 @@ LoopBuilder mlir::edsc::makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
   for (size_t i = 0, e = ivs.size(); i < e; ++i)
     ivs[i] = parallelOp.getBody()->getArgument(i);
   LoopBuilder result;
-  result.enter(parallelOp.getBody(), /*prev=*/1);
+  result.enter(parallelOp.getBody());
   return result;
 }
 
@@ -107,6 +107,6 @@ mlir::edsc::makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
     iterArgsHandles[i] = body->getArgument(i + 1);
   }
   result.setOp(forOp);
-  result.enter(body, /*prev=*/1);
+  result.enter(body);
   return result;
 }
