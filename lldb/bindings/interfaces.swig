@@ -22,6 +22,7 @@
 %include "./interface/SBBreakpointName.i"
 %include "./interface/SBBroadcaster.i"
 %include "./interface/SBCommandInterpreter.i"
+%include "./interface/SBCommandInterpreterRunOptions.i"
 %include "./interface/SBCommandReturnObject.i"
 %include "./interface/SBCommunication.i"
 %include "./interface/SBCompileUnit.i"

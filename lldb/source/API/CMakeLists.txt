@@ -29,6 +29,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBBreakpointOptionCommon.cpp
   SBBroadcaster.cpp
   SBCommandInterpreter.cpp
+  SBCommandInterpreterRunOptions.cpp
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
