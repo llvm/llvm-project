@@ -2176,6 +2176,10 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
         Next = Next->Next;
         continue;
       }
+      if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
+        Next = Next->MatchingParen;
+        continue;
+      }
 
       break;
     }
@@ -2704,6 +2708,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
                                     tok::l_square));
   if (Right.is(tok::star) && Left.is(tok::l_paren))
+    return false;
+  if (Right.is(tok::star) && Left.is(tok::star))
     return false;
   if (Right.isOneOf(tok::star, tok::amp, tok::ampamp)) {
     const FormatToken *Previous = &Left;

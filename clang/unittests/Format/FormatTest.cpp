@@ -6185,7 +6185,17 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "void\n"
                "A::operator[]() {}\n"
                "void\n"
-               "A::operator!() {}\n",
+               "A::operator!() {}\n"
+               "void\n"
+               "A::operator**() {}\n"
+               "void\n"
+               "A::operator<Foo> *() {}\n"
+               "void\n"
+               "A::operator<Foo> **() {}\n"
+               "void\n"
+               "A::operator<Foo> &() {}\n"
+               "void\n"
+               "A::operator void **() {}\n",
                Style);
   verifyFormat("constexpr auto\n"
                "operator()() const -> reference {}\n"
@@ -6199,6 +6209,10 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "operator->() const -> reference {}\n"
                "constexpr auto\n"
                "operator++() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator void *() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator void **() const -> reference {}\n"
                "constexpr auto\n"
                "operator void *() const -> reference {}\n"
                "constexpr auto\n"
@@ -14986,9 +15000,20 @@ TEST_F(FormatTest, OperatorSpacing) {
   Style.PointerAlignment = FormatStyle::PAS_Right;
   verifyFormat("Foo::operator*();", Style);
   verifyFormat("Foo::operator void *();", Style);
+  verifyFormat("Foo::operator void **();", Style);
   verifyFormat("Foo::operator()(void *);", Style);
   verifyFormat("Foo::operator*(void *);", Style);
   verifyFormat("Foo::operator*();", Style);
+  verifyFormat("Foo::operator**();", Style);
+  verifyFormat("Foo::operator&();", Style);
+  verifyFormat("Foo::operator<int> *();", Style);
+  verifyFormat("Foo::operator<Foo> *();", Style);
+  verifyFormat("Foo::operator<int> **();", Style);
+  verifyFormat("Foo::operator<Foo> **();", Style);
+  verifyFormat("Foo::operator<int> &();", Style);
+  verifyFormat("Foo::operator<Foo> &();", Style);
+  verifyFormat("Foo::operator<int> &&();", Style);
+  verifyFormat("Foo::operator<Foo> &&();", Style);
   verifyFormat("operator*(int (*)(), class Foo);", Style);
 
   verifyFormat("Foo::operator&();", Style);
@@ -14999,21 +15024,39 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("operator&(int (&)(), class Foo);", Style);
 
   verifyFormat("Foo::operator&&();", Style);
+  verifyFormat("Foo::operator**();", Style);
   verifyFormat("Foo::operator void &&();", Style);
   verifyFormat("Foo::operator()(void &&);", Style);
   verifyFormat("Foo::operator&&(void &&);", Style);
   verifyFormat("Foo::operator&&();", Style);
   verifyFormat("operator&&(int(&&)(), class Foo);", Style);
+  verifyFormat("operator const nsTArrayRight<E> &()", Style);
+  verifyFormat("[[nodiscard]] operator const nsTArrayRight<E, Allocator> &()",
+               Style);
+  verifyFormat("operator void **()", Style);
+  verifyFormat("operator const FooRight<Object> &()", Style);
+  verifyFormat("operator const FooRight<Object> *()", Style);
+  verifyFormat("operator const FooRight<Object> **()", Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("Foo::operator*();", Style);
+  verifyFormat("Foo::operator**();", Style);
   verifyFormat("Foo::operator void*();", Style);
+  verifyFormat("Foo::operator void**();", Style);
   verifyFormat("Foo::operator/*comment*/ void*();", Style);
   verifyFormat("Foo::operator/*a*/ const /*b*/ void*();", Style);
   verifyFormat("Foo::operator/*a*/ volatile /*b*/ void*();", Style);
   verifyFormat("Foo::operator()(void*);", Style);
   verifyFormat("Foo::operator*(void*);", Style);
   verifyFormat("Foo::operator*();", Style);
+  verifyFormat("Foo::operator<int>*();", Style);
+  verifyFormat("Foo::operator<Foo>*();", Style);
+  verifyFormat("Foo::operator<int>**();", Style);
+  verifyFormat("Foo::operator<Foo>**();", Style);
+  verifyFormat("Foo::operator<int>&();", Style);
+  verifyFormat("Foo::operator<Foo>&();", Style);
+  verifyFormat("Foo::operator<int>&&();", Style);
+  verifyFormat("Foo::operator<Foo>&&();", Style);
   verifyFormat("operator*(int (*)(), class Foo);", Style);
 
   verifyFormat("Foo::operator&();", Style);
@@ -15035,9 +15078,17 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("Foo::operator&&(void&&);", Style);
   verifyFormat("Foo::operator&&();", Style);
   verifyFormat("operator&&(int(&&)(), class Foo);", Style);
+  verifyFormat("operator const nsTArrayLeft<E>&()", Style);
+  verifyFormat("[[nodiscard]] operator const nsTArrayLeft<E, Allocator>&()",
+               Style);
+  verifyFormat("operator void**()", Style);
+  verifyFormat("operator const FooLeft<Object>&()", Style);
+  verifyFormat("operator const FooLeft<Object>*()", Style);
+  verifyFormat("operator const FooLeft<Object>**()", Style);
 
   // PR45107
   verifyFormat("operator Vector<String>&();", Style);
+  verifyFormat("operator const Vector<String>&();", Style);
   verifyFormat("operator foo::Bar*();", Style);
   verifyFormat("operator const Foo<X>::Bar<Y>*();", Style);
   verifyFormat("operator/*a*/ const /*b*/ Foo /*c*/<X> /*d*/ ::Bar<Y>*();",
