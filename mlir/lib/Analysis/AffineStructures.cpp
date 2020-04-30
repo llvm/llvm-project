@@ -2075,7 +2075,7 @@ Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
                                /*num=*/getNumDimIds());
 
   Optional<int64_t> minDiff = None;
-  unsigned minLbPosition, minUbPosition;
+  unsigned minLbPosition = 0, minUbPosition = 0;
   for (auto ubPos : ubIndices) {
     for (auto lbPos : lbIndices) {
       // Look for a lower bound and an upper bound that only differ by a
