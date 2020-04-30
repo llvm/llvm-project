@@ -1074,7 +1074,7 @@ def CondBranchOp : Std_Op<"cond_br",
 
     /// Erase the operand at 'index' from the true operand list.
     void eraseTrueOperand(unsigned index)  {
-      eraseSuccessorOperand(trueIndex, index);
+      trueDestOperandsMutable().erase(index);
     }
 
     // Accessors for operands to the 'false' destination.
@@ -1093,7 +1093,7 @@ def CondBranchOp : Std_Op<"cond_br",
 
     /// Erase the operand at 'index' from the false operand list.
     void eraseFalseOperand(unsigned index) {
-      eraseSuccessorOperand(falseIndex, index);
+      falseDestOperandsMutable().erase(index);
     }
 
   private:
