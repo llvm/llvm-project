@@ -634,7 +634,8 @@ For example:
 
     ; CHECK: load r[[#REG:]], [r0]
     ; CHECK: load r[[#REG+1]], [r1]
-    ; CHECK: Loading from 0x[[#%x,ADDR:] to 0x[[#ADDR + 7]]
+    ; CHECK: Loading from 0x[[#%x,ADDR:]]
+    ; CHECK-SAME: to 0x[[#ADDR + 7]]
 
 The above example would match the text:
 
