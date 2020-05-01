@@ -87,8 +87,8 @@ TEST(SinCosfTest, InFloatRange) {
 
     float sin, cos;
     __llvm_libc::sincosf(x, &sin, &cos);
-    EXPECT_TRUE(mpfr::equalsCos(x, cos, tolerance));
-    EXPECT_TRUE(mpfr::equalsSin(x, sin, tolerance));
+    ASSERT_MPFR_MATCH(mpfr::OP_Cos, x, cos, tolerance);
+    ASSERT_MPFR_MATCH(mpfr::OP_Sin, x, sin, tolerance);
   }
 }
 
@@ -98,16 +98,16 @@ TEST(SinCosfTest, SmallValues) {
   float x = as_float(bits);
   float result_cos, result_sin;
   __llvm_libc::sincosf(x, &result_sin, &result_cos);
-  EXPECT_TRUE(mpfr::equalsCos(x, result_cos, tolerance));
-  EXPECT_TRUE(mpfr::equalsSin(x, result_sin, tolerance));
+  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result_cos, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result_sin, tolerance);
   EXPECT_EQ(FloatBits::One, as_uint32_bits(result_cos));
   EXPECT_EQ(bits, as_uint32_bits(result_sin));
 
   bits = 0x00400000;
   x = as_float(bits);
   __llvm_libc::sincosf(x, &result_sin, &result_cos);
-  EXPECT_TRUE(mpfr::equalsCos(x, result_cos, tolerance));
-  EXPECT_TRUE(mpfr::equalsSin(x, result_sin, tolerance));
+  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result_cos, tolerance);
+  EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result_sin, tolerance);
   EXPECT_EQ(FloatBits::One, as_uint32_bits(result_cos));
   EXPECT_EQ(bits, as_uint32_bits(result_sin));
 }
@@ -119,7 +119,7 @@ TEST(SinCosfTest, SDCOMP_26094) {
     float x = as_float(v);
     float sin, cos;
     __llvm_libc::sincosf(x, &sin, &cos);
-    EXPECT_TRUE(mpfr::equalsCos(x, cos, tolerance));
-    EXPECT_TRUE(mpfr::equalsSin(x, sin, tolerance));
+    EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, cos, tolerance);
+    EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, sin, tolerance);
   }
 }
