@@ -656,6 +656,16 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return cmpNumbers(RMWI->getSyncScopeID(),
                       cast<AtomicRMWInst>(R)->getSyncScopeID());
   }
+  if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(L)) {
+    ArrayRef<int> LMask = SVI->getShuffleMask();
+    ArrayRef<int> RMask = cast<ShuffleVectorInst>(R)->getShuffleMask();
+    if (int Res = cmpNumbers(LMask.size(), RMask.size()))
+      return Res;
+    for (size_t i = 0, e = LMask.size(); i != e; ++i) {
+      if (int Res = cmpNumbers(LMask[i], RMask[i]))
+        return Res;
+    }
+  }
   if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
     const PHINode *PNR = cast<PHINode>(R);
     // Ensure that in addition to the incoming values being identical
