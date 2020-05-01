@@ -54,8 +54,6 @@ public:
   AttributeImpl(const AttributeImpl &) = delete;
   AttributeImpl &operator=(const AttributeImpl &) = delete;
 
-  virtual ~AttributeImpl();
-
   bool isEnumAttribute() const { return KindID == EnumAttrEntry; }
   bool isIntAttribute() const { return KindID == IntAttrEntry; }
   bool isStringAttribute() const { return KindID == StringAttrEntry; }
@@ -104,6 +102,9 @@ public:
   }
 };
 
+static_assert(std::is_trivially_destructible<AttributeImpl>::value,
+              "AttributeImpl should be trivially destructible");
+
 //===----------------------------------------------------------------------===//
 /// \class
 /// A set of classes that contain the value of the
@@ -112,8 +113,6 @@ public:
 /// attribute enties, which are for target-dependent attributes.
 
 class EnumAttributeImpl : public AttributeImpl {
-  virtual void anchor();
-
   Attribute::AttrKind Kind;
 
 protected:
@@ -130,8 +129,6 @@ public:
 class IntAttributeImpl : public EnumAttributeImpl {
   uint64_t Val;
 
-  void anchor() override;
-
 public:
   IntAttributeImpl(Attribute::AttrKind Kind, uint64_t Val)
       : EnumAttributeImpl(IntAttrEntry, Kind), Val(Val) {
@@ -142,24 +139,43 @@ public:
   uint64_t getValue() const { return Val; }
 };
 
-class StringAttributeImpl : public AttributeImpl {
-  virtual void anchor();
+class StringAttributeImpl final
+    : public AttributeImpl,
+      private TrailingObjects<StringAttributeImpl, char> {
+  friend TrailingObjects;
 
-  std::string Kind;
-  std::string Val;
+  unsigned KindSize;
+  unsigned ValSize;
+  size_t numTrailingObjects(OverloadToken<char>) const {
+    return KindSize + 1 + ValSize + 1;
+  }
 
 public:
   StringAttributeImpl(StringRef Kind, StringRef Val = StringRef())
-      : AttributeImpl(StringAttrEntry), Kind(std::string(Kind)),
-        Val(std::string(Val)) {}
+      : AttributeImpl(StringAttrEntry), KindSize(Kind.size()),
+        ValSize(Val.size()) {
+    char *TrailingString = getTrailingObjects<char>();
+    // Some users rely on zero-termination.
+    llvm::copy(Kind, TrailingString);
+    TrailingString[KindSize] = '\0';
+    llvm::copy(Val, &TrailingString[KindSize + 1]);
+    TrailingString[KindSize + 1 + ValSize] = '\0';
+  }
 
-  StringRef getStringKind() const { return Kind; }
-  StringRef getStringValue() const { return Val; }
+  StringRef getStringKind() const {
+    return StringRef(getTrailingObjects<char>(), KindSize);
+  }
+  StringRef getStringValue() const {
+    return StringRef(getTrailingObjects<char>() + KindSize + 1, ValSize);
+  }
+
+  static size_t totalSizeToAlloc(StringRef Kind, StringRef Val) {
+    return TrailingObjects::totalSizeToAlloc<char>(Kind.size() + 1 +
+                                                   Val.size() + 1);
+  }
 };
 
 class TypeAttributeImpl : public EnumAttributeImpl {
-  void anchor() override;
-
   Type *Ty;
 
 public:
@@ -265,8 +281,6 @@ public:
   AttributeListImpl(const AttributeListImpl &) = delete;
   AttributeListImpl &operator=(const AttributeListImpl &) = delete;
 
-  void operator delete(void *p) { ::operator delete(p); }
-
   /// Get the context that created this AttributeListImpl.
   LLVMContext &getContext() { return Context; }
 
@@ -286,6 +300,9 @@ public:
 
   void dump() const;
 };
+
+static_assert(std::is_trivially_destructible<AttributeListImpl>::value,
+              "AttributeListImpl should be trivially destructible");
 
 } // end namespace llvm
 
