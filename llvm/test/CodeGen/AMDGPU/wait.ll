@@ -9,7 +9,6 @@
 ; DEFAULT: s_load_dwordx4
 ; DEFAULT: s_waitcnt lgkmcnt(0)
 ; DEFAULT: buffer_load_format_xyzw
-; DEFAULT: s_waitcnt vmcnt(0)
 ; DEFAULT: buffer_load_format_xyzw
 ; DEFAULT: s_waitcnt vmcnt(0)
 ; DEFAULT: exp
