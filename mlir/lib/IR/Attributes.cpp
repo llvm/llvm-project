@@ -615,6 +615,8 @@ Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
     FloatElementIterator floatIt(floatEltTy.getFloatSemantics(), intIt);
     return FloatAttr::get(eltTy, *floatIt);
   }
+  if (owner.isa<DenseStringElementsAttr>())
+    return StringAttr::get(owner.getRawStringData()[index], eltTy);
   llvm_unreachable("unexpected element type");
 }
 
@@ -655,11 +657,23 @@ DenseElementsAttr::FloatElementIterator::FloatElementIterator(
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
-  assert(type.getElementType().isIntOrIndexOrFloat() &&
-         "expected int or index or float element type");
   assert(hasSameElementsOrSplat(type, values));
 
+  // If the element type is not based on int/float/index, assume it is a string
+  // type.
   auto eltType = type.getElementType();
+  if (!type.getElementType().isIntOrIndexOrFloat()) {
+    SmallVector<StringRef, 8> stringValues;
+    stringValues.reserve(values.size());
+    for (Attribute attr : values) {
+      assert(attr.isa<StringAttr>() &&
+             "expected string value for non integer/index/float element");
+      stringValues.push_back(attr.cast<StringAttr>().getValue());
+    }
+    return get(type, stringValues);
+  }
+
+  // Otherwise, get the raw storage width to use for the allocation.
   size_t bitWidth = getDenseElementBitWidth(eltType);
   size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
 

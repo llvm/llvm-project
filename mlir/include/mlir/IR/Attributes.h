@@ -703,7 +703,8 @@ public:
 
   /// Constructs a dense elements attribute from an array of element values.
   /// Each element attribute value is expected to be an element of 'type'.
-  /// 'type' must be a vector or tensor with static shape.
+  /// 'type' must be a vector or tensor with static shape. If the element of
+  /// `type` is non-integer/index/float it is assumed to be a string type.
   static DenseElementsAttr get(ShapedType type, ArrayRef<Attribute> values);
 
   /// Constructs a dense integer elements attribute from an array of integer
