@@ -1190,10 +1190,13 @@ void SBDebugger::RunCommandInterpreter(bool auto_handle_events,
     options.SetAutoHandleEvents(auto_handle_events);
     options.SetSpawnThread(spawn_thread);
     CommandInterpreter &interp = m_opaque_sp->GetCommandInterpreter();
-    interp.RunCommandInterpreter(options.ref());
-    num_errors = interp.GetNumErrors();
-    quit_requested = interp.GetQuitRequested();
-    stopped_for_crash = interp.GetStoppedForCrash();
+    CommandInterpreterRunResult result =
+        interp.RunCommandInterpreter(options.ref());
+    num_errors = result.GetNumErrors();
+    quit_requested =
+        result.IsResult(lldb::eCommandInterpreterResultQuitRequested);
+    stopped_for_crash =
+        result.IsResult(lldb::eCommandInterpreterResultInferiorCrash);
   }
 }
 
