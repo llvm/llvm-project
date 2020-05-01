@@ -1334,9 +1334,10 @@ dense-elements-attribute ::= `dense` `<` attribute-value `>` `:`
 ```
 
 A dense elements attribute is an elements attribute where the storage for the
-constant vector or tensor value has been packed to the element bitwidth. The
-element type of the vector or tensor constant must be of integer, index, or
-floating point type.
+constant vector or tensor value has been densely packed. The attribute supports
+storing integer or floating point elements, with integer/index/floating element
+types. It also support storing string elements with a custom dialect string
+element type.
 
 ##### Opaque Elements Attribute
 

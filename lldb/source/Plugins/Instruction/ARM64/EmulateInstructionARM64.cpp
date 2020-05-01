@@ -417,20 +417,12 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
   if (opcode_data == nullptr)
     return false;
 
-  // printf ("opcode template for 0x%8.8x: %s\n", opcode, opcode_data->name);
   const bool auto_advance_pc =
       evaluate_options & eEmulateInstructionOptionAutoAdvancePC;
   m_ignore_conditions =
       evaluate_options & eEmulateInstructionOptionIgnoreConditions;
 
   bool success = false;
-  //    if (m_opcode_cpsr == 0 || m_ignore_conditions == false)
-  //    {
-  //        m_opcode_cpsr = ReadRegisterUnsigned (eRegisterKindLLDB,
-  //                                              gpr_cpsr_arm64,
-  //                                              0,
-  //                                              &success);
-  //    }
 
   // Only return false if we are unable to read the CPSR if we care about
   // conditions
@@ -785,10 +777,6 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
 
   RegisterValue data_Rt;
   RegisterValue data_Rt2;
-
-  //    if (vector)
-  //        CheckFPEnabled(false);
-
   RegisterInfo reg_info_base;
   RegisterInfo reg_info_Rt;
   RegisterInfo reg_info_Rt2;
