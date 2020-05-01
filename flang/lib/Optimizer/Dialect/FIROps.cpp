@@ -611,8 +611,7 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
   bodyRegion->push_back(new Block{});
   bodyRegion->front().addArgument(builder.getIndexType());
   bodyRegion->front().addArgument(iterate.getType());
-  for (auto v : iterArgs)
-    bodyRegion->front().addArgument(v.getType());
+  bodyRegion->front().addArguments(iterArgs.getTypes());
   result.addAttributes(attributes);
 }
 
@@ -799,8 +798,7 @@ void fir::LoopOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
   if (iterArgs.empty())
     LoopOp::ensureTerminator(*bodyRegion, builder, result.location);
   bodyRegion->front().addArgument(builder.getIndexType());
-  for (auto v : iterArgs)
-    bodyRegion->front().addArgument(v.getType());
+  bodyRegion->front().addArguments(iterArgs.getTypes());
   if (unordered)
     result.addAttribute(unorderedAttrName(), builder.getUnitAttr());
   result.addAttributes(attributes);
