@@ -11073,7 +11073,7 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
           break;
         case Linear:
           Out << 'l';
-          if (!!ParamAttr.StrideOrArg)
+          if (ParamAttr.StrideOrArg != 1)
             Out << ParamAttr.StrideOrArg;
           break;
         case Uniform:
@@ -11213,7 +11213,7 @@ static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
       Out << 'l';
       // Don't print the step value if it is not present or if it is
       // equal to 1.
-      if (!!ParamAttr.StrideOrArg && ParamAttr.StrideOrArg != 1)
+      if (ParamAttr.StrideOrArg != 1)
         Out << ParamAttr.StrideOrArg;
       break;
     case Uniform:
@@ -11451,15 +11451,24 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       for (const Expr *E : Attr->linears()) {
         E = E->IgnoreParenImpCasts();
         unsigned Pos;
+        // Rescaling factor needed to compute the linear parameter
+        // value in the mangled name.
+        unsigned PtrRescalingFactor = 1;
         if (isa<CXXThisExpr>(E)) {
           Pos = ParamPositions[FD];
         } else {
           const auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
                                 ->getCanonicalDecl();
           Pos = ParamPositions[PVD];
+          if (auto *P = dyn_cast<PointerType>(PVD->getType()))
+            PtrRescalingFactor = CGM.getContext()
+                                     .getTypeSizeInChars(P->getPointeeType())
+                                     .getQuantity();
         }
         ParamAttrTy &ParamAttr = ParamAttrs[Pos];
         ParamAttr.Kind = Linear;
+        // Assuming a stride of 1, for `linear` without modifiers.
+        ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(1);
         if (*SI) {
           Expr::EvalResult Result;
           if (!(*SI)->EvaluateAsInt(Result, C, Expr::SE_AllowSideEffects)) {
@@ -11475,6 +11484,11 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
             ParamAttr.StrideOrArg = Result.Val.getInt();
           }
         }
+        // If we are using a linear clause on a pointer, we need to
+        // rescale the value of linear_step with the byte size of the
+        // pointee type.
+        if (Linear == ParamAttr.Kind)
+          ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
         ++MI;
       }
