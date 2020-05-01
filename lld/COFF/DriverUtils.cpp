@@ -861,19 +861,25 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 }
 
 // Tokenizes and parses a given string as command line in .drective section.
-// /EXPORT options are processed in fastpath.
 ParsedDirectives ArgParser::parseDirectives(StringRef s) {
   ParsedDirectives result;
   SmallVector<const char *, 16> rest;
 
-  for (StringRef tok : tokenize(s)) {
+  // Handle /EXPORT and /INCLUDE in a fast path. These directives can appear for
+  // potentially every symbol in the object, so they must be handled quickly.
+  SmallVector<StringRef, 16> tokens;
+  cl::TokenizeWindowsCommandLineNoCopy(s, saver, tokens);
+  for (StringRef tok : tokens) {
     if (tok.startswith_lower("/export:") || tok.startswith_lower("-export:"))
       result.exports.push_back(tok.substr(strlen("/export:")));
     else if (tok.startswith_lower("/include:") ||
              tok.startswith_lower("-include:"))
       result.includes.push_back(tok.substr(strlen("/include:")));
-    else
-      rest.push_back(tok.data());
+    else {
+      // Save non-null-terminated strings to make proper C strings.
+      bool HasNul = tok.data()[tok.size()] == '\0';
+      rest.push_back(HasNul ? tok.data() : saver.save(tok).data());
+    }
   }
 
   // Make InputArgList from unparsed string vectors.
