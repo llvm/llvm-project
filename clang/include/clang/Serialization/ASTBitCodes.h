@@ -686,6 +686,9 @@ namespace serialization {
 
       /// Record code for the Decls to be checked for deferred diags.
       DECLS_TO_CHECK_FOR_DEFERRED_DIAGS = 64,
+
+      /// Record code for \#pragma float_control options.
+      FLOAT_CONTROL_PRAGMA_OPTIONS = 65,
     };
 
     /// Record types used within a source manager block.
