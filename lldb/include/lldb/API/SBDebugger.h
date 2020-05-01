@@ -331,6 +331,9 @@ public:
                              int &num_errors, bool &quit_requested,
                              bool &stopped_for_crash);
 
+  SBCommandInterpreterRunResult
+  RunCommandInterpreter(const SBCommandInterpreterRunOptions &options);
+
   SBError RunREPL(lldb::LanguageType language, const char *repl_options);
 
 private:
