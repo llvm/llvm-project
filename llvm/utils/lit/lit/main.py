@@ -98,11 +98,8 @@ def main(builtin_params={}):
 
     print_results(discovered_tests, elapsed, opts)
 
-    if opts.output_path:
-        #TODO(yln): pass in discovered_tests
-        write_test_results(executed_tests, lit_config, elapsed, opts.output_path)
-    if opts.xunit_output_file:
-        write_test_results_xunit(executed_tests, opts)
+    for report in opts.reports:
+        report.write_results(executed_tests, elapsed)
 
     if lit_config.numErrors:
         sys.stderr.write('\n%d error(s) in tests\n' % lit_config.numErrors)
@@ -330,16 +327,3 @@ def print_summary(tests_by_code, quiet, elapsed):
         label = label.ljust(max_label_len)
         count = str(count).rjust(max_count_len)
         print('  %s: %s' % (label, count))
-
-
-def write_test_results(tests, lit_config, elapsed, output_path):
-    import lit.reports
-    r = lit.reports.JsonReport(output_path)
-    r.write_results(tests, elapsed)
-
-
-def write_test_results_xunit(tests, opts):
-    import lit.reports
-    r = lit.reports.XunitReport(opts.xunit_output_file)
-    r.write_results(tests, 0.0)
-
