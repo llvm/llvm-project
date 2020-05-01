@@ -4302,6 +4302,11 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (isa<UndefValue>(Idx))
     return UndefValue::get(Vec->getType());
 
+  // If the scalar is undef, and there is no risk of propagating poison from the
+  // vector value, simplify to the vector value.
+  if (isa<UndefValue>(Val) && isGuaranteedNotToBeUndefOrPoison(Vec))
+    return Vec;
+
   // If we are extracting a value from a vector, then inserting it into the same
   // place, that's the input vector:
   // insertelt Vec, (extractelt Vec, Idx), Idx --> Vec
