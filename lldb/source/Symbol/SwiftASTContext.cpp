@@ -4047,7 +4047,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
   };
 
   for (auto import : swift::namelookup::getAllImports(swift_module)) {
-    import.second->collectLinkLibraries(addLinkLibrary);
+    import.importedModule->collectLinkLibraries(addLinkLibrary);
   }
   error = current_error;
 }
@@ -8466,7 +8466,7 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
       sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 
   for (auto module_pair : parsed_imports) {
-    swift::ModuleDecl *module = module_pair.second;
+    swift::ModuleDecl *module = module_pair.importedModule;
     if (module) {
       std::string module_name;
       GetNameFromModule(module, module_name);
