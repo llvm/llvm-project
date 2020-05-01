@@ -348,9 +348,8 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook for creating a new block with the given arguments.
-  Block *createBlock(Region *parent, Region::iterator insertPt = {},
-                     TypeRange argTypes = llvm::None) override;
+  /// PatternRewriter hook creating a new block.
+  void notifyBlockCreated(Block *block) override;
 
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
@@ -373,7 +372,7 @@ public:
   using PatternRewriter::cloneRegionBefore;
 
   /// PatternRewriter hook for inserting a new operation.
-  Operation *insert(Operation *op) override;
+  void notifyOperationInserted(Operation *op) override;
 
   /// PatternRewriter hook for updating the root operation in-place.
   /// Note: These methods only track updates to the top-level operation itself,
