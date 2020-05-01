@@ -1525,18 +1525,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
 
-    setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
-    setOperationAction(ISD::TRUNCATE,           MVT::v16i16, Custom);
-    setOperationAction(ISD::TRUNCATE,           MVT::v32i8, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i16, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i32, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v8i64, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v32i16, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v16i32, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v8i64, Custom);
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i16, Custom);
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i32, Custom);
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i64, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v8i32,  Legal);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i16, Legal);
+    setOperationAction(ISD::TRUNCATE,    MVT::v32i8,  HasBWI ? Legal : Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v32i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v16i32, Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v8i64,  Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::v32i16, Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::v16i32, Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::v8i64,  Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v32i16, Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v16i32, Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v8i64,  Custom);
 
     if (HasBWI) {
       // Extends from v64i1 masks to 512-bit vectors.
