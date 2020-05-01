@@ -164,6 +164,28 @@ enum RegisterMapping {
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
 };
 
+// Enumerate different types of result-returning VMEM operations. Although
+// s_waitcnt orders them all with a single vmcnt counter, in the absence of
+// s_waitcnt only instructions of the same VmemType are guaranteed to write
+// their results in order -- so there is no need to insert an s_waitcnt between
+// two instructions of the same type that write the same vgpr.
+enum VmemType {
+  // BUF instructions and MIMG instructions without a sampler.
+  VMEM_NOSAMPLER,
+  // MIMG instructions with a sampler.
+  VMEM_SAMPLER,
+};
+
+VmemType getVmemType(const MachineInstr &Inst) {
+  assert(SIInstrInfo::isVMEM(Inst));
+  if (!SIInstrInfo::isMIMG(Inst))
+    return VMEM_NOSAMPLER;
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
+  return AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode)->Sampler
+             ? VMEM_SAMPLER
+             : VMEM_NOSAMPLER;
+}
+
 void addWait(AMDGPU::Waitcnt &Wait, InstCounterType T, unsigned Count) {
   switch (T) {
   case VM_CNT:
@@ -281,6 +303,18 @@ public:
     LastFlat[LGKM_CNT] = ScoreUBs[LGKM_CNT];
   }
 
+  // Return true if there might be pending writes to the specified vgpr by VMEM
+  // instructions with types different from V.
+  bool hasOtherPendingVmemTypes(int GprNo, VmemType V) const {
+    assert(GprNo < NUM_ALL_VGPRS);
+    return VgprVmemTypes[GprNo] & ~(1 << V);
+  }
+
+  void clearVgprVmemTypes(int GprNo) {
+    assert(GprNo < NUM_ALL_VGPRS);
+    VgprVmemTypes[GprNo] = 0;
+  }
+
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
 
@@ -337,6 +371,9 @@ private:
   unsigned VgprScores[NUM_INST_CNTS][NUM_ALL_VGPRS] = {{0}};
   // Wait cnt scores for every sgpr, only lgkmcnt is relevant.
   unsigned SgprScores[SQ_MAX_PGM_SGPRS] = {0};
+  // Bitmask of the VmemTypes of VMEM instructions that might have a pending
+  // write to each vgpr.
+  unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -617,8 +654,15 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       if (!Op.isReg() || !Op.isDef())
         continue;
       RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, I);
-      if (T == VM_CNT && Interval.first >= NUM_ALL_VGPRS)
-        continue;
+      if (T == VM_CNT) {
+        if (Interval.first >= NUM_ALL_VGPRS)
+          continue;
+        if (SIInstrInfo::isVMEM(Inst)) {
+          VmemType V = getVmemType(Inst);
+          for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
+            VgprVmemTypes[RegNo] |= 1 << V;
+        }
+      }
       for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
         setRegScore(RegNo, T, CurrScore);
       }
@@ -982,8 +1026,17 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (TRI->isVGPR(*MRI, Op.getReg())) {
-            ScoreBrackets.determineWait(
-                VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
+            // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
+            // previous write and this write are the same type of VMEM
+            // instruction, in which case they're guaranteed to write their
+            // results in order anyway.
+            if (Op.isUse() || !SIInstrInfo::isVMEM(MI) ||
+                ScoreBrackets.hasOtherPendingVmemTypes(RegNo,
+                                                       getVmemType(MI))) {
+              ScoreBrackets.determineWait(
+                  VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
+              ScoreBrackets.clearVgprVmemTypes(RegNo);
+            }
             if (Op.isDef()) {
               ScoreBrackets.determineWait(
                   EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
@@ -1294,6 +1347,14 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     bool RegStrictDom = false;
     for (int J = 0; J <= VgprUB; J++) {
       RegStrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
+    }
+
+    if (T == VM_CNT) {
+      for (int J = 0; J <= VgprUB; J++) {
+        unsigned char NewVmemTypes = VgprVmemTypes[J] | Other.VgprVmemTypes[J];
+        RegStrictDom |= NewVmemTypes != VgprVmemTypes[J];
+        VgprVmemTypes[J] = NewVmemTypes;
+      }
     }
 
     if (T == LGKM_CNT) {
