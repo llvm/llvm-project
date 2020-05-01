@@ -231,9 +231,12 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   // If we're emitting codeview, it's important to try to match MSVC's naming so
   // that visualizers written for MSVC will trigger for our class names. In
   // particular, we can't have spaces between arguments of standard templates
-  // like basic_string and vector.
-  if (CGM.getCodeGenOpts().EmitCodeView)
+  // like basic_string and vector, but we must have spaces between consecutive
+  // angle brackets that close nested template argument lists.
+  if (CGM.getCodeGenOpts().EmitCodeView) {
     PP.MSVCFormatting = true;
+    PP.SplitTemplateClosers = true;
+  }
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
