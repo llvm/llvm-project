@@ -94,7 +94,7 @@ def main(builtin_params={}):
         t for t in selected_tests if t.result.code != lit.Test.SKIPPED]
 
     if opts.time_tests:
-        print_histogram(executed_tests)
+        print_histogram(discovered_tests)
 
     print_results(discovered_tests, elapsed, opts)
 
@@ -257,8 +257,10 @@ def execute_in_tmp_dir(run, lit_config):
 
 
 def print_histogram(tests):
-    test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
-    lit.util.printHistogram(test_times, title='Tests')
+    test_times = [(t.getFullName(), t.result.elapsed)
+                  for t in tests if t.result.elapsed]
+    if test_times:
+        lit.util.printHistogram(test_times, title='Tests')
 
 
 def add_result_category(result_code, label):
