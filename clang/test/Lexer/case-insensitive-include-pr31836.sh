@@ -1,5 +1,4 @@
 // REQUIRES: case-insensitive-filesystem
-// UNSUPPORTED: system-windows
 
 // RUN: mkdir -p %t
 // RUN: touch %t/case-insensitive-include-pr31836.h

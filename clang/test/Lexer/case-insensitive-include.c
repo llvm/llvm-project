@@ -16,11 +16,11 @@
 #include "Case-Insensitive-Include.h" // expected-warning {{non-portable path}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:38}:"\"case-insensitive-include.h\""
 
-#include "../Output/./case-insensitive-include.h"
-#include "../Output/./Case-Insensitive-Include.h" // expected-warning {{non-portable path}}
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:50}:"\"../Output/./case-insensitive-include.h\""
-#include "../output/./case-insensitive-include.h" // expected-warning {{non-portable path}}
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:50}:"\"../Output/./case-insensitive-include.h\""
+#include "../Output/.//case-insensitive-include.h"
+#include "../Output/.//Case-Insensitive-Include.h" // expected-warning {{non-portable path}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:51}:"\"../Output/.//case-insensitive-include.h\""
+#include "../output/.//case-insensitive-include.h" // expected-warning {{non-portable path}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:10-[[@LINE-1]]:51}:"\"../Output/.//case-insensitive-include.h\""
 
 #include "apath/.././case-insensitive-include.h"
 #include "apath/.././Case-Insensitive-Include.h" // expected-warning {{non-portable path}}

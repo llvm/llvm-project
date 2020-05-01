@@ -1915,14 +1915,18 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SourceLocation FilenameLoc = FilenameTok.getLocation();
   StringRef LookupFilename = Filename;
 
-#ifndef _WIN32
+#ifdef _WIN32
+  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::windows;
+#else
   // Normalize slashes when compiling with -fms-extensions on non-Windows. This
   // is unnecessary on Windows since the filesystem there handles backslashes.
   SmallString<128> NormalizedPath;
+  llvm::sys::path::Style BackslashStyle = llvm::sys::path::Style::posix;
   if (LangOpts.MicrosoftExt) {
     NormalizedPath = Filename.str();
     llvm::sys::path::native(NormalizedPath);
     LookupFilename = NormalizedPath;
+    BackslashStyle = llvm::sys::path::Style::windows;
   }
 #endif
 
@@ -2105,21 +2109,44 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       SmallString<128> Path;
       Path.reserve(Name.size()+2);
       Path.push_back(isAngled ? '<' : '"');
-      bool isLeadingSeparator = llvm::sys::path::is_absolute(Name);
+
+      const auto IsSep = [BackslashStyle](char c) {
+        return llvm::sys::path::is_separator(c, BackslashStyle);
+      };
+
       for (auto Component : Components) {
-        if (isLeadingSeparator)
-          isLeadingSeparator = false;
-        else
+        // On POSIX, Components will contain a single '/' as first element
+        // exactly if Name is an absolute path.
+        // On Windows, it will contain "C:" followed by '\' for absolute paths.
+        // The drive letter is optional for absolute paths on Windows, but
+        // clang currently cannot process absolute paths in #include lines that
+        // don't have a drive.
+        // If the first entry in Components is a directory separator,
+        // then the code at the bottom of this loop that keeps the original
+        // directory separator style copies it. If the second entry is
+        // a directory separator (the C:\ case), then that separator already
+        // got copied when the C: was processed and we want to skip that entry.
+        if (!(Component.size() == 1 && IsSep(Component[0])))
           Path.append(Component);
-        // Append the separator the user used, or the close quote
-        Path.push_back(
-          Path.size() <= Filename.size() ? Filename[Path.size()-1] :
-            (isAngled ? '>' : '"'));
+        else if (!Path.empty())
+          continue;
+
+        // Append the separator(s) the user used, or the close quote
+        if (Path.size() > Filename.size()) {
+          Path.push_back(isAngled ? '>' : '"');
+          continue;
+        }
+        assert(IsSep(Filename[Path.size()-1]));
+        do
+          Path.push_back(Filename[Path.size()-1]);
+        while (Path.size() <= Filename.size() && IsSep(Filename[Path.size()-1]));
       }
-      // For user files and known standard headers, by default we issue a diagnostic.
-      // For other system headers, we don't. They can be controlled separately.
-      auto DiagId = (FileCharacter == SrcMgr::C_User || warnByDefaultOnWrongCase(Name)) ?
-          diag::pp_nonportable_path : diag::pp_nonportable_system_path;
+      // For user files and known standard headers, issue a diagnostic.
+      // For other system headers, don't. They can be controlled separately.
+      auto DiagId =
+          (FileCharacter == SrcMgr::C_User || warnByDefaultOnWrongCase(Name))
+              ? diag::pp_nonportable_path
+              : diag::pp_nonportable_system_path;
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(FilenameRange, Path);
     }
