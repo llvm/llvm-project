@@ -2254,25 +2254,26 @@ Error BinaryWriter::finalize() {
   OrderedSegments.erase(End, std::end(OrderedSegments));
 
   // Compute the section LMA based on its sh_offset and the containing segment's
-  // p_offset and p_paddr. Also compute the minimum LMA of all sections as
-  // MinAddr. In the output, the contents between address 0 and MinAddr will be
-  // skipped.
+  // p_offset and p_paddr. Also compute the minimum LMA of all non-empty
+  // sections as MinAddr. In the output, the contents between address 0 and
+  // MinAddr will be skipped.
   uint64_t MinAddr = UINT64_MAX;
   for (SectionBase &Sec : Obj.allocSections()) {
     if (Sec.ParentSegment != nullptr)
       Sec.Addr =
           Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
-    MinAddr = std::min(MinAddr, Sec.Addr);
+    if (Sec.Size > 0)
+      MinAddr = std::min(MinAddr, Sec.Addr);
   }
 
   // Now that every section has been laid out we just need to compute the total
   // file size. This might not be the same as the offset returned by
   // layoutSections, because we want to truncate the last segment to the end of
-  // its last section, to match GNU objcopy's behaviour.
+  // its last non-empty section, to match GNU objcopy's behaviour.
   TotalSize = 0;
   for (SectionBase &Sec : Obj.allocSections()) {
     Sec.Offset = Sec.Addr - MinAddr;
-    if (Sec.Type != SHT_NOBITS)
+    if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
       TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
   }
 
