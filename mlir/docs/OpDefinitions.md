@@ -348,13 +348,14 @@ class. See [Constraints](#constraints) for more information.
 
 ### Operation interfaces
 
-[Operation interfaces](Interfaces.md#operation-interfaces) are a mechanism by
-which to opaquely call methods and access information on an *Op instance*,
-without knowing the exact operation type. Operation interfaces defined in C++
-can be accessed in the ODS framework via the `OpInterfaceTrait` class. Aside
-from using pre-existing interfaces in the C++ API, the ODS framework also
-provides a simplified mechanism for defining such interfaces; that removes much
-of the boilerplate necessary.
+[Operation interfaces](Interfaces.md#operation-interfaces) allow
+operations to expose method calls without the
+caller needing to know the exact operation type. Operation interfaces
+defined in C++ can be accessed in the ODS framework via the
+`OpInterfaceTrait` class. Aside from using pre-existing interfaces in
+the C++ API, the ODS framework also provides a simplified mechanism
+for defining such interfaces which removes much of the boilerplate
+necessary.
 
 Providing a definition of the `OpInterface` class will auto-generate the C++
 classes for the interface. An `OpInterface` includes a name, for the C++ class,
