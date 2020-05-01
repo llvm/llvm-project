@@ -76,7 +76,7 @@ struct TrieNode {
 
   // Returns whether the new estimated offset differs from the old one.
   bool updateOffset(size_t &nextOffset);
-  void writeTo(uint8_t *buf);
+  void writeTo(uint8_t *buf) const;
 };
 
 bool TrieNode::updateOffset(size_t &nextOffset) {
@@ -108,7 +108,7 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
   return result;
 }
 
-void TrieNode::writeTo(uint8_t *buf) {
+void TrieNode::writeTo(uint8_t *buf) const {
   buf += offset;
   if (info) {
     // TrieNodes with Symbol info: size, flags address
@@ -227,7 +227,7 @@ size_t TrieBuilder::build() {
   return offset;
 }
 
-void TrieBuilder::writeTo(uint8_t *buf) {
+void TrieBuilder::writeTo(uint8_t *buf) const {
   for (TrieNode *node : nodes)
     node->writeTo(buf);
 }

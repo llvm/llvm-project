@@ -9,6 +9,7 @@
 #include "Driver.h"
 #include "Config.h"
 #include "InputFiles.h"
+#include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"

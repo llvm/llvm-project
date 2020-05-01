@@ -22,8 +22,10 @@ using namespace lld::macho;
 std::vector<InputSection *> macho::inputSections;
 
 uint64_t InputSection::getFileOffset() const {
-  return parent->fileOff + addr - parent->firstSection()->addr;
+  return parent->fileOff + outSecFileOff;
 }
+
+uint64_t InputSection::getVA() const { return parent->addr + outSecOff; }
 
 void InputSection::writeTo(uint8_t *buf) {
   if (!data.empty())
@@ -38,14 +40,14 @@ void InputSection::writeTo(uint8_t *buf) {
         va = s->getVA();
       }
     } else if (auto *isec = r.target.dyn_cast<InputSection *>()) {
-      va = isec->addr;
+      va = isec->getVA();
     } else {
       llvm_unreachable("Unknown relocation target");
     }
 
     uint64_t val = va + r.addend;
     if (1) // TODO: handle non-pcrel relocations
-      val -= addr + r.offset;
+      val -= getVA() + r.offset;
     target->relocateOne(buf + r.offset, r.type, val);
   }
 }

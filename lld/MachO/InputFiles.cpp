@@ -43,7 +43,7 @@
 
 #include "InputFiles.h"
 #include "InputSection.h"
-#include "OutputSegment.h"
+#include "OutputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
