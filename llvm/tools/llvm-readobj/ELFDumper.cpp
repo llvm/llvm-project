@@ -882,10 +882,6 @@ private:
   std::string getSymbolSectionNdx(const ELFO *Obj, const Elf_Sym *Symbol,
                                   const Elf_Sym *FirstSym);
   void printDynamicRelocation(const ELFO *Obj, Elf_Rela R, bool IsRela);
-  bool checkTLSSections(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
-  bool checkoffsets(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
-  bool checkVMA(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
-  bool checkPTDynamic(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
   void printProgramHeaders(const ELFO *Obj);
   void printSectionMapping(const ELFO *Obj);
   void printGNUVersionSectionProlog(const ELFFile<ELFT> *Obj,
@@ -4022,63 +4018,76 @@ static inline std::string printPhdrFlags(unsigned Flag) {
   return Str;
 }
 
-// SHF_TLS sections are only in PT_TLS, PT_LOAD or PT_GNU_RELRO
-// PT_TLS must only have SHF_TLS sections
 template <class ELFT>
-bool GNUStyle<ELFT>::checkTLSSections(const Elf_Phdr &Phdr,
-                                      const Elf_Shdr &Sec) {
-  return (((Sec.sh_flags & ELF::SHF_TLS) &&
-           ((Phdr.p_type == ELF::PT_TLS) || (Phdr.p_type == ELF::PT_LOAD) ||
-            (Phdr.p_type == ELF::PT_GNU_RELRO))) ||
-          (!(Sec.sh_flags & ELF::SHF_TLS) && Phdr.p_type != ELF::PT_TLS));
+static bool checkTLSSections(const typename ELFT::Phdr &Phdr,
+                             const typename ELFT::Shdr &Sec) {
+  if (Sec.sh_flags & ELF::SHF_TLS) {
+    // .tbss must only be shown in the PT_TLS segment.
+    if (Sec.sh_type == ELF::SHT_NOBITS)
+      return Phdr.p_type == ELF::PT_TLS;
+
+    // SHF_TLS sections are only shown in PT_TLS, PT_LOAD or PT_GNU_RELRO
+    // segments.
+    return (Phdr.p_type == ELF::PT_TLS) || (Phdr.p_type == ELF::PT_LOAD) ||
+           (Phdr.p_type == ELF::PT_GNU_RELRO);
+  }
+
+  // PT_TLS must only have SHF_TLS sections.
+  return Phdr.p_type != ELF::PT_TLS;
 }
 
-// Non-SHT_NOBITS must have its offset inside the segment
-// Only non-zero section can be at end of segment
 template <class ELFT>
-bool GNUStyle<ELFT>::checkoffsets(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
+static bool checkOffsets(const typename ELFT::Phdr &Phdr,
+                         const typename ELFT::Shdr &Sec) {
+  // SHT_NOBITS sections don't need to have an offset inside the segment.
   if (Sec.sh_type == ELF::SHT_NOBITS)
     return true;
-  bool IsSpecial =
-      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
-  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties
-  auto SectionSize =
-      (IsSpecial && Phdr.p_type != ELF::PT_TLS) ? 0 : Sec.sh_size;
-  if (Sec.sh_offset >= Phdr.p_offset)
-    return ((Sec.sh_offset + SectionSize <= Phdr.p_filesz + Phdr.p_offset)
-            /*only non-zero sized sections at end*/
-            && (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz));
-  return false;
+
+  if (Sec.sh_offset < Phdr.p_offset)
+    return false;
+
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0)
+    return (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz);
+  return Sec.sh_offset + Sec.sh_size <= Phdr.p_offset + Phdr.p_filesz;
 }
 
-// SHF_ALLOC must have VMA inside segment
-// Only non-zero section can be at end of segment
+// Check that an allocatable section belongs to a virtual address
+// space of a segment.
 template <class ELFT>
-bool GNUStyle<ELFT>::checkVMA(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
+static bool checkVMA(const typename ELFT::Phdr &Phdr,
+                     const typename ELFT::Shdr &Sec) {
   if (!(Sec.sh_flags & ELF::SHF_ALLOC))
     return true;
-  bool IsSpecial =
+
+  if (Sec.sh_addr < Phdr.p_vaddr)
+    return false;
+
+  bool IsTbss =
       (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
-  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties
-  auto SectionSize =
-      (IsSpecial && Phdr.p_type != ELF::PT_TLS) ? 0 : Sec.sh_size;
-  if (Sec.sh_addr >= Phdr.p_vaddr)
-    return ((Sec.sh_addr + SectionSize <= Phdr.p_vaddr + Phdr.p_memsz) &&
-            (Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz));
-  return false;
+  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties.
+  bool IsTbssInNonTLS = IsTbss && Phdr.p_type != ELF::PT_TLS;
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0 || IsTbssInNonTLS)
+    return Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz;
+  return Sec.sh_addr + Sec.sh_size <= Phdr.p_vaddr + Phdr.p_memsz;
 }
 
-// No section with zero size must be at start or end of PT_DYNAMIC
 template <class ELFT>
-bool GNUStyle<ELFT>::checkPTDynamic(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
-  if (Phdr.p_type != ELF::PT_DYNAMIC || Sec.sh_size != 0 || Phdr.p_memsz == 0)
+static bool checkPTDynamic(const typename ELFT::Phdr &Phdr,
+                           const typename ELFT::Shdr &Sec) {
+  if (Phdr.p_type != ELF::PT_DYNAMIC || Phdr.p_memsz == 0 || Sec.sh_size != 0)
     return true;
-  // Is section within the phdr both based on offset and VMA ?
-  return ((Sec.sh_type == ELF::SHT_NOBITS) ||
-          (Sec.sh_offset > Phdr.p_offset &&
-           Sec.sh_offset < Phdr.p_offset + Phdr.p_filesz)) &&
-         (!(Sec.sh_flags & ELF::SHF_ALLOC) ||
-          (Sec.sh_addr > Phdr.p_vaddr && Sec.sh_addr < Phdr.p_memsz));
+
+  // We get here when we have an empty section. Only non-empty sections can be
+  // at the start or at the end of PT_DYNAMIC.
+  // Is section within the phdr both based on offset and VMA?
+  bool CheckOffset = (Sec.sh_type == ELF::SHT_NOBITS) ||
+                     (Sec.sh_offset > Phdr.p_offset &&
+                      Sec.sh_offset < Phdr.p_offset + Phdr.p_filesz);
+  bool CheckVA = !(Sec.sh_flags & ELF::SHF_ALLOC) ||
+                 (Sec.sh_addr > Phdr.p_vaddr && Sec.sh_addr < Phdr.p_memsz);
+  return CheckOffset && CheckVA;
 }
 
 template <class ELFT>
@@ -4167,17 +4176,16 @@ void GNUStyle<ELFT>::printSectionMapping(const ELFO *Obj) {
        unwrapOrError(this->FileName, Obj->program_headers())) {
     std::string Sections;
     OS << format("   %2.2d     ", Phnum++);
+    // Check if each section is in a segment and then print mapping.
     for (const Elf_Shdr &Sec : unwrapOrError(this->FileName, Obj->sections())) {
-      // Check if each section is in a segment and then print mapping.
+      if (Sec.sh_type == ELF::SHT_NULL)
+        continue;
+
       // readelf additionally makes sure it does not print zero sized sections
       // at end of segments and for PT_DYNAMIC both start and end of section
       // .tbss must only be shown in PT_TLS section.
-      bool TbssInNonTLS = (Sec.sh_type == ELF::SHT_NOBITS) &&
-                          ((Sec.sh_flags & ELF::SHF_TLS) != 0) &&
-                          Phdr.p_type != ELF::PT_TLS;
-      if (!TbssInNonTLS && checkTLSSections(Phdr, Sec) &&
-          checkoffsets(Phdr, Sec) && checkVMA(Phdr, Sec) &&
-          checkPTDynamic(Phdr, Sec) && (Sec.sh_type != ELF::SHT_NULL)) {
+      if (checkTLSSections<ELFT>(Phdr, Sec) && checkOffsets<ELFT>(Phdr, Sec) &&
+          checkVMA<ELFT>(Phdr, Sec) && checkPTDynamic<ELFT>(Phdr, Sec)) {
         Sections +=
             unwrapOrError(this->FileName, Obj->getSectionName(&Sec)).str() +
             " ";
