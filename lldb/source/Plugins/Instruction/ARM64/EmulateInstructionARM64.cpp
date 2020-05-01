@@ -785,10 +785,6 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
 
   RegisterValue data_Rt;
   RegisterValue data_Rt2;
-
-  //    if (vector)
-  //        CheckFPEnabled(false);
-
   RegisterInfo reg_info_base;
   RegisterInfo reg_info_Rt;
   RegisterInfo reg_info_Rt2;
