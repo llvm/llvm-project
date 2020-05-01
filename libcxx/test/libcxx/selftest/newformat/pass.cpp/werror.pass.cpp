@@ -17,6 +17,9 @@
 // TODO: We don't enable -Werror on GCC right now, because too many tests fail.
 // UNSUPPORTED: gcc
 
+// TODO(ldionne): We don't enable -Werror in C++03 right now
+// UNSUPPORTED: c++98, c++03
+
 int main() {
     int foo;
 }
