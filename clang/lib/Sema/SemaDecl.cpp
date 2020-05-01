@@ -7100,6 +7100,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   case CSK_constexpr:
     NewVD->setConstexpr(true);
+    MaybeAddCUDAConstantAttr(NewVD);
     // C++1z [dcl.spec.constexpr]p1:
     //   A static data member declared with the constexpr specifier is
     //   implicitly an inline variable.

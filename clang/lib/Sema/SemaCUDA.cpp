@@ -513,9 +513,14 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
     // constructor according to CUDA rules. This deviates from NVCC,
     // but allows us to handle things like constexpr constructors.
     if (!AllowedInit &&
-        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()))
-      AllowedInit = VD->getInit()->isConstantInitializer(
-          Context, VD->getType()->isReferenceType());
+        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>())) {
+      auto *Init = VD->getInit();
+      AllowedInit =
+          ((VD->getType()->isDependentType() || Init->isValueDependent()) &&
+           VD->isConstexpr()) ||
+          Init->isConstantInitializer(Context,
+                                      VD->getType()->isReferenceType());
+    }
 
     // Also make sure that destructor, if there is one, is empty.
     if (AllowedInit)
@@ -610,6 +615,13 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
 
   NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
   NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+}
+
+void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
+  if (getLangOpts().CUDAIsDevice && VD->isConstexpr() &&
+      (VD->isFileVarDecl() || VD->isStaticDataMember())) {
+    VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
+  }
 }
 
 Sema::DeviceDiagBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
