@@ -93,8 +93,8 @@ class ScopedDisableMemoryTagChecks {
   }
 };
 
-inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
-                         uptr *TaggedEnd) {
+inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
+                         uptr *TaggedBegin, uptr *TaggedEnd) {
   void *End;
   __asm__ __volatile__(
       R"(
@@ -102,7 +102,7 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
 
     // Set a random tag for Ptr in TaggedPtr. This needs to happen even if
     // Size = 0 so that TaggedPtr ends up pointing at a valid address.
-    irg %[TaggedPtr], %[Ptr]
+    irg %[TaggedPtr], %[Ptr], %[ExcludeMask]
     mov %[Cur], %[TaggedPtr]
 
     // Skip the loop if Size = 0. We don't want to do any tagging in this case.
@@ -120,9 +120,9 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
 
   2:
   )"
-      : [ TaggedPtr ] "=&r"(*TaggedBegin), [ Cur ] "=&r"(*TaggedEnd),
-        [ End ] "=&r"(End)
-      : [ Ptr ] "r"(Ptr), [ Size ] "r"(Size)
+      :
+      [TaggedPtr] "=&r"(*TaggedBegin), [Cur] "=&r"(*TaggedEnd), [End] "=&r"(End)
+      : [Ptr] "r"(Ptr), [Size] "r"(Size), [ExcludeMask] "r"(ExcludeMask)
       : "memory");
 }
 
@@ -138,7 +138,7 @@ inline void *prepareTaggedChunk(void *Ptr, uptr Size, uptr BlockEnd) {
                        : "memory");
 
   uptr TaggedBegin, TaggedEnd;
-  setRandomTag(Ptr, Size, &TaggedBegin, &TaggedEnd);
+  setRandomTag(Ptr, Size, 0, &TaggedBegin, &TaggedEnd);
 
   // Finally, set the tag of the granule past the end of the allocation to 0,
   // to catch linear overflows even if a previous larger allocation used the
@@ -225,10 +225,11 @@ struct ScopedDisableMemoryTagChecks {
   ScopedDisableMemoryTagChecks() {}
 };
 
-inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
-                         uptr *TaggedEnd) {
+inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
+                         uptr *TaggedBegin, uptr *TaggedEnd) {
   (void)Ptr;
   (void)Size;
+  (void)ExcludeMask;
   (void)TaggedBegin;
   (void)TaggedEnd;
   UNREACHABLE("memory tagging not supported");
