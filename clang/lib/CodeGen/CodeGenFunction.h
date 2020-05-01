@@ -4575,11 +4575,6 @@ inline llvm::Value *DominatingLLVMValue::restore(CodeGenFunction &CGF,
 }
 
 }  // end namespace CodeGen
-
-// Map the LangOption for floating point exception behavior into
-// the corresponding enum in the IR.
-llvm::fp::ExceptionBehavior
-ToConstrainedExceptMD(LangOptions::FPExceptionModeKind Kind);
 }  // end namespace clang
 
 #endif

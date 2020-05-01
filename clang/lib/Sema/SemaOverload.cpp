@@ -13001,9 +13001,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
   if (Input->isTypeDependent()) {
     if (Fns.empty())
-      return UnaryOperator::Create(Context, Input, Opc, Context.DependentTy,
-                                   VK_RValue, OK_Ordinary, OpLoc, false,
-                                   CurFPFeatures);
+      return new (Context) UnaryOperator(Input, Opc, Context.DependentTy,
+                                         VK_RValue, OK_Ordinary, OpLoc, false);
 
     CXXRecordDecl *NamingClass = nullptr; // lookup ignores member operators
     UnresolvedLookupExpr *Fn = UnresolvedLookupExpr::Create(
@@ -14803,9 +14802,9 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         if (Context.getTargetInfo().getCXXABI().isMicrosoft())
           (void)isCompleteType(UnOp->getOperatorLoc(), MemPtrType);
 
-        return UnaryOperator::Create(
-            Context, SubExpr, UO_AddrOf, MemPtrType, VK_RValue, OK_Ordinary,
-            UnOp->getOperatorLoc(), false, CurFPFeatures);
+        return new (Context) UnaryOperator(SubExpr, UO_AddrOf, MemPtrType,
+                                           VK_RValue, OK_Ordinary,
+                                           UnOp->getOperatorLoc(), false);
       }
     }
     Expr *SubExpr = FixOverloadedFunctionReference(UnOp->getSubExpr(),
@@ -14813,9 +14812,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     if (SubExpr == UnOp->getSubExpr())
       return UnOp;
 
-    return UnaryOperator::Create(
-        Context, SubExpr, UO_AddrOf, Context.getPointerType(SubExpr->getType()),
-        VK_RValue, OK_Ordinary, UnOp->getOperatorLoc(), false, CurFPFeatures);
+    return new (Context) UnaryOperator(SubExpr, UO_AddrOf,
+                                     Context.getPointerType(SubExpr->getType()),
+                                       VK_RValue, OK_Ordinary,
+                                       UnOp->getOperatorLoc(), false);
   }
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {

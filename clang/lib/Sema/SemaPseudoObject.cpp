@@ -127,10 +127,12 @@ namespace {
       if (UnaryOperator *uop = dyn_cast<UnaryOperator>(e)) {
         assert(uop->getOpcode() == UO_Extension);
         e = rebuild(uop->getSubExpr());
-        return UnaryOperator::Create(
-            S.Context, e, uop->getOpcode(), uop->getType(), uop->getValueKind(),
-            uop->getObjectKind(), uop->getOperatorLoc(), uop->canOverflow(),
-            S.CurFPFeatures);
+        return new (S.Context) UnaryOperator(e, uop->getOpcode(),
+                                             uop->getType(),
+                                             uop->getValueKind(),
+                                             uop->getObjectKind(),
+                                             uop->getOperatorLoc(),
+                                             uop->canOverflow());
       }
 
       if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
@@ -524,14 +526,12 @@ PseudoOpBuilder::buildIncDecOperation(Scope *Sc, SourceLocation opcLoc,
       (result.get()->isTypeDependent() || CanCaptureValue(result.get())))
     setResultToLastSemantic();
 
-  UnaryOperator *syntactic =
-      UnaryOperator::Create(S.Context, syntacticOp, opcode, resultType,
-                            VK_LValue, OK_Ordinary, opcLoc,
-                            !resultType->isDependentType()
-                                ? S.Context.getTypeSize(resultType) >=
-                                      S.Context.getTypeSize(S.Context.IntTy)
-                                : false,
-                            S.CurFPFeatures);
+  UnaryOperator *syntactic = new (S.Context) UnaryOperator(
+      syntacticOp, opcode, resultType, VK_LValue, OK_Ordinary, opcLoc,
+      !resultType->isDependentType()
+          ? S.Context.getTypeSize(resultType) >=
+                S.Context.getTypeSize(S.Context.IntTy)
+          : false);
   return complete(syntactic);
 }
 
@@ -1551,9 +1551,8 @@ ExprResult Sema::checkPseudoObjectIncDec(Scope *Sc, SourceLocation opcLoc,
                                          UnaryOperatorKind opcode, Expr *op) {
   // Do nothing if the operand is dependent.
   if (op->isTypeDependent())
-    return UnaryOperator::Create(Context, op, opcode, Context.DependentTy,
-                                 VK_RValue, OK_Ordinary, opcLoc, false,
-                                 CurFPFeatures);
+    return new (Context) UnaryOperator(op, opcode, Context.DependentTy,
+                                       VK_RValue, OK_Ordinary, opcLoc, false);
 
   assert(UnaryOperator::isIncrementDecrementOp(opcode));
   Expr *opaqueRef = op->IgnoreParens();
@@ -1637,10 +1636,9 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
   Expr *syntax = E->getSyntacticForm();
   if (UnaryOperator *uop = dyn_cast<UnaryOperator>(syntax)) {
     Expr *op = stripOpaqueValuesFromPseudoObjectRef(*this, uop->getSubExpr());
-    return UnaryOperator::Create(Context, op, uop->getOpcode(), uop->getType(),
-                                 uop->getValueKind(), uop->getObjectKind(),
-                                 uop->getOperatorLoc(), uop->canOverflow(),
-                                 CurFPFeatures);
+    return new (Context) UnaryOperator(
+        op, uop->getOpcode(), uop->getType(), uop->getValueKind(),
+        uop->getObjectKind(), uop->getOperatorLoc(), uop->canOverflow());
   } else if (CompoundAssignOperator *cop
                = dyn_cast<CompoundAssignOperator>(syntax)) {
     Expr *lhs = stripOpaqueValuesFromPseudoObjectRef(*this, cop->getLHS());
