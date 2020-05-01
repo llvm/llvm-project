@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,10 +24,16 @@
 using namespace clang;
 using namespace ento;
 
+//===----------------------------------------------------------------------===//
+//                           RangeSet implementation
+//===----------------------------------------------------------------------===//
+
 void RangeSet::IntersectInRange(BasicValueFactory &BV, Factory &F,
-                      const llvm::APSInt &Lower, const llvm::APSInt &Upper,
-                      PrimRangeSet &newRanges, PrimRangeSet::iterator &i,
-                      PrimRangeSet::iterator &e) const {
+                                const llvm::APSInt &Lower,
+                                const llvm::APSInt &Upper,
+                                PrimRangeSet &newRanges,
+                                PrimRangeSet::iterator &i,
+                                PrimRangeSet::iterator &e) const {
   // There are six cases for each range R in the set:
   //   1. R is entirely before the intersection range.
   //   2. R is entirely after the intersection range.
@@ -66,6 +73,11 @@ const llvm::APSInt &RangeSet::getMinValue() const {
 }
 
 bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
+  if (isEmpty()) {
+    // This range is already infeasible.
+    return false;
+  }
+
   // This function has nine cases, the cartesian product of range-testing
   // both the upper and lower bounds against the symbol's type.
   // Each case requires a different pinning operation.
@@ -283,6 +295,207 @@ void RangeSet::print(raw_ostream &os) const {
 }
 
 namespace {
+
+/// A little component aggregating all of the reasoning we have about
+/// the ranges of symbolic expressions.
+///
+/// Even when we don't know the exact values of the operands, we still
+/// can get a pretty good estimate of the result's range.
+class SymbolicRangeInferrer
+    : public SymExprVisitor<SymbolicRangeInferrer, RangeSet> {
+public:
+  static RangeSet inferRange(BasicValueFactory &BV, RangeSet::Factory &F,
+                             ProgramStateRef State, SymbolRef Sym) {
+    SymbolicRangeInferrer Inferrer(BV, F, State);
+    return Inferrer.infer(Sym);
+  }
+
+  RangeSet VisitSymExpr(SymbolRef Sym) {
+    // If we got to this function, the actual type of the symbolic
+    // expression is not supported for advanced inference.
+    // In this case, we simply backoff to the default "let's simply
+    // infer the range from the expression's type".
+    return infer(Sym->getType());
+  }
+
+  RangeSet VisitSymIntExpr(const SymIntExpr *Sym) {
+    return VisitBinaryOperator(Sym);
+  }
+
+  RangeSet VisitIntSymExpr(const IntSymExpr *Sym) {
+    return VisitBinaryOperator(Sym);
+  }
+
+  RangeSet VisitSymSymExpr(const SymSymExpr *Sym) {
+    return VisitBinaryOperator(Sym);
+  }
+
+private:
+  SymbolicRangeInferrer(BasicValueFactory &BV, RangeSet::Factory &F,
+                        ProgramStateRef S)
+      : ValueFactory(BV), RangeFactory(F), State(S) {}
+
+  /// Infer range information from the given integer constant.
+  ///
+  /// It's not a real "inference", but is here for operating with
+  /// sub-expressions in a more polymorphic manner.
+  RangeSet inferAs(const llvm::APSInt &Val, QualType) {
+    return {RangeFactory, Val};
+  }
+
+  /// Infer range information from symbol in the context of the given type.
+  RangeSet inferAs(SymbolRef Sym, QualType DestType) {
+    QualType ActualType = Sym->getType();
+    // Check that we can reason about the symbol at all.
+    if (ActualType->isIntegralOrEnumerationType() ||
+        Loc::isLocType(ActualType)) {
+      return infer(Sym);
+    }
+    // Otherwise, let's simply infer from the destination type.
+    // We couldn't figure out nothing else about that expression.
+    return infer(DestType);
+  }
+
+  RangeSet infer(SymbolRef Sym) {
+    const RangeSet *AssociatedRange = State->get<ConstraintRange>(Sym);
+
+    // If Sym is a difference of symbols A - B, then maybe we have range set
+    // stored for B - A.
+    const RangeSet *RangeAssociatedWithNegatedSym =
+        getRangeForMinusSymbol(State, Sym);
+
+    // If we have range set stored for both A - B and B - A then calculate the
+    // effective range set by intersecting the range set for A - B and the
+    // negated range set of B - A.
+    if (AssociatedRange && RangeAssociatedWithNegatedSym)
+      return AssociatedRange->Intersect(
+          ValueFactory, RangeFactory,
+          RangeAssociatedWithNegatedSym->Negate(ValueFactory, RangeFactory));
+
+    if (AssociatedRange)
+      return *AssociatedRange;
+
+    if (RangeAssociatedWithNegatedSym)
+      return RangeAssociatedWithNegatedSym->Negate(ValueFactory, RangeFactory);
+
+    return Visit(Sym);
+  }
+
+  /// Infer range information solely from the type.
+  RangeSet infer(QualType T) {
+    // Lazily generate a new RangeSet representing all possible values for the
+    // given symbol type.
+    RangeSet Result(RangeFactory, ValueFactory.getMinValue(T),
+                    ValueFactory.getMaxValue(T));
+
+    // References are known to be non-zero.
+    if (T->isReferenceType())
+      return assumeNonZero(Result, T);
+
+    return Result;
+  }
+
+  template <class BinarySymExprTy>
+  RangeSet VisitBinaryOperator(const BinarySymExprTy *Sym) {
+    // TODO #1: VisitBinaryOperator implementation might not make a good
+    // use of the inferred ranges.  In this case, we might be calculating
+    // everything for nothing.  This being said, we should introduce some
+    // sort of laziness mechanism here.
+    //
+    // TODO #2: We didn't go into the nested expressions before, so it
+    // might cause us spending much more time doing the inference.
+    // This can be a problem for deeply nested expressions that are
+    // involved in conditions and get tested continuously.  We definitely
+    // need to address this issue and introduce some sort of caching
+    // in here.
+    QualType ResultType = Sym->getType();
+    return VisitBinaryOperator(inferAs(Sym->getLHS(), ResultType),
+                               Sym->getOpcode(),
+                               inferAs(Sym->getRHS(), ResultType), ResultType);
+  }
+
+  RangeSet VisitBinaryOperator(RangeSet LHS, BinaryOperator::Opcode Op,
+                               RangeSet RHS, QualType T) {
+    switch (Op) {
+    case BO_Or:
+      return VisitOrOperator(LHS, RHS, T);
+    case BO_And:
+      return VisitAndOperator(LHS, RHS, T);
+    default:
+      return infer(T);
+    }
+  }
+
+  RangeSet VisitOrOperator(RangeSet LHS, RangeSet RHS, QualType T) {
+    // TODO: generalize for the ranged RHS.
+    if (const llvm::APSInt *RHSConstant = RHS.getConcreteValue()) {
+      // For unsigned types, the output is greater-or-equal than RHS.
+      if (T->isUnsignedIntegerType()) {
+        return LHS.Intersect(ValueFactory, RangeFactory, *RHSConstant,
+                             ValueFactory.getMaxValue(T));
+      }
+
+      // Bitwise-or with a non-zero constant is always non-zero.
+      const llvm::APSInt &Zero = ValueFactory.getAPSIntType(T).getZeroValue();
+      if (*RHSConstant != Zero) {
+        return assumeNonZero(LHS, T);
+      }
+    }
+    return infer(T);
+  }
+
+  RangeSet VisitAndOperator(RangeSet LHS, RangeSet RHS, QualType T) {
+    // TODO: generalize for the ranged RHS.
+    if (const llvm::APSInt *RHSConstant = RHS.getConcreteValue()) {
+      const llvm::APSInt &Zero = ValueFactory.getAPSIntType(T).getZeroValue();
+
+      // For unsigned types, or positive RHS,
+      // bitwise-and output is always smaller-or-equal than RHS (assuming two's
+      // complement representation of signed types).
+      if (T->isUnsignedIntegerType() || *RHSConstant >= Zero) {
+        return LHS.Intersect(ValueFactory, RangeFactory,
+                             ValueFactory.getMinValue(T), *RHSConstant);
+      }
+    }
+    return infer(T);
+  }
+
+  /// Return a range set subtracting zero from \p Domain.
+  RangeSet assumeNonZero(RangeSet Domain, QualType T) {
+    APSIntType IntType = ValueFactory.getAPSIntType(T);
+    return Domain.Intersect(ValueFactory, RangeFactory,
+                            ++IntType.getZeroValue(), --IntType.getZeroValue());
+  }
+
+  // FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
+  //        obtain the negated symbolic expression instead of constructing the
+  //        symbol manually. This will allow us to support finding ranges of not
+  //        only negated SymSymExpr-type expressions, but also of other, simpler
+  //        expressions which we currently do not know how to negate.
+  const RangeSet *getRangeForMinusSymbol(ProgramStateRef State, SymbolRef Sym) {
+    if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(Sym)) {
+      if (SSE->getOpcode() == BO_Sub) {
+        QualType T = Sym->getType();
+        SymbolManager &SymMgr = State->getSymbolManager();
+        SymbolRef negSym =
+            SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), T);
+
+        if (const RangeSet *negV = State->get<ConstraintRange>(negSym)) {
+          // Unsigned range set cannot be negated, unless it is [0, 0].
+          if (T->isUnsignedIntegerOrEnumerationType() ||
+              T->isSignedIntegerOrEnumerationType())
+            return negV;
+        }
+      }
+    }
+    return nullptr;
+  }
+
+  BasicValueFactory &ValueFactory;
+  RangeSet::Factory &RangeFactory;
+  ProgramStateRef State;
+};
+
 class RangeConstraintManager : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
@@ -350,8 +563,7 @@ private:
   RangeSet::Factory F;
 
   RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
-  const RangeSet* getRangeForMinusSymbol(ProgramStateRef State,
-                                         SymbolRef Sym);
+  const RangeSet *getRangeForMinusSymbol(ProgramStateRef State, SymbolRef Sym);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
@@ -368,7 +580,6 @@ private:
   RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
                          const llvm::APSInt &Adjustment);
-
 };
 
 } // end anonymous namespace
@@ -475,87 +686,9 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   return Changed ? State->set<ConstraintRange>(CR) : State;
 }
 
-/// Return a range set subtracting zero from \p Domain.
-static RangeSet assumeNonZero(
-    BasicValueFactory &BV,
-    RangeSet::Factory &F,
-    SymbolRef Sym,
-    RangeSet Domain) {
-  APSIntType IntType = BV.getAPSIntType(Sym->getType());
-  return Domain.Intersect(BV, F, ++IntType.getZeroValue(),
-      --IntType.getZeroValue());
-}
-
-/// Apply implicit constraints for bitwise OR- and AND-.
-/// For unsigned types, bitwise OR with a constant always returns
-/// a value greater-or-equal than the constant, and bitwise AND
-/// returns a value less-or-equal then the constant.
-///
-/// Pattern matches the expression \p Sym against those rule,
-/// and applies the required constraints.
-/// \p Input Previously established expression range set
-static RangeSet applyBitwiseConstraints(
-    BasicValueFactory &BV,
-    RangeSet::Factory &F,
-    RangeSet Input,
-    const SymIntExpr* SIE) {
-  QualType T = SIE->getType();
-  bool IsUnsigned = T->isUnsignedIntegerType();
-  const llvm::APSInt &RHS = SIE->getRHS();
-  const llvm::APSInt &Zero = BV.getAPSIntType(T).getZeroValue();
-  BinaryOperator::Opcode Operator = SIE->getOpcode();
-
-  // For unsigned types, the output of bitwise-or is bigger-or-equal than RHS.
-  if (Operator == BO_Or && IsUnsigned)
-    return Input.Intersect(BV, F, RHS, BV.getMaxValue(T));
-
-  // Bitwise-or with a non-zero constant is always non-zero.
-  if (Operator == BO_Or && RHS != Zero)
-    return assumeNonZero(BV, F, SIE, Input);
-
-  // For unsigned types, or positive RHS,
-  // bitwise-and output is always smaller-or-equal than RHS (assuming two's
-  // complement representation of signed types).
-  if (Operator == BO_And && (IsUnsigned || RHS >= Zero))
-    return Input.Intersect(BV, F, BV.getMinValue(T), RHS);
-
-  return Input;
-}
-
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
                                           SymbolRef Sym) {
-  ConstraintRangeTy::data_type *V = State->get<ConstraintRange>(Sym);
-
-  // If Sym is a difference of symbols A - B, then maybe we have range set
-  // stored for B - A.
-  BasicValueFactory &BV = getBasicVals();
-  const RangeSet *R = getRangeForMinusSymbol(State, Sym);
-
-  // If we have range set stored for both A - B and B - A then calculate the
-  // effective range set by intersecting the range set for A - B and the
-  // negated range set of B - A.
-  if (V && R)
-    return V->Intersect(BV, F, R->Negate(BV, F));
-  if (V)
-    return *V;
-  if (R)
-    return R->Negate(BV, F);
-
-  // Lazily generate a new RangeSet representing all possible values for the
-  // given symbol type.
-  QualType T = Sym->getType();
-
-  RangeSet Result(F, BV.getMinValue(T), BV.getMaxValue(T));
-
-  // References are known to be non-zero.
-  if (T->isReferenceType())
-    return assumeNonZero(BV, F, Sym, Result);
-
-  // Known constraints on ranges of bitwise expressions.
-  if (const SymIntExpr* SIE = dyn_cast<SymIntExpr>(Sym))
-    return applyBitwiseConstraints(BV, F, Result, SIE);
-
-  return Result;
+  return SymbolicRangeInferrer::inferRange(getBasicVals(), F, State, Sym);
 }
 
 // FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
