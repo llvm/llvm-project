@@ -590,28 +590,16 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, i6
 ; XOP-LABEL: bitselect_v4i64_broadcast_rrm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vbroadcastsd (%rdi), %ymm2
-; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm3
-; XOP-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; XOP-NEXT:    vandnps %ymm1, %ymm3, %ymm1
-; XOP-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
-; AVX1-LABEL: bitselect_v4i64_broadcast_rrm:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm3
-; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm1, %ymm3, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: bitselect_v4i64_broadcast_rrm:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm2
-; AVX2-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: bitselect_v4i64_broadcast_rrm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastsd (%rdi), %ymm2
+; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    vandnps %ymm1, %ymm2, %ymm1
+; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v4i64_broadcast_rrm:
 ; AVX512F:       # %bb.0:
@@ -986,37 +974,20 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrm(<8 x i64> %a0, <8 x i64> %a1, i6
 ; XOP-LABEL: bitselect_v8i64_broadcast_rrm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vbroadcastsd (%rdi), %ymm4
-; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm5
-; XOP-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; XOP-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; XOP-NEXT:    vandnps %ymm3, %ymm5, %ymm3
-; XOP-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; XOP-NEXT:    vandnps %ymm2, %ymm5, %ymm2
-; XOP-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm3, %ymm1, %ymm1
 ; XOP-NEXT:    retq
 ;
-; AVX1-LABEL: bitselect_v8i64_broadcast_rrm:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm4
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm5
-; AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm3, %ymm5, %ymm3
-; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vandnps %ymm2, %ymm5, %ymm2
-; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: bitselect_v8i64_broadcast_rrm:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm4
-; AVX2-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; AVX2-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vandnps %ymm3, %ymm4, %ymm3
-; AVX2-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vandnps %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: bitselect_v8i64_broadcast_rrm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastsd (%rdi), %ymm4
+; AVX-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; AVX-NEXT:    vandps %ymm4, %ymm0, %ymm0
+; AVX-NEXT:    vandnps %ymm3, %ymm4, %ymm3
+; AVX-NEXT:    vorps %ymm3, %ymm1, %ymm1
+; AVX-NEXT:    vandnps %ymm2, %ymm4, %ymm2
+; AVX-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: bitselect_v8i64_broadcast_rrm:
 ; AVX512:       # %bb.0:

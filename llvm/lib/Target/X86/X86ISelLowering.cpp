@@ -5728,13 +5728,21 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
 
     // TODO - Handle more general insert_subvector chains.
     if (VT.getSizeInBits() == (SubVT.getSizeInBits() * 2) &&
-        Idx == (VT.getVectorNumElements() / 2) &&
-        Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        Src.getOperand(1).getValueType() == SubVT &&
-        isNullConstant(Src.getOperand(2))) {
-      Ops.push_back(Src.getOperand(1));
-      Ops.push_back(Sub);
-      return true;
+        Idx == (VT.getVectorNumElements() / 2)) {
+      // insert_subvector(insert_subvector(undef, x, lo), y, hi)
+      if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Src.getOperand(1).getValueType() == SubVT &&
+          isNullConstant(Src.getOperand(2))) {
+        Ops.push_back(Src.getOperand(1));
+        Ops.push_back(Sub);
+        return true;
+      }
+      // insert_subvector(x, extract_subvector(x, lo), hi)
+      if (Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          Sub.getOperand(0) == Src && isNullConstant(Sub.getOperand(1))) {
+        Ops.append(2, Sub);
+        return true;
+      }
     }
   }
 
@@ -46679,6 +46687,15 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
          (EltSizeInBits >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
+
+    // concat_vectors(extract_subvector(broadcast(x)),
+    //                extract_subvector(broadcast(x))) -> broadcast(x)
+    if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op0.getOperand(0).getValueType() == VT) {
+      if (Op0.getOperand(0).getOpcode() == X86ISD::VBROADCAST ||
+          Op0.getOperand(0).getOpcode() == X86ISD::VBROADCAST_LOAD)
+        return Op0.getOperand(0);
+    }
   }
 
   // Repeated opcode.
