@@ -146,10 +146,9 @@ DeclRefExpr *ASTMaker::makeDeclRefExpr(
 }
 
 UnaryOperator *ASTMaker::makeDereference(const Expr *Arg, QualType Ty) {
-  return UnaryOperator::Create(C, const_cast<Expr *>(Arg), UO_Deref, Ty,
+  return new (C) UnaryOperator(const_cast<Expr*>(Arg), UO_Deref, Ty,
                                VK_LValue, OK_Ordinary, SourceLocation(),
-                               /*CanOverflow*/ false,
-                               FPOptions(C.getLangOpts()));
+                              /*CanOverflow*/ false);
 }
 
 ImplicitCastExpr *ASTMaker::makeLvalueToRvalue(const Expr *Arg, QualType Ty) {
@@ -448,16 +447,15 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   QualType DerefType = Deref->getType();
 
   // Negation predicate.
-  UnaryOperator *FlagCheck = UnaryOperator::Create(
-      C,
+  UnaryOperator *FlagCheck = new (C) UnaryOperator(
       /* input=*/
       M.makeImplicitCast(M.makeLvalueToRvalue(Deref, DerefType), DerefType,
                          CK_IntegralToBoolean),
-      /* opc=*/UO_LNot,
-      /* QualType=*/C.IntTy,
-      /* ExprValueKind=*/VK_RValue,
-      /* ExprObjectKind=*/OK_Ordinary, SourceLocation(),
-      /* CanOverflow*/ false, FPOptions(C.getLangOpts()));
+      /* opc=*/ UO_LNot,
+      /* QualType=*/ C.IntTy,
+      /* ExprValueKind=*/ VK_RValue,
+      /* ExprObjectKind=*/ OK_Ordinary, SourceLocation(),
+      /* CanOverflow*/ false);
 
   // Create assignment.
   BinaryOperator *FlagAssignment = M.makeAssignment(
@@ -520,9 +518,9 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
 
   // (2) Create the assignment to the predicate.
   Expr *DoneValue =
-      UnaryOperator::Create(C, M.makeIntegerLiteral(0, C.LongTy), UO_Not,
-                            C.LongTy, VK_RValue, OK_Ordinary, SourceLocation(),
-                            /*CanOverflow*/ false, FPOptions(C.getLangOpts()));
+      new (C) UnaryOperator(M.makeIntegerLiteral(0, C.LongTy), UO_Not, C.LongTy,
+                            VK_RValue, OK_Ordinary, SourceLocation(),
+                            /*CanOverflow*/false);
 
   BinaryOperator *B =
     M.makeAssignment(

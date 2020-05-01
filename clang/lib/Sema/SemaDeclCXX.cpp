@@ -13455,13 +13455,13 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   // directly construct UnaryOperators here because semantic analysis
   // does not permit us to take the address of an xvalue.
   Expr *From = FromB.build(S, Loc);
-  From = UnaryOperator::Create(
-      S.Context, From, UO_AddrOf, S.Context.getPointerType(From->getType()),
-      VK_RValue, OK_Ordinary, Loc, false, S.CurFPFeatures);
+  From = new (S.Context) UnaryOperator(From, UO_AddrOf,
+                         S.Context.getPointerType(From->getType()),
+                         VK_RValue, OK_Ordinary, Loc, false);
   Expr *To = ToB.build(S, Loc);
-  To = UnaryOperator::Create(S.Context, To, UO_AddrOf,
-                             S.Context.getPointerType(To->getType()), VK_RValue,
-                             OK_Ordinary, Loc, false, S.CurFPFeatures);
+  To = new (S.Context) UnaryOperator(To, UO_AddrOf,
+                       S.Context.getPointerType(To->getType()),
+                       VK_RValue, OK_Ordinary, Loc, false);
 
   const Type *E = T->getBaseElementTypeUnsafe();
   bool NeedsCollectableMemCpy =
@@ -13703,9 +13703,9 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
   // Create the pre-increment of the iteration variable. We can determine
   // whether the increment will overflow based on the value of the array
   // bound.
-  Expr *Increment = UnaryOperator::Create(
-      S.Context, IterationVarRef.build(S, Loc), UO_PreInc, SizeType, VK_LValue,
-      OK_Ordinary, Loc, Upper.isMaxValue(), S.CurFPFeatures);
+  Expr *Increment = new (S.Context)
+      UnaryOperator(IterationVarRef.build(S, Loc), UO_PreInc, SizeType,
+                    VK_LValue, OK_Ordinary, Loc, Upper.isMaxValue());
 
   // Construct the loop that copies all elements of this array.
   return S.ActOnForStmt(
