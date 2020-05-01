@@ -38,7 +38,7 @@ public:
   lldb::CommandInterpreterResult GetResult() const { return m_result; }
 
   bool IsResult(lldb::CommandInterpreterResult result) {
-    return m_result = result;
+    return m_result == result;
   }
 
 protected:
