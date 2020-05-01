@@ -10,7 +10,7 @@
 // IR modules. We will do this in seven steps:
 //
 // 1. Create an LLJIT instance.
-// 2. Install a transform so that we is being compiled.
+// 2. Install a transform so that we can see what is being compiled.
 // 3. Create an indirect stubs manager and lazy call-through manager.
 // 4. Add two modules that will be conditionally compiled, plus a main module.
 // 5. Add lazy-rexports of the symbols in the conditionally compiled modules.
