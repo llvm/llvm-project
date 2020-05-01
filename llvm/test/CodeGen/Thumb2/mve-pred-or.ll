@@ -124,12 +124,10 @@ define arm_aapcs_vfpcc <4 x i32> @cmpulez_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpulez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcmp.u32 cs, q1, zr
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
@@ -247,12 +245,10 @@ define arm_aapcs_vfpcc <4 x i32> @cmpult_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i
 ; CHECK-LABEL: cmpult_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcmp.u32 hi, q2, q1
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
@@ -266,12 +262,10 @@ define arm_aapcs_vfpcc <4 x i32> @cmpugt_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i
 ; CHECK-LABEL: cmpugt_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcmp.u32 hi, q1, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
@@ -285,12 +279,10 @@ define arm_aapcs_vfpcc <4 x i32> @cmpule_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i
 ; CHECK-LABEL: cmpule_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcmp.u32 cs, q2, q1
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
@@ -304,12 +296,10 @@ define arm_aapcs_vfpcc <4 x i32> @cmpuge_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i
 ; CHECK-LABEL: cmpuge_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcmp.u32 cs, q1, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.i32 ne, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
