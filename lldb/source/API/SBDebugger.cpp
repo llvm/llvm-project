@@ -1200,6 +1200,22 @@ void SBDebugger::RunCommandInterpreter(bool auto_handle_events,
   }
 }
 
+SBCommandInterpreterRunResult SBDebugger::RunCommandInterpreter(
+    const SBCommandInterpreterRunOptions &options) {
+  LLDB_RECORD_METHOD(lldb::SBCommandInterpreterRunResult, SBDebugger,
+                     RunCommandInterpreter,
+                     (const lldb::SBCommandInterpreterRunOptions &), options);
+
+  if (!m_opaque_sp)
+    return LLDB_RECORD_RESULT(SBCommandInterpreterRunResult());
+
+  CommandInterpreter &interp = m_opaque_sp->GetCommandInterpreter();
+  CommandInterpreterRunResult result =
+      interp.RunCommandInterpreter(options.ref());
+
+  return LLDB_RECORD_RESULT(SBCommandInterpreterRunResult(result));
+}
+
 SBError SBDebugger::RunREPL(lldb::LanguageType language,
                             const char *repl_options) {
   LLDB_RECORD_METHOD(lldb::SBError, SBDebugger, RunREPL,
@@ -1826,6 +1842,9 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
                        (lldb::SBTypeNameSpecifier));
   LLDB_REGISTER_METHOD(bool, SBDebugger, EnableLog,
                        (const char *, const char **));
+  LLDB_REGISTER_METHOD(lldb::SBCommandInterpreterRunResult, SBDebugger,
+                       RunCommandInterpreter,
+                       (const lldb::SBCommandInterpreterRunOptions &));
 }
 
 } // namespace repro

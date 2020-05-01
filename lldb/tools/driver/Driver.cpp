@@ -588,10 +588,7 @@ int Driver::MainLoop() {
   const char *commands_data = commands_stream.GetData();
   const size_t commands_size = commands_stream.GetSize();
 
-  // The command file might have requested that we quit, this variable will
-  // track that.
-  bool quit_requested = false;
-  bool stopped_for_crash = false;
+  bool go_interactive = true;
   if ((commands_data != nullptr) && (commands_size != 0u)) {
     FILE *commands_file =
         PrepareCommandsForSourcing(commands_data, commands_size);
@@ -603,23 +600,27 @@ int Driver::MainLoop() {
 
     m_debugger.SetInputFileHandle(commands_file, true);
 
-    // Set the debugger into Sync mode when running the command file.
-    // Otherwise command files
-    // that run the target won't run in a sensible way.
+    // Set the debugger into Sync mode when running the command file. Otherwise
+    // command files that run the target won't run in a sensible way.
     bool old_async = m_debugger.GetAsync();
     m_debugger.SetAsync(false);
-    int num_errors = 0;
 
     SBCommandInterpreterRunOptions options;
+    options.SetAutoHandleEvents(true);
+    options.SetSpawnThread(false);
     options.SetStopOnError(true);
-    if (m_option_data.m_batch)
-      options.SetStopOnCrash(true);
+    options.SetStopOnCrash(m_option_data.m_batch);
 
-    m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
-                                     num_errors, quit_requested,
-                                     stopped_for_crash);
+    SBCommandInterpreterRunResult results =
+        m_debugger.RunCommandInterpreter(options);
+    if (results.GetResult() == lldb::eCommandInterpreterResultQuitRequested)
+      go_interactive = false;
+    if (m_option_data.m_batch &&
+        results.GetResult() != lldb::eCommandInterpreterResultInferiorCrash)
+      go_interactive = false;
 
-    if (m_option_data.m_batch && stopped_for_crash &&
+    if (m_option_data.m_batch &&
+        results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
@@ -629,30 +630,20 @@ int Driver::MainLoop() {
       commands_file =
           PrepareCommandsForSourcing(crash_commands_data, crash_commands_size);
       if (commands_file != nullptr) {
-        bool local_quit_requested;
-        bool local_stopped_for_crash;
         m_debugger.SetInputFileHandle(commands_file, true);
-
-        m_debugger.RunCommandInterpreter(handle_events, spawn_thread, options,
-                                         num_errors, local_quit_requested,
-                                         local_stopped_for_crash);
-        if (local_quit_requested)
-          quit_requested = true;
+        SBCommandInterpreterRunResult local_results =
+            m_debugger.RunCommandInterpreter(options);
+        if (local_results.GetResult() ==
+            lldb::eCommandInterpreterResultQuitRequested)
+          go_interactive = false;
       }
     }
     m_debugger.SetAsync(old_async);
   }
 
-  // Now set the input file handle to STDIN and run the command
-  // interpreter again in interactive mode or repl mode and let the debugger
-  // take ownership of stdin
-
-  bool go_interactive = true;
-  if (quit_requested)
-    go_interactive = false;
-  else if (m_option_data.m_batch && !stopped_for_crash)
-    go_interactive = false;
-
+  // Now set the input file handle to STDIN and run the command interpreter
+  // again in interactive mode or repl mode and let the debugger take ownership
+  // of stdin.
   if (go_interactive) {
     m_debugger.SetInputFileHandle(stdin, true);
 
