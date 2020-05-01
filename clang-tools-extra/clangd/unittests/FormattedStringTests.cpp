@@ -112,8 +112,10 @@ TEST(Render, Escaping) {
 
   // But we have to escape the backticks.
   P = Paragraph();
-  P.appendCode("foo`bar`baz");
+  P.appendCode("foo`bar`baz", /*Preserve=*/true);
   EXPECT_EQ(P.asMarkdown(), "`foo``bar``baz`");
+  // In plain-text, we fall back to different quotes.
+  EXPECT_EQ(P.asPlainText(), "'foo`bar`baz'");
 
   // Inline code blocks starting or ending with backticks should add spaces.
   P = Paragraph();
@@ -147,6 +149,17 @@ TEST(Render, Escaping) {
   EXPECT_EQ(D.asMarkdown(), "`````cpp\n"
                             "foobarbaz ` `` ``` ```` `\nqux\n"
                             "`````");
+}
+
+TEST(Paragraph, Chunks) {
+  Paragraph P = Paragraph();
+  P.appendText("One ");
+  P.appendCode("fish");
+  P.appendText(", two");
+  P.appendCode("fish", /*Preserve=*/true);
+
+  EXPECT_EQ(P.asMarkdown(), "One `fish` , two `fish`");
+  EXPECT_EQ(P.asPlainText(), "One fish , two `fish`");
 }
 
 TEST(Paragraph, SeparationOfChunks) {
@@ -238,6 +251,17 @@ TEST(Document, Ruler) {
   D.addParagraph().appendText("foo");
   EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nfoo");
   EXPECT_EQ(D.asPlainText(), "foo\n\nfoo");
+}
+
+TEST(Document, Append) {
+  Document D;
+  D.addParagraph().appendText("foo");
+  D.addRuler();
+  Document E;
+  E.addRuler();
+  E.addParagraph().appendText("bar");
+  D.append(std::move(E));
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nbar");
 }
 
 TEST(Document, Heading) {

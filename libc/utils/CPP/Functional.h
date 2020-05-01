@@ -12,14 +12,14 @@
 namespace __llvm_libc {
 namespace cpp {
 
-template <typename Func> class function;
+template <typename Func> class Function;
 
-template <typename Ret, typename... Params> class function<Ret(Params...)> {
+template <typename Ret, typename... Params> class Function<Ret(Params...)> {
   Ret (*func)(Params...) = nullptr;
 
 public:
-  constexpr function() = default;
-  template <typename Func> constexpr function(Func &&f) : func(f) {}
+  constexpr Function() = default;
+  template <typename Func> constexpr Function(Func &&f) : func(f) {}
 
   constexpr Ret operator()(Params... params) { return func(params...); }
 };

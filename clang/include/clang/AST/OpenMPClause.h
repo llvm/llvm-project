@@ -7127,6 +7127,131 @@ public:
   }
 };
 
+/// This represents clause 'uses_allocators' in the '#pragma omp target'-based
+/// directives.
+///
+/// \code
+/// #pragma omp target uses_allocators(default_allocator, my_allocator(traits))
+/// \endcode
+/// In this example directive '#pragma omp target' has clause 'uses_allocators'
+/// with the allocators 'default_allocator' and user-defined 'my_allocator'.
+class OMPUsesAllocatorsClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPUsesAllocatorsClause, Expr *,
+                                    SourceLocation> {
+public:
+  /// Data for list of allocators.
+  struct Data {
+    /// Allocator.
+    Expr *Allocator = nullptr;
+    /// Allocator traits.
+    Expr *AllocatorTraits = nullptr;
+    /// Locations of '(' and ')' symbols.
+    SourceLocation LParenLoc, RParenLoc;
+  };
+
+private:
+  friend class OMPClauseReader;
+  friend TrailingObjects;
+
+  enum class ExprOffsets {
+    Allocator,
+    AllocatorTraits,
+    Total,
+  };
+
+  enum class ParenLocsOffsets {
+    LParen,
+    RParen,
+    Total,
+  };
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+  /// Total number of allocators in the clause.
+  unsigned NumOfAllocators = 0;
+
+  /// Build clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of allocators asssociated with the clause.
+  OMPUsesAllocatorsClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                          SourceLocation EndLoc, unsigned N)
+      : OMPClause(llvm::omp::OMPC_uses_allocators, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), NumOfAllocators(N) {}
+
+  /// Build an empty clause.
+  /// \param N Number of allocators asssociated with the clause.
+  ///
+  explicit OMPUsesAllocatorsClause(unsigned N)
+      : OMPClause(llvm::omp::OMPC_uses_allocators, SourceLocation(),
+                  SourceLocation()),
+        NumOfAllocators(N) {}
+
+  unsigned numTrailingObjects(OverloadToken<Expr *>) const {
+    return NumOfAllocators * static_cast<int>(ExprOffsets::Total);
+  }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Sets the allocators data for the clause.
+  void setAllocatorsData(ArrayRef<OMPUsesAllocatorsClause::Data> Data);
+
+public:
+  /// Creates clause with a list of allocators \p Data.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Data List of allocators.
+  static OMPUsesAllocatorsClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<OMPUsesAllocatorsClause::Data> Data);
+
+  /// Creates an empty clause with the place for \p N allocators.
+  ///
+  /// \param C AST context.
+  /// \param N The number of allocators.
+  static OMPUsesAllocatorsClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns number of allocators associated with the clause.
+  unsigned getNumberOfAllocators() const { return NumOfAllocators; }
+
+  /// Returns data for the specified allocator.
+  OMPUsesAllocatorsClause::Data getAllocatorData(unsigned I) const;
+
+  // Iterators
+  child_range children() {
+    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    return child_range(Begin, Begin + NumOfAllocators *
+                                          static_cast<int>(ExprOffsets::Total));
+  }
+  const_child_range children() const {
+    Stmt *const *Begin =
+        reinterpret_cast<Stmt *const *>(getTrailingObjects<Expr *>());
+    return const_child_range(
+        Begin, Begin + NumOfAllocators * static_cast<int>(ExprOffsets::Total));
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_uses_allocators;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>

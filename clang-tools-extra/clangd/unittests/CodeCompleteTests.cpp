@@ -1665,8 +1665,8 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertText, "Foo::x");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
   EXPECT_EQ(R.filterText, "x");
-  EXPECT_EQ(R.detail, "int\n\"foo.h\"");
-  EXPECT_EQ(R.documentation->value, "This is x()");
+  EXPECT_EQ(R.detail, "int");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
@@ -1688,7 +1688,8 @@ TEST(CompletionTest, Render) {
 
   C.BundleSize = 2;
   R = C.render(Opts);
-  EXPECT_EQ(R.detail, "[2 overloads]\n\"foo.h\"");
+  EXPECT_EQ(R.detail, "[2 overloads]");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
 
   C.Deprecated = true;
   R = C.render(Opts);
@@ -1696,7 +1697,7 @@ TEST(CompletionTest, Render) {
 
   Opts.DocumentationFormat = MarkupKind::Markdown;
   R = C.render(Opts);
-  EXPECT_EQ(R.documentation->value, "This is `x()`");
+  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`  \nThis is `x()`");
 }
 
 TEST(CompletionTest, IgnoreRecoveryResults) {

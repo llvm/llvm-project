@@ -292,8 +292,9 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
     return 0;
   }
 
-  // If no input files, silently do nothing to match lib.exe.
-  if (!Args.hasArgNoClaim(OPT_INPUT))
+  // If no input files and not told otherwise, silently do nothing to match
+  // lib.exe
+  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArg(OPT_llvmlibempty))
     return 0;
 
   if (Args.hasArg(OPT_lst)) {

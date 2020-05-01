@@ -925,7 +925,9 @@ public:
     Type eltType = vectorType ? vectorType.getElementType() : printType;
     int64_t rank = vectorType ? vectorType.getRank() : 0;
     Operation *printer;
-    if (eltType.isSignlessInteger(32))
+    if (eltType.isSignlessInteger(1))
+      printer = getPrintI1(op);
+    else if (eltType.isSignlessInteger(32))
       printer = getPrintI32(op);
     else if (eltType.isSignlessInteger(64))
       printer = getPrintI64(op);
@@ -992,6 +994,11 @@ private:
   }
 
   // Helpers for method names.
+  Operation *getPrintI1(Operation *op) const {
+    LLVM::LLVMDialect *dialect = typeConverter.getDialect();
+    return getPrint(op, dialect, "print_i1",
+                    LLVM::LLVMType::getInt1Ty(dialect));
+  }
   Operation *getPrintI32(Operation *op) const {
     LLVM::LLVMDialect *dialect = typeConverter.getDialect();
     return getPrint(op, dialect, "print_i32",

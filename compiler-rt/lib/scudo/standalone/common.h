@@ -182,6 +182,15 @@ struct BlockInfo {
   uptr RegionEnd;
 };
 
+constexpr unsigned char PatternFillByte = 0xAB;
+
+enum FillContentsMode {
+  NoFill = 0,
+  ZeroFill = 1,
+  PatternOrZeroFill = 2 // Pattern fill unless the memory is known to be
+                        // zero-initialized already.
+};
+
 } // namespace scudo
 
 #endif // SCUDO_COMMON_H_

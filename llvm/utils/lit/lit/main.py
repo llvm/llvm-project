@@ -57,9 +57,11 @@ def main(builtin_params={}):
                         opts.maxIndividualTestTime))
             lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
 
-    filtered_tests = [t for t in discovered_tests if
+    determine_order(discovered_tests, opts.order)
+
+    selected_tests = [t for t in discovered_tests if
                       opts.filter.search(t.getFullName())]
-    if not filtered_tests:
+    if not selected_tests:
         sys.stderr.write('error: filter did not match any tests '
                          '(of %d discovered).  ' % len(discovered_tests))
         if opts.allow_empty_runs:
@@ -71,32 +73,30 @@ def main(builtin_params={}):
                              'error.\n')
             sys.exit(2)
 
-    determine_order(filtered_tests, opts.order)
-
     if opts.shard:
         (run, shards) = opts.shard
-        filtered_tests = filter_by_shard(filtered_tests, run, shards, lit_config)
-        if not filtered_tests:
+        selected_tests = filter_by_shard(selected_tests, run, shards, lit_config)
+        if not selected_tests:
             sys.stderr.write('warning: shard does not contain any tests.  '
                              'Consider decreasing the number of shards.\n')
             sys.exit(0)
 
-    filtered_tests = filtered_tests[:opts.max_tests]
+    selected_tests = selected_tests[:opts.max_tests]
 
-    opts.workers = min(len(filtered_tests), opts.workers)
+    mark_excluded(discovered_tests, selected_tests)
 
     start = time.time()
-    run_tests(filtered_tests, lit_config, opts, len(discovered_tests))
+    run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
     # TODO(yln): eventually, all functions below should act on discovered_tests
     executed_tests = [
-        t for t in filtered_tests if t.result.code != lit.Test.SKIPPED]
+        t for t in selected_tests if t.result.code != lit.Test.SKIPPED]
 
     if opts.time_tests:
-        print_histogram(executed_tests)
+        print_histogram(discovered_tests)
 
-    print_results(filtered_tests, elapsed, opts)
+    print_results(discovered_tests, elapsed, opts)
 
     if opts.output_path:
         #TODO(yln): pass in discovered_tests
@@ -111,7 +111,7 @@ def main(builtin_params={}):
     if lit_config.numWarnings:
         sys.stderr.write('\n%d warning(s) in tests\n' % lit_config.numWarnings)
 
-    has_failure = any(t.isFailure() for t in executed_tests)
+    has_failure = any(t.isFailure() for t in discovered_tests)
     if has_failure:
         sys.exit(1)
 
@@ -189,15 +189,24 @@ def filter_by_shard(tests, run, shards, lit_config):
     return selected_tests
 
 
+def mark_excluded(discovered_tests, selected_tests):
+    excluded_tests = set(discovered_tests) - set(selected_tests)
+    result = lit.Test.Result(lit.Test.EXCLUDED)
+    for t in excluded_tests:
+        t.setResult(result)
+
+
 def run_tests(tests, lit_config, opts, discovered_tests):
+    workers = min(len(tests), opts.workers)
     display = lit.display.create_display(opts, len(tests), discovered_tests,
-                                         opts.workers)
+                                         workers)
+
     def progress_callback(test):
         display.update(test)
         if opts.order == 'failing-first':
             touch_file(test)
 
-    run = lit.run.Run(tests, lit_config, opts.workers, progress_callback,
+    run = lit.run.Run(tests, lit_config, workers, progress_callback,
                       opts.max_failures, opts.timeout)
 
     display.print_header()
@@ -248,8 +257,10 @@ def execute_in_tmp_dir(run, lit_config):
 
 
 def print_histogram(tests):
-    test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
-    lit.util.printHistogram(test_times, title='Tests')
+    test_times = [(t.getFullName(), t.result.elapsed)
+                  for t in tests if t.result.elapsed]
+    if test_times:
+        lit.util.printHistogram(test_times, title='Tests')
 
 
 def add_result_category(result_code, label):
@@ -261,6 +272,7 @@ def add_result_category(result_code, label):
 # Status code, summary label, group label
 result_codes = [
     # Passes
+    (lit.Test.EXCLUDED,    'Excluded Tests',      'Excluded'),
     (lit.Test.SKIPPED,     'Skipped Tests',       'Skipped'),
     (lit.Test.UNSUPPORTED, 'Unsupported Tests',   'Unsupported'),
     (lit.Test.PASS,        'Expected Passes',     ''),
@@ -289,7 +301,7 @@ def print_group(code, label, tests, opts):
     if not tests:
         return
     # TODO(yln): FLAKYPASS? Make this more consistent!
-    if code in {lit.Test.SKIPPED, lit.Test.PASS}:
+    if code in {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.PASS}:
         return
     if (lit.Test.XFAIL == code and not opts.show_xfail) or \
        (lit.Test.UNSUPPORTED == code and not opts.show_unsupported):

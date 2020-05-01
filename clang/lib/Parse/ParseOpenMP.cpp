@@ -2436,6 +2436,50 @@ bool Parser::ParseOpenMPSimpleVarList(
   return !IsCorrect;
 }
 
+OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
+  SourceLocation Loc = Tok.getLocation();
+  ConsumeAnyToken();
+
+  // Parse '('.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, "uses_allocator"))
+    return nullptr;
+  SmallVector<Sema::UsesAllocatorsData, 4> Data;
+  do {
+    ExprResult Allocator = ParseCXXIdExpression();
+    if (Allocator.isInvalid()) {
+      SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                StopBeforeMatch);
+      break;
+    }
+    Sema::UsesAllocatorsData &D = Data.emplace_back();
+    D.Allocator = Allocator.get();
+    if (Tok.is(tok::l_paren)) {
+      BalancedDelimiterTracker T(*this, tok::l_paren,
+                                 tok::annot_pragma_openmp_end);
+      T.consumeOpen();
+      ExprResult AllocatorTraits = ParseCXXIdExpression();
+      T.consumeClose();
+      if (AllocatorTraits.isInvalid()) {
+        SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                  StopBeforeMatch);
+        break;
+      }
+      D.AllocatorTraits = AllocatorTraits.get();
+      D.LParenLoc = T.getOpenLocation();
+      D.RParenLoc = T.getCloseLocation();
+    }
+    if (Tok.isNot(tok::comma) && Tok.isNot(tok::r_paren))
+      Diag(Tok, diag::err_omp_expected_punc) << "uses_allocators" << 0;
+    // Parse ','
+    if (Tok.is(tok::comma))
+      ConsumeAnyToken();
+  } while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end));
+  T.consumeClose();
+  return Actions.ActOnOpenMPUsesAllocatorClause(Loc, T.getOpenLocation(),
+                                                T.getCloseLocation(), Data);
+}
+
 /// Parsing of OpenMP clauses.
 ///
 ///    clause:
@@ -2453,7 +2497,7 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       in_reduction-clause | allocator-clause | allocate-clause |
 ///       acq_rel-clause | acquire-clause | release-clause | relaxed-clause |
 ///       depobj-clause | destroy-clause | detach-clause | inclusive-clause |
-///       exclusive-clause
+///       exclusive-clause | uses_allocators-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -2625,6 +2669,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_inclusive:
   case OMPC_exclusive:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
+    break;
+  case OMPC_uses_allocators:
+    Clause = ParseOpenMPUsesAllocatorClause(DKind);
     break;
   case OMPC_device_type:
   case OMPC_unknown:

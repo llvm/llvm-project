@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for lastprivate(2 * 2) // expected-error {{expected variable name}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp target parallel for lastprivate(ba) allocate(omp_thread_mem_alloc: ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}}
+#pragma omp target parallel for lastprivate(ba) allocate(omp_thread_mem_alloc: ba) uses_allocators(omp_thread_mem_alloc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target parallel for'}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target parallel for lastprivate(ca) // expected-error {{const-qualified variable without mutable fields cannot be lastprivate}}

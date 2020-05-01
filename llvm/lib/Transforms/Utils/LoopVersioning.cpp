@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
@@ -44,9 +45,8 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
   }
 }
 
-void LoopVersioning::setAliasChecks(
-    SmallVector<RuntimePointerCheck, 4> Checks) {
-  AliasChecks = std::move(Checks);
+void LoopVersioning::setAliasChecks(ArrayRef<RuntimePointerCheck> Checks) {
+  AliasChecks = {Checks.begin(), Checks.end()};
 }
 
 void LoopVersioning::setSCEVChecks(SCEVUnionPredicate Check) {

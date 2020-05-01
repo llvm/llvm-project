@@ -13,9 +13,9 @@ define void @load_i16_stride2() {
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
 ;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
 ;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 32 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 8 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 16 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 3 for VF 32 For instruction:   %1 = load
 entry:
   br label %for.body
 
@@ -38,10 +38,10 @@ define void @load_i16_stride3() {
 ;CHECK-LABEL: load_i16_stride3
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
 ;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 3 for VF 32 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 8 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 3 for VF 16 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 5 for VF 32 For instruction:   %1 = load
 entry:
   br label %for.body
 
@@ -64,10 +64,10 @@ define void @load_i16_stride4() {
 ;CHECK-LABEL: load_i16_stride4
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
 ;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 5 for VF 32 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 8 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 3 for VF 16 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 8 for VF 32 For instruction:   %1 = load
 entry:
   br label %for.body
 
@@ -89,11 +89,11 @@ for.end:                                          ; preds = %for.body
 define void @load_i16_stride5() {
 ;CHECK-LABEL: load_i16_stride5
 ;CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 2 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 3 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 6 for VF 32 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 2 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 2 for VF 4 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 3 for VF 8 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 5 for VF 16 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 10 for VF 32 For instruction:   %1 = load
 entry:
   br label %for.body
 

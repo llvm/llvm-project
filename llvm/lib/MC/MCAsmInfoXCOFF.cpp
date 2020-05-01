@@ -14,17 +14,21 @@ void MCAsmInfoXCOFF::anchor() {}
 
 MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   IsLittleEndian = false;
-  HasDotTypeDotSizeDirective = false;
-  HasDotExternDirective = true;
-  COMMDirectiveAlignmentIsInBytes = false;
-  LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
+  SupportsQuotedNames = false;
   UseDotAlignForAlignment = true;
+  ZeroDirective = "\t.space\t";
+  ZeroDirectiveSupportsNonZeroValue = false;
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
-  NeedsFunctionDescriptors = true;
-  HasDotLGloblDirective = true;
   Data64bitsDirective = "\t.llong\t";
-  SupportsQuotedNames = false;
+  COMMDirectiveAlignmentIsInBytes = false;
+  LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
+  HasDotTypeDotSizeDirective = false;
+  HasDotExternDirective = true;
+  HasDotLGloblDirective = true;
+  SymbolsHaveSMC = true;
+  UseIntegratedAssembler = false;
+  NeedsFunctionDescriptors = true;
 }
 
 bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {

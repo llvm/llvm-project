@@ -4485,7 +4485,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(UseCall != nullptr,
              "Uses of llvm.call.preallocated.setup must be calls");
       const Function *Fn = UseCall->getCalledFunction();
-      if (Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
+      if (Fn && Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
         auto *AllocArgIndex = dyn_cast<ConstantInt>(UseCall->getArgOperand(1));
         Assert(AllocArgIndex != nullptr,
                "llvm.call.preallocated.alloc arg index must be a constant");
@@ -4500,8 +4500,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                            "llvm.call.preallocated.setup");
         FoundCall = true;
         size_t NumPreallocatedArgs = 0;
-        for (auto &Arg : Fn->args()) {
-          if (Arg.hasAttribute(Attribute::Preallocated)) {
+        for (unsigned i = 0; i < UseCall->getNumArgOperands(); i++) {
+          if (UseCall->paramHasAttr(i, Attribute::Preallocated)) {
             ++NumPreallocatedArgs;
           }
         }

@@ -37,6 +37,7 @@ UNRESOLVED  = ResultCode('UNRESOLVED', True)
 UNSUPPORTED = ResultCode('UNSUPPORTED', False)
 TIMEOUT     = ResultCode('TIMEOUT', True)
 SKIPPED     = ResultCode('SKIPPED', False)
+EXCLUDED    = ResultCode('EXCLUDED', False)
 
 # Test metric values.
 

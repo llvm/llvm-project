@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 void xxx(int argc) {
   int fp, fp1; // expected-note {{initialize the variable 'fp' to silence this warning}} expected-note {{initialize the variable 'fp1' to silence this warning}}
@@ -128,7 +128,7 @@ int foomain(I argc, C **argv) {
 {}
 #pragma omp target firstprivate(argv[1]) // expected-error {{expected variable name}}
 {}
-#pragma omp target firstprivate(e, g) allocate(omp_thread_mem_alloc: e) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}}
+#pragma omp target firstprivate(e, g) allocate(omp_thread_mem_alloc: e) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}} expected-error {{allocator must be specified in the 'uses_allocators' clause}}
 {}
 #pragma omp target firstprivate(h) // expected-error {{threadprivate or thread local variable cannot be firstprivate}}
 {}

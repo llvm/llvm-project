@@ -8019,7 +8019,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // We convert trunc/ext to opposing shifts in IR, but casts may be cheaper.
   //   sra (add (shl X, N1C), AddC), N1C -->
   //   sext (add (trunc X to (width - N1C)), AddC')
-  if (!LegalTypes && N0.getOpcode() == ISD::ADD && N0.hasOneUse() && N1C &&
+  if (N0.getOpcode() == ISD::ADD && N0.hasOneUse() && N1C &&
       N0.getOperand(0).getOpcode() == ISD::SHL &&
       N0.getOperand(0).getOperand(1) == N1 && N0.getOperand(0).hasOneUse()) {
     if (ConstantSDNode *AddC = isConstOrConstSplat(N0.getOperand(1))) {
@@ -8036,7 +8036,8 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
       //       implementation and/or target-specific overrides (because
       //       non-simple types likely require masking when legalized), but that
       //       restriction may conflict with other transforms.
-      if (TruncVT.isSimple() && TLI.isTruncateFree(VT, TruncVT)) {
+      if (TruncVT.isSimple() && isTypeLegal(TruncVT) &&
+          TLI.isTruncateFree(VT, TruncVT)) {
         SDLoc DL(N);
         SDValue Trunc = DAG.getZExtOrTrunc(Shl.getOperand(0), DL, TruncVT);
         SDValue ShiftC = DAG.getConstant(AddC->getAPIntValue().lshr(ShiftAmt).

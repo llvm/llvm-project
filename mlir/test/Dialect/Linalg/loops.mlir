@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -convert-linalg-to-parallel-loops | FileCheck --check-prefix=CHECKPARALLEL %s
 
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
-// RUN: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm -o=/dev/null 2>&1
 
 // CHECKLOOP-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECKLOOP-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
@@ -353,7 +353,6 @@ func @conv_view4(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %
 //       CHECKPARALLEL:           %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?x?xf32, #[[strided4D]]>
 //       CHECKPARALLEL:           %{{.*}} = addf %{{.*}}, %{{.*}} : f32
 //       CHECKPARALLEL:           store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?x?xf32, #[[strided4D]]>
-
 
 func @conv_padding(%arg0: memref<?x?x?x?xf32>,
                    %arg1: memref<?x?x?x?xf32>,
@@ -854,8 +853,8 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 //  CHECKLOOP-SAME: %[[ARG1]]: memref<f32>
 //  CHECKLOOP-SAME: %[[ARG2]]: memref<f32>
 //   CHECKLOOP-NOT: loop.for
-//   CHECKLOOP-DAG: load %[[ARG0]][]
-//   CHECKLOOP-DAG: load %[[ARG1]][]
+//       CHECKLOOP: load %[[ARG0]][]
+//       CHECKLOOP: load %[[ARG1]][]
 //       CHECKLOOP: addf
 //       CHECKLOOP: store %{{.*}}, %[[ARG2]][]
 
@@ -864,7 +863,50 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 //  CHECKPARALLEL-SAME: %[[ARG1]]: memref<f32>
 //  CHECKPARALLEL-SAME: %[[ARG2]]: memref<f32>
 //   CHECKPARALLEL-NOT: loop.for
-//   CHECKPARALLEL-DAG: load %[[ARG0]][]
-//   CHECKPARALLEL-DAG: load %[[ARG1]][]
+//       CHECKPARALLEL: load %[[ARG0]][]
+//       CHECKPARALLEL: load %[[ARG1]][]
 //       CHECKPARALLEL: addf
 //       CHECKPARALLEL: store %{{.*}}, %[[ARG2]][]
+
+//----------------------------------------------------------------------------//
+// Named ops to loops.
+//----------------------------------------------------------------------------//
+func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
+  linalg.batch_matmul %A, %B, %C : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>) -> ()
+  return
+}
+// CHECKLOOP-LABEL: @named_batch_matmul
+//  CHECKLOOP-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECKLOOP-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECKLOOP-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//       CHECKLOOP: %[[B:.*]] = dim %[[mA]], 0 : memref<?x?x?xf32>
+//       CHECKLOOP: %[[M:.*]] = dim %[[mA]], 1 : memref<?x?x?xf32>
+//       CHECKLOOP: %[[K:.*]] = dim %[[mA]], 2 : memref<?x?x?xf32>
+//       CHECKLOOP: %[[N:.*]] = dim %[[mB]], 2 : memref<?x?x?xf32>
+//       CHECKLOOP: loop.for %[[b:.*]] = %{{.*}} to %[[B]] step %{{.*}} {
+//       CHECKLOOP:   loop.for %[[m:.*]] = %{{.*}} to %[[M]] step %{{.*}} {
+//       CHECKLOOP:     loop.for %[[n:.*]] = %{{.*}} to %[[N]] step %{{.*}} {
+//       CHECKLOOP:       loop.for %[[k:.*]] = %{{.*}} to %[[K]] step %{{.*}} {
+//       CHECKLOOP:       %[[va:.*]] = load %[[mA]][%[[b]], %[[m]], %[[k]]] : memref<?x?x?xf32>
+//       CHECKLOOP:       %[[vb:.*]] = load %[[mB]][%[[b]], %[[k]], %[[n]]] : memref<?x?x?xf32>
+//       CHECKLOOP:       %[[vc:.*]] = load %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
+//       CHECKLOOP:       %[[inc:.*]] = mulf %[[va]], %[[vb]] : f32
+//       CHECKLOOP:       %[[res:.*]] = addf %[[vc]], %[[inc]] : f32
+//       CHECKLOOP:       store %[[res]], %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
+
+// CHECKPARALLEL-LABEL: @named_batch_matmul
+//  CHECKPARALLEL-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECKPARALLEL-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECKPARALLEL-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = dim %[[mA]], 0 : memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[M:.*]] = dim %[[mA]], 1 : memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[K:.*]] = dim %[[mA]], 2 : memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[N:.*]] = dim %[[mB]], 2 : memref<?x?x?xf32>
+//       CHECKPARALLEL: loop.parallel (%[[b:.*]], %[[m:.*]], %[[n:.*]]) = ({{.*}}) to (%[[B]], %[[M]], %[[N]]) step ({{.*}}) {
+//       CHECKPARALLEL:   loop.for %[[k:.*]] = %{{.*}} to %[[K]] step %{{.*}} {
+//       CHECKPARALLEL:       %[[va:.*]] = load %[[mA]][%[[b]], %[[m]], %[[k]]] : memref<?x?x?xf32>
+//       CHECKPARALLEL:       %[[vb:.*]] = load %[[mB]][%[[b]], %[[k]], %[[n]]] : memref<?x?x?xf32>
+//       CHECKPARALLEL:       %[[vc:.*]] = load %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
+//       CHECKPARALLEL:       %[[inc:.*]] = mulf %[[va]], %[[vb]] : f32
+//       CHECKPARALLEL:       %[[res:.*]] = addf %[[vc]], %[[inc]] : f32
+//       CHECKPARALLEL:       store %[[res]], %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
