@@ -18,12 +18,9 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (75):
-CHECK-NEXT:   ext_excess_initializers
-CHECK-NEXT:   ext_excess_initializers_in_char_array_initializer
+CHECK: Warnings without flags (72):
 CHECK-NEXT:   ext_expected_semi_decl_list
 CHECK-NEXT:   ext_explicit_specialization_storage_class
-CHECK-NEXT:   ext_initializer_string_for_char_array_too_long
 CHECK-NEXT:   ext_missing_declspec
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
 CHECK-NEXT:   ext_new_paren_array_nonconst

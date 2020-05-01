@@ -5396,15 +5396,18 @@ def err_variable_object_no_init : Error<
 def err_excess_initializers : Error<
   "excess elements in %select{array|vector|scalar|union|struct}0 initializer">;
 def ext_excess_initializers : ExtWarn<
-  "excess elements in %select{array|vector|scalar|union|struct}0 initializer">;
+  "excess elements in %select{array|vector|scalar|union|struct}0 initializer">,
+  InGroup<ExcessInitializers>;
 def err_excess_initializers_in_char_array_initializer : Error<
   "excess elements in char array initializer">;
 def ext_excess_initializers_in_char_array_initializer : ExtWarn<
-  "excess elements in char array initializer">;
+  "excess elements in char array initializer">,
+  InGroup<ExcessInitializers>;
 def err_initializer_string_for_char_array_too_long : Error<
   "initializer-string for char array is too long">;
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
-  "initializer-string for char array is too long">;
+  "initializer-string for char array is too long">,
+  InGroup<ExcessInitializers>;
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
