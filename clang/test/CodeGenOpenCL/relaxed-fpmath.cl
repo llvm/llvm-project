@@ -8,12 +8,12 @@
 float spscalardiv(float a, float b) {
   // CHECK: @spscalardiv(
 
-  // NORMAL: fdiv float
+  // NORMAL: fdiv contract float
   // FAST: fdiv fast float
-  // FINITE: fdiv nnan ninf float
-  // UNSAFE: fdiv nnan nsz float
-  // MAD: fdiv float
-  // NOSIGNED: fdiv nsz float
+  // FINITE: fdiv nnan ninf contract float
+  // UNSAFE: fdiv nnan nsz contract float
+  // MAD: fdiv contract float
+  // NOSIGNED: fdiv nsz contract float
   return a / b;
 }
 // CHECK: attributes
