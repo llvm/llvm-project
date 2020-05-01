@@ -760,6 +760,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_fenv_access:
     HandlePragmaFEnvAccess();
     return nullptr;
+  case tok::annot_pragma_float_control:
+    HandlePragmaFloatControl();
+    return nullptr;
   case tok::annot_pragma_fp:
     HandlePragmaFP();
     break;
