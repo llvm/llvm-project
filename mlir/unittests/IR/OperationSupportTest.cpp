@@ -33,7 +33,7 @@ TEST(OperandStorageTest, NonResizable) {
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
-  Operation *user = createOp(&context, operand, builder.getIntegerType(16));
+  Operation *user = createOp(&context, operand);
 
   // The same number of operands is okay.
   user->setOperands(operand);
@@ -57,7 +57,7 @@ TEST(OperandStorageTest, Resizable) {
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
-  Operation *user = createOp(&context, operand, builder.getIntegerType(16));
+  Operation *user = createOp(&context, operand);
 
   // The same number of operands is okay.
   user->setOperands(operand);
@@ -70,6 +70,79 @@ TEST(OperandStorageTest, Resizable) {
   // Adding more operands is okay.
   user->setOperands({operand, operand, operand});
   EXPECT_EQ(user->getNumOperands(), 3u);
+
+  // Destroy the operations.
+  user->destroy();
+  useOp->destroy();
+}
+
+TEST(OperandStorageTest, RangeReplace) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp =
+      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
+  Value operand = useOp->getResult(0);
+
+  // Create a resizable operation with one operand.
+  Operation *user = createOp(&context, operand);
+
+  // Check setting with the same number of operands.
+  user->setOperands(/*start=*/0, /*length=*/1, operand);
+  EXPECT_EQ(user->getNumOperands(), 1u);
+
+  // Check setting with more operands.
+  user->setOperands(/*start=*/0, /*length=*/1, {operand, operand, operand});
+  EXPECT_EQ(user->getNumOperands(), 3u);
+
+  // Check setting with less operands.
+  user->setOperands(/*start=*/1, /*length=*/2, {operand});
+  EXPECT_EQ(user->getNumOperands(), 2u);
+
+  // Check inserting without replacing operands.
+  user->setOperands(/*start=*/2, /*length=*/0, {operand});
+  EXPECT_EQ(user->getNumOperands(), 3u);
+
+  // Check erasing operands.
+  user->setOperands(/*start=*/0, /*length=*/3, {});
+  EXPECT_EQ(user->getNumOperands(), 0u);
+
+  // Destroy the operations.
+  user->destroy();
+  useOp->destroy();
+}
+
+TEST(OperandStorageTest, MutableRange) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp =
+      createOp(&context, /*operands=*/llvm::None, builder.getIntegerType(16));
+  Value operand = useOp->getResult(0);
+
+  // Create a resizable operation with one operand.
+  Operation *user = createOp(&context, operand);
+
+  // Check setting with the same number of operands.
+  MutableOperandRange mutableOperands(user);
+  mutableOperands.assign(operand);
+  EXPECT_EQ(mutableOperands.size(), 1u);
+  EXPECT_EQ(user->getNumOperands(), 1u);
+
+  // Check setting with more operands.
+  mutableOperands.assign({operand, operand, operand});
+  EXPECT_EQ(mutableOperands.size(), 3u);
+  EXPECT_EQ(user->getNumOperands(), 3u);
+
+  // Check with inserting a new operand.
+  mutableOperands.append({operand, operand});
+  EXPECT_EQ(mutableOperands.size(), 5u);
+  EXPECT_EQ(user->getNumOperands(), 5u);
+
+  // Check erasing operands.
+  mutableOperands.clear();
+  EXPECT_EQ(mutableOperands.size(), 0u);
+  EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Destroy the operations.
   user->destroy();

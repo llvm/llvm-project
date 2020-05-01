@@ -63,3 +63,7 @@ llvm::StringRef InterfaceOpTrait::getTrait() const {
 bool InterfaceOpTrait::shouldDeclareMethods() const {
   return def->isSubClassOf("DeclareOpInterfaceMethods");
 }
+
+std::vector<StringRef> InterfaceOpTrait::getAlwaysDeclaredMethods() const {
+  return def->getValueAsListOfStrings("alwaysOverriddenMethods");
+}

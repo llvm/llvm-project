@@ -55,6 +55,7 @@ std::string toString(const elf::InputFile *f) {
 namespace elf {
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
+std::vector<ArchiveFile *> archiveFiles;
 std::vector<BinaryFile *> binaryFiles;
 std::vector<BitcodeFile *> bitcodeFiles;
 std::vector<LazyObjFile *> lazyObjFiles;
@@ -173,6 +174,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
   // .a file
   if (auto *f = dyn_cast<ArchiveFile>(file)) {
+    archiveFiles.push_back(f);
     f->parse();
     return;
   }
@@ -1163,6 +1165,19 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
       mb, getName(), c.getParent()->isThin() ? 0 : c.getChildOffset());
   file->groupId = groupId;
   parseFile(file);
+}
+
+size_t ArchiveFile::getMemberCount() const {
+  size_t count = 0;
+  Error err = Error::success();
+  for (const Archive::Child &c : file->children(err)) {
+    (void)c;
+    ++count;
+  }
+  // This function is used by --print-archive-stats=, where an error does not
+  // really matter.
+  consumeError(std::move(err));
+  return count;
 }
 
 unsigned SharedFile::vernauxNum;

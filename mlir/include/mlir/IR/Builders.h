@@ -171,48 +171,83 @@ protected:
 /// automatically inserted at an insertion point. The builder is copyable.
 class OpBuilder : public Builder {
 public:
+  struct Listener;
+
   /// Create a builder with the given context.
-  explicit OpBuilder(MLIRContext *ctx) : Builder(ctx) {}
+  explicit OpBuilder(MLIRContext *ctx, Listener *listener = nullptr)
+      : Builder(ctx), listener(listener) {}
 
   /// Create a builder and set the insertion point to the start of the region.
-  explicit OpBuilder(Region *region) : Builder(region->getContext()) {
+  explicit OpBuilder(Region *region, Listener *listener = nullptr)
+      : OpBuilder(region->getContext(), listener) {
     if (!region->empty())
       setInsertionPoint(&region->front(), region->front().begin());
   }
-  explicit OpBuilder(Region &region) : OpBuilder(&region) {}
-
-  virtual ~OpBuilder();
+  explicit OpBuilder(Region &region, Listener *listener = nullptr)
+      : OpBuilder(&region, listener) {}
 
   /// Create a builder and set insertion point to the given operation, which
   /// will cause subsequent insertions to go right before it.
-  explicit OpBuilder(Operation *op) : Builder(op->getContext()) {
+  explicit OpBuilder(Operation *op, Listener *listener = nullptr)
+      : OpBuilder(op->getContext(), listener) {
     setInsertionPoint(op);
   }
 
-  OpBuilder(Block *block, Block::iterator insertPoint)
-      : OpBuilder(block->getParent()) {
+  OpBuilder(Block *block, Block::iterator insertPoint,
+            Listener *listener = nullptr)
+      : OpBuilder(block->getParent()->getContext(), listener) {
     setInsertionPoint(block, insertPoint);
   }
 
   /// Create a builder and set the insertion point to before the first operation
   /// in the block but still inside the block.
-  static OpBuilder atBlockBegin(Block *block) {
-    return OpBuilder(block, block->begin());
+  static OpBuilder atBlockBegin(Block *block, Listener *listener = nullptr) {
+    return OpBuilder(block, block->begin(), listener);
   }
 
   /// Create a builder and set the insertion point to after the last operation
   /// in the block but still inside the block.
-  static OpBuilder atBlockEnd(Block *block) {
-    return OpBuilder(block, block->end());
+  static OpBuilder atBlockEnd(Block *block, Listener *listener = nullptr) {
+    return OpBuilder(block, block->end(), listener);
   }
 
   /// Create a builder and set the insertion point to before the block
   /// terminator.
-  static OpBuilder atBlockTerminator(Block *block) {
+  static OpBuilder atBlockTerminator(Block *block,
+                                     Listener *listener = nullptr) {
     auto *terminator = block->getTerminator();
     assert(terminator != nullptr && "the block has no terminator");
-    return OpBuilder(block, terminator->getIterator());
+    return OpBuilder(block, Block::iterator(terminator), listener);
   }
+
+  //===--------------------------------------------------------------------===//
+  // Listeners
+  //===--------------------------------------------------------------------===//
+
+  /// This class represents a listener that may be used to hook into various
+  /// actions within an OpBuilder.
+  struct Listener {
+    virtual ~Listener();
+
+    /// Notification handler for when an operation is inserted into the builder.
+    /// `op` is the operation that was inserted.
+    virtual void notifyOperationInserted(Operation *op) {}
+
+    /// Notification handler for when a block is created using the builder.
+    /// `block` is the block that was created.
+    virtual void notifyBlockCreated(Block *block) {}
+  };
+
+  /// Sets the listener of this builder to the one provided.
+  void setListener(Listener *newListener) { listener = newListener; }
+
+  /// Returns the current listener of this builder, or nullptr if this builder
+  /// doesn't have a listener.
+  Listener *getListener() const { return listener; }
+
+  //===--------------------------------------------------------------------===//
+  // Insertion Point Management
+  //===--------------------------------------------------------------------===//
 
   /// This class represents a saved insertion point.
   class InsertPoint {
@@ -304,21 +339,29 @@ public:
   /// Returns the current insertion point of the builder.
   Block::iterator getInsertionPoint() const { return insertPoint; }
 
-  /// Insert the given operation at the current insertion point and return it.
-  virtual Operation *insert(Operation *op);
+  /// Returns the current block of the builder.
+  Block *getBlock() const { return block; }
+
+  //===--------------------------------------------------------------------===//
+  // Block Creation
+  //===--------------------------------------------------------------------===//
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is inserted at the provided insertion point of
   /// 'parent'.
-  virtual Block *createBlock(Region *parent, Region::iterator insertPt = {},
-                             TypeRange argTypes = llvm::None);
+  Block *createBlock(Region *parent, Region::iterator insertPt = {},
+                     TypeRange argTypes = llvm::None);
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is placed before 'insertBefore'.
   Block *createBlock(Block *insertBefore, TypeRange argTypes = llvm::None);
 
-  /// Returns the current block of the builder.
-  Block *getBlock() const { return block; }
+  //===--------------------------------------------------------------------===//
+  // Operation Creation
+  //===--------------------------------------------------------------------===//
+
+  /// Insert the given operation at the current insertion point and return it.
+  Operation *insert(Operation *op);
 
   /// Creates an operation given the fields represented as an OperationState.
   Operation *createOperation(const OperationState &state);
@@ -406,8 +449,13 @@ public:
   }
 
 private:
+  /// The current block this builder is inserting into.
   Block *block = nullptr;
+  /// The insertion point within the block that this builder is inserting
+  /// before.
   Block::iterator insertPoint;
+  /// The optional listener for events of this builder.
+  Listener *listener;
 };
 
 } // namespace mlir

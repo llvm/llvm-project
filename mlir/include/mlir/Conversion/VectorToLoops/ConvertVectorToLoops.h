@@ -14,8 +14,8 @@ class MLIRContext;
 class OwningRewritePatternList;
 
 /// Collect a set of patterns to convert from the Vector dialect to loops + std.
-void populateVectorToAffineLoopsConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+void populateVectorToLoopsConversionPatterns(OwningRewritePatternList &patterns,
+                                             MLIRContext *context);
 
 } // namespace mlir
 

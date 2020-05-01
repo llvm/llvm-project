@@ -42,7 +42,6 @@ void registerTestAffineDataCopyPass();
 void registerTestAllReduceLoweringPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestBufferPlacementPreparationPass();
-void registerTestLinalgMatmulToVectorPass();
 void registerTestLoopPermutationPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
@@ -106,7 +105,6 @@ void registerTestPasses() {
   registerTestAffineDataCopyPass();
   registerTestAllReduceLoweringPass();
   registerTestAffineLoopUnswitchingPass();
-  registerTestLinalgMatmulToVectorPass();
   registerTestLoopPermutationPass();
   registerTestCallGraphPass();
   registerTestConstantFold();

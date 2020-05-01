@@ -351,10 +351,11 @@ template <typename ConcreteType>
 class NamedStructuredOpTraits
     : public OpTrait::TraitBase<ConcreteType, NamedStructuredOpTraits> {
 public:
-  llvm::Optional<SmallVector<StringRef, 8>> referenceIterators();
-  llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps();
-  std::function<void(OpBuilder &, Location, ArrayRef<Value>)>
-  emitScalarImplementation();
+  static SmallVector<StringRef, 8> referenceIterators(TypeRange inputTypes,
+                                                      TypeRange outputTypes);
+
+  static SmallVector<AffineMap, 8> referenceIndexingMaps(TypeRange inputTypes,
+                                                         TypeRange outputTypes);
 };
 
 } // namespace linalg

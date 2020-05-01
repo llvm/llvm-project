@@ -158,9 +158,10 @@ public:
     /// Generation flags.
     class Flags {
       enum {
-        F_IsForEH             = 0x1,
+        F_IsForEH = 0x1,
         F_IsNormalCleanupKind = 0x2,
-        F_IsEHCleanupKind     = 0x4
+        F_IsEHCleanupKind = 0x4,
+        F_HasExitSwitch = 0x8,
       };
       unsigned flags;
 
@@ -179,8 +180,10 @@ public:
       /// cleanup.
       bool isEHCleanupKind() const { return flags & F_IsEHCleanupKind; }
       void setIsEHCleanupKind() { flags |= F_IsEHCleanupKind; }
-    };
 
+      bool hasExitSwitch() const { return flags & F_HasExitSwitch; }
+      void setHasExitSwitch() { flags |= F_HasExitSwitch; }
+    };
 
     /// Emit the cleanup.  For normal cleanups, this is run in the
     /// same EH context as when the cleanup was pushed, i.e. the

@@ -2339,7 +2339,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
 
     // A byval, inalloca, or nonnull argument is never null.
     if (const Argument *A = dyn_cast<Argument>(V))
-      if (A->hasByValOrInAllocaAttr() || A->hasNonNullAttr())
+      if (A->hasPassPointeeByValueAttr() || A->hasNonNullAttr())
         return true;
 
     // A Load tagged with nonnull metadata is never null.

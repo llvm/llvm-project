@@ -209,7 +209,7 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
 
   // Check to see if we can reason about the successor operands and mutate them.
   BranchOpInterface branchInterface = dyn_cast<BranchOpInterface>(op);
-  if (!branchInterface || !branchInterface.canEraseSuccessorOperand()) {
+  if (!branchInterface) {
     for (Block *successor : op->getSuccessors())
       for (BlockArgument arg : successor->getArguments())
         liveMap.setProvedLive(arg);
@@ -219,7 +219,7 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
   // If we can't reason about the operands to a successor, conservatively mark
   // all arguments as live.
   for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i) {
-    if (!branchInterface.getSuccessorOperands(i))
+    if (!branchInterface.getMutableSuccessorOperands(i))
       for (BlockArgument arg : op->getSuccessor(i)->getArguments())
         liveMap.setProvedLive(arg);
   }
@@ -278,7 +278,8 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
     // since it will promote later operands of the terminator being erased
     // first, reducing the quadratic-ness.
     unsigned succ = succE - succI - 1;
-    Optional<OperandRange> succOperands = branchOp.getSuccessorOperands(succ);
+    Optional<MutableOperandRange> succOperands =
+        branchOp.getMutableSuccessorOperands(succ);
     if (!succOperands)
       continue;
     Block *successor = terminator->getSuccessor(succ);
@@ -288,7 +289,7 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
       // shifting later args when earlier args are erased.
       unsigned arg = argE - argI - 1;
       if (!liveMap.wasProvenLive(successor->getArgument(arg)))
-        branchOp.eraseSuccessorOperand(succ, arg);
+        succOperands->erase(arg);
     }
   }
 }

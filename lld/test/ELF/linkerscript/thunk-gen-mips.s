@@ -4,14 +4,14 @@
 
 # SECTIONS command with the first pattern that does not match.
 # Linking a PIC and non-PIC object files triggers the LA25 thunk generation.
-# RUN:		echo "SECTIONS { \
+# RUN:		echo 'SECTIONS { \
 # RUN:		.text : { \
 # RUN:			*(.nomatch) \
-# RUN:			%t(.text) \
+# RUN:			"%t"(.text) \
 # RUN:			. = . + 0x100000 ; \
-# RUN:			%t1(.text) \
+# RUN:			"%t1"(.text) \
 # RUN:		} \
-# RUN:	}" > %t.script
+# RUN:	}' > %t.script
 # RUN: ld.lld -o %t.exe --script %t.script %t %t1
 # RUN: llvm-objdump -t %t.exe | FileCheck %s
 # CHECK: SYMBOL TABLE:

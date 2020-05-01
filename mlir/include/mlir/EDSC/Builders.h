@@ -33,17 +33,17 @@ class NestedBuilder;
 /// setting and restoring of insertion points.
 class ScopedContext {
 public:
-  ScopedContext(OpBuilder &builder, Location location);
+  ScopedContext(OpBuilder &b, Location location);
 
   /// Sets the insertion point of the builder to 'newInsertPt' for the duration
   /// of the scope. The existing insertion point of the builder is restored on
   /// destruction.
-  ScopedContext(OpBuilder &builder, OpBuilder::InsertPoint newInsertPt,
+  ScopedContext(OpBuilder &b, OpBuilder::InsertPoint newInsertPt,
                 Location location);
   ~ScopedContext();
 
   static MLIRContext *getContext();
-  static OpBuilder &getBuilder();
+  static OpBuilder &getBuilderRef();
   static Location getLocation();
 
 private:
@@ -59,22 +59,19 @@ private:
 
   /// Top level OpBuilder.
   OpBuilder &builder;
-  /// The previous insertion point of the builder.
-  Optional<OpBuilder::InsertPoint> prevBuilderInsertPoint;
+  /// Guard to the previous insertion point.
+  OpBuilder::InsertionGuard guard;
   /// Current location.
   Location location;
   /// Parent context we return into.
   ScopedContext *enclosingScopedContext;
-  /// Defensively keeps track of the current NestedBuilder to ensure proper
-  /// scoping usage.
-  NestedBuilder *nestedBuilder;
 };
 
 template <typename Op>
 struct ValueBuilder {
   template <typename... Args>
   ValueBuilder(Args... args) {
-    value = ScopedContext::getBuilder()
+    value = ScopedContext::getBuilderRef()
                 .create<Op>(ScopedContext::getLocation(), args...)
                 .getResult();
   }
@@ -86,8 +83,8 @@ template <typename Op>
 struct OperationBuilder {
   template <typename... Args>
   OperationBuilder(Args... args) {
-    op = ScopedContext::getBuilder().create<Op>(ScopedContext::getLocation(),
-                                                args...);
+    op = ScopedContext::getBuilderRef().create<Op>(ScopedContext::getLocation(),
+                                                   args...);
   }
   operator Op() { return op; }
   operator Operation *() { return op.getOperation(); }
@@ -120,21 +117,21 @@ protected:
   /// scoping itself, we use enter/exit pairs of operations.
   /// As a consequence we must allocate a new OpBuilder + ScopedContext and
   /// let the escape.
-  /// Step back "prev" times from the end of the block to set up the insertion
-  /// point, which is useful for non-empty blocks.
-  void enter(mlir::Block *block, int prev = 0) {
+  void enter(mlir::Block *block) {
     bodyScope = new ScopedContext(
-        ScopedContext::getBuilder(),
-        OpBuilder::InsertPoint(block, std::prev(block->end(), prev)),
+        ScopedContext::getBuilderRef(),
+        OpBuilder::InsertPoint(block, std::prev(block->end())),
         ScopedContext::getLocation());
-    bodyScope->nestedBuilder = this;
+    if (!block->empty()) {
+      auto &termOp = block->back();
+      if (termOp.isKnownTerminator())
+        ScopedContext::getBuilderRef().setInsertionPoint(&termOp);
+    }
   }
 
   /// Exit the current mlir::Block by explicitly deleting the dynamically
   /// allocated OpBuilder and ScopedContext.
   void exit() {
-    // Reclaim now to exit the scope.
-    bodyScope->nestedBuilder = nullptr;
     delete bodyScope;
     bodyScope = nullptr;
   }
@@ -199,7 +196,8 @@ class Append {};
 class BlockBuilder : public NestedBuilder {
 public:
   /// Enters the mlir::Block* previously captured by `bh` and sets the insertion
-  /// point to its end.
+  /// point to its end. If the block already contains a terminator, set the
+  /// insertion point before the terminator.
   BlockBuilder(BlockHandle bh, Append);
 
   /// Constructs a new mlir::Block with argument types derived from `args`.

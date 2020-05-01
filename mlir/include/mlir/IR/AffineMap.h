@@ -66,6 +66,11 @@ public:
   static AffineMap getMultiDimIdentityMap(unsigned numDims,
                                           MLIRContext *context);
 
+  /// Returns an identity affine map (d0, ..., dn) -> (dp, ..., dn) on the most
+  /// minor dimensions.
+  static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
+                                       MLIRContext *context);
+
   /// Returns an AffineMap representing a permutation.
   /// The permutation is expressed as a non-empty vector of integers.
   /// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with
@@ -93,6 +98,10 @@ public:
   /// An identity affine map corresponds to an identity affine function on the
   /// dimensional identifiers.
   bool isIdentity() const;
+
+  /// Returns true if the map is a minor identity map, i.e. an identity affine
+  /// map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
+  static bool isMinorIdentity(AffineMap map);
 
   /// Returns true if this affine map is an empty map, i.e., () -> ().
   bool isEmpty() const;

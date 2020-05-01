@@ -45,25 +45,23 @@ static const char *const builderOpState = "odsState";
 // {1}: The total number of non-variadic operands/results.
 // {2}: The total number of variadic operands/results.
 // {3}: The total number of actual values.
-// {4}: The begin iterator of the actual values.
-// {5}: "operand" or "result".
+// {4}: "operand" or "result".
 const char *sameVariadicSizeValueRangeCalcCode = R"(
   bool isVariadic[] = {{{0}};
   int prevVariadicCount = 0;
   for (unsigned i = 0; i < index; ++i)
     if (isVariadic[i]) ++prevVariadicCount;
 
-  // Calculate how many dynamic values a static variadic {5} corresponds to.
-  // This assumes all static variadic {5}s have the same dynamic value count.
+  // Calculate how many dynamic values a static variadic {4} corresponds to.
+  // This assumes all static variadic {4}s have the same dynamic value count.
   int variadicSize = ({3} - {1}) / {2};
   // `index` passed in as the parameter is the static index which counts each
-  // {5} (variadic or not) as size 1. So here for each previous static variadic
-  // {5}, we need to offset by (variadicSize - 1) to get where the dynamic
-  // value pack for this static {5} starts.
-  int offset = index + (variadicSize - 1) * prevVariadicCount;
+  // {4} (variadic or not) as size 1. So here for each previous static variadic
+  // {4}, we need to offset by (variadicSize - 1) to get where the dynamic
+  // value pack for this static {4} starts.
+  int start = index + (variadicSize - 1) * prevVariadicCount;
   int size = isVariadic[index] ? variadicSize : 1;
-
-  return {{std::next({4}, offset), std::next({4}, offset + size)};
+  return {{start, size};
 )";
 
 // The logic to calculate the actual value range for a declared operand/result
@@ -72,14 +70,23 @@ const char *sameVariadicSizeValueRangeCalcCode = R"(
 // (variadic or not).
 //
 // {0}: The name of the attribute specifying the segment sizes.
-// {1}: The begin iterator of the actual values.
 const char *attrSizedSegmentValueRangeCalcCode = R"(
   auto sizeAttr = getAttrOfType<DenseIntElementsAttr>("{0}");
   unsigned start = 0;
   for (unsigned i = 0; i < index; ++i)
     start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned end = start + (*(sizeAttr.begin() + index)).getZExtValue();
-  return {{std::next({1}, start), std::next({1}, end)};
+  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+  return {{start, size};
+)";
+
+// The logic to build a range of either operand or result values.
+//
+// {0}: The begin iterator of the actual values.
+// {1}: The call to generate the start and length of the value range.
+const char *valueRangeReturnCode = R"(
+  auto valueRange = {1};
+  return {{std::next({0}, valueRange.first),
+           std::next({0}, valueRange.first + valueRange.second)};
 )";
 
 static const char *const opCommentHeader = R"(
@@ -176,6 +183,9 @@ private:
 
   // Generates getters for named operands.
   void genNamedOperandGetters();
+
+  // Generates setters for named operands.
+  void genNamedOperandSetters();
 
   // Generates getters for named results.
   void genNamedResultGetters();
@@ -310,6 +320,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genOpAsmInterface();
   genOpNameGetter();
   genNamedOperandGetters();
+  genNamedOperandSetters();
   genNamedResultGetters();
   genNamedRegionGetters();
   genNamedSuccessorGetters();
@@ -478,6 +489,37 @@ void OpEmitter::genAttrSetters() {
   }
 }
 
+// Generates the code to compute the start and end index of an operand or result
+// range.
+template <typename RangeT>
+static void
+generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
+                              int numVariadic, int numNonVariadic,
+                              StringRef rangeSizeCall, bool hasAttrSegmentSize,
+                              StringRef segmentSizeAttr, RangeT &&odsValues) {
+  auto &method = opClass.newMethod("std::pair<unsigned, unsigned>", methodName,
+                                   "unsigned index");
+
+  if (numVariadic == 0) {
+    method.body() << "  return {index, 1};\n";
+  } else if (hasAttrSegmentSize) {
+    method.body() << formatv(attrSizedSegmentValueRangeCalcCode,
+                             segmentSizeAttr);
+  } else {
+    // Because the op can have arbitrarily interleaved variadic and non-variadic
+    // operands, we need to embed a list in the "sink" getter method for
+    // calculation at run-time.
+    llvm::SmallVector<StringRef, 4> isVariadic;
+    isVariadic.reserve(llvm::size(odsValues));
+    for (auto &it : odsValues)
+      isVariadic.push_back(it.isVariableLength() ? "true" : "false");
+    std::string isVariadicList = llvm::join(isVariadic, ", ");
+    method.body() << formatv(sameVariadicSizeValueRangeCalcCode, isVariadicList,
+                             numNonVariadic, numVariadic, rangeSizeCall,
+                             "operand");
+  }
+}
+
 // Generates the named operand getter methods for the given Operator `op` and
 // puts them in `opClass`.  Uses `rangeType` as the return type of getters that
 // return a range of operands (individual operands are `Value ` and each
@@ -519,32 +561,16 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
                     "'SameVariadicOperandSize' traits");
   }
 
-  // First emit a "sink" getter method upon which we layer all nicer named
+  // First emit a few "sink" getter methods upon which we layer all nicer named
   // getter methods.
+  generateValueRangeStartAndEnd(
+      opClass, "getODSOperandIndexAndLength", numVariadicOperands,
+      numNormalOperands, rangeSizeCall, attrSizedOperands,
+      "operand_segment_sizes", const_cast<Operator &>(op).getOperands());
+
   auto &m = opClass.newMethod(rangeType, "getODSOperands", "unsigned index");
-
-  if (numVariadicOperands == 0) {
-    // We still need to match the return type, which is a range.
-    m.body() << "  return {std::next(" << rangeBeginCall
-             << ", index), std::next(" << rangeBeginCall << ", index + 1)};";
-  } else if (attrSizedOperands) {
-    m.body() << formatv(attrSizedSegmentValueRangeCalcCode,
-                        "operand_segment_sizes", rangeBeginCall);
-  } else {
-    // Because the op can have arbitrarily interleaved variadic and non-variadic
-    // operands, we need to embed a list in the "sink" getter method for
-    // calculation at run-time.
-    llvm::SmallVector<StringRef, 4> isVariadic;
-    isVariadic.reserve(numOperands);
-    for (int i = 0; i < numOperands; ++i)
-      isVariadic.push_back(op.getOperand(i).isVariableLength() ? "true"
-                                                               : "false");
-    std::string isVariadicList = llvm::join(isVariadic, ", ");
-
-    m.body() << formatv(sameVariadicSizeValueRangeCalcCode, isVariadicList,
-                        numNormalOperands, numVariadicOperands, rangeSizeCall,
-                        rangeBeginCall, "operand");
-  }
+  m.body() << formatv(valueRangeReturnCode, rangeBeginCall,
+                      "getODSOperandIndexAndLength(index)");
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
@@ -579,6 +605,26 @@ void OpEmitter::genNamedOperandGetters() {
       /*getOperandCallPattern=*/"getOperation()->getOperand({0})");
 }
 
+void OpEmitter::genNamedOperandSetters() {
+  auto *attrSizedOperands = op.getTrait("OpTrait::AttrSizedOperandSegments");
+  for (int i = 0, e = op.getNumOperands(); i != e; ++i) {
+    const auto &operand = op.getOperand(i);
+    if (operand.name.empty())
+      continue;
+    auto &m = opClass.newMethod("::mlir::MutableOperandRange",
+                                (operand.name + "Mutable").str());
+    auto &body = m.body();
+    body << "  auto range = getODSOperandIndexAndLength(" << i << ");\n"
+         << "  return ::mlir::MutableOperandRange(getOperation(), "
+            "range.first, range.second";
+    if (attrSizedOperands)
+      body << ", ::mlir::MutableOperandRange::OperandSegment(" << i
+           << "u, *getOperation()->getMutableAttrDict().getNamed("
+              "\"operand_segment_sizes\"))";
+    body << ");\n";
+  }
+}
+
 void OpEmitter::genNamedResultGetters() {
   const int numResults = op.getNumResults();
   const int numVariadicResults = op.getNumVariableLengthResults();
@@ -607,29 +653,14 @@ void OpEmitter::genNamedResultGetters() {
                     "'SameVariadicResultSize' traits");
   }
 
+  generateValueRangeStartAndEnd(
+      opClass, "getODSResultIndexAndLength", numVariadicResults,
+      numNormalResults, "getOperation()->getNumResults()", attrSizedResults,
+      "result_segment_sizes", op.getResults());
   auto &m = opClass.newMethod("Operation::result_range", "getODSResults",
                               "unsigned index");
-
-  if (numVariadicResults == 0) {
-    m.body() << "  return {std::next(getOperation()->result_begin(), index), "
-                "std::next(getOperation()->result_begin(), index + 1)};";
-  } else if (attrSizedResults) {
-    m.body() << formatv(attrSizedSegmentValueRangeCalcCode,
-                        "result_segment_sizes",
-                        "getOperation()->result_begin()");
-  } else {
-    llvm::SmallVector<StringRef, 4> isVariadic;
-    isVariadic.reserve(numResults);
-    for (int i = 0; i < numResults; ++i)
-      isVariadic.push_back(op.getResult(i).isVariableLength() ? "true"
-                                                              : "false");
-    std::string isVariadicList = llvm::join(isVariadic, ", ");
-
-    m.body() << formatv(sameVariadicSizeValueRangeCalcCode, isVariadicList,
-                        numNormalResults, numVariadicResults,
-                        "getOperation()->getNumResults()",
-                        "getOperation()->result_begin()", "result");
-  }
+  m.body() << formatv(valueRangeReturnCode, "getOperation()->result_begin()",
+                      "getODSResultIndexAndLength(index)");
 
   for (int i = 0; i != numResults; ++i) {
     const auto &result = op.getResult(i);
@@ -1251,10 +1282,23 @@ void OpEmitter::genOpInterfaceMethods() {
     if (!opTrait || !opTrait->shouldDeclareMethods())
       continue;
     auto interface = opTrait->getOpInterface();
-    for (auto method : interface.getMethods()) {
-      // Don't declare if the method has a body or a default implementation.
-      if (method.getBody() || method.getDefaultImplementation())
+
+    // Get the set of methods that should always be declared.
+    auto alwaysDeclaredMethodsVec = opTrait->getAlwaysDeclaredMethods();
+    llvm::StringSet<> alwaysDeclaredMethods;
+    alwaysDeclaredMethods.insert(alwaysDeclaredMethodsVec.begin(),
+                                 alwaysDeclaredMethodsVec.end());
+
+    for (const OpInterfaceMethod &method : interface.getMethods()) {
+      // Don't declare if the method has a body.
+      if (method.getBody())
         continue;
+      // Don't declare if the method has a default implementation and the op
+      // didn't request that it always be declared.
+      if (method.getDefaultImplementation() &&
+          !alwaysDeclaredMethods.count(method.getName()))
+        continue;
+
       std::string args;
       llvm::raw_string_ostream os(args);
       interleaveComma(method.getArguments(), os,

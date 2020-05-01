@@ -21,39 +21,6 @@ using namespace mlir;
 // BranchOpInterface
 //===----------------------------------------------------------------------===//
 
-/// Erase an operand from a branch operation that is used as a successor
-/// operand. 'operandIndex' is the operand within 'operands' to be erased.
-void mlir::detail::eraseBranchSuccessorOperand(OperandRange operands,
-                                               unsigned operandIndex,
-                                               Operation *op) {
-  assert(operandIndex < operands.size() &&
-         "invalid index for successor operands");
-
-  // Erase the operand from the operation.
-  size_t fullOperandIndex = operands.getBeginOperandIndex() + operandIndex;
-  op->eraseOperand(fullOperandIndex);
-
-  // If this operation has an OperandSegmentSizeAttr, keep it up to date.
-  auto operandSegmentAttr =
-      op->getAttrOfType<DenseElementsAttr>("operand_segment_sizes");
-  if (!operandSegmentAttr)
-    return;
-
-  // Find the segment containing the full operand index and decrement it.
-  // TODO: This seems like a general utility that could be added somewhere.
-  SmallVector<int32_t, 4> values(operandSegmentAttr.getValues<int32_t>());
-  unsigned currentSize = 0;
-  for (unsigned i = 0, e = values.size(); i != e; ++i) {
-    currentSize += values[i];
-    if (fullOperandIndex < currentSize) {
-      --values[i];
-      break;
-    }
-  }
-  op->setAttr("operand_segment_sizes",
-              DenseIntElementsAttr::get(operandSegmentAttr.getType(), values));
-}
-
 /// Returns the `BlockArgument` corresponding to operand `operandIndex` in some
 /// successor if 'operandIndex' is within the range of 'operands', or None if
 /// `operandIndex` isn't a successor operand index.

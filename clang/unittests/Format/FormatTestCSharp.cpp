@@ -343,7 +343,13 @@ TEST_F(FormatTestCSharp, CSharpRegions) {
 }
 
 TEST_F(FormatTestCSharp, CSharpKeyWordEscaping) {
-  verifyFormat("public enum var { none, @string, bool, @enum }");
+  verifyFormat("public enum var\n"
+               "{\n"
+               "    none,\n"
+               "    @string,\n"
+               "    bool,\n"
+               "    @enum\n"
+               "}");
 }
 
 TEST_F(FormatTestCSharp, CSharpNullCoalescing) {

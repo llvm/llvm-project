@@ -8,6 +8,7 @@
 
 #include "SyntheticSections.h"
 #include "Config.h"
+#include "ExportTrie.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -136,38 +137,14 @@ ExportSection::ExportSection() {
 }
 
 void ExportSection::finalizeContents() {
-  raw_svector_ostream os{contents};
-  std::vector<const Defined *> exported;
   // TODO: We should check symbol visibility.
   for (const Symbol *sym : symtab->getSymbols())
     if (auto *defined = dyn_cast<Defined>(sym))
-      exported.push_back(defined);
-
-  if (exported.empty())
-    return;
-
-  if (exported.size() > 1) {
-    error("TODO: Unable to export more than 1 symbol");
-    return;
-  }
-
-  const Defined *sym = exported.front();
-  os << (char)0; // Indicates non-leaf node
-  os << (char)1; // # of children
-  os << sym->getName() << '\0';
-  encodeULEB128(sym->getName().size() + 4, os); // Leaf offset
-
-  // Leaf node
-  uint64_t addr = sym->getVA() + ImageBase;
-  os << (char)(1 + getULEB128Size(addr));
-  os << (char)0; // Flags
-  encodeULEB128(addr, os);
-  os << (char)0; // Terminator
+      trieBuilder.addSymbol(*defined);
+  size = trieBuilder.build();
 }
 
-void ExportSection::writeTo(uint8_t *buf) {
-  memcpy(buf, contents.data(), contents.size());
-}
+void ExportSection::writeTo(uint8_t *buf) { trieBuilder.writeTo(buf); }
 
 SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : stringTableSection(stringTableSection) {

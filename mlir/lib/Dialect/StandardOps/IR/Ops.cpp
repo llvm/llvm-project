@@ -677,12 +677,11 @@ void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
       context);
 }
 
-Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+BranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return getOperands();
+  return destOperandsMutable();
 }
-
-bool BranchOp::canEraseSuccessorOperand() { return true; }
 
 Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 
@@ -1021,12 +1020,12 @@ void CondBranchOp::getCanonicalizationPatterns(
                  SimplifyCondBranchIdenticalSuccessors>(context);
 }
 
-Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+CondBranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
-  return index == trueIndex ? getTrueOperands() : getFalseOperands();
+  return index == trueIndex ? trueDestOperandsMutable()
+                            : falseDestOperandsMutable();
 }
-
-bool CondBranchOp::canEraseSuccessorOperand() { return true; }
 
 Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   if (BoolAttr condAttr = operands.front().dyn_cast_or_null<BoolAttr>())

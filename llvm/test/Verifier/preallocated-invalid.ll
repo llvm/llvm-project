@@ -98,7 +98,7 @@ define void @preallocated_require_bundle() {
     ret void
 }
 
-; CHECK: arg size must be equal to number of arguments
+; CHECK: arg size must be equal to number of preallocated arguments
 define void @preallocated_num_args() {
     %cs = call token @llvm.call.preallocated.setup(i32 3)
     %x = call i8* @llvm.call.preallocated.arg(token %cs, i32 0) preallocated(i32)

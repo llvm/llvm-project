@@ -23,15 +23,10 @@ bool MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   return false;
 }
 
-bool MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
-                                     uint64_t Size, uint64_t &Target) const {
-  if (Inst.getNumOperands() == 0 ||
-      Info->get(Inst.getOpcode()).OpInfo[0].OperandType != MCOI::OPERAND_PCREL)
-    return false;
-
-  int64_t Imm = Inst.getOperand(0).getImm();
-  Target = Addr+Size+Imm;
-  return true;
+bool MCInstrAnalysis::evaluateBranch(const MCInst & /*Inst*/, uint64_t /*Addr*/,
+                                     uint64_t /*Size*/,
+                                     uint64_t & /*Target*/) const {
+  return false;
 }
 
 Optional<uint64_t>

@@ -1563,15 +1563,7 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   ast.getTypeDeclType(class_template_specialization_decl, nullptr);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
-  // FIXME: Turning this on breaks the libcxx data formatter tests.
-  // SetOwningModule marks the Decl as external, which prevents a
-  // LookupPtr from being built. Template instantiations can also not
-  // be found by ExternalASTSource::FindExternalVisibleDeclsByName(),
-  // nor can we lazily build a LookupPtr later, because template
-  // specializations are supposed to be hidden so
-  // makeDeclVisibleInContextWithFlags() is a noop, as well.
-  //
-  // SetOwningModule(class_template_specialization_decl, owning_module);
+  SetOwningModule(class_template_specialization_decl, owning_module);
   decl_ctx->addDecl(class_template_specialization_decl);
 
   class_template_specialization_decl->setSpecializationKind(

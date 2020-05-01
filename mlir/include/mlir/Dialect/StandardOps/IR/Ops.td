@@ -129,14 +129,12 @@ class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //
 //   %0 = alloclike(%m)[%s] : memref<8x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1)>
 //
-class AllocLikeOp<string mnemonic,
-                  list<OpVariableDecorator> resultDecorators = [],
-                  list<OpTrait> traits = []> :
-    Std_Op<mnemonic, traits> {
+class AllocLikeOp<string mnemonic, list<OpTrait> traits = []> :
+    Std_Op<mnemonic, !listconcat(traits, [MemoryEffects<[MemAlloc]>])> {
 
   let arguments = (ins Variadic<Index>:$value,
                    Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment);
-  let results = (outs Arg<AnyMemRef, "", resultDecorators>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc]>);
 
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, MemRefType memrefType", [{
@@ -278,7 +276,7 @@ def AddIOp : IntArithmeticOp<"addi", [Commutative]> {
 // AllocOp
 //===----------------------------------------------------------------------===//
 
-def AllocOp : AllocLikeOp<"alloc", [MemAlloc], [MemoryEffects<[MemAlloc]>]> {
+def AllocOp : AllocLikeOp<"alloc"> {
   let summary = "memory allocation operation";
   let description = [{
     The `alloc` operation allocates a region of memory, as specified by its
@@ -562,7 +560,8 @@ def AtomicYieldOp : Std_Op<"atomic_yield", [
 //===----------------------------------------------------------------------===//
 
 def BranchOp : Std_Op<"br",
-    [DeclareOpInterfaceMethods<BranchOpInterface>, NoSideEffect, Terminator]> {
+    [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     NoSideEffect, Terminator]> {
   let summary = "branch operation";
   let description = [{
     The `br` operation represents a branch operation in a function.
@@ -598,10 +597,6 @@ def BranchOp : Std_Op<"br",
 
     /// Erase the operand at 'index' from the operand list.
     void eraseOperand(unsigned index);
-
-    /// Returns the successor that would be chosen with the given constant
-    /// operands. Returns nullptr if a single successor could not be chosen.
-    Block *getSuccessorForOperands(ArrayRef<Attribute>);
   }];
 
   let hasCanonicalizer = 1;
@@ -991,7 +986,8 @@ def CmpIOp : Std_Op<"cmpi",
 //===----------------------------------------------------------------------===//
 
 def CondBranchOp : Std_Op<"cond_br",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      NoSideEffect, Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
@@ -1076,7 +1072,7 @@ def CondBranchOp : Std_Op<"cond_br",
 
     /// Erase the operand at 'index' from the true operand list.
     void eraseTrueOperand(unsigned index)  {
-      eraseSuccessorOperand(trueIndex, index);
+      trueDestOperandsMutable().erase(index);
     }
 
     // Accessors for operands to the 'false' destination.
@@ -1095,12 +1091,8 @@ def CondBranchOp : Std_Op<"cond_br",
 
     /// Erase the operand at 'index' from the false operand list.
     void eraseFalseOperand(unsigned index) {
-      eraseSuccessorOperand(falseIndex, index);
+      falseDestOperandsMutable().erase(index);
     }
-
-    /// Returns the successor that would be chosen with the given constant
-    /// operands. Returns nullptr if a single successor could not be chosen.
-    Block *getSuccessorForOperands(ArrayRef<Attribute> operands);
 
   private:
     /// Get the index of the first true destination operand.
@@ -1245,6 +1237,36 @@ def CosOp : FloatUnaryOp<"cos"> {
     ```
   }];
 }
+
+def SinOp : FloatUnaryOp<"sin"> {
+  let summary = "sine of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.sin` ssa-use `:` type
+    ```
+
+    The `sin` operation computes the sine of a given value. It takes one
+    operand and returns one result of the same type. This type may be a float
+    scalar type, a vector whose element type is float, or a tensor of floats.
+    It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar sine value.
+    %a = sin %b : f64
+
+    // SIMD vector element-wise sine value.
+    %f = sin %g : vector<4xf32>
+
+    // Tensor element-wise sine value.
+    %x = sin %y : tensor<4x?xf8>
+    ```
+  }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // DeallocOp

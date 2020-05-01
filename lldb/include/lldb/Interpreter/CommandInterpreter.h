@@ -144,6 +144,20 @@ public:
     m_add_to_history = add_to_history ? eLazyBoolYes : eLazyBoolNo;
   }
 
+  bool GetAutoHandleEvents() const {
+    return DefaultToYes(m_auto_handle_events);
+  }
+
+  void SetAutoHandleEvents(bool auto_handle_events) {
+    m_auto_handle_events = auto_handle_events ? eLazyBoolYes : eLazyBoolNo;
+  }
+
+  bool GetSpawnThread() const { return DefaultToNo(m_spawn_thread); }
+
+  void SetSpawnThread(bool spawn_thread) {
+    m_spawn_thread = spawn_thread ? eLazyBoolYes : eLazyBoolNo;
+  }
+
   LazyBool m_stop_on_continue;
   LazyBool m_stop_on_error;
   LazyBool m_stop_on_crash;
@@ -152,6 +166,8 @@ public:
   LazyBool m_print_results;
   LazyBool m_print_errors;
   LazyBool m_add_to_history;
+  LazyBool m_auto_handle_events;
+  LazyBool m_spawn_thread;
 
 private:
   static bool DefaultToYes(LazyBool flag) {
@@ -426,8 +442,7 @@ public:
 
   bool IsActive();
 
-  void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread,
-                             CommandInterpreterRunOptions &options);
+  void RunCommandInterpreter(CommandInterpreterRunOptions &options);
 
   void GetLLDBCommandsFromIOHandler(const char *prompt,
                                     IOHandlerDelegate &delegate,

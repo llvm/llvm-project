@@ -277,17 +277,17 @@ void PassTiming::runAfterPipeline(const OperationName &name,
 
 /// Start a new timer for the given pass.
 void PassTiming::startPassTimer(Pass *pass) {
-  auto kind = isAdaptorPass(pass) ? TimerKind::PipelineCollection
-                                  : TimerKind::PassOrAnalysis;
+  auto kind = isa<OpToOpPassAdaptor>(pass) ? TimerKind::PipelineCollection
+                                           : TimerKind::PassOrAnalysis;
   Timer *timer = getTimer(pass, kind, [pass]() -> std::string {
-    if (auto *adaptor = getAdaptorPassBase(pass))
-      return adaptor->getName();
+    if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
+      return adaptor->getAdaptorName();
     return std::string(pass->getName());
   });
 
   // We don't actually want to time the adaptor passes, they gather their total
   // from their held passes.
-  if (!isAdaptorPass(pass))
+  if (!isa<OpToOpPassAdaptor>(pass))
     timer->start();
 }
 
@@ -302,9 +302,9 @@ void PassTiming::startAnalysisTimer(StringRef name, TypeID id) {
 void PassTiming::runAfterPass(Pass *pass, Operation *) {
   Timer *timer = popLastActiveTimer();
 
-  // If this is an OpToOpPassAdaptorParallel, then we need to merge in the
-  // timing data for the pipelines running on other threads.
-  if (isa<OpToOpPassAdaptorParallel>(pass)) {
+  // If this is a pass adaptor, then we need to merge in the timing data for the
+  // pipelines running on other threads.
+  if (isa<OpToOpPassAdaptor>(pass)) {
     auto toMerge = pipelinesToMerge.find({llvm::get_threadid(), pass});
     if (toMerge != pipelinesToMerge.end()) {
       for (auto &it : toMerge->second)
@@ -314,10 +314,7 @@ void PassTiming::runAfterPass(Pass *pass, Operation *) {
     return;
   }
 
-  // Adaptor passes aren't timed directly, so we don't need to stop their
-  // timers.
-  if (!isAdaptorPass(pass))
-    timer->stop();
+  timer->stop();
 }
 
 /// Stop a timer.

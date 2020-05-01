@@ -1366,6 +1366,12 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::REV:               return "AArch64ISD::REV";
   case AArch64ISD::REINTERPRET_CAST:  return "AArch64ISD::REINTERPRET_CAST";
   case AArch64ISD::TBL:               return "AArch64ISD::TBL";
+  case AArch64ISD::FADDA_PRED:        return "AArch64ISD::FADDA_PRED";
+  case AArch64ISD::FADDV_PRED:        return "AArch64ISD::FADDV_PRED";
+  case AArch64ISD::FMAXV_PRED:        return "AArch64ISD::FMAXV_PRED";
+  case AArch64ISD::FMAXNMV_PRED:      return "AArch64ISD::FMAXNMV_PRED";
+  case AArch64ISD::FMINV_PRED:        return "AArch64ISD::FMINV_PRED";
+  case AArch64ISD::FMINNMV_PRED:      return "AArch64ISD::FMINNMV_PRED";
   case AArch64ISD::NOT:               return "AArch64ISD::NOT";
   case AArch64ISD::BIT:               return "AArch64ISD::BIT";
   case AArch64ISD::CBZ:               return "AArch64ISD::CBZ";
@@ -11308,6 +11314,46 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
   return DAG.getZExtOrTrunc(Res, DL, VT);
 }
 
+static SDValue combineSVEReductionFP(SDNode *N, unsigned Opc,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  SDValue Pred = N->getOperand(1);
+  SDValue VecToReduce = N->getOperand(2);
+
+  EVT ReduceVT = VecToReduce.getValueType();
+  SDValue Reduce = DAG.getNode(Opc, DL, ReduceVT, Pred, VecToReduce);
+
+  // SVE reductions set the whole vector register with the first element
+  // containing the reduction result, which we'll now extract.
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, N->getValueType(0), Reduce,
+                     Zero);
+}
+
+static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
+                                            SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  SDValue Pred = N->getOperand(1);
+  SDValue InitVal = N->getOperand(2);
+  SDValue VecToReduce = N->getOperand(3);
+  EVT ReduceVT = VecToReduce.getValueType();
+
+  // Ordered reductions use the first lane of the result vector as the
+  // reduction's initial value.
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  InitVal = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ReduceVT,
+                        DAG.getUNDEF(ReduceVT), InitVal, Zero);
+
+  SDValue Reduce = DAG.getNode(Opc, DL, ReduceVT, Pred, InitVal, VecToReduce);
+
+  // SVE reductions set the whole vector register with the first element
+  // containing the reduction result, which we'll now extract.
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, N->getValueType(0), Reduce,
+                     Zero);
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -11391,6 +11437,18 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_udiv:
      return DAG.getNode(AArch64ISD::UDIV_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_fadda:
+    return combineSVEReductionOrderedFP(N, AArch64ISD::FADDA_PRED, DAG);
+  case Intrinsic::aarch64_sve_faddv:
+    return combineSVEReductionFP(N, AArch64ISD::FADDV_PRED, DAG);
+  case Intrinsic::aarch64_sve_fmaxnmv:
+    return combineSVEReductionFP(N, AArch64ISD::FMAXNMV_PRED, DAG);
+  case Intrinsic::aarch64_sve_fmaxv:
+    return combineSVEReductionFP(N, AArch64ISD::FMAXV_PRED, DAG);
+  case Intrinsic::aarch64_sve_fminnmv:
+    return combineSVEReductionFP(N, AArch64ISD::FMINNMV_PRED, DAG);
+  case Intrinsic::aarch64_sve_fminv:
+    return combineSVEReductionFP(N, AArch64ISD::FMINV_PRED, DAG);
   case Intrinsic::aarch64_sve_sel:
     return DAG.getNode(ISD::VSELECT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));

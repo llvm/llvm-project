@@ -33,8 +33,9 @@ public:
       //   - Operation pointer
       addDataToHash(hasher, op);
       //   - Attributes
-      addDataToHash(hasher,
-                    op->getAttrList().getDictionary().getAsOpaquePointer());
+      addDataToHash(
+          hasher,
+          op->getMutableAttrDict().getDictionary().getAsOpaquePointer());
       //   - Blocks in Regions
       for (Region &region : op->getRegions()) {
         for (Block &block : region) {
@@ -98,7 +99,7 @@ private:
 
 /// Returns true if the given pass is hidden from IR printing.
 static bool isHiddenPass(Pass *pass) {
-  return isAdaptorPass(pass) || isa<VerifierPass>(pass);
+  return isa<OpToOpPassAdaptor>(pass) || isa<VerifierPass>(pass);
 }
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
@@ -172,7 +173,7 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
 }
 
 void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
-  if (isAdaptorPass(pass))
+  if (isa<OpToOpPassAdaptor>(pass))
     return;
   if (config->shouldPrintAfterOnlyOnChange())
     beforePassFingerPrints.erase(pass);

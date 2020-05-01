@@ -424,8 +424,17 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     int DefIdx = -1;
     for (unsigned OpNum = 0; OpNum < SrcI->getNumOperands(); OpNum++) {
       const MachineOperand &MO = SrcI->getOperand(OpNum);
-      if (MO.isReg() && MO.isDef() && MO.getReg() == DepR)
-        DefIdx = OpNum;
+      bool IsSameOrSubReg = false;
+      if (MO.isReg()) {
+        unsigned MOReg = MO.getReg();
+        if (Register::isVirtualRegister(DepR)) {
+          IsSameOrSubReg = (MOReg == DepR);
+        } else {
+          IsSameOrSubReg = getRegisterInfo()->isSubRegisterEq(DepR, MOReg);
+        }
+        if (MO.isDef() && IsSameOrSubReg)
+          DefIdx = OpNum;
+      }
     }
     assert(DefIdx >= 0 && "Def Reg not found in Src MI");
     MachineInstr *DstI = Dst->getInstr();

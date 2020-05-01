@@ -860,6 +860,9 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         // TODO: base this on the number of branch-afters and fixups
         const unsigned SwitchCapacity = 10;
 
+        // pass the abnormal exit flag to Fn (SEH cleanup)
+        cleanupFlags.setHasExitSwitch();
+
         llvm::LoadInst *Load =
           createLoadInstBefore(getNormalCleanupDestSlot(), "cleanup.dest",
                                nullptr);

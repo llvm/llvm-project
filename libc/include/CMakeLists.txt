@@ -12,6 +12,12 @@ add_header(
 )
 
 add_header(
+  stdc_types
+  HDR
+    __llvm-libc-stdc-types.h
+)
+
+add_header(
   ctype
   HDR
    ctype.h
@@ -25,6 +31,7 @@ add_gen_header(
   GEN_HDR math.h
   DEPENDS
     .llvm_libc_common_h
+    .stdc_types
 )
 
 add_gen_header(

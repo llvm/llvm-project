@@ -1459,6 +1459,8 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   bool HasCancel = false;
   if (const auto *OPD = dyn_cast<OMPParallelDirective>(&D))
     HasCancel = OPD->hasCancel();
+  else if (const auto *OPD = dyn_cast<OMPTargetParallelDirective>(&D))
+    HasCancel = OPD->hasCancel();
   else if (const auto *OPSD = dyn_cast<OMPParallelSectionsDirective>(&D))
     HasCancel = OPSD->hasCancel();
   else if (const auto *OPFD = dyn_cast<OMPParallelForDirective>(&D))

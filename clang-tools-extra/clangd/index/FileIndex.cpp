@@ -29,6 +29,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -96,27 +97,6 @@ SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
                          std::move(Relations));
 }
 
-// Resolves URI to file paths with cache.
-class URIToFileCache {
-public:
-  URIToFileCache(PathRef HintPath) : HintPath(HintPath) {}
-
-  llvm::StringRef operator[](llvm::StringRef FileURI) {
-    if (FileURI.empty())
-      return "";
-    auto I = URIToPathCache.try_emplace(FileURI);
-    if (I.second) {
-      I.first->second = llvm::cantFail(URI::resolve(FileURI, HintPath),
-                                       "Failed to resolve URI");
-    }
-    return I.first->second;
-  }
-
-private:
-  PathRef HintPath;
-  llvm::StringMap<std::string> URIToPathCache;
-};
-
 // We keep only the node "U" and its edges. Any node other than "U" will be
 // empty in the resultant graph.
 IncludeGraph getSubGraph(llvm::StringRef URI, const IncludeGraph &FullGraph) {
@@ -137,24 +117,21 @@ IncludeGraph getSubGraph(llvm::StringRef URI, const IncludeGraph &FullGraph) {
 }
 } // namespace
 
-FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
+FileShardedIndex::FileShardedIndex(IndexFileIn Input)
     : Index(std::move(Input)) {
-  URIToFileCache UriToFile(HintPath);
   // Used to build RelationSlabs.
   llvm::DenseMap<SymbolID, FileShard *> SymbolIDToFile;
 
   // Attribute each Symbol to both their declaration and definition locations.
   if (Index.Symbols) {
     for (const auto &S : *Index.Symbols) {
-      auto File = UriToFile[S.CanonicalDeclaration.FileURI];
-      auto It = Shards.try_emplace(File);
+      auto It = Shards.try_emplace(S.CanonicalDeclaration.FileURI);
       It.first->getValue().Symbols.insert(&S);
       SymbolIDToFile[S.ID] = &It.first->getValue();
       // Only bother if definition file is different than declaration file.
       if (S.Definition &&
           S.Definition.FileURI != S.CanonicalDeclaration.FileURI) {
-        auto File = UriToFile[S.Definition.FileURI];
-        auto It = Shards.try_emplace(File);
+        auto It = Shards.try_emplace(S.Definition.FileURI);
         It.first->getValue().Symbols.insert(&S);
       }
     }
@@ -163,8 +140,7 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
   if (Index.Refs) {
     for (const auto &SymRefs : *Index.Refs) {
       for (const auto &R : SymRefs.second) {
-        auto File = UriToFile[R.Location.FileURI];
-        const auto It = Shards.try_emplace(File);
+        const auto It = Shards.try_emplace(R.Location.FileURI);
         It.first->getValue().Refs.insert(&R);
         RefToSymID[&R] = SymRefs.first;
       }
@@ -183,25 +159,26 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input, PathRef HintPath)
   if (Index.Sources) {
     const auto &FullGraph = *Index.Sources;
     for (const auto &It : FullGraph) {
-      auto File = UriToFile[It.first()];
-      auto ShardIt = Shards.try_emplace(File);
+      auto ShardIt = Shards.try_emplace(It.first());
       ShardIt.first->getValue().IG = getSubGraph(It.first(), FullGraph);
     }
   }
 }
-std::vector<PathRef> FileShardedIndex::getAllFiles() const {
+std::vector<llvm::StringRef> FileShardedIndex::getAllSources() const {
   // It should be enough to construct a vector with {Shards.keys().begin(),
   // Shards.keys().end()} but MSVC fails to compile that.
   std::vector<PathRef> Result;
   Result.reserve(Shards.size());
-  for (PathRef Key : Shards.keys())
+  for (auto Key : Shards.keys())
     Result.push_back(Key);
   return Result;
 }
 
-IndexFileIn FileShardedIndex::getShard(PathRef File) const {
-  auto It = Shards.find(File);
-  assert(It != Shards.end() && "received unknown file");
+llvm::Optional<IndexFileIn>
+FileShardedIndex::getShard(llvm::StringRef Uri) const {
+  auto It = Shards.find(Uri);
+  if (It == Shards.end())
+    return llvm::None;
 
   IndexFileIn IF;
   IF.Sources = It->getValue().IG;
@@ -245,27 +222,28 @@ SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                       /*IsIndexMainAST=*/false, Version);
 }
 
-void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
+void FileSymbols::update(llvm::StringRef Key,
+                         std::unique_ptr<SymbolSlab> Symbols,
                          std::unique_ptr<RefSlab> Refs,
                          std::unique_ptr<RelationSlab> Relations,
                          bool CountReferences) {
   std::lock_guard<std::mutex> Lock(Mutex);
   if (!Symbols)
-    FileToSymbols.erase(Path);
+    SymbolsSnapshot.erase(Key);
   else
-    FileToSymbols[Path] = std::move(Symbols);
+    SymbolsSnapshot[Key] = std::move(Symbols);
   if (!Refs) {
-    FileToRefs.erase(Path);
+    RefsSnapshot.erase(Key);
   } else {
     RefSlabAndCountReferences Item;
     Item.CountReferences = CountReferences;
     Item.Slab = std::move(Refs);
-    FileToRefs[Path] = std::move(Item);
+    RefsSnapshot[Key] = std::move(Item);
   }
   if (!Relations)
-    FileToRelations.erase(Path);
+    RelatiosSnapshot.erase(Key);
   else
-    FileToRelations[Path] = std::move(Relations);
+    RelatiosSnapshot[Key] = std::move(Relations);
 }
 
 std::unique_ptr<SymbolIndex>
@@ -276,14 +254,14 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   std::vector<RefSlab *> MainFileRefs;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-    for (const auto &FileAndSymbols : FileToSymbols)
+    for (const auto &FileAndSymbols : SymbolsSnapshot)
       SymbolSlabs.push_back(FileAndSymbols.second);
-    for (const auto &FileAndRefs : FileToRefs) {
+    for (const auto &FileAndRefs : RefsSnapshot) {
       RefSlabs.push_back(FileAndRefs.second.Slab);
       if (FileAndRefs.second.CountReferences)
         MainFileRefs.push_back(RefSlabs.back().get());
     }
-    for (const auto &FileAndRelations : FileToRelations)
+    for (const auto &FileAndRelations : RelatiosSnapshot)
       RelationSlabs.push_back(FileAndRelations.second);
   }
   std::vector<const Symbol *> AllSymbols;
@@ -399,13 +377,16 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
   IndexFileIn IF;
   std::tie(IF.Symbols, std::ignore, IF.Relations) =
       indexHeaderSymbols(Version, AST, std::move(PP), Includes);
-  FileShardedIndex ShardedIndex(std::move(IF), Path);
-  for (PathRef File : ShardedIndex.getAllFiles()) {
-    auto IF = ShardedIndex.getShard(File);
+  FileShardedIndex ShardedIndex(std::move(IF));
+  for (auto Uri : ShardedIndex.getAllSources()) {
+    auto IF = ShardedIndex.getShard(Uri);
+    // We are using the key received from ShardedIndex, so it should always
+    // exist.
+    assert(IF);
     PreambleSymbols.update(
-        File, std::make_unique<SymbolSlab>(std::move(*IF.Symbols)),
+        Uri, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
         std::make_unique<RefSlab>(),
-        std::make_unique<RelationSlab>(std::move(*IF.Relations)),
+        std::make_unique<RelationSlab>(std::move(*IF->Relations)),
         /*CountReferences=*/false);
   }
   PreambleIndex.reset(

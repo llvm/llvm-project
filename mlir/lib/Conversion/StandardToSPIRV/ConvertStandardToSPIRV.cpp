@@ -97,6 +97,55 @@ static FloatAttr convertFloatAttr(FloatAttr srcAttr, FloatType dstType,
   return builder.getF32FloatAttr(dstVal.convertToFloat());
 }
 
+/// Returns the offset of the value in `targetBits` representation. `srcIdx` is
+/// an index into a 1-D array with each element having `sourceBits`. When
+/// accessing an element in the array treating as having elements of
+/// `targetBits`, multiple values are loaded in the same time. The method
+/// returns the offset where the `srcIdx` locates in the value. For example, if
+/// `sourceBits` equals to 8 and `targetBits` equals to 32, the x-th element is
+/// located at (x % 4) * 8. Because there are four elements in one i32, and one
+/// element has 8 bits.
+static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
+                                  int targetBits, OpBuilder &builder) {
+  assert(targetBits % sourceBits == 0);
+  IntegerType targetType = builder.getIntegerType(targetBits);
+  IntegerAttr idxAttr =
+      builder.getIntegerAttr(targetType, targetBits / sourceBits);
+  auto idx = builder.create<spirv::ConstantOp>(loc, targetType, idxAttr);
+  IntegerAttr srcBitsAttr = builder.getIntegerAttr(targetType, sourceBits);
+  auto srcBitsValue =
+      builder.create<spirv::ConstantOp>(loc, targetType, srcBitsAttr);
+  auto m = builder.create<spirv::SModOp>(loc, srcIdx, idx);
+  return builder.create<spirv::IMulOp>(loc, targetType, m, srcBitsValue);
+}
+
+/// Returns an adjusted spirv::AccessChainOp. Based on the
+/// extension/capabilities, certain integer bitwidths `sourceBits` might not be
+/// supported. During conversion if a memref of an unsupported type is used,
+/// load/stores to this memref need to be modified to use a supported higher
+/// bitwidth `targetBits` and extracting the required bits. For an accessing a
+/// 1D array (spv.array or spv.rt_array), the last index is modified to load the
+/// bits needed. The extraction of the actual bits needed are handled
+/// separately. Note that this only works for a 1-D tensor.
+static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
+                                          spirv::AccessChainOp op,
+                                          int sourceBits, int targetBits,
+                                          OpBuilder &builder) {
+  assert(targetBits % sourceBits == 0);
+  const auto loc = op.getLoc();
+  IntegerType targetType = builder.getIntegerType(targetBits);
+  IntegerAttr attr =
+      builder.getIntegerAttr(targetType, targetBits / sourceBits);
+  auto idx = builder.create<spirv::ConstantOp>(loc, targetType, attr);
+  auto lastDim = op.getOperation()->getOperand(op.getNumOperands() - 1);
+  auto indices = llvm::to_vector<4>(op.indices());
+  // There are two elements if this is a 1-D tensor.
+  assert(indices.size() == 2);
+  indices.back() = builder.create<spirv::SDivOp>(loc, lastDim, idx);
+  Type t = typeConverter.convertType(op.component_ptr().getType());
+  return builder.create<spirv::AccessChainOp>(loc, t, op.base_ptr(), indices);
+}
+
 //===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
@@ -201,6 +250,16 @@ public:
 
   LogicalResult
   matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts std.load to spv.Load.
+class IntLoadOpPattern final : public SPIRVOpLowering<LoadOp> {
+public:
+  using SPIRVOpLowering<LoadOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -529,12 +588,78 @@ CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
+IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
+                                  ConversionPatternRewriter &rewriter) const {
+  LoadOpOperandAdaptor loadOperands(operands);
+  auto loc = loadOp.getLoc();
+  auto memrefType = loadOp.memref().getType().cast<MemRefType>();
+  if (!memrefType.getElementType().isSignlessInteger())
+    return failure();
+  spirv::AccessChainOp accessChainOp =
+      spirv::getElementPtr(typeConverter, memrefType, loadOperands.memref(),
+                           loadOperands.indices(), loc, rewriter);
+
+  int srcBits = memrefType.getElementType().getIntOrFloatBitWidth();
+  auto dstType = typeConverter.convertType(memrefType)
+                     .cast<spirv::PointerType>()
+                     .getPointeeType()
+                     .cast<spirv::StructType>()
+                     .getElementType(0)
+                     .cast<spirv::ArrayType>()
+                     .getElementType();
+  int dstBits = dstType.getIntOrFloatBitWidth();
+  assert(dstBits % srcBits == 0);
+
+  // If the rewrited load op has the same bit width, use the loading value
+  // directly.
+  if (srcBits == dstBits) {
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp,
+                                               accessChainOp.getResult());
+    return success();
+  }
+
+  // Assume that getElementPtr() works linearizely. If it's a scalar, the method
+  // still returns a linearized accessing. If the accessing is not linearized,
+  // there will be offset issues.
+  assert(accessChainOp.indices().size() == 2);
+  Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
+                                                   srcBits, dstBits, rewriter);
+  Value spvLoadOp = rewriter.create<spirv::LoadOp>(
+      loc, dstType, adjustedPtr,
+      loadOp.getAttrOfType<IntegerAttr>(
+          spirv::attributeName<spirv::MemoryAccess>()),
+      loadOp.getAttrOfType<IntegerAttr>("alignment"));
+
+  // Shift the bits to the rightmost.
+  // ____XXXX________ -> ____________XXXX
+  Value lastDim = accessChainOp.getOperation()->getOperand(
+      accessChainOp.getNumOperands() - 1);
+  Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
+  Value result = rewriter.create<spirv::ShiftRightArithmeticOp>(
+      loc, spvLoadOp.getType(), spvLoadOp, offset);
+
+  // Apply the mask to extract corresponding bits.
+  Value mask = rewriter.create<spirv::ConstantOp>(
+      loc, dstType, rewriter.getIntegerAttr(dstType, (1 << srcBits) - 1));
+  result = rewriter.create<spirv::BitwiseAndOp>(loc, dstType, result, mask);
+  rewriter.replaceOp(loadOp, result);
+
+  assert(accessChainOp.use_empty());
+  rewriter.eraseOp(accessChainOp);
+
+  return success();
+}
+
+LogicalResult
 LoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter) const {
   LoadOpOperandAdaptor loadOperands(operands);
-  auto loadPtr = spirv::getElementPtr(
-      typeConverter, loadOp.memref().getType().cast<MemRefType>(),
-      loadOperands.memref(), loadOperands.indices(), loadOp.getLoc(), rewriter);
+  auto memrefType = loadOp.memref().getType().cast<MemRefType>();
+  if (memrefType.getElementType().isSignlessInteger())
+    return failure();
+  auto loadPtr =
+      spirv::getElementPtr(typeConverter, memrefType, loadOperands.memref(),
+                           loadOperands.indices(), loadOp.getLoc(), rewriter);
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
   return success();
 }
@@ -632,6 +757,7 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       UnaryAndBinaryOpPattern<SignedRemIOp, spirv::SRemOp>,
       UnaryAndBinaryOpPattern<SignedShiftRightOp,
                               spirv::ShiftRightArithmeticOp>,
+      UnaryAndBinaryOpPattern<SinOp, spirv::GLSLSinOp>,
       UnaryAndBinaryOpPattern<SqrtOp, spirv::GLSLSqrtOp>,
       UnaryAndBinaryOpPattern<SubFOp, spirv::FSubOp>,
       UnaryAndBinaryOpPattern<SubIOp, spirv::ISubOp>,
@@ -642,9 +768,11 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
       BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
       BoolCmpIOpPattern, ConstantCompositeOpPattern, ConstantScalarOpPattern,
-      CmpFOpPattern, CmpIOpPattern, LoadOpPattern, ReturnOpPattern,
-      SelectOpPattern, StoreOpPattern,
+      CmpFOpPattern, CmpIOpPattern, IntLoadOpPattern, LoadOpPattern,
+      ReturnOpPattern, SelectOpPattern, StoreOpPattern,
       TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
+      TypeCastingOpPattern<ZeroExtendIOp, spirv::UConvertOp>,
+      TypeCastingOpPattern<TruncateIOp, spirv::SConvertOp>,
       TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
       TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>, XOrOpPattern>(
       context, typeConverter);

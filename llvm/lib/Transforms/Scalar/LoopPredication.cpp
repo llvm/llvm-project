@@ -362,8 +362,7 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
   // For the new PM, we also can't use BranchProbabilityInfo as an analysis
   // pass. Function analyses need to be preserved across loop transformations
   // but BPI is not preserved, hence a newly built one is needed.
-  BranchProbabilityInfo BPI;
-  BPI.calculate(*F, AR.LI);
+  BranchProbabilityInfo BPI(*F, AR.LI, &AR.TLI);
   LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, &BPI);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();

@@ -252,6 +252,9 @@ private:
   /// Allow access to 'clone' and 'run'.
   friend class OpPassManager;
 
+  /// Allow access to 'run'.
+  friend class PassManager;
+
   /// Allow access to 'passOptions'.
   friend class PassInfo;
 };

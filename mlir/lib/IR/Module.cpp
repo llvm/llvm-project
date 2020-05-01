@@ -83,7 +83,7 @@ LogicalResult ModuleOp::verify() {
 
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : getOperation()->getAttrList().getAttrs()) {
+  for (auto attr : getOperation()->getMutableAttrDict().getAttrs()) {
     if (!attr.first.strref().contains('.') &&
         !llvm::is_contained(
             ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),

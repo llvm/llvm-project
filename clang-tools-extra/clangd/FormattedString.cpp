@@ -216,23 +216,10 @@ std::string getMarkerForCodeBlock(llvm::StringRef Input) {
 }
 
 // Trims the input and concatenates whitespace blocks into a single ` `.
-std::string canonicalizeSpaces(std::string Input) {
-  // Goes over the string and preserves only a single ` ` for any whitespace
-  // chunks, the rest is moved to the end of the string and dropped in the end.
-  auto WritePtr = Input.begin();
+std::string canonicalizeSpaces(llvm::StringRef Input) {
   llvm::SmallVector<llvm::StringRef, 4> Words;
   llvm::SplitString(Input, Words);
-  if (Words.empty())
-    return "";
-  // Go over each word and add it to the string.
-  for (llvm::StringRef Word : Words) {
-    if (WritePtr > Input.begin())
-      *WritePtr++ = ' '; // Separate from previous block.
-    llvm::for_each(Word, [&WritePtr](const char C) { *WritePtr++ = C; });
-  }
-  // Get rid of extra spaces.
-  Input.resize(WritePtr - Input.begin());
-  return Input;
+  return llvm::join(Words, " ");
 }
 
 std::string renderBlocks(llvm::ArrayRef<std::unique_ptr<Block>> Children,
@@ -284,6 +271,9 @@ public:
     OS << "\n---\n";
   }
   void renderPlainText(llvm::raw_ostream &OS) const override { OS << '\n'; }
+  std::unique_ptr<Block> clone() const override {
+    return std::make_unique<Ruler>(*this);
+  }
   bool isRuler() const override { return true; }
 };
 
@@ -298,6 +288,10 @@ public:
   void renderPlainText(llvm::raw_ostream &OS) const override {
     // In plaintext we want one empty line before and after codeblocks.
     OS << '\n' << Contents << "\n\n";
+  }
+
+  std::unique_ptr<Block> clone() const override {
+    return std::make_unique<CodeBlock>(*this);
   }
 
   CodeBlock(std::string Contents, std::string Language)
@@ -371,10 +365,28 @@ void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
   OS << "  \n";
 }
 
+std::unique_ptr<Block> Paragraph::clone() const {
+  return std::make_unique<Paragraph>(*this);
+}
+
+/// Choose a marker to delimit `Text` from a prioritized list of options.
+/// This is more readable than escaping for plain-text.
+llvm::StringRef chooseMarker(llvm::ArrayRef<llvm::StringRef> Options,
+                             llvm::StringRef Text) {
+  // Prefer a delimiter whose characters don't appear in the text.
+  for (llvm::StringRef S : Options)
+    if (Text.find_first_of(S) == llvm::StringRef::npos)
+      return S;
+  return Options.front();
+}
+
 void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
   llvm::StringRef Sep = "";
   for (auto &C : Chunks) {
-    OS << Sep << C.Contents;
+    llvm::StringRef Marker = "";
+    if (C.Preserve && C.Kind == Chunk::InlineCode)
+      Marker = chooseMarker({"`", "'", "\""}, C.Contents);
+    OS << Sep << Marker << C.Contents << Marker;
     Sep = " ";
   }
   OS << '\n';
@@ -398,31 +410,48 @@ void BulletList::renderPlainText(llvm::raw_ostream &OS) const {
   }
 }
 
-Paragraph &Paragraph::appendText(std::string Text) {
-  Text = canonicalizeSpaces(std::move(Text));
-  if (Text.empty())
+Paragraph &Paragraph::appendText(llvm::StringRef Text) {
+  std::string Norm = canonicalizeSpaces(Text);
+  if (Norm.empty())
     return *this;
   Chunks.emplace_back();
   Chunk &C = Chunks.back();
-  C.Contents = std::move(Text);
+  C.Contents = std::move(Norm);
   C.Kind = Chunk::PlainText;
   return *this;
 }
 
-Paragraph &Paragraph::appendCode(std::string Code) {
-  Code = canonicalizeSpaces(std::move(Code));
-  if (Code.empty())
+Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
+  std::string Norm = canonicalizeSpaces(std::move(Code));
+  if (Norm.empty())
     return *this;
   Chunks.emplace_back();
   Chunk &C = Chunks.back();
-  C.Contents = std::move(Code);
+  C.Contents = std::move(Norm);
   C.Kind = Chunk::InlineCode;
+  C.Preserve = Preserve;
   return *this;
+}
+
+std::unique_ptr<Block> BulletList::clone() const {
+  return std::make_unique<BulletList>(*this);
 }
 
 class Document &BulletList::addItem() {
   Items.emplace_back();
   return Items.back();
+}
+
+Document &Document::operator=(const Document &Other) {
+  Children.clear();
+  for (const auto &C : Other.Children)
+    Children.push_back(C->clone());
+  return *this;
+}
+
+void Document::append(Document Other) {
+  std::move(Other.Children.begin(), Other.Children.end(),
+            std::back_inserter(Children));
 }
 
 Paragraph &Document::addParagraph() {

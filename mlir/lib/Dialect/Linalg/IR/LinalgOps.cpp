@@ -33,10 +33,9 @@ using namespace mlir::linalg;
 
 /// Forward declarations.
 template <typename NamedStructuredOpType>
-static void buildNamedStructuredOpRegion(Builder &builder,
-                                         OperationState &result,
-                                         TypeRange operandTypes,
-                                         TypeRange tensorResultTypes);
+static void buildNamedStructuredOpRegionAndAttributes(
+    Builder &builder, OperationState &result, TypeRange operandTypes,
+    TypeRange tensorResultTypes);
 template <typename NamedStructuredOpType>
 static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op);
 template <typename NamedStructuredOpType>
@@ -1085,9 +1084,10 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
 //===----------------------------------------------------------------------===//
 
 template <typename NamedStructuredOpType>
-void buildNamedStructuredOpRegion(Builder &builder, OperationState &result,
-                                  TypeRange operandTypes,
-                                  TypeRange tensorResultTypes) {
+void buildNamedStructuredOpRegionAndAttributes(Builder &builder,
+                                               OperationState &result,
+                                               TypeRange operandTypes,
+                                               TypeRange tensorResultTypes) {
   Region &region = *result.addRegion();
   Block *body = new Block();
   // TODO: atm all operands go through getElementTypeOrSelf,
@@ -1102,12 +1102,24 @@ void buildNamedStructuredOpRegion(Builder &builder, OperationState &result,
   opBuilder.setInsertionPointToStart(&region.front());
   mlir::edsc::ScopedContext scope(opBuilder, builder.getUnknownLoc());
   NamedStructuredOpType::regionBuilder(*body);
+
+  auto indexingMaps = builder.getAffineMapArrayAttr(
+      NamedStructuredOpType::referenceIndexingMaps(operandTypes,
+                                                   tensorResultTypes));
+  result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
+
+  auto iterators =
+      builder.getStrArrayAttr(NamedStructuredOpType::referenceIterators(
+          operandTypes, tensorResultTypes));
+  result.addAttribute(getIteratorTypesAttrName(), iterators);
 }
 
 template <typename NamedStructuredOpType>
 static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
+  std::array<StringRef, 2> silentAttrNames{getIndexingMapsAttrName(),
+                                           getIteratorTypesAttrName()};
   p << op.getOperationName() << ' ';
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op.getAttrs(), silentAttrNames);
   p << ' ' << op.getOperands();
   p << ": (" << op.getOperandTypes() << ")";
   auto outputTensorTypes = op.getResultTypes();
@@ -1139,7 +1151,7 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
   if (!tensorResultTypes.empty())
     result.addTypes(tensorResultTypes);
 
-  buildNamedStructuredOpRegion<NamedStructuredOpType>(
+  buildNamedStructuredOpRegionAndAttributes<NamedStructuredOpType>(
       parser.getBuilder(), result, operandTypes, tensorResultTypes);
 
   return parser.resolveOperands(operandsInfo, operandTypes,

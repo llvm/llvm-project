@@ -395,6 +395,9 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
   GlobalValue::LinkageTypes Linkage = GV->getLinkage();
   switch (Linkage) {
   case GlobalValue::CommonLinkage:
+    assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
+           "CommonLinkage of XCOFF should not come to this path.");
+    LLVM_FALLTHROUGH;
   case GlobalValue::LinkOnceAnyLinkage:
   case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::WeakAnyLinkage:
@@ -418,8 +421,10 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
     }
     return;
   case GlobalValue::ExternalLinkage:
-    // If external, declare as a global symbol: .globl _foo
-    OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
+    if (MAI->hasDotExternDirective() && GV->isDeclaration())
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Extern);
+    else
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
     return;
   case GlobalValue::PrivateLinkage:
     return;
@@ -427,9 +432,14 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
     if (MAI->hasDotLGloblDirective())
       OutStreamer->emitSymbolAttribute(GVSym, MCSA_LGlobal);
     return;
+  case GlobalValue::ExternalWeakLinkage:
+    if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+      OutStreamer->emitSymbolAttribute(GVSym, MCSA_Weak);
+      return;
+    }
+    LLVM_FALLTHROUGH;
   case GlobalValue::AppendingLinkage:
   case GlobalValue::AvailableExternallyLinkage:
-  case GlobalValue::ExternalWeakLinkage:
     llvm_unreachable("Should never emit this");
   }
   llvm_unreachable("Unknown linkage type!");
@@ -1489,15 +1499,30 @@ bool AsmPrinter::doFinalization(Module &M) {
   // Emit remaining GOT equivalent globals.
   emitGlobalGOTEquivs();
 
-  // Emit visibility info for declarations
+  // Emit linkage(XCOFF) and visibility info for declarations
   for (const Function &F : M) {
     if (!F.isDeclarationForLinker())
       continue;
+
+    MCSymbol *Name = getSymbol(&F);
+    // Function getSymbol gives us the function descriptor symbol for XCOFF.
+    if (TM.getTargetTriple().isOSBinFormatXCOFF() && !F.isIntrinsic()) {
+
+      // Get the function entry point symbol.
+      MCSymbol *FnEntryPointSym = OutContext.getOrCreateSymbol(
+          "." + cast<MCSymbolXCOFF>(Name)->getUnqualifiedName());
+      if (cast<MCSymbolXCOFF>(FnEntryPointSym)->hasRepresentedCsectSet())
+        // Emit linkage for the function entry point.
+        emitLinkage(&F, FnEntryPointSym);
+
+      // Emit linkage for the function descriptor.
+      emitLinkage(&F, Name);
+    }
+
     GlobalValue::VisibilityTypes V = F.getVisibility();
     if (V == GlobalValue::DefaultVisibility)
       continue;
 
-    MCSymbol *Name = getSymbol(&F);
     emitVisibility(Name, V, false);
   }
 

@@ -67,6 +67,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   Operation::operand_range getODSOperands(unsigned index);
 // CHECK:   Value a();
 // CHECK:   Operation::operand_range b();
+// CHECK:   ::mlir::MutableOperandRange aMutable();
+// CHECK:   ::mlir::MutableOperandRange bMutable();
 // CHECK:   Operation::result_range getODSResults(unsigned index);
 // CHECK:   Value r();
 // CHECK:   Region &someRegion();
@@ -119,6 +121,7 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 
 // CHECK-LABEL: NS::EOp declarations
 // CHECK:   Value a();
+// CHECK:   ::mlir::MutableOperandRange aMutable();
 // CHECK:   Value b();
 // CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
 

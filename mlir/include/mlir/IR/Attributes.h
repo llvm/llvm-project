@@ -296,6 +296,10 @@ public:
   Attribute get(StringRef name) const;
   Attribute get(Identifier name) const;
 
+  /// Return the specified named attribute if present, None otherwise.
+  Optional<NamedAttribute> getNamed(StringRef name) const;
+  Optional<NamedAttribute> getNamed(Identifier name) const;
+
   /// Support range iteration.
   using iterator = llvm::ArrayRef<NamedAttribute>::iterator;
   iterator begin() const;
@@ -1476,26 +1480,26 @@ inline ::llvm::hash_code hash_value(Attribute arg) {
 }
 
 //===----------------------------------------------------------------------===//
-// NamedAttributeList
+// MutableDictionaryAttr
 //===----------------------------------------------------------------------===//
 
-/// A NamedAttributeList is a mutable wrapper around a DictionaryAttr. It
+/// A MutableDictionaryAttr is a mutable wrapper around a DictionaryAttr. It
 /// provides additional interfaces for adding, removing, replacing attributes
 /// within a DictionaryAttr.
 ///
 /// We assume there will be relatively few attributes on a given operation
 /// (maybe a dozen or so, but not hundreds or thousands) so we use linear
 /// searches for everything.
-class NamedAttributeList {
+class MutableDictionaryAttr {
 public:
-  NamedAttributeList(DictionaryAttr attrs = nullptr)
+  MutableDictionaryAttr(DictionaryAttr attrs = nullptr)
       : attrs((attrs && !attrs.empty()) ? attrs : nullptr) {}
-  NamedAttributeList(ArrayRef<NamedAttribute> attributes);
+  MutableDictionaryAttr(ArrayRef<NamedAttribute> attributes);
 
-  bool operator!=(const NamedAttributeList &other) const {
+  bool operator!=(const MutableDictionaryAttr &other) const {
     return !(*this == other);
   }
-  bool operator==(const NamedAttributeList &other) const {
+  bool operator==(const MutableDictionaryAttr &other) const {
     return attrs == other.attrs;
   }
 
@@ -1512,6 +1516,10 @@ public:
   /// Return the specified attribute if present, null otherwise.
   Attribute get(StringRef name) const;
   Attribute get(Identifier name) const;
+
+  /// Return the specified named attribute if present, None otherwise.
+  Optional<NamedAttribute> getNamed(StringRef name) const;
+  Optional<NamedAttribute> getNamed(Identifier name) const;
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value.  Otherwise, add a new attribute with the specified name/value.

@@ -680,7 +680,7 @@ def LLVM_LLVMFuncOp
     OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
               "LLVMType type, LLVM::Linkage linkage = LLVM::Linkage::External, "
               "ArrayRef<NamedAttribute> attrs = {}, "
-              "ArrayRef<NamedAttributeList> argAttrs = {}">
+              "ArrayRef<MutableDictionaryAttr> argAttrs = {}">
   ];
 
   let extraClassDeclaration = [{

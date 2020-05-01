@@ -15,6 +15,7 @@
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
@@ -1166,9 +1167,9 @@ void SBDebugger::RunCommandInterpreter(bool auto_handle_events,
 
   if (m_opaque_sp) {
     CommandInterpreterRunOptions options;
-
-    m_opaque_sp->GetCommandInterpreter().RunCommandInterpreter(
-        auto_handle_events, spawn_thread, options);
+    options.SetAutoHandleEvents(auto_handle_events);
+    options.SetSpawnThread(spawn_thread);
+    m_opaque_sp->GetCommandInterpreter().RunCommandInterpreter(options);
   }
 }
 
@@ -1186,9 +1187,10 @@ void SBDebugger::RunCommandInterpreter(bool auto_handle_events,
                      quit_requested, stopped_for_crash);
 
   if (m_opaque_sp) {
+    options.SetAutoHandleEvents(auto_handle_events);
+    options.SetSpawnThread(spawn_thread);
     CommandInterpreter &interp = m_opaque_sp->GetCommandInterpreter();
-    interp.RunCommandInterpreter(auto_handle_events, spawn_thread,
-                                 options.ref());
+    interp.RunCommandInterpreter(options.ref());
     num_errors = interp.GetNumErrors();
     quit_requested = interp.GetQuitRequested();
     stopped_for_crash = interp.GetStoppedForCrash();

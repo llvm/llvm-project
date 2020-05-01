@@ -59,7 +59,9 @@ MATCHER_P(Labeled, Label, "") {
 }
 MATCHER_P(SigHelpLabeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.Kind == K; }
-MATCHER_P(Doc, D, "") { return arg.Documentation == D; }
+MATCHER_P(Doc, D, "") {
+  return arg.Documentation && arg.Documentation->asPlainText() == D;
+}
 MATCHER_P(ReturnType, D, "") { return arg.ReturnType == D; }
 MATCHER_P(HasInclude, IncludeHeader, "") {
   return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader;
@@ -83,7 +85,7 @@ Matcher<const std::vector<CodeCompletion> &> Has(std::string Name,
                                                  CompletionItemKind K) {
   return Contains(AllOf(Named(std::move(Name)), Kind(K)));
 }
-MATCHER(IsDocumented, "") { return !arg.Documentation.empty(); }
+MATCHER(IsDocumented, "") { return arg.Documentation.hasValue(); }
 MATCHER(Deprecated, "") { return arg.Deprecated; }
 
 std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
@@ -842,7 +844,7 @@ TEST(CompletionTest, Documentation) {
       Results.Completions,
       Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
   EXPECT_THAT(Results.Completions,
-              Contains(AllOf(Named("baz"), Doc("Multi-line\nblock comment"))));
+              Contains(AllOf(Named("baz"), Doc("Multi-line block comment"))));
 }
 
 TEST(CompletionTest, CommentsFromSystemHeaders) {
@@ -1506,8 +1508,10 @@ TEST(CompletionTest, OverloadBundling) {
   EXPECT_EQ(A.Kind, CompletionItemKind::Method);
   EXPECT_EQ(A.ReturnType, "int"); // All overloads return int.
   // For now we just return one of the doc strings arbitrarily.
-  EXPECT_THAT(A.Documentation, AnyOf(HasSubstr("Overload with int"),
-                                     HasSubstr("Overload with bool")));
+  ASSERT_TRUE(A.Documentation);
+  EXPECT_THAT(
+      A.Documentation->asPlainText(),
+      AnyOf(HasSubstr("Overload with int"), HasSubstr("Overload with bool")));
   EXPECT_EQ(A.SnippetSuffix, "($0)");
 }
 
@@ -1641,7 +1645,8 @@ TEST(CompletionTest, Render) {
   C.ReturnType = "int";
   C.RequiredQualifier = "Foo::";
   C.Scope = "ns::Foo::";
-  C.Documentation = "This is x().";
+  C.Documentation.emplace();
+  C.Documentation->addParagraph().appendText("This is ").appendCode("x()");
   C.Includes.emplace_back();
   auto &Include = C.Includes.back();
   Include.Header = "\"foo.h\"";
@@ -1660,8 +1665,8 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertText, "Foo::x");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
   EXPECT_EQ(R.filterText, "x");
-  EXPECT_EQ(R.detail, "int\n\"foo.h\"");
-  EXPECT_EQ(R.documentation, "This is x().");
+  EXPECT_EQ(R.detail, "int");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
@@ -1683,11 +1688,16 @@ TEST(CompletionTest, Render) {
 
   C.BundleSize = 2;
   R = C.render(Opts);
-  EXPECT_EQ(R.detail, "[2 overloads]\n\"foo.h\"");
+  EXPECT_EQ(R.detail, "[2 overloads]");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
 
   C.Deprecated = true;
   R = C.render(Opts);
   EXPECT_TRUE(R.deprecated);
+
+  Opts.DocumentationFormat = MarkupKind::Markdown;
+  R = C.render(Opts);
+  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`  \nThis is `x()`");
 }
 
 TEST(CompletionTest, IgnoreRecoveryResults) {

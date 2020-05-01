@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: verify-support
-
 // Make sure the test passes if we expected no diagnostics
 
 // expected-no-diagnostics

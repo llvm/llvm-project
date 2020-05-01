@@ -164,7 +164,8 @@ public:
     other.back = nullptr;
     nextUse = nullptr;
     back = nullptr;
-    insertIntoCurrent();
+    if (value)
+      insertIntoCurrent();
     return *this;
   }
 

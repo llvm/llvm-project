@@ -1709,7 +1709,7 @@ public:
       const DataLayout &DL = BB->getModule()->getDataLayout();
       Align = DL.getABITypeAlign(Val->getType());
     }
-    return Insert(new StoreInst(Val, Ptr, isVolatile, Align));
+    return Insert(new StoreInst(Val, Ptr, isVolatile, *Align));
   }
   FenceInst *CreateFence(AtomicOrdering Ordering,
                          SyncScope::ID SSID = SyncScope::System,

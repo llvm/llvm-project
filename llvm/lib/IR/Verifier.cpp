@@ -4485,7 +4485,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(UseCall != nullptr,
              "Uses of llvm.call.preallocated.setup must be calls");
       const Function *Fn = UseCall->getCalledFunction();
-      if (Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
+      if (Fn && Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
         auto *AllocArgIndex = dyn_cast<ConstantInt>(UseCall->getArgOperand(1));
         Assert(AllocArgIndex != nullptr,
                "llvm.call.preallocated.alloc arg index must be a constant");
@@ -4500,15 +4500,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                            "llvm.call.preallocated.setup");
         FoundCall = true;
         size_t NumPreallocatedArgs = 0;
-        for (auto &Arg : Fn->args()) {
-          if (Arg.hasAttribute(Attribute::Preallocated)) {
+        for (unsigned i = 0; i < UseCall->getNumArgOperands(); i++) {
+          if (UseCall->paramHasAttr(i, Attribute::Preallocated)) {
             ++NumPreallocatedArgs;
           }
         }
         Assert(NumArgs->equalsInt(NumPreallocatedArgs),
                "llvm.call.preallocated.setup arg size must be equal to number "
-               "of arguments "
-               "at call site");
+               "of preallocated arguments "
+               "at call site",
+               Call, *UseCall);
         // getOperandBundle() cannot be called if more than one of the operand
         // bundle exists. There is already a check elsewhere for this, so skip
         // here if we see more than one.

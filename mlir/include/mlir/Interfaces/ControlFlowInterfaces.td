@@ -27,29 +27,25 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
   }];
   let methods = [
     InterfaceMethod<[{
-        Returns a set of values that correspond to the arguments to the
+        Returns a mutable range of operands that correspond to the arguments of
         successor at the given index. Returns None if the operands to the
         successor are non-materialized values, i.e. they are internal to the
         operation.
       }],
-      "Optional<OperandRange>", "getSuccessorOperands", (ins "unsigned":$index)
+      "Optional<MutableOperandRange>", "getMutableSuccessorOperands",
+      (ins "unsigned":$index)
     >,
     InterfaceMethod<[{
-        Return true if this operation can erase an operand to a successor block.
+        Returns a range of operands that correspond to the arguments of
+        successor at the given index. Returns None if the operands to the
+        successor are non-materialized values, i.e. they are internal to the
+        operation.
       }],
-      "bool", "canEraseSuccessorOperand"
-    >,
-    InterfaceMethod<[{
-        Erase the operand at `operandIndex` from the `index`-th successor. This
-        should only be called if `canEraseSuccessorOperand` returns true.
-      }],
-      "void", "eraseSuccessorOperand",
-      (ins "unsigned":$index, "unsigned":$operandIndex), [{}],
-      /*defaultImplementation=*/[{
+      "Optional<OperandRange>", "getSuccessorOperands",
+      (ins "unsigned":$index), [{}], [{
         ConcreteOp *op = static_cast<ConcreteOp *>(this);
-        Optional<OperandRange> operands = op->getSuccessorOperands(index);
-        assert(operands && "unable to query operands for successor");
-        detail::eraseBranchSuccessorOperand(*operands, operandIndex, *op);
+        auto operands = op->getMutableSuccessorOperands(index);
+        return operands ? Optional<OperandRange>(*operands) : llvm::None;
       }]
     >,
     InterfaceMethod<[{

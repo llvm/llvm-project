@@ -11882,6 +11882,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_detach:
     C = new (Context) OMPDetachClause();
     break;
+  case llvm::omp::OMPC_uses_allocators:
+    C = OMPUsesAllocatorsClause::CreateEmpty(Context, Record.readInt());
+    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -12708,6 +12711,21 @@ void OMPClauseReader::VisitOMPExclusiveClause(OMPExclusiveClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Record.readSubExpr());
   C->setVarRefs(Vars);
+}
+
+void OMPClauseReader::VisitOMPUsesAllocatorsClause(OMPUsesAllocatorsClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumOfAllocators = C->getNumberOfAllocators();
+  SmallVector<OMPUsesAllocatorsClause::Data, 4> Data;
+  Data.reserve(NumOfAllocators);
+  for (unsigned I = 0; I != NumOfAllocators; ++I) {
+    OMPUsesAllocatorsClause::Data &D = Data.emplace_back();
+    D.Allocator = Record.readSubExpr();
+    D.AllocatorTraits = Record.readSubExpr();
+    D.LParenLoc = Record.readSourceLocation();
+    D.RParenLoc = Record.readSourceLocation();
+  }
+  C->setAllocatorsData(Data);
 }
 
 void OMPClauseReader::VisitOMPOrderClause(OMPOrderClause *C) {

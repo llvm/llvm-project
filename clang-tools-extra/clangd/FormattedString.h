@@ -30,6 +30,7 @@ class Block {
 public:
   virtual void renderMarkdown(llvm::raw_ostream &OS) const = 0;
   virtual void renderPlainText(llvm::raw_ostream &OS) const = 0;
+  virtual std::unique_ptr<Block> clone() const = 0;
   std::string asMarkdown() const;
   std::string asPlainText() const;
 
@@ -44,12 +45,14 @@ class Paragraph : public Block {
 public:
   void renderMarkdown(llvm::raw_ostream &OS) const override;
   void renderPlainText(llvm::raw_ostream &OS) const override;
+  std::unique_ptr<Block> clone() const override;
 
   /// Append plain text to the end of the string.
-  Paragraph &appendText(std::string Text);
+  Paragraph &appendText(llvm::StringRef Text);
 
   /// Append inline code, this translates to the ` block in markdown.
-  Paragraph &appendCode(std::string Code);
+  /// \p Preserve indicates the code span must be apparent even in plaintext.
+  Paragraph &appendCode(llvm::StringRef Code, bool Preserve = false);
 
 private:
   struct Chunk {
@@ -57,9 +60,9 @@ private:
       PlainText,
       InlineCode,
     } Kind = PlainText;
+    // Preserve chunk markers in plaintext.
+    bool Preserve = false;
     std::string Contents;
-    /// Language for code block chunks. Ignored for other chunks.
-    std::string Language;
   };
   std::vector<Chunk> Chunks;
 };
@@ -70,6 +73,7 @@ class BulletList : public Block {
 public:
   void renderMarkdown(llvm::raw_ostream &OS) const override;
   void renderPlainText(llvm::raw_ostream &OS) const override;
+  std::unique_ptr<Block> clone() const override;
 
   class Document &addItem();
 
@@ -81,6 +85,14 @@ private:
 /// markdown and plaintext.
 class Document {
 public:
+  Document() = default;
+  Document(const Document &Other) { *this = Other; }
+  Document &operator=(const Document &);
+  Document(Document &&) = default;
+  Document &operator=(Document &&) = default;
+
+  void append(Document Other);
+
   /// Adds a semantical block that will be separate from others.
   Paragraph &addParagraph();
   /// Inserts a horizontal separator to the document.

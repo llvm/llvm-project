@@ -384,7 +384,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
         linalg_range(range.offset, range.size, range.stride));
   }
   GenericLoopNestRangeBuilder<LoopTy>(ivs, linalgRanges)([&] {
-    auto b = ScopedContext::getBuilder();
+    auto &b = ScopedContext::getBuilderRef();
     auto loc = ScopedContext::getLocation();
     SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
 

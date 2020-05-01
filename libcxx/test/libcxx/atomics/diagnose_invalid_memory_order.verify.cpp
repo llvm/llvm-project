@@ -10,7 +10,7 @@
 // when -fdelayed-template-parsing is enabled, like it is on Windows.
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// REQUIRES: verify-support, diagnose-if-support
+// REQUIRES: diagnose-if-support
 // UNSUPPORTED: libcpp-has-no-threads
 
 // <atomic>

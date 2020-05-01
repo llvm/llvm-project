@@ -727,3 +727,48 @@ func @fill_and_conv(%arg0: memref<1x4x5x1xf32>, %arg1: memref<2x3x1x1xf32>, %arg
 // CHECK:   loop.for
 // CHECK:     linalg.fill
 // CHECK:     linalg.conv
+
+// -----
+
+// Test that different allocation-like ops are recognized and properly handled.
+func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c4 = constant 4 : index
+
+  %A = alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
+  %B = alloca(%dim, %dim)[%s0, %s1] : memref<?x?xf32, offset: 0, strides: [?, ?]>
+  %C = alloc(%dim, %dim)[%s0, %s1]  : memref<?x?xf32, offset: 0, strides: [?, ?]>
+
+  linalg.matmul(%A, %B, %C) :
+    memref<?x?xf32, offset: 0, strides: [?, ?]>,
+    memref<?x?xf32, offset: 0, strides: [?, ?]>,
+    memref<?x?xf32, offset: 0, strides: [?, ?]>
+
+  loop.for %i = %c0 to %dim step %c2 {
+    loop.for %j = %c0 to %dim step %c3 {
+      loop.for %k = %c0 to %dim step %c4 {
+        %0 = std.subview %A[%i, %k][%c2, %c4][%c1, %c1] :
+          memref<?x?xf32, offset: 0, strides: [?, ?]> to
+          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        %1 = std.subview %B[%k, %j][%c4, %c3][%c1, %c1] :
+          memref<?x?xf32, offset: 0, strides: [?, ?]> to
+          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        %2 = std.subview %C[%i, %j][%c2, %c3][%c1, %c1] :
+          memref<?x?xf32, offset: 0, strides: [?, ?]> to
+          memref<?x?xf32, offset: ?, strides: [?, ?]>
+        linalg.matmul(%0, %1, %2) :
+          memref<?x?xf32, offset: ?, strides: [?, ?]>,
+          memref<?x?xf32, offset: ?, strides: [?, ?]>,
+          memref<?x?xf32, offset: ?, strides: [?, ?]>
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @accept_different_alloc_ops
+// CHECK-COUNT-3: loop.for
+// CHECK-COUNT-2:   linalg.matmul

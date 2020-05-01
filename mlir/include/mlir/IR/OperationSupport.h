@@ -369,8 +369,14 @@ public:
   /// 'values'.
   void setOperands(Operation *owner, ValueRange values);
 
-  /// Erase an operand held by the storage.
-  void eraseOperand(unsigned index);
+  /// Replace the operands beginning at 'start' and ending at 'start' + 'length'
+  /// with the ones provided in 'operands'. 'operands' may be smaller or larger
+  /// than the range pointed to by 'start'+'length'.
+  void setOperands(Operation *owner, unsigned start, unsigned length,
+                   ValueRange operands);
+
+  /// Erase the operands held by the storage within the given range.
+  void eraseOperands(unsigned start, unsigned length);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() {
@@ -654,6 +660,69 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// MutableOperandRange
+
+/// This class provides a mutable adaptor for a range of operands. It allows for
+/// setting, inserting, and erasing operands from the given range.
+class MutableOperandRange {
+public:
+  /// A pair of a named attribute corresponding to an operand segment attribute,
+  /// and the index within that attribute. The attribute should correspond to an
+  /// i32 DenseElementsAttr.
+  using OperandSegment = std::pair<unsigned, NamedAttribute>;
+
+  /// Construct a new mutable range from the given operand, operand start index,
+  /// and range length. `operandSegments` is an optional set of operand segments
+  /// to be updated when mutating the operand list.
+  MutableOperandRange(Operation *owner, unsigned start, unsigned length,
+                      ArrayRef<OperandSegment> operandSegments = llvm::None);
+  MutableOperandRange(Operation *owner);
+
+  /// Slice this range into a sub range, with the additional operand segment.
+  MutableOperandRange slice(unsigned subStart, unsigned subLen,
+                            Optional<OperandSegment> segment = llvm::None);
+
+  /// Append the given values to the range.
+  void append(ValueRange values);
+
+  /// Assign this range to the given values.
+  void assign(ValueRange values);
+
+  /// Assign the range to the given value.
+  void assign(Value value);
+
+  /// Erase the operands within the given sub-range.
+  void erase(unsigned subStart, unsigned subLen = 1);
+
+  /// Clear this range and erase all of the operands.
+  void clear();
+
+  /// Returns the current size of the range.
+  unsigned size() const { return length; }
+
+  /// Allow implicit conversion to an OperandRange.
+  operator OperandRange() const;
+
+  /// Returns the owning operation.
+  Operation *getOwner() const { return owner; }
+
+private:
+  /// Update the length of this range to the one provided.
+  void updateLength(unsigned newLength);
+
+  /// The owning operation of this range.
+  Operation *owner;
+
+  /// The start index of the operand range within the owner operand list, and
+  /// the length starting from `start`.
+  unsigned start, length;
+
+  /// Optional set of operand segments that should be updated when mutating the
+  /// length of this range.
+  SmallVector<std::pair<unsigned, NamedAttribute>, 1> operandSegments;
+};
+
+//===----------------------------------------------------------------------===//
 // ResultRange
 
 /// This class implements the result iterators for the Operation class.
@@ -751,6 +820,20 @@ private:
 
   /// Allow access to `offset_base` and `dereference_iterator`.
   friend RangeBaseT;
+};
+
+//===----------------------------------------------------------------------===//
+// Operation Equivalency
+//===----------------------------------------------------------------------===//
+
+/// This class provides utilities for computing if two operations are
+/// equivalent.
+struct OperationEquivalence {
+  /// Compute a hash for the given operation.
+  static llvm::hash_code computeHash(Operation *op);
+
+  /// Compare two operations and return if they are equivalent.
+  static bool isEquivalentTo(Operation *lhs, Operation *rhs);
 };
 } // end namespace mlir
 

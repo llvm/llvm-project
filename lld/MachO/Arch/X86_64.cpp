@@ -31,6 +31,7 @@ X86_64::X86_64() {
 
 uint64_t X86_64::getImplicitAddend(const uint8_t *loc, uint8_t type) const {
   switch (type) {
+  case X86_64_RELOC_BRANCH:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_GOT_LOAD:
     return read32le(loc);
@@ -42,6 +43,7 @@ uint64_t X86_64::getImplicitAddend(const uint8_t *loc, uint8_t type) const {
 
 void X86_64::relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const {
   switch (type) {
+  case X86_64_RELOC_BRANCH:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_GOT_LOAD:
     // These types are only used for pc-relative relocations, so offset by 4

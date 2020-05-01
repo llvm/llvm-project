@@ -9,6 +9,7 @@
 #include "Driver.h"
 
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFile.h"

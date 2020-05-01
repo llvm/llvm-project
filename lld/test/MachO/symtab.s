@@ -14,10 +14,41 @@
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value:
 # CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: bar
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     RefType:
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __data
+# CHECK-NEXT:     RefType:
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
+.data
+.global foo
+foo:
+  .asciz "Hello world!\n"
+
+.text
+.global bar
 .global _main
 
 _main:
   mov $0, %rax
+  ret
+
+bar:
+  mov $2, %rax
   ret

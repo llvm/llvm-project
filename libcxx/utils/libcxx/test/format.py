@@ -135,8 +135,6 @@ class LibcxxTestFormat(object):
         substitutions.append(('%{file_dependencies}', ' '.join(data_files)))
 
         # Add other convenience substitutions
-        if self.cxx.isVerifySupported():
-            substitutions.append(('%{verify}', ' '.join(self.cxx.verify_flags)))
         substitutions.append(('%{build}', '%{cxx} -o %t.exe %s %{flags} %{compile_flags} %{link_flags}'))
         substitutions.append(('%{run}', '%{exec} %t.exe'))
 

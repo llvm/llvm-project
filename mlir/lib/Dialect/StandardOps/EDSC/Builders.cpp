@@ -30,7 +30,7 @@ static SmallVector<Value, 8> getMemRefSizes(Value memRef) {
   return res;
 }
 
-mlir::edsc::MemRefBoundsCapture::MemRefBoundsCapture(Value v) : base(v) {
+mlir::edsc::MemRefBoundsCapture::MemRefBoundsCapture(Value v) {
   auto memrefSizeValues = getMemRefSizes(v);
   for (auto s : memrefSizeValues) {
     lbs.push_back(std_constant_index(0));
@@ -39,11 +39,13 @@ mlir::edsc::MemRefBoundsCapture::MemRefBoundsCapture(Value v) : base(v) {
   }
 }
 
-mlir::edsc::VectorBoundsCapture::VectorBoundsCapture(Value v) : base(v) {
-  auto vectorType = v.getType().cast<VectorType>();
-  for (auto s : vectorType.getShape()) {
+mlir::edsc::VectorBoundsCapture::VectorBoundsCapture(VectorType t) {
+  for (auto s : t.getShape()) {
     lbs.push_back(std_constant_index(0));
     ubs.push_back(std_constant_index(s));
     steps.push_back(1);
   }
 }
+
+mlir::edsc::VectorBoundsCapture::VectorBoundsCapture(Value v)
+    : VectorBoundsCapture(v.getType().cast<VectorType>()) {}

@@ -95,6 +95,22 @@ AffineMap AffineMap::getConstantMap(int64_t val, MLIRContext *context) {
              {getAffineConstantExpr(val, context)});
 }
 
+/// Returns an identity affine map (d0, ..., dn) -> (dp, ..., dn) on the most
+/// minor dimensions.
+AffineMap AffineMap::getMinorIdentityMap(unsigned dims, unsigned results,
+                                         MLIRContext *context) {
+  assert(dims >= results && "Dimension mismatch");
+  auto id = AffineMap::getMultiDimIdentityMap(dims, context);
+  return AffineMap::get(dims, 0, id.getResults().take_back(results), context);
+}
+
+bool AffineMap::isMinorIdentity(AffineMap map) {
+  if (!map)
+    return false;
+  return map == getMinorIdentityMap(map.getNumDims(), map.getNumResults(),
+                                    map.getContext());
+};
+
 /// Returns an AffineMap representing a permutation.
 AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
                                        MLIRContext *context) {

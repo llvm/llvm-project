@@ -26,6 +26,7 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
+#include "Hover.h"
 #include "Preamble.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -371,12 +372,19 @@ struct CodeCompletionBuilder {
       S.SnippetSuffix = std::string(C.IndexResult->CompletionSnippetSuffix);
       S.ReturnType = std::string(C.IndexResult->ReturnType);
     }
-    if (ExtractDocumentation && Completion.Documentation.empty()) {
-      if (C.IndexResult)
-        Completion.Documentation = std::string(C.IndexResult->Documentation);
-      else if (C.SemaResult)
-        Completion.Documentation = getDocComment(*ASTCtx, *C.SemaResult,
-                                                 /*CommentsFromHeader=*/false);
+    if (ExtractDocumentation && !Completion.Documentation) {
+      auto SetDoc = [&](llvm::StringRef Doc) {
+        if (!Doc.empty()) {
+          Completion.Documentation.emplace();
+          parseDocumentation(Doc, *Completion.Documentation);
+        }
+      };
+      if (C.IndexResult) {
+        SetDoc(C.IndexResult->Documentation);
+      } else if (C.SemaResult) {
+        SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
+                             /*CommentsFromHeader=*/false));
+      }
     }
   }
 
@@ -1816,6 +1824,21 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   return false;
 }
 
+// FIXME: find a home for this (that can depend on both markup and Protocol).
+static MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
+  MarkupContent Result;
+  Result.kind = Kind;
+  switch (Kind) {
+  case MarkupKind::PlainText:
+    Result.value.append(Doc.asPlainText());
+    break;
+  case MarkupKind::Markdown:
+    Result.value.append(Doc.asMarkdown());
+    break;
+  }
+  return Result;
+}
+
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   const auto *InsertInclude = Includes.empty() ? nullptr : &Includes[0];
@@ -1830,9 +1853,16 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                    ? std::string(llvm::formatv("[{0} overloads]", BundleSize))
                    : ReturnType;
   LSP.deprecated = Deprecated;
-  if (InsertInclude)
-    LSP.detail += "\n" + InsertInclude->Header;
-  LSP.documentation = Documentation;
+  // Combine header information and documentation in LSP `documentation` field.
+  // This is not quite right semantically, but tends to display well in editors.
+  if (InsertInclude || Documentation) {
+    markup::Document Doc;
+    if (InsertInclude)
+      Doc.addParagraph().appendText("From ").appendCode(InsertInclude->Header);
+    if (Documentation)
+      Doc.append(*Documentation);
+    LSP.documentation = renderDoc(Doc, Opts.DocumentationFormat);
+  }
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
   LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};

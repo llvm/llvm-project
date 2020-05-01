@@ -28,7 +28,6 @@
 // Deprecated in C++17
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// REQUIRES: verify-support
 
 // Clang 6 does not handle the deprecated attribute on template members properly,
 // so the rebind<int> check below fails.

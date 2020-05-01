@@ -468,7 +468,7 @@ class OperationTransactionState {
 public:
   OperationTransactionState() = default;
   OperationTransactionState(Operation *op)
-      : op(op), loc(op->getLoc()), attrs(op->getAttrList()),
+      : op(op), loc(op->getLoc()), attrs(op->getMutableAttrDict()),
         operands(op->operand_begin(), op->operand_end()),
         successors(op->successor_begin(), op->successor_end()) {}
 
@@ -488,7 +488,7 @@ public:
 private:
   Operation *op;
   LocationAttr loc;
-  NamedAttributeList attrs;
+  MutableDictionaryAttr attrs;
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 };
@@ -954,12 +954,8 @@ Value ConversionPatternRewriter::getRemappedValue(Value key) {
 }
 
 /// PatternRewriter hook for creating a new block with the given arguments.
-Block *ConversionPatternRewriter::createBlock(Region *parent,
-                                              Region::iterator insertPtr,
-                                              TypeRange argTypes) {
-  Block *block = PatternRewriter::createBlock(parent, insertPtr, argTypes);
+void ConversionPatternRewriter::notifyBlockCreated(Block *block) {
   impl->notifyCreatedBlock(block);
-  return block;
 }
 
 /// PatternRewriter hook for splitting a block into two parts.
@@ -1001,13 +997,12 @@ void ConversionPatternRewriter::cloneRegionBefore(
 }
 
 /// PatternRewriter hook for creating a new operation.
-Operation *ConversionPatternRewriter::insert(Operation *op) {
+void ConversionPatternRewriter::notifyOperationInserted(Operation *op) {
   LLVM_DEBUG({
     impl->logger.startLine()
         << "** Insert  : '" << op->getName() << "'(" << op << ")\n";
   });
   impl->createdOps.push_back(op);
-  return OpBuilder::insert(op);
 }
 
 /// PatternRewriter hook for updating the root operation in-place.
@@ -1541,9 +1536,8 @@ struct OperationConverter {
   explicit OperationConverter(ConversionTarget &target,
                               const OwningRewritePatternList &patterns,
                               OpConversionMode mode,
-                              DenseSet<Operation *> *legalizableOps = nullptr)
-      : opLegalizer(target, patterns), mode(mode),
-        legalizableOps(legalizableOps) {}
+                              DenseSet<Operation *> *trackedOps = nullptr)
+      : opLegalizer(target, patterns), mode(mode), trackedOps(trackedOps) {}
 
   /// Converts the given operations to the conversion target.
   LogicalResult convertOperations(ArrayRef<Operation *> ops,
@@ -1563,9 +1557,11 @@ private:
   /// The conversion mode to use when legalizing operations.
   OpConversionMode mode;
 
-  /// A set of pre-existing operations that were found to be legalizable to the
-  /// target. This field is only used when mode == OpConversionMode::Analysis.
-  DenseSet<Operation *> *legalizableOps;
+  /// A set of pre-existing operations. When mode == OpConversionMode::Analysis,
+  /// this is populated with ops found to be legalizable to the target.
+  /// When mode == OpConversionMode::Partial, this is populated with ops found
+  /// *not* to be legalizable to the target.
+  DenseSet<Operation *> *trackedOps;
 };
 } // end anonymous namespace
 
@@ -1594,17 +1590,22 @@ LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
       return op->emitError()
              << "failed to legalize operation '" << op->getName() << "'";
     /// Partial conversions allow conversions to fail iff the operation was not
-    /// explicitly marked as illegal.
-    if (mode == OpConversionMode::Partial && opLegalizer.isIllegal(op))
-      return op->emitError()
-             << "failed to legalize operation '" << op->getName()
-             << "' that was explicitly marked illegal";
+    /// explicitly marked as illegal. If the user provided a nonlegalizableOps
+    /// set, non-legalizable ops are included.
+    if (mode == OpConversionMode::Partial) {
+      if (opLegalizer.isIllegal(op))
+        return op->emitError()
+               << "failed to legalize operation '" << op->getName()
+               << "' that was explicitly marked illegal";
+      if (trackedOps)
+        trackedOps->insert(op);
+    }
   } else {
     /// Analysis conversions don't fail if any operations fail to legalize,
     /// they are only interested in the operations that were successfully
     /// legalized.
     if (mode == OpConversionMode::Analysis)
-      legalizableOps->insert(op);
+      trackedOps->insert(op);
 
     // If legalization succeeded, convert the types any of the blocks within
     // this operation.
@@ -1932,21 +1933,30 @@ auto ConversionTarget::getOpInfo(OperationName op) const
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
-/// Apply a partial conversion on the given operations, and all nested
+/// Apply a partial conversion on the given operations and all nested
 /// operations. This method converts as many operations to the target as
-/// possible, ignoring operations that failed to legalize.
+/// possible, ignoring operations that failed to legalize. This method only
+/// returns failure if there ops explicitly marked as illegal. If `converter` is
+/// provided, the signatures of blocks and regions are also converted.
+/// If an `unconvertedOps` set is provided, all operations that are found not
+/// to be legalizable to the given `target` are placed within that set. (Note
+/// that if there is an op explicitly marked as illegal, the conversion
+/// terminates and the `unconvertedOps` set will not necessarily be complete.)
 LogicalResult mlir::applyPartialConversion(
     ArrayRef<Operation *> ops, ConversionTarget &target,
-    const OwningRewritePatternList &patterns, TypeConverter *converter) {
-  OperationConverter opConverter(target, patterns, OpConversionMode::Partial);
+    const OwningRewritePatternList &patterns, TypeConverter *converter,
+    DenseSet<Operation *> *unconvertedOps) {
+  OperationConverter opConverter(target, patterns, OpConversionMode::Partial,
+                                 unconvertedOps);
   return opConverter.convertOperations(ops, converter);
 }
 LogicalResult
 mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
                              const OwningRewritePatternList &patterns,
-                             TypeConverter *converter) {
+                             TypeConverter *converter,
+                             DenseSet<Operation *> *unconvertedOps) {
   return applyPartialConversion(llvm::makeArrayRef(op), target, patterns,
-                                converter);
+                                converter, unconvertedOps);
 }
 
 /// Apply a complete conversion on the given operations, and all nested

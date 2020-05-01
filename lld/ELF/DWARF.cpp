@@ -36,6 +36,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_gnu_pubnames", &gnuPubnamesSection)
                 .Case(".debug_gnu_pubtypes", &gnuPubtypesSection)
                 .Case(".debug_info", &infoSection)
+                .Case(".debug_loclists", &loclistsSection)
                 .Case(".debug_ranges", &rangesSection)
                 .Case(".debug_rnglists", &rnglistsSection)
                 .Case(".debug_str_offsets", &strOffsetsSection)

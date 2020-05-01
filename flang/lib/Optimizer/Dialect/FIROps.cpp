@@ -997,14 +997,26 @@ static constexpr llvm::StringRef getTargetOffsetAttr() {
   return "target_operand_offsets";
 }
 
-template <typename A>
+template <typename A, typename... AdditionalArgs>
 static A getSubOperands(unsigned pos, A allArgs,
-                        mlir::DenseIntElementsAttr ranges) {
+                        mlir::DenseIntElementsAttr ranges,
+                        AdditionalArgs &&... additionalArgs) {
   unsigned start = 0;
   for (unsigned i = 0; i < pos; ++i)
     start += (*(ranges.begin() + i)).getZExtValue();
-  unsigned end = start + (*(ranges.begin() + pos)).getZExtValue();
-  return {std::next(allArgs.begin(), start), std::next(allArgs.begin(), end)};
+  return allArgs.slice(start, (*(ranges.begin() + pos)).getZExtValue(),
+                       std::forward<AdditionalArgs>(additionalArgs)...);
+}
+
+static mlir::MutableOperandRange
+getMutableSuccessorOperands(unsigned pos, mlir::MutableOperandRange operands,
+                            StringRef offsetAttr) {
+  Operation *owner = operands.getOwner();
+  NamedAttribute targetOffsetAttr =
+      *owner->getMutableAttrDict().getNamed(offsetAttr);
+  return getSubOperands(
+      pos, operands, targetOffsetAttr.second.cast<DenseIntElementsAttr>(),
+      mlir::MutableOperandRange::OperandSegment(pos, targetOffsetAttr));
 }
 
 static unsigned denseElementsSize(mlir::DenseIntElementsAttr attr) {
@@ -1020,10 +1032,10 @@ fir::SelectOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
 
-llvm::Optional<mlir::OperandRange>
-fir::SelectOp::getSuccessorOperands(unsigned oper) {
-  auto a = getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  return {getSubOperands(oper, targetArgs(), a)};
+llvm::Optional<mlir::MutableOperandRange>
+fir::SelectOp::getMutableSuccessorOperands(unsigned oper) {
+  return ::getMutableSuccessorOperands(oper, targetArgsMutable(),
+                                       getTargetOffsetAttr());
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -1034,8 +1046,6 @@ fir::SelectOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
       getAttrOfType<mlir::DenseIntElementsAttr>(getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
-
-bool fir::SelectOp::canEraseSuccessorOperand() { return true; }
 
 unsigned fir::SelectOp::targetOffsetSize() {
   return denseElementsSize(
@@ -1061,10 +1071,10 @@ fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
 
-llvm::Optional<mlir::OperandRange>
-fir::SelectCaseOp::getSuccessorOperands(unsigned oper) {
-  auto a = getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  return {getSubOperands(oper, targetArgs(), a)};
+llvm::Optional<mlir::MutableOperandRange>
+fir::SelectCaseOp::getMutableSuccessorOperands(unsigned oper) {
+  return ::getMutableSuccessorOperands(oper, targetArgsMutable(),
+                                       getTargetOffsetAttr());
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -1075,8 +1085,6 @@ fir::SelectCaseOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
       getAttrOfType<mlir::DenseIntElementsAttr>(getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
-
-bool fir::SelectCaseOp::canEraseSuccessorOperand() { return true; }
 
 // parser for fir.select_case Op
 static mlir::ParseResult parseSelectCase(mlir::OpAsmParser &parser,
@@ -1254,10 +1262,10 @@ fir::SelectRankOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
 
-llvm::Optional<mlir::OperandRange>
-fir::SelectRankOp::getSuccessorOperands(unsigned oper) {
-  auto a = getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  return {getSubOperands(oper, targetArgs(), a)};
+llvm::Optional<mlir::MutableOperandRange>
+fir::SelectRankOp::getMutableSuccessorOperands(unsigned oper) {
+  return ::getMutableSuccessorOperands(oper, targetArgsMutable(),
+                                       getTargetOffsetAttr());
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -1268,8 +1276,6 @@ fir::SelectRankOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
       getAttrOfType<mlir::DenseIntElementsAttr>(getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
-
-bool fir::SelectRankOp::canEraseSuccessorOperand() { return true; }
 
 unsigned fir::SelectRankOp::targetOffsetSize() {
   return denseElementsSize(
@@ -1290,10 +1296,10 @@ fir::SelectTypeOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
 
-llvm::Optional<mlir::OperandRange>
-fir::SelectTypeOp::getSuccessorOperands(unsigned oper) {
-  auto a = getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  return {getSubOperands(oper, targetArgs(), a)};
+llvm::Optional<mlir::MutableOperandRange>
+fir::SelectTypeOp::getMutableSuccessorOperands(unsigned oper) {
+  return ::getMutableSuccessorOperands(oper, targetArgsMutable(),
+                                       getTargetOffsetAttr());
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
@@ -1304,8 +1310,6 @@ fir::SelectTypeOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
       getAttrOfType<mlir::DenseIntElementsAttr>(getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
-
-bool fir::SelectTypeOp::canEraseSuccessorOperand() { return true; }
 
 static ParseResult parseSelectType(OpAsmParser &parser,
                                    OperationState &result) {

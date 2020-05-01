@@ -1069,9 +1069,9 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *BaseTp,
       {TTI::SK_PermuteSingleSrc, MVT::v64i8, 1}, // vpermb
       {TTI::SK_PermuteSingleSrc, MVT::v32i8, 1}, // vpermb
 
-      {TTI::SK_PermuteTwoSrc, MVT::v64i8, 1}, // vpermt2b
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 1}, // vpermt2b
-      {TTI::SK_PermuteTwoSrc, MVT::v16i8, 1}  // vpermt2b
+      {TTI::SK_PermuteTwoSrc, MVT::v64i8, 2}, // vpermt2b
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 2}, // vpermt2b
+      {TTI::SK_PermuteTwoSrc, MVT::v16i8, 2}  // vpermt2b
   };
 
   if (ST->hasVBMI())
@@ -1083,22 +1083,18 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *BaseTp,
       {TTI::SK_Broadcast, MVT::v32i16, 1}, // vpbroadcastw
       {TTI::SK_Broadcast, MVT::v64i8, 1},  // vpbroadcastb
 
-      {TTI::SK_Reverse, MVT::v32i16, 1}, // vpermw
-      {TTI::SK_Reverse, MVT::v16i16, 1}, // vpermw
+      {TTI::SK_Reverse, MVT::v32i16, 2}, // vpermw
+      {TTI::SK_Reverse, MVT::v16i16, 2}, // vpermw
       {TTI::SK_Reverse, MVT::v64i8, 2},  // pshufb + vshufi64x2
 
-      {TTI::SK_PermuteSingleSrc, MVT::v32i16, 1}, // vpermw
-      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 1}, // vpermw
-      {TTI::SK_PermuteSingleSrc, MVT::v8i16, 1},  // vpermw
+      {TTI::SK_PermuteSingleSrc, MVT::v32i16, 2}, // vpermw
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 2}, // vpermw
       {TTI::SK_PermuteSingleSrc, MVT::v64i8, 8},  // extend to v32i16
-      {TTI::SK_PermuteSingleSrc, MVT::v32i8, 3},  // vpermw + zext/trunc
 
-      {TTI::SK_PermuteTwoSrc, MVT::v32i16, 1}, // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v16i16, 1}, // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v8i16, 1},  // vpermt2w
-      {TTI::SK_PermuteTwoSrc, MVT::v32i8, 3},  // zext + vpermt2w + trunc
+      {TTI::SK_PermuteTwoSrc, MVT::v32i16, 2}, // vpermt2w
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16, 2}, // vpermt2w
+      {TTI::SK_PermuteTwoSrc, MVT::v8i16, 2},  // vpermt2w
       {TTI::SK_PermuteTwoSrc, MVT::v64i8, 19}, // 6 * v32i8 + 1
-      {TTI::SK_PermuteTwoSrc, MVT::v16i8, 3}   // zext + vpermt2w + trunc
   };
 
   if (ST->hasBWI())
@@ -1699,6 +1695,9 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 3 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 3 },
 
+    { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  2 },
+    { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
+
     { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i64,  2 },
     { ISD::TRUNCATE,    MVT::v4i16,  MVT::v4i64,  2 },
     { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i32,  2 },
@@ -1729,6 +1728,12 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 4 },
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32, 4 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32, 4 },
+
+    { ISD::TRUNCATE,    MVT::v4i1,  MVT::v4i64,  4 },
+    { ISD::TRUNCATE,    MVT::v8i1,  MVT::v8i32,  5 },
+    { ISD::TRUNCATE,    MVT::v16i1, MVT::v16i16, 4 },
+    { ISD::TRUNCATE,    MVT::v8i1,  MVT::v8i64,  9 },
+    { ISD::TRUNCATE,    MVT::v16i1, MVT::v16i64, 11 },
 
     { ISD::TRUNCATE,    MVT::v16i8, MVT::v16i16, 4 },
     { ISD::TRUNCATE,    MVT::v8i8,  MVT::v8i32,  4 },
