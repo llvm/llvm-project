@@ -664,12 +664,6 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
         const DWARFBaseDIE cu_die =
             dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
         if (cu_die) {
-          if (const char *sdk =
-                  cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr)) {
-            const char *sysroot =
-                cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
-            module_sp->RegisterXcodeSDK(sdk, sysroot);
-          }
           FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
           MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
 
@@ -776,6 +770,26 @@ lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
     return GetLanguage(*dwarf_cu);
   else
     return eLanguageTypeUnknown;
+}
+
+XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  if (!dwarf_cu)
+    return {};
+  ModuleSP module_sp = m_objfile_sp->GetModule();
+  if (!module_sp)
+    return {};
+  const DWARFBaseDIE cu_die = dwarf_cu->GetNonSkeletonUnit().GetUnitDIEOnly();
+  if (!cu_die)
+    return {};
+  const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
+  if (!sdk)
+    return {};
+  const char *sysroot =
+      cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
+  module_sp->RegisterXcodeSDK(sdk, sysroot);
+  return {sdk};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {

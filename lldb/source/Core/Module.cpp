@@ -1598,9 +1598,6 @@ bool Module::RemapSourceFile(llvm::StringRef path,
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
   XcodeSDK sdk(sdk_name.str());
-  if (m_xcode_sdk == sdk)
-    return;
-  m_xcode_sdk.Merge(sdk);
   PlatformSP module_platform =
       Platform::GetPlatformForArchitecture(GetArchitecture(), nullptr);
   ConstString sdk_path(module_platform->GetSDKPath(sdk));
