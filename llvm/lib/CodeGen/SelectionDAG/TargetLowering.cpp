@@ -2416,6 +2416,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       break;
     unsigned SubIdx = Idx.getZExtValue();
     APInt SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
+    if (!SubElts)
+      return TLO.CombineTo(Op, Base);
     APInt SubUndef, SubZero;
     if (SimplifyDemandedVectorElts(Sub, SubElts, SubUndef, SubZero, TLO,
                                    Depth + 1))
