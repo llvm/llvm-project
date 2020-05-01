@@ -14,9 +14,9 @@
 
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Analysis/Dominance.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Function.h"
 #include "mlir/Interfaces/SideEffects.h"
 #include "mlir/Pass/Pass.h"

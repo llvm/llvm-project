@@ -2,6 +2,8 @@ NEED ATTENTION
 ______________
 
 [Eric]
+  . ConvertExpr.cpp:193 - function type mismatch
+  . Bridge.cpp:1322 - array assignment
 
 [Varun]
 
@@ -13,42 +15,12 @@ ______________
   Intrinsics lowering problems
   . bbc: Lower/Intrinsics.cpp:763: Assertion `false && "LEN_TRIM TODO"' failed.
 
-  
-FIXED
-_____
+[unassigned]
 
-unexpected character type [xerbla]
-
-intrinsics: 'fir.convert' op invalid type conversion
-
-error: 'fir.convert' related to assignments
-
-error: 'fir.coordinate_of' op cannot find coordinate with unknown extents
-  
-Lowering globals in general
-
-Handle adjusted arrays of CHARACTER with adjusted LEN
-
-CHARACTER comparison calls: UNREACHABLE executed at Lower/ConvertExpr.cpp:405!
-
-UNREACHABLE executed at Lower/ConvertExpr.cpp:798!  intrinsic subroutine
-
-UNREACHABLE executed at Lower/Bridge.cpp:1243!  adjustable array
-
-error: branch has N operands for successor #M, but target block has K
-
-UNREACHABLE executed at Lower/IO.cpp:764!       FORMAT
-
-UNREACHABLE executed at Lower/ConvertExpr.cpp:848!  temps on call?
-
-Block.cpp:200: mlir::Operation *mlir::Block::getTerminator(): Assertion `!empty() && !back().isKnownNonTerminator()' failed.
-
-error: 'std.return' op must be the last operation in the parent block
-
-bbc: Lower/Intrinsics.cpp:504: Assertion `arg != nullptr' failed.
-  . optional argument in ichar
-bbc: Lower/Intrinsics.cpp:628: Assertion `false && "no runtime found for this intrinsics"' failed.
-  . sign, mod, dble, ichar intrinsic lowering missing
-bbc: Lower/Intrinsics.cpp:474: Assertion `!bestMatchDistance.isLoosingPrecision() && "runtime selection looses precision"' failed.
-  . missing complex abs
+  . ConvertExpr.cpp:266 - character comparison
+  . ConvertExpr.cpp:458! - concat CHARs
+  . ConvertExpr.cpp:711! - Ev::Triplet
+  . Intrinsics.cpp:613! - nint
+  . error: unreachable blocks were not converted
+  . error: 'llvm.mlir.global' op initializer region type '!llvm.i1' does not match global type '!llvm.i32'
 
