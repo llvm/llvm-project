@@ -544,9 +544,6 @@ public:
   // AttributeList Accessors
   //===--------------------------------------------------------------------===//
 
-  /// Retrieve the LLVM context.
-  LLVMContext &getContext() const;
-
   /// The attributes for the specified index are returned.
   AttributeSet getAttributes(unsigned Index) const;
 

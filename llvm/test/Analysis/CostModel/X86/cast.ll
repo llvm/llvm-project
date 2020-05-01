@@ -210,7 +210,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
@@ -240,7 +240,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
@@ -270,7 +270,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>

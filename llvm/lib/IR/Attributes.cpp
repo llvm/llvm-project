@@ -92,9 +92,9 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
     if (!Val)
-      PA = new EnumAttributeImpl(Kind);
+      PA = new (pImpl->Alloc) EnumAttributeImpl(Kind);
     else
-      PA = new IntAttributeImpl(Kind, Val);
+      PA = new (pImpl->Alloc) IntAttributeImpl(Kind, Val);
     pImpl->AttrsSet.InsertNode(PA, InsertPoint);
   }
 
@@ -114,7 +114,10 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    PA = new StringAttributeImpl(Kind, Val);
+    void *Mem =
+        pImpl->Alloc.Allocate(StringAttributeImpl::totalSizeToAlloc(Kind, Val),
+                              alignof(StringAttributeImpl));
+    PA = new (Mem) StringAttributeImpl(Kind, Val);
     pImpl->AttrsSet.InsertNode(PA, InsertPoint);
   }
 
@@ -135,7 +138,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    PA = new TypeAttributeImpl(Kind, Ty);
+    PA = new (pImpl->Alloc) TypeAttributeImpl(Kind, Ty);
     pImpl->AttrsSet.InsertNode(PA, InsertPoint);
   }
 
@@ -554,17 +557,6 @@ void Attribute::Profile(FoldingSetNodeID &ID) const {
 // AttributeImpl Definition
 //===----------------------------------------------------------------------===//
 
-// Pin the vtables to this file.
-AttributeImpl::~AttributeImpl() = default;
-
-void EnumAttributeImpl::anchor() {}
-
-void IntAttributeImpl::anchor() {}
-
-void StringAttributeImpl::anchor() {}
-
-void TypeAttributeImpl::anchor() {}
-
 bool AttributeImpl::hasAttribute(Attribute::AttrKind A) const {
   if (isStringAttribute()) return false;
   return getKindAsEnum() == A;
@@ -982,9 +974,8 @@ static constexpr unsigned attrIdxToArrayIdx(unsigned Index) {
   return Index == AttributeList::FunctionIndex ? 0 : Index + 1;
 }
 
-AttributeListImpl::AttributeListImpl(LLVMContext &C,
-                                     ArrayRef<AttributeSet> Sets)
-    : Context(C), NumAttrSets(Sets.size()) {
+AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
+    : NumAttrSets(Sets.size()) {
   assert(!Sets.empty() && "pointless AttributeListImpl");
 
   // There's memory after the node where we can store the entries in.
@@ -1040,9 +1031,10 @@ AttributeList AttributeList::getImpl(LLVMContext &C,
   // create a new one and insert it.
   if (!PA) {
     // Coallocate entries after the AttributeListImpl itself.
-    void *Mem = ::operator new(
-        AttributeListImpl::totalSizeToAlloc<AttributeSet>(AttrSets.size()));
-    PA = new (Mem) AttributeListImpl(C, AttrSets);
+    void *Mem = pImpl->Alloc.Allocate(
+        AttributeListImpl::totalSizeToAlloc<AttributeSet>(AttrSets.size()),
+        alignof(AttributeListImpl));
+    PA = new (Mem) AttributeListImpl(AttrSets);
     pImpl->AttrsLists.InsertNode(PA, InsertPoint);
   }
 
@@ -1366,8 +1358,6 @@ AttributeList::addAllocSizeAttr(LLVMContext &C, unsigned Index,
 //===----------------------------------------------------------------------===//
 // AttributeList Accessor Methods
 //===----------------------------------------------------------------------===//
-
-LLVMContext &AttributeList::getContext() const { return pImpl->getContext(); }
 
 AttributeSet AttributeList::getParamAttributes(unsigned ArgNo) const {
   return getAttributes(ArgNo + FirstArgIndex);

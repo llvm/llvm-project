@@ -28,7 +28,7 @@ define i32 @trunc_vXi32() {
 ;
 ; AVX512-LABEL: 'trunc_vXi32'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i32>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i32>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i32>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i64 = trunc <16 x i64> undef to <16 x i32>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef

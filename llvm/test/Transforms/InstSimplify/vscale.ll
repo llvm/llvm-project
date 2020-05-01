@@ -17,7 +17,8 @@ define <vscale x 4 x i32> @insertelement_idx_undef(<vscale x 4 x i32> %a) {
 
 define <vscale x 4 x i32> @insertelement_value_undef(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @insertelement_value_undef(
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <vscale x 4 x i32> [[A:%.*]], i32 undef, i64 0
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = insertelement <vscale x 4 x i32> %a, i32 undef, i64 0
   ret <vscale x 4 x i32> %r

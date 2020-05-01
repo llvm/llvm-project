@@ -136,7 +136,6 @@ static LogicalResult checkLoopNestMappable(OpTy forOp, unsigned numBlockDims,
     return success();
   }
 
-  OpBuilder builder(forOp.getOperation());
   if (numBlockDims > 3) {
     return forOp.emitError("cannot map to more than 3 block dimensions");
   }

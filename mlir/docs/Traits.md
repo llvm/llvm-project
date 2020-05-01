@@ -4,7 +4,7 @@
 
 MLIR allows for a truly open operation ecosystem, as any dialect may define
 operations that suit a specific level of abstraction. `Traits` are a mechanism
-in which to abstract implementation details and properties that are common
+which abstracts implementation details and properties that are common
 across many different operations. `Traits` may be used to specify special
 properties and constraints of the operation, including whether the operation has
 side effects or whether its output has the same type as the input. Some examples

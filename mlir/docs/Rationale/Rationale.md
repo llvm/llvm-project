@@ -861,11 +861,12 @@ func @matmul(%A, %B, %C, %M, %N, %K) : (...)  { // %M, N, K are symbols
 
 ### Affine Relations
 
-The current MLIR spec includes affine maps and integer sets, but not affine
-relations. Affine relations are a natural way to model read and write access
-information, which can be very useful to capture the behavior of opaque external
-library calls, high-performance vendor libraries, or user-provided / user-tuned
-routines.
+The current MLIR spec includes affine maps and integer sets, but not
+affine relations. Affine relations are a natural way to model read and
+write access information, which can be very useful to capture the
+behavior of external library calls where no implementation is
+available, high-performance vendor libraries, or user-provided /
+user-tuned routines.
 
 An affine relation is a relation between input and output dimension identifiers
 while being symbolic on a list of symbolic identifiers and with affine

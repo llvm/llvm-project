@@ -83,4 +83,5 @@ target_link_libraries(MLIRROCDLIR
   LLVMSupport
   MLIRIR
   MLIRSideEffects
+  MLIRVectorToLLVM
   )

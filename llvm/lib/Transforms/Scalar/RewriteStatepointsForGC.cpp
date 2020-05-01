@@ -1260,7 +1260,8 @@ normalizeForInvokeSafepoint(BasicBlock *BB, BasicBlock *InvokeParent,
 
 // Create new attribute set containing only attributes which can be transferred
 // from original call to the safepoint.
-static AttributeList legalizeCallAttributes(AttributeList AL) {
+static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
+                                            AttributeList AL) {
   if (AL.isEmpty())
     return AL;
 
@@ -1274,7 +1275,6 @@ static AttributeList legalizeCallAttributes(AttributeList AL) {
   }
 
   // Just skip parameter and return attributes for now
-  LLVMContext &Ctx = AL.getContext();
   return AttributeList::get(Ctx, AttributeList::FunctionIndex,
                             AttributeSet::get(Ctx, FnAttrs));
 }
@@ -1520,7 +1520,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // function attributes.  In case if we can handle this set of attributes -
     // set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPCall->setAttributes(legalizeCallAttributes(CI->getAttributes()));
+    SPCall->setAttributes(
+        legalizeCallAttributes(CI->getContext(), CI->getAttributes()));
 
     Token = SPCall;
 
@@ -1546,7 +1547,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // function attributes.  In case if we can handle this set of attributes -
     // set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPInvoke->setAttributes(legalizeCallAttributes(II->getAttributes()));
+    SPInvoke->setAttributes(
+        legalizeCallAttributes(II->getContext(), II->getAttributes()));
 
     Token = SPInvoke;
 

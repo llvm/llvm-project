@@ -34,7 +34,7 @@ int main() {
   assert(regex_match(str1 + 1, str1 + 2, regex("\\ba\\b"),
                      regex_constants::match_not_bow |
                          regex_constants::match_prev_avail));
-  assert(regex_search(str1, regex("\\ba"),
+  assert(regex_search(str1_scnd, regex("\\ba"),
                       regex_constants::match_not_bow |
                           regex_constants::match_prev_avail));
 
