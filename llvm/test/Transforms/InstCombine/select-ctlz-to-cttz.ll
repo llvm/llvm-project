@@ -220,7 +220,7 @@ define <2 x i32> @select_clz_to_ctz_vec_with_undef(<2 x i32> %a) {
 
 define i4 @PR45762(i3 %x4) {
 ; CHECK-LABEL: @PR45762(
-; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 true), !range !2
+; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range !2
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl i4 1, [[T7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i3 [[X4]], 0
