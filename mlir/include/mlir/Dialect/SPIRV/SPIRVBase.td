@@ -3079,6 +3079,7 @@ def SPV_OC_OpSourceExtension           : I32EnumAttrCase<"OpSourceExtension", 4>
 def SPV_OC_OpName                      : I32EnumAttrCase<"OpName", 5>;
 def SPV_OC_OpMemberName                : I32EnumAttrCase<"OpMemberName", 6>;
 def SPV_OC_OpString                    : I32EnumAttrCase<"OpString", 7>;
+def SPV_OC_OpLine                      : I32EnumAttrCase<"OpLine", 8>;
 def SPV_OC_OpExtension                 : I32EnumAttrCase<"OpExtension", 10>;
 def SPV_OC_OpExtInstImport             : I32EnumAttrCase<"OpExtInstImport", 11>;
 def SPV_OC_OpExtInst                   : I32EnumAttrCase<"OpExtInst", 12>;
@@ -3204,6 +3205,7 @@ def SPV_OC_OpBranchConditional         : I32EnumAttrCase<"OpBranchConditional", 
 def SPV_OC_OpReturn                    : I32EnumAttrCase<"OpReturn", 253>;
 def SPV_OC_OpReturnValue               : I32EnumAttrCase<"OpReturnValue", 254>;
 def SPV_OC_OpUnreachable               : I32EnumAttrCase<"OpUnreachable", 255>;
+def SPV_OC_OpNoLine                    : I32EnumAttrCase<"OpNoLine", 317>;
 def SPV_OC_OpModuleProcessed           : I32EnumAttrCase<"OpModuleProcessed", 330>;
 def SPV_OC_OpGroupNonUniformElect      : I32EnumAttrCase<"OpGroupNonUniformElect", 333>;
 def SPV_OC_OpGroupNonUniformBallot     : I32EnumAttrCase<"OpGroupNonUniformBallot", 339>;
@@ -3223,7 +3225,7 @@ def SPV_OpcodeAttr :
     SPV_I32EnumAttr<"Opcode", "valid SPIR-V instructions", [
       SPV_OC_OpNop, SPV_OC_OpUndef, SPV_OC_OpSourceContinued, SPV_OC_OpSource,
       SPV_OC_OpSourceExtension, SPV_OC_OpName, SPV_OC_OpMemberName, SPV_OC_OpString,
-      SPV_OC_OpExtension, SPV_OC_OpExtInstImport, SPV_OC_OpExtInst,
+      SPV_OC_OpLine, SPV_OC_OpExtension, SPV_OC_OpExtInstImport, SPV_OC_OpExtInst,
       SPV_OC_OpMemoryModel, SPV_OC_OpEntryPoint, SPV_OC_OpExecutionMode,
       SPV_OC_OpCapability, SPV_OC_OpTypeVoid, SPV_OC_OpTypeBool, SPV_OC_OpTypeInt,
       SPV_OC_OpTypeFloat, SPV_OC_OpTypeVector, SPV_OC_OpTypeArray,
@@ -3262,14 +3264,14 @@ def SPV_OpcodeAttr :
       SPV_OC_OpAtomicUMax, SPV_OC_OpAtomicAnd, SPV_OC_OpAtomicOr, SPV_OC_OpAtomicXor,
       SPV_OC_OpPhi, SPV_OC_OpLoopMerge, SPV_OC_OpSelectionMerge, SPV_OC_OpLabel,
       SPV_OC_OpBranch, SPV_OC_OpBranchConditional, SPV_OC_OpReturn,
-      SPV_OC_OpReturnValue, SPV_OC_OpUnreachable, SPV_OC_OpModuleProcessed,
-      SPV_OC_OpGroupNonUniformElect, SPV_OC_OpGroupNonUniformBallot,
-      SPV_OC_OpGroupNonUniformIAdd, SPV_OC_OpGroupNonUniformFAdd,
-      SPV_OC_OpGroupNonUniformIMul, SPV_OC_OpGroupNonUniformFMul,
-      SPV_OC_OpGroupNonUniformSMin, SPV_OC_OpGroupNonUniformUMin,
-      SPV_OC_OpGroupNonUniformFMin, SPV_OC_OpGroupNonUniformSMax,
-      SPV_OC_OpGroupNonUniformUMax, SPV_OC_OpGroupNonUniformFMax,
-      SPV_OC_OpSubgroupBallotKHR
+      SPV_OC_OpReturnValue, SPV_OC_OpUnreachable, SPV_OC_OpNoLine,
+      SPV_OC_OpModuleProcessed, SPV_OC_OpGroupNonUniformElect,
+      SPV_OC_OpGroupNonUniformBallot, SPV_OC_OpGroupNonUniformIAdd,
+      SPV_OC_OpGroupNonUniformFAdd, SPV_OC_OpGroupNonUniformIMul,
+      SPV_OC_OpGroupNonUniformFMul, SPV_OC_OpGroupNonUniformSMin,
+      SPV_OC_OpGroupNonUniformUMin, SPV_OC_OpGroupNonUniformFMin,
+      SPV_OC_OpGroupNonUniformSMax, SPV_OC_OpGroupNonUniformUMax,
+      SPV_OC_OpGroupNonUniformFMax, SPV_OC_OpSubgroupBallotKHR
     ]>;
 
 // End opcode section. Generated from SPIR-V spec; DO NOT MODIFY!
