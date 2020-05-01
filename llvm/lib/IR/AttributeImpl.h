@@ -266,7 +266,6 @@ class AttributeListImpl final
   friend TrailingObjects;
 
 private:
-  LLVMContext &Context;
   unsigned NumAttrSets; ///< Number of entries in this set.
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint8_t AvailableFunctionAttrs[12] = {};
@@ -275,14 +274,11 @@ private:
   size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
 
 public:
-  AttributeListImpl(LLVMContext &C, ArrayRef<AttributeSet> Sets);
+  AttributeListImpl(ArrayRef<AttributeSet> Sets);
 
   // AttributesSetImpt is uniqued, these should not be available.
   AttributeListImpl(const AttributeListImpl &) = delete;
   AttributeListImpl &operator=(const AttributeListImpl &) = delete;
-
-  /// Get the context that created this AttributeListImpl.
-  LLVMContext &getContext() { return Context; }
 
   /// Return true if the AttributeSet or the FunctionIndex has an
   /// enum attribute of the given kind.
