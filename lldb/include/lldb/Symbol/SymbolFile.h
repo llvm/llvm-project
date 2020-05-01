@@ -18,6 +18,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Errc.h"
@@ -128,6 +129,8 @@ public:
   Symtab *GetSymtab();
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
+  /// Return the Xcode SDK comp_unit was compiled against.
+  virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
