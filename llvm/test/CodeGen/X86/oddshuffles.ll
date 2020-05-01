@@ -556,7 +556,7 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, <12 x i32>* %p) nounwind {
 ; AVX1-NEXT:    vpermilps {{.*#+}} ymm3 = ymm0[0,u,u,1,5,u,u,6]
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm2 = ymm3[0],ymm2[1],ymm3[2,3,4,5],ymm2[6],ymm3[7]
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[0,1,0,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm3
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm3[2],ymm2[3,4],ymm3[5],ymm2[6,7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm3[3,3]
@@ -602,7 +602,7 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, <12 x i32>* %p) nounwind {
 ; XOP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,0,1]
 ; XOP-NEXT:    vpermil2ps {{.*#+}} ymm2 = ymm0[0],ymm2[0],ymm0[u,1,5,u],ymm2[6],ymm0[6]
 ; XOP-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[0,1,0,1]
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm3
 ; XOP-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm3[2],ymm2[3,4],ymm3[5],ymm2[6,7]
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm3[3,3]
