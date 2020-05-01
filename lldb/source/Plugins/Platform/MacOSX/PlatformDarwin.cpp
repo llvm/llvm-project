@@ -1761,12 +1761,12 @@ PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   return {};
 }
 
-std::string PlatformDarwin::GetSDKPath(XcodeSDK sdk) {
+llvm::StringRef PlatformDarwin::GetSDKPath(XcodeSDK sdk) {
   std::lock_guard<std::mutex> guard(m_sdk_path_mutex);
   std::string &path = m_sdk_path[sdk.GetString()];
-  if (!path.empty())
-    return path;
-  return HostInfo::GetXcodeSDK(sdk);
+  if (path.empty())
+    path = HostInfo::GetXcodeSDK(sdk);
+  return path;
 }
 
 FileSpec PlatformDarwin::GetXcodeContentsDirectory() {
