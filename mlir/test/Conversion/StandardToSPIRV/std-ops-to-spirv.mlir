@@ -619,3 +619,115 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
 }
 
 } // end module
+
+// -----
+
+// Check that access chain indices are properly adjusted if non-32-bit types are
+// emulated via 32-bit types.
+// TODO: Test i64 type.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: @load_i8
+func @load_i8(%arg0: memref<i8>) {
+  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[FOUR1:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
+  //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
+  //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
+  //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
+  //     CHECK: %[[IDX:.+]] = spv.SMod %[[ZERO]], %[[FOUR2]] : i32
+  //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
+  //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
+  //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
+  //     CHECK: spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  %0 = load %arg0[] : memref<i8>
+  return
+}
+
+// CHECK-LABEL: @load_i16
+//       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i32)
+func @load_i16(%arg0: memref<10xi16>, %index : index) {
+  //     CHECK: %[[ONE:.+]] = spv.constant 1 : i32
+  //     CHECK: %[[FLAT_IDX:.+]] = spv.IMul %[[ONE]], %[[ARG1]] : i32
+  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[TWO1:.+]] = spv.constant 2 : i32
+  //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[FLAT_IDX]], %[[TWO1]] : i32
+  //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
+  //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
+  //     CHECK: %[[TWO2:.+]] = spv.constant 2 : i32
+  //     CHECK: %[[SIXTEEN:.+]] = spv.constant 16 : i32
+  //     CHECK: %[[IDX:.+]] = spv.SMod %[[FLAT_IDX]], %[[TWO2]] : i32
+  //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[SIXTEEN]] : i32
+  //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
+  //     CHECK: %[[MASK:.+]] = spv.constant 65535 : i32
+  //     CHECK: spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  %0 = load %arg0[%index] : memref<10xi16>
+  return
+}
+
+// CHECK-LABEL: @load_i32
+func @load_i32(%arg0: memref<i32>) {
+  // CHECK-NOT: spv.SDiv
+  //     CHECK: spv.Load
+  // CHECK-NOT: spv.ShiftRightArithmetic
+  %0 = load %arg0[] : memref<i32>
+  return
+}
+
+// CHECK-LABEL: @load_f32
+func @load_f32(%arg0: memref<f32>) {
+  // CHECK-NOT: spv.SDiv
+  //     CHECK: spv.Load
+  // CHECK-NOT: spv.ShiftRightArithmetic
+  %0 = load %arg0[] : memref<f32>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check that access chain indices are properly adjusted if non-16/32-bit types
+// are emulated via 32-bit types.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Int16, StorageBuffer16BitAccess, Shader],
+    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: @load_i8
+func @load_i8(%arg0: memref<i8>) {
+  //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
+  //     CHECK: %[[FOUR1:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
+  //     CHECK: %[[PTR:.+]] = spv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
+  //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
+  //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
+  //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
+  //     CHECK: %[[IDX:.+]] = spv.SMod %[[ZERO]], %[[FOUR2]] : i32
+  //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
+  //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
+  //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
+  //     CHECK: spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  %0 = load %arg0[] : memref<i8>
+  return
+}
+
+// CHECK-LABEL: @load_i16
+func @load_i16(%arg0: memref<i16>) {
+  // CHECK-NOT: spv.SDiv
+  //     CHECK: spv.Load
+  // CHECK-NOT: spv.ShiftRightArithmetic
+  %0 = load %arg0[] : memref<i16>
+  return
+}
+
+} // end module
