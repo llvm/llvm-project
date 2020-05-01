@@ -231,37 +231,33 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         if '-fmodules' in test.config.available_features and self._disableWithModules(test):
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
 
-        # TODO(ldionne): Enable -Werror with all supported compilers.
-        clangOrAppleClang = {'clang', 'apple-clang'}.intersection(test.config.available_features) != set()
-        werror = '-Werror' if clangOrAppleClang else ''
-
         if re.search('[.]sh[.][^.]+$', filename):
             steps = [ ] # The steps are already in the script
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.compile.pass.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{{cxx}} %s {} %{{flags}} %{{compile_flags}} -fsyntax-only".format(werror)
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.compile.fail.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) ! %{{cxx}} %s {} %{{flags}} %{{compile_flags}} -fsyntax-only".format(werror)
+                "%dbg(COMPILED WITH) ! %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.link.pass.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{{cxx}} %s {} %{{flags}} %{{compile_flags}} %{{link_flags}} -o %t.exe".format(werror)
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.link.fail.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{{cxx}} %s {} %{{flags}} %{{compile_flags}} -c -o %t.o".format(werror),
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -o %t.o",
                 "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.run.fail.cpp'):
             steps = [
-                "%dbg(COMPILED WITH) %{{cxx}} %s {} %{{flags}} %{{compile_flags}} %{{link_flags}} -o %t.exe".format(werror),
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} ! %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
@@ -270,14 +266,16 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 return lit.Test.Result(lit.Test.UNSUPPORTED,
                     "Test {} requires support for Clang-verify, which isn't supported by the compiler".format(test.getFullName()))
             steps = [
-                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only {}".format(VERIFY_FLAGS)
+                # Note: Use -Wno-error to make sure all diagnostics are not treated as errors,
+                #       which doesn't make sense for clang-verify tests.
+                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(VERIFY_FLAGS)
             ]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
         # suffixes above too.
         elif filename.endswith('.pass.cpp') or filename.endswith('.pass.mm'):
             steps = [
-                "%dbg(COMPILED WITH) %{{cxx}} %s {} %{{flags}} %{{compile_flags}} %{{link_flags}} -o %t.exe".format(werror),
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps, fileDependencies=['%t.exe'])
@@ -287,11 +285,11 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         elif filename.endswith('.fail.cpp'):
             if supportsVerify:
                 steps = [
-                    "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only {}".format(VERIFY_FLAGS)
+                    "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(VERIFY_FLAGS)
                 ]
             else:
                 steps = [
-                    "%dbg(COMPILED WITH) ! %{{cxx}} {} %s %{{flags}} %{{compile_flags}} -fsyntax-only".format(werror)
+                    "%dbg(COMPILED WITH) ! %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
                 ]
             return self._executeShTest(test, litConfig, steps)
         else:
