@@ -183,11 +183,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setCondCodeAction(static_cast<ISD::CondCode>(CC), MVT::v2i64, Custom);
 
     // 64x2 conversions are not in the spec
-    if (!Subtarget->hasUnimplementedSIMD128())
-      for (auto Op :
-           {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT})
-        for (auto T : {MVT::v2i64, MVT::v2f64})
-          setOperationAction(Op, T, Expand);
+    for (auto Op :
+         {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT})
+      for (auto T : {MVT::v2i64, MVT::v2f64})
+        setOperationAction(Op, T, Expand);
   }
 
   // As a special case, these operators use the type to mean the type to
