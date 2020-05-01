@@ -2,6 +2,12 @@
 ! Derived type parameters
 ! C731 The same type-param-name shall not appear more than once in a given
 ! derived-type-stmt.
+! C741 A type-param-name in a type-param-def-stmt in a derived-type-def shall
+! be one of the type-paramnames in the derived-type-stmt of that
+! derived-type-def.
+! C742 Each type-param-name in the derived-type-stmt in a derived-type-def
+! shall appear exactly once as a type-param-name in a type-param-def-stmt 
+! in that derived-type-def.
 
 module m
   !ERROR: Duplicate type parameter name: 'a'
