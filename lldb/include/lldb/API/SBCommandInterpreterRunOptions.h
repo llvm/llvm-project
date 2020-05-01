@@ -13,6 +13,11 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class CommandInterpreterRunOptions;
+class CommandInterpreterRunResult;
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBCommandInterpreterRunOptions {
@@ -67,6 +72,29 @@ private:
   // This is set in the constructor and will always be valid.
   mutable std::unique_ptr<lldb_private::CommandInterpreterRunOptions>
       m_opaque_up;
+};
+
+class LLDB_API SBCommandInterpreterRunResult {
+  friend class SBDebugger;
+  friend class SBCommandInterpreter;
+
+public:
+  SBCommandInterpreterRunResult();
+  SBCommandInterpreterRunResult(const SBCommandInterpreterRunResult &rhs);
+  ~SBCommandInterpreterRunResult();
+
+  SBCommandInterpreterRunResult &
+  operator=(const SBCommandInterpreterRunResult &rhs);
+
+  int GetNumberOfErrors() const;
+  lldb::CommandInterpreterResult GetResult() const;
+
+private:
+  SBCommandInterpreterRunResult(
+      const lldb_private::CommandInterpreterRunResult &rhs);
+
+  // This is set in the constructor and will always be valid.
+  std::unique_ptr<lldb_private::CommandInterpreterRunResult> m_opaque_up;
 };
 
 } // namespace lldb

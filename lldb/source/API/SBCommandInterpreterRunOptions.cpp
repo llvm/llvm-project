@@ -163,6 +163,58 @@ SBCommandInterpreterRunOptions::ref() const {
   return *m_opaque_up;
 }
 
+SBCommandInterpreterRunResult::SBCommandInterpreterRunResult()
+    : m_opaque_up(new CommandInterpreterRunResult())
+
+{
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommandInterpreterRunResult);
+}
+
+SBCommandInterpreterRunResult::SBCommandInterpreterRunResult(
+    const SBCommandInterpreterRunResult &rhs)
+    : m_opaque_up(new CommandInterpreterRunResult()) {
+  LLDB_RECORD_CONSTRUCTOR(SBCommandInterpreterRunResult,
+                          (const lldb::SBCommandInterpreterRunResult &), rhs);
+
+  *m_opaque_up = *rhs.m_opaque_up;
+}
+
+SBCommandInterpreterRunResult::SBCommandInterpreterRunResult(
+    const CommandInterpreterRunResult &rhs)
+    : m_opaque_up() {
+  m_opaque_up.reset(new CommandInterpreterRunResult(rhs));
+}
+
+SBCommandInterpreterRunResult::~SBCommandInterpreterRunResult() = default;
+
+SBCommandInterpreterRunResult &SBCommandInterpreterRunResult::operator=(
+    const SBCommandInterpreterRunResult &rhs) {
+  LLDB_RECORD_METHOD(lldb::SBCommandInterpreterRunResult &,
+                     SBCommandInterpreterRunResult,
+                     operator=,(const lldb::SBCommandInterpreterRunResult &),
+                     rhs);
+
+  if (this == &rhs)
+    return *this;
+  *m_opaque_up = *rhs.m_opaque_up;
+  return LLDB_RECORD_RESULT(*this);
+}
+
+int SBCommandInterpreterRunResult::GetNumberOfErrors() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(int, SBCommandInterpreterRunResult,
+                                   GetNumberOfErrors);
+
+  return m_opaque_up->GetNumErrors();
+}
+
+lldb::CommandInterpreterResult
+SBCommandInterpreterRunResult::GetResult() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::CommandInterpreterResult,
+                                   SBCommandInterpreterRunResult, GetResult);
+
+  return m_opaque_up->GetResult();
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -204,6 +256,16 @@ template <> void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
                              GetSpawnThread, ());
   LLDB_REGISTER_METHOD(void, SBCommandInterpreterRunOptions, SetSpawnThread,
                        (bool));
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandInterpreterRunResult, ());
+  LLDB_REGISTER_CONSTRUCTOR(SBCommandInterpreterRunResult,
+                            (const lldb::SBCommandInterpreterRunResult &));
+  LLDB_REGISTER_METHOD(lldb::SBCommandInterpreterRunResult &,
+                       SBCommandInterpreterRunResult,
+                       operator=,(const lldb::SBCommandInterpreterRunResult &));
+  LLDB_REGISTER_METHOD_CONST(int, SBCommandInterpreterRunResult,
+                             GetNumberOfErrors, ());
+  LLDB_REGISTER_METHOD_CONST(lldb::CommandInterpreterResult,
+                             SBCommandInterpreterRunResult, GetResult, ());
 }
 
 } // namespace repro
