@@ -770,6 +770,8 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       CmpFOpPattern, CmpIOpPattern, IntLoadOpPattern, LoadOpPattern,
       ReturnOpPattern, SelectOpPattern, StoreOpPattern,
       TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
+      TypeCastingOpPattern<ZeroExtendIOp, spirv::UConvertOp>,
+      TypeCastingOpPattern<TruncateIOp, spirv::SConvertOp>,
       TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
       TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>, XOrOpPattern>(
       context, typeConverter);

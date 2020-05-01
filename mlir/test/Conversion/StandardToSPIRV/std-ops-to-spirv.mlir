@@ -501,6 +501,34 @@ func @sitofp2(%arg0 : i64) -> f64 {
   return %0 : f64
 }
 
+// CHECK-LABEL: @zexti1
+func @zexti1(%arg0: i16) -> i64 {
+  // CHECK: spv.UConvert %{{.*}} : i16 to i64
+  %0 = std.zexti %arg0 : i16 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: @zexti2
+func @zexti2(%arg0 : i32) -> i64 {
+  // CHECK: spv.UConvert %{{.*}} : i32 to i64
+  %0 = std.zexti %arg0 : i32 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: @trunci1
+func @trunci1(%arg0 : i64) -> i16 {
+  // CHECK: spv.SConvert %{{.*}} : i64 to i16
+  %0 = std.trunci %arg0 : i64 to i16
+  return %0 : i16
+}
+
+// CHECK-LABEL: @trunci2
+func @trunci2(%arg0: i32) -> i16 {
+  // CHECK: spv.SConvert %{{.*}} : i32 to i16
+  %0 = std.trunci %arg0 : i32 to i16
+  return %0 : i16
+}
+
 } // end module
 
 // -----
