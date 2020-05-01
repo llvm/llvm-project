@@ -3105,6 +3105,7 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 #include "lldb/API/SBBreakpointName.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBCompileUnit.h"
