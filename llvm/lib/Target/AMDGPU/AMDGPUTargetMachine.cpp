@@ -241,6 +241,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
+  initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
   initializeSIWholeQuadModePass(*PR);
@@ -1044,6 +1045,8 @@ void GCNPassConfig::addPreEmitPass() {
   // FIXME: This stand-alone pass will emit indiv. S_NOP 0, as needed. It would
   // be better for it to emit S_NOP <N> when possible.
   addPass(&PostRAHazardRecognizerID);
+  if (getOptLevel() > CodeGenOpt::None)
+    addPass(&SIInsertHardClausesID);
 
   addPass(&SIRemoveShortExecBranchesID);
   addPass(&SIPreEmitPeepholeID);
