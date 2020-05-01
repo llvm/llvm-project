@@ -515,6 +515,18 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = rsqrt %arg1 : f32
   %145 = rsqrt %f : f32
 
+  // CHECK: %{{[0-9]+}} = sin %arg1 : f32
+  %146 = "std.sin"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = sin %arg1 : f32
+  %147 = sin %f : f32
+
+  // CHECK: %{{[0-9]+}} = sin %cst_8 : vector<4xf32>
+  %148 = sin %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = sin %arg0 : tensor<4x4x?xf32>
+  %149 = sin %t : tensor<4x4x?xf32>
+
   return
 }
 
