@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include <cstdint>
 using namespace llvm;
 
 // Check that no bytes are wasted and everything is well-aligned.
