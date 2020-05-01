@@ -954,12 +954,8 @@ Value ConversionPatternRewriter::getRemappedValue(Value key) {
 }
 
 /// PatternRewriter hook for creating a new block with the given arguments.
-Block *ConversionPatternRewriter::createBlock(Region *parent,
-                                              Region::iterator insertPtr,
-                                              TypeRange argTypes) {
-  Block *block = PatternRewriter::createBlock(parent, insertPtr, argTypes);
+void ConversionPatternRewriter::notifyBlockCreated(Block *block) {
   impl->notifyCreatedBlock(block);
-  return block;
 }
 
 /// PatternRewriter hook for splitting a block into two parts.
@@ -1001,13 +997,12 @@ void ConversionPatternRewriter::cloneRegionBefore(
 }
 
 /// PatternRewriter hook for creating a new operation.
-Operation *ConversionPatternRewriter::insert(Operation *op) {
+void ConversionPatternRewriter::notifyOperationInserted(Operation *op) {
   LLVM_DEBUG({
     impl->logger.startLine()
         << "** Insert  : '" << op->getName() << "'(" << op << ")\n";
   });
   impl->createdOps.push_back(op);
-  return OpBuilder::insert(op);
 }
 
 /// PatternRewriter hook for updating the root operation in-place.

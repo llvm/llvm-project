@@ -211,7 +211,7 @@ template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
 ///     to apply patterns and observe their effects (e.g. to keep worklists or
 ///     other data structures up to date).
 ///
-class PatternRewriter : public OpBuilder {
+class PatternRewriter : public OpBuilder, public OpBuilder::Listener {
 public:
   /// Create operation of specific op type at the current insertion point
   /// without verifying to see if it is valid.
@@ -246,10 +246,6 @@ public:
     op->erase();
     return OpTy();
   }
-
-  /// This is implemented to insert the specified operation and serves as a
-  /// notification hook for rewriters that want to know about new operations.
-  virtual Operation *insert(Operation *op) = 0;
 
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
@@ -349,11 +345,13 @@ public:
   }
 
 protected:
-  explicit PatternRewriter(MLIRContext *ctx) : OpBuilder(ctx) {}
-  virtual ~PatternRewriter();
+  /// Initialize the builder with this rewriter as the listener.
+  explicit PatternRewriter(MLIRContext *ctx)
+      : OpBuilder(ctx, /*listener=*/this) {}
+  ~PatternRewriter() override;
 
-  // These are the callback methods that subclasses can choose to implement if
-  // they would like to be notified about certain types of mutations.
+  /// These are the callback methods that subclasses can choose to implement if
+  /// they would like to be notified about certain types of mutations.
 
   /// Notify the pattern rewriter that the specified operation is about to be
   /// replaced with another set of operations.  This is called before the uses
