@@ -2452,6 +2452,18 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         return true;
       KnownUndef = SrcUndef.extractBits(NumElts, Idx);
       KnownZero = SrcZero.extractBits(NumElts, Idx);
+
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (!DemandedElts.isAllOnesValue()) {
+        APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+        SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, DemandedBits, SrcElts, TLO.DAG, Depth + 1);
+        if (NewSrc) {
+          SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
+                                          Op.getOperand(1));
+          return TLO.CombineTo(Op, NewOp);
+        }
+      }
     }
     break;
   }
