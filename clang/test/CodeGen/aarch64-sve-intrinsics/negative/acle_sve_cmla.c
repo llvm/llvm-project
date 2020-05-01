@@ -10,6 +10,48 @@
 
 #include <arm_sve.h>
 
+svfloat16_t test_svcmla_f16_z(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f16,_z,)(pg, op1, op2, op3, 19);
+}
+
+svfloat16_t test_svcmla_f16_z_1(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f16,_z,)(pg, op1, op2, op3, 1);
+}
+
+svfloat16_t test_svcmla_f16_z_2(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f16,_z,)(pg, op1, op2, op3, 18);
+}
+
+svfloat16_t test_svcmla_f16_z_3(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f16,_z,)(pg, op1, op2, op3, 91);
+}
+
+svfloat16_t test_svcmla_f16_z_4(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f16,_z,)(pg, op1, op2, op3, 181);
+}
+
+svfloat32_t test_svcmla_f32_z(svbool_t pg, svfloat32_t op1, svfloat32_t op2, svfloat32_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f32,_z,)(pg, op1, op2, op3, 19);
+}
+
+svfloat64_t test_svcmla_f64_z(svbool_t pg, svfloat64_t op1, svfloat64_t op2, svfloat64_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f64,_z,)(pg, op1, op2, op3, 19);
+}
+
 svfloat16_t test_svcmla_f16_m(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
 {
   // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
@@ -26,6 +68,24 @@ svfloat64_t test_svcmla_f64_m(svbool_t pg, svfloat64_t op1, svfloat64_t op2, svf
 {
   // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
   return SVE_ACLE_FUNC(svcmla,_f64,_m,)(pg, op1, op2, op3, 19);
+}
+
+svfloat16_t test_svcmla_f16_x(svbool_t pg, svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f16,_x,)(pg, op1, op2, op3, 19);
+}
+
+svfloat32_t test_svcmla_f32_x(svbool_t pg, svfloat32_t op1, svfloat32_t op2, svfloat32_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f32,_x,)(pg, op1, op2, op3, 19);
+}
+
+svfloat64_t test_svcmla_f64_x(svbool_t pg, svfloat64_t op1, svfloat64_t op2, svfloat64_t op3)
+{
+  // expected-error@+1 {{argument should be the value 0, 90, 180 or 270}}
+  return SVE_ACLE_FUNC(svcmla,_f64,_x,)(pg, op1, op2, op3, 19);
 }
 
 svfloat16_t test_svcmla_lane_f16(svfloat16_t op1, svfloat16_t op2, svfloat16_t op3)
@@ -104,4 +164,10 @@ svfloat32_t test_svcmla_lane_f32_3(svfloat32_t op1, svfloat32_t op2, svfloat32_t
 {
   // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
   return SVE_ACLE_FUNC(svcmla_lane,_f32,,)(op1, op2, op3, 2, 0);
+}
+
+svfloat32_t test_svcmla_lane_f32_4(svfloat32_t op1, svfloat32_t op2, svfloat32_t op3)
+{
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  return SVE_ACLE_FUNC(svcmla_lane,_f32,,)(op1, op2, op3, 3, 180);
 }
