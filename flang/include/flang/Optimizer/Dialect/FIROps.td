@@ -2190,6 +2190,24 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
   }];
 }
 
+def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoSideEffect]> {
+  let summary = "insert sub-value into a range on an existing sequence";
+
+  let description = [{
+    Insert a constant value into an entity with an array type. Returns a
+    new ssa value where the range of offsets from the original array have been
+    replaced with the constant. The result is an array type entity.
+  }];
+
+  let arguments = (ins fir_SequenceType:$seq, AnyType:$val,
+                       Index:$start, Index:$end);
+  let results = (outs fir_SequenceType);
+
+  let assemblyFormat = [{
+    operands attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
   let summary =
     "create a field index value from a LEN type parameter identifier";
