@@ -10,6 +10,7 @@
 
 #include "InputChunks.h"
 #include "OutputSegment.h"
+#include "SymbolTable.h"
 #include "SyntheticSections.h"
 
 using namespace llvm;
@@ -39,15 +40,36 @@ static bool allowUndefined(const Symbol* sym) {
   if (auto *g = dyn_cast<UndefinedGlobal>(sym))
     if (g->importName)
       return true;
-  return (config->allowUndefined ||
-          config->allowUndefinedSymbols.count(sym->getName()) != 0);
+  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
+    if (g->importName)
+      return true;
+  return config->allowUndefinedSymbols.count(sym->getName()) != 0;
 }
 
-static void reportUndefined(const Symbol* sym) {
-  assert(sym->isUndefined());
-  assert(!sym->isWeak());
-  if (!allowUndefined(sym))
-    error(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+static void reportUndefined(Symbol *sym) {
+  if (!allowUndefined(sym)) {
+    switch (config->unresolvedSymbols) {
+    case UnresolvedPolicy::ReportError:
+      error(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+      break;
+    case UnresolvedPolicy::Warn:
+      warn(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+      break;
+    case UnresolvedPolicy::Ignore:
+      if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+        if (!f->stubFunction) {
+          LLVM_DEBUG(dbgs()
+                     << "ignoring undefined symbol: " + toString(*sym) + "\n");
+          f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
+          f->stubFunction->markLive();
+          f->setTableIndex(0);
+        }
+      }
+      break;
+    case UnresolvedPolicy::ImportFuncs:
+      break;
+    }
+  }
 }
 
 static void addGOTEntry(Symbol *sym) {
@@ -131,7 +153,6 @@ void scanRelocations(InputChunk *chunk) {
       if (sym->isUndefined() && !config->relocatable && !sym->isWeak())
         reportUndefined(sym);
     }
-
   }
 }
 

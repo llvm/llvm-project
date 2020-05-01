@@ -673,7 +673,19 @@ InputFunction *SymbolTable::replaceWithUnreachable(Symbol *sym,
   // to be exported outside the object file.
   replaceSymbol<DefinedFunction>(sym, debugName, WASM_SYMBOL_BINDING_LOCAL,
                                  nullptr, func);
+  // Ensure it compares equal to the null pointer, and so that table relocs
+  // don't pull in the stub body (only call-operand relocs should do that).
+  func->setTableIndex(0);
   return func;
+}
+
+void SymbolTable::replaceWithUndefined(Symbol *sym) {
+  // Add a synthetic dummy for weak undefined functions.  These dummies will
+  // be GC'd if not used as the target of any "call" instructions.
+  StringRef debugName = saver.save("undefined_weak:" + toString(*sym));
+  replaceWithUnreachable(sym, *sym->getSignature(), debugName);
+  // Hide our dummy to prevent export.
+  sym->setHidden(true);
 }
 
 // For weak undefined functions, there may be "call" instructions that reference
@@ -682,29 +694,35 @@ InputFunction *SymbolTable::replaceWithUnreachable(Symbol *sym,
 // the call instruction that passes Wasm validation.
 void SymbolTable::handleWeakUndefines() {
   for (Symbol *sym : getSymbols()) {
-    if (!sym->isUndefWeak())
-      continue;
-
-    const WasmSignature *sig = sym->getSignature();
-    if (!sig) {
-      // It is possible for undefined functions not to have a signature (eg. if
-      // added via "--undefined"), but weak undefined ones do have a signature.
-      // Lazy symbols may not be functions and therefore Sig can still be null
-      // in some circumstance.
-      assert(!isa<FunctionSymbol>(sym));
-      continue;
+    if (sym->isUndefWeak()) {
+      if (sym->getSignature()) {
+        replaceWithUndefined(sym);
+      } else {
+        // It is possible for undefined functions not to have a signature (eg.
+        // if added via "--undefined"), but weak undefined ones do have a
+        // signature.  Lazy symbols may not be functions and therefore Sig can
+        // still be null in some circumstance.
+        assert(!isa<FunctionSymbol>(sym));
+      }
     }
-
-    // Add a synthetic dummy for weak undefined functions.  These dummies will
-    // be GC'd if not used as the target of any "call" instructions.
-    StringRef debugName = saver.save("undefined:" + toString(*sym));
-    InputFunction* func = replaceWithUnreachable(sym, *sig, debugName);
-    // Ensure it compares equal to the null pointer, and so that table relocs
-    // don't pull in the stub body (only call-operand relocs should do that).
-    func->setTableIndex(0);
-    // Hide our dummy to prevent export.
-    sym->setHidden(true);
   }
+}
+
+DefinedFunction *SymbolTable::createUndefinedStub(const WasmSignature &sig) {
+  if (stubFunctions.count(sig))
+    return stubFunctions[sig];
+  LLVM_DEBUG(dbgs() << "createUndefinedStub: " << toString(sig) << "\n");
+  auto *sym = reinterpret_cast<DefinedFunction *>(make<SymbolUnion>());
+  sym->isUsedInRegularObj = true;
+  sym->canInline = true;
+  sym->traced = false;
+  sym->forceExport = false;
+  sym->signature = &sig;
+  replaceSymbol<DefinedFunction>(
+      sym, "undefined_stub", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr, nullptr);
+  replaceWithUnreachable(sym, sig, "undefined_stub");
+  stubFunctions[sig] = sym;
+  return sym;
 }
 
 static void reportFunctionSignatureMismatch(StringRef symName,

@@ -16,6 +16,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/BinaryFormat/WasmTraits.h"
 
 namespace lld {
 namespace wasm {
@@ -88,6 +89,7 @@ public:
 
   void handleSymbolVariants();
   void handleWeakUndefines();
+  DefinedFunction *createUndefinedStub(const WasmSignature &sig);
 
   std::vector<ObjFile *> objectFiles;
   std::vector<SharedFile *> sharedFiles;
@@ -103,6 +105,7 @@ private:
                           const InputFile *file, Symbol **out);
   InputFunction *replaceWithUnreachable(Symbol *sym, const WasmSignature &sig,
                                         StringRef debugName);
+  void replaceWithUndefined(Symbol *sym);
 
   // Maps symbol names to index into the symVector.  -1 means that symbols
   // is to not yet in the vector but it should have tracing enabled if it is
@@ -113,6 +116,7 @@ private:
   // For certain symbols types, e.g. function symbols, we allow for multiple
   // variants of the same symbol with different signatures.
   llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> symVariants;
+  llvm::DenseMap<WasmSignature, DefinedFunction *> stubFunctions;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set
