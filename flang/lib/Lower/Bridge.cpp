@@ -218,7 +218,11 @@ public:
                         fir::NameUniquer &uniquer)
       : mlirContext{bridge.getMLIRContext()}, cooked{bridge.getCookedSource()},
         module{bridge.getModule()}, defaults{bridge.getDefaultKinds()},
-        kindMap{bridge.getKindMap()}, uniquer{uniquer} {}
+        kindMap{bridge.getKindMap()}, uniquer{uniquer},
+        getShape{[&](const Fortran::lower::SomeExpr &expr) {
+          auto foldCtx = bridge.createFoldingContext();
+          return Fortran::evaluate::GetShape(foldCtx, expr);
+        }} {}
   virtual ~FirConverter() = default;
 
   /// Convert the PFT to FIR
@@ -1324,69 +1328,148 @@ private:
     noRuntimeSupport("LOCK");
   }
 
+  fir::LoopOp createLoopNest(llvm::SmallVectorImpl<mlir::Value> &lcvs,
+                             const Fortran::evaluate::Shape &shape) {
+    llvm::SmallVector<mlir::Value, 8> extents;
+    auto idxTy = builder->getIndexType();
+    auto zero = builder->createIntegerConstant(idxTy, 0);
+    auto one = builder->createIntegerConstant(idxTy, 1);
+    auto loc = toLocation();
+    for (auto s : shape) {
+      if (s.has_value()) {
+        auto ub = builder->createConvert(
+            loc, idxTy,
+            genExprValue(Fortran::evaluate::AsGenericExpr(std::move(*s))));
+        auto up = builder->create<mlir::SubIOp>(loc, ub, one);
+        extents.push_back(up);
+      } else {
+        TODO();
+      }
+    }
+    // Iteration space is created with outermost columns, innermost rows
+    std::reverse(extents.begin(), extents.end());
+    fir::LoopOp inner;
+    auto insPt = builder->saveInsertionPoint();
+    for (auto e : extents) {
+      if (inner)
+        builder->setInsertionPointToStart(inner.getBody());
+      auto loop = builder->create<fir::LoopOp>(loc, zero, e, one);
+      lcvs.push_back(loop.getInductionVar());
+      if (!inner)
+        insPt = builder->saveInsertionPoint();
+      inner = loop;
+    }
+    builder->restoreInsertionPoint(insPt);
+    return inner;
+  }
+
+  mlir::OpBuilder::InsertPoint
+  genPrelude(llvm::SmallVectorImpl<mlir::Value> &lcvs, bool isHeap,
+             const Fortran::lower::SomeExpr &lhs,
+             const Fortran::lower::SomeExpr &rhs,
+             const Fortran::evaluate::Shape &shape) {
+    if (isHeap) {
+      // does this require a dealloc and realloc?
+    }
+    if (/*needToMakeCopies*/ false) {
+      // make copies
+    }
+    // create the loop nest
+    auto innerLoop = createLoopNest(lcvs, shape);
+    std::reverse(lcvs.begin(), lcvs.end());
+    assert(innerLoop);
+    auto insPt = builder->saveInsertionPoint();
+    // move insertion point inside loop nest
+    builder->setInsertionPointToStart(innerLoop.getBody());
+    return insPt;
+  }
+
+  void genPostlude(bool isHeap, const Fortran::lower::SomeExpr &lhs,
+                   const Fortran::lower::SomeExpr &rhs,
+                   mlir::OpBuilder::InsertPoint insPt) {
+    builder->restoreInsertionPoint(insPt);
+    if (/*copiesWereMade*/ false) {
+      // free buffers
+    }
+  }
+
+  Fortran::lower::ExValue genExprEleValue(const Fortran::lower::SomeExpr &expr,
+                                          llvm::ArrayRef<mlir::Value> lcvs) {
+    return createSomeExtendedExpression(toLocation(), *this, expr, localSymbols,
+                                        lcvs);
+  }
+
+  Fortran::lower::ExValue genExprEleAddr(const Fortran::lower::SomeExpr &expr,
+                                         llvm::ArrayRef<mlir::Value> lcvs) {
+    return createSomeExtendedAddress(toLocation(), *this, expr, localSymbols,
+                                     lcvs);
+  }
+
   /// Shared for both assignments and pointer assignments.
-  void genFIR(const Fortran::evaluate::Assignment &assignment) {
+  void genFIR(const Fortran::evaluate::Assignment &assign) {
     std::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Assignment::Intrinsic &) {
+              auto loc = toLocation();
               const auto *sym =
-                  Fortran::evaluate::UnwrapWholeSymbolDataRef(assignment.lhs);
-              if (sym && Fortran::semantics::IsAllocatable(*sym)) {
-                // Assignment of allocatable are more complex, the lhs
-                // may need to be deallocated/reallocated.
-                // See Fortran 2018 10.2.1.3 p3
-                TODO();
-              } else if (sym && Fortran::semantics::IsPointer(*sym)) {
-                // Target of the pointer must be assigned.
-                // See Fortran 2018 10.2.1.3 p2
-                auto lhsType = assignment.lhs.GetType();
-                assert(lhsType && "lhs cannot be typeless");
-                if (isNumericScalarCategory(lhsType->category())) {
-                  auto val = genExprValue(assignment.rhs);
-                  auto addr = genExprValue(assignment.lhs);
-                  auto toTy = fir::dyn_cast_ptrEleTy(addr.getType());
-                  auto cast =
-                      builder->convertWithSemantics(toLocation(), toTy, val);
-                  builder->create<fir::StoreOp>(toLocation(), cast, addr);
-                } else if (isCharacterCategory(lhsType->category())) {
-                  TODO();
-                } else {
-                  assert(lhsType->category() ==
-                         Fortran::common::TypeCategory::Derived);
-                  TODO();
-                }
-              } else if (assignment.lhs.Rank() > 0) {
+                  Fortran::evaluate::UnwrapWholeSymbolDataRef(assign.lhs);
+              // Assignment of allocatable are more complex, the lhs may need to
+              // be deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
+              const bool isHeap =
+                  sym && Fortran::semantics::IsAllocatable(*sym);
+              // Target of the pointer must be assigned. See Fortran
+              // 2018 10.2.1.3 p2
+              const bool isPointer = sym && Fortran::semantics::IsPointer(*sym);
+              auto lhsType = assign.lhs.GetType();
+              assert(lhsType && "lhs cannot be typeless");
+
+              if (assign.lhs.Rank() > 0 || (assign.rhs.Rank() > 0 && isHeap)) {
                 // Array assignment
                 // See Fortran 2018 10.2.1.3 p5, p6, and p7
-                TODO();
-              } else {
-                // Scalar assignments
-                auto lhsType = assignment.lhs.GetType();
-                assert(lhsType && "lhs cannot be typeless");
-                if (isNumericScalarCategory(lhsType->category())) {
-                  // Fortran 2018 10.2.1.3 p8 and p9
-                  // Conversions should have been inserted by semantic analysis,
-                  // but they can be incorrect between the rhs and lhs. Correct
-                  // that here.
-                  auto loc = toLocation();
-                  auto addr = genExprAddr(assignment.lhs);
-                  auto val = genExprValue(assignment.rhs);
-                  auto toTy = fir::dyn_cast_ptrEleTy(addr.getType());
-                  auto cast = builder->convertWithSemantics(loc, toTy, val);
-                  builder->create<fir::StoreOp>(loc, cast, addr);
-                } else if (isCharacterCategory(lhsType->category())) {
-                  // Fortran 2018 10.2.1.3 p10 and p11
-                  // Generating value for lhs to get fir.boxchar.
-                  auto lhs{genExprValue(assignment.lhs)};
-                  auto rhs{genExprValue(assignment.rhs)};
-                  builder->createAssign(lhs, rhs);
-                } else {
-                  assert(lhsType->category() ==
-                         Fortran::common::TypeCategory::Derived);
-                  // Fortran 2018 10.2.1.3 p12 and p13
-                  TODO();
-                }
+                auto shape = getShape(assign.lhs);
+                assert(shape.has_value() && "array without shape");
+                llvm::SmallVector<mlir::Value, 8> lcvs;
+                auto insPt =
+                    genPrelude(lcvs, isHeap, assign.lhs, assign.rhs, *shape);
+                auto valBox = genExprEleValue(assign.rhs, lcvs);
+                auto addrBox = genExprEleAddr(assign.lhs, lcvs);
+                builder->create<fir::StoreOp>(loc, fir::getBase(valBox),
+                                              fir::getBase(addrBox));
+                genPostlude(isHeap, assign.lhs, assign.rhs, insPt);
+                return;
               }
+
+              // Scalar assignment
+              if (isHeap) {
+                TODO();
+              }
+              if (isNumericScalarCategory(lhsType->category())) {
+                // Fortran 2018 10.2.1.3 p8 and p9
+                // Conversions should have been inserted by semantic analysis,
+                // but they can be incorrect between the rhs and lhs. Correct
+                // that here.
+                mlir::Value addr = isPointer ? genExprValue(assign.lhs)
+                                             : genExprAddr(assign.lhs);
+                auto val = genExprValue(assign.rhs);
+                auto toTy = fir::dyn_cast_ptrEleTy(addr.getType());
+                auto cast = builder->convertWithSemantics(loc, toTy, val);
+                builder->create<fir::StoreOp>(loc, cast, addr);
+                return;
+              }
+              if (isCharacterCategory(lhsType->category())) {
+                // Fortran 2018 10.2.1.3 p10 and p11
+                // Generating value for lhs to get fir.boxchar.
+                auto lhs = genExprValue(assign.lhs);
+                auto rhs = genExprValue(assign.rhs);
+                builder->createAssign(lhs, rhs);
+                return;
+              }
+              if (lhsType->category() ==
+                  Fortran::common::TypeCategory::Derived) {
+                // Fortran 2018 10.2.1.3 p12 and p13
+                TODO();
+              }
+              llvm_unreachable("unknown category");
             },
             [&](const Fortran::evaluate::ProcedureRef &) {
               // Defined assignment: call ProcRef
@@ -1401,7 +1484,7 @@ private:
               TODO();
             },
         },
-        assignment.u);
+        assign.u);
   }
 
   void genFIR(Fortran::lower::pft::Evaluation &,
@@ -1642,7 +1725,38 @@ private:
       }
       auto addrOf = builder->create<fir::AddrOfOp>(
           toLocation(), global.resultType(), global.getSymbol());
-      addSymbol(sym, addrOf);
+      SymbolIndexAnalyzer sia(sym);
+      sia.analyze();
+      if (sia.isTrivial()) {
+        addSymbol(sym, addrOf);
+        return;
+      }
+      auto idxTy = builder->getIndexType();
+      mlir::Value len;
+      if (sia.isChar) {
+        auto c = sia.getCharLenConst();
+        assert(c.hasValue());
+        len = builder->createIntegerConstant(idxTy, *c);
+      }
+      llvm::SmallVector<mlir::Value, 8> extents;
+      llvm::SmallVector<mlir::Value, 8> lbounds;
+      if (sia.isArray) {
+        assert(sia.staticSize);
+        for (auto i : sia.staticShape)
+          extents.push_back(builder->createIntegerConstant(idxTy, i));
+        if (!sia.lboundIsAllOnes())
+          for (auto i : sia.staticLBound)
+            lbounds.push_back(builder->createIntegerConstant(idxTy, i));
+      }
+      if (sia.isChar && sia.isArray) {
+        localSymbols.addCharSymbolWithBounds(sym, addrOf, len, extents,
+                                             lbounds);
+      } else if (sia.isChar) {
+        localSymbols.addCharSymbol(sym, addrOf, len);
+      } else {
+        assert(sia.isArray);
+        localSymbols.addSymbolWithBounds(sym, addrOf, extents, lbounds);
+      }
     } else {
       TODO(); // Procedure pointer
     }
@@ -1745,11 +1859,12 @@ private:
 
     if (sia.isArray) {
       // if object is an array process the lower bound and extent values
-      llvm::SmallVector<Fortran::lower::SymIndex::Bounds, 8> bounds;
+      llvm::SmallVector<mlir::Value, 8> extents;
+      llvm::SmallVector<mlir::Value, 8> lbounds;
       mustBeDummy = !isExplicitShape(sym);
       if (sia.staticSize) {
         // object shape is constant
-        auto castTy = fir::ReferenceType::get(genType(sym));
+        auto castTy = builder->getRefType(genType(sym));
         if (addr)
           addr = builder->createConvert(loc, castTy, addr);
         if (sia.lboundIsAllOnes()) {
@@ -1778,7 +1893,7 @@ private:
         }
       } else {
         // cast to the known constant parts from the declaration
-        auto castTy = fir::ReferenceType::get(genType(sym));
+        auto castTy = builder->getRefType(genType(sym));
         if (addr) {
           // XXX: special handling for boxchar; see proviso above
           if (auto box =
@@ -1792,7 +1907,8 @@ private:
       for (const auto &i : llvm::zip(sia.staticLBound, sia.staticShape)) {
         auto fst = builder->createIntegerConstant(idxTy, std::get<0>(i));
         auto snd = builder->createIntegerConstant(idxTy, std::get<1>(i));
-        bounds.emplace_back(fst, snd);
+        lbounds.emplace_back(fst);
+        extents.emplace_back(snd);
       }
 
       // default array case: populate `bounds` with lower and extent values
@@ -1808,50 +1924,42 @@ private:
           auto one = builder->createIntegerConstant(ty, 1);
           auto sz = builder->create<mlir::AddIOp>(loc, ty, diff, one);
           auto idx = builder->createConvert(loc, idxTy, sz);
-          bounds.emplace_back(lb, idx);
+          lbounds.emplace_back(lb);
+          extents.emplace_back(idx);
           continue;
         }
         if (low && spec->ubound().isAssumed()) {
           // An assumed size array. The extent is not computed.
           auto lb = genExprValue(Fortran::semantics::SomeExpr{*low});
-          bounds.emplace_back(lb, mlir::Value{});
+          lbounds.emplace_back(lb);
+          extents.emplace_back(mlir::Value{});
         }
         break;
       }
 
-      auto unzipInto =
-          [&](llvm::SmallVectorImpl<mlir::Value> &shape,
-              llvm::ArrayRef<Fortran::lower::SymIndex::Bounds> bounds) {
-            std::for_each(bounds.begin(), bounds.end(), [&](const auto &pair) {
-              mlir::Value second;
-              std::tie(std::ignore, second) = pair;
-              shape.push_back(second);
-            });
-          };
       if (sia.isChar) {
         if (isDummy) {
-          localSymbols.addCharSymbolWithBounds(sym, addr, len, bounds, true);
+          localSymbols.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
+                                               true);
           return;
         }
         // local CHARACTER array with computed bounds
         assert(!mustBeDummy);
         llvm::SmallVector<mlir::Value, 8> shape;
         shape.push_back(len);
-        unzipInto(shape, bounds);
+        shape.append(extents.begin(), extents.end());
         auto local = createNewLocal(loc, sym, shape);
-        localSymbols.addCharSymbolWithBounds(sym, local, len, bounds);
+        localSymbols.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
         return;
       }
       if (isDummy) {
-        localSymbols.addSymbolWithBounds(sym, addr, bounds, true);
+        localSymbols.addSymbolWithBounds(sym, addr, extents, lbounds, true);
         return;
       }
       // local array with computed bounds
       assert(!mustBeDummy);
-      llvm::SmallVector<mlir::Value, 8> shape;
-      unzipInto(shape, bounds);
-      auto local = createNewLocal(loc, sym, shape);
-      localSymbols.addSymbolWithBounds(sym, local, bounds);
+      auto local = createNewLocal(loc, sym, extents);
+      localSymbols.addSymbolWithBounds(sym, local, extents, lbounds);
       return;
     }
 
@@ -2039,14 +2147,22 @@ private:
   const Fortran::parser::CookedSource *cooked;
   mlir::ModuleOp &module;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaults;
-  Fortran::lower::FirOpBuilder *builder = nullptr;
   const fir::KindMapping &kindMap;
   fir::NameUniquer &uniquer;
+  std::function<std::optional<Fortran::evaluate::Shape>(
+      const Fortran::lower::SomeExpr &)>
+      getShape;
+  Fortran::lower::FirOpBuilder *builder = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
 };
 
 } // namespace
+
+Fortran::evaluate::FoldingContext
+Fortran::lower::LoweringBridge::createFoldingContext() const {
+  return {getDefaultKinds(), getIntrinsicTable()};
+}
 
 void Fortran::lower::LoweringBridge::lower(
     const Fortran::parser::Program &prg, fir::NameUniquer &uniquer,
@@ -2066,8 +2182,9 @@ void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {
 
 Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
-    const Fortran::parser::CookedSource *cooked)
-    : defaultKinds{defaultKinds}, cooked{cooked},
+    const Fortran::evaluate::IntrinsicProcTable &intrinsics,
+    const Fortran::parser::CookedSource &cooked)
+    : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
       context{std::make_unique<mlir::MLIRContext>()}, kindMap{context.get()} {
   module = std::make_unique<mlir::ModuleOp>(
       mlir::ModuleOp::create(mlir::UnknownLoc::get(context.get())));

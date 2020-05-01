@@ -728,7 +728,7 @@ mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
   auto dataAndLen = builder.createUnboxChar(arg);
   auto charType = fir::CharacterType::get(
       builder.getContext(), builder.getCharacterKind(arg.getType()));
-  auto refType = fir::ReferenceType::get(charType);
+  auto refType = builder.getRefType(charType);
   auto charAddr = builder.createHere<fir::ConvertOp>(refType, dataAndLen.first);
   auto charVal = builder.createHere<fir::LoadOp>(charType, charAddr);
   return builder.createHere<fir::ConvertOp>(resultType, charVal);
