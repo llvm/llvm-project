@@ -153,14 +153,23 @@ template <class ELFT> void writeResult() {
 }
 
 static void removeEmptyPTLoad(std::vector<PhdrEntry *> &phdrs) {
-  llvm::erase_if(phdrs, [&](const PhdrEntry *p) {
-    if (p->p_type != PT_LOAD)
-      return false;
-    if (!p->firstSec)
-      return true;
-    uint64_t size = p->lastSec->addr + p->lastSec->size - p->firstSec->addr;
-    return size == 0;
-  });
+  auto it = std::stable_partition(
+      phdrs.begin(), phdrs.end(), [&](const PhdrEntry *p) {
+        if (p->p_type != PT_LOAD)
+          return true;
+        if (!p->firstSec)
+          return false;
+        uint64_t size = p->lastSec->addr + p->lastSec->size - p->firstSec->addr;
+        return size != 0;
+      });
+
+  // Clear OutputSection::ptLoad for sections contained in removed
+  // segments.
+  DenseSet<PhdrEntry *> removed(it, phdrs.end());
+  for (OutputSection *sec : outputSections)
+    if (removed.count(sec->ptLoad))
+      sec->ptLoad = nullptr;
+  phdrs.erase(it, phdrs.end());
 }
 
 void copySectionsIntoPartitions() {
