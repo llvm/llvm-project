@@ -154,4 +154,12 @@ TEST(DenseSplatTest, StringSplat) {
   testSplat(stringType, value);
 }
 
+TEST(DenseSplatTest, StringAttrSplat) {
+  MLIRContext context;
+  Type stringType =
+      OpaqueType::get(Identifier::get("test", &context), "string", &context);
+  Attribute stringAttr = StringAttr::get("test-string", stringType);
+  testSplat(stringType, stringAttr);
+}
+
 } // end namespace
