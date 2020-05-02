@@ -99,7 +99,7 @@ public:
   void mergeStatisticsInto(OpPassManager &other);
 
 private:
-  OpPassManager(OperationName name, bool disableThreads, bool verifyPasses);
+  OpPassManager(OperationName name, bool verifyPasses);
 
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
@@ -138,13 +138,6 @@ public:
   /// Run the passes within this manager on the provided module.
   LLVM_NODISCARD
   LogicalResult run(ModuleOp module);
-
-  /// Disable support for multi-threading within the pass manager.
-  void disableMultithreading(bool disable = true);
-
-  /// Return true if the pass manager is configured with multi-threading
-  /// enabled.
-  bool isMultithreadingEnabled();
 
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `outputFile` is a .mlir filename used to

@@ -30,14 +30,6 @@ struct PassManagerOptions {
       llvm::cl::init(false)};
 
   //===--------------------------------------------------------------------===//
-  // Multi-threading
-  //===--------------------------------------------------------------------===//
-  llvm::cl::opt<bool> disableThreads{
-      "disable-pass-threading",
-      llvm::cl::desc("Disable multithreading in the pass manager"),
-      llvm::cl::init(false)};
-
-  //===--------------------------------------------------------------------===//
   // IR Printing
   //===--------------------------------------------------------------------===//
   PassPipelineCLParser printBefore{"print-ir-before",
@@ -163,10 +155,6 @@ void mlir::applyPassManagerCLOptions(PassManager &pm) {
   if (options->reproducerFile.getNumOccurrences())
     pm.enableCrashReproducerGeneration(options->reproducerFile,
                                        options->localReproducer);
-
-  // Disable multi-threading.
-  if (options->disableThreads)
-    pm.disableMultithreading();
 
   // Enable statistics dumping.
   if (options->passStatistics)
