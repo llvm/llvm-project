@@ -2643,6 +2643,7 @@ void EnqueueVisitor::VisitIfStmt(const IfStmt *If) {
   AddStmt(If->getElse());
   AddStmt(If->getThen());
   AddStmt(If->getCond());
+  AddStmt(If->getInit());
   AddDecl(If->getConditionVariable());
 }
 void EnqueueVisitor::VisitInitListExpr(const InitListExpr *IE) {
