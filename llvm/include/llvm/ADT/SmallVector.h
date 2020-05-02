@@ -200,9 +200,17 @@ public:
   }
 };
 
-/// SmallVectorTemplateBase<TriviallyCopyable = false> - This is where we put method
-/// implementations that are designed to work with non-POD-like T's.
-template <typename T, bool = is_trivially_copyable<T>::value>
+/// SmallVectorTemplateBase<TriviallyCopyable = false> - This is where we put
+/// method implementations that are designed to work with non-trivial T's.
+///
+/// We approximate is_trivially_copyable with trivial move/copy construction and
+/// trivial destruction. While the standard doesn't specify that you're allowed
+/// copy these types with memcpy, there is no way for the type to observe this.
+/// This catches the important case of std::pair<POD, POD>, which is not
+/// trivially assignable.
+template <typename T, bool = (is_trivially_copy_constructible<T>::value) &&
+                             (is_trivially_move_constructible<T>::value) &&
+                             std::is_trivially_destructible<T>::value>
 class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
 protected:
   SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
@@ -290,7 +298,9 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
 }
 
 /// SmallVectorTemplateBase<TriviallyCopyable = true> - This is where we put
-/// method implementations that are designed to work with POD-like T's.
+/// method implementations that are designed to work with trivially copyable
+/// T's. This allows using memcpy in place of copy/move construction and
+/// skipping destruction.
 template <typename T>
 class SmallVectorTemplateBase<T, true> : public SmallVectorTemplateCommon<T> {
 protected:
