@@ -1,11 +1,11 @@
-//===-- FormattedStringTests.cpp ------------------------------------------===//
+//===-- MarkupTests.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "FormattedString.h"
+#include "support/Markup.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"

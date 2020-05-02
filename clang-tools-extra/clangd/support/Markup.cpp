@@ -1,12 +1,11 @@
-//===--- FormattedString.cpp --------------------------------*- C++-*------===//
+//===--- Markup.cpp -----------------------------------------*- C++-*------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "FormattedString.h"
-#include "clang/Basic/CharInfo.h"
+#include "support/Markup.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,8 +24,14 @@
 namespace clang {
 namespace clangd {
 namespace markup {
-
 namespace {
+
+/// Like std::isspace but for "C" locale.
+/// FIXME: move to StringExtras?
+bool isSpace(char C) {
+  return C == ' ' || C == '\f' || C == '\n' || C == '\r' || C == '\t' ||
+         C == '\v';
+}
 
 // Is <contents a plausible start to an HTML tag?
 // Contents may not be the rest of the line, but it's the rest of the plain
@@ -45,11 +50,11 @@ bool looksLikeTag(llvm::StringRef Contents) {
                  .drop_while([](char C) {
                    return llvm::isAlnum(C) || C == '-' || C == '_' || C == ':';
                  })
-                 .drop_while(isWhitespace);
+                 .drop_while(isSpace);
   // The rest of the tag consists of attributes, which have restrictive names.
   // If we hit '=', all bets are off (attribute values can contain anything).
   for (; !Contents.empty(); Contents = Contents.drop_front()) {
-    if (llvm::isAlnum(Contents.front()) || isWhitespace(Contents.front()))
+    if (llvm::isAlnum(Contents.front()) || isSpace(Contents.front()))
       continue;
     if (Contents.front() == '>' || Contents.startswith("/>"))
       return true; // May close the tag.
@@ -70,7 +75,7 @@ bool looksLikeTag(llvm::StringRef Contents) {
 // a markdown grammar construct.
 bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
                         bool StartsLine) {
-  assert(Before.take_while(isWhitespace).empty());
+  assert(Before.take_while(isSpace).empty());
   auto RulerLength = [&]() -> /*Length*/ unsigned {
     if (!StartsLine || !Before.empty())
       return false;
@@ -82,8 +87,8 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
            (After.empty() || After.startswith(" "));
   };
   auto SpaceSurrounds = [&]() {
-    return (After.empty() || isWhitespace(After.front())) &&
-           (Before.empty() || isWhitespace(Before.back()));
+    return (After.empty() || isSpace(After.front())) &&
+           (Before.empty() || isSpace(Before.back()));
   };
   auto WordSurrounds = [&]() {
     return (!After.empty() && llvm::isAlnum(After.front())) &&
@@ -429,8 +434,8 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   Chunk &C = Chunks.back();
   C.Contents = std::move(Norm);
   C.Kind = Chunk::PlainText;
-  C.SpaceBefore = isWhitespace(Text.front());
-  C.SpaceAfter = isWhitespace(Text.back());
+  C.SpaceBefore = isSpace(Text.front());
+  C.SpaceAfter = isSpace(Text.back());
   return *this;
 }
 

@@ -11,7 +11,6 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "CodeComplete.h"
-#include "FormattedString.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "Protocol.h"
