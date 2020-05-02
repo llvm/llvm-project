@@ -230,8 +230,10 @@ struct SymbolSorter {
     if (!BTypeOrErr)
       reportError(BTypeOrErr.takeError(), B.getObject()->getFileName());
     SymbolRef::Type BType = *BTypeOrErr;
-    uint64_t AAddr = (AType != SymbolRef::ST_Function) ? 0 : A.getValue();
-    uint64_t BAddr = (BType != SymbolRef::ST_Function) ? 0 : B.getValue();
+    uint64_t AAddr =
+        (AType != SymbolRef::ST_Function) ? 0 : cantFail(A.getValue());
+    uint64_t BAddr =
+        (BType != SymbolRef::ST_Function) ? 0 : cantFail(B.getValue());
     return AAddr < BAddr;
   }
 };
@@ -1267,7 +1269,7 @@ static void CreateSymbolAddressMap(MachOObjectFile *O,
     SymbolRef::Type ST = unwrapOrError(Symbol.getType(), FileName);
     if (ST == SymbolRef::ST_Function || ST == SymbolRef::ST_Data ||
         ST == SymbolRef::ST_Other) {
-      uint64_t Address = Symbol.getValue();
+      uint64_t Address = cantFail(Symbol.getValue());
       StringRef SymName = unwrapOrError(Symbol.getName(), FileName);
       if (!SymName.startswith(".objc"))
         (*AddrMap)[Address] = SymName;
@@ -3352,7 +3354,7 @@ static const char *get_symbol_64(uint32_t sect_offset, SectionRef S,
   // and return its name.
   const char *SymbolName = nullptr;
   if (reloc_found && isExtern) {
-    n_value = Symbol.getValue();
+    n_value = cantFail(Symbol.getValue());
     StringRef Name = unwrapOrError(Symbol.getName(), info->O->getFileName());
     if (!Name.empty()) {
       SymbolName = Name.data();
@@ -6908,7 +6910,7 @@ static const char *GuessLiteralPointer(uint64_t ReferenceValue,
       if (info->O->getAnyRelocationPCRel(RE)) {
         unsigned Type = info->O->getAnyRelocationType(RE);
         if (Type == MachO::X86_64_RELOC_SIGNED) {
-          ReferenceValue = Symbol.getValue();
+          ReferenceValue = cantFail(Symbol.getValue());
         }
       }
     }
@@ -7449,7 +7451,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           unwrapOrError(Symbol.getType(), MachOOF->getFileName());
       if (ST == SymbolRef::ST_Function || ST == SymbolRef::ST_Data ||
           ST == SymbolRef::ST_Other) {
-        uint64_t Address = Symbol.getValue();
+        uint64_t Address = cantFail(Symbol.getValue());
         StringRef SymName =
             unwrapOrError(Symbol.getName(), MachOOF->getFileName());
         AddrMap[Address] = SymName;
@@ -7528,7 +7530,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
       // Start at the address of the symbol relative to the section's address.
       uint64_t SectSize = Sections[SectIdx].getSize();
-      uint64_t Start = Symbols[SymIdx].getValue();
+      uint64_t Start = cantFail(Symbols[SymIdx].getValue());
       uint64_t SectionAddress = Sections[SectIdx].getAddress();
       Start -= SectionAddress;
 
@@ -7549,7 +7551,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         if (NextSymType == SymbolRef::ST_Function) {
           containsNextSym =
               Sections[SectIdx].containsSymbol(Symbols[NextSymIdx]);
-          NextSym = Symbols[NextSymIdx].getValue();
+          NextSym = cantFail(Symbols[NextSymIdx].getValue());
           NextSym -= SectionAddress;
           break;
         }
@@ -8208,7 +8210,7 @@ void objdump::printMachOUnwindInfo(const MachOObjectFile *Obj) {
     if (Section == Obj->section_end())
       continue;
 
-    uint64_t Addr = SymRef.getValue();
+    uint64_t Addr = cantFail(SymRef.getValue());
     Symbols.insert(std::make_pair(Addr, SymRef));
   }
 

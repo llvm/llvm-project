@@ -516,7 +516,12 @@ uint64_t ELFObjectFile<ELFT>::getSymbolValueImpl(DataRefImpl Symb) const {
 template <class ELFT>
 Expected<uint64_t>
 ELFObjectFile<ELFT>::getSymbolAddress(DataRefImpl Symb) const {
-  uint64_t Result = getSymbolValue(Symb);
+  Expected<uint64_t> SymbolValueOrErr = getSymbolValue(Symb);
+  if (!SymbolValueOrErr)
+    // TODO: Test this error.
+    return SymbolValueOrErr.takeError();
+
+  uint64_t Result = *SymbolValueOrErr;
   const Elf_Sym *ESym = getSymbol(Symb);
   switch (ESym->st_shndx) {
   case ELF::SHN_COMMON:

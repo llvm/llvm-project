@@ -166,7 +166,7 @@ uint32_t COFFObjectFile::getSymbolAlignment(DataRefImpl Ref) const {
 }
 
 Expected<uint64_t> COFFObjectFile::getSymbolAddress(DataRefImpl Ref) const {
-  uint64_t Result = getSymbolValue(Ref);
+  uint64_t Result = cantFail(getSymbolValue(Ref));
   COFFSymbolRef Symb = getCOFFSymbol(Ref);
   int32_t SectionNumber = Symb.getSectionNumber();
 

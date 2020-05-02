@@ -478,7 +478,7 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
   CurrentObjectAddresses.clear();
 
   for (auto Sym : Obj.symbols()) {
-    uint64_t Addr = Sym.getValue();
+    uint64_t Addr = cantFail(Sym.getValue());
     Expected<StringRef> Name = Sym.getName();
     if (!Name) {
       // TODO: Actually report errors helpfully.
@@ -562,7 +562,7 @@ void MachODebugMapParser::loadMainBinarySymbols(
     Section = *SectionOrErr;
     if (Section == MainBinary.section_end() || Section->isText())
       continue;
-    uint64_t Addr = Sym.getValue();
+    uint64_t Addr = cantFail(Sym.getValue());
     Expected<StringRef> NameOrErr = Sym.getName();
     if (!NameOrErr) {
       // TODO: Actually report errors helpfully.
