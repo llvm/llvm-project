@@ -65,6 +65,41 @@ enum Kind {
 
 } // namespace StandardTypes
 
+//===----------------------------------------------------------------------===//
+// ComplexType
+//===----------------------------------------------------------------------===//
+
+/// The 'complex' type represents a complex number with a parameterized element
+/// type, which is composed of a real and imaginary value of that element type.
+///
+/// The element must be a floating point or integer scalar type.
+///
+class ComplexType
+    : public Type::TypeBase<ComplexType, Type, detail::ComplexTypeStorage> {
+public:
+  using Base::Base;
+
+  /// Get or create a ComplexType with the provided element type.
+  static ComplexType get(Type elementType);
+
+  /// Get or create a ComplexType with the provided element type.  This emits
+  /// and error at the specified location and returns null if the element type
+  /// isn't supported.
+  static ComplexType getChecked(Type elementType, Location location);
+
+  /// Verify the construction of an integer type.
+  static LogicalResult verifyConstructionInvariants(Location loc,
+                                                    Type elementType);
+
+  Type getElementType();
+
+  static bool kindof(unsigned kind) { return kind == StandardTypes::Complex; }
+};
+
+//===----------------------------------------------------------------------===//
+// IndexType
+//===----------------------------------------------------------------------===//
+
 /// Index is a special integer-like type with unknown platform-dependent bit
 /// width.
 class IndexType : public Type::TypeBase<IndexType, Type> {
@@ -80,6 +115,10 @@ public:
   /// Storage bit width used for IndexType by internal compiler data structures.
   static constexpr unsigned kInternalStorageBitWidth = 64;
 };
+
+//===----------------------------------------------------------------------===//
+// IntegerType
+//===----------------------------------------------------------------------===//
 
 /// Integer types can have arbitrary bitwidth up to a large fixed limit.
 class IntegerType
@@ -145,6 +184,10 @@ public:
   static constexpr unsigned kMaxWidth = 4096;
 };
 
+//===----------------------------------------------------------------------===//
+// FloatType
+//===----------------------------------------------------------------------===//
+
 class FloatType : public Type::TypeBase<FloatType, Type> {
 public:
   using Base::Base;
@@ -178,32 +221,25 @@ public:
   const llvm::fltSemantics &getFloatSemantics();
 };
 
-/// The 'complex' type represents a complex number with a parameterized element
-/// type, which is composed of a real and imaginary value of that element type.
-///
-/// The element must be a floating point or integer scalar type.
-///
-class ComplexType
-    : public Type::TypeBase<ComplexType, Type, detail::ComplexTypeStorage> {
+//===----------------------------------------------------------------------===//
+// NoneType
+//===----------------------------------------------------------------------===//
+
+/// NoneType is a unit type, i.e. a type with exactly one possible value, where
+/// its value does not have a defined dynamic representation.
+class NoneType : public Type::TypeBase<NoneType, Type> {
 public:
   using Base::Base;
 
-  /// Get or create a ComplexType with the provided element type.
-  static ComplexType get(Type elementType);
+  /// Get an instance of the NoneType.
+  static NoneType get(MLIRContext *context);
 
-  /// Get or create a ComplexType with the provided element type.  This emits
-  /// and error at the specified location and returns null if the element type
-  /// isn't supported.
-  static ComplexType getChecked(Type elementType, Location location);
-
-  /// Verify the construction of an integer type.
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    Type elementType);
-
-  Type getElementType();
-
-  static bool kindof(unsigned kind) { return kind == StandardTypes::Complex; }
+  static bool kindof(unsigned kind) { return kind == StandardTypes::None; }
 };
+
+//===----------------------------------------------------------------------===//
+// ShapedType
+//===----------------------------------------------------------------------===//
 
 /// This is a common base class between Vector, UnrankedTensor, RankedTensor,
 /// and MemRef types because they share behavior and semantics around shape,
@@ -291,6 +327,10 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// VectorType
+//===----------------------------------------------------------------------===//
+
 /// Vector types represent multi-dimensional SIMD vectors, and have a fixed
 /// known constant shape with one or more dimension.
 class VectorType
@@ -326,6 +366,10 @@ public:
   static bool kindof(unsigned kind) { return kind == StandardTypes::Vector; }
 };
 
+//===----------------------------------------------------------------------===//
+// TensorType
+//===----------------------------------------------------------------------===//
+
 /// Tensor types represent multi-dimensional arrays, and have two variants:
 /// RankedTensorType and UnrankedTensorType.
 class TensorType : public ShapedType {
@@ -349,6 +393,9 @@ public:
            type.getKind() == StandardTypes::UnrankedTensor;
   }
 };
+
+//===----------------------------------------------------------------------===//
+// RankedTensorType
 
 /// Ranked tensor types represent multi-dimensional arrays that have a shape
 /// with a fixed number of dimensions. Each shape element can be a non-negative
@@ -382,6 +429,9 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// UnrankedTensorType
+
 /// Unranked tensor types represent multi-dimensional arrays that have an
 /// unknown shape.
 class UnrankedTensorType
@@ -411,6 +461,10 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// BaseMemRefType
+//===----------------------------------------------------------------------===//
+
 /// Base MemRef for Ranked and Unranked variants
 class BaseMemRefType : public ShapedType {
 public:
@@ -422,6 +476,9 @@ public:
            type.getKind() == StandardTypes::UnrankedMemRef;
   }
 };
+
+//===----------------------------------------------------------------------===//
+// MemRefType
 
 /// MemRef types represent a region of memory that have a shape with a fixed
 /// number of dimensions. Each shape element can be a non-negative integer or
@@ -525,6 +582,9 @@ private:
   using Base::getImpl;
 };
 
+//===----------------------------------------------------------------------===//
+// UnrankedMemRefType
+
 /// Unranked MemRef type represent multi-dimensional MemRefs that
 /// have an unknown rank.
 class UnrankedMemRefType
@@ -557,6 +617,10 @@ public:
     return kind == StandardTypes::UnrankedMemRef;
   }
 };
+
+//===----------------------------------------------------------------------===//
+// TupleType
+//===----------------------------------------------------------------------===//
 
 /// Tuple types represent a collection of other types. Note: This type merely
 /// provides a common mechanism for representing tuples in MLIR. It is up to
@@ -601,17 +665,9 @@ public:
   static bool kindof(unsigned kind) { return kind == StandardTypes::Tuple; }
 };
 
-/// NoneType is a unit type, i.e. a type with exactly one possible value, where
-/// its value does not have a defined dynamic representation.
-class NoneType : public Type::TypeBase<NoneType, Type> {
-public:
-  using Base::Base;
-
-  /// Get an instance of the NoneType.
-  static NoneType get(MLIRContext *context);
-
-  static bool kindof(unsigned kind) { return kind == StandardTypes::None; }
-};
+//===----------------------------------------------------------------------===//
+// Type Utilities
+//===----------------------------------------------------------------------===//
 
 /// Returns the strides of the MemRef if the layout map is in strided form.
 /// MemRefs with layout maps in strided form include:
