@@ -346,18 +346,21 @@ std::string Block::asPlainText() const {
 }
 
 void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
-  llvm::StringRef Sep = "";
+  bool NeedsSpace = false;
+  bool HasChunks = false;
   for (auto &C : Chunks) {
-    OS << Sep;
+    if (C.SpaceBefore || NeedsSpace)
+      OS << " ";
     switch (C.Kind) {
     case Chunk::PlainText:
-      OS << renderText(C.Contents, Sep.empty());
+      OS << renderText(C.Contents, !HasChunks);
       break;
     case Chunk::InlineCode:
       OS << renderInlineBlock(C.Contents);
       break;
     }
-    Sep = " ";
+    HasChunks = true;
+    NeedsSpace = C.SpaceAfter;
   }
   // Paragraphs are translated into markdown lines, not markdown paragraphs.
   // Therefore it only has a single linebreak afterwards.
@@ -381,13 +384,15 @@ llvm::StringRef chooseMarker(llvm::ArrayRef<llvm::StringRef> Options,
 }
 
 void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
-  llvm::StringRef Sep = "";
+  bool NeedsSpace = false;
   for (auto &C : Chunks) {
+    if (C.SpaceBefore || NeedsSpace)
+      OS << " ";
     llvm::StringRef Marker = "";
     if (C.Preserve && C.Kind == Chunk::InlineCode)
       Marker = chooseMarker({"`", "'", "\""}, C.Contents);
-    OS << Sep << Marker << C.Contents << Marker;
-    Sep = " ";
+    OS << Marker << C.Contents << Marker;
+    NeedsSpace = C.SpaceAfter;
   }
   OS << '\n';
 }
@@ -410,6 +415,12 @@ void BulletList::renderPlainText(llvm::raw_ostream &OS) const {
   }
 }
 
+Paragraph &Paragraph::appendSpace() {
+  if (!Chunks.empty())
+    Chunks.back().SpaceAfter = true;
+  return *this;
+}
+
 Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   std::string Norm = canonicalizeSpaces(Text);
   if (Norm.empty())
@@ -418,10 +429,14 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   Chunk &C = Chunks.back();
   C.Contents = std::move(Norm);
   C.Kind = Chunk::PlainText;
+  C.SpaceBefore = isWhitespace(Text.front());
+  C.SpaceAfter = isWhitespace(Text.back());
   return *this;
 }
 
 Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
+  bool AdjacentCode =
+      !Chunks.empty() && Chunks.back().Kind == Chunk::InlineCode;
   std::string Norm = canonicalizeSpaces(std::move(Code));
   if (Norm.empty())
     return *this;
@@ -430,6 +445,8 @@ Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
   C.Contents = std::move(Norm);
   C.Kind = Chunk::InlineCode;
   C.Preserve = Preserve;
+  // Disallow adjacent code spans without spaces, markdown can't render them.
+  C.SpaceBefore = AdjacentCode;
   return *this;
 }
 
