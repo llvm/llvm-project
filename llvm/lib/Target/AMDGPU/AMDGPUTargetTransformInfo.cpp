@@ -805,7 +805,6 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
     case Intrinsic::amdgcn_fcmp:
     case Intrinsic::amdgcn_waterfall_readfirstlane:
     case Intrinsic::amdgcn_waterfall_begin:
-    case Intrinsic::amdgcn_waterfall_end:
     case Intrinsic::amdgcn_waterfall_last_use:
     case Intrinsic::amdgcn_ballot:
     case Intrinsic::amdgcn_if_break:
