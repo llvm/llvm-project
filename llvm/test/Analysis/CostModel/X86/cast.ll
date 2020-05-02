@@ -85,8 +85,8 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %C.v4i8.z = zext <4 x i8> undef to <4 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C.v4i8.s = sext <4 x i8> undef to <4 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D = zext <4 x i32> undef to <4 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %D1 = zext <8 x i32> undef to <8 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %D2 = sext <8 x i32> undef to <8 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D1 = zext <8 x i32> undef to <8 x i64>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %D2 = sext <8 x i32> undef to <8 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
@@ -95,7 +95,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %G1 = trunc <16 x i32> undef to <16 x i16>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %G2 = trunc <16 x i32> undef to <16 x i8>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
@@ -115,8 +115,8 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C.v4i8.z = zext <4 x i8> undef to <4 x i64>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C.v4i8.s = sext <4 x i8> undef to <4 x i64>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D = zext <4 x i32> undef to <4 x i64>
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D1 = zext <8 x i32> undef to <8 x i64>
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D2 = sext <8 x i32> undef to <8 x i64>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D1 = zext <8 x i32> undef to <8 x i64>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D2 = sext <8 x i32> undef to <8 x i64>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
@@ -125,7 +125,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %G1 = trunc <16 x i32> undef to <16 x i16>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %G2 = trunc <16 x i32> undef to <16 x i8>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
@@ -529,9 +529,9 @@ define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 define void @fp_conv(<8 x float> %a, <16 x float>%b, <4 x float> %c) {
 ; SSE-LABEL: 'fp_conv'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX-LABEL: 'fp_conv'
