@@ -76,7 +76,7 @@ class XunitReport(object):
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
 
         with open(self.output_file, 'w') as file:
-            file.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
+            file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
             file.write('<testsuites>\n')
             for suite, test_iter in tests_by_suite:
                 self._write_testsuite(file, suite, list(test_iter))
@@ -100,7 +100,7 @@ class XunitReport(object):
         file.write(f'<testcase classname={quo(class_name)} name={quo(name)} time="{time:.2f}"')
 
         if test.isFailure():
-            file.write('>\n\t<failure ><![CDATA[')
+            file.write('>\n  <failure><![CDATA[')
             # In the unlikely case that the output contains the CDATA
             # terminator we wrap it by creating a new CDATA block.
             output = test.result.output.replace(']]>', ']]]]><![CDATA[>')
@@ -110,7 +110,7 @@ class XunitReport(object):
             file.write(']]></failure>\n</testcase>\n')
         elif test.result.code in self.skipped_codes:
             reason = self._get_skip_reason(test)
-            file.write(f'>\n\t<skipped message={quo(reason)} />\n</testcase>\n\n')
+            file.write(f'>\n  <skipped message={quo(reason)}/>\n</testcase>\n')
         else:
             file.write('/>\n')
 
@@ -124,5 +124,5 @@ class XunitReport(object):
         assert code == lit.Test.UNSUPPORTED
         features = test.getMissingRequiredFeatures()
         if features:
-            return 'Skipping because of: ' + ', '.join(features)
-        return 'Skipping because of configuration.'
+            return 'Missing required feature(s): ' + ', '.join(features)
+        return 'Skipping because of configuration'
