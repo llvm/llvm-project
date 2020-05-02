@@ -208,6 +208,7 @@
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -337,7 +338,7 @@ static std::string getSignature(FunctionType *FTy) {
   if (FTy->isVarArg())
     OS << "_...";
   Sig = OS.str();
-  Sig.erase(remove_if(Sig, isspace), Sig.end());
+  Sig.erase(remove_if(Sig, isSpace), Sig.end());
   // When s2wasm parses .s file, a comma means the end of an argument. So a
   // mangled function name can contain any character but a comma.
   std::replace(Sig.begin(), Sig.end(), ',', '.');
