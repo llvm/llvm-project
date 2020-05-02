@@ -77,7 +77,9 @@ void DerivedTypeSpec::CookParameters(evaluate::FoldingContext &foldingContext) {
       name = *nextNameIter++;
       auto it{std::find_if(parameterDecls.begin(), parameterDecls.end(),
           [&](const Symbol &symbol) { return symbol.name() == name; })};
-      CHECK(it != parameterDecls.end());
+      if (it == parameterDecls.end()) {
+        break;
+      }
       attr = it->get().get<TypeParamDetails>().attr();
     } else {
       messages.Say(name_,
