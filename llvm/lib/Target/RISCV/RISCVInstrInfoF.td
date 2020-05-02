@@ -366,11 +366,15 @@ def : PatFpr32Fpr32<setole, FLE_S>;
 def : Pat<(seto FPR32:$rs1, FPR32:$rs2),
           (AND (FEQ_S FPR32:$rs1, FPR32:$rs1),
                (FEQ_S FPR32:$rs2, FPR32:$rs2))>;
+def : Pat<(seto FPR32:$rs1, FPR32:$rs1),
+          (FEQ_S $rs1, $rs1)>;
 
 def : Pat<(setuo FPR32:$rs1, FPR32:$rs2),
           (SLTIU (AND (FEQ_S FPR32:$rs1, FPR32:$rs1),
                       (FEQ_S FPR32:$rs2, FPR32:$rs2)),
                  1)>;
+def : Pat<(setuo FPR32:$rs1, FPR32:$rs1),
+          (SLTIU (FEQ_S $rs1, $rs1), 1)>;
 
 def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
 
