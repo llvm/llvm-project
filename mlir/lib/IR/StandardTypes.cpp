@@ -90,6 +90,29 @@ bool Type::isIntOrFloat() { return isa<IntegerType>() || isa<FloatType>(); }
 bool Type::isIntOrIndexOrFloat() { return isIntOrFloat() || isIndex(); }
 
 //===----------------------------------------------------------------------===//
+/// ComplexType
+//===----------------------------------------------------------------------===//
+
+ComplexType ComplexType::get(Type elementType) {
+  return Base::get(elementType.getContext(), StandardTypes::Complex,
+                   elementType);
+}
+
+ComplexType ComplexType::getChecked(Type elementType, Location location) {
+  return Base::getChecked(location, StandardTypes::Complex, elementType);
+}
+
+/// Verify the construction of an integer type.
+LogicalResult ComplexType::verifyConstructionInvariants(Location loc,
+                                                        Type elementType) {
+  if (!elementType.isIntOrFloat())
+    return emitError(loc, "invalid element type for complex");
+  return success();
+}
+
+Type ComplexType::getElementType() { return getImpl()->elementType; }
+
+//===----------------------------------------------------------------------===//
 // Integer Type
 //===----------------------------------------------------------------------===//
 
@@ -611,29 +634,6 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   }
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-/// ComplexType
-//===----------------------------------------------------------------------===//
-
-ComplexType ComplexType::get(Type elementType) {
-  return Base::get(elementType.getContext(), StandardTypes::Complex,
-                   elementType);
-}
-
-ComplexType ComplexType::getChecked(Type elementType, Location location) {
-  return Base::getChecked(location, StandardTypes::Complex, elementType);
-}
-
-/// Verify the construction of an integer type.
-LogicalResult ComplexType::verifyConstructionInvariants(Location loc,
-                                                        Type elementType) {
-  if (!elementType.isa<FloatType>() && !elementType.isSignlessInteger())
-    return emitError(loc, "invalid element type for complex");
-  return success();
-}
-
-Type ComplexType::getElementType() { return getImpl()->elementType; }
 
 //===----------------------------------------------------------------------===//
 /// TupleType
