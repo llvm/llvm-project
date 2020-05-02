@@ -49,7 +49,6 @@ unittest("ClangdTests") {
     "FindSymbolsTests.cpp",
     "FindTargetTests.cpp",
     "FormatTests.cpp",
-    "FormattedStringTests.cpp",
     "FuzzyMatchTests.cpp",
     "GlobalCompilationDatabaseTests.cpp",
     "HeaderSourceSwitchTests.cpp",
@@ -86,6 +85,7 @@ unittest("ClangdTests") {
     "support/CancellationTests.cpp",
     "support/ContextTests.cpp",
     "support/FunctionTests.cpp",
+    "support/MarkupTests.cpp",
     "support/ThreadingTests.cpp",
     "support/TraceTests.cpp",
   ]
