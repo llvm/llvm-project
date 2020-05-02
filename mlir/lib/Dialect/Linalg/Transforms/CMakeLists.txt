@@ -1,9 +1,11 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
   Fusion.cpp
-  LinalgTransforms.cpp
-  LinalgToLoops.cpp
+  Interchange.cpp
+  Loops.cpp
   Promotion.cpp
   Tiling.cpp
+  Transforms.cpp
+  Vectorization.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
@@ -11,7 +13,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DEPENDS
   intrinsics_gen
   MLIRLinalgPassIncGen
-  MLIRLinalgTransformPatternsIncGen
   )
 target_link_libraries(MLIRLinalgTransforms
   PUBLIC

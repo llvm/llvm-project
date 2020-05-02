@@ -1,4 +1,4 @@
-//===- LinalgToLoops.cpp - conversion from Linalg library ops to loops-----===//
+//===- Loops.cpp - conversion from Linalg named and generic ops to loops --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/Linalg/Transforms/LinalgTransforms.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/LoopOps/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
@@ -489,20 +489,6 @@ public:
   }
 };
 
-/// This struct is for factoring out the implementation and support template
-/// instantiations in the following 2 cases:
-///   1. Appending to a list of patterns via RewritePatternList.
-///   2. Direct invocation via `linalgOpToLoops` and `linalgOpToAffineLoops`.
-/// The implementation must work both in DRR and inside a RewritePattern. As a
-/// consequence, (1) it is only allowed to emit new ops if the match is
-/// guaranteed to be a success, (2) it is not allowed erase/replace, and (3) an
-/// encompassing pattern must take care of the erasure logic.
-template <typename LoopTy, typename ConcreteOpTy>
-class LinalgOpToLoopsImpl {
-public:
-  static Optional<LinalgLoops> doit(Operation *op, PatternRewriter &rewriter);
-};
-
 namespace {
 /// Helper struct to generate the loop nest for the op. This factored out here
 /// to be able to partially specialize this for different LoopTy.
@@ -573,14 +559,12 @@ public:
 } // namespace
 
 template <typename LoopTy, typename ConcreteOpTy>
-Optional<LinalgLoops>
-LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
-                                                PatternRewriter &rewriter) {
+Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
   using Impl = GenerateLoopNest<LoopTy, ConcreteOpTy>;
   using IndexedValueTy =
       typename GenerateLoopNest<LoopTy, ConcreteOpTy>::IndexedValueTy;
 
-  ScopedContext scope(rewriter, op->getLoc());
+  ScopedContext scope(builder, op->getLoc());
 
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).
@@ -607,7 +591,7 @@ LinalgOpToLoopsImpl<LoopTy, ConcreteOpTy>::doit(Operation *op,
   SmallVector<Value, 4> allIvs(nLoops);
   auto loopRanges =
       emitLoopRanges(scope.getBuilderRef(), scope.getLocation(), invertedMap,
-                     getViewSizes(rewriter, linalgOp));
+                     getViewSizes(builder, linalgOp));
   assert(loopRanges.size() == allIvs.size());
   Impl::doit(linalgOp, loopRanges, allIvs);
   // Number of loop ops might be different from the number of ivs since some
@@ -635,8 +619,7 @@ public:
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    using Impl = LinalgOpToLoopsImpl<LoopType, ConcreteOp>;
-    if (!Impl::doit(op, rewriter))
+    if (!linalgOpToLoopsImpl<LoopType, ConcreteOp>(op, rewriter))
       return failure();
     rewriter.eraseOp(op);
     return success();
@@ -662,7 +645,7 @@ public:
   }
 };
 
-/// Populate the given list with patterns that convert from Linalg to LLVM.
+/// Populate the given list with patterns that convert from Linalg to loops.
 template <typename LoopType>
 void FillRewritePatterns(OwningRewritePatternList &patterns, MLIRContext *ctx) {
   RewritePatternList<LoopType,
@@ -759,50 +742,49 @@ mlir::createConvertLinalgToAffineLoopsPass() {
 
 /// Emits a loop nest with the proper body for `op`.
 template <typename LoopTy, typename ConcreteOp>
-Optional<LinalgLoops>
-mlir::linalg::linalgLowerOpToLoops(PatternRewriter &rewriter, Operation *op) {
-  return LinalgOpToLoopsImpl<LoopTy, ConcreteOp>::doit(op, rewriter);
+Optional<LinalgLoops> mlir::linalg::linalgLowerOpToLoops(OpBuilder &builder,
+                                                         Operation *op) {
+  return linalgOpToLoopsImpl<LoopTy, ConcreteOp>(op, builder);
 }
 
 /// Emits a loop nest of `loop.for` with the proper body for `op`.
 template <typename ConcreteOp>
-LogicalResult mlir::linalg::linalgOpToLoops(PatternRewriter &rewriter,
-                                            Operation *op) {
+LogicalResult mlir::linalg::linalgOpToLoops(OpBuilder &builder, Operation *op) {
   Optional<LinalgLoops> loops =
-      linalgLowerOpToLoops<loop::ForOp, ConcreteOp>(rewriter, op);
+      linalgLowerOpToLoops<loop::ForOp, ConcreteOp>(builder, op);
   return loops ? success() : failure();
 }
 
 /// Emits a loop nest of `affine.for` with the proper body for `op`.
 template <typename ConcreteOp>
-LogicalResult mlir::linalg::linalgOpToAffineLoops(PatternRewriter &rewriter,
+LogicalResult mlir::linalg::linalgOpToAffineLoops(OpBuilder &builder,
                                                   Operation *op) {
   Optional<LinalgLoops> loops =
-      linalgLowerOpToLoops<AffineForOp, ConcreteOp>(rewriter, op);
+      linalgLowerOpToLoops<AffineForOp, ConcreteOp>(builder, op);
   return loops ? success() : failure();
 }
 
 /// Emits a loop nest of `loop.parallel` with the proper body for `op`.
 template <typename ConcreteOp>
-LogicalResult mlir::linalg::linalgOpToParallelLoops(PatternRewriter &rewriter,
+LogicalResult mlir::linalg::linalgOpToParallelLoops(OpBuilder &builder,
                                                     Operation *op) {
   Optional<LinalgLoops> loops =
-      linalgLowerOpToLoops<loop::ParallelOp, ConcreteOp>(rewriter, op);
+      linalgLowerOpToLoops<loop::ParallelOp, ConcreteOp>(builder, op);
   return loops ? success() : failure();
 }
 
-// TODO(ntv) Need to make these instantiations more future-proof to avoid the
-// need to update as soon as we add new ops.
+// TODO Need to make these instantiations more future-proof to avoid the need to
+// update as soon as we add new ops.
 #define INSTANTIATE_LINALG_OP_TO_LOOPS(OP_TYPE)                                \
   template LogicalResult mlir::linalg::linalgOpToLoops<OP_TYPE>(               \
-      PatternRewriter & rewriter, Operation * op);                             \
+      OpBuilder & builder, Operation * op);                                    \
   template LogicalResult mlir::linalg::linalgOpToAffineLoops<OP_TYPE>(         \
-      PatternRewriter & rewriter, Operation * op);                             \
+      OpBuilder & builder, Operation * op);                                    \
   template LogicalResult mlir::linalg::linalgOpToParallelLoops<OP_TYPE>(       \
-      PatternRewriter & rewriter, Operation * op);                             \
+      OpBuilder & builder, Operation * op);                                    \
   template Optional<LinalgLoops>                                               \
       mlir::linalg::linalgLowerOpToLoops<loop::ParallelOp, OP_TYPE>(           \
-          PatternRewriter & rewriter, Operation * op);
+          OpBuilder & builder, Operation * op);
 
 INSTANTIATE_LINALG_OP_TO_LOOPS(CopyOp)
 INSTANTIATE_LINALG_OP_TO_LOOPS(FillOp)
