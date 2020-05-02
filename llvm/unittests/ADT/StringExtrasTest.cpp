@@ -23,6 +23,17 @@ TEST(StringExtrasTest, isPrint) {
   EXPECT_TRUE(isPrint('?'));
 }
 
+TEST(StringExtrasTest, isSpace) {
+  EXPECT_TRUE(isSpace(' '));
+  EXPECT_TRUE(isSpace('\t'));
+  EXPECT_TRUE(isSpace('\n'));
+  EXPECT_TRUE(isSpace('\v'));
+  EXPECT_TRUE(isSpace('\f'));
+  EXPECT_TRUE(isSpace('\v'));
+  EXPECT_FALSE(isSpace('\0'));
+  EXPECT_FALSE(isSpace('_'));
+}
+
 TEST(StringExtrasTest, Join) {
   std::vector<std::string> Items;
   EXPECT_EQ("", join(Items.begin(), Items.end(), " <sep> "));
