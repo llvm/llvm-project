@@ -13,6 +13,7 @@ static_library("support") {
     "Context.cpp",
     "FSProvider.cpp",
     "Logger.cpp",
+    "Markup.cpp",
     "Shutdown.cpp",
     "Threading.cpp",
     "Trace.cpp",
