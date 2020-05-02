@@ -14,9 +14,9 @@
 #include "toy/MLIRGen.h"
 #include "toy/Parser.h"
 
-#include "mlir/Analysis/Verifier.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"

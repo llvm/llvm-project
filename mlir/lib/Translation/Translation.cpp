@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Translation.h"
-#include "mlir/Analysis/Verifier.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/SourceMgr.h"

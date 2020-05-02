@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_DOMINANCE_H
-#define MLIR_ANALYSIS_DOMINANCE_H
+#ifndef MLIR_IR_DOMINANCE_H
+#define MLIR_IR_DOMINANCE_H
 
 #include "mlir/IR/RegionGraphTraits.h"
 #include "llvm/Support/GenericDomTree.h"

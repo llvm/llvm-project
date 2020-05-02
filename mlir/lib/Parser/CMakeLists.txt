@@ -9,4 +9,4 @@ add_mlir_library(MLIRParser
 target_link_libraries(MLIRParser
   PUBLIC
   MLIRIR
-  MLIRAnalysis)
+  )
