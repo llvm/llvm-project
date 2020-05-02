@@ -9,7 +9,6 @@
 #include "ClangdLSPServer.h"
 #include "Diagnostics.h"
 #include "DraftStore.h"
-#include "FormattedString.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"

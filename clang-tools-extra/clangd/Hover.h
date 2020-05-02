@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HOVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HOVER_H
 
-#include "FormattedString.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 
 namespace clang {

@@ -1,4 +1,4 @@
-//===--- FormattedString.h ----------------------------------*- C++-*------===//
+//===--- Markup.h -------------------------------------------*- C++-*------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A simple intermediate representation of formatted text that could be
-// converted to plaintext or markdown.
+// A model of formatted text that can be rendered to plaintext or markdown.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MARKUP_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MARKUP_H
 
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
