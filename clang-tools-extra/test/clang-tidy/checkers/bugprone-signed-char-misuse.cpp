@@ -3,6 +3,16 @@
 ///////////////////////////////////////////////////////////////////
 /// Test cases correctly caught by the check.
 
+typedef __SIZE_TYPE__ size_t;
+
+namespace std {
+template <typename T, size_t N>
+struct array {
+  T &operator[](size_t n);
+  T &at(size_t n);
+};
+} // namespace std
+
 int SimpleVarDeclaration() {
   signed char CCharacter = -5;
   int NCharacter = CCharacter;
@@ -88,6 +98,16 @@ int CompareWithUnsignedNonAsciiConstant(signed char SCharacter) {
   if (USCharacter == SCharacter) // CHECK-MESSAGES: [[@LINE]]:7: warning: comparison between 'signed char' and 'unsigned char' [bugprone-signed-char-misuse]
     return 1;
   return 0;
+}
+
+int SignedCharCArraySubscript(signed char SCharacter) {
+  int Array[3] = {1, 2, 3};
+
+  return Array[static_cast<unsigned int>(SCharacter)]; // CHECK-MESSAGES: [[@LINE]]:42: warning: 'signed char' to 'unsigned int' conversion in array subscript; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
+int SignedCharSTDArraySubscript(std::array<int, 3> Array, signed char SCharacter) {
+  return Array[static_cast<unsigned int>(SCharacter)]; // CHECK-MESSAGES: [[@LINE]]:42: warning: 'signed char' to 'unsigned int' conversion in array subscript; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -206,4 +226,24 @@ int CompareWithUnsignedAsciiConstant(signed char SCharacter) {
   if (USCharacter == SCharacter)
     return 1;
   return 0;
+}
+
+int UnsignedCharCArraySubscript(unsigned char USCharacter) {
+  int Array[3] = {1, 2, 3};
+
+  return Array[static_cast<unsigned int>(USCharacter)];
+}
+
+int CastedCArraySubscript(signed char SCharacter) {
+  int Array[3] = {1, 2, 3};
+
+  return Array[static_cast<unsigned char>(SCharacter)];
+}
+
+int UnsignedCharSTDArraySubscript(std::array<int, 3> Array, unsigned char USCharacter) {
+  return Array[static_cast<unsigned int>(USCharacter)];
+}
+
+int CastedSTDArraySubscript(std::array<int, 3> Array, signed char SCharacter) {
+  return Array[static_cast<unsigned char>(SCharacter)];
 }
