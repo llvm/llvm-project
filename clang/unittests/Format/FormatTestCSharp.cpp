@@ -761,7 +761,8 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
 
   verifyFormat(R"(//
 class ItemFactory<T>
-    where T : new() {})", Style);
+    where T : new() {})",
+               Style);
 
   verifyFormat(R"(//
 class Dictionary<TKey, TVal>

@@ -140,7 +140,9 @@ TEST_F(FormatTestRawStrings, UsesConfigurationOverBaseStyle) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
   EXPECT_EQ(0, parseConfiguration("---\n"
                                   "Language: Cpp\n"
-                                  "BasedOnStyle: Google", &Style).value());
+                                  "BasedOnStyle: Google",
+                                  &Style)
+                   .value());
   Style.RawStringFormats = {{
       FormatStyle::LK_Cpp,
       {"cpp"},
@@ -178,26 +180,18 @@ t = R"pb(item:      1)pb";)test",
 }
 
 TEST_F(FormatTestRawStrings, ReformatsShortRawStringsOnSingleLine) {
-  expect_eq(
-      R"test(P p = TP(R"pb()pb");)test",
-      format(
-          R"test(P p = TP(R"pb( )pb");)test",
-          getRawStringPbStyleWithColumns(40)));
-  expect_eq(
-      R"test(P p = TP(R"pb(item_1: 1)pb");)test",
-      format(
-          R"test(P p = TP(R"pb(item_1:1)pb");)test",
-          getRawStringPbStyleWithColumns(40)));
-  expect_eq(
-      R"test(P p = TP(R"pb(item_1: 1)pb");)test",
-      format(
-          R"test(P p = TP(R"pb(  item_1 :  1   )pb");)test",
-          getRawStringPbStyleWithColumns(40)));
-  expect_eq(
-      R"test(P p = TP(R"pb(item_1: 1 item_2: 2)pb");)test",
-      format(
-          R"test(P p = TP(R"pb(item_1:1 item_2:2)pb");)test",
-          getRawStringPbStyleWithColumns(40)));
+  expect_eq(R"test(P p = TP(R"pb()pb");)test",
+            format(R"test(P p = TP(R"pb( )pb");)test",
+                   getRawStringPbStyleWithColumns(40)));
+  expect_eq(R"test(P p = TP(R"pb(item_1: 1)pb");)test",
+            format(R"test(P p = TP(R"pb(item_1:1)pb");)test",
+                   getRawStringPbStyleWithColumns(40)));
+  expect_eq(R"test(P p = TP(R"pb(item_1: 1)pb");)test",
+            format(R"test(P p = TP(R"pb(  item_1 :  1   )pb");)test",
+                   getRawStringPbStyleWithColumns(40)));
+  expect_eq(R"test(P p = TP(R"pb(item_1: 1 item_2: 2)pb");)test",
+            format(R"test(P p = TP(R"pb(item_1:1 item_2:2)pb");)test",
+                   getRawStringPbStyleWithColumns(40)));
   // Merge two short lines into one.
   expect_eq(R"test(
 std::string s = R"pb(
@@ -219,10 +213,10 @@ TEST_F(FormatTestRawStrings, BreaksShortRawStringsWhenNeeded) {
   expect_eq(R"test(
 P p = TP(R"pb(item_1 < 1 >
               item_2: { 2 })pb");)test",
-      format(
-          R"test(
+            format(
+                R"test(
 P p = TP(R"pb(item_1<1> item_2:{2})pb");)test",
-          getRawStringPbStyleWithColumns(40)));
+                getRawStringPbStyleWithColumns(40)));
 }
 
 TEST_F(FormatTestRawStrings, BreaksRawStringsExceedingColumnLimit) {
@@ -247,9 +241,9 @@ P p = TPPPPPPPPPPPPPPP(R"pb(item_1: 1, item_2: 2, item_3: 3)pb");)test",
 P p = TP(R"pb(item_1 < 1 >
               item_2: < 2 >
               item_3 {})pb");)test",
-      format(R"test(
+            format(R"test(
 P p = TP(R"pb(item_1<1> item_2:<2> item_3{ })pb");)test",
-          getRawStringPbStyleWithColumns(40)));
+                   getRawStringPbStyleWithColumns(40)));
 
   expect_eq(
       R"test(
@@ -552,7 +546,6 @@ ASSERT_TRUE(
             format(R"test(
 ASSERT_TRUE(ParseFromString(R"pb(item_1: 1 item_2: 2)pb"), ptr);)test",
                    getRawStringPbStyleWithColumns(40)));
-
 }
 
 TEST_F(FormatTestRawStrings, RawStringsInOperands) {
@@ -683,7 +676,6 @@ auto S =
 auto S=(count<3)?R"pb(item_1:1)pb":R"pb(item_2:2,item_3:3)pb";
 )test",
                    getRawStringPbStyleWithColumns(40)));
-
 }
 
 TEST_F(FormatTestRawStrings, PrefixAndSuffixAlignment) {
@@ -770,8 +762,7 @@ TEST_F(FormatTestRawStrings, DontFormatNonRawStrings) {
 
 TEST_F(FormatTestRawStrings, FormatsRawStringsWithEnclosingFunctionName) {
   FormatStyle Style = getRawStringPbStyleWithColumns(40);
-  Style.RawStringFormats[0].EnclosingFunctions.push_back(
-      "PARSE_TEXT_PROTO");
+  Style.RawStringFormats[0].EnclosingFunctions.push_back("PARSE_TEXT_PROTO");
   Style.RawStringFormats[0].EnclosingFunctions.push_back("ParseTextProto");
   expect_eq(R"test(a = PARSE_TEXT_PROTO(R"(key: value)");)test",
             format(R"test(a = PARSE_TEXT_PROTO(R"(key:value)");)test", Style));
@@ -816,7 +807,8 @@ xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
 xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
   Category: aaaaaaaaaaaaaaaaaaaaaaaaaa
 )pb"));
-)test", Style));
+)test",
+                   Style));
   // The '(' in R"pb is at column 61, break.
   expect_eq(R"test(
 xxxxxxxaaaaax wwwwwww =
@@ -828,14 +820,15 @@ xxxxxxxaaaaax wwwwwww =
 xxxxxxxaaaaax wwwwwww = _Verxrrrrrrrrr(PARSE_TEXT_PROTO(R"pb(
       Category: aaaaaaaaaaaaaaaaaaaaaaaaaa
 )pb"));
-)test", Style));
+)test",
+                   Style));
 }
 
 TEST_F(FormatTestRawStrings, KeepsRBraceFolloedByMoreLBracesOnSameLine) {
   FormatStyle Style = getRawStringPbStyleWithColumns(80);
 
   expect_eq(
-                    R"test(
+      R"test(
 int f() {
   if (1) {
     TTTTTTTTTTTTTTTTTTTTT s = PARSE_TEXT_PROTO(R"pb(
@@ -849,8 +842,8 @@ int f() {
   }
 }
 )test",
-            format(
-                    R"test(
+      format(
+          R"test(
 int f() {
   if (1) {
    TTTTTTTTTTTTTTTTTTTTT s = PARSE_TEXT_PROTO(R"pb(
@@ -862,14 +855,13 @@ int f() {
   }
 }
 )test",
-                    Style));
+          Style));
 }
 
 TEST_F(FormatTestRawStrings,
        DoNotFormatUnrecognizedDelimitersInRecognizedFunctions) {
   FormatStyle Style = getRawStringPbStyleWithColumns(60);
-  Style.RawStringFormats[0].EnclosingFunctions.push_back(
-      "EqualsProto");
+  Style.RawStringFormats[0].EnclosingFunctions.push_back("EqualsProto");
   // EqualsProto is a recognized function, but the Raw delimiter is
   // unrecognized. Do not touch the string in this case, since it might be
   // special.
@@ -933,7 +925,7 @@ int f() {
 }
 )test",
                    Style));
-  
+
   expect_eq(R"test(
 int f() {
   int a = g(x,
@@ -978,7 +970,8 @@ int f() {
 int f() {
   int a = g(R"pb(key:
                  1)pb", 2);
-})test", Style));
+})test",
+                   Style));
 }
 
 TEST_F(FormatTestRawStrings, IndentsLastParamAfterNewline) {
