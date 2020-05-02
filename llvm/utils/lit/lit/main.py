@@ -13,6 +13,7 @@ import lit.cl_arguments
 import lit.discovery
 import lit.display
 import lit.LitConfig
+import lit.reports
 import lit.run
 import lit.Test
 import lit.util
@@ -123,16 +124,14 @@ def create_params(builtin_params, user_params):
 
 
 def print_discovered(tests, show_suites, show_tests):
-    # Suite names are not necessarily unique.  Include object identity in sort
-    # key to avoid mixing tests of different suites.
-    tests.sort(key=lambda t: (t.suite.name, t.suite, t.path_in_suite))
+    tests.sort(key=lit.reports.by_suite_and_test_path)
 
     if show_suites:
         import itertools
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
         print('-- Test Suites --')
-        for suite, suite_iter in tests_by_suite:
-            test_count = sum(1 for _ in suite_iter)
+        for suite, test_iter in tests_by_suite:
+            test_count = sum(1 for _ in test_iter)
             print('  %s - %d tests' % (suite.name, test_count))
             print('    Source Root: %s' % suite.source_root)
             print('    Exec Root  : %s' % suite.exec_root)
