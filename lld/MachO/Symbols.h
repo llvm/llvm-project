@@ -81,7 +81,7 @@ public:
 
 inline uint64_t Symbol::getVA() const {
   if (auto *d = dyn_cast<Defined>(this))
-    return d->isec->addr + d->value;
+    return d->isec->getVA() + d->value;
   return 0;
 }
 
