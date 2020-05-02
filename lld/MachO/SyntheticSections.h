@@ -10,11 +10,9 @@
 #define LLD_MACHO_SYNTHETIC_SECTIONS_H
 
 #include "ExportTrie.h"
-#include "InputSection.h"
+#include "OutputSection.h"
 #include "Target.h"
 #include "llvm/ADT/SetVector.h"
-
-using namespace llvm::MachO;
 
 namespace lld {
 namespace macho {
@@ -27,20 +25,27 @@ constexpr const char *binding = "__binding";
 constexpr const char *export_ = "__export";
 constexpr const char *symbolTable = "__symbol_table";
 constexpr const char *stringTable = "__string_table";
+constexpr const char *got = "__got";
 
 } // namespace section_names
 
 class DylibSymbol;
 class LoadCommand;
 
+class SyntheticSection : public OutputSection {
+public:
+  SyntheticSection(const char *segname, const char *name);
+  virtual ~SyntheticSection() = default;
+};
+
 // The header of the Mach-O file, which must have a file offset of zero.
-class MachHeaderSection : public InputSection {
+class MachHeaderSection : public SyntheticSection {
 public:
   MachHeaderSection();
   void addLoadCommand(LoadCommand *);
   bool isHidden() const override { return true; }
   size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
+  void writeTo(uint8_t *buf) const override;
 
 private:
   std::vector<LoadCommand *> loadCommands;
@@ -49,17 +54,18 @@ private:
 
 // A hidden section that exists solely for the purpose of creating the
 // __PAGEZERO segment, which is used to catch null pointer dereferences.
-class PageZeroSection : public InputSection {
+class PageZeroSection : public SyntheticSection {
 public:
   PageZeroSection();
   bool isHidden() const override { return true; }
   size_t getSize() const override { return ImageBase; }
   uint64_t getFileSize() const override { return 0; }
+  void writeTo(uint8_t *buf) const override {}
 };
 
 // This section will be populated by dyld with addresses to non-lazily-loaded
 // dylib symbols.
-class GotSection : public InputSection {
+class GotSection : public SyntheticSection {
 public:
   GotSection();
 
@@ -68,11 +74,11 @@ public:
     return entries;
   }
 
-  size_t getSize() const override { return entries.size() * WordSize; }
-
   bool isNeeded() const override { return !entries.empty(); }
 
-  void writeTo(uint8_t *buf) override {
+  size_t getSize() const override { return entries.size() * WordSize; }
+
+  void writeTo(uint8_t *buf) const override {
     // Nothing to write, GOT contains all zeros at link time; it's populated at
     // runtime by dyld.
   }
@@ -82,7 +88,7 @@ private:
 };
 
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
-class BindingSection : public InputSection {
+class BindingSection : public SyntheticSection {
 public:
   BindingSection();
   void finalizeContents();
@@ -92,13 +98,13 @@ public:
   // section headers.
   bool isHidden() const override { return true; }
   bool isNeeded() const override;
-  void writeTo(uint8_t *buf) override;
+  void writeTo(uint8_t *buf) const override;
 
   SmallVector<char, 128> contents;
 };
 
 // Stores a trie that describes the set of exported symbols.
-class ExportSection : public InputSection {
+class ExportSection : public SyntheticSection {
 public:
   ExportSection();
   void finalizeContents();
@@ -107,7 +113,7 @@ public:
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
   bool isHidden() const override { return true; }
-  void writeTo(uint8_t *buf) override;
+  void writeTo(uint8_t *buf) const override;
 
 private:
   TrieBuilder trieBuilder;
@@ -115,7 +121,7 @@ private:
 };
 
 // Stores the strings referenced by the symbol table.
-class StringTableSection : public InputSection {
+class StringTableSection : public SyntheticSection {
 public:
   StringTableSection();
   // Returns the start offset of the added string.
@@ -125,7 +131,7 @@ public:
   // offsets are recorded in the LC_SYMTAB load command, instead of in section
   // headers.
   bool isHidden() const override { return true; }
-  void writeTo(uint8_t *buf) override;
+  void writeTo(uint8_t *buf) const override;
 
 private:
   // An n_strx value of 0 always indicates the empty string, so we must locate
@@ -140,7 +146,7 @@ struct SymtabEntry {
   size_t strx;
 };
 
-class SymtabSection : public InputSection {
+class SymtabSection : public SyntheticSection {
 public:
   SymtabSection(StringTableSection &);
   void finalizeContents();
@@ -150,7 +156,7 @@ public:
   // offsets are recorded in the LC_SYMTAB load command, instead of in section
   // headers.
   bool isHidden() const override { return true; }
-  void writeTo(uint8_t *buf) override;
+  void writeTo(uint8_t *buf) const override;
 
 private:
   StringTableSection &stringTableSection;

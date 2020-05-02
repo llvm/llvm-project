@@ -37,8 +37,7 @@ public:
   Writer() : buffer(errorHandler().outputBuffer) {}
 
   void scanRelocations();
-  void createHiddenSections();
-  void sortSections();
+  void createOutputSections();
   void createLoadCommands();
   void assignAddresses(OutputSegment *);
   void createSymtabContents();
@@ -71,11 +70,11 @@ public:
     c->cmd = LC_DYLD_INFO_ONLY;
     c->cmdsize = getSize();
     if (bindingSection->isNeeded()) {
-      c->bind_off = bindingSection->getFileOffset();
+      c->bind_off = bindingSection->fileOff;
       c->bind_size = bindingSection->getFileSize();
     }
     if (exportSection->isNeeded()) {
-      c->export_off = exportSection->getFileOffset();
+      c->export_off = exportSection->fileOff;
       c->export_size = exportSection->getFileSize();
     }
   }
@@ -101,7 +100,7 @@ public:
 
   uint32_t getSize() const override {
     return sizeof(segment_command_64) +
-           seg->numNonHiddenSections * sizeof(section_64);
+           seg->numNonHiddenSections() * sizeof(section_64);
   }
 
   void writeTo(uint8_t *buf) const override {
@@ -115,20 +114,19 @@ public:
     c->maxprot = seg->maxProt;
     c->initprot = seg->initProt;
 
-    if (seg->getSections().empty())
+    if (!seg->isNeeded())
       return;
 
     c->vmaddr = seg->firstSection()->addr;
     c->vmsize =
         seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
-    c->nsects = seg->numNonHiddenSections;
+    c->nsects = seg->numNonHiddenSections();
 
     for (auto &p : seg->getSections()) {
       StringRef s = p.first;
-      ArrayRef<InputSection *> sections = p.second;
-      for (InputSection *isec : sections)
-        c->filesize += isec->getFileSize();
-      if (sections[0]->isHidden())
+      OutputSection *section = p.second;
+      c->filesize += section->getFileSize();
+      if (section->isHidden())
         continue;
 
       auto *sectHdr = reinterpret_cast<section_64 *>(buf);
@@ -137,16 +135,11 @@ public:
       memcpy(sectHdr->sectname, s.data(), s.size());
       memcpy(sectHdr->segname, name.data(), name.size());
 
-      sectHdr->addr = sections[0]->addr;
-      sectHdr->offset = sections[0]->getFileOffset();
-      sectHdr->align = sections[0]->align;
-      uint32_t maxAlign = 0;
-      for (const InputSection *section : sections)
-        maxAlign = std::max(maxAlign, section->align);
-      sectHdr->align = Log2_32(maxAlign);
-      sectHdr->flags = sections[0]->flags;
-      sectHdr->size = sections.back()->addr + sections.back()->getSize() -
-                      sections[0]->addr;
+      sectHdr->addr = section->addr;
+      sectHdr->offset = section->fileOff;
+      sectHdr->align = Log2_32(section->align);
+      sectHdr->flags = section->flags;
+      sectHdr->size = section->getSize();
     }
   }
 
@@ -178,9 +171,9 @@ public:
     auto *c = reinterpret_cast<symtab_command *>(buf);
     c->cmd = LC_SYMTAB;
     c->cmdsize = getSize();
-    c->symoff = symtabSection->getFileOffset();
+    c->symoff = symtabSection->fileOff;
     c->nsyms = symtabSection->getNumSymbols();
-    c->stroff = stringTableSection->getFileOffset();
+    c->stroff = stringTableSection->fileOff;
     c->strsize = stringTableSection->getFileSize();
   }
 
@@ -259,75 +252,7 @@ private:
   // different location.
   const StringRef path = "/usr/lib/dyld";
 };
-
-class SectionComparator {
-public:
-  struct OrderInfo {
-    uint32_t segmentOrder;
-    DenseMap<StringRef, uint32_t> sectionOrdering;
-  };
-
-  SectionComparator() {
-    // This defines the order of segments and the sections within each segment.
-    // Segments that are not mentioned here will end up at defaultPosition;
-    // sections that are not mentioned will end up at the end of the section
-    // list for their given segment.
-    std::vector<std::pair<StringRef, std::vector<StringRef>>> ordering{
-        {segment_names::pageZero, {}},
-        {segment_names::text, {section_names::header}},
-        {defaultPosition, {}},
-        // Make sure __LINKEDIT is the last segment (i.e. all its hidden
-        // sections must be ordered after other sections).
-        {segment_names::linkEdit,
-         {
-             section_names::binding,
-             section_names::export_,
-             section_names::symbolTable,
-             section_names::stringTable,
-         }},
-    };
-
-    for (uint32_t i = 0, n = ordering.size(); i < n; ++i) {
-      auto &p = ordering[i];
-      StringRef segname = p.first;
-      const std::vector<StringRef> &sectOrdering = p.second;
-      OrderInfo &info = orderMap[segname];
-      info.segmentOrder = i;
-      for (uint32_t j = 0, m = sectOrdering.size(); j < m; ++j)
-        info.sectionOrdering[sectOrdering[j]] = j;
-    }
-  }
-
-  // Return a {segmentOrder, sectionOrder} pair. Using this as a key will
-  // ensure that all sections in the same segment are sorted contiguously.
-  std::pair<uint32_t, uint32_t> order(const InputSection *isec) {
-    auto it = orderMap.find(isec->segname);
-    if (it == orderMap.end())
-      return {orderMap[defaultPosition].segmentOrder, 0};
-    OrderInfo &info = it->second;
-    auto sectIt = info.sectionOrdering.find(isec->name);
-    if (sectIt != info.sectionOrdering.end())
-      return {info.segmentOrder, sectIt->second};
-    return {info.segmentOrder, info.sectionOrdering.size()};
-  }
-
-  bool operator()(const InputSection *a, const InputSection *b) {
-    return order(a) < order(b);
-  }
-
-private:
-  const StringRef defaultPosition = StringRef();
-  DenseMap<StringRef, OrderInfo> orderMap;
-};
-
 } // namespace
-
-template <typename SectionType, typename... ArgT>
-SectionType *createInputSection(ArgT &&... args) {
-  auto *section = make<SectionType>(std::forward<ArgT>(args)...);
-  inputSections.push_back(section);
-  return section;
-}
 
 void Writer::scanRelocations() {
   for (InputSection *sect : inputSections)
@@ -378,37 +303,29 @@ void Writer::createLoadCommands() {
       make<LCLoadDylib>("/usr/lib/libSystem.B.dylib"));
 }
 
-void Writer::createHiddenSections() {
-  headerSection = createInputSection<MachHeaderSection>();
-  bindingSection = createInputSection<BindingSection>();
-  stringTableSection = createInputSection<StringTableSection>();
-  symtabSection = createInputSection<SymtabSection>(*stringTableSection);
-  exportSection = createInputSection<ExportSection>();
+void Writer::createOutputSections() {
+  // First, create hidden sections
+  headerSection = make<MachHeaderSection>();
+  bindingSection = make<BindingSection>();
+  stringTableSection = make<StringTableSection>();
+  symtabSection = make<SymtabSection>(*stringTableSection);
+  exportSection = make<ExportSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
-    createInputSection<PageZeroSection>();
+    make<PageZeroSection>();
     break;
   case MH_DYLIB:
     break;
   default:
     llvm_unreachable("unhandled output file type");
   }
-}
 
-void Writer::sortSections() {
-  llvm::stable_sort(inputSections, SectionComparator());
-
-  // TODO This is wrong; input sections ought to be grouped into
-  // output sections, which are then organized like this.
-  uint32_t sectionIndex = 0;
-  // Add input sections to output segments.
+  // Then merge input sections into output sections/segments.
   for (InputSection *isec : inputSections) {
-    if (isec->isNeeded()) {
-      if (!isec->isHidden())
-        isec->sectionIndex = ++sectionIndex;
-      getOrCreateOutputSegment(isec->segname)->addSection(isec);
-    }
+    getOrCreateOutputSegment(isec->segname)
+        ->getOrCreateOutputSection(isec->name)
+        ->mergeInput(isec);
   }
 }
 
@@ -418,16 +335,17 @@ void Writer::assignAddresses(OutputSegment *seg) {
   seg->fileOff = fileOff;
 
   for (auto &p : seg->getSections()) {
-    ArrayRef<InputSection *> sections = p.second;
-    for (InputSection *isec : sections) {
-      addr = alignTo(addr, isec->align);
-      // We must align the file offsets too to avoid misaligned writes of
-      // structs.
-      fileOff = alignTo(fileOff, isec->align);
-      isec->addr = addr;
-      addr += isec->getSize();
-      fileOff += isec->getFileSize();
-    }
+    OutputSection *section = p.second;
+    addr = alignTo(addr, section->align);
+    // We must align the file offsets too to avoid misaligned writes of
+    // structs.
+    fileOff = alignTo(fileOff, section->align);
+    section->addr = addr;
+    section->fileOff = fileOff;
+    section->finalize();
+
+    addr += section->getSize();
+    fileOff += section->getFileSize();
   }
 }
 
@@ -446,26 +364,25 @@ void Writer::openFile() {
 void Writer::writeSections() {
   uint8_t *buf = buffer->getBufferStart();
   for (OutputSegment *seg : outputSegments) {
-    uint64_t fileOff = seg->fileOff;
-    for (auto &sect : seg->getSections()) {
-      for (InputSection *isec : sect.second) {
-        fileOff = alignTo(fileOff, isec->align);
-        isec->writeTo(buf + fileOff);
-        fileOff += isec->getFileSize();
-      }
+    for (auto &p : seg->getSections()) {
+      OutputSection *section = p.second;
+      section->writeTo(buf + section->fileOff);
     }
   }
 }
 
 void Writer::run() {
-  scanRelocations();
-  createHiddenSections();
-  // Sort and assign sections to their respective segments. No more sections can
-  // be created after this method runs.
-  sortSections();
   // dyld requires __LINKEDIT segment to always exist (even if empty).
-  getOrCreateOutputSegment(segment_names::linkEdit);
-  // No more segments can be created after this method runs.
+  OutputSegment *linkEditSegment =
+      getOrCreateOutputSegment(segment_names::linkEdit);
+
+  scanRelocations();
+
+  // Sort and assign sections to their respective segments. No more sections nor
+  // segments may be created after this method runs.
+  createOutputSections();
+  sortOutputSegmentsAndSections();
+
   createLoadCommands();
 
   // Ensure that segments (and the sections they contain) are allocated
@@ -475,7 +392,8 @@ void Writer::run() {
   // determine addresses of other segments/sections before generating its
   // contents.
   for (OutputSegment *seg : outputSegments)
-    assignAddresses(seg);
+    if (seg != linkEditSegment)
+      assignAddresses(seg);
 
   // Fill __LINKEDIT contents.
   bindingSection->finalizeContents();
@@ -483,9 +401,8 @@ void Writer::run() {
   symtabSection->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
-  // addresses and offsets. We don't have to recalculate the other segments
-  // since sortSections() ensures that __LINKEDIT is the last segment.
-  assignAddresses(getOutputSegment(segment_names::linkEdit));
+  // addresses and offsets.
+  assignAddresses(linkEditSegment);
 
   openFile();
   if (errorCount())
@@ -499,6 +416,4 @@ void Writer::run() {
 
 void macho::writeResult() { Writer().run(); }
 
-void macho::createSyntheticSections() {
-  in.got = createInputSection<GotSection>();
-}
+void macho::createSyntheticSections() { in.got = make<GotSection>(); }
