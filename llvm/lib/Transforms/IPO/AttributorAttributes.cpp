@@ -897,7 +897,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
 
   // Callback to replace the uses of CB with the constant C.
   auto ReplaceCallSiteUsersWith = [&A](CallBase &CB, Constant &C) {
-    if (CB.getNumUses() == 0)
+    if (CB.use_empty())
       return ChangeStatus::UNCHANGED;
     if (A.changeValueAfterManifest(CB, C))
       return ChangeStatus::CHANGED;
@@ -2267,7 +2267,7 @@ struct AANoAliasFloating final : AANoAliasImpl {
       if (!CI)
         break;
       Value *Base = CI->getOperand(0);
-      if (Base->getNumUses() != 1)
+      if (!Base->hasOneUse())
         break;
       Val = Base;
     } while (true);
@@ -2451,7 +2451,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       Instruction *UserI = cast<Instruction>(U.getUser());
 
       // If user if curr instr and only use.
-      if ((UserI == getCtxI()) && (UserI->getNumUses() == 1))
+      if (UserI == getCtxI() && UserI->hasOneUse())
         return true;
 
       const Function *ScopeFn = VIRP.getAnchorScope();
