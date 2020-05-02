@@ -26,13 +26,6 @@ namespace clangd {
 namespace markup {
 namespace {
 
-/// Like std::isspace but for "C" locale.
-/// FIXME: move to StringExtras?
-bool isSpace(char C) {
-  return C == ' ' || C == '\f' || C == '\n' || C == '\r' || C == '\t' ||
-         C == '\v';
-}
-
 // Is <contents a plausible start to an HTML tag?
 // Contents may not be the rest of the line, but it's the rest of the plain
 // text, so we expect to see at least the tag name.
@@ -50,11 +43,11 @@ bool looksLikeTag(llvm::StringRef Contents) {
                  .drop_while([](char C) {
                    return llvm::isAlnum(C) || C == '-' || C == '_' || C == ':';
                  })
-                 .drop_while(isSpace);
+                 .drop_while(llvm::isSpace);
   // The rest of the tag consists of attributes, which have restrictive names.
   // If we hit '=', all bets are off (attribute values can contain anything).
   for (; !Contents.empty(); Contents = Contents.drop_front()) {
-    if (llvm::isAlnum(Contents.front()) || isSpace(Contents.front()))
+    if (llvm::isAlnum(Contents.front()) || llvm::isSpace(Contents.front()))
       continue;
     if (Contents.front() == '>' || Contents.startswith("/>"))
       return true; // May close the tag.
@@ -75,7 +68,7 @@ bool looksLikeTag(llvm::StringRef Contents) {
 // a markdown grammar construct.
 bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
                         bool StartsLine) {
-  assert(Before.take_while(isSpace).empty());
+  assert(Before.take_while(llvm::isSpace).empty());
   auto RulerLength = [&]() -> /*Length*/ unsigned {
     if (!StartsLine || !Before.empty())
       return false;
@@ -87,8 +80,8 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
            (After.empty() || After.startswith(" "));
   };
   auto SpaceSurrounds = [&]() {
-    return (After.empty() || isSpace(After.front())) &&
-           (Before.empty() || isSpace(Before.back()));
+    return (After.empty() || llvm::isSpace(After.front())) &&
+           (Before.empty() || llvm::isSpace(Before.back()));
   };
   auto WordSurrounds = [&]() {
     return (!After.empty() && llvm::isAlnum(After.front())) &&
@@ -434,8 +427,8 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   Chunk &C = Chunks.back();
   C.Contents = std::move(Norm);
   C.Kind = Chunk::PlainText;
-  C.SpaceBefore = isSpace(Text.front());
-  C.SpaceAfter = isSpace(Text.back());
+  C.SpaceBefore = llvm::isSpace(Text.front());
+  C.SpaceAfter = llvm::isSpace(Text.back());
   return *this;
 }
 
