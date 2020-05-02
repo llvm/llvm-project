@@ -1454,6 +1454,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
     gep_type_iterator GTI = gep_type_begin(I);
     for (unsigned i = 1, e = I->getNumOperands(); i != e; ++i, ++GTI) {
+      // TrailZ can only become smaller, short-circuit if we hit zero.
+      if (TrailZ == 0)
+        break;
+
       Value *Index = I->getOperand(i);
       if (StructType *STy = GTI.getStructTypeOrNull()) {
         // Handle struct member offset arithmetic.
