@@ -6,6 +6,12 @@ from xml.sax.saxutils import quoteattr as quo
 import lit.Test
 
 
+def by_suite_and_test_path(test):
+    # Suite names are not necessarily unique.  Include object identity in sort
+    # key to avoid mixing tests of different suites.
+    return (test.suite.name, id(test.suite), test.path_in_suite)
+
+
 class JsonReport(object):
     def __init__(self, output_file):
         self.output_file = output_file
@@ -70,9 +76,7 @@ class XunitReport(object):
     # TODO(yln): elapsed unused, put it somewhere?
     def write_results(self, tests, elapsed):
         assert not any(t.result.code in {lit.Test.EXCLUDED, lit.Test.SKIPPED} for t in tests)
-        # Suite names are not necessarily unique.  Include object identity in
-        # sort key to avoid mixing tests of different suites.
-        tests.sort(key=lambda t: (t.suite.name, id(t.suite), t.path_in_suite))
+        tests.sort(key=by_suite_and_test_path)
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
 
         with open(self.output_file, 'w') as file:
