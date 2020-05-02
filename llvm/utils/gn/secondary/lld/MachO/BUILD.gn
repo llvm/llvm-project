@@ -24,6 +24,8 @@ static_library("MachO2") {
     "ExportTrie.cpp",
     "InputFiles.cpp",
     "InputSection.cpp",
+    "MergedOutputSection.cpp",
+    "OutputSection.cpp",
     "OutputSegment.cpp",
     "SymbolTable.cpp",
     "Symbols.cpp",
