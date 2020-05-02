@@ -114,8 +114,11 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
           auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend();
           auto A = AddendOrErr ? *AddendOrErr : 0;
-          uint64_t resolved = Resolver(Reloc, Reloc.getSymbol()->getValue(), A);
-          Relocs.insert({Reloc.getOffset(), resolved});
+          Expected<uint64_t> ValueOrErr = Reloc.getSymbol()->getValue();
+          if (!ValueOrErr)
+            // TODO: Test this error.
+            return ValueOrErr.takeError();
+          Relocs.insert({Reloc.getOffset(), Resolver(Reloc, *ValueOrErr, A)});
         } else if (Reloc.getType() == RelativeRelocation) {
           if (auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend())
             Relocs.insert({Reloc.getOffset(), *AddendOrErr});
