@@ -73,8 +73,11 @@
 //
 // w: vector of element type promoted to 64bits, vector maintains
 //    signedness of its element type.
+// f: element type promoted to uint64_t (splat to vector type)
 // j: element type promoted to 64bits (splat to vector type)
 // K: element type bitcast to a signed integer (splat to vector type)
+// L: element type bitcast to an unsigned integer (splat to vector type)
+//
 // i: constant uint64_t
 // k: int32_t
 // l: int64_t
@@ -677,6 +680,29 @@ defm SVNOT  : SInstZPZ<"svnot",  "csilUcUsUiUl", "aarch64_sve_not">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Shifts
+
+multiclass SInst_SHIFT<string name, string intrinsic, string ts, string wide_ts> {
+  def _M : SInst<name # "[_{d}]", "dPdu", ts, MergeOp1,  intrinsic>;
+  def _X : SInst<name # "[_{d}]", "dPdu", ts, MergeAny,  intrinsic>;
+  def _Z : SInst<name # "[_{d}]", "dPdu", ts, MergeZero, intrinsic>;
+
+  def _N_M : SInst<name # "[_n_{d}]", "dPdL", ts, MergeOp1,  intrinsic>;
+  def _N_X : SInst<name # "[_n_{d}]", "dPdL", ts, MergeAny,  intrinsic>;
+  def _N_Z : SInst<name # "[_n_{d}]", "dPdL", ts, MergeZero, intrinsic>;
+
+  def _WIDE_M : SInst<name # _wide # "[_{d}]", "dPdg", wide_ts, MergeOp1,  intrinsic # _wide>;
+  def _WIDE_X : SInst<name # _wide # "[_{d}]", "dPdg", wide_ts, MergeAny,  intrinsic # _wide>;
+  def _WIDE_Z : SInst<name # _wide # "[_{d}]", "dPdg", wide_ts, MergeZero, intrinsic # _wide>;
+
+  def _WIDE_N_M : SInst<name # _wide # "[_n_{d}]", "dPdf", wide_ts, MergeOp1,  intrinsic # _wide>;
+  def _WIDE_N_X : SInst<name # _wide # "[_n_{d}]", "dPdf", wide_ts, MergeAny,  intrinsic # _wide>;
+  def _WIDE_N_Z : SInst<name # _wide # "[_n_{d}]", "dPdf", wide_ts, MergeZero, intrinsic # _wide>;
+}
+
+defm SVASR : SInst_SHIFT<"svasr", "aarch64_sve_asr", "csil", "csi">;
+defm SVLSL : SInst_SHIFT<"svlsl", "aarch64_sve_lsl", "csilUcUsUiUl", "csiUcUsUi">;
+defm SVLSR : SInst_SHIFT<"svlsr", "aarch64_sve_lsr", "UcUsUiUl", "UcUsUi">;
+
 def SVASRD_M : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeOp1,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
