@@ -144,7 +144,7 @@ public:
     // If the use is actually in a constant cast expression which itself
     // has only one use, we look through the constant cast expression.
     if (auto *CE = dyn_cast<ConstantExpr>(U->getUser()))
-      if (CE->getNumUses() == 1 && CE->isCast())
+      if (CE->hasOneUse() && CE->isCast())
         U = &*CE->use_begin();
 
     return (int)CB->getArgOperandNo(U) == CI.ParameterEncoding[0];

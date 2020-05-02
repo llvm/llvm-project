@@ -584,7 +584,7 @@ void CoroCloner::replaceEntryBlock() {
   // Move any allocas into Entry that weren't moved into the frame.
   for (auto IT = OldEntry->begin(), End = OldEntry->end(); IT != End;) {
     Instruction &I = *IT++;
-    if (!isa<AllocaInst>(&I) || I.getNumUses() == 0)
+    if (!isa<AllocaInst>(&I) || I.use_empty())
       continue;
 
     I.moveBefore(*Entry, Entry->getFirstInsertionPt());
