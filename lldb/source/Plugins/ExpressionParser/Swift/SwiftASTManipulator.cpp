@@ -430,7 +430,8 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   result_loc_info.tmp_var_decl->setSetterAccess(internal_access);
 
   auto *var_pattern =
-      new (ast_context) swift::NamedPattern(result_loc_info.tmp_var_decl, true);
+      swift::NamedPattern::createImplicit(ast_context,
+                                          result_loc_info.tmp_var_decl);
 
   const auto static_spelling_kind = swift::StaticSpellingKind::KeywordStatic;
   result_loc_info.binding_decl = swift::PatternBindingDecl::createImplicit(
@@ -996,10 +997,8 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
                             swift::DeclContext *containing_context) {
   swift::ASTContext &ast_context = var_decl->getASTContext();
 
-  const bool is_implicit = true;
-
   swift::NamedPattern *named_pattern =
-      new (ast_context) swift::NamedPattern(var_decl, is_implicit);
+      swift::NamedPattern::createImplicit(ast_context, var_decl);
 
   // Since lldb does not call bindExtensions, must ensure that any enclosing
   // extension is bound
