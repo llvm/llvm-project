@@ -1471,7 +1471,7 @@ void UnwrappedLineParser::parseStructuralElement() {
       } else if (Style.Language == FormatStyle::LK_Proto &&
                  FormatTok->Tok.is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum*/false,
+        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                         /*ClosingBraceKind=*/tok::greater);
       }
       break;
@@ -1824,7 +1824,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
     case tok::less:
       if (Style.Language == FormatStyle::LK_Proto) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum*/false,
+        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                         /*ClosingBraceKind=*/tok::greater);
       } else {
         nextToken();

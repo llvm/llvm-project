@@ -16,6 +16,9 @@ add_mlir_library(MLIRAnalysis
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
+
+  DEPENDS
+  mlir-generic-headers
   )
 
 target_link_libraries(MLIRAnalysis
@@ -36,6 +39,9 @@ add_mlir_library(MLIRLoopAnalysis
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
+
+  DEPENDS
+  mlir-generic-headers
   )
 
 target_link_libraries(MLIRLoopAnalysis

@@ -7,8 +7,6 @@ add_mlir_dialect_library(MLIRLinalgOps
 
   DEPENDS
   intrinsics_gen
-  )
-add_dependencies(MLIRLinalgOps
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgStructuredOpsInterfaceIncGen
