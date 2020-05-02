@@ -1293,7 +1293,7 @@ static void createShallowWrapper(Function &F) {
   F.setLinkage(GlobalValue::InternalLinkage);
 
   F.replaceAllUsesWith(Wrapper);
-  assert(F.getNumUses() == 0 && "Uses remained after wrapper was created!");
+  assert(F.use_empty() && "Uses remained after wrapper was created!");
 
   // Move the COMDAT section to the wrapper.
   // TODO: Check if we need to keep it for F as well.
