@@ -1007,20 +1007,6 @@ wasm_u32x4_trunc_saturate_f32x4(v128_t __a) {
   return (v128_t)__builtin_wasm_trunc_saturate_u_i32x4_f32x4((__f32x4)__a);
 }
 
-#ifdef __wasm_unimplemented_simd128__
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS
-wasm_i64x2_trunc_saturate_f64x2(v128_t __a) {
-  return (v128_t)__builtin_wasm_trunc_saturate_s_i64x2_f64x2((__f64x2)__a);
-}
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS
-wasm_u64x2_trunc_saturate_f64x2(v128_t __a) {
-  return (v128_t)__builtin_wasm_trunc_saturate_s_i64x2_f64x2((__f64x2)__a);
-}
-
-#endif // __wasm_unimplemented_simd128__
-
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_f32x4_convert_i32x4(v128_t __a) {
   return (v128_t) __builtin_convertvector((__i32x4)__a, __f32x4);
@@ -1030,20 +1016,6 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_f32x4_convert_u32x4(v128_t __a) {
   return (v128_t) __builtin_convertvector((__u32x4)__a, __f32x4);
 }
-
-#ifdef __wasm_unimplemented_simd128__
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS
-wasm_f64x2_convert_i64x2(v128_t __a) {
-  return (v128_t) __builtin_convertvector((__i64x2)__a, __f64x2);
-}
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS
-wasm_f64x2_convert_u64x2(v128_t __a) {
-  return (v128_t) __builtin_convertvector((__u64x2)__a, __f64x2);
-}
-
-#endif // __wasm_unimplemented_simd128__
 
 #define wasm_v8x16_shuffle(__a, __b, __c0, __c1, __c2, __c3, __c4, __c5, __c6, \
                            __c7, __c8, __c9, __c10, __c11, __c12, __c13,       \

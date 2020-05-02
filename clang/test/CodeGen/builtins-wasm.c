@@ -645,18 +645,6 @@ i32x4 trunc_saturate_u_i32x4_f32x4(f32x4 f) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i64x2 trunc_saturate_s_i64x2_f64x2(f64x2 f) {
-  return __builtin_wasm_trunc_saturate_s_i64x2_f64x2(f);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.trunc.saturate.signed.v2i64.v2f64(<2 x double> %f)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-i64x2 trunc_saturate_u_i64x2_f64x2(f64x2 f) {
-  return __builtin_wasm_trunc_saturate_u_i64x2_f64x2(f);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.trunc.saturate.unsigned.v2i64.v2f64(<2 x double> %f)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 i8x16 narrow_s_i8x16_i16x8(i16x8 low, i16x8 high) {
   return __builtin_wasm_narrow_s_i8x16_i16x8(low, high);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(
