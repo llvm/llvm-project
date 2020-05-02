@@ -254,7 +254,12 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
                            << toString(std::move(Err)) << '\n';
     } else {
       for (const auto &Sym : Object->symbols()) {
-        uint64_t Address = Sym.getValue();
+        Expected<uint64_t> AddressOrErr = Sym.getValue();
+        if (!AddressOrErr) {
+          // TODO: Actually report errors helpfully.
+          consumeError(AddressOrErr.takeError());
+          continue;
+        }
         Expected<StringRef> Name = Sym.getName();
         Expected<uint32_t> FlagsOrErr = Sym.getFlags();
         if (!Name || !FlagsOrErr ||
@@ -266,7 +271,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
             consumeError(Name.takeError());
           continue;
         }
-        SymbolAddresses[*Name] = Address;
+        SymbolAddresses[*Name] = *AddressOrErr;
       }
     }
   }
