@@ -3163,15 +3163,19 @@ using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
 #endif // > C++17
 
 template <class _Container, class _Predicate>
-inline void __libcpp_erase_if_container( _Container& __c, _Predicate __pred)
-{
-	for (typename _Container::iterator __iter = __c.begin(), __last = __c.end(); __iter != __last;)
-	{
-		if (__pred(*__iter))
-			__iter = __c.erase(__iter);
-		else
-			++__iter;
-	}
+inline typename _Container::size_type
+__libcpp_erase_if_container(_Container& __c, _Predicate __pred) {
+  typename _Container::size_type __old_size = __c.size();
+
+  const typename _Container::iterator __last = __c.end();
+  for (typename _Container::iterator __iter = __c.begin(); __iter != __last;) {
+    if (__pred(*__iter))
+      __iter = __c.erase(__iter);
+    else
+      ++__iter;
+  }
+
+  return __old_size - __c.size();
 }
 
 _LIBCPP_END_NAMESPACE_STD
