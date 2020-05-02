@@ -649,8 +649,8 @@ inline bool isBool(StringRef S) {
 inline QuotingType needsQuotes(StringRef S) {
   if (S.empty())
     return QuotingType::Single;
-  if (isspace(static_cast<unsigned char>(S.front())) ||
-      isspace(static_cast<unsigned char>(S.back())))
+  if (isSpace(static_cast<unsigned char>(S.front())) ||
+      isSpace(static_cast<unsigned char>(S.back())))
     return QuotingType::Single;
   if (isNull(S))
     return QuotingType::Single;
