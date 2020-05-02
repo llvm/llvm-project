@@ -8,7 +8,10 @@
 
 #include "OutputSegment.h"
 #include "InputSection.h"
+#include "MergedOutputSection.h"
+#include "SyntheticSections.h"
 
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -33,13 +36,71 @@ static uint32_t maxProt(StringRef name) {
   return VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE;
 }
 
-void OutputSegment::addSection(InputSection *isec) {
-  isec->parent = this;
-  std::vector<InputSection *> &vec = sections[isec->name];
-  if (vec.empty() && !isec->isHidden()) {
-    ++numNonHiddenSections;
+size_t OutputSegment::numNonHiddenSections() const {
+  size_t count = 0;
+  for (const OutputSegment::SectionMapEntry &i : sections) {
+    OutputSection *os = i.second;
+    count += (os->isHidden() ? 0 : 1);
   }
-  vec.push_back(isec);
+  return count;
+}
+
+void OutputSegment::addOutputSection(OutputSection *os) {
+  os->parent = this;
+  std::pair<SectionMap::iterator, bool> result =
+      sections.insert(SectionMapEntry(os->name, os));
+  if (!result.second) {
+    llvm_unreachable("Attempted to set section, but a section with the same "
+                     "name already exists");
+  }
+}
+
+OutputSection *OutputSegment::getOrCreateOutputSection(StringRef name) {
+  OutputSegment::SectionMap::iterator i = sections.find(name);
+  if (i != sections.end()) {
+    return i->second;
+  }
+
+  auto *os = make<MergedOutputSection>(name);
+  addOutputSection(os);
+  return os;
+}
+
+void OutputSegment::sortOutputSections(OutputSegmentComparator *comparator) {
+  llvm::stable_sort(sections, *comparator->sectionComparator(this));
+}
+
+OutputSegmentComparator::OutputSegmentComparator() {
+  // This defines the order of segments and the sections within each segment.
+  // Segments that are not mentioned here will end up at defaultPosition;
+  // sections that are not mentioned will end up at the end of the section
+  // list for their given segment.
+  std::vector<std::pair<StringRef, std::vector<StringRef>>> ordering{
+      {segment_names::pageZero, {}},
+      {segment_names::text, {section_names::header}},
+      {defaultPosition, {}},
+      // Make sure __LINKEDIT is the last segment (i.e. all its hidden
+      // sections must be ordered after other sections).
+      {segment_names::linkEdit,
+       {
+           section_names::binding,
+           section_names::export_,
+           section_names::symbolTable,
+           section_names::stringTable,
+       }},
+  };
+
+  for (uint32_t i = 0, n = ordering.size(); i < n; ++i) {
+    auto &p = ordering[i];
+    StringRef segname = p.first;
+    const std::vector<StringRef> &sectOrdering = p.second;
+    orderMap.insert(std::pair<StringRef, OutputSectionComparator>(
+        segname, OutputSectionComparator(i, sectOrdering)));
+  }
+
+  // Cache the position for the default comparator since this is the likely
+  // scenario.
+  defaultPositionComparator = &orderMap.find(defaultPosition)->second;
 }
 
 static llvm::DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
@@ -61,4 +122,25 @@ OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
 
   outputSegments.push_back(segRef);
   return segRef;
+}
+
+void macho::sortOutputSegmentsAndSections() {
+  // Sorting only can happen once all outputs have been collected.
+  // Since output sections are grouped by segment, sorting happens
+  // first over all segments, then over sections per segment.
+  auto comparator = OutputSegmentComparator();
+  llvm::stable_sort(outputSegments, comparator);
+
+  // Now that the output sections are sorted, assign the final
+  // output section indices.
+  uint32_t sectionIndex = 0;
+  for (OutputSegment *seg : outputSegments) {
+    seg->sortOutputSections(&comparator);
+    for (auto &p : seg->getSections()) {
+      OutputSection *section = p.second;
+      if (!section->isHidden()) {
+        section->index = ++sectionIndex;
+      }
+    }
+  }
 }

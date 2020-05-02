@@ -24,7 +24,7 @@ public:
   void addSymbol(const Symbol &sym) { exported.push_back(&sym); }
   // Returns the size in bytes of the serialized trie.
   size_t build();
-  void writeTo(uint8_t *buf);
+  void writeTo(uint8_t *buf) const;
 
 private:
   TrieNode *makeNode();
