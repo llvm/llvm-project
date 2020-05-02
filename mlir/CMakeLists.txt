@@ -12,8 +12,13 @@ include(AddMLIR)
 
 # Installing the headers and docs needs to depend on generating any public
 # tablegen'd targets.
+# mlir-generic-headers are dialect-independent.
+add_custom_target(mlir-generic-headers)
+set_target_properties(mlir-generic-headers PROPERTIES FOLDER "Misc")
+# mlir-headers may be dialect-dependent.
 add_custom_target(mlir-headers)
 set_target_properties(mlir-headers PROPERTIES FOLDER "Misc")
+add_dependencies(mlir-headers mlir-generic-headers)
 add_custom_target(mlir-doc)
 
 # Build the CUDA conversions and run according tests if the NVPTX backend
