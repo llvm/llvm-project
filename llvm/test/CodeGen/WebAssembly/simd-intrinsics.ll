@@ -456,28 +456,6 @@ define <2 x i64> @bitselect_v2i64(<2 x i64> %v1, <2 x i64> %v2, <2 x i64> %c) {
   ret <2 x i64> %a
 }
 
-; CHECK-LABEL: trunc_sat_s_v2i64:
-; NO-SIMD128-NOT: f32x4
-; SIMD128-NEXT: .functype trunc_sat_s_v2i64 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i64x2.trunc_sat_f64x2_s $push[[R:[0-9]+]]=, $0
-; SIMD128-NEXT: return $pop[[R]]
-declare <2 x i64> @llvm.wasm.trunc.saturate.signed.v2i64.v2f64(<2 x double>)
-define <2 x i64> @trunc_sat_s_v2i64(<2 x double> %x) {
-  %a = call <2 x i64> @llvm.wasm.trunc.saturate.signed.v2i64.v2f64(<2 x double> %x)
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: trunc_sat_u_v2i64:
-; NO-SIMD128-NOT: f32x4
-; SIMD128-NEXT: .functype trunc_sat_u_v2i64 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i64x2.trunc_sat_f64x2_u $push[[R:[0-9]+]]=, $0
-; SIMD128-NEXT: return $pop[[R]]
-declare <2 x i64> @llvm.wasm.trunc.saturate.unsigned.v2i64.v2f64(<2 x double>)
-define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
-  %a = call <2 x i64> @llvm.wasm.trunc.saturate.unsigned.v2i64.v2f64(<2 x double> %x)
-  ret <2 x i64> %a
-}
-
 ; ==============================================================================
 ; 4 x f32
 ; ==============================================================================

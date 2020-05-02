@@ -24,10 +24,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Verifier.h"
-#include "mlir/Analysis/Dominance.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"

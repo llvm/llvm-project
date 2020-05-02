@@ -107,9 +107,7 @@ struct SymbolEntry {
   uint16_t n_desc;
   uint64_t n_value;
 
-  bool isExternalSymbol() const {
-    return n_type & ((MachO::N_EXT | MachO::N_PEXT));
-  }
+  bool isExternalSymbol() const { return n_type & MachO::N_EXT; }
 
   bool isLocalSymbol() const { return !isExternalSymbol(); }
 

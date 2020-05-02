@@ -47,7 +47,7 @@ enum class Style { windows, posix, native };
 ///   foo/       => foo,.
 ///   /foo/bar   => /,foo,bar
 ///   ../        => ..,.
-///   C:\foo\bar => C:,/,foo,bar
+///   C:\foo\bar => C:,\,foo,bar
 /// @endcode
 class const_iterator
     : public iterator_facade_base<const_iterator, std::input_iterator_tag,

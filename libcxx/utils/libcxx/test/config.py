@@ -414,9 +414,6 @@ class Configuration(object):
                 intMacroValue(macros['__cpp_concepts']) < 201811:
             self.config.available_features.add('libcpp-no-concepts')
 
-        if sys.platform.lower().strip() == 'win32':
-            self.config.available_features.add('host-windows')
-
         if self.target_info.is_windows():
             self.config.available_features.add('windows')
             if self.cxx_stdlib_under_test == 'libc++':
@@ -812,14 +809,12 @@ class Configuration(object):
         self.cxx.compile_flags += ['-D_LIBCPP_DEBUG=%s' % debug_level]
 
     def configure_warnings(self):
-        # Turn on warnings by default for Clang based compilers when C++ >= 11
-        default_enable_warnings = self.cxx.type in ['clang', 'apple-clang'] \
-            and len(self.config.available_features.intersection(
-                ['c++11', 'c++14', 'c++17', 'c++2a'])) != 0
+        # Turn on warnings by default for Clang based compilers
+        default_enable_warnings = self.cxx.type in ['clang', 'apple-clang']
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
         self.cxx.useWarnings(enable_warnings)
-        self.cxx.warning_flags += ['-Wall', '-Wextra']
+        self.cxx.warning_flags += ['-Werror', '-Wall', '-Wextra']
         # On GCC, the libc++ headers cause errors due to throw() decorators
         # on operator new clashing with those from the test suite, so we
         # don't enable warnings in system headers on GCC.
@@ -972,7 +967,7 @@ class Configuration(object):
         sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
         # Configure flags substitutions
         flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
-        compile_flags = self.cxx.compile_flags + self.cxx.warning_flags
+        compile_flags = self.cxx.compile_flags + (self.cxx.warning_flags if self.cxx.use_warnings else [])
         sub.append(('%{flags}',         ' '.join(map(pipes.quote, flags))))
         sub.append(('%{compile_flags}', ' '.join(map(pipes.quote, compile_flags))))
         sub.append(('%{link_flags}',    ' '.join(map(pipes.quote, self.cxx.link_flags))))

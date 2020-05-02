@@ -50,7 +50,7 @@ int main(int, char**)
 {
   using TestSizeT = test_allocator<char>::size_type;
   { // Testing (1)
-    // Nothing TODO. Cannot deduce without any arguments.
+    // Nothing to do. Cannot deduce without any arguments.
   }
   { // Testing (2)
     // This overload isn't compatible with implicit deduction guides as

@@ -99,9 +99,11 @@ class Run(object):
 
     # Update local test object "in place" from remote test object.  This
     # ensures that the original test object which is used for printing test
-    # results reflect the changes.
+    # results reflects the changes.
     def _update_test(self, local_test, remote_test):
-        local_test.__dict__.update(remote_test.__dict__)
+        # Needed for getMissingRequiredFeatures()
+        local_test.requires = remote_test.requires
+        local_test.result = remote_test.result
 
     # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these

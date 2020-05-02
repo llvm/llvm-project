@@ -29,6 +29,7 @@ add_linalg_ods_gen(LinalgNamedStructuredOpsSpec.tc LinalgNamedStructuredOps)
 # Provide a short name for all external dependency that needs to
 # include Linalg in ODS
 add_custom_target(LinalgOdsGen DEPENDS MLIRLinalgNamedStructuredOpsIncGen)
+add_dependencies(mlir-headers LinalgOdsGen)
 
 add_mlir_dialect(LinalgOps linalg)
 
@@ -40,8 +41,10 @@ mlir_tablegen(LinalgStructuredOps.h.inc -gen-op-decls)
 mlir_tablegen(LinalgStructuredOps.cpp.inc -gen-op-defs)
 add_public_tablegen_target(MLIRLinalgStructuredOpsIncGen)
 add_dependencies(MLIRLinalgStructuredOpsIncGen LinalgOdsGen)
-    
+add_dependencies(mlir-headers MLIRLinalgStructuredOpsIncGen)
+
 set(LLVM_TARGET_DEFINITIONS LinalgStructuredOpsInterface.td)
 mlir_tablegen(LinalgStructuredOpsInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(LinalgStructuredOpsInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRLinalgStructuredOpsInterfaceIncGen)
+add_dependencies(mlir-headers MLIRLinalgStructuredOpsInterfaceIncGen)

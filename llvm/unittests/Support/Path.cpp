@@ -1176,6 +1176,7 @@ TEST_F(FileSystemTest, FileMapping) {
 }
 
 TEST(Support, NormalizePath) {
+  //                           Input,        Expected Win, Expected Posix
   using TestTuple = std::tuple<const char *, const char *, const char *>;
   std::vector<TestTuple> Tests;
   Tests.emplace_back("a", "a", "a");

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_VERIFIER_H
-#define MLIR_ANALYSIS_VERIFIER_H
+#ifndef MLIR_IR_VERIFIER_H
+#define MLIR_IR_VERIFIER_H
 
 namespace mlir {
 struct LogicalResult;

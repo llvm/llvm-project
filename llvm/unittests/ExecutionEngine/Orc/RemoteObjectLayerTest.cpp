@@ -16,6 +16,19 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+// Writing 64-bit XCOFF isn't supported yet, so we need to disable some tests on
+// AIX till it is.
+#ifdef _AIX
+#define SKIPTEST_IF_UNSUPPORTED()                                              \
+  do {                                                                         \
+    return;                                                                    \
+  } while (false)
+#else
+#define SKIPTEST_IF_UNSUPPORTED()                                              \
+  do {                                                                         \
+  } while (false)
+#endif
+
 namespace {
 
 class MockObjectLayer {
@@ -109,6 +122,7 @@ MockObjectLayer::ObjectPtr createTestObject() {
 }
 
 TEST(RemoteObjectLayer, AddObject) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -166,6 +180,7 @@ TEST(RemoteObjectLayer, AddObject) {
 }
 
 TEST(RemoteObjectLayer, AddObjectFailure) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -221,6 +236,7 @@ TEST(RemoteObjectLayer, AddObjectFailure) {
 
 
 TEST(RemoteObjectLayer, RemoveObject) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -268,6 +284,7 @@ TEST(RemoteObjectLayer, RemoveObject) {
 }
 
 TEST(RemoteObjectLayer, RemoveObjectFailure) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -324,6 +341,7 @@ TEST(RemoteObjectLayer, RemoveObjectFailure) {
 }
 
 TEST(RemoteObjectLayer, FindSymbol) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -406,6 +424,7 @@ TEST(RemoteObjectLayer, FindSymbol) {
 }
 
 TEST(RemoteObjectLayer, FindSymbolIn) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -484,6 +503,7 @@ TEST(RemoteObjectLayer, FindSymbolIn) {
 }
 
 TEST(RemoteObjectLayer, EmitAndFinalize) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)
@@ -532,6 +552,7 @@ TEST(RemoteObjectLayer, EmitAndFinalize) {
 }
 
 TEST(RemoteObjectLayer, EmitAndFinalizeFailure) {
+  SKIPTEST_IF_UNSUPPORTED();
   llvm::orc::rpc::registerStringError<rpc::RawByteChannel>();
   auto TestObject = createTestObject();
   if (!TestObject)

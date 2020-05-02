@@ -1429,13 +1429,16 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
 }
 
 Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
-  if (!Inst.getType()->isVectorTy()) return nullptr;
+  // FIXME: some of this is likely fine for scalable vectors
+  if (!isa<FixedVectorType>(Inst.getType()))
+    return nullptr;
 
   BinaryOperator::BinaryOps Opcode = Inst.getOpcode();
-  unsigned NumElts = cast<VectorType>(Inst.getType())->getNumElements();
   Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
-  assert(cast<VectorType>(LHS->getType())->getNumElements() == NumElts);
-  assert(cast<VectorType>(RHS->getType())->getNumElements() == NumElts);
+  assert(cast<VectorType>(LHS->getType())->getElementCount() ==
+         cast<VectorType>(Inst.getType())->getElementCount());
+  assert(cast<VectorType>(RHS->getType())->getElementCount() ==
+         cast<VectorType>(Inst.getType())->getElementCount());
 
   // If both operands of the binop are vector concatenations, then perform the
   // narrow binop on each pair of the source operands followed by concatenation
@@ -1518,11 +1521,12 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // intends to move shuffles closer to other shuffles and binops closer to
   // other binops, so they can be folded. It may also enable demanded elements
   // transforms.
+  unsigned NumElts = cast<FixedVectorType>(Inst.getType())->getNumElements();
   Constant *C;
   if (match(&Inst, m_c_BinOp(m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(),
                                                       m_Mask(Mask))),
                              m_Constant(C))) &&
-      cast<VectorType>(V1->getType())->getNumElements() <= NumElts) {
+      cast<FixedVectorType>(V1->getType())->getNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
 
@@ -1533,7 +1537,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
     // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     bool ConstOp1 = isa<Constant>(RHS);
     ArrayRef<int> ShMask = Mask;
-    unsigned SrcVecNumElts = cast<VectorType>(V1->getType())->getNumElements();
+    unsigned SrcVecNumElts =
+        cast<FixedVectorType>(V1->getType())->getNumElements();
     UndefValue *UndefScalar = UndefValue::get(C->getType()->getScalarType());
     SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, UndefScalar);
     bool MayChange = true;

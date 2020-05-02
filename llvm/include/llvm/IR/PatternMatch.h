@@ -262,20 +262,20 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
   return constantint_match<Val>();
 }
 
-/// This helper class is used to match scalar and vector integer constants that
-/// satisfy a specified predicate.
+/// This helper class is used to match scalar and fixed width vector integer
+/// constants that satisfy a specified predicate.
 /// For vector constants, undefined elements are ignored.
 template <typename Predicate> struct cst_pred_ty : public Predicate {
   template <typename ITy> bool match(ITy *V) {
     if (const auto *CI = dyn_cast<ConstantInt>(V))
       return this->isValue(CI->getValue());
-    if (V->getType()->isVectorTy()) {
+    if (const auto *FVTy = dyn_cast<FixedVectorType>(V->getType())) {
       if (const auto *C = dyn_cast<Constant>(V)) {
         if (const auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue()))
           return this->isValue(CI->getValue());
 
         // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
+        unsigned NumElts = FVTy->getNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
         bool HasNonUndefElements = false;
         for (unsigned i = 0; i != NumElts; ++i) {
@@ -462,6 +462,7 @@ inline cst_pred_ty<is_zero_int> m_ZeroInt() {
 struct is_zero {
   template <typename ITy> bool match(ITy *V) {
     auto *C = dyn_cast<Constant>(V);
+    // FIXME: this should be able to do something for scalable vectors
     return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
   }
 };

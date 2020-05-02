@@ -785,18 +785,24 @@ public:
       // of casting the original vector twice. We also need to factor in the
       // cost of the split itself. Count that as 1, to be consistent with
       // TLI->getTypeLegalizationCost().
-      if ((TLI->getTypeAction(Src->getContext(), TLI->getValueType(DL, Src)) ==
-               TargetLowering::TypeSplitVector ||
-           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
-               TargetLowering::TypeSplitVector) &&
-          SrcVTy->getNumElements() > 1 && DstVTy->getNumElements() > 1) {
-        Type *SplitDst = VectorType::get(DstVTy->getElementType(),
-                                         DstVTy->getNumElements() / 2);
-        Type *SplitSrc = VectorType::get(SrcVTy->getElementType(),
-                                         SrcVTy->getNumElements() / 2);
+      bool SplitSrc =
+          TLI->getTypeAction(Src->getContext(), TLI->getValueType(DL, Src)) ==
+          TargetLowering::TypeSplitVector;
+      bool SplitDst =
+          TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
+          TargetLowering::TypeSplitVector;
+      if ((SplitSrc || SplitDst) && SrcVTy->getNumElements() > 1 &&
+          DstVTy->getNumElements() > 1) {
+        Type *SplitDstTy = VectorType::get(DstVTy->getElementType(),
+                                           DstVTy->getNumElements() / 2);
+        Type *SplitSrcTy = VectorType::get(SrcVTy->getElementType(),
+                                           SrcVTy->getNumElements() / 2);
         T *TTI = static_cast<T *>(this);
-        return TTI->getVectorSplitCost() +
-               (2 * TTI->getCastInstrCost(Opcode, SplitDst, SplitSrc, I));
+        // If both types need to be split then the split is free.
+        unsigned SplitCost =
+            (!SplitSrc || !SplitDst) ? TTI->getVectorSplitCost() : 0;
+        return SplitCost +
+               (2 * TTI->getCastInstrCost(Opcode, SplitDstTy, SplitSrcTy, I));
       }
 
       // In other cases where the source or destination are illegal, assume

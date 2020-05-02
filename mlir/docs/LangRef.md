@@ -307,11 +307,11 @@ Example:
 module ::= `module` symbol-ref-id? (`attributes` attribute-dict)? region
 ```
 
-An MLIR module represents an opaque top-level container operation. It contains a
-single region containing a single block that is comprised of any operations.
-Operations within this region must not implicitly capture values defined above
-it. Modules have an optional symbol name that can be used to refer to them in
-operations.
+An MLIR Module represents a top-level container operation. It contains
+a single region containing a single block which can contain any
+operations.  Operations within this region must not implicitly capture
+values defined outside the module.  Modules have an optional symbol
+name that can be used to refer to them in operations.
 
 ### Functions
 
@@ -509,16 +509,16 @@ where the control flow is transmitted next. It may, for example, enter a region
 of the same op, including the same region that returned the control flow.
 
 The enclosing operation determines the way in which control is transmitted into
-the entry block of a Region. The successor to a region’s exit points may not
+the entry block of a Region. The successor to a Region’s exit points may not
 necessarily exist: for example a call to a function that does not return.
-Concurrent or asynchronous execution of regions is unspecified. Operations may
+Concurrent or asynchronous execution of Regions is unspecified. Operations may
 define specific rules of execution, e.g. sequential loops or switch cases.
 
 A Region may also enter another region within the enclosing operation. If an
 operation has multiple regions, the semantics of the operation defines into
 which regions the control flows and in which order, if any. An operation may
-transmit control into regions that were specified in other operations, in
-particular those that defined the values the given operation uses. Thus such
+transmit control into Regions that were specified in other operations, in
+particular those that defined the values the given operation uses. Thus, such
 operations can be treated opaquely in the enclosing control flow graph,
 providing a level of control flow isolation similar to that of the call
 operation.
@@ -1334,9 +1334,10 @@ dense-elements-attribute ::= `dense` `<` attribute-value `>` `:`
 ```
 
 A dense elements attribute is an elements attribute where the storage for the
-constant vector or tensor value has been packed to the element bitwidth. The
-element type of the vector or tensor constant must be of integer, index, or
-floating point type.
+constant vector or tensor value has been densely packed. The attribute supports
+storing integer or floating point elements, with integer/index/floating element
+types. It also support storing string elements with a custom dialect string
+element type.
 
 ##### Opaque Elements Attribute
 
@@ -1465,10 +1466,11 @@ This attribute can only be held internally by
 attribute dictionary), i.e. no other attribute kinds such as Locations or
 extended attribute kinds.
 
-**Rationale:** Given that MLIR models global accesses with symbol references, to
-enable efficient multi-threading, it becomes difficult to effectively reason
-about their uses. By restricting the places that can legally hold a symbol
-reference, we can always opaquely reason about a symbols usage characteristics.
+**Rationale:** Identifying accesses to global data is critical to
+enabling efficient multi-threaded compilation.  Restricting global
+data access to occur through symbols and limiting the places that can
+legally hold a symbol reference simplifies reasoning about these data
+accesses.
 
 See [`Symbols And SymbolTables`](SymbolsAndSymbolTables.md) for more
 information.

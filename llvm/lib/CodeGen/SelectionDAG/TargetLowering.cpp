@@ -2416,6 +2416,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       break;
     unsigned SubIdx = Idx.getZExtValue();
     APInt SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
+    if (!SubElts)
+      return TLO.CombineTo(Op, Base);
     APInt SubUndef, SubZero;
     if (SimplifyDemandedVectorElts(Sub, SubElts, SubUndef, SubZero, TLO,
                                    Depth + 1))
@@ -2436,6 +2438,22 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
     KnownUndef.insertBits(SubUndef, SubIdx);
     KnownZero.insertBits(SubZero, SubIdx);
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!BaseElts.isAllOnesValue() || !SubElts.isAllOnesValue()) {
+      APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+      SDValue NewBase = SimplifyMultipleUseDemandedBits(
+          Base, DemandedBits, BaseElts, TLO.DAG, Depth + 1);
+      SDValue NewSub = SimplifyMultipleUseDemandedBits(
+          Sub, DemandedBits, SubElts, TLO.DAG, Depth + 1);
+      if (NewBase || NewSub) {
+        NewBase = NewBase ? NewBase : Base;
+        NewSub = NewSub ? NewSub : Sub;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewBase,
+                                        NewSub, Op.getOperand(2));
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
@@ -2452,6 +2470,18 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         return true;
       KnownUndef = SrcUndef.extractBits(NumElts, Idx);
       KnownZero = SrcZero.extractBits(NumElts, Idx);
+
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (!DemandedElts.isAllOnesValue()) {
+        APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+        SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+            Src, DemandedBits, SrcElts, TLO.DAG, Depth + 1);
+        if (NewSrc) {
+          SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
+                                          Op.getOperand(1));
+          return TLO.CombineTo(Op, NewOp);
+        }
+      }
     }
     break;
   }

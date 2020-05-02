@@ -660,6 +660,8 @@ static void emitSerializationFunction(const Record *attrClass,
                   opVar, record->getValueAsString("extendedInstSetName"),
                   record->getValueAsInt("extendedInstOpcode"), operands);
   } else {
+    // Emit debug info.
+    os << formatv("  emitDebugLine(functionBody, {0}.getLoc());\n", opVar);
     os << formatv("  encodeInstructionInto("
                   "functionBody, spirv::getOpcode<{0}>(), {1});\n",
                   op.getQualCppClassName(), operands);
@@ -900,13 +902,21 @@ static void emitDeserializationFunction(const Record *attrClass,
   emitOperandDeserialization(op, record->getLoc(), "  ", words, wordIndex,
                              operands, attributes, os);
 
-  os << formatv(
-      "  auto {1} = opBuilder.create<{0}>(unknownLoc, {2}, {3}, {4}); "
-      "(void){1};\n",
-      op.getQualCppClassName(), opVar, resultTypes, operands, attributes);
+  os << formatv("  Location loc = createFileLineColLoc(opBuilder);\n");
+  os << formatv("  auto {1} = opBuilder.create<{0}>(loc, {2}, {3}, {4}); "
+                "(void){1};\n",
+                op.getQualCppClassName(), opVar, resultTypes, operands,
+                attributes);
   if (op.getNumResults() == 1) {
     os << formatv("  valueMap[{0}] = {1}.getResult();\n\n", valueID, opVar);
   }
+
+  // According to SPIR-V spec:
+  // This location information applies to the instructions physically following
+  // this instruction, up to the first occurrence of any of the following: the
+  // next end of block.
+  os << formatv("  if ({0}.hasTrait<OpTrait::IsTerminator>())\n", opVar);
+  os << formatv("    clearDebugLine();\n");
 
   // Decorations
   emitDecorationDeserialization(op, "  ", valueID, attributes, os);
