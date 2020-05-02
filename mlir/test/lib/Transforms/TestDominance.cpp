@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Dominance.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
