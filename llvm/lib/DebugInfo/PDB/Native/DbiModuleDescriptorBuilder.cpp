@@ -89,7 +89,6 @@ void DbiModuleDescriptorBuilder::addSourceFile(StringRef Path) {
 uint32_t DbiModuleDescriptorBuilder::calculateC13DebugInfoSize() const {
   uint32_t Result = 0;
   for (const auto &Builder : C13Builders) {
-    assert(Builder && "Empty C13 Fragment Builder!");
     Result += Builder.calculateSerializedLength();
   }
   return Result;
@@ -163,7 +162,6 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
            "Invalid debug section alignment!");
     // TODO: Write C11 Line data
     for (const auto &Builder : C13Builders) {
-      assert(Builder && "Empty C13 Fragment Builder!");
       if (auto EC = Builder.commit(SymbolWriter, CodeViewContainer::Pdb))
         return EC;
     }
