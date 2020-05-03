@@ -255,6 +255,34 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     %t2 = phi i32 [ %t0, %else_bb ], [ %t1, %then_bb ]
 ///     br %normal_dst
 ///
+/// An indirect musttail call is processed slightly differently in that:
+/// 1. No merge block needed for the orginal and the cloned callsite, since
+///    either one ends the flow. No phi node is needed either.
+/// 2. The return statement following the original call site is duplicated too
+///    and placed immediately after the cloned call site per the IR convention.
+///
+/// For example, the musttail call instruction below:
+///
+///   orig_bb:
+///     %t0 = musttail call i32 %ptr()
+///     ...
+///
+/// Is replaced by the following:
+///
+///   cond_bb:
+///     %cond = icmp eq i32 ()* %ptr, @func
+///     br i1 %cond, %then_bb, %orig_bb
+///
+///   then_bb:
+///     ; The clone of the original call instruction is placed in the "then"
+///     ; block. It is not yet promoted.
+///     %t1 = musttail call i32 %ptr()
+///     ret %t1
+///
+///   orig_bb:
+///     ; The original call instruction stays in its original block.
+///     %t0 = musttail call i32 %ptr()
+///     ret %t0
 static CallBase &versionCallSite(CallBase &CB, Value *Callee,
                                  MDNode *BranchWeights) {
 
@@ -267,6 +295,44 @@ static CallBase &versionCallSite(CallBase &CB, Value *Callee,
   if (CB.getCalledOperand()->getType() != Callee->getType())
     Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
   auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
+
+  if (OrigInst->isMustTailCall()) {
+    // Create an if-then structure. The original instruction stays in its block,
+    // and a clone of the original instruction is placed in the "then" block.
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Cond, &CB, false, BranchWeights);
+    BasicBlock *ThenBlock = ThenTerm->getParent();
+    ThenBlock->setName("if.true.direct_targ");
+    CallBase *NewInst = cast<CallBase>(OrigInst->clone());
+    NewInst->insertBefore(ThenTerm);
+
+    // Place a clone of the optional bitcast after the new call site.
+    Value *NewRetVal = NewInst;
+    auto Next = OrigInst->getNextNode();
+    if (auto *BitCast = dyn_cast_or_null<BitCastInst>(Next)) {
+      assert(BitCast->getOperand(0) == OrigInst &&
+             "bitcast following musttail call must use the call");
+      auto NewBitCast = BitCast->clone();
+      NewBitCast->replaceUsesOfWith(OrigInst, NewInst);
+      NewBitCast->insertBefore(ThenTerm);
+      NewRetVal = NewBitCast;
+      Next = BitCast->getNextNode();
+    }
+
+    // Place a clone of the return instruction after the new call site.
+    ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
+    assert(Ret && "musttail call must precede a ret with an optional bitcast");
+    auto NewRet = Ret->clone();
+    if (Ret->getReturnValue())
+      NewRet->replaceUsesOfWith(Ret->getReturnValue(), NewRetVal);
+    NewRet->insertBefore(ThenTerm);
+
+    // A return instructions is terminating, so we don't need the terminator
+    // instruction just created.
+    ThenTerm->eraseFromParent();
+
+    return *NewInst;
+  }
 
   // Create an if-then-else structure. The original instruction is moved into
   // the "else" block, and a clone of the original instruction is placed in the
