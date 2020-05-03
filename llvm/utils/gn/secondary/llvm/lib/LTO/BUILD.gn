@@ -6,6 +6,7 @@ static_library("LTO") {
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/CodeGen",
+    "//llvm/lib/Extensions",
     "//llvm/lib/IR",
     "//llvm/lib/Linker",
     "//llvm/lib/MC",
