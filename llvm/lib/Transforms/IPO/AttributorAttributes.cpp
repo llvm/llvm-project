@@ -4532,9 +4532,13 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
             for (ReturnInst *RI : RetInsts) {
               if (RI->getFunction() != getAnchorScope())
                 continue;
-              LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *C
+              auto *RC = C;
+              if (RC->getType() != RI->getReturnValue()->getType())
+                RC = ConstantExpr::getBitCast(RC,
+                                              RI->getReturnValue()->getType());
+              LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *RC
                                 << " in " << *RI << " :: " << *this << "\n");
-              if (A.changeUseAfterManifest(RI->getOperandUse(0), *C))
+              if (A.changeUseAfterManifest(RI->getOperandUse(0), *RC))
                 Changed = ChangeStatus::CHANGED;
             }
             return true;
