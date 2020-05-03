@@ -908,9 +908,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
     if (UniqueRVArg->getType()->canLosslesslyBitCastTo(
             getAssociatedFunction()->getReturnType())) {
-      // TODO: This should be handled differently!
-      this->AnchorVal = UniqueRVArg;
-      this->KindOrArgNo = UniqueRVArg->getArgNo();
+      getIRPosition() = IRPosition::argument(*UniqueRVArg);
       Changed = IRAttribute::manifest(A);
     }
   } else if (auto *RVC = dyn_cast<Constant>(UniqueRV.getValue())) {
