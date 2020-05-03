@@ -257,7 +257,8 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
 /// Add an instrumentation to print the IR before and after pass execution,
 /// using the provided configuration.
 void PassManager::enableIRPrinting(std::unique_ptr<IRPrinterConfig> config) {
-  if (config->shouldPrintAtModuleScope() && isMultithreadingEnabled())
+  if (config->shouldPrintAtModuleScope() &&
+      getContext()->isMultithreadingEnabled())
     llvm::report_fatal_error("IR printing can't be setup on a pass-manager "
                              "without disabling multi-threading first.");
   addInstrumentation(

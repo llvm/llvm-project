@@ -65,6 +65,9 @@ public:
   StorageUniquer();
   ~StorageUniquer();
 
+  /// Set the flag specifying if multi-threading is disabled within the uniquer.
+  void disableMultithreading(bool disable = true);
+
   /// This class acts as the base storage that all storage classes must derived
   /// from.
   class BaseStorage {
