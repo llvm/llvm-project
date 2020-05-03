@@ -17,6 +17,7 @@
 #include "support/Cancellation.h"
 #include "support/Context.h"
 #include "support/Path.h"
+#include "support/TestTracer.h"
 #include "support/Threading.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -41,6 +42,7 @@ using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::Pointee;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
 MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
@@ -502,6 +504,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   auto Opts = optsForTest();
   Opts.AsyncThreadsCount = 1;
   Opts.RetentionPolicy.MaxRetainedASTs = 2;
+  trace::TestTracer Tracer;
   TUScheduler S(CDB, Opts);
 
   llvm::StringLiteral SourceContents = R"cpp(
@@ -517,12 +520,16 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   auto Bar = testPath("bar.cpp");
   auto Baz = testPath("baz.cpp");
 
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
   // Build one file in advance. We will not access it later, so it will be the
   // one that the cache will evict.
   updateWithCallback(S, Foo, SourceContents, WantDiagnostics::Yes,
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_EQ(BuiltASTCounter.load(), 1);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(1));
 
   // Build two more files. Since we can retain only 2 ASTs, these should be
   // the ones we see in the cache later.
@@ -532,6 +539,8 @@ TEST_F(TUSchedulerTests, EvictedAST) {
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_EQ(BuiltASTCounter.load(), 3);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(2));
 
   // Check only the last two ASTs are retained.
   ASSERT_THAT(S.getFilesWithCachedAST(), UnorderedElementsAre(Bar, Baz));
@@ -541,6 +550,8 @@ TEST_F(TUSchedulerTests, EvictedAST) {
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_EQ(BuiltASTCounter.load(), 4);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(1));
 
   // Check the AST for foo.cpp is retained now and one of the others got
   // evicted.
@@ -758,11 +769,16 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
   EXPECT_EQ(DiagCount, 2U);
 }
 TEST_F(TUSchedulerTests, NoChangeDiags) {
+  trace::TestTracer Tracer;
   TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto FooCpp = testPath("foo.cpp");
-  auto Contents = "int a; int b;";
+  const auto *Contents = "int a; int b;";
 
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "miss"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
   updateWithDiags(
       S, FooCpp, Contents, WantDiagnostics::No,
       [](std::vector<Diag>) { ADD_FAILURE() << "Should not be called."; });
@@ -771,6 +787,8 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
     cantFail(std::move(IA));
   });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "miss"), SizeIs(1));
 
   // Even though the inputs didn't change and AST can be reused, we need to
   // report the diagnostics, as they were not reported previously.
@@ -779,6 +797,8 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
                   [&](std::vector<Diag>) { SeenDiags = true; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_TRUE(SeenDiags);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(1));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
 
   // Subsequent request does not get any diagnostics callback because the same
   // diags have previously been reported and the inputs didn't change.

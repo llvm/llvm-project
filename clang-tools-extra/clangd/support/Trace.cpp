@@ -9,12 +9,16 @@
 #include "support/Trace.h"
 #include "support/Context.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
 #include <atomic>
+#include <chrono>
+#include <memory>
 #include <mutex>
 
 namespace clang {
@@ -209,27 +213,54 @@ void log(const llvm::Twine &Message) {
 }
 
 // Returned context owns Args.
-static Context makeSpanContext(llvm::Twine Name, llvm::json::Object *Args) {
+static Context makeSpanContext(llvm::Twine Name, llvm::json::Object *Args,
+                               const Metric &LatencyMetric) {
   if (!T)
     return Context::current().clone();
   WithContextValue WithArgs{std::unique_ptr<llvm::json::Object>(Args)};
+  llvm::Optional<WithContextValue> WithLatency;
+  using Clock = std::chrono::high_resolution_clock;
+  WithLatency.emplace(llvm::make_scope_exit(
+      [StartTime = Clock::now(), Name = Name.str(), &LatencyMetric] {
+        LatencyMetric.record(
+            std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() -
+                                                                  StartTime)
+                .count(),
+            Name);
+      }));
   return T->beginSpan(Name.isSingleStringRef() ? Name.getSingleStringRef()
                                                : llvm::StringRef(Name.str()),
                       Args);
 }
 
+// Fallback metric that measures latencies for spans without an explicit latency
+// metric. Labels are span names.
+constexpr Metric SpanLatency("span_latency", Metric::Distribution, "span_name");
+
 // Span keeps a non-owning pointer to the args, which is how users access them.
 // The args are owned by the context though. They stick around until the
 // beginSpan() context is destroyed, when the tracing engine will consume them.
-Span::Span(llvm::Twine Name)
+Span::Span(llvm::Twine Name) : Span(Name, SpanLatency) {}
+Span::Span(llvm::Twine Name, const Metric &LatencyMetric)
     : Args(T ? new llvm::json::Object() : nullptr),
-      RestoreCtx(makeSpanContext(Name, Args)) {}
+      RestoreCtx(makeSpanContext(Name, Args, LatencyMetric)) {}
 
 Span::~Span() {
   if (T)
     T->endSpan();
 }
 
+void Metric::record(double Value, llvm::StringRef Label) const {
+  if (!T)
+    return;
+  assert((LabelName.empty() == Label.empty()) &&
+         "recording a measurement with inconsistent labeling");
+  T->record(*this, Value, Label);
+}
+
+Context EventTracer::beginSpan(llvm::StringRef Name, llvm::json::Object *Args) {
+  return Context::current().clone();
+}
 } // namespace trace
 } // namespace clangd
 } // namespace clang
