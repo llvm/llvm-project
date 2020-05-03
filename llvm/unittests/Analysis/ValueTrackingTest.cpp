@@ -773,6 +773,19 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownMulBits) {
   expectKnownBits(/*zero*/ 95u, /*one*/ 32u);
 }
 
+TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
+  // %q is known nonzero without known bits.
+  // Because %q is nonzero, %A[0] is known to be zero.
+  parseAssembly(
+      "define i8 @test(i8 %p, i8* %pq) {\n"
+      "  %q = load i8, i8* %pq, !range !0\n"
+      "  %A = shl i8 %p, %q\n"
+      "  ret i8 %A\n"
+      "}\n"
+      "!0 = !{ i8 1, i8 5 }\n");
+  expectKnownBits(/*zero*/ 1u, /*one*/ 0u);
+}
+
 TEST_F(ComputeKnownBitsTest, ComputeKnownFshl) {
   // fshl(....1111....0000, 00..1111........, 6)
   // = 11....000000..11
