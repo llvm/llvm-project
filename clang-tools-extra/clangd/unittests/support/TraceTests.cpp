@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestTracer.h"
 #include "support/Context.h"
-#include "support/TestTracer.h"
 #include "support/Trace.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
