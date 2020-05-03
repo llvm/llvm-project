@@ -23,13 +23,11 @@ using namespace llvm::codeview;
 DebugSubsectionRecord::DebugSubsectionRecord() = default;
 
 DebugSubsectionRecord::DebugSubsectionRecord(DebugSubsectionKind Kind,
-                                             BinaryStreamRef Data,
-                                             CodeViewContainer Container)
-    : Container(Container), Kind(Kind), Data(Data) {}
+                                             BinaryStreamRef Data)
+    : Kind(Kind), Data(Data) {}
 
 Error DebugSubsectionRecord::initialize(BinaryStreamRef Stream,
-                                        DebugSubsectionRecord &Info,
-                                        CodeViewContainer Container) {
+                                        DebugSubsectionRecord &Info) {
   const DebugSubsectionHeader *Header;
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readObject(Header))
@@ -39,7 +37,6 @@ Error DebugSubsectionRecord::initialize(BinaryStreamRef Stream,
       static_cast<DebugSubsectionKind>(uint32_t(Header->Kind));
   if (auto EC = Reader.readStreamRef(Info.Data, Header->Length))
     return EC;
-  Info.Container = Container;
   Info.Kind = Kind;
   return Error::success();
 }
@@ -53,14 +50,14 @@ DebugSubsectionKind DebugSubsectionRecord::kind() const { return Kind; }
 BinaryStreamRef DebugSubsectionRecord::getRecordData() const { return Data; }
 
 DebugSubsectionRecordBuilder::DebugSubsectionRecordBuilder(
-    std::shared_ptr<DebugSubsection> Subsection, CodeViewContainer Container)
-    : Subsection(std::move(Subsection)), Container(Container) {}
+    std::shared_ptr<DebugSubsection> Subsection)
+    : Subsection(std::move(Subsection)) {}
 
 DebugSubsectionRecordBuilder::DebugSubsectionRecordBuilder(
-    const DebugSubsectionRecord &Contents, CodeViewContainer Container)
-    : Contents(Contents), Container(Container) {}
+    const DebugSubsectionRecord &Contents)
+    : Contents(Contents) {}
 
-uint32_t DebugSubsectionRecordBuilder::calculateSerializedLength() {
+uint32_t DebugSubsectionRecordBuilder::calculateSerializedLength() const {
   uint32_t DataSize = Subsection ? Subsection->calculateSerializedSize()
                                  : Contents.getRecordData().getLength();
   // The length of the entire subsection is always padded to 4 bytes,
@@ -68,7 +65,8 @@ uint32_t DebugSubsectionRecordBuilder::calculateSerializedLength() {
   return sizeof(DebugSubsectionHeader) + alignTo(DataSize, 4);
 }
 
-Error DebugSubsectionRecordBuilder::commit(BinaryStreamWriter &Writer) const {
+Error DebugSubsectionRecordBuilder::commit(BinaryStreamWriter &Writer,
+                                           CodeViewContainer Container) const {
   assert(Writer.getOffset() % alignOf(Container) == 0 &&
          "Debug Subsection not properly aligned");
 

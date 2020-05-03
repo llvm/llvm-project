@@ -187,7 +187,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   std::vector<DebugSubsectionRecordBuilder> Builders;
   uint32_t Size = sizeof(uint32_t);
   for (auto &SS : CVSS) {
-    DebugSubsectionRecordBuilder B(SS, CodeViewContainer::ObjectFile);
+    DebugSubsectionRecordBuilder B(SS);
     Size += B.calculateSerializedLength();
     Builders.push_back(std::move(B));
   }
@@ -197,7 +197,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
 
   Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
   for (const auto &B : Builders) {
-    Err(B.commit(Writer));
+    Err(B.commit(Writer, CodeViewContainer::ObjectFile));
   }
   return {Output};
 }
