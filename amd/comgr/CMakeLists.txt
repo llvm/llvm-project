@@ -28,27 +28,10 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(Clang REQUIRED)
   add_definitions(${LLVM_DEFINITIONS})
   include_directories(${LLVM_INCLUDE_DIRS})
-  link_directories(${LLVM_LIBRARY_DIRS})
   include_directories(${CLANG_INCLUDE_DIRS})
 
-  # FIXME: There is no way to directly determine the include paths for LLD when
-  # working with an LLVM build tree, but we want to avoid having to install LLVM
-  # to build Comgr. This should eventually be fixed in usptream LLD so this can
-  # be removed.
-  if(DEFINED LLVM_BUILD_MAIN_SRC_DIR)
-    set(INTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/tools/lld/include")
-    set(EXTERNAL_LLD_INCLUDE_DIRS "${LLVM_BUILD_MAIN_SRC_DIR}/../lld/include")
-    if (EXISTS "${INTERNAL_LLD_INCLUDE_DIRS}"
-        AND IS_DIRECTORY "${INTERNAL_LLD_INCLUDE_DIRS}")
-      set(LLD_INCLUDE_DIRS "${INTERNAL_LLD_INCLUDE_DIRS}")
-    elseif (EXISTS "${EXTERNAL_LLD_INCLUDE_DIRS}"
-        AND IS_DIRECTORY "${EXTERNAL_LLD_INCLUDE_DIRS}")
-      set(LLD_INCLUDE_DIRS "${EXTERNAL_LLD_INCLUDE_DIRS}")
-    else()
-      message(FATAL_ERROR "You are attempting to compile using an LLVM build tree, but the LLD include directory could not be located. The paths '${INTERNAL_LLD_INCLUDE_DIRS}' and '${EXTERNAL_LLD_INCLUDE_DIRS}' were tried.")
-    endif()
-    include_directories(${LLD_INCLUDE_DIRS})
-  endif()
+  find_package(LLD REQUIRED CONFIG)
+  include_directories(${LLD_INCLUDE_DIRS})
 else()
   # If building with LLVM_EXTERNAL_PROJECTS, we've already picked up
   # the include directories for LLVM, but not clang.
