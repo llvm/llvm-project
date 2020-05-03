@@ -55,6 +55,12 @@ public:
   /// Enables creating operations in unregistered dialects.
   void allowUnregisteredDialects(bool allow = true);
 
+  /// Return true if multi-threading is enabled by the context.
+  bool isMultithreadingEnabled();
+
+  /// Set the flag specifying if multi-threading is disabled by the context.
+  void disableMultithreading(bool disable = true);
+
   /// Return true if we should attach the operation to diagnostics emitted via
   /// Operation::emit.
   bool shouldPrintOpOnDiagnostic();

@@ -726,10 +726,9 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
     // in both cases we just need the second type index.
     if (!ti->isSimple() && !ti->isNoneType()) {
       CVType funcIdData = iDTable.getType(*ti);
-      SmallVector<TypeIndex, 2> indices;
-      discoverTypeIndices(funcIdData, indices);
-      assert(indices.size() == 2);
-      *ti = indices[1];
+      ArrayRef<uint8_t> tiBuf = funcIdData.data().slice(8, 4);
+      assert(tiBuf.size() == 4 && "corruct LF_[MEM]FUNC_ID record");
+      *ti = *reinterpret_cast<const TypeIndex *>(tiBuf.data());
     }
 
     kind = (kind == SymbolKind::S_GPROC32_ID) ? SymbolKind::S_GPROC32

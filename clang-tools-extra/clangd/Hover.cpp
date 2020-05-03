@@ -11,12 +11,12 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "FindTarget.h"
-#include "FormattedString.h"
 #include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
 #include "support/Logger.h"
+#include "support/Markup.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
@@ -773,7 +773,7 @@ markup::Document HoverInfo::present() const {
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
   if (Kind != index::SymbolKind::Unknown)
-    Header.appendText(index::getSymbolKindString(Kind));
+    Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
 
@@ -787,9 +787,9 @@ markup::Document HoverInfo::present() const {
     // Parameters:
     // - `bool param1`
     // - `int param2 = 5`
-    Output.addParagraph().appendText("→").appendCode(*ReturnType);
+    Output.addParagraph().appendText("→ ").appendCode(*ReturnType);
     if (Parameters && !Parameters->empty()) {
-      Output.addParagraph().appendText("Parameters:");
+      Output.addParagraph().appendText("Parameters: ");
       markup::BulletList &L = Output.addBulletList();
       for (const auto &Param : *Parameters) {
         std::string Buffer;
@@ -804,7 +804,7 @@ markup::Document HoverInfo::present() const {
 
   if (Value) {
     markup::Paragraph &P = Output.addParagraph();
-    P.appendText("Value =");
+    P.appendText("Value = ");
     P.appendCode(*Value);
   }
 
@@ -883,7 +883,7 @@ void parseDocumentationLine(llvm::StringRef Line, markup::Paragraph &Out) {
         break;
     }
   }
-  Out.appendText(Line);
+  Out.appendText(Line).appendSpace();
 }
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {

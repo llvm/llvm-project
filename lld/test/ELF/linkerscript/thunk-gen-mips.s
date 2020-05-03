@@ -15,9 +15,9 @@
 # RUN: ld.lld -o %t.exe --script %t.script %t %t1
 # RUN: llvm-objdump -t %t.exe | FileCheck %s
 # CHECK: SYMBOL TABLE:
-# CHECK-ANY: 00000000         .text           00000000 _start
-# CHECK-ANY: 0010000c l     F .text           00000010 __LA25Thunk_too_far
-# CHECK-ANY: 00100020 g     F .text           00000024 too_far
+# CHECK-DAG:                         [[#%x, START_ADDR:]] g       .text           00000000 _start
+# CHECK-DAG: {{0*}}[[#THUNK_ADDR:START_ADDR+0x100000+12]] l     F .text           00000010 __LA25Thunk_too_far
+# CHECK-DAG:                     {{0*}}[[#THUNK_ADDR+20]] g     F .text           0000000c too_far
 
 .ifdef MAIN
 .global _start

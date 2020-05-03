@@ -31,11 +31,10 @@ It depends on the actual platform whether plain ``char`` is handled as ``signed 
 by default and so it is caught by this check or not. To change the default behavior
 you can use ``-funsigned-char`` and ``-fsigned-char`` compilation options.
 
-Currently, this check is limited to assignments and variable declarations,
-where a ``signed char`` is assigned to an integer variable and to
-equality/inequality comparisons between ``signed char`` and ``unsigned char``.
-There are other use cases where the unexpected value ranges might lead to
-similar bogus behavior.
+Currently, this check warns in the following cases:
+- ``signed char`` is assigned to an integer variable
+- ``signed char`` and ``unsigned char`` are compared with equality/inequality operator
+- ``signed char`` is converted to an integer in the array subscript
 
 See also:
 `STR34-C. Cast characters to unsigned char before converting to larger integer sizes

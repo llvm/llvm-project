@@ -1,4 +1,4 @@
-// RUN: mlir-opt -disable-pass-threading -test-spirv-target-env %s | FileCheck %s
+// RUN: mlir-opt -mlir-disable-threading -test-spirv-target-env %s | FileCheck %s
 
 // Note: The following tests check that a spv.target_env can properly control
 // the conversion target and filter unavailable ops during the conversion.

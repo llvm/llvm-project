@@ -21,6 +21,7 @@ add_clang_library(clangdSupport
   Context.cpp
   FSProvider.cpp
   Logger.cpp
+  Markup.cpp
   Shutdown.cpp
   Threading.cpp
   Trace.cpp

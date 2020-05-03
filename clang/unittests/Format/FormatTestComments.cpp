@@ -28,11 +28,7 @@ FormatStyle getGoogleStyle() { return getGoogleStyle(FormatStyle::LK_Cpp); }
 
 class FormatTestComments : public ::testing::Test {
 protected:
-  enum StatusCheck {
-    SC_ExpectComplete,
-    SC_ExpectIncomplete,
-    SC_DoNotCheck
-  };
+  enum StatusCheck { SC_ExpectComplete, SC_ExpectIncomplete, SC_DoNotCheck };
 
   std::string format(llvm::StringRef Code,
                      const FormatStyle &Style = getLLVMStyle(),
@@ -649,7 +645,8 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
                    "//!line 4\n"
                    "//!line 5\n"
                    "// line 6\n"
-                   "//line 7", getLLVMStyleWithColumns(20)));
+                   "//line 7",
+                   getLLVMStyleWithColumns(20)));
 
   EXPECT_EQ("// aa bb cc dd",
             format("// aa bb             cc dd                   ",
@@ -1346,7 +1343,8 @@ TEST_F(FormatTestComments, KeepsTrailingPPCommentsAndSectionCommentsSeparate) {
                "  // section comment 3\n"
                "  i = 4;\n"
                "#endif\n"
-               "}", getLLVMStyleWithColumns(80));
+               "}",
+               getLLVMStyleWithColumns(80));
 }
 
 TEST_F(FormatTestComments, AlignsPPElseEndifComments) {
@@ -1824,14 +1822,13 @@ TEST_F(FormatTestComments, ReflowsComments) {
 
   // Reflow the last two lines of a section that starts with a line having
   // different indentation.
-  EXPECT_EQ(
-      "//     long\n"
-      "// long long long\n"
-      "// long long",
-      format("//     long\n"
-             "// long long long long\n"
-             "// long",
-             getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("//     long\n"
+            "// long long long\n"
+            "// long long",
+            format("//     long\n"
+                   "// long long long long\n"
+                   "// long",
+                   getLLVMStyleWithColumns(20)));
 
   // Keep the block comment endling '*/' while reflowing.
   EXPECT_EQ("/* Long long long\n"
@@ -1911,10 +1908,9 @@ TEST_F(FormatTestComments, ReflowsComments) {
   EXPECT_EQ("// long long long\n"
             "// long\n"
             "// ... --- ...",
-            format(
-                "// long long long long\n"
-                "// ... --- ...",
-                getLLVMStyleWithColumns(20)));
+            format("// long long long long\n"
+                   "// ... --- ...",
+                   getLLVMStyleWithColumns(20)));
 
   // Don't reflow lines starting with '@'.
   EXPECT_EQ("// long long long\n"
@@ -1968,10 +1964,9 @@ TEST_F(FormatTestComments, ReflowsComments) {
   // characters.
   EXPECT_EQ("// long long long\n"
             "// long 'long'",
-            format(
-                "// long long long long\n"
-                "// 'long'",
-                getLLVMStyleWithColumns(20)));
+            format("// long long long long\n"
+                   "// 'long'",
+                   getLLVMStyleWithColumns(20)));
 
   // Don't reflow between separate blocks of comments.
   EXPECT_EQ("/* First comment\n"
@@ -2420,7 +2415,7 @@ TEST_F(FormatTestComments, BlockComments) {
             format("int aaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
                    "    /* line 1\n"
                    "       bbbbbbbbbbbb */ bbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
-            getLLVMStyleWithColumns(50)));
+                   getLLVMStyleWithColumns(50)));
 
   FormatStyle NoBinPacking = getLLVMStyle();
   NoBinPacking.BinPackParameters = false;
@@ -2791,15 +2786,18 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
   EXPECT_EQ("/*\n"
             " */",
             format("/*\n"
-                   "*/", getLLVMStyle()));
+                   "*/",
+                   getLLVMStyle()));
   EXPECT_EQ("/*\n"
             " */",
             format("/*\n"
-                   " */", getLLVMStyle()));
+                   " */",
+                   getLLVMStyle()));
   EXPECT_EQ("/*\n"
             " */",
             format("/*\n"
-                   "  */", getLLVMStyle()));
+                   "  */",
+                   getLLVMStyle()));
 
   // Align a single line.
   EXPECT_EQ("/*\n"
@@ -2854,19 +2852,22 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
             " */",
             format("/*\n"
                    "* line\n"
-                   "*/", getLLVMStyle()));
+                   "*/",
+                   getLLVMStyle()));
   EXPECT_EQ("/*\n"
             " * line\n"
             " */",
             format("/*\n"
                    "   * line\n"
-                   "  */", getLLVMStyle()));
+                   "  */",
+                   getLLVMStyle()));
   EXPECT_EQ("/*\n"
             " * line\n"
             " */",
             format("/*\n"
                    "  * line\n"
-                   "  */", getLLVMStyle()));
+                   "  */",
+                   getLLVMStyle()));
 
   // Align two lines.
   EXPECT_EQ("/* line 1\n"
@@ -2947,7 +2948,8 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                    "  *  line 2\n"
                    "   * line 3\n"
                    "*   line 4\n"
-                   "*/", getLLVMStyle()));
+                   "*/",
+                   getLLVMStyle()));
 
   // Align empty or blank lines.
   EXPECT_EQ("/**\n"
@@ -2959,7 +2961,8 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                    "*  \n"
                    " * \n"
                    "  *\n"
-                   "*/", getLLVMStyle()));
+                   "*/",
+                   getLLVMStyle()));
 
   // Align while breaking and reflowing.
   EXPECT_EQ("/*\n"
@@ -3096,7 +3099,7 @@ TEST_F(FormatTestComments, BreaksBeforeTrailingUnbreakableSequence) {
 }
 
 TEST_F(FormatTestComments, ReflowBackslashCrash) {
-// clang-format off
+  // clang-format off
   EXPECT_EQ(
 "// How to run:\n"
 "// bbbbb run \\\n"
@@ -3107,7 +3110,7 @@ TEST_F(FormatTestComments, ReflowBackslashCrash) {
 "// bbbbb run \\\n"
 "// rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr \\\n"
 "// <log_file> -- --output_directory=\"<output_directory>\""));
-// clang-format on
+  // clang-format on
 }
 
 TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
@@ -3143,18 +3146,18 @@ TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
                    "long long long long long long long long long long long\n"
                    " */\n",
                    Style));
-  EXPECT_EQ(
-      "/**\n"
-      " * Sentence that\n"
-      " * should be broken.\n"
-      " * @param short\n"
-      " * keep indentation\n"
-      " */\n", format(
-          "/**\n"
-          " * Sentence that should be broken.\n"
-          " * @param short\n"
-          " * keep indentation\n"
-          " */\n", Style20));
+  EXPECT_EQ("/**\n"
+            " * Sentence that\n"
+            " * should be broken.\n"
+            " * @param short\n"
+            " * keep indentation\n"
+            " */\n",
+            format("/**\n"
+                   " * Sentence that should be broken.\n"
+                   " * @param short\n"
+                   " * keep indentation\n"
+                   " */\n",
+                   Style20));
 
   EXPECT_EQ("/**\n"
             " * @param l1 long1\n"

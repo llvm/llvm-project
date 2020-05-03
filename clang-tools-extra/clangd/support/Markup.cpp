@@ -1,12 +1,11 @@
-//===--- FormattedString.cpp --------------------------------*- C++-*------===//
+//===--- Markup.cpp -----------------------------------------*- C++-*------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "FormattedString.h"
-#include "clang/Basic/CharInfo.h"
+#include "support/Markup.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,7 +24,6 @@
 namespace clang {
 namespace clangd {
 namespace markup {
-
 namespace {
 
 // Is <contents a plausible start to an HTML tag?
@@ -45,11 +43,11 @@ bool looksLikeTag(llvm::StringRef Contents) {
                  .drop_while([](char C) {
                    return llvm::isAlnum(C) || C == '-' || C == '_' || C == ':';
                  })
-                 .drop_while(isWhitespace);
+                 .drop_while(llvm::isSpace);
   // The rest of the tag consists of attributes, which have restrictive names.
   // If we hit '=', all bets are off (attribute values can contain anything).
   for (; !Contents.empty(); Contents = Contents.drop_front()) {
-    if (llvm::isAlnum(Contents.front()) || isWhitespace(Contents.front()))
+    if (llvm::isAlnum(Contents.front()) || llvm::isSpace(Contents.front()))
       continue;
     if (Contents.front() == '>' || Contents.startswith("/>"))
       return true; // May close the tag.
@@ -70,7 +68,7 @@ bool looksLikeTag(llvm::StringRef Contents) {
 // a markdown grammar construct.
 bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
                         bool StartsLine) {
-  assert(Before.take_while(isWhitespace).empty());
+  assert(Before.take_while(llvm::isSpace).empty());
   auto RulerLength = [&]() -> /*Length*/ unsigned {
     if (!StartsLine || !Before.empty())
       return false;
@@ -82,8 +80,8 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
            (After.empty() || After.startswith(" "));
   };
   auto SpaceSurrounds = [&]() {
-    return (After.empty() || isWhitespace(After.front())) &&
-           (Before.empty() || isWhitespace(Before.back()));
+    return (After.empty() || llvm::isSpace(After.front())) &&
+           (Before.empty() || llvm::isSpace(Before.back()));
   };
   auto WordSurrounds = [&]() {
     return (!After.empty() && llvm::isAlnum(After.front())) &&
@@ -346,18 +344,21 @@ std::string Block::asPlainText() const {
 }
 
 void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
-  llvm::StringRef Sep = "";
+  bool NeedsSpace = false;
+  bool HasChunks = false;
   for (auto &C : Chunks) {
-    OS << Sep;
+    if (C.SpaceBefore || NeedsSpace)
+      OS << " ";
     switch (C.Kind) {
     case Chunk::PlainText:
-      OS << renderText(C.Contents, Sep.empty());
+      OS << renderText(C.Contents, !HasChunks);
       break;
     case Chunk::InlineCode:
       OS << renderInlineBlock(C.Contents);
       break;
     }
-    Sep = " ";
+    HasChunks = true;
+    NeedsSpace = C.SpaceAfter;
   }
   // Paragraphs are translated into markdown lines, not markdown paragraphs.
   // Therefore it only has a single linebreak afterwards.
@@ -381,13 +382,15 @@ llvm::StringRef chooseMarker(llvm::ArrayRef<llvm::StringRef> Options,
 }
 
 void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
-  llvm::StringRef Sep = "";
+  bool NeedsSpace = false;
   for (auto &C : Chunks) {
+    if (C.SpaceBefore || NeedsSpace)
+      OS << " ";
     llvm::StringRef Marker = "";
     if (C.Preserve && C.Kind == Chunk::InlineCode)
       Marker = chooseMarker({"`", "'", "\""}, C.Contents);
-    OS << Sep << Marker << C.Contents << Marker;
-    Sep = " ";
+    OS << Marker << C.Contents << Marker;
+    NeedsSpace = C.SpaceAfter;
   }
   OS << '\n';
 }
@@ -410,6 +413,12 @@ void BulletList::renderPlainText(llvm::raw_ostream &OS) const {
   }
 }
 
+Paragraph &Paragraph::appendSpace() {
+  if (!Chunks.empty())
+    Chunks.back().SpaceAfter = true;
+  return *this;
+}
+
 Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   std::string Norm = canonicalizeSpaces(Text);
   if (Norm.empty())
@@ -418,10 +427,14 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   Chunk &C = Chunks.back();
   C.Contents = std::move(Norm);
   C.Kind = Chunk::PlainText;
+  C.SpaceBefore = llvm::isSpace(Text.front());
+  C.SpaceAfter = llvm::isSpace(Text.back());
   return *this;
 }
 
 Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
+  bool AdjacentCode =
+      !Chunks.empty() && Chunks.back().Kind == Chunk::InlineCode;
   std::string Norm = canonicalizeSpaces(std::move(Code));
   if (Norm.empty())
     return *this;
@@ -430,6 +443,8 @@ Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
   C.Contents = std::move(Norm);
   C.Kind = Chunk::InlineCode;
   C.Preserve = Preserve;
+  // Disallow adjacent code spans without spaces, markdown can't render them.
+  C.SpaceBefore = AdjacentCode;
   return *this;
 }
 
