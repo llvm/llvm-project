@@ -149,15 +149,6 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
               llvm::ValueIs(testing::ElementsAre(
                   DiagMessage("Use of undeclared identifier 'changed'"))));
 }
-
-TEST_F(LSPTest, RecordsLatencies) {
-  trace::TestTracer Tracer;
-  auto &Client = start();
-  llvm::StringLiteral MethodName = "method_name";
-  EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(0));
-  llvm::consumeError(Client.call(MethodName, {}).take().takeError());
-  EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(1));
-}
 } // namespace
 } // namespace clangd
 } // namespace clang

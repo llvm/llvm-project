@@ -27,7 +27,7 @@ namespace trace {
 /// A RAII Tracer that can be used by tests.
 class TestTracer : public EventTracer {
 public:
-  TestTracer() : Session(*this) {}
+  TestTracer() : S(*this) {}
   /// Stores all the measurements to be returned with take later on.
   void record(const Metric &Metric, double Value,
               llvm::StringRef Label) override;
@@ -40,7 +40,7 @@ private:
   std::mutex Mu;
   /// Measurements recorded per metric per label.
   llvm::StringMap<llvm::StringMap<std::vector<double>>> Measurements;
-  Session Session;
+  Session S;
 };
 
 } // namespace trace
