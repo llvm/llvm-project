@@ -179,13 +179,15 @@ define arm_aapcs_vfpcc <2 x i64> @bitcast_to_v2i1(i2 %b, <2 x i64> %a) {
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
-; CHECK-LE-NEXT:    and r0, r0, #3
-; CHECK-LE-NEXT:    sbfx r1, r0, #0, #1
-; CHECK-LE-NEXT:    sbfx r0, r0, #1, #1
-; CHECK-LE-NEXT:    vmov.32 q1[0], r1
-; CHECK-LE-NEXT:    vmov.32 q1[1], r1
-; CHECK-LE-NEXT:    vmov.32 q1[2], r0
-; CHECK-LE-NEXT:    vmov.32 q1[3], r0
+; CHECK-LE-NEXT:    and r1, r0, #2
+; CHECK-LE-NEXT:    and r0, r0, #1
+; CHECK-LE-NEXT:    rsbs r0, r0, #0
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmov.32 q1[0], r0
+; CHECK-LE-NEXT:    sub.w r1, r2, r1, lsr #1
+; CHECK-LE-NEXT:    vmov.32 q1[1], r0
+; CHECK-LE-NEXT:    vmov.32 q1[2], r1
+; CHECK-LE-NEXT:    vmov.32 q1[3], r1
 ; CHECK-LE-NEXT:    vand q0, q0, q1
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -194,9 +196,11 @@ define arm_aapcs_vfpcc <2 x i64> @bitcast_to_v2i1(i2 %b, <2 x i64> %a) {
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
-; CHECK-BE-NEXT:    and r0, r0, #3
-; CHECK-BE-NEXT:    sbfx r1, r0, #0, #1
-; CHECK-BE-NEXT:    sbfx r0, r0, #1, #1
+; CHECK-BE-NEXT:    and r1, r0, #2
+; CHECK-BE-NEXT:    movs r2, #0
+; CHECK-BE-NEXT:    and r0, r0, #1
+; CHECK-BE-NEXT:    sub.w r1, r2, r1, lsr #1
+; CHECK-BE-NEXT:    rsbs r0, r0, #0
 ; CHECK-BE-NEXT:    vmov.32 q1[0], r1
 ; CHECK-BE-NEXT:    vmov.32 q1[1], r1
 ; CHECK-BE-NEXT:    vmov.32 q1[2], r0
