@@ -988,7 +988,7 @@ declare i8* @passthru_p8(i8* returned)
 define i32 @returned_const_int_arg() {
 ; CHECK-LABEL: @returned_const_int_arg(
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @passthru_i32(i32 42)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 42
 ;
   %x = call i32 @passthru_i32(i32 42)
   ret i32 %x
