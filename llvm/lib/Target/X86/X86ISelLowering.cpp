@@ -15138,37 +15138,13 @@ static SDValue splitAndLowerShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   int NumElements = VT.getVectorNumElements();
   int SplitNumElements = NumElements / 2;
   MVT ScalarVT = VT.getVectorElementType();
-  MVT SplitVT = MVT::getVectorVT(ScalarVT, NumElements / 2);
+  MVT SplitVT = MVT::getVectorVT(ScalarVT, SplitNumElements);
 
-  // Rather than splitting build-vectors, just build two narrower build
-  // vectors. This helps shuffling with splats and zeros.
+  // Use splitVector/extractSubVector so that split build-vectors just build two
+  // narrower build vectors. This helps shuffling with splats and zeros.
   auto SplitVector = [&](SDValue V) {
-    V = peekThroughBitcasts(V);
-
-    MVT OrigVT = V.getSimpleValueType();
-    int OrigNumElements = OrigVT.getVectorNumElements();
-    int OrigSplitNumElements = OrigNumElements / 2;
-    MVT OrigScalarVT = OrigVT.getVectorElementType();
-    MVT OrigSplitVT = MVT::getVectorVT(OrigScalarVT, OrigNumElements / 2);
-
     SDValue LoV, HiV;
-
-    auto *BV = dyn_cast<BuildVectorSDNode>(V);
-    if (!BV) {
-      LoV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OrigSplitVT, V,
-                        DAG.getIntPtrConstant(0, DL));
-      HiV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OrigSplitVT, V,
-                        DAG.getIntPtrConstant(OrigSplitNumElements, DL));
-    } else {
-
-      SmallVector<SDValue, 16> LoOps, HiOps;
-      for (int i = 0; i < OrigSplitNumElements; ++i) {
-        LoOps.push_back(BV->getOperand(i));
-        HiOps.push_back(BV->getOperand(i + OrigSplitNumElements));
-      }
-      LoV = DAG.getBuildVector(OrigSplitVT, DL, LoOps);
-      HiV = DAG.getBuildVector(OrigSplitVT, DL, HiOps);
-    }
+    std::tie(LoV, HiV) = splitVector(peekThroughBitcasts(V), DAG, DL);
     return std::make_pair(DAG.getBitcast(SplitVT, LoV),
                           DAG.getBitcast(SplitVT, HiV));
   };
