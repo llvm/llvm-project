@@ -50,6 +50,10 @@ namespace {
 /// various bits of an MLIRContext. This uses a struct wrapper to avoid the need
 /// for global command line options.
 struct MLIRContextOptions {
+  llvm::cl::opt<bool> disableThreading{
+      "mlir-disable-threading",
+      llvm::cl::desc("Disabling multi-threading within MLIR")};
+
   llvm::cl::opt<bool> printOpOnDiagnostic{
       "mlir-print-op-on-diagnostic",
       llvm::cl::desc("When a diagnostic is emitted on an operation, also print "
@@ -102,6 +106,41 @@ struct BuiltinDialect : public Dialect {
 } // end anonymous namespace.
 
 //===----------------------------------------------------------------------===//
+// Locking Utilities
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Utility reader lock that takes a runtime flag that specifies if we really
+/// need to lock.
+struct ScopedReaderLock {
+  ScopedReaderLock(llvm::sys::SmartRWMutex<true> &mutexParam, bool shouldLock)
+      : mutex(shouldLock ? &mutexParam : nullptr) {
+    if (mutex)
+      mutex->lock_shared();
+  }
+  ~ScopedReaderLock() {
+    if (mutex)
+      mutex->unlock_shared();
+  }
+  llvm::sys::SmartRWMutex<true> *mutex;
+};
+/// Utility writer lock that takes a runtime flag that specifies if we really
+/// need to lock.
+struct ScopedWriterLock {
+  ScopedWriterLock(llvm::sys::SmartRWMutex<true> &mutexParam, bool shouldLock)
+      : mutex(shouldLock ? &mutexParam : nullptr) {
+    if (mutex)
+      mutex->lock();
+  }
+  ~ScopedWriterLock() {
+    if (mutex)
+      mutex->unlock();
+  }
+  llvm::sys::SmartRWMutex<true> *mutex;
+};
+} // end anonymous namespace.
+
+//===----------------------------------------------------------------------===//
 // AffineMap and IntegerSet hashing
 //===----------------------------------------------------------------------===//
 
@@ -111,8 +150,10 @@ template <typename ValueT, typename DenseInfoT, typename KeyT,
           typename ConstructorFn>
 static ValueT safeGetOrCreate(DenseSet<ValueT, DenseInfoT> &container,
                               KeyT &&key, llvm::sys::SmartRWMutex<true> &mutex,
+                              bool threadingIsEnabled,
                               ConstructorFn &&constructorFn) {
-  { // Check for an existing instance in read-only mode.
+  // Check for an existing instance in read-only mode.
+  if (threadingIsEnabled) {
     llvm::sys::SmartScopedReader<true> instanceLock(mutex);
     auto it = container.find_as(key);
     if (it != container.end())
@@ -120,16 +161,14 @@ static ValueT safeGetOrCreate(DenseSet<ValueT, DenseInfoT> &container,
   }
 
   // Acquire a writer-lock so that we can safely create the new instance.
-  llvm::sys::SmartScopedWriter<true> instanceLock(mutex);
+  ScopedWriterLock instanceLock(mutex, threadingIsEnabled);
 
   // Check for an existing instance again here, because another writer thread
-  // may have already created one.
+  // may have already created one. Otherwise, construct a new instance.
   auto existing = container.insert_as(ValueT(), key);
-  if (!existing.second)
-    return *existing.first;
-
-  // Otherwise, construct a new instance of the value.
-  return *existing.first = constructorFn();
+  if (existing.second)
+    return *existing.first = constructorFn();
+  return *existing.first;
 }
 
 namespace {
@@ -217,6 +256,9 @@ public:
   /// detect such use cases
   bool allowUnregisteredDialects = false;
 
+  /// Enable support for multi-threading within MLIR.
+  bool threadingIsEnabled = true;
+
   /// If the operation should be attached to diagnostics printed via the
   /// Operation::emit methods.
   bool printOpOnDiagnostic = true;
@@ -288,17 +330,19 @@ public:
   UnknownLoc unknownLocAttr;
 
 public:
-  MLIRContextImpl() : identifiers(identifierAllocator) {
-    // Initialize values based on the command line flags if they were provided.
-    if (clOptions.isConstructed()) {
-      printOpOnDiagnostic = clOptions->printOpOnDiagnostic;
-      printStackTraceOnDiagnostic = clOptions->printStackTraceOnDiagnostic;
-    }
-  }
+  MLIRContextImpl() : identifiers(identifierAllocator) {}
 };
 } // end namespace mlir
 
 MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
+  // Initialize values based on the command line flags if they were provided.
+  if (clOptions.isConstructed()) {
+    disableMultithreading(clOptions->disableThreading);
+    printOpOnDiagnostic(clOptions->printOpOnDiagnostic);
+    printStackTraceOnDiagnostic(clOptions->printStackTraceOnDiagnostic);
+  }
+
+  // Register dialects with this context.
   new BuiltinDialect(this);
   registerAllDialects(this);
 
@@ -372,11 +416,10 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 /// Return information about all registered IR dialects.
 std::vector<Dialect *> MLIRContext::getRegisteredDialects() {
   // Lock access to the context registry.
-  llvm::sys::SmartScopedReader<true> registryLock(getImpl().contextMutex);
-
+  ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
   std::vector<Dialect *> result;
-  result.reserve(getImpl().dialects.size());
-  for (auto &dialect : getImpl().dialects)
+  result.reserve(impl->dialects.size());
+  for (auto &dialect : impl->dialects)
     result.push_back(dialect.get());
   return result;
 }
@@ -385,11 +428,15 @@ std::vector<Dialect *> MLIRContext::getRegisteredDialects() {
 /// then return nullptr.
 Dialect *MLIRContext::getRegisteredDialect(StringRef name) {
   // Lock access to the context registry.
-  llvm::sys::SmartScopedReader<true> registryLock(getImpl().contextMutex);
-  for (auto &dialect : getImpl().dialects)
-    if (name == dialect->getNamespace())
-      return dialect.get();
-  return nullptr;
+  ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
+
+  // Dialects are sorted by name, so we can use binary search for lookup.
+  auto it = llvm::lower_bound(
+      impl->dialects, name,
+      [](const auto &lhs, StringRef rhs) { return lhs->getNamespace() < rhs; });
+  return (it != impl->dialects.end() && (*it)->getNamespace() == name)
+             ? (*it).get()
+             : nullptr;
 }
 
 /// Register this dialect object with the specified context.  The context
@@ -399,15 +446,13 @@ void Dialect::registerDialect(MLIRContext *context) {
   std::unique_ptr<Dialect> dialect(this);
 
   // Lock access to the context registry.
-  llvm::sys::SmartScopedWriter<true> registryLock(impl.contextMutex);
+  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
 
   // Get the correct insertion position sorted by namespace.
-  auto insertPt =
-      llvm::lower_bound(impl.dialects, dialect,
-                        [](const std::unique_ptr<Dialect> &lhs,
-                           const std::unique_ptr<Dialect> &rhs) {
-                          return lhs->getNamespace() < rhs->getNamespace();
-                        });
+  auto insertPt = llvm::lower_bound(
+      impl.dialects, dialect, [](const auto &lhs, const auto &rhs) {
+        return lhs->getNamespace() < rhs->getNamespace();
+      });
 
   // Abort if dialect with namespace has already been registered.
   if (insertPt != impl.dialects.end() &&
@@ -424,6 +469,21 @@ bool MLIRContext::allowsUnregisteredDialects() {
 
 void MLIRContext::allowUnregisteredDialects(bool allowing) {
   impl->allowUnregisteredDialects = allowing;
+}
+
+/// Return true if multi-threading is disabled by the context.
+bool MLIRContext::isMultithreadingEnabled() {
+  return impl->threadingIsEnabled && llvm::llvm_is_multithreaded();
+}
+
+/// Set the flag specifying if multi-threading is disabled by the context.
+void MLIRContext::disableMultithreading(bool disable) {
+  impl->threadingIsEnabled = !disable;
+
+  // Update the threading mode for each of the uniquers.
+  impl->affineUniquer.disableMultithreading(disable);
+  impl->attributeUniquer.disableMultithreading(disable);
+  impl->typeUniquer.disableMultithreading(disable);
 }
 
 /// Return true if we should attach the operation to diagnostics emitted via
@@ -457,13 +517,13 @@ std::vector<AbstractOperation *> MLIRContext::getRegisteredOperations() {
   std::vector<std::pair<StringRef, AbstractOperation *>> opsToSort;
 
   { // Lock access to the context registry.
-    llvm::sys::SmartScopedReader<true> registryLock(getImpl().contextMutex);
+    ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
 
     // We just have the operations in a non-deterministic hash table order. Dump
     // into a temporary array, then sort it by operation name to get a stable
     // ordering.
     llvm::StringMap<AbstractOperation> &registeredOps =
-        getImpl().registeredOperations;
+        impl->registeredOperations;
 
     opsToSort.reserve(registeredOps.size());
     for (auto &elt : registeredOps)
@@ -487,7 +547,7 @@ void Dialect::addOperation(AbstractOperation opInfo) {
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
-  llvm::sys::SmartScopedWriter<true> registryLock(impl.contextMutex);
+  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
   if (!impl.registeredOperations.insert({opInfo.name, opInfo}).second) {
     llvm::errs() << "error: operation named '" << opInfo.name
                  << "' is already registered.\n";
@@ -500,7 +560,7 @@ void Dialect::addSymbol(TypeID typeID) {
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
-  llvm::sys::SmartScopedWriter<true> registryLock(impl.contextMutex);
+  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
   if (!impl.registeredDialectSymbols.insert({typeID, this}).second) {
     llvm::errs() << "error: dialect symbol already registered.\n";
     abort();
@@ -514,7 +574,7 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
   auto &impl = context->getImpl();
 
   // Lock access to the context registry.
-  llvm::sys::SmartScopedReader<true> registryLock(impl.contextMutex);
+  ScopedReaderLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
   auto it = impl.registeredOperations.find(opName);
   if (it != impl.registeredOperations.end())
     return &it->second;
@@ -529,7 +589,8 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
 Identifier Identifier::get(StringRef str, MLIRContext *context) {
   auto &impl = context->getImpl();
 
-  { // Check for an existing identifier in read-only mode.
+  // Check for an existing identifier in read-only mode.
+  if (context->isMultithreadingEnabled()) {
     llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
     auto it = impl.identifiers.find(str);
     if (it != impl.identifiers.end())
@@ -544,7 +605,7 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
          "Cannot create an identifier with a nul character");
 
   // Acquire a writer-lock so that we can safely create the new instance.
-  llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
+  ScopedWriterLock contextLock(impl.identifierMutex, impl.threadingIsEnabled);
   auto it = impl.identifiers.insert(str).first;
   return Identifier(&*it);
 }
@@ -696,16 +757,18 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
   auto key = std::make_tuple(dimCount, symbolCount, results);
 
   // Safely get or create an AffineMap instance.
-  return safeGetOrCreate(impl.affineMaps, key, impl.affineMutex, [&] {
-    auto *res = impl.affineAllocator.Allocate<detail::AffineMapStorage>();
+  return safeGetOrCreate(
+      impl.affineMaps, key, impl.affineMutex, impl.threadingIsEnabled, [&] {
+        auto *res = impl.affineAllocator.Allocate<detail::AffineMapStorage>();
 
-    // Copy the results into the bump pointer.
-    results = copyArrayRefInto(impl.affineAllocator, results);
+        // Copy the results into the bump pointer.
+        results = copyArrayRefInto(impl.affineAllocator, results);
 
-    // Initialize the memory using placement new.
-    new (res) detail::AffineMapStorage{dimCount, symbolCount, results, context};
-    return AffineMap(res);
-  });
+        // Initialize the memory using placement new.
+        new (res)
+            detail::AffineMapStorage{dimCount, symbolCount, results, context};
+        return AffineMap(res);
+      });
 }
 
 AffineMap AffineMap::get(MLIRContext *context) {
@@ -760,12 +823,12 @@ IntegerSet IntegerSet::get(unsigned dimCount, unsigned symbolCount,
   if (constraints.size() < IntegerSet::kUniquingThreshold) {
     auto key = std::make_tuple(dimCount, symbolCount, constraints, eqFlags);
     return safeGetOrCreate(impl.integerSets, key, impl.affineMutex,
-                           constructorFn);
+                           impl.threadingIsEnabled, constructorFn);
   }
 
   // Otherwise, acquire a writer-lock so that we can safely create the new
   // instance.
-  llvm::sys::SmartScopedWriter<true> affineLock(impl.affineMutex);
+  ScopedWriterLock affineLock(impl.affineMutex, impl.threadingIsEnabled);
   return constructorFn();
 }
 

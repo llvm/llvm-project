@@ -496,22 +496,28 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
   // NOTE: This is simple now, because we don't enable canonicalizing nodes
   // within children. When we remove this restriction, this logic will need to
   // be reworked.
-  ParallelDiagnosticHandler canonicalizationHandler(context);
-  llvm::parallel::for_each_n(
-      llvm::parallel::par, /*Begin=*/size_t(0),
-      /*End=*/nodesToCanonicalize.size(), [&](size_t index) {
-        // Set the order for this thread so that diagnostics will be properly
-        // ordered.
-        canonicalizationHandler.setOrderIDForThread(index);
+  if (context->isMultithreadingEnabled()) {
+    ParallelDiagnosticHandler canonicalizationHandler(context);
+    llvm::parallel::for_each_n(
+        llvm::parallel::par, /*Begin=*/size_t(0),
+        /*End=*/nodesToCanonicalize.size(), [&](size_t index) {
+          // Set the order for this thread so that diagnostics will be properly
+          // ordered.
+          canonicalizationHandler.setOrderIDForThread(index);
 
-        // Apply the canonicalization patterns to this region.
-        auto *node = nodesToCanonicalize[index];
-        applyPatternsAndFoldGreedily(*node->getCallableRegion(), canonPatterns);
+          // Apply the canonicalization patterns to this region.
+          auto *node = nodesToCanonicalize[index];
+          applyPatternsAndFoldGreedily(*node->getCallableRegion(),
+                                       canonPatterns);
 
-        // Make sure to reset the order ID for the diagnostic handler, as this
-        // thread may be used in a different context.
-        canonicalizationHandler.eraseOrderIDForThread();
-      });
+          // Make sure to reset the order ID for the diagnostic handler, as this
+          // thread may be used in a different context.
+          canonicalizationHandler.eraseOrderIDForThread();
+        });
+  } else {
+    for (CallGraphNode *node : nodesToCanonicalize)
+      applyPatternsAndFoldGreedily(*node->getCallableRegion(), canonPatterns);
+  }
 
   // Recompute the uses held by each of the nodes.
   for (CallGraphNode *node : nodesToCanonicalize)

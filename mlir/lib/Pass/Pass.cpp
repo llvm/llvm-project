@@ -118,9 +118,8 @@ void VerifierPass::runOnOperation() {
 namespace mlir {
 namespace detail {
 struct OpPassManagerImpl {
-  OpPassManagerImpl(OperationName name, bool disableThreads, bool verifyPasses)
-      : name(name), disableThreads(disableThreads), verifyPasses(verifyPasses) {
-  }
+  OpPassManagerImpl(OperationName name, bool verifyPasses)
+      : name(name), verifyPasses(verifyPasses) {}
 
   /// Merge the passes of this pass manager into the one provided.
   void mergeInto(OpPassManagerImpl &rhs);
@@ -152,9 +151,6 @@ struct OpPassManagerImpl {
   /// The name of the operation that passes of this pass manager operate on.
   OperationName name;
 
-  /// Flag to disable multi-threading of passes.
-  bool disableThreads : 1;
-
   /// Flag that specifies if the IR should be verified after each pass has run.
   bool verifyPasses : 1;
 
@@ -172,7 +168,7 @@ void OpPassManagerImpl::mergeInto(OpPassManagerImpl &rhs) {
 }
 
 OpPassManager &OpPassManagerImpl::nest(const OperationName &nestedName) {
-  OpPassManager nested(nestedName, disableThreads, verifyPasses);
+  OpPassManager nested(nestedName, verifyPasses);
   auto *adaptor = new OpToOpPassAdaptor(std::move(nested));
   addPass(std::unique_ptr<Pass>(adaptor));
   return adaptor->getPassManagers().front();
@@ -269,9 +265,8 @@ void OpPassManagerImpl::splitAdaptorPasses() {
 // OpPassManager
 //===----------------------------------------------------------------------===//
 
-OpPassManager::OpPassManager(OperationName name, bool disableThreads,
-                             bool verifyPasses)
-    : impl(new OpPassManagerImpl(name, disableThreads, verifyPasses)) {
+OpPassManager::OpPassManager(OperationName name, bool verifyPasses)
+    : impl(new OpPassManagerImpl(name, verifyPasses)) {
   assert(name.getAbstractOperation() &&
          "OpPassManager can only operate on registered operations");
   assert(name.getAbstractOperation()->hasProperty(
@@ -282,8 +277,7 @@ OpPassManager::OpPassManager(OperationName name, bool disableThreads,
 OpPassManager::OpPassManager(OpPassManager &&rhs) : impl(std::move(rhs.impl)) {}
 OpPassManager::OpPassManager(const OpPassManager &rhs) { *this = rhs; }
 OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
-  impl.reset(new OpPassManagerImpl(rhs.impl->name, rhs.impl->disableThreads,
-                                   rhs.impl->verifyPasses));
+  impl.reset(new OpPassManagerImpl(rhs.impl->name, rhs.impl->verifyPasses));
   for (auto &pass : rhs.impl->passes)
     impl->passes.emplace_back(pass->clone());
   return *this;
@@ -419,10 +413,10 @@ std::string OpToOpPassAdaptor::getAdaptorName() {
 
 /// Run the held pipeline over all nested operations.
 void OpToOpPassAdaptor::runOnOperation() {
-  if (mgrs.front().getImpl().disableThreads || !llvm::llvm_is_multithreaded())
-    runOnOperationImpl();
-  else
+  if (getContext().isMultithreadingEnabled())
     runOnOperationAsyncImpl();
+  else
+    runOnOperationImpl();
 }
 
 /// Run this pass adaptor synchronously.
@@ -576,7 +570,7 @@ private:
   /// The filename to use when generating the reproducer.
   StringRef filename;
 
-  /// Various pass manager flags.
+  /// Various pass manager and context flags.
   bool disableThreads;
   bool verifyPasses;
 
@@ -628,7 +622,7 @@ LogicalResult RecoveryReproducerContext::generate(std::string &error) {
   // Output the current pass manager configuration.
   outputOS << "// configuration: -pass-pipeline='" << pipeline << "'";
   if (disableThreads)
-    outputOS << " -disable-pass-threading";
+    outputOS << " -mlir-disable-threading";
 
   // TODO: Should this also be configured with a pass manager flag?
   outputOS << "\n// note: verifyPasses=" << (verifyPasses ? "true" : "false")
@@ -684,7 +678,8 @@ LogicalResult
 PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
                                   ModuleOp module, AnalysisManager am) {
   RecoveryReproducerContext context(passes, module, *crashReproducerFileName,
-                                    impl->disableThreads, impl->verifyPasses);
+                                    !getContext()->isMultithreadingEnabled(),
+                                    impl->verifyPasses);
 
   // Safely invoke the passes within a recovery context.
   llvm::CrashRecoveryContext::Enable();
@@ -715,7 +710,7 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
 
 PassManager::PassManager(MLIRContext *ctx, bool verifyPasses)
     : OpPassManager(OperationName(ModuleOp::getOperationName(), ctx),
-                    /*disableThreads=*/false, verifyPasses),
+                    verifyPasses),
       passTiming(false), localReproducer(false) {}
 
 PassManager::~PassManager() {}
@@ -739,15 +734,6 @@ LogicalResult PassManager::run(ModuleOp module) {
   if (passStatisticsMode)
     dumpStatistics();
   return result;
-}
-
-/// Disable support for multi-threading within the pass manager.
-void PassManager::disableMultithreading(bool disable) {
-  getImpl().disableThreads = disable;
-}
-
-bool PassManager::isMultithreadingEnabled() {
-  return !getImpl().disableThreads;
 }
 
 /// Enable support for the pass manager to generate a reproducer on the event
