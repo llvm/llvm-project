@@ -767,6 +767,8 @@ static const llvm::opt::OptTable::Info infoTable[] = {
 
 COFFOptTable::COFFOptTable() : OptTable(infoTable, true) {}
 
+COFFOptTable optTable;
+
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
 static void handleColorDiagnostics(opt::InputArgList &args) {
@@ -812,8 +814,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   // options so we parse here before and ignore all the options but
   // --rsp-quoting and /lldignoreenv.
   // (This means --rsp-quoting can't be added through %LINK%.)
-  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
-
+  opt::InputArgList args = optTable.ParseArgs(argv, missingIndex, missingCount);
 
   // Expand response files (arguments in the form of @<filename>) and insert
   // flags from %LINK% and %_LINK_%, and then parse the argument again.
@@ -822,8 +823,8 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   if (!args.hasArg(OPT_lldignoreenv))
     addLINK(expandedArgv);
   cl::ExpandResponseFiles(saver, getQuotingStyle(args), expandedArgv);
-  args = table.ParseArgs(makeArrayRef(expandedArgv).drop_front(), missingIndex,
-                         missingCount);
+  args = optTable.ParseArgs(makeArrayRef(expandedArgv).drop_front(),
+                            missingIndex, missingCount);
 
   // Print the real command line if response files are expanded.
   if (args.hasArg(OPT_verbose) && argv.size() != expandedArgv.size()) {
@@ -847,7 +848,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 
   for (auto *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
-    if (table.findNearest(arg->getAsString(args), nearest) > 1)
+    if (optTable.findNearest(arg->getAsString(args), nearest) > 1)
       warn("ignoring unknown argument '" + arg->getAsString(args) + "'");
     else
       warn("ignoring unknown argument '" + arg->getAsString(args) +
@@ -886,7 +887,7 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
   unsigned missingIndex;
   unsigned missingCount;
 
-  result.args = table.ParseArgs(rest, missingIndex, missingCount);
+  result.args = optTable.ParseArgs(rest, missingIndex, missingCount);
 
   if (missingCount)
     fatal(Twine(result.args.getArgString(missingIndex)) + ": missing argument");
@@ -917,9 +918,9 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void printHelp(const char *argv0) {
-  COFFOptTable().PrintHelp(lld::outs(),
-                           (std::string(argv0) + " [options] file...").c_str(),
-                           "LLVM Linker", false);
+  optTable.PrintHelp(lld::outs(),
+                     (std::string(argv0) + " [options] file...").c_str(),
+                     "LLVM Linker", false);
 }
 
 } // namespace coff
