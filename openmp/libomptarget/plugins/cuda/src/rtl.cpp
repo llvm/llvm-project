@@ -380,7 +380,7 @@ public:
     return DeviceId >= 0 && DeviceId < NumberOfDevices;
   }
 
-  bool getNumOfDevices() const { return NumberOfDevices; }
+  int getNumOfDevices() const { return NumberOfDevices; }
 
   void setRequiresFlag(const int64_t Flags) { this->RequiresFlags = Flags; }
 
