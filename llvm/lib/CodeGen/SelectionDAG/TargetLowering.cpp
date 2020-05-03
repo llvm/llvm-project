@@ -6620,27 +6620,40 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   // elements that are byte-sized must therefore be stored as an integer
   // built out of the extracted vector elements.
   if (!SrcEltVT.isByteSized()) {
-    unsigned NumBits = SrcVT.getSizeInBits();
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumBits);
+    unsigned NumLoadBits = SrcVT.getStoreSizeInBits();
+    EVT LoadVT = EVT::getIntegerVT(*DAG.getContext(), NumLoadBits);
 
-    SDValue Load = DAG.getLoad(IntVT, SL, Chain, BasePTR, LD->getPointerInfo(),
-                               LD->getAlignment(),
-                               LD->getMemOperand()->getFlags(),
-                               LD->getAAInfo());
+    unsigned NumSrcBits = SrcVT.getSizeInBits();
+    EVT SrcIntVT = EVT::getIntegerVT(*DAG.getContext(), NumSrcBits);
+
+    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
+    SDValue SrcEltBitMask = DAG.getConstant(
+        APInt::getLowBitsSet(NumLoadBits, SrcEltBits), SL, LoadVT);
+
+    // Load the whole vector and avoid masking off the top bits as it makes
+    // the codegen worse.
+    SDValue Load =
+        DAG.getExtLoad(ISD::EXTLOAD, SL, LoadVT, Chain, BasePTR,
+                       LD->getPointerInfo(), SrcIntVT, LD->getAlignment(),
+                       LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
     SmallVector<SDValue, 8> Vals;
     for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
       unsigned ShiftIntoIdx =
           (DAG.getDataLayout().isBigEndian() ? (NumElem - 1) - Idx : Idx);
       SDValue ShiftAmount =
-          DAG.getConstant(ShiftIntoIdx * SrcEltVT.getSizeInBits(), SL, IntVT);
-      SDValue ShiftedElt =
-          DAG.getNode(ISD::SRL, SL, IntVT, Load, ShiftAmount);
-      SDValue Scalar = DAG.getNode(ISD::TRUNCATE, SL, SrcEltVT, ShiftedElt);
+          DAG.getConstant(ShiftIntoIdx * SrcEltVT.getSizeInBits(), SL,
+                          getShiftAmountTy(LoadVT, DAG.getDataLayout()));
+      SDValue ShiftedElt = DAG.getNode(ISD::SRL, SL, LoadVT, Load, ShiftAmount);
+      SDValue Elt =
+          DAG.getNode(ISD::AND, SL, LoadVT, ShiftedElt, SrcEltBitMask);
+      SDValue Scalar = DAG.getNode(ISD::TRUNCATE, SL, SrcEltVT, Elt);
+
       if (ExtType != ISD::NON_EXTLOAD) {
         unsigned ExtendOp = ISD::getExtForLoadExtType(false, ExtType);
         Scalar = DAG.getNode(ExtendOp, SL, DstEltVT, Scalar);
       }
+
       Vals.push_back(Scalar);
     }
 
