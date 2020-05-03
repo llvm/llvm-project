@@ -5600,6 +5600,9 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     break;
   case Instruction::Call: {
     Result = SimplifyCall(cast<CallInst>(I), Q);
+    // Don't perform known bits simplification below for musttail calls.
+    if (cast<CallInst>(I)->isMustTailCall())
+      return Result;
     break;
   }
   case Instruction::Freeze:
@@ -5615,6 +5618,14 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     // No simplifications for Alloca and it can't be constant folded.
     Result = nullptr;
     break;
+  }
+
+  // In general, it is possible for computeKnownBits to determine all bits in a
+  // value even when the operands are not all constants.
+  if (!Result && I->getType()->isIntOrIntVectorTy()) {
+    KnownBits Known = computeKnownBits(I, Q.DL, /*Depth*/ 0, Q.AC, I, Q.DT, ORE);
+    if (Known.isConstant())
+      Result = ConstantInt::get(I->getType(), Known.getConstant());
   }
 
   /// If called on unreachable code, the above logic may report that the

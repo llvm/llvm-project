@@ -197,17 +197,14 @@ exit:
   ret i32 %add
 }
 
-; This test checks that we don't optimize away instructions that are
-; simplified by SimplifyInstruction(), but are not trivially dead.
-
 define i32 @test9(i32* %V) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOAD:%.*]] = call i32 undef()
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i32, i32* [[V:%.*]], !range !0
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %load = call i32 undef()
+  %load = load volatile i32, i32* %V, !range !0
   ret i32 %load
 }
 
