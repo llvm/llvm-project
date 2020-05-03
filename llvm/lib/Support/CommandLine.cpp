@@ -919,91 +919,118 @@ static size_t parseBackslash(StringRef Src, size_t I, SmallString<128> &Token) {
   return I - 1;
 }
 
-void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
-                                    SmallVectorImpl<const char *> &NewArgv,
-                                    bool MarkEOLs) {
+// Windows treats whitespace, double quotes, and backslashes specially.
+static bool isWindowsSpecialChar(char C) {
+  return isWhitespaceOrNull(C) || C == '\\' || C == '\"';
+}
+
+// Windows tokenization implementation. The implementation is designed to be
+// inlined and specialized for the two user entry points.
+static inline void
+tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
+                               function_ref<void(StringRef)> AddToken,
+                               bool AlwaysCopy, function_ref<void()> MarkEOL) {
   SmallString<128> Token;
 
-  // This is a small state machine to consume characters until it reaches the
-  // end of the source string.
+  // Try to do as much work inside the state machine as possible.
   enum { INIT, UNQUOTED, QUOTED } State = INIT;
-  for (size_t I = 0, E = Src.size(); I != E; ++I) {
-    char C = Src[I];
-
-    // INIT state indicates that the current input index is at the start of
-    // the string or between tokens.
-    if (State == INIT) {
-      if (isWhitespaceOrNull(C)) {
-        // Mark the end of lines in response files
-        if (MarkEOLs && C == '\n')
-          NewArgv.push_back(nullptr);
-        continue;
+  for (size_t I = 0, E = Src.size(); I < E; ++I) {
+    switch (State) {
+    case INIT: {
+      assert(Token.empty() && "token should be empty in initial state");
+      // Eat whitespace before a token.
+      while (I < E && isWhitespaceOrNull(Src[I])) {
+        if (Src[I] == '\n')
+          MarkEOL();
+        ++I;
       }
-      if (C == '"') {
+      // Stop if this was trailing whitespace.
+      if (I >= E)
+        break;
+      size_t Start = I;
+      while (I < E && !isWindowsSpecialChar(Src[I]))
+        ++I;
+      StringRef NormalChars = Src.slice(Start, I);
+      if (I >= E || isWhitespaceOrNull(Src[I])) {
+        if (I < E && Src[I] == '\n')
+          MarkEOL();
+        // No special characters: slice out the substring and start the next
+        // token. Copy the string if the caller asks us to.
+        AddToken(AlwaysCopy ? Saver.save(NormalChars) : NormalChars);
+      } else if (Src[I] == '\"') {
+        Token += NormalChars;
         State = QUOTED;
-        continue;
-      }
-      if (C == '\\') {
+      } else if (Src[I] == '\\') {
+        Token += NormalChars;
         I = parseBackslash(Src, I, Token);
         State = UNQUOTED;
-        continue;
+      } else {
+        llvm_unreachable("unexpected special character");
       }
-      Token.push_back(C);
-      State = UNQUOTED;
-      continue;
+      break;
     }
 
-    // UNQUOTED state means that it's reading a token not quoted by double
-    // quotes.
-    if (State == UNQUOTED) {
-      // Whitespace means the end of the token.
-      if (isWhitespaceOrNull(C)) {
-        NewArgv.push_back(Saver.save(StringRef(Token)).data());
+    case UNQUOTED:
+      if (isWhitespaceOrNull(Src[I])) {
+        // Whitespace means the end of the token. If we are in this state, the
+        // token must have contained a special character, so we must copy the
+        // token.
+        AddToken(Saver.save(Token.str()));
         Token.clear();
+        if (Src[I] == '\n')
+          MarkEOL();
         State = INIT;
-        // Mark the end of lines in response files
-        if (MarkEOLs && C == '\n')
-          NewArgv.push_back(nullptr);
-        continue;
-      }
-      if (C == '"') {
+      } else if (Src[I] == '\"') {
         State = QUOTED;
-        continue;
-      }
-      if (C == '\\') {
+      } else if (Src[I] == '\\') {
         I = parseBackslash(Src, I, Token);
-        continue;
+      } else {
+        Token.push_back(Src[I]);
       }
-      Token.push_back(C);
-      continue;
-    }
+      break;
 
-    // QUOTED state means that it's reading a token quoted by double quotes.
-    if (State == QUOTED) {
-      if (C == '"') {
+    case QUOTED:
+      if (Src[I] == '\"') {
         if (I < (E - 1) && Src[I + 1] == '"') {
           // Consecutive double-quotes inside a quoted string implies one
           // double-quote.
           Token.push_back('"');
-          I = I + 1;
-          continue;
+          ++I;
+        } else {
+          // Otherwise, end the quoted portion and return to the unquoted state.
+          State = UNQUOTED;
         }
-        State = UNQUOTED;
-        continue;
-      }
-      if (C == '\\') {
+      } else if (Src[I] == '\\') {
         I = parseBackslash(Src, I, Token);
-        continue;
+      } else {
+        Token.push_back(Src[I]);
       }
-      Token.push_back(C);
+      break;
     }
   }
-  // Append the last token after hitting EOF with no whitespace.
+
   if (!Token.empty())
-    NewArgv.push_back(Saver.save(StringRef(Token)).data());
-  // Mark the end of response files
-  if (MarkEOLs)
-    NewArgv.push_back(nullptr);
+    AddToken(Saver.save(Token.str()));
+}
+
+void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
+                                    SmallVectorImpl<const char *> &NewArgv,
+                                    bool MarkEOLs) {
+  auto AddToken = [&](StringRef Tok) { NewArgv.push_back(Tok.data()); };
+  auto OnEOL = [&]() {
+    if (MarkEOLs)
+      NewArgv.push_back(nullptr);
+  };
+  tokenizeWindowsCommandLineImpl(Src, Saver, AddToken,
+                                 /*AlwaysCopy=*/true, OnEOL);
+}
+
+void cl::TokenizeWindowsCommandLineNoCopy(StringRef Src, StringSaver &Saver,
+                                          SmallVectorImpl<StringRef> &NewArgv) {
+  auto AddToken = [&](StringRef Tok) { NewArgv.push_back(Tok); };
+  auto OnEOL = []() {};
+  tokenizeWindowsCommandLineImpl(Src, Saver, AddToken, /*AlwaysCopy=*/false,
+                                 OnEOL);
 }
 
 void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
