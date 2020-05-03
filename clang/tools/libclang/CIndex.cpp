@@ -1295,6 +1295,14 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
   return false;
 }
 
+bool CursorVisitor::VisitDecompositionDecl(DecompositionDecl *D) {
+  for (auto *B : D->bindings()) {
+    if (Visit(MakeCXCursor(B, TU, RegionOfInterest)))
+      return true;
+  }
+  return VisitVarDecl(D);
+}
+
 bool CursorVisitor::VisitDeclarationNameInfo(DeclarationNameInfo Name) {
   switch (Name.getName().getNameKind()) {
   case clang::DeclarationName::Identifier:
