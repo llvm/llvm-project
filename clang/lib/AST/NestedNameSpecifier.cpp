@@ -464,13 +464,14 @@ static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
     unsigned NewCapacity = std::max(
         (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
         (unsigned)(BufferSize + (End - Start)));
-    char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
-    if (Buffer) {
-      memcpy(NewBuffer, Buffer, BufferSize);
-      if (BufferCapacity)
-        free(Buffer);
+    if (!BufferCapacity) {
+      char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
+      if (Buffer)
+        memcpy(NewBuffer, Buffer, BufferSize);
+      Buffer = NewBuffer;
+    } else {
+      Buffer = static_cast<char *>(llvm::safe_realloc(Buffer, NewCapacity));
     }
-    Buffer = NewBuffer;
     BufferCapacity = NewCapacity;
   }
   assert(Buffer && Start && End && End > Start && "Illegal memory buffer copy");
