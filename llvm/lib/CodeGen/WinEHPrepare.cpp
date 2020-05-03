@@ -234,6 +234,9 @@ static const BasicBlock *getEHPadFromPredecessor(const BasicBlock *BB,
   return CleanupPad->getParent();
 }
 
+// Starting from a EHPad, Backward walk through control-flow graph
+// to produce two primary outputs:
+//      FuncInfo.EHPadStateMap[] and FuncInfo.CxxUnwindMap[]
 static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
                                      const Instruction *FirstNonPHI,
                                      int ParentState) {
@@ -336,6 +339,9 @@ static int addSEHFinally(WinEHFuncInfo &FuncInfo, int ParentState,
   return FuncInfo.SEHUnwindMap.size() - 1;
 }
 
+// Starting from a EHPad, Backward walk through control-flow graph
+// to produce two primary outputs:
+//      FuncInfo.EHPadStateMap[] and FuncInfo.SEHUnwindMap[]
 static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
                                      const Instruction *FirstNonPHI,
                                      int ParentState) {
