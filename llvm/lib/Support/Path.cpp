@@ -684,43 +684,66 @@ StringRef remove_leading_dotslash(StringRef Path, Style style) {
   return Path;
 }
 
-static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot,
-                                    Style style) {
+// Remove path traversal components ("." and "..") when possible, and
+// canonicalize slashes.
+bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
+                 Style style) {
+  style = real_style(style);
+  StringRef remaining(the_path.data(), the_path.size());
+  bool needs_change = false;
   SmallVector<StringRef, 16> components;
 
-  // Skip the root path, then look for traversal in the components.
-  StringRef rel = path::relative_path(path, style);
-  for (StringRef C :
-       llvm::make_range(path::begin(rel, style), path::end(rel))) {
-    if (C == ".")
-      continue;
-    // Leading ".." will remain in the path unless it's at the root.
-    if (remove_dot_dot && C == "..") {
+  // Consume the root path, if present.
+  StringRef root = path::root_path(remaining, style);
+  bool absolute = !root.empty();
+  if (absolute)
+    remaining = remaining.drop_front(root.size());
+
+  // Loop over path components manually. This makes it easier to detect
+  // non-preferred slashes and double separators that must be canonicalized.
+  while (!remaining.empty()) {
+    size_t next_slash = remaining.find_first_of(separators(style));
+    if (next_slash == StringRef::npos)
+      next_slash = remaining.size();
+    StringRef component = remaining.take_front(next_slash);
+    remaining = remaining.drop_front(next_slash);
+
+    // Eat the slash, and check if it is the preferred separator.
+    if (!remaining.empty()) {
+      needs_change |= remaining.front() != preferred_separator(style);
+      remaining = remaining.drop_front();
+    }
+
+    // Check for path traversal components or double separators.
+    if (component.empty() || component == ".") {
+      needs_change = true;
+    } else if (remove_dot_dot && component == "..") {
+      needs_change = true;
+      // Do not allow ".." to remove the root component. If this is the
+      // beginning of a relative path, keep the ".." component.
       if (!components.empty() && components.back() != "..") {
         components.pop_back();
-        continue;
+      } else if (!absolute) {
+        components.push_back(component);
       }
-      if (path::is_absolute(path, style))
-        continue;
+    } else {
+      components.push_back(component);
     }
-    components.push_back(C);
   }
 
-  SmallString<256> buffer = path::root_path(path, style);
-  for (StringRef C : components)
-    path::append(buffer, style, C);
-  return buffer;
-}
-
-bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot,
-                 Style style) {
-  StringRef p(path.data(), path.size());
-
-  SmallString<256> result = remove_dots(p, remove_dot_dot, style);
-  if (result == path)
+  // Avoid rewriting the path unless we have to.
+  if (!needs_change)
     return false;
 
-  path.swap(result);
+  SmallString<256> buffer = root;
+  if (!components.empty()) {
+    buffer += components[0];
+    for (StringRef C : makeArrayRef(components).drop_front()) {
+      buffer += preferred_separator(style);
+      buffer += C;
+    }
+  }
+  the_path.swap(buffer);
   return true;
 }
 
