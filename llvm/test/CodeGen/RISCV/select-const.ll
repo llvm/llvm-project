@@ -39,42 +39,26 @@ define signext i32 @select_const_int_easy(i1 zeroext %a) nounwind {
 define signext i32 @select_const_int_one_away(i1 zeroext %a) nounwind {
 ; RV32I-LABEL: select_const_int_one_away:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    addi a0, zero, 3
-; RV32I-NEXT:    bnez a1, .LBB1_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    addi a0, zero, 4
-; RV32I-NEXT:  .LBB1_2:
+; RV32I-NEXT:    addi a1, zero, 4
+; RV32I-NEXT:    sub a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IF-LABEL: select_const_int_one_away:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    mv a1, a0
-; RV32IF-NEXT:    addi a0, zero, 3
-; RV32IF-NEXT:    bnez a1, .LBB1_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    addi a0, zero, 4
-; RV32IF-NEXT:  .LBB1_2:
+; RV32IF-NEXT:    addi a1, zero, 4
+; RV32IF-NEXT:    sub a0, a1, a0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64I-LABEL: select_const_int_one_away:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    addi a0, zero, 3
-; RV64I-NEXT:    bnez a1, .LBB1_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    addi a0, zero, 4
-; RV64I-NEXT:  .LBB1_2:
+; RV64I-NEXT:    addi a1, zero, 4
+; RV64I-NEXT:    sub a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IFD-LABEL: select_const_int_one_away:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    mv a1, a0
-; RV64IFD-NEXT:    addi a0, zero, 3
-; RV64IFD-NEXT:    bnez a1, .LBB1_2
-; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    addi a0, zero, 4
-; RV64IFD-NEXT:  .LBB1_2:
+; RV64IFD-NEXT:    addi a1, zero, 4
+; RV64IFD-NEXT:    sub a0, a1, a0
 ; RV64IFD-NEXT:    ret
   %1 = select i1 %a, i32 3, i32 4
   ret i32 %1
@@ -83,42 +67,22 @@ define signext i32 @select_const_int_one_away(i1 zeroext %a) nounwind {
 define signext i32 @select_const_int_pow2_zero(i1 zeroext %a) nounwind {
 ; RV32I-LABEL: select_const_int_pow2_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    addi a0, zero, 4
-; RV32I-NEXT:    bnez a1, .LBB2_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, zero
-; RV32I-NEXT:  .LBB2_2:
+; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    ret
 ;
 ; RV32IF-LABEL: select_const_int_pow2_zero:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    mv a1, a0
-; RV32IF-NEXT:    addi a0, zero, 4
-; RV32IF-NEXT:    bnez a1, .LBB2_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    mv a0, zero
-; RV32IF-NEXT:  .LBB2_2:
+; RV32IF-NEXT:    slli a0, a0, 2
 ; RV32IF-NEXT:    ret
 ;
 ; RV64I-LABEL: select_const_int_pow2_zero:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    addi a0, zero, 4
-; RV64I-NEXT:    bnez a1, .LBB2_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, zero
-; RV64I-NEXT:  .LBB2_2:
+; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    ret
 ;
 ; RV64IFD-LABEL: select_const_int_pow2_zero:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    mv a1, a0
-; RV64IFD-NEXT:    addi a0, zero, 4
-; RV64IFD-NEXT:    bnez a1, .LBB2_2
-; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    mv a0, zero
-; RV64IFD-NEXT:  .LBB2_2:
+; RV64IFD-NEXT:    slli a0, a0, 2
 ; RV64IFD-NEXT:    ret
   %1 = select i1 %a, i32 4, i32 0
   ret i32 %1
