@@ -20,7 +20,9 @@ llvm::Expected<llvm::json::Value> clang::clangd::LSPClient::CallResult::take() {
     ADD_FAILURE() << "No result from call after 10 seconds!";
     return llvm::json::Value(nullptr);
   }
-  return std::move(*Value);
+  auto Res = std::move(*Value);
+  Value.reset();
+  return Res;
 }
 
 llvm::json::Value LSPClient::CallResult::takeValue() {

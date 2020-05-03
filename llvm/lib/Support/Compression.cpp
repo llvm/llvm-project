@@ -74,10 +74,10 @@ Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
 Error zlib::uncompress(StringRef InputBuffer,
                        SmallVectorImpl<char> &UncompressedBuffer,
                        size_t UncompressedSize) {
-  UncompressedBuffer.resize(UncompressedSize);
+  UncompressedBuffer.reserve(UncompressedSize);
   Error E =
       uncompress(InputBuffer, UncompressedBuffer.data(), UncompressedSize);
-  UncompressedBuffer.resize(UncompressedSize);
+  UncompressedBuffer.set_size(UncompressedSize);
   return E;
 }
 

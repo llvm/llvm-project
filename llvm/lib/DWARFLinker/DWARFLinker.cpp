@@ -160,15 +160,16 @@ bool DWARFLinker::DIECloner::getDIENames(const DWARFDie &Die,
   if (Die.getTag() == dwarf::DW_TAG_lexical_block)
     return false;
 
-  // FIXME: a bit wasteful as the first getName might return the
-  // short name.
   if (!Info.MangledName)
-    if (const char *MangledName = Die.getName(DINameKind::LinkageName))
+    if (const char *MangledName = Die.getLinkageName())
       Info.MangledName = StringPool.getEntry(MangledName);
 
   if (!Info.Name)
-    if (const char *Name = Die.getName(DINameKind::ShortName))
+    if (const char *Name = Die.getShortName())
       Info.Name = StringPool.getEntry(Name);
+
+  if (!Info.MangledName)
+    Info.MangledName = Info.Name;
 
   if (StripTemplate && Info.Name && Info.MangledName != Info.Name) {
     StringRef Name = Info.Name.getString();

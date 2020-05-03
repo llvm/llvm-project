@@ -14,6 +14,9 @@
 #include "TestFS.h"
 #include "refactor/Rename.h"
 #include "support/Logger.h"
+#include "support/TestTracer.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
@@ -146,7 +149,6 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
               llvm::ValueIs(testing::ElementsAre(
                   DiagMessage("Use of undeclared identifier 'changed'"))));
 }
-
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -142,11 +142,19 @@ public:
   /// Returns the cached value for \p K, or llvm::None if the value is not in
   /// the cache anymore. If nullptr was cached for \p K, this function will
   /// return a null unique_ptr wrapped into an optional.
-  llvm::Optional<std::unique_ptr<ParsedAST>> take(Key K) {
+  /// If \p AccessMetric is set records whether there was a hit or miss.
+  llvm::Optional<std::unique_ptr<ParsedAST>>
+  take(Key K, const trace::Metric *AccessMetric = nullptr) {
+    // Record metric after unlocking the mutex.
     std::unique_lock<std::mutex> Lock(Mut);
     auto Existing = findByKey(K);
-    if (Existing == LRU.end())
+    if (Existing == LRU.end()) {
+      if (AccessMetric)
+        AccessMetric->record(1, "miss");
       return None;
+    }
+    if (AccessMetric)
+      AccessMetric->record(1, "hit");
     std::unique_ptr<ParsedAST> V = std::move(Existing->second);
     LRU.erase(Existing);
     // GCC 4.8 fails to compile `return V;`, as it tries to call the copy
@@ -649,10 +657,14 @@ void ASTWorker::runWithAST(
     llvm::StringRef Name,
     llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
     TUScheduler::ASTActionInvalidation Invalidation) {
+  // Tracks ast cache accesses for read operations.
+  static constexpr trace::Metric ASTAccessForRead(
+      "ast_access_read", trace::Metric::Counter, "result");
   auto Task = [=, Action = std::move(Action)]() mutable {
     if (auto Reason = isCancelled())
       return Action(llvm::make_error<CancelledError>(Reason));
-    llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
+    llvm::Optional<std::unique_ptr<ParsedAST>> AST =
+        IdleASTs.take(this, &ASTAccessForRead);
     if (!AST) {
       StoreDiags CompilerInvocationDiagConsumer;
       std::unique_ptr<CompilerInvocation> Invocation =
@@ -773,6 +785,9 @@ void ASTWorker::updatePreamble(std::unique_ptr<CompilerInvocation> CI,
 void ASTWorker::generateDiagnostics(
     std::unique_ptr<CompilerInvocation> Invocation, ParseInputs Inputs,
     std::vector<Diag> CIDiags) {
+  // Tracks ast cache accesses for publishing diags.
+  static constexpr trace::Metric ASTAccessForDiag(
+      "ast_access_diag", trace::Metric::Counter, "result");
   assert(Invocation);
   // No need to rebuild the AST if we won't send the diagnostics.
   {
@@ -801,7 +816,8 @@ void ASTWorker::generateDiagnostics(
   // We might be able to reuse the last we've built for a read request.
   // FIXME: It might be better to not reuse this AST. That way queued AST builds
   // won't be required for diags.
-  llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
+  llvm::Optional<std::unique_ptr<ParsedAST>> AST =
+      IdleASTs.take(this, &ASTAccessForDiag);
   if (!AST || !InputsAreLatest) {
     auto RebuildStartTime = DebouncePolicy::clock::now();
     llvm::Optional<ParsedAST> NewAST = ParsedAST::build(

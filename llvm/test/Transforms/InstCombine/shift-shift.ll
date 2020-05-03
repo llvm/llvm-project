@@ -8,9 +8,9 @@
 define void @pr12967() {
 ; CHECK-LABEL: @pr12967(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label %loop
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br label %loop
+; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
   br label %loop
@@ -27,9 +27,9 @@ loop:
 define void @pr26760() {
 ; CHECK-LABEL: @pr26760(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label %loop
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br label %loop
+; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
   br label %loop
@@ -47,14 +47,14 @@ loop:
 define i32 @pr8547(i32* %g) {
 ; CHECK-LABEL: @pr8547(
 ; CHECK-NEXT:  codeRepl:
-; CHECK-NEXT:    br label %for.cond
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, %codeRepl ], [ 5, %for.cond ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* %g, align 4
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[CODEREPL:%.*]] ], [ 5, [[FOR_COND]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* [[G:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i32 [[STOREMERGE]], 6
 ; CHECK-NEXT:    [[CONV2:%.*]] = and i32 [[TMP0]], 64
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[CONV2]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label %for.cond, label %codeRepl2
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_COND]], label [[CODEREPL2:%.*]]
 ; CHECK:       codeRepl2:
 ; CHECK-NEXT:    ret i32 [[CONV2]]
 ;
@@ -73,3 +73,63 @@ codeRepl2:
   ret i32 %conv2
 }
 
+; Two same direction shifts that add up to more than the bitwidth should get
+; folded to zero.
+
+define i32 @shl_shl(i32 %A) {
+; CHECK-LABEL: @shl_shl(
+; CHECK-NEXT:    ret i32 0
+;
+  %B = shl i32 %A, 6
+  %C = shl i32 %B, 28
+  ret i32 %C
+}
+
+define <2 x i33> @shl_shl_splat_vec(<2 x i33> %A) {
+; CHECK-LABEL: @shl_shl_splat_vec(
+; CHECK-NEXT:    ret <2 x i33> zeroinitializer
+;
+  %B = shl <2 x i33> %A, <i33 5, i33 5>
+  %C = shl <2 x i33> %B, <i33 28, i33 28>
+  ret <2 x i33> %C
+}
+
+; FIXME
+
+define <2 x i33> @shl_shl_vec(<2 x i33> %A) {
+; CHECK-LABEL: @shl_shl_vec(
+; CHECK-NEXT:    [[B:%.*]] = shl <2 x i33> [[A:%.*]], <i33 6, i33 5>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i33> [[B]], <i33 27, i33 28>
+; CHECK-NEXT:    ret <2 x i33> [[C]]
+;
+  %B = shl <2 x i33> %A, <i33 6, i33 5>
+  %C = shl <2 x i33> %B, <i33 27, i33 28>
+  ret <2 x i33> %C
+}
+
+define i232 @lshr_lshr(i232 %A) {
+; CHECK-LABEL: @lshr_lshr(
+; CHECK-NEXT:    ret i232 0
+;
+  %B = lshr i232 %A, 231
+  %C = lshr i232 %B, 1
+  ret i232 %C
+}
+
+define <2 x i32> @lshr_lshr_splat_vec(<2 x i32> %A) {
+; CHECK-LABEL: @lshr_lshr_splat_vec(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %B = lshr <2 x i32> %A, <i32 28, i32 28>
+  %C = lshr <2 x i32> %B, <i32 4, i32 4>
+  ret <2 x i32> %C
+}
+
+define <2 x i32> @lshr_lshr_vec(<2 x i32> %A) {
+; CHECK-LABEL: @lshr_lshr_vec(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %B = lshr <2 x i32> %A, <i32 29, i32 28>
+  %C = lshr <2 x i32> %B, <i32 4, i32 5>
+  ret <2 x i32> %C
+}

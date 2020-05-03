@@ -636,7 +636,6 @@ public:
   virtual void execute(struct VPTransformState &State) = 0;
 
   /// Each recipe prints itself.
-  void print(raw_ostream &O, const Twine &Indent);
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
 
