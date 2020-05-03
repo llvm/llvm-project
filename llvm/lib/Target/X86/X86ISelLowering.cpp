@@ -5751,13 +5751,14 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
 
 static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
                                                const SDLoc &dl) {
-  MVT VT = Op.getSimpleValueType();
+  EVT VT = Op.getValueType();
   unsigned NumElems = VT.getVectorNumElements();
   unsigned SizeInBits = VT.getSizeInBits();
+  assert((NumElems % 2) == 0 && (SizeInBits % 2) == 0 &&
+         "Can't split odd sized vector");
 
   SDValue Lo = extractSubVector(Op, 0, DAG, dl, SizeInBits / 2);
   SDValue Hi = extractSubVector(Op, NumElems / 2, DAG, dl, SizeInBits / 2);
-
   return std::make_pair(Lo, Hi);
 }
 
