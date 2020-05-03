@@ -564,7 +564,7 @@ format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
   if (!Style) {
     log("getStyle() failed for file {0}: {1}. Fallback is LLVM style.", File,
         Style.takeError());
-    Style = format::getLLVMStyle();
+    return format::getLLVMStyle();
   }
   return *Style;
 }
