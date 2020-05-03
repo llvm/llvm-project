@@ -145,8 +145,7 @@ define i1 @shl_i1(i1 %a, i1 %b) {
   ret i1 %shl
 }
 
-; The following cases only get folded by InstCombine,
-; see InstCombine/lshr.ll.
+; Simplify count leading/trailing zeros to zero if all valid bits are shifted out.
 
 declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
@@ -155,9 +154,7 @@ declare <2 x i8> @llvm.ctlz.v2i8(<2 x i8>, i1) nounwind readnone
 
 define i32 @lshr_ctlz_zero_is_undef(i32 %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef(
-; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[CT]], 5
-; CHECK-NEXT:    ret i32 [[SH]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ct = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %sh = lshr i32 %ct, 5
@@ -166,9 +163,7 @@ define i32 @lshr_ctlz_zero_is_undef(i32 %x) {
 
 define i32 @lshr_cttz_zero_is_undef(i32 %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef(
-; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[CT]], 5
-; CHECK-NEXT:    ret i32 [[SH]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ct = call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %sh = lshr i32 %ct, 5
@@ -177,9 +172,7 @@ define i32 @lshr_cttz_zero_is_undef(i32 %x) {
 
 define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef_splat_vec(
-; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
-; CHECK-NEXT:    ret <2 x i8> [[SH]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 3>
@@ -188,10 +181,7 @@ define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
 
 define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef_vec(
-; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 0>
-; CHECK-NEXT:    [[EX:%.*]] = extractelement <2 x i8> [[SH]], i32 0
-; CHECK-NEXT:    ret i8 [[EX]]
+; CHECK-NEXT:    ret i8 0
 ;
   %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 0>
@@ -201,9 +191,7 @@ define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
 
 define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_splat_vec(
-; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 3>
-; CHECK-NEXT:    ret <2 x i8> [[SH]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 3>
@@ -212,10 +200,7 @@ define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 
 define i8 @lshr_cttz_zero_is_undef_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_vec(
-; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 0>
-; CHECK-NEXT:    [[EX:%.*]] = extractelement <2 x i8> [[SH]], i32 0
-; CHECK-NEXT:    ret i8 [[EX]]
+; CHECK-NEXT:    ret i8 0
 ;
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 0>
