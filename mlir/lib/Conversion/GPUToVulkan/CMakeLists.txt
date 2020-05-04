@@ -18,4 +18,5 @@ target_link_libraries(MLIRGPUtoVulkanTransforms
   MLIRSupport
   MLIRTransforms
   MLIRTranslation
+  LLVMSupport
   )

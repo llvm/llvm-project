@@ -6,10 +6,12 @@ add_mlir_dialect_library(MLIRShape
 
   DEPENDS
   MLIRShapeOpsIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRShape
+  PUBLIC
   MLIRDialect
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRSideEffects
+  LLVMSupport
   )

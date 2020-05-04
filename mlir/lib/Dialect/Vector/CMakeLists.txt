@@ -10,8 +10,9 @@ add_mlir_dialect_library(MLIRVector
   DEPENDS
   MLIRVectorOpsIncGen
   MLIRVectorTransformPatternsIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRVector
+  PUBLIC
   MLIREDSC
   MLIRIR
   MLIRStandardOps

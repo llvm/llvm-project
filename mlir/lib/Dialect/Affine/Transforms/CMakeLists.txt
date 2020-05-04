@@ -14,8 +14,9 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRAffineOpsIncGen
   MLIRAffinePassIncGen
   MLIRLoopLikeInterfaceIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRAffineTransforms
+  PUBLIC
   MLIRAffineOps
   MLIREDSC
   MLIRIR

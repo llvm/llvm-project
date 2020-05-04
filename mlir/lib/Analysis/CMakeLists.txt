@@ -17,7 +17,12 @@ add_mlir_library(MLIRAnalysis
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
 
-  LINK_LIBS PUBLIC
+  DEPENDS
+  mlir-generic-headers
+  )
+
+target_link_libraries(MLIRAnalysis
+  PUBLIC
   MLIRAffineOps
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
@@ -35,10 +40,14 @@ add_mlir_library(MLIRLoopAnalysis
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
 
-  LINK_LIBS PUBLIC
+  DEPENDS
+  mlir-generic-headers
+  )
+
+target_link_libraries(MLIRLoopAnalysis
+  PUBLIC
   MLIRAffineOps
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
-  MLIRLoopOps
-  )
+  MLIRLoopOps)

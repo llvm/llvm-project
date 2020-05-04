@@ -16,8 +16,9 @@ add_mlir_library(MLIRCallInterfaces
 
   DEPENDS
   MLIRCallInterfacesIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRCallInterfaces
+  PUBLIC
   MLIRIR
   )
 
@@ -29,8 +30,9 @@ add_mlir_library(MLIRControlFlowInterfaces
 
   DEPENDS
   MLIRControlFlowInterfacesIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRControlFlowInterfaces
+  PUBLIC
   MLIRIR
   )
 
@@ -42,8 +44,9 @@ add_mlir_library(MLIRDerivedAttributeOpInterface
 
   DEPENDS
   MLIRDerivedAttributeOpInterfaceIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRDerivedAttributeOpInterface
+  PUBLIC
   MLIRIR
   )
 
@@ -55,8 +58,9 @@ add_mlir_library(MLIRInferTypeOpInterface
 
   DEPENDS
   MLIRInferTypeOpInterfaceIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRInferTypeOpInterface
+  PUBLIC
   MLIRIR
   )
 
@@ -68,8 +72,9 @@ add_mlir_library(MLIRLoopLikeInterface
 
   DEPENDS
   MLIRLoopLikeInterfaceIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRLoopLikeInterface
+  PUBLIC
   MLIRIR
   )
 
@@ -81,8 +86,9 @@ add_mlir_library(MLIRSideEffects
 
   DEPENDS
   MLIRSideEffectOpInterfacesIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRSideEffects
+  PUBLIC
   MLIRIR
   )
 
@@ -94,7 +100,8 @@ add_mlir_library(MLIRViewLikeInterface
 
   DEPENDS
   MLIRViewLikeInterfaceIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRViewLikeInterface
+  PUBLIC
   MLIRIR
   )

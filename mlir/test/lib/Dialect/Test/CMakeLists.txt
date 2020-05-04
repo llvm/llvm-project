@@ -14,17 +14,16 @@ mlir_tablegen(TestOpStructs.cpp.inc -gen-struct-attr-defs)
 mlir_tablegen(TestPatterns.inc -gen-rewriters)
 add_public_tablegen_target(MLIRTestOpsIncGen)
 
-# Exclude tests from libMLIR.so
-add_mlir_library(MLIRTestDialect
+add_llvm_library(MLIRTestDialect
   TestDialect.cpp
   TestPatterns.cpp
 
-  EXCLUDE_FROM_LIBMLIR
-
   DEPENDS
   MLIRTestOpsIncGen
-
-  LINK_LIBS PUBLIC
+)
+target_link_libraries(MLIRTestDialect
+  PUBLIC
+  LLVMSupport
   MLIRControlFlowInterfaces
   MLIRDerivedAttributeOpInterface
   MLIRDialect

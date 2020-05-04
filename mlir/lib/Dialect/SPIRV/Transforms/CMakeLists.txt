@@ -8,8 +8,10 @@ add_mlir_dialect_library(MLIRSPIRVTransforms
 
   DEPENDS
   MLIRSPIRVPassIncGen
+  )
 
-  LINK_LIBS PUBLIC
+target_link_libraries(MLIRSPIRVTransforms
+  PUBLIC
   MLIRPass
   MLIRSPIRV
   )

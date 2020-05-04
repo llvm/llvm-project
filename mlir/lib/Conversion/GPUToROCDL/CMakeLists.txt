@@ -12,6 +12,7 @@ add_mlir_conversion_library(MLIRGPUtoROCDLTransforms
 
 target_link_libraries(MLIRGPUtoROCDLTransforms
   PUBLIC
+  LLVMSupport
   MLIRGPU
   MLIRLLVMIR
   MLIRROCDLIR
