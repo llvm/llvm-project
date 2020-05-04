@@ -99,15 +99,6 @@ public:
   const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,
                                std::string &storage) const;
 
-  void Dump(const DWARFUnit *cu, lldb_private::Stream &s,
-            uint32_t recurse_depth) const;
-
-  static void
-  DumpAttribute(const DWARFUnit *cu,
-                const lldb_private::DWARFDataExtractor &data,
-                lldb::offset_t *offset_ptr, lldb_private::Stream &s,
-                dw_attr_t attr, DWARFFormValue &form_value);
-
   bool GetDIENamesAndRanges(
       DWARFUnit *cu, const char *&name, const char *&mangled,
       DWARFRangeList &rangeList, int &decl_file, int &decl_line,
