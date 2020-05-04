@@ -6,10 +6,7 @@ add_mlir_conversion_library(MLIRAVX512ToLLVM
 
   DEPENDS
   MLIRConversionPassIncGen
-
-  LINK_COMPONENTS
-  Core
-  )
+)
 
 target_link_libraries(MLIRAVX512ToLLVM
   PUBLIC
@@ -18,4 +15,6 @@ target_link_libraries(MLIRAVX512ToLLVM
   MLIRLLVMIR
   MLIRStandardToLLVM
   MLIRTransforms
+  LLVMCore
+  LLVMSupport
   )

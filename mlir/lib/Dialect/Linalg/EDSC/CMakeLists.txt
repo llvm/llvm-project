@@ -6,8 +6,10 @@ add_mlir_dialect_library(MLIRLinalgEDSC
 
   DEPENDS
   intrinsics_gen
+  )
 
-  LINK_LIBS PUBLIC
+target_link_libraries(MLIRLinalgEDSC
+  PUBLIC
   MLIREDSC
   MLIRIR
   MLIRAffineOps
@@ -15,4 +17,5 @@ add_mlir_dialect_library(MLIRLinalgEDSC
   MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
+  LLVMSupport
   )

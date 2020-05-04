@@ -13,8 +13,9 @@ add_mlir_dialect_library(MLIRGPU
   MLIRGPUPassIncGen
   MLIRParallelLoopMapperAttrGen
   MLIRParallelLoopMapperEnumsGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRGPU
+  PUBLIC
   MLIREDSC
   MLIRIR
   MLIRLLVMIR
@@ -24,4 +25,5 @@ add_mlir_dialect_library(MLIRGPU
   MLIRStandardOps
   MLIRSupport
   MLIRTransformUtils
+  LLVMSupport
   )

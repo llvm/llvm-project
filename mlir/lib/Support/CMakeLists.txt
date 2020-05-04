@@ -13,11 +13,10 @@ add_mlir_library(MLIRSupport
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
-
-  LINK_COMPONENTS
-  Support
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRSupport
+  PUBLIC
+  LLVMSupport
   ${LLVM_PTHREAD_LIB})
 
 add_mlir_library(MLIROptLib
@@ -25,30 +24,20 @@ add_mlir_library(MLIROptLib
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
-
-  LINK_COMPONENTS
-  Support
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIROptLib
+  PUBLIC
   MLIRPass
   MLIRParser
+  LLVMSupport
   MLIRSupport
   )
 
-# Exclude from libMLIR.so because the JIT infrastructure
-# is a big dependency which most don't need.
-add_mlir_library(MLIRJitRunner
+add_llvm_library(MLIRJitRunner
   JitRunner.cpp
-
-  EXCLUDE_FROM_LIBMLIR
-
-  LINK_COMPONENTS
-  Core
-  OrcJIT
-  JITLink
-  Support
-
-  LINK_LIBS PUBLIC
+)
+target_link_libraries(MLIRJitRunner
+  PUBLIC
   MLIRExecutionEngine
   MLIRIR
   MLIRParser
@@ -57,4 +46,6 @@ add_mlir_library(MLIRJitRunner
   MLIRTransforms
   MLIRStandardToLLVM
   MLIRSupport
+  LLVMCore
+  LLVMSupport
 )

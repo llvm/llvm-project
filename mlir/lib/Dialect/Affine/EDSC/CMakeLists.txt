@@ -6,8 +6,9 @@ add_mlir_dialect_library(MLIRAffineEDSC
 
   DEPENDS
   MLIRAffineOpsIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRAffineEDSC
+  PUBLIC
   MLIRAffineOps
   MLIREDSC
   MLIRIR
