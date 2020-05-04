@@ -168,7 +168,10 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
       return NULL;
 
     Symp->setName(Name);
-    Symp->Value = Fsym.getValue();
+    auto ExpectedFsymValue = Fsym.getValue();
+    if (!ExpectedFsymValue)
+      return NULL;
+    Symp->Value = ExpectedFsymValue.get();
 
     DataRefImpl Symb = Fsym.getRawDataRefImpl();
     auto Flags = Fsym.getObject()->getSymbolFlags(Symb);
@@ -235,7 +238,10 @@ amd_comgr_status_t SymbolHelper::iterateTable(
         return AMD_COMGR_STATUS_ERROR;
       StringRef SymName = *SymNameOrErr;
       Ctxp->setName(SymName);
-      Ctxp->Value = Symbol.getValue();
+      auto ExpectedSymbolValue = Symbol.getValue();
+      if (!ExpectedSymbolValue)
+        return AMD_COMGR_STATUS_ERROR;
+      Ctxp->Value = ExpectedSymbolValue.get();
 
       Expected<SymbolRef::Type> TypeOrErr = Symbol.getType();
       if (!TypeOrErr)
