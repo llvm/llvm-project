@@ -3092,7 +3092,7 @@ bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
   if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
     int64_t ImmVal = CNode->getSExtValue();
     SDLoc DL(N);
-    if (ImmVal >= -127 && ImmVal < 127) {
+    if (ImmVal >= -128 && ImmVal < 128) {
       Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
       return true;
     }
