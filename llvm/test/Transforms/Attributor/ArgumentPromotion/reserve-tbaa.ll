@@ -48,7 +48,7 @@ define i32 @main() {
 ; IS__TUNIT____-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa !5
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa !5
 ; IS__TUNIT____-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa !0
-; IS__TUNIT____-NEXT:    call fastcc void @fn(i32* nofree nonnull readonly align 4 dereferenceable(4) @g)
+; IS__TUNIT____-NEXT:    call fastcc void @fn(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) @g)
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@main()

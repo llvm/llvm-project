@@ -23,6 +23,7 @@ unittest("ClangdTests") {
     "//llvm/lib/Testing/Support",
   ]
   include_dirs = [
+    ".",
     "//clang-tools-extra/clangd",
 
     # To pick up the generated inc files.
@@ -49,7 +50,6 @@ unittest("ClangdTests") {
     "FindSymbolsTests.cpp",
     "FindTargetTests.cpp",
     "FormatTests.cpp",
-    "FormattedStringTests.cpp",
     "FuzzyMatchTests.cpp",
     "GlobalCompilationDatabaseTests.cpp",
     "HeaderSourceSwitchTests.cpp",
@@ -86,6 +86,8 @@ unittest("ClangdTests") {
     "support/CancellationTests.cpp",
     "support/ContextTests.cpp",
     "support/FunctionTests.cpp",
+    "support/MarkupTests.cpp",
+    "support/TestTracer.cpp",
     "support/ThreadingTests.cpp",
     "support/TraceTests.cpp",
   ]

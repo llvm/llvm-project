@@ -1,11 +1,11 @@
-//===-- FormattedStringTests.cpp ------------------------------------------===//
+//===-- MarkupTests.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "FormattedString.h"
+#include "support/Markup.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -155,11 +155,11 @@ TEST(Paragraph, Chunks) {
   Paragraph P = Paragraph();
   P.appendText("One ");
   P.appendCode("fish");
-  P.appendText(", two");
+  P.appendText(", two ");
   P.appendCode("fish", /*Preserve=*/true);
 
-  EXPECT_EQ(P.asMarkdown(), "One `fish` , two `fish`");
-  EXPECT_EQ(P.asPlainText(), "One fish , two `fish`");
+  EXPECT_EQ(P.asMarkdown(), "One `fish`, two `fish`");
+  EXPECT_EQ(P.asPlainText(), "One fish, two `fish`");
 }
 
 TEST(Paragraph, SeparationOfChunks) {
@@ -168,17 +168,21 @@ TEST(Paragraph, SeparationOfChunks) {
   // Purpose is to check for separation between different chunks.
   Paragraph P;
 
-  P.appendText("after");
+  P.appendText("after ");
   EXPECT_EQ(P.asMarkdown(), "after");
   EXPECT_EQ(P.asPlainText(), "after");
 
-  P.appendCode("foobar");
+  P.appendCode("foobar").appendSpace();
   EXPECT_EQ(P.asMarkdown(), "after `foobar`");
   EXPECT_EQ(P.asPlainText(), "after foobar");
 
   P.appendText("bat");
   EXPECT_EQ(P.asMarkdown(), "after `foobar` bat");
   EXPECT_EQ(P.asPlainText(), "after foobar bat");
+
+  P.appendCode("no").appendCode("space");
+  EXPECT_EQ(P.asMarkdown(), "after `foobar` bat`no` `space`");
+  EXPECT_EQ(P.asPlainText(), "after foobar batno space");
 }
 
 TEST(Paragraph, ExtraSpaces) {
@@ -186,8 +190,16 @@ TEST(Paragraph, ExtraSpaces) {
   Paragraph P;
   P.appendText("foo\n   \t   baz");
   P.appendCode(" bar\n");
-  EXPECT_EQ(P.asMarkdown(), "foo baz `bar`");
-  EXPECT_EQ(P.asPlainText(), "foo baz bar");
+  EXPECT_EQ(P.asMarkdown(), "foo baz`bar`");
+  EXPECT_EQ(P.asPlainText(), "foo bazbar");
+}
+
+TEST(Paragraph, SpacesCollapsed) {
+  Paragraph P;
+  P.appendText(" foo bar ");
+  P.appendText(" baz ");
+  EXPECT_EQ(P.asMarkdown(), "foo bar baz");
+  EXPECT_EQ(P.asPlainText(), "foo bar baz");
 }
 
 TEST(Paragraph, NewLines) {

@@ -230,7 +230,7 @@ TEST_F(StringMapTest, StringMapEntryTest) {
           StringRef(testKeyFirst, testKeyLength), Allocator, 1u);
   EXPECT_STREQ(testKey, entry->first().data());
   EXPECT_EQ(1u, entry->second);
-  free(entry);
+  entry->Destroy(Allocator);
 }
 
 // Test insert() method.

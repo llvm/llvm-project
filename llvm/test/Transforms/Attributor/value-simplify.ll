@@ -277,7 +277,7 @@ define internal i32* @test_inalloca(i32* inalloca %a) {
 }
 define i32* @complicated_args_inalloca() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_inalloca()
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly align 536870912 null)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree writeonly align 536870912 null)
 ; CHECK-NEXT:    ret i32* [[CALL]]
 ;
   %call = call i32* @test_inalloca(i32* null)
@@ -304,12 +304,12 @@ define void @complicated_args_sret(%struct.X** %b) {
 ;
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__TUNIT____-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]])
-; IS__TUNIT____-NEXT:    call void @test_sret(%struct.X* noalias nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]])
+; IS__TUNIT____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__CGSCC____-SAME: (%struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
-; IS__CGSCC____-NEXT:    call void @test_sret(%struct.X* noalias nofree writeonly align 536870912 null, %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B]])
+; IS__CGSCC____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree writeonly align 536870912 null, %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B]])
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)
@@ -329,7 +329,7 @@ define internal %struct.X* @test_nest(%struct.X* nest %a) {
 }
 define %struct.X* @complicated_args_nest() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_nest()
-; CHECK-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nofree readnone align 536870912 null)
+; CHECK-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nocapture nofree readnone align 536870912 null)
 ; CHECK-NEXT:    ret %struct.X* [[CALL]]
 ;
   %call = call %struct.X* @test_nest(%struct.X* null)
@@ -348,7 +348,7 @@ define internal void @test_byval(%struct.X* byval %a) {
 ; IS__CGSCC_NPM-SAME: (i8* nocapture nofree readnone [[TMP0:%.*]])
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]]
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.X* [[A_PRIV]] to i8**
-; IS__CGSCC_NPM-NEXT:    store i8* [[TMP0]], i8** [[A_PRIV_CAST]]
+; IS__CGSCC_NPM-NEXT:    store i8* [[TMP0]], i8** [[A_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X]], %struct.X* [[A_PRIV]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    store i8* null, i8** [[G0]], align 8
 ; IS__CGSCC_NPM-NEXT:    ret void

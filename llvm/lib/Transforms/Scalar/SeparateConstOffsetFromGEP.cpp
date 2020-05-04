@@ -704,7 +704,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);
-  assert(BO->getNumUses() <= 1 &&
+  assert((BO->use_empty() || BO->hasOneUse()) &&
          "distributeExtsAndCloneChain clones each BinaryOperator in "
          "UserChain, so no one should be used more than "
          "once");

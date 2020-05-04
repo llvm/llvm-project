@@ -44,7 +44,6 @@ add_clang_library(clangDaemon
   FileDistance.cpp
   Format.cpp
   FS.cpp
-  FormattedString.cpp
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp

@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestTracer.h"
+#include "support/Context.h"
 #include "support/Trace.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/YAMLParser.h"
@@ -19,6 +21,8 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+using testing::SizeIs;
 
 MATCHER_P(StringNode, Val, "") {
   if (arg->getType() != llvm::yaml::Node::NK_Scalar) {
@@ -120,6 +124,18 @@ TEST(TraceTest, SmokeTest) {
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "X"}, {"name", "A"}}));
   ASSERT_EQ(++Event, Events->end());
   ASSERT_EQ(++Prop, Root->end());
+}
+
+TEST(MetricsTracer, LatencyTest) {
+  trace::TestTracer Tracer;
+  constexpr llvm::StringLiteral MetricName = "span_latency";
+  constexpr llvm::StringLiteral OpName = "op_name";
+  {
+    // A span should record latencies to span_latency by default.
+    trace::Span SpanWithLat(OpName);
+    EXPECT_THAT(Tracer.takeMetric(MetricName, OpName), SizeIs(0));
+  }
+  EXPECT_THAT(Tracer.takeMetric(MetricName, OpName), SizeIs(1));
 }
 
 } // namespace

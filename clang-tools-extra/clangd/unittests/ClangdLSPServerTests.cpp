@@ -14,6 +14,9 @@
 #include "TestFS.h"
 #include "refactor/Rename.h"
 #include "support/Logger.h"
+#include "support/TestTracer.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
@@ -147,6 +150,15 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
                   DiagMessage("Use of undeclared identifier 'changed'"))));
 }
 
+TEST_F(LSPTest, RecordsLatencies) {
+  trace::TestTracer Tracer;
+  auto &Client = start();
+  llvm::StringLiteral MethodName = "method_name";
+  EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(0));
+  llvm::consumeError(Client.call(MethodName, {}).take().takeError());
+  Client.sync();
+  EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(1));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

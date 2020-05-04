@@ -27,7 +27,7 @@ define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]]
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]]
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 99, i32* [[TMP2]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
@@ -98,7 +98,7 @@ entry:
 define i32 @unions() nounwind {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unions()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions()
@@ -173,7 +173,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly 
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]]
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]]
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 99, i32* [[Z]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
@@ -199,7 +199,7 @@ entry:
 define i32 @unions_v2() nounwind {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions_v2()
@@ -213,7 +213,7 @@ define i32 @unions_v2() nounwind {
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* noalias nofree nonnull readnone byval align 8 dereferenceable(8) @mystr)
+; IS__CGSCC_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* noalias nocapture nofree nonnull readnone byval align 8 dereferenceable(8) @mystr)
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@unions_v2()

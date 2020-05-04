@@ -13,14 +13,14 @@ define i32 @fn2() local_unnamed_addr {
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32, i32* @b, align 4
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to i32*
-; IS__TUNIT____-NEXT:    call fastcc void @fn1(i32* nofree readonly align 4 [[TMP3]])
+; IS__TUNIT____-NEXT:    call fastcc void @fn1(i32* nocapture nofree readonly align 4 [[TMP3]])
 ; IS__TUNIT____-NEXT:    ret i32 undef
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2() local_unnamed_addr
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* @b, align 4
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to i32*
-; IS__CGSCC____-NEXT:    call fastcc void @fn1(i32* nofree nonnull readonly align 4 [[TMP3]])
+; IS__CGSCC____-NEXT:    call fastcc void @fn1(i32* nocapture nofree nonnull readonly align 4 [[TMP3]])
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %1 = load i32, i32* @b, align 4

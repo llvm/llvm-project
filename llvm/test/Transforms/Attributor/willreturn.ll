@@ -335,9 +335,7 @@ define void @f1() #0 {
   ret void
 }
 
-; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
-; FIXME: Because we do not derive norecurse in the module run anymore, willreturn is missing as well.
-; IS__TUNIT____-NOT: willreturn
+; IS__TUNIT____: Function Attrs: noinline nounwind uwtable willreturn
 ; IS__CGSCC____: Function Attrs: noinline norecurse nounwind uwtable willreturn
 define void @f2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@f2()

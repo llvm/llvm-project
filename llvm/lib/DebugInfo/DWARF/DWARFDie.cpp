@@ -531,14 +531,26 @@ const char *DWARFDie::getName(DINameKind Kind) const {
     return nullptr;
   // Try to get mangled name only if it was asked for.
   if (Kind == DINameKind::LinkageName) {
-    if (auto Name = dwarf::toString(
-            findRecursively({DW_AT_MIPS_linkage_name, DW_AT_linkage_name}),
-            nullptr))
+    if (auto Name = getLinkageName())
       return Name;
   }
-  if (auto Name = dwarf::toString(findRecursively(DW_AT_name), nullptr))
-    return Name;
-  return nullptr;
+  return getShortName();
+}
+
+const char *DWARFDie::getShortName() const {
+  if (!isValid())
+    return nullptr;
+
+  return dwarf::toString(findRecursively(dwarf::DW_AT_name), nullptr);
+}
+
+const char *DWARFDie::getLinkageName() const {
+  if (!isValid())
+    return nullptr;
+
+  return dwarf::toString(findRecursively({dwarf::DW_AT_MIPS_linkage_name,
+                                          dwarf::DW_AT_linkage_name}),
+                         nullptr);
 }
 
 uint64_t DWARFDie::getDeclLine() const {

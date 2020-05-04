@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 
-#include "FormattedString.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Index.h"

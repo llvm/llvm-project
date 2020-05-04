@@ -161,7 +161,7 @@ define i8* @test6() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @strdup(i8* nonnull dereferenceable(2) [[ARRAYIDX]])
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @strdup(i8* nocapture nonnull dereferenceable(2) [[ARRAYIDX]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -233,7 +233,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 declare void @use_i8(i8* nocapture)
 define internal void @test9a(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test9a()
-; CHECK-NEXT:    call void @use_i8(i8* noalias align 536870912 null)
+; CHECK-NEXT:    call void @use_i8(i8* noalias nocapture align 536870912 null)
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(i8* null)
@@ -265,25 +265,15 @@ define internal void @test9c(i8* %a, i8* %b, i8* %c) {
   ret void
 }
 define void @test9_helper(i8* %a, i8* %b) {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test9_helper
-; NOT_CGSCC_NPM-SAME: (i8* nocapture [[A:%.*]], i8* nocapture [[B:%.*]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @test9a()
-; NOT_CGSCC_NPM-NEXT:    tail call void @test9a()
-; NOT_CGSCC_NPM-NEXT:    tail call void @test9b(i8* noalias nocapture [[A]], i8* nocapture [[B]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @test9b(i8* noalias nocapture [[B]], i8* noalias nocapture [[A]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @test9c(i8* noalias nocapture [[A]], i8* nocapture [[B]], i8* nocapture [[B]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @test9c(i8* noalias nocapture [[B]], i8* noalias nocapture [[A]], i8* noalias nocapture [[A]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test9_helper
-; IS__CGSCC____-SAME: (i8* nocapture [[A:%.*]], i8* nocapture [[B:%.*]])
-; IS__CGSCC____-NEXT:    tail call void @test9a()
-; IS__CGSCC____-NEXT:    tail call void @test9a()
-; IS__CGSCC____-NEXT:    tail call void @test9b(i8* noalias [[A]], i8* [[B]])
-; IS__CGSCC____-NEXT:    tail call void @test9b(i8* noalias [[B]], i8* noalias [[A]])
-; IS__CGSCC____-NEXT:    tail call void @test9c(i8* noalias [[A]], i8* [[B]], i8* [[B]])
-; IS__CGSCC____-NEXT:    tail call void @test9c(i8* noalias nocapture [[B]], i8* noalias [[A]], i8* noalias nocapture [[A]])
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test9_helper
+; CHECK-SAME: (i8* nocapture [[A:%.*]], i8* nocapture [[B:%.*]])
+; CHECK-NEXT:    tail call void @test9a()
+; CHECK-NEXT:    tail call void @test9a()
+; CHECK-NEXT:    tail call void @test9b(i8* noalias nocapture [[A]], i8* nocapture [[B]])
+; CHECK-NEXT:    tail call void @test9b(i8* noalias nocapture [[B]], i8* noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @test9c(i8* noalias nocapture [[A]], i8* nocapture [[B]], i8* nocapture [[B]])
+; CHECK-NEXT:    tail call void @test9c(i8* noalias nocapture [[B]], i8* noalias nocapture [[A]], i8* noalias nocapture [[A]])
+; CHECK-NEXT:    ret void
 ;
   tail call void @test9a(i8* noalias %a, i8* %b)
   tail call void @test9a(i8* noalias %b, i8* noalias %a)
@@ -342,23 +332,14 @@ define void @test11(i8* noalias %a) {
 declare void @use_nocapture(i8* nocapture)
 declare void @use(i8*)
 define void @test12_1() {
-; IS________OPM-LABEL: define {{[^@]+}}@test12_1()
-; IS________OPM-NEXT:    [[A:%.*]] = alloca i8, align 4
-; IS________OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* noalias nonnull align 4 dereferenceable(1) [[A]])
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* noalias nonnull align 4 dereferenceable(1) [[A]])
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* noalias [[B]])
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* noalias [[B]])
-; IS________OPM-NEXT:    ret void
-;
-; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test12_1()
-; NOT_TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i8, align 4
-; NOT_TUNIT_OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* noalias nonnull align 4 dereferenceable(1) [[A]])
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* noalias nonnull align 4 dereferenceable(1) [[A]])
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
-; NOT_TUNIT_OPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test12_1()
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
+; CHECK-NEXT:    ret void
 ;
   %A = alloca i8, align 4
   %B = tail call noalias i8* @malloc(i64 4)
@@ -370,21 +351,13 @@ define void @test12_1() {
 }
 
 define void @test12_2(){
-; IS________OPM-LABEL: define {{[^@]+}}@test12_2()
-; IS________OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
-; IS________OPM-NEXT:    tail call void @use(i8* [[A]])
-; IS________OPM-NEXT:    tail call void @use_nocapture(i8* [[A]])
-; IS________OPM-NEXT:    ret void
-;
-; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test12_2()
-; NOT_TUNIT_OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
-; NOT_TUNIT_OPM-NEXT:    tail call void @use(i8* [[A]])
-; NOT_TUNIT_OPM-NEXT:    tail call void @use_nocapture(i8* nocapture [[A]])
-; NOT_TUNIT_OPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test12_2()
+; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @use(i8* [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* nocapture [[A]])
+; CHECK-NEXT:    ret void
 ;
 ; FIXME: This should be @use_nocapture(i8* noalias [[A]])
 ; FIXME: This should be @use_nocapture(i8* noalias nocapture [[A]])
@@ -398,15 +371,10 @@ define void @test12_2(){
 
 declare void @two_args(i8* nocapture , i8* nocapture)
 define void @test12_3(){
-; IS________OPM-LABEL: define {{[^@]+}}@test12_3()
-; IS________OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS________OPM-NEXT:    tail call void @two_args(i8* [[A]], i8* [[A]])
-; IS________OPM-NEXT:    ret void
-;
-; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test12_3()
-; NOT_TUNIT_OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; NOT_TUNIT_OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A]])
-; NOT_TUNIT_OPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test12_3()
+; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A]])
+; CHECK-NEXT:    ret void
 ;
   %A = tail call noalias i8* @malloc(i64 4)
   tail call void @two_args(i8* %A, i8* %A)
@@ -420,10 +388,10 @@ define void @test12_4(){
 ; IS________OPM-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
 ; IS________OPM-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
 ; IS________OPM-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
-; IS________OPM-NEXT:    tail call void @two_args(i8* [[A]], i8* [[B]])
-; IS________OPM-NEXT:    tail call void @two_args(i8* [[A]], i8* [[A_0]])
-; IS________OPM-NEXT:    tail call void @two_args(i8* [[A]], i8* [[A_1]])
-; IS________OPM-NEXT:    tail call void @two_args(i8* [[A_0]], i8* [[B_0]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[B]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A_0]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A_1]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A_0]], i8* nocapture [[B_0]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test12_4()
@@ -488,23 +456,14 @@ define void @test13_use_noalias(){
 }
 
 define void @test13_use_alias(){
-; IS________OPM-LABEL: define {{[^@]+}}@test13_use_alias()
-; IS________OPM-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS________OPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
-; IS________OPM-NEXT:    [[C2A:%.*]] = bitcast i16* [[C1]] to i8*
-; IS________OPM-NEXT:    [[C2B:%.*]] = bitcast i16* [[C1]] to i8*
-; IS________OPM-NEXT:    call void @use_i8_internal(i8* [[C2A]])
-; IS________OPM-NEXT:    call void @use_i8_internal(i8* [[C2B]])
-; IS________OPM-NEXT:    ret void
-;
-; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test13_use_alias()
-; NOT_TUNIT_OPM-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; NOT_TUNIT_OPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
-; NOT_TUNIT_OPM-NEXT:    [[C2A:%.*]] = bitcast i16* [[C1]] to i8*
-; NOT_TUNIT_OPM-NEXT:    [[C2B:%.*]] = bitcast i16* [[C1]] to i8*
-; NOT_TUNIT_OPM-NEXT:    call void @use_i8_internal(i8* nocapture [[C2A]])
-; NOT_TUNIT_OPM-NEXT:    call void @use_i8_internal(i8* nocapture [[C2B]])
-; NOT_TUNIT_OPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test13_use_alias()
+; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
+; CHECK-NEXT:    [[C2A:%.*]] = bitcast i16* [[C1]] to i8*
+; CHECK-NEXT:    [[C2B:%.*]] = bitcast i16* [[C1]] to i8*
+; CHECK-NEXT:    call void @use_i8_internal(i8* nocapture [[C2A]])
+; CHECK-NEXT:    call void @use_i8_internal(i8* nocapture [[C2B]])
+; CHECK-NEXT:    ret void
 ;
   %m1 = tail call noalias i8* @malloc(i64 4)
   %c1 = bitcast i8* %m1 to i16*
@@ -537,7 +496,7 @@ define i32 @i2p(i32* %arg) {
 ; NOT_CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]])
 ; NOT_CGSCC_NPM-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to i8*
 ; NOT_CGSCC_NPM-NEXT:    [[BC:%.*]] = bitcast i8* [[I2P]] to i32*
-; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nofree readonly align 4 [[BC]])
+; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree readonly align 4 [[BC]])
 ; NOT_CGSCC_NPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@i2p
@@ -545,7 +504,7 @@ define i32 @i2p(i32* %arg) {
 ; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]])
 ; IS__CGSCC____-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to i8*
 ; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* [[I2P]] to i32*
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nofree nonnull readonly align 4 dereferenceable(4) [[BC]])
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[BC]])
 ; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
 ;
   %c = call i32 @p2i(i32* %arg)
@@ -579,11 +538,11 @@ define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; NOT_CGSCC_NPM-NEXT:  entry:
 ; NOT_CGSCC_NPM-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; NOT_CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nonnull align 8 dereferenceable(240) [[TMP0]])
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nocapture nonnull align 8 dereferenceable(240) [[TMP0]])
 ; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
 ; NOT_CGSCC_NPM-NEXT:    call void @__shlim(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i64 0)
 ; NOT_CGSCC_NPM-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i32 1, i32 1)
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nonnull align 8 dereferenceable(240) [[TMP0]])
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nocapture nonnull align 8 dereferenceable(240) [[TMP0]])
 ; NOT_CGSCC_NPM-NEXT:    ret double [[CALL1]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@strtox
@@ -591,11 +550,11 @@ define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nonnull align 8 dereferenceable(240) [[TMP0]])
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nocapture nonnull align 8 dereferenceable(240) [[TMP0]])
 ; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
 ; IS__CGSCC____-NEXT:    call void @__shlim(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i64 0)
 ; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i32 1, i32 1)
-; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nonnull align 8 dereferenceable(240) [[TMP0]])
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nocapture nonnull align 8 dereferenceable(240) [[TMP0]])
 ; IS__CGSCC____-NEXT:    ret double [[CALL1]]
 ;
 entry:
@@ -731,7 +690,7 @@ define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
 ; NOT_CGSCC_NPM-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; NOT_CGSCC_NPM-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; NOT_CGSCC_NPM:       if.then2:
-; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* nofree writeonly align 4 [[P]])
+; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]])
 ; NOT_CGSCC_NPM-NEXT:    br label [[IF_END3]]
 ; NOT_CGSCC_NPM:       if.end3:
 ; NOT_CGSCC_NPM-NEXT:    ret void
@@ -748,7 +707,7 @@ define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; IS__CGSCC____:       if.then2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]])
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]])
 ; IS__CGSCC____-NEXT:    br label [[IF_END3]]
 ; IS__CGSCC____:       if.end3:
 ; IS__CGSCC____-NEXT:    ret void

@@ -71,7 +71,6 @@ static_library("clangd") {
     "FindSymbols.cpp",
     "FindTarget.cpp",
     "Format.cpp",
-    "FormattedString.cpp",
     "FuzzyMatch.cpp",
     "GlobalCompilationDatabase.cpp",
     "HeaderSourceSwitch.cpp",

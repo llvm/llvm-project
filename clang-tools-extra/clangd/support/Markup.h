@@ -1,4 +1,4 @@
-//===--- FormattedString.h ----------------------------------*- C++-*------===//
+//===--- Markup.h -------------------------------------------*- C++-*------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A simple intermediate representation of formatted text that could be
-// converted to plaintext or markdown.
+// A model of formatted text that can be rendered to plaintext or markdown.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MARKUP_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MARKUP_H
 
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
@@ -54,6 +53,10 @@ public:
   /// \p Preserve indicates the code span must be apparent even in plaintext.
   Paragraph &appendCode(llvm::StringRef Code, bool Preserve = false);
 
+  /// Ensure there is space between the surrounding chunks.
+  /// Has no effect at the beginning or end of a paragraph.
+  Paragraph &appendSpace();
+
 private:
   struct Chunk {
     enum {
@@ -63,6 +66,11 @@ private:
     // Preserve chunk markers in plaintext.
     bool Preserve = false;
     std::string Contents;
+    // Whether this chunk should be surrounded by whitespace.
+    // Consecutive SpaceAfter and SpaceBefore will be collapsed into one space.
+    // Code spans don't usually set this: their spaces belong "inside" the span.
+    bool SpaceBefore = false;
+    bool SpaceAfter = false;
   };
   std::vector<Chunk> Chunks;
 };

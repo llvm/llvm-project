@@ -125,7 +125,8 @@ public:
     // Free memory referenced by the item.
     size_t AllocSize = sizeof(StringMapEntry) + this->getKeyLength() + 1;
     this->~StringMapEntry();
-    allocator.Deallocate(static_cast<void *>(this), AllocSize);
+    allocator.Deallocate(static_cast<void *>(this), AllocSize,
+                         alignof(StringMapEntry));
   }
 };
 

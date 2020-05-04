@@ -1671,10 +1671,10 @@ define void @call_via_pointer_with_dead_args_caller(i32* %a, i32* %b) {
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
 ; CHECK-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
 ; CHECK-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[PTR1]], void (i32*, i32*, i32*, i64, i32**)* nofree nonnull @called_via_pointer)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[PTR2]], void (i32*, i32*, i32*, i64, i32**)* nofree nonnull @called_via_pointer_internal_1)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* nonnull align 128 dereferenceable(4) [[PTR3]], void (i32*, i32*, i32*, i64, i32**)* nofree nonnull @called_via_pointer)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* nonnull align 128 dereferenceable(4) [[PTR4]], void (i32*, i32*, i32*, i64, i32**)* nofree nonnull @called_via_pointer_internal_2)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[PTR1]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[PTR2]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer_internal_1)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* nonnull align 128 dereferenceable(4) [[PTR3]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* nonnull align 128 dereferenceable(4) [[PTR4]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer_internal_2)
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = alloca i32, align 128
