@@ -67,7 +67,7 @@ int setBuf(const char *infile, char **buf) {
 
   fp = fopen(infile, "rb");
   if (!fp)
-    fail("fopen");
+    fail("fopen : %s", infile);
   if (fseek(fp, 0L, SEEK_END) != 0)
     fail("fopen");
   size = ftell(fp);

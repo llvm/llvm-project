@@ -15,11 +15,43 @@ macro(add_test_input_binary name input output)
   list(APPEND TEST_INPUT_BINARIES "${name}")
 endmacro()
 
+macro(add_test_shared_binary name input1 input2 output)
+  add_custom_command(
+    OUTPUT "${output}" "${input1}.o" "${input2}.o"
+    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -nogpulib
+      ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input1}" -o "${input1}.o"
+    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -nogpulib
+      ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input2}" -o "${input2}.o"
+    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa
+      "${input1}.o" "${input2}.o" -o "${output}"
+    VERBATIM
+    DEPENDS clang "${input1}" "${input2}")
+  add_custom_target("${name}"
+    DEPENDS "${output}"
+    SOURCES "${input1}" "${input2}")
+  list(APPEND TEST_INPUT_BINARIES "${name}")
+endmacro()
+
 add_test_input_binary(reloc1 reloc1.cl reloc1.o -c -mno-code-object-v3)
 add_test_input_binary(reloc2 reloc2.cl reloc2.o -c -mno-code-object-v3)
 add_test_input_binary(reloc-asm reloc-asm.s reloc-asm.o -c -mno-code-object-v3)
 add_test_input_binary(shared shared.cl shared.so -mno-code-object-v3)
 add_test_input_binary(shared-v3 shared.cl shared-v3.so -mcode-object-v3)
+
+add_test_shared_binary(shared12-v2 source1-v2.s source2-v2.s shared12-v2.so
+  -c -mcpu=gfx803 -mno-code-object-v3)
+add_test_shared_binary(shared14-v2 source1-v2.s source4-v2.s shared14-v2.so
+  -c -mcpu=gfx803 -mno-code-object-v3)
+add_test_shared_binary(shared23-v2 source2-v2.s source3-v2.s shared23-v2.so
+  -c -mcpu=gfx803 -mno-code-object-v3)
+
+add_test_shared_binary(shared12-v3 source1-v3.s source2-v3.s shared12-v3.so
+  -c -mcpu=gfx803)
+add_test_shared_binary(shared14-v3 source1-v3.s source4-v3.s shared14-v3.so
+  -c -mcpu=gfx803)
+add_test_shared_binary(shared23-v3 source2-v3.s source3-v3.s shared23-v3.so
+  -c -mcpu=gfx803)
+
 configure_file("source1.cl" "source1.cl" COPYONLY)
 configure_file("source1-device-libs.cl" "source1-device-libs.cl" COPYONLY)
 configure_file("source2.cl" "source2.cl" COPYONLY)
@@ -28,6 +60,15 @@ configure_file("source1.s" "source1.s" COPYONLY)
 configure_file("shared.cl" "shared.cl" COPYONLY)
 configure_file("source1.hip" "source1.hip" COPYONLY)
 configure_file("source2.hip" "source2.hip" COPYONLY)
+
+configure_file("source1-v2.s" "source1-v2.s" COPYONLY)
+configure_file("source2-v2.s" "source2-v2.s" COPYONLY)
+configure_file("source3-v2.s" "source3-v2.s" COPYONLY)
+configure_file("source4-v2.s" "source4-v2.s" COPYONLY)
+configure_file("source1-v3.s" "source1-v3.s" COPYONLY)
+configure_file("source2-v3.s" "source2-v3.s" COPYONLY)
+configure_file("source3-v3.s" "source3-v3.s" COPYONLY)
+configure_file("source4-v3.s" "source4-v3.s" COPYONLY)
 
 # Create executable ${name} and accompanying test ${name} built from
 # test/${name}.cl
@@ -62,6 +103,7 @@ add_comgr_test(disasm_options_test)
 add_comgr_test(metadata_tp_test)
 add_comgr_test(metadata_yaml_test)
 add_comgr_test(metadata_msgpack_test)
+add_comgr_test(metadata_merge_test)
 add_comgr_test(symbols_test)
 add_comgr_test(symbols_iterate_test)
 add_comgr_test(compile_test)
