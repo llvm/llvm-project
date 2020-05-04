@@ -1825,14 +1825,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   }
 
   auto CallSitePred = [&](Instruction &I) -> bool {
-    auto *CB = dyn_cast<CallBase>(&I);
-    IRPosition CBRetPos = IRPosition::callsite_returned(*CB);
+    auto &CB = cast<CallBase>(I);
+    IRPosition CBRetPos = IRPosition::callsite_returned(CB);
 
     // Call sites might be dead if they do not have side effects and no live
     // users. The return value might be dead if there are no live users.
     getOrCreateAAFor<AAIsDead>(CBRetPos);
 
-    Function *Callee = CB->getCalledFunction();
+    Function *Callee = CB.getCalledFunction();
     // TODO: Even if the callee is not known now we might be able to simplify
     //       the call/callee.
     if (!Callee)
@@ -1844,18 +1844,18 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         !Callee->hasMetadata(LLVMContext::MD_callback))
       return true;
 
-    if (!Callee->getReturnType()->isVoidTy() && !CB->use_empty()) {
+    if (!Callee->getReturnType()->isVoidTy() && !CB.use_empty()) {
 
-      IRPosition CBRetPos = IRPosition::callsite_returned(*CB);
+      IRPosition CBRetPos = IRPosition::callsite_returned(CB);
 
       // Call site return integer values might be limited by a constant range.
       if (Callee->getReturnType()->isIntegerTy())
         getOrCreateAAFor<AAValueConstantRange>(CBRetPos);
     }
 
-    for (int I = 0, E = CB->getNumArgOperands(); I < E; ++I) {
+    for (int I = 0, E = CB.getNumArgOperands(); I < E; ++I) {
 
-      IRPosition CBArgPos = IRPosition::callsite_argument(*CB, I);
+      IRPosition CBArgPos = IRPosition::callsite_argument(CB, I);
 
       // Every call site argument might be dead.
       getOrCreateAAFor<AAIsDead>(CBArgPos);
@@ -1863,7 +1863,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Call site argument might be simplified.
       getOrCreateAAFor<AAValueSimplify>(CBArgPos);
 
-      if (!CB->getArgOperand(I)->getType()->isPointerTy())
+      if (!CB.getArgOperand(I)->getType()->isPointerTy())
         continue;
 
       // Call site argument attribute "non-null".
