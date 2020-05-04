@@ -32,6 +32,9 @@ using namespace mlir;
 
 namespace {
 
+/// Import the GPU Ops to ROCDL Patterns.
+#include "GPUToROCDL.cpp.inc"
+
 // A pass that replaces all occurrences of GPU device operations with their
 // corresponding ROCDL equivalent.
 //
@@ -71,6 +74,7 @@ public:
 
 void mlir::populateGpuToROCDLConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+  populateWithGenerated(converter.getDialect()->getContext(), &patterns);
   patterns.insert<
       GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
                                   ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
