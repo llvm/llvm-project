@@ -1025,23 +1025,31 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           HardwareLoopInfo &HWLoopInfo) {
   // Low-overhead branches are only supported in the 'low-overhead branch'
   // extension of v8.1-m.
-  if (!ST->hasLOB() || DisableLowOverheadLoops)
+  if (!ST->hasLOB() || DisableLowOverheadLoops) {
+    LLVM_DEBUG(dbgs() << "ARMHWLoops: Disabled\n");
     return false;
+  }
 
-  if (!SE.hasLoopInvariantBackedgeTakenCount(L))
+  if (!SE.hasLoopInvariantBackedgeTakenCount(L)) {
+    LLVM_DEBUG(dbgs() << "ARMHWLoops: No BETC\n");
     return false;
+  }
 
   const SCEV *BackedgeTakenCount = SE.getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount))
+  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
+    LLVM_DEBUG(dbgs() << "ARMHWLoops: Uncomputable BETC\n");
     return false;
+  }
 
   const SCEV *TripCountSCEV =
     SE.getAddExpr(BackedgeTakenCount,
                   SE.getOne(BackedgeTakenCount->getType()));
 
   // We need to store the trip count in LR, a 32-bit register.
-  if (SE.getUnsignedRangeMax(TripCountSCEV).getBitWidth() > 32)
+  if (SE.getUnsignedRangeMax(TripCountSCEV).getBitWidth() > 32) {
+    LLVM_DEBUG(dbgs() << "ARMHWLoops: Trip count does not fit into 32bits\n");
     return false;
+  }
 
   // Making a call will trash LR and clear LO_BRANCH_INFO, so there's little
   // point in generating a hardware loop if that's going to happen.
@@ -1146,8 +1154,10 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   auto ScanLoop = [&](Loop *L) {
     for (auto *BB : L->getBlocks()) {
       for (auto &I : *BB) {
-        if (MaybeCall(I) || IsHardwareLoopIntrinsic(I))
+        if (MaybeCall(I) || IsHardwareLoopIntrinsic(I)) {
+          LLVM_DEBUG(dbgs() << "ARMHWLoops: Bad instruction: " << I << "\n");
           return false;
+        }
       }
     }
     return true;
