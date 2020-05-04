@@ -184,7 +184,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8* @a2, null
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP4:%.*]]
 ; CHECK:       2:
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i8* @f1(i8* noalias nofree nonnull readnone align 16 dereferenceable(1) @a2)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i8* @f1(i8* noalias nofree nonnull readnone align 16 dereferenceable(1) "no-capture-maybe-returned" @a2)
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i8* [ [[TMP3]], [[TMP2]] ], [ @a1, [[TMP0:%.*]] ]
@@ -206,7 +206,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
 ; Better than IR information
 define align 4 i8* @test7() #0 {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test7()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = tail call i8* @f1(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) @a1)
+; IS__TUNIT____-NEXT:    [[C:%.*]] = tail call i8* @f1(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" @a1)
 ; IS__TUNIT____-NEXT:    ret i8* [[C]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test7()
@@ -300,7 +300,7 @@ define internal i8* @f3b(i8* readnone %0) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8* @a2, null
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP4:%.*]]
 ; CHECK:       2:
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 16 dereferenceable(1) @a2)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 16 dereferenceable(1) "no-capture-maybe-returned" @a2)
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i8* [ [[TMP3]], [[TMP2]] ], [ @a1, [[TMP0:%.*]] ]
@@ -319,10 +319,15 @@ define internal i8* @f3b(i8* readnone %0) local_unnamed_addr #0 {
 }
 
 define align 4 i32* @test7b(i32* align 32 %p) #0 {
-; CHECK-LABEL: define {{[^@]+}}@test7b
-; CHECK-SAME: (i32* nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) @a1)
-; CHECK-NEXT:    ret i32* [[P]]
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test7b
+; IS__TUNIT____-SAME: (i32* nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]])
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" @a1)
+; IS__TUNIT____-NEXT:    ret i32* [[P]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test7b
+; IS__CGSCC____-SAME: (i32* nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]])
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) @a1)
+; IS__CGSCC____-NEXT:    ret i32* [[P]]
 ;
   tail call i8* @f1b(i8* align 8 dereferenceable(1) @a1)
   ret i32* %p
@@ -334,9 +339,9 @@ define void @test8_helper() {
 ; CHECK-NEXT:    [[PTR0:%.*]] = tail call i32* @unknown()
 ; CHECK-NEXT:    [[PTR1:%.*]] = tail call align 4 i32* @unknown()
 ; CHECK-NEXT:    [[PTR2:%.*]] = tail call align 8 i32* @unknown()
-; CHECK-NEXT:    tail call void @test8(i32* noalias readnone align 4 [[PTR1]], i32* noalias readnone align 4 [[PTR1]], i32* noalias readnone [[PTR0]])
-; CHECK-NEXT:    tail call void @test8(i32* noalias readnone align 8 [[PTR2]], i32* noalias readnone align 4 [[PTR1]], i32* noalias readnone align 4 [[PTR1]])
-; CHECK-NEXT:    tail call void @test8(i32* noalias readnone align 8 [[PTR2]], i32* noalias readnone align 4 [[PTR1]], i32* noalias readnone align 4 [[PTR1]])
+; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone [[PTR0]])
+; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture readnone align 8 [[PTR2]], i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone align 4 [[PTR1]])
+; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture readnone align 8 [[PTR2]], i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone align 4 [[PTR1]])
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = tail call i32* @unknown()

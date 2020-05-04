@@ -40,25 +40,15 @@ entry:
 }
 
 define i32 @main() {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@main()
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]]
-; IS__TUNIT____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__TUNIT____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT____-NEXT:    store i32 1, i32* [[F0]], align 4
-; IS__TUNIT____-NEXT:    store i32 2, i32* [[F1]], align 4
-; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nocapture nofree nonnull align 4 dereferenceable(8) [[S]])
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@main()
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]]
-; IS__CGSCC____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC____-NEXT:    store i32 1, i32* [[F0]], align 4
-; IS__CGSCC____-NEXT:    store i32 2, i32* [[F1]], align 4
-; IS__CGSCC____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nofree nonnull align 4 dereferenceable(8) [[S]])
-; IS__CGSCC____-NEXT:    ret i32 [[R]]
+; CHECK-LABEL: define {{[^@]+}}@main()
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]]
+; CHECK-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, i32* [[F0]], align 4
+; CHECK-NEXT:    store i32 2, i32* [[F1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nocapture nofree nonnull align 4 dereferenceable(8) [[S]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %S = alloca inalloca %struct.ss

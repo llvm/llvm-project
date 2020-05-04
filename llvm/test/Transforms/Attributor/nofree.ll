@@ -380,16 +380,16 @@ define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_call
 ; CHECK-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
 ; CHECK-NEXT:    call void @unknown(i8* [[ARG1]], i8* [[ARG2]], i8* [[ARG3]], i8* [[ARG4]])
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias readnone [[ARG1]])
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias readnone [[ARG2]])
+; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture readnone [[ARG1]])
+; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture readnone [[ARG2]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nofree readnone [[ARG3]])
-; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias readnone [[ARG4]])
-; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nofree readnone [[ARG1]])
-; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias readnone [[ARG2]])
+; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG3]])
+; CHECK-NEXT:    call void @use_i8_ptr(i8* noalias nocapture readnone [[ARG4]])
+; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree readnone [[ARG1]])
+; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture readnone [[ARG2]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG4]]) ]
-; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nofree readnone [[ARG3]])
-; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nofree readnone [[ARG4]])
+; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree readnone [[ARG3]])
+; CHECK-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree readnone [[ARG4]])
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4)

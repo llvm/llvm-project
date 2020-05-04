@@ -122,7 +122,7 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__CGSCC_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nofree nonnull readnone byval align 8 dereferenceable(12) [[S]], i32* noalias nocapture nofree nonnull readnone byval align 4 dereferenceable(4) [[X]])
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree nonnull readnone byval align 8 dereferenceable(12) [[S]], i32* noalias nocapture nofree nonnull readnone byval align 4 dereferenceable(4) [[X]])
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[C]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test

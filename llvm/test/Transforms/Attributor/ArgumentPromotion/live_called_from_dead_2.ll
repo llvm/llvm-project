@@ -68,17 +68,11 @@ define internal i32 @caller(i32* %B) {
 }
 
 define i32 @callercaller() {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@callercaller()
-; IS__TUNIT____-NEXT:    [[B:%.*]] = alloca i32
-; IS__TUNIT____-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__TUNIT____-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[B]])
-; IS__TUNIT____-NEXT:    ret i32 0
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@callercaller()
-; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32
-; IS__CGSCC____-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nofree nonnull writeonly align 4 dereferenceable(4) [[B]])
-; IS__CGSCC____-NEXT:    ret i32 0
+; CHECK-LABEL: define {{[^@]+}}@callercaller()
+; CHECK-NEXT:    [[B:%.*]] = alloca i32
+; CHECK-NEXT:    store i32 2, i32* [[B]], align 4
+; CHECK-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[B]])
+; CHECK-NEXT:    ret i32 0
 ;
   %B = alloca i32
   store i32 2, i32* %B
