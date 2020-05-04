@@ -27,6 +27,7 @@
 #include "flang/Common/unsigned-const-division.h"
 #include "flang/Decimal/binary-floating-point.h"
 #include "flang/Decimal/decimal.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <limits>
 #include <type_traits>
@@ -110,6 +111,8 @@ public:
   // with default rounding to the nearest value.
   void Minimize(
       BigRadixFloatingPointNumber &&less, BigRadixFloatingPointNumber &&more);
+
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   BigRadixFloatingPointNumber(const BigRadixFloatingPointNumber &that)
@@ -280,14 +283,6 @@ private:
       }
     } else {
       return 0;
-    }
-  }
-
-  template <int N> void MultiplyByRounded() {
-    if (int carry{MultiplyBy<N>()}) {
-      LoseLeastSignificantDigit();
-      digit_[digits_ - 1] += carry;
-      exponent_ += log10Radix;
     }
   }
 
