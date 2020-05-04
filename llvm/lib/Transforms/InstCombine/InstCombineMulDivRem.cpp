@@ -275,6 +275,15 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
   }
 
+  // abs(X) * abs(X) -> X * X
+  // nabs(X) * nabs(X) -> X * X
+  if (Op0 == Op1) {
+    Value *X, *Y;
+    SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
+    if (SPF == SPF_ABS || SPF == SPF_NABS)
+      return BinaryOperator::CreateMul(X, X);
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;
