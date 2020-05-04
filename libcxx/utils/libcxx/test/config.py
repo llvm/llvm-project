@@ -164,7 +164,7 @@ class Configuration(object):
         self.lit_config.note('Using link flags: %s' % self.cxx.link_flags)
         # Print as list to prevent "set([...])" from being printed.
         self.lit_config.note('Using available_features: %s' %
-                             list(self.config.available_features))
+                             list(sorted(self.config.available_features)))
         show_env_vars = {}
         for k,v in self.exec_env.items():
             if k not in os.environ or os.environ[k] != v:
