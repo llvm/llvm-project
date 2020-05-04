@@ -221,16 +221,6 @@ class Configuration(object):
                                   '(e.g., --param=cxx_under_test=clang++)')
         self.cxx = CXXCompiler(self, cxx) if not self.cxx_is_clang_cl else \
                    self._configure_clang_cl(cxx)
-        cxx_type = self.cxx.type
-        if cxx_type is not None:
-            assert self.cxx.version is not None
-            maj_v, min_v, patch_v = self.cxx.version
-            self.config.available_features.add(cxx_type)
-            self.config.available_features.add('%s-%s' % (cxx_type, maj_v))
-            self.config.available_features.add('%s-%s.%s' % (
-                cxx_type, maj_v, min_v))
-            self.config.available_features.add('%s-%s.%s.%s' % (
-                cxx_type, maj_v, min_v, patch_v))
         self.cxx.compile_env = dict(os.environ)
         # 'CCACHE_CPP2' prevents ccache from stripping comments while
         # preprocessing. This is required to prevent stripping of '-verify'
