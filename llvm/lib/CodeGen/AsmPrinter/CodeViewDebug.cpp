@@ -3111,7 +3111,9 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.EmitCOFFSectionIndex(GVSym);
     OS.AddComment("Name");
     const unsigned LengthOfDataRecord = 12;
-    emitNullTerminatedSymbolName(OS, DIGV->getName(), LengthOfDataRecord);
+    emitNullTerminatedSymbolName(
+        OS, getFullyQualifiedName(DIGV->getScope(), DIGV->getName()),
+        LengthOfDataRecord);
     endSymbolRecord(DataEnd);
   } else {
     // FIXME: Currently this only emits the global variables in the IR metadata.
