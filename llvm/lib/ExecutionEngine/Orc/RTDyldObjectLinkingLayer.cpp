@@ -47,10 +47,10 @@ public:
       MR.addDependenciesForAll(Deps);
     };
 
-    JITDylibSearchOrder SearchOrder;
-    MR.getTargetJITDylib().withSearchOrderDo(
-        [&](const JITDylibSearchOrder &JDs) { SearchOrder = JDs; });
-    ES.lookup(LookupKind::Static, SearchOrder, InternedSymbols,
+    JITDylibSearchOrder LinkOrder;
+    MR.getTargetJITDylib().withLinkOrderDo(
+        [&](const JITDylibSearchOrder &LO) { LinkOrder = LO; });
+    ES.lookup(LookupKind::Static, LinkOrder, InternedSymbols,
               SymbolState::Resolved, std::move(OnResolvedWithUnwrap),
               RegisterDependencies);
   }

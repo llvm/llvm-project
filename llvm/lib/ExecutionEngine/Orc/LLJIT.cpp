@@ -374,8 +374,8 @@ private:
         continue;
       Visited.insert(&NextJD);
       DFSLinkOrder.push_back(&NextJD);
-      NextJD.withSearchOrderDo([&](const JITDylibSearchOrder &SearchOrder) {
-        for (auto &KV : SearchOrder)
+      NextJD.withLinkOrderDo([&](const JITDylibSearchOrder &LinkOrder) {
+        for (auto &KV : LinkOrder)
           WorkStack.push_back(KV.first);
       });
     }

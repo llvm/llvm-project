@@ -50,9 +50,9 @@ public:
   void lookup(const LookupMap &Symbols,
               std::unique_ptr<JITLinkAsyncLookupContinuation> LC) override {
 
-    JITDylibSearchOrder SearchOrder;
-    MR.getTargetJITDylib().withSearchOrderDo(
-        [&](const JITDylibSearchOrder &O) { SearchOrder = O; });
+    JITDylibSearchOrder LinkOrder;
+    MR.getTargetJITDylib().withLinkOrderDo(
+        [&](const JITDylibSearchOrder &LO) { LinkOrder = LO; });
 
     auto &ES = Layer.getExecutionSession();
 
@@ -90,7 +90,7 @@ public:
       MR.addDependencies(KV.first, InternalDeps);
     }
 
-    ES.lookup(LookupKind::Static, SearchOrder, std::move(LookupSet),
+    ES.lookup(LookupKind::Static, LinkOrder, std::move(LookupSet),
               SymbolState::Resolved, std::move(OnResolve),
               [this](const SymbolDependenceMap &Deps) {
                 registerDependencies(Deps);
