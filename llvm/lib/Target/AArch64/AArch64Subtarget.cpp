@@ -68,6 +68,9 @@ void AArch64Subtarget::initializeProperties() {
   switch (ARMProcFamily) {
   case Others:
     break;
+  case Carmel:
+    CacheLineSize = 64;
+    break;
   case CortexA35:
     break;
   case CortexA53:

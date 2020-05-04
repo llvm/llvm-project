@@ -975,9 +975,15 @@ TEST(TargetParserTest, testAArch64CPU) {
       AArch64::AEK_SIMD | AArch64::AEK_FP16 | AArch64::AEK_RAS |
       AArch64::AEK_LSE | AArch64::AEK_SVE | AArch64::AEK_RDM,
       "8.2-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "carmel", "armv8.2-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+      AArch64::AEK_SIMD | AArch64::AEK_FP16 | AArch64::AEK_RAS |
+      AArch64::AEK_LSE | AArch64::AEK_RDM,
+      "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 37;
+static constexpr unsigned NumAArch64CPUArchs = 38;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1126,6 +1132,10 @@ TEST(TargetParserTest, testAArch64Extension) {
                                    AArch64::ArchKind::INVALID, "sve"));
   EXPECT_FALSE(testAArch64Extension("a64fx",
                                    AArch64::ArchKind::INVALID, "sve2"));
+  EXPECT_TRUE(
+      testAArch64Extension("carmel", AArch64::ArchKind::INVALID, "crypto"));
+  EXPECT_TRUE(
+      testAArch64Extension("carmel", AArch64::ArchKind::INVALID, "fp16"));
 
   EXPECT_FALSE(testAArch64Extension(
       "generic", AArch64::ArchKind::ARMV8A, "ras"));
