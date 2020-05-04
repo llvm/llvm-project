@@ -7,9 +7,8 @@ add_mlir_dialect_library(MLIRAffineOps
 
   DEPENDS
   MLIRAffineOpsIncGen
-  )
-target_link_libraries(MLIRAffineOps
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIREDSC
   MLIRIR
   MLIRLoopLikeInterface

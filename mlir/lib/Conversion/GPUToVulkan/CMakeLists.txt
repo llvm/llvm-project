@@ -4,10 +4,8 @@ add_mlir_conversion_library(MLIRGPUtoVulkanTransforms
 
   DEPENDS
   MLIRConversionPassIncGen
-  )
 
-target_link_libraries(MLIRGPUtoVulkanTransforms
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIRGPU
   MLIRIR
   MLIRLLVMIR
@@ -18,5 +16,4 @@ target_link_libraries(MLIRGPUtoVulkanTransforms
   MLIRSupport
   MLIRTransforms
   MLIRTranslation
-  LLVMSupport
   )

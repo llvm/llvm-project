@@ -9,9 +9,8 @@ add_mlir_dialect_library(MLIRLinalgOps
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgStructuredOpsInterfaceIncGen
-  )
-target_link_libraries(MLIRLinalgOps
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRSideEffects
   MLIRViewLikeInterface

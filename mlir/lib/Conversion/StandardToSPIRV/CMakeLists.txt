@@ -9,10 +9,8 @@ add_mlir_conversion_library(MLIRStandardToSPIRVTransforms
 
   DEPENDS
   MLIRConversionPassIncGen
-  )
 
-target_link_libraries(MLIRStandardToSPIRVTransforms
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRPass
   MLIRSPIRV

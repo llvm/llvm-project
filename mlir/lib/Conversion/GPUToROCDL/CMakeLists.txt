@@ -8,11 +8,8 @@ add_mlir_conversion_library(MLIRGPUtoROCDLTransforms
   DEPENDS
   MLIRConversionPassIncGen
   MLIRGPUToROCDLIncGen
-  )
 
-target_link_libraries(MLIRGPUtoROCDLTransforms
-  PUBLIC
-  LLVMSupport
+  LINK_LIBS PUBLIC
   MLIRGPU
   MLIRLLVMIR
   MLIRROCDLIR
