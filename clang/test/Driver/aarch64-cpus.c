@@ -296,6 +296,20 @@
 // RUN: %clang -target arm64-apple-darwin -arch arm64 -mcpu=lightning -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-LIGHTNING %s
 // ARM64-LIGHTNING: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "lightning" "-target-feature" "+v8.4a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto"  "-target-feature" "+dotprod" "-target-feature" "+fullfp16" "-target-feature" "+ras" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+rcpc" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+fp16fml" "-target-feature" "+sm4" "-target-feature" "+sha3" "-target-feature" "+sha2" "-target-feature" "+aes"
 
+// RUN: %clang -target aarch64 -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL %s
+// RUN: %clang -target aarch64 -mlittle-endian -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL %s
+// RUN: %clang -target aarch64 -mtune=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL-TUNE %s
+// RUN: %clang -target aarch64 -mlittle-endian -mtune=carmel -### -c %s 2>&1 | FileCheck -check-prefix=CARMEL-TUNE %s
+// CARMEL: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "carmel"
+// CARMEL-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target arm64 -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-CARMEL %s
+// RUN: %clang -target arm64 -mlittle-endian -mcpu=carmel -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-CARMEL %s
+// RUN: %clang -target arm64 -mtune=carmel -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-CARMEL-TUNE %s
+// RUN: %clang -target arm64 -mlittle-endian -mtune=carmel -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-CARMEL-TUNE %s
+// ARM64-CARMEL: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "carmel"
+// ARM64-CARMEL-TUNE: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "generic"
+
 // RUN: %clang -target aarch64_be -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
