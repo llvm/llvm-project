@@ -184,6 +184,13 @@ private:
   Sema &Actions;
 };
 
+struct PragmaFloatControlHandler : public PragmaHandler {
+  PragmaFloatControlHandler(Sema &Actions)
+      : PragmaHandler("float_control") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 struct PragmaMSPointersToMembers : public PragmaHandler {
   explicit PragmaMSPointersToMembers() : PragmaHandler("pointers_to_members") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
@@ -334,6 +341,8 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler(MSCommentHandler.get());
   }
 
+  FloatControlHandler = std::make_unique<PragmaFloatControlHandler>(Actions);
+  PP.AddPragmaHandler(FloatControlHandler.get());
   if (getLangOpts().MicrosoftExt) {
     MSDetectMismatchHandler =
         std::make_unique<PragmaDetectMismatchHandler>(Actions);
@@ -438,6 +447,8 @@ void Parser::resetPragmaHandlers() {
   PP.RemovePragmaHandler("clang", PCSectionHandler.get());
   PCSectionHandler.reset();
 
+  PP.RemovePragmaHandler(FloatControlHandler.get());
+  FloatControlHandler.reset();
   if (getLangOpts().MicrosoftExt) {
     PP.RemovePragmaHandler(MSDetectMismatchHandler.get());
     MSDetectMismatchHandler.reset();
@@ -646,6 +657,22 @@ void Parser::HandlePragmaFPContract() {
   ConsumeAnnotationToken();
 }
 
+void Parser::HandlePragmaFloatControl() {
+  assert(Tok.is(tok::annot_pragma_float_control));
+
+  // The value that is held on the PragmaFloatControlStack encodes
+  // the PragmaFloatControl kind and the MSStackAction kind
+  // into a single 32-bit word. The MsStackAction is the high 16 bits
+  // and the FloatControl is the lower 16 bits. Use shift and bit-and
+  // to decode the parts.
+  uintptr_t Value = reinterpret_cast<uintptr_t>(Tok.getAnnotationValue());
+  Sema::PragmaMsStackAction Action =
+      static_cast<Sema::PragmaMsStackAction>((Value >> 16) & 0xFFFF);
+  PragmaFloatControlKind Kind = PragmaFloatControlKind(Value & 0xFFFF);
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  Actions.ActOnPragmaFloatControl(PragmaLoc, Action, Kind);
+}
+
 void Parser::HandlePragmaFEnvAccess() {
   assert(Tok.is(tok::annot_pragma_fenv_access));
   tok::OnOffSwitch OOS =
@@ -665,8 +692,8 @@ void Parser::HandlePragmaFEnvAccess() {
     break;
   }
 
-  Actions.ActOnPragmaFEnvAccess(FPC);
-  ConsumeAnnotationToken();
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  Actions.ActOnPragmaFEnvAccess(PragmaLoc, FPC);
 }
 
 
@@ -2489,6 +2516,129 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
   PP.EnterToken(AnnotTok, /*IsReinject*/ false);
 }
 
+/// Handle the \#pragma float_control extension.
+///
+/// The syntax is:
+/// \code
+///   #pragma float_control(keyword[, setting] [,push])
+/// \endcode
+/// Where 'keyword' and 'setting' are identifiers.
+// 'keyword' can be: precise, except, push, pop
+// 'setting' can be: on, off
+/// The optional arguments 'setting' and 'push' are supported only
+/// when the keyword is 'precise' or 'except'.
+void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
+                                             PragmaIntroducer Introducer,
+                                             Token &Tok) {
+  Sema::PragmaMsStackAction Action = Sema::PSK_Set;
+  SourceLocation FloatControlLoc = Tok.getLocation();
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::l_paren)) {
+    PP.Diag(FloatControlLoc, diag::err_expected) << tok::l_paren;
+    return;
+  }
+
+  // Read the identifier.
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+    return;
+  }
+
+  // Verify that this is one of the float control options.
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  PragmaFloatControlKind Kind =
+      llvm::StringSwitch<PragmaFloatControlKind>(II->getName())
+          .Case("precise", PFC_Precise)
+          .Case("except", PFC_Except)
+          .Case("push", PFC_Push)
+          .Case("pop", PFC_Pop)
+          .Default(PFC_Unknown);
+  PP.Lex(Tok); // the identifier
+  if (Kind == PFC_Unknown) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+    return;
+  } else if (Kind == PFC_Push || Kind == PFC_Pop) {
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+      return;
+    }
+    PP.Lex(Tok); // Eat the r_paren
+    Action = (Kind == PFC_Pop) ? Sema::PSK_Pop : Sema::PSK_Push;
+  } else {
+    if (Tok.is(tok::r_paren))
+      // Selecting Precise or Except
+      PP.Lex(Tok); // the r_paren
+    else if (Tok.isNot(tok::comma)) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+      return;
+    } else {
+      PP.Lex(Tok); // ,
+      if (!Tok.isAnyIdentifier()) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+        return;
+      }
+      StringRef PushOnOff = Tok.getIdentifierInfo()->getName();
+      if (PushOnOff == "on")
+        // Kind is set correctly
+        ;
+      else if (PushOnOff == "off") {
+        if (Kind == PFC_Precise)
+          Kind = PFC_NoPrecise;
+        if (Kind == PFC_Except)
+          Kind = PFC_NoExcept;
+      } else if (PushOnOff == "push") {
+        Action = Sema::PSK_Push_Set;
+      } else {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+        return;
+      }
+      PP.Lex(Tok); // the identifier
+      if (Tok.is(tok::comma)) {
+        PP.Lex(Tok); // ,
+        if (!Tok.isAnyIdentifier()) {
+          PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+          return;
+        }
+        StringRef ExpectedPush = Tok.getIdentifierInfo()->getName();
+        if (ExpectedPush == "push") {
+          Action = Sema::PSK_Push_Set;
+        } else {
+          PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+          return;
+        }
+        PP.Lex(Tok); // the push identifier
+      }
+      if (Tok.isNot(tok::r_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
+        return;
+      }
+      PP.Lex(Tok); // the r_paren
+    }
+  }
+  SourceLocation EndLoc = Tok.getLocation();
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "float_control";
+    return;
+  }
+
+  // Note: there is no accomodation for PP callback for this pragma.
+
+  // Enter the annotation.
+  auto TokenArray = std::make_unique<Token[]>(1);
+  TokenArray[0].startToken();
+  TokenArray[0].setKind(tok::annot_pragma_float_control);
+  TokenArray[0].setLocation(FloatControlLoc);
+  TokenArray[0].setAnnotationEndLoc(EndLoc);
+  // Create an encoding of Action and Value by shifting the Action into
+  // the high 16 bits then union with the Kind.
+  TokenArray[0].setAnnotationValue(reinterpret_cast<void *>(
+      static_cast<uintptr_t>((Action << 16) | (Kind & 0xFFFF))));
+  PP.EnterTokenStream(std::move(TokenArray), 1,
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
 /// Handle the Microsoft \#pragma detect_mismatch extension.
 ///
 /// The syntax is:
@@ -2749,7 +2899,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
 
     auto *AnnotValue = new (PP.getPreprocessorAllocator())
         TokFPAnnotValue{*FlagKind, *FlagValue};
-    // Generate the loop hint token.
+    // Generate the fp annotation token.
     Token FPTok;
     FPTok.startToken();
     FPTok.setKind(tok::annot_pragma_fp);

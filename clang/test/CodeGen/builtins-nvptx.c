@@ -1,11 +1,11 @@
 // REQUIRES: nvptx-registered-target
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_61 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 \
