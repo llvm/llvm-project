@@ -138,6 +138,7 @@ LLVMTypeConverter::LLVMTypeConverter(
         module->getDataLayout().getPointerSizeInBits();
 
   // Register conversions for the standard types.
+  addConversion([&](ComplexType type) { return convertComplexType(type); });
   addConversion([&](FloatType type) { return convertFloatType(type); });
   addConversion([&](FunctionType type) { return convertFunctionType(type); });
   addConversion([&](IndexType type) { return convertIndexType(type); });
@@ -189,6 +190,17 @@ Type LLVMTypeConverter::convertFloatType(FloatType type) {
   default:
     llvm_unreachable("non-float type in convertFloatType");
   }
+}
+
+// Convert a `ComplexType` to an LLVM type. The result is a complex number
+// struct with entries for the
+//   1. real part and for the
+//   2. imaginary part.
+static constexpr unsigned kRealPosInComplexNumberStruct = 0;
+static constexpr unsigned kImaginaryPosInComplexNumberStruct = 1;
+Type LLVMTypeConverter::convertComplexType(ComplexType type) {
+  auto elementType = convertType(type.getElementType()).cast<LLVM::LLVMType>();
+  return LLVM::LLVMType::getStructTy(llvmDialect, {elementType, elementType});
 }
 
 // Except for signatures, MLIR function types are converted into LLVM
@@ -392,6 +404,7 @@ ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
 /*============================================================================*/
 /* StructBuilder implementation                                               */
 /*============================================================================*/
+
 StructBuilder::StructBuilder(Value v) : value(v) {
   assert(value != nullptr && "value cannot be null");
   structType = value.getType().dyn_cast<LLVM::LLVMType>();
@@ -410,6 +423,35 @@ void StructBuilder::setPtr(OpBuilder &builder, Location loc, unsigned pos,
   value = builder.create<LLVM::InsertValueOp>(loc, structType, value, ptr,
                                               builder.getI64ArrayAttr(pos));
 }
+
+/*============================================================================*/
+/* ComplexStructBuilder implementation                                        */
+/*============================================================================*/
+
+ComplexStructBuilder ComplexStructBuilder::undef(OpBuilder &builder,
+                                                 Location loc, Type type) {
+  Value val = builder.create<LLVM::UndefOp>(loc, type.cast<LLVM::LLVMType>());
+  return ComplexStructBuilder(val);
+}
+
+void ComplexStructBuilder::setReal(OpBuilder &builder, Location loc,
+                                   Value real) {
+  setPtr(builder, loc, kRealPosInComplexNumberStruct, real);
+}
+
+Value ComplexStructBuilder::real(OpBuilder &builder, Location loc) {
+  return extractPtr(builder, loc, kRealPosInComplexNumberStruct);
+}
+
+void ComplexStructBuilder ::setImaginary(OpBuilder &builder, Location loc,
+                                         Value imaginary) {
+  setPtr(builder, loc, kImaginaryPosInComplexNumberStruct, imaginary);
+}
+
+Value ComplexStructBuilder ::imaginary(OpBuilder &builder, Location loc) {
+  return extractPtr(builder, loc, kImaginaryPosInComplexNumberStruct);
+}
+
 /*============================================================================*/
 /* MemRefDescriptor implementation                                            */
 /*============================================================================*/
@@ -1283,6 +1325,65 @@ using UnsignedRemIOpLowering =
 using UnsignedShiftRightOpLowering =
     OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp>;
 using XOrOpLowering = VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
+
+// Lowerings for operations on complex numbers, `CreateComplexOp`, `ReOp`, and
+// `ImOp`.
+
+struct CreateComplexOpLowering
+    : public ConvertOpToLLVMPattern<CreateComplexOp> {
+  using ConvertOpToLLVMPattern<CreateComplexOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto complexOp = cast<CreateComplexOp>(op);
+    OperandAdaptor<CreateComplexOp> transformed(operands);
+
+    // Pack real and imaginary part in a complex number struct.
+    auto loc = op->getLoc();
+    auto structType = typeConverter.convertType(complexOp.getType());
+    auto complexStruct = ComplexStructBuilder::undef(rewriter, loc, structType);
+    complexStruct.setReal(rewriter, loc, transformed.real());
+    complexStruct.setImaginary(rewriter, loc, transformed.imaginary());
+
+    rewriter.replaceOp(op, {complexStruct});
+    return success();
+  }
+};
+
+struct ReOpLowering : public ConvertOpToLLVMPattern<ReOp> {
+  using ConvertOpToLLVMPattern<ReOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    OperandAdaptor<ReOp> transformed(operands);
+
+    // Extract real part from the complex number struct.
+    ComplexStructBuilder complexStruct(transformed.complex());
+    Value real = complexStruct.real(rewriter, op->getLoc());
+    rewriter.replaceOp(op, real);
+
+    return success();
+  }
+};
+
+struct ImOpLowering : public ConvertOpToLLVMPattern<ImOp> {
+  using ConvertOpToLLVMPattern<ImOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    OperandAdaptor<ImOp> transformed(operands);
+
+    // Extract imaginary part from the complex number struct.
+    ComplexStructBuilder complexStruct(transformed.complex());
+    Value imaginary = complexStruct.imaginary(rewriter, op->getLoc());
+    rewriter.replaceOp(op, imaginary);
+
+    return success();
+  }
+};
 
 // Check if the MemRefType `type` is supported by the lowering. We currently
 // only support memrefs with identity maps.
@@ -2896,6 +2997,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       CopySignOpLowering,
       CosOpLowering,
       ConstLLVMOpLowering,
+      CreateComplexOpLowering,
       DialectCastOpLowering,
       DivFOpLowering,
       ExpOpLowering,
@@ -2906,12 +3008,14 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       Log2OpLowering,
       FPExtLowering,
       FPTruncLowering,
+      ImOpLowering,
       IndexCastOpLowering,
       MulFOpLowering,
       MulIOpLowering,
       NegFOpLowering,
       OrOpLowering,
       PrefetchOpLowering,
+      ReOpLowering,
       RemFOpLowering,
       ReturnOpLowering,
       RsqrtOpLowering,
