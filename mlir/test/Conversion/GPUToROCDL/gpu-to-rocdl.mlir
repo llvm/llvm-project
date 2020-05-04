@@ -43,6 +43,17 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_sync()
+  func @gpu_sync() {
+    // CHECK: rocdl.barrier
+    gpu.barrier
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__ocml_fabs_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__ocml_fabs_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_fabs
