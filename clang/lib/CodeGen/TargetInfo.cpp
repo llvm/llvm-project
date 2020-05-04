@@ -4252,7 +4252,7 @@ public:
 }
 
 CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
-  // Complex types are passed just like their elements
+  // Complex types are passed just like their elements.
   if (const ComplexType *CTy = Ty->getAs<ComplexType>())
     Ty = CTy->getElementType();
 
