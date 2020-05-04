@@ -885,12 +885,10 @@ struct Attributor {
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
     const IRPosition &IRP = AA.getIRPosition();
-    Kind2AAMapTy *&Kind2AA = AAMap[IRP];
-    if (!Kind2AA)
-      Kind2AA = new (Allocator) Kind2AAMapTy();
+    AbstractAttribute *&AAPtr = AAMap[{&AAType::ID, IRP}];
 
-    assert(!(*Kind2AA)[&AAType::ID] && "Attribute already in map!");
-    (*Kind2AA)[&AAType::ID] = &AA;
+    assert(!AAPtr && "Attribute already in map!");
+    AAPtr = &AA;
 
     AllAbstractAttributes.push_back(&AA);
     return AA;
@@ -1278,13 +1276,11 @@ private:
 
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
-    Kind2AAMapTy *Kind2AA = AAMap.lookup(IRP);
-    if (!Kind2AA)
+    AbstractAttribute *AAPtr = AAMap.lookup({&AAType::ID, IRP});
+    if (!AAPtr)
       return nullptr;
 
-    AAType *AA = static_cast<AAType *>((*Kind2AA)[&AAType::ID]);
-    if (!AA)
-      return nullptr;
+    AAType *AA = static_cast<AAType *>(AAPtr);
 
     // Do not register a dependence on an attribute with an invalid state.
     if (TrackDependence && AA->getState().isValidState())
@@ -1309,9 +1305,8 @@ private:
   /// on the outer level, and the addresses of the static member (AAType::ID) on
   /// the inner level.
   ///{
-  using Kind2AAMapTy =
-      SmallDenseMap<const char *, AbstractAttribute *, /*InlineBuckets=*/32>;
-  DenseMap<IRPosition, Kind2AAMapTy *> AAMap;
+  using AAMapKeyTy = std::pair<const char *, IRPosition>;
+  DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
   ///}
 
   /// A map from abstract attributes to the ones that queried them through calls
