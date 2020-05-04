@@ -869,7 +869,6 @@ class Configuration(object):
                 '-fmodules is enabled but not supported by the compiler')
         if not supports_modules:
             return
-        self.config.available_features.add('modules-support')
         module_cache = os.path.join(self.config.test_exec_root,
                                    'modules.cache')
         module_cache = os.path.realpath(module_cache)
