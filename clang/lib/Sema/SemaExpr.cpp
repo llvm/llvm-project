@@ -1483,7 +1483,7 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     return LHSType;
 
   // ExtInt types aren't subject to conversions between them or normal integers,
-  // so this fails. 
+  // so this fails.
   if(LHSType->isExtIntType() || RHSType->isExtIntType())
     return QualType();
 
@@ -9621,7 +9621,8 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
       ScalarCast = CK_IntegralToFloating;
     } else
       return true;
-  }
+  } else if (ScalarTy->isEnumeralType())
+    return true;
 
   // Adjust scalar if desired.
   if (Scalar) {
