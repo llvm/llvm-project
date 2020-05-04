@@ -1596,7 +1596,7 @@ static bool compareByFilePosition(InputSection *a, InputSection *b) {
   OutputSection *bOut = lb->getParent();
 
   if (aOut != bOut)
-    return aOut->sectionIndex < bOut->sectionIndex;
+    return aOut->addr < bOut->addr;
   return la->outSecOff < lb->outSecOff;
 }
 
@@ -1666,11 +1666,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
   script->assignAddresses();
-  // .ARM.exidx does not require precise addresses, but it does require the
-  // relative addresses of OutputSections because linker scripts can assign
-  // Virtual Addresses to OutputSections that are not monotonically increasing.
+  // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
+  // do require the relative addresses of OutputSections because linker scripts
+  // can assign Virtual Addresses to OutputSections that are not monotonically
+  // increasing.
   for (Partition &part : partitions)
     finalizeSynthetic(part.armExidx);
+  resolveShfLinkOrder();
 
   // Converts call x@GDPLT to call __tls_get_addr
   if (config->emachine == EM_HEXAGON)
@@ -2104,12 +2106,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!script->hasSectionsCommand && !config->relocatable)
     fixSectionAlignments();
 
-  // SHFLinkOrder processing must be processed after relative section placements are
-  // known but before addresses are allocated.
-  resolveShfLinkOrder();
-  if (errorCount())
-    return;
-
   // This is used to:
   // 1) Create "thunks":
   //    Jump instructions in many ISAs have small displacements, and therefore
@@ -2132,6 +2128,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
+  if (errorCount())
+    return;
 
   // finalizeAddressDependentContent may have added local symbols to the static symbol table.
   finalizeSynthetic(in.symTab);
