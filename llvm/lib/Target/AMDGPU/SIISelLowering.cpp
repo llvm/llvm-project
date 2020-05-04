@@ -3602,6 +3602,26 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   switch (MI.getOpcode()) {
+  case AMDGPU::S_UADDO_PSEUDO:
+  case AMDGPU::S_USUBO_PSEUDO: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    MachineOperand &Dest0 = MI.getOperand(0);
+    MachineOperand &Dest1 = MI.getOperand(1);
+    MachineOperand &Src0 = MI.getOperand(2);
+    MachineOperand &Src1 = MI.getOperand(3);
+
+    unsigned Opc = (MI.getOpcode() == AMDGPU::S_UADDO_PSEUDO)
+                       ? AMDGPU::S_ADD_I32
+                       : AMDGPU::S_SUB_I32;
+    BuildMI(*BB, MI, DL, TII->get(Opc), Dest0.getReg()).add(Src0).add(Src1);
+
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
+        .addImm(1)
+        .addImm(0);
+
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
@@ -3617,35 +3637,146 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
-     Src0, BoolRC, AMDGPU::sub0,
-     &AMDGPU::SReg_32RegClass);
-    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
-      Src0, BoolRC, AMDGPU::sub1,
-      &AMDGPU::SReg_32RegClass);
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
 
-    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
-      Src1, BoolRC, AMDGPU::sub0,
-      &AMDGPU::SReg_32RegClass);
-    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
-      Src1, BoolRC, AMDGPU::sub1,
-      &AMDGPU::SReg_32RegClass);
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
 
     unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
     unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
-      .add(Src0Sub0)
-      .add(Src1Sub0);
-    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
-      .add(Src0Sub1)
-      .add(Src1Sub1);
+    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
+    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-      .addReg(DestSub0)
-      .addImm(AMDGPU::sub0)
-      .addReg(DestSub1)
-      .addImm(AMDGPU::sub1);
+        .addReg(DestSub0)
+        .addImm(AMDGPU::sub0)
+        .addReg(DestSub1)
+        .addImm(AMDGPU::sub1);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::V_ADD_U64_PSEUDO:
+  case AMDGPU::V_SUB_U64_PSEUDO: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
+
+    const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    Register CarryReg = MRI.createVirtualRegister(CarryRC);
+    Register DeadCarryReg = MRI.createVirtualRegister(CarryRC);
+
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+    MachineOperand &Src1 = MI.getOperand(2);
+
+    const TargetRegisterClass *Src0RC = Src0.isReg()
+                                            ? MRI.getRegClass(Src0.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                            ? MRI.getRegClass(Src1.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegClass(Src0RC, AMDGPU::sub0);
+    const TargetRegisterClass *Src1SubRC =
+        TRI->getSubRegClass(Src1RC, AMDGPU::sub1);
+
+    MachineOperand SrcReg0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+    MachineOperand SrcReg1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+    MachineOperand SrcReg0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+    MachineOperand SrcReg1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
+    unsigned LoOpc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    MachineInstr *LoHalf = BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
+                               .addReg(CarryReg, RegState::Define)
+                               .add(SrcReg0Sub0)
+                               .add(SrcReg1Sub0)
+                               .addImm(0); // clamp bit
+
+    unsigned HiOpc = IsAdd ? AMDGPU::V_ADDC_U32_e64 : AMDGPU::V_SUBB_U32_e64;
+    MachineInstr *HiHalf =
+        BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+            .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
+            .add(SrcReg0Sub1)
+            .add(SrcReg1Sub1)
+            .addReg(CarryReg, RegState::Kill)
+            .addImm(0); // clamp bit
+
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+        .addReg(DestSub0)
+        .addImm(AMDGPU::sub0)
+        .addReg(DestSub1)
+        .addImm(AMDGPU::sub1);
+    TII->legalizeOperands(*LoHalf);
+    TII->legalizeOperands(*HiHalf);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::S_ADD_CO_PSEUDO:
+  case AMDGPU::S_SUB_CO_PSEUDO: {
+    // This pseudo has a chance to be selected
+    // only from uniform add/subcarry node. All the VGPR operands
+    // therefore assumed to be splat vectors.
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    MachineBasicBlock::iterator MII = MI;
+    const DebugLoc &DL = MI.getDebugLoc();
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(2);
+    MachineOperand &Src1 = MI.getOperand(3);
+    MachineOperand &Src2 = MI.getOperand(4);
+    unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO)
+                       ? AMDGPU::S_ADDC_U32
+                       : AMDGPU::S_SUBB_U32;
+    if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
+      Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
+          .addReg(Src0.getReg());
+      Src0.setReg(RegOp0);
+    }
+    if (Src1.isReg() && TRI->isVectorRegister(MRI, Src1.getReg())) {
+      Register RegOp1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp1)
+          .addReg(Src1.getReg());
+      Src1.setReg(RegOp1);
+    }
+    Register RegOp2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    if (TRI->isVectorRegister(MRI, Src2.getReg())) {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp2)
+          .addReg(Src2.getReg());
+      Src2.setReg(RegOp2);
+    }
+
+    if (TRI->getRegSizeInBits(*MRI.getRegClass(Src2.getReg())) == 64) {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
+          .addReg(Src2.getReg())
+          .addImm(0);
+    } else {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMPK_LG_U32))
+          .addReg(Src2.getReg())
+          .addImm(0);
+    }
+
+    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg()).add(Src0).add(Src1);
     MI.eraseFromParent();
     return BB;
   }
