@@ -326,7 +326,7 @@ class targetCommandTestCase(TestBase):
     @no_debug_info_test
     def test_target_create_nonexistent_core_file(self):
         self.expect("target create -c doesntexist", error=True,
-                    substrs=["Cannot open 'doesntexist': No such file or directory"])
+                    patterns=["Cannot open 'doesntexist'", ": (No such file or directory|The system cannot find the file specified)"])
 
     # Write only files don't seem to be supported on Windows.
     @skipIfWindows
@@ -340,7 +340,7 @@ class targetCommandTestCase(TestBase):
     @no_debug_info_test
     def test_target_create_nonexistent_sym_file(self):
         self.expect("target create -s doesntexist doesntexisteither", error=True,
-                    substrs=["Cannot open '", "': No such file or directory"])
+                    patterns=["Cannot open '", ": (No such file or directory|The system cannot find the file specified)"])
 
     @skipIfWindows
     @no_debug_info_test
