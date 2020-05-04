@@ -15,8 +15,11 @@ define double @sqrt_libcall(double %x) {
 
 define double @sqrt_intrinsic(double %x) {
 ; CHECK-LABEL: @sqrt_intrinsic(
-; CHECK-NEXT:    [[RETVAL:%.*]] = call double @llvm.pow.f64(double [[X:%.*]], double 5.000000e-01)
-; CHECK-NEXT:    ret double [[RETVAL]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %retval = call double @llvm.pow.f64(double %x, double 0.5)
   ret double %retval
