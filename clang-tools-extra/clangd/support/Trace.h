@@ -52,7 +52,7 @@ struct Metric {
     Distribution,
   };
   constexpr Metric(llvm::StringLiteral Name, MetricType Type,
-                   llvm::StringLiteral LabelName = "")
+                   llvm::StringLiteral LabelName = llvm::StringLiteral(""))
       : Name(Name), Type(Type), LabelName(LabelName) {}
 
   /// Records a measurement for this metric to active tracer.
