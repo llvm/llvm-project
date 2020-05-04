@@ -26,7 +26,6 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/Utility/UserIDResolver.h"
-#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 #include "llvm/Support/VersionTuple.h"
@@ -434,8 +433,6 @@ public:
   GetSDKDirectory(lldb_private::Target &target) {
     return lldb_private::ConstString();
   }
-
-  virtual llvm::StringRef GetSDKPath(lldb_private::XcodeSDK sdk) { return {}; }
 
   const std::string &GetRemoteURL() const { return m_remote_url; }
 
