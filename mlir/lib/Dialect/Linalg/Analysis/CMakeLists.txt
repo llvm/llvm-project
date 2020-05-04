@@ -6,9 +6,12 @@ add_mlir_dialect_library(MLIRLinalgAnalysis
 
   DEPENDS
   intrinsics_gen
+  )
 
-  LINK_LIBS PUBLIC
+target_link_libraries(MLIRLinalgAnalysis
+  PUBLIC
   MLIRIR
   MLIRLinalgOps
   MLIRStandardOps
+  LLVMSupport
   )

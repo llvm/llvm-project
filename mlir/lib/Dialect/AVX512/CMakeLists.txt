@@ -6,9 +6,11 @@ add_mlir_dialect_library(MLIRAVX512
 
   DEPENDS
   MLIRAVX512IncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRAVX512
+  PUBLIC
   MLIRIR
   MLIRSideEffects
   MLIRVectorToLLVM
+  LLVMSupport
   )

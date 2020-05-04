@@ -13,8 +13,9 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DEPENDS
   intrinsics_gen
   MLIRLinalgPassIncGen
-
-  LINK_LIBS PUBLIC
+  )
+target_link_libraries(MLIRLinalgTransforms
+  PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
