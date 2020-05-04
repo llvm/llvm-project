@@ -1358,7 +1358,8 @@ CallExpr *CallExpr::CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
   assert(!(reinterpret_cast<uintptr_t>(Mem) % alignof(CallExpr)) &&
          "Misaligned memory in CallExpr::CreateTemporary!");
   return new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, /*Args=*/{}, Ty,
-                            VK, RParenLoc, /*MinNumArgs=*/0, UsesADL);
+                            VK, RParenLoc,
+                            /*MinNumArgs=*/0, UsesADL);
 }
 
 CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
@@ -4443,6 +4444,38 @@ CompoundAssignOperator *CompoundAssignOperator::Create(
   return new (Mem)
       CompoundAssignOperator(C, lhs, rhs, opc, ResTy, VK, OK, opLoc, FPFeatures,
                              CompLHSType, CompResultType);
+}
+
+UnaryOperator *UnaryOperator::CreateEmpty(const ASTContext &C,
+                                          bool hasFPFeatures) {
+  void *Mem = C.Allocate(totalSizeToAlloc<FPOptions>(hasFPFeatures),
+                         alignof(UnaryOperator));
+  return new (Mem) UnaryOperator(hasFPFeatures, EmptyShell());
+}
+
+UnaryOperator::UnaryOperator(const ASTContext &Ctx, Expr *input, Opcode opc,
+                             QualType type, ExprValueKind VK, ExprObjectKind OK,
+                             SourceLocation l, bool CanOverflow,
+                             FPOptions FPFeatures)
+    : Expr(UnaryOperatorClass, type, VK, OK), Val(input) {
+  UnaryOperatorBits.Opc = opc;
+  UnaryOperatorBits.CanOverflow = CanOverflow;
+  UnaryOperatorBits.Loc = l;
+  UnaryOperatorBits.HasFPFeatures =
+      FPFeatures.requiresTrailingStorage(Ctx.getLangOpts());
+  setDependence(computeDependence(this));
+}
+
+UnaryOperator *UnaryOperator::Create(const ASTContext &C, Expr *input,
+                                     Opcode opc, QualType type,
+                                     ExprValueKind VK, ExprObjectKind OK,
+                                     SourceLocation l, bool CanOverflow,
+                                     FPOptions FPFeatures) {
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage(C.getLangOpts());
+  unsigned Size = totalSizeToAlloc<FPOptions>(HasFPFeatures);
+  void *Mem = C.Allocate(Size, alignof(UnaryOperator));
+  return new (Mem)
+      UnaryOperator(C, input, opc, type, VK, OK, l, CanOverflow, FPFeatures);
 }
 
 const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
