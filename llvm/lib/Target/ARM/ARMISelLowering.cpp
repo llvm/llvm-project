@@ -2663,9 +2663,11 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   // Check that the call results are passed in the same way.
   LLVMContext &C = *DAG.getContext();
-  if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
-                                  CCAssignFnForReturn(CalleeCC, isVarArg),
-                                  CCAssignFnForReturn(CallerCC, isVarArg)))
+  if (!CCState::resultsCompatible(
+          getEffectiveCallingConv(CalleeCC, isVarArg),
+          getEffectiveCallingConv(CallerCC, CallerF.isVarArg()), MF, C, Ins,
+          CCAssignFnForReturn(CalleeCC, isVarArg),
+          CCAssignFnForReturn(CallerCC, CallerF.isVarArg())))
     return false;
   // The callee has to preserve all registers the caller needs to preserve.
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
