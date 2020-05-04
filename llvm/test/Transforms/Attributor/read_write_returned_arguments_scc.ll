@@ -46,10 +46,10 @@ define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 ; IS__TUNIT____-NEXT:    ret i32* [[CALL3]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@external_ret2_nrw
-; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree returned [[W0:%.*]])
+; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree align 4 [[R0:%.*]], i32* nofree returned [[W0:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret0_nw(i32* nofree [[N0]], i32* nofree [[W0]])
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret1_rrw(i32* nofree align 4 [[R0]], i32* nofree [[R0]], i32* nofree [[W0]])
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret1_rrw(i32* nofree align 4 [[R0]], i32* nofree align 4 [[R0]], i32* nofree [[W0]])
 ; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly align 4 [[R0]], i32* nofree writeonly [[W0]])
 ; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret1_rw(i32* nofree align 4 [[R0]], i32* nofree [[W0]])
 ; IS__CGSCC____-NEXT:    ret i32* [[CALL3]]
@@ -333,10 +333,10 @@ define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 ; IS__TUNIT____-NEXT:    ret i32* [[CALL1]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@external_source_ret2_nrw
-; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree returned [[W0:%.*]])
+; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree align 4 [[R0:%.*]], i32* nofree returned [[W0:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly [[W0]])
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree [[R0]], i32* nofree [[W0]])
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly align 4 [[R0]], i32* nofree writeonly [[W0]])
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree align 4 [[R0]], i32* nofree [[W0]])
 ; IS__CGSCC____-NEXT:    ret i32* [[CALL1]]
 ;
 entry:

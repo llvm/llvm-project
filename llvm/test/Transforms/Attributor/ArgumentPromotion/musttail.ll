@@ -73,7 +73,7 @@ define i32 @caller2(%T* %g) {
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2
-; IS__CGSCC____-SAME: (%T* nocapture nofree readonly [[G:%.*]])
+; IS__CGSCC____-SAME: (%T* nocapture nofree readonly align 4 [[G:%.*]])
 ; IS__CGSCC____-NEXT:    [[V:%.*]] = call i32 @test2(%T* nocapture nofree readonly [[G]], i32 0)
 ; IS__CGSCC____-NEXT:    ret i32 [[V]]
 ;
@@ -124,7 +124,7 @@ define i32 @caller2b(%T* %g) {
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2b
-; IS__CGSCC____-SAME: (%T* nocapture nofree readonly [[G:%.*]])
+; IS__CGSCC____-SAME: (%T* nocapture nofree readonly align 4 [[G:%.*]])
 ; IS__CGSCC____-NEXT:    [[V:%.*]] = call i32 @test2b(%T* nocapture nofree readonly [[G]], i32 0)
 ; IS__CGSCC____-NEXT:    ret i32 [[V]]
 ;
