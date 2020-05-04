@@ -1097,9 +1097,9 @@ def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "
   "Microsoft environment">,
   InGroup<IgnoredPragmas>;
-// - #pragma fp_contract
-def err_pragma_fp_contract_scope : Error<
-  "'#pragma fp_contract' can only appear at file scope or at the start of a "
+// - #pragma restricted to file scope or start of compound statement
+def err_pragma_file_or_compound_scope : Error<
+  "'#pragma %0' can only appear at file scope or at the start of a "
   "compound statement">;
 // - #pragma stdc unknown
 def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
@@ -1118,6 +1118,10 @@ def warn_pragma_comment_ignored : Warning<"'#pragma comment %0' ignored">,
 def err_pragma_detect_mismatch_malformed : Error<
   "pragma detect_mismatch is malformed; it requires two comma-separated "
   "string literals">;
+// - #pragma float_control
+def err_pragma_float_control_malformed : Error<
+  "pragma float_control is malformed; use 'float_control({push|pop})' or "
+  "'float_control({precise|except}, {on|off} [,push])'">;
 // - #pragma pointers_to_members
 def err_pragma_pointers_to_members_unknown_kind : Error<
   "unexpected %0, expected to see one of %select{|'best_case', 'full_generality', }1"
@@ -1332,9 +1336,6 @@ def err_pragma_fp_invalid_option : Error<
 def err_pragma_fp_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma clang fp %1'; "
   "expected 'on', 'fast' or 'off'">;
-def err_pragma_fp_scope : Error<
-  "'#pragma clang fp' can only appear at file scope or at the start of a "
-  "compound statement">;
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
