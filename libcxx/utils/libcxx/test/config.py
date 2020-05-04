@@ -858,9 +858,7 @@ class Configuration(object):
             self.cxx.compile_flags += ['-O0']
 
     def configure_modules(self):
-        modules_flags = ['-fmodules']
-        if not self.target_info.is_darwin():
-            modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
+        modules_flags = ['-fmodules', '-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
         enable_modules = self.get_lit_bool('enable_modules', default=False,
                                                              env_var='LIBCXX_ENABLE_MODULES')
