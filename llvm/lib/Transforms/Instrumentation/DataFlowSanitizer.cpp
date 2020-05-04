@@ -389,6 +389,8 @@ class DataFlowSanitizer : public ModulePass {
                                  GlobalValue::LinkageTypes NewFLink,
                                  FunctionType *NewFT);
   Constant *getOrBuildTrampolineFunction(FunctionType *FT, StringRef FName);
+  void initializeCallbackFunctions(Module &M);
+  void initializeRuntimeFunctions(Module &M);
 
 public:
   static char ID;
@@ -740,25 +742,8 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
   return cast<Constant>(C.getCallee());
 }
 
-bool DataFlowSanitizer::runOnModule(Module &M) {
-  if (ABIList.isIn(M, "skip"))
-    return false;
-
-  if (!GetArgTLSPtr) {
-    Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
-    ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS))
-      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-  }
-  if (!GetRetvalTLSPtr) {
-    RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", ShadowTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS))
-      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-  }
-
-  ExternalShadowMask =
-      Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
-
+// Initialize DataFlowSanitizer runtime functions and declare them in the module
+void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
   {
     AttributeList AL;
     AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
@@ -772,7 +757,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     DFSanUnionFn =
         Mod->getOrInsertFunction("__dfsan_union", DFSanUnionFnTy, AL);
   }
-
   {
     AttributeList AL;
     AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
@@ -809,7 +793,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Mod->getOrInsertFunction("__dfsan_nonzero_label", DFSanNonzeroLabelFnTy);
   DFSanVarargWrapperFn = Mod->getOrInsertFunction("__dfsan_vararg_wrapper",
                                                   DFSanVarargWrapperFnTy);
+}
 
+// Initializes event callback functions and declare them in the module
+void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
   DFSanLoadCallbackFn = Mod->getOrInsertFunction("__dfsan_load_callback",
                                                  DFSanLoadStoreCmpCallbackFnTy);
   DFSanStoreCallbackFn = Mod->getOrInsertFunction(
@@ -818,6 +805,29 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
   DFSanCmpCallbackFn = Mod->getOrInsertFunction("__dfsan_cmp_callback",
                                                 DFSanLoadStoreCmpCallbackFnTy);
+}
+
+bool DataFlowSanitizer::runOnModule(Module &M) {
+  if (ABIList.isIn(M, "skip"))
+    return false;
+
+  if (!GetArgTLSPtr) {
+    Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
+    ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS))
+      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+  }
+  if (!GetRetvalTLSPtr) {
+    RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", ShadowTy);
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS))
+      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+  }
+
+  ExternalShadowMask =
+      Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
+
+  initializeCallbackFunctions(M);
+  initializeRuntimeFunctions(M);
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
