@@ -9176,6 +9176,14 @@ StmtResult Sema::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
          diag::err_omp_scan_single_clause_expected);
     return StmtError();
   }
+  // Check that scan directive is used in the scopeof the OpenMP loop body.
+  if (Scope *S = DSAStack->getCurScope()) {
+    Scope *ParentS = S->getParent();
+    if (!ParentS || ParentS->getParent() != ParentS->getBreakParent() ||
+        !ParentS->getBreakParent()->isOpenMPLoopScope())
+      return StmtError(Diag(StartLoc, diag::err_omp_orphaned_device_directive)
+                       << getOpenMPDirectiveName(OMPD_scan) << 5);
+  }
   // Check that only one instance of scan directives is used in the same outer
   // region.
   if (DSAStack->doesParentHasScanDirective()) {
@@ -14461,6 +14469,12 @@ struct ReductionData {
   SmallVector<Expr *, 8> RHSs;
   /// Reduction operation expression.
   SmallVector<Expr *, 8> ReductionOps;
+  /// inscan copy operation expressions.
+  SmallVector<Expr *, 8> InscanCopyOps;
+  /// inscan copy temp array expressions for prefix sums.
+  SmallVector<Expr *, 8> InscanCopyArrayTemps;
+  /// inscan copy temp array element expressions for prefix sums.
+  SmallVector<Expr *, 8> InscanCopyArrayElems;
   /// Taskgroup descriptors for the corresponding reduction items in
   /// in_reduction clauses.
   SmallVector<Expr *, 8> TaskgroupDescriptors;
@@ -14478,6 +14492,11 @@ struct ReductionData {
     LHSs.reserve(Size);
     RHSs.reserve(Size);
     ReductionOps.reserve(Size);
+    if (RedModifier == OMPC_REDUCTION_inscan) {
+      InscanCopyOps.reserve(Size);
+      InscanCopyArrayTemps.reserve(Size);
+      InscanCopyArrayElems.reserve(Size);
+    }
     TaskgroupDescriptors.reserve(Size);
     ExprCaptures.reserve(Size);
     ExprPostUpdates.reserve(Size);
@@ -14491,16 +14510,31 @@ struct ReductionData {
     RHSs.emplace_back(nullptr);
     ReductionOps.emplace_back(ReductionOp);
     TaskgroupDescriptors.emplace_back(nullptr);
+    if (RedModifier == OMPC_REDUCTION_inscan) {
+      InscanCopyOps.push_back(nullptr);
+      InscanCopyArrayTemps.push_back(nullptr);
+      InscanCopyArrayElems.push_back(nullptr);
+    }
   }
   /// Stores reduction data.
   void push(Expr *Item, Expr *Private, Expr *LHS, Expr *RHS, Expr *ReductionOp,
-            Expr *TaskgroupDescriptor) {
+            Expr *TaskgroupDescriptor, Expr *CopyOp, Expr *CopyArrayTemp,
+            Expr *CopyArrayElem) {
     Vars.emplace_back(Item);
     Privates.emplace_back(Private);
     LHSs.emplace_back(LHS);
     RHSs.emplace_back(RHS);
     ReductionOps.emplace_back(ReductionOp);
     TaskgroupDescriptors.emplace_back(TaskgroupDescriptor);
+    if (RedModifier == OMPC_REDUCTION_inscan) {
+      InscanCopyOps.push_back(CopyOp);
+      InscanCopyArrayTemps.push_back(CopyArrayTemp);
+      InscanCopyArrayElems.push_back(CopyArrayElem);
+    } else {
+      assert(CopyOp == nullptr && CopyArrayTemp == nullptr &&
+             CopyArrayElem == nullptr &&
+             "Copy operation must be used for inscan reductions only.");
+    }
   }
 };
 } // namespace
@@ -14893,11 +14927,11 @@ static bool actOnOMPReductionKindClause(
         if (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective())) {
           S.Diag(ELoc, diag::err_omp_reduction_vla_unsupported) << !!OASE;
           S.Diag(ELoc, diag::note_vla_unsupported);
+          continue;
         } else {
           S.targetDiag(ELoc, diag::err_omp_reduction_vla_unsupported) << !!OASE;
           S.targetDiag(ELoc, diag::note_vla_unsupported);
         }
-        continue;
       }
       // For arrays/array sections only:
       // Create pseudo array type for private copy. The size for this array will
@@ -15102,6 +15136,40 @@ static bool actOnOMPReductionKindClause(
         continue;
     }
 
+    // Add copy operations for inscan reductions.
+    // LHS = RHS;
+    ExprResult CopyOpRes, TempArrayRes, TempArrayElem;
+    if (ClauseKind == OMPC_reduction &&
+        RD.RedModifier == OMPC_REDUCTION_inscan) {
+      ExprResult RHS = S.DefaultLvalueConversion(RHSDRE);
+      CopyOpRes = S.BuildBinOp(Stack->getCurScope(), ELoc, BO_Assign, LHSDRE,
+                               RHS.get());
+      if (!CopyOpRes.isUsable())
+        continue;
+      CopyOpRes =
+          S.ActOnFinishFullExpr(CopyOpRes.get(), /*DiscardedValue=*/true);
+      if (!CopyOpRes.isUsable())
+        continue;
+      // Build temp array for prefix sum.
+      auto *Dim = new (S.Context)
+          OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_RValue);
+      QualType ArrayTy =
+          S.Context.getVariableArrayType(PrivateTy, Dim, ArrayType::Normal,
+                                         /*IndexTypeQuals=*/0, {ELoc, ELoc});
+      VarDecl *TempArrayVD =
+          buildVarDecl(S, ELoc, ArrayTy, D->getName(),
+                       D->hasAttrs() ? &D->getAttrs() : nullptr);
+      // Add a constructor to the temp decl.
+      S.ActOnUninitializedDecl(TempArrayVD);
+      TempArrayRes = buildDeclRefExpr(S, TempArrayVD, ArrayTy, ELoc);
+      TempArrayElem =
+          S.DefaultFunctionArrayLvalueConversion(TempArrayRes.get());
+      auto *Idx = new (S.Context)
+          OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_RValue);
+      TempArrayElem = S.CreateBuiltinArraySubscriptExpr(TempArrayElem.get(),
+                                                        ELoc, Idx, ELoc);
+    }
+
     // OpenMP [2.15.4.6, Restrictions, p.2]
     // A list item that appears in an in_reduction clause of a task construct
     // must appear in a task_reduction clause of a construct associated with a
@@ -15203,7 +15271,8 @@ static bool actOnOMPReductionKindClause(
         Stack->addTaskgroupReductionData(D, ReductionIdRange, BOK);
     }
     RD.push(VarsExpr, PrivateDRE, LHSDRE, RHSDRE, ReductionOp.get(),
-            TaskgroupDescriptor);
+            TaskgroupDescriptor, CopyOpRes.get(), TempArrayRes.get(),
+            TempArrayElem.get());
   }
   return RD.Vars.empty();
 }
@@ -15246,7 +15315,8 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
   return OMPReductionClause::Create(
       Context, StartLoc, LParenLoc, ModifierLoc, ColonLoc, EndLoc, Modifier,
       RD.Vars, ReductionIdScopeSpec.getWithLocInContext(Context), ReductionId,
-      RD.Privates, RD.LHSs, RD.RHSs, RD.ReductionOps,
+      RD.Privates, RD.LHSs, RD.RHSs, RD.ReductionOps, RD.InscanCopyOps,
+      RD.InscanCopyArrayTemps, RD.InscanCopyArrayElems,
       buildPreInits(Context, RD.ExprCaptures),
       buildPostUpdate(*this, RD.ExprPostUpdates));
 }

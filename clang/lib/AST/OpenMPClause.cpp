@@ -709,15 +709,43 @@ void OMPReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
   std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
 }
 
+void OMPReductionClause::setInscanCopyOps(ArrayRef<Expr *> Ops) {
+  assert(Modifier == OMPC_REDUCTION_inscan && "Expected inscan reduction.");
+  assert(Ops.size() == varlist_size() && "Number of copy "
+                                         "expressions is not the same "
+                                         "as the preallocated buffer");
+  llvm::copy(Ops, getReductionOps().end());
+}
+
+void OMPReductionClause::setInscanCopyArrayTemps(
+    ArrayRef<Expr *> CopyArrayTemps) {
+  assert(Modifier == OMPC_REDUCTION_inscan && "Expected inscan reduction.");
+  assert(CopyArrayTemps.size() == varlist_size() &&
+         "Number of copy temp expressions is not the same as the preallocated "
+         "buffer");
+  llvm::copy(CopyArrayTemps, getInscanCopyOps().end());
+}
+
+void OMPReductionClause::setInscanCopyArrayElems(
+    ArrayRef<Expr *> CopyArrayElems) {
+  assert(Modifier == OMPC_REDUCTION_inscan && "Expected inscan reduction.");
+  assert(CopyArrayElems.size() == varlist_size() &&
+         "Number of copy temp expressions is not the same as the preallocated "
+         "buffer");
+  llvm::copy(CopyArrayElems, getInscanCopyArrayTemps().end());
+}
+
 OMPReductionClause *OMPReductionClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     SourceLocation ModifierLoc, SourceLocation EndLoc, SourceLocation ColonLoc,
     OpenMPReductionClauseModifier Modifier, ArrayRef<Expr *> VL,
     NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
     ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
-    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps, Stmt *PreInit,
-    Expr *PostUpdate) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size()));
+    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps,
+    ArrayRef<Expr *> CopyOps, ArrayRef<Expr *> CopyArrayTemps,
+    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
+      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * VL.size()));
   auto *Clause = new (Mem)
       OMPReductionClause(StartLoc, LParenLoc, ModifierLoc, EndLoc, ColonLoc,
                          Modifier, VL.size(), QualifierLoc, NameInfo);
@@ -728,13 +756,29 @@ OMPReductionClause *OMPReductionClause::Create(
   Clause->setReductionOps(ReductionOps);
   Clause->setPreInitStmt(PreInit);
   Clause->setPostUpdateExpr(PostUpdate);
+  if (Modifier == OMPC_REDUCTION_inscan) {
+    Clause->setInscanCopyOps(CopyOps);
+    Clause->setInscanCopyArrayTemps(CopyArrayTemps);
+    Clause->setInscanCopyArrayElems(CopyArrayElems);
+  } else {
+    assert(CopyOps.empty() &&
+           "copy operations are expected in inscan reductions only.");
+    assert(CopyArrayTemps.empty() &&
+           "copy array temps are expected in inscan reductions only.");
+    assert(CopyArrayElems.empty() &&
+           "copy array temps are expected in inscan reductions only.");
+  }
   return Clause;
 }
 
-OMPReductionClause *OMPReductionClause::CreateEmpty(const ASTContext &C,
-                                                    unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * N));
-  return new (Mem) OMPReductionClause(N);
+OMPReductionClause *
+OMPReductionClause::CreateEmpty(const ASTContext &C, unsigned N,
+                                OpenMPReductionClauseModifier Modifier) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
+      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * N));
+  auto *Clause = new (Mem) OMPReductionClause(N);
+  Clause->setModifier(Modifier);
+  return Clause;
 }
 
 void OMPTaskReductionClause::setPrivates(ArrayRef<Expr *> Privates) {
