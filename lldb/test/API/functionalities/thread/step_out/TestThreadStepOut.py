@@ -70,9 +70,9 @@ class ThreadStepOutTestCase(TestBase):
         self.bkpt_string = '// Set breakpoint here'
         self.breakpoint = line_number('main.cpp', self.bkpt_string)       
 
-        if "gcc" in self.getCompiler() or self.isIntelCompiler() or self.getArchitecture() in ['arm64', 'arm64e']:
+        if "gcc" in self.getCompiler() or self.isIntelCompiler():
             self.step_out_destination = line_number(
-                'main.cpp', '// Expect to stop here after step-out (icc and gcc; arm64)')
+                'main.cpp', '// Expect to stop here after step-out (icc and gcc)')
         else:
             self.step_out_destination = line_number(
                 'main.cpp', '// Expect to stop here after step-out (clang)')
