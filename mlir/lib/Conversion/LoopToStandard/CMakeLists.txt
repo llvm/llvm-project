@@ -6,12 +6,13 @@ add_mlir_conversion_library(MLIRLoopToStandard
 
   DEPENDS
   MLIRConversionPassIncGen
-)
+
+  LINK_COMPONENTS
+  Core
+  )
 target_link_libraries(
   MLIRLoopToStandard
   PUBLIC
   MLIRLoopOps
   MLIRTransforms
-  LLVMCore
-  LLVMSupport
   )

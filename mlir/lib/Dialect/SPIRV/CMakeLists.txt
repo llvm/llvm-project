@@ -27,9 +27,8 @@ add_mlir_dialect_library(MLIRSPIRV
   MLIRSPIRVOpsIncGen
   MLIRSPIRVOpUtilsGen
   MLIRSPIRVTargetAndABIIncGen
-  )
-target_link_libraries(MLIRSPIRV
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRParser

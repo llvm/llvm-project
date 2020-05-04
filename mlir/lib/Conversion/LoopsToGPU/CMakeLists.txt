@@ -19,5 +19,4 @@ target_link_libraries(MLIRLoopsToGPU
   MLIRStandardOps
   MLIRSupport
   MLIRTransforms
-  LLVMSupport
   )
