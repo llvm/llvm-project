@@ -2271,11 +2271,11 @@ Error BinaryWriter::finalize() {
   // layoutSections, because we want to truncate the last segment to the end of
   // its last non-empty section, to match GNU objcopy's behaviour.
   TotalSize = 0;
-  for (SectionBase &Sec : Obj.allocSections()) {
-    Sec.Offset = Sec.Addr - MinAddr;
-    if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
+  for (SectionBase &Sec : Obj.allocSections())
+    if (Sec.Type != SHT_NOBITS && Sec.Size > 0) {
+      Sec.Offset = Sec.Addr - MinAddr;
       TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
-  }
+    }
 
   if (Error E = Buf.allocate(TotalSize))
     return E;
