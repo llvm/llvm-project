@@ -94,9 +94,7 @@ public:
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float; }
   bool isInteger() const { return !Float && !Predicate; }
-  bool isScalarPredicate() const {
-    return !Float && Predicate && NumVectors == 0;
-  }
+  bool isScalarPredicate() const { return !Float && ElementBitwidth == 1; }
   bool isPredicateVector() const { return Predicate; }
   bool isPredicatePattern() const { return PredicatePattern; }
   bool isPrefetchOp() const { return PrefetchOp; }
@@ -409,12 +407,12 @@ std::string SVEType::str() const {
 
     if (Float)
       S += "float";
-    else if (isScalarPredicate() || isPredicateVector())
+    else if (isScalarPredicate())
       S += "bool";
     else
       S += "int";
 
-    if (!isScalarPredicate() && !isPredicateVector())
+    if (!isScalarPredicate())
       S += utostr(ElementBitwidth);
     if (!isScalableVector() && isVector())
       S += "x" + utostr(getNumElements());
@@ -435,6 +433,7 @@ void SVEType::applyTypespec() {
     switch (I) {
     case 'P':
       Predicate = true;
+      ElementBitwidth = 1;
       break;
     case 'U':
       Signed = false;
