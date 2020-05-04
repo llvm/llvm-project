@@ -361,9 +361,7 @@ private:
   // prints a debug message with the updated value.
   void pushToWorkListMsg(ValueLatticeElement &IV, Value *V) {
     LLVM_DEBUG(dbgs() << "updated " << IV << ": " << *V << '\n');
-    if (IV.isOverdefined())
-      return OverdefinedInstWorkList.push_back(V);
-    InstWorkList.push_back(V);
+    pushToWorkList(IV, V);
   }
 
   // markConstant - Make a value be marked as "constant".  If the value

@@ -28,3 +28,9 @@ func @rocdl_special_regs() -> !llvm.i32 {
   %11 = rocdl.grid.dim.z : !llvm.i32
   llvm.return %0 : !llvm.i32
 }
+
+func @rocdl.barrier() {
+  // CHECK: rocdl.barrier
+  rocdl.barrier
+  llvm.return
+}

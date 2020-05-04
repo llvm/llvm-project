@@ -1668,12 +1668,6 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   bool AllowApprox = Pow->hasApproxFunc();
   bool Ignored;
 
-  // Bail out if simplifying libcalls to pow() is disabled, and the present call
-  // is pow() rather than llvm.pow.
-  if (!Callee->isIntrinsic() &&
-      !hasFloatFn(TLI, Ty, LibFunc_pow, LibFunc_powf, LibFunc_powl))
-    return nullptr;
-
   // Propagate the math semantics from the call to any created instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Pow->getFastMathFlags());
