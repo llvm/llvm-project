@@ -60,7 +60,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B:%.*]])
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32
 ; IS__CGSCC____-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; IS__CGSCC____-NEXT:    ret i32 [[C]]
 ;
   %A = alloca i32
@@ -70,11 +70,11 @@ define internal i32 @caller(i32* %B) {
 }
 
 define i32 @callercaller() {
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@callercaller()
-; IS__TUNIT_OPM-NEXT:    [[B:%.*]] = alloca i32
-; IS__TUNIT_OPM-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
-; IS__TUNIT_OPM-NEXT:    ret i32 [[X]]
+; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callercaller()
+; NOT_TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32
+; NOT_TUNIT_NPM-NEXT:    store i32 2, i32* [[B]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; NOT_TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callercaller()
 ; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32
@@ -82,12 +82,6 @@ define i32 @callercaller() {
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 1
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32 [[TMP1]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[X]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@callercaller()
-; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32
-; IS__CGSCC____-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[B]])
-; IS__CGSCC____-NEXT:    ret i32 [[X]]
 ;
   %B = alloca i32
   store i32 2, i32* %B

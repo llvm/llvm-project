@@ -1869,6 +1869,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Call site argument attribute "non-null".
       getOrCreateAAFor<AANonNull>(CBArgPos);
 
+      // Call site argument attribute "nocapture".
+      getOrCreateAAFor<AANoCapture>(CBArgPos);
+
       // Call site argument attribute "no-alias".
       getOrCreateAAFor<AANoAlias>(CBArgPos);
 

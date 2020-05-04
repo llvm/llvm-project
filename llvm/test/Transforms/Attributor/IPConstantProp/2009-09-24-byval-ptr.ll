@@ -98,7 +98,7 @@ entry:
 define i32 @unions() nounwind {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unions()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions()
@@ -199,7 +199,7 @@ entry:
 define i32 @unions_v2() nounwind {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions_v2()
@@ -213,7 +213,7 @@ define i32 @unions_v2() nounwind {
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* noalias nofree nonnull readnone byval align 8 dereferenceable(8) @mystr)
+; IS__CGSCC_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* noalias nocapture nofree nonnull readnone byval align 8 dereferenceable(8) @mystr)
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@unions_v2()

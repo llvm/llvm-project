@@ -272,7 +272,7 @@ define void @nc5(void (i8*)* %f, i8* %p) {
 define void @test1_1(i8* %x1_1, i8* %y1_1, i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_1
 ; CHECK-SAME: (i8* nocapture nofree readnone [[X1_1:%.*]], i8* nocapture nofree readnone [[Y1_1:%.*]], i1 [[C:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @test1_2(i8* noalias nofree readnone undef, i8* noalias nofree readnone "no-capture-maybe-returned" [[Y1_1]], i1 [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @test1_2(i8* noalias nocapture nofree readnone undef, i8* noalias nofree readnone "no-capture-maybe-returned" [[Y1_1]], i1 [[C]])
 ; CHECK-NEXT:    store i32* null, i32** @g, align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -286,7 +286,7 @@ define i8* @test1_2(i8* %x1_2, i8* %y1_2, i1 %c) {
 ; CHECK-SAME: (i8* nocapture nofree readnone [[X1_2:%.*]], i8* nofree readnone returned "no-capture-maybe-returned" [[Y1_2:%.*]], i1 [[C:%.*]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    call void @test1_1(i8* noalias nofree readnone undef, i8* noalias nocapture nofree readnone [[Y1_2]], i1 [[C]])
+; CHECK-NEXT:    call void @test1_1(i8* noalias nocapture nofree readnone undef, i8* noalias nocapture nofree readnone [[Y1_2]], i1 [[C]])
 ; CHECK-NEXT:    store i32* null, i32** @g, align 8
 ; CHECK-NEXT:    br label [[F]]
 ; CHECK:       f:
@@ -324,7 +324,7 @@ define void @test3(i8* %x3, i8* %y3, i8* %z3) {
 define void @test4_1(i8* %x4_1, i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_1
 ; CHECK-SAME: (i8* nocapture nofree readnone [[X4_1:%.*]], i1 [[C:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @test4_2(i8* noalias nofree readnone undef, i8* noalias nofree readnone "no-capture-maybe-returned" [[X4_1]], i8* noalias nofree readnone undef, i1 [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @test4_2(i8* noalias nocapture nofree readnone undef, i8* noalias nofree readnone "no-capture-maybe-returned" [[X4_1]], i8* noalias nocapture nofree readnone undef, i1 [[C]])
 ; CHECK-NEXT:    store i32* null, i32** @g, align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -338,7 +338,7 @@ define i8* @test4_2(i8* %x4_2, i8* %y4_2, i8* %z4_2, i1 %c) {
 ; CHECK-SAME: (i8* nocapture nofree readnone [[X4_2:%.*]], i8* nofree readnone returned "no-capture-maybe-returned" [[Y4_2:%.*]], i8* nocapture nofree readnone [[Z4_2:%.*]], i1 [[C:%.*]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    call void @test4_1(i8* noalias nofree readnone align 536870912 null, i1 [[C]])
+; CHECK-NEXT:    call void @test4_1(i8* noalias nocapture nofree readnone align 536870912 null, i1 [[C]])
 ; CHECK-NEXT:    store i32* null, i32** @g, align 8
 ; CHECK-NEXT:    br label [[F]]
 ; CHECK:       f:
@@ -556,7 +556,7 @@ declare void @unknown(i8*)
 define void @test_callsite() {
 ; CHECK-LABEL: define {{[^@]+}}@test_callsite()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown(i8* noalias align 536870912 null)
+; CHECK-NEXT:    call void @unknown(i8* noalias nocapture align 536870912 null)
 ; CHECK-NEXT:    ret void
 ;
 entry:

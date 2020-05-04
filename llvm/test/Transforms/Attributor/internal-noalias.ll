@@ -99,8 +99,8 @@ define dso_local i32 @visible_local(i32* %A) #0 {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[B]])
-; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; IS__CGSCC____-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; IS__CGSCC____-NEXT:    ret i32 [[ADD]]
 ;
@@ -146,11 +146,11 @@ define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
 }
 
 define i32 @visible_local_2() {
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@visible_local_2()
-; IS__TUNIT_OPM-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__TUNIT_OPM-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
-; IS__TUNIT_OPM-NEXT:    ret i32 [[CALL]]
+; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@visible_local_2()
+; NOT_TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
+; NOT_TUNIT_NPM-NEXT:    store i32 5, i32* [[B]], align 4
+; NOT_TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; NOT_TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@visible_local_2()
 ; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -159,12 +159,6 @@ define i32 @visible_local_2() {
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[B]], align 1
 ; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 [[TMP1]], i32 [[TMP2]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@visible_local_2()
-; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[B]], i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[B]])
-; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
 ;
   %B = alloca i32, align 4
   store i32 5, i32* %B, align 4
@@ -191,17 +185,11 @@ define internal i32 @noalias_args_argmem_rn(i32* %A, i32* %B) #1 {
 }
 
 define i32 @visible_local_3() {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@visible_local_3()
-; IS__TUNIT____-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree nonnull align 4 dereferenceable(4) [[B]])
-; IS__TUNIT____-NEXT:    ret i32 [[CALL]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@visible_local_3()
-; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nofree nonnull align 4 dereferenceable(4) [[B]])
-; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
+; CHECK-LABEL: define {{[^@]+}}@visible_local_3()
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 5, i32* [[B]], align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree nonnull align 4 dereferenceable(4) [[B]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %B = alloca i32, align 4
   store i32 5, i32* %B, align 4
