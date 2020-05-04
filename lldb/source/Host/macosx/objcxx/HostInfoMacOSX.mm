@@ -297,7 +297,7 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   }
 }
 
-std::string HostInfoMacOSX::GetXcodeSDK(XcodeSDK sdk) {
+static std::string GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
   auto find_sdk = [](std::string sdk_name) -> std::string {
@@ -359,5 +359,16 @@ std::string HostInfoMacOSX::GetXcodeSDK(XcodeSDK sdk) {
   // Whatever is left in output should be a valid path.
   if (!FileSystem::Instance().Exists(path))
     return {};
+  return path;
+}
+
+llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
+  static llvm::StringMap<std::string> g_sdk_path;
+  static std::mutex g_sdk_path_mutex;
+
+  std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
+  std::string &path = g_sdk_path[sdk.GetString()];
+  if (path.empty())
+    path = GetXcodeSDK(sdk);
   return path;
 }

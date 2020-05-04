@@ -1761,14 +1761,6 @@ PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   return {};
 }
 
-llvm::StringRef PlatformDarwin::GetSDKPath(XcodeSDK sdk) {
-  std::lock_guard<std::mutex> guard(m_sdk_path_mutex);
-  std::string &path = m_sdk_path[sdk.GetString()];
-  if (path.empty())
-    path = HostInfo::GetXcodeSDK(sdk);
-  return path;
-}
-
 FileSpec PlatformDarwin::GetXcodeContentsDirectory() {
   static FileSpec g_xcode_contents_path;
   static std::once_flag g_once_flag;
@@ -1797,7 +1789,7 @@ FileSpec PlatformDarwin::GetXcodeContentsDirectory() {
       }
     }
 
-    FileSpec fspec(HostInfo::GetXcodeSDK(XcodeSDK::GetAnyMacOS()));
+    FileSpec fspec(HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS()));
     if (fspec) {
       if (FileSystem::Instance().Exists(fspec)) {
         std::string xcode_contents_dir =
