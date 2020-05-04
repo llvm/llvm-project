@@ -6,7 +6,10 @@ add_mlir_conversion_library(MLIRLinalgToLLVM
 
   DEPENDS
   MLIRConversionPassIncGen
-)
+
+  LINK_COMPONENTS
+  Core
+  )
 
 target_link_libraries(MLIRLinalgToLLVM
   PUBLIC
@@ -20,6 +23,4 @@ target_link_libraries(MLIRLinalgToLLVM
   MLIRVectorToLLVM
   MLIRVectorToLoops
   MLIRTransforms
-  LLVMCore
-  LLVMSupport
   )

@@ -1,4 +1,5 @@
-add_llvm_library(MLIRTestTransforms
+# Exclude tests from libMLIR.so
+add_mlir_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
   TestBufferPlacement.cpp
   TestCallGraph.cpp
@@ -20,21 +21,16 @@ add_llvm_library(MLIRTestTransforms
   TestVectorToLoopsConversion.cpp
   TestVectorTransforms.cpp
 
+  EXCLUDE_FROM_LIBMLIR
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
   DEPENDS
   MLIRStandardOpsIncGen
   MLIRTestVectorTransformPatternsIncGen
-)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
-
-target_link_libraries(MLIRTestTransforms
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
@@ -51,3 +47,8 @@ target_link_libraries(MLIRTestTransforms
   MLIRVectorToLoops
   MLIRVector
   )
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
