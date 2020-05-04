@@ -43347,17 +43347,6 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   // of one truncation.
   // i.e. if one of the inputs will constant fold or the input is repeated.
   switch (SrcOpcode) {
-  case ISD::AND:
-  case ISD::XOR:
-  case ISD::OR: {
-    SDValue Op0 = Src.getOperand(0);
-    SDValue Op1 = Src.getOperand(1);
-    if (TLI.isOperationLegalOrPromote(SrcOpcode, VT) &&
-        (Op0 == Op1 || IsFreeTruncation(Op0) || IsFreeTruncation(Op1)))
-      return TruncateArithmetic(Op0, Op1);
-    break;
-  }
-
   case ISD::MUL:
     // X86 is rubbish at scalar and vector i64 multiplies (until AVX512DQ) - its
     // better to truncate if we have the chance.
@@ -43366,6 +43355,9 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
         !TLI.isOperationLegal(SrcOpcode, SrcVT))
       return TruncateArithmetic(Src.getOperand(0), Src.getOperand(1));
     LLVM_FALLTHROUGH;
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
   case ISD::ADD: {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
