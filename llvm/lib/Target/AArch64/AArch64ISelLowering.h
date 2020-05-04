@@ -55,6 +55,10 @@ enum NodeType : unsigned {
   // Arithmetic instructions
   SDIV_PRED,
   UDIV_PRED,
+  SMIN_PRED,
+  UMIN_PRED,
+  SMAX_PRED,
+  UMAX_PRED,
 
   // Arithmetic instructions which write flags.
   ADDS,
@@ -793,8 +797,8 @@ private:
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerDIV(SDValue Op, SelectionDAG &DAG,
-                   unsigned NewOp) const;
+  SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
+                              unsigned NewOp) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
