@@ -4835,55 +4835,15 @@ define <16 x i8> @trunc_ssat_v16i64_v16i8(<16 x i64>* %p0) "min-legal-vector-wid
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc_ssat_v16i64_v16i8:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [127,127,127,127,127,127,127,127]
-; AVX512F-NEXT:    vpminsq (%rdi), %zmm0, %zmm1
-; AVX512F-NEXT:    vpminsq 64(%rdi), %zmm0, %zmm0
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488]
-; AVX512F-NEXT:    vpmaxsq %zmm2, %zmm0, %zmm0
-; AVX512F-NEXT:    vpmaxsq %zmm2, %zmm1, %zmm1
-; AVX512F-NEXT:    vpmovqd %zmm1, %ymm1
-; AVX512F-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: trunc_ssat_v16i64_v16i8:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512VL-NEXT:    vmovdqa64 64(%rdi), %zmm1
-; AVX512VL-NEXT:    vpmovsqb %zmm1, %xmm1
-; AVX512VL-NEXT:    vpmovsqb %zmm0, %xmm0
-; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc_ssat_v16i64_v16i8:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [127,127,127,127,127,127,127,127]
-; AVX512BW-NEXT:    vpminsq (%rdi), %zmm0, %zmm1
-; AVX512BW-NEXT:    vpminsq 64(%rdi), %zmm0, %zmm0
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488,18446744073709551488]
-; AVX512BW-NEXT:    vpmaxsq %zmm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmaxsq %zmm2, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovqd %zmm1, %ymm1
-; AVX512BW-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: trunc_ssat_v16i64_v16i8:
-; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BWVL-NEXT:    vmovdqa64 64(%rdi), %zmm1
-; AVX512BWVL-NEXT:    vpmovsqb %zmm1, %xmm1
-; AVX512BWVL-NEXT:    vpmovsqb %zmm0, %xmm0
-; AVX512BWVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512BWVL-NEXT:    vzeroupper
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: trunc_ssat_v16i64_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-NEXT:    vmovdqa64 64(%rdi), %zmm1
+; AVX512-NEXT:    vpmovsqb %zmm1, %xmm1
+; AVX512-NEXT:    vpmovsqb %zmm0, %xmm0
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_ssat_v16i64_v16i8:
 ; SKX:       # %bb.0:

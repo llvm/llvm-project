@@ -188,74 +188,85 @@ def parse_locstats(opts, binary):
     print ('error: No valid llvm-dwarfdump statistics found.')
     sys.exit(1)
 
+  # TODO: Parse the statistics Version from JSON.
+
   if opts.only_variables:
     # Read the JSON only for local variables.
     variables_total_locstats = \
-      json_parsed['total vars procesed by location statistics']
+      json_parsed['#local vars processed by location statistics']
     variables_scope_bytes_covered = \
-      json_parsed['vars scope bytes covered']
+      json_parsed['sum_all_local_vars(#bytes in parent scope covered' \
+                  ' by DW_AT_location)']
     variables_scope_bytes = \
-      json_parsed['vars scope bytes total']
+      json_parsed['sum_all_local_vars(#bytes in parent scope)']
     if not opts.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
-        cov_category = "vars with {} of its scope covered".format(cov_bucket)
+        cov_category = "#local vars with {} of parent scope covered " \
+                       "by DW_AT_location".format(cov_bucket)
         variables_coverage_map[cov_bucket] = json_parsed[cov_category]
     else:
       variables_scope_bytes_entry_values = \
-        json_parsed['vars entry value scope bytes covered']
+        json_parsed['sum_all_local_vars(#bytes in parent scope ' \
+                    'covered by DW_OP_entry_value)']
       variables_scope_bytes_covered = variables_scope_bytes_covered \
          - variables_scope_bytes_entry_values
       for cov_bucket in coverage_buckets():
         cov_category = \
-          "vars (excluding the debug entry values) " \
-          "with {} of its scope covered".format(cov_bucket)
+          "#local vars - entry values with {} of parent scope " \
+          "covered by DW_AT_location".format(cov_bucket)
         variables_coverage_map[cov_bucket] = json_parsed[cov_category]
   elif opts.only_formal_parameters:
     # Read the JSON only for formal parameters.
     variables_total_locstats = \
-      json_parsed['total params procesed by location statistics']
+      json_parsed['#params processed by location statistics']
     variables_scope_bytes_covered = \
-      json_parsed['formal params scope bytes covered']
+      json_parsed['sum_all_params(#bytes in parent scope covered ' \
+                  'by DW_AT_location)']
     variables_scope_bytes = \
-      json_parsed['formal params scope bytes total']
+      json_parsed['sum_all_params(#bytes in parent scope)']
     if not opts.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
-        cov_category = "params with {} of its scope covered".format(cov_bucket)
+        cov_category = "#params with {} of parent scope covered " \
+                       "by DW_AT_location".format(cov_bucket)
         variables_coverage_map[cov_bucket] = json_parsed[cov_category]
     else:
       variables_scope_bytes_entry_values = \
-        json_parsed['formal params entry value scope bytes covered']
+        json_parsed['sum_all_params(#bytes in parent scope covered ' \
+                    'by DW_OP_entry_value)']
       variables_scope_bytes_covered = variables_scope_bytes_covered \
         - variables_scope_bytes_entry_values
       for cov_bucket in coverage_buckets():
         cov_category = \
-          "params (excluding the debug entry values) " \
-          "with {} of its scope covered".format(cov_bucket)
+          "#params - entry values with {} of parent scope covered" \
+          " by DW_AT_location".format(cov_bucket)
         variables_coverage_map[cov_bucket] = json_parsed[cov_category]
   else:
     # Read the JSON for both local variables and formal parameters.
     variables_total = \
-      json_parsed['source variables']
-    variables_with_loc = json_parsed['variables with location']
+      json_parsed['#source variables']
+    variables_with_loc = json_parsed['#source variables with location']
     variables_total_locstats = \
-      json_parsed['total variables procesed by location statistics']
+      json_parsed['#variables processed by location statistics']
     variables_scope_bytes_covered = \
-      json_parsed['scope bytes covered']
+      json_parsed['sum_all_variables(#bytes in parent scope covered ' \
+                  'by DW_AT_location)']
     variables_scope_bytes = \
-      json_parsed['scope bytes total']
+      json_parsed['sum_all_variables(#bytes in parent scope)']
     if not opts.ignore_debug_entry_values:
       for cov_bucket in coverage_buckets():
-        cov_category = "variables with {} of its scope covered". \
-                       format(cov_bucket)
+        cov_category = "#variables with {} of parent scope covered " \
+                       "by DW_AT_location".format(cov_bucket)
         variables_coverage_map[cov_bucket] = json_parsed[cov_category]
     else:
       variables_scope_bytes_entry_values = \
-        json_parsed['entry value scope bytes covered']
+        json_parsed['sum_all_variables(#bytes in parent scope covered ' \
+                    'by DW_OP_entry_value)']
       variables_scope_bytes_covered = variables_scope_bytes_covered \
         - variables_scope_bytes_entry_values
       for cov_bucket in coverage_buckets():
-        cov_category = "variables (excluding the debug entry values) " \
-                       "with {} of its scope covered". format(cov_bucket)
+        cov_category = \
+          "#variables - entry values with {} of parent scope covered " \
+          "by DW_AT_location".format(cov_bucket)
         variables_coverage_map[cov_bucket] = json_parsed[cov_category]
 
   return LocationStats(binary, variables_total, variables_total_locstats,
