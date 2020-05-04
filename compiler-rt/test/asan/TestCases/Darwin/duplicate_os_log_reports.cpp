@@ -10,7 +10,7 @@
 
 // Check syslog output. We filter recent system logs based on PID to avoid
 // getting the logs of previous test runs.
-// RUN: log show --debug --last 2m  --predicate "processID == ${TEST_PID}" --style syslog > %t.process_syslog_output.txt
+// RUN: log show --debug --last 5m  --predicate "processID == ${TEST_PID}" --style syslog > %t.process_syslog_output.txt
 // RUN: FileCheck %s -input-file=%t.process_syslog_output.txt
 #include <cassert>
 #include <cstdio>
