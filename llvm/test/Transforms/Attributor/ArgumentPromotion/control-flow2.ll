@@ -63,7 +63,7 @@ define i32 @foo() {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo()
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32
 ; IS__CGSCC____-NEXT:    store i32 17, i32* [[A]], align 4
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* noalias nofree nonnull readonly align 4 dereferenceable(4) [[A]])
+; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC____-NEXT:    ret i32 [[X]]
 ;
   %A = alloca i32         ; <i32*> [#uses=2]

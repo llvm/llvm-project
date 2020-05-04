@@ -31,6 +31,26 @@ define i8* @test2(i8* nonnull %p) {
 
 define i8* @test2A(i1 %c, i8* %ret) {
 ; ATTRIBUTOR: define nonnull i8* @test2A(i1 %c, i8* nofree nonnull readnone returned %ret)
+; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test2A
+; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]])
+; NOT_CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; NOT_CGSCC_OPM:       A:
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) #11 [ "nonnull"(i8* [[RET]]) ]
+; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
+; NOT_CGSCC_OPM:       B:
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[RET]]) ]
+; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
+;
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test2A
+; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]])
+; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; IS__CGSCC_OPM:       A:
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) #12 [ "nonnull"(i8* [[RET]]) ]
+; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
+; IS__CGSCC_OPM:       B:
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[RET]]) ]
+; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
+;
   br i1 %c, label %A, label %B
 A:
   call void @llvm.assume(i1 true) [ "nonnull"(i8* %ret) ]
@@ -42,6 +62,26 @@ B:
 
 define i8* @test2B(i1 %c, i8* %ret) {
 ; ATTRIBUTOR: define nonnull dereferenceable(4) i8* @test2B(i1 %c, i8* nofree nonnull readnone returned dereferenceable(4) %ret)
+; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test2B
+; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]])
+; NOT_CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; NOT_CGSCC_OPM:       A:
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) #11 [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
+; NOT_CGSCC_OPM:       B:
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
+;
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test2B
+; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]])
+; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; IS__CGSCC_OPM:       A:
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) #12 [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
+; IS__CGSCC_OPM:       B:
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
+;
   br i1 %c, label %A, label %B
 A:
   call void @llvm.assume(i1 true) [ "dereferenceable"(i8* %ret, i32 4) ]
@@ -268,8 +308,8 @@ define void @test13_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@test13_helper()
 ; CHECK-NEXT:    [[NONNULLPTR:%.*]] = tail call nonnull i8* @ret_nonnull()
 ; CHECK-NEXT:    [[MAYBENULLPTR:%.*]] = tail call i8* @unknown()
-; CHECK-NEXT:    tail call void @test13(i8* noalias nofree nonnull readnone [[NONNULLPTR]], i8* noalias nofree nonnull readnone [[NONNULLPTR]], i8* noalias nofree readnone [[MAYBENULLPTR]])
-; CHECK-NEXT:    tail call void @test13(i8* noalias nofree nonnull readnone [[NONNULLPTR]], i8* noalias nofree readnone [[MAYBENULLPTR]], i8* noalias nofree nonnull readnone [[NONNULLPTR]])
+; CHECK-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]])
+; CHECK-NEXT:    tail call void @test13(i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]], i8* noalias nocapture nofree readnone [[MAYBENULLPTR]], i8* noalias nocapture nofree nonnull readnone [[NONNULLPTR]])
 ; CHECK-NEXT:    ret void
 ;
   %nonnullptr = tail call i8* @ret_nonnull()
@@ -687,31 +727,18 @@ define i8 @parent7(i8* %a) {
 declare i32 @esfp(...)
 
 define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@parent8
-; NOT_CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) {{#[0-9]+}} personality i8* bitcast (i32 (...)* @esfp to i8*)
-; NOT_CGSCC_OPM-NEXT:  entry:
-; NOT_CGSCC_OPM-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
-; NOT_CGSCC_OPM-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
-; NOT_CGSCC_OPM:       cont:
-; NOT_CGSCC_OPM-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[B]], null
-; NOT_CGSCC_OPM-NEXT:    ret i1 [[NULL_CHECK]]
-; NOT_CGSCC_OPM:       exc:
-; NOT_CGSCC_OPM-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
-; NOT_CGSCC_OPM-NEXT:    filter [0 x i8*] zeroinitializer
-; NOT_CGSCC_OPM-NEXT:    unreachable
-;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@parent8
-; IS__CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) {{#[0-9]+}} personality i8* bitcast (i32 (...)* @esfp to i8*)
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
-; IS__CGSCC_OPM-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
-; IS__CGSCC_OPM:       cont:
-; IS__CGSCC_OPM-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[B]], null
-; IS__CGSCC_OPM-NEXT:    ret i1 [[NULL_CHECK]]
-; IS__CGSCC_OPM:       exc:
-; IS__CGSCC_OPM-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
-; IS__CGSCC_OPM-NEXT:    filter [0 x i8*] zeroinitializer
-; IS__CGSCC_OPM-NEXT:    unreachable
+; CHECK-LABEL: define {{[^@]+}}@parent8
+; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* nocapture nofree readnone [[BOGUS1:%.*]], i8* nonnull [[B:%.*]]) #2 personality i8* bitcast (i32 (...)* @esfp to i8*)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
+; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[B]], null
+; CHECK-NEXT:    ret i1 [[NULL_CHECK]]
+; CHECK:       exc:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
+; CHECK-NEXT:    unreachable
 ;
 
 entry:
@@ -804,7 +831,7 @@ define internal void @called_by_weak(i32* %a) {
 define weak_odr void @weak_caller(i32* nonnull %a) {
 ; CHECK-LABEL: define {{[^@]+}}@weak_caller
 ; CHECK-SAME: (i32* nonnull [[A:%.*]])
-; CHECK-NEXT:    call void @called_by_weak(i32* noalias nonnull readnone [[A]])
+; CHECK-NEXT:    call void @called_by_weak(i32* noalias nocapture nonnull readnone [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @called_by_weak(i32* %a)
@@ -850,7 +877,7 @@ define void @make_live(i32* nonnull dereferenceable(8) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@make_live
 ; CHECK-SAME: (i32* nonnull align 16 dereferenceable(8) [[A:%.*]])
 ; CHECK-NEXT:    call void @naked(i32* nonnull align 16 dereferenceable(8) [[A]])
-; CHECK-NEXT:    call void @control(i32* noalias nonnull readnone align 16 dereferenceable(8) [[A]])
+; CHECK-NEXT:    call void @control(i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A]])
 ; CHECK-NEXT:    call void @optnone(i32* nonnull align 16 dereferenceable(8) [[A]])
 ; CHECK-NEXT:    ret void
 ;
