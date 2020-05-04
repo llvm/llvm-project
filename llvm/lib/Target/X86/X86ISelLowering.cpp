@@ -35662,6 +35662,64 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 
     return SDValue();
   }
+  case X86ISD::VZEXT_MOVL: {
+    SDValue N0 = N.getOperand(0);
+
+    // If this a vzmovl of a full vector load, replace it with a vzload, unless
+    // the load is volatile.
+    if (N0.hasOneUse() && ISD::isNormalLoad(N0.getNode())) {
+      auto *LN = cast<LoadSDNode>(N0);
+      if (LN->isSimple()) {
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+        SDValue VZLoad = DAG.getMemIntrinsicNode(
+            X86ISD::VZEXT_LOAD, DL, Tys, Ops, VT.getVectorElementType(),
+            LN->getPointerInfo(), LN->getAlign(),
+            LN->getMemOperand()->getFlags());
+        DCI.CombineTo(N.getNode(), VZLoad);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
+        return N;
+      }
+    }
+
+    // If this a VZEXT_MOVL of a VBROADCAST_LOAD, we don't need the broadcast
+    // and can just use a VZEXT_LOAD.
+    // FIXME: Is there some way to do this with SimplifyDemandedVectorElts?
+    if (N0.hasOneUse() && N0.getOpcode() == X86ISD::VBROADCAST_LOAD) {
+      auto *LN = cast<MemSDNode>(N0);
+      if (VT.getScalarSizeInBits() == LN->getMemoryVT().getSizeInBits()) {
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+        SDValue VZLoad =
+            DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, DL, Tys, Ops,
+                                    LN->getMemoryVT(), LN->getMemOperand());
+        DCI.CombineTo(N.getNode(), VZLoad);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
+        return N;
+      }
+    }
+
+    // Turn (v2i64 (vzext_movl (scalar_to_vector (i64 X)))) into
+    // (v2i64 (bitcast (v4i32 (vzext_movl (scalar_to_vector (i32 (trunc X)))))))
+    // if the upper bits of the i64 are zero.
+    if (N0.hasOneUse() && N0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+        N0.getOperand(0).hasOneUse() &&
+        N0.getOperand(0).getValueType() == MVT::i64) {
+      SDValue In = N0.getOperand(0);
+      APInt Mask = APInt::getHighBitsSet(64, 32);
+      if (DAG.MaskedValueIsZero(In, Mask)) {
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, In);
+        MVT VecVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
+        SDValue SclVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Trunc);
+        SDValue Movl = DAG.getNode(X86ISD::VZEXT_MOVL, DL, VecVT, SclVec);
+        return DAG.getBitcast(VT, Movl);
+      }
+    }
+
+    return SDValue();
+  }
   case X86ISD::BLENDI: {
     SDValue N0 = N.getOperand(0);
     SDValue N1 = N.getOperand(1);
@@ -36403,62 +36461,6 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT,
                        getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl),
                        Movl, N->getOperand(0).getOperand(2));
-  }
-
-  // If this a vzmovl of a full vector load, replace it with a vzload, unless
-  // the load is volatile.
-  if (N->getOpcode() == X86ISD::VZEXT_MOVL && N->getOperand(0).hasOneUse() &&
-      ISD::isNormalLoad(N->getOperand(0).getNode())) {
-    LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
-    if (LN->isSimple()) {
-      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-      SDValue VZLoad = DAG.getMemIntrinsicNode(
-          X86ISD::VZEXT_LOAD, dl, Tys, Ops, VT.getVectorElementType(),
-          LN->getPointerInfo(), LN->getAlign(),
-          LN->getMemOperand()->getFlags());
-      DCI.CombineTo(N, VZLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
-      DCI.recursivelyDeleteUnusedNodes(LN);
-      return SDValue(N, 0);
-    }
-  }
-
-  // If this a VZEXT_MOVL of a VBROADCAST_LOAD, we don't need the broadcast and
-  // can just use a VZEXT_LOAD.
-  // FIXME: Is there some way to do this with SimplifyDemandedVectorElts?
-  if (N->getOpcode() == X86ISD::VZEXT_MOVL && N->getOperand(0).hasOneUse() &&
-      N->getOperand(0).getOpcode() == X86ISD::VBROADCAST_LOAD) {
-    auto *LN = cast<MemSDNode>(N->getOperand(0));
-    if (VT.getScalarSizeInBits() == LN->getMemoryVT().getSizeInBits()) {
-      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-      SDValue VZLoad =
-          DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
-                                  LN->getMemoryVT(), LN->getMemOperand());
-      DCI.CombineTo(N, VZLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
-      DCI.recursivelyDeleteUnusedNodes(LN);
-      return SDValue(N, 0);
-    }
-  }
-
-  // Turn (v2i64 (vzext_movl (scalar_to_vector (i64 X)))) into
-  // (v2i64 (bitcast (v4i32 (vzext_movl (scalar_to_vector (i32 (trunc X)))))))
-  // if the upper bits of the i64 are zero.
-  if (N->getOpcode() == X86ISD::VZEXT_MOVL && N->getOperand(0).hasOneUse() &&
-      N->getOperand(0)->getOpcode() == ISD::SCALAR_TO_VECTOR &&
-      N->getOperand(0).getOperand(0).hasOneUse() &&
-      N->getOperand(0).getOperand(0).getValueType() == MVT::i64) {
-    SDValue In = N->getOperand(0).getOperand(0);
-    APInt Mask = APInt::getHighBitsSet(64, 32);
-    if (DAG.MaskedValueIsZero(In, Mask)) {
-      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, In);
-      MVT VecVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
-      SDValue SclVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, Trunc);
-      SDValue Movl = DAG.getNode(X86ISD::VZEXT_MOVL, dl, VecVT, SclVec);
-      return DAG.getBitcast(VT, Movl);
-    }
   }
 
   return SDValue();
