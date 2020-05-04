@@ -16,6 +16,7 @@
 
 // Mangling
 #define MATH_MANGLE(N) OCML_MANGLE_F32(N)
+#define MATH_MANGLE2(N) OCML_MANGLE_2F32(N)
 #define MATH_PRIVATE(N) MANGLE3(__ocmlpriv,N,f32)
 
 // Optimization Controls

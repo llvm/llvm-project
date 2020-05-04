@@ -15,6 +15,7 @@
 #define ATTR __attribute__((overloadable))
 
 #define float_ssuf _f32
+#define float_psuf _2f32
 #define double_ssuf _f64
 #define half_ssuf _f16
 #define half_psuf _2f16
@@ -84,7 +85,7 @@ F(T##2 a, T##2 b, T##2 c) \
 
 #if !defined USE_CLP
 #define WRAP(F) \
-    SWRAPT(F,float) \
+    PWRAPT(F,float) \
     SWRAPT(F,double) \
     PWRAPT(F,half)
 #else

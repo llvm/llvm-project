@@ -8,6 +8,12 @@
 #include "irif.h"
 #include "mathF.h"
 
+CONSTATTR float2
+MATH_MANGLE2(fma)(float2 a, float2 b, float2 c)
+{
+    return BUILTIN_FMA_2F32(a, b, c);
+}
+
 CONSTATTR float
 MATH_MANGLE(fma)(float a, float b, float c)
 {

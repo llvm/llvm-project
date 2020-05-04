@@ -14,6 +14,8 @@
 #define REQUIRES_GFX9_INSTS __attribute__((target("gfx9-insts")))
 
 // Generic intrinsics
+extern __attribute__((const)) float2 __llvm_fma_2f32(float2, float2, float2) __asm("llvm.fma.v2f32");
+
 extern __attribute__((const)) half2 __llvm_fma_2f16(half2, half2, half2) __asm("llvm.fma.v2f16");
 extern __attribute__((const)) half2 __llvm_fabs_2f16(half2) __asm("llvm.fabs.v2f16");
 extern __attribute__((const)) half2 __llvm_minnum_2f16(half2, half2) __asm("llvm.minnum.v2f16");

@@ -180,6 +180,7 @@
 })
 
 #define BUILTIN_FMA_F32 __builtin_fmaf
+#define BUILTIN_FMA_2F32 __llvm_fma_2f32
 #define BUILTIN_FMA_F64 __builtin_fma
 #define BUILTIN_FMA_F16 __builtin_fmaf16
 #define BUILTIN_FMA_2F16 __llvm_fma_2f16
@@ -209,6 +210,7 @@
 #define BUILTIN_TRIG_PREOP_F64 __builtin_amdgcn_trig_preop
 
 #define BUILTIN_MAD_F32 __ocml_fmuladd_f32
+#define BUILTIN_MAD_2F32 __ocml_fmuladd_2f32
 #define BUILTIN_MAD_F64 __ocml_fmuladd_f64
 #define BUILTIN_MAD_F16 __ocml_fmuladd_f16
 #define BUILTIN_MAD_2F16 __ocml_fmuladd_2f16
