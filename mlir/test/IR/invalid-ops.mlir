@@ -1220,3 +1220,47 @@ func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@-1 {{requires an ancestor op with AutomaticAllocationScope trait}}
   return
 }) : () -> ()
+
+// -----
+
+func @complex_number_from_non_float_operands(%real: i32, %imag: i32) {
+  // expected-error@+1 {{'complex' must be complex type with floating-point elements, but got 'complex<i32>'}}
+  std.create_complex %real, %imag : complex<i32>
+  return
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func @complex_number_from_different_float_types(%real: f32, %imag: f64) {
+  // expected-error@+1 {{expects different type than prior uses: 'f32' vs 'f64'}}
+  std.create_complex %real, %imag : complex<f32>
+  return
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func @complex_number_from_incompatible_float_type(%real: f32, %imag: f32) {
+  // expected-error@+1 {{expects different type than prior uses: 'f64' vs 'f32'}}
+  std.create_complex %real, %imag : complex<f64>
+  return
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func @real_part_from_incompatible_complex_type(%cplx: complex<f32>) {
+  // expected-error@+1 {{expects different type than prior uses: 'complex<f64>' vs 'complex<f32>'}}
+  std.re %cplx : complex<f64>
+  return
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func @imaginary_part_from_incompatible_complex_type(%cplx: complex<f64>) {
+  // expected-error@+1 {{expects different type than prior uses: 'complex<f32>' vs 'complex<f64>'}}
+  std.re %cplx : complex<f32>
+  return
+}
