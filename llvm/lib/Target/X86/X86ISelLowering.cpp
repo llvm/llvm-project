@@ -1528,6 +1528,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,    MVT::v8i32,  Legal);
     setOperationAction(ISD::TRUNCATE,    MVT::v16i16, Legal);
     setOperationAction(ISD::TRUNCATE,    MVT::v32i8,  HasBWI ? Legal : Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i64, Custom);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v32i16, Custom);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v16i32, Custom);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v8i64,  Custom);
@@ -20414,7 +20415,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   if (!TLI.isTypeLegal(InVT)) {
     if ((InVT == MVT::v8i64 || InVT == MVT::v16i32 || InVT == MVT::v16i64) &&
         VT.is128BitVector()) {
-      assert(Subtarget.hasVLX() && "Unexpected subtarget!");
+      assert((InVT == MVT::v16i64 || Subtarget.hasVLX()) &&
+             "Unexpected subtarget!");
       // The default behavior is to truncate one step, concatenate, and then
       // truncate the remainder. We'd rather produce two 64-bit results and
       // concatenate those.
@@ -36957,6 +36959,18 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   unsigned BitWidth = OriginalDemandedBits.getBitWidth();
   unsigned Opc = Op.getOpcode();
   switch(Opc) {
+  case X86ISD::VTRUNC: {
+    KnownBits KnownOp;
+    SDValue Src = Op.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+
+    // Simplify the input, using demanded bit information.
+    APInt TruncMask = OriginalDemandedBits.zext(SrcVT.getScalarSizeInBits());
+    APInt DemandedElts = OriginalDemandedElts.trunc(SrcVT.getVectorNumElements());
+    if (SimplifyDemandedBits(Src, TruncMask, DemandedElts, KnownOp, TLO, Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::PMULDQ:
   case X86ISD::PMULUDQ: {
     // PMULDQ/PMULUDQ only uses lower 32 bits from each vector element.
@@ -43747,7 +43761,8 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   return combineVectorTruncation(N, DAG, Subtarget);
 }
 
-static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
   SDValue In = N->getOperand(0);
   SDLoc DL(N);
@@ -43756,6 +43771,11 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG) {
     return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
   if (auto USatVal = detectUSatPattern(In, VT, DAG, DL))
     return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  APInt DemandedMask(APInt::getAllOnesValue(VT.getScalarSizeInBits()));
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
+    return SDValue(N, 0);
 
   return SDValue();
 }
@@ -47495,7 +47515,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
-  case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG);
+  case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
   case X86ISD::ANDNP:       return combineAndnp(N, DAG, DCI, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
