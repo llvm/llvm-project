@@ -976,21 +976,19 @@ ChangeStatus Attributor::run() {
 
     // Update all abstract attribute in the work list and record the ones that
     // changed.
-    for (AbstractAttribute *AA : Worklist)
-      if (!AA->getState().isAtFixpoint() &&
+    for (AbstractAttribute *AA : Worklist) {
+      const auto &AAState = AA->getState();
+      if (!AAState.isAtFixpoint() &&
           !isAssumedDead(*AA, nullptr, /* CheckBBLivenessOnly */ true)) {
-        QueriedNonFixAA = false;
-        if (AA->update(*this) == ChangeStatus::CHANGED) {
+        if (updateAA(*AA) == ChangeStatus::CHANGED) {
           ChangedAAs.push_back(AA);
-          if (!AA->getState().isValidState())
-            InvalidAAs.insert(AA);
-        } else if (!QueriedNonFixAA) {
-          // If the attribute did not query any non-fix information, the state
-          // will not change and we can indicate that right away.
-          AA->getState().indicateOptimisticFixpoint();
         }
       }
-
+      // Use the InvalidAAs vector to propagate invalid states fast transitively
+      // without requiring updates.
+      if (!AAState.isValidState())
+        InvalidAAs.insert(AA);
+    }
 
     // Add attributes to the changed set if they have been created in the last
     // iteration.
@@ -1269,6 +1267,31 @@ ChangeStatus Attributor::run() {
 #endif
 
   return ManifestChange;
+}
+
+ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
+  // Use a new dependence vector for this update.
+  DependenceVector DV;
+  DependenceStack.push_back(&DV);
+
+  auto &AAState = AA.getState();
+  ChangeStatus CS = AA.update(*this);
+  if (DV.empty()) {
+    // If the attribute did not query any non-fix information, the state
+    // will not change and we can indicate that right away.
+    AAState.indicateOptimisticFixpoint();
+  }
+
+  if (!AAState.isAtFixpoint())
+    rememberDependences();
+
+  // Verify the stack was used properly, that is we pop the dependence vector we
+  // put there earlier.
+  DependenceVector *PoppedDV = DependenceStack.pop_back_val();
+  (void)PoppedDV;
+  assert(PoppedDV == &DV && "Inconsistent usage of the dependence stack!");
+
+  return CS;
 }
 
 /// Create a shallow wrapper for \p F such that \p F has internal linkage
@@ -1686,18 +1709,29 @@ InformationCache::FunctionInfo::~FunctionInfo() {
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA,
                                   DepClassTy DepClass) {
+  // If we are outside of an update, thus before the actual fixpoint iteration
+  // started (= when we create AAs), we do not track dependences because we will
+  // put all AAs into the initial worklist anyway.
+  if (DependenceStack.empty())
+    return;
   if (FromAA.getState().isAtFixpoint())
     return;
+  DependenceStack.back()->push_back({&FromAA, &ToAA, DepClass});
+}
 
-  QueryMapValueTy *&DepAAs = QueryMap[&FromAA];
-  if (!DepAAs)
-    DepAAs = new (Allocator) QueryMapValueTy();
+void Attributor::rememberDependences() {
+  assert(!DependenceStack.empty() && "No dependences to remember!");
 
-  if (DepClass == DepClassTy::REQUIRED)
-    DepAAs->RequiredAAs.insert(const_cast<AbstractAttribute *>(&ToAA));
-  else
-    DepAAs->OptionalAAs.insert(const_cast<AbstractAttribute *>(&ToAA));
-  QueriedNonFixAA = true;
+  for (DepInfo &DI : *DependenceStack.back()) {
+    QueryMapValueTy *&DepAAs = QueryMap[DI.FromAA];
+    if (!DepAAs)
+      DepAAs = new (Allocator) QueryMapValueTy();
+
+    if (DI.DepClass == DepClassTy::REQUIRED)
+      DepAAs->RequiredAAs.insert(const_cast<AbstractAttribute *>(DI.ToAA));
+    else
+      DepAAs->OptionalAAs.insert(const_cast<AbstractAttribute *>(DI.ToAA));
+  }
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {

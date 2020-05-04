@@ -104,27 +104,16 @@ define i1 @c5(i32* %q, i32 %bitno) {
 declare void @throw_if_bit_set(i8*, i8) readonly
 
 define i1 @c6(i8* %q, i8 %bit) personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@c6
-; IS__TUNIT____-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) #5 personality i32 (...)* @__gxx_personality_v0
-; IS__TUNIT____-NEXT:    invoke void @throw_if_bit_set(i8* readonly [[Q]], i8 [[BIT]])
-; IS__TUNIT____-NEXT:    to label [[RET0:%.*]] unwind label [[RET1:%.*]]
-; IS__TUNIT____:       ret0:
-; IS__TUNIT____-NEXT:    ret i1 false
-; IS__TUNIT____:       ret1:
-; IS__TUNIT____-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
-; IS__TUNIT____-NEXT:    cleanup
-; IS__TUNIT____-NEXT:    ret i1 true
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@c6
-; IS__CGSCC____-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) #4 personality i32 (...)* @__gxx_personality_v0
-; IS__CGSCC____-NEXT:    invoke void @throw_if_bit_set(i8* readonly [[Q]], i8 [[BIT]])
-; IS__CGSCC____-NEXT:    to label [[RET0:%.*]] unwind label [[RET1:%.*]]
-; IS__CGSCC____:       ret0:
-; IS__CGSCC____-NEXT:    ret i1 false
-; IS__CGSCC____:       ret1:
-; IS__CGSCC____-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
-; IS__CGSCC____-NEXT:    cleanup
-; IS__CGSCC____-NEXT:    ret i1 true
+; CHECK-LABEL: define {{[^@]+}}@c6
+; CHECK-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) #4 personality i32 (...)* @__gxx_personality_v0
+; CHECK-NEXT:    invoke void @throw_if_bit_set(i8* readonly [[Q]], i8 [[BIT]])
+; CHECK-NEXT:    to label [[RET0:%.*]] unwind label [[RET1:%.*]]
+; CHECK:       ret0:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       ret1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    ret i1 true
 ;
   invoke void @throw_if_bit_set(i8* %q, i8 %bit)
   to label %ret0 unwind label %ret1
