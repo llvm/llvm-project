@@ -33,3 +33,11 @@ llvm.func @kernel_func() attributes {gpu.kernel} {
   // CHECK-LABEL: amdgpu_kernel void @kernel_func
   llvm.return
 }
+
+llvm.func @rocdl.barrier() {
+  // CHECK:      fence syncscope("workgroup") release
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
+  // CHECK-NEXT: fence syncscope("workgroup") acquire
+  rocdl.barrier
+  llvm.return
+}
