@@ -64,7 +64,19 @@ else()
   endif()
 endif()
 
-option(BUILD_SHARED_LIBS "Build the shared library" ON)
+# BUILD_SHARED_LIBS is a frustratingly global variable common to all
+# projects. LLVM also defines an option for the same varible with the
+# opposite default, which will overwrite our default preference
+# here. Ignore the regular BUILD_SHARED_LIBS in an embedded llvm
+# build. Try to use BUILD_SHARED_LIBS to hint our project specific
+# version in a standalone build.
+set(build_shared_libs_default ON)
+if(NOT DEFINED LLVM_SOURCE_DIR AND DEFINED BUILD_SHARED_LIBS)
+  set(build_shared_libs_default ${BUILD_SHARED_LIBS})
+endif()
+
+option(COMGR_BUILD_SHARED_LIBS "Build the shared library"
+       ${build_shared_libs_default})
 
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
@@ -132,7 +144,11 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
 
 file(GLOB SOURCES "src/*.cpp")
-add_library(amd_comgr ${SOURCES})
+if(COMGR_BUILD_SHARED_LIBS)
+  add_library(amd_comgr SHARED ${SOURCES})
+else()
+  add_library(amd_comgr STATIC ${SOURCES})
+endif()
 
 include(bc2h)
 include(opencl_pch)
