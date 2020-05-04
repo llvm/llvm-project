@@ -25,7 +25,6 @@ add_llvm_library(MLIRTestTransforms
 
   DEPENDS
   MLIRStandardOpsIncGen
-  MLIRTestLinalgTransformPatternsIncGen
   MLIRTestVectorTransformPatternsIncGen
 )
 
