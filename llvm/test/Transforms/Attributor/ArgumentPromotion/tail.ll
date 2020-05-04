@@ -17,15 +17,25 @@ define internal void @bar(%pair* byval %Data) {
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = tail call i8* @foo(%pair* [[DATA]])
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM-LABEL: define {{[^@]+}}@bar
-; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; IS________NPM-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]]
-; IS________NPM-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
-; IS________NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]]
-; IS________NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i32 0, i32 1
-; IS________NPM-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]]
-; IS________NPM-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* [[DATA_PRIV]])
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@bar
+; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]]
+; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]]
+; IS__TUNIT_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]]
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* [[DATA_PRIV]])
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]]
+; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]], align 4
+; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i32 0, i32 1
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]], align 4
+; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* nonnull align 4 dereferenceable(8) [[DATA_PRIV]])
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   tail call i8* @foo(%pair* %Data)
   ret void

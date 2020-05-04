@@ -5,11 +5,11 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define void @f() {
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@f()
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32, align 1
-; IS__TUNIT_OPM-NEXT:    call void @g(i32* noalias nocapture nonnull readonly dereferenceable(4) [[A]])
-; IS__TUNIT_OPM-NEXT:    ret void
+; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@f()
+; NOT_TUNIT_NPM-NEXT:  entry:
+; NOT_TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 1
+; NOT_TUNIT_NPM-NEXT:    call void @g(i32* noalias nocapture nonnull readonly dereferenceable(4) [[A]])
+; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f()
 ; IS__TUNIT_NPM-NEXT:  entry:
@@ -17,12 +17,6 @@ define void @f() {
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 1
 ; IS__TUNIT_NPM-NEXT:    call void @g(i32 [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@f()
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 1
-; IS__CGSCC____-NEXT:    call void @g(i32* noalias nonnull readonly dereferenceable(4) [[A]])
-; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   %a = alloca i32, align 1

@@ -367,7 +367,7 @@ define void @callerC2() {
 ; CHECK-NOT: Function Attrs
 define void @callerD1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD1()
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias align 536870912 null)
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias nocapture align 536870912 null)
 ; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
 ; CHECK-NEXT:    ret void
 ;
@@ -378,7 +378,7 @@ define void @callerD1() {
 ; CHECK-NOT: Function Attrs
 define void @callerD2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD2()
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias align 536870912 null)
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias nocapture align 536870912 null)
 ; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
 ; CHECK-NEXT:    ret void
 ;
@@ -435,7 +435,7 @@ define void @writeonly_global() {
 ; CHECK-SAME: writeonly
 define void @writeonly_global_via_arg() {
 ; CHECK-LABEL: define {{[^@]+}}@writeonly_global_via_arg()
-; CHECK-NEXT:    call void @write_global_via_arg(i32* nofree nonnull writeonly align 4 dereferenceable(4) @G)
+; CHECK-NEXT:    call void @write_global_via_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) @G)
 ; CHECK-NEXT:    ret void
 ;
   call void @write_global_via_arg(i32* @G)

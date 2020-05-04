@@ -885,12 +885,10 @@ struct Attributor {
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
     const IRPosition &IRP = AA.getIRPosition();
-    Kind2AAMapTy *&Kind2AA = AAMap[IRP];
-    if (!Kind2AA)
-      Kind2AA = new (Allocator) Kind2AAMapTy();
+    AbstractAttribute *&AAPtr = AAMap[{&AAType::ID, IRP}];
 
-    assert(!(*Kind2AA)[&AAType::ID] && "Attribute already in map!");
-    (*Kind2AA)[&AAType::ID] = &AA;
+    assert(!AAPtr && "Attribute already in map!");
+    AAPtr = &AA;
 
     AllAbstractAttributes.push_back(&AA);
     return AA;
@@ -1195,6 +1193,14 @@ struct Attributor {
   BumpPtrAllocator &Allocator;
 
 private:
+  /// Run `::update` on \p AA and track the dependences queried while doing so.
+  /// Also adjust the state if we know further updates are not necessary.
+  ChangeStatus updateAA(AbstractAttribute &AA);
+
+  /// Remember the dependences on the top of the dependence stack such that they
+  /// may trigger further updates. (\see DependenceStack)
+  void rememberDependences();
+
   /// Check \p Pred on all call sites of \p Fn.
   ///
   /// This method will evaluate \p Pred on call sites and return
@@ -1248,7 +1254,7 @@ private:
       return AA;
     }
 
-    AA.update(*this);
+    updateAA(AA);
 
     if (TrackDependence && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
@@ -1270,13 +1276,11 @@ private:
 
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
-    Kind2AAMapTy *Kind2AA = AAMap.lookup(IRP);
-    if (!Kind2AA)
+    AbstractAttribute *AAPtr = AAMap.lookup({&AAType::ID, IRP});
+    if (!AAPtr)
       return nullptr;
 
-    AAType *AA = static_cast<AAType *>((*Kind2AA)[&AAType::ID]);
-    if (!AA)
-      return nullptr;
+    AAType *AA = static_cast<AAType *>(AAPtr);
 
     // Do not register a dependence on an attribute with an invalid state.
     if (TrackDependence && AA->getState().isValidState())
@@ -1301,9 +1305,8 @@ private:
   /// on the outer level, and the addresses of the static member (AAType::ID) on
   /// the inner level.
   ///{
-  using Kind2AAMapTy =
-      SmallDenseMap<const char *, AbstractAttribute *, /*InlineBuckets=*/32>;
-  DenseMap<IRPosition, Kind2AAMapTy *> AAMap;
+  using AAMapKeyTy = std::pair<const char *, IRPosition>;
+  DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
   ///}
 
   /// A map from abstract attributes to the ones that queried them through calls
@@ -1345,8 +1348,23 @@ private:
   /// impact the call graph.
   SmallPtrSet<Function *, 8> CGModifiedFunctions;
 
-  /// Set if the attribute currently updated did query a non-fix attribute.
-  bool QueriedNonFixAA;
+  /// Information about a dependence. If FromAA is changed ToAA needs to be
+  /// updated as well.
+  struct DepInfo {
+    const AbstractAttribute *FromAA;
+    const AbstractAttribute *ToAA;
+    DepClassTy DepClass;
+  };
+
+  /// The dependence stack is used to track dependences during an
+  /// `AbstractAttribute::update` call. As `AbstractAttribute::update` can be
+  /// recursive we might have multiple vectors of dependences in here. The stack
+  /// size, should be adjusted according to the expected recursion depth and the
+  /// inner dependence vector size to the expected number of dependences per
+  /// abstract attribute. Since the inner vectors are actually allocated on the
+  /// stack we can be generous with their size.
+  using DependenceVector = SmallVector<DepInfo, 8>;
+  SmallVector<DependenceVector *, 16> DependenceStack;
 
   /// If not null, a set limiting the attribute opportunities.
   const DenseSet<const char *> *Whitelist;

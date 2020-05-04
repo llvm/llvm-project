@@ -50,7 +50,7 @@ define void @exportedfun(%struct.a* %a) {
 ; IS__TUNIT____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]])
 ; IS__TUNIT____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
 ; IS__TUNIT____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; IS__TUNIT____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nofree readnone undef, <{ [[STRUCT_A]] }>* inalloca nonnull align 4 dereferenceable(1) [[ARGMEM]])
+; IS__TUNIT____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone undef, <{ [[STRUCT_A]] }>* inalloca nonnull align 4 dereferenceable(1) [[ARGMEM]])
 ; IS__TUNIT____-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
