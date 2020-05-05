@@ -205,6 +205,8 @@ public:
   /// member is null if that kind of information is unavailable).
   AAMDNodes AATags;
 
+  void print(raw_ostream &OS) const { OS << *Ptr << " " << Size << "\n"; }
+
   /// Return a location with information about the memory reference by the given
   /// instruction.
   static MemoryLocation get(const LoadInst *LI);
