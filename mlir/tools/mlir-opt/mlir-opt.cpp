@@ -150,9 +150,9 @@ int main(int argc, char **argv) {
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, "MLIR modular optimizer driver\n");
 
-  MLIRContext context;
   if(showDialects) {
     llvm::outs() << "Registered Dialects:\n";
+    MLIRContext context;
     for(Dialect *dialect : context.getRegisteredDialects()) {
       llvm::outs() << dialect->getNamespace() << "\n";
     }
