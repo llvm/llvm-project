@@ -38,11 +38,12 @@ public:
     if (isInsideMainFile(HashLoc, SM)) {
       Out->MainFileIncludes.emplace_back();
       auto &Inc = Out->MainFileIncludes.back();
-      Inc.R = halfOpenToRange(SM, FilenameRange);
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
       Inc.Resolved = std::string(File ? File->tryGetRealPathName() : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
+      Inc.HashLine =
+          SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
       Inc.FileKind = FileKind;
       Inc.Directive = IncludeTok.getIdentifierInfo()->getPPKeywordID();
     }
@@ -228,8 +229,8 @@ IncludeInserter::insert(llvm::StringRef VerbatimHeader) const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Inclusion &Inc) {
   return OS << Inc.Written << " = "
-            << (!Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]") << " at "
-            << Inc.R;
+            << (!Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]")
+            << " at line" << Inc.HashLine;
 }
 
 } // namespace clangd

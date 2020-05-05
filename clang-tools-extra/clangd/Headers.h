@@ -52,11 +52,11 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym);
 
 // An #include directive that we found in the main file.
 struct Inclusion {
-  Range R;                      // Inclusion range.
   tok::PPKeywordKind Directive; // Directive used for inclusion, e.g. import
   std::string Written;          // Inclusion name as written e.g. <vector>.
   Path Resolved; // Resolved path of included file. Empty if not resolved.
   unsigned HashOffset = 0; // Byte offset from start of file to #.
+  int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
