@@ -2425,15 +2425,18 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
+      auto AI = Fn->getArg(FirstIRArg);
+      llvm::Type *LTy = ConvertType(Arg->getType());
 
-      // If we have the trivial case, handle it with no muss and fuss.
-      if (!isa<llvm::StructType>(ArgI.getCoerceToType()) &&
-          ArgI.getCoerceToType() == ConvertType(Ty) &&
-          ArgI.getDirectOffset() == 0) {
+      // Prepare parameter attributes. So far, only attributes for pointer
+      // parameters are prepared. See
+      // http://llvm.org/docs/LangRef.html#paramattrs.
+      if (ArgI.getDirectOffset() == 0 && LTy->isPointerTy() &&
+          ArgI.getCoerceToType()->isPointerTy()) {
         assert(NumIRArgs == 1);
-        auto AI = Fn->getArg(FirstIRArg);
 
         if (const ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(Arg)) {
+          // Set `nonnull` attribute if any.
           if (getNonNullAttr(CurCodeDecl, PVD, PVD->getType(),
                              PVD->getFunctionScopeIndex()) &&
               !CGM.getCodeGenOpts().NullPointerIsValid)
@@ -2471,6 +2474,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
               AI->addAttr(llvm::Attribute::NonNull);
           }
 
+          // Set `align` attribute if any.
           const auto *AVAttr = PVD->getAttr<AlignValueAttr>();
           if (!AVAttr)
             if (const auto *TOTy = dyn_cast<TypedefType>(OTy))
@@ -2488,8 +2492,17 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           }
         }
 
+        // Set 'noalias' if an argument type has the `restrict` qualifier.
         if (Arg->getType().isRestrictQualified())
           AI->addAttr(llvm::Attribute::NoAlias);
+      }
+
+      // Prepare the argument value. If we have the trivial case, handle it
+      // with no muss and fuss.
+      if (!isa<llvm::StructType>(ArgI.getCoerceToType()) &&
+          ArgI.getCoerceToType() == ConvertType(Ty) &&
+          ArgI.getDirectOffset() == 0) {
+        assert(NumIRArgs == 1);
 
         // LLVM expects swifterror parameters to be used in very restricted
         // ways.  Copy the value into a less-restricted temporary.
