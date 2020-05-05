@@ -33,7 +33,10 @@ public:
 
   void Check() { Check(context_.globalScope()); }
   void Check(const ParamValue &, bool canBeAssumed);
-  void Check(const Bound &bound) { CheckSpecExpr(bound.GetExplicit()); }
+  void Check(const Bound &bound) {
+    CheckSpecExpr(
+        bound.GetExplicit(), evaluate::SpecificationExprContext::BOUND);
+  }
   void Check(const ShapeSpec &spec) {
     Check(spec.lbound());
     Check(spec.ubound());
@@ -44,7 +47,9 @@ public:
   void Check(const Scope &);
 
 private:
-  template <typename A> void CheckSpecExpr(const A &x) {
+  template <typename A>
+  void CheckSpecExpr(
+      const A &x, const evaluate::SpecificationExprContext specExprContext) {
     if (symbolBeingChecked_ && IsSaved(*symbolBeingChecked_)) {
       if (!evaluate::IsConstantExpr(x)) {
         messages_.Say(
@@ -52,18 +57,23 @@ private:
             symbolBeingChecked_->name());
       }
     } else {
-      evaluate::CheckSpecificationExpr(x, messages_, DEREF(scope_));
+      evaluate::CheckSpecificationExpr(
+          x, messages_, DEREF(scope_), context_.intrinsics(), specExprContext);
     }
   }
-  template <typename A> void CheckSpecExpr(const std::optional<A> &x) {
+  template <typename A>
+  void CheckSpecExpr(const std::optional<A> &x,
+      const evaluate::SpecificationExprContext specExprContext) {
     if (x) {
-      CheckSpecExpr(*x);
+      CheckSpecExpr(*x, specExprContext);
     }
   }
-  template <typename A> void CheckSpecExpr(A &x) {
+  template <typename A>
+  void CheckSpecExpr(
+      A &x, const evaluate::SpecificationExprContext specExprContext) {
     x = Fold(foldingContext_, std::move(x));
     const A &constx{x};
-    CheckSpecExpr(constx);
+    CheckSpecExpr(constx, specExprContext);
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
   void CheckVolatile(
@@ -131,7 +141,8 @@ void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
           " external function result"_err_en_US);
     }
   } else {
-    CheckSpecExpr(value.GetExplicit());
+    CheckSpecExpr(
+        value.GetExplicit(), evaluate::SpecificationExprContext::TYPE_PARAM);
   }
 }
 
@@ -384,15 +395,25 @@ void CheckHelper::CheckObjectEntity(
   CheckAssumedTypeEntity(symbol, details);
   symbolBeingChecked_ = nullptr;
   if (!details.coshape().empty()) {
+    bool isDeferredShape{details.coshape().IsDeferredShape()};
     if (IsAllocatable(symbol)) {
-      if (!details.coshape().IsDeferredShape()) { // C827
-        messages_.Say(
-            "ALLOCATABLE coarray must have a deferred coshape"_err_en_US);
+      if (!isDeferredShape) { // C827
+        messages_.Say("'%s' is an ALLOCATABLE coarray and must have a deferred"
+                      " coshape"_err_en_US,
+            symbol.name());
       }
+    } else if (symbol.owner().IsDerivedType()) { // C746
+      std::string deferredMsg{
+          isDeferredShape ? "" : " and have a deferred coshape"};
+      messages_.Say("Component '%s' is a coarray and must have the ALLOCATABLE"
+                    " attribute%s"_err_en_US,
+          symbol.name(), deferredMsg);
     } else {
       if (!details.coshape().IsAssumedSize()) { // C828
         messages_.Say(
-            "Non-ALLOCATABLE coarray must have an explicit coshape"_err_en_US);
+            "Component '%s' is a non-ALLOCATABLE coarray and must have"
+            " an explicit coshape"_err_en_US,
+            symbol.name());
       }
     }
   }
@@ -409,7 +430,8 @@ void CheckHelper::CheckObjectEntity(
             "An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE"_err_en_US);
       }
     }
-    if (InPure() && !IsPointer(symbol) && !IsIntentIn(symbol) &&
+    if (InPure() && !IsStmtFunction(DEREF(innermostSymbol_)) &&
+        !IsPointer(symbol) && !IsIntentIn(symbol) &&
         !symbol.attrs().test(Attr::VALUE)) {
       if (InFunction()) { // C1583
         messages_.Say(

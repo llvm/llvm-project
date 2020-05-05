@@ -2092,13 +2092,14 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     }
     semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
         context_.FindScope(callSite), treatExternalAsImplicit);
-    if (!chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
+    const Symbol *procSymbol{proc.GetSymbol()};
+    if (procSymbol && !IsPureProcedure(*procSymbol)) {
       if (const semantics::Scope *
           pure{semantics::FindPureProcedureContaining(
               context_.FindScope(callSite))}) {
         Say(callSite,
             "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-            DEREF(proc.GetSymbol()).name(), DEREF(pure->symbol()).name());
+            procSymbol->name(), DEREF(pure->symbol()).name());
       }
     }
   }
