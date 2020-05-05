@@ -2969,6 +2969,11 @@ def warn_objc_collection_literal_element : Warning<
   "object of type %0 is not compatible with "
   "%select{array element type|dictionary key type|dictionary value type}1 %2">,
   InGroup<ObjCLiteralConversion>;
+def warn_nsdictionary_duplicate_key : Warning<
+  "duplicate key in dictionary literal">,
+  InGroup<DiagGroup<"objc-dictionary-duplicate-keys">>;
+def note_nsdictionary_duplicate_key_here : Note<
+  "previous equal key is here">;
 def err_swift_param_attr_not_swiftcall : Error<
   "'%0' parameter can only be used with swiftcall calling convention">;
 def err_swift_indirect_result_not_first : Error<
