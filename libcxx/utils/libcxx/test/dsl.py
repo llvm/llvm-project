@@ -197,9 +197,11 @@ class Feature(object):
 
     addTo = lambda subs, sub, flag: [(s, x + ' ' + flag) if s == sub else (s, x) for (s, x) in subs]
     if self._compileFlag:
-      config.substitutions = addTo(config.substitutions, '%{compile_flags}', self._compileFlag)
+      compileFlag = self._compileFlag(config) if callable(self._compileFlag) else self._compileFlag
+      config.substitutions = addTo(config.substitutions, '%{compile_flags}', compileFlag)
     if self._linkFlag:
-      config.substitutions = addTo(config.substitutions, '%{link_flags}', self._linkFlag)
+      linkFlag = self._linkFlag(config) if callable(self._linkFlag) else self._linkFlag
+      config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
 
     name = self._name(config) if callable(self._name) else self._name
     config.available_features.add(name)
