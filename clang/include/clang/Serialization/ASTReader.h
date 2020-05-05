@@ -1367,7 +1367,7 @@ private:
                           unsigned PreviousGeneration = 0);
 
   RecordLocation getLocalBitOffset(uint64_t GlobalOffset);
-  uint64_t getGlobalBitOffset(ModuleFile &M, uint32_t LocalOffset);
+  uint64_t getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset);
 
   /// Returns the first preprocessed entity ID that begins or ends after
   /// \arg Loc.
