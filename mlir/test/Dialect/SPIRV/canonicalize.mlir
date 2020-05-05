@@ -559,15 +559,18 @@ func @cannot_canonicalize_selection_op_0(%cond: i1) -> () {
 
   // CHECK: spv.selection {
   spv.selection {
+    // CHECK: spv.BranchConditional
+    // CHECK-SAME: ^bb1(%[[DST_VAR_0]], %[[SRC_VALUE_0]]
+    // CHECK-SAME: ^bb1(%[[DST_VAR_1]], %[[SRC_VALUE_1]]
     spv.BranchConditional %cond, ^then, ^else
 
   ^then:
-    // CHECK: spv.Store "Function" %[[DST_VAR_0]], %[[SRC_VALUE_0]] ["Aligned", 8] : vector<3xi32>
+    // CHECK: ^bb1(%[[ARG0:.*]]: !spv.ptr<vector<3xi32>, Function>, %[[ARG1:.*]]: vector<3xi32>):
+    // CHECK: spv.Store "Function" %[[ARG0]], %[[ARG1]] ["Aligned", 8] : vector<3xi32>
     spv.Store "Function" %3, %1 ["Aligned", 8]:  vector<3xi32>
     spv.Branch ^merge
 
   ^else:
-    // CHECK: spv.Store "Function" %[[DST_VAR_1]], %[[SRC_VALUE_1]] ["Aligned", 8] : vector<3xi32>
     spv.Store "Function" %4, %2 ["Aligned", 8] : vector<3xi32>
     spv.Branch ^merge
 
