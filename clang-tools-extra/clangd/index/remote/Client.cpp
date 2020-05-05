@@ -14,7 +14,6 @@
 #include "marshalling/Marshalling.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
-#include "llvm/Support/YAMLTraits.h"
 
 namespace clang {
 namespace clangd {

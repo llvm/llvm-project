@@ -11,15 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Features.inc"
-#include "SourceCode.h"
 #include "index/Serialization.h"
 #include "index/dex/Dex.h"
 #include "index/remote/Client.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
