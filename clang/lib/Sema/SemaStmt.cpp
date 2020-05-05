@@ -394,6 +394,11 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                                    ArrayRef<Stmt *> Elts, bool isStmtExpr) {
   const unsigned NumElts = Elts.size();
 
+  // Mark the current function as usng floating point constrained intrinsics
+  if (getCurFPFeatures().isFPConstrained())
+    if (FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext))
+      F->setUsesFPIntrin(true);
+
   // If we're in C89 mode, check that we don't have any decls after stmts.  If
   // so, emit an extension diagnostic.
   if (!getLangOpts().C99 && !getLangOpts().CPlusPlus) {

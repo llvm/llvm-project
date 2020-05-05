@@ -65,6 +65,24 @@ func @simple_loop() {
   return
 }
 
+// CHECK-LABEL: llvm.func @complex_numbers()
+// CHECK-NEXT:    %[[REAL0:.*]] = llvm.mlir.constant(1.200000e+00 : f32) : !llvm.float
+// CHECK-NEXT:    %[[IMAG0:.*]] = llvm.mlir.constant(3.400000e+00 : f32) : !llvm.float
+// CHECK-NEXT:    %[[CPLX0:.*]] = llvm.mlir.undef : !llvm<"{ float, float }">
+// CHECK-NEXT:    %[[CPLX1:.*]] = llvm.insertvalue %[[REAL0]], %[[CPLX0]][0] : !llvm<"{ float, float }">
+// CHECK-NEXT:    %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG0]], %[[CPLX1]][1] : !llvm<"{ float, float }">
+// CHECK-NEXT:    %[[REAL1:.*]] = llvm.extractvalue %[[CPLX2:.*]][0] : !llvm<"{ float, float }">
+// CHECK-NEXT:    %[[IMAG1:.*]] = llvm.extractvalue %[[CPLX2:.*]][1] : !llvm<"{ float, float }">
+// CHECK-NEXT:    llvm.return
+func @complex_numbers() {
+  %real0 = constant 1.2 : f32
+  %imag0 = constant 3.4 : f32
+  %cplx2 = create_complex %real0, %imag0 : complex<f32>
+  %real1 = re %cplx2 : complex<f32>
+  %imag1 = im %cplx2 : complex<f32>
+  return
+}
+
 // CHECK-LABEL: func @simple_caller() {
 // CHECK-NEXT:  llvm.call @simple_loop() : () -> ()
 // CHECK-NEXT:  llvm.return
@@ -367,6 +385,12 @@ func @more_imperfectly_nested_loops() {
 func @get_i64() -> (i64)
 // CHECK-LABEL: func @get_f32() -> !llvm.float
 func @get_f32() -> (f32)
+// CHECK-LABEL: func @get_c16() -> !llvm<"{ half, half }">
+func @get_c16() -> (complex<f16>)
+// CHECK-LABEL: func @get_c32() -> !llvm<"{ float, float }">
+func @get_c32() -> (complex<f32>)
+// CHECK-LABEL: func @get_c64() -> !llvm<"{ double, double }">
+func @get_c64() -> (complex<f64>)
 // CHECK-LABEL: func @get_memref() -> !llvm<"{ float*, float*, i64, [4 x i64], [4 x i64] }">
 // CHECK32-LABEL: func @get_memref() -> !llvm<"{ float*, float*, i32, [4 x i32], [4 x i32] }">
 func @get_memref() -> (memref<42x?x10x?xf32>)

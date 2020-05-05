@@ -1174,6 +1174,9 @@ public:
     return RangeT(iterator_range<iterator>(*this));
   }
 
+  /// Returns the base of this range.
+  const BaseT &getBase() const { return base; }
+
 private:
   /// Offset the given base by the given amount.
   static BaseT offset_base(const BaseT &base, size_t n) {

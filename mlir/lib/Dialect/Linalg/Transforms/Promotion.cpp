@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
@@ -262,6 +263,21 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
   });
   for (auto op : toErase)
     op.erase();
+}
+
+LogicalResult mlir::linalg::promoteSubviewsLinalgOpPrecondition(
+    Operation *op, llvm::Optional<DenseSet<unsigned>> operandIndicesToPromote) {
+  LinalgOp linOp = dyn_cast<LinalgOp>(op);
+  // Transformation applies to buffers only.
+  if (!linOp || !linOp.hasBufferSemantics())
+    return failure();
+  for (auto en : llvm::enumerate(linOp.getInputsAndOutputBuffers())) {
+    auto sv = isa_and_nonnull<SubViewOp>(en.value().getDefiningOp());
+    if (sv && (!operandIndicesToPromote.hasValue() ||
+               operandIndicesToPromote->count(en.index())))
+      return success();
+  }
+  return failure();
 }
 
 namespace {

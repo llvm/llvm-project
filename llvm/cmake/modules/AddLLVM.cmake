@@ -467,6 +467,21 @@ function(llvm_add_library name)
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
+    # Treat link libraries like PUBLIC dependencies.  LINK_LIBS might
+    # result in generating header files.  Add a dependendency so that
+    # the generated header is created before this object library.
+    if(ARG_LINK_LIBS)
+      cmake_parse_arguments(LINK_LIBS_ARG
+        ""
+        ""
+        "PUBLIC;PRIVATE"
+        ${ARG_LINK_LIBS})
+      foreach(link_lib ${LINK_LIBS_ARG_PUBLIC})
+        if(TARGET ${link_lib})
+          add_dependencies(${obj_name} ${link_lib})
+        endif()
+      endforeach()
+    endif()
   endif()
 
   if(ARG_SHARED AND ARG_STATIC)

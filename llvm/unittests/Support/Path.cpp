@@ -1253,6 +1253,30 @@ TEST(Support, RemoveDots) {
             remove_dots("..\\a\\b\\..\\c", true, path::Style::windows));
   EXPECT_EQ("..\\..\\a\\c",
             remove_dots("..\\..\\a\\b\\..\\c", true, path::Style::windows));
+  EXPECT_EQ("C:\\a\\c", remove_dots("C:\\foo\\bar//..\\..\\a\\c", true,
+                                    path::Style::windows));
+
+  // FIXME: These leading forward slashes are emergent behavior. VFS depends on
+  // this behavior now.
+  EXPECT_EQ("C:/bar",
+            remove_dots("C:/foo/../bar", true, path::Style::windows));
+  EXPECT_EQ("C:/foo\\bar",
+            remove_dots("C:/foo/bar", true, path::Style::windows));
+  EXPECT_EQ("C:/foo\\bar",
+            remove_dots("C:/foo\\bar", true, path::Style::windows));
+  EXPECT_EQ("/", remove_dots("/", true, path::Style::windows));
+  EXPECT_EQ("C:/", remove_dots("C:/", true, path::Style::windows));
+
+  // Some clients of remove_dots expect it to remove trailing slashes. Again,
+  // this is emergent behavior that VFS relies on, and not inherently part of
+  // the specification.
+  EXPECT_EQ("C:\\foo\\bar",
+            remove_dots("C:\\foo\\bar\\", true, path::Style::windows));
+  EXPECT_EQ("/foo/bar",
+            remove_dots("/foo/bar/", true, path::Style::posix));
+
+  // A double separator is rewritten.
+  EXPECT_EQ("C:/foo\\bar", remove_dots("C:/foo//bar", true, path::Style::windows));
 
   SmallString<64> Path1(".\\.\\c");
   EXPECT_TRUE(path::remove_dots(Path1, true, path::Style::windows));
@@ -1271,6 +1295,11 @@ TEST(Support, RemoveDots) {
   EXPECT_EQ("/a/c", remove_dots("/../../a/c", true, path::Style::posix));
   EXPECT_EQ("/a/c",
             remove_dots("/../a/b//../././/c", true, path::Style::posix));
+  EXPECT_EQ("/", remove_dots("/", true, path::Style::posix));
+
+  // FIXME: Leaving behind this double leading slash seems like a bug.
+  EXPECT_EQ("//foo/bar",
+            remove_dots("//foo/bar/", true, path::Style::posix));
 
   SmallString<64> Path2("././c");
   EXPECT_TRUE(path::remove_dots(Path2, true, path::Style::posix));

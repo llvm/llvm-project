@@ -175,6 +175,33 @@ TEST_FUNC(builder_max_min_for) {
   f.erase();
 }
 
+TEST_FUNC(builder_block_append) {
+  using namespace edsc::op;
+  auto f = makeFunction("builder_blocks");
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+
+  BlockHandle b1, functionBlock(&f.front());
+  BlockBuilder(&b1, {}, {})([&] { std_constant_index(0); });
+  BlockBuilder(b1, Append())([&] { std_constant_index(1); });
+  BlockBuilder(b1, Append())([&] { std_ret(); });
+  // Get back to entry block and add a branch into b1
+  BlockBuilder(functionBlock, Append())([&] { std_br(b1, {}); });
+
+  // clang-format off
+  // CHECK-LABEL: @builder_blocks
+  // CHECK-NEXT:   br ^bb1
+  // CHECK-NEXT: ^bb1: // pred: ^bb0
+  // CHECK-NEXT:   constant 0 : index
+  // CHECK-NEXT:   constant 1 : index
+  // CHECK-NEXT:   return
+  // CHECK-NEXT: }
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(builder_blocks) {
   using namespace edsc::op;
   auto f = makeFunction("builder_blocks");
@@ -1071,8 +1098,8 @@ TEST_FUNC(builder_loop_for_yield) {
   // CHECK:     [[sum:%[0-9]+]] = addf [[arg0]], [[arg1]] : f32
   // CHECK:     loop.yield [[arg1]], [[sum]] : f32, f32
   // CHECK:     addf [[res]]#0, [[res]]#1 : f32
-
   // clang-format on
+
   f.print(llvm::outs());
   f.erase();
 }

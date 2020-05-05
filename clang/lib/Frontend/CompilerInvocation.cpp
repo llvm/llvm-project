@@ -2455,7 +2455,7 @@ static const StringRef GetInputKindName(InputKind IK) {
 
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                           const TargetOptions &TargetOpts,
-                          PreprocessorOptions &PPOpts,
+                          PreprocessorOptions &PPOpts, CodeGenOptions &CGOpts,
                           DiagnosticsEngine &Diags) {
   // FIXME: Cleanup per-file based stuff.
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;
@@ -3187,6 +3187,15 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.UnsafeFPMath = Args.hasArg(OPT_menable_unsafe_fp_math) ||
                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
                       Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.AllowFPReassoc = Opts.FastMath || CGOpts.Reassociate;
+  Opts.NoHonorNaNs =
+      Opts.FastMath || CGOpts.NoNaNsFPMath || Opts.FiniteMathOnly;
+  Opts.NoHonorInfs =
+      Opts.FastMath || CGOpts.NoInfsFPMath || Opts.FiniteMathOnly;
+  Opts.NoSignedZero = Opts.FastMath || CGOpts.NoSignedZeros;
+  Opts.AllowRecip = Opts.FastMath || CGOpts.ReciprocalMath;
+  // Currently there's no clang option to enable this individually
+  Opts.ApproxFunc = Opts.FastMath;
 
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
@@ -3640,7 +3649,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     // Other LangOpts are only initialized when the input is not AST or LLVM IR.
     // FIXME: Should we really be calling this for an Language::Asm input?
     ParseLangArgs(LangOpts, Args, DashX, Res.getTargetOpts(),
-                  Res.getPreprocessorOpts(), Diags);
+                  Res.getPreprocessorOpts(), Res.getCodeGenOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
     if (T.isOSDarwin() && DashX.isPreprocessed()) {

@@ -8,15 +8,13 @@ add_mlir_dialect_library(MLIRLoopOps
 
   DEPENDS
   MLIRLoopOpsIncGen
-  )
-target_link_libraries(MLIRLoopOps
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIREDSC
   MLIRIR
   MLIRLoopLikeInterface
   MLIRSideEffects
   MLIRStandardOps
-  LLVMSupport
   )
 
 add_subdirectory(Transforms)

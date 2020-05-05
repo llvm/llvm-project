@@ -81,10 +81,10 @@ def hasLocale(config, locale):
     with open(test.getSourcePath(), 'w') as source:
       source.write("""
       #include <locale.h>
-      int main(int, char** argv) {{
+      int main(int, char** argv) {
         if (::setlocale(LC_ALL, argv[1]) != NULL) return 0;
         else                                      return 1;
-      }}
+      }
       """)
     commands = [
       "mkdir -p %T",

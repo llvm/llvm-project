@@ -191,6 +191,12 @@ COMPATIBLE_LANGOPT(Deprecated        , 1, 0, "__DEPRECATED predefined macro")
 COMPATIBLE_LANGOPT(FastMath          , 1, 0, "fast FP math optimizations, and __FAST_MATH__ predefined macro")
 COMPATIBLE_LANGOPT(FiniteMathOnly    , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 COMPATIBLE_LANGOPT(UnsafeFPMath      , 1, 0, "Unsafe Floating Point Math")
+COMPATIBLE_LANGOPT(AllowFPReassoc    , 1, 0, "Permit Floating Point reassociation")
+COMPATIBLE_LANGOPT(NoHonorNaNs       , 1, 0, "Permit Floating Point optimization without regard to NaN")
+COMPATIBLE_LANGOPT(NoHonorInfs       , 1, 0, "Permit Floating Point optimization without regard to infinities")
+COMPATIBLE_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization without regard to signed zeros")
+COMPATIBLE_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
+COMPATIBLE_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 

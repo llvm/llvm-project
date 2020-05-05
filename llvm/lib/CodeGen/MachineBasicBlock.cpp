@@ -62,30 +62,39 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
     MCContext &Ctx = MF->getContext();
     auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
 
-    // We emit a non-temporary symbol for every basic block if we have BBLabels
-    // or -- with basic block sections -- when a basic block begins a section.
-    bool BasicBlockSymbols = isBeginSection() || MF->hasBBLabels();
-    auto Delimiter = BasicBlockSymbols ? "." : "_";
     assert(getNumber() >= 0 && "cannot get label for unreachable MBB");
 
-    // With Basic Block Sections, we emit a symbol for every basic block. To
-    // keep the size of strtab small, we choose a unary encoding which can
-    // compress the symbol names significantly.  The basic blocks for function
-    // foo are named a.BB.foo, aa.BB.foo, and so on.
-    if (BasicBlockSymbols) {
+    // We emit a non-temporary symbol for every basic block if we have BBLabels
+    // or -- with basic block sections -- when a basic block begins a section.
+    // With basic block symbols, we use a unary encoding which can
+    // compress the symbol names significantly. For basic block sections where
+    // this block is the first in a cluster, we use a non-temp descriptive name.
+    // Otherwise we fall back to use temp label.
+    if (MF->hasBBLabels()) {
       auto Iter = MF->getBBSectionsSymbolPrefix().begin();
       if (getNumber() < 0 ||
           getNumber() >= (int)MF->getBBSectionsSymbolPrefix().size())
         report_fatal_error("Unreachable MBB: " + Twine(getNumber()));
+      // The basic blocks for function foo are named a.BB.foo, aa.BB.foo, and
+      // so on.
       std::string Prefix(Iter + 1, Iter + getNumber() + 1);
       std::reverse(Prefix.begin(), Prefix.end());
       CachedMCSymbol =
-          Ctx.getOrCreateSymbol(Prefix + Twine(Delimiter) + "BB" +
-                                Twine(Delimiter) + Twine(MF->getName()));
+          Ctx.getOrCreateSymbol(Twine(Prefix) + ".BB." + Twine(MF->getName()));
+    } else if (MF->hasBBSections() && isBeginSection()) {
+      SmallString<5> Suffix;
+      if (SectionID == MBBSectionID::ColdSectionID) {
+        Suffix += ".cold";
+      } else if (SectionID == MBBSectionID::ExceptionSectionID) {
+        Suffix += ".eh";
+      } else {
+        Suffix += "." + std::to_string(SectionID.Number);
+      }
+      CachedMCSymbol = Ctx.getOrCreateSymbol(MF->getName() + Suffix);
     } else {
-      CachedMCSymbol = Ctx.getOrCreateSymbol(
-          Twine(Prefix) + "BB" + Twine(MF->getFunctionNumber()) +
-          Twine(Delimiter) + Twine(getNumber()));
+      CachedMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB" +
+                                             Twine(MF->getFunctionNumber()) +
+                                             "_" + Twine(getNumber()));
     }
   }
   return CachedMCSymbol;

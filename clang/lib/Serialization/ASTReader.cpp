@@ -3779,6 +3779,29 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
     }
 
+    case FLOAT_CONTROL_PRAGMA_OPTIONS: {
+      if (Record.size() < 3) {
+        Error("invalid pragma pack record");
+        return Failure;
+      }
+      FpPragmaCurrentValue = Record[0];
+      FpPragmaCurrentLocation = ReadSourceLocation(F, Record[1]);
+      unsigned NumStackEntries = Record[2];
+      unsigned Idx = 3;
+      // Reset the stack when importing a new module.
+      FpPragmaStack.clear();
+      for (unsigned I = 0; I < NumStackEntries; ++I) {
+        FpPragmaStackEntry Entry;
+        Entry.Value = Record[Idx++];
+        Entry.Location = ReadSourceLocation(F, Record[Idx++]);
+        Entry.PushLocation = ReadSourceLocation(F, Record[Idx++]);
+        FpPragmaStrings.push_back(ReadString(Record, Idx));
+        Entry.SlotLabel = FpPragmaStrings.back();
+        FpPragmaStack.push_back(Entry);
+      }
+      break;
+    }
+
     case DECLS_TO_CHECK_FOR_DEFERRED_DIAGS:
       for (unsigned I = 0, N = Record.size(); I != N; ++I)
         DeclsToCheckForDeferredDiags.push_back(getGlobalDeclID(F, Record[I]));
@@ -7851,6 +7874,34 @@ void ASTReader::UpdateSema() {
     } else {
       SemaObj->PackStack.CurrentValue = *PragmaPackCurrentValue;
       SemaObj->PackStack.CurrentPragmaLocation = PragmaPackCurrentLocation;
+    }
+  }
+  if (FpPragmaCurrentValue) {
+    // The bottom of the stack might have a default value. It must be adjusted
+    // to the current value to ensure that fp-pragma state is preserved after
+    // popping entries that were included/imported from a PCH/module.
+    bool DropFirst = false;
+    if (!FpPragmaStack.empty() && FpPragmaStack.front().Location.isInvalid()) {
+      assert(FpPragmaStack.front().Value ==
+                 SemaObj->FpPragmaStack.DefaultValue &&
+             "Expected a default pragma float_control value");
+      SemaObj->FpPragmaStack.Stack.emplace_back(
+          FpPragmaStack.front().SlotLabel, SemaObj->FpPragmaStack.CurrentValue,
+          SemaObj->FpPragmaStack.CurrentPragmaLocation,
+          FpPragmaStack.front().PushLocation);
+      DropFirst = true;
+    }
+    for (const auto &Entry :
+         llvm::makeArrayRef(FpPragmaStack).drop_front(DropFirst ? 1 : 0))
+      SemaObj->FpPragmaStack.Stack.emplace_back(
+          Entry.SlotLabel, Entry.Value, Entry.Location, Entry.PushLocation);
+    if (FpPragmaCurrentLocation.isInvalid()) {
+      assert(*FpPragmaCurrentValue == SemaObj->FpPragmaStack.DefaultValue &&
+             "Expected a default pragma float_control value");
+      // Keep the current values.
+    } else {
+      SemaObj->FpPragmaStack.CurrentValue = *FpPragmaCurrentValue;
+      SemaObj->FpPragmaStack.CurrentPragmaLocation = FpPragmaCurrentLocation;
     }
   }
 }

@@ -9,9 +9,8 @@ add_mlir_dialect_library(MLIRSPIRVSerialization
 
   DEPENDS
   MLIRSPIRVSerializationGen
-  )
-target_link_libraries(MLIRSPIRVSerialization
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRSPIRV
   MLIRSupport

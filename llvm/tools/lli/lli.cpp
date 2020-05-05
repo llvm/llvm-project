@@ -942,8 +942,8 @@ int runOrcLazyJIT(const char *ProgName) {
       orc::JITDylib *JD = J->getJITDylibByName(*JDItr);
       if (!JD) {
         JD = &ExitOnErr(J->createJITDylib(*JDItr));
-        J->getMainJITDylib().addToSearchOrder(*JD);
-        JD->addToSearchOrder(J->getMainJITDylib());
+        J->getMainJITDylib().addToLinkOrder(*JD);
+        JD->addToLinkOrder(J->getMainJITDylib());
       }
       IdxToDylib[JITDylibs.getPosition(JDItr - JITDylibs.begin())] = JD;
     }

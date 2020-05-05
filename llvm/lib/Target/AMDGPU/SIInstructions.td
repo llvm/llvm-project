@@ -193,16 +193,27 @@ def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
   let Constraints = "$src = $vdst";
 }
 
+let usesCustomInserter = 1, Defs = [VCC, EXEC] in {
+def V_ADD_U64_PSEUDO : VPseudoInstSI <
+  (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
+  [(set VReg_64:$vdst, (getDivergentFrag<add>.ret i64:$src0, i64:$src1))]
+>;
+
+def V_SUB_U64_PSEUDO : VPseudoInstSI <
+  (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
+  [(set VReg_64:$vdst, (getDivergentFrag<sub>.ret i64:$src0, i64:$src1))]
+>;
+} // End usesCustomInserter = 1, Defs = [VCC, EXEC]
 
 let usesCustomInserter = 1, Defs = [SCC] in {
 def S_ADD_U64_PSEUDO : SPseudoInstSI <
-  (outs SReg_64:$vdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
-  [(set SReg_64:$vdst, (add i64:$src0, i64:$src1))]
+  (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  [(set SReg_64:$sdst, (UniformBinFrag<add> i64:$src0, i64:$src1))]
 >;
 
 def S_SUB_U64_PSEUDO : SPseudoInstSI <
-  (outs SReg_64:$vdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
-  [(set SReg_64:$vdst, (sub i64:$src0, i64:$src1))]
+  (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 
 def S_ADD_U64_CO_PSEUDO : SPseudoInstSI <
@@ -212,6 +223,23 @@ def S_ADD_U64_CO_PSEUDO : SPseudoInstSI <
 def S_SUB_U64_CO_PSEUDO : SPseudoInstSI <
   (outs SReg_64:$vdst, VOPDstS64orS32:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
 >;
+
+def S_ADD_CO_PSEUDO : SPseudoInstSI <
+  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+>;
+
+def S_SUB_CO_PSEUDO : SPseudoInstSI <
+  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+>;
+
+def S_UADDO_PSEUDO : SPseudoInstSI <
+  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+>;
+
+def S_USUBO_PSEUDO : SPseudoInstSI <
+  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+>;
+
 } // End usesCustomInserter = 1, Defs = [SCC]
 
 let usesCustomInserter = 1 in {

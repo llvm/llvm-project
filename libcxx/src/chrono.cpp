@@ -25,8 +25,8 @@
 #endif
 #else
 #if !defined(CLOCK_REALTIME) || !defined(_LIBCPP_USE_CLOCK_GETTIME)
-#include <sys/time.h>        // for gettimeofday and timeval
-#endif // !defined(CLOCK_REALTIME)
+#include <sys/time.h> // for gettimeofday and timeval
+#endif
 #endif // defined(_LIBCPP_WIN32API)
 
 #if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)

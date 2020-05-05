@@ -36,18 +36,17 @@ struct ForLoopMapper : public ConvertSimpleLoopsToGPUBase<ForLoopMapper> {
   }
 
   void runOnFunction() override {
-    for (Block &block : getFunction())
-      for (Operation &op : llvm::make_early_inc_range(block)) {
-        if (auto forOp = dyn_cast<AffineForOp>(&op)) {
-          if (failed(convertAffineLoopNestToGPULaunch(forOp, numBlockDims,
-                                                      numThreadDims)))
-            signalPassFailure();
-        } else if (auto forOp = dyn_cast<ForOp>(&op)) {
-          if (failed(convertLoopNestToGPULaunch(forOp, numBlockDims,
-                                                numThreadDims)))
-            signalPassFailure();
-        }
+    for (Operation &op : llvm::make_early_inc_range(getFunction().getOps())) {
+      if (auto forOp = dyn_cast<AffineForOp>(&op)) {
+        if (failed(convertAffineLoopNestToGPULaunch(forOp, numBlockDims,
+                                                    numThreadDims)))
+          signalPassFailure();
+      } else if (auto forOp = dyn_cast<ForOp>(&op)) {
+        if (failed(
+                convertLoopNestToGPULaunch(forOp, numBlockDims, numThreadDims)))
+          signalPassFailure();
       }
+    }
   }
 };
 
@@ -81,14 +80,10 @@ struct ImperfectlyNestedForLoopMapper
           funcOp.getLoc(), builder.getIntegerAttr(builder.getIndexType(), val));
       workGroupSizeVal.push_back(constOp);
     }
-    for (Block &block : getFunction()) {
-      for (Operation &op : llvm::make_early_inc_range(block)) {
-        if (auto forOp = dyn_cast<ForOp>(&op)) {
-          if (failed(convertLoopToGPULaunch(forOp, numWorkGroupsVal,
-                                            workGroupSizeVal))) {
-            return signalPassFailure();
-          }
-        }
+    for (ForOp forOp : llvm::make_early_inc_range(funcOp.getOps<ForOp>())) {
+      if (failed(convertLoopToGPULaunch(forOp, numWorkGroupsVal,
+                                        workGroupSizeVal))) {
+        return signalPassFailure();
       }
     }
   }

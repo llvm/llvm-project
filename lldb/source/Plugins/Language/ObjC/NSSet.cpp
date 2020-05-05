@@ -682,7 +682,7 @@ lldb_private::formatters::
 
 template <typename D32, typename D64>
 lldb_private::formatters::
-  GenericNSSetMSyntheticFrontEnd<D32, D64>::~GenericNSSetMSyntheticFrontEnd() {
+  GenericNSSetMSyntheticFrontEnd<D32, D64>::~GenericNSSetMSyntheticFrontEnd<D32, D64>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;

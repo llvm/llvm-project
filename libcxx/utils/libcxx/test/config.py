@@ -22,6 +22,7 @@ from libcxx.test.target_info import make_target_info
 from libcxx.test.executor import *
 from libcxx.test.tracing import *
 import libcxx.util
+import libcxx.test.features
 
 def loadSiteConfig(lit_config, config, param_name, env_name):
     # We haven't loaded the site specific configuration (the user is
@@ -130,7 +131,6 @@ class Configuration(object):
         self.configure_obj_root()
         self.configure_cxx_stdlib_under_test()
         self.configure_cxx_library_root()
-        self.configure_use_thread_safety()
         self.configure_ccache()
         self.configure_compile_flags()
         self.configure_link_flags()
@@ -141,11 +141,14 @@ class Configuration(object):
         self.configure_sanitizer()
         self.configure_coverage()
         self.configure_modules()
-        self.configure_coroutines()
-        self.configure_blocks()
-        self.configure_objc_arc()
         self.configure_substitutions()
         self.configure_features()
+        self.configure_new_features()
+
+    def configure_new_features(self):
+        supportedFeatures = [f for f in libcxx.test.features.features if f.isSupported(self.config)]
+        for feature in supportedFeatures:
+            feature.enableIn(self.config)
 
     def print_config_info(self):
         # Print the final compile and link flags.
@@ -161,7 +164,7 @@ class Configuration(object):
         self.lit_config.note('Using link flags: %s' % self.cxx.link_flags)
         # Print as list to prevent "set([...])" from being printed.
         self.lit_config.note('Using available_features: %s' %
-                             list(self.config.available_features))
+                             list(sorted(self.config.available_features)))
         show_env_vars = {}
         for k,v in self.exec_env.items():
             if k not in os.environ or os.environ[k] != v:
@@ -218,16 +221,6 @@ class Configuration(object):
                                   '(e.g., --param=cxx_under_test=clang++)')
         self.cxx = CXXCompiler(self, cxx) if not self.cxx_is_clang_cl else \
                    self._configure_clang_cl(cxx)
-        cxx_type = self.cxx.type
-        if cxx_type is not None:
-            assert self.cxx.version is not None
-            maj_v, min_v, patch_v = self.cxx.version
-            self.config.available_features.add(cxx_type)
-            self.config.available_features.add('%s-%s' % (cxx_type, maj_v))
-            self.config.available_features.add('%s-%s.%s' % (
-                cxx_type, maj_v, min_v))
-            self.config.available_features.add('%s-%s.%s.%s' % (
-                cxx_type, maj_v, min_v, patch_v))
         self.cxx.compile_env = dict(os.environ)
         # 'CCACHE_CPP2' prevents ccache from stripping comments while
         # preprocessing. This is required to prevent stripping of '-verify'
@@ -322,14 +315,6 @@ class Configuration(object):
             if self.get_lit_conf('enable_experimental') is None:
                 self.config.enable_experimental = 'true'
 
-    def configure_use_thread_safety(self):
-        '''If set, run clang with -verify on failing tests.'''
-        has_thread_safety = self.cxx.hasCompileFlag('-Werror=thread-safety')
-        if has_thread_safety:
-            self.cxx.compile_flags += ['-Werror=thread-safety']
-            self.config.available_features.add('thread-safety')
-            self.lit_config.note("enabling thread-safety annotations")
-
     def configure_ccache(self):
         use_ccache_default = os.environ.get('LIBCXX_USE_CCACHE') is not None
         use_ccache = self.get_lit_bool('use_ccache', use_ccache_default)
@@ -384,35 +369,8 @@ class Configuration(object):
         if not self.get_lit_bool('enable_filesystem', default=True):
             self.config.available_features.add('c++filesystem-disabled')
 
-
-        # Run a compile test for the -fsized-deallocation flag. This is needed
-        # in test/std/language.support/support.dynamic/new.delete
-        if self.cxx.hasCompileFlag('-fsized-deallocation'):
-            self.config.available_features.add('-fsized-deallocation')
-
-        if self.cxx.hasCompileFlag('-faligned-allocation'):
-            self.config.available_features.add('-faligned-allocation')
-
-        if self.cxx.hasCompileFlag('-fdelayed-template-parsing'):
-            self.config.available_features.add('fdelayed-template-parsing')
-
         if self.get_lit_bool('has_libatomic', False):
             self.config.available_features.add('libatomic')
-
-        macros = self._dump_macros_verbose()
-        if '__cpp_if_constexpr' not in macros:
-            self.config.available_features.add('libcpp-no-if-constexpr')
-
-        if '__cpp_structured_bindings' not in macros:
-            self.config.available_features.add('libcpp-no-structured-bindings')
-
-        if '__cpp_deduction_guides' not in macros or \
-                intMacroValue(macros['__cpp_deduction_guides']) < 201611:
-            self.config.available_features.add('libcpp-no-deduction-guides')
-
-        if '__cpp_concepts' not in macros or \
-                intMacroValue(macros['__cpp_concepts']) < 201811:
-            self.config.available_features.add('libcpp-no-concepts')
 
         if self.target_info.is_windows():
             self.config.available_features.add('windows')
@@ -428,12 +386,6 @@ class Configuration(object):
         if libcxx_gdb and 'NOTFOUND' not in libcxx_gdb:
             self.config.available_features.add('libcxx_gdb')
             self.cxx.libcxx_gdb = libcxx_gdb
-
-        # Support Objective-C++ only on MacOS and if the compiler supports it.
-        if self.target_info.platform() == "darwin" and \
-           self.target_info.is_host_macosx() and \
-           self.cxx.hasCompileFlag(["-x", "objective-c++", "-fobjc-arc"]):
-            self.config.available_features.add("objective-c++")
 
     def configure_compile_flags(self):
         self.configure_default_compile_flags()
@@ -820,9 +772,6 @@ class Configuration(object):
         # don't enable warnings in system headers on GCC.
         if self.cxx.type != 'gcc':
             self.cxx.warning_flags += ['-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER']
-        if self.cxx.hasWarningFlag('-Wuser-defined-warnings'):
-            self.cxx.warning_flags += ['-Wuser-defined-warnings']
-            self.config.available_features.add('diagnose-if-support')
         self.cxx.addWarningFlagIfSupported('-Wshadow')
         self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
         self.cxx.addWarningFlagIfSupported('-Wno-attributes')
@@ -908,31 +857,8 @@ class Configuration(object):
             self.cxx.flags += ['-g', '--coverage']
             self.cxx.compile_flags += ['-O0']
 
-    def configure_coroutines(self):
-        if self.cxx.hasCompileFlag('-fcoroutines-ts'):
-            macros = self._dump_macros_verbose(flags=['-fcoroutines-ts'])
-            if '__cpp_coroutines' not in macros:
-                self.lit_config.warning('-fcoroutines-ts is supported but '
-                    '__cpp_coroutines is not defined')
-            # Consider coroutines supported only when the feature test macro
-            # reflects a recent value.
-            if intMacroValue(macros['__cpp_coroutines']) >= 201703:
-                self.config.available_features.add('fcoroutines-ts')
-
-    def configure_blocks(self):
-        if self.cxx.hasCompileFlag('-fblocks'):
-            self.config.available_features.add('has-fblocks')
-
-    def configure_objc_arc(self):
-        cxx = copy.deepcopy(self.cxx)
-        cxx.source_lang = 'objective-c++'
-        if cxx.hasCompileFlag('-fobjc-arc'):
-            self.config.available_features.add('has-fobjc-arc')
-
     def configure_modules(self):
-        modules_flags = ['-fmodules']
-        if not self.target_info.is_darwin():
-            modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
+        modules_flags = ['-fmodules', '-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
         enable_modules = self.get_lit_bool('enable_modules', default=False,
                                                              env_var='LIBCXX_ENABLE_MODULES')
@@ -941,7 +867,6 @@ class Configuration(object):
                 '-fmodules is enabled but not supported by the compiler')
         if not supports_modules:
             return
-        self.config.available_features.add('modules-support')
         module_cache = os.path.join(self.config.test_exec_root,
                                    'modules.cache')
         module_cache = os.path.realpath(module_cache)

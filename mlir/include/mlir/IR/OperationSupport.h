@@ -20,6 +20,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -617,6 +618,17 @@ public:
       ValueTypeIterator<typename ValueRangeT::iterator>>::iterator_range;
   template <typename Container>
   ValueTypeRange(Container &&c) : ValueTypeRange(c.begin(), c.end()) {}
+
+  /// Compare this range with another.
+  template <typename OtherT>
+  bool operator==(const OtherT &other) const {
+    return llvm::size(*this) == llvm::size(other) &&
+           std::equal(this->begin(), this->end(), other.begin());
+  }
+  template <typename OtherT>
+  bool operator!=(const OtherT &other) const {
+    return !(*this == other);
+  }
 };
 
 template <typename RangeT>
@@ -829,12 +841,29 @@ private:
 /// This class provides utilities for computing if two operations are
 /// equivalent.
 struct OperationEquivalence {
+  enum Flags {
+    None = 0,
+
+    /// This flag signals that operands should not be considered when checking
+    /// for equivalence. This allows for users to implement there own
+    /// equivalence schemes for operand values. The number of operands are still
+    /// checked, just not the operands themselves.
+    IgnoreOperands = 1,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreOperands)
+  };
+
   /// Compute a hash for the given operation.
-  static llvm::hash_code computeHash(Operation *op);
+  static llvm::hash_code computeHash(Operation *op, Flags flags = Flags::None);
 
   /// Compare two operations and return if they are equivalent.
-  static bool isEquivalentTo(Operation *lhs, Operation *rhs);
+  static bool isEquivalentTo(Operation *lhs, Operation *rhs,
+                             Flags flags = Flags::None);
 };
+
+/// Enable Bitmask enums for OperationEquivalence::Flags.
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 } // end namespace mlir
 
 namespace llvm {

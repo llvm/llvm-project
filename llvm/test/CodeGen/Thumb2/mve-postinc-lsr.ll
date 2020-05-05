@@ -1049,6 +1049,344 @@ if.end:                                           ; preds = %for.cond.cleanup23,
   ret i8* %out
 }
 
+%struct.arm_cfft_instance_f32 = type { i16, float*, i16*, i16, i32*, i32*, i32*, float*, float*, float* }
+define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cfft_instance_f32Pfjf(%struct.arm_cfft_instance_f32* nocapture readonly %0, float* %1, i32 %2, float %3) {
+; CHECK-LABEL: _Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cfft_instance_f32Pfjf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    .pad #72
+; CHECK-NEXT:    sub sp, #72
+; CHECK-NEXT:    cmp r2, #8
+; CHECK-NEXT:    strd r0, r1, [sp, #28] @ 8-byte Folded Spill
+; CHECK-NEXT:    vstr s0, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    blo.w .LBB7_9
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    movs r6, #1
+; CHECK-NEXT:    str r2, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    lsrs r1, r2, #2
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    str r2, [sp, #48] @ 4-byte Spill
+; CHECK-NEXT:    b .LBB7_3
+; CHECK-NEXT:  .LBB7_2: @ in Loop: Header=BB7_3 Depth=1
+; CHECK-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    lsls r6, r6, #2
+; CHECK-NEXT:    ldr r2, [sp, #48] @ 4-byte Reload
+; CHECK-NEXT:    cmp r3, #7
+; CHECK-NEXT:    asr.w r1, r3, #2
+; CHECK-NEXT:    add.w r2, r2, #1
+; CHECK-NEXT:    str r2, [sp, #48] @ 4-byte Spill
+; CHECK-NEXT:    ble .LBB7_9
+; CHECK-NEXT:  .LBB7_3: @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB7_6 Depth 2
+; CHECK-NEXT:    @ Child Loop BB7_7 Depth 3
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    cmp r6, #1
+; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    lsr.w r2, r1, #2
+; CHECK-NEXT:    str r2, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    blt .LBB7_2
+; CHECK-NEXT:  @ %bb.4: @ in Loop: Header=BB7_3 Depth=1
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    cmp.w r2, r1, lsr #3
+; CHECK-NEXT:    beq .LBB7_2
+; CHECK-NEXT:  @ %bb.5: @ %.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB7_3 Depth=1
+; CHECK-NEXT:    lsrs r2, r1, #3
+; CHECK-NEXT:    lsls r0, r1, #1
+; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    str r2, [sp, #40] @ 4-byte Spill
+; CHECK-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; CHECK-NEXT:    lsls r5, r1, #3
+; CHECK-NEXT:    lsls r7, r1, #4
+; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
+; CHECK-NEXT:    str r6, [sp, #44] @ 4-byte Spill
+; CHECK-NEXT:    lsls r3, r1, #3
+; CHECK-NEXT:  .LBB7_6: @ Parent Loop BB7_3 Depth=1
+; CHECK-NEXT:    @ => This Loop Header: Depth=2
+; CHECK-NEXT:    @ Child Loop BB7_7 Depth 3
+; CHECK-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
+; CHECK-NEXT:    ldr r6, [sp, #48] @ 4-byte Reload
+; CHECK-NEXT:    ldrd r4, r0, [r1, #24]
+; CHECK-NEXT:    ldrd r12, r2, [r1, #16]
+; CHECK-NEXT:    ldrd r8, r9, [r1, #32]
+; CHECK-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    ldr.w lr, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    ldr.w r4, [r4, r6, lsl #2]
+; CHECK-NEXT:    mul r1, r1, r10
+; CHECK-NEXT:    ldr.w r11, [r2, r6, lsl #2]
+; CHECK-NEXT:    ldr.w r6, [r12, r6, lsl #2]
+; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    add.w r12, r2, r1, lsl #2
+; CHECK-NEXT:    add.w r2, r9, r4, lsl #2
+; CHECK-NEXT:    add.w r9, r8, r11, lsl #2
+; CHECK-NEXT:    add.w r8, r0, r6, lsl #2
+; CHECK-NEXT:  .LBB7_7: @ Parent Loop BB7_3 Depth=1
+; CHECK-NEXT:    @ Parent Loop BB7_6 Depth=2
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
+; CHECK-NEXT:    add.w r4, r12, r7
+; CHECK-NEXT:    add.w r1, r12, r3
+; CHECK-NEXT:    add.w r6, r12, r5
+; CHECK-NEXT:    vldrw.u32 q3, [r12]
+; CHECK-NEXT:    vldrw.u32 q7, [r4]
+; CHECK-NEXT:    vldrw.u32 q4, [r1]
+; CHECK-NEXT:    vldrw.u32 q5, [r6]
+; CHECK-NEXT:    vsub.f32 q0, q3, q7
+; CHECK-NEXT:    vadd.f32 q3, q7, q3
+; CHECK-NEXT:    vsub.f32 q6, q5, q4
+; CHECK-NEXT:    vcadd.f32 q1, q0, q6, #270
+; CHECK-NEXT:    vcadd.f32 q2, q0, q6, #90
+; CHECK-NEXT:    vadd.f32 q0, q5, q4
+; CHECK-NEXT:    vsub.f32 q4, q3, q0
+; CHECK-NEXT:    vadd.f32 q0, q3, q0
+; CHECK-NEXT:    vstrb.8 q0, [r12], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r9], #16
+; CHECK-NEXT:    vcmul.f32 q3, q0, q4, #0
+; CHECK-NEXT:    vcmla.f32 q3, q0, q4, #90
+; CHECK-NEXT:    vstrw.32 q3, [r6]
+; CHECK-NEXT:    vldrw.u32 q0, [r8], #16
+; CHECK-NEXT:    vcmul.f32 q3, q0, q2, #0
+; CHECK-NEXT:    vcmla.f32 q3, q0, q2, #90
+; CHECK-NEXT:    vstrw.32 q3, [r4]
+; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
+; CHECK-NEXT:    vcmul.f32 q2, q0, q1, #0
+; CHECK-NEXT:    vcmla.f32 q2, q0, q1, #90
+; CHECK-NEXT:    vstrw.32 q2, [r1]
+; CHECK-NEXT:    le lr, .LBB7_7
+; CHECK-NEXT:  @ %bb.8: @ in Loop: Header=BB7_6 Depth=2
+; CHECK-NEXT:    ldr r6, [sp, #44] @ 4-byte Reload
+; CHECK-NEXT:    add.w r10, r10, #1
+; CHECK-NEXT:    cmp r10, r6
+; CHECK-NEXT:    bne .LBB7_6
+; CHECK-NEXT:    b .LBB7_2
+; CHECK-NEXT:  .LBB7_9:
+; CHECK-NEXT:    adr r0, .LCPI7_0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    ldr r0, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
+; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    lsr.w lr, r0, #3
+; CHECK-NEXT:    wls lr, lr, .LBB7_12
+; CHECK-NEXT:  @ %bb.10:
+; CHECK-NEXT:    vldrw.u32 q3, [q1, #16]
+; CHECK-NEXT:    vldr s0, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:  .LBB7_11: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrw.u32 q0, [q1, #24]
+; CHECK-NEXT:    vldrw.u32 q4, [q1, #8]
+; CHECK-NEXT:    vadd.f32 q6, q2, q3
+; CHECK-NEXT:    vsub.f32 q2, q2, q3
+; CHECK-NEXT:    vadd.f32 q5, q4, q0
+; CHECK-NEXT:    vsub.f32 q0, q4, q0
+; CHECK-NEXT:    vsub.f32 q7, q6, q5
+; CHECK-NEXT:    vcadd.f32 q4, q2, q0, #270
+; CHECK-NEXT:    vstrw.32 q7, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vcadd.f32 q7, q2, q0, #90
+; CHECK-NEXT:    vadd.f32 q0, q6, q5
+; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
+; CHECK-NEXT:    vmul.f32 q0, q0, r0
+; CHECK-NEXT:    vldrw.u32 q3, [q1, #16]
+; CHECK-NEXT:    vstrw.32 q0, [q1, #-64]
+; CHECK-NEXT:    vldrw.u32 q5, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vmul.f32 q0, q4, r0
+; CHECK-NEXT:    vmul.f32 q4, q7, r0
+; CHECK-NEXT:    vmul.f32 q5, q5, r0
+; CHECK-NEXT:    vstrw.32 q5, [q1, #-56]
+; CHECK-NEXT:    vstrw.32 q4, [q1, #-48]
+; CHECK-NEXT:    vstrw.32 q0, [q1, #-40]
+; CHECK-NEXT:    le lr, .LBB7_11
+; CHECK-NEXT:  .LBB7_12:
+; CHECK-NEXT:    add sp, #72
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.13:
+; CHECK-NEXT:  .LCPI7_0:
+; CHECK-NEXT:    .long 4294967232 @ 0xffffffc0
+; CHECK-NEXT:    .long 4294967236 @ 0xffffffc4
+; CHECK-NEXT:    .long 4294967264 @ 0xffffffe0
+; CHECK-NEXT:    .long 4294967268 @ 0xffffffe4
+  %5 = icmp ugt i32 %2, 7
+  br i1 %5, label %6, label %26
+
+6: ; preds = %4
+  %7 = lshr i32 %2, 2
+  %8 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 7
+  %9 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 4
+  %10 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 8
+  %11 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 5
+  %12 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 9
+  %13 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 6
+  br label %14
+
+14: ; preds = %6, %40
+  %15 = phi i32 [ %2, %6 ], [ %19, %40 ]
+  %16 = phi i32 [ %7, %6 ], [ %43, %40 ]
+  %17 = phi i32 [ 1, %6 ], [ %41, %40 ]
+  %18 = phi i32 [ 0, %6 ], [ %42, %40 ]
+  %19 = lshr i32 %15, 2
+  %20 = icmp sgt i32 %17, 0
+  br i1 %20, label %21, label %40
+
+21: ; preds = %14
+  %22 = shl i32 %15, 1
+  %23 = shl nuw nsw i32 %19, 1
+  %24 = lshr i32 %15, 3
+  %25 = icmp eq i32 %24, 0
+  br i1 %25, label %40, label %45
+
+26: ; preds = %40, %4
+  %27 = ptrtoint float* %1 to i32
+  %28 = insertelement <4 x i32> undef, i32 %27, i32 0
+  %29 = shufflevector <4 x i32> %28, <4 x i32> undef, <4 x i32> zeroinitializer
+  %30 = add <4 x i32> %29, <i32 -64, i32 -60, i32 -32, i32 -28>
+  %31 = tail call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32> %30, i32 64)
+  %32 = extractvalue { <4 x float>, <4 x i32> } %31, 1
+  %33 = lshr i32 %2, 3
+  %34 = icmp eq i32 %33, 0
+  br i1 %34, label %141, label %35
+
+35: ; preds = %26
+  %36 = tail call <4 x float> @llvm.arm.mve.vldr.gather.base.v4f32.v4i32(<4 x i32> %32, i32 16)
+  %37 = extractvalue { <4 x float>, <4 x i32> } %31, 0
+  %38 = insertelement <4 x float> undef, float %3, i32 0
+  %39 = shufflevector <4 x float> %38, <4 x float> undef, <4 x i32> zeroinitializer
+  br label %116
+
+40: ; preds = %113, %21, %14
+  %41 = shl i32 %17, 2
+  %42 = add nuw nsw i32 %18, 1
+  %43 = ashr i32 %16, 2
+  %44 = icmp sgt i32 %16, 7
+  br i1 %44, label %14, label %26
+
+45: ; preds = %21, %113
+  %46 = phi i32 [ %114, %113 ], [ 0, %21 ]
+  %47 = load float*, float** %8, align 4
+  %48 = load i32*, i32** %9, align 4
+  %49 = getelementptr inbounds i32, i32* %48, i32 %18
+  %50 = load i32, i32* %49, align 4
+  %51 = getelementptr inbounds float, float* %47, i32 %50
+  %52 = load float*, float** %10, align 4
+  %53 = load i32*, i32** %11, align 4
+  %54 = getelementptr inbounds i32, i32* %53, i32 %18
+  %55 = load i32, i32* %54, align 4
+  %56 = getelementptr inbounds float, float* %52, i32 %55
+  %57 = load float*, float** %12, align 4
+  %58 = load i32*, i32** %13, align 4
+  %59 = getelementptr inbounds i32, i32* %58, i32 %18
+  %60 = load i32, i32* %59, align 4
+  %61 = getelementptr inbounds float, float* %57, i32 %60
+  %62 = mul i32 %22, %46
+  %63 = getelementptr inbounds float, float* %1, i32 %62
+  %64 = getelementptr inbounds float, float* %63, i32 %23
+  %65 = getelementptr inbounds float, float* %64, i32 %23
+  %66 = getelementptr inbounds float, float* %65, i32 %23
+  br label %67
+
+67: ; preds = %45, %67
+  %68 = phi float* [ %63, %45 ], [ %89, %67 ]
+  %69 = phi float* [ %65, %45 ], [ %103, %67 ]
+  %70 = phi float* [ %66, %45 ], [ %110, %67 ]
+  %71 = phi float* [ %64, %45 ], [ %96, %67 ]
+  %72 = phi float* [ %61, %45 ], [ %107, %67 ]
+  %73 = phi float* [ %56, %45 ], [ %93, %67 ]
+  %74 = phi float* [ %51, %45 ], [ %100, %67 ]
+  %75 = phi i32 [ %24, %45 ], [ %111, %67 ]
+  %76 = bitcast float* %69 to <4 x float>*
+  %77 = bitcast float* %68 to <4 x float>*
+  %78 = load <4 x float>, <4 x float>* %76, align 4
+  %79 = load <4 x float>, <4 x float>* %77, align 4
+  %80 = bitcast float* %71 to <4 x float>*
+  %81 = load <4 x float>, <4 x float>* %80, align 4
+  %82 = bitcast float* %70 to <4 x float>*
+  %83 = load <4 x float>, <4 x float>* %82, align 4
+  %84 = fadd <4 x float> %78, %79
+  %85 = fsub <4 x float> %79, %78
+  %86 = fadd <4 x float> %81, %83
+  %87 = fsub <4 x float> %81, %83
+  %88 = fadd <4 x float> %84, %86
+  store <4 x float> %88, <4 x float>* %77, align 4
+  %89 = getelementptr inbounds float, float* %68, i32 4
+  %90 = fsub <4 x float> %84, %86
+  %91 = bitcast float* %73 to <4 x float>*
+  %92 = load <4 x float>, <4 x float>* %91, align 4
+  %93 = getelementptr inbounds float, float* %73, i32 4
+  %94 = tail call <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32 0, <4 x float> %92, <4 x float> %90)
+  %95 = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> %94, <4 x float> %92, <4 x float> %90)
+  store <4 x float> %95, <4 x float>* %80, align 4
+  %96 = getelementptr inbounds float, float* %71, i32 4
+  %97 = tail call <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32 1, i32 0, <4 x float> %85, <4 x float> %87)
+  %98 = bitcast float* %74 to <4 x float>*
+  %99 = load <4 x float>, <4 x float>* %98, align 4
+  %100 = getelementptr inbounds float, float* %74, i32 4
+  %101 = tail call <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32 0, <4 x float> %99, <4 x float> %97)
+  %102 = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> %101, <4 x float> %99, <4 x float> %97)
+  store <4 x float> %102, <4 x float>* %76, align 4
+  %103 = getelementptr inbounds float, float* %69, i32 4
+  %104 = tail call <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32 1, i32 1, <4 x float> %85, <4 x float> %87)
+  %105 = bitcast float* %72 to <4 x float>*
+  %106 = load <4 x float>, <4 x float>* %105, align 4
+  %107 = getelementptr inbounds float, float* %72, i32 4
+  %108 = tail call <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32 0, <4 x float> %106, <4 x float> %104)
+  %109 = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> %108, <4 x float> %106, <4 x float> %104)
+  store <4 x float> %109, <4 x float>* %82, align 4
+  %110 = getelementptr inbounds float, float* %70, i32 4
+  %111 = add nsw i32 %75, -1
+  %112 = icmp eq i32 %111, 0
+  br i1 %112, label %113, label %67
+
+113: ; preds = %67
+  %114 = add nuw nsw i32 %46, 1
+  %115 = icmp eq i32 %114, %17
+  br i1 %115, label %40, label %45
+
+116: ; preds = %35, %116
+  %117 = phi <4 x i32> [ %32, %35 ], [ %128, %116 ]
+  %118 = phi i32 [ %33, %35 ], [ %139, %116 ]
+  %119 = phi <4 x float> [ %36, %35 ], [ %130, %116 ]
+  %120 = phi <4 x float> [ %37, %35 ], [ %129, %116 ]
+  %121 = fadd <4 x float> %120, %119
+  %122 = fsub <4 x float> %120, %119
+  %123 = tail call <4 x float> @llvm.arm.mve.vldr.gather.base.v4f32.v4i32(<4 x i32> %117, i32 8)
+  %124 = tail call <4 x float> @llvm.arm.mve.vldr.gather.base.v4f32.v4i32(<4 x i32> %117, i32 24)
+  %125 = fadd <4 x float> %123, %124
+  %126 = fsub <4 x float> %123, %124
+  %127 = tail call { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32> %117, i32 64)
+  %128 = extractvalue { <4 x float>, <4 x i32> } %127, 1
+  %129 = extractvalue { <4 x float>, <4 x i32> } %127, 0
+  %130 = tail call <4 x float> @llvm.arm.mve.vldr.gather.base.v4f32.v4i32(<4 x i32> %128, i32 16)
+  %131 = fadd <4 x float> %121, %125
+  %132 = fmul <4 x float> %39, %131
+  tail call void @llvm.arm.mve.vstr.scatter.base.v4i32.v4f32(<4 x i32> %128, i32 -64, <4 x float> %132)
+  %133 = fsub <4 x float> %121, %125
+  %134 = fmul <4 x float> %39, %133
+  tail call void @llvm.arm.mve.vstr.scatter.base.v4i32.v4f32(<4 x i32> %128, i32 -56, <4 x float> %134)
+  %135 = tail call <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32 1, i32 0, <4 x float> %122, <4 x float> %126)
+  %136 = fmul <4 x float> %39, %135
+  tail call void @llvm.arm.mve.vstr.scatter.base.v4i32.v4f32(<4 x i32> %128, i32 -48, <4 x float> %136)
+  %137 = tail call <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32 1, i32 1, <4 x float> %122, <4 x float> %126)
+  %138 = fmul <4 x float> %39, %137
+  tail call void @llvm.arm.mve.vstr.scatter.base.v4i32.v4f32(<4 x i32> %128, i32 -40, <4 x float> %138)
+  %139 = add nsw i32 %118, -1
+  %140 = icmp eq i32 %139, 0
+  br i1 %140, label %141, label %116
+
+141: ; preds = %116, %26
+  ret void
+}
+
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
@@ -1061,3 +1399,10 @@ declare i32 @llvm.arm.mve.vmldava.v8i16(i32, i32, i32, i32, <8 x i16>, <8 x i16>
 declare i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32, i32, i32, i32, <16 x i8>, <16 x i8>, <16 x i1>)
 declare i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32, i32, i32, i32, <8 x i16>, <8 x i16>, <8 x i1>)
 declare <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16>, <8 x i16>, <8 x i1>, <8 x i16>)
+
+declare <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32, <4 x float>, <4 x float>)
+declare <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32, <4 x float>, <4 x float>, <4 x float>)
+declare <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32, i32, <4 x float>, <4 x float>)
+declare { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32(<4 x i32>, i32)
+declare <4 x float> @llvm.arm.mve.vldr.gather.base.v4f32.v4i32(<4 x i32>, i32)
+declare void @llvm.arm.mve.vstr.scatter.base.v4i32.v4f32(<4 x i32>, i32, <4 x float>)

@@ -101,63 +101,6 @@ SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ArrayRef<Value> values,
                                        OperationFolder *folder = nullptr);
 
-struct TiledLinalgOp {
-  LinalgOp op;
-  SmallVector<Operation *, 8> loops;
-};
-
-/// Performs standalone tiling of a single LinalgOp by `tileSizes`.
-/// and permute the loop nest according to `permutation`
-/// The permutation is expressed as a list of integers that specify
-/// the new ordering of the loop nest. The length of `permutation`
-/// must be equal to the length of `tileSizes`.
-/// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with
-/// `permutation = [1,2,0]`. All values in `permutation` must be
-/// integers, in the range 0..`tileSizes.size()` without duplications
-/// (i.e. `[1,1,2]` is an invalid permutation). An empty list
-/// states for the identity permutation.
-/// Returns a struct containing the tiled loops in the specified order
-/// and the cloned op if successful, llvm::None otherwise.
-/// When non-null, the optional pointer `folder` is used to call into the
-/// `createAndFold` builder method. If `folder` is null, the regular `create`
-/// method is called.
-Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     ArrayRef<Value> tileSizes,
-                                     ArrayRef<unsigned> permutation = {},
-                                     OperationFolder *folder = nullptr);
-Optional<TiledLinalgOp> tileLinalgOpToParallelLoops(
-    OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
-    ArrayRef<unsigned> permutation = {}, OperationFolder *folder = nullptr);
-
-/// Performs standalone tiling of a single LinalgOp by constant `tileSizes`.
-/// and permute the loop nest according to `permutation`
-/// The permutation is expressed as a list of integers that specify
-/// the new ordering of the loop nest. The length of `permutation`
-/// must be equal to the length of `tileSizes`.
-/// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with
-/// `permutation = [1,2,0]`. All values in `permutation` must be
-/// integers, in the range 0..`tileSizes.size()` without duplications
-/// (i.e. `[1,1,2]` is an invalid permutation). An empty list
-/// states for the identity permutation.
-/// Returns a struct containing the tiled loops in the specified order
-/// and the cloned op if successful, llvm::None otherwise.
-/// When non-null, the optional pointer `folder` is used to call into the
-/// `createAndFold` builder method. If `folder` is null, the regular `create`
-/// method is called.
-Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     ArrayRef<int64_t> tileSizes,
-                                     ArrayRef<unsigned> permutation = {},
-                                     OperationFolder *folder = nullptr);
-Optional<TiledLinalgOp> tileLinalgOpToParallelLoops(
-    OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
-    ArrayRef<unsigned> permutation = {}, OperationFolder *folder = nullptr);
-
-template <typename... Args>
-Optional<TiledLinalgOp> tileLinalgOperation(OpBuilder &b, Operation *op,
-                                            Args... args) {
-  return tileLinalgOp(b, cast<LinalgOp>(op), args...);
-}
-
 struct PromotionInfo {
   Value buffer;
   Value fullLocalView;
@@ -197,17 +140,6 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
     auxVec[i] = inVec[permutation[i]];
   inVec = auxVec;
 }
-
-/// Prepares the SubView promotion later performed by `promoteSubViews`
-/// (where most of the transformation happens). It arranges the new
-/// operands for `LinalgOp op` and deallocates the new buffer(s)
-/// It is the entry point for declarative transformation
-/// Returns the cloned `LinalgOp` with the new operands
-LinalgOp promoteSubViewOperands(OpBuilder &b, LinalgOp op,
-                                llvm::SetVector<Value> subViews,
-                                bool dynamicBuffers = false,
-                                int64_t alignment = 0,
-                                OperationFolder *folder = nullptr);
 
 } // namespace linalg
 } // namespace mlir

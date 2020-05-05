@@ -136,12 +136,16 @@ public:
   /// \p comp_unit. Recursively also descends into the referenced external
   /// modules of any encountered compilation unit.
   ///
+  /// This function can be used to traverse Clang -gmodules debug
+  /// information, which is stored in DWARF files separate from the
+  /// object files.
+  ///
   /// \param comp_unit
   ///     When this SymbolFile consists of multiple auxilliary
   ///     SymbolFiles, for example, a Darwin debug map that references
   ///     multiple .o files, comp_unit helps choose the auxilliary
   ///     file. In most other cases comp_unit's symbol file is
-  ///     identiacal with *this.
+  ///     identical with *this.
   ///
   /// \param[in] lambda
   ///     The lambda that should be applied to every function. The lambda can
