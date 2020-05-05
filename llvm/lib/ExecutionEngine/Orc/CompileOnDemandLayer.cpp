@@ -179,21 +179,20 @@ CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   if (I == DylibResources.end()) {
     auto &ImplD =
         getExecutionSession().createBareJITDylib(TargetD.getName() + ".impl");
-    JITDylibSearchOrder NewSearchOrder;
-    TargetD.withSearchOrderDo(
-        [&](const JITDylibSearchOrder &TargetSearchOrder) {
-          NewSearchOrder = TargetSearchOrder;
-        });
+    JITDylibSearchOrder NewLinkOrder;
+    TargetD.withLinkOrderDo([&](const JITDylibSearchOrder &TargetLinkOrder) {
+      NewLinkOrder = TargetLinkOrder;
+    });
 
-    assert(
-        !NewSearchOrder.empty() && NewSearchOrder.front().first == &TargetD &&
-        NewSearchOrder.front().second == JITDylibLookupFlags::MatchAllSymbols &&
-        "TargetD must be at the front of its own search order and match "
-        "non-exported symbol");
-    NewSearchOrder.insert(std::next(NewSearchOrder.begin()),
-                          {&ImplD, JITDylibLookupFlags::MatchAllSymbols});
-    ImplD.setSearchOrder(NewSearchOrder, false);
-    TargetD.setSearchOrder(std::move(NewSearchOrder), false);
+    assert(!NewLinkOrder.empty() && NewLinkOrder.front().first == &TargetD &&
+           NewLinkOrder.front().second ==
+               JITDylibLookupFlags::MatchAllSymbols &&
+           "TargetD must be at the front of its own search order and match "
+           "non-exported symbol");
+    NewLinkOrder.insert(std::next(NewLinkOrder.begin()),
+                        {&ImplD, JITDylibLookupFlags::MatchAllSymbols});
+    ImplD.setLinkOrder(NewLinkOrder, false);
+    TargetD.setLinkOrder(std::move(NewLinkOrder), false);
 
     PerDylibResources PDR(ImplD, BuildIndirectStubsManager());
     I = DylibResources.insert(std::make_pair(&TargetD, std::move(PDR))).first;
