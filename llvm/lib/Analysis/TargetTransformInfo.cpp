@@ -261,6 +261,10 @@ bool TargetTransformInfo::isLSRCostLess(LSRCost &C1, LSRCost &C2) const {
   return TTIImpl->isLSRCostLess(C1, C2);
 }
 
+bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {
+  return TTIImpl->isProfitableLSRChainElement(I);
+}
+
 bool TargetTransformInfo::canMacroFuseCmp() const {
   return TTIImpl->canMacroFuseCmp();
 }
