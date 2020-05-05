@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Remarks/RemarkFormat.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
 #include "llvm/DWARFLinker/DWARFLinker.h"
@@ -61,6 +62,10 @@ struct LinkOptions {
 
   /// Symbol map translator.
   SymbolMapTranslator Translator;
+
+  /// Virtual File System.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+      vfs::getRealFileSystem();
 
   /// Fields used for linking and placing remarks into the .dSYM bundle.
   /// @{

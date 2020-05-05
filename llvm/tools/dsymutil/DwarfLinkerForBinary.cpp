@@ -455,8 +455,8 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   if (Map.getTriple().isOSDarwin() && !Map.getBinaryPath().empty() &&
       Options.FileType == OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
-        Map, Options.Translator, *Streamer->getAsmPrinter().OutStreamer,
-        OutFile);
+        Options.VFS, Map, Options.Translator,
+        *Streamer->getAsmPrinter().OutStreamer, OutFile);
 
   Streamer->finish();
   return true;
