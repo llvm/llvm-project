@@ -63,14 +63,21 @@ public:
                                 MachineBasicBlock &MBB) const override;
 
   /// Returns true if the target will correctly handle shrink wrapping.
-  bool enableShrinkWrapping(const MachineFunction &MF) const override {
-    return true;
-  }
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
   bool isProfitableForNoCSROpt(const Function &F) const override {
     // The no-CSR optimisation is bad for code size on ARM, because we can save
     // many registers with a single PUSH/POP pair.
     return false;
   }
+
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
+
+  const SpillSlot *
+  getCalleeSavedSpillSlots(unsigned &NumEntries) const override;
 
 private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,

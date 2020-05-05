@@ -1,0 +1,26 @@
+# RUN: llc -mcpu=cortex-m33 -run-pass=arm-pseudo %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8m.main-arm-none-eabi"
+
+  define hidden void @foo() local_unnamed_addr #0 {
+  entry:
+    ret void
+  }
+...
+---
+name:            foo
+alignment:       2
+tracksRegLiveness: true
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    tBXNS_RET
+...
+
+# CHECK-LABEL: name: foo
+# CHECK: bb.0.entry:
+# CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
+# CHECK: bb.1.entry:
+# CHECK-NEXT: successors: %bb.2(0x80000000)
