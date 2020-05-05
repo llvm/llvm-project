@@ -639,8 +639,10 @@ Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
     FloatElementIterator floatIt(floatEltTy.getFloatSemantics(), intIt);
     return FloatAttr::get(eltTy, *floatIt);
   }
-  if (owner.isa<DenseStringElementsAttr>())
-    return StringAttr::get(owner.getRawStringData()[index], eltTy);
+  if (owner.isa<DenseStringElementsAttr>()) {
+    ArrayRef<StringRef> vals = owner.getRawStringData();
+    return StringAttr::get(owner.isSplat() ? vals.front() : vals[index], eltTy);
+  }
   llvm_unreachable("unexpected element type");
 }
 
