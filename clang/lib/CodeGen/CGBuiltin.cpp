@@ -10327,9 +10327,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {
+    auto Alignment = CGM.getNaturalPointeeTypeAlignment(
+        E->getArg(0)->IgnoreParenCasts()->getType());
     Ops[0] = Builder.CreateBitCast(Ops[0], llvm::PointerType::getUnqual(VTy));
-    auto Alignment = CharUnits::fromQuantity(
-        BuiltinID == NEON::BI__builtin_neon_vld1_v ? 8 : 16);
     return Builder.CreateAlignedLoad(VTy, Ops[0], Alignment);
   }
   case NEON::BI__builtin_neon_vst1_v:
@@ -10342,8 +10342,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[1] = Builder.CreateBitCast(Ops[1], Ty);
     Ty = llvm::PointerType::getUnqual(VTy->getElementType());
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
-    auto Alignment = CharUnits::fromQuantity(
-        BuiltinID == NEON::BI__builtin_neon_vld1_lane_v ? 8 : 16);
+    auto Alignment = CGM.getNaturalPointeeTypeAlignment(
+        E->getArg(0)->IgnoreParenCasts()->getType());
     Ops[0] =
         Builder.CreateAlignedLoad(VTy->getElementType(), Ops[0], Alignment);
     return Builder.CreateInsertElement(Ops[1], Ops[0], Ops[2], "vld1_lane");
@@ -10353,8 +10353,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *V = UndefValue::get(Ty);
     Ty = llvm::PointerType::getUnqual(VTy->getElementType());
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
-    auto Alignment = CharUnits::fromQuantity(
-        BuiltinID == NEON::BI__builtin_neon_vld1_dup_v ? 8 : 16);
+    auto Alignment = CGM.getNaturalPointeeTypeAlignment(
+        E->getArg(0)->IgnoreParenCasts()->getType());
     Ops[0] =
         Builder.CreateAlignedLoad(VTy->getElementType(), Ops[0], Alignment);
     llvm::Constant *CI = ConstantInt::get(Int32Ty, 0);
