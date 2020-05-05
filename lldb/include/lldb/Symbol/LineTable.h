@@ -42,6 +42,13 @@ public:
   ///     The compile unit to which this line table belongs.
   LineTable(CompileUnit *comp_unit);
 
+  /// Construct with entries found in \a sequences.
+  ///
+  /// \param[in] sequences
+  ///     Unsorted list of line sequences.
+  LineTable(CompileUnit *comp_unit,
+            std::vector<std::unique_ptr<LineSequence>> &&sequences);
+
   /// Destructor.
   ~LineTable();
 
@@ -64,11 +71,11 @@ public:
                        bool is_epilogue_begin, bool is_terminal_entry);
 
   // Used to instantiate the LineSequence helper class
-  LineSequence *CreateLineSequenceContainer();
+  static std::unique_ptr<LineSequence> CreateLineSequenceContainer();
 
   // Append an entry to a caller-provided collection that will later be
   // inserted in this line table.
-  void AppendLineEntryToSequence(LineSequence *sequence, lldb::addr_t file_addr,
+  static void AppendLineEntryToSequence(LineSequence *sequence, lldb::addr_t file_addr,
                                  uint32_t line, uint16_t column,
                                  uint16_t file_idx, bool is_start_of_statement,
                                  bool is_start_of_basic_block,
@@ -259,6 +266,8 @@ protected:
     public:
       LessThanBinaryPredicate(LineTable *line_table);
       bool operator()(const LineTable::Entry &, const LineTable::Entry &) const;
+      bool operator()(const std::unique_ptr<LineSequence> &,
+                      const std::unique_ptr<LineSequence> &) const;
 
     protected:
       LineTable *m_line_table;
