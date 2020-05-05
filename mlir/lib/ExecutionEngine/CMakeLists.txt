@@ -12,6 +12,9 @@ add_mlir_library(MLIRExecutionEngine
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/ExecutionEngine
+
+  DEPENDS
+  intrinsics_gen
   )
 target_link_libraries(MLIRExecutionEngine
   PUBLIC

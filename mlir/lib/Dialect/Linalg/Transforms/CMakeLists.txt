@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
 
   DEPENDS
-  intrinsics_gen
   MLIRLinalgPassIncGen
   )
 target_link_libraries(MLIRLinalgTransforms

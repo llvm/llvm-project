@@ -6,7 +6,6 @@ add_mlir_dialect_library(MLIRLinalgOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
 
   DEPENDS
-  intrinsics_gen
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgStructuredOpsInterfaceIncGen
