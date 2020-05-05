@@ -3625,6 +3625,14 @@ ParseResult OperationParser::addDefinition(SSAUseInfo useInfo, Value value) {
           .append("previously defined here");
     }
 
+    if (existing.getType() != value.getType()) {
+      return emitError(useInfo.loc)
+          .append("definition of SSA value '", useInfo.name, "#",
+                  useInfo.number, "' has type ", value.getType())
+          .attachNote(getEncodedSourceLocation(entries[useInfo.number].second))
+          .append("previously used here with type ", existing.getType());
+    }
+
     // If it was a forward reference, update everything that used it to use
     // the actual definition instead, delete the forward ref, and remove it
     // from our set of forward references we track.

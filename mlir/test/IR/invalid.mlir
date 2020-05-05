@@ -1512,3 +1512,18 @@ func @duplicate_dictionary_attr_key() {
   // expected-error @+1 {{duplicate key in dictionary attribute}}
   "foo.op"() {a, a} : () -> ()
 }
+
+// -----
+
+func @forward_reference_type_check() -> (i8) {
+  br ^bb2
+
+^bb1:
+  // expected-note @+1 {{previously used here with type 'i8'}}
+  return %1 : i8
+
+^bb2:
+  // expected-error @+1 {{definition of SSA value '%1#0' has type 'f32'}}
+  %1 = "bar"() : () -> (f32)
+  br ^bb1
+}
