@@ -1554,6 +1554,17 @@ def SVQXTNT_U  : SInst<"svqxtnt[_{d}]",  "hhd", "UsUiUl",  MergeNone, "aarch64_s
 def SVQXTUNT_S : SInst<"svqxtunt[_{d}]", "eed", "sil",     MergeNone, "aarch64_sve_sqxtunt">;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Widening complex integer arithmetic
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+defm SVADDLBT : SInstWideDSPLong<"svaddlbt", "sil", "aarch64_sve_saddlbt">;
+defm SVSUBLBT : SInstWideDSPLong<"svsublbt", "sil", "aarch64_sve_ssublbt">;
+defm SVSUBLTB : SInstWideDSPLong<"svsubltb", "sil", "aarch64_sve_ssubltb">;
+
+defm SVQDMLALBT : SInstWideDSPAcc<"svqdmlalbt", "sil", "aarch64_sve_sqdmlalbt">;
+defm SVQDMLSLBT : SInstWideDSPAcc<"svqdmlslbt", "sil", "aarch64_sve_sqdmlslbt">;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
