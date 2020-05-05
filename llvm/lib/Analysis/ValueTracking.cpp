@@ -3202,6 +3202,9 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
 
 /// Return true if we can prove that the specified FP value is never equal to
 /// -0.0.
+/// NOTE: Do not check 'nsz' here because that fast-math-flag does not guarantee
+///       that a value is not -0.0. It only guarantees that -0.0 may be treated
+///       the same as +0.0 in floating-point ops.
 ///
 /// NOTE: this function will need to be revisited when we support non-default
 /// rounding modes!
@@ -3217,11 +3220,6 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   auto *Op = dyn_cast<Operator>(V);
   if (!Op)
     return false;
-
-  // Check if the nsz fast-math flag is set.
-  if (auto *FPO = dyn_cast<FPMathOperator>(Op))
-    if (FPO->hasNoSignedZeros())
-      return true;
 
   // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
   if (match(Op, m_FAdd(m_Value(), m_PosZeroFP())))
