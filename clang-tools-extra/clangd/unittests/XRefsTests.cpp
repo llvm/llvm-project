@@ -1490,14 +1490,15 @@ TEST(GetNonLocalDeclRefs, All) {
 
 TEST(DocumentLinks, All) {
   Annotations MainCpp(R"cpp(
-      #include $foo[["foo.h"]]
+      #/*comments*/include /*comments*/ $foo[["foo.h"]] //more comments
       int end_of_preamble = 0;
-      #include $bar[["bar.h"]]
+      #include $bar[[<bar.h>]]
     )cpp");
 
   TestTU TU;
   TU.Code = std::string(MainCpp.code());
   TU.AdditionalFiles = {{"foo.h", ""}, {"bar.h", ""}};
+  TU.ExtraArgs = {"-isystem."};
   auto AST = TU.build();
 
   EXPECT_THAT(
