@@ -2888,10 +2888,9 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
-unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty,
+unsigned X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
                                               const APInt &DemandedElts,
                                               bool Insert, bool Extract) {
-  auto* VecTy = cast<VectorType>(Ty);
   unsigned Cost = 0;
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
@@ -2917,7 +2916,7 @@ unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty,
         // 128-bit vector is free.
         // NOTE: This assumes legalization widens vXf32 vectors.
         if (MScalarTy == MVT::f32)
-          for (unsigned i = 0, e = VecTy->getNumElements(); i < e; i += 4)
+          for (unsigned i = 0, e = Ty->getNumElements(); i < e; i += 4)
             if (DemandedElts[i])
               Cost--;
       }
@@ -2933,7 +2932,7 @@ unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty,
       // vector elements, which represents the number of unpacks we'll end up
       // performing.
       unsigned NumElts = LT.second.getVectorNumElements();
-      unsigned Pow2Elts = PowerOf2Ceil(VecTy->getNumElements());
+      unsigned Pow2Elts = PowerOf2Ceil(Ty->getNumElements());
       Cost += (std::min<unsigned>(NumElts, Pow2Elts) - 1) * LT.first;
     }
   }
@@ -2970,7 +2969,7 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       APInt DemandedElts = APInt::getAllOnesValue(NumElem);
       int Cost = BaseT::getMemoryOpCost(Opcode, VTy->getScalarType(), Alignment,
                                         AddressSpace, CostKind);
-      int SplitCost = getScalarizationOverhead(Src, DemandedElts,
+      int SplitCost = getScalarizationOverhead(VTy, DemandedElts,
                                                Opcode == Instruction::Load,
                                                Opcode == Instruction::Store);
       return NumElem * Cost + SplitCost;
