@@ -93,6 +93,13 @@ static cl::opt<bool>
     DisableInlinedAllocaMerging("disable-inlined-alloca-merging",
                                 cl::init(false), cl::Hidden);
 
+// An integer used to limit the cost of inline deferral.  The default negative
+// number tells shouldBeDeferred to only take the secondary cost into account.
+static cl::opt<int>
+    InlineDeferralScale("inline-deferral-scale",
+                        cl::desc("Scale to limit the cost of inline deferral"),
+                        cl::init(-1), cl::Hidden);
+
 namespace {
 
 enum class InlinerFunctionImportStatsOpts {
@@ -338,12 +345,8 @@ shouldBeDeferred(Function *Caller, InlineCost IC, int &TotalSecondaryCost,
   bool ApplyLastCallBonus = Caller->hasLocalLinkage() && !Caller->hasOneUse();
   // This bool tracks what happens if we DO inline C into B.
   bool InliningPreventsSomeOuterInline = false;
+  unsigned NumCallerUsers = 0;
   for (User *U : Caller->users()) {
-    // If the caller will not be removed (either because it does not have a
-    // local linkage or because the LastCallToStaticBonus has been already
-    // applied), then we can exit the loop early.
-    if (!ApplyLastCallBonus && TotalSecondaryCost >= IC.getCost())
-      return false;
     CallBase *CS2 = dyn_cast<CallBase>(U);
 
     // If this isn't a call to Caller (it could be some other sort
@@ -369,8 +372,13 @@ shouldBeDeferred(Function *Caller, InlineCost IC, int &TotalSecondaryCost,
     if (IC2.getCostDelta() <= CandidateCost) {
       InliningPreventsSomeOuterInline = true;
       TotalSecondaryCost += IC2.getCost();
+      NumCallerUsers++;
     }
   }
+
+  if (!InliningPreventsSomeOuterInline)
+    return false;
+
   // If all outer calls to Caller would get inlined, the cost for the last
   // one is set very low by getInlineCost, in anticipation that Caller will
   // be removed entirely.  We did not account for this above unless there
@@ -378,7 +386,14 @@ shouldBeDeferred(Function *Caller, InlineCost IC, int &TotalSecondaryCost,
   if (ApplyLastCallBonus)
     TotalSecondaryCost -= InlineConstants::LastCallToStaticBonus;
 
-  return InliningPreventsSomeOuterInline && TotalSecondaryCost < IC.getCost();
+  // If InlineDeferralScale is negative, then ignore the cost of primary
+  // inlining -- IC.getCost() multiplied by the number of callers to Caller.
+  if (InlineDeferralScale < 0)
+    return TotalSecondaryCost < IC.getCost();
+
+  int TotalCost = TotalSecondaryCost + IC.getCost() * NumCallerUsers;
+  int Allowance = IC.getCost() * InlineDeferralScale;
+  return TotalCost < Allowance;
 }
 
 static std::basic_ostream<char> &operator<<(std::basic_ostream<char> &R,
