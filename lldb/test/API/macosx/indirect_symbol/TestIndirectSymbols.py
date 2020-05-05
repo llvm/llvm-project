@@ -28,10 +28,9 @@ class TestIndirectFunctions(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        if self.platformIsDarwin():
-            lib1 = self.getBuildArtifact('libindirect.dylib')
-            lib2 = self.getBuildArtifact('libreexport.dylib')
-            self.registerSharedLibrariesWithTarget(target, [lib1, lib2])
+        lib1 = self.getBuildArtifact('libindirect.dylib')
+        lib2 = self.getBuildArtifact('libreexport.dylib')
+        self.registerSharedLibrariesWithTarget(target, [lib1, lib2])
 
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
