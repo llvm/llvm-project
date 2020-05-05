@@ -7917,6 +7917,19 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
 
+  llvm::Type *Ty = ConvertType(E->getType());
+  if (BuiltinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
+      BuiltinID <= SVE::BI__builtin_sve_reinterpret_f64_f64) {
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    // FIXME: For big endian this needs an additional REV, or needs a separate
+    // intrinsic that is code-generated as a no-op, because the LLVM bitcast
+    // instruction is defined as 'bitwise' equivalent from memory point of
+    // view (when storing/reloading), whereas the svreinterpret builtin
+    // implements bitwise equivalent cast from register point of view.
+    // LLVM CodeGen for a bitcast must add an explicit REV for big-endian.
+    return Builder.CreateBitCast(Val, Ty);
+  }
+
   llvm::SmallVector<Value *, 4> Ops;
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
     if ((ICEArguments & (1 << i)) == 0)
@@ -7939,7 +7952,6 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   auto *Builtin = findARMVectorIntrinsicInMap(AArch64SVEIntrinsicMap, BuiltinID,
                                               AArch64SVEIntrinsicsProvenSorted);
   SVETypeFlags TypeFlags(Builtin->TypeModifier);
-  llvm::Type *Ty = ConvertType(E->getType());
   if (TypeFlags.isLoad())
     return EmitSVEMaskedLoad(E, Ty, Ops, Builtin->LLVMIntrinsic,
                              TypeFlags.isZExtReturn());
