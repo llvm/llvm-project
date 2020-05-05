@@ -83,6 +83,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// GPRCS1Size, GPRCS2Size, DPRCSSize - Sizes of callee saved register spills
   /// areas.
+  unsigned FPCXTSaveSize = 0;
   unsigned GPRCS1Size = 0;
   unsigned GPRCS2Size = 0;
   unsigned DPRCSAlignGapSize = 0;
@@ -104,6 +105,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// HasITBlocks - True if IT blocks have been inserted.
   bool HasITBlocks = false;
+
+  // Security Extensions
+  bool IsCmseNSEntry;
+  bool IsCmseNSCall;
 
   /// CPEClones - Track constant pool entries clones created by Constant Island
   /// pass.
@@ -140,6 +145,9 @@ public:
   bool isThumb1OnlyFunction() const { return isThumb && !hasThumb2; }
   bool isThumb2Function() const { return isThumb && hasThumb2; }
 
+  bool isCmseNSEntryFunction() const { return IsCmseNSEntry; }
+  bool isCmseNSCallFunction() const { return IsCmseNSCall; }
+
   unsigned getStoredByValParamsPadding() const { return StByValParamsPadding; }
   void setStoredByValParamsPadding(unsigned p) { StByValParamsPadding = p; }
 
@@ -172,11 +180,13 @@ public:
   void setGPRCalleeSavedArea2Offset(unsigned o) { GPRCS2Offset = o; }
   void setDPRCalleeSavedAreaOffset(unsigned o)  { DPRCSOffset = o; }
 
+  unsigned getFPCXTSaveAreaSize() const       { return FPCXTSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
   unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
   unsigned getDPRCalleeSavedAreaSize()  const { return DPRCSSize; }
 
+  void setFPCXTSaveAreaSize(unsigned s)       { FPCXTSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
   void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }

@@ -588,3 +588,6 @@ def Tuples4DSpc : RegisterTuples<[dsub_0, dsub_2, dsub_4, dsub_6],
 
 // Spaced quads of D registers.
 def DQuadSpc : RegisterClass<"ARM", [v4i64], 64, (add Tuples3DSpc)>;
+
+// FP context payload
+def FPCXTRegs : RegisterClass<"ARM", [i32], 32, (add FPCXTNS)>;
