@@ -2510,7 +2510,6 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   unsigned Opc = UseMI.getOpcode();
   if (Opc == AMDGPU::COPY) {
     Register DstReg = UseMI.getOperand(0).getReg();
-    Register SrcReg = UseMI.getOperand(1).getReg();
     bool Is16Bit = getOpSize(UseMI, 0) == 2;
     bool isVGPRCopy = RI.isVGPR(*MRI, DstReg);
     unsigned NewOpc = isVGPRCopy ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
@@ -2538,7 +2537,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         DstReg = RI.get32BitRegister(DstReg);
         UseMI.getOperand(0).setReg(DstReg);
       }
-      assert(SrcReg.isVirtual());
+      assert(UseMI.getOperand(1).getReg().isVirtual());
     }
 
     UseMI.setDesc(get(NewOpc));
