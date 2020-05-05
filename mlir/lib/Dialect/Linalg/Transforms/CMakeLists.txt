@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   Promotion.cpp
+  TensorsToBuffers.cpp
   Tiling.cpp
   Transforms.cpp
   Vectorization.cpp
