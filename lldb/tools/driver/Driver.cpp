@@ -619,6 +619,12 @@ int Driver::MainLoop() {
         results.GetResult() != lldb::eCommandInterpreterResultInferiorCrash)
       go_interactive = false;
 
+    // When running in batch mode and stopped because of an error, exit with a
+    // non-zero exit status.
+    if (m_option_data.m_batch &&
+        results.GetResult() == lldb::eCommandInterpreterResultCommandError)
+      exit(1);
+
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
@@ -636,6 +642,13 @@ int Driver::MainLoop() {
         if (local_results.GetResult() ==
             lldb::eCommandInterpreterResultQuitRequested)
           go_interactive = false;
+
+        // When running in batch mode and an error occurred while sourcing
+        // the crash commands, exit with a non-zero exit status.
+        if (m_option_data.m_batch &&
+            local_results.GetResult() ==
+                lldb::eCommandInterpreterResultCommandError)
+          exit(1);
       }
     }
     m_debugger.SetAsync(old_async);
