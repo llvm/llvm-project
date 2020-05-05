@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <complex>
 
 namespace mlir {
 class AffineMap;
@@ -687,6 +688,11 @@ protected:
   /// Return the data base pointer.
   const char *getData() const { return this->base.getPointer(); }
 };
+
+/// Type trait detector that checks if a given type T is a complex type.
+template <typename T> struct is_complex_t : public std::false_type {};
+template <typename T>
+struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
 
 /// An attribute that represents a reference to a dense vector or tensor object.
@@ -724,9 +730,25 @@ public:
   /// Constructs a dense integer elements attribute from a single element.
   template <typename T, typename = typename std::enable_if<
                             std::numeric_limits<T>::is_integer ||
-                            llvm::is_one_of<T, float, double>::value>::type>
+                            llvm::is_one_of<T, float, double>::value ||
+                            detail::is_complex_t<T>::value>::type>
   static DenseElementsAttr get(const ShapedType &type, T value) {
     return get(type, llvm::makeArrayRef(value));
+  }
+
+  /// Constructs a dense complex elements attribute from an array of complex
+  /// values. Each value is expected to be the same bitwidth of the element type
+  /// of 'type'. 'type' must be a vector or tensor with static shape.
+  template <typename T, typename ElementT = typename T::value_type,
+            typename = typename std::enable_if<
+                detail::is_complex_t<T>::value &&
+                (std::numeric_limits<ElementT>::is_integer ||
+                 llvm::is_one_of<ElementT, float, double>::value)>::type>
+  static DenseElementsAttr get(const ShapedType &type, ArrayRef<T> values) {
+    const char *data = reinterpret_cast<const char *>(values.data());
+    return getRawComplex(type, ArrayRef<char>(data, values.size() * sizeof(T)),
+                         sizeof(T), std::numeric_limits<ElementT>::is_integer,
+                         std::numeric_limits<ElementT>::is_signed);
   }
 
   /// Overload of the above 'get' method that is specialized for boolean values.
@@ -763,6 +785,12 @@ public:
   static DenseElementsAttr getFromRawBuffer(ShapedType type,
                                             ArrayRef<char> rawBuffer,
                                             bool isSplatBuffer);
+
+  /// Returns true if the given buffer is a valid raw buffer for the given type.
+  /// `detectedSplat` is set if the buffer is valid and represents a splat
+  /// buffer.
+  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer,
+                               bool &detectedSplat);
 
   //===--------------------------------------------------------------------===//
   // Iterators
@@ -900,12 +928,28 @@ public:
   llvm::iterator_range<ElementIterator<T>> getValues() const {
     assert(isValidIntOrFloat(sizeof(T), std::numeric_limits<T>::is_integer,
                              std::numeric_limits<T>::is_signed));
-    auto rawData = getRawData().data();
+    const char *rawData = getRawData().data();
     bool splat = isSplat();
     return {ElementIterator<T>(rawData, splat, 0),
             ElementIterator<T>(rawData, splat, getNumElements())};
   }
 
+  /// Return the held element values as a range of std::complex.
+  template <typename T, typename ElementT = typename T::value_type,
+            typename = typename std::enable_if<
+                detail::is_complex_t<T>::value &&
+                (std::numeric_limits<ElementT>::is_integer ||
+                 llvm::is_one_of<ElementT, float, double>::value)>::type>
+  llvm::iterator_range<ElementIterator<T>> getValues() const {
+    assert(isValidComplex(sizeof(T), std::numeric_limits<ElementT>::is_integer,
+                          std::numeric_limits<ElementT>::is_signed));
+    const char *rawData = getRawData().data();
+    bool splat = isSplat();
+    return {ElementIterator<T>(rawData, splat, 0),
+            ElementIterator<T>(rawData, splat, getNumElements())};
+  }
+
+  /// Return the held element values as a range of StringRef.
   template <typename T, typename = typename std::enable_if<
                             std::is_same<T, StringRef>::value>::type>
   llvm::iterator_range<ElementIterator<StringRef>> getValues() const {
@@ -1011,6 +1055,13 @@ protected:
   }
 
   /// Overload of the raw 'get' method that asserts that the given type is of
+  /// complex type. This method is used to verify type invariants that the
+  /// templatized 'get' method cannot.
+  static DenseElementsAttr getRawComplex(ShapedType type, ArrayRef<char> data,
+                                         int64_t dataEltSize, bool isInt,
+                                         bool isSigned);
+
+  /// Overload of the raw 'get' method that asserts that the given type is of
   /// integer or floating-point type. This method is used to verify type
   /// invariants that the templatized 'get' method cannot.
   static DenseElementsAttr getRawIntOrFloat(ShapedType type,
@@ -1022,6 +1073,11 @@ protected:
   /// the current attribute. This method is used to verify specific type
   /// invariants that the templatized 'getValues' method cannot.
   bool isValidIntOrFloat(int64_t dataEltSize, bool isInt, bool isSigned) const;
+
+  /// Check the information for a C++ data type, check if this type is valid for
+  /// the current attribute. This method is used to verify specific type
+  /// invariants that the templatized 'getValues' method cannot.
+  bool isValidComplex(int64_t dataEltSize, bool isInt, bool isSigned) const;
 };
 
 /// An attribute class for representing dense arrays of strings. The structure
@@ -1073,6 +1129,13 @@ protected:
   /// data buffer. 'type' must be a vector or tensor with static shape.
   static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data,
                                   bool isSplat);
+
+  /// Overload of the raw 'get' method that asserts that the given type is of
+  /// complex type. This method is used to verify type invariants that the
+  /// templatized 'get' method cannot.
+  static DenseElementsAttr getRawComplex(ShapedType type, ArrayRef<char> data,
+                                         int64_t dataEltSize, bool isInt,
+                                         bool isSigned);
 
   /// Overload of the raw 'get' method that asserts that the given type is of
   /// integer or floating-point type. This method is used to verify type
@@ -1287,20 +1350,15 @@ private:
     return getZeroAPFloat();
   }
 
-  /// Get a zero for a StringRef.
+  /// Get a zero for an C++ integer, float, StringRef, or complex type.
   template <typename T>
-  typename std::enable_if<std::is_same<StringRef, T>::value, T>::type
+  typename std::enable_if<
+      std::numeric_limits<T>::is_integer ||
+          llvm::is_one_of<T, float, double, StringRef>::value ||
+          detail::is_complex_t<T>::value,
+      T>::type
   getZeroValue() const {
-    return StringRef();
-  }
-
-  /// Get a zero for an C++ integer or float type.
-  template <typename T>
-  typename std::enable_if<std::numeric_limits<T>::is_integer ||
-                              llvm::is_one_of<T, float, double>::value,
-                          T>::type
-  getZeroValue() const {
-    return T(0);
+    return T();
   }
 
   /// Flatten, and return, all of the sparse indices in this attribute in
