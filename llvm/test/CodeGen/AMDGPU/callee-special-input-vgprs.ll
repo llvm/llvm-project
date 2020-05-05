@@ -396,13 +396,11 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x:
-; VARABI: buffer_store_dword v32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VARABI: buffer_load_dword v32, off, s[0:3], s32{{$}}
 ; VARABI: v_and_b32_e32 v32, 0x3ff, v32
 ; VARABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
 
-; VARABI: buffer_load_dword v32, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; VARABI-NEXT: s_waitcnt
+; VARABI: s_waitcnt
 ; VARABI-NEXT: s_setpc_b64
 
 ; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
@@ -457,14 +455,12 @@ define void @too_many_args_use_workitem_id_x(
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x:
 ; VARABI: enable_vgpr_workitem_id = 0
 
-; VARABI: s_mov_b32 s33, s7
 ; VARABI: s_mov_b32 s32, s33
 ; VARABI: buffer_store_dword v0, off, s[0:3], s32{{$}}
 ; VARABI: s_swappc_b64
 
 
 ; FIXEDABI: enable_vgpr_workitem_id = 2
-; FIXEDABI: s_mov_b32 s33, s17
 ; FIXEDABI-DAG: s_mov_b32 s32, s33
 ; FIXEDABI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x140{{$}}
 ; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
@@ -516,15 +512,15 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; Requires loading and storing to stack slot.
 ; GCN-LABEL: {{^}}too_many_args_call_too_many_args_use_workitem_id_x:
 ; GCN-DAG: s_add_u32 s32, s32, 0x400{{$}}
-; GCN-DAG: buffer_store_dword v32, off, s[0:3], s34 offset:4 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-DAG: buffer_load_dword v32, off, s[0:3], s34{{$}}
 
 ; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
 
 ; GCN: s_swappc_b64
 
-; GCN: buffer_load_dword v32, off, s[0:3], s34 offset:4 ; 4-byte Folded Reload
 ; GCN: s_sub_u32 s32, s32, 0x400{{$}}
+; GCN: buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN: s_setpc_b64
 define void @too_many_args_call_too_many_args_use_workitem_id_x(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -545,13 +541,11 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; frame[2] = VGPR spill slot
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x_byval:
-; VARABI: buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VARABI: buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VARABI-NEXT: s_waitcnt
 ; VARABI-NEXT: v_and_b32_e32 v32, 0x3ff, v32
 ; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v32
 ; VARABI: buffer_load_dword v0, off, s[0:3], s32{{$}}
-; VARABI: buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; VARABI: s_setpc_b64
 
 
@@ -616,8 +610,7 @@ define void @too_many_args_use_workitem_id_x_byval(
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_byval:
 ; VARABI: enable_vgpr_workitem_id = 0
-; VARABI-DAG: s_mov_b32 s33, s7
-; VARABI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
+; VARABI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
 ; VARABI: buffer_store_dword [[K]], off, s[0:3], s33 offset:4
 ; VARABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33 offset:4
 ; VARABI: s_add_u32 s32, s33, 0x400{{$}}
@@ -630,9 +623,8 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; VARABI: s_swappc_b64
 
 
-; FIXEDABI: s_mov_b32 s33, s17
-; FIXEDABI-DAG: s_add_u32 s32, s33, 0x400
-; FIXEDABI-DAG: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7
+; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7
+; FIXEDABI: s_add_u32 s32, s33, 0x400{{$}}
 ; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], s33 offset:4{{$}}
 
 ; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140
@@ -703,10 +695,7 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
   ret void
 }
 
-; Only one stack load should be emitted for all 3 values.
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_xyz:
-; VARABI: buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; VARABI: buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VARABI-NOT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
 ; VARABI: buffer_load_dword v32, off, s[0:3], s32{{$}}
 ; VARABI-NOT: buffer_load_dword
@@ -720,9 +709,7 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 ; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Y]]
 ; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Z]]
 
-; VARABI: buffer_load_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; VARABI: buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; VARABI-NEXT: s_waitcnt
+; VARABI: s_waitcnt
 ; VARABI-NEXT: s_setpc_b64
 
 
@@ -789,8 +776,6 @@ define void @too_many_args_use_workitem_id_xyz(
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_xyz:
 ; GCN: enable_vgpr_workitem_id = 2
 
-; VARABI-DAG: s_mov_b32 s33, s7
-; FIXEDABI-DAG: s_mov_b32 s33, s17
 ; GCN-DAG: s_mov_b32 s32, s33
 
 ; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
@@ -831,7 +816,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_xyz() #1 {
 
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-; GCN: ScratchSize: 8
+; GCN: ScratchSize: 0
 define void @too_many_args_use_workitem_id_x_stack_yz(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
   i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15,
@@ -884,9 +869,6 @@ define void @too_many_args_use_workitem_id_x_stack_yz(
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_stack_yz:
 ; GCN: enable_vgpr_workitem_id = 2
-
-; VARABI: s_mov_b32 s33, s7
-; FIXEDABI: s_mov_b32 s33, s17
 
 ; GCN-NOT: v0
 ; GCN-DAG: v_lshlrev_b32_e32 v1, 10, v1

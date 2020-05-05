@@ -11150,7 +11150,7 @@ static bool getAArch64PBV(QualType QT, ASTContext &C) {
 /// as defined by `LS(P)` in 3.2.1 of the AAVFABI.
 /// TODO: Add support for references, section 3.2.1, item 1.
 static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
-  if (getAArch64MTV(QT, Kind) && QT.getCanonicalType()->isPointerType()) {
+  if (!getAArch64MTV(QT, Kind) && QT.getCanonicalType()->isPointerType()) {
     QualType PTy = QT.getCanonicalType()->getPointeeType();
     if (getAArch64PBV(PTy, C))
       return C.getTypeSize(PTy);

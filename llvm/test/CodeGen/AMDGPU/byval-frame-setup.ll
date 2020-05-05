@@ -69,12 +69,12 @@ bb1:
 }
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_non_leaf:
-; GCN: buffer_store_dword v33, off, s[0:3], s32 offset:36
-; GCN-DAG: v_writelane_b32 v33, s34,
+; GCN: buffer_store_dword v41, off, s[0:3], s32 offset:36
+; GCN-DAG: v_writelane_b32 v41, s34,
 ; GCN: s_mov_b32 s34, s32
 ; GCN-DAG: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s34{{$}}
 ; GCN-DAG: s_add_u32 s32, s32, 0xc00{{$}}
-; GCN-DAG: buffer_store_dword v32, off, s[0:3], s34 offset:32
+; GCN-DAG: buffer_store_dword v40, off, s[0:3], s34 offset:32
 ; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, s32
 
 ; GCN-DAG: v_add_{{[iu]}}32_e32 [[ADD0:v[0-9]+]], vcc, 1, [[LOAD0]]
@@ -89,10 +89,10 @@ bb1:
 
 ; GCN: v_readlane_b32
 ; GCN-NOT: v_readlane_b32 s32
-; GCN-DAG: buffer_load_dword v32, off, s[0:3], s34 offset:32
+; GCN-DAG: buffer_load_dword v40, off, s[0:3], s34 offset:32
 ; GCN: s_sub_u32 s32, s32, 0xc00{{$}}
-; GCN: v_readlane_b32 s34, v33,
-; GCN-DAG: buffer_load_dword v33, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; GCN: v_readlane_b32 s34, v41,
+; GCN-DAG: buffer_load_dword v41, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
 ; GCN: s_setpc_b64
 define void  @void_func_byval_struct_non_leaf(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg1) #1 {
 entry:

@@ -15,7 +15,7 @@ module m
     real, pointer :: p
   end type
   type :: hasCoarray
-    real :: co[*]
+    real, allocatable :: co[:]
   end type
  contains
   pure function test(ptr, in, hpd)

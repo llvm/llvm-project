@@ -14,6 +14,7 @@ add_mlir_library(MLIRTestTransforms
   TestLiveness.cpp
   TestLoopMapping.cpp
   TestLoopParametricTiling.cpp
+  TestLoopUnrolling.cpp
   TestOpaqueLoc.cpp
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp

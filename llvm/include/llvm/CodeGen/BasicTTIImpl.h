@@ -552,32 +552,30 @@ public:
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.
-  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+  unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                                     bool Insert, bool Extract) {
-    auto *VTy = cast<VectorType>(Ty);
-    assert(DemandedElts.getBitWidth() == VTy->getNumElements() &&
+    assert(DemandedElts.getBitWidth() == Ty->getNumElements() &&
            "Vector size mismatch");
 
     unsigned Cost = 0;
 
-    for (int i = 0, e = VTy->getNumElements(); i < e; ++i) {
+    for (int i = 0, e = Ty->getNumElements(); i < e; ++i) {
       if (!DemandedElts[i])
         continue;
       if (Insert)
         Cost += static_cast<T *>(this)->getVectorInstrCost(
-            Instruction::InsertElement, VTy, i);
+            Instruction::InsertElement, Ty, i);
       if (Extract)
         Cost += static_cast<T *>(this)->getVectorInstrCost(
-            Instruction::ExtractElement, VTy, i);
+            Instruction::ExtractElement, Ty, i);
     }
 
     return Cost;
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
-    auto *VTy = cast<VectorType>(Ty);
-    APInt DemandedElts = APInt::getAllOnesValue(VTy->getNumElements());
+  unsigned getScalarizationOverhead(VectorType *Ty, bool Insert, bool Extract) {
+    APInt DemandedElts = APInt::getAllOnesValue(Ty->getNumElements());
     return static_cast<T *>(this)->getScalarizationOverhead(Ty, DemandedElts,
                                                             Insert, Extract);
   }
@@ -591,11 +589,10 @@ public:
     SmallPtrSet<const Value*, 4> UniqueOperands;
     for (const Value *A : Args) {
       if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
-        Type *VecTy = nullptr;
-        if (A->getType()->isVectorTy()) {
-          VecTy = A->getType();
+        auto *VecTy = dyn_cast<VectorType>(A->getType());
+        if (VecTy) {
           // If A is a vector operand, VF should be 1 or correspond to A.
-          assert((VF == 1 || VF == cast<VectorType>(VecTy)->getNumElements()) &&
+          assert((VF == 1 || VF == VecTy->getNumElements()) &&
                  "Vector argument does not match VF");
         }
         else
@@ -608,17 +605,16 @@ public:
     return Cost;
   }
 
-  unsigned getScalarizationOverhead(Type *VecTy, ArrayRef<const Value *> Args) {
+  unsigned getScalarizationOverhead(VectorType *Ty, ArrayRef<const Value *> Args) {
     unsigned Cost = 0;
-    auto *VecVTy = cast<VectorType>(VecTy);
 
-    Cost += getScalarizationOverhead(VecVTy, true, false);
+    Cost += getScalarizationOverhead(Ty, true, false);
     if (!Args.empty())
-      Cost += getOperandsScalarizationOverhead(Args, VecVTy->getNumElements());
+      Cost += getOperandsScalarizationOverhead(Args, Ty->getNumElements());
     else
       // When no information on arguments is provided, we add the cost
       // associated with one argument as a heuristic.
-      Cost += getScalarizationOverhead(VecVTy, false, true);
+      Cost += getScalarizationOverhead(Ty, false, true);
 
     return Cost;
   }
@@ -742,13 +738,16 @@ public:
       break;
     }
 
+    auto *SrcVTy = dyn_cast<VectorType>(Src);
+    auto *DstVTy = dyn_cast<VectorType>(Dst);
+
     // If the cast is marked as legal (or promote) then assume low cost.
     if (SrcLT.first == DstLT.first &&
         TLI->isOperationLegalOrPromote(ISD, DstLT.second))
       return SrcLT.first;
 
     // Handle scalar conversions.
-    if (!Src->isVectorTy() && !Dst->isVectorTy()) {
+    if (!SrcVTy && !DstVTy) {
       // Scalar bitcasts are usually free.
       if (Opcode == Instruction::BitCast)
         return 0;
@@ -763,9 +762,7 @@ public:
     }
 
     // Check vector-to-vector casts.
-    if (Dst->isVectorTy() && Src->isVectorTy()) {
-      auto *SrcVTy = cast<VectorType>(Src);
-      auto *DstVTy = cast<VectorType>(Dst);
+    if (DstVTy && SrcVTy) {
       // If the cast is between same-sized registers, then the check is simple.
       if (SrcLT.first == DstLT.first &&
           SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits()) {
@@ -819,19 +816,18 @@ public:
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(Dst, true, true) + Num * Cost;
+      return getScalarizationOverhead(DstVTy, true, true) + Num * Cost;
     }
 
     // We already handled vector-to-vector and scalar-to-scalar conversions.
     // This
     // is where we handle bitcast between vectors and scalars. We need to assume
     //  that the conversion is scalarized in one way or another.
-    if (Opcode == Instruction::BitCast)
+    if (Opcode == Instruction::BitCast) {
       // Illegal bitcasts are done by storing and loading from a stack slot.
-      return (Src->isVectorTy() ? getScalarizationOverhead(Src, false, true)
-                                : 0) +
-             (Dst->isVectorTy() ? getScalarizationOverhead(Dst, true, false)
-                                : 0);
+      return (SrcVTy ? getScalarizationOverhead(SrcVTy, false, true) : 0) +
+             (DstVTy ? getScalarizationOverhead(DstVTy, true, false) : 0);
+    }
 
     llvm_unreachable("Unhandled cast");
   }
@@ -923,7 +919,8 @@ public:
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.
         // We must account for the cost of building or decomposing the vector.
-        Cost += getScalarizationOverhead(Src, Opcode != Instruction::Store,
+        Cost += getScalarizationOverhead(cast<VectorType>(Src),
+                                         Opcode != Instruction::Store,
                                          Opcode == Instruction::Store);
       }
     }
@@ -1118,7 +1115,8 @@ public:
       if (RetVF > 1 || VF > 1) {
         ScalarizationCost = 0;
         if (!RetTy->isVoidTy())
-          ScalarizationCost += getScalarizationOverhead(RetTy, true, false);
+          ScalarizationCost +=
+              getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
         ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
       }
 
@@ -1224,21 +1222,19 @@ public:
       unsigned ScalarizationCost = ScalarizationCostPassed;
       unsigned ScalarCalls = 1;
       Type *ScalarRetTy = RetTy;
-      if (RetTy->isVectorTy()) {
+      if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
         if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
-          ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
-        ScalarCalls =
-            std::max(ScalarCalls, cast<VectorType>(RetTy)->getNumElements());
+          ScalarizationCost = getScalarizationOverhead(RetVTy, true, false);
+        ScalarCalls = std::max(ScalarCalls, RetVTy->getNumElements());
         ScalarRetTy = RetTy->getScalarType();
       }
       SmallVector<Type *, 4> ScalarTys;
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         Type *Ty = Tys[i];
-        if (Ty->isVectorTy()) {
+        if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
-            ScalarizationCost += getScalarizationOverhead(Ty, false, true);
-          ScalarCalls =
-              std::max(ScalarCalls, cast<VectorType>(Ty)->getNumElements());
+            ScalarizationCost += getScalarizationOverhead(VTy, false, true);
+          ScalarCalls = std::max(ScalarCalls, VTy->getNumElements());
           Ty = Ty->getScalarType();
         }
         ScalarTys.push_back(Ty);
@@ -1588,12 +1584,12 @@ public:
     // Else, assume that we need to scalarize this intrinsic. For math builtins
     // this will emit a costly libcall, adding call overhead and spills. Make it
     // very expensive.
-    if (RetTy->isVectorTy()) {
+    if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
       unsigned ScalarizationCost =
           ((ScalarizationCostPassed != std::numeric_limits<unsigned>::max())
                ? ScalarizationCostPassed
-               : getScalarizationOverhead(RetTy, true, false));
-      unsigned ScalarCalls = cast<VectorType>(RetTy)->getNumElements();
+               : getScalarizationOverhead(RetVTy, true, false));
+      unsigned ScalarCalls = RetVTy->getNumElements();
       SmallVector<Type *, 4> ScalarTys;
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         Type *Ty = Tys[i];
@@ -1604,14 +1600,12 @@ public:
       unsigned ScalarCost = ConcreteTTI->getIntrinsicInstrCost(
           IID, RetTy->getScalarType(), ScalarTys, FMF, CostKind);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        if (Tys[i]->isVectorTy()) {
+        if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
           if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
-            ScalarizationCost += getScalarizationOverhead(Tys[i], false, true);
-          ScalarCalls =
-              std::max(ScalarCalls, cast<VectorType>(Tys[i])->getNumElements());
+            ScalarizationCost += getScalarizationOverhead(VTy, false, true);
+          ScalarCalls = std::max(ScalarCalls, VTy->getNumElements());
         }
       }
-
       return ScalarCalls * ScalarCost + ScalarizationCost;
     }
 

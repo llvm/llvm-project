@@ -254,7 +254,7 @@ body: |
 ...
 
 # GCN-LABEL: csr{{$}}
-# GCN: V_AND_B32_e32 $vgpr4, $vgpr0,
+# GCN: V_AND_B32_e32 $vgpr37, $vgpr0,
 ---
 name:            csr
 tracksRegLiveness: true

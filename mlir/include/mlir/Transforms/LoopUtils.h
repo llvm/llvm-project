@@ -38,8 +38,9 @@ LogicalResult loopUnrollFull(AffineForOp forOp);
 
 /// Unrolls this for operation by the specified unroll factor. Returns failure
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
-/// unroll factors.
+/// unroll factors. Requires positive loop bounds and step.
 LogicalResult loopUnrollByFactor(AffineForOp forOp, uint64_t unrollFactor);
+LogicalResult loopUnrollByFactor(loop::ForOp forOp, uint64_t unrollFactor);
 
 /// Unrolls this loop by the specified unroll factor or its trip count,
 /// whichever is lower.
@@ -68,9 +69,10 @@ LogicalResult loopUnrollJamByFactor(AffineForOp forOp,
 LogicalResult loopUnrollJamUpToFactor(AffineForOp forOp,
                                       uint64_t unrollJamFactor);
 
-/// Promotes the loop body of a AffineForOp to its containing block if the
-/// AffineForOp was known to have a single iteration.
+/// Promotes the loop body of a AffineForOp/loop::ForOp to its containing block
+/// if the loop was known to have a single iteration.
 LogicalResult promoteIfSingleIteration(AffineForOp forOp);
+LogicalResult promoteIfSingleIteration(loop::ForOp forOp);
 
 /// Promotes all single iteration AffineForOp's in the Function, i.e., moves
 /// their body into the containing Block.

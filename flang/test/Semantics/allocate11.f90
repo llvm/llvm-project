@@ -38,6 +38,7 @@ subroutine C937(var)
 
   type B
     type(A) y
+    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'y%x')
     type(B), pointer :: forward
     real :: u
   end type
@@ -47,6 +48,7 @@ subroutine C937(var)
   end type
 
   type D
+    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'x')
     type(A), pointer :: potential
   end type
 

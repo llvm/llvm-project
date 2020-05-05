@@ -807,7 +807,7 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
                                            CostKind);
     // Return the cost of multiple scalar invocation plus the cost of
     // inserting and extracting the values.
-    return BaseT::getScalarizationOverhead(Ty, Args) + Num * Cost;
+    return BaseT::getScalarizationOverhead(VTy, Args) + Num * Cost;
   }
 
   return BaseCost;
@@ -899,7 +899,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   // The scalarization cost should be a lot higher. We use the number of vector
   // elements plus the scalarization overhead.
   unsigned ScalarCost =
-      NumElems * LT.first + BaseT::getScalarizationOverhead(DataTy, {});
+      NumElems * LT.first + BaseT::getScalarizationOverhead(VTy, {});
 
   if (Alignment < EltSize / 8)
     return ScalarCost;

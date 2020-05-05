@@ -4,12 +4,12 @@
 ! - 8.5.19 constraints on the VOLATILE attribute
 
 module m
-  !ERROR: ALLOCATABLE coarray must have a deferred coshape
+  !ERROR: 'mustbedeferred' is an ALLOCATABLE coarray and must have a deferred coshape
   real, allocatable :: mustBeDeferred[*]  ! C827
-  !ERROR: Non-ALLOCATABLE coarray must have an explicit coshape
+  !ERROR: Component 'mustbeexplicit' is a non-ALLOCATABLE coarray and must have an explicit coshape
   real :: mustBeExplicit[:]  ! C828
   type :: hasCoarray
-    real :: coarray[*]
+    real, allocatable :: coarray[:]
   end type
   real :: coarray[*]
   type(hasCoarray) :: coarrayComponent

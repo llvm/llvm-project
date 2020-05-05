@@ -6,32 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdin
+// XFAIL: libcpp-has-no-stdout
 
 // <iostream>
 
-// istream cin;
+// istream wcout;
+
+// FILE_DEPENDENCIES: %t.exe
+// RUN: %{build}
+// RUN: %{exec} %t.exe > %t.out
+// RUN: grep -e 'Hello World!' %t.out
 
 #include <iostream>
-#include <cassert>
 
 #include "test_macros.h"
 
 int main(int, char**)
 {
-#if 0
-    std::cout << "Hello World!\n";
-    int i;
-    std::cout << "Enter a number: ";
-    std::cin >> i;
-    std::cout << "The number is : " << i << '\n';
-#else  // 0
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::cin.tie() == NULL);
-#else
-    assert(std::cin.tie() == &std::cout);
-#endif
-#endif
+    std::wcout << L"Hello World!\n";
 
-  return 0;
+    return 0;
 }
