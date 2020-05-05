@@ -1419,6 +1419,95 @@ def SVSQRDCMLAH_LANE_X : SInst<"svqrdcmlah_lane[_{d}]", "ddddii", "si",         
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Widening DSP operations
+
+multiclass SInstWideDSPAcc<string name, string types, string intrinsic> {
+  def    : SInst<name # "[_{d}]",   "ddhh", types, MergeNone, intrinsic>;
+  def _N : SInst<name # "[_n_{d}]", "ddhR", types, MergeNone, intrinsic>;
+}
+
+multiclass SInstWideDSPLong<string name, string types, string intrinsic> {
+  def    : SInst<name # "[_{d}]",   "dhh", types, MergeNone, intrinsic>;
+  def _N : SInst<name # "[_n_{d}]", "dhR", types, MergeNone, intrinsic>;
+}
+
+multiclass SInstWideDSPWide<string name, string types, string intrinsic> {
+  def    : SInst<name # "[_{d}]",   "ddh", types, MergeNone, intrinsic>;
+  def _N : SInst<name # "[_n_{d}]", "ddR", types, MergeNone, intrinsic>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+defm SVABALB_S : SInstWideDSPAcc<"svabalb",   "sil",    "aarch64_sve_sabalb">;
+defm SVABALB_U : SInstWideDSPAcc<"svabalb",   "UsUiUl", "aarch64_sve_uabalb">;
+defm SVABALT_S : SInstWideDSPAcc<"svabalt",   "sil",    "aarch64_sve_sabalt">;
+defm SVABALT_U : SInstWideDSPAcc<"svabalt",   "UsUiUl", "aarch64_sve_uabalt">;
+defm SVMLALB_S : SInstWideDSPAcc<"svmlalb",   "sil",    "aarch64_sve_smlalb">;
+defm SVMLALB_U : SInstWideDSPAcc<"svmlalb",   "UsUiUl", "aarch64_sve_umlalb">;
+defm SVMLALT_S : SInstWideDSPAcc<"svmlalt",   "sil",    "aarch64_sve_smlalt">;
+defm SVMLALT_U : SInstWideDSPAcc<"svmlalt",   "UsUiUl", "aarch64_sve_umlalt">;
+defm SVMLSLB_S : SInstWideDSPAcc<"svmlslb",   "sil",    "aarch64_sve_smlslb">;
+defm SVMLSLB_U : SInstWideDSPAcc<"svmlslb",   "UsUiUl", "aarch64_sve_umlslb">;
+defm SVMLSLT_S : SInstWideDSPAcc<"svmlslt",   "sil",    "aarch64_sve_smlslt">;
+defm SVMLSLT_U : SInstWideDSPAcc<"svmlslt",   "UsUiUl", "aarch64_sve_umlslt">;
+defm SVQDMLALB : SInstWideDSPAcc<"svqdmlalb", "sil",    "aarch64_sve_sqdmlalb">;
+defm SVQDMLALT : SInstWideDSPAcc<"svqdmlalt", "sil",    "aarch64_sve_sqdmlalt">;
+defm SVQDMLSLB : SInstWideDSPAcc<"svqdmlslb", "sil",    "aarch64_sve_sqdmlslb">;
+defm SVQDMLSLT : SInstWideDSPAcc<"svqdmlslt", "sil",    "aarch64_sve_sqdmlslt">;
+
+defm SVABDLB_S : SInstWideDSPLong<"svabdlb",   "sil",    "aarch64_sve_sabdlb">;
+defm SVABDLB_U : SInstWideDSPLong<"svabdlb",   "UsUiUl", "aarch64_sve_uabdlb">;
+defm SVABDLT_S : SInstWideDSPLong<"svabdlt",   "sil",    "aarch64_sve_sabdlt">;
+defm SVABDLT_U : SInstWideDSPLong<"svabdlt",   "UsUiUl", "aarch64_sve_uabdlt">;
+defm SVADDLB_S : SInstWideDSPLong<"svaddlb",   "sil",    "aarch64_sve_saddlb">;
+defm SVADDLB_U : SInstWideDSPLong<"svaddlb",   "UsUiUl", "aarch64_sve_uaddlb">;
+defm SVADDLT_S : SInstWideDSPLong<"svaddlt",   "sil",    "aarch64_sve_saddlt">;
+defm SVADDLT_U : SInstWideDSPLong<"svaddlt",   "UsUiUl", "aarch64_sve_uaddlt">;
+defm SVMULLB_S : SInstWideDSPLong<"svmullb",   "sil",    "aarch64_sve_smullb">;
+defm SVMULLB_U : SInstWideDSPLong<"svmullb",   "UsUiUl", "aarch64_sve_umullb">;
+defm SVMULLT_S : SInstWideDSPLong<"svmullt",   "sil",    "aarch64_sve_smullt">;
+defm SVMULLT_U : SInstWideDSPLong<"svmullt",   "UsUiUl", "aarch64_sve_umullt">;
+defm SVQDMULLB : SInstWideDSPLong<"svqdmullb", "sil",    "aarch64_sve_sqdmullb">;
+defm SVQDMULLT : SInstWideDSPLong<"svqdmullt", "sil",    "aarch64_sve_sqdmullt">;
+defm SVSUBLB_S : SInstWideDSPLong<"svsublb",   "sil",    "aarch64_sve_ssublb">;
+defm SVSUBLB_U : SInstWideDSPLong<"svsublb",   "UsUiUl", "aarch64_sve_usublb">;
+defm SVSUBLT_S : SInstWideDSPLong<"svsublt",   "sil",    "aarch64_sve_ssublt">;
+defm SVSUBLT_U : SInstWideDSPLong<"svsublt",   "UsUiUl", "aarch64_sve_usublt">;
+
+defm SVADDWB_S : SInstWideDSPWide<"svaddwb", "sil",    "aarch64_sve_saddwb">;
+defm SVADDWB_U : SInstWideDSPWide<"svaddwb", "UsUiUl", "aarch64_sve_uaddwb">;
+defm SVADDWT_S : SInstWideDSPWide<"svaddwt", "sil",    "aarch64_sve_saddwt">;
+defm SVADDWT_U : SInstWideDSPWide<"svaddwt", "UsUiUl", "aarch64_sve_uaddwt">;
+defm SVSUBWB_S : SInstWideDSPWide<"svsubwb", "sil",    "aarch64_sve_ssubwb">;
+defm SVSUBWB_U : SInstWideDSPWide<"svsubwb", "UsUiUl", "aarch64_sve_usubwb">;
+defm SVSUBWT_S : SInstWideDSPWide<"svsubwt", "sil",    "aarch64_sve_ssubwt">;
+defm SVSUBWT_U : SInstWideDSPWide<"svsubwt", "UsUiUl", "aarch64_sve_usubwt">;
+
+def SVSHLLB_S_N : SInst<"svshllb[_n_{d}]", "dhi", "sil",    MergeNone, "aarch64_sve_sshllb", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
+def SVSHLLB_U_N : SInst<"svshllb[_n_{d}]", "dhi", "UsUiUl", MergeNone, "aarch64_sve_ushllb", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
+def SVSHLLT_S_N : SInst<"svshllt[_n_{d}]", "dhi", "sil",    MergeNone, "aarch64_sve_sshllt", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
+def SVSHLLT_U_N : SInst<"svshllt[_n_{d}]", "dhi", "UsUiUl", MergeNone, "aarch64_sve_ushllt", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
+
+def SVMLALB_S_LANE : SInst<"svmlalb_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlalb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLALB_U_LANE : SInst<"svmlalb_lane[_{d}]",   "ddhhi", "UiUl", MergeNone, "aarch64_sve_umlalb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLALT_S_LANE : SInst<"svmlalt_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlalt_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLALT_U_LANE : SInst<"svmlalt_lane[_{d}]",   "ddhhi", "UiUl", MergeNone, "aarch64_sve_umlalt_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLSLB_S_LANE : SInst<"svmlslb_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlslb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLSLB_U_LANE : SInst<"svmlslb_lane[_{d}]",   "ddhhi", "UiUl", MergeNone, "aarch64_sve_umlslb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLSLT_S_LANE : SInst<"svmlslt_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlslt_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLSLT_U_LANE : SInst<"svmlslt_lane[_{d}]",   "ddhhi", "UiUl", MergeNone, "aarch64_sve_umlslt_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMULLB_S_LANE : SInst<"svmullb_lane[_{d}]",   "dhhi",  "il",   MergeNone, "aarch64_sve_smullb_lane",   [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVMULLB_U_LANE : SInst<"svmullb_lane[_{d}]",   "dhhi",  "UiUl", MergeNone, "aarch64_sve_umullb_lane",   [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVMULLT_S_LANE : SInst<"svmullt_lane[_{d}]",   "dhhi",  "il",   MergeNone, "aarch64_sve_smullt_lane",   [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVMULLT_U_LANE : SInst<"svmullt_lane[_{d}]",   "dhhi",  "UiUl", MergeNone, "aarch64_sve_umullt_lane",   [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVQDMLALB_LANE : SInst<"svqdmlalb_lane[_{d}]", "ddhhi", "il",   MergeNone, "aarch64_sve_sqdmlalb_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVQDMLALT_LANE : SInst<"svqdmlalt_lane[_{d}]", "ddhhi", "il",   MergeNone, "aarch64_sve_sqdmlalt_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVQDMLSLB_LANE : SInst<"svqdmlslb_lane[_{d}]", "ddhhi", "il",   MergeNone, "aarch64_sve_sqdmlslb_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVQDMLSLT_LANE : SInst<"svqdmlslt_lane[_{d}]", "ddhhi", "il",   MergeNone, "aarch64_sve_sqdmlslt_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVQDMULLB_LANE : SInst<"svqdmullb_lane[_{d}]", "dhhi",  "il",   MergeNone, "aarch64_sve_sqdmullb_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVQDMULLT_LANE : SInst<"svqdmullt_lane[_{d}]", "dhhi",  "il",   MergeNone, "aarch64_sve_sqdmullt_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 // Non-temporal gather load one vector (vector base)
