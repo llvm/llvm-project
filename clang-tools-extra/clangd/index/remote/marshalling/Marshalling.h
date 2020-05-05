@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REMOTE_MARSHALLING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REMOTE_MARSHALLING_H
 
-#include "Index.grpc.pb.h"
+#include "Index.pb.h"
 #include "index/Index.h"
 #include "llvm/Support/StringSaver.h"
 
