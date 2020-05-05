@@ -8,7 +8,7 @@
 
 #include "lld/Common/ErrorHandler.h"
 
-#include "lld/Common/Threads.h"
+#include "llvm/Support/Parallel.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
