@@ -9,9 +9,8 @@ add_mlir_library(MLIRIR
   MLIRCallInterfacesIncGen
   MLIROpAsmInterfacesIncGen
   MLIRSymbolInterfacesIncGen
-  )
-target_link_libraries(MLIRIR
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRSupport
   LLVMSupport
   )

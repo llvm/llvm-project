@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+  )
+
 add_llvm_executable(mlir-sdbm-api-test
   sdbm-api-test.cpp
 )
@@ -9,8 +14,6 @@ target_link_libraries(mlir-sdbm-api-test
   MLIRIR
   MLIRSDBM
   MLIRSupport
-  LLVMCore
-  LLVMSupport
 )
 
 target_include_directories(mlir-sdbm-api-test PRIVATE ..)

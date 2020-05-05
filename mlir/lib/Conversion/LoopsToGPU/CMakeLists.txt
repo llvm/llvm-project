@@ -7,9 +7,8 @@ add_mlir_conversion_library(MLIRLoopsToGPU
 
   DEPENDS
   MLIRConversionPassIncGen
-)
-target_link_libraries(MLIRLoopsToGPU
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRAffineToStandard
   MLIRGPU
@@ -19,5 +18,4 @@ target_link_libraries(MLIRLoopsToGPU
   MLIRStandardOps
   MLIRSupport
   MLIRTransforms
-  LLVMSupport
   )
