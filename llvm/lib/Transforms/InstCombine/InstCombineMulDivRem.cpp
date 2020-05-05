@@ -96,19 +96,21 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
 
 /// A helper routine of InstCombiner::visitMul().
 ///
-/// If C is a scalar/vector of known powers of 2, then this function returns
-/// a new scalar/vector obtained from logBase2 of C.
+/// If C is a scalar/fixed width vector of known powers of 2, then this
+/// function returns a new scalar/fixed width vector obtained from logBase2
+/// of C.
 /// Return a null pointer otherwise.
 static Constant *getLogBase2(Type *Ty, Constant *C) {
   const APInt *IVal;
   if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
     return ConstantInt::get(Ty, IVal->logBase2());
 
-  if (!Ty->isVectorTy())
+  // FIXME: We can extract pow of 2 of splat constant for scalable vectors.
+  if (!isa<FixedVectorType>(Ty))
     return nullptr;
 
   SmallVector<Constant *, 4> Elts;
-  for (unsigned I = 0, E = cast<VectorType>(Ty)->getNumElements(); I != E;
+  for (unsigned I = 0, E = cast<FixedVectorType>(Ty)->getNumElements(); I != E;
        ++I) {
     Constant *Elt = C->getAggregateElement(I);
     if (!Elt)
