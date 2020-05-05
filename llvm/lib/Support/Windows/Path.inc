@@ -101,17 +101,12 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   }
 
   // Remove '.' and '..' because long paths treat these as real path components.
+  llvm::sys::path::native(Path8Str, path::Style::windows);
   llvm::sys::path::remove_dots(Path8Str, true);
 
   const StringRef RootName = llvm::sys::path::root_name(Path8Str);
   assert(!RootName.empty() &&
          "Root name cannot be empty for an absolute path!");
-
-  // llvm::sys::path::remove_dots, used above, can leave a '/' after the root
-  // name and long paths must use '\' as the separator.
-  const size_t RootNameSize = RootName.size();
-  if (RootNameSize < Path8Str.size() && Path8Str[RootNameSize] == '/')
-    Path8Str[RootNameSize] = '\\';
 
   SmallString<2 * MAX_PATH> FullPath(LongPathPrefix);
   if (RootName[1] != ':') { // Check if UNC.
