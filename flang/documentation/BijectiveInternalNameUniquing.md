@@ -49,10 +49,48 @@ The uniqued name of `fun` becomes:
 
    * A common block name will be prefixed with `B`
 
+Given:
+```
+   common /variables/ i, j
+```
+
+The uniqued name of `variables` becomes:
+```
+    _QBvariables
+```
+
+Given:
+```
+   common i, j
+```
+
+The uniqued name in case of `blank common block` becomes:
+```
+    _QB
+```
+
 ### Module scope global data
 
    * A global data entity is prefixed with `E`
    * A global entity that is constant (parameter) will be prefixed with `EC`
+
+Given:
+```
+    module mod
+      integer :: intvar
+      real, parameter :: pi = 3.14
+    end module
+```
+
+The uniqued name of `intvar` becomes:
+```
+    _QMmodEintvar
+```
+
+The uniqued name of `pi` becomes:
+```
+    _QMmodECpi
+```
 
 ### Procedures/Subprograms
 
