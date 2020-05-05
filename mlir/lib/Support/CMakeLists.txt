@@ -35,6 +35,9 @@ target_link_libraries(MLIROptLib
 
 add_llvm_library(MLIRJitRunner
   JitRunner.cpp
+
+  DEPENDS
+  intrinsics_gen
 )
 target_link_libraries(MLIRJitRunner
   PUBLIC

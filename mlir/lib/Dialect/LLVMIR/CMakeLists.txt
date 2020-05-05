@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRLLVMIR
   DEPENDS
   MLIRLLVMOpsIncGen
   MLIRLLVMConversionsIncGen
+  intrinsics_gen
   )
 target_link_libraries(MLIRLLVMIR
   PUBLIC
@@ -35,6 +36,7 @@ add_mlir_dialect_library(MLIRLLVMAVX512
   DEPENDS
   MLIRLLVMAVX512IncGen
   MLIRLLVMAVX512ConversionsIncGen
+  intrinsics_gen
   )
 target_link_libraries(MLIRLLVMAVX512
   PUBLIC
@@ -55,6 +57,7 @@ add_mlir_dialect_library(MLIRNVVMIR
   DEPENDS
   MLIRNVVMOpsIncGen
   MLIRNVVMConversionsIncGen
+  intrinsics_gen
   )
 target_link_libraries(MLIRNVVMIR
   PUBLIC
@@ -75,6 +78,7 @@ add_mlir_dialect_library(MLIRROCDLIR
   DEPENDS
   MLIRROCDLOpsIncGen
   MLIRROCDLConversionsIncGen
+  intrinsics_gen
   )
 target_link_libraries(MLIRROCDLIR
   PUBLIC

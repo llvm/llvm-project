@@ -20,6 +20,7 @@ add_mlir_conversion_library(MLIRGPUtoCUDATransforms
 
   DEPENDS
   MLIRConversionPassIncGen
+  intrinsics_gen
 )
 target_link_libraries(MLIRGPUtoCUDATransforms
   PUBLIC
