@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  LineEditor
   Support
   )
 add_clang_executable(clangd-index-server
@@ -8,6 +7,7 @@ add_clang_executable(clangd-index-server
   DEPENDS
   RemoteIndexProtos
   )
+
 target_link_libraries(clangd-index-server
   PRIVATE
   clangDaemon
