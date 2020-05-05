@@ -60,6 +60,7 @@ TEST_CASE(test_constructor_signatures)
 
 TEST_CASE(test_construction_from_bad_path)
 {
+    static_test_env static_env;
     std::error_code ec;
     directory_options opts = directory_options::none;
     const directory_iterator endIt;
@@ -169,6 +170,7 @@ TEST_CASE(test_open_on_empty_directory_equals_end)
 
 TEST_CASE(test_open_on_directory_succeeds)
 {
+    static_test_env static_env;
     const path testDir = StaticEnv::Dir;
     std::set<path> dir_contents(std::begin(StaticEnv::DirIterationList),
                                 std::end(  StaticEnv::DirIterationList));
@@ -190,6 +192,7 @@ TEST_CASE(test_open_on_directory_succeeds)
 
 TEST_CASE(test_open_on_file_fails)
 {
+    static_test_env static_env;
     const path testFile = StaticEnv::File;
     const directory_iterator endIt{};
     {
@@ -225,6 +228,7 @@ TEST_CASE(test_open_on_dot_dir)
 
 TEST_CASE(test_open_on_symlink)
 {
+    static_test_env static_env;
     const path symlinkToDir = StaticEnv::SymlinkToDir;
     std::set<path> dir_contents;
     for (path const& p : StaticEnv::DirIterationList) {

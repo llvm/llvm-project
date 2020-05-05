@@ -43,6 +43,7 @@ TEST_CASE(test_function_signatures)
 
 TEST_CASE(test_ranged_for_loop)
 {
+    static_test_env static_env;
     const path testDir = StaticEnv::Dir;
     std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
                                 std::end(  StaticEnv::RecDirIterationList));

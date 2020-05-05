@@ -3,7 +3,7 @@
 
 #include "filesystem_include.h"
 
-#include <unistd.h> // for ftruncate
+#include <unistd.h> // for ftruncate, symlink, unlink
 
 #include <cassert>
 #include <cstdio> // for printf
@@ -105,6 +105,13 @@ static const fs::path RecDirFollowSymlinksIterationList[] = {
     makePath("dir1/dir2/symlink_to_dir3/file5"),
 };
 
+static const std::pair<fs::path, fs::path> SymlinkList[] = {
+    {"dne",        makePath("bad_symlink")},
+    {"dir1",       makePath("symlink_to_dir")},
+    {"empty_file", makePath("symlink_to_empty_file")},
+    {"dir3",       makePath("dir1/dir2/symlink_to_dir3")}
+};
+
 } // namespace StaticEnv
 
 namespace random_utils {
@@ -120,6 +127,39 @@ inline char random_hex_char() {
 }
 
 } // namespace random_utils
+
+/// A RAII object that prepares the 'static_test_env' directory for usage in
+/// tests.
+///
+/// Namely, it creates some symlinks that tests expect to be present.
+/// We do it here instead of storing them in the repo to be
+/// cross-toolchain-friendly. The primary use case for this are Windows-hosted
+/// cross-toolchains.
+/// Windows doesn't really have a concept of symlinks. So, when the monorepo
+/// is cloned, those symlinks turn to ordinary text files.
+/// If we cross-compiled libc++ for some symlink-friendly system
+/// (e. g. Linux) and ran tests on the target system, some tests would fail.
+/// Instead, we create symlinks here, when a test is already being executed.
+class static_test_env {
+public:
+  static_test_env() {
+    for (const auto *link = std::begin(StaticEnv::SymlinkList);
+         link != std::end(StaticEnv::SymlinkList);
+         ++link) {
+      int ret = ::symlink(link->first.c_str(), link->second.c_str());
+      assert(ret == 0);
+    }
+  }
+
+  ~static_test_env() {
+    for (const auto *link = std::begin(StaticEnv::SymlinkList);
+         link != std::end(StaticEnv::SymlinkList);
+         ++link) {
+      int ret = ::unlink(link->second.c_str());
+      assert(ret == 0);
+    }
+  }
+};
 
 struct scoped_test_env
 {
