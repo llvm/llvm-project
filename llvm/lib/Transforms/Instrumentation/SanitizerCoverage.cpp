@@ -945,7 +945,12 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto FlagPtr = IRB.CreateGEP(
         FunctionBoolArray->getValueType(), FunctionBoolArray,
         {ConstantInt::get(IntptrTy, 0), ConstantInt::get(IntptrTy, Idx)});
-    auto Store = IRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    auto Load = IRB.CreateLoad(Int1Ty, FlagPtr);
+    auto ThenTerm =
+        SplitBlockAndInsertIfThen(IRB.CreateIsNull(Load), &*IP, false);
+    IRBuilder<> ThenIRB(ThenTerm);
+    auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    SetNoSanitizeMetadata(Load);
     SetNoSanitizeMetadata(Store);
   }
   if (Options.StackDepth && IsEntryBB && !IsLeafFunc) {
