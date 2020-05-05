@@ -36,7 +36,7 @@ class SwiftExpressionParser;
 /// LLDB uses expressions for various purposes, notably to call functions
 /// and as a backend for the expr command.  SwiftUserExpression encapsulates
 /// the objects needed to parse and interpret or JIT an expression.  It
-/// uses the Clang parser to produce LLVM IR from the expression.
+/// uses the Swift parser to produce LLVM IR from the expression.
 //----------------------------------------------------------------------
 class SwiftUserExpression : public LLVMUserExpression {
   // LLVM RTTI support
