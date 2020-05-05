@@ -1054,6 +1054,15 @@ SwiftLanguageRuntimeImpl::DoArchetypeBindingForType(StackFrame &stack_frame,
     // Replace opaque types with their underlying types when possible.
     swift::Mangle::ASTMangler mangler(true);
 
+    // Rewrite all dynamic self types to their static self types.
+    target_swift_type =
+        target_swift_type.transform([](swift::Type type) -> swift::Type {
+          if (auto *dynamic_self =
+                  llvm::dyn_cast<swift::DynamicSelfType>(type.getPointer()))
+            return dynamic_self->getSelfType();
+          return type;
+        });
+
     while (target_swift_type->hasOpaqueArchetype()) {
       auto old_type = target_swift_type;
       target_swift_type = target_swift_type.subst(
