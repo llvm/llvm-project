@@ -261,6 +261,15 @@ define double @pow_ok_ten_base(double %e) {
   ret double %call
 }
 
+define double @pow_ok_denorm_base(double %e) {
+; CHECK-LABEL: @pow_ok_denorm_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0xFFFFFFFF, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 0x00000000FFFFFFFF, double %e)
+  ret double %call
+}
+
 define float @powf_ok_base(float %e) {
 ; CHECK-LABEL: @powf_ok_base(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0xBFE07762{{.*}}
@@ -298,6 +307,15 @@ define float @powf_ok_ten_base(float %e) {
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
   %call = tail call afn nnan ninf float @powf(float 1.000000e+01, float %e)
+  ret float %call
+}
+
+define float @powf_ok_denorm_base(float %e) {
+; CHECK-LABEL: @powf_ok_denorm_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x3780000000000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0x3780000000000000, float %e)
   ret float %call
 }
 
