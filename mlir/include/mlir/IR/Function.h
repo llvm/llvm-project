@@ -32,9 +32,10 @@ namespace mlir {
 /// symbols referenced by name via a string attribute).
 class FuncOp
     : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-                OpTrait::IsIsolatedFromAbove, OpTrait::FunctionLike,
-                OpTrait::AutomaticAllocationScope, OpTrait::PolyhedralScope,
-                CallableOpInterface::Trait, SymbolOpInterface::Trait> {
+                OpTrait::OneRegion, OpTrait::IsIsolatedFromAbove,
+                OpTrait::FunctionLike, OpTrait::AutomaticAllocationScope,
+                OpTrait::PolyhedralScope, CallableOpInterface::Trait,
+                SymbolOpInterface::Trait> {
 public:
   using Op::Op;
   using Op::print;

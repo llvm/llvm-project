@@ -583,6 +583,13 @@ class OneRegion : public TraitBase<ConcreteType, OneRegion> {
 public:
   Region &getRegion() { return this->getOperation()->getRegion(0); }
 
+  /// Returns a range of operations within the region of this operation.
+  auto getOps() { return getRegion().getOps(); }
+  template <typename OpT>
+  auto getOps() {
+    return getRegion().template getOps<OpT>();
+  }
+
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifyOneRegion(op);
   }
