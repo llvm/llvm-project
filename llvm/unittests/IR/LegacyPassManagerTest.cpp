@@ -687,9 +687,9 @@ namespace llvm {
       Passes.add(P);
       Passes.run(*M);
       ASSERT_EQ(P->SetupWorked, 1U);
-      ASSERT_EQ(P->NumSCCs, 5U);
-      ASSERT_EQ(P->NumFns, 8U);
-      ASSERT_EQ(P->NumFnDecls, 3U);
+      ASSERT_EQ(P->NumSCCs, 4U);
+      ASSERT_EQ(P->NumFns, 6U);
+      ASSERT_EQ(P->NumFnDecls, 1U);
       ASSERT_EQ(M->getFunctionList().size(), 3U);
       ASSERT_EQ(P->NumExtCalledBefore, /* test1, 2a, 2b, 3, 4 */ 5U);
       ASSERT_EQ(P->NumExtCalledAfter, /* test1, 3repl, 4 */ 3U);
