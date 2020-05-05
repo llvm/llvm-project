@@ -1,4 +1,8 @@
-add_llvm_library(LLVMMLIRTableGen
+# This library is unusual, since mlir-tblgen depends on it.
+# For non-obvious reasons, linking mlir-tblgen fails with
+# LLVM_BUILD_LLVM_DYLIB and LLVM_LINK_LLVM_DYLIB unless
+# DISABLE_LLVM_LINK_LLVM_DYLIB is set.
+llvm_add_library(LLVMMLIRTableGen STATIC
   Argument.cpp
   Attribute.cpp
   Constraint.cpp
@@ -16,10 +20,14 @@ add_llvm_library(LLVMMLIRTableGen
   Successor.cpp
   Type.cpp
 
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/TableGen
+
+  LINK_COMPONENTS
+  TableGen
+  Demangle
   )
-target_link_libraries(LLVMMLIRTableGen
-  PUBLIC
-  LLVMSupport
-  LLVMTableGen)
+
+mlir_check_all_link_libraries(LLVMMLIRTableGen)

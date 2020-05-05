@@ -3,12 +3,9 @@ add_mlir_dialect_library(MLIRLinalgAnalysis
   
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
-  )
 
-target_link_libraries(MLIRLinalgAnalysis
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRLinalgOps
   MLIRStandardOps
-  LLVMSupport
   )

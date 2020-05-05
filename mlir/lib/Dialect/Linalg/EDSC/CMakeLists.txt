@@ -3,10 +3,8 @@ add_mlir_dialect_library(MLIRLinalgEDSC
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
-  )
 
-target_link_libraries(MLIRLinalgEDSC
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIREDSC
   MLIRIR
   MLIRAffineOps
@@ -14,5 +12,4 @@ target_link_libraries(MLIRLinalgEDSC
   MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
-  LLVMSupport
   )

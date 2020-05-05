@@ -8,14 +8,12 @@ add_mlir_dialect_library(MLIRLoopOpsTransforms
 
   DEPENDS
   MLIRLoopPassIncGen
-  )
-target_link_libraries(MLIRLoopOpsTransforms
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRIR
   MLIRPass
   MLIRLoopOps
   MLIRStandardOps
   MLIRSupport
-  LLVMSupport
   )
