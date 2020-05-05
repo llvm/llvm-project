@@ -184,6 +184,7 @@ public:
 
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -191,7 +192,7 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  unsigned getCFInstrCost(unsigned Opcode);
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
 
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
@@ -225,23 +226,30 @@ public:
 
   int getInlinerVectorBonusPercent() { return 0; }
 
-  int getArithmeticReductionCost(unsigned Opcode,
-                                 VectorType *Ty,
-                                 bool IsPairwise);
+  int getArithmeticReductionCost(
+      unsigned Opcode,
+      VectorType *Ty,
+      bool IsPairwise,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+
   template <typename T>
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy, ArrayRef<T *> Args,
                             FastMathFlags FMF, unsigned VF,
+                            TTI::TargetCostKind CostKind,
                             const Instruction *I = nullptr);
-  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Type *> Tys, FastMathFlags FMF,
-                            unsigned ScalarizationCostPassed = UINT_MAX,
-                            const Instruction *I = nullptr);
-  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Value *> Args, FastMathFlags FMF,
-                            unsigned VF = 1, const Instruction *I = nullptr);
-  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                             bool IsPairwiseForm,
-                             bool IsUnsigned);
+  int getIntrinsicInstrCost(
+    Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
+    unsigned ScalarizationCostPassed = UINT_MAX,
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+    const Instruction *I = nullptr);
+  int getIntrinsicInstrCost(
+    Intrinsic::ID IID, Type *RetTy, ArrayRef<Value *> Args, FastMathFlags FMF,
+    unsigned VF = 1, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+    const Instruction *I = nullptr);
+  int getMinMaxReductionCost(
+    VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
                        TTI::TargetCostKind CostKind);
 };
@@ -282,7 +290,7 @@ public:
                                     unsigned Alignment,
                                     unsigned AddrSpace) const;
   unsigned getMaxInterleaveFactor(unsigned VF);
-  unsigned getCFInstrCost(unsigned Opcode);
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
   int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
 };
 

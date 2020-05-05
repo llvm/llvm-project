@@ -170,6 +170,7 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
 }
 
 int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
+                                       TTI::TargetCostKind CostKind,
                                        TTI::OperandValueKind Op1Info,
                                        TTI::OperandValueKind Op2Info,
                                        TTI::OperandValueProperties Opd1PropInfo,
@@ -256,20 +257,25 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
       // The OperandValue properties may not be the same as that of the previous
       // operation; conservatively assume OP_None.
       int Cost =
-          2 * getArithmeticInstrCost(Instruction::AShr, Ty, Op1Info, Op2Info,
+          2 * getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Op1Info,
+                                     Op2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::LShr, Ty, Op1Info, Op2Info,
+      Cost += getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Info,
+                                     Op2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Add, Ty, Op1Info, Op2Info,
+      Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind, Op1Info,
+                                     Op2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
 
       if (ISD == ISD::SREM) {
         // For SREM: (X % C) is the equivalent of (X - (X/C)*C)
-        Cost += getArithmeticInstrCost(Instruction::Mul, Ty, Op1Info, Op2Info);
-        Cost += getArithmeticInstrCost(Instruction::Sub, Ty, Op1Info, Op2Info);
+        Cost += getArithmeticInstrCost(Instruction::Mul, Ty, CostKind, Op1Info,
+                                       Op2Info);
+        Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Op1Info,
+                                       Op2Info);
       }
 
       return Cost;
@@ -277,12 +283,14 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
 
     // Vector unsigned division/remainder will be simplified to shifts/masks.
     if (ISD == ISD::UDIV)
-      return getArithmeticInstrCost(Instruction::LShr, Ty, Op1Info, Op2Info,
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                    Op1Info, Op2Info,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
 
     else // UREM
-      return getArithmeticInstrCost(Instruction::And, Ty, Op1Info, Op2Info,
+      return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                    Op1Info, Op2Info,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
   }
@@ -596,7 +604,8 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
          Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
       // On AVX512, a packed v32i16 shift left by a constant build_vector
       // is lowered into a vector multiply (vpmullw).
-      return getArithmeticInstrCost(Instruction::Mul, Ty, Op1Info, Op2Info,
+      return getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                    Op1Info, Op2Info,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
   }
@@ -608,7 +617,8 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
          Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
       // On AVX2, a packed v16i16 shift left by a constant build_vector
       // is lowered into a vector multiply (vpmullw).
-      return getArithmeticInstrCost(Instruction::Mul, Ty, Op1Info, Op2Info,
+      return getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                    Op1Info, Op2Info,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
 
@@ -916,13 +926,13 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   if (LT.second.isVector() && (ISD == ISD::SDIV || ISD == ISD::SREM ||
                                ISD == ISD::UDIV || ISD == ISD::UREM)) {
     int ScalarCost = getArithmeticInstrCost(
-        Opcode, Ty->getScalarType(), Op1Info, Op2Info,
+        Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info,
         TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
     return 20 * LT.first * LT.second.getVectorNumElements() * ScalarCost;
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info);
 }
 
 int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *BaseTp,
@@ -1353,6 +1363,7 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *BaseTp,
 }
 
 int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                 TTI::TargetCostKind CostKind,
                                  const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
@@ -1966,7 +1977,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
   // The function getSimpleVT only handles simple value types.
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return BaseT::getCastInstrCost(Opcode, Dst, Src);
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
 
   MVT SimpleSrcTy = SrcTy.getSimpleVT();
   MVT SimpleDstTy = DstTy.getSimpleVT();
@@ -2027,10 +2038,11 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       return Entry->Cost;
   }
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src, I);
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
 }
 
 int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                   TTI::TargetCostKind CostKind,
                                    const Instruction *I) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
@@ -2214,7 +2226,7 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
       return LT.first * (ExtraCost + Entry->Cost);
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
 }
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
@@ -2222,6 +2234,7 @@ unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Type *> Tys, FastMathFlags FMF,
                                       unsigned ScalarizationCostPassed,
+                                      TTI::TargetCostKind CostKind,
                                       const Instruction *I) {
   // Costs should match the codegen from:
   // BITREVERSE: llvm\test\CodeGen\X86\vector-bitreverse.ll
@@ -2682,12 +2695,14 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
   }
 
   return BaseT::getIntrinsicInstrCost(IID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed, I);
+                                      ScalarizationCostPassed, CostKind, I);
 }
 
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Value *> Args, FastMathFlags FMF,
-                                      unsigned VF, const Instruction *I) {
+                                      unsigned VF,
+                                      TTI::TargetCostKind CostKind,
+                                      const Instruction *I) {
   static const CostTblEntry AVX512CostTbl[] = {
     { ISD::ROTL,       MVT::v8i64,   1 },
     { ISD::ROTL,       MVT::v4i64,   1 },
@@ -2777,7 +2792,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
       return LT.first * Entry->Cost;
   }
 
-  return BaseT::getIntrinsicInstrCost(IID, RetTy, Args, FMF, VF, I);
+  return BaseT::getIntrinsicInstrCost(IID, RetTy, Args, FMF, VF, CostKind, I);
 }
 
 int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
@@ -2933,6 +2948,7 @@ unsigned X86TTIImpl::getScalarizationOverhead(Type *Ty,
 
 int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 MaybeAlign Alignment, unsigned AddressSpace,
+                                TTI::TargetCostKind CostKind,
                                 const Instruction *I) {
   // Handle non-power-of-two vectors such as <3 x float>
   if (VectorType *VTy = dyn_cast<VectorType>(Src)) {
@@ -2953,7 +2969,7 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if (!isPowerOf2_32(NumElem)) {
       APInt DemandedElts = APInt::getAllOnesValue(NumElem);
       int Cost = BaseT::getMemoryOpCost(Opcode, VTy->getScalarType(), Alignment,
-                                        AddressSpace);
+                                        AddressSpace, CostKind);
       int SplitCost = getScalarizationOverhead(Src, DemandedElts,
                                                Opcode == Instruction::Load,
                                                Opcode == Instruction::Store);
@@ -2979,14 +2995,16 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
 int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
                                       unsigned Alignment,
-                                      unsigned AddressSpace) {
+                                      unsigned AddressSpace,
+                                      TTI::TargetCostKind CostKind) {
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
 
   VectorType *SrcVTy = dyn_cast<VectorType>(SrcTy);
   if (!SrcVTy)
     // To calculate scalar take the regular cost, without mask
-    return getMemoryOpCost(Opcode, SrcTy, MaybeAlign(Alignment), AddressSpace);
+    return getMemoryOpCost(Opcode, SrcTy, MaybeAlign(Alignment), AddressSpace,
+                           CostKind);
 
   unsigned NumElem = SrcVTy->getNumElements();
   VectorType *MaskTy =
@@ -2999,14 +3017,16 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
     int MaskSplitCost =
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
     int ScalarCompareCost = getCmpSelInstrCost(
-        Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr);
-    int BranchCost = getCFInstrCost(Instruction::Br);
+        Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
+        CostKind);
+    int BranchCost = getCFInstrCost(Instruction::Br, CostKind);
     int MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
     int ValueSplitCost =
         getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                         MaybeAlign(Alignment), AddressSpace);
+                                         MaybeAlign(Alignment), AddressSpace,
+                                         CostKind);
     return MemopCost + ValueSplitCost + MaskSplitCost + MaskCmpCost;
   }
 
@@ -3061,10 +3081,11 @@ int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
 }
 
 int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                           bool IsPairwise) {
+                                           bool IsPairwise,
+                                           TTI::TargetCostKind CostKind) {
   // Just use the default implementation for pair reductions.
   if (IsPairwise)
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise);
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise, CostKind);
 
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
@@ -3134,7 +3155,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     // Type needs to be split. We need LT.first - 1 arithmetic ops.
     VectorType *SingleOpTy =
         VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
-    ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy);
+    ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
     ArithmeticCost *= LT.first - 1;
   }
 
@@ -3204,7 +3225,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       // Type needs to be split. We need LT.first - 1 arithmetic ops.
       Type *SingleOpTy =
           VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
-      ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy);
+      ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
       ArithmeticCost *= LT.first - 1;
     }
 
@@ -3221,7 +3242,8 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       if (const auto *Entry = CostTableLookup(SSE2BoolReduction, ISD, MTy))
         return ArithmeticCost + Entry->Cost;
 
-    return BaseT::getArithmeticReductionCost(Opcode, ValVTy, IsPairwise);
+    return BaseT::getArithmeticReductionCost(Opcode, ValVTy, IsPairwise,
+                                             CostKind);
   }
 
   unsigned NumVecElts = ValVTy->getNumElements();
@@ -3230,7 +3252,8 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   // Special case power of 2 reductions where the scalar type isn't changed
   // by type legalization.
   if (!isPowerOf2_32(NumVecElts) || ScalarSize != MTy.getScalarSizeInBits())
-    return BaseT::getArithmeticReductionCost(Opcode, ValVTy, IsPairwise);
+    return BaseT::getArithmeticReductionCost(Opcode, ValVTy, IsPairwise,
+                                             CostKind);
 
   unsigned ReductionCost = 0;
 
@@ -3239,7 +3262,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {
     // Type needs to be split. We need LT.first - 1 arithmetic ops.
     Ty = VectorType::get(ValVTy->getElementType(), MTy.getVectorNumElements());
-    ReductionCost = getArithmeticInstrCost(Opcode, Ty);
+    ReductionCost = getArithmeticInstrCost(Opcode, Ty, CostKind);
     ReductionCost *= LT.first - 1;
     NumVecElts = MTy.getVectorNumElements();
   }
@@ -3279,13 +3302,14 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       auto *ShiftTy = VectorType::get(
           Type::getIntNTy(ValVTy->getContext(), Size), 128 / Size);
       ReductionCost += getArithmeticInstrCost(
-          Instruction::LShr, ShiftTy, TargetTransformInfo::OK_AnyValue,
+          Instruction::LShr, ShiftTy, CostKind,
+          TargetTransformInfo::OK_AnyValue,
           TargetTransformInfo::OK_UniformConstantValue,
           TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
     }
 
     // Add the arithmetic op for this level.
-    ReductionCost += getArithmeticInstrCost(Opcode, Ty);
+    ReductionCost += getArithmeticInstrCost(Opcode, Ty, CostKind);
   }
 
   // Add the final extract element to the cost.
@@ -3409,16 +3433,19 @@ int X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned) {
     CmpOpcode = Instruction::ICmp;
   }
 
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   // Otherwise fall back to cmp+select.
-  return getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
-         getCmpSelInstrCost(Instruction::Select, Ty, CondTy, nullptr);
+  return getCmpSelInstrCost(CmpOpcode, Ty, CondTy, CostKind) +
+         getCmpSelInstrCost(Instruction::Select, Ty, CondTy, CostKind);
 }
 
 int X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
-                                       bool IsPairwise, bool IsUnsigned) {
+                                       bool IsPairwise, bool IsUnsigned,
+                                       TTI::TargetCostKind CostKind) {
   // Just use the default implementation for pair reductions.
   if (IsPairwise)
-    return BaseT::getMinMaxReductionCost(ValTy, CondTy, IsPairwise, IsUnsigned);
+    return BaseT::getMinMaxReductionCost(ValTy, CondTy, IsPairwise, IsUnsigned,
+                                         CostKind);
 
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
 
@@ -3534,7 +3561,8 @@ int X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
   // by type legalization.
   if (!isPowerOf2_32(ValVTy->getNumElements()) ||
       ScalarSize != MTy.getScalarSizeInBits())
-    return BaseT::getMinMaxReductionCost(ValTy, CondTy, IsPairwise, IsUnsigned);
+    return BaseT::getMinMaxReductionCost(ValTy, CondTy, IsPairwise, IsUnsigned,
+                                         CostKind);
 
   // Now handle reduction with the legal type, taking into account size changes
   // at each level.
@@ -3571,7 +3599,8 @@ int X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
       VectorType *ShiftTy = VectorType::get(
           Type::getIntNTy(ValTy->getContext(), Size), 128 / Size);
       MinMaxCost += getArithmeticInstrCost(
-          Instruction::LShr, ShiftTy, TargetTransformInfo::OK_AnyValue,
+          Instruction::LShr, ShiftTy, TTI::TCK_RecipThroughput,
+          TargetTransformInfo::OK_AnyValue,
           TargetTransformInfo::OK_UniformConstantValue,
           TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
     }
@@ -3599,7 +3628,8 @@ int X86TTIImpl::getIntImmCost(int64_t Val) {
   return 2 * TTI::TCC_Basic;
 }
 
-int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
+int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                              TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -3634,7 +3664,7 @@ int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
 }
 
 int X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                              Type *Ty) {
+                                  Type *Ty, TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -3721,17 +3751,18 @@ int X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Im
 
   if (Idx == ImmIdx) {
     int NumConstants = divideCeil(BitSize, 64);
-    int Cost = X86TTIImpl::getIntImmCost(Imm, Ty);
+    int Cost = X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)
                : Cost;
   }
 
-  return X86TTIImpl::getIntImmCost(Imm, Ty);
+  return X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
 int X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                    const APInt &Imm, Type *Ty) {
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -3762,7 +3793,7 @@ int X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   }
-  return X86TTIImpl::getIntImmCost(Imm, Ty);
+  return X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
 unsigned
@@ -3842,7 +3873,8 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, Value *Ptr,
                              ? ST->getGatherOverhead()
                              : ST->getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                           MaybeAlign(Alignment), AddressSpace);
+                                           MaybeAlign(Alignment), AddressSpace,
+                                           TTI::TCK_RecipThroughput);
 }
 
 /// Return the cost of full scalarization of gather / scatter operation.
@@ -3858,6 +3890,7 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
                                 unsigned AddressSpace) {
   unsigned VF = cast<VectorType>(SrcVTy)->getNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(VF);
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   int MaskUnpackCost = 0;
   if (VariableMask) {
@@ -3867,14 +3900,15 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
     int ScalarCompareCost =
       getCmpSelInstrCost(Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()),
-                         nullptr);
-    int BranchCost = getCFInstrCost(Instruction::Br);
+                         nullptr, CostKind);
+    int BranchCost = getCFInstrCost(Instruction::Br, CostKind);
     MaskUnpackCost += VF * (BranchCost + ScalarCompareCost);
   }
 
   // The cost of the scalar loads/stores.
   int MemoryOpCost = VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                          MaybeAlign(Alignment), AddressSpace);
+                                          MaybeAlign(Alignment), AddressSpace,
+                                          CostKind);
 
   int InsertExtractCost = 0;
   if (Opcode == Instruction::Load)
@@ -3892,10 +3926,11 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 }
 
 /// Calculate the cost of Gather / Scatter operation
-int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
-                                       Value *Ptr, bool VariableMask,
-                                       unsigned Alignment,
-                                       const Instruction *I = nullptr) {
+int X86TTIImpl::getGatherScatterOpCost(
+    unsigned Opcode, Type *SrcVTy, Value *Ptr, bool VariableMask,
+    unsigned Alignment, TTI::TargetCostKind CostKind,
+    const Instruction *I = nullptr) {
+
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   unsigned VF = cast<VectorType>(SrcVTy)->getNumElements();
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
@@ -4177,19 +4212,21 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
                                                ArrayRef<unsigned> Indices,
                                                unsigned Alignment,
                                                unsigned AddressSpace,
+                                               TTI::TargetCostKind CostKind,
                                                bool UseMaskForCond,
                                                bool UseMaskForGaps) {
 
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
+                                             Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
 
   // We currently Support only fully-interleaved groups, with no gaps.
   // TODO: Support also strided loads (interleaved-groups with gaps).
   if (Indices.size() && Indices.size() != Factor)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace);
+                                             Alignment, AddressSpace,
+                                             CostKind);
 
   // VecTy for interleave memop is <VF*Factor x Elt>.
   // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
@@ -4201,7 +4238,8 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   // (see MachineValueType.h::getVectorVT()).
   if (!LegalVT.isVector())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace);
+                                             Alignment, AddressSpace,
+                                             CostKind);
 
   unsigned VF = cast<VectorType>(VecTy)->getNumElements() / Factor;
   Type *ScalarTy = cast<VectorType>(VecTy)->getElementType();
@@ -4217,13 +4255,15 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
       VectorType::get(cast<VectorType>(VecTy)->getElementType(),
                       LegalVT.getVectorNumElements());
   unsigned MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy,
-                                       MaybeAlign(Alignment), AddressSpace);
+                                       MaybeAlign(Alignment), AddressSpace,
+                                       CostKind);
 
   VectorType *VT = VectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
   if (!ETy.isSimple())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace);
+                                             Alignment, AddressSpace,
+                                             CostKind);
 
   // TODO: Complete for other data-types and strides.
   // Each combination of Stride, ElementTy and VF results in a different
@@ -4282,7 +4322,7 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                           Alignment, AddressSpace);
+                                           Alignment, AddressSpace, CostKind);
 }
 
 // Get estimation for interleaved load/store operations and strided load.
@@ -4294,12 +4334,13 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
                                                  ArrayRef<unsigned> Indices,
                                                  unsigned Alignment,
                                                  unsigned AddressSpace,
+                                                 TTI::TargetCostKind CostKind,
                                                  bool UseMaskForCond,
                                                  bool UseMaskForGaps) {
 
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
+                                             Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
 
   // VecTy for interleave memop is <VF*Factor x Elt>.
@@ -4318,7 +4359,8 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
       VectorType::get(cast<VectorType>(VecTy)->getElementType(),
                       LegalVT.getVectorNumElements());
   unsigned MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy,
-                                       MaybeAlign(Alignment), AddressSpace);
+                                       MaybeAlign(Alignment), AddressSpace,
+                                       CostKind);
 
   unsigned VF = cast<VectorType>(VecTy)->getNumElements() / Factor;
   MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
@@ -4421,6 +4463,7 @@ int X86TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                            ArrayRef<unsigned> Indices,
                                            unsigned Alignment,
                                            unsigned AddressSpace,
+                                           TTI::TargetCostKind CostKind,
                                            bool UseMaskForCond,
                                            bool UseMaskForGaps) {
   auto isSupportedOnAVX512 = [](Type *VecTy, bool HasBW) {
@@ -4434,14 +4477,14 @@ int X86TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   };
   if (ST->hasAVX512() && isSupportedOnAVX512(VecTy, ST->hasBWI()))
     return getInterleavedMemoryOpCostAVX512(Opcode, VecTy, Factor, Indices,
-                                            Alignment, AddressSpace,
+                                            Alignment, AddressSpace, CostKind,
                                             UseMaskForCond, UseMaskForGaps);
   if (ST->hasAVX2())
     return getInterleavedMemoryOpCostAVX2(Opcode, VecTy, Factor, Indices,
-                                          Alignment, AddressSpace,
+                                          Alignment, AddressSpace, CostKind,
                                           UseMaskForCond, UseMaskForGaps);
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                           Alignment, AddressSpace,
+                                           Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);
 }
