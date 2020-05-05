@@ -64,11 +64,11 @@ define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) 
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+4
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    v_mov_b32_e32 v32, 0
+; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s34
 ; GCN-NEXT:    v_mov_b32_e32 v1, s35
-; GCN-NEXT:    global_store_dword v[0:1], v32, off
+; GCN-NEXT:    global_store_dword v[0:1], v40, off
 ; GCN-NEXT:    s_endpgm
   call void @func(i32 0)
   store i32 0, i32 addrspace(1)* %ptr

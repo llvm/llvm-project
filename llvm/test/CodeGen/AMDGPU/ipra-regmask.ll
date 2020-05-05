@@ -3,7 +3,7 @@
 
 ; CHECK-DAG: csr Clobbered Registers: $vgpr0 $vgpr0_hi16 $vgpr0_lo16 $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 $vgpr0_vgpr1_vgpr2_vgpr3 $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 $vgpr0_vgpr1 $vgpr0_vgpr1_vgpr2 {{$}}
 define void @csr() #0 {
-  call void asm sideeffect "", "~{v0},~{v36},~{v37}"() #0
+  call void asm sideeffect "", "~{v0},~{v44},~{v45}"() #0
   ret void
 }
 

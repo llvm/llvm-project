@@ -127,8 +127,8 @@ define void @callee_with_stack_and_call() #0 {
 ; GCN-DAG: v_writelane_b32 [[CSR_VGPR]], s31, 1
 ; GCN: s_swappc_b64
 
-; GCN-DAG: v_readlane_b32 s4, v32, 0
-; GCN-DAG: v_readlane_b32 s5, v32, 1
+; GCN-DAG: v_readlane_b32 s4, v40, 0
+; GCN-DAG: v_readlane_b32 s5, v40, 1
 
 ; GCN: s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT: v_readlane_b32 s33, [[CSR_VGPR]], [[FP_SPILL_LANE]]
@@ -168,6 +168,7 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
   call void asm sideeffect "", "~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15}"() #0
   call void asm sideeffect "", "~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23}"() #0
   call void asm sideeffect "", "~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"() #0
+  call void asm sideeffect "", "~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() #0
 
   %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -207,14 +208,14 @@ define void @spill_only_csr_sgpr() {
 ; GCN-NEXT:s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
 ; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
-; GCN-DAG: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s33 offset:8
 
 ; GCN:	;;#ASMSTART
-; GCN-NEXT: ; clobber v33
+; GCN-NEXT: ; clobber v41
 ; GCN-NEXT: ;;#ASMEND
 
-; GCN: buffer_load_dword v33, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: s_mov_b32 s33, s4
@@ -223,7 +224,7 @@ define void @spill_only_csr_sgpr() {
 define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
-  call void asm sideeffect "; clobber v33", "~{v33}"()
+  call void asm sideeffect "; clobber v41", "~{v41}"()
   ret void
 }
 
@@ -232,7 +233,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: v_writelane_b32 v1, s33, 63
 ; GCN-NEXT: s_mov_b32 s33, s32
-; GCN: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN: buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-COUNT-63: v_writelane_b32 v1
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:8
 ; GCN: ;;#ASMSTART
@@ -246,7 +247,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 define void @last_lane_vgpr_for_fp_csr() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
-  call void asm sideeffect "; clobber v33", "~{v33}"()
+  call void asm sideeffect "; clobber v41", "~{v41}"()
   call void asm sideeffect "",
     "~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
     ,~{s50},~{s51},~{s52},~{s53},~{s54},~{s55},~{s56},~{s57},~{s58},~{s59}
@@ -264,14 +265,14 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
-; GCN-NEXT: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-COUNT-64: v_writelane_b32 v1,
 
 ; GCN: buffer_store_dword
 ; GCN: ;;#ASMSTART
 ; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v1
 
-; GCN: buffer_load_dword v33, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
@@ -280,7 +281,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 define void @no_new_vgpr_for_fp_csr() #1 {
   %alloca = alloca i32, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
-  call void asm sideeffect "; clobber v33", "~{v33}"()
+  call void asm sideeffect "; clobber v41", "~{v41}"()
   call void asm sideeffect "",
     "~{s39},~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
     ,~{s50},~{s51},~{s52},~{s53},~{s54},~{s55},~{s56},~{s57},~{s58},~{s59}
@@ -347,20 +348,20 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_store_dword [[CSR_VGPR:v[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
-; GCN-NEXT: v_writelane_b32 v32, s33, 2
-; GCN-NEXT: v_writelane_b32 v32, s30, 0
+; GCN-NEXT: v_writelane_b32 [[CSR_VGPR]], s33, 2
+; GCN-NEXT: v_writelane_b32 [[CSR_VGPR]], s30, 0
 ; GCN-NEXT: s_mov_b32 s33, s32
 
-; GCN-DAG: v_writelane_b32 v32, s31, 1
+; GCN-DAG: v_writelane_b32 [[CSR_VGPR]], s31, 1
 ; GCN-DAG: buffer_store_dword
 ; GCN: s_add_u32 s32, s32, 0x300{{$}}
 
 ; GCN: ;;#ASMSTART
 
-; GCN: v_readlane_b32 s4, v32, 0
-; GCN-NEXT: v_readlane_b32 s5, v32, 1
+; GCN: v_readlane_b32 s4, [[CSR_VGPR]], 0
+; GCN-NEXT: v_readlane_b32 s5, [[CSR_VGPR]], 1
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300{{$}}
-; GCN-NEXT: v_readlane_b32 s33, v32, 2
+; GCN-NEXT: v_readlane_b32 s33, [[CSR_VGPR]], 2
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
@@ -377,11 +378,11 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
     ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
     ,~{s30},~{s31}"() #0
 
-  call void asm sideeffect "; clobber nonpreserved VGPRs",
+  call void asm sideeffect "; clobber nonpreserved initial VGPRs",
     "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
     ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
     ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
-    ,~{v30},~{v31}"() #1
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() #1
 
   ret void
 }
@@ -394,19 +395,19 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; GCN-NEXT: v_mov_b32_e32 [[SCRATCH_VGPR:v[0-9]+]], 0x1008
 ; GCN-NEXT: buffer_store_dword [[CSR_VGPR:v[0-9]+]], [[SCRATCH_VGPR]], s[0:3], s32 offen ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
-; GCN-NEXT: v_writelane_b32 v32, s33, 2
-; GCN-NEXT: v_writelane_b32 v32, s30, 0
+; GCN-NEXT: v_writelane_b32 [[CSR_VGPR]], s33, 2
+; GCN-NEXT: v_writelane_b32 [[CSR_VGPR]], s30, 0
 ; GCN-NEXT: s_mov_b32 s33, s32
-; GCN-DAG: v_writelane_b32 v32, s31, 1
+; GCN-DAG: v_writelane_b32 [[CSR_VGPR]], s31, 1
 ; GCN-DAG: s_add_u32 s32, s32, 0x40300{{$}}
 ; GCN-DAG: buffer_store_dword
 
 ; GCN: ;;#ASMSTART
 
-; GCN: v_readlane_b32 s4, v32, 0
-; GCN-NEXT: v_readlane_b32 s5, v32, 1
+; GCN: v_readlane_b32 s4, [[CSR_VGPR]], 0
+; GCN-NEXT: v_readlane_b32 s5, [[CSR_VGPR]], 1
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x40300{{$}}
-; GCN-NEXT: v_readlane_b32 s33, v32, 2
+; GCN-NEXT: v_readlane_b32 s33, [[CSR_VGPR]], 2
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: v_mov_b32_e32 [[SCRATCH_VGPR:v[0-9]+]], 0x1008
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], [[SCRATCH_VGPR]], s[0:3], s32 offen ; 4-byte Folded Reload
@@ -429,7 +430,7 @@ define void @scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval ali
     "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
     ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
     ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
-    ,~{v30},~{v31}"() #1
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"() #1
 
   ret void
 }

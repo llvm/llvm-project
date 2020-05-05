@@ -727,9 +727,6 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GPRIDX-NEXT:    s_mov_b32 s18, 0
 ; GPRIDX-NEXT:    s_mov_b32 s19, 0x40200000
-; GPRIDX-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GPRIDX-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GPRIDX-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GPRIDX-NEXT:    s_mov_b32 s17, 0x401c0000
 ; GPRIDX-NEXT:    s_mov_b32 s16, s18
 ; GPRIDX-NEXT:    s_mov_b32 s15, 0x40180000
@@ -793,9 +790,6 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
-; GPRIDX-NEXT:    buffer_load_dword v34, off, s[0:3], s32 ; 4-byte Folded Reload
-; GPRIDX-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GPRIDX-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -816,9 +810,6 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL-NEXT:    s_mov_b32 s8, s18
 ; MOVREL-NEXT:    s_mov_b64 s[6:7], 2.0
 ; MOVREL-NEXT:    s_mov_b64 s[4:5], 1.0
-; MOVREL-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; MOVREL-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; MOVREL-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; MOVREL-NEXT:    v_mov_b32_e32 v34, s19
 ; MOVREL-NEXT:    v_mov_b32_e32 v33, s18
 ; MOVREL-NEXT:    v_mov_b32_e32 v32, s17
@@ -868,10 +859,6 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
-; MOVREL-NEXT:    buffer_load_dword v34, off, s[0:3], s32 ; 4-byte Folded Reload
-; MOVREL-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; MOVREL-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
 entry:

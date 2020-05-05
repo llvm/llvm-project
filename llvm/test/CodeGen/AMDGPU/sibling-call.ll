@@ -152,9 +152,6 @@ define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %l
 ; FIXME: Why load and store same location for stack args?
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32_a32i32:
 
-; GCN-DAG: buffer_store_dword v32, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GCN-DAG: buffer_store_dword v33, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-
 ; GCN-DAG: buffer_load_dword [[LOAD_0:v[0-9]+]], off, s[0:3], s32{{$}}
 ; GCN-DAG: buffer_load_dword [[LOAD_1:v[0-9]+]], off, s[0:3], s32 offset:4
 
@@ -162,9 +159,6 @@ define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %l
 
 ; GCN-DAG: buffer_store_dword [[LOAD_0]], off, s[0:3], s32{{$}}
 ; GCN-DAG: buffer_store_dword [[LOAD_1]], off, s[0:3], s32 offset:4
-
-; GCN-DAG: buffer_load_dword v32, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GCN-DAG: buffer_load_dword v33, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
@@ -176,7 +170,7 @@ entry:
 
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32_a32i32_stack_object:
 ; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
-; GCN: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:40
+; GCN: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:28
 ; GCN: s_setpc_b64
 define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i32 %b, [32 x i32] %c) #1 {
 entry:
@@ -203,15 +197,15 @@ entry:
 ; Have another non-tail in the function
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32_other_call:
 ; GCN: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
-; GCN-NEXT: buffer_store_dword v34, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v42, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec
 ; GCN: s_mov_b32 s33, s32
 ; GCN-DAG: s_add_u32 s32, s32, 0x400
 
-; GCN-DAG: buffer_store_dword v32, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GCN-DAG: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-DAG: v_writelane_b32 v34, s34, 0
-; GCN-DAG: v_writelane_b32 v34, s35, 1
+; GCN-DAG: buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-DAG: buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-DAG: v_writelane_b32 v42, s34, 0
+; GCN-DAG: v_writelane_b32 v42, s35, 1
 
 ; GCN-DAG: s_getpc_b64 s[4:5]
 ; GCN-DAG: s_add_u32 s4, s4, i32_fastcc_i32_i32@gotpcrel32@lo+4
@@ -220,11 +214,11 @@ entry:
 
 ; GCN: s_swappc_b64
 
-; GCN-DAG: v_readlane_b32 s34, v34, 0
-; GCN-DAG: v_readlane_b32 s35, v34, 1
+; GCN-DAG: v_readlane_b32 s34, v42, 0
+; GCN-DAG: v_readlane_b32 s35, v42, 1
 
-; GCN: buffer_load_dword v33, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN: buffer_load_dword v32, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, sibling_call_i32_fastcc_i32_i32@rel32@lo+4
@@ -233,7 +227,7 @@ entry:
 ; GCN: s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT: v_readlane_b32 s33,
 ; GCN-NEXT: s_or_saveexec_b64 s[6:7], -1
-; GCN-NEXT: buffer_load_dword v34, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v42, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, s[6:7]
 ; GCN-NEXT: s_setpc_b64 s[4:5]
 define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) #1 {
@@ -248,11 +242,11 @@ entry:
 
 ; GCN-LABEL: {{^}}sibling_call_stack_objecti32_fastcc_i32_i32_a32i32:
 ; GCN-NOT: s33
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32 offset:
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:
 
 ; GCN-NOT: s33
 
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32 offset:
 ; GCN: s_setpc_b64 s[4:5]
 define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x i32] %c) #1 {
 entry:
