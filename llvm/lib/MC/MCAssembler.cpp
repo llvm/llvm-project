@@ -397,6 +397,9 @@ void MCAsmLayout::layoutFragment(MCFragment *F) {
   assert((!Prev || isFragmentValid(Prev)) &&
          "Attempt to compute fragment before its predecessor!");
 
+  assert(!F->IsBeingLaidOut && "Already being laid out!");
+  F->IsBeingLaidOut = true;
+
   ++stats::FragmentLayouts;
 
   // Compute fragment offset and size.
@@ -404,6 +407,7 @@ void MCAsmLayout::layoutFragment(MCFragment *F) {
     F->Offset = Prev->Offset + getAssembler().computeFragmentSize(*this, *Prev);
   else
     F->Offset = 0;
+  F->IsBeingLaidOut = false;
   LastValidFragment[F->getParent()] = F;
 
   // If bundling is enabled and this fragment has instructions in it, it has to
