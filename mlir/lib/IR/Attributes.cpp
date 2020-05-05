@@ -779,24 +779,44 @@ DenseElementsAttr DenseElementsAttr::getFromRawBuffer(ShapedType type,
   return DenseIntOrFPElementsAttr::getRaw(type, rawBuffer, isSplatBuffer);
 }
 
+/// Returns true if the given buffer is a valid raw buffer for the given type.
+bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
+                                         ArrayRef<char> rawBuffer,
+                                         bool &detectedSplat) {
+  size_t elementWidth = getDenseElementBitWidth(type.getElementType());
+  size_t storageWidth = getDenseElementStorageWidth(elementWidth);
+  size_t rawBufferWidth = rawBuffer.size() * CHAR_BIT;
+
+  // Storage width of 1 is special as it is packed by the bit.
+  if (storageWidth == 1) {
+    // Check for a splat, or a buffer equal to the number of elements.
+    if ((detectedSplat = rawBuffer.size() == 1))
+      return true;
+    return rawBufferWidth == llvm::alignTo<8>(type.getNumElements());
+  }
+  // All other types are 8-bit aligned.
+  if ((detectedSplat = rawBufferWidth == storageWidth))
+    return true;
+  return rawBufferWidth == (storageWidth * type.getNumElements());
+}
+
 /// Check the information for a C++ data type, check if this type is valid for
 /// the current attribute. This method is used to verify specific type
 /// invariants that the templatized 'getValues' method cannot.
-static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize, bool isInt,
+static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
                               bool isSigned) {
   // Make sure that the data element size is the same as the type element width.
-  if (getDenseElementBitWidth(type.getElementType()) !=
+  if (getDenseElementBitWidth(type) !=
       static_cast<size_t>(dataEltSize * CHAR_BIT))
     return false;
 
   // Check that the element type is either float or integer or index.
   if (!isInt)
-    return type.getElementType().isa<FloatType>();
-
-  if (type.getElementType().isIndex())
+    return type.isa<FloatType>();
+  if (type.isIndex())
     return true;
 
-  auto intType = type.getElementType().dyn_cast<IntegerType>();
+  auto intType = type.dyn_cast<IntegerType>();
   if (!intType)
     return false;
 
@@ -807,6 +827,13 @@ static bool isValidIntOrFloat(ShapedType type, int64_t dataEltSize, bool isInt,
 }
 
 /// Defaults down the subclass implementation.
+DenseElementsAttr DenseElementsAttr::getRawComplex(ShapedType type,
+                                                   ArrayRef<char> data,
+                                                   int64_t dataEltSize,
+                                                   bool isInt, bool isSigned) {
+  return DenseIntOrFPElementsAttr::getRawComplex(type, data, dataEltSize, isInt,
+                                                 isSigned);
+}
 DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
                                                       ArrayRef<char> data,
                                                       int64_t dataEltSize,
@@ -820,7 +847,17 @@ DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
 /// method cannot.
 bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
                                           bool isSigned) const {
-  return ::isValidIntOrFloat(getType(), dataEltSize, isInt, isSigned);
+  return ::isValidIntOrFloat(getType().getElementType(), dataEltSize, isInt,
+                             isSigned);
+}
+
+/// Check the information for a C++ data type, check if this type is valid for
+/// the current attribute.
+bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
+                                       bool isSigned) const {
+  return ::isValidIntOrFloat(
+      getType().getElementType().cast<ComplexType>().getElementType(),
+      dataEltSize / 2, isInt, isSigned);
 }
 
 /// Returns if this attribute corresponds to a splat, i.e. if all element
@@ -964,6 +1001,23 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                    type, data, isSplat);
 }
 
+/// Overload of the raw 'get' method that asserts that the given type is of
+/// complex type. This method is used to verify type invariants that the
+/// templatized 'get' method cannot.
+DenseElementsAttr DenseIntOrFPElementsAttr::getRawComplex(ShapedType type,
+                                                          ArrayRef<char> data,
+                                                          int64_t dataEltSize,
+                                                          bool isInt,
+                                                          bool isSigned) {
+  assert(::isValidIntOrFloat(
+      type.getElementType().cast<ComplexType>().getElementType(),
+      dataEltSize / 2, isInt, isSigned));
+
+  int64_t numElements = data.size() / dataEltSize;
+  assert(numElements == 1 || numElements == type.getNumElements());
+  return getRaw(type, data, /*isSplat=*/numElements == 1);
+}
+
 /// Overload of the 'getRaw' method that asserts that the given type is of
 /// integer type. This method is used to verify type invariants that the
 /// templatized 'get' method cannot.
@@ -971,7 +1025,8 @@ DenseElementsAttr
 DenseIntOrFPElementsAttr::getRawIntOrFloat(ShapedType type, ArrayRef<char> data,
                                            int64_t dataEltSize, bool isInt,
                                            bool isSigned) {
-  assert(::isValidIntOrFloat(type, dataEltSize, isInt, isSigned));
+  assert(
+      ::isValidIntOrFloat(type.getElementType(), dataEltSize, isInt, isSigned));
 
   int64_t numElements = data.size() / dataEltSize;
   assert(numElements == 1 || numElements == type.getNumElements());

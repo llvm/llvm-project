@@ -374,6 +374,8 @@ struct TypeAttributeStorage : public AttributeStorage {
 
 /// Return the bit width which DenseElementsAttr should use for this type.
 inline size_t getDenseElementBitWidth(Type eltType) {
+  if (ComplexType complex = eltType.dyn_cast<ComplexType>())
+    return getDenseElementBitWidth(complex.getElementType()) * 2;
   // FIXME(b/121118307): using 64 bits for BF16 because it is currently stored
   // with double semantics.
   if (eltType.isBF16())

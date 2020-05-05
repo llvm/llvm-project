@@ -2041,7 +2041,8 @@ DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
   Type eltType = type.getElementType();
 
   // Check to see if we parse the literal from a hex string.
-  if (hexStorage.hasValue() && eltType.isIntOrFloat())
+  if (hexStorage.hasValue() &&
+      (eltType.isIntOrFloat() || eltType.isa<ComplexType>()))
     return getHexAttr(loc, type);
 
   // Check that the parsed storage size has the same number of elements to the
@@ -2062,6 +2063,13 @@ DenseElementsAttr TensorLiteralParser::getAttr(llvm::SMLoc loc,
   // If parsing a floating point type.
   if (auto floatTy = eltType.dyn_cast<FloatType>())
     return getFloatAttr(loc, type, floatTy);
+
+  // If parsing a complex type.
+  // TODO: Support complex elements with pretty element printing.
+  if (eltType.isa<ComplexType>()) {
+    p.emitError(loc) << "complex elements only support hex formatting";
+    return nullptr;
+  }
 
   // Other types are assumed to be string representations.
   return getStringAttr(loc, type, type.getElementType());
@@ -2196,9 +2204,10 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(llvm::SMLoc loc,
 DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
                                                   ShapedType type) {
   Type elementType = type.getElementType();
-  if (!elementType.isa<FloatType>() && !elementType.isa<IntegerType>()) {
-    p.emitError(loc) << "expected floating-point or integer element type, got "
-                     << elementType;
+  if (!elementType.isIntOrIndexOrFloat() && !elementType.isa<ComplexType>()) {
+    p.emitError(loc)
+        << "expected floating-point, integer, or complex element type, got "
+        << elementType;
     return nullptr;
   }
 
@@ -2206,21 +2215,15 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
   if (parseElementAttrHexValues(p, hexStorage.getValue(), data))
     return nullptr;
 
-  // Check that the size of the hex data corresponds to the size of the type, or
-  // a splat of the type.
-  // TODO: bf16 is currently stored as a double, this should be removed when
-  // APFloat properly supports it.
-  int64_t elementWidth =
-      elementType.isBF16() ? 64 : elementType.getIntOrFloatBitWidth();
-  if (static_cast<int64_t>(data.size() * CHAR_BIT) !=
-      (type.getNumElements() * elementWidth)) {
+  ArrayRef<char> rawData(data.data(), data.size());
+  bool detectedSplat = false;
+  if (!DenseElementsAttr::isValidRawBuffer(type, rawData, detectedSplat)) {
     p.emitError(loc) << "elements hex data size is invalid for provided type: "
                      << type;
     return nullptr;
   }
 
-  return DenseElementsAttr::getFromRawBuffer(
-      type, ArrayRef<char>(data.data(), data.size()), /*isSplatBuffer=*/false);
+  return DenseElementsAttr::getFromRawBuffer(type, rawData, detectedSplat);
 }
 
 ParseResult TensorLiteralParser::parseElement() {
