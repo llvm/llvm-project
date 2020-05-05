@@ -370,6 +370,52 @@ define amdgpu_ps <4 x float> @test_keep_waterfall_multi_rl(<8 x i32> addrspace(4
 }
 
 
+; GCN-LABEL: {{^}}test_waterfall_sample_with_kill:
+; GCN: {{^}}BB10_1:
+; GCN: v_readfirstlane_b32 s[[FIRSTVAL:[0-9]+]], v{{[0-9]+}}
+; GCN: s_add_u32 s[[NONUSTART:[0-9]+]], s0, s[[FIRSTVAL]]
+; GCN: s_addc_u32 s[[NONUEND:[0-9]+]], s1, s{{[0-9]+}}
+; GCN-DAG: s_load_dwordx8 s{{\[}}[[RSRCSTART:[0-9]+]]:[[RSRCEND:[0-9]+]]{{\]}}, s{{\[}}[[NONUSTART]]:[[NONUEND]]{{\]}}
+; GCN-DAG: s_add_u32 s[[UNISTART:[0-9]+]], s2, s{{[0-9]+}}
+; GCN-DAG: s_addc_u32 s[[UNIEND:[0-9]+]], s3, s{{[0-9]+}}
+; GCN: s_load_dwordx4 s{{\[}}[[SAMPSTART:[0-9]+]]:[[SAMPEND:[0-9]+]]{{\]}}, s{{\[}}[[UNISTART]]:[[UNIEND]]{{\]}}
+; GCN-DAG: image_sample v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s{{\[}}[[RSRCSTART]]:[[RSRCEND]]{{\]}}, s{{\[}}[[SAMPSTART]]:[[SAMPEND]]{{\]}} dmask:0xf
+; GCN: s_cbranch_execnz BB10_1
+; GCN-32: v_cmp_gt_f32_e32 vcc_lo, 0, v{{[0-9]+}}
+; GCN-64: v_cmp_gt_f32_e32 vcc, 0, v{{[0-9]+}}
+; GCN-32: s_and_saveexec_b32 s[[EXEC:[0-9]+]], vcc
+; GCN-64: s_and_saveexec_b64 s[[EXEC:\[[0-9]+:[0-9]+\]]], vcc
+; GCN-32: s_mov_b32 exec_lo, 0
+; GCN-64: s_mov_b64 exec, 0
+; GCN-32: s_or_b32 exec_lo, exec_lo, s[[EXEC]]
+; GCN-64: s_or_b64 exec, exec, s[[EXEC]]
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: exp mrt0 v0, off, off, off done vm
+define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* inreg %in,
+                                                       <4 x i32> addrspace(4)* inreg %samp_in,
+                                                       i32 %index, float %s, i32 inreg %val) #1 {
+  %wf_token = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %index)
+  %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %wf_token, i32 %index)
+  %s_idx2 = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %wf_token, i32 %val)
+  %ptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %ptr2 = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %samp_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4) * %ptr, align 32
+  %samp = load <4 x i32>, <4 x i32> addrspace(4) * %ptr2, align 32
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %wf_token, <4 x float> %r)
+  %r2 = extractelement <4 x float> %r1, i32 0
+  %cond = fcmp olt float %r2, 0.000000e+00
+  br i1 %cond, label %.kill, label %.exit
+
+.kill:
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %.exit
+
+.exit:
+  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 1, float 0.000000e+00, float undef, float undef, float undef, i1 immarg true, i1 immarg true)
+  ret void
+}
+
 declare i32 @llvm.amdgcn.waterfall.begin.i32(i32) #6
 declare i32 @llvm.amdgcn.waterfall.begin.v2i32(<2 x i32>) #6
 declare i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32, i32) #6
@@ -392,6 +438,8 @@ declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i1) #2
 declare void @llvm.amdgcn.buffer.store.short(float, <4 x i32>, i32, i32, i1, i1) #5
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #5
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #5
+declare void @llvm.amdgcn.kill(i1) #1
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #7
 
 attributes #0 = { nounwind readnone convergent }
 attributes #1 = { nounwind }
@@ -400,3 +448,4 @@ attributes #3 = { nounwind readnone speculatable }
 attributes #4 = { nounwind readonly }
 attributes #5 = { nounwind writeonly }
 attributes #6 = { nounwind }
+attributes #7 = { inaccessiblememonly nounwind writeonly }
