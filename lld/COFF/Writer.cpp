@@ -17,7 +17,6 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"

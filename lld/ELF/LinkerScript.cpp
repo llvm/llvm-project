@@ -21,7 +21,6 @@
 #include "Writer.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/Threads.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -29,6 +28,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>

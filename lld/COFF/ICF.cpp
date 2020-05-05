@@ -21,7 +21,6 @@
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Debug.h"
