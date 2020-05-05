@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRStandalone
 
         DEPENDS
         MLIRStandaloneOpsIncGen
-        )
 
-target_link_libraries(MLIRStandalone PUBLIC MLIRIR)
+	LINK_LIBS PUBLIC
+	MLIRIR
+	)
