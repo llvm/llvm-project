@@ -1110,25 +1110,6 @@ func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : 
 
 // -----
 
-// CHECK-LABEL: func @cmpxchg
-func @cmpxchg(%F : memref<10xf32>, %fval : f32, %i : index) -> f32 {
-  %x = atomic_rmw "maxf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
-  // CHECK: %[[init:.*]] = llvm.load %{{.*}} : !llvm<"float*">
-  // CHECK-NEXT: llvm.br ^bb1(%[[init]] : !llvm.float)
-  // CHECK-NEXT: ^bb1(%[[loaded:.*]]: !llvm.float):
-  // CHECK-NEXT: %[[cmp:.*]] = llvm.fcmp "ogt" %[[loaded]], %{{.*}} : !llvm.float
-  // CHECK-NEXT: %[[max:.*]] = llvm.select %[[cmp]], %[[loaded]], %{{.*}} : !llvm.i1, !llvm.float
-  // CHECK-NEXT: %[[pair:.*]] = llvm.cmpxchg %{{.*}}, %[[loaded]], %[[max]] acq_rel monotonic : !llvm.float
-  // CHECK-NEXT: %[[new:.*]] = llvm.extractvalue %[[pair]][0] : !llvm<"{ float, i1 }">
-  // CHECK-NEXT: %[[ok:.*]] = llvm.extractvalue %[[pair]][1] : !llvm<"{ float, i1 }">
-  // CHECK-NEXT: llvm.cond_br %[[ok]], ^bb2, ^bb1(%[[new]] : !llvm.float)
-  // CHECK-NEXT: ^bb2:
-  return %x : f32
-  // CHECK-NEXT: llvm.return %[[new]]
-}
-
-// -----
-
 // CHECK-LABEL: func @generic_atomic_rmw
 func @generic_atomic_rmw(%I : memref<10xf32>, %i : index) -> f32 {
   %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
