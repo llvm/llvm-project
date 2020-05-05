@@ -75,7 +75,7 @@ public:
 
   // Append an entry to a caller-provided collection that will later be
   // inserted in this line table.
-  void AppendLineEntryToSequence(LineSequence *sequence, lldb::addr_t file_addr,
+  static void AppendLineEntryToSequence(LineSequence *sequence, lldb::addr_t file_addr,
                                  uint32_t line, uint16_t column,
                                  uint16_t file_idx, bool is_start_of_statement,
                                  bool is_start_of_basic_block,
