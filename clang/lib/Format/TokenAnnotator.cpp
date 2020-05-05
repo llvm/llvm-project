@@ -1852,6 +1852,10 @@ private:
     if (Style.Language == FormatStyle::LK_JavaScript)
       return TT_BinaryOperator;
 
+    // && in C# must be a binary operator.
+    if (Style.isCSharp() && Tok.is(tok::ampamp))
+      return TT_BinaryOperator;
+
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
