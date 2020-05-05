@@ -6,20 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-has-no-stdin
+
 // <iostream>
 
-// istream clog;
+// istream cin;
+
+// FILE_DEPENDENCIES: %t.exe
+// RUN: %{build}
+// RUN: %{exec} echo "123" | %t.exe > %t.out
+// RUN: grep -e 'The number is 123!' %t.out
 
 #include <iostream>
+#include <cassert>
 
 #include "test_macros.h"
 
 int main(int, char**)
 {
-#if 0
-    std::clog << "Hello World!\n";
+    int i;
+    std::cin >> i;
+    std::cout << "The number is " << i << "!";
+
+#ifdef _LIBCPP_HAS_NO_STDOUT
+    assert(std::cin.tie() == NULL);
 #else
-    (void)std::clog;
+    assert(std::cin.tie() == &std::cout);
 #endif
 
   return 0;
