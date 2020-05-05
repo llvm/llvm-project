@@ -13,6 +13,13 @@ _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_buil
 _isAppleClang = lambda cfg: '__apple_build_version__' in compilerMacros(cfg)
 _isGCC        = lambda cfg: '__GNUC__' in compilerMacros(cfg) and '__clang__' not in compilerMacros(cfg)
 
+def _assert(condition, message):
+  """Function to use an assertion statement as an expression.
+  Use as `_assert(condition, message) and <expression>`.
+  """
+  assert condition, message
+  return True
+
 features = [
   Feature(name='fcoroutines-ts', compileFlag='-fcoroutines-ts',
           when=lambda cfg: hasCompileFlag(cfg, '-fcoroutines-ts') and
@@ -48,3 +55,43 @@ features = [
   Feature(name=lambda cfg: 'gcc-{__GNUC__}.{__GNUC_MINOR__}'.format(**compilerMacros(cfg)),                                        when=_isGCC),
   Feature(name=lambda cfg: 'gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}'.format(**compilerMacros(cfg)),                  when=_isGCC),
 ]
+
+# Deduce and add the test features that that are implied by the #defines in
+# the <__config_site> header.
+#
+# For each macro of the form `_LIBCPP_XXX_YYY_ZZZ` defined below that
+# is defined after including <__config_site>, add a Lit feature called
+# `libcpp-xxx-yyy-zzz`. When a macro is defined to a specific value
+# (e.g. `_LIBCPP_ABI_VERSION=2`), the feature is `libcpp-xxx-yyy-zzz=<value>`.
+macros = [
+  '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE',
+  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK',
+  '_LIBCPP_HAS_NO_STDIN',
+  '_LIBCPP_HAS_NO_STDOUT',
+  '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS',
+  '_LIBCPP_HAS_NO_THREADS',
+  '_LIBCPP_HAS_THREAD_API_EXTERNAL',
+  '_LIBCPP_HAS_THREAD_API_PTHREAD',
+  '_LIBCPP_NO_VCRUNTIME',
+  '_LIBCPP_ABI_VERSION',
+  '_LIBCPP_ABI_UNSTABLE'
+]
+for macro in macros:
+  features += [
+    Feature(name=lambda cfg, macro=macro: macro.lower()[1:].replace('_', '-') + (
+              '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
+            ),
+            when=lambda cfg, macro=macro:
+              _assert('_LIBCPP_CONFIG_SITE' in compilerMacros(cfg),
+                "Trying to determine whether macro {} is defined, but it looks "
+                "like <__config_site> wasn't included".format(macro)) and
+              macro in compilerMacros(cfg),
+
+            # FIXME: This is a hack that should be fixed using module maps.
+            # If modules are enabled then we have to lift all of the definitions
+            # in <__config_site> onto the command line.
+            compileFlag=lambda cfg: '-Wno-macro-redefined -D{}'.format(macro) + (
+              '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
+            )
+    )
+  ]
