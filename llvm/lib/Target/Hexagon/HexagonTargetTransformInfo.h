@@ -101,7 +101,7 @@ public:
     return true;
   }
 
-  unsigned getScalarizationOverhead(Type *Ty, const APInt &DemandedElts,
+  unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                                     bool Insert, bool Extract);
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                             unsigned VF);
