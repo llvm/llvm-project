@@ -4,9 +4,11 @@
 # RUN: llvm-objcopy --dump-section .text=%t4 %t %t5
 # RUN: llvm-objcopy --dump-section .foo=%t6 %t %t7
 # RUN: not llvm-objcopy --dump-section .bar=%t8 %t %t9 2>&1 | FileCheck %s --check-prefix=NOBITS -DINPUT=%t
+# RUN: llvm-objcopy --dump-section .empty=%t.empty %t /dev/null
 # RUN: od -t x1 %t2 | FileCheck %s --ignore-case
 # RUN: od -t x1 %t6 | FileCheck %s --ignore-case --check-prefix=NON-ALLOC
 # RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
+# RUN: wc -c %t.empty | FileCheck %s --check-prefix=EMPTY
 # RUN: diff %t2 %t3
 # RUN: diff %t4 %t3
 
@@ -26,6 +28,9 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_WRITE ]
     Content:         "CAFE"
+  - Name:            .empty
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
   - Name:            .bar
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE ]
@@ -42,3 +47,5 @@ ProgramHeaders:
 # SIZE: 4
 
 # NOBITS: error: '[[INPUT]]': cannot dump section '.bar': it has no contents
+
+# EMPTY: 0
