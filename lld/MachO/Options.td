@@ -23,6 +23,10 @@ def l: Joined<["-"], "l">, MetaVarName<"<libname>">,
 def o: Separate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def order_file: Separate<["-"], "order_file">,
+  HelpText<"Lay out symbols within each section in the order specified by the "
+           "order file">;
+
 def sub_library: Separate<["-"], "sub_library">, MetaVarName<"<libname>">,
   HelpText<"Re-export the specified dylib">;
 

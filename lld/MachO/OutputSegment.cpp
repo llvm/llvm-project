@@ -129,23 +129,3 @@ OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
   outputSegments.push_back(segRef);
   return segRef;
 }
-
-void macho::sortOutputSegmentsAndSections() {
-  // Sorting only can happen once all outputs have been collected.
-  // Since output sections are grouped by segment, sorting happens
-  // first over all segments, then over sections per segment.
-  auto comparator = OutputSegmentComparator();
-  llvm::stable_sort(outputSegments, comparator);
-
-  // Now that the output sections are sorted, assign the final
-  // output section indices.
-  uint32_t sectionIndex = 0;
-  for (OutputSegment *seg : outputSegments) {
-    seg->sortOutputSections(&comparator);
-    for (auto &p : seg->getSections()) {
-      OutputSection *section = p.second;
-      if (!section->isHidden())
-        section->index = ++sectionIndex;
-    }
-  }
-}
