@@ -610,6 +610,13 @@ def SVPRFW_GATHER_BASES_OFFSET : MInst<"svprfw_gather[_{2}base]_index",  "vPdlJ"
 def SVPRFD_GATHER_BASES_OFFSET : MInst<"svprfd_gather[_{2}base]_index",  "vPdlJ", "UiUl", [IsGatherPrefetch], MemEltTyInt64, "aarch64_sve_prfd_gather_scalar_offset">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Scalar to vector
+
+def SVDUPQ_8  : SInst<"svdupq[_n]_{d}", "dssssssssssssssss",  "cUc", MergeNone>;
+def SVDUPQ_16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "sUsh", MergeNone>;
+def SVDUPQ_32 : SInst<"svdupq[_n]_{d}", "dssss",  "iUif", MergeNone>;
+def SVDUPQ_64 : SInst<"svdupq[_n]_{d}", "dss",  "lUld", MergeNone>;
+
 // Integer arithmetic
 
 multiclass SInstZPZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
@@ -1034,7 +1041,7 @@ def SVCLASTB     : SInst<"svclastb[_{d}]",    "dPdd", "csilUcUsUiUlhfd", MergeNo
 def SVCLASTB_N   : SInst<"svclastb[_n_{d}]",  "sPsd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_clastb_n">;
 def SVCOMPACT    : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd",        MergeNone, "aarch64_sve_compact">;
 //  SVDUP_LANE    (to land in D78750)
-//  SVDUPQ_LANE   (to land in D78750)
+def SVDUPQ_LANE  : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_dupq_lane">;
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
 def SVLASTA      : SInst<"svlasta[_{d}]",     "sPd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_lasta">;
 def SVLASTB      : SInst<"svlastb[_{d}]",     "sPd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_lastb">;
@@ -1071,6 +1078,12 @@ def SVPFALSE : SInst<"svpfalse[_b]", "P", "", MergeNone, "", [IsOverloadNone]>;
 
 def SVPTRUE_PAT : SInst<"svptrue_pat_{d}", "PI", "PcPsPiPl", MergeNone, "aarch64_sve_ptrue">;
 def SVPTRUE     : SInst<"svptrue_{d}",     "P",  "PcPsPiPl", MergeNone, "aarch64_sve_ptrue", [IsAppendSVALL]>;
+
+def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeNone>;
+def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone>;
+def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone>;
+def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone>;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Predicate operations
