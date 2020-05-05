@@ -238,13 +238,13 @@ class ConstantOp : public mlir::Op<ConstantOp,
   /// operations. This state is a collection of all of the discrete elements
   /// that an operation may contain.
   /// Build a constant with the given return type and `value` attribute.
-  static void build(mlir::Builder *builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::Type result, mlir::DenseElementsAttr value);
   /// Build a constant and reuse the type from the given 'value'.
-  static void build(mlir::Builder *builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::DenseElementsAttr value);
   /// Build a constant by broadcasting the given 'value'.
-  static void build(mlir::Builder *builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     double value);
 };
 ```
