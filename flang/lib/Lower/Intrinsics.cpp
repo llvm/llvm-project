@@ -194,7 +194,7 @@ enum MathRuntimeVersion {
   llvmOnly
 };
 llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
-    "math_runtime", llvm::cl::desc("Select math runtime version:"),
+    "math-runtime", llvm::cl::desc("Select math runtime version:"),
     llvm::cl::values(
         clEnumValN(fastVersion, "fast", "use pgmath fast runtime"),
         clEnumValN(relaxedVersion, "relaxed", "use pgmath relaxed runtime"),
@@ -278,17 +278,20 @@ public:
     if (nResults != to.getNumResults() || nInputs != to.getNumInputs()) {
       infinite = true;
     } else {
-      for (decltype(nInputs) i{0}; i < nInputs; ++i)
+      for (decltype(nInputs) i{0}; i < nInputs && !infinite; ++i)
         addArgumentDistance(from.getInput(i), to.getInput(i));
-      for (decltype(nResults) i{0}; i < nResults; ++i)
+      for (decltype(nResults) i{0}; i < nResults && !infinite; ++i)
         addResultDistance(to.getResult(i), from.getResult(i));
     }
   }
+  /// Beware both d1.isSmallerThan(d2) *and* d2.isSmallerThan(d1) may be
+  /// false if both d1 and d2 are infinite. This implies that
+  ///  d1.isSmallerThan(d2) is not equivalent to !d2.isSmallerThan(d1)
   bool isSmallerThan(const FunctionDistance &d) const {
-    return d.infinite ||
-           (!infinite && std::lexicographical_compare(
-                             conversions.begin(), conversions.end(),
-                             d.conversions.begin(), d.conversions.end()));
+    return !infinite &&
+           (d.infinite || std::lexicographical_compare(
+                              conversions.begin(), conversions.end(),
+                              d.conversions.begin(), d.conversions.end()));
   }
   bool isLosingPrecision() const {
     return conversions[narrowingArg] != 0 || conversions[extendingResult] != 0;
@@ -589,8 +592,7 @@ mlir::Value IntrinsicLibrary::genRuntimeCall(llvm::StringRef name,
     for (mlir::Value arg : args) {
       auto actualType = actualFuncType.getInput(i);
       if (soughtFuncType.getInput(i) != actualType) {
-        auto castedArg =
-            builder.convertOnAssign(builder.getLoc(), actualType, arg);
+        auto castedArg = builder.createHere<fir::ConvertOp>(actualType, arg);
         convertedArguments.push_back(castedArg);
       } else {
         convertedArguments.push_back(arg);
@@ -601,8 +603,7 @@ mlir::Value IntrinsicLibrary::genRuntimeCall(llvm::StringRef name,
     mlir::Type soughtType = soughtFuncType.getResult(0);
     mlir::Value res = call.getResult(0);
     if (actualFuncType.getResult(0) != soughtType) {
-      auto castedRes =
-          builder.convertOnAssign(builder.getLoc(), soughtType, res);
+      auto castedRes = builder.createHere<fir::ConvertOp>(soughtType, res);
       return castedRes;
     } else {
       return res;
@@ -702,14 +703,12 @@ mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
 }
 
 // LEN_TRIM
-mlir::Value IntrinsicLibrary::genLenTrim(mlir::Type,
+mlir::Value IntrinsicLibrary::genLenTrim(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
   // Optional KIND argument reflected in result type.
   assert(args.size() >= 1);
-  // FIXME: LEN_TRIM needs actual runtime and to be define in CharRT.h
-  llvm_unreachable("LEN_TRIM TODO");
-  // Fake implementation for debugging:
-  // return builder.createIntegerConstant(resultType, 0);
+  auto len = builder.createLenTrim(args[0]);
+  return builder.createHere<fir::ConvertOp>(resultType, len);
 }
 
 // MERGE
@@ -799,7 +798,7 @@ static mlir::Value createExtremumCompare(Fortran::lower::FirOpBuilder &builder,
       static_assert(behavior == ExtremumBehavior::IeeeMinMaxNum,
                     "ieeeMinNum/ieeeMaxNum behavior not implemented");
     }
-  } else if (type.isa<mlir::IntegerType>()) {
+  } else if (type.isa<mlir::IntegerType>() || type.isa<mlir::IndexType>()) {
     result = builder.createHere<mlir::CmpIOp>(integerPredicate, left, right);
   } else if (type.isa<fir::CharacterType>()) {
     // TODO: ! character min and max is tricky because the result

@@ -12,8 +12,6 @@ ______________
 
 [Jean]
 
-  Intrinsics lowering problems
-  . bbc: Lower/Intrinsics.cpp:763: Assertion `false && "LEN_TRIM TODO"' failed.
 
 [unassigned]
 
@@ -23,4 +21,6 @@ ______________
   . Intrinsics.cpp:613! - nint
   . error: unreachable blocks were not converted
   . error: 'llvm.mlir.global' op initializer region type '!llvm.i1' does not match global type '!llvm.i32'
+
+bbc: Missing LEN_TRIM lowering
 

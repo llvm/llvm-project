@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 ! ABS
 ! CHECK-LABEL: abs_testi
@@ -48,9 +48,9 @@ end subroutine
 ! CHECK-LABEL: conjg_test
 subroutine conjg_test(z1, z2)
   complex :: z1, z2
-  ! CHECK: fir.extract_value 
+  ! CHECK: fir.extract_value
   ! CHECK: fir.negf
-  ! CHECK: fir.insert_value 
+  ! CHECK: fir.insert_value
   z2 = conjg(z1)
 end subroutine
 
@@ -70,6 +70,27 @@ subroutine len_test(i, c)
   ! CHECK: fir.boxchar_len
   i = len(c)
 end subroutine
+
+! LEN_TRIM
+!CHECK-LABEL: len_trim_test
+integer function len_trim_test(c)
+  character(*) :: c
+  ltrim = len_trim(c)
+  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
+  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
+  ! CHECK-DAG: %[[cm1:.*]] = constant -1 : index
+  ! CHECK-DAG: %[[lastChar:.*]] = subi {{.*}}, %[[c1]]
+  ! CHECK: %[[iterateResult:.*]], %[[lastIndex:.*]] = fir.iterate_while (%[[index:.*]] = %[[lastChar]] to %[[c0]] step %[[cm1]]) and ({{.*}}) iter_args({{.*}}) {
+    ! CHECK: %[[addr:.*]] = fir.coordinate_of {{.*}}, %[[index]]
+    ! CHECK: %[[char:.*]] = fir.load %[[addr]]
+    ! CHECK: %[[code:.*]] = fir.convert %[[char]]
+    ! CHECK: %[[bool:.*]] = cmpi "eq"
+    !CHECK fir.result %[[bool]], %[[index]]
+  ! CHECK }
+  ! CHECK-DAG: %[[len:.*]] = addi %[[lastIndex]], %[[c1]]
+  ! CHECK: select %[[iterateResult]], %[[c0]], %[[len]]
+end function
+
 
 
 ! SIGN
