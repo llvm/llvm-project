@@ -234,7 +234,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
 
 dsymutil::DebugMapObject
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
-  BinaryHolder BinHolder(/* Verbose =*/false);
+  BinaryHolder BinHolder(vfs::getRealFileSystem(), /* Verbose =*/false);
   const auto &Ctxt = *reinterpret_cast<YAMLContext *>(IO.getContext());
   SmallString<80> Path(Ctxt.PrependPath);
   StringMap<uint64_t> SymbolAddresses;

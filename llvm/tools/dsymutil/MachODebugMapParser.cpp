@@ -23,12 +23,13 @@ using namespace llvm::object;
 
 class MachODebugMapParser {
 public:
-  MachODebugMapParser(StringRef BinaryPath, ArrayRef<std::string> Archs,
+  MachODebugMapParser(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                      StringRef BinaryPath, ArrayRef<std::string> Archs,
                       StringRef PathPrefix = "",
                       bool PaperTrailWarnings = false, bool Verbose = false)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs.begin(), Archs.end()),
         PathPrefix(std::string(PathPrefix)),
-        PaperTrailWarnings(PaperTrailWarnings), BinHolder(Verbose),
+        PaperTrailWarnings(PaperTrailWarnings), BinHolder(VFS, Verbose),
         CurrentDebugMapObject(nullptr) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
@@ -190,7 +191,8 @@ MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
   loadMainBinarySymbols(MainBinary);
   ArrayRef<uint8_t> UUID = MainBinary.getUuid();
-  Result = std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
+  Result =
+      std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();
@@ -583,20 +585,22 @@ void MachODebugMapParser::loadMainBinarySymbols(
 namespace llvm {
 namespace dsymutil {
 llvm::ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
-parseDebugMap(StringRef InputFile, ArrayRef<std::string> Archs,
+parseDebugMap(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+              StringRef InputFile, ArrayRef<std::string> Archs,
               StringRef PrependPath, bool PaperTrailWarnings, bool Verbose,
               bool InputIsYAML) {
   if (InputIsYAML)
     return DebugMap::parseYAMLDebugMap(InputFile, PrependPath, Verbose);
 
-  MachODebugMapParser Parser(InputFile, Archs, PrependPath, PaperTrailWarnings,
-                             Verbose);
+  MachODebugMapParser Parser(VFS, InputFile, Archs, PrependPath,
+                             PaperTrailWarnings, Verbose);
   return Parser.parse();
 }
 
-bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,
+bool dumpStab(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+              StringRef InputFile, ArrayRef<std::string> Archs,
               StringRef PrependPath) {
-  MachODebugMapParser Parser(InputFile, Archs, PrependPath, false);
+  MachODebugMapParser Parser(VFS, InputFile, Archs, PrependPath, false);
   return Parser.dumpStab();
 }
 } // namespace dsymutil
