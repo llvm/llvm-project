@@ -43516,6 +43516,13 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   // Use PACKSS if the input has sign-bits that extend all the way to the
   // packed/truncated value. e.g. Comparison result, sext_in_reg, etc.
   unsigned NumSignBits = DAG.ComputeNumSignBits(In);
+
+  // Don't use PACKSS for vXi64 -> vXi32 truncations unless we're dealing with
+  // a sign splat. ComputeNumSignBits struggles to see through BITCASTs later
+  // on and combines/simplifications can't then use it.
+  if (SVT == MVT::i32 && NumSignBits != InSVT.getSizeInBits())
+    return SDValue();
+
   if (NumSignBits > (InSVT.getSizeInBits() - NumPackedSignBits))
     return truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget);
 

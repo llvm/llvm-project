@@ -114,15 +114,9 @@ define <4 x float> @signbits_ashr_sitofp_1(<4 x i64> %a0) nounwind {
 ; X86-LABEL: signbits_ashr_sitofp_1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vpsrad $31, %xmm1, %xmm2
 ; X86-NEXT:    vpsrad $16, %xmm1, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X86-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; X86-NEXT:    vpsrad $31, %xmm0, %xmm2
 ; X86-NEXT:    vpsrad $16, %xmm0, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; X86-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -130,27 +124,18 @@ define <4 x float> @signbits_ashr_sitofp_1(<4 x i64> %a0) nounwind {
 ; X64-AVX1-LABEL: signbits_ashr_sitofp_1:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-NEXT:    vpsrad $31, %xmm1, %xmm2
 ; X64-AVX1-NEXT:    vpsrad $16, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; X64-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; X64-AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; X64-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_ashr_sitofp_1:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrad $31, %ymm0, %ymm1
 ; X64-AVX2-NEXT:    vpsrad $16, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
-; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; X64-AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
