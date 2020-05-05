@@ -1,8 +1,8 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -331,6 +331,9 @@ __device__ void test_device_calls_template_fn() {
 // If we have a mix of HD and H-only or D-only candidates in the overload set,
 // normal C++ overload resolution rules apply first.
 template <typename T> TemplateReturnTy template_vs_hd_function(T arg)
+#ifdef __CUDA_ARCH__
+//expected-note@-2 {{declared here}}
+#endif
 {
   return TemplateReturnTy();
 }
@@ -339,13 +342,11 @@ __host__ __device__ HostDeviceReturnTy template_vs_hd_function(float arg) {
 }
 
 __host__ __device__ void test_host_device_calls_hd_template() {
-#ifdef __CUDA_ARCH__
-  typedef HostDeviceReturnTy ExpectedReturnTy;
-#else
-  typedef TemplateReturnTy ExpectedReturnTy;
-#endif
   HostDeviceReturnTy ret1 = template_vs_hd_function(1.0f);
-  ExpectedReturnTy ret2 = template_vs_hd_function(1);
+  TemplateReturnTy ret2 = template_vs_hd_function(1);
+#ifdef __CUDA_ARCH__
+  // expected-error@-2 {{reference to __host__ function 'template_vs_hd_function<int>' in __host__ __device__ function}}
+#endif
 }
 
 __host__ void test_host_calls_hd_template() {
@@ -366,14 +367,14 @@ __device__ void test_device_calls_hd_template() {
 __device__ DeviceReturnTy device_only_function(int arg) { return DeviceReturnTy(); }
 __device__ DeviceReturnTy2 device_only_function(float arg) { return DeviceReturnTy2(); }
 #ifndef __CUDA_ARCH__
-  // expected-note@-3 2{{'device_only_function' declared here}}
-  // expected-note@-3 2{{'device_only_function' declared here}}
+  // expected-note@-3 {{'device_only_function' declared here}}
+  // expected-note@-3 {{'device_only_function' declared here}}
 #endif
 __host__ HostReturnTy host_only_function(int arg) { return HostReturnTy(); }
 __host__ HostReturnTy2 host_only_function(float arg) { return HostReturnTy2(); }
 #ifdef __CUDA_ARCH__
-  // expected-note@-3 2{{'host_only_function' declared here}}
-  // expected-note@-3 2{{'host_only_function' declared here}}
+  // expected-note@-3 {{'host_only_function' declared here}}
+  // expected-note@-3 {{'host_only_function' declared here}}
 #endif
 
 __host__ __device__ void test_host_device_single_side_overloading() {
@@ -389,37 +390,6 @@ __host__ __device__ void test_host_device_single_side_overloading() {
   // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
   // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
 #endif
-}
-
-// wrong-sided overloading should not cause diagnostic unless it is emitted.
-// This inline function is not emitted.
-inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_no_diag() {
-  DeviceReturnTy ret1 = device_only_function(1);
-  DeviceReturnTy2 ret2 = device_only_function(1.0f);
-  HostReturnTy ret3 = host_only_function(1);
-  HostReturnTy2 ret4 = host_only_function(1.0f);
-}
-
-// wrong-sided overloading should cause diagnostic if it is emitted.
-// This inline function is emitted since it is called by an emitted function.
-inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_diag() {
-  DeviceReturnTy ret1 = device_only_function(1);
-  DeviceReturnTy2 ret2 = device_only_function(1.0f);
-#ifndef __CUDA_ARCH__
-  // expected-error@-3 {{reference to __device__ function 'device_only_function' in __host__ __device__ function}}
-  // expected-error@-3 {{reference to __device__ function 'device_only_function' in __host__ __device__ function}}
-#endif
-  HostReturnTy ret3 = host_only_function(1);
-  HostReturnTy2 ret4 = host_only_function(1.0f);
-#ifdef __CUDA_ARCH__
-  // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
-  // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
-#endif
-}
-
-__host__ __device__ void test_host_device_wrong_side_overloading_inline_diag_caller() {
-  test_host_device_wrong_side_overloading_inline_diag();
-  // expected-note@-1 {{called by 'test_host_device_wrong_side_overloading_inline_diag_caller'}}
 }
 
 // Verify that we allow overloading function templates.
@@ -448,18 +418,4 @@ __host__ __device__ int constexpr_overload(const T &x, const T &y) {
 // Verify that function overloading doesn't prune candidate wrongly.
 int test_constexpr_overload(C2 &x, C2 &y) {
   return constexpr_overload(x, y);
-}
-
-// Verify no ambiguity for new operator.
-void *a = new int;
-__device__ void *b = new int;
-// expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, and __shared__ variables.}}
-
-// Verify no ambiguity for new operator.
-template<typename _Tp> _Tp&& f();
-template<typename _Tp, typename = decltype(new _Tp(f<_Tp>()))>
-void __test();
-
-void foo() {
-  __test<int>();
 }
