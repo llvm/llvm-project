@@ -74,8 +74,8 @@ TEST(StringPrinterTests, CxxASCII) {
   EXPECT_EQ(fmt("🥑"), QUOTE("🥑"));
 
   // Octal (\nnn), hex (\xnn), extended octal (\unnnn or \Unnnnnnnn).
-  EXPECT_EQ(fmt("\uD55C"), QUOTE("한"));
-  EXPECT_EQ(fmt("\U00010348"), QUOTE("𐍈"));
+  EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
+  EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
   // FIXME: These strings are all rejected, but shouldn't be AFAICT. LLDB finds
   // that these are not valid utf8 sequences, but that's OK, the raw values
@@ -111,8 +111,8 @@ TEST(StringPrinterTests, CxxUTF8) {
   EXPECT_EQ(fmt("🥑"), QUOTE("🥑"));
 
   // Octal (\nnn), hex (\xnn), extended octal (\unnnn or \Unnnnnnnn).
-  EXPECT_EQ(fmt("\uD55C"), QUOTE("한"));
-  EXPECT_EQ(fmt("\U00010348"), QUOTE("𐍈"));
+  EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
+  EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
   // FIXME: These strings are all rejected, but shouldn't be AFAICT. LLDB finds
   // that these are not valid utf8 sequences, but that's OK, the raw values
@@ -148,8 +148,8 @@ TEST(StringPrinterTests, SwiftUTF8) {
   EXPECT_EQ(fmt("🥑"), QUOTE("🥑"));
 
   // Octal (\nnn), hex (\xnn), extended octal (\unnnn or \Unnnnnnnn).
-  EXPECT_EQ(fmt("\uD55C"), QUOTE("한"));
-  EXPECT_EQ(fmt("\U00010348"), QUOTE("𐍈"));
+  EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
+  EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
   // FIXME: These strings are all rejected, but shouldn't be AFAICT. LLDB finds
   // that these are not valid utf8 sequences, but that's OK, the raw values
