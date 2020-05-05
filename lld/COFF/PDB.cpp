@@ -725,7 +725,7 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
     if (!ti->isSimple() && !ti->isNoneType()) {
       CVType funcIdData = iDTable.getType(*ti);
       ArrayRef<uint8_t> tiBuf = funcIdData.data().slice(8, 4);
-      assert(tiBuf.size() == 4 && "corruct LF_[MEM]FUNC_ID record");
+      assert(tiBuf.size() == 4 && "corrupt LF_[MEM]FUNC_ID record");
       *ti = *reinterpret_cast<const TypeIndex *>(tiBuf.data());
     }
 
