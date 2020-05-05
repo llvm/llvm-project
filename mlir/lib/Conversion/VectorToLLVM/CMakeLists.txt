@@ -6,7 +6,8 @@ add_mlir_conversion_library(MLIRVectorToLLVM
 
   DEPENDS
   MLIRConversionPassIncGen
-)
+  intrinsics_gen
+  )
 
 target_link_libraries(MLIRVectorToLLVM
   PUBLIC
