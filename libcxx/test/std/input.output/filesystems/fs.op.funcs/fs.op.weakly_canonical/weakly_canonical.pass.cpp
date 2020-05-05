@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -27,6 +26,9 @@
 
 
 int main(int, char**) {
+
+  static_test_env static_env;
+
   // clang-format off
   struct {
     std::string input;
@@ -41,20 +43,20 @@ int main(int, char**) {
       {"a/b", fs::current_path() / "a/b"},
       {"a", fs::current_path() / "a"},
       {"a/b/", fs::current_path() / "a/b/"},
-      {StaticEnv::File, StaticEnv::File},
-      {StaticEnv::Dir, StaticEnv::Dir},
-      {StaticEnv::SymlinkToDir, StaticEnv::Dir},
-      {StaticEnv::SymlinkToDir / "dir2/.", StaticEnv::Dir / "dir2"},
+      {static_env.File, static_env.File},
+      {static_env.Dir, static_env.Dir},
+      {static_env.SymlinkToDir, static_env.Dir},
+      {static_env.SymlinkToDir / "dir2/.", static_env.Dir / "dir2"},
       // FIXME? If the trailing separator occurs in a part of the path that exists,
       // it is omitted. Otherwise it is added to the end of the result.
-      {StaticEnv::SymlinkToDir / "dir2/./", StaticEnv::Dir / "dir2"},
-      {StaticEnv::SymlinkToDir / "dir2/DNE/./", StaticEnv::Dir / "dir2/DNE/"},
-      {StaticEnv::SymlinkToDir / "dir2", StaticEnv::Dir2},
-      {StaticEnv::SymlinkToDir / "dir2/../dir2/DNE/..", StaticEnv::Dir2 / ""},
-      {StaticEnv::SymlinkToDir / "dir2/dir3/../DNE/DNE2", StaticEnv::Dir2 / "DNE/DNE2"},
-      {StaticEnv::Dir / "../dir1", StaticEnv::Dir},
-      {StaticEnv::Dir / "./.", StaticEnv::Dir},
-      {StaticEnv::Dir / "DNE/../foo", StaticEnv::Dir / "foo"}
+      {static_env.SymlinkToDir / "dir2/./", static_env.Dir / "dir2"},
+      {static_env.SymlinkToDir / "dir2/DNE/./", static_env.Dir / "dir2/DNE/"},
+      {static_env.SymlinkToDir / "dir2", static_env.Dir2},
+      {static_env.SymlinkToDir / "dir2/../dir2/DNE/..", static_env.Dir2 / ""},
+      {static_env.SymlinkToDir / "dir2/dir3/../DNE/DNE2", static_env.Dir2 / "DNE/DNE2"},
+      {static_env.Dir / "../dir1", static_env.Dir},
+      {static_env.Dir / "./.", static_env.Dir},
+      {static_env.Dir / "DNE/../foo", static_env.Dir / "foo"}
   };
   // clang-format on
   int ID = 0;
