@@ -217,3 +217,44 @@ svuint64_t test_svmlslb_lane_u64_1(svuint64_t op1, svuint32_t op2, svuint32_t op
   // expected-warning@+1 {{implicit declaration of function 'svmlslb_lane_u64'}}
   return SVE_ACLE_FUNC(svmlslb_lane,_u64,,)(op1, op2, op3, 3);
 }
+
+svfloat32_t test_svmlslb_f32(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // CHECK-LABEL: test_svmlslb_f32
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmlslb.nxv4f32(<vscale x 4 x float> %op1, <vscale x 8 x half> %op2, <vscale x 8 x half> %op3)
+  // CHECK: ret <vscale x 4 x float> %[[INTRINSIC]]
+  // overload-warning@+2 {{implicit declaration of function 'svmlslb'}}
+  // expected-warning@+1 {{implicit declaration of function 'svmlslb_f32'}}
+  return SVE_ACLE_FUNC(svmlslb,_f32,,)(op1, op2, op3);
+}
+
+svfloat32_t test_svmlslb_n_f32(svfloat32_t op1, svfloat16_t op2, float16_t op3)
+{
+  // CHECK-LABEL: test_svmlslb_n_f32
+  // CHECK: %[[DUP:.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half %op3)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmlslb.nxv4f32(<vscale x 4 x float> %op1, <vscale x 8 x half> %op2, <vscale x 8 x half> %[[DUP]])
+  // CHECK: ret <vscale x 4 x float> %[[INTRINSIC]]
+  // overload-warning@+2 {{implicit declaration of function 'svmlslb'}}
+  // expected-warning@+1 {{implicit declaration of function 'svmlslb_n_f32'}}
+  return SVE_ACLE_FUNC(svmlslb,_n_f32,,)(op1, op2, op3);
+}
+
+svfloat32_t test_svmlslb_lane_f32(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // CHECK-LABEL: test_svmlslb_lane_f32
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmlslb.lane.nxv4f32(<vscale x 4 x float> %op1, <vscale x 8 x half> %op2, <vscale x 8 x half> %op3, i32 0)
+  // CHECK: ret <vscale x 4 x float> %[[INTRINSIC]]
+  // overload-warning@+2 {{implicit declaration of function 'svmlslb_lane'}}
+  // expected-warning@+1 {{implicit declaration of function 'svmlslb_lane_f32'}}
+  return SVE_ACLE_FUNC(svmlslb_lane,_f32,,)(op1, op2, op3, 0);
+}
+
+svfloat32_t test_svmlslb_lane_f32_1(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // CHECK-LABEL: test_svmlslb_lane_f32_1
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmlslb.lane.nxv4f32(<vscale x 4 x float> %op1, <vscale x 8 x half> %op2, <vscale x 8 x half> %op3, i32 7)
+  // CHECK: ret <vscale x 4 x float> %[[INTRINSIC]]
+  // overload-warning@+2 {{implicit declaration of function 'svmlslb_lane'}}
+  // expected-warning@+1 {{implicit declaration of function 'svmlslb_lane_f32'}}
+  return SVE_ACLE_FUNC(svmlslb_lane,_f32,,)(op1, op2, op3, 7);
+}
