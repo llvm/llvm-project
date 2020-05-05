@@ -2816,8 +2816,10 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   case eReturnStatusFailed:
     m_result.IncrementNumberOfErrors();
-    if (io_handler.GetFlags().Test(eHandleCommandFlagStopOnError))
+    if (io_handler.GetFlags().Test(eHandleCommandFlagStopOnError)) {
+      m_result.SetResult(lldb::eCommandInterpreterResultCommandError);
       io_handler.SetIsDone(true);
+    }
     break;
 
   case eReturnStatusQuit:
