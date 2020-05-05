@@ -103,7 +103,6 @@ TEST_CASE(test_status_cannot_resolve)
 
 TEST_CASE(status_file_types_test)
 {
-    static_test_env static_env;
     scoped_test_env env;
     struct TestCase {
       path p;

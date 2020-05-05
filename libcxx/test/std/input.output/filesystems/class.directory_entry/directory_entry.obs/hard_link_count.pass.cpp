@@ -110,7 +110,6 @@ TEST_CASE(not_regular_file) {
 TEST_CASE(error_reporting) {
   using namespace fs;
 
-  static_test_env static_env;
   scoped_test_env env;
 
   const path dir = env.create_dir("dir");

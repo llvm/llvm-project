@@ -27,9 +27,6 @@
 
 
 int main(int, char**) {
-
-  static_test_env static_env;
-
   // clang-format off
   struct {
     std::string input;
