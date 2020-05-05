@@ -27,7 +27,7 @@ static void testSplat(Type eltType, const EltTy &splatElt) {
   EXPECT_EQ(detectedSplat, splat);
 
   for (auto newValue : detectedSplat.template getValues<EltTy>())
-    EXPECT_EQ(newValue, splatElt);
+    EXPECT_TRUE(newValue == splatElt);
 }
 
 namespace {
@@ -176,6 +176,20 @@ TEST(DenseComplexTest, ComplexIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(64, &context));
   std::complex<int64_t> value(10, 15);
+  testSplat(complexType, value);
+}
+
+TEST(DenseComplexTest, ComplexAPFloatSplat) {
+  MLIRContext context;
+  ComplexType complexType = ComplexType::get(FloatType::getF32(&context));
+  std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
+  testSplat(complexType, value);
+}
+
+TEST(DenseComplexTest, ComplexAPIntSplat) {
+  MLIRContext context;
+  ComplexType complexType = ComplexType::get(IntegerType::get(64, &context));
+  std::complex<APInt> value(APInt(64, 10), APInt(64, 15));
   testSplat(complexType, value);
 }
 
