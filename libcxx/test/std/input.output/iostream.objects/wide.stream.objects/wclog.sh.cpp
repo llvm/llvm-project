@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdout
-
 // <iostream>
 
-// istream cout;
+// istream wclog;
+
+// FILE_DEPENDENCIES: %t.exe
+// RUN: %{build}
+// RUN: %{exec} %t.exe 2> %t.err
+// RUN: grep -e 'Hello World!' %t.err
 
 #include <iostream>
 
@@ -18,15 +21,7 @@
 
 int main(int, char**)
 {
-#if 0
-    std::cout << "Hello World!\n";
-    int i;
-    std::cout << "Enter a number: ";
-    std::cin >> i;
-    std::cout << "The number is : " << i << '\n';
-#else  // 0
-    (void)std::cout;
-#endif
+    std::wclog << L"Hello World!\n";
 
-  return 0;
+    return 0;
 }

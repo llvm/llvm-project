@@ -6,23 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdout
-
 // <iostream>
 
-// istream wcout;
+// istream cerr;
+
+// FILE_DEPENDENCIES: %t.exe
+// RUN: %{build}
+// RUN: %{exec} %t.exe 2> %t.err
+// RUN: grep -e 'Hello World!' %t.err
 
 #include <iostream>
+#include <cassert>
 
 #include "test_macros.h"
 
 int main(int, char**)
 {
-#if 0
-    std::wcout << L"Hello World!\n";
+
+    std::cerr << "Hello World!\n";
+
+#ifdef _LIBCPP_HAS_NO_STDOUT
+    assert(std::cerr.tie() == NULL);
 #else
-    (void)std::wcout;
+    assert(std::cerr.tie() == &std::cout);
 #endif
+    assert(std::cerr.flags() & std::ios_base::unitbuf);
 
   return 0;
 }
