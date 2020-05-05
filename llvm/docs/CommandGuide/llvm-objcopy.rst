@@ -417,7 +417,8 @@ them.
 
  Write the output as the specified format. See `SUPPORTED FORMATS`_ for a list
  of valid ``<format>`` values. If unspecified, the output format is assumed to
- be the same as the input file's format.
+ be the same as the value specified for :option:`--input-target` or the input
+ file's format if that option is also unspecified.
 
 .. option:: --prefix-alloc-sections <prefix>
 
