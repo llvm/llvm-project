@@ -2598,11 +2598,14 @@ struct AAIsDeadValueImpl : public AAIsDead {
     if (!NoUnwindAA.isAssumedNoUnwind())
       return false;
 
-    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(*this, CallIRP);
-    if (!MemBehaviorAA.isAssumedReadOnly())
-      return false;
-
-    return true;
+    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+        *this, CallIRP, /* TrackDependence */ false);
+    if (MemBehaviorAA.isAssumedReadOnly()) {
+      if (!MemBehaviorAA.isKnownReadOnly())
+        A.recordDependence(MemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      return true;
+    }
+    return false;
   }
 };
 
@@ -4061,12 +4064,14 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   AANoCapture::StateType T;
 
   // Readonly means we cannot capture through memory.
-  const auto &FnMemAA = A.getAAFor<AAMemoryBehavior>(
-      *this, FnPos, /* TrackDependence */ true, DepClassTy::OPTIONAL);
+  const auto &FnMemAA =
+      A.getAAFor<AAMemoryBehavior>(*this, FnPos, /* TrackDependence */ false);
   if (FnMemAA.isAssumedReadOnly()) {
     T.addKnownBits(NOT_CAPTURED_IN_MEM);
     if (FnMemAA.isKnownReadOnly())
       addKnownBits(NOT_CAPTURED_IN_MEM);
+    else
+      A.recordDependence(FnMemAA, *this, DepClassTy::OPTIONAL);
   }
 
   // Make sure all returned values are different than the underlying value.
