@@ -2302,11 +2302,11 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
 
     // Print out some context information about the predecessors of this block.
     if (!block->getParent()) {
-      os << "\t// block is not in a region!";
+      os << "  // block is not in a region!";
     } else if (block->hasNoPredecessors()) {
-      os << "\t// no predecessors";
+      os << "  // no predecessors";
     } else if (auto *pred = block->getSinglePredecessor()) {
-      os << "\t// pred: ";
+      os << "  // pred: ";
       printBlockName(pred);
     } else {
       // We want to print the predecessors in increasing numeric order, not in
@@ -2316,7 +2316,7 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
         predIDs.push_back({state->getSSANameState().getBlockID(pred), pred});
       llvm::array_pod_sort(predIDs.begin(), predIDs.end());
 
-      os << "\t// " << predIDs.size() << " preds: ";
+      os << "  // " << predIDs.size() << " preds: ";
 
       interleaveComma(predIDs, [&](std::pair<unsigned, Block *> pred) {
         printBlockName(pred.second);
