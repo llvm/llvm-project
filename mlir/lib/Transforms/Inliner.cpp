@@ -496,9 +496,8 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
   // be reworked.
   if (context->isMultithreadingEnabled()) {
     ParallelDiagnosticHandler canonicalizationHandler(context);
-    llvm::parallel::for_each_n(
-        llvm::parallel::par, /*Begin=*/size_t(0),
-        /*End=*/nodesToCanonicalize.size(), [&](size_t index) {
+    llvm::parallelForEachN(
+        /*Begin=*/0, /*End=*/nodesToCanonicalize.size(), [&](size_t index) {
           // Set the order for this thread so that diagnostics will be properly
           // ordered.
           canonicalizationHandler.setOrderIDForThread(index);

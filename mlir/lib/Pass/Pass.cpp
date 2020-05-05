@@ -493,8 +493,8 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl() {
 
   // An atomic failure variable for the async executors.
   std::atomic<bool> passFailed(false);
-  llvm::parallel::for_each(
-      llvm::parallel::par, asyncExecutors.begin(),
+  llvm::parallelForEach(
+      asyncExecutors.begin(),
       std::next(asyncExecutors.begin(),
                 std::min(asyncExecutors.size(), opAMPairs.size())),
       [&](MutableArrayRef<OpPassManager> pms) {
