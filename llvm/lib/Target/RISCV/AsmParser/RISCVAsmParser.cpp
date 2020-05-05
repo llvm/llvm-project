@@ -1177,6 +1177,8 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       return MatchOperand_ParseFail;
 
     auto SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
+    if (!SysReg)
+      SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
     // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
       if (!SysReg->haveRequiredFeatures(getSTI().getFeatureBits())) {
