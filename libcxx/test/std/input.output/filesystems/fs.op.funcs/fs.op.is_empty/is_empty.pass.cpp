@@ -45,7 +45,6 @@ TEST_CASE(test_exist_not_found)
 
 TEST_CASE(test_is_empty_directory)
 {
-    static_test_env static_env;
     TEST_CHECK(!is_empty(StaticEnv::Dir));
     TEST_CHECK(!is_empty(StaticEnv::SymlinkToDir));
 }

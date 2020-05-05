@@ -55,7 +55,6 @@ TEST_CASE(file_size_non_empty)
 
 TEST_CASE(symlink_test_case)
 {
-    static_test_env static_env;
     const path p = StaticEnv::File;
     const path p2 = StaticEnv::SymlinkToFile;
     TEST_CHECK(file_size(p) == file_size(p2));
@@ -63,7 +62,6 @@ TEST_CASE(symlink_test_case)
 
 TEST_CASE(file_size_error_cases)
 {
-  static_test_env static_env;
   struct {
     path p;
     std::errc expected_err;

@@ -350,7 +350,6 @@ TEST_CASE(signature_test)
 
 TEST_CASE(read_last_write_time_static_env_test)
 {
-    static_test_env static_env;
     using C = file_time_type::clock;
     file_time_type min = file_time_type::min();
     {
