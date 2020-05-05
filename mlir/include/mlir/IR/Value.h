@@ -123,6 +123,9 @@ public:
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();
 
+  /// Return the Block in which this Value is defined.
+  Block *getParentBlock();
+
   //===--------------------------------------------------------------------===//
   // UseLists
   //===--------------------------------------------------------------------===//
@@ -149,6 +152,9 @@ public:
   /// returns true.
   void replaceUsesWithIf(Value newValue,
                          function_ref<bool(OpOperand &)> shouldReplace);
+
+  /// Returns true if the value is used outside of the given block.
+  bool isUsedOutsideOfBlock(Block *block);
 
   //===--------------------------------------------------------------------===//
   // Uses

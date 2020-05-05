@@ -412,7 +412,7 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
 // Operation Equivalency
 //===----------------------------------------------------------------------===//
 
-llvm::hash_code OperationEquivalence::computeHash(Operation *op) {
+llvm::hash_code OperationEquivalence::computeHash(Operation *op, Flags flags) {
   // Hash operations based upon their:
   //   - Operation Name
   //   - Attributes
@@ -438,12 +438,17 @@ llvm::hash_code OperationEquivalence::computeHash(Operation *op) {
   }
 
   //   - Operands
-  // TODO: Allow commutative operations to have different ordering.
-  return llvm::hash_combine(
-      hash, llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
+  bool ignoreOperands = flags & Flags::IgnoreOperands;
+  if (!ignoreOperands) {
+    // TODO: Allow commutative operations to have different ordering.
+    hash = llvm::hash_combine(
+        hash, llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
+  }
+  return hash;
 }
 
-bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs) {
+bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs,
+                                          Flags flags) {
   if (lhs == rhs)
     return true;
 
@@ -478,6 +483,9 @@ bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs) {
     break;
   }
   // Compare operands.
+  bool ignoreOperands = flags & Flags::IgnoreOperands;
+  if (ignoreOperands)
+    return true;
   // TODO: Allow commutative operations to have different ordering.
   return std::equal(lhs->operand_begin(), lhs->operand_end(),
                     rhs->operand_begin());

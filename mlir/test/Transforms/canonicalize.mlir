@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(canonicalize)' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(canonicalize)' -split-input-file | FileCheck %s -dump-input-on-failure
 
 // CHECK-LABEL: func @test_subi_zero
 func @test_subi_zero(%arg0: i32) -> i32 {
@@ -361,19 +361,15 @@ func @dead_dealloc_fold() {
 
 // CHECK-LABEL: func @dead_dealloc_fold_multi_use
 func @dead_dealloc_fold_multi_use(%cond : i1) {
-  // CHECK-NEXT: cond_br
+  // CHECK-NEXT: return
   %a = alloc() : memref<4xf32>
   cond_br %cond, ^bb1, ^bb2
 
-  // CHECK-LABEL: bb1:
 ^bb1:
-  // CHECK-NEXT: return
   dealloc %a: memref<4xf32>
   return
 
-  // CHECK-LABEL: bb2:
 ^bb2:
-  // CHECK-NEXT: return
   dealloc %a: memref<4xf32>
   return
 }
