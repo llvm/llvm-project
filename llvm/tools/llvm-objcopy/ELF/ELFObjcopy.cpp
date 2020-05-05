@@ -288,7 +288,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
-      if (Sec.OriginalData.empty())
+      if (Sec.Type == SHT_NOBITS)
         return createStringError(object_error::parse_failed,
                                  "cannot dump section '%s': it has no contents",
                                  SecName.str().c_str());

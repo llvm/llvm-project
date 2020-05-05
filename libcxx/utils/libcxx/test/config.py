@@ -131,11 +131,9 @@ class Configuration(object):
         self.configure_obj_root()
         self.configure_cxx_stdlib_under_test()
         self.configure_cxx_library_root()
-        self.configure_ccache()
         self.configure_compile_flags()
         self.configure_link_flags()
         self.configure_env()
-        self.configure_color_diagnostics()
         self.configure_debug_mode()
         self.configure_warnings()
         self.configure_sanitizer()
@@ -222,10 +220,6 @@ class Configuration(object):
         self.cxx = CXXCompiler(self, cxx) if not self.cxx_is_clang_cl else \
                    self._configure_clang_cl(cxx)
         self.cxx.compile_env = dict(os.environ)
-        # 'CCACHE_CPP2' prevents ccache from stripping comments while
-        # preprocessing. This is required to prevent stripping of '-verify'
-        # comments.
-        self.cxx.compile_env['CCACHE_CPP2'] = '1'
 
     def _configure_clang_cl(self, clang_path):
         def _split_env_var(var):
@@ -244,17 +238,6 @@ class Configuration(object):
         return CXXCompiler(self, clang_path, flags=flags,
                            compile_flags=compile_flags,
                            link_flags=link_flags)
-
-    def _dump_macros_verbose(self, *args, **kwargs):
-        macros_or_error = self.cxx.dumpMacros(*args, **kwargs)
-        if isinstance(macros_or_error, tuple):
-            cmd, out, err, rc = macros_or_error
-            report = libcxx.util.makeReport(cmd, out, err, rc)
-            report += "Compiler failed unexpectedly when dumping macros!"
-            self.lit_config.fatal(report)
-            return None
-        assert isinstance(macros_or_error, dict)
-        return macros_or_error
 
     def configure_src_root(self):
         self.libcxx_src_root = self.get_lit_conf(
@@ -314,13 +297,6 @@ class Configuration(object):
             # FIXME this is a hack.
             if self.get_lit_conf('enable_experimental') is None:
                 self.config.enable_experimental = 'true'
-
-    def configure_ccache(self):
-        use_ccache_default = os.environ.get('LIBCXX_USE_CCACHE') is not None
-        use_ccache = self.get_lit_bool('use_ccache', use_ccache_default)
-        if use_ccache:
-            self.cxx.use_ccache = True
-            self.lit_config.note('enabling ccache')
 
     def configure_features(self):
         additional_features = self.get_lit_conf('additional_features')
@@ -442,7 +418,6 @@ class Configuration(object):
         # Configure feature flags.
         self.configure_compile_flags_exceptions()
         self.configure_compile_flags_rtti()
-        self.configure_compile_flags_abi_version()
         enable_32bit = self.get_lit_bool('enable_32bit', False)
         if enable_32bit:
             self.cxx.flags += ['-m32']
@@ -531,62 +506,7 @@ class Configuration(object):
         config_site_header = os.path.join(self.libcxx_obj_root, '__config_site')
         if not os.path.isfile(config_site_header):
             return
-        contained_macros = self.parse_config_site_and_add_features(
-            config_site_header)
-        self.lit_config.note('Using __config_site header %s with macros: %r'
-            % (config_site_header, contained_macros))
-        # FIXME: This must come after the call to
-        # 'parse_config_site_and_add_features(...)' in order for it to work.
         self.cxx.compile_flags += ['-include', config_site_header]
-
-    def parse_config_site_and_add_features(self, header):
-        """ parse_config_site_and_add_features - Deduce and add the test
-            features that that are implied by the #define's in the __config_site
-            header. Return a dictionary containing the macros found in the
-            '__config_site' header.
-        """
-        # Parse the macro contents of __config_site by dumping the macros
-        # using 'c++ -dM -E' and filtering the predefines.
-        predefines = self._dump_macros_verbose()
-        macros = self._dump_macros_verbose(header)
-        feature_macros_keys = set(macros.keys()) - set(predefines.keys())
-        feature_macros = {}
-        for k in feature_macros_keys:
-            feature_macros[k] = macros[k]
-        # We expect the header guard to be one of the definitions
-        assert '_LIBCPP_CONFIG_SITE' in feature_macros
-        del feature_macros['_LIBCPP_CONFIG_SITE']
-        # The __config_site header should be non-empty. Otherwise it should
-        # have never been emitted by CMake.
-        assert len(feature_macros) > 0
-        # FIXME: This is a hack that should be fixed using module maps.
-        # If modules are enabled then we have to lift all of the definitions
-        # in __config_site onto the command line.
-        for m in feature_macros:
-            define = '-D%s' % m
-            if feature_macros[m]:
-                define += '=%s' % (feature_macros[m])
-            self.cxx.modules_flags += [define]
-        self.cxx.compile_flags += ['-Wno-macro-redefined']
-        # Transform the following macro names from __config_site into features
-        # that can be used in the tests.
-        # Ex. _LIBCPP_HAS_NO_THREADS -> libcpp-has-no-threads
-        translate = {
-            '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE',
-            '_LIBCPP_HAS_NO_MONOTONIC_CLOCK',
-            '_LIBCPP_HAS_NO_STDIN',
-            '_LIBCPP_HAS_NO_STDOUT',
-            '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS',
-            '_LIBCPP_HAS_NO_THREADS',
-            '_LIBCPP_HAS_THREAD_API_EXTERNAL',
-            '_LIBCPP_HAS_THREAD_API_PTHREAD',
-            '_LIBCPP_NO_VCRUNTIME'
-        }
-        for m in translate.intersection(feature_macros.keys()):
-            self.config.available_features.add(m.lower()[1:].replace('_', '-'))
-        return feature_macros
-
-
 
     def configure_compile_flags_exceptions(self):
         enable_exceptions = self.get_lit_bool('enable_exceptions', True)
@@ -599,16 +519,6 @@ class Configuration(object):
         if not enable_rtti:
             self.config.available_features.add('-fno-rtti')
             self.cxx.compile_flags += ['-fno-rtti', '-D_LIBCPP_NO_RTTI']
-
-    def configure_compile_flags_abi_version(self):
-        abi_version = self.get_lit_conf('abi_version', '').strip()
-        abi_unstable = self.get_lit_bool('abi_unstable')
-        # Only add the ABI version when it is non-default.
-        # FIXME(EricWF): Get the ABI version from the "__config_site".
-        if abi_version and abi_version != '1':
-          self.cxx.compile_flags += ['-D_LIBCPP_ABI_VERSION=' + abi_version]
-        if abi_unstable:
-          self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
     def configure_link_flags(self):
         # Configure library path
@@ -731,25 +641,6 @@ class Configuration(object):
         if self.get_lit_bool('cxx_ext_threads', default=False):
             self.cxx.link_flags += ['-lc++external_threads']
         self.target_info.add_cxx_link_flags(self.cxx.link_flags)
-
-    def configure_color_diagnostics(self):
-        use_color = self.get_lit_conf('color_diagnostics')
-        if use_color is None:
-            use_color = os.environ.get('LIBCXX_COLOR_DIAGNOSTICS')
-        if use_color is None:
-            return
-        if use_color != '':
-            self.lit_config.fatal('Invalid value for color_diagnostics "%s".'
-                                  % use_color)
-        color_flag = '-fdiagnostics-color=always'
-        # Check if the compiler supports the color diagnostics flag. Issue a
-        # warning if it does not since color diagnostics have been requested.
-        if not self.cxx.hasCompileFlag(color_flag):
-            self.lit_config.warning(
-                'color diagnostics have been requested but are not supported '
-                'by the compiler')
-        else:
-            self.cxx.flags += [color_flag]
 
     def configure_debug_mode(self):
         debug_level = self.get_lit_conf('debug_level', None)

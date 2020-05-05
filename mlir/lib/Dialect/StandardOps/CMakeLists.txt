@@ -17,3 +17,5 @@ add_mlir_dialect_library(MLIRStandardOps
   MLIRSideEffects
   MLIRViewLikeInterface
   )
+
+add_subdirectory(Transforms)

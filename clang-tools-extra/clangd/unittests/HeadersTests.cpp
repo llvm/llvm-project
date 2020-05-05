@@ -127,7 +127,7 @@ protected:
 
 MATCHER_P(Written, Name, "") { return arg.Written == Name; }
 MATCHER_P(Resolved, Name, "") { return arg.Resolved == Name; }
-MATCHER_P(IncludeLine, N, "") { return arg.R.start.line == N; }
+MATCHER_P(IncludeLine, N, "") { return arg.HashLine == N; }
 MATCHER_P(Directive, D, "") { return arg.Directive == D; }
 
 MATCHER_P2(Distance, File, D, "") {

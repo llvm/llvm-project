@@ -3363,8 +3363,19 @@ void ARMExidxSyntheticSection::finalizeContents() {
   // ICF may remove executable InputSections and their dependent .ARM.exidx
   // section that we recorded earlier.
   auto isDiscarded = [](const InputSection *isec) { return !isec->isLive(); };
-  llvm::erase_if(executableSections, isDiscarded);
   llvm::erase_if(exidxSections, isDiscarded);
+  // We need to remove discarded InputSections and InputSections without
+  // .ARM.exidx sections that if we generated the .ARM.exidx it would be out
+  // of range.
+  auto isDiscardedOrOutOfRange = [this](InputSection *isec) {
+    if (!isec->isLive())
+      return true;
+    if (findExidxSection(isec))
+      return false;
+    int64_t off = static_cast<int64_t>(isec->getVA() - getVA());
+    return off != llvm::SignExtend64(off, 31);
+  };
+  llvm::erase_if(executableSections, isDiscardedOrOutOfRange);
 
   // Sort the executable sections that may or may not have associated
   // .ARM.exidx sections by order of ascending address. This requires the

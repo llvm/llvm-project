@@ -3918,6 +3918,7 @@ public:
   llvm::Type *getEltType(SVETypeFlags TypeFlags);
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(SVETypeFlags TypeFlags);
+  llvm::Value *EmitSVEAllTruePred(SVETypeFlags TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred,
                                     llvm::ScalableVectorType *VTy);

@@ -905,10 +905,11 @@ define <32 x i8> @trunc_v32i16_v32i8_zeroes(<32 x i16>* %x) nounwind "min-legal-
 define <8 x i32> @trunc_v8i64_v8i32_sign(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i32_sign:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsraq $48, 32(%rdi), %ymm1
-; CHECK-NEXT:    vpsraq $48, (%rdi), %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
-; CHECK-NEXT:    vpermi2w %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vpsraq $48, 32(%rdi), %ymm0
+; CHECK-NEXT:    vpsraq $48, (%rdi), %ymm1
+; CHECK-NEXT:    vpmovqd %ymm1, %xmm1
+; CHECK-NEXT:    vpmovqd %ymm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <8 x i64>, <8 x i64>* %x
   %b = ashr <8 x i64> %a, <i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48>

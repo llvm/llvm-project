@@ -1460,6 +1460,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
 
+  if (Subtarget->hasMVEIntegerOps())
+    setTargetDAGCombine(ISD::VSELECT);
+
   if (Subtarget->hasV6Ops())
     setTargetDAGCombine(ISD::SRL);
   if (Subtarget->isThumb1Only())
@@ -11719,6 +11722,42 @@ static SDValue PerformAddeSubeCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue PerformVSELECTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const ARMSubtarget *Subtarget) {
+  // Transforms vselect(not(cond), lhs, rhs) into vselect(cond, rhs, lhs).
+  //
+  // We need to re-implement this optimization here as the implementation in the
+  // Target-Independent DAGCombiner does not handle the kind of constant we make
+  // (it calls isConstOrConstSplat with AllowTruncation set to false - and for
+  // good reason, allowing truncation there would break other targets).
+  //
+  // Currently, this is only done for MVE, as it's the only target that benefits
+  // from this transformation (e.g. VPNOT+VPSEL becomes a single VPSEL).
+  if (!Subtarget->hasMVEIntegerOps())
+    return SDValue();
+
+  if (N->getOperand(0).getOpcode() != ISD::XOR)
+    return SDValue();
+  SDValue XOR = N->getOperand(0);
+
+  // Check if the XOR's RHS is either a 1, or a BUILD_VECTOR of 1s.
+  // It is important to check with truncation allowed as the BUILD_VECTORs we
+  // generate in those situations will truncate their operands.
+  ConstantSDNode *Const =
+      isConstOrConstSplat(XOR->getOperand(1), /*AllowUndefs*/ false,
+                          /*AllowTruncation*/ true);
+  if (!Const || !Const->isOne())
+    return SDValue();
+
+  // Rewrite into vselect(cond, rhs, lhs).
+  SDValue Cond = XOR->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  EVT Type = N->getValueType(0);
+  return DCI.DAG.getNode(ISD::VSELECT, SDLoc(N), Type, Cond, RHS, LHS);
+}
+
 static SDValue PerformABSCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const ARMSubtarget *Subtarget) {
@@ -12612,58 +12651,44 @@ static bool isValidMVECond(unsigned CC, bool IsFloat) {
   };
 }
 
+static ARMCC::CondCodes getVCMPCondCode(SDValue N) {
+  if (N->getOpcode() == ARMISD::VCMP)
+    return (ARMCC::CondCodes)N->getConstantOperandVal(2);
+  else if (N->getOpcode() == ARMISD::VCMPZ)
+    return (ARMCC::CondCodes)N->getConstantOperandVal(1);
+  else
+    llvm_unreachable("Not a VCMP/VCMPZ!");
+}
+
+static bool CanInvertMVEVCMP(SDValue N) {
+  ARMCC::CondCodes CC = ARMCC::getOppositeCondition(getVCMPCondCode(N));
+  return isValidMVECond(CC, N->getOperand(0).getValueType().isFloatingPoint());
+}
+
 static SDValue PerformORCombine_i1(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const ARMSubtarget *Subtarget) {
   // Try to invert "or A, B" -> "and ~A, ~B", as the "and" is easier to chain
   // together with predicates
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  ARMCC::CondCodes CondCode0 = ARMCC::AL;
-  ARMCC::CondCodes CondCode1 = ARMCC::AL;
-  if (N0->getOpcode() == ARMISD::VCMP)
-    CondCode0 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N0->getOperand(2))
-                    ->getZExtValue();
-  else if (N0->getOpcode() == ARMISD::VCMPZ)
-    CondCode0 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N0->getOperand(1))
-                    ->getZExtValue();
-  if (N1->getOpcode() == ARMISD::VCMP)
-    CondCode1 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N1->getOperand(2))
-                    ->getZExtValue();
-  else if (N1->getOpcode() == ARMISD::VCMPZ)
-    CondCode1 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N1->getOperand(1))
-                    ->getZExtValue();
+  auto IsFreelyInvertable = [&](SDValue V) {
+    if (V->getOpcode() == ARMISD::VCMP || V->getOpcode() == ARMISD::VCMPZ)
+      return CanInvertMVEVCMP(V);
+    return false;
+  };
 
-  if (CondCode0 == ARMCC::AL || CondCode1 == ARMCC::AL)
+  // At least one operand must be freely invertable.
+  if (!(IsFreelyInvertable(N0) || IsFreelyInvertable(N1)))
     return SDValue();
 
-  unsigned Opposite0 = ARMCC::getOppositeCondition(CondCode0);
-  unsigned Opposite1 = ARMCC::getOppositeCondition(CondCode1);
-
-  if (!isValidMVECond(Opposite0,
-                      N0->getOperand(0)->getValueType(0).isFloatingPoint()) ||
-      !isValidMVECond(Opposite1,
-                      N1->getOperand(0)->getValueType(0).isFloatingPoint()))
-    return SDValue();
-
-  SmallVector<SDValue, 4> Ops0;
-  Ops0.push_back(N0->getOperand(0));
-  if (N0->getOpcode() == ARMISD::VCMP)
-    Ops0.push_back(N0->getOperand(1));
-  Ops0.push_back(DCI.DAG.getConstant(Opposite0, SDLoc(N0), MVT::i32));
-  SmallVector<SDValue, 4> Ops1;
-  Ops1.push_back(N1->getOperand(0));
-  if (N1->getOpcode() == ARMISD::VCMP)
-    Ops1.push_back(N1->getOperand(1));
-  Ops1.push_back(DCI.DAG.getConstant(Opposite1, SDLoc(N1), MVT::i32));
-
-  SDValue NewN0 = DCI.DAG.getNode(N0->getOpcode(), SDLoc(N0), VT, Ops0);
-  SDValue NewN1 = DCI.DAG.getNode(N1->getOpcode(), SDLoc(N1), VT, Ops1);
-  SDValue And = DCI.DAG.getNode(ISD::AND, SDLoc(N), VT, NewN0, NewN1);
-  return DCI.DAG.getNode(ISD::XOR, SDLoc(N), VT, And,
-                         DCI.DAG.getAllOnesConstant(SDLoc(N), VT));
+  SDValue NewN0 = DCI.DAG.getLogicalNOT(DL, N0, VT);
+  SDValue NewN1 = DCI.DAG.getLogicalNOT(DL, N1, VT);
+  SDValue And = DCI.DAG.getNode(ISD::AND, DL, VT, NewN0, NewN1);
+  return DCI.DAG.getLogicalNOT(DL, And, VT);
 }
 
 /// PerformORCombine - Target-specific dag combine xforms for ISD::OR
@@ -12782,6 +12807,27 @@ static SDValue PerformXORCombine(SDNode *N,
 
     if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
       return Result;
+  }
+
+  if (Subtarget->hasMVEIntegerOps()) {
+    // fold (xor(vcmp/z, 1)) into a vcmp with the opposite condition.
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    const TargetLowering *TLI = Subtarget->getTargetLowering();
+    if (TLI->isConstTrueVal(N1.getNode()) &&
+        (N0->getOpcode() == ARMISD::VCMP || N0->getOpcode() == ARMISD::VCMPZ)) {
+      if (CanInvertMVEVCMP(N0)) {
+        SDLoc DL(N0);
+        ARMCC::CondCodes CC = ARMCC::getOppositeCondition(getVCMPCondCode(N0));
+
+        SmallVector<SDValue, 4> Ops;
+        Ops.push_back(N0->getOperand(0));
+        if (N0->getOpcode() == ARMISD::VCMP)
+          Ops.push_back(N0->getOperand(1));
+        Ops.push_back(DCI.DAG.getConstant(CC, DL, MVT::i32));
+        return DCI.DAG.getNode(N0->getOpcode(), DL, N0->getValueType(0), Ops);
+      }
+    }
   }
 
   return SDValue();
@@ -13180,8 +13226,7 @@ PerformPREDICATE_CASTCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     // If the valuetypes are the same, we can remove the cast entirely.
     if (Op->getOperand(0).getValueType() == VT)
       return Op->getOperand(0);
-    return DCI.DAG.getNode(ARMISD::PREDICATE_CAST, dl,
-                           Op->getOperand(0).getValueType(), Op->getOperand(0));
+    return DCI.DAG.getNode(ARMISD::PREDICATE_CAST, dl, VT, Op->getOperand(0));
   }
 
   return SDValue();
@@ -15225,6 +15270,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   default: break;
+  case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
   case ISD::ABS:        return PerformABSCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);

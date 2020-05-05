@@ -129,7 +129,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
   for (unsigned i = 0, e = ArgumentConstants.size(); i != e; ++i, ++AI) {
     // Do we have a constant argument?
     if (ArgumentConstants[i].getInt() || AI->use_empty() ||
-        AI->hasInAllocaAttr() || (AI->hasByValAttr() && !F.onlyReadsMemory()))
+        (AI->hasByValAttr() && !F.onlyReadsMemory()))
       continue;
 
     Value *V = ArgumentConstants[i].getPointer();

@@ -55,8 +55,8 @@ define <4 x float> @signbits_sext_v4i64_sitofp_v4f32(i8 signext %a0, i16 signext
   ret <4 x float> %9
 }
 
-define <4 x double> @signbits_ashr_sitofp(<4 x i64> %a0) nounwind {
-; X86-LABEL: signbits_ashr_sitofp:
+define <4 x double> @signbits_ashr_sitofp_0(<4 x i64> %a0) nounwind {
+; X86-LABEL: signbits_ashr_sitofp_0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpsrlq $36, %xmm1, %xmm2
@@ -75,7 +75,7 @@ define <4 x double> @signbits_ashr_sitofp(<4 x i64> %a0) nounwind {
 ; X86-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X86-NEXT:    retl
 ;
-; X64-AVX1-LABEL: signbits_ashr_sitofp:
+; X64-AVX1-LABEL: signbits_ashr_sitofp_0:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX1-NEXT:    vpsrlq $36, %xmm1, %xmm2
@@ -94,7 +94,7 @@ define <4 x double> @signbits_ashr_sitofp(<4 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
-; X64-AVX2-LABEL: signbits_ashr_sitofp:
+; X64-AVX2-LABEL: signbits_ashr_sitofp_0:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpsrlvq {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1073741824,536870912,268435456,134217728]
@@ -107,6 +107,41 @@ define <4 x double> @signbits_ashr_sitofp(<4 x i64> %a0) nounwind {
   %1 = ashr <4 x i64> %a0, <i64 33, i64 34, i64 35, i64 36>
   %2 = sitofp <4 x i64> %1 to <4 x double>
   ret <4 x double> %2
+}
+
+; PR45794
+define <4 x float> @signbits_ashr_sitofp_1(<4 x i64> %a0) nounwind {
+; X86-LABEL: signbits_ashr_sitofp_1:
+; X86:       # %bb.0:
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-NEXT:    vpsrad $16, %xmm1, %xmm1
+; X86-NEXT:    vpsrad $16, %xmm0, %xmm0
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-AVX1-LABEL: signbits_ashr_sitofp_1:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X64-AVX1-NEXT:    vpsrad $16, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; X64-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: signbits_ashr_sitofp_1:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpsrad $16, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; X64-AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
+  %1 = ashr <4 x i64> %a0, <i64 48, i64 48, i64 48, i64 48>
+  %2 = sitofp <4 x i64> %1 to <4 x float>
+  ret <4 x float> %2
 }
 
 define float @signbits_ashr_extract_sitofp_0(<2 x i64> %a0) nounwind {
