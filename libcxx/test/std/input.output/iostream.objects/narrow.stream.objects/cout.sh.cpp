@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-has-no-stdout
+
 // <iostream>
 
-// istream wclog;
+// istream cout;
+
+// FILE_DEPENDENCIES: %t.exe
+// RUN: %{build}
+// RUN: %{exec} %t.exe > %t.out
+// RUN: grep -e 'Hello World!' %t.out
 
 #include <iostream>
 
@@ -16,11 +23,7 @@
 
 int main(int, char**)
 {
-#if 0
-    std::wclog << L"Hello World!\n";
-#else
-    (void)std::wclog;
-#endif
+    std::cout << "Hello World!\n";
 
-  return 0;
+    return 0;
 }

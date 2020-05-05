@@ -12,6 +12,11 @@
 
 // istream wcin;
 
+// FILE_DEPENDENCIES: %t.exe
+// RUN: %{build}
+// RUN: %{exec} echo "123" | %t.exe > %t.out
+// RUN: grep -e 'The number is 123!' %t.out
+
 #include <iostream>
 #include <cassert>
 
@@ -19,19 +24,15 @@
 
 int main(int, char**)
 {
-#if 0
-    std::wcout << L"Hello World!\n";
     int i;
-    std::wcout << L"Enter a number: ";
     std::wcin >> i;
-    std::wcout << L"The number is : " << i << L'\n';
-#else  // 0
+    std::wcout << L"The number is " << i << L"!";
+
 #ifdef _LIBCPP_HAS_NO_STDOUT
     assert(std::wcin.tie() == NULL);
 #else
     assert(std::wcin.tie() == &std::wcout);
 #endif
-#endif
 
-  return 0;
+    return 0;
 }
