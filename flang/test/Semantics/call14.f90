@@ -3,7 +3,7 @@
 
 module m
   type :: hasCoarray
-    real :: coarray[*]
+    real, allocatable :: coarray[:]
   end type
  contains
   !ERROR: VALUE attribute may apply only to a dummy data object
