@@ -53,6 +53,7 @@ void registerTestLinalgTransforms();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
 void registerTestLoopMappingPass();
+void registerTestLoopUnrollingPass();
 void registerTestMatchers();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
@@ -119,6 +120,7 @@ void registerTestPasses() {
   registerTestLivenessPass();
   registerTestLoopFusion();
   registerTestLoopMappingPass();
+  registerTestLoopUnrollingPass();
   registerTestMatchers();
   registerTestMemRefDependenceCheck();
   registerTestMemRefStrideCalculation();
