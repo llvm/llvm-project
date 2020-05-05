@@ -35,10 +35,10 @@ ProgramHeaders:
   Sections:
     - Section: .text
 
-#CHECK: 0000000 de ad be ef
+# CHECK: 0000000 de ad be ef
 
-#NON-ALLOC: 0000000 ca fe
+# NON-ALLOC: 0000000 ca fe
 
-#SIZE: 4
+# SIZE: 4
 
-#NOBITS: error: '[[INPUT]]': cannot dump section '.bar': it has no contents
+# NOBITS: error: '[[INPUT]]': cannot dump section '.bar': it has no contents
