@@ -13,5 +13,6 @@ target_link_libraries(MLIRStandardOpsTransforms
   MLIRPass
   MLIRStandardOps
   MLIRSupport
+  MLIRTransforms 
   LLVMSupport
   )
