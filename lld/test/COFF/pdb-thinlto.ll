@@ -29,10 +29,8 @@ declare void @foo()
 
 ; CHECK:                           Modules
 ; CHECK: ============================================================
-; CHECK: Mod 0000 | `{{.*}}main.exe.lto.obj`:
-; CHECK: Obj: `{{.*}}main.exe.lto.obj`:
-; CHECK: Mod 0001 | `{{.*}}main.exe.lto.1.obj`:
+; CHECK: Mod 0000 | `{{.*}}main.exe.lto.1.obj`:
 ; CHECK: Obj: `{{.*}}main.exe.lto.1.obj`:
-; CHECK: Mod 0002 | `{{.*}}main.exe.lto.2.obj`:
+; CHECK: Mod 0001 | `{{.*}}main.exe.lto.2.obj`:
 ; CHECK: Obj: `{{.*}}main.exe.lto.2.obj`:
-; CHECK: Mod 0003 | `* Linker *`:
+; CHECK: Mod 0002 | `* Linker *`:

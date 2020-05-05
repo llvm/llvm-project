@@ -81,6 +81,7 @@ static lto::Config createConfig() {
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.CGOptLevel = args::getCGOptLevel(config->ltoo);
+  c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
   if (config->saveTemps)
     checkError(c.addSaveTemps(std::string(config->outputFile) + ".",
