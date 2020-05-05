@@ -75,6 +75,46 @@ private:
   friend RangeBaseT;
 };
 
+//===----------------------------------------------------------------------===//
+// Operation Iterators
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+/// A utility iterator that filters out operations that are not 'OpT'.
+template <typename OpT, typename IteratorT>
+class op_filter_iterator
+    : public llvm::filter_iterator<IteratorT, bool (*)(Operation &)> {
+  static bool filter(Operation &op) { return llvm::isa<OpT>(op); }
+
+public:
+  op_filter_iterator(IteratorT it, IteratorT end)
+      : llvm::filter_iterator<IteratorT, bool (*)(Operation &)>(it, end,
+                                                                &filter) {}
+
+  /// Allow implicit conversion to the underlying iterator.
+  operator IteratorT() const { return this->wrapped(); }
+};
+
+/// This class provides iteration over the held operations of a block for a
+/// specific operation type.
+template <typename OpT, typename IteratorT>
+class op_iterator
+    : public llvm::mapped_iterator<op_filter_iterator<OpT, IteratorT>,
+                                   OpT (*)(Operation &)> {
+  static OpT unwrap(Operation &op) { return cast<OpT>(op); }
+
+public:
+  using reference = OpT;
+
+  /// Initializes the iterator to the specified filter iterator.
+  op_iterator(op_filter_iterator<OpT, IteratorT> it)
+      : llvm::mapped_iterator<op_filter_iterator<OpT, IteratorT>,
+                              OpT (*)(Operation &)>(it, &unwrap) {}
+
+  /// Allow implicit conversion to the underlying block iterator.
+  operator IteratorT() const { return this->wrapped(); }
+};
+} // end namespace detail
 } // end namespace mlir
 
 namespace llvm {
