@@ -15,10 +15,9 @@ subroutine assign1(lhs, rhs)
 
   ! CHECK: %[[cmp_len:[0-9]+]] = cmpi "slt", %[[lhs:.*]]#1, %[[rhs:.*]]#1
   ! CHECK-NEXT: %[[min_len:[0-9]+]] = select %[[cmp_len]], %[[lhs]]#1, %[[rhs]]#1
-  ! CHECK-NEXT: %[[minIdxLen:.*]] = fir.convert %[[min_len]]
 
   ! Allocate temp in case rhs and lhs may overlap
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1>, %[[minIdxLen]]
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1>, %[[min_len]]
 
   ! Copy of rhs into temp
   ! CHECK: fir.do_loop %[[i:.*]] =
@@ -63,13 +62,13 @@ subroutine assign_substring1(str, rhs, lb, ub)
 
 
   ! Compute substring length
-  ! CHECK-DAG: %[[diff:.*]] = subi %[[ub]], %[[lb]]
-  ! CHECK-DAG: %[[c1:.*]] = constant 1
+  ! CHECK-DAG: %[[ubi:.*]] = fir.convert %[[ub]] : (i64) -> index
+  ! CHECK-DAG: %[[diff:.*]] = subi %[[ubi]], %[[lbi]]
   ! CHECK-DAG: %[[pre_lhs_len:.*]] = addi %[[diff]], %[[c1]]
   ! CHECK-DAG: %[[c0:.*]] = constant 0
   ! CHECK-DAG: %[[cmp_len:.*]] = cmpi "slt", %[[pre_lhs_len]], %[[c0]]
-  ! CHECK-DAG: %[[lhs_len:.*]] = select %[[cmp_len]], %[[c0]], %[[pre_lhs_len]]
 
+  ! CHECK-DAG: %[[lhs_len:.*]] = select %[[cmp_len]], %[[c0]], %[[pre_lhs_len]]
   ! CHECK: %[[lhs_box:.*]] = fir.emboxchar %[[lhs_addr]], %[[lhs_len]]
 
   ! The rest of the assignment is just as the one above, only test that the
