@@ -172,6 +172,10 @@ FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
   if (Flags & F_executable)
     Mode |= fs::all_exe;
 
+  // If Size is zero, don't use mmap which will fail with EINVAL.
+  if (Size == 0)
+    return createInMemoryBuffer(Path, Size, Mode);
+
   fs::file_status Stat;
   fs::status(Path, Stat);
 
