@@ -188,12 +188,6 @@ default.
   Run the tests using the given sanitizer. If LLVM_USE_SANITIZER was given when
   building libc++ then that sanitizer will be used by default.
 
-.. option:: color_diagnostics
-
-  Enable the use of colorized compile diagnostics. If the color_diagnostics
-  option is specified or the environment variable LIBCXX_COLOR_DIAGNOSTICS is
-  present then color diagnostics will be enabled.
-
 .. option:: llvm_unwinder
 
   Enable the use of LLVM unwinder instead of libgcc.
@@ -210,12 +204,6 @@ Environment Variables
 
   Specify the site configuration to use when running the tests.
   Also see `libcxx_site_config`.
-
-.. envvar:: LIBCXX_COLOR_DIAGNOSTICS
-
-  If ``LIBCXX_COLOR_DIAGNOSTICS`` is defined then the test suite will attempt
-  to use color diagnostic outputs from the compiler.
-  Also see `color_diagnostics`.
 
 Writing Tests
 -------------
