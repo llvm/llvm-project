@@ -69,6 +69,7 @@ TEST_CASE(test_exist_not_found)
 
 TEST_CASE(static_env_test)
 {
+    static_test_env static_env;
     TEST_CHECK(is_directory(StaticEnv::Dir));
     TEST_CHECK(is_directory(StaticEnv::SymlinkToDir));
     TEST_CHECK(!is_directory(StaticEnv::File));

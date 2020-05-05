@@ -63,6 +63,7 @@ TEST_CASE(is_symlink_status_test)
 
 TEST_CASE(static_env_test)
 {
+    static_test_env static_env;
     struct TestCase {
         path p;
         bool expect;

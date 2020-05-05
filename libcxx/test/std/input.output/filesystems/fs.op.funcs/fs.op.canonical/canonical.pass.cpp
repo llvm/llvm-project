@@ -47,6 +47,7 @@ TEST_CASE(signature_test)
 // Each scope tests one of the cases.
 TEST_CASE(test_canonical)
 {
+    static_test_env static_env;
     CWDGuard guard;
     // has_root_name() && has_root_directory()
     const path Root = StaticEnv::Root;

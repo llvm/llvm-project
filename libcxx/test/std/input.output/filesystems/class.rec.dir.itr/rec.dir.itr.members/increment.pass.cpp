@@ -43,6 +43,7 @@ TEST_CASE(test_increment_signatures)
 
 TEST_CASE(test_prefix_increment)
 {
+    static_test_env static_env;
     const path testDir = StaticEnv::Dir;
     const std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
                                       std::end(  StaticEnv::RecDirIterationList));
@@ -66,6 +67,7 @@ TEST_CASE(test_prefix_increment)
 
 TEST_CASE(test_postfix_increment)
 {
+    static_test_env static_env;
     const path testDir = StaticEnv::Dir;
     const std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
                                       std::end(  StaticEnv::RecDirIterationList));
@@ -89,6 +91,7 @@ TEST_CASE(test_postfix_increment)
 
 TEST_CASE(test_increment_method)
 {
+    static_test_env static_env;
     const path testDir = StaticEnv::Dir;
     const std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
                                       std::end(  StaticEnv::RecDirIterationList));
@@ -113,6 +116,7 @@ TEST_CASE(test_increment_method)
 
 TEST_CASE(test_follow_symlinks)
 {
+    static_test_env static_env;
     const path testDir = StaticEnv::Dir;
     auto const& IterList = StaticEnv::RecDirFollowSymlinksIterationList;
 
