@@ -1564,8 +1564,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
                                 LibFunc_exp10l, B, Attrs);
 
   // pow(n, x) -> exp2(log2(n) * x)
-  if (Pow->hasOneUse() && Pow->hasApproxFunc() && Pow->hasNoNaNs() &&
-      Pow->hasNoInfs() && BaseF->isNormal() && !BaseF->isNegative()) {
+  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && Pow->hasNoInfs() &&
+      BaseF->isNormal() && !BaseF->isNegative()) {
     Value *Log = nullptr;
     if (Ty->isFloatTy())
       Log = ConstantFP::get(Ty, std::log2(BaseF->convertToFloat()));
