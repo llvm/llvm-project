@@ -464,7 +464,8 @@ int SystemZTTIImpl::getArithmeticInstrCost(
       return DivInstrCost;
   }
   else if (ST->hasVector()) {
-    unsigned VF = cast<VectorType>(Ty)->getNumElements();
+    auto *VTy = cast<VectorType>(Ty);
+    unsigned VF = VTy->getNumElements();
     unsigned NumVectors = getNumVectorRegs(Ty);
 
     // These vector operations are custom handled, but are still supported
@@ -477,7 +478,7 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     if (DivRemConstPow2)
       return (NumVectors * (SignedDivRem ? SDivPow2Cost : 1));
     if (DivRemConst)
-      return VF * DivMulSeqCost + getScalarizationOverhead(Ty, Args);
+      return VF * DivMulSeqCost + getScalarizationOverhead(VTy, Args);
     if ((SignedDivRem || UnsignedDivRem) && VF > 4)
       // Temporary hack: disable high vectorization factors with integer
       // division/remainder, which will get scalarized and handled with
@@ -500,7 +501,7 @@ int SystemZTTIImpl::getArithmeticInstrCost(
         // inserting and extracting the values.
         unsigned ScalarCost =
             getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind);
-        unsigned Cost = (VF * ScalarCost) + getScalarizationOverhead(Ty, Args);
+        unsigned Cost = (VF * ScalarCost) + getScalarizationOverhead(VTy, Args);
         // FIXME: VF 2 for these FP operations are currently just as
         // expensive as for VF 4.
         if (VF == 2)
@@ -517,7 +518,7 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 
     // There is no native support for FRem.
     if (Opcode == Instruction::FRem) {
-      unsigned Cost = (VF * LIBCALL_COST) + getScalarizationOverhead(Ty, Args);
+      unsigned Cost = (VF * LIBCALL_COST) + getScalarizationOverhead(VTy, Args);
       // FIXME: VF 2 for float is currently just as expensive as for VF 4.
       if (VF == 2 && ScalarBits == 32)
         Cost *= 2;
@@ -724,8 +725,9 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
   else if (ST->hasVector()) {
-    assert (Dst->isVectorTy());
-    unsigned VF = cast<VectorType>(Src)->getNumElements();
+    auto *SrcVecTy = cast<VectorType>(Src);
+    auto *DstVecTy = cast<VectorType>(Dst);
+    unsigned VF = SrcVecTy->getNumElements();
     unsigned NumDstVectors = getNumVectorRegs(Dst);
     unsigned NumSrcVectors = getNumVectorRegs(Src);
 
@@ -781,8 +783,8 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
           (Opcode == Instruction::FPToSI || Opcode == Instruction::FPToUI))
         NeedsExtracts = false;
 
-      TotCost += getScalarizationOverhead(Src, false, NeedsExtracts);
-      TotCost += getScalarizationOverhead(Dst, NeedsInserts, false);
+      TotCost += getScalarizationOverhead(SrcVecTy, false, NeedsExtracts);
+      TotCost += getScalarizationOverhead(DstVecTy, NeedsInserts, false);
 
       // FIXME: VF 2 for float<->i32 is currently just as expensive as for VF 4.
       if (VF == 2 && SrcScalarBits == 32 && DstScalarBits == 32)
@@ -793,7 +795,8 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
     if (Opcode == Instruction::FPTrunc) {
       if (SrcScalarBits == 128)  // fp128 -> double/float + inserts of elements.
-        return VF /*ldxbr/lexbr*/ + getScalarizationOverhead(Dst, true, false);
+        return VF /*ldxbr/lexbr*/ +
+               getScalarizationOverhead(DstVecTy, true, false);
       else // double -> float
         return VF / 2 /*vledb*/ + std::max(1U, VF / 4 /*vperm*/);
     }
@@ -806,7 +809,7 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
         return VF * 2;
       }
       // -> fp128.  VF * lxdb/lxeb + extraction of elements.
-      return VF + getScalarizationOverhead(Src, false, true);
+      return VF + getScalarizationOverhead(SrcVecTy, false, true);
     }
   }
 
