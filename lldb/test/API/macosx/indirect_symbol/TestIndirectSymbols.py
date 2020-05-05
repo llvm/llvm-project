@@ -19,7 +19,6 @@ class TestIndirectFunctions(TestBase):
         self.main_source = "main.c"
 
     @skipUnlessDarwin
-    @expectedFailureAll(oslist=no_match(["macosx"]), bugnumber="rdar://55952764")
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test stepping and setting breakpoints in indirect and re-exported symbols."""
