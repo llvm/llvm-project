@@ -1180,7 +1180,9 @@ static bool matchIntrinsicType(
     case IITDescriptor::Quad: return !Ty->isFP128Ty();
     case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
     case IITDescriptor::Vector: {
-      VectorType *VT = dyn_cast<VectorType>(Ty);
+      // FIXME: We shouldn't be assuming all Vector types are fixed width.
+      // This will be fixed soon in another future patch.
+      FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
       return !VT || VT->getNumElements() != D.Vector_Width ||
              matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
                                 DeferredChecks, IsDeferredCheck);
@@ -1357,7 +1359,11 @@ static bool matchIntrinsicType(
     case IITDescriptor::ScalableVecArgument: {
       if (!isa<ScalableVectorType>(Ty))
         return true;
-      return matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks,
+      ScalableVectorType *STy = cast<ScalableVectorType>(Ty);
+      unsigned MinElts = STy->getMinNumElements();
+      FixedVectorType *FVTy =
+          FixedVectorType::get(STy->getElementType(), MinElts);
+      return matchIntrinsicType(FVTy, Infos, ArgTys, DeferredChecks,
                                 IsDeferredCheck);
     }
     case IITDescriptor::VecOfBitcastsToInt: {
