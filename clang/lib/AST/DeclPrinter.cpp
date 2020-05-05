@@ -532,7 +532,7 @@ void DeclPrinter::VisitEnumDecl(EnumDecl *D) {
 
   Out << ' ' << *D;
 
-  if (D->isFixed() && D->getASTContext().getLangOpts().CPlusPlus11)
+  if (D->isFixed())
     Out << " : " << D->getIntegerType().stream(Policy);
 
   if (D->isCompleteDefinition()) {
