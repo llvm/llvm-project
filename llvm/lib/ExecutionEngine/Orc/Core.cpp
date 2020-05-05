@@ -1157,30 +1157,29 @@ void JITDylib::notifyFailed(FailedSymbolsWorklist Worklist) {
     Q->handleFailed(make_error<FailedToMaterialize>(FailedSymbolsMap));
 }
 
-void JITDylib::setSearchOrder(JITDylibSearchOrder NewSearchOrder,
-                              bool SearchThisJITDylibFirst) {
+void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
+                            bool LinkAgainstThisJITDylibFirst) {
   ES.runSessionLocked([&]() {
-    if (SearchThisJITDylibFirst) {
-      SearchOrder.clear();
-      if (NewSearchOrder.empty() || NewSearchOrder.front().first != this)
-        SearchOrder.push_back(
+    if (LinkAgainstThisJITDylibFirst) {
+      LinkOrder.clear();
+      if (NewLinkOrder.empty() || NewLinkOrder.front().first != this)
+        LinkOrder.push_back(
             std::make_pair(this, JITDylibLookupFlags::MatchAllSymbols));
-      SearchOrder.insert(SearchOrder.end(), NewSearchOrder.begin(),
-                         NewSearchOrder.end());
+      LinkOrder.insert(LinkOrder.end(), NewLinkOrder.begin(),
+                       NewLinkOrder.end());
     } else
-      SearchOrder = std::move(NewSearchOrder);
+      LinkOrder = std::move(NewLinkOrder);
   });
 }
 
-void JITDylib::addToSearchOrder(JITDylib &JD,
-                                JITDylibLookupFlags JDLookupFlags) {
-  ES.runSessionLocked([&]() { SearchOrder.push_back({&JD, JDLookupFlags}); });
+void JITDylib::addToLinkOrder(JITDylib &JD, JITDylibLookupFlags JDLookupFlags) {
+  ES.runSessionLocked([&]() { LinkOrder.push_back({&JD, JDLookupFlags}); });
 }
 
-void JITDylib::replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD,
-                                    JITDylibLookupFlags JDLookupFlags) {
+void JITDylib::replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
+                                  JITDylibLookupFlags JDLookupFlags) {
   ES.runSessionLocked([&]() {
-    for (auto &KV : SearchOrder)
+    for (auto &KV : LinkOrder)
       if (KV.first == &OldJD) {
         KV = {&NewJD, JDLookupFlags};
         break;
@@ -1188,14 +1187,14 @@ void JITDylib::replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD,
   });
 }
 
-void JITDylib::removeFromSearchOrder(JITDylib &JD) {
+void JITDylib::removeFromLinkOrder(JITDylib &JD) {
   ES.runSessionLocked([&]() {
-    auto I = std::find_if(SearchOrder.begin(), SearchOrder.end(),
+    auto I = std::find_if(LinkOrder.begin(), LinkOrder.end(),
                           [&](const JITDylibSearchOrder::value_type &KV) {
                             return KV.first == &JD;
                           });
-    if (I != SearchOrder.end())
-      SearchOrder.erase(I);
+    if (I != LinkOrder.end())
+      LinkOrder.erase(I);
   });
 }
 
@@ -1529,7 +1528,7 @@ void JITDylib::dump(raw_ostream &OS) {
   ES.runSessionLocked([&, this]() {
     OS << "JITDylib \"" << JITDylibName << "\" (ES: "
        << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES)) << "):\n"
-       << "Search order: " << SearchOrder << "\n"
+       << "Link order: " << LinkOrder << "\n"
        << "Symbol table:\n";
 
     for (auto &KV : Symbols) {
@@ -1610,7 +1609,7 @@ JITDylib::MaterializingInfo::takeQueriesMeeting(SymbolState RequiredState) {
 
 JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
     : ES(ES), JITDylibName(std::move(Name)) {
-  SearchOrder.push_back({this, JITDylibLookupFlags::MatchAllSymbols});
+  LinkOrder.push_back({this, JITDylibLookupFlags::MatchAllSymbols});
 }
 
 Error JITDylib::defineImpl(MaterializationUnit &MU) {

@@ -825,47 +825,46 @@ public:
   /// have been added and not yet removed).
   void removeGenerator(DefinitionGenerator &G);
 
-  /// Set the search order to be used when fixing up definitions in JITDylib.
-  /// This will replace the previous search order, and apply to any symbol
+  /// Set the link order to be used when fixing up definitions in JITDylib.
+  /// This will replace the previous link order, and apply to any symbol
   /// resolutions made for definitions in this JITDylib after the call to
-  /// setSearchOrder (even if the definition itself was added before the
+  /// setLinkOrder (even if the definition itself was added before the
   /// call).
   ///
-  /// If SearchThisJITDylibFirst is set, which by default it is, then this
-  /// JITDylib will add itself to the beginning of the SearchOrder (Clients
-  /// should *not* put this JITDylib in the list in this case, to avoid
-  /// redundant lookups).
+  /// If LinkAgainstThisJITDylibFirst is true (the default) then this JITDylib
+  /// will add itself to the beginning of the LinkOrder (Clients should not
+  /// put this JITDylib in the list in this case, to avoid redundant lookups).
   ///
-  /// If SearchThisJITDylibFirst is false then the search order will be used as
-  /// given. The main motivation for this feature is to support deliberate
+  /// If LinkAgainstThisJITDylibFirst is false then the link order will be used
+  /// as-is. The primary motivation for this feature is to support deliberate
   /// shadowing of symbols in this JITDylib by a facade JITDylib. For example,
   /// the facade may resolve function names to stubs, and the stubs may compile
   /// lazily by looking up symbols in this dylib. Adding the facade dylib
-  /// as the first in the search order (instead of this dylib) ensures that
+  /// as the first in the link order (instead of this dylib) ensures that
   /// definitions within this dylib resolve to the lazy-compiling stubs,
   /// rather than immediately materializing the definitions in this dylib.
-  void setSearchOrder(JITDylibSearchOrder NewSearchOrder,
-                      bool SearchThisJITDylibFirst = true);
+  void setLinkOrder(JITDylibSearchOrder NewSearchOrder,
+                    bool LinkAgainstThisJITDylibFirst = true);
 
-  /// Add the given JITDylib to the search order for definitions in this
+  /// Add the given JITDylib to the link order for definitions in this
   /// JITDylib.
-  void addToSearchOrder(JITDylib &JD,
-                        JITDylibLookupFlags JDLookupFlags =
-                            JITDylibLookupFlags::MatchExportedSymbolsOnly);
+  void addToLinkOrder(JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags =
+                          JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
-  /// Replace OldJD with NewJD in the search order if OldJD is present.
+  /// Replace OldJD with NewJD in the link order if OldJD is present.
   /// Otherwise this operation is a no-op.
-  void replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD,
-                            JITDylibLookupFlags JDLookupFlags =
-                                JITDylibLookupFlags::MatchExportedSymbolsOnly);
+  void replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
+                          JITDylibLookupFlags JDLookupFlags =
+                              JITDylibLookupFlags::MatchExportedSymbolsOnly);
 
-  /// Remove the given JITDylib from the search order for this JITDylib if it is
+  /// Remove the given JITDylib from the link order for this JITDylib if it is
   /// present. Otherwise this operation is a no-op.
-  void removeFromSearchOrder(JITDylib &JD);
+  void removeFromLinkOrder(JITDylib &JD);
 
-  /// Do something with the search order (run under the session lock).
+  /// Do something with the link order (run under the session lock).
   template <typename Func>
-  auto withSearchOrderDo(Func &&F)
+  auto withLinkOrderDo(Func &&F)
       -> decltype(F(std::declval<const JITDylibSearchOrder &>()));
 
   /// Define all symbols provided by the materialization unit to be part of this
@@ -1049,7 +1048,7 @@ private:
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
   std::vector<std::unique_ptr<DefinitionGenerator>> DefGenerators;
-  JITDylibSearchOrder SearchOrder;
+  JITDylibSearchOrder LinkOrder;
 };
 
 /// Platforms set up standard symbols and mediate interactions between dynamic
@@ -1297,9 +1296,9 @@ GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
 }
 
 template <typename Func>
-auto JITDylib::withSearchOrderDo(Func &&F)
+auto JITDylib::withLinkOrderDo(Func &&F)
     -> decltype(F(std::declval<const JITDylibSearchOrder &>())) {
-  return ES.runSessionLocked([&]() { return F(SearchOrder); });
+  return ES.runSessionLocked([&]() { return F(LinkOrder); });
 }
 
 template <typename MaterializationUnitType>
