@@ -331,6 +331,7 @@ private:
       std::vector<GlobalValue *> Keep;
     };
     std::vector<AddedModule> ModsWithSummaries;
+    bool EmptyCombinedModule = true;
   } RegularLTO;
 
   struct ThinLTOState {
