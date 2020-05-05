@@ -554,6 +554,14 @@ public:
                         [](OpResult result) { return result.use_empty(); });
   }
 
+  /// Returns true if the results of this operation are used outside of the
+  /// given block.
+  bool isUsedOutsideOfBlock(Block *block) {
+    return llvm::any_of(getOpResults(), [block](OpResult result) {
+      return result.isUsedOutsideOfBlock(block);
+    });
+  }
+
   //===--------------------------------------------------------------------===//
   // Users
   //===--------------------------------------------------------------------===//

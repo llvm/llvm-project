@@ -119,6 +119,29 @@ public:
 
 namespace llvm {
 
+/// Provide support for hashing successor ranges.
+template <>
+struct DenseMapInfo<mlir::SuccessorRange> {
+  static mlir::SuccessorRange getEmptyKey() {
+    auto *pointer = llvm::DenseMapInfo<mlir::BlockOperand *>::getEmptyKey();
+    return mlir::SuccessorRange(pointer, 0);
+  }
+  static mlir::SuccessorRange getTombstoneKey() {
+    auto *pointer = llvm::DenseMapInfo<mlir::BlockOperand *>::getTombstoneKey();
+    return mlir::SuccessorRange(pointer, 0);
+  }
+  static unsigned getHashValue(mlir::SuccessorRange value) {
+    return llvm::hash_combine_range(value.begin(), value.end());
+  }
+  static bool isEqual(mlir::SuccessorRange lhs, mlir::SuccessorRange rhs) {
+    if (rhs.getBase() == getEmptyKey().getBase())
+      return lhs.getBase() == getEmptyKey().getBase();
+    if (rhs.getBase() == getTombstoneKey().getBase())
+      return lhs.getBase() == getTombstoneKey().getBase();
+    return lhs == rhs;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // ilist_traits for Operation
 //===----------------------------------------------------------------------===//
