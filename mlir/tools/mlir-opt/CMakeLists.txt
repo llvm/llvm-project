@@ -30,7 +30,6 @@ set(LIBS
   MLIRTestTransforms
   MLIRSupport
   MLIRIR
-  MLIROptLib
   )
 
 # Exclude from libMLIR.so because this has static options intended for
@@ -42,6 +41,10 @@ add_mlir_library(MLIRMlirOptMain
 
   LINK_LIBS
   ${LIBS}
+
+  DEPENDS
+  intrinsics_gen
+  mlir-headers
   )
 
 add_llvm_tool(mlir-opt
