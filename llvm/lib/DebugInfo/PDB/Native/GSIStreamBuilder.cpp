@@ -49,7 +49,6 @@ struct llvm::pdb::GSIHashStreamBuilder {
   };
 
   std::vector<CVSymbol> Records;
-  uint32_t StreamIndex;
   llvm::DenseSet<CVSymbol, SymbolDenseMapInfo> SymbolHashes;
   std::vector<PSHashRecord> HashRecords;
   std::array<support::ulittle32_t, (IPHR_HASH + 32) / 32> HashBitmap;
@@ -213,11 +212,12 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   Expected<uint32_t> Idx = Msf.addStream(calculateGlobalsHashStreamSize());
   if (!Idx)
     return Idx.takeError();
-  GSH->StreamIndex = *Idx;
+  GlobalsStreamIndex = *Idx;
+
   Idx = Msf.addStream(calculatePublicsHashStreamSize());
   if (!Idx)
     return Idx.takeError();
-  PSH->StreamIndex = *Idx;
+  PublicsStreamIndex = *Idx;
 
   uint32_t RecordBytes =
       GSH->calculateRecordByteSize() + PSH->calculateRecordByteSize();
@@ -225,7 +225,7 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   Idx = Msf.addStream(RecordBytes);
   if (!Idx)
     return Idx.takeError();
-  RecordStreamIdx = *Idx;
+  RecordStreamIndex = *Idx;
   return Error::success();
 }
 
@@ -284,14 +284,6 @@ static std::vector<ulittle32_t> computeAddrMap(ArrayRef<CVSymbol> Records) {
     AddrMap.push_back(ulittle32_t(SymOffsets[Idx]));
   }
   return AddrMap;
-}
-
-uint32_t GSIStreamBuilder::getPublicsStreamIndex() const {
-  return PSH->StreamIndex;
-}
-
-uint32_t GSIStreamBuilder::getGlobalsStreamIndex() const {
-  return GSH->StreamIndex;
 }
 
 void GSIStreamBuilder::addPublicSymbol(const PublicSym32 &Pub) {
@@ -377,7 +369,7 @@ Error GSIStreamBuilder::commit(const msf::MSFLayout &Layout,
   auto PS = WritableMappedBlockStream::createIndexedStream(
       Layout, Buffer, getPublicsStreamIndex(), Msf.getAllocator());
   auto PRS = WritableMappedBlockStream::createIndexedStream(
-      Layout, Buffer, getRecordStreamIdx(), Msf.getAllocator());
+      Layout, Buffer, getRecordStreamIndex(), Msf.getAllocator());
 
   if (auto EC = commitSymbolRecordStream(*PRS))
     return EC;
