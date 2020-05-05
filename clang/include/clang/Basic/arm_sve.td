@@ -1249,6 +1249,32 @@ def SVWHILEHS_U64 : SInst<"svwhilege_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNon
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Uniform DSP operations
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+defm SVQADD_S  : SInstZPZZ<"svqadd",  "csli",     "aarch64_sve_sqadd">;
+defm SVQADD_U  : SInstZPZZ<"svqadd",  "UcUsUiUl", "aarch64_sve_uqadd">;
+defm SVHADD_S  : SInstZPZZ<"svhadd",  "csli",     "aarch64_sve_shadd">;
+defm SVHADD_U  : SInstZPZZ<"svhadd",  "UcUsUiUl", "aarch64_sve_uhadd">;
+defm SVRHADD_S : SInstZPZZ<"svrhadd", "csli",     "aarch64_sve_srhadd">;
+defm SVRHADD_U : SInstZPZZ<"svrhadd", "UcUsUiUl", "aarch64_sve_urhadd">;
+
+defm SVQSUB_S  : SInstZPZZ<"svqsub",  "csli",     "aarch64_sve_sqsub">;
+defm SVQSUB_U  : SInstZPZZ<"svqsub",  "UcUsUiUl", "aarch64_sve_uqsub">;
+defm SVQSUBR_S : SInstZPZZ<"svqsubr", "csli",     "aarch64_sve_sqsubr">;
+defm SVQSUBR_U : SInstZPZZ<"svqsubr", "UcUsUiUl", "aarch64_sve_uqsubr">;
+defm SVHSUB_S  : SInstZPZZ<"svhsub",  "csli",     "aarch64_sve_shsub">;
+defm SVHSUB_U  : SInstZPZZ<"svhsub",  "UcUsUiUl", "aarch64_sve_uhsub">;
+defm SVHSUBR_S : SInstZPZZ<"svhsubr", "csli",     "aarch64_sve_shsubr">;
+defm SVHSUBR_U : SInstZPZZ<"svhsubr", "UcUsUiUl", "aarch64_sve_uhsubr">;
+
+defm SVQABS   : SInstZPZ<"svqabs",   "csil", "aarch64_sve_sqabs">;
+defm SVQNEG   : SInstZPZ<"svqneg",   "csil", "aarch64_sve_sqneg">;
+defm SVRECPE  : SInstZPZ<"svrecpe",  "Ui",   "aarch64_sve_urecpe">;
+defm SVRSQRTE : SInstZPZ<"svrsqrte", "Ui",   "aarch64_sve_ursqrte">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 // Non-temporal gather load one vector (vector base)
