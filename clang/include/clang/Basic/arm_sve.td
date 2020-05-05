@@ -1775,6 +1775,12 @@ def SVWHILEWR_D : SInst<"svwhilewr[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sv
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Extended table lookup/permute
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVTBX  : SInst<"svtbx[_{d}]",  "dddu", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbx">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Optional
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE2_AES)" in {
