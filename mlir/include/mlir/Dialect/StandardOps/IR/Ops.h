@@ -286,6 +286,7 @@ public:
   void print(OpAsmPrinter &p);
   LogicalResult fold(ArrayRef<Attribute> cstOperands,
                      SmallVectorImpl<OpFoldResult> &results);
+  LogicalResult verify();
 };
 
 /// Prints dimension and symbol list.

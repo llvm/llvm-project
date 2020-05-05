@@ -1444,49 +1444,82 @@ ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(tagIndexInfos, indexType, result.operands))
     return failure();
 
-  auto memrefType0 = types[0].dyn_cast<MemRefType>();
-  if (!memrefType0)
-    return parser.emitError(parser.getNameLoc(),
-                            "expected source to be of memref type");
-
-  auto memrefType1 = types[1].dyn_cast<MemRefType>();
-  if (!memrefType1)
-    return parser.emitError(parser.getNameLoc(),
-                            "expected destination to be of memref type");
-
-  auto memrefType2 = types[2].dyn_cast<MemRefType>();
-  if (!memrefType2)
-    return parser.emitError(parser.getNameLoc(),
-                            "expected tag to be of memref type");
-
   if (isStrided) {
     if (parser.resolveOperands(strideInfo, indexType, result.operands))
       return failure();
   }
 
-  // Check that source/destination index list size matches associated rank.
-  if (static_cast<int64_t>(srcIndexInfos.size()) != memrefType0.getRank() ||
-      static_cast<int64_t>(dstIndexInfos.size()) != memrefType1.getRank())
-    return parser.emitError(parser.getNameLoc(),
-                            "memref rank not equal to indices count");
-  if (static_cast<int64_t>(tagIndexInfos.size()) != memrefType2.getRank())
-    return parser.emitError(parser.getNameLoc(),
-                            "tag memref rank not equal to indices count");
 
   return success();
 }
 
 LogicalResult DmaStartOp::verify() {
+  unsigned numOperands = getNumOperands();
+
+  // Mandatory non-variadic operands are: src memref, dst memref, tag memref and
+  // the number of elements.
+  if (numOperands < 4)
+    return emitOpError("expected at least 4 operands");
+
+  // Check types of operands. The order of these calls is important: the later
+  // calls rely on some type properties to compute the operand position.
+  // 1. Source memref.
+  if (!getSrcMemRef().getType().isa<MemRefType>())
+    return emitOpError("expected source to be of memref type");
+  if (numOperands < getSrcMemRefRank() + 4)
+    return emitOpError() << "expected at least " << getSrcMemRefRank() + 4
+                         << " operands";
+  if (!getSrcIndices().empty() &&
+      !llvm::all_of(getSrcIndices().getTypes(),
+                    [](Type t) { return t.isIndex(); }))
+    return emitOpError("expected source indices to be of index type");
+
+  // 2. Destination memref.
+  if (!getDstMemRef().getType().isa<MemRefType>())
+    return emitOpError("expected destination to be of memref type");
+  unsigned numExpectedOperands = getSrcMemRefRank() + getDstMemRefRank() + 4;
+  if (numOperands < numExpectedOperands)
+    return emitOpError() << "expected at least " << numExpectedOperands
+                         << " operands";
+  if (!getDstIndices().empty() &&
+      !llvm::all_of(getDstIndices().getTypes(),
+                    [](Type t) { return t.isIndex(); }))
+    return emitOpError("expected destination indices to be of index type");
+
+  // 3. Number of elements.
+  if (!getNumElements().getType().isIndex())
+    return emitOpError("expected num elements to be of index type");
+
+  // 4. Tag memref.
+  if (!getTagMemRef().getType().isa<MemRefType>())
+    return emitOpError("expected tag to be of memref type");
+  numExpectedOperands += getTagMemRefRank();
+  if (numOperands < numExpectedOperands)
+    return emitOpError() << "expected at least " << numExpectedOperands
+                         << " operands";
+  if (!getTagIndices().empty() &&
+      !llvm::all_of(getTagIndices().getTypes(),
+                    [](Type t) { return t.isIndex(); }))
+    return emitOpError("expected tag indices to be of index type");
+
   // DMAs from different memory spaces supported.
   if (getSrcMemorySpace() == getDstMemorySpace())
     return emitOpError("DMA should be between different memory spaces");
 
-  if (getNumOperands() != getTagMemRefRank() + getSrcMemRefRank() +
-                              getDstMemRefRank() + 3 + 1 &&
-      getNumOperands() != getTagMemRefRank() + getSrcMemRefRank() +
-                              getDstMemRefRank() + 3 + 1 + 2) {
+  // Optional stride-related operands must be either both present or both
+  // absent.
+  if (numOperands != numExpectedOperands &&
+      numOperands != numExpectedOperands + 2)
     return emitOpError("incorrect number of operands");
+
+  // 5. Strides.
+  if (isStrided()) {
+    if (!getStride().getType().isIndex() ||
+        !getNumElementsPerStride().getType().isIndex())
+      return emitOpError(
+          "expected stride and num elements per stride to be of type index");
   }
+
   return success();
 }
 
@@ -1536,15 +1569,6 @@ ParseResult DmaWaitOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(numElementsInfo, indexType, result.operands))
     return failure();
 
-  auto memrefType = type.dyn_cast<MemRefType>();
-  if (!memrefType)
-    return parser.emitError(parser.getNameLoc(),
-                            "expected tag to be of memref type");
-
-  if (static_cast<int64_t>(tagIndexInfos.size()) != memrefType.getRank())
-    return parser.emitError(parser.getNameLoc(),
-                            "tag memref rank not equal to indices count");
-
   return success();
 }
 
@@ -1552,6 +1576,32 @@ LogicalResult DmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
                               SmallVectorImpl<OpFoldResult> &results) {
   /// dma_wait(memrefcast) -> dma_wait
   return foldMemRefCast(*this);
+}
+
+LogicalResult DmaWaitOp::verify() {
+  // Mandatory non-variadic operands are tag and the number of elements.
+  if (getNumOperands() < 2)
+    return emitOpError() << "expected at least 2 operands";
+
+  // Check types of operands. The order of these calls is important: the later
+  // calls rely on some type properties to compute the operand position.
+  if (!getTagMemRef().getType().isa<MemRefType>())
+    return emitOpError() << "expected tag to be of memref type";
+
+  if (getNumOperands() != 2 + getTagMemRefRank())
+    return emitOpError() << "expected " << 2 + getTagMemRefRank()
+                         << " operands";
+
+  if (!getTagIndices().empty() &&
+      !llvm::all_of(getTagIndices().getTypes(),
+                    [](Type t) { return t.isIndex(); }))
+    return emitOpError() << "expected tag indices to be of index type";
+
+  if (!getNumElements().getType().isIndex())
+    return emitOpError()
+           << "expected the number of elements to be of index type";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
