@@ -29,7 +29,7 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GCN-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GCN-NEXT:    s_mov_b32 s32, 0xc0000
-; GCN-NEXT:    v_add_nc_u32_e64 v32, 4, 0x4000
+; GCN-NEXT:    v_add_nc_u32_e64 v40, 4, 0x4000
 ; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
@@ -41,8 +41,8 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:    s_cbranch_execz BB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if.then4.i
-; GCN-NEXT:    buffer_load_dword v0, v32, s[36:39], s32 offen
-; GCN-NEXT:    buffer_load_dword v1, v32, s[36:39], s32 offen offset:4
+; GCN-NEXT:    buffer_load_dword v0, v40, s[36:39], s32 offen
+; GCN-NEXT:    buffer_load_dword v1, v40, s[36:39], s32 offen offset:4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    v_mul_lo_u32 v0, 0x41c64e6d, v0
