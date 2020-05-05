@@ -164,16 +164,18 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
                    [(NSString *)[bks_error localizedDescription] UTF8String];
                if (error_str) {
                  open_app_error_string = error_str;
+                 DNBLogError("In app launch attempt, got error "
+                             "localizedDescription '%s'.", error_str);
+                 const char *obj_desc = 
+                      [NSString stringWithFormat:@"%@", bks_error].UTF8String;
+                 DNBLogError("In app launch attempt, got error "
+                             "NSError object description: '%s'.",
+                             obj_desc);
                }
                DNBLogThreadedIf(LOG_PROCESS, "In completion handler for send "
                                              "event, got error \"%s\"(%ld).",
                                 error_str ? error_str : "<unknown error>",
                                 open_app_error);
-               // REMOVE ME
-               DNBLogError("In completion handler for send event, got error "
-                           "\"%s\"(%ld).",
-                           error_str ? error_str : "<unknown error>",
-                           open_app_error);
              }
 
              [system_service release];
