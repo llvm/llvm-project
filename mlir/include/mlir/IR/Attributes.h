@@ -764,11 +764,25 @@ public:
   /// shape.
   static DenseElementsAttr get(ShapedType type, ArrayRef<APInt> values);
 
+  /// Constructs a dense complex elements attribute from an array of APInt
+  /// values. Each APInt value is expected to have the same bitwidth as the
+  /// element type of 'type'. 'type' must be a vector or tensor with static
+  /// shape.
+  static DenseElementsAttr get(ShapedType type,
+                               ArrayRef<std::complex<APInt>> values);
+
   /// Constructs a dense float elements attribute from an array of APFloat
   /// values. Each APFloat value is expected to have the same bitwidth as the
   /// element type of 'type'. 'type' must be a vector or tensor with static
   /// shape.
   static DenseElementsAttr get(ShapedType type, ArrayRef<APFloat> values);
+
+  /// Constructs a dense complex elements attribute from an array of APFloat
+  /// values. Each APFloat value is expected to have the same bitwidth as the
+  /// element type of 'type'. 'type' must be a vector or tensor with static
+  /// shape.
+  static DenseElementsAttr get(ShapedType type,
+                               ArrayRef<std::complex<APFloat>> values);
 
   /// Construct a dense elements attribute for an initializer_list of values.
   /// Each value is expected to be the same bitwidth of the element type of
@@ -868,6 +882,26 @@ public:
     size_t bitWidth;
   };
 
+  /// A utility iterator that allows walking over the internal raw complex APInt
+  /// values.
+  class ComplexIntElementIterator
+      : public detail::DenseElementIndexedIteratorImpl<
+            ComplexIntElementIterator, std::complex<APInt>, std::complex<APInt>,
+            std::complex<APInt>> {
+  public:
+    /// Accesses the raw std::complex<APInt> value at this iterator position.
+    std::complex<APInt> operator*() const;
+
+  private:
+    friend DenseElementsAttr;
+
+    /// Constructs a new iterator.
+    ComplexIntElementIterator(DenseElementsAttr attr, size_t dataIndex);
+
+    /// The bitwidth of the element type.
+    size_t bitWidth;
+  };
+
   /// Iterator for walking over APFloat values.
   class FloatElementIterator final
       : public llvm::mapped_iterator<IntElementIterator,
@@ -879,6 +913,21 @@ public:
 
   public:
     using reference = APFloat;
+  };
+
+  /// Iterator for walking over complex APFloat values.
+  class ComplexFloatElementIterator final
+      : public llvm::mapped_iterator<
+            ComplexIntElementIterator,
+            std::function<std::complex<APFloat>(const std::complex<APInt> &)>> {
+    friend DenseElementsAttr;
+
+    /// Initializes the float element iterator to the specified iterator.
+    ComplexFloatElementIterator(const llvm::fltSemantics &smt,
+                                ComplexIntElementIterator it);
+
+  public:
+    using reference = std::complex<APFloat>;
   };
 
   //===--------------------------------------------------------------------===//
@@ -1004,6 +1053,15 @@ public:
   IntElementIterator int_value_begin() const;
   IntElementIterator int_value_end() const;
 
+  /// Return the held element values as a range of complex APInts. The element
+  /// type of this attribute must be a complex of integer type.
+  llvm::iterator_range<ComplexIntElementIterator> getComplexIntValues() const;
+  template <typename T, typename = typename std::enable_if<
+                            std::is_same<T, std::complex<APInt>>::value>::type>
+  llvm::iterator_range<ComplexIntElementIterator> getValues() const {
+    return getComplexIntValues();
+  }
+
   /// Return the held element values as a range of APFloat. The element type of
   /// this attribute must be of float type.
   llvm::iterator_range<FloatElementIterator> getFloatValues() const;
@@ -1014,6 +1072,16 @@ public:
   }
   FloatElementIterator float_value_begin() const;
   FloatElementIterator float_value_end() const;
+
+  /// Return the held element values as a range of complex APFloat. The element
+  /// type of this attribute must be a complex of float type.
+  llvm::iterator_range<ComplexFloatElementIterator>
+  getComplexFloatValues() const;
+  template <typename T, typename = typename std::enable_if<std::is_same<
+                            T, std::complex<APFloat>>::value>::type>
+  llvm::iterator_range<ComplexFloatElementIterator> getValues() const {
+    return getComplexFloatValues();
+  }
 
   /// Return the raw storage data held by this attribute. Users should generally
   /// not use this directly, as the internal storage format is not always in the
@@ -1120,10 +1188,17 @@ public:
 protected:
   friend DenseElementsAttr;
 
+  /// Constructs a dense elements attribute from an array of raw APFloat values.
+  /// Each APFloat value is expected to have the same bitwidth as the element
+  /// type of 'type'. 'type' must be a vector or tensor with static shape.
+  static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
+                                  ArrayRef<APFloat> values, bool isSplat);
+
   /// Constructs a dense elements attribute from an array of raw APInt values.
   /// Each APInt value is expected to have the same bitwidth as the element type
   /// of 'type'. 'type' must be a vector or tensor with static shape.
-  static DenseElementsAttr getRaw(ShapedType type, ArrayRef<APInt> values);
+  static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
+                                  ArrayRef<APInt> values, bool isSplat);
 
   /// Get or create a new dense elements attribute instance with the given raw
   /// data buffer. 'type' must be a vector or tensor with static shape.
@@ -1343,11 +1418,24 @@ private:
   getZeroValue() const {
     return getZeroAPInt();
   }
+  template <typename T>
+  typename std::enable_if<std::is_same<std::complex<APInt>, T>::value, T>::type
+  getZeroValue() const {
+    APInt intZero = getZeroAPInt();
+    return {intZero, intZero};
+  }
   /// Get a zero for an APFloat.
   template <typename T>
   typename std::enable_if<std::is_same<APFloat, T>::value, T>::type
   getZeroValue() const {
     return getZeroAPFloat();
+  }
+  template <typename T>
+  typename std::enable_if<std::is_same<std::complex<APFloat>, T>::value,
+                          T>::type
+  getZeroValue() const {
+    APFloat floatZero = getZeroAPFloat();
+    return {floatZero, floatZero};
   }
 
   /// Get a zero for an C++ integer, float, StringRef, or complex type.
@@ -1355,7 +1443,9 @@ private:
   typename std::enable_if<
       std::numeric_limits<T>::is_integer ||
           llvm::is_one_of<T, float, double, StringRef>::value ||
-          detail::is_complex_t<T>::value,
+          (detail::is_complex_t<T>::value &&
+           !llvm::is_one_of<T, std::complex<APInt>,
+                            std::complex<APFloat>>::value),
       T>::type
   getZeroValue() const {
     return T();

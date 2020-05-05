@@ -689,6 +689,22 @@ func @elementsattr_toolarge2() -> () {
 
 // -----
 
+"foo"(){bar = dense<[()]> : tensor<complex<i64>>} : () -> () // expected-error {{expected element literal of primitive type}}
+
+// -----
+
+"foo"(){bar = dense<[(10)]> : tensor<complex<i64>>} : () -> () // expected-error {{expected ',' between complex elements}}
+
+// -----
+
+"foo"(){bar = dense<[(10,)]> : tensor<complex<i64>>} : () -> () // expected-error {{expected element literal of primitive type}}
+
+// -----
+
+"foo"(){bar = dense<[(10,10]> : tensor<complex<i64>>} : () -> () // expected-error {{expected ')' after complex elements}}
+
+// -----
+
 func @elementsattr_malformed_opaque() -> () {
 ^bb0:
   "foo"(){bar = opaque<10, "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected dialect namespace}}

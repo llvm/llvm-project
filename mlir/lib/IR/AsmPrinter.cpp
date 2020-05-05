@@ -1456,21 +1456,13 @@ void ModulePrinter::printAttribute(Attribute attr,
   }
 }
 
-/// Print the integer element of the given DenseElementsAttr at 'index'.
-static void printDenseIntElement(DenseElementsAttr attr, raw_ostream &os,
-                                 unsigned index, bool isSigned) {
-  APInt value = *std::next(attr.int_value_begin(), index);
+/// Print the integer element of a DenseElementsAttr.
+static void printDenseIntElement(const APInt &value, raw_ostream &os,
+                                 bool isSigned) {
   if (value.getBitWidth() == 1)
     os << (value.getBoolValue() ? "true" : "false");
   else
     value.print(os, isSigned);
-}
-
-/// Print the float element of the given DenseElementsAttr at 'index'.
-static void printDenseFloatElement(DenseElementsAttr attr, raw_ostream &os,
-                                   unsigned index) {
-  APFloat value = *std::next(attr.float_value_begin(), index);
-  printFloatValue(value, os);
 }
 
 static void
@@ -1543,26 +1535,45 @@ void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
   auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  // TODO: Add support for formatting complex elements nicely.
   auto numElements = type.getNumElements();
-  if (type.getElementType().isa<ComplexType>() ||
-      (!attr.isSplat() && allowHex &&
-       shouldPrintElementsAttrWithHex(numElements))) {
+  if (!attr.isSplat() && allowHex &&
+      shouldPrintElementsAttrWithHex(numElements)) {
     ArrayRef<char> rawData = attr.getRawData();
     os << '"' << "0x" << llvm::toHex(StringRef(rawData.data(), rawData.size()))
        << "\"";
     return;
   }
 
-  if (elementType.isIntOrIndex()) {
+  if (ComplexType complexTy = elementType.dyn_cast<ComplexType>()) {
+    auto printComplexValue = [&](auto complexValues, auto printFn,
+                                 raw_ostream &os, auto &&... params) {
+      printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
+        auto complexValue = *(complexValues.begin() + index);
+        os << "(";
+        printFn(complexValue.real(), os, params...);
+        os << ",";
+        printFn(complexValue.imag(), os, params...);
+        os << ")";
+      });
+    };
+
+    Type complexElementType = complexTy.getElementType();
+    if (complexElementType.isa<IntegerType>())
+      printComplexValue(attr.getComplexIntValues(), printDenseIntElement, os,
+                        /*isSigned=*/!complexElementType.isUnsignedInteger());
+    else
+      printComplexValue(attr.getComplexFloatValues(), printFloatValue, os);
+  } else if (elementType.isIntOrIndex()) {
     bool isSigned = !elementType.isUnsignedInteger();
+    auto intValues = attr.getIntValues();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printDenseIntElement(attr, os, index, isSigned);
+      printDenseIntElement(*(intValues.begin() + index), os, isSigned);
     });
   } else {
     assert(elementType.isa<FloatType>() && "unexpected element type");
+    auto floatValues = attr.getFloatValues();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printDenseFloatElement(attr, os, index);
+      printFloatValue(*(floatValues.begin() + index), os);
     });
   }
 }
