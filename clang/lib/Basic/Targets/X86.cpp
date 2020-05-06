@@ -1916,7 +1916,7 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
         return false;
       break;
     }
-    LLVM_FALLTHROUGH;
+    break;
   case 'v':
   case 'x':
     if (FeatureMap.lookup("avx512f"))
