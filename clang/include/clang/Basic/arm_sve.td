@@ -742,6 +742,8 @@ defm SVLSR : SInst_SHIFT<"svlsr", "aarch64_sve_lsr", "UcUsUiUl", "UcUsUi">;
 def SVASRD_M : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeOp1,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
 def SVASRD_X : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeAny,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
 def SVASRD_Z : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeZero, "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVINSR   : SInst<"svinsr[_n_{d}]", "dds",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_insr">;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer reductions
