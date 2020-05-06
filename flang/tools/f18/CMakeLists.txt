@@ -17,7 +17,7 @@ target_link_libraries(f18
   FortranParser
   FortranEvaluate
   FortranSemantics
-  FortranLower
+  LLVMSupport
 )
 
 set(MODULES
