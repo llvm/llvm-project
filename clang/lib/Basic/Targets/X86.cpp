@@ -1898,8 +1898,14 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
       return Size <= 64;
     case 'z':
     case '0':
-      // XMM0
-      if (FeatureMap.lookup("sse"))
+      // XMM0/YMM/ZMM0
+      if (FeatureMap.lookup("avx512f"))
+        // ZMM0 can be used if target supports AVX512F.
+        return Size <= 512U;
+      else if (FeatureMap.lookup("avx"))
+        // YMM0 can be used if target supports AVX.
+        return Size <= 256U;
+      else if (FeatureMap.lookup("sse"))
         return Size <= 128U;
       return false;
     case 'i':
