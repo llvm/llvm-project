@@ -52,6 +52,7 @@ public:
   uint64_t fileOff = 0;
   MachHeaderSection *headerSection = nullptr;
   BindingSection *bindingSection = nullptr;
+  LazyBindingSection *lazyBindingSection = nullptr;
   ExportSection *exportSection = nullptr;
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
@@ -60,8 +61,11 @@ public:
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
 class LCDyldInfo : public LoadCommand {
 public:
-  LCDyldInfo(BindingSection *bindingSection, ExportSection *exportSection)
-      : bindingSection(bindingSection), exportSection(exportSection) {}
+  LCDyldInfo(BindingSection *bindingSection,
+             LazyBindingSection *lazyBindingSection,
+             ExportSection *exportSection)
+      : bindingSection(bindingSection), lazyBindingSection(lazyBindingSection),
+        exportSection(exportSection) {}
 
   uint32_t getSize() const override { return sizeof(dyld_info_command); }
 
@@ -73,6 +77,10 @@ public:
       c->bind_off = bindingSection->fileOff;
       c->bind_size = bindingSection->getFileSize();
     }
+    if (lazyBindingSection->isNeeded()) {
+      c->lazy_bind_off = lazyBindingSection->fileOff;
+      c->lazy_bind_size = lazyBindingSection->getFileSize();
+    }
     if (exportSection->isNeeded()) {
       c->export_off = exportSection->fileOff;
       c->export_size = exportSection->getFileSize();
@@ -80,6 +88,7 @@ public:
   }
 
   BindingSection *bindingSection;
+  LazyBindingSection *lazyBindingSection;
   ExportSection *exportSection;
 };
 
@@ -260,12 +269,12 @@ void Writer::scanRelocations() {
     for (Reloc &r : sect->relocs)
       if (auto *s = r.target.dyn_cast<Symbol *>())
         if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
-          in.got->addEntry(*dylibSymbol);
+          target->prepareDylibSymbolRelocation(*dylibSymbol, r.type);
 }
 
 void Writer::createLoadCommands() {
   headerSection->addLoadCommand(
-      make<LCDyldInfo>(bindingSection, exportSection));
+      make<LCDyldInfo>(bindingSection, lazyBindingSection, exportSection));
   headerSection->addLoadCommand(
       make<LCSymtab>(symtabSection, stringTableSection));
   headerSection->addLoadCommand(make<LCDysymtab>());
@@ -295,17 +304,13 @@ void Writer::createLoadCommands() {
       dylibFile->ordinal = dylibOrdinal++;
     }
   }
-
-  // TODO: dyld requires libSystem to be loaded. libSystem is a universal
-  // binary and we don't have support for that yet, so mock it out here.
-  headerSection->addLoadCommand(
-      make<LCLoadDylib>("/usr/lib/libSystem.B.dylib"));
 }
 
 void Writer::createOutputSections() {
   // First, create hidden sections
   headerSection = make<MachHeaderSection>();
   bindingSection = make<BindingSection>();
+  lazyBindingSection = make<LazyBindingSection>();
   stringTableSection = make<StringTableSection>();
   symtabSection = make<SymtabSection>(*stringTableSection);
   exportSection = make<ExportSection>();
@@ -387,6 +392,8 @@ void Writer::run() {
       getOrCreateOutputSegment(segment_names::linkEdit);
 
   scanRelocations();
+  if (in.stubHelper->isNeeded())
+    in.stubHelper->setup();
 
   // Sort and assign sections to their respective segments. No more sections nor
   // segments may be created after this method runs.
@@ -407,6 +414,7 @@ void Writer::run() {
 
   // Fill __LINKEDIT contents.
   bindingSection->finalizeContents();
+  lazyBindingSection->finalizeContents();
   exportSection->finalizeContents();
   symtabSection->finalizeContents();
 
@@ -426,4 +434,10 @@ void Writer::run() {
 
 void macho::writeResult() { Writer().run(); }
 
-void macho::createSyntheticSections() { in.got = make<GotSection>(); }
+void macho::createSyntheticSections() {
+  in.got = make<GotSection>();
+  in.lazyPointers = make<LazyPointerSection>();
+  in.stubs = make<StubsSection>();
+  in.stubHelper = make<StubHelperSection>();
+  in.imageLoaderCache = make<ImageLoaderCacheSection>();
+}

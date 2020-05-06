@@ -77,6 +77,8 @@ public:
 
   DylibFile *file;
   uint32_t gotIndex = UINT32_MAX;
+  uint32_t stubsIndex = UINT32_MAX;
+  uint32_t lazyBindOffset = UINT32_MAX;
 };
 
 inline uint64_t Symbol::getVA() const {
