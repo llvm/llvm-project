@@ -28,3 +28,28 @@ __m512 testZMM(__m512 _zmm0, __m512 _zmm1) {
 #endif
   return _zmm0;
 }
+
+// SSE: call <4 x float> asm "pcmpeqd $0, $0", "=^Yz,~{dirflag},~{fpsr},~{flags}"()
+__m128 testXMM0(void) {
+  __m128 xmm0;
+  __asm__("pcmpeqd %0, %0" :"=Yz"(xmm0));
+  return xmm0;
+}
+
+// AVX: call <8 x float> asm "vpcmpeqd $0, $0, $0", "=^Yz,~{dirflag},~{fpsr},~{flags}"()
+__m256 testYMM0(void) {
+  __m256 ymm0;
+#ifdef AVX
+  __asm__("vpcmpeqd %0, %0, %0" :"=Yz"(ymm0));
+#endif
+  return ymm0;
+}
+
+// AVX512: call <16 x float> asm "vpternlogd $$255, $0, $0, $0", "=^Yz,~{dirflag},~{fpsr},~{flags}"()
+__m512 testZMM0(void) {
+  __m512 zmm0;
+#ifdef AVX512
+  __asm__("vpternlogd $255, %0, %0, %0" :"=Yz"(zmm0));
+#endif
+  return zmm0;
+}

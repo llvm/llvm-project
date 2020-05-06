@@ -134,3 +134,13 @@ entry:
   ret <8 x float> %0
 }
 
+define <8 x float> @testYMM0() {
+; CHECK: vpcmpeqd %ymm0, %ymm0, %ymm0
+entry:
+  %ymm0 = alloca <8 x float>, align 32
+  %0 = call <8 x float> asm "vpcmpeqd $0, $0, $0", "=^Yz,~{dirflag},~{fpsr},~{flags}"()
+  store <8 x float> %0, <8 x float>* %ymm0, align 32
+  %1 = load <8 x float>, <8 x float>* %ymm0, align 32
+  ret <8 x float> %1
+}
+
