@@ -18546,6 +18546,69 @@ static SDValue combineConcatVectorOfExtracts(SDNode *N, SelectionDAG &DAG) {
                                      DAG.getBitcast(VT, SV1), Mask, DAG);
 }
 
+static SDValue combineConcatVectorOfCasts(SDNode *N, SelectionDAG &DAG) {
+  unsigned CastOpcode = N->getOperand(0).getOpcode();
+  switch (CastOpcode) {
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    // TODO: Allow more opcodes?
+    //  case ISD::BITCAST:
+    //  case ISD::TRUNCATE:
+    //  case ISD::ZERO_EXTEND:
+    //  case ISD::SIGN_EXTEND:
+    //  case ISD::FP_EXTEND:
+    break;
+  default:
+    return SDValue();
+  }
+
+  EVT SrcVT = N->getOperand(0).getOperand(0).getValueType();
+  if (!SrcVT.isVector())
+    return SDValue();
+
+  // All operands of the concat must be the same kind of cast from the same
+  // source type.
+  SmallVector<SDValue, 4> SrcOps;
+  for (SDValue Op : N->ops()) {
+    if (Op.getOpcode() != CastOpcode || !Op.hasOneUse() ||
+        Op.getOperand(0).getValueType() != SrcVT)
+      return SDValue();
+    SrcOps.push_back(Op.getOperand(0));
+  }
+
+  // The wider cast must be supported by the target. This is unusual because
+  // the operation support type parameter depends on the opcode. In addition,
+  // check the other type in the cast to make sure this is really legal.
+  EVT VT = N->getValueType(0);
+  EVT SrcEltVT = SrcVT.getVectorElementType();
+  unsigned NumElts = SrcVT.getVectorElementCount().Min * N->getNumOperands();
+  EVT ConcatSrcVT = EVT::getVectorVT(*DAG.getContext(), SrcEltVT, NumElts);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  switch (CastOpcode) {
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    if (!TLI.isOperationLegalOrCustom(CastOpcode, ConcatSrcVT) ||
+        !TLI.isTypeLegal(VT))
+      return SDValue();
+    break;
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    if (!TLI.isOperationLegalOrCustom(CastOpcode, VT) ||
+        !TLI.isTypeLegal(ConcatSrcVT))
+      return SDValue();
+    break;
+  default:
+    llvm_unreachable("Unexpected cast opcode");
+  }
+
+  // concat (cast X), (cast Y)... -> cast (concat X, Y...)
+  SDLoc DL(N);
+  SDValue NewConcat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatSrcVT, SrcOps);
+  return DAG.getNode(CastOpcode, DL, VT, NewConcat);
+}
+
 SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   // If we only have one input vector, we don't need to do any concatenation.
   if (N->getNumOperands() == 1)
@@ -18672,6 +18735,9 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT))
     if (SDValue V = combineConcatVectorOfExtracts(N, DAG))
       return V;
+
+  if (SDValue V = combineConcatVectorOfCasts(N, DAG))
+    return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
   // nodes often generate nop CONCAT_VECTOR nodes.
