@@ -13053,6 +13053,18 @@ static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &
     }
   }
 
+  // fold (VMOVhr (load x)) -> (load (f16*)x)
+  if (LoadSDNode *LN0 = dyn_cast<LoadSDNode>(Op0)) {
+    if (LN0->hasOneUse() && LN0->isUnindexed() &&
+        LN0->getMemoryVT() == MVT::i16) {
+      SDValue Load = DCI.DAG.getLoad(MVT::f16, SDLoc(N), LN0->getChain(),
+                                     LN0->getBasePtr(), LN0->getMemOperand());
+      DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Load.getValue(0));
+      DCI.DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Load.getValue(1));
+      return Load;
+    }
+  }
+
   // Only the bottom 16 bits of the source register are used.
   APInt DemandedMask = APInt::getLowBitsSet(32, 16);
   const TargetLowering &TLI = DCI.DAG.getTargetLoweringInfo();
