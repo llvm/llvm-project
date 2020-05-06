@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -62,17 +63,16 @@ TEST_CASE(is_symlink_status_test)
 
 TEST_CASE(static_env_test)
 {
-    static_test_env static_env;
     struct TestCase {
         path p;
         bool expect;
     };
     const TestCase testCases[] = {
-        {static_env.File, false},
-        {static_env.Dir, false},
-        {static_env.SymlinkToFile, true},
-        {static_env.SymlinkToDir, true},
-        {static_env.BadSymlink, true}
+        {StaticEnv::File, false},
+        {StaticEnv::Dir, false},
+        {StaticEnv::SymlinkToFile, true},
+        {StaticEnv::SymlinkToDir, true},
+        {StaticEnv::BadSymlink, true}
     };
     for (auto& TC : testCases) {
         TEST_CHECK(is_symlink(TC.p) == TC.expect);
@@ -81,8 +81,7 @@ TEST_CASE(static_env_test)
 
 TEST_CASE(test_exist_not_found)
 {
-    static_test_env static_env;
-    const path p = static_env.DNE;
+    const path p = StaticEnv::DNE;
     TEST_CHECK(is_symlink(p) == false);
     std::error_code ec;
     TEST_CHECK(is_symlink(p, ec) == false);
