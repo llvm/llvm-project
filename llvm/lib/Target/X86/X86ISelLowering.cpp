@@ -48016,7 +48016,6 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
       default:
         break;
       case 'z':
-      case '0':
         return C_Register;
       case 'i':
       case 'm':
@@ -48080,7 +48079,6 @@ TargetLowering::ConstraintWeight
         return CW_Invalid;
       // XMM0
       case 'z':
-      case '0':
         if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
             ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()) ||
             ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512()))
@@ -48551,7 +48549,6 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (!Subtarget.hasMMX()) break;
       return std::make_pair(0U, &X86::VR64RegClass);
     case 'z':
-    case '0':
       if (!Subtarget.hasSSE1()) break;
       switch (VT.SimpleTy) {
       default: break;
