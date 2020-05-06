@@ -10,6 +10,7 @@ CHECK-NEXT:   SectionCount: 3
 CHECK-NEXT:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 CHECK-NEXT:   PointerToSymbolTable: 0xB0
 CHECK-NEXT:   SymbolCount: 8
+CHECK-NEXT:   StringTableSize: 4
 CHECK-NEXT:   OptionalHeaderSize: 0
 CHECK-NEXT:   Characteristics [ (0x0)
 CHECK-NEXT:   ]
