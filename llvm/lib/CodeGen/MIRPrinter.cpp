@@ -365,7 +365,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   // Process fixed stack objects.
   unsigned ID = 0;
-  for (int I = MFI.getObjectIndexBegin(); I < 0; ++I, ++ID) {
+  for (int I = MFI.getObjectIndexBegin(); I < 0; ++I) {
     if (MFI.isDeadObjectIndex(I))
       continue;
 
@@ -383,11 +383,13 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YMF.FixedStackObjects.push_back(YamlObject);
     StackObjectOperandMapping.insert(
         std::make_pair(I, FrameIndexOperand::createFixed(ID)));
+    ++ID;
+    assert(YMF.FixedStackObjects.size() == ID);
   }
 
   // Process ordinary stack objects.
   ID = 0;
-  for (int I = 0, E = MFI.getObjectIndexEnd(); I < E; ++I, ++ID) {
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I < E; ++I) {
     if (MFI.isDeadObjectIndex(I))
       continue;
 
@@ -409,6 +411,8 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YMF.StackObjects.push_back(YamlObject);
     StackObjectOperandMapping.insert(std::make_pair(
         I, FrameIndexOperand::create(YamlObject.Name.Value, ID)));
+    ++ID;
+    assert(YMF.StackObjects.size() == ID);
   }
 
   for (const auto &CSInfo : MFI.getCalleeSavedInfo()) {
