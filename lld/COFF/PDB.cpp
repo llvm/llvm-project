@@ -792,6 +792,7 @@ static bool symbolGoesInModuleStream(const CVSymbol &sym, bool isGlobalScope) {
   switch (sym.kind()) {
   case SymbolKind::S_GDATA32:
   case SymbolKind::S_CONSTANT:
+  case SymbolKind::S_GTHREAD32:
   // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
   // since they are synthesized by the linker in response to S_GPROC32 and
   // S_LPROC32, but if we do see them, don't put them in the module stream I
@@ -804,17 +805,18 @@ static bool symbolGoesInModuleStream(const CVSymbol &sym, bool isGlobalScope) {
     return !isGlobalScope;
   // S_GDATA32 does not go in the module stream, but S_LDATA32 does.
   case SymbolKind::S_LDATA32:
+  case SymbolKind::S_LTHREAD32:
   default:
     return true;
   }
 }
 
-static bool symbolGoesInGlobalsStream(const CVSymbol &sym, bool isGlobalScope) {
+static bool symbolGoesInGlobalsStream(const CVSymbol &sym,
+                                      bool isFunctionScope) {
   switch (sym.kind()) {
   case SymbolKind::S_CONSTANT:
   case SymbolKind::S_GDATA32:
-  // S_LDATA32 goes in both the module stream and the globals stream.
-  case SymbolKind::S_LDATA32:
+  case SymbolKind::S_GTHREAD32:
   case SymbolKind::S_GPROC32:
   case SymbolKind::S_LPROC32:
   // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
@@ -823,9 +825,11 @@ static bool symbolGoesInGlobalsStream(const CVSymbol &sym, bool isGlobalScope) {
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
     return true;
-  // S_UDT records go in the globals stream if it is a global S_UDT.
+  // Records that go in the globals stream, unless they are function-local.
   case SymbolKind::S_UDT:
-    return isGlobalScope;
+  case SymbolKind::S_LDATA32:
+  case SymbolKind::S_LTHREAD32:
+    return !isFunctionScope;
   default:
     return false;
   }
@@ -837,6 +841,8 @@ static void addGlobalSymbol(pdb::GSIStreamBuilder &builder, uint16_t modIndex,
   case SymbolKind::S_CONSTANT:
   case SymbolKind::S_UDT:
   case SymbolKind::S_GDATA32:
+  case SymbolKind::S_GTHREAD32:
+  case SymbolKind::S_LTHREAD32:
   case SymbolKind::S_LDATA32:
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
@@ -950,7 +956,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *file, const CVIndexMap &indexMap,
         // adding the symbol to the module since we may need to get the next
         // symbol offset, and writing to the module's symbol stream will update
         // that offset.
-        if (symbolGoesInGlobalsStream(sym, scopes.empty())) {
+        if (symbolGoesInGlobalsStream(sym, !scopes.empty())) {
           addGlobalSymbol(builder.getGsiBuilder(),
                           file->moduleDBI->getModuleIndex(), curSymOffset, sym);
           ++globalSymbols;
