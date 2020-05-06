@@ -1110,13 +1110,10 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Create the function name. This should be unique.
   // FIXME: We should have a better naming scheme. This should be stable,
   // regardless of changes to the outliner's cost model/traversal order.
-  std::string FunctionName;
+  std::string FunctionName = "OUTLINED_FUNCTION_";
   if (OutlineRepeatedNum > 0)
-    FunctionName = ("OUTLINED_FUNCTION_" + Twine(OutlineRepeatedNum + 1) + "_" +
-                    Twine(Name))
-                       .str();
-  else
-    FunctionName = ("OUTLINED_FUNCTION_" + Twine(Name)).str();
+    FunctionName += std::to_string(OutlineRepeatedNum + 1) + "_";
+  FunctionName += std::to_string(Name);
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
