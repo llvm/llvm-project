@@ -205,3 +205,21 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
                             MaxCount, MaxInternalCount, MaxFunctionCount,
                             NumCounts, NumFunctions, IsPartialProfile);
 }
+
+void ProfileSummary::printSummary(raw_ostream &OS) {
+  OS << "Total functions: " << NumFunctions << "\n";
+  OS << "Maximum function count: " << MaxFunctionCount << "\n";
+  OS << "Maximum block count: " << MaxCount << "\n";
+  OS << "Total number of blocks: " << NumCounts << "\n";
+  OS << "Total count: " << TotalCount << "\n";
+}
+
+void ProfileSummary::printDetailedSummary(raw_ostream &OS) {
+  OS << "Detailed summary:\n";
+  for (auto Entry : DetailedSummary) {
+    OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
+       << " account for "
+       << format("%0.6g", (float)Entry.Cutoff / Scale * 100)
+       << " percentage of the total counts.\n";
+  }
+}

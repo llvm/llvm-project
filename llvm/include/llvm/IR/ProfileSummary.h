@@ -21,6 +21,7 @@ namespace llvm {
 
 class LLVMContext;
 class Metadata;
+class raw_ostream;
 
 // The profile summary is one or more (Cutoff, MinCount, NumCounts) triplets.
 // The semantics of counts depend on the type of profile. For instrumentation
@@ -85,6 +86,8 @@ public:
   uint64_t getMaxInternalCount() { return MaxInternalCount; }
   void setPartialProfile(bool PP) { Partial = PP; }
   bool isPartialProfile() { return Partial; }
+  void printSummary(raw_ostream &OS);
+  void printDetailedSummary(raw_ostream &OS);
 };
 
 } // end namespace llvm
