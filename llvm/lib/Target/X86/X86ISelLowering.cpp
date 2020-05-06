@@ -7758,24 +7758,24 @@ static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
 /// element of the result of the vector shuffle.
 static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
                                    unsigned Depth) {
-  if (Depth == 6)
-    return SDValue();  // Limit search depth.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return SDValue(); // Limit search depth.
 
   SDValue V = SDValue(N, 0);
   EVT VT = V.getValueType();
   unsigned Opcode = V.getOpcode();
 
   // Recurse into ISD::VECTOR_SHUFFLE node to find scalars.
-  if (const ShuffleVectorSDNode *SV = dyn_cast<ShuffleVectorSDNode>(N)) {
+  if (auto *SV = dyn_cast<ShuffleVectorSDNode>(N)) {
     int Elt = SV->getMaskElt(Index);
 
     if (Elt < 0)
       return DAG.getUNDEF(VT.getVectorElementType());
 
     unsigned NumElems = VT.getVectorNumElements();
-    SDValue NewV = (Elt < (int)NumElems) ? SV->getOperand(0)
-                                         : SV->getOperand(1);
-    return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG, Depth+1);
+    SDValue NewV =
+        (Elt < (int)NumElems) ? SV->getOperand(0) : SV->getOperand(1);
+    return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG, Depth + 1);
   }
 
   // Recurse into target specific vector shuffles to find scalars.
@@ -7787,7 +7787,8 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
     SmallVector<SDValue, 16> ShuffleOps;
     bool IsUnary;
 
-    if (!getTargetShuffleMask(N, ShufVT, true, ShuffleOps, ShuffleMask, IsUnary))
+    if (!getTargetShuffleMask(N, ShufVT, true, ShuffleOps, ShuffleMask,
+                              IsUnary))
       return SDValue();
 
     int Elt = ShuffleMask[Index];
@@ -7797,10 +7798,9 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
     if (Elt == SM_SentinelUndef)
       return DAG.getUNDEF(ShufSVT);
 
-    assert(0 <= Elt && Elt < (2*NumElems) && "Shuffle index out of range");
+    assert(0 <= Elt && Elt < (2 * NumElems) && "Shuffle index out of range");
     SDValue NewV = (Elt < NumElems) ? ShuffleOps[0] : ShuffleOps[1];
-    return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG,
-                               Depth+1);
+    return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG, Depth + 1);
   }
 
   // Recurse into insert_subvector base/sub vector to find scalars.
