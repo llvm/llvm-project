@@ -1045,9 +1045,9 @@ public:
 /// optimization purposes. Any SSA values of 'index' type that either dominate
 /// such an operation or are used at the top-level of such an operation
 /// automatically become valid symbols for the polyhedral scope defined by that
-/// operation. For more details, see `Traits.md#PolyhedralScope`.
+/// operation. For more details, see `Traits.md#AffineScope`.
 template <typename ConcreteType>
-class PolyhedralScope : public TraitBase<ConcreteType, PolyhedralScope> {
+class AffineScope : public TraitBase<ConcreteType, AffineScope> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
     static_assert(!ConcreteType::template hasTrait<ZeroRegion>(),
