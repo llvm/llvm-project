@@ -48046,7 +48046,9 @@ TargetLowering::ConstraintWeight
       // XMM0
       case 'z':
       case '0':
-        if ((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1())
+        if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
+            ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()) ||
+            ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512()))
           return CW_SpecificReg;
         return CW_Invalid;
       // Conditional OpMask regs (AVX512)
@@ -48496,6 +48498,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (Subtarget.hasAVX())
           return std::make_pair(0U, &X86::VR256RegClass);
         break;
+      case MVT::v64i8:
+      case MVT::v32i16:
       case MVT::v8f64:
       case MVT::v16f32:
       case MVT::v16i32:
@@ -48521,7 +48525,42 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'z':
     case '0':
       if (!Subtarget.hasSSE1()) break;
-      return std::make_pair(X86::XMM0, &X86::VR128RegClass);
+      switch (VT.SimpleTy) {
+      default: break;
+      // Scalar SSE types.
+      case MVT::f32:
+      case MVT::i32:
+        return std::make_pair(X86::XMM0, &X86::FR32RegClass);
+      case MVT::f64:
+      case MVT::i64:
+        return std::make_pair(X86::XMM0, &X86::FR64RegClass);
+      case MVT::f128:
+      case MVT::v16i8:
+      case MVT::v8i16:
+      case MVT::v4i32:
+      case MVT::v2i64:
+      case MVT::v4f32:
+      case MVT::v2f64:
+        return std::make_pair(X86::XMM0, &X86::VR128RegClass);
+      // AVX types.
+      case MVT::v32i8:
+      case MVT::v16i16:
+      case MVT::v8i32:
+      case MVT::v4i64:
+      case MVT::v8f32:
+      case MVT::v4f64:
+        if (Subtarget.hasAVX())
+          return std::make_pair(X86::YMM0, &X86::VR256RegClass);
+        break;
+      case MVT::v8f64:
+      case MVT::v16f32:
+      case MVT::v16i32:
+      case MVT::v8i64:
+        if (Subtarget.hasAVX512())
+          return std::make_pair(X86::ZMM0, &X86::VR512_0_15RegClass);
+        break;
+      }
+      break;
     case 'k':
       // This register class doesn't allocate k0 for masked vector operation.
       if (Subtarget.hasAVX512()) {
