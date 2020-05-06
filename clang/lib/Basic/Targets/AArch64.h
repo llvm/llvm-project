@@ -122,6 +122,8 @@ public:
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;
 
   bool hasInt128Type() const override;
+
+  bool hasExtIntType() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

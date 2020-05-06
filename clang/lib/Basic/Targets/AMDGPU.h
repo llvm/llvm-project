@@ -354,6 +354,8 @@ public:
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
+
+  bool hasExtIntType() const override { return true; }
 };
 
 } // namespace targets
