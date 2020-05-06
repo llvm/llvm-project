@@ -202,6 +202,100 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// NamedAttrList
+//===----------------------------------------------------------------------===//
+
+/// NamedAttrList is array of NamedAttributes that tracks whether it is sorted
+/// and does some basic work to remain sorted.
+class NamedAttrList {
+public:
+  using const_iterator = SmallVectorImpl<NamedAttribute>::const_iterator;
+  using const_reference = const NamedAttribute &;
+  using reference = NamedAttribute &;
+  using size_type = size_t;
+
+  NamedAttrList() : dictionarySorted({}, true) {}
+  NamedAttrList(ArrayRef<NamedAttribute> attributes);
+  NamedAttrList(const_iterator in_start, const_iterator in_end);
+
+  bool operator!=(const NamedAttrList &other) const {
+    return !(*this == other);
+  }
+  bool operator==(const NamedAttrList &other) const {
+    return attrs == other.attrs;
+  }
+
+  /// Add an attribute with the specified name.
+  void append(StringRef name, Attribute attr);
+
+  /// Add an attribute with the specified name.
+  void append(Identifier name, Attribute attr);
+
+  /// Add an array of named attributes.
+  void append(ArrayRef<NamedAttribute> newAttributes);
+
+  /// Add a range of named attributes.
+  void append(const_iterator in_start, const_iterator in_end);
+
+  /// Replaces the attributes with new list of attributes.
+  void assign(const_iterator in_start, const_iterator in_end);
+
+  /// Replaces the attributes with new list of attributes.
+  void assign(ArrayRef<NamedAttribute> range) {
+    append(range.begin(), range.end());
+  }
+
+  bool empty() const { return attrs.empty(); }
+
+  void reserve(size_type N) { attrs.reserve(N); }
+
+  /// Add an attribute with the specified name.
+  void push_back(NamedAttribute newAttribute);
+
+  /// Pop last element from list.
+  void pop_back() { attrs.pop_back(); }
+
+  /// Return a dictionary attribute for the underlying dictionary. This will
+  /// return an empty dictionary attribute if empty rather than null.
+  DictionaryAttr getDictionary(MLIRContext *context) const;
+
+  /// Return all of the attributes on this operation.
+  ArrayRef<NamedAttribute> getAttrs() const;
+
+  /// Return the specified attribute if present, null otherwise.
+  Attribute get(Identifier name) const;
+  Attribute get(StringRef name) const;
+
+  /// Return the specified named attribute if present, None otherwise.
+  Optional<NamedAttribute> getNamed(StringRef name) const;
+  Optional<NamedAttribute> getNamed(Identifier name) const;
+
+  /// If the an attribute exists with the specified name, change it to the new
+  /// value.  Otherwise, add a new attribute with the specified name/value.
+  void set(Identifier name, Attribute value);
+  void set(StringRef name, Attribute value);
+
+  const_iterator begin() const { return attrs.begin(); }
+  const_iterator end() const { return attrs.end(); }
+
+  NamedAttrList &operator=(const SmallVectorImpl<NamedAttribute> &rhs);
+  operator ArrayRef<NamedAttribute>() const;
+  operator MutableDictionaryAttr() const;
+
+private:
+  /// Return whether the attributes are sorted.
+  bool isSorted() const { return dictionarySorted.getInt(); }
+
+  // These are marked mutable as they may be modified (e.g., sorted)
+  mutable SmallVector<NamedAttribute, 4> attrs;
+  // Pair with cached DictionaryAttr and status of whether attrs is sorted.
+  // Note: just because sorted does not mean a DictionaryAttr has been created
+  // but the case where there is a DictionaryAttr but attrs isn't sorted should
+  // not occur.
+  mutable llvm::PointerIntPair<Attribute, 1, bool> dictionarySorted;
+};
+
+//===----------------------------------------------------------------------===//
 // OperationName
 //===----------------------------------------------------------------------===//
 
@@ -269,7 +363,7 @@ struct OperationState {
   SmallVector<Value, 4> operands;
   /// Types of the results of this operation.
   SmallVector<Type, 4> types;
-  SmallVector<NamedAttribute, 4> attributes;
+  NamedAttrList attributes;
   /// Successors of this operation and their respective operands.
   SmallVector<Block *, 1> successors;
   /// Regions that the op will hold.
@@ -303,12 +397,12 @@ public:
 
   /// Add an attribute with the specified name.
   void addAttribute(Identifier name, Attribute attr) {
-    attributes.push_back({name, attr});
+    attributes.append(name, attr);
   }
 
   /// Add an array of named attributes.
   void addAttributes(ArrayRef<NamedAttribute> newAttributes) {
-    attributes.append(newAttributes.begin(), newAttributes.end());
+    attributes.append(newAttributes);
   }
 
   /// Add an array of successors.
@@ -329,7 +423,7 @@ public:
   void addRegion(std::unique_ptr<Region> &&region);
 
   /// Get the context held by this operation state.
-  MLIRContext *getContext() { return location->getContext(); }
+  MLIRContext *getContext() const { return location->getContext(); }
 };
 
 //===----------------------------------------------------------------------===//

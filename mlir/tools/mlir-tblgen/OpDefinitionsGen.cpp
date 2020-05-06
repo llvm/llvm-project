@@ -775,7 +775,8 @@ void OpEmitter::genSeparateArgParamBuilder() {
       body << formatv(R"(
         SmallVector<Type, 2> inferredReturnTypes;
         if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
-                      {1}.location, {1}.operands, {1}.attributes,
+                      {1}.location, {1}.operands,
+                      {1}.attributes.getDictionary({1}.getContext()),
                       /*regions=*/{{}, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
         else
@@ -867,13 +868,48 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
       opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
                         OpMethod::MP_Static);
   auto &body = m.body();
+
+  int numResults = op.getNumResults();
+  int numVariadicResults = op.getNumVariableLengthResults();
+  int numNonVariadicResults = numResults - numVariadicResults;
+
+  int numOperands = op.getNumOperands();
+  int numVariadicOperands = op.getNumVariableLengthOperands();
+  int numNonVariadicOperands = numOperands - numVariadicOperands;
+
+  // Operands
+  if (numVariadicOperands == 0 || numNonVariadicOperands != 0)
+    body << "  assert(operands.size()"
+         << (numVariadicOperands != 0 ? " >= " : " == ")
+         << numNonVariadicOperands
+         << "u && \"mismatched number of parameters\");\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  body << "  " << builderOpState << ".addAttributes(attributes);\n";
+
+  // Create the correct number of regions
+  if (int numRegions = op.getNumRegions()) {
+    body << llvm::formatv(
+        "  for (unsigned i = 0; i != {0}; ++i)\n",
+        (op.getNumVariadicRegions() ? "numRegions" : Twine(numRegions)));
+    body << "    (void)" << builderOpState << ".addRegion();\n";
+  }
+
+  // Result types
   body << formatv(R"(
     SmallVector<Type, 2> inferredReturnTypes;
     if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
-                  {1}.location, operands, attributes,
-                  /*regions=*/{{}, inferredReturnTypes)))
-      build(odsBuilder, odsState, inferredReturnTypes, operands, attributes);
-    else
+                  {1}.location, operands,
+                  {1}.attributes.getDictionary({1}.getContext()),
+                  /*regions=*/{{}, inferredReturnTypes))) {{)",
+                  opClass.getClassName(), builderOpState);
+  if (numVariadicResults == 0 || numNonVariadicResults != 0)
+    body << "  assert(inferredReturnTypes.size()"
+         << (numVariadicResults != 0 ? " >= " : " == ") << numNonVariadicResults
+         << "u && \"mismatched number of return types\");\n";
+  body << "      " << builderOpState << ".addTypes(inferredReturnTypes);";
+
+  body << formatv(R"(
+    } else
       llvm::report_fatal_error("Failed to infer result type(s).");)",
                   opClass.getClassName(), builderOpState);
 }

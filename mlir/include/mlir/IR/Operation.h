@@ -294,6 +294,11 @@ public:
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() { return attrs.getAttrs(); }
 
+  /// Return all of the attributes on this operation as a DictionaryAttr.
+  DictionaryAttr getAttrDictionary() {
+    return attrs.getDictionary(getContext());
+  }
+
   /// Return mutable container of all the attributes on this operation.
   MutableDictionaryAttr &getMutableAttrDict() { return attrs; }
 
@@ -325,6 +330,9 @@ public:
   /// value indicates whether the attribute was present or not.
   MutableDictionaryAttr::RemoveResult removeAttr(Identifier name) {
     return attrs.remove(name);
+  }
+  MutableDictionaryAttr::RemoveResult removeAttr(StringRef name) {
+    return attrs.remove(Identifier::get(name, getContext()));
   }
 
   /// A utility iterator that filters out non-dialect attributes.

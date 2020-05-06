@@ -334,7 +334,7 @@ OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
 
 LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, Optional<Location> location, ValueRange operands,
-    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -347,7 +347,7 @@ LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, Optional<Location> location, ValueRange operands,
-    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = *operands.getTypes().begin();
