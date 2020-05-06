@@ -919,3 +919,15 @@ func @tensor_divi_unsigned_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi32> {
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
 }
+
+// -----
+
+// CHECK-LABEL: func @memref_cast_folding_subview
+func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<?x?xf32, offset:? , strides: [?, ?]>) {
+  %0 = memref_cast %arg0 : memref<4x5xf32> to memref<?x?xf32>
+  // CHECK-NEXT: subview %{{.*}}: memref<4x5xf32>
+  %1 = subview %0[][%i,%i][]: memref<?x?xf32> to memref<?x?xf32, offset:? , strides: [?, ?]>
+  // CHECK-NEXT: return %{{.*}}
+  return %1: memref<?x?xf32, offset:? , strides: [?, ?]>
+}
+
