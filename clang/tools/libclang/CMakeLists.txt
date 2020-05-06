@@ -51,7 +51,6 @@ set(LIBS
   clangSerialization
   clangTooling
   clangToolingRefactor
-  LLVMSupport
 )
 
 if (CLANG_ENABLE_ARCMT)
