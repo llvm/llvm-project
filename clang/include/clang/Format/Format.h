@@ -1983,6 +1983,17 @@ struct FormatStyle {
     ///    }
     /// \endcode
     SBPO_ControlStatements,
+    /// Same as ``SBPO_ControlStatements`` except this option doesn't apply to
+    /// ForEach macros. This is useful in projects where ForEach macros are 
+    /// treated as function calls instead of control statements. 
+    /// \code
+    ///    void f() {
+    ///      Q_FOREACH(...) {
+    ///        f();
+    ///      }
+    ///    }
+    /// \endcode
+    SBPO_ControlStatementsExceptForEachMacros,
     /// Put a space before opening parentheses only if the parentheses are not
     /// empty i.e. '()'
     /// \code
