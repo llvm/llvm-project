@@ -46,6 +46,16 @@ define void @f3(i64 %x) nounwind {
   ret void
 }
 
+; CHECK: @store_volatile
+define void @store_volatile(i64 %x) nounwind {
+  %1 = tail call i8* @calloc(i64 4, i64 %x)
+  %2 = bitcast i8* %1 to i32*
+  %idx = getelementptr inbounds i32, i32* %2, i64 8
+; CHECK-NOT: trap
+  store volatile i32 3, i32* %idx, align 4
+  ret void
+}
+
 ; CHECK: @f4
 define void @f4(i64 %x) nounwind {
   %1 = tail call i8* @realloc(i8* null, i64 %x) nounwind
@@ -144,9 +154,20 @@ define void @f11_as1(i128 addrspace(1)* byval %x) nounwind {
 define i64 @f12(i64 %x, i64 %y) nounwind {
   %1 = tail call i8* @calloc(i64 1, i64 %x)
 ; CHECK: mul i64 %y, 8
+; CHECK: trap
   %2 = bitcast i8* %1 to i64*
   %3 = getelementptr inbounds i64, i64* %2, i64 %y
   %4 = load i64, i64* %3, align 8
+  ret i64 %4
+}
+
+; CHECK: @load_volatile
+define i64 @load_volatile(i64 %x, i64 %y) nounwind {
+  %1 = tail call i8* @calloc(i64 1, i64 %x)
+; CHECK-NOT: trap
+  %2 = bitcast i8* %1 to i64*
+  %3 = getelementptr inbounds i64, i64* %2, i64 %y
+  %4 = load volatile i64, i64* %3, align 8
   ret i64 %4
 }
 
