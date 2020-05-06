@@ -386,11 +386,11 @@ define void @callerD2() {
   store i8 0, i8* %unknown
   ret void
 }
-
-; CHECK: Function Attrs: nofree {{(norecurse )?}}nosync nounwind readnone willreturn
+; CHECK: Function Attrs: argmemonly nounwind willreturn
 define void @callerE(i8* %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@callerE
-; CHECK-SAME: (i8* nocapture nofree readnone [[ARG:%.*]])
+; CHECK-SAME: (i8* nocapture [[ARG:%.*]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nocapture [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %arg)
