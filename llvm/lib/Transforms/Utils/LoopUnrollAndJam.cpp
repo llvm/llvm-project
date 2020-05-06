@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -69,17 +70,14 @@ typedef SmallPtrSet<BasicBlock *, 4> BasicBlockSet;
 
 // Partition blocks in an outer/inner loop pair into blocks before and after
 // the loop
-static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
-                                     BasicBlockSet &ForeBlocks,
-                                     BasicBlockSet &SubLoopBlocks,
-                                     BasicBlockSet &AftBlocks,
-                                     DominatorTree *DT) {
+static bool partitionLoopBlocks(Loop &L, BasicBlockSet &ForeBlocks,
+                                BasicBlockSet &AftBlocks, DominatorTree &DT) {
+  Loop *SubLoop = L.getSubLoops()[0];
   BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-  SubLoopBlocks.insert(SubLoop->block_begin(), SubLoop->block_end());
 
-  for (BasicBlock *BB : L->blocks()) {
+  for (BasicBlock *BB : L.blocks()) {
     if (!SubLoop->contains(BB)) {
-      if (DT->dominates(SubLoopLatch, BB))
+      if (DT.dominates(SubLoopLatch, BB))
         AftBlocks.insert(BB);
       else
         ForeBlocks.insert(BB);
@@ -93,12 +91,42 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
     if (BB == SubLoopPreHeader)
       continue;
     Instruction *TI = BB->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      if (!ForeBlocks.count(TI->getSuccessor(i)))
+    for (BasicBlock *Succ : successors(TI))
+      if (!ForeBlocks.count(Succ))
         return false;
   }
 
   return true;
+}
+
+/// Partition blocks in a loop nest into blocks before and after each inner
+/// loop.
+static bool partitionOuterLoopBlocks(
+    Loop &Root, Loop &JamLoop, BasicBlockSet &JamLoopBlocks,
+    DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
+    DenseMap<Loop *, BasicBlockSet> &AftBlocksMap, DominatorTree &DT) {
+  JamLoopBlocks.insert(JamLoop.block_begin(), JamLoop.block_end());
+
+  for (Loop *L : Root.getLoopsInPreorder()) {
+    if (L == &JamLoop)
+      break;
+
+    if (!partitionLoopBlocks(*L, ForeBlocksMap[L], AftBlocksMap[L], DT))
+      return false;
+  }
+
+  return true;
+}
+
+// TODO Remove when UnrollAndJamLoop changed to support unroll and jamming more
+// than 2 levels loop.
+static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
+                                     BasicBlockSet &ForeBlocks,
+                                     BasicBlockSet &SubLoopBlocks,
+                                     BasicBlockSet &AftBlocks,
+                                     DominatorTree *DT) {
+  SubLoopBlocks.insert(SubLoop->block_begin(), SubLoop->block_end());
+  return partitionLoopBlocks(*L, ForeBlocks, AftBlocks, *DT);
 }
 
 // Looks at the phi nodes in Header for values coming from Latch. For these
@@ -619,7 +647,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 }
 
 static bool getLoadsAndStores(BasicBlockSet &Blocks,
-                              SmallVector<Value *, 4> &MemInstr) {
+                              SmallVector<Instruction *, 4> &MemInstr) {
   // Scan the BBs and collect legal loads and stores.
   // Returns false if non-simple loads/stores are found.
   for (BasicBlock *BB : Blocks) {
@@ -640,97 +668,235 @@ static bool getLoadsAndStores(BasicBlockSet &Blocks,
   return true;
 }
 
-static bool checkDependencies(SmallVector<Value *, 4> &Earlier,
-                              SmallVector<Value *, 4> &Later,
-                              unsigned LoopDepth, bool InnerLoop,
-                              DependenceInfo &DI) {
-  // Use DA to check for dependencies between loads and stores that make unroll
-  // and jam invalid
-  for (Value *I : Earlier) {
-    for (Value *J : Later) {
-      Instruction *Src = cast<Instruction>(I);
-      Instruction *Dst = cast<Instruction>(J);
-      if (Src == Dst)
-        continue;
-      // Ignore Input dependencies.
-      if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
-        continue;
+static bool preservesForwardDependence(Instruction *Src, Instruction *Dst,
+                                       unsigned UnrollLevel, unsigned JamLevel,
+                                       bool Sequentialized, Dependence *D) {
+  // UnrollLevel might carry the dependency Src --> Dst
+  // Does a different loop after unrolling?
+  for (unsigned CurLoopDepth = UnrollLevel + 1; CurLoopDepth <= JamLevel;
+       ++CurLoopDepth) {
+    auto JammedDir = D->getDirection(CurLoopDepth);
+    if (JammedDir == Dependence::DVEntry::LT)
+      return true;
 
-      // Track dependencies, and if we find them take a conservative approach
-      // by allowing only = or < (not >), altough some > would be safe
-      // (depending upon unroll width).
-      // For the inner loop, we need to disallow any (> <) dependencies
-      // FIXME: Allow > so long as distance is less than unroll width
-      if (auto D = DI.depends(Src, Dst, true)) {
-        assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+    if (JammedDir & Dependence::DVEntry::GT)
+      return false;
+  }
 
-        if (D->isConfused()) {
-          LLVM_DEBUG(dbgs() << "  Confused dependency between:\n"
-                            << "  " << *Src << "\n"
-                            << "  " << *Dst << "\n");
+  return true;
+}
+
+static bool preservesBackwardDependence(Instruction *Src, Instruction *Dst,
+                                        unsigned UnrollLevel, unsigned JamLevel,
+                                        bool Sequentialized, Dependence *D) {
+  // UnrollLevel might carry the dependency Dst --> Src
+  for (unsigned CurLoopDepth = UnrollLevel + 1; CurLoopDepth <= JamLevel;
+       ++CurLoopDepth) {
+    auto JammedDir = D->getDirection(CurLoopDepth);
+    if (JammedDir == Dependence::DVEntry::GT)
+      return true;
+
+    if (JammedDir & Dependence::DVEntry::LT)
+      return false;
+  }
+
+  // Backward dependencies are only preserved if not interleaved.
+  return Sequentialized;
+}
+
+// Check whether it is semantically safe Src and Dst considering any potential
+// dependency between them.
+//
+// @param UnrollLevel The level of the loop being unrolled
+// @param JamLevel    The level of the loop being jammed; if Src and Dst are on
+// different levels, the outermost common loop counts as jammed level
+//
+// @return true if is safe and false if there is a dependency violation.
+static bool checkDependency(Instruction *Src, Instruction *Dst,
+                            unsigned UnrollLevel, unsigned JamLevel,
+                            bool Sequentialized, DependenceInfo &DI) {
+  assert(UnrollLevel <= JamLevel &&
+         "Expecting JamLevel to be at least UnrollLevel");
+
+  if (Src == Dst)
+    return true;
+  // Ignore Input dependencies.
+  if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
+    return true;
+
+  // Check whether unroll-and-jam may violate a dependency.
+  // By construction, every dependency will be lexicographically non-negative
+  // (if it was, it would violate the current execution order), such as
+  //   (0,0,>,*,*)
+  // Unroll-and-jam changes the GT execution of two executions to the same
+  // iteration of the chosen unroll level. That is, a GT dependence becomes a GE
+  // dependence (or EQ, if we fully unrolled the loop) at the loop's position:
+  //   (0,0,>=,*,*)
+  // Now, the dependency is not necessarily non-negative anymore, i.e.
+  // unroll-and-jam may violate correctness.
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  if (!D)
+    return true;
+  assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+
+  if (D->isConfused()) {
+    LLVM_DEBUG(dbgs() << "  Confused dependency between:\n"
+                      << "  " << *Src << "\n"
+                      << "  " << *Dst << "\n");
+    return false;
+  }
+
+  // If outer levels (levels enclosing the loop being unroll-and-jammed) have a
+  // non-equal direction, then the locations accessed in the inner levels cannot
+  // overlap in memory. We assumes the indexes never overlap into neighboring
+  // dimensions.
+  for (unsigned CurLoopDepth = 1; CurLoopDepth < UnrollLevel; ++CurLoopDepth)
+    if (!(D->getDirection(CurLoopDepth) & Dependence::DVEntry::EQ))
+      return true;
+
+  auto UnrollDirection = D->getDirection(UnrollLevel);
+
+  // If the distance carried by the unrolled loop is 0, then after unrolling
+  // that distance will become non-zero resulting in non-overlapping accesses in
+  // the inner loops.
+  if (UnrollDirection == Dependence::DVEntry::EQ)
+    return true;
+
+  if (UnrollDirection & Dependence::DVEntry::LT &&
+      !preservesForwardDependence(Src, Dst, UnrollLevel, JamLevel,
+                                  Sequentialized, D.get()))
+    return false;
+
+  if (UnrollDirection & Dependence::DVEntry::GT &&
+      !preservesBackwardDependence(Src, Dst, UnrollLevel, JamLevel,
+                                   Sequentialized, D.get()))
+    return false;
+
+  return true;
+}
+
+static bool
+checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
+                  const DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
+                  const DenseMap<Loop *, BasicBlockSet> &AftBlocksMap,
+                  DependenceInfo &DI, LoopInfo &LI) {
+  SmallVector<BasicBlockSet, 8> AllBlocks;
+  for (Loop *L : Root.getLoopsInPreorder())
+    if (ForeBlocksMap.find(L) != ForeBlocksMap.end())
+      AllBlocks.push_back(ForeBlocksMap.lookup(L));
+  AllBlocks.push_back(SubLoopBlocks);
+  for (Loop *L : Root.getLoopsInPreorder())
+    if (AftBlocksMap.find(L) != AftBlocksMap.end())
+      AllBlocks.push_back(AftBlocksMap.lookup(L));
+
+  unsigned LoopDepth = Root.getLoopDepth();
+  SmallVector<Instruction *, 4> EarlierLoadsAndStores;
+  SmallVector<Instruction *, 4> CurrentLoadsAndStores;
+  for (BasicBlockSet &Blocks : AllBlocks) {
+    CurrentLoadsAndStores.clear();
+    if (!getLoadsAndStores(Blocks, CurrentLoadsAndStores))
+      return false;
+
+    Loop *CurLoop = LI.getLoopFor((*Blocks.begin())->front().getParent());
+    unsigned CurLoopDepth = CurLoop->getLoopDepth();
+
+    for (auto *Earlier : EarlierLoadsAndStores) {
+      Loop *EarlierLoop = LI.getLoopFor(Earlier->getParent());
+      unsigned EarlierDepth = EarlierLoop->getLoopDepth();
+      unsigned CommonLoopDepth = std::min(EarlierDepth, CurLoopDepth);
+      for (auto *Later : CurrentLoadsAndStores) {
+        if (!checkDependency(Earlier, Later, LoopDepth, CommonLoopDepth, false,
+                             DI))
           return false;
-        }
-        if (!InnerLoop) {
-          if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT) {
-            LLVM_DEBUG(dbgs() << "  > dependency between:\n"
-                              << "  " << *Src << "\n"
-                              << "  " << *Dst << "\n");
-            return false;
-          }
-        } else {
-          assert(LoopDepth + 1 <= D->getLevels());
-          if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT &&
-              D->getDirection(LoopDepth + 1) & Dependence::DVEntry::LT) {
-            LLVM_DEBUG(dbgs() << "  < > dependency between:\n"
-                              << "  " << *Src << "\n"
-                              << "  " << *Dst << "\n");
-            return false;
-          }
-        }
       }
     }
+
+    size_t NumInsts = CurrentLoadsAndStores.size();
+    for (size_t I = 0; I < NumInsts; ++I) {
+      for (size_t J = I; J < NumInsts; ++J) {
+        if (!checkDependency(CurrentLoadsAndStores[I], CurrentLoadsAndStores[J],
+                             LoopDepth, CurLoopDepth, true, DI))
+          return false;
+      }
+    }
+
+    EarlierLoadsAndStores.append(CurrentLoadsAndStores.begin(),
+                                 CurrentLoadsAndStores.end());
   }
   return true;
 }
 
-static bool checkDependencies(Loop *L, BasicBlockSet &ForeBlocks,
-                              BasicBlockSet &SubLoopBlocks,
-                              BasicBlockSet &AftBlocks, DependenceInfo &DI) {
-  // Get all loads/store pairs for each blocks
-  SmallVector<Value *, 4> ForeMemInstr;
-  SmallVector<Value *, 4> SubLoopMemInstr;
-  SmallVector<Value *, 4> AftMemInstr;
-  if (!getLoadsAndStores(ForeBlocks, ForeMemInstr) ||
-      !getLoadsAndStores(SubLoopBlocks, SubLoopMemInstr) ||
-      !getLoadsAndStores(AftBlocks, AftMemInstr))
+static bool isEligibleLoopForm(const Loop &Root) {
+  // Root must have a child.
+  if (Root.getSubLoops().size() != 1)
     return false;
 
-  // Check for dependencies between any blocks that may change order
-  unsigned LoopDepth = L->getLoopDepth();
-  return checkDependencies(ForeMemInstr, SubLoopMemInstr, LoopDepth, false,
-                           DI) &&
-         checkDependencies(ForeMemInstr, AftMemInstr, LoopDepth, false, DI) &&
-         checkDependencies(SubLoopMemInstr, AftMemInstr, LoopDepth, false,
-                           DI) &&
-         checkDependencies(SubLoopMemInstr, SubLoopMemInstr, LoopDepth, true,
-                           DI);
+  const Loop *L = &Root;
+  do {
+    // All loops in Root need to be in simplify and rotated form.
+    if (!L->isLoopSimplifyForm())
+      return false;
+
+    if (!L->isRotatedForm())
+      return false;
+
+    if (L->getHeader()->hasAddressTaken()) {
+      LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Address taken\n");
+      return false;
+    }
+
+    unsigned SubLoopsSize = L->getSubLoops().size();
+    if (SubLoopsSize == 0)
+      return true;
+
+    // Only one child is allowed.
+    if (SubLoopsSize != 1)
+      return false;
+
+    L = L->getSubLoops()[0];
+  } while (L);
+
+  return true;
+}
+
+static Loop *getInnerMostLoop(Loop *L) {
+  while (!L->getSubLoops().empty())
+    L = L->getSubLoops()[0];
+  return L;
 }
 
 bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                                DependenceInfo &DI) {
+                                DependenceInfo &DI, LoopInfo &LI) {
+  if (!isEligibleLoopForm(*L)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Ineligible loop form\n");
+    return false;
+  }
+
   /* We currently handle outer loops like this:
         |
-    ForeFirst    <----\    }
-     Blocks           |    } ForeBlocks
-    ForeLast          |    }
-        |             |
-    SubLoopFirst  <\  |    }
-     Blocks        |  |    } SubLoopBlocks
-    SubLoopLast   -/  |    }
-        |             |
-    AftFirst          |    }
-     Blocks           |    } AftBlocks
-    AftLast     ------/    }
+    ForeFirst    <------\   }
+     Blocks             |   } ForeBlocks of L
+    ForeLast            |   }
+        |               |
+       ...              |
+        |               |
+    ForeFirst    <----\ |   }
+     Blocks           | |   } ForeBlocks of a inner loop of L
+    ForeLast          | |   }
+        |             | |
+    JamLoopFirst  <\  | |   }
+     Blocks        |  | |   } JamLoopBlocks of the innermost loop
+    JamLoopLast   -/  | |   }
+        |             | |
+    AftFirst          | |   }
+     Blocks           | |   } AftBlocks of a inner loop of L
+    AftLast     ------/ |   }
+        |               |
+       ...              |
+        |               |
+    AftFirst            |   }
+     Blocks             |   } AftBlocks of L
+    AftLast     --------/   }
         |
 
     There are (theoretically) any number of blocks in ForeBlocks, SubLoopBlocks
@@ -740,14 +906,16 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     things further in the profitablility checks of the unroll and jam pass.
 
     Because of the way we rearrange basic blocks, we also require that
-    the Fore blocks on all unrolled iterations are safe to move before the
-    SubLoop blocks of all iterations. So we require that the phi node looping
-    operands of ForeHeader can be moved to at least the end of ForeEnd, so that
-    we can arrange cloned Fore Blocks before the subloop and match up Phi's
-    correctly.
+    the Fore blocks of L on all unrolled iterations are safe to move before the
+    blocks of the direct child of L of all iterations. So we require that the
+    phi node looping operands of ForeHeader can be moved to at least the end of
+    ForeEnd, so that we can arrange cloned Fore Blocks before the subloop and
+    match up Phi's correctly.
 
-    i.e. The old order of blocks used to be F1 S1_1 S1_2 A1 F2 S2_1 S2_2 A2.
-    It needs to be safe to tranform this to F1 F2 S1_1 S2_1 S1_2 S2_2 A1 A2.
+    i.e. The old order of blocks used to be
+           (F1)1 (F2)1 J1_1 J1_2 (A2)1 (A1)1 (F1)2 (F2)2 J2_1 J2_2 (A2)2 (A1)2.
+         It needs to be safe to transform this to
+           (F1)1 (F1)2 (F2)1 (F2)2 J1_1 J1_2 J2_1 J2_2 (A2)1 (A2)2 (A1)1 (A1)2.
 
     There are then a number of checks along the lines of no calls, no
     exceptions, inner loop IV is consistent, etc. Note that for loops requiring
@@ -755,35 +923,13 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     UnrollAndJamLoop if the trip count cannot be easily calculated.
   */
 
-  if (!L->isLoopSimplifyForm() || L->getSubLoops().size() != 1)
-    return false;
-  Loop *SubLoop = L->getSubLoops()[0];
-  if (!SubLoop->isLoopSimplifyForm())
-    return false;
-
-  BasicBlock *Header = L->getHeader();
-  BasicBlock *Latch = L->getLoopLatch();
-  BasicBlock *Exit = L->getExitingBlock();
-  BasicBlock *SubLoopHeader = SubLoop->getHeader();
-  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-  BasicBlock *SubLoopExit = SubLoop->getExitingBlock();
-
-  if (Latch != Exit)
-    return false;
-  if (SubLoopLatch != SubLoopExit)
-    return false;
-
-  if (Header->hasAddressTaken() || SubLoopHeader->hasAddressTaken()) {
-    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Address taken\n");
-    return false;
-  }
-
   // Split blocks into Fore/SubLoop/Aft based on dominators
+  Loop *JamLoop = getInnerMostLoop(L);
   BasicBlockSet SubLoopBlocks;
-  BasicBlockSet ForeBlocks;
-  BasicBlockSet AftBlocks;
-  if (!partitionOuterLoopBlocks(L, SubLoop, ForeBlocks, SubLoopBlocks,
-                                AftBlocks, &DT)) {
+  DenseMap<Loop *, BasicBlockSet> ForeBlocksMap;
+  DenseMap<Loop *, BasicBlockSet> AftBlocksMap;
+  if (!partitionOuterLoopBlocks(*L, *JamLoop, SubLoopBlocks, ForeBlocksMap,
+                                AftBlocksMap, DT)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Incompatible loop layout\n");
     return false;
   }
@@ -791,7 +937,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // Aft blocks may need to move instructions to fore blocks, which becomes more
   // difficult if there are multiple (potentially conditionally executed)
   // blocks. For now we just exclude loops with multiple aft blocks.
-  if (AftBlocks.size() != 1) {
+  if (AftBlocksMap[L].size() != 1) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Can't currently handle "
                          "multiple blocks after the loop\n");
     return false;
@@ -799,7 +945,9 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 
   // Check inner loop backedge count is consistent on all iterations of the
   // outer loop
-  if (!hasIterationCountInvariantInParent(SubLoop, SE)) {
+  if (any_of(L->getLoopsInPreorder(), [&SE](Loop *SubLoop) {
+        return !hasIterationCountInvariantInParent(SubLoop, SE);
+      })) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Inner loop iteration count is "
                          "not consistent on each iteration\n");
     return false;
@@ -820,6 +968,10 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   //  ForeBlock phi operands before the subloop
 
   // Make sure we can move all instructions we need to before the subloop
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *Latch = L->getLoopLatch();
+  BasicBlockSet AftBlocks = AftBlocksMap[L];
+  Loop *SubLoop = L->getSubLoops()[0];
   if (!processHeaderPhiOperands(
           Header, Latch, AftBlocks, [&AftBlocks, &SubLoop](Instruction *I) {
             if (SubLoop->contains(I->getParent()))
@@ -845,7 +997,8 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // Check for memory dependencies which prohibit the unrolling we are doing.
   // Because of the way we are unrolling Fore/Sub/Aft blocks, we need to check
   // there are no dependencies between Fore-Sub, Fore-Aft, Sub-Aft and Sub-Sub.
-  if (!checkDependencies(L, ForeBlocks, SubLoopBlocks, AftBlocks, DI)) {
+  if (!checkDependencies(*L, SubLoopBlocks, ForeBlocksMap, AftBlocksMap, DI,
+                         LI)) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; failed dependency check\n");
     return false;
   }
