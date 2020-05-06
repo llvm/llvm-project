@@ -101,8 +101,7 @@ static bool isSwiftLanguageSymbolContext(const SwiftUserExpression &expr,
                                          const SymbolContext &sym_ctx) {
   if (sym_ctx.comp_unit && (expr.Language() == lldb::eLanguageTypeUnknown ||
                             expr.Language() == lldb::eLanguageTypeSwift)) {
-    if (sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift ||
-        sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypePLI)
+    if (sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift)
       return true;
   } else if (sym_ctx.symbol && expr.Language() == lldb::eLanguageTypeUnknown) {
     if (sym_ctx.symbol->GetMangled().GuessLanguage() ==
