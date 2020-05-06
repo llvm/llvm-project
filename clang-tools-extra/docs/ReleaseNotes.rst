@@ -168,6 +168,11 @@ New check aliases
   :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone-reserved-identifier>` was added.
 
+- New alias :doc:`cert-str34-c
+  <clang-tidy/checks/cert-str34-c>` to
+  :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone-signed-char-misuse>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
