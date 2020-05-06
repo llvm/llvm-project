@@ -256,8 +256,6 @@ define arm_aapcs_vfpcc half @vdup_f16_extract(half* %src1, half* %src2) {
 ; CHECK-NEXT:    vldr.16 s0, [r2]
 ; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vmov.f16 r1, s0
-; CHECK-NEXT:    vmov.f16 s0, r1
 ; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
