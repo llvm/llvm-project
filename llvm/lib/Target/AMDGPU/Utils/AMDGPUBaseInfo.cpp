@@ -148,10 +148,17 @@ struct MTBUFInfo {
   bool has_soffset;
 };
 
+struct SMInfo {
+  uint16_t Opcode;
+  bool IsBuffer;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
+#define GET_SMInfoTable_DECL
+#define GET_SMInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -212,6 +219,11 @@ bool getMUBUFHasSrsrc(unsigned Opc) {
 bool getMUBUFHasSoffset(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->has_soffset : false;
+}
+
+bool getSMEMIsBuffer(unsigned Opc) {
+  const SMInfo *Info = getSMEMOpcodeHelper(Opc);
+  return Info ? Info->IsBuffer : false;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -1268,10 +1280,18 @@ static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
   return isGFX9(ST) || isGFX10(ST);
 }
 
-static bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
-                                             int64_t EncodedOffset) {
+bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
+                                      int64_t EncodedOffset) {
   return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
                                : isUInt<8>(EncodedOffset);
+}
+
+bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
+                                    int64_t EncodedOffset,
+                                    bool IsBuffer) {
+  return !IsBuffer &&
+         hasSMRDSignedImmOffset(ST) &&
+         isInt<21>(EncodedOffset);
 }
 
 static bool isDwordAligned(uint64_t ByteOffset) {

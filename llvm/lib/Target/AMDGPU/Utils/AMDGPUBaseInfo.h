@@ -294,6 +294,9 @@ LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
 
 LLVM_READONLY
+bool getSMEMIsBuffer(unsigned Opc);
+
+LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
@@ -634,6 +637,15 @@ LLVM_READNONE
 bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 bool isArgPassedInSGPR(const Argument *Arg);
+
+LLVM_READONLY
+bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
+                                      int64_t EncodedOffset);
+
+LLVM_READONLY
+bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
+                                    int64_t EncodedOffset,
+                                    bool IsBuffer);
 
 /// Convert \p ByteOffset to dwords if the subtarget uses dword SMRD immediate
 /// offsets.
