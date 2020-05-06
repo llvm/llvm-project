@@ -434,8 +434,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             DumpSymbolVector(os, x.objects());
           },
           [&](const CommonBlockDetails &x) {
-            if (x.align()) {
-              os << " align=" << x.align();
+            if (x.alignment()) {
+              os << " alignment=" << x.alignment();
             }
             os << ':';
             for (const auto &object : x.objects()) {

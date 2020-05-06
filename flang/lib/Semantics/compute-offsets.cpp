@@ -30,13 +30,13 @@ public:
   void Compute() { Compute(context_.globalScope()); }
 
 private:
-  struct SizeAndAlign {
-    SizeAndAlign() {}
-    SizeAndAlign(std::size_t size) : size{size}, align{size} {}
-    SizeAndAlign(std::size_t size, std::size_t align)
-        : size{size}, align{align} {}
+  struct SizeAndAlignment {
+    SizeAndAlignment() {}
+    SizeAndAlignment(std::size_t size) : size{size}, alignment{size} {}
+    SizeAndAlignment(std::size_t size, std::size_t alignment)
+        : size{size}, alignment{alignment} {}
     std::size_t size{0};
-    std::size_t align{0};
+    std::size_t alignment{0};
   };
   struct SymbolAndOffset {
     Symbol *symbol{nullptr};
@@ -50,16 +50,16 @@ private:
   std::size_t GetOffset(SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
   void DoSymbol(Symbol &);
-  SizeAndAlign GetSizeAndAlign(const Symbol &);
-  SizeAndAlign GetElementSize(const Symbol &, bool isSubstring = false);
+  SizeAndAlignment GetSizeAndAlignment(const Symbol &);
+  SizeAndAlignment GetElementSize(const Symbol &, bool isSubstring = false);
   std::size_t CountElements(const Symbol &);
   static std::size_t Align(std::size_t, std::size_t);
-  static SizeAndAlign GetIntrinsicSizeAndAlign(TypeCategory, int);
+  static SizeAndAlignment GetIntrinsicSizeAndAlignment(TypeCategory, int);
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
   std::size_t offset_{0};
-  std::size_t align_{0};
+  std::size_t alignment_{0};
   // symbol -> symbol+offset that determines its location, from EQUIVALENCE
   std::map<MutableSymbolRef, SymbolAndOffset> dependents_;
 };
@@ -89,7 +89,7 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
     DoEquivalenceSet(set);
   }
   offset_ = 0;
-  align_ = 0;
+  alignment_ = 0;
   for (auto &symbol : scope.GetSymbols()) {
     if (!InCommonBlock(*symbol) &&
         dependents_.find(symbol) == dependents_.end()) {
@@ -98,14 +98,14 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
   }
   for (auto &[symbol, dep] : dependents_) {
     if (symbol->size() == 0) {
-      SizeAndAlign s{GetSizeAndAlign(*symbol)};
+      SizeAndAlignment s{GetSizeAndAlignment(*symbol)};
       symbol->set_size(s.size);
       symbol->set_offset(GetOffset(dep));
       offset_ = std::max(offset_, symbol->offset() + symbol->size());
     }
   }
   scope.set_size(offset_);
-  scope.set_align(align_);
+  scope.set_alignment(alignment_);
 }
 
 std::size_t ComputeOffsetsHelper::GetOffset(SymbolAndOffset &dep) {
@@ -120,12 +120,12 @@ std::size_t ComputeOffsetsHelper::GetOffset(SymbolAndOffset &dep) {
 void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   auto &details{commonBlock.get<CommonBlockDetails>()};
   offset_ = 0;
-  align_ = 0;
+  alignment_ = 0;
   for (auto &object : details.objects()) {
     DoSymbol(*object);
   }
   commonBlock.set_size(offset_);
-  details.set_align(align_);
+  details.set_alignment(alignment_);
 }
 
 void ComputeOffsetsHelper::DoEquivalenceSet(EquivalenceSet &set) {
@@ -181,30 +181,30 @@ void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
       symbol.has<UseDetails>() || symbol.has<ProcBindingDetails>()) {
     return; // these have type but no size
   }
-  SizeAndAlign s{GetSizeAndAlign(symbol)};
+  SizeAndAlignment s{GetSizeAndAlignment(symbol)};
   if (s.size == 0) {
     return;
   }
-  offset_ = Align(offset_, s.align);
+  offset_ = Align(offset_, s.alignment);
   symbol.set_size(s.size);
   symbol.set_offset(offset_);
   offset_ += s.size;
-  align_ = std::max(align_, s.align);
+  alignment_ = std::max(alignment_, s.alignment);
 }
 
-auto ComputeOffsetsHelper::GetSizeAndAlign(const Symbol &symbol)
-    -> SizeAndAlign {
-  SizeAndAlign result{GetElementSize(symbol)};
+auto ComputeOffsetsHelper::GetSizeAndAlignment(const Symbol &symbol)
+    -> SizeAndAlignment {
+  SizeAndAlignment result{GetElementSize(symbol)};
   std::size_t elements{CountElements(symbol)};
   if (elements > 1) {
-    result.size = Align(result.size, result.align);
+    result.size = Align(result.size, result.alignment);
   }
   result.size *= elements;
   return result;
 }
 
 auto ComputeOffsetsHelper::GetElementSize(
-    const Symbol &symbol, bool isSubstring) -> SizeAndAlign {
+    const Symbol &symbol, bool isSubstring) -> SizeAndAlignment {
   const DeclTypeSpec *type{symbol.GetType()};
   if (!type) {
     return {};
@@ -218,10 +218,10 @@ auto ComputeOffsetsHelper::GetElementSize(
         runtime::Descriptor::SizeInBytes(symbol.Rank(), false, lenParams)};
     return {size, maxAlignment};
   }
-  SizeAndAlign result;
+  SizeAndAlignment result;
   if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {
     if (auto kind{ToInt64(intrinsic->kind())}) {
-      result = GetIntrinsicSizeAndAlign(intrinsic->category(), *kind);
+      result = GetIntrinsicSizeAndAlignment(intrinsic->category(), *kind);
     }
     if (!isSubstring && type->category() == DeclTypeSpec::Character) {
       ParamValue length{type->characterTypeSpec().length()};
@@ -235,7 +235,7 @@ auto ComputeOffsetsHelper::GetElementSize(
   } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
     if (derived->scope()) {
       result.size = derived->scope()->size();
-      result.align = derived->scope()->align();
+      result.alignment = derived->scope()->alignment();
     }
   } else {
     DIE("not intrinsic or derived");
@@ -262,8 +262,8 @@ std::size_t ComputeOffsetsHelper::Align(std::size_t x, std::size_t alignment) {
   return (x + alignment - 1) & -alignment;
 }
 
-auto ComputeOffsetsHelper::GetIntrinsicSizeAndAlign(
-    TypeCategory category, int kind) -> SizeAndAlign {
+auto ComputeOffsetsHelper::GetIntrinsicSizeAndAlignment(
+    TypeCategory category, int kind) -> SizeAndAlignment {
   // TODO: does kind==10 need special handling?
   std::size_t size{kind == 3 ? 2 : static_cast<std::size_t>(kind)};
   if (category == TypeCategory::Complex) {
