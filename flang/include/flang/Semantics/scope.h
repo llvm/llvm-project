@@ -190,8 +190,8 @@ public:
 
   std::size_t size() const { return size_; }
   void set_size(std::size_t size) { size_ = size; }
-  std::size_t align() const { return align_; }
-  void set_align(std::size_t align) { align_ = align; }
+  std::size_t alignment() const { return alignment_; }
+  void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
   ImportKind GetImportKind() const;
   // Names appearing in IMPORT statements in this scope
@@ -229,7 +229,7 @@ private:
   Scope &parent_; // this is enclosing scope, not extended derived type base
   const Kind kind_;
   std::size_t size_{0}; // size in bytes
-  std::size_t align_{0}; // required alignment in bytes
+  std::size_t alignment_{0}; // required alignment in bytes
   parser::CharBlock sourceRange_;
   Symbol *const symbol_; // if not null, symbol_->scope() == this
   std::list<Scope> children_;

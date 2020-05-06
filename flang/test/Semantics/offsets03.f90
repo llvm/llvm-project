@@ -21,19 +21,19 @@ module mb
 end
 
 ! equivalence and substring
-subroutine mc         !CHECK: Subprogram scope: mc size=12 align=1
+subroutine mc         !CHECK: Subprogram scope: mc size=12 alignment=1
   character(10) :: c1 !CHECK: c1 size=10 offset=0:
   character(5)  :: c2 !CHECK: c2 size=5 offset=7:
   equivalence(c1(9:), c2(2:4))
 end
 
 ! Common block: objects are in order from COMMON statement and not part of module
-module md                   !CHECK: Module scope: md size=1 align=1
+module md                   !CHECK: Module scope: md size=1 alignment=1
   integer(1) :: i 
   integer(2) :: d1          !CHECK: d1, PUBLIC size=2 offset=8:
   integer(4) :: d2          !CHECK: d2, PUBLIC size=4 offset=4:
   integer(1) :: d3          !CHECK: d3, PUBLIC size=1 offset=0:
   real(2) :: d4             !CHECK: d4, PUBLIC size=2 offset=0:
-  common /common1/ d3,d2,d1 !CHECK: common1 size=10 offset=0: CommonBlockDetails align=4:
-  common /common2/ d4       !CHECK: common2 size=2 offset=0: CommonBlockDetails align=2:
+  common /common1/ d3,d2,d1 !CHECK: common1 size=10 offset=0: CommonBlockDetails alignment=4:
+  common /common2/ d4       !CHECK: common2 size=2 offset=0: CommonBlockDetails alignment=2:
 end
