@@ -85,19 +85,17 @@ Operation *AffineDialect::materializeConstant(OpBuilder &builder,
 }
 
 /// A utility function to check if a value is defined at the top level of an
-/// op with trait `PolyhedralScope`. A value of index type defined at the top
+/// op with trait `AffineScope`. A value of index type defined at the top
 /// level is always a valid symbol.
 bool mlir::isTopLevelValue(Value value) {
   if (auto arg = value.dyn_cast<BlockArgument>())
-    return arg.getOwner()->getParentOp()->hasTrait<OpTrait::PolyhedralScope>();
-  return value.getDefiningOp()
-      ->getParentOp()
-      ->hasTrait<OpTrait::PolyhedralScope>();
+    return arg.getOwner()->getParentOp()->hasTrait<OpTrait::AffineScope>();
+  return value.getDefiningOp()->getParentOp()->hasTrait<OpTrait::AffineScope>();
 }
 
 /// A utility function to check if a value is defined at the top level of
 /// `region` or is an argument of `region`. A value of index type defined at the
-/// top level of a `PolyhedralScope` region is always a valid symbol for all
+/// top level of a `AffineScope` region is always a valid symbol for all
 /// uses in that region.
 static bool isTopLevelValue(Value value, Region *region) {
   if (auto arg = value.dyn_cast<BlockArgument>())
@@ -106,12 +104,12 @@ static bool isTopLevelValue(Value value, Region *region) {
 }
 
 /// Returns the closest region enclosing `op` that is held by an operation with
-/// trait `PolyhedralScope`.
+/// trait `AffineScope`.
 //  TODO: getAffineScope should be publicly exposed for affine passes/utilities.
 static Region *getAffineScope(Operation *op) {
   auto *curOp = op;
   while (auto *parentOp = curOp->getParentOp()) {
-    if (parentOp->hasTrait<OpTrait::PolyhedralScope>())
+    if (parentOp->hasTrait<OpTrait::AffineScope>())
       return curOp->getParentRegion();
     curOp = parentOp;
   }
@@ -132,9 +130,9 @@ bool mlir::isValidDim(Value value) {
     return isValidDim(value, getAffineScope(defOp));
 
   // This value has to be a block argument for an op that has the
-  // `PolyhedralScope` trait or for an affine.for or affine.parallel.
+  // `AffineScope` trait or for an affine.for or affine.parallel.
   auto *parentOp = value.cast<BlockArgument>().getOwner()->getParentOp();
-  return parentOp->hasTrait<OpTrait::PolyhedralScope>() ||
+  return parentOp->hasTrait<OpTrait::AffineScope>() ||
          isa<AffineForOp>(parentOp) || isa<AffineParallelOp>(parentOp);
 }
 
@@ -209,7 +207,7 @@ static bool isDimOpValidSymbol(DimOp dimOp, Region *region) {
 // the following conditions:
 // *) It is a constant.
 // *) Its defining op or block arg appearance is immediately enclosed by an op
-//    with `PolyhedralScope` trait.
+//    with `AffineScope` trait.
 // *) It is the result of an affine.apply operation with symbol operands.
 // *) It is a result of the dim op on a memref whose corresponding size is a
 //    valid symbol.

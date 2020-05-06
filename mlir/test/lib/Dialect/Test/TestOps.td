@@ -1150,10 +1150,10 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   let printer = [{ return ::print(p, *this); }];
 }
 
-def PolyhedralScopeOp : TEST_Op<"polyhedral_scope", [PolyhedralScope]> {
-  let summary =  "polyhedral scope operation";
+def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
+  let summary =  "affine scope operation";
   let description = [{
-    Test op that defines a new polyhedral scope.
+    Test op that defines a new affine scope.
   }];
 
   let regions = (region SizedRegion<1>:$region);

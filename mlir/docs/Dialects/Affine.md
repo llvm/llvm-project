@@ -62,16 +62,16 @@ Example:
 The affine dialect imposes certain restrictions on dimension and symbolic
 identifiers to enable powerful analysis and transformation. An SSA value's use
 can be bound to a symbolic identifier if that SSA value is either
-1. a region argument for an op with trait `PolyhedralScope` (eg. `FuncOp`),
-2. a value defined at the top level of a `PolyhedralScope` op (i.e., immediately
+1. a region argument for an op with trait `AffineScope` (eg. `FuncOp`),
+2. a value defined at the top level of a `AffineScope` op (i.e., immediately
 enclosed by the latter),
-3. a value that dominates the `PolyhedralScope` op enclosing the value's use,
+3. a value that dominates the `AffineScope` op enclosing the value's use,
 4. the result of a [`constant` operation](Standard.md#constant-operation),
 5. the result of an [`affine.apply`
 operation](#affineapply-operation) that recursively takes as arguments any valid
 symbolic identifiers, or
 6. the result of a [`dim` operation](Standard.md#dim-operation) on either a
-memref that is an argument to a `PolyhedralScope` op or a memref where the
+memref that is an argument to a `AffineScope` op or a memref where the
 corresponding dimension is either static or a dynamic one in turn bound to a
 valid symbol.
 

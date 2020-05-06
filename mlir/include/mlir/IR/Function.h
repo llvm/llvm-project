@@ -34,7 +34,7 @@ class FuncOp
     : public Op<FuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
                 OpTrait::OneRegion, OpTrait::IsIsolatedFromAbove,
                 OpTrait::FunctionLike, OpTrait::AutomaticAllocationScope,
-                OpTrait::PolyhedralScope, CallableOpInterface::Trait,
+                OpTrait::AffineScope, CallableOpInterface::Trait,
                 SymbolOpInterface::Trait> {
 public:
   using Op::Op;
