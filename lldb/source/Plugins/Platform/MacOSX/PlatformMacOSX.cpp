@@ -208,7 +208,8 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   }
 
   // Use the default SDK as a fallback.
-  FileSpec fspec(HostInfo::GetXcodeSDK(lldb_private::XcodeSDK::GetAnyMacOS()));
+  FileSpec fspec(
+      HostInfo::GetXcodeSDKPath(lldb_private::XcodeSDK::GetAnyMacOS()));
   if (fspec) {
     if (FileSystem::Instance().Exists(fspec))
       return ConstString(fspec.GetPath());
