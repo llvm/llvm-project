@@ -435,6 +435,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got@tlsld@l", VK_PPC_GOT_TLSLD_LO)
     .Case("got@tlsld@h", VK_PPC_GOT_TLSLD_HI)
     .Case("got@tlsld@ha", VK_PPC_GOT_TLSLD_HA)
+    .Case("got@pcrel", VK_PPC_GOT_PCREL)
     .Case("notoc", VK_PPC_NOTOC)
     .Case("gdgot", VK_Hexagon_GD_GOT)
     .Case("gdplt", VK_Hexagon_GD_PLT)
