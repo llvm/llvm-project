@@ -98,11 +98,10 @@ def main():
         # temporary directory, where we know they have been copied when we handled
         # test dependencies above.
         commandLine = (pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
-        remoteCommands += [
-            'cd {}'.format(tmp),
-            'export {}'.format(' '.join(args.env)),
-            subprocess.list2cmdline(commandLine)
-        ]
+        remoteCommands.append('cd {}'.format(tmp))
+        if args.env:
+            remoteCommands.append('export {}'.format(' '.join(args.env)))
+        remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.
         rc = subprocess.call(ssh(' && '.join(remoteCommands)))
