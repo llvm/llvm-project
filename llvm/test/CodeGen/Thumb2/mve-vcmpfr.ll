@@ -5289,8 +5289,7 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_oeq_v8f16_bc(<8 x half> %src, half* %src
 ; CHECK-MVEFP-LABEL: vcmp_oeq_v8f16_bc:
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
 ; CHECK-MVEFP-NEXT:    ldrh r0, [r0]
-; CHECK-MVEFP-NEXT:    vdup.16 q3, r0
-; CHECK-MVEFP-NEXT:    vcmp.f16 eq, q0, q3
+; CHECK-MVEFP-NEXT:    vcmp.f16 eq, q0, r0
 ; CHECK-MVEFP-NEXT:    vpsel q0, q1, q2
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
