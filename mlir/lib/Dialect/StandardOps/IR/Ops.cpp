@@ -2519,6 +2519,111 @@ public:
 
 } // end anonymous namespace
 
+/// Determines whether MemRefCastOp casts to a more dynamic version of the
+/// source memref. This is useful to to fold a memref_cast into a consuming op
+/// and implement canonicalization patterns for ops in different dialects that
+/// may consume the results of memref_cast operations. Such foldable memref_cast
+/// operations are typically inserted as `view` and `subview` ops are
+/// canonicalized, to preserve the type compatibility of their uses.
+///
+/// Returns true when all conditions are met:
+/// 1. source and result are ranked memrefs with strided semantics and same
+/// element type and rank.
+/// 2. each of the source's size, offset or stride has more static information
+/// than the corresponding result's size, offset or stride.
+///
+/// Example 1:
+/// ```mlir
+///   %1 = memref_cast %0 : memref<8x16xf32> to memref<?x?xf32>
+///   %2 = consumer %1 ... : memref<?x?xf32> ...
+/// ```
+///
+/// may fold into:
+///
+/// ```mlir
+///   %2 = consumer %0 ... : memref<8x16xf32> ...
+/// ```
+///
+/// Example 2:
+/// ```
+///   %1 = memref_cast %0 : memref<?x16xf32, affine_map<(i, j)->(16 * i + j)>>
+///          to memref<?x?xf32>
+///   consumer %1 : memref<?x?xf32> ...
+/// ```
+///
+/// may fold into:
+///
+/// ```
+///   consumer %0 ... : memref<?x16xf32, affine_map<(i, j)->(16 * i + j)>>
+/// ```
+bool mlir::canFoldIntoConsumerOp(MemRefCastOp castOp) {
+  MemRefType sourceType = castOp.source().getType().dyn_cast<MemRefType>();
+  MemRefType resultType = castOp.getType().dyn_cast<MemRefType>();
+
+  // Requires ranked MemRefType.
+  if (!sourceType || !resultType)
+    return false;
+
+  // Requires same elemental type.
+  if (sourceType.getElementType() != resultType.getElementType())
+    return false;
+
+  // Requires same rank.
+  if (sourceType.getRank() != resultType.getRank())
+    return false;
+
+  // Only fold casts between strided memref forms.
+  int64_t sourceOffset, resultOffset;
+  SmallVector<int64_t, 4> sourceStrides, resultStrides;
+  if (failed(getStridesAndOffset(sourceType, sourceStrides, sourceOffset)) ||
+      failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
+    return false;
+
+  // If cast is towards more static sizes along any dimension, don't fold.
+  for (auto it : llvm::zip(sourceType.getShape(), resultType.getShape())) {
+    auto ss = std::get<0>(it), st = std::get<1>(it);
+    if (ss != st)
+      if (MemRefType::isDynamic(ss) && !MemRefType::isDynamic(st))
+        return false;
+  }
+
+  // If cast is towards more static offset along any dimension, don't fold.
+  if (sourceOffset != resultOffset)
+    if (MemRefType::isDynamicStrideOrOffset(sourceOffset) &&
+        !MemRefType::isDynamicStrideOrOffset(resultOffset))
+      return false;
+
+  // If cast is towards more static strides along any dimension, don't fold.
+  for (auto it : llvm::zip(sourceStrides, resultStrides)) {
+    auto ss = std::get<0>(it), st = std::get<1>(it);
+    if (ss != st)
+      if (MemRefType::isDynamicStrideOrOffset(ss) &&
+          !MemRefType::isDynamicStrideOrOffset(st))
+        return false;
+  }
+
+  return true;
+}
+
+OpFoldResult SubViewOp::fold(ArrayRef<Attribute>) {
+  auto folds = [](Operation *op) {
+    bool folded = false;
+    for (OpOperand &operand : op->getOpOperands()) {
+      auto castOp =
+          dyn_cast_or_null<MemRefCastOp>(operand.get().getDefiningOp());
+      if (castOp && canFoldIntoConsumerOp(castOp)) {
+        operand.set(castOp.getOperand());
+        folded = true;
+      }
+    }
+    return folded ? success() : failure();
+  };
+
+  if (succeeded(folds(*this)))
+    return getResult();
+  return {};
+}
+
 void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
   results.insert<SubViewOpShapeFolder, SubViewOpStrideFolder,
