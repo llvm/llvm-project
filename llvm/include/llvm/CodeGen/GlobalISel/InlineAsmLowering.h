@@ -14,10 +14,15 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_INLINEASMLOWERING_H
 #define LLVM_CODEGEN_GLOBALISEL_INLINEASMLOWERING_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include <functional>
+
 namespace llvm {
 class CallBase;
 class MachineIRBuilder;
+class Register;
 class TargetLowering;
+class Value;
 
 class InlineAsmLowering {
   const TargetLowering *TLI;
@@ -25,7 +30,9 @@ class InlineAsmLowering {
   virtual void anchor();
 
 public:
-  bool lowerInlineAsm(MachineIRBuilder &MIRBuilder, const CallBase &CB) const;
+  bool lowerInlineAsm(MachineIRBuilder &MIRBuilder, const CallBase &CB,
+                      std::function<ArrayRef<Register>(const Value &Val)>
+                          GetOrCreateVRegs) const;
 
 protected:
   /// Getter for generic TargetLowering class.
