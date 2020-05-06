@@ -24,7 +24,6 @@ namespace Fortran::semantics {
 class ComputeOffsetsHelper {
 public:
   // TODO: configure based on target
-  static constexpr int descriptorSize{3 * 8};
   static constexpr int maxAlignment{8};
 
   ComputeOffsetsHelper(SemanticsContext &context) : context_{context} {}
@@ -39,11 +38,20 @@ private:
     std::size_t size{0};
     std::size_t align{0};
   };
+  struct SymbolAndOffset {
+    Symbol *symbol{nullptr};
+    std::size_t offset{0};
+  };
 
   void Compute(Scope &);
   void DoScope(Scope &);
+  void DoCommonBlock(Symbol &);
+  void DoEquivalenceSet(EquivalenceSet &);
+  std::size_t GetOffset(SymbolAndOffset &);
+  std::size_t ComputeOffset(const EquivalenceObject &);
   void DoSymbol(Symbol &);
   SizeAndAlign GetSizeAndAlign(const Symbol &);
+  SizeAndAlign GetElementSize(const Symbol &, bool isSubstring = false);
   std::size_t CountElements(const Symbol &);
   static std::size_t Align(std::size_t, std::size_t);
   static SizeAndAlign GetIntrinsicSizeAndAlign(TypeCategory, int);
@@ -52,6 +60,8 @@ private:
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
   std::size_t offset_{0};
   std::size_t align_{0};
+  // symbol -> symbol+offset that determines its location, from EQUIVALENCE
+  std::map<MutableSymbolRef, SymbolAndOffset> dependents_;
 };
 
 void ComputeOffsetsHelper::Compute(Scope &scope) {
@@ -61,22 +71,116 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   DoScope(scope);
 }
 
+static bool InCommonBlock(const Symbol &symbol) {
+  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
+  return details && details->commonBlock();
+}
+
 void ComputeOffsetsHelper::DoScope(Scope &scope) {
   if (scope.symbol() && scope.IsParameterizedDerivedType()) {
     return; // only process instantiations of parameterized derived types
   }
+  // Symbols in common block get offsets from the beginning of the block
+  for (auto &pair : scope.commonBlocks()) {
+    DoCommonBlock(*pair.second);
+  }
+  // Build dependents_ from equivalences: symbol -> symbol+offset
+  for (EquivalenceSet &set : scope.equivalenceSets()) {
+    DoEquivalenceSet(set);
+  }
   offset_ = 0;
   align_ = 0;
-  for (auto symbol : scope.GetSymbols()) {
-    if (!symbol->has<TypeParamDetails>() && !symbol->has<SubprogramDetails>()) {
+  for (auto &symbol : scope.GetSymbols()) {
+    if (!InCommonBlock(*symbol) &&
+        dependents_.find(symbol) == dependents_.end()) {
       DoSymbol(*symbol);
+    }
+  }
+  for (auto &[symbol, dep] : dependents_) {
+    if (symbol->size() == 0) {
+      SizeAndAlign s{GetSizeAndAlign(*symbol)};
+      symbol->set_size(s.size);
+      symbol->set_offset(GetOffset(dep));
+      offset_ = std::max(offset_, symbol->offset() + symbol->size());
     }
   }
   scope.set_size(offset_);
   scope.set_align(align_);
 }
 
+std::size_t ComputeOffsetsHelper::GetOffset(SymbolAndOffset &dep) {
+  auto it{dependents_.find(*dep.symbol)};
+  if (it == dependents_.end()) {
+    return dep.symbol->offset() + dep.offset;
+  } else {
+    return GetOffset(it->second) + dep.offset;
+  }
+}
+
+void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
+  auto &details{commonBlock.get<CommonBlockDetails>()};
+  offset_ = 0;
+  align_ = 0;
+  for (auto &object : details.objects()) {
+    DoSymbol(*object);
+  }
+  commonBlock.set_size(offset_);
+  details.set_align(align_);
+}
+
+void ComputeOffsetsHelper::DoEquivalenceSet(EquivalenceSet &set) {
+  std::vector<SymbolAndOffset> symbolOffsets;
+  SymbolAndOffset max;
+  for (EquivalenceObject &object : set) {
+    std::size_t offset{ComputeOffset(object)};
+    symbolOffsets.push_back({&object.symbol, offset});
+    if (offset >= max.offset) {
+      max.offset = offset;
+      max.symbol = &object.symbol;
+    }
+  }
+  CHECK(max.symbol);
+  for (auto &[symbol, offset] : symbolOffsets) {
+    if (symbol != max.symbol) {
+      dependents_.emplace(
+          *symbol, SymbolAndOffset{max.symbol, max.offset - offset});
+    }
+  }
+}
+
+// Offset of this equivalence object from the start of its variable.
+std::size_t ComputeOffsetsHelper::ComputeOffset(
+    const EquivalenceObject &object) {
+  std::size_t offset{0};
+  if (object.substringStart) {
+    offset = *object.substringStart - 1;
+  }
+  if (!object.subscripts.empty()) {
+    const ArraySpec &shape{object.symbol.get<ObjectEntityDetails>().shape()};
+    auto lbound{[&](std::size_t i) {
+      return *ToInt64(shape[i].lbound().GetExplicit());
+    }};
+    auto ubound{[&](std::size_t i) {
+      return *ToInt64(shape[i].ubound().GetExplicit());
+    }};
+    for (std::size_t i{object.subscripts.size() - 1};;) {
+      offset += object.subscripts[i] - lbound(i);
+      if (i == 0) {
+        break;
+      }
+      --i;
+      offset *= ubound(i) - lbound(i) + 1;
+    }
+  }
+  return offset *
+      GetElementSize(object.symbol, object.substringStart.has_value()).size;
+}
+
 void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
+  if (symbol.has<TypeParamDetails>() || symbol.has<SubprogramDetails>() ||
+      symbol.has<UseDetails>() || symbol.has<ProcBindingDetails>()) {
+    return; // these have type but no size
+  }
   SizeAndAlign s{GetSizeAndAlign(symbol)};
   if (s.size == 0) {
     return;
@@ -85,13 +189,22 @@ void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
   symbol.set_size(s.size);
   symbol.set_offset(offset_);
   offset_ += s.size;
-  if (s.align > align_) {
-    align_ = s.align;
-  }
+  align_ = std::max(align_, s.align);
 }
 
 auto ComputeOffsetsHelper::GetSizeAndAlign(const Symbol &symbol)
     -> SizeAndAlign {
+  SizeAndAlign result{GetElementSize(symbol)};
+  std::size_t elements{CountElements(symbol)};
+  if (elements > 1) {
+    result.size = Align(result.size, result.align);
+  }
+  result.size *= elements;
+  return result;
+}
+
+auto ComputeOffsetsHelper::GetElementSize(
+    const Symbol &symbol, bool isSubstring) -> SizeAndAlign {
   const DeclTypeSpec *type{symbol.GetType()};
   if (!type) {
     return {};
@@ -110,7 +223,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlign(const Symbol &symbol)
     if (auto kind{ToInt64(intrinsic->kind())}) {
       result = GetIntrinsicSizeAndAlign(intrinsic->category(), *kind);
     }
-    if (type->category() == DeclTypeSpec::Character) {
+    if (!isSubstring && type->category() == DeclTypeSpec::Character) {
       ParamValue length{type->characterTypeSpec().length()};
       CHECK(length.isExplicit()); // else should be descriptor
       if (MaybeIntExpr lengthExpr{length.GetExplicit()}) {
@@ -127,11 +240,6 @@ auto ComputeOffsetsHelper::GetSizeAndAlign(const Symbol &symbol)
   } else {
     DIE("not intrinsic or derived");
   }
-  std::size_t elements{CountElements(symbol)};
-  if (elements > 1) {
-    result.size = Align(result.size, result.align);
-  }
-  result.size *= elements;
   return result;
 }
 
