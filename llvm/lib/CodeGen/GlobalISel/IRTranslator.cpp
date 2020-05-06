@@ -1577,7 +1577,8 @@ bool IRTranslator::translateInlineAsm(const CallBase &CB,
     return false;
   }
 
-  return ALI->lowerInlineAsm(MIRBuilder, CB);
+  return ALI->lowerInlineAsm(
+      MIRBuilder, CB, [&](const Value &Val) { return getOrCreateVRegs(Val); });
 }
 
 bool IRTranslator::translateCallBase(const CallBase &CB,
