@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: not wasm-ld -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=UNDEF
-; RUN: not wasm-ld --allow-undefined -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=UNDEF
+; RUN: wasm-ld --allow-undefined -o %t.wasm %t.o
 ; RUN: not wasm-ld --shared -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED
 
 target triple = "wasm32-unknown-unknown"
