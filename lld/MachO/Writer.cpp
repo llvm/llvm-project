@@ -114,7 +114,7 @@ public:
     c->maxprot = seg->maxProt;
     c->initprot = seg->initProt;
 
-    if (!seg->isNeeded())
+    if (seg->getSections().empty())
       return;
 
     c->vmaddr = seg->firstSection()->addr;
@@ -126,6 +126,7 @@ public:
       StringRef s = p.first;
       OutputSection *section = p.second;
       c->filesize += section->getFileSize();
+
       if (section->isHidden())
         continue;
 
@@ -283,10 +284,8 @@ void Writer::createLoadCommands() {
 
   uint8_t segIndex = 0;
   for (OutputSegment *seg : outputSegments) {
-    if (seg->isNeeded()) {
-      headerSection->addLoadCommand(make<LCSegment>(seg->name, seg));
-      seg->index = segIndex++;
-    }
+    headerSection->addLoadCommand(make<LCSegment>(seg->name, seg));
+    seg->index = segIndex++;
   }
 
   uint64_t dylibOrdinal = 1;
@@ -326,6 +325,17 @@ void Writer::createOutputSections() {
     getOrCreateOutputSegment(isec->segname)
         ->getOrCreateOutputSection(isec->name)
         ->mergeInput(isec);
+  }
+
+  // Remove unneeded segments and sections.
+  // TODO: Avoid creating unneeded segments in the first place
+  for (auto it = outputSegments.begin(); it != outputSegments.end();) {
+    OutputSegment *seg = *it;
+    seg->removeUnneededSections();
+    if (!seg->isNeeded())
+      it = outputSegments.erase(it);
+    else
+      ++it;
   }
 }
 

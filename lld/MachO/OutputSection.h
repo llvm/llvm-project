@@ -36,8 +36,8 @@ public:
   // as-is so their file size is the same as their address space size.
   virtual uint64_t getFileSize() const { return getSize(); }
 
-  // Hidden sections omit header content, but body content is still present.
-  virtual bool isHidden() const { return !this->isNeeded(); }
+  // Hidden sections omit header content, but body content may still be present.
+  virtual bool isHidden() const { return false; }
   // Unneeded sections are omitted entirely (header and body).
   virtual bool isNeeded() const { return true; }
 
