@@ -322,6 +322,15 @@ define <16 x i8> @test_vll4(i8 *%base, i64 %index, i32 %length) {
   ret <16 x i8> %res
 }
 
+; VLL with length >= 15 should become VL.
+define <16 x i8> @test_vll5(i8 *%ptr) {
+; CHECK-LABEL: test_vll5:
+; CHECK: vl %v24, 0({{%r[1-5]}})
+; CHECK: br %r14
+  %res = call <16 x i8> @llvm.s390.vll(i32 15, i8 *%ptr)
+  ret <16 x i8> %res
+}
+
 ; VPDI taking element 0 from each half.
 define <2 x i64> @test_vpdi1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vpdi1:
@@ -660,6 +669,15 @@ define void @test_vstl4(<16 x i8> %vec, i8 *%base, i64 %index, i32 %length) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%base, i64 %index
   call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  ret void
+}
+
+; VSTL with length >= 15 should become VST.
+define void @test_vstl5(<16 x i8> %vec, i8 *%ptr) {
+; CHECK-LABEL: test_vstl5:
+; CHECK: vst %v24, 0({{%r[1-5]}})
+; CHECK: br %r14
+  call void @llvm.s390.vstl(<16 x i8> %vec, i32 15, i8 *%ptr)
   ret void
 }
 

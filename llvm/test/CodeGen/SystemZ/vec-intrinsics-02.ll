@@ -123,6 +123,15 @@ define <16 x i8> @test_vlrl4(i8 *%base, i64 %index) {
   ret <16 x i8> %res
 }
 
+; VLRL with length >= 15 should become VL.
+define <16 x i8> @test_vlrl5(i8 *%ptr) {
+; CHECK-LABEL: test_vlrl5:
+; CHECK: vl %v24, 0({{%r[1-5]}})
+; CHECK: br %r14
+  %res = call <16 x i8> @llvm.s390.vlrl(i32 15, i8 *%ptr)
+  ret <16 x i8> %res
+}
+
 ; VSTRLR with the lowest in-range displacement.
 define void @test_vstrlr1(<16 x i8> %vec, i8 *%ptr, i32 %length) {
 ; CHECK-LABEL: test_vstrlr1:
@@ -198,6 +207,15 @@ define void @test_vstrl4(<16 x i8> %vec, i8 *%base, i64 %index) {
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%base, i64 %index
   call void @llvm.s390.vstrl(<16 x i8> %vec, i32 8, i8 *%ptr)
+  ret void
+}
+
+; VSTRL with length >= 15 should become VST.
+define void @test_vstrl5(<16 x i8> %vec, i8 *%ptr) {
+; CHECK-LABEL: test_vstrl5:
+; CHECK: vst %v24, 0({{%r[1-5]}})
+; CHECK: br %r14
+  call void @llvm.s390.vstrl(<16 x i8> %vec, i32 15, i8 *%ptr)
   ret void
 }
 
