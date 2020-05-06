@@ -69,6 +69,7 @@
 // R: scalar of 1/2 width element type (splat to vector type)
 // r: scalar of 1/4 width element type (splat to vector type)
 // e: 1/2 width unsigned elements, 2x element count
+// b: 1/4 width unsigned elements, 4x element count
 // h: 1/2 width elements, 2x element count
 // q: 1/4 width elements, 4x element count
 // o: 4x width elements, 1/4 element count
@@ -1234,6 +1235,21 @@ def SVQINCP_N_S32 : SInst<"svqincp[_n_s32]_{d}", "kkP", "PcPsPiPl", MergeNone, "
 def SVQINCP_N_S64 : SInst<"svqincp[_n_s64]_{d}", "llP", "PcPsPiPl", MergeNone, "aarch64_sve_sqincp_n64">;
 def SVQINCP_N_U32 : SInst<"svqincp[_n_u32]_{d}", "mmP", "PcPsPiPl", MergeNone, "aarch64_sve_uqincp_n32">;
 def SVQINCP_N_U64 : SInst<"svqincp[_n_u64]_{d}", "nnP", "PcPsPiPl", MergeNone, "aarch64_sve_uqincp_n64">;
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_INT8)" in {
+def SVMLLA_S32   : SInst<"svmmla[_s32]",   "ddqq","i",  MergeNone, "aarch64_sve_smmla">;
+def SVMLLA_U32   : SInst<"svmmla[_u32]",   "ddqq","Ui", MergeNone, "aarch64_sve_ummla">;
+def SVUSMLLA_S32 : SInst<"svusmmla[_s32]", "ddbq","i",  MergeNone, "aarch64_sve_usmmla">;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP32)" in {
+def SVMLLA_F32 : SInst<"svmmla[_f32]", "dddd","f", MergeNone, "aarch64_sve_fmmla">;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
+def SVMLLA_F64 : SInst<"svmmla[_f64]", "dddd","d", MergeNone, "aarch64_sve_fmmla">;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT

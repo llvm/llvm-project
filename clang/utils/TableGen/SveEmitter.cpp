@@ -513,6 +513,11 @@ void SVEType::applyModifier(char Mod) {
   case 'q':
     ElementBitwidth /= 4;
     break;
+  case 'b':
+    Signed = false;
+    Float = false;
+    ElementBitwidth /= 4;
+    break;
   case 'o':
     ElementBitwidth *= 4;
     break;
