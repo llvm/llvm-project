@@ -4,26 +4,20 @@
 define void @_start() {
 ; CHECK-LABEL: _start:
 ; CHECK:       # %bb.0: # %Entry
-; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    andq $-128, %rsp
-; CHECK-NEXT:    subq $256, %rsp # imm = 0x100
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    shrdq $2, %rcx, %rax
 ; CHECK-NEXT:    shrq $2, %rcx
 ; CHECK-NEXT:    leaq 1(,%rax,4), %rdx
-; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    shrdq $62, %rcx, %rax
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    orq $-2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rbp, %rsp
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    orq $-2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 Entry:
   %y = alloca <3 x i129>, align 4
