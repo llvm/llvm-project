@@ -93,7 +93,7 @@ entry:
 ; GCN-LABEL: {{^}}smrd6:
 ; SICIVI: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, -4
 ; SICIVI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x0
-; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0xfffffffc
+; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], -0x4
 define amdgpu_kernel void @smrd6(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
 entry:
   %tmp = getelementptr i32, i32 addrspace(4)* %ptr, i64 -1

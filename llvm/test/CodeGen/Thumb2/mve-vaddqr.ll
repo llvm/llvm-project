@@ -131,8 +131,7 @@ define arm_aapcs_vfpcc <4 x float> @vaddqr_v4f32_3(<4 x float> %src, float %src2
 ; CHECK-LABEL: vaddqr_v4f32_3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vadd.f32 q0, q0, q1
+; CHECK-NEXT:    vadd.f32 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %src2bc = bitcast float %src2 to i32
@@ -147,8 +146,7 @@ define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_3(<8 x half> %src, half *%src2p,
 ; CHECK-LABEL: vaddqr_v8f16_3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vdup.16 q1, r0
-; CHECK-NEXT:    vadd.f16 q0, q0, q1
+; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %src2 = load half, half *%src2p, align 2
@@ -164,8 +162,7 @@ define arm_aapcs_vfpcc <4 x float> @vaddqr_v4f32_4(<4 x float> %src, float %src2
 ; CHECK-LABEL: vaddqr_v4f32_4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vadd.f32 q0, q1, q0
+; CHECK-NEXT:    vadd.f32 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %src2bc = bitcast float %src2 to i32
@@ -180,8 +177,7 @@ define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_4(<8 x half> %src, half *%src2p,
 ; CHECK-LABEL: vaddqr_v8f16_4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vdup.16 q1, r0
-; CHECK-NEXT:    vadd.f16 q0, q1, q0
+; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %src2 = load half, half *%src2p, align 2

@@ -810,6 +810,19 @@ void prev_0_end(const std::vector<int> &V) {
   auto j = std::prev(i, 0); // no-warning
 }
 
+// std::prev() with int* for checking Loc value argument
+namespace std {
+template <typename T>
+T prev(T, int *);
+}
+
+void prev_loc_value(const std::vector<int> &V, int o) {
+
+  auto i = return_any_iterator(V.begin());
+  int *offset = &o;
+  auto j = std::prev(i, offset); // no-warning
+}
+
 //
 // Structure member dereference operators
 //

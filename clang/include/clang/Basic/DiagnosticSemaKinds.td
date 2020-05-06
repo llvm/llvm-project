@@ -171,8 +171,9 @@ def err_field_designator_unknown : Error<
 def err_field_designator_nonfield : Error<
   "field designator %0 does not refer to a non-static data member">;
 def note_field_designator_found : Note<"field designator refers here">;
-def err_designator_for_scalar_init : Error<
-  "designator in initializer for scalar type %0">;
+def err_designator_for_scalar_or_sizeless_init : Error<
+  "designator in initializer for %select{scalar|indivisible sizeless}0 "
+  "type %1">;
 def warn_initializer_overrides : Warning<
   "initializer %select{partially |}0overrides prior initialization of "
   "this subobject">, InGroup<InitializerOverrides>;
@@ -5398,6 +5399,11 @@ def err_excess_initializers : Error<
 def ext_excess_initializers : ExtWarn<
   "excess elements in %select{array|vector|scalar|union|struct}0 initializer">,
   InGroup<ExcessInitializers>;
+def err_excess_initializers_for_sizeless_type : Error<
+  "excess elements in initializer for indivisible sizeless type %0">;
+def ext_excess_initializers_for_sizeless_type : ExtWarn<
+  "excess elements in initializer for indivisible sizeless type %0">,
+  InGroup<ExcessInitializers>;
 def err_excess_initializers_in_char_array_initializer : Error<
   "excess elements in char array initializer">;
 def ext_excess_initializers_in_char_array_initializer : ExtWarn<
@@ -5411,17 +5417,23 @@ def ext_initializer_string_for_char_array_too_long : ExtWarn<
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
-def warn_braces_around_scalar_init : Warning<
-  "braces around scalar initializer">, InGroup<DiagGroup<"braced-scalar-init">>;
-def ext_many_braces_around_scalar_init : ExtWarn<
-  "too many braces around scalar initializer">,
+def warn_braces_around_init : Warning<
+  "braces around %select{scalar |}0initializer">,
+  InGroup<DiagGroup<"braced-scalar-init">>;
+def ext_many_braces_around_init : ExtWarn<
+  "too many braces around %select{scalar |}0initializer">,
   InGroup<DiagGroup<"many-braces-around-scalar-init">>, SFINAEFailure;
 def ext_complex_component_init : Extension<
   "complex initialization specifying real and imaginary components "
   "is an extension">, InGroup<DiagGroup<"complex-component-init">>;
 def err_empty_scalar_initializer : Error<"scalar initializer cannot be empty">;
+def err_empty_sizeless_initializer : Error<
+  "initializer for sizeless type %0 cannot be empty">;
 def warn_cxx98_compat_empty_scalar_initializer : Warning<
   "scalar initialized from empty initializer list is incompatible with C++98">,
+  InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cxx98_compat_empty_sizeless_initializer : Warning<
+  "initializing %0 from an empty initializer list is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx98_compat_reference_list_init : Warning<
   "reference initialized from initializer list is incompatible with C++98">,
