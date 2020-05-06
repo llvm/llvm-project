@@ -1340,13 +1340,24 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
     } else if (const Expr *TheExpr = Item.getExpr()) {
       ArgVal = EmitScalarExpr(TheExpr, /*Ignore*/ false);
 
-      // If this is a retainable type, push a lifetime-extended cleanup to
-      // ensure the lifetime of the argument is extended to the end of the
-      // enclosing block scope.
-      // FIXME: We only have to do this if the argument is a temporary, which
-      //        gets released after the full expression.
+      // If a temporary object that requires destruction after the full
+      // expression is passed, push a lifetime-extended cleanup to extend its
+      // lifetime to the end of the enclosing block scope.
+      auto LifetimeExtendObject = [&](const Expr *E) {
+        E = E->IgnoreParenCasts();
+        // Extend lifetimes of objects returned by function calls and message
+        // sends.
+
+        // FIXME: We should do this in other cases in which temporaries are
+        //        created including arguments of non-ARC types (e.g., C++
+        //        temporaries).
+        if (isa<CallExpr>(E) || isa<ObjCMessageExpr>(E))
+          return true;
+        return false;
+      };
+
       if (TheExpr->getType()->isObjCRetainableType() &&
-          getLangOpts().ObjCAutoRefCount) {
+          getLangOpts().ObjCAutoRefCount && LifetimeExtendObject(TheExpr)) {
         assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
                "Only scalar can be a ObjC retainable type");
         if (!isa<Constant>(ArgVal)) {
