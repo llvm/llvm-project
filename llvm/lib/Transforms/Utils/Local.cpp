@@ -403,22 +403,9 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
       return true;
 
-    if (II->isLifetimeStartOrEnd()) {
-      auto *Arg = II->getArgOperand(1);
-      // Lifetime intrinsics are dead when their right-hand is undef.
-      if (isa<UndefValue>(Arg))
-        return true;
-      // If the right-hand is an alloc, global, or argument and the only uses
-      // are lifetime intrinsics then the intrinsics are dead.
-      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
-        return llvm::all_of(Arg->uses(), [](Use &Use) {
-          if (IntrinsicInst *IntrinsicUse =
-                  dyn_cast<IntrinsicInst>(Use.getUser()))
-            return IntrinsicUse->isLifetimeStartOrEnd();
-          return false;
-        });
-      return false;
-    }
+    // Lifetime intrinsics are dead when their right-hand is undef.
+    if (II->isLifetimeStartOrEnd())
+      return isa<UndefValue>(II->getArgOperand(1));
 
     // Assumptions are dead if their condition is trivially true.  Guards on
     // true are operationally no-ops.  In the future we can consider more
