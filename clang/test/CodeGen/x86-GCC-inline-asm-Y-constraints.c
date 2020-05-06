@@ -54,15 +54,3 @@ void f_Yz(__m128 x, __m128 y, __m128 z)
           :"+Yi"(z),"=Yz" (x)
           :"Yi" (y) );
 }
-
-// CHECK-LABEL: f_Y0
-void f_Y0(__m128 x, __m128 y, __m128 z)
-  {
-  // CHECK: vpaddq
-  // CHECK-SAME: "=^Yi,=^Y0,^Yi,0,~{dirflag},~{fpsr},~{flags}"
-  __asm__ volatile ("vpaddq %0,%2,%1\n\t"
-          "vpaddq %1,%0,%2\n\t"
-          :"+Yi"(z),"=Y0" (x)
-          :"Yi" (y) );
-}
-
