@@ -398,6 +398,8 @@ cleanup:
 ; CHECK-LABEL: sub_sub_eq
 ; CHECK: %j = phi
 ; CHECK: %j.1 = phi
+; CHECK: %j.2 = phi
+; CHECK: %j.3 = phi
 define void @sub_sub_eq(i32* noalias nocapture %A, i32 %N, i32* noalias nocapture readonly %B) {
 entry:
   %cmp = icmp sgt i32 %N, 0

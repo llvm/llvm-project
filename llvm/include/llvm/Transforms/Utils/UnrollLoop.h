@@ -110,7 +110,7 @@ LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                   Loop **EpilogueLoop = nullptr);
 
 bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                          DependenceInfo &DI);
+                          DependenceInfo &DI, LoopInfo &LI);
 
 bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                         DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
