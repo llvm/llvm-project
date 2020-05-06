@@ -1218,7 +1218,6 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     for (BasicSymbolRef Sym : Symbols) {
       Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
       if (!SymFlagsOrErr) {
-        // TODO: Test this error.
         error(SymFlagsOrErr.takeError(), Obj.getFileName());
         return;
       }
