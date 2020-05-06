@@ -1010,15 +1010,9 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   }
 
   if (ShowDetailedSummary) {
-    OS << "Detailed summary:\n";
     OS << "Total number of blocks: " << PS->getNumCounts() << "\n";
     OS << "Total count: " << PS->getTotalCount() << "\n";
-    for (auto Entry : PS->getDetailedSummary()) {
-      OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
-         << " account for "
-         << format("%0.6g", (float)Entry.Cutoff / ProfileSummary::Scale * 100)
-         << " percentage of the total counts.\n";
-    }
+    PS->printDetailedSummary(OS);
   }
   return 0;
 }
@@ -1034,7 +1028,7 @@ static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
 }
 
 static int showSampleProfile(const std::string &Filename, bool ShowCounts,
-                             bool ShowAllFunctions,
+                             bool ShowAllFunctions, bool ShowDetailedSummary,
                              const std::string &ShowFunction,
                              bool ShowProfileSymbolList,
                              bool ShowSectionInfoOnly, raw_fd_ostream &OS) {
@@ -1063,6 +1057,12 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
         Reader->getProfileSymbolList();
     ReaderList->dump(OS);
+  }
+
+  if (ShowDetailedSummary) {
+    auto &PS = Reader->getSummary();
+    PS.printSummary(OS);
+    PS.printDetailedSummary(OS);
   }
 
   return 0;
@@ -1153,8 +1153,8 @@ static int show_main(int argc, const char *argv[]) {
                             OnlyListBelow, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
-                             ShowFunction, ShowProfileSymbolList,
-                             ShowSectionInfoOnly, OS);
+                             ShowDetailedSummary, ShowFunction,
+                             ShowProfileSymbolList, ShowSectionInfoOnly, OS);
 }
 
 int main(int argc, const char *argv[]) {
