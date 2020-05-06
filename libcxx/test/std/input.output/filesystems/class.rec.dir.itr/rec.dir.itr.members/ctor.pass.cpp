@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -60,12 +61,11 @@ TEST_CASE(test_constructor_signatures)
 
 TEST_CASE(test_construction_from_bad_path)
 {
-    static_test_env static_env;
     std::error_code ec;
     directory_options opts = directory_options::none;
     const RDI endIt;
 
-    const path testPaths[] = { static_env.DNE, static_env.BadSymlink };
+    const path testPaths[] = { StaticEnv::DNE, StaticEnv::BadSymlink };
     for (path const& testPath : testPaths)
     {
         {
@@ -171,10 +171,9 @@ TEST_CASE(test_open_on_empty_directory_equals_end)
 
 TEST_CASE(test_open_on_directory_succeeds)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    std::set<path> dir_contents(static_env.DirIterationList.begin(),
-                                static_env.DirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    std::set<path> dir_contents(std::begin(StaticEnv::DirIterationList),
+                                std::end(  StaticEnv::DirIterationList));
     const RDI endIt{};
 
     {
@@ -193,8 +192,7 @@ TEST_CASE(test_open_on_directory_succeeds)
 
 TEST_CASE(test_open_on_file_fails)
 {
-    static_test_env static_env;
-    const path testFile = static_env.File;
+    const path testFile = StaticEnv::File;
     const RDI endIt{};
     {
         std::error_code ec;
@@ -209,9 +207,8 @@ TEST_CASE(test_open_on_file_fails)
 
 TEST_CASE(test_options_post_conditions)
 {
-    static_test_env static_env;
-    const path goodDir = static_env.Dir;
-    const path badDir = static_env.DNE;
+    const path goodDir = StaticEnv::Dir;
+    const path badDir = StaticEnv::DNE;
 
     {
         std::error_code ec;

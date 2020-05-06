@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -62,17 +63,15 @@ TEST_CASE(is_directory_status_test)
 
 TEST_CASE(test_exist_not_found)
 {
-    static_test_env static_env;
-    const path p = static_env.DNE;
+    const path p = StaticEnv::DNE;
     TEST_CHECK(is_directory(p) == false);
 }
 
 TEST_CASE(static_env_test)
 {
-    static_test_env static_env;
-    TEST_CHECK(is_directory(static_env.Dir));
-    TEST_CHECK(is_directory(static_env.SymlinkToDir));
-    TEST_CHECK(!is_directory(static_env.File));
+    TEST_CHECK(is_directory(StaticEnv::Dir));
+    TEST_CHECK(is_directory(StaticEnv::SymlinkToDir));
+    TEST_CHECK(!is_directory(StaticEnv::File));
 }
 
 TEST_CASE(test_is_directory_fails)
