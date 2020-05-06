@@ -4356,7 +4356,7 @@ private:
   ///
   /// \param AI - The first function argument of the expansion.
   void ExpandTypeFromArgs(QualType Ty, LValue Dst,
-                          SmallVectorImpl<llvm::Value *>::iterator &AI);
+                          llvm::Function::arg_iterator &AI);
 
   /// ExpandTypeToArgs - Expand an CallArg \arg Arg, with the LLVM type for \arg
   /// Ty, into individual arguments on the provided vector \arg IRCallArgs,

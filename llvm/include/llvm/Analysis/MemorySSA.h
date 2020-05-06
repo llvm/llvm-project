@@ -1228,6 +1228,9 @@ private:
           CurrentPair.second = Location.getWithNewPtr(Translator.getAddr());
           return;
         }
+      } else {
+        CurrentPair.second = Location.getWithNewSize(LocationSize::unknown());
+        return;
       }
     }
     CurrentPair.second = Location;

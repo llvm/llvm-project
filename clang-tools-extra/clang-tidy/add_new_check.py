@@ -172,7 +172,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
     lines = iter(lines)
     try:
       while True:
-        line = lines.next()
+        line = next(lines)
         if not header_added:
           match = re.search('#include "(.*)"', line)
           if match:
@@ -197,7 +197,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
                 # If we didn't find the check name on this line, look on the
                 # next one.
                 prev_line = line
-                line = lines.next()
+                line = next(lines)
                 match = re.search(' *"([^"]*)"', line)
                 if match:
                   current_check_name = match.group(1)

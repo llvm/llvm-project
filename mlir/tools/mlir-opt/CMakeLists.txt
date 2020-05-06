@@ -39,7 +39,7 @@ add_mlir_library(MLIRMlirOptMain
 
   EXCLUDE_FROM_LIBMLIR
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   ${LIBS}
 
   DEPENDS

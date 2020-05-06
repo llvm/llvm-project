@@ -622,6 +622,14 @@ protected:
         result.AppendErrorWithFormat(
             "Function name regular expression could not be compiled: %s",
             llvm::toString(std::move(err)).c_str());
+        // Check if the incorrect regex looks like a globbing expression and
+        // warn the user about it.
+        if (!m_options.m_func_regexp.empty()) {
+          if (m_options.m_func_regexp[0] == '*' ||
+              m_options.m_func_regexp[0] == '?')
+            result.AppendWarning(
+                "Function name regex does not accept glob patterns.");
+        }
         result.SetStatus(eReturnStatusFailed);
         return false;
       }

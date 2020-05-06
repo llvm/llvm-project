@@ -236,7 +236,7 @@ struct Prefetch {
   /// The (first seen) prefetched instruction.
   Instruction *MemI;
 
-  /// Constructor to create a new Prefetch for \param I.
+  /// Constructor to create a new Prefetch for \p I.
   Prefetch(const SCEVAddRecExpr *L, Instruction *I)
       : LSCEVAddRec(L), InsertPt(nullptr), Writes(false), MemI(nullptr) {
     addInstruction(I);

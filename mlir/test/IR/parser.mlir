@@ -702,6 +702,15 @@ func @densetensorattr() -> () {
   "index"(){bar = dense<1> : tensor<index>} : () -> ()
 // CHECK: "index"() {bar = dense<[1, 2]> : tensor<2xindex>} : () -> ()
   "index"(){bar = dense<[1, 2]> : tensor<2xindex>} : () -> ()
+
+  // CHECK: dense<(1,1)> : tensor<complex<i64>>
+  "complex_attr"(){bar = dense<(1,1)> : tensor<complex<i64>>} : () -> ()
+  // CHECK: dense<[(1,1), (2,2)]> : tensor<2xcomplex<i64>>
+  "complex_attr"(){bar = dense<[(1,1), (2,2)]> : tensor<2xcomplex<i64>>} : () -> ()
+  // CHECK: dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>
+  "complex_attr"(){bar = dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>} : () -> ()
+  // CHECK: dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>
+  "complex_attr"(){bar = dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>} : () -> ()
   return
 }
 

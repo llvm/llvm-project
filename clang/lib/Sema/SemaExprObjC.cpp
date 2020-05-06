@@ -894,6 +894,62 @@ ExprResult Sema::BuildObjCArrayLiteral(SourceRange SR, MultiExprArg Elements) {
                                     ArrayWithObjectsMethod, SR));
 }
 
+/// Check for duplicate keys in an ObjC dictionary literal. For instance:
+///   NSDictionary *nd = @{ @"foo" : @"bar", @"foo" : @"baz" };
+static void
+CheckObjCDictionaryLiteralDuplicateKeys(Sema &S,
+                                        ObjCDictionaryLiteral *Literal) {
+  if (Literal->isValueDependent() || Literal->isTypeDependent())
+    return;
+
+  // NSNumber has quite relaxed equality semantics (for instance, @YES is
+  // considered equal to @1.0). For now, ignore floating points and just do a
+  // bit-width and sign agnostic integer compare.
+  struct APSIntCompare {
+    bool operator()(const llvm::APSInt &LHS, const llvm::APSInt &RHS) const {
+      return llvm::APSInt::compareValues(LHS, RHS) < 0;
+    }
+  };
+
+  llvm::DenseMap<StringRef, SourceLocation> StringKeys;
+  std::map<llvm::APSInt, SourceLocation, APSIntCompare> IntegralKeys;
+
+  auto checkOneKey = [&](auto &Map, const auto &Key, SourceLocation Loc) {
+    auto Pair = Map.insert({Key, Loc});
+    if (!Pair.second) {
+      S.Diag(Loc, diag::warn_nsdictionary_duplicate_key);
+      S.Diag(Pair.first->second, diag::note_nsdictionary_duplicate_key_here);
+    }
+  };
+
+  for (unsigned Idx = 0, End = Literal->getNumElements(); Idx != End; ++Idx) {
+    Expr *Key = Literal->getKeyValueElement(Idx).Key->IgnoreParenImpCasts();
+
+    if (auto *StrLit = dyn_cast<ObjCStringLiteral>(Key)) {
+      StringRef Bytes = StrLit->getString()->getBytes();
+      SourceLocation Loc = StrLit->getExprLoc();
+      checkOneKey(StringKeys, Bytes, Loc);
+    }
+
+    if (auto *BE = dyn_cast<ObjCBoxedExpr>(Key)) {
+      Expr *Boxed = BE->getSubExpr();
+      SourceLocation Loc = BE->getExprLoc();
+
+      // Check for @("foo").
+      if (auto *Str = dyn_cast<StringLiteral>(Boxed->IgnoreParenImpCasts())) {
+        checkOneKey(StringKeys, Str->getBytes(), Loc);
+        continue;
+      }
+
+      Expr::EvalResult Result;
+      if (Boxed->EvaluateAsInt(Result, S.getASTContext(),
+                               Expr::SE_AllowSideEffects)) {
+        checkOneKey(IntegralKeys, Result.Val.getInt(), Loc);
+      }
+    }
+  }
+}
+
 ExprResult Sema::BuildObjCDictionaryLiteral(SourceRange SR,
                               MutableArrayRef<ObjCDictionaryElement> Elements) {
   SourceLocation Loc = SR.getBegin();
@@ -1061,12 +1117,14 @@ ExprResult Sema::BuildObjCDictionaryLiteral(SourceRange SR,
     HasPackExpansions = true;
   }
 
-  QualType Ty
-    = Context.getObjCObjectPointerType(
-                                Context.getObjCInterfaceType(NSDictionaryDecl));
-  return MaybeBindToTemporary(ObjCDictionaryLiteral::Create(
-      Context, Elements, HasPackExpansions, Ty,
-      DictionaryWithObjectsMethod, SR));
+  QualType Ty = Context.getObjCObjectPointerType(
+      Context.getObjCInterfaceType(NSDictionaryDecl));
+
+  auto *Literal =
+      ObjCDictionaryLiteral::Create(Context, Elements, HasPackExpansions, Ty,
+                                    DictionaryWithObjectsMethod, SR);
+  CheckObjCDictionaryLiteralDuplicateKeys(*this, Literal);
+  return MaybeBindToTemporary(Literal);
 }
 
 ExprResult Sema::BuildObjCEncodeExpression(SourceLocation AtLoc,

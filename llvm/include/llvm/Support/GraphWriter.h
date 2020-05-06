@@ -330,11 +330,8 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
                        const Twine &Title = "",
                        std::string Filename = "") {
   int FD;
-  // Windows can't always handle long paths, so limit the length of the name.
-  std::string N = Name.str();
-  N = N.substr(0, std::min<std::size_t>(N.size(), 140));
   if (Filename.empty()) {
-    Filename = createGraphFilename(N, FD);
+    Filename = createGraphFilename(Name.str(), FD);
   } else {
     std::error_code EC = sys::fs::openFileForWrite(Filename, FD);
 

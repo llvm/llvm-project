@@ -29,10 +29,14 @@ static Matcher<TypedefDecl> hasAnyListedName(const std::string &Names) {
 SignedCharMisuseCheck::SignedCharMisuseCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CharTypdefsToIgnoreList(Options.get("CharTypdefsToIgnore", "")) {}
+      CharTypdefsToIgnoreList(Options.get("CharTypdefsToIgnore", "")),
+      DiagnoseSignedUnsignedCharComparisons(
+          Options.get("DiagnoseSignedUnsignedCharComparisons", true)) {}
 
 void SignedCharMisuseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CharTypdefsToIgnore", CharTypdefsToIgnoreList);
+  Options.store(Opts, "DiagnoseSignedUnsignedCharComparisons",
+                DiagnoseSignedUnsignedCharComparisons);
 }
 
 // Create a matcher for char -> integer cast.
@@ -92,16 +96,18 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(Declaration, this);
 
-  // Catch signed char/unsigned char comparison.
-  const auto CompareOperator =
-      expr(binaryOperator(hasAnyOperatorName("==", "!="),
-                          anyOf(allOf(hasLHS(SignedCharCastExpr),
-                                      hasRHS(UnSignedCharCastExpr)),
-                                allOf(hasLHS(UnSignedCharCastExpr),
-                                      hasRHS(SignedCharCastExpr)))))
-          .bind("comparison");
+  if (DiagnoseSignedUnsignedCharComparisons) {
+    // Catch signed char/unsigned char comparison.
+    const auto CompareOperator =
+        expr(binaryOperator(hasAnyOperatorName("==", "!="),
+                            anyOf(allOf(hasLHS(SignedCharCastExpr),
+                                        hasRHS(UnSignedCharCastExpr)),
+                                  allOf(hasLHS(UnSignedCharCastExpr),
+                                        hasRHS(SignedCharCastExpr)))))
+            .bind("comparison");
 
-  Finder->addMatcher(CompareOperator, this);
+    Finder->addMatcher(CompareOperator, this);
+  }
 
   // Catch array subscripts with signed char -> integer conversion.
   // Matcher for C arrays.
