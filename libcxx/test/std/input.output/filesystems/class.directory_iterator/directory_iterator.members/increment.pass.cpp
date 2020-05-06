@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -43,10 +44,9 @@ TEST_CASE(test_increment_signatures)
 
 TEST_CASE(test_prefix_increment)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const std::set<path> dir_contents(static_env.DirIterationList.begin(),
-                                      static_env.DirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    const std::set<path> dir_contents(std::begin(StaticEnv::DirIterationList),
+                                      std::end(  StaticEnv::DirIterationList));
     const directory_iterator endIt{};
 
     std::error_code ec;
@@ -67,10 +67,9 @@ TEST_CASE(test_prefix_increment)
 
 TEST_CASE(test_postfix_increment)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const std::set<path> dir_contents(static_env.DirIterationList.begin(),
-                                      static_env.DirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    const std::set<path> dir_contents(std::begin(StaticEnv::DirIterationList),
+                                      std::end(  StaticEnv::DirIterationList));
     const directory_iterator endIt{};
 
     std::error_code ec;
@@ -92,10 +91,9 @@ TEST_CASE(test_postfix_increment)
 
 TEST_CASE(test_increment_method)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const std::set<path> dir_contents(static_env.DirIterationList.begin(),
-                                      static_env.DirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    const std::set<path> dir_contents(std::begin(StaticEnv::DirIterationList),
+                                      std::end(  StaticEnv::DirIterationList));
     const directory_iterator endIt{};
 
     std::error_code ec;
