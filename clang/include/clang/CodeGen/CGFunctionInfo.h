@@ -44,9 +44,22 @@ public:
     /// but also emit a zero/sign extension attribute.
     Extend,
 
-    /// Indirect - Pass the argument indirectly via a hidden pointer
-    /// with the specified alignment (0 indicates default alignment).
+    /// Indirect - Pass the argument indirectly via a hidden pointer with the
+    /// specified alignment (0 indicates default alignment) and address space.
     Indirect,
+
+    /// IndirectAliased - Similar to Indirect, but the pointer may be to an
+    /// object that is otherwise referenced.  The object is known to not be
+    /// modified through any other references for the duration of the call, and
+    /// the callee must not itself modify the object.  Because C allows
+    /// parameter variables to be modified and guarantees that they have unique
+    /// addresses, the callee must defensively copy the object into a local
+    /// variable if it might be modified or its address might be compared.
+    /// Since those are uncommon, in principle this convention allows programs
+    /// to avoid copies in more situations.  However, it may introduce *extra*
+    /// copies if the callee fails to prove that a copy is unnecessary and the
+    /// caller naturally produces an unaliased object for the argument.
+    IndirectAliased,
 
     /// Ignore - Ignore the argument (treat as void). Useful for void and
     /// empty structs.
@@ -86,6 +99,7 @@ private:
     unsigned AllocaFieldIndex; // isInAlloca()
   };
   Kind TheKind;
+  unsigned IndirectAddrSpace : 24; // isIndirect()
   bool PaddingInReg : 1;
   bool InAllocaSRet : 1;    // isInAlloca()
   bool InAllocaIndirect : 1;// isInAlloca()
@@ -97,7 +111,8 @@ private:
   bool SignExt : 1;         // isExtend()
 
   bool canHavePaddingType() const {
-    return isDirect() || isExtend() || isIndirect() || isExpand();
+    return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
+           isExpand();
   }
   void setPaddingType(llvm::Type *T) {
     assert(canHavePaddingType());
@@ -112,9 +127,10 @@ private:
 public:
   ABIArgInfo(Kind K = Direct)
       : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0), TheKind(K),
-        PaddingInReg(false), InAllocaSRet(false), InAllocaIndirect(false),
-        IndirectByVal(false), IndirectRealign(false), SRetAfterThis(false),
-        InReg(false), CanBeFlattened(false), SignExt(false) {}
+        IndirectAddrSpace(0), PaddingInReg(false), InAllocaSRet(false),
+        InAllocaIndirect(false), IndirectByVal(false), IndirectRealign(false),
+        SRetAfterThis(false), InReg(false), CanBeFlattened(false),
+        SignExt(false) {}
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,
@@ -180,6 +196,19 @@ public:
     AI.setPaddingType(Padding);
     return AI;
   }
+
+  /// Pass this in memory using the IR byref attribute.
+  static ABIArgInfo getIndirectAliased(CharUnits Alignment, unsigned AddrSpace,
+                                       bool Realign = false,
+                                       llvm::Type *Padding = nullptr) {
+    auto AI = ABIArgInfo(IndirectAliased);
+    AI.setIndirectAlign(Alignment);
+    AI.setIndirectRealign(Realign);
+    AI.setPaddingType(Padding);
+    AI.setIndirectAddrSpace(AddrSpace);
+    return AI;
+  }
+
   static ABIArgInfo getIndirectInReg(CharUnits Alignment, bool ByVal = true,
                                      bool Realign = false) {
     auto AI = getIndirect(Alignment, ByVal, Realign);
@@ -259,6 +288,7 @@ public:
   bool isExtend() const { return TheKind == Extend; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isIndirect() const { return TheKind == Indirect; }
+  bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isExpand() const { return TheKind == Expand; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
 
@@ -338,11 +368,11 @@ public:
 
   // Indirect accessors
   CharUnits getIndirectAlign() const {
-    assert(isIndirect() && "Invalid kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
     return CharUnits::fromQuantity(IndirectAlign);
   }
   void setIndirectAlign(CharUnits IA) {
-    assert(isIndirect() && "Invalid kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
     IndirectAlign = IA.getQuantity();
   }
 
@@ -355,12 +385,22 @@ public:
     IndirectByVal = IBV;
   }
 
+  unsigned getIndirectAddrSpace() const {
+    assert(isIndirectAliased() && "Invalid kind!");
+    return IndirectAddrSpace;
+  }
+
+  void setIndirectAddrSpace(unsigned AddrSpace) {
+    assert(isIndirectAliased() && "Invalid kind!");
+    IndirectAddrSpace = AddrSpace;
+  }
+
   bool getIndirectRealign() const {
-    assert(isIndirect() && "Invalid kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
     return IndirectRealign;
   }
   void setIndirectRealign(bool IR) {
-    assert(isIndirect() && "Invalid kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
     IndirectRealign = IR;
   }
 
