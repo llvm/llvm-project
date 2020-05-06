@@ -6642,8 +6642,8 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
       unsigned ShiftIntoIdx =
           (DAG.getDataLayout().isBigEndian() ? (NumElem - 1) - Idx : Idx);
       SDValue ShiftAmount =
-          DAG.getConstant(ShiftIntoIdx * SrcEltVT.getSizeInBits(), SL,
-                          getShiftAmountTy(LoadVT, DAG.getDataLayout()));
+          DAG.getShiftAmountConstant(ShiftIntoIdx * SrcEltVT.getSizeInBits(),
+                                     LoadVT, SL, /*LegalTypes=*/false);
       SDValue ShiftedElt = DAG.getNode(ISD::SRL, SL, LoadVT, Load, ShiftAmount);
       SDValue Elt =
           DAG.getNode(ISD::AND, SL, LoadVT, ShiftedElt, SrcEltBitMask);
