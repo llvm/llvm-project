@@ -89,7 +89,7 @@ define signext i32 @pos_i32_hi20_only() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    ret
-  ret i32 65536
+  ret i32 65536 ; 0x10000
 }
 
 define signext i32 @neg_i32_hi20_only() nounwind {
@@ -102,7 +102,7 @@ define signext i32 @neg_i32_hi20_only() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 1048560
 ; RV64I-NEXT:    ret
-  ret i32 -65536
+  ret i32 -65536 ; -0x10000
 }
 
 define i64 @imm64_1() nounwind {
@@ -117,7 +117,7 @@ define i64 @imm64_1() nounwind {
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    slli a0, a0, 31
 ; RV64I-NEXT:    ret
-  ret i64 2147483648
+  ret i64 2147483648 ; 0x8000_0000
 }
 
 ; TODO: This and similar constants with all 0s in the upper bits and all 1s in
@@ -136,7 +136,7 @@ define i64 @imm64_2() nounwind {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    ret
-  ret i64 4294967295
+  ret i64 4294967295 ; 0xFFFF_FFFF
 }
 
 define i64 @imm64_3() nounwind {
@@ -151,7 +151,7 @@ define i64 @imm64_3() nounwind {
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    ret
-  ret i64 4294967296
+  ret i64 4294967296 ; 0x1_0000_0000
 }
 
 define i64 @imm64_4() nounwind {
@@ -166,7 +166,7 @@ define i64 @imm64_4() nounwind {
 ; RV64I-NEXT:    addi a0, zero, -1
 ; RV64I-NEXT:    slli a0, a0, 63
 ; RV64I-NEXT:    ret
-  ret i64 9223372036854775808
+  ret i64 9223372036854775808 ; 0x8000_0000_0000_0000
 }
 
 define i64 @imm64_5() nounwind {
@@ -181,7 +181,7 @@ define i64 @imm64_5() nounwind {
 ; RV64I-NEXT:    addi a0, zero, -1
 ; RV64I-NEXT:    slli a0, a0, 63
 ; RV64I-NEXT:    ret
-  ret i64 -9223372036854775808
+  ret i64 -9223372036854775808 ; 0x8000_0000_0000_0000
 }
 
 define i64 @imm64_6() nounwind {
@@ -198,7 +198,7 @@ define i64 @imm64_6() nounwind {
 ; RV64I-NEXT:    addiw a0, a0, -1329
 ; RV64I-NEXT:    slli a0, a0, 35
 ; RV64I-NEXT:    ret
-  ret i64 1311768464867721216
+  ret i64 1311768464867721216 ; 0x1234_5678_0000_0000
 }
 
 define i64 @imm64_7() nounwind {
@@ -217,7 +217,7 @@ define i64 @imm64_7() nounwind {
 ; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    ret
-  ret i64 8070450532432478223
+  ret i64 8070450532432478223 ; 0x7000_0000_0B00_000F
 }
 
 ; TODO: it can be preferable to put constants that are expensive to materialise
@@ -242,7 +242,7 @@ define i64 @imm64_8() nounwind {
 ; RV64I-NEXT:    slli a0, a0, 13
 ; RV64I-NEXT:    addi a0, a0, -272
 ; RV64I-NEXT:    ret
-  ret i64 1311768467463790320
+  ret i64 1311768467463790320 ; 0x1234_5678_9ABC_DEF0
 }
 
 define i64 @imm64_9() nounwind {
@@ -257,4 +257,184 @@ define i64 @imm64_9() nounwind {
 ; RV64I-NEXT:    addi a0, zero, -1
 ; RV64I-NEXT:    ret
   ret i64 -1
+}
+
+; Various cases where extraneous ADDIs can be inserted where a (left shifted)
+; LUI suffices.
+
+define i64 @imm_left_shifted_lui_1() nounwind {
+; RV32I-LABEL: imm_left_shifted_lui_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 524290
+; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_left_shifted_lui_1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 64
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 13
+; RV64I-NEXT:    ret
+  ret i64 2147491840 ; 0x8000_2000
+}
+
+define i64 @imm_left_shifted_lui_2() nounwind {
+; RV32I-LABEL: imm_left_shifted_lui_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 4
+; RV32I-NEXT:    addi a1, zero, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_left_shifted_lui_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 64
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 14
+; RV64I-NEXT:    ret
+  ret i64 4294983680 ; 0x1_0000_4000
+}
+
+define i64 @imm_left_shifted_lui_3() nounwind {
+; RV32I-LABEL: imm_left_shifted_lui_3:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    addi a1, a0, 1
+; RV32I-NEXT:    mv a0, zero
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_left_shifted_lui_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    ret
+  ret i64 17596481011712 ; 0x1001_0000_0000
+}
+
+; Various cases where extraneous ADDIs can be inserted where a (right shifted)
+; LUI suffices, or where multiple ADDIs can be used instead of a single LUI.
+
+define i64 @imm_right_shifted_lui_1() nounwind {
+; RV32I-LABEL: imm_right_shifted_lui_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 1048575
+; RV32I-NEXT:    addi a0, a0, 1
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_right_shifted_lui_1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, zero, 1
+; RV64I-NEXT:    slli a0, a0, 36
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    ret
+  ret i64 281474976706561 ; 0xFFFF_FFFF_F001
+}
+
+define i64 @imm_right_shifted_lui_2() nounwind {
+; RV32I-LABEL: imm_right_shifted_lui_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 1048575
+; RV32I-NEXT:    addi a0, a0, 1
+; RV32I-NEXT:    addi a1, zero, 255
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_right_shifted_lui_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 65536
+; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    ret
+  ret i64 1099511623681 ; 0xFF_FFFF_F001
+}
+
+; We can materialize the upper bits with a single (shifted) LUI, but that option
+; can be missed due to the lower bits, which aren't just 1s or just 0s.
+
+define i64 @imm_decoupled_lui_addi() nounwind {
+; RV32I-LABEL: imm_decoupled_lui_addi:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, zero, -3
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_decoupled_lui_addi:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    addi a0, a0, -3
+; RV64I-NEXT:    ret
+  ret i64 17596481011709 ; 0x1000_FFFF_FFFD
+}
+
+; This constant can be materialized for RV64 with LUI+SRLI+XORI.
+
+define i64 @imm_end_xori_1() nounwind {
+; RV32I-LABEL: imm_end_xori_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 8192
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    lui a1, 917504
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_end_xori_1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, zero, -1
+; RV64I-NEXT:    slli a0, a0, 36
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 25
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+  ret i64 -2305843009180139521 ; 0xE000_0000_01FF_FFFF
+}
+
+; This constant can be materialized for RV64 with ADDI+SLLI+ADDI+ADDI.
+
+define i64 @imm_end_2addi_1() nounwind {
+; RV32I-LABEL: imm_end_2addi_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 1048575
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    lui a1, 1048512
+; RV32I-NEXT:    addi a1, a1, 127
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_end_2addi_1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, zero, -2047
+; RV64I-NEXT:    slli a0, a0, 27
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    ret
+  ret i64 -1125350151030785 ; 0xFFFC_007F_FFFF_F7FF
+}
+
+; This constant can be more efficiently materialized for RV64 if we use two
+; registers instead of one.
+
+define i64 @imm_2reg_1() nounwind {
+; RV32I-LABEL: imm_2reg_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 74565
+; RV32I-NEXT:    addi a0, a0, 1656
+; RV32I-NEXT:    lui a1, 983040
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_2reg_1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, zero, -1
+; RV64I-NEXT:    slli a0, a0, 35
+; RV64I-NEXT:    addi a0, a0, 9
+; RV64I-NEXT:    slli a0, a0, 13
+; RV64I-NEXT:    addi a0, a0, 837
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    addi a0, a0, 1656
+; RV64I-NEXT:    ret
+  ret i64 -1152921504301427080 ; 0xF000_0000_1234_5678
 }
