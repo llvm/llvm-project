@@ -35,6 +35,8 @@ class ProgramTree;
 
 using SymbolRef = common::Reference<const Symbol>;
 using SymbolVector = std::vector<SymbolRef>;
+using MutableSymbolRef = common::Reference<Symbol>;
+using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // A module or submodule.
 class ModuleDetails {
@@ -299,15 +301,16 @@ private:
 
 class CommonBlockDetails {
 public:
-  const SymbolVector &objects() const { return objects_; }
-  void add_object(const Symbol &object) { objects_.emplace_back(object); }
+  MutableSymbolVector &objects() { return objects_; }
+  const MutableSymbolVector &objects() const { return objects_; }
+  void add_object(Symbol &object) { objects_.emplace_back(object); }
   MaybeExpr bindName() const { return bindName_; }
   void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
   std::size_t align() const { return align_; }
   void set_align(std::size_t align) { align_ = align; }
 
 private:
-  SymbolVector objects_;
+  MutableSymbolVector objects_;
   MaybeExpr bindName_;
   std::size_t align_{0}; // required alignment in bytes
 };
@@ -739,8 +742,7 @@ inline bool ProcEntityDetails::HasExplicitInterface() const {
 }
 
 inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
-inline bool operator<(
-    common::Reference<Symbol> x, common::Reference<Symbol> y) {
+inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
   return *x < *y;
 }
 using SymbolSet = std::set<SymbolRef>;
