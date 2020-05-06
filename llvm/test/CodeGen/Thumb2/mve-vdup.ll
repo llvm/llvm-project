@@ -240,9 +240,6 @@ entry:
 define arm_aapcs_vfpcc float @vdup_f32_extract(float %src) {
 ; CHECK-LABEL: vdup_f32_extract:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vdup.32 q0, r0
-; CHECK-NEXT:    vmov.f32 s0, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %srcbc = bitcast float %src to i32
@@ -260,8 +257,8 @@ define arm_aapcs_vfpcc half @vdup_f16_extract(half* %src1, half* %src2) {
 ; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov.f16 r1, s0
-; CHECK-NEXT:    vdup.16 q0, r1
-; CHECK-NEXT:    vstr.16 s1, [r0]
+; CHECK-NEXT:    vmov.f16 s0, r1
+; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load half, half *%src1, align 2
