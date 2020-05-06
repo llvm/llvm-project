@@ -1,0 +1,33 @@
+## This test ensures llvm-objdump emits a helpful error message when dumping a symbol table
+## whose sh_size isn't a multiple of the symbol size (sh_size % sizeof(Elf_Sym) != 0).
+
+## a) Broken .symtab symbol table. Valid .dynsym symbol table.
+# RUN: yaml2obj -DBITS=32 -DSIZE=33 -DDYNSIZE=32 %s -o %t.32-bit.o
+# RUN: not llvm-objdump --syms %t.32-bit.o 2>&1 | FileCheck -DSIZE=33 -DSYMSIZE=16 -DINDEX=2 %s
+# RUN: yaml2obj -DBITS=64 -DSIZE=49 -DDYNSIZE=48 %s -o %t.64-bit.o
+# RUN: not llvm-objdump --syms %t.64-bit.o 2>&1 | FileCheck -DSIZE=49 -DSYMSIZE=24 -DINDEX=2 %s
+
+## b) Broken .dynsym symbol table. Valid .symtab symbol table.
+# RUN: yaml2obj -DBITS=32 -DSIZE=32 -DDYNSIZE=33 %s -o %t.32-bit.o
+# RUN: not llvm-objdump --dynamic-syms %t.32-bit.o 2>&1 | FileCheck -DSIZE=33 -DSYMSIZE=16 -DINDEX=3 %s
+# RUN: yaml2obj -DBITS=64 -DSIZE=48 -DDYNSIZE=49 %s -o %t.64-bit.o
+# RUN: not llvm-objdump --dynamic-syms %t.64-bit.o 2>&1 | FileCheck -DSIZE=49 -DSYMSIZE=24 -DINDEX=3 %s
+
+# CHECK: error: {{.*}} section [index [[INDEX]]] has an invalid sh_size ([[SIZE]]) which is not a multiple of its sh_entsize ([[SYMSIZE]])
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Content: "00"
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Size:    [[SIZE]]
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Size:    [[DYNSIZE]]
