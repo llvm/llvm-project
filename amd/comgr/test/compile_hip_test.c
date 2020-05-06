@@ -47,6 +47,10 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t dataAction;
   amd_comgr_status_t status;
   size_t count;
+  const char *options[] = {"--amdgpu-target=gfx900"
+                           "-hip-path"
+                           "/opt/rocm/hip"};
+  size_t optionsCount = sizeof(options) / sizeof(options[0]);
 
   sizeSource1 = setBuf(TEST_OBJ_DIR "/source1.hip", &bufSource1);
 
@@ -67,9 +71,9 @@ int main(int argc, char *argv[]) {
   status =
       amd_comgr_action_info_set_language(dataAction, AMD_COMGR_LANGUAGE_HIP);
   checkError(status, "amd_comgr_action_info_set_language");
-  status = amd_comgr_action_info_set_options(
-      dataAction, "--amdgpu-target=gfx900 -hip-path /opt/rocm/hip");
-  checkError(status, "amd_comgr_action_info_set_options");
+  status =
+      amd_comgr_action_info_set_option_list(dataAction, options, optionsCount);
+  checkError(status, "amd_comgr_action_info_set_option_list");
 
   status = amd_comgr_create_data_set(&dataSetFatBin);
   checkError(status, "amd_comgr_create_data_set");
