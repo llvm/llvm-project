@@ -33109,6 +33109,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       const SelectionDAG &DAG,
                                                       unsigned Depth) const {
   unsigned BitWidth = Known.getBitWidth();
+  unsigned NumElts = DemandedElts.getBitWidth();
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
   assert((Opc >= ISD::BUILTIN_OP_END ||
@@ -33249,6 +33250,48 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         Known = Known.extractBits(Length, Shift);
         Known = Known.zextOrTrunc(BitWidth);
       }
+    }
+    break;
+  }
+  case X86ISD::CVTSI2P:
+  case X86ISD::CVTUI2P:
+  case X86ISD::CVTP2SI:
+  case X86ISD::CVTP2UI:
+  case X86ISD::MCVTP2SI:
+  case X86ISD::MCVTP2UI:
+  case X86ISD::CVTTP2SI:
+  case X86ISD::CVTTP2UI:
+  case X86ISD::MCVTTP2SI:
+  case X86ISD::MCVTTP2UI:
+  case X86ISD::MCVTSI2P:
+  case X86ISD::MCVTUI2P:
+  case X86ISD::VFPROUND:
+  case X86ISD::VMFPROUND:
+  case X86ISD::CVTPS2PH:
+  case X86ISD::MCVTPS2PH: {
+    // Conversions - upper elements are known zero.
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      if (NumElts > NumSrcElts &&
+          DemandedElts.countTrailingZeros() >= NumSrcElts)
+        Known.setAllZero();
+    }
+    break;
+  }
+  case X86ISD::STRICT_CVTTP2SI:
+  case X86ISD::STRICT_CVTTP2UI:
+  case X86ISD::STRICT_CVTSI2P:
+  case X86ISD::STRICT_CVTUI2P:
+  case X86ISD::STRICT_VFPROUND:
+  case X86ISD::STRICT_CVTPS2PH: {
+    // Strict Conversions - upper elements are known zero.
+    EVT SrcVT = Op.getOperand(1).getValueType();
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      if (NumElts > NumSrcElts &&
+          DemandedElts.countTrailingZeros() >= NumSrcElts)
+        Known.setAllZero();
     }
     break;
   }
@@ -36402,51 +36445,6 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
   }
 
-  // Look for a v2i64/v2f64 VZEXT_MOVL of a node that already produces zeros
-  // in the upper 64 bits.
-  // TODO: Can we generalize this using computeKnownBits.
-  if (N->getOpcode() == X86ISD::VZEXT_MOVL &&
-      (VT == MVT::v2f64 || VT == MVT::v2i64) &&
-      N->getOperand(0).getOpcode() == ISD::BITCAST) {
-    SDValue In = N->getOperand(0).getOperand(0);
-    EVT InVT = In.getValueType();
-    switch (In.getOpcode()) {
-    default:
-      break;
-    case X86ISD::CVTP2SI:   case X86ISD::CVTP2UI:
-    case X86ISD::MCVTP2SI:  case X86ISD::MCVTP2UI:
-    case X86ISD::CVTTP2SI:  case X86ISD::CVTTP2UI:
-    case X86ISD::MCVTTP2SI: case X86ISD::MCVTTP2UI:
-    case X86ISD::CVTSI2P:   case X86ISD::CVTUI2P:
-    case X86ISD::MCVTSI2P:  case X86ISD::MCVTUI2P:
-    case X86ISD::VFPROUND:  case X86ISD::VMFPROUND:
-      if ((InVT == MVT::v4f32 || InVT == MVT::v4i32) &&
-          (In.getOperand(0).getValueType() == MVT::v2f64 ||
-           In.getOperand(0).getValueType() == MVT::v2i64))
-        return N->getOperand(0); // return the bitcast
-      break;
-    case X86ISD::STRICT_CVTTP2SI:
-    case X86ISD::STRICT_CVTTP2UI:
-    case X86ISD::STRICT_CVTSI2P:
-    case X86ISD::STRICT_CVTUI2P:
-    case X86ISD::STRICT_VFPROUND:
-      if ((InVT == MVT::v4f32 || InVT == MVT::v4i32) &&
-          (In.getOperand(1).getValueType() == MVT::v2f64 ||
-           In.getOperand(1).getValueType() == MVT::v2i64))
-        return N->getOperand(0); // return the bitcast
-      break;
-    case X86ISD::CVTPS2PH:
-    case X86ISD::MCVTPS2PH:
-      if (InVT == MVT::v8i16 && In.getOperand(0).getValueType() == MVT::v4f32)
-        return N->getOperand(0); // return the bitcast
-      break;
-    case X86ISD::STRICT_CVTPS2PH:
-      if (InVT == MVT::v8i16 && In.getOperand(1).getValueType() == MVT::v4f32)
-        return N->getOperand(0); // return the bitcast
-      break;
-    }
-  }
-
   // Pull subvector inserts into undef through VZEXT_MOVL by making it an
   // insert into a zero vector. This helps get VZEXT_MOVL closer to
   // scalar_to_vectors where 256/512 are canonicalized to an insert and a
@@ -36700,6 +36698,15 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     KnownZero = LHSZero & RHSZero;
     KnownUndef = LHSUndef & RHSUndef;
+    break;
+  }
+  case X86ISD::VZEXT_MOVL: {
+    // If upper demanded elements are already zero then we have nothing to do.
+    SDValue Src = Op.getOperand(0);
+    APInt DemandedUpperElts = DemandedElts;
+    DemandedUpperElts.clearLowBits(1);
+    if (TLO.DAG.computeKnownBits(Src, DemandedUpperElts, Depth + 1).isZero())
+      return TLO.CombineTo(Op, Src);
     break;
   }
   case X86ISD::VBROADCAST: {
