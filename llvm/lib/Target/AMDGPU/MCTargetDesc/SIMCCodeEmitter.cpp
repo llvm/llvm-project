@@ -70,6 +70,10 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const override;
 
+  unsigned getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const override;
+
   unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const override;
@@ -356,6 +360,15 @@ unsigned SIMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
   }
 
   return getMachineOpValue(MI, MO, Fixups, STI);
+}
+
+unsigned SIMCCodeEmitter::getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo,
+                                                SmallVectorImpl<MCFixup> &Fixups,
+                                                const MCSubtargetInfo &STI) const {
+  auto Offset = MI.getOperand(OpNo).getImm();
+  // VI only supports 20-bit unsigned offsets.
+  assert(!AMDGPU::isVI(STI) || isUInt<20>(Offset));
+  return Offset;
 }
 
 unsigned
