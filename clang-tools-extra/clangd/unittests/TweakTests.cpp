@@ -2463,6 +2463,13 @@ public:
   // test that we don't crash.
   EXPECT_UNAVAILABLE(Header +
                      "template<typename TT> using foo = one::tt<T^T>;");
+
+  // Check that we do not trigger in header files.
+  FileName = "test.h";
+  ExtraArgs.push_back("-xc++-header"); // .h file is treated a C by default.
+  EXPECT_UNAVAILABLE(Header + "void fun() { one::two::f^f(); }");
+  FileName = "test.hpp";
+  EXPECT_UNAVAILABLE(Header + "void fun() { one::two::f^f(); }");
 }
 
 TEST_F(AddUsingTest, Apply) {
