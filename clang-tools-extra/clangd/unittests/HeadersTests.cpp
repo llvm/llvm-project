@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,7 +26,9 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 
 class HeadersTest : public ::testing::Test {
@@ -302,6 +305,27 @@ TEST(Headers, NoHeaderSearchInfo) {
             llvm::None);
 }
 
+TEST_F(HeadersTest, PresumedLocations) {
+  std::string HeaderFile = "implicit_include.h";
+
+  // Line map inclusion back to main file.
+  std::string HeaderContents =
+      llvm::formatv("#line 0 \"{0}\"", llvm::sys::path::filename(MainFile));
+  HeaderContents += R"cpp(
+#line 3
+#include <a.h>)cpp";
+  FS.Files[HeaderFile] = HeaderContents;
+
+  // Including through non-builtin file has no effects.
+  FS.Files[MainFile] = "#include \"implicit_include.h\"\n\n";
+  EXPECT_THAT(collectIncludes().MainFileIncludes,
+              Not(Contains(Written("<a.h>"))));
+
+  // Now include through built-in file.
+  CDB.ExtraClangFlags = {"-include", testPath(HeaderFile)};
+  EXPECT_THAT(collectIncludes().MainFileIncludes,
+              Contains(AllOf(IncludeLine(2), Written("<a.h>"))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
