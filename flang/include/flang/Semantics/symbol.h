@@ -306,13 +306,13 @@ public:
   void add_object(Symbol &object) { objects_.emplace_back(object); }
   MaybeExpr bindName() const { return bindName_; }
   void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
-  std::size_t align() const { return align_; }
-  void set_align(std::size_t align) { align_ = align; }
+  std::size_t alignment() const { return alignment_; }
+  void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
   MutableSymbolVector objects_;
   MaybeExpr bindName_;
-  std::size_t align_{0}; // required alignment in bytes
+  std::size_t alignment_{0}; // required alignment in bytes
 };
 
 class FinalProcDetails {}; // TODO

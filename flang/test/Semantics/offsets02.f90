@@ -39,13 +39,13 @@ subroutine s3
     character(kind=k, len=8) :: c3
     character(kind=k, len=l) :: d3
   end type
-  !CHECK: DerivedType scope: size=48 align=8 instantiation of t(k=2_4,l=10_4)
+  !CHECK: DerivedType scope: size=48 alignment=8 instantiation of t(k=2_4,l=10_4)
   !CHECK: a3 size=2 offset=0:
   !CHECK: b3 size=2 offset=2:
   !CHECK: c3 size=16 offset=4:
   !CHECK: d3 size=24 offset=24:
   type(t(2, 10)) :: x3
-  !CHECK: DerivedType scope: size=64 align=8 instantiation of t(k=4_4,l=20_4)
+  !CHECK: DerivedType scope: size=64 alignment=8 instantiation of t(k=4_4,l=20_4)
   !CHECK: a3 size=4 offset=0:
   !CHECK: b3 size=4 offset=4:
   !CHECK: c3 size=32 offset=8:
