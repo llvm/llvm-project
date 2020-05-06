@@ -848,7 +848,8 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
 amd_comgr_status_t
 AMDGPUCompiler::addCompilationFlags() {
   HIPIncludePath = (Twine(env::getHIPPath()) + "/include").str();
-  ClangIncludePath = (Twine(env::getLLVMPath()) + "/lib/clang/"+CLANG_VERSION_STRING+"/include").str();
+  ClangIncludePath = (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING).str();
+  ClangIncludePath2 = (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING + "/include").str();
 
   Args.push_back("-x");
 
@@ -872,6 +873,8 @@ AMDGPUCompiler::addCompilationFlags() {
     Args.push_back(HIPIncludePath.c_str());
     Args.push_back("-isystem");
     Args.push_back(ClangIncludePath.c_str());
+    Args.push_back("-isystem");
+    Args.push_back(ClangIncludePath2.c_str());
     break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;

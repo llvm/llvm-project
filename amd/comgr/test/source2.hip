@@ -37,6 +37,7 @@
 
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "include/cuda_wrappers/algorithm"
 
 __global__ void Empty(int param) {}
 

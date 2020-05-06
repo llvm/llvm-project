@@ -113,6 +113,7 @@ class AMDGPUCompiler {
   /// HIP and Clang Include Paths
   std::string HIPIncludePath;
   std::string ClangIncludePath;
+  std::string ClangIncludePath2;
   /// Perform out-of-process compilation.
   bool CompileOOP = false;
   /// Precompiled header file paths.
