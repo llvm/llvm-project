@@ -571,7 +571,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
       if ((!isBackwardSlice && loopDepth > getNestingDepth(opsA[i])) ||
           (isBackwardSlice && loopDepth > getNestingDepth(opsB[j]))) {
-        LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n.");
+        LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n");
         return failure();
       }
 
@@ -584,7 +584,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
           &dependenceConstraints, /*dependenceComponents=*/nullptr,
           /*allowRAR=*/readReadAccesses);
       if (result.value == DependenceResult::Failure) {
-        LLVM_DEBUG(llvm::dbgs() << "Dependence check failed\n.");
+        LLVM_DEBUG(llvm::dbgs() << "Dependence check failed\n");
         return failure();
       }
       if (result.value == DependenceResult::NoDependence)
@@ -601,7 +601,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
         // Initialize 'sliceUnionCst' with the bounds computed in previous step.
         if (failed(tmpSliceState.getAsConstraints(&sliceUnionCst))) {
           LLVM_DEBUG(llvm::dbgs()
-                     << "Unable to compute slice bound constraints\n.");
+                     << "Unable to compute slice bound constraints\n");
           return failure();
         }
         assert(sliceUnionCst.getNumDimAndSymbolIds() > 0);
@@ -612,7 +612,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
       FlatAffineConstraints tmpSliceCst;
       if (failed(tmpSliceState.getAsConstraints(&tmpSliceCst))) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "Unable to compute slice bound constraints\n.");
+                   << "Unable to compute slice bound constraints\n");
         return failure();
       }
 
@@ -645,8 +645,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
           tmpSliceCst.getNumLocalIds() > 0 ||
           failed(sliceUnionCst.unionBoundingBox(tmpSliceCst))) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "Unable to compute union bounding box of slice bounds."
-                      "\n.");
+                   << "Unable to compute union bounding box of slice bounds\n");
         return failure();
       }
     }
@@ -665,7 +664,7 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
   unsigned innermostCommonLoopDepth =
       getInnermostCommonLoopDepth(ops, surroundingLoops);
   if (loopDepth > innermostCommonLoopDepth) {
-    LLVM_DEBUG(llvm::dbgs() << "Exceeds max loop depth\n.");
+    LLVM_DEBUG(llvm::dbgs() << "Exceeds max loop depth\n");
     return failure();
   }
 
