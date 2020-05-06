@@ -1429,7 +1429,8 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         Module &module,
                                         const std::string &m_description,
                                         llvm::raw_ostream &error,
-                                        bool &got_serialized_options) {
+                                        bool &got_serialized_options,
+                                        bool &found_swift_modules) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   bool found_validation_errors = false;
   std::string last_sdk_path;
@@ -1467,6 +1468,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
         continue;
       }
 
+      found_swift_modules = true;
       StringRef moduleData = buf.substr(0, info.bytes);
       got_serialized_options |=
           DeserializeCompilerFlags(invocation, moduleData, info.name, error);
@@ -1742,6 +1744,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   swift_ast_sp->SetTriple(triple, &module);
 
   bool set_triple = false;
+  bool found_swift_modules = false;
 
   SymbolFile *sym_file = module.GetSymbolFile();
 
@@ -1752,7 +1755,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
     if (DeserializeAllCompilerFlags(*swift_ast_sp, module, m_description, errs,
-                                    got_serialized_options)) {
+                                    got_serialized_options, found_swift_modules)) {
       // Validation errors are not fatal for the context.
       swift_ast_sp->m_module_import_warnings.push_back(std::string(error));
     }
@@ -1771,20 +1774,34 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
 
     // SDK path setup.
-    llvm::StringRef serialized_sdk_path =
-        swift_ast_sp->GetCompilerInvocation().getSDKPath();
-    if (serialized_sdk_path.empty())
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "No serialized SDK path.");
-    else
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized SDK path is %s.",
-                 serialized_sdk_path.str().c_str());
-    XcodeSDK sdk = module.GetXcodeSDK();
-    PlatformSP platform =
-      Platform::GetPlatformForArchitecture(module.GetArchitecture(), nullptr);
-    std::string sdk_path = platform->GetSDKPath(sdk).str();
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path is %s.", sdk_path.c_str());
-    if (FileSystem::Instance().Exists(sdk_path)) {
-      swift_ast_sp->SetPlatformSDKPath(sdk_path);
+    //
+    // This step is skipped for modules that don't have any Swift
+    // debug info. (We assume that a module without a .swift_ast
+    // section has not debuggable Swift code). This skips looking
+    // through all the shared cache dylibs when they don't have debug
+    // info.
+    if (found_swift_modules) {
+      llvm::StringRef serialized_sdk_path =
+          swift_ast_sp->GetCompilerInvocation().getSDKPath();
+      if (serialized_sdk_path.empty())
+        LOG_PRINTF(LIBLLDB_LOG_TYPES, "No serialized SDK path.");
+      else
+        LOG_PRINTF(LIBLLDB_LOG_TYPES, "Serialized SDK path is %s.",
+                   serialized_sdk_path.str().c_str());
+
+      // Force parsing of the CUs to extract the SDK info.
+      XcodeSDK sdk;
+      if (SymbolFile *sym_file = module.GetSymbolFile())
+        for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
+          sdk.Merge(
+              sym_file->ParseXcodeSDK(*sym_file->GetCompileUnitAtIndex(i)));
+
+      std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path is %s.", sdk_path.c_str());
+      if (FileSystem::Instance().Exists(sdk_path)) {
+        swift_ast_sp->SetPlatformSDKPath(sdk_path);
+        swift_ast_sp->GetCompilerInvocation().setSDKPath(sdk_path);
+      }
     }
   }
 
