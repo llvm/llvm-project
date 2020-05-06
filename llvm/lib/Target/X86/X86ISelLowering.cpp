@@ -4716,6 +4716,13 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
   }
 }
 
+static bool isTargetShuffleSplat(SDValue Op) {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::EXTRACT_SUBVECTOR)
+    return isTargetShuffleSplat(Op.getOperand(0));
+  return Opcode == X86ISD::VBROADCAST || Opcode == X86ISD::VBROADCAST_LOAD;
+}
+
 SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
@@ -7815,6 +7822,15 @@ static SDValue getShuffleScalarElt(SDValue Op, unsigned Index,
     return getShuffleScalarElt(Vec, Index, DAG, Depth + 1);
   }
 
+  // Recurse into concat_vectors sub vector to find scalars.
+  if (Opcode == ISD::CONCAT_VECTORS) {
+    EVT SubVT = Op.getOperand(0).getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t SubIdx = Index / NumSubElts;
+    uint64_t SubElt = Index % NumSubElts;
+    return getShuffleScalarElt(Op.getOperand(SubIdx), SubElt, DAG, Depth + 1);
+  }
+
   // Recurse into extract_subvector src vector to find scalars.
   if (Opcode == ISD::EXTRACT_SUBVECTOR &&
       isa<ConstantSDNode>(Op.getOperand(1))) {
@@ -7833,6 +7849,15 @@ static SDValue getShuffleScalarElt(SDValue Op, unsigned Index,
   }
 
   // Actual nodes that may contain scalar elements
+
+  // For insert_vector_elt - either return the index matching scalar or recurse
+  // into the base vector.
+  if (Opcode == ISD::INSERT_VECTOR_ELT &&
+      isa<ConstantSDNode>(Op.getOperand(2))) {
+    if (Op.getConstantOperandAPInt(2) == Index)
+      return Op.getOperand(1);
+    return getShuffleScalarElt(Op.getOperand(0), Index, DAG, Depth + 1);
+  }
 
   if (Opcode == ISD::SCALAR_TO_VECTOR)
     return (Index == 0) ? Op.getOperand(0)
@@ -34052,6 +34077,14 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
+  // If we are shuffling a broadcast (and not introducing zeros) then
+  // we can just use the broadcast directly. This works for smaller broadcast
+  // elements as well as they already repeat across each mask element
+  if (UnaryShuffle && isTargetShuffleSplat(V1) && !isAnyZero(BaseMask) &&
+      (BaseMaskEltSizeInBits % V1.getScalarValueSizeInBits()) == 0) {
+    return DAG.getBitcast(RootVT, V1);
+  }
+
   // Attempt to match a subvector broadcast.
   // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
   if (UnaryShuffle &&
@@ -46646,6 +46679,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     if (Op0.getOpcode() == X86ISD::VBROADCAST ||
         Op0.getOpcode() == X86ISD::SUBV_BROADCAST)
       return DAG.getNode(Op0.getOpcode(), DL, VT, Op0.getOperand(0));
+
+    // If this broadcast_load is inserted into both halves, use a larger
+    // broadcast_load. Update other uses to use an extracted subvector.
+    if (Op0.getOpcode() == X86ISD::VBROADCAST_LOAD) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Op0);
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = {MemIntr->getChain(), MemIntr->getBasePtr()};
+      SDValue BcastLd = DAG.getMemIntrinsicNode(
+          X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MemIntr->getMemoryVT(),
+          MemIntr->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(
+          Op0, extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits()));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
+      return BcastLd;
+    }
 
     // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
     if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
