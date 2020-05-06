@@ -985,18 +985,22 @@ void Sema::ActOnPragmaVisibility(const IdentifierInfo* VisType,
   }
 }
 
-void Sema::ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC) {
+void Sema::ActOnPragmaFPContract(LangOptions::FPModeKind FPC) {
   switch (FPC) {
-  case LangOptions::FPC_On:
+  case LangOptions::FPM_On:
     CurFPFeatures.setAllowFPContractWithinStatement();
     break;
-  case LangOptions::FPC_Fast:
+  case LangOptions::FPM_Fast:
     CurFPFeatures.setAllowFPContractAcrossStatement();
     break;
-  case LangOptions::FPC_Off:
+  case LangOptions::FPM_Off:
     CurFPFeatures.setDisallowFPContract();
     break;
   }
+}
+
+void Sema::ActOnPragmaFPReassociate(bool IsEnabled) {
+  CurFPFeatures.setAllowAssociativeMath(IsEnabled);
 }
 
 void Sema::setRoundingMode(llvm::RoundingMode FPR) {
@@ -1007,10 +1011,8 @@ void Sema::setExceptionMode(LangOptions::FPExceptionModeKind FPE) {
   CurFPFeatures.setExceptionMode(FPE);
 }
 
-void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc,
-                                 LangOptions::FEnvAccessModeKind FPC) {
-  switch (FPC) {
-  case LangOptions::FEA_On:
+void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
+  if (IsEnabled) {
     // Verify Microsoft restriction:
     // You can't enable fenv_access unless precise semantics are enabled.
     // Precise semantics can be enabled either by the float_control
@@ -1018,11 +1020,8 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc,
     if (!isPreciseFPEnabled())
       Diag(Loc, diag::err_pragma_fenv_requires_precise);
     CurFPFeatures.setAllowFEnvAccess();
-    break;
-  case LangOptions::FEA_Off:
+  } else
     CurFPFeatures.setDisallowFEnvAccess();
-    break;
-  }
 }
 
 void Sema::PushNamespaceVisibilityAttr(const VisibilityAttr *Attr,
