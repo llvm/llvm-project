@@ -276,14 +276,18 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
   for (unsigned I = 0, E = RVLocs1.size(); I != E; ++I) {
     const CCValAssign &Loc1 = RVLocs1[I];
     const CCValAssign &Loc2 = RVLocs2[I];
-
-    if ( // Must both be in registers, or both in memory
-        Loc1.isRegLoc() != Loc2.isRegLoc() ||
-        // Must fill the same part of their locations
-        Loc1.getLocInfo() != Loc2.getLocInfo() ||
-        // Memory offset/register number must be the same
-        Loc1.getExtraInfo() != Loc1.getExtraInfo())
+    if (Loc1.getLocInfo() != Loc2.getLocInfo())
       return false;
+    bool RegLoc1 = Loc1.isRegLoc();
+    if (RegLoc1 != Loc2.isRegLoc())
+      return false;
+    if (RegLoc1) {
+      if (Loc1.getLocReg() != Loc2.getLocReg())
+        return false;
+    } else {
+      if (Loc1.getLocMemOffset() != Loc2.getLocMemOffset())
+        return false;
+    }
   }
   return true;
 }
