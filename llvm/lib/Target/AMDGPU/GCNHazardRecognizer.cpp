@@ -228,11 +228,6 @@ void GCNHazardRecognizer::processBundle() {
   CurrCycleInstr = nullptr;
 }
 
-unsigned GCNHazardRecognizer::PreEmitNoops(SUnit *SU) {
-  IsHazardRecognizerMode = false;
-  return PreEmitNoopsCommon(SU->getInstr());
-}
-
 unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   IsHazardRecognizerMode = true;
   CurrCycleInstr = MI;
