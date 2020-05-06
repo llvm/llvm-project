@@ -26,6 +26,12 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
+static cl::opt<bool> Keep16BitSuffixes(
+  "amdgpu-keep-16-bit-reg-suffixes",
+  cl::desc("Keep .l and .h suffixes in asm for debugging purposes"),
+  cl::init(false),
+  cl::ReallyHidden);
+
 void AMDGPUInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   // FIXME: The current implementation of
   // AsmParser::parseRegisterOrRegisterNumber in MC implies we either emit this
@@ -317,7 +323,12 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  O << getRegisterName(RegNo);
+  StringRef RegName(getRegisterName(RegNo));
+  if (!Keep16BitSuffixes)
+    if (!RegName.consume_back(".l"))
+      RegName.consume_back(".h");
+
+  O << RegName;
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
