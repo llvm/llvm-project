@@ -62,10 +62,15 @@ class LLDBTest(TestFormat):
             return (lit.Test.UNSUPPORTED, 'Test is unsupported')
 
         testPath, testFile = os.path.split(test.getSourcePath())
+
+        # The Python used to run lit can be different from the Python LLDB was
+        # build with.
+        executable = test.config.python_executable
+
         # On Windows, the system does not always correctly interpret
         # shebang lines.  To make sure we can execute the tests, add
         # python exe as the first parameter of the command.
-        cmd = [sys.executable] + self.dotest_cmd + [testPath, '-p', testFile]
+        cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
         builddir = getBuildDir(cmd)
         mkdir_p(builddir)
@@ -74,13 +79,13 @@ class LLDBTest(TestFormat):
         # libraries into system binaries, but this can be worked around by
         # copying the binary into a different location.
         if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
-                (sys.executable.startswith('/System/') or \
-                sys.executable.startswith('/usr/bin/')):
+                (executable.startswith('/System/') or \
+                executable.startswith('/usr/bin/')):
             copied_python = os.path.join(builddir, 'copied-system-python')
             if not os.path.isfile(copied_python):
                 import shutil, subprocess
                 python = subprocess.check_output([
-                    sys.executable,
+                    executable,
                     '-c',
                     'import sys; print(sys.executable)'
                 ]).decode('utf-8').strip()
