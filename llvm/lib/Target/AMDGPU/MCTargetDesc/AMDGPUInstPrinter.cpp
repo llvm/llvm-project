@@ -180,10 +180,10 @@ void AMDGPUInstPrinter::printSMRDOffset8(const MCInst *MI, unsigned OpNo,
   printU32ImmOperand(MI, OpNo, STI, O);
 }
 
-void AMDGPUInstPrinter::printSMRDOffset20(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printSMEMOffset(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  printU32ImmOperand(MI, OpNo, STI, O);
+  O << formatHex(MI->getOperand(OpNo).getImm());
 }
 
 void AMDGPUInstPrinter::printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,

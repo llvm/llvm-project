@@ -100,6 +100,18 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, MCOperand::createImm(Imm));
 }
 
+static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm,
+                                     uint64_t Addr, const void *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  int64_t Offset;
+  if (DAsm->isVI()) {         // VI supports 20-bit unsigned offsets.
+    Offset = Imm & 0xFFFFF;
+  } else {                    // GFX9+ supports 21-bit signed offsets.
+    Offset = SignExtend64<21>(Imm);
+  }
+  return addOperand(Inst, MCOperand::createImm(Offset));
+}
+
 static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val,
                                   uint64_t Addr, const void *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
