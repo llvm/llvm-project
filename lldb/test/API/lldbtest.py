@@ -63,10 +63,15 @@ class LLDBTest(TestFormat):
             return (lit.Test.UNSUPPORTED, 'Test is unsupported')
 
         testPath, testFile = os.path.split(test.getSourcePath())
+
+        # The Python used to run lit can be different from the Python LLDB was
+        # build with.
+        executable = test.config.python_executable
+
         # On Windows, the system does not always correctly interpret
         # shebang lines.  To make sure we can execute the tests, add
         # python exe as the first parameter of the command.
-        cmd = [sys.executable] + self.dotest_cmd + [testPath, '-p', testFile]
+        cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
         # On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim
         # python binary as the ASan interceptors get loaded too late. Also,
@@ -82,7 +87,7 @@ class LLDBTest(TestFormat):
             if not os.path.isfile(copied_python):
                 import shutil, subprocess
                 python = subprocess.check_output([
-                    sys.executable,
+                    executable,
                     os.path.join(os.path.dirname(os.path.realpath(__file__)),
                         'get_darwin_real_python.py')
                 ]).decode('utf-8').strip()
