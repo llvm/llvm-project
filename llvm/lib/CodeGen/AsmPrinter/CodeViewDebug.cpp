@@ -3092,6 +3092,14 @@ void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
 
 void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   const DIGlobalVariable *DIGV = CVGV.DIGV;
+
+  const DIScope *Scope = DIGV->getScope();
+  // For static data members, get the scope from the declaration.
+  if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
+          DIGV->getRawStaticDataMemberDeclaration()))
+    Scope = MemberDecl->getScope();
+  std::string QualifiedName = getFullyQualifiedName(Scope, DIGV->getName());
+
   if (const GlobalVariable *GV =
           CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
     // DataSym record, see SymbolRecord.h for more info. Thread local data
@@ -3111,13 +3119,9 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.EmitCOFFSectionIndex(GVSym);
     OS.AddComment("Name");
     const unsigned LengthOfDataRecord = 12;
-    emitNullTerminatedSymbolName(
-        OS, getFullyQualifiedName(DIGV->getScope(), DIGV->getName()),
-        LengthOfDataRecord);
+    emitNullTerminatedSymbolName(OS, QualifiedName, LengthOfDataRecord);
     endSymbolRecord(DataEnd);
   } else {
-    // FIXME: Currently this only emits the global variables in the IR metadata.
-    // This should also emit enums and static data members.
     const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
     assert(DIE->isConstant() &&
            "Global constant variables must contain a constant expression.");
@@ -3137,13 +3141,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.emitBinaryData(SRef);
 
     OS.AddComment("Name");
-    const DIScope *Scope = DIGV->getScope();
-    // For static data members, get the scope from the declaration.
-    if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
-            DIGV->getRawStaticDataMemberDeclaration()))
-      Scope = MemberDecl->getScope();
-    emitNullTerminatedSymbolName(OS,
-                                 getFullyQualifiedName(Scope, DIGV->getName()));
+    emitNullTerminatedSymbolName(OS, QualifiedName);
     endSymbolRecord(SConstantEnd);
   }
 }
