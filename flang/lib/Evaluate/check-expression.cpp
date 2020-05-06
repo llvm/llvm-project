@@ -207,7 +207,7 @@ public:
       return std::nullopt;
     } else if (scope_.IsDerivedType() && IsVariableName(symbol) &&
         specExprContext_ == SpecificationExprContext::BOUND) { // C750
-      return "derived type component not allowed to reference to variable '"s +
+      return "derived type component not allowed to reference variable '"s +
           symbol.name().ToString() + "'";
     } else if (symbol.IsDummy()) {
       if (symbol.attrs().test(semantics::Attr::OPTIONAL)) {
