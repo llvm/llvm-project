@@ -1063,8 +1063,8 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
                                unsigned *dstLoopDepth, bool maximalFusion,
                                double computeToleranceThreshold) {
   LLVM_DEBUG({
-    llvm::dbgs() << "Checking whether fusion is profitable between:\n";
-    llvm::dbgs() << " " << *srcOpInst << " and \n";
+    llvm::dbgs() << "Checking whether fusion is profitable between src op:\n";
+    llvm::dbgs() << ' ' << *srcOpInst << " and destination op(s)\n";
     for (auto dstOpInst : dstLoadOpInsts) {
       llvm::dbgs() << " " << *dstOpInst << "\n";
     };
