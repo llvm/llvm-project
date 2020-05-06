@@ -15,6 +15,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -97,6 +98,10 @@ static llvm::cl::opt<bool> dumpSymbols("dump-symbols",
                                        llvm::cl::desc("dump the symbol table"),
                                        llvm::cl::init(false));
 
+static llvm::cl::opt<bool> pftDumpTest("pft-test", llvm::cl::desc("parse the input, create a PFT, dump it, and exit"), llvm::cl::init(false));
+
+static llvm::cl::opt<bool> enableOpenMP("fopenmp", llvm::cl::desc("enable openmp"), llvm::cl::init(false));
+
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -128,6 +133,12 @@ static void convertFortranSourceToMLIR(
       std::string suffix{path.substr(dot + 1)};
       options.isFixedForm = suffix == "f" || suffix == "F" || suffix == "ff";
     }
+  }
+
+  // enable parsing of OpenMP
+  if (enableOpenMP) {
+    options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
+    options.predefinitions.emplace_back("_OPENMP", "201511");
   }
 
   // prep for prescan and parse
@@ -172,6 +183,16 @@ static void convertFortranSourceToMLIR(
   }
   if (dumpSymbols)
     semantics.DumpSymbols(llvm::outs());
+  
+  if (pftDumpTest) {
+    if (auto ast{Fortran::lower::createPFT(parseTree, semanticsContext)}) {
+      Fortran::lower::dumpPFT(llvm::outs(), *ast);
+    } else {
+      llvm::errs() << "Pre FIR Tree is NULL.\n";
+      exitStatus = EXIT_FAILURE;
+    }
+    return;
+  }
 
   // MLIR+FIR
   fir::NameUniquer nameUniquer;

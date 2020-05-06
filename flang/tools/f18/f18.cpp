@@ -11,7 +11,6 @@
 #include "flang/Common/Fortran-features.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
@@ -99,7 +98,6 @@ struct DriverOptions {
   bool dumpUnparse{false};
   bool dumpUnparseWithSymbols{false};
   bool dumpParseTree{false};
-  bool dumpPreFirTree{false};
   bool dumpSymbols{false};
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
@@ -325,14 +323,6 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
         nullptr /* action before each statement */, &asFortran);
     return {};
   }
-  if (driver.dumpPreFirTree) {
-    if (auto ast{Fortran::lower::createPFT(parseTree, semanticsContext)}) {
-      Fortran::lower::dumpPFT(llvm::outs(), *ast);
-    } else {
-      llvm::errs() << "Pre FIR Tree is NULL.\n";
-      exitStatus = EXIT_FAILURE;
-    }
-  }
   if (driver.syntaxOnly) {
     return {};
   }
@@ -552,8 +542,6 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-fdebug-dump-parse-tree") {
       driver.dumpParseTree = true;
       driver.syntaxOnly = true;
-    } else if (arg == "-fdebug-pre-fir-tree") {
-      driver.dumpPreFirTree = true;
     } else if (arg == "-fdebug-dump-symbols") {
       driver.dumpSymbols = true;
       driver.syntaxOnly = true;

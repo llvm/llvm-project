@@ -7,10 +7,14 @@ ______________
 
 [Varun]
 
-  DATA statement
+  . DATA statement
     loc("lapack/BLAS/SRC/srotmg.f":116:7): error: DATA statement is not handled.
+  . error: 'llvm.mlir.global' op initializer region type '!llvm.i1' does not match global type '!llvm.i32'
 
 [Jean]
+
+  . have lowering call the runtime STOP function (instead of the dummy standin)
+  . Intrinsics.cpp:613! - nint
 
 
 [unassigned]
@@ -18,9 +22,10 @@ ______________
   . ConvertExpr.cpp:266 - character comparison
   . ConvertExpr.cpp:458! - concat CHARs
   . ConvertExpr.cpp:711! - Ev::Triplet
-  . Intrinsics.cpp:613! - nint
   . error: unreachable blocks were not converted
-  . error: 'llvm.mlir.global' op initializer region type '!llvm.i1' does not match global type '!llvm.i32'
+
+FIXED
+_____
 
 bbc: Missing LEN_TRIM lowering
 
