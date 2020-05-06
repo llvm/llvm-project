@@ -323,6 +323,15 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
   return success();
 }
 
+OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1);
+  if (operands.front()) {
+    setAttr("attr", operands.front());
+    return getResult();
+  }
+  return {};
+}
+
 LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
