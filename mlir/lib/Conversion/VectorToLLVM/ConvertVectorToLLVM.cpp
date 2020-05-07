@@ -752,6 +752,19 @@ void replaceTransferOp(ConversionPatternRewriter &rewriter,
                        Operation *op, ArrayRef<Value> operands, Value dataPtr,
                        Value mask);
 
+LogicalResult getLLVMTypeAndAlignment(LLVMTypeConverter &typeConverter,
+                                      Type type, LLVM::LLVMType &llvmType,
+                                      unsigned &align) {
+  auto convertedType = typeConverter.convertType(type);
+  if (!convertedType)
+    return failure();
+
+  llvmType = convertedType.template cast<LLVM::LLVMType>();
+  auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
+  align = dataLayout.getPrefTypeAlignment(llvmType.getUnderlyingType());
+  return success();
+}
+
 template <>
 void replaceTransferOp<TransferReadOp>(ConversionPatternRewriter &rewriter,
                                        LLVMTypeConverter &typeConverter,
@@ -764,10 +777,13 @@ void replaceTransferOp<TransferReadOp>(ConversionPatternRewriter &rewriter,
   Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
   fill = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(fillType), fill);
 
-  auto vecTy = toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
-  rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
-      op, vecTy, dataPtr, mask, ValueRange{fill},
-      rewriter.getI32IntegerAttr(1));
+  LLVM::LLVMType vecTy;
+  unsigned align;
+  if (succeeded(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
+                                        vecTy, align)))
+    rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
+        op, vecTy, dataPtr, mask, ValueRange{fill},
+        rewriter.getI32IntegerAttr(align));
 }
 
 template <>
@@ -777,8 +793,14 @@ void replaceTransferOp<TransferWriteOp>(ConversionPatternRewriter &rewriter,
                                         ArrayRef<Value> operands, Value dataPtr,
                                         Value mask) {
   auto adaptor = TransferWriteOpOperandAdaptor(operands);
-  rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
-      op, adaptor.vector(), dataPtr, mask, rewriter.getI32IntegerAttr(1));
+
+  auto xferOp = cast<TransferWriteOp>(op);
+  LLVM::LLVMType vecTy;
+  unsigned align;
+  if (succeeded(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
+                                        vecTy, align)))
+    rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
+        op, adaptor.vector(), dataPtr, mask, rewriter.getI32IntegerAttr(align));
 }
 
 static TransferReadOpOperandAdaptor
