@@ -492,24 +492,19 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B,
   return true;
 }
 
-Register AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &B,
-                                               Type *ParamTy,
-                                               uint64_t Offset) const {
-
+void AMDGPUCallLowering::lowerParameterPtr(Register DstReg, MachineIRBuilder &B,
+                                           Type *ParamTy,
+                                           uint64_t Offset) const {
   MachineFunction &MF = B.getMF();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  PointerType *PtrTy = PointerType::get(ParamTy, AMDGPUAS::CONSTANT_ADDRESS);
-  LLT PtrType = getLLTForType(*PtrTy, DL);
   Register KernArgSegmentPtr =
     MFI->getPreloadedReg(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   Register KernArgSegmentVReg = MRI.getLiveInVirtReg(KernArgSegmentPtr);
 
   auto OffsetReg = B.buildConstant(LLT::scalar(64), Offset);
 
-  return B.buildPtrAdd(PtrType, KernArgSegmentVReg, OffsetReg).getReg(0);
+  B.buildPtrAdd(DstReg, KernArgSegmentVReg, OffsetReg);
 }
 
 void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, Type *ParamTy,
@@ -520,7 +515,10 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, Type *ParamTy,
   const DataLayout &DL = F.getParent()->getDataLayout();
   MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
   unsigned TypeSize = DL.getTypeStoreSize(ParamTy);
-  Register PtrReg = lowerParameterPtr(B, ParamTy, Offset);
+
+  LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
+  Register PtrReg = B.getMRI()->createGenericVirtualRegister(PtrTy);
+  lowerParameterPtr(PtrReg, B, ParamTy, Offset);
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo,
@@ -607,12 +605,15 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
   for (auto &Arg : F.args()) {
-    Type *ArgTy = Arg.getType();
+    const bool IsByRef = Arg.hasByRefAttr();
+    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
     if (AllocSize == 0)
       continue;
 
-    Align ABIAlign = DL.getABITypeAlign(ArgTy);
+    MaybeAlign ABIAlign = IsByRef ? Arg.getParamAlign() : None;
+    if (!ABIAlign)
+      ABIAlign = DL.getABITypeAlign(ArgTy);
 
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
@@ -622,16 +623,34 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
       continue;
     }
 
-    ArrayRef<Register> OrigArgRegs = VRegs[i];
-    Register ArgReg =
-      OrigArgRegs.size() == 1
-      ? OrigArgRegs[0]
-      : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
-
     Align Alignment = commonAlignment(KernArgBaseAlign, ArgOffset);
-    lowerParameter(B, ArgTy, ArgOffset, Alignment, ArgReg);
-    if (OrigArgRegs.size() > 1)
-      unpackRegs(OrigArgRegs, ArgReg, ArgTy, B);
+
+    if (IsByRef) {
+      unsigned ByRefAS = cast<PointerType>(Arg.getType())->getAddressSpace();
+
+      assert(VRegs[i].size() == 1 &&
+             "expected only one register for byval pointers");
+      if (ByRefAS == AMDGPUAS::CONSTANT_ADDRESS) {
+        lowerParameterPtr(VRegs[i][0], B, ArgTy, ArgOffset);
+      } else {
+        const LLT ConstPtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
+        Register PtrReg = MRI.createGenericVirtualRegister(ConstPtrTy);
+        lowerParameterPtr(PtrReg, B, ArgTy, ArgOffset);
+
+        B.buildAddrSpaceCast(VRegs[i][0], PtrReg);
+      }
+    } else {
+      ArrayRef<Register> OrigArgRegs = VRegs[i];
+      Register ArgReg =
+        OrigArgRegs.size() == 1
+        ? OrigArgRegs[0]
+        : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
+
+      lowerParameter(B, ArgTy, ArgOffset, Alignment, ArgReg);
+      if (OrigArgRegs.size() > 1)
+        unpackRegs(OrigArgRegs, ArgReg, ArgTy, B);
+    }
+
     ++i;
   }
 

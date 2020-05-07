@@ -1265,3 +1265,467 @@ define amdgpu_kernel void @unused_i32_arg(i32 addrspace(1)* nocapture %out, i32 
 entry:
   ret void
 }
+
+; Byref pointers should only be treated as offsets from kernarg
+define amdgpu_kernel void @byref_constant_i8_arg(i32 addrspace(1)* nocapture %out, i8 addrspace(4)* byref(i8) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_constant_i8_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p4) :: (load 1 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
+  ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_constant_i8_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p4) :: (load 1 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
+  ; LEGACY-MESA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i8, i8 addrspace(4)* %in.byref
+  %ext = zext i8 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_i16_arg(i32 addrspace(1)* nocapture %out, i16 addrspace(4)* byref(i16) align 2 %in.byref) {
+  ; HSA-VI-LABEL: name: byref_constant_i16_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p4) :: (load 2 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s16)
+  ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_constant_i16_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p4) :: (load 2 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s16)
+  ; LEGACY-MESA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i16, i16 addrspace(4)* %in.byref
+  %ext = zext i16 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) align 4 %in.byref, i32 %after.offset) {
+  ; HSA-VI-LABEL: name: byref_constant_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+  ; HSA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 4 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   G_STORE [[LOAD2]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_constant_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+  ; LEGACY-MESA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, align 16, addrspace 4)
+  ; LEGACY-MESA-VI:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 4 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD2]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_v4i32_arg(<4 x i32> addrspace(1)* nocapture %out, <4 x i32> addrspace(4)* byref(<4 x i32>) align(16) %in.byref, i32 %after.offset) {
+  ; HSA-VI-LABEL: name: byref_constant_v4i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+  ; HSA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load 16 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   G_STORE [[LOAD2]](<4 x s32>), [[LOAD]](p1) :: (volatile store 16 into %ir.out, align 4, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out.cast, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_constant_v4i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 52
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
+  ; LEGACY-MESA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[LOAD2:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load 16 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD2]](<4 x s32>), [[LOAD]](p1) :: (volatile store 16 into %ir.out, align 4, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out.cast, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load <4 x i32>, <4 x i32> addrspace(4)* %in.byref
+  store volatile <4 x i32> %in, <4 x i32> addrspace(1)* %out, align 4
+  %out.cast = bitcast <4 x i32> addrspace(1)* %out to i32 addrspace(1)*
+  store volatile i32 %after.offset, i32 addrspace(1)* %out.cast, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_align_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) align(256) %in.byref, i32 %after.offset) {
+  ; HSA-VI-LABEL: name: byref_align_constant_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 260
+  ; HSA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 4 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   G_STORE [[LOAD2]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_align_constant_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 292
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 296
+  ; LEGACY-MESA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, align 8, addrspace 4)
+  ; LEGACY-MESA-VI:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 4 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD2]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(i32 addrspace(1)* nocapture %out, i8, <16 x i32> addrspace(4)* byref(<16 x i32>) align(64) %in.byref, i32 %after.offset) {
+  ; HSA-VI-LABEL: name: byref_natural_align_constant_v16i32_arg
+  ; HSA-VI: bb.1 (%ir-block.1):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
+  ; HSA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load 64 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   G_STORE [[LOAD2]](<16 x s32>), [[LOAD]](p1) :: (volatile store 64 into %ir.cast.out, align 4, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_natural_align_constant_v16i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.1):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 100
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 164
+  ; LEGACY-MESA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load 64 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD2]](<16 x s32>), [[LOAD]](p1) :: (volatile store 64 into %ir.cast.out, align 4, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load <16 x i32>, <16 x i32> addrspace(4)* %in.byref
+  %cast.out = bitcast i32 addrspace(1)* %out to <16 x i32> addrspace(1)*
+  store volatile <16 x i32> %in, <16 x i32> addrspace(1)* %cast.out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; Also accept byref kernel arguments with other global address spaces.
+define amdgpu_kernel void @byref_global_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* byref(i32) align(4) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_global_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p1) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; HSA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[ADDRSPACE_CAST]](p1)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (load 4 from %ir.1, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_global_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p1) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; LEGACY-MESA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[ADDRSPACE_CAST]](p1)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (load 4 from %ir.1, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(1)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_flat_i32_arg(i32 addrspace(1)* nocapture %out, i32* byref(i32) align(4) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_flat_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p0) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p0) :: (load 4 from %ir.in.byref)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_flat_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p0) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p0) :: (load 4 from %ir.in.byref)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_32bit_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(6)* byref(i32) align(4) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_constant_32bit_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p6) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p6) :: (load 4 from %ir.in.byref, addrspace 6)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_constant_32bit_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p6) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p6) :: (load 4 from %ir.in.byref, addrspace 6)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(6)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_unknown_as_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(999)* byref(i32) align(4) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_unknown_as_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p999) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p999) :: (load 4 from %ir.in.byref, addrspace 999)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_unknown_as_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p999) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p999) :: (load 4 from %ir.in.byref, addrspace 999)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(999)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; Invalid, but should not crash.
+define amdgpu_kernel void @byref_local_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(3)* byref(i32) align(4) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_local_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p3) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p3) :: (load 4 from %ir.in.byref, addrspace 3)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_local_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[ADDRSPACE_CAST:%[0-9]+]]:_(p3) = G_ADDRSPACE_CAST [[PTR_ADD1]](p4)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[ADDRSPACE_CAST]](p3) :: (load 4 from %ir.in.byref, addrspace 3)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(3)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @multi_byref_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) align(4) %in0.byref, i32 addrspace(4)* byref(i32) align(4) %in1.byref, i32 %after.offset) {
+  ; HSA-VI-LABEL: name: multi_byref_constant_i32_arg
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 16, addrspace 4)
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+  ; HSA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; HSA-VI:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; HSA-VI:   [[PTR_ADD3:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C3]](s64)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p4) :: (dereferenceable invariant load 4, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 4 from %ir.in0.byref, addrspace 4)
+  ; HSA-VI:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (load 4 from %ir.in1.byref, addrspace 4)
+  ; HSA-VI:   G_STORE [[LOAD2]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD3]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: multi_byref_constant_i32_arg
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8, align 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
+  ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+  ; LEGACY-MESA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; LEGACY-MESA-VI:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 52
+  ; LEGACY-MESA-VI:   [[PTR_ADD3:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C3]](s64)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p4) :: (dereferenceable invariant load 4, addrspace 4)
+  ; LEGACY-MESA-VI:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (load 4 from %ir.in0.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p4) :: (load 4 from %ir.in1.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD2]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD3]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (volatile store 4 into %ir.out, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in0 = load i32, i32 addrspace(4)* %in0.byref
+  %in1 = load i32, i32 addrspace(4)* %in1.byref
+  store volatile i32 %in0, i32 addrspace(1)* %out, align 4
+  store volatile i32 %in1, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @byref_constant_i32_arg_offset0(i32 addrspace(4)* byref(i32) align(4) %in.byref) {
+  ; HSA-VI-LABEL: name: byref_constant_i32_arg_offset0
+  ; HSA-VI: bb.1 (%ir-block.0):
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; HSA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; HSA-VI:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load 4 from %ir.in.byref, addrspace 4)
+  ; HSA-VI:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: byref_constant_i32_arg_offset0
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; LEGACY-MESA-VI:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; LEGACY-MESA-VI:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load 4 from %ir.in.byref, addrspace 4)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store i32 %in, i32 addrspace(1)* undef, align 4
+  ret void
+}
