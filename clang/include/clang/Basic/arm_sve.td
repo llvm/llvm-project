@@ -1709,6 +1709,15 @@ def SVPMULLT_PAIR_N : SInst<"svpmullt_pair[_n_{d}]", "dda",  "UcUi",         Mer
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Complex integer dot product
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVCDOT      : SInst<"svcdot[_{d}]",      "ddqqi",  "il",   MergeNone, "aarch64_sve_cdot",      [], [ImmCheck<3, ImmCheckComplexRotAll90>]>;
+def SVCDOT_LANE : SInst<"svcdot_lane[_{d}]", "ddqqii", "il",   MergeNone, "aarch64_sve_cdot_lane", [], [ImmCheck<4, ImmCheckComplexRotAll90>,
+                                                                                                        ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Contiguous conflict detection
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw_b", [IsOverloadWhileRW]>;
