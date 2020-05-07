@@ -16,8 +16,8 @@ namespace __llvm_libc {
 namespace testutils {
 
 FDReader::FDReader() {
-  int err = ::pipe(pipefd);
-  assert(!err && "pipe(2) failed");
+  if (::pipe(pipefd))
+    llvm::report_fatal_error("pipe(2) failed");
 }
 
 FDReader::~FDReader() {
