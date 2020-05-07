@@ -1773,3 +1773,37 @@ def SVWHILEWR_H : SInst<"svwhilewr[_{1}]", "Pcc", "sUsh", MergeNone, "aarch64_sv
 def SVWHILEWR_S : SInst<"svwhilewr[_{1}]", "Pcc", "iUif", MergeNone, "aarch64_sve_whilewr_s", [IsOverloadWhileRW]>;
 def SVWHILEWR_D : SInst<"svwhilewr[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sve_whilewr_d", [IsOverloadWhileRW]>;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Optional
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2_AES)" in {
+def SVAESD   : SInst<"svaesd[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aesd", [IsOverloadNone]>;
+def SVAESIMC : SInst<"svaesimc[_{d}]", "dd",  "Uc", MergeNone, "aarch64_sve_aesimc", [IsOverloadNone]>;
+def SVAESE   : SInst<"svaese[_{d}]",   "ddd", "Uc", MergeNone, "aarch64_sve_aese", [IsOverloadNone]>;
+def SVAESMC  : SInst<"svaesmc[_{d}]",  "dd",  "Uc", MergeNone, "aarch64_sve_aesmc", [IsOverloadNone]>;
+
+def SVPMULLB_PAIR_U64   : SInst<"svpmullb_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullb_pair">;
+def SVPMULLB_PAIR_N_U64 : SInst<"svpmullb_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullb_pair">;
+
+def SVPMULLT_PAIR_U64   : SInst<"svpmullt_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullt_pair">;
+def SVPMULLT_PAIR_N_U64 : SInst<"svpmullt_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullt_pair">;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2_SHA3)" in {
+def SVRAX1   : SInst<"svrax1[_{d}]",   "ddd", "lUl", MergeNone, "aarch64_sve_rax1", [IsOverloadNone]>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2_SM4)" in {
+def SVSM4E    : SInst<"svsm4e[_{d}]",    "ddd", "Ui", MergeNone, "aarch64_sve_sm4e", [IsOverloadNone]>;
+def SVSM4EKEY : SInst<"svsm4ekey[_{d}]", "ddd", "Ui", MergeNone, "aarch64_sve_sm4ekey", [IsOverloadNone]>;
+}
+
+let ArchGuard = "__ARM_FEATURE_SVE2_BITPERM" in {
+def SVBDEP   : SInst<"svbdep[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x">;
+def SVBDEP_N : SInst<"svbdep[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x">;
+def SVBEXT   : SInst<"svbext[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bext_x">;
+def SVBEXT_N : SInst<"svbext[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bext_x">;
+def SVBGRP   : SInst<"svbgrp[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bgrp_x">;
+def SVBGRP_N : SInst<"svbgrp[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bgrp_x">;
+}
