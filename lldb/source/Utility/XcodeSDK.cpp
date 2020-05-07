@@ -182,25 +182,11 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
   ConstString last_path_component = sdk_path.GetLastPathComponent();
 
-  if (last_path_component) {
-    const llvm::StringRef sdk_name = last_path_component.GetStringRef();
+  if (!last_path_component)
+    return false;
 
-    const std::string sdk_name_lower = sdk_name.lower();
-    Info info;
-    info.type = desired_type;
-    const std::string sdk_string = GetCanonicalName(info);
-    if (!llvm::StringRef(sdk_name_lower).startswith(sdk_string))
-      return false;
-
-    auto version_part = sdk_name.drop_front(sdk_string.size());
-    version_part.consume_back(".sdk");
-    version_part.consume_back(".Internal");
-
-    llvm::VersionTuple version;
-    if (version.tryParse(version_part))
-      return false;
-    return SDKSupportsModules(desired_type, version);
-  }
-
-  return false;
+  XcodeSDK sdk(last_path_component.GetStringRef().str());
+  if (sdk.GetType() != desired_type)
+    return false;
+  return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());
 }
