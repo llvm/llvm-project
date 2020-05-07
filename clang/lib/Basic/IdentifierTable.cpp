@@ -16,6 +16,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -31,6 +32,12 @@
 #include <string>
 
 using namespace clang;
+
+// A check to make sure the ObjCOrBuiltinID has sufficient room to store the
+// largest possible target/aux-target combination. If we exceed this, we likely
+// need to just change the ObjCOrBuiltinIDBits value in IdentifierTable.h.
+static_assert(2 * LargestBuiltinID < (2 << (ObjCOrBuiltinIDBits - 1)),
+              "Insufficient ObjCOrBuiltinID Bits");
 
 //===----------------------------------------------------------------------===//
 // IdentifierTable Implementation
