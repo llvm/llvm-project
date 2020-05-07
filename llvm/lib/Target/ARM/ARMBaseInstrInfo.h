@@ -21,6 +21,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include <array>
 #include <cstdint>
 
@@ -829,6 +831,27 @@ inline bool isLegalAddressImm(unsigned Opcode, int Imm,
   default:
     llvm_unreachable("Unhandled Addressing mode");
   }
+}
+
+// Return true if the given intrinsic is a gather or scatter
+inline bool isGatherScatter(IntrinsicInst *IntInst) {
+  if (IntInst == nullptr)
+    return false;
+  unsigned IntrinsicID = IntInst->getIntrinsicID();
+  return (IntrinsicID == Intrinsic::masked_gather ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset_predicated ||
+          IntrinsicID == Intrinsic::masked_scatter ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset_predicated);
 }
 
 } // end namespace llvm
