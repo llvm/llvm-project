@@ -122,13 +122,18 @@ StringRef getOutputSectionName(const InputSectionBase *s) {
   // When no SECTIONS is specified, emulate GNU ld's internal linker scripts
   // by grouping sections with certain prefixes.
 
-  // GNU ld places text sections with prefix ".text.hot.", ".text.unlikely.",
-  // ".text.startup." or ".text.exit." before others. We provide an option -z
-  // keep-text-section-prefix to group such sections into separate output
-  // sections. This is more flexible. See also sortISDBySectionOrder().
+  // GNU ld places text sections with prefix ".text.hot.", ".text.unknown.",
+  // ".text.unlikely.", ".text.startup." or ".text.exit." before others.
+  // We provide an option -z keep-text-section-prefix to group such sections
+  // into separate output sections. This is more flexible. See also
+  // sortISDBySectionOrder().
+  // ".text.unknown" means the hotness of the section is unknown. When
+  // SampleFDO is used, if a function doesn't have sample, it could be very
+  // cold or it could be a new function never being sampled. Those functions
+  // will be kept in the ".text.unknown" section.
   if (config->zKeepTextSectionPrefix)
-    for (StringRef v :
-         {".text.hot.", ".text.unlikely.", ".text.startup.", ".text.exit."})
+    for (StringRef v : {".text.hot.", ".text.unknown.", ".text.unlikely.",
+                        ".text.startup.", ".text.exit."})
       if (isSectionPrefix(v, s->name))
         return v.drop_back();
 
