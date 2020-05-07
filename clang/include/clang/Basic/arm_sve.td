@@ -1361,6 +1361,27 @@ def SVADALP_U_Z : SInst<"svadalp[_{d}]", "dPdh", "UsUiUl", MergeZero, "aarch64_s
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Bitwise ternary logical instructions
+//
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVBCAX  : SInst<"svbcax[_{d}]",  "dddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_bcax">;
+def SVBSL   : SInst<"svbsl[_{d}]",   "dddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_bsl">;
+def SVBSL1N : SInst<"svbsl1n[_{d}]", "dddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_bsl1n">;
+def SVBSL2N : SInst<"svbsl2n[_{d}]", "dddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_bsl2n">;
+def SVEOR3  : SInst<"sveor3[_{d}]",  "dddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_eor3">;
+def SVNBSL  : SInst<"svnbsl[_{d}]",  "dddd", "csilUcUsUiUl", MergeNone, "aarch64_sve_nbsl">;
+
+def SVBCAX_N  : SInst<"svbcax[_n_{d}]",  "ddda", "csilUcUsUiUl", MergeNone, "aarch64_sve_bcax">;
+def SVBSL_N   : SInst<"svbsl[_n_{d}]",   "ddda", "csilUcUsUiUl", MergeNone, "aarch64_sve_bsl">;
+def SVBSL1N_N : SInst<"svbsl1n[_n_{d}]", "ddda", "csilUcUsUiUl", MergeNone, "aarch64_sve_bsl1n">;
+def SVBSL2N_N : SInst<"svbsl2n[_n_{d}]", "ddda", "csilUcUsUiUl", MergeNone, "aarch64_sve_bsl2n">;
+def SVEOR3_N  : SInst<"sveor3[_n_{d}]",  "ddda", "csilUcUsUiUl", MergeNone, "aarch64_sve_eor3">;
+def SVNBSL_N  : SInst<"svnbsl[_n_{d}]",  "ddda", "csilUcUsUiUl", MergeNone, "aarch64_sve_nbsl">;
+def SVXAR_N   : SInst<"svxar[_n_{d}]",   "dddi", "csilUcUsUiUl", MergeNone, "aarch64_sve_xar", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 // Non-temporal gather load one vector (vector base)
