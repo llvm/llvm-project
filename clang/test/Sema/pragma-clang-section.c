@@ -22,4 +22,10 @@
 #pragma clang section bss = "myrodata.1"               // expected-error {{this causes a section type conflict with a prior #pragma section}}
 #pragma clang section text = "mybss.3"                 // expected-error {{this causes a section type conflict with a prior #pragma section}}
 
+#pragma clang section rodata = "myrodata.4"              // expected-note {{#pragma entered here}}
+int x __attribute__((section("myrodata.4")));            // expected-error {{'x' causes a section type conflict with a prior #pragma section}}
+const int y __attribute__((section("myrodata.5"))) = 10; // expected-note {{declared here}}
+#pragma clang section data = "myrodata.5"                // expected-error {{this causes a section type conflict with 'y'}}
+const int z __attribute__((section("myrodata.6"))) = 11;
+
 int a;
