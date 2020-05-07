@@ -87,6 +87,15 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+
+  case ELF::EM_P2:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/P2.def"
+    default:
+      break;
+    }
+    break;
+
   case ELF::EM_PPC:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"

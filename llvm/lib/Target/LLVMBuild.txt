@@ -28,6 +28,7 @@ subdirectories =
  Lanai
  MSP430
  Mips
+ P2
  NVPTX
  PowerPC
  RISCV
