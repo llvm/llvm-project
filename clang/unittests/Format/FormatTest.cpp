@@ -7672,6 +7672,19 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
                MultiLineFunctions);
 }
 
+TEST_F(FormatTest, AttributePenaltyBreaking) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("void ABCDEFGH::ABCDEFGHIJKLMN(\n"
+               "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
+               Style);
+  verifyFormat("void ABCDEFGH::ABCDEFGHIJK(\n"
+               "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
+               Style);
+  verifyFormat("void ABCDEFGH::ABCDEFGH([[maybe_unused]] const "
+               "shared_ptr<ALongTypeName> &C d) {\n}",
+               Style);
+}
+
 TEST_F(FormatTest, UnderstandsEllipsis) {
   verifyFormat("int printf(const char *fmt, ...);");
   verifyFormat("template <class... Ts> void Foo(Ts... ts) { Foo(ts...); }");
