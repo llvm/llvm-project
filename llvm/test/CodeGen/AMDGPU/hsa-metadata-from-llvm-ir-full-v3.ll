@@ -573,12 +573,11 @@ define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a) #0
 }
 
 ; CHECK:        - .args:
-; CHECK-NEXT:       - .address_space:  private
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         0
-; CHECK-NEXT:         .size:           4
+; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .type_name:      struct A
-; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK-NEXT:         .value_kind:     by_value
 ; CHECK-NEXT:         .value_type:     struct
 ; CHECK-NEXT:       - .offset:         8
 ; CHECK-NEXT:         .size:           8
@@ -618,7 +617,58 @@ define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a) #0
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_struct
 ; CHECK:          .symbol:         test_struct.kd
-define amdgpu_kernel void @test_struct(%struct.A addrspace(5)* byval %a) #0
+define amdgpu_kernel void @test_struct(%struct.A %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
+    !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:        - .args:
+; CHECK-NEXT:         .name:           a
+; CHECK-NEXT:         .offset:         0
+; CHECK-NEXT:         .size:           32
+; CHECK-NEXT:         .type_name:      struct A
+; CHECK-NEXT:         .value_kind:     by_value
+; CHECK-NEXT:         .value_type:     struct
+; CHECK-NEXT:       - .offset:         32
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:         .value_type:     i64
+; CHECK-NEXT:       - .offset:         40
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:         .value_type:     i64
+; CHECK-NEXT:       - .offset:         48
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:         .value_type:     i64
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_printf_buffer
+; CHECK-NEXT:         .value_type:     i8
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         64
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_type:     i8
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         72
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_type:     i8
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         80
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
+; CHECK-NEXT:         .value_type:     i8
+; CHECK:          .language:       OpenCL C
+; CHECK-NEXT:     .language_version:
+; CHECK-NEXT:       - 2
+; CHECK-NEXT:       - 0
+; CHECK:          .name:           test_array
+; CHECK:          .symbol:         test_array.kd
+define amdgpu_kernel void @test_array([32 x i8] %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -1481,12 +1531,11 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 addrspace(5)* addrspace(1)* %
 }
 
 ; CHECK:        - .args:
-; CHECK-NEXT:       - .address_space:  private
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         0
-; CHECK-NEXT:         .size:           4
+; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .type_name:      struct B
-; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK-NEXT:         .value_kind:     by_value
 ; CHECK-NEXT:         .value_type:     struct
 ; CHECK-NEXT:       - .offset:         8
 ; CHECK-NEXT:         .size:           8
@@ -1526,7 +1575,7 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 addrspace(5)* addrspace(1)* %
 ; CHECK-NEXT:       - 0
 ; CHECK:          .name:           test_arg_struct_contains_ptr
 ; CHECK:          .symbol:         test_arg_struct_contains_ptr.kd
-define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B addrspace(5)* byval %a) #0
+define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !82
     !kernel_arg_base_type !82 !kernel_arg_type_qual !4 {
  ret void
