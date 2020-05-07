@@ -16,9 +16,6 @@
 
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x i32> undef, i32 %index, i32 0
-; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x i32> %broadcast.splatinsert, <2 x i32> undef, <2 x i32> zeroinitializer
-; FORCED-NEXT:    %induction = add <2 x i32> %broadcast.splat, <i32 0, i32 1>
 ; FORCED-NEXT:    %0 = add i32 %index, 0
 ; FORCED-NEXT:    %1 = extractvalue { i64, i64 } %sv, 0
 ; FORCED-NEXT:    %2 = extractvalue { i64, i64 } %sv, 0
@@ -68,9 +65,6 @@ declare float @pow(float, float) readnone nounwind
 
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x i32> undef, i32 %index, i32 0
-; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x i32> %broadcast.splatinsert, <2 x i32> undef, <2 x i32> zeroinitializer
-; FORCED-NEXT:    %induction = add <2 x i32> %broadcast.splat, <i32 0, i32 1>
 ; FORCED-NEXT:    %0 = add i32 %index, 0
 ; FORCED-NEXT:    %1 = extractvalue { float, float } %sv, 0
 ; FORCED-NEXT:    %2 = extractvalue { float, float } %sv, 0
