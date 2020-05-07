@@ -1569,9 +1569,6 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   // If configuration file was used, print its path.
   if (!ConfigFile.empty())
     OS << "Configuration file: " << ConfigFile << '\n';
-
-  // Print the registered targets.
-  llvm::TargetRegistry::printRegisteredTargetsForVersion(OS);
 }
 
 /// PrintDiagnosticCategories - Implement the --print-diagnostic-categories
