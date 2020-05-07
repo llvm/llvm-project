@@ -42,6 +42,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUAtomicOptimizer.cpp
   AMDGPUCallLowering.cpp
   AMDGPUCodeGenPrepare.cpp
+  AMDGPUExportClustering.cpp
   AMDGPUFixFunctionBitcasts.cpp
   AMDGPUFrameLowering.cpp
   AMDGPUHSAMetadataStreamer.cpp
