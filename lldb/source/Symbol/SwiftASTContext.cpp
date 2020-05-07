@@ -8310,8 +8310,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
         s.PutCString("Library");
       case swift::SourceFileKind::Main:
         s.PutCString("Main");
-      case swift::SourceFileKind::REPL:
-        s.PutCString("REPL");
       case swift::SourceFileKind::SIL:
         s.PutCString("SIL");
       }
