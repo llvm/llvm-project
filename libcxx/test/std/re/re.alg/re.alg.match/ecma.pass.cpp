@@ -1391,6 +1391,17 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+    {
+        // LWG#2584: identity escapes. Match exact chars/strings.
+        const std::regex r1("\\z");
+        assert(std::regex_match("z", r1));
+
+        const std::regex r2("\\zz");
+        assert(std::regex_match("zz", r2));
+
+        const std::regex r3("\\zx");
+        assert(std::regex_match("zx", r3));
+    }
 
   return 0;
 }
