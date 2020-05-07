@@ -30,6 +30,7 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_limits_posix.h"
 #include "sanitizer_procmaps.h"
+#include "sanitizer_ptrauth.h"
 
 #if !SANITIZER_IOS
 #include <crt_externs.h>  // for _NSGetEnviron
@@ -764,12 +765,6 @@ bool SignalContext::IsTrueFaultingAddress() const {
   // "Real" SIGSEGV codes (e.g., SEGV_MAPERR, SEGV_MAPERR) are non-zero.
   return si->si_signo == SIGSEGV && si->si_code != 0;
 }
-
-#if __has_feature(ptrauth_calls)
-# include <ptrauth.h>
-#else
-# define ptrauth_strip(value, key) (value)
-#endif
 
 #if defined(__aarch64__) && defined(arm_thread_state64_get_sp)
   #define AARCH64_GET_REG(r) \
