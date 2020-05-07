@@ -1508,8 +1508,7 @@ private:
   // call FAIL IMAGE in runtime
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::FailImageStmt &stmt) {
-    auto callee = genRuntimeFunction(
-        Fortran::lower::RuntimeEntryCode::FailImageStatement, *builder);
+    auto callee = genFailImageStatementRuntime(*builder);
     llvm::SmallVector<mlir::Value, 1> operands; // FAIL IMAGE has no args
     builder->create<mlir::CallOp>(toLocation(), callee, operands);
   }
@@ -1517,9 +1516,46 @@ private:
   // call STOP, ERROR STOP in runtime
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::StopStmt &stmt) {
-    auto callee = genRuntimeFunction(
-        Fortran::lower::RuntimeEntryCode::StopStatement, *builder);
+    auto callee = genStopStatementRuntime(*builder);
+    auto calleeType = callee.getType();
     llvm::SmallVector<mlir::Value, 8> operands;
+    assert(calleeType.getNumInputs() == 3 &&
+           "expected 3 arguments in STOP runtime");
+    // First operand is stop code (zero if absent)
+    if (const auto &code =
+            std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
+      auto expr = Fortran::semantics::GetExpr(*code);
+      assert(expr && "failed getting typed expression");
+      operands.push_back(genExprValue(*expr));
+    } else {
+      operands.push_back(
+          builder->createIntegerConstant(calleeType.getInput(0), 0));
+    }
+    // Second operand indicates ERROR STOP
+    bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
+                   Fortran::parser::StopStmt::Kind::ErrorStop;
+    operands.push_back(
+        builder->createIntegerConstant(calleeType.getInput(1), isError));
+
+    // Third operand indicates QUIET (default to false).
+    if (const auto &quiet =
+            std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(
+                stmt.t)) {
+      auto expr = Fortran::semantics::GetExpr(*quiet);
+      assert(expr && "failed getting typed expression");
+      operands.push_back(genExprValue(*expr));
+    } else {
+      operands.push_back(
+          builder->createIntegerConstant(calleeType.getInput(2), 0));
+    }
+
+    // Cast operands in case they have different integer/logical types
+    // compare to runtime.
+    auto i = 0;
+    for (auto &op : operands) {
+      auto type = calleeType.getInput(i++);
+      op = builder->createConvert(toLocation(), type, op);
+    }
     builder->create<mlir::CallOp>(toLocation(), callee, operands);
   }
 

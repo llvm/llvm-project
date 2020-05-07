@@ -44,6 +44,25 @@ subroutine dble_test(a)
   print *, dble(a)
 end subroutine
 
+! CEILING
+! CHECK-LABEL: ceiling_test1
+subroutine ceiling_test1(i, a)
+  integer :: i
+  real :: a
+  i = ceiling(a)
+  ! CHECK: %[[f:.*]] = call @llvm.ceil.f32
+  ! CHECK: fir.convert %[[f]] : (f32) -> i32
+end subroutine
+! CHECK-LABEL: ceiling_test2
+subroutine ceiling_test2(i, a)
+  integer(8) :: i
+  real :: a
+  i = ceiling(a, 8)
+  ! CHECK: %[[f:.*]] = call @llvm.ceil.f32
+  ! CHECK: fir.convert %[[f]] : (f32) -> i64
+end subroutine
+
+
 ! CONJG
 ! CHECK-LABEL: conjg_test
 subroutine conjg_test(z1, z2)
@@ -52,6 +71,24 @@ subroutine conjg_test(z1, z2)
   ! CHECK: fir.negf
   ! CHECK: fir.insert_value
   z2 = conjg(z1)
+end subroutine
+
+! FLOOR
+! CHECK-LABEL: floor_test1
+subroutine floor_test1(i, a)
+  integer :: i
+  real :: a
+  i = floor(a)
+  ! CHECK: %[[f:.*]] = call @llvm.floor.f32
+  ! CHECK: fir.convert %[[f]] : (f32) -> i32
+end subroutine
+! CHECK-LABEL: floor_test2
+subroutine floor_test2(i, a)
+  integer(8) :: i
+  real :: a
+  i = floor(a, 8)
+  ! CHECK: %[[f:.*]] = call @llvm.floor.f32
+  ! CHECK: fir.convert %[[f]] : (f32) -> i64
 end subroutine
 
 ! ICHAR
@@ -72,7 +109,7 @@ subroutine len_test(i, c)
 end subroutine
 
 ! LEN_TRIM
-!CHECK-LABEL: len_trim_test
+! CHECK-LABEL: len_trim_test
 integer function len_trim_test(c)
   character(*) :: c
   ltrim = len_trim(c)
@@ -90,6 +127,22 @@ integer function len_trim_test(c)
   ! CHECK-DAG: %[[len:.*]] = addi %[[lastIndex]], %[[c1]]
   ! CHECK: select %[[iterateResult]], %[[c0]], %[[len]]
 end function
+
+! NINT
+! CHECK-LABEL: nint_test1
+subroutine nint_test1(i, a)
+  integer :: i
+  real :: a
+  i = nint(a)
+  ! CHECK: call @llvm.lround.i32.f32
+end subroutine
+! CHECK-LABEL: nint_test2
+subroutine nint_test2(i, a)
+  integer(8) :: i
+  real(8) :: a
+  i = nint(a, 8)
+  ! CHECK: call @llvm.lround.i64.f64
+end subroutine
 
 
 
