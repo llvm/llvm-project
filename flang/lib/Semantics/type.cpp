@@ -507,6 +507,13 @@ bool ArraySpec::IsAssumedSize() const {
 bool ArraySpec::IsAssumedRank() const {
   return Rank() == 1 && front().lbound().isAssumed();
 }
+bool ArraySpec::IsConstantShape() const {
+  return CheckAll([](const ShapeSpec &x) {
+    const auto &lb{x.lbound().GetExplicit()};
+    const auto &ub{x.ubound().GetExplicit()};
+    return lb && ub && IsConstantExpr(*lb) && IsConstantExpr(*ub);
+  });
+}
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const ArraySpec &arraySpec) {
