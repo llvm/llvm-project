@@ -11,9 +11,8 @@ ______________
   . error: 'llvm.mlir.global' op initializer region type '!llvm.i1' does not match global type '!llvm.i32'
 
 [Jean]
-
-  . have lowering call the runtime STOP function (instead of the dummy standin)
-  . Intrinsics.cpp:613! - nint
+  . ConvertExpr.cpp:266 - character comparison
+  . ConvertExpr.cpp:458! - concat CHARs
 
 [Val]
 
@@ -23,8 +22,6 @@ ______________
 
 [unassigned]
 
-  . lapack/SRC/sgbcon.f - ConvertExpr.cpp:266 - character comparison
-  . lapack/SRC/sgesvd.f - ConvertExpr.cpp:458! - concat CHARs
   . lapack/SRC/sbdsvdx.f - ConvertExpr.cpp:711! - Ev::Triplet
   . lapack/INSTALL/second_INT_ETIME.f - 'etime' is not a known intrinsic procedure
   . lapack/SRC/chla_transtype.f - type of return operand 0 ('!fir.array<1x!fir.char<1>>') doesn't match function result type ('!fir.char<1>')
@@ -34,7 +31,9 @@ ______________
 FIXED
 _____
 
-bbc: Missing LEN_TRIM lowering
+  . Missing LEN_TRIM lowering
+  . Missing NINT lowering
+  . STOP runtime mismatch
 
   . ConvertExpr.cpp:193 - function type mismatch
   . 'std.call' op incorrect number of operands for callee

@@ -105,10 +105,12 @@ struct IntrinsicLibrary {
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIchar(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genLenTrim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMerge(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
@@ -152,12 +154,14 @@ static constexpr IntrinsicHanlder handlers[]{
     {"char", &I::genConversion},
     {"conjg", &I::genConjg},
     {"dble", &I::genConversion},
+    {"floor", &I::genFloor},
     {"ichar", &I::genIchar},
     {"len_trim", &I::genLenTrim},
     {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"merge", &I::genMerge},
     {"mod", &I::genMod},
+    {"nint", &I::genNint},
     {"sign", &I::genSign},
 };
 
@@ -229,34 +233,54 @@ static constexpr RuntimeFunction pgmathPrecise[] = {
 #include "../runtime/pgmath.h.inc"
 };
 
-static mlir::FunctionType gen1ArgF32FuncType(mlir::MLIRContext *context) {
+static mlir::FunctionType genF32F32FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF32(context);
   return mlir::FunctionType::get({t}, {t}, context);
 }
-static mlir::FunctionType gen1ArgF64FuncType(mlir::MLIRContext *context) {
+static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
   return mlir::FunctionType::get({t}, {t}, context);
+}
+
+template <int Bits>
+static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF64(context);
+  auto r = mlir::IntegerType::get(Bits, context);
+  return mlir::FunctionType::get({t}, {r}, context);
+}
+template <int Bits>
+static mlir::FunctionType genIntF32FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF32(context);
+  auto r = mlir::IntegerType::get(Bits, context);
+  return mlir::FunctionType::get({t}, {r}, context);
 }
 
 // TODO : Fill-up this table with more intrinsic.
 // Note: These are also defined as operations in LLVM dialect. See if this
 // can be use and has advantages.
 static constexpr RuntimeFunction llvmIntrinsics[] = {
-    {"abs", "llvm.fabs.f32", gen1ArgF32FuncType},
-    {"abs", "llvm.fabs.f64", gen1ArgF64FuncType},
+    {"abs", "llvm.fabs.f32", genF32F32FuncType},
+    {"abs", "llvm.fabs.f64", genF64F64FuncType},
     // ceil is used for CEILING but is different, it returns a real.
-    {"ceil", "llvm.ceil.f32", gen1ArgF32FuncType},
-    {"ceil", "llvm.ceil.f64", gen1ArgF64FuncType},
-    {"cos", "llvm.cos.f32", gen1ArgF32FuncType},
-    {"cos", "llvm.cos.f64", gen1ArgF64FuncType},
-    {"log", "llvm.log.f32", gen1ArgF32FuncType},
-    {"log", "llvm.log.f64", gen1ArgF64FuncType},
-    {"log10", "llvm.log10.f32", gen1ArgF32FuncType},
-    {"log10", "llvm.log10.f64", gen1ArgF64FuncType},
-    {"sin", "llvm.sin.f32", gen1ArgF32FuncType},
-    {"sin", "llvm.sin.f64", gen1ArgF64FuncType},
-    {"sqrt", "llvm.sqrt.f32", gen1ArgF32FuncType},
-    {"sqrt", "llvm.sqrt.f64", gen1ArgF64FuncType},
+    {"ceil", "llvm.ceil.f32", genF32F32FuncType},
+    {"ceil", "llvm.ceil.f64", genF64F64FuncType},
+    {"cos", "llvm.cos.f32", genF32F32FuncType},
+    {"cos", "llvm.cos.f64", genF64F64FuncType},
+    // llvm.floor is used for FLOOR, but returns real.
+    {"floor", "llvm.floor.f32", genF32F32FuncType},
+    {"floor", "llvm.floor.f64", genF64F64FuncType},
+    {"log", "llvm.log.f32", genF32F32FuncType},
+    {"log", "llvm.log.f64", genF64F64FuncType},
+    {"log10", "llvm.log10.f32", genF32F32FuncType},
+    {"log10", "llvm.log10.f64", genF64F64FuncType},
+    {"nint", "llvm.lround.i64.f64", genIntF64FuncType<64>},
+    {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>},
+    {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>},
+    {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>},
+    {"sin", "llvm.sin.f32", genF32F32FuncType},
+    {"sin", "llvm.sin.f64", genF64F64FuncType},
+    {"sqrt", "llvm.sqrt.f32", genF32F32FuncType},
+    {"sqrt", "llvm.sqrt.f64", genF64F64FuncType},
 };
 
 // This helper class computes a "distance" between two function types.
@@ -666,7 +690,7 @@ mlir::Value IntrinsicLibrary::genCeiling(mlir::Type resultType,
   // Use ceil that is not an actual Fortran intrinsic but that is
   // an llvm intrinsic that does the same, but return a floating
   // point.
-  auto ceil = genIntrinsicCall("ceil", arg.getType(), {arg});
+  auto ceil = genRuntimeCall("ceil", arg.getType(), {arg});
   return builder.createHere<fir::ConvertOp>(resultType, ceil);
 }
 
@@ -681,6 +705,17 @@ mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
   auto imag = builder.extractComplexPart(cplx, /*isImagPart=*/true);
   auto negImag = builder.createHere<fir::NegfOp>(imag);
   return builder.insertComplexPart(cplx, negImag, /*isImagPart=*/true);
+}
+
+// FLOOR
+mlir::Value IntrinsicLibrary::genFloor(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // Optional KIND argument.
+  assert(args.size() >= 1);
+  auto arg = args[0];
+  // Use LLVM floor that returns real.
+  auto floor = genRuntimeCall("floor", arg.getType(), {arg});
+  return builder.createHere<fir::ConvertOp>(resultType, floor);
 }
 
 // ICHAR
@@ -728,6 +763,14 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   // Use runtime. Note that mlir::RemFOp alos implement floating point
   // remainder, but it does not work with fir::Real type.
   return genRuntimeCall("mod", resultType, args);
+}
+
+// MOD
+mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1);
+  // Skip optional kind argument to search the runtime
+  return genRuntimeCall("nint", resultType, {args[0]});
 }
 
 // SIGN
