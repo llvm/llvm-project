@@ -332,14 +332,18 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
   if (IndexC) {
-    unsigned NumElts = EI.getVectorOperandType()->getNumElements();
+    ElementCount EC = EI.getVectorOperandType()->getElementCount();
+    unsigned NumElts = EC.Min;
 
     // InstSimplify should handle cases where the index is invalid.
-    if (!IndexC->getValue().ule(NumElts))
+    // For fixed-length vector, it's invalid to extract out-of-range element.
+    if (!EC.Scalable && IndexC->getValue().uge(NumElts))
       return nullptr;
 
     // This instruction only demands the single element from the input vector.
-    if (NumElts != 1) {
+    // Skip for scalable type, the number of elements is unknown at
+    // compile-time.
+    if (!EC.Scalable && NumElts != 1) {
       // If the input vector has a single use, simplify it based on this use
       // property.
       if (SrcVec->hasOneUse()) {
@@ -417,11 +421,13 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
       // If this is extracting an element from a shufflevector, figure out where
       // it came from and extract from the appropriate input element instead.
-      if (auto *Elt = dyn_cast<ConstantInt>(Index)) {
-        int SrcIdx = SVI->getMaskValue(Elt->getZExtValue());
+      // Restrict the following transformation to fixed-length vector.
+      if (isa<FixedVectorType>(SVI->getType()) && isa<ConstantInt>(Index)) {
+        int SrcIdx =
+            SVI->getMaskValue(cast<ConstantInt>(Index)->getZExtValue());
         Value *Src;
-        unsigned LHSWidth =
-            cast<VectorType>(SVI->getOperand(0)->getType())->getNumElements();
+        unsigned LHSWidth = cast<FixedVectorType>(SVI->getOperand(0)->getType())
+                                ->getNumElements();
 
         if (SrcIdx < 0)
           return replaceInstUsesWith(EI, UndefValue::get(EI.getType()));
@@ -432,9 +438,8 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
           Src = SVI->getOperand(1);
         }
         Type *Int32Ty = Type::getInt32Ty(EI.getContext());
-        return ExtractElementInst::Create(Src,
-                                          ConstantInt::get(Int32Ty,
-                                                           SrcIdx, false));
+        return ExtractElementInst::Create(
+            Src, ConstantInt::get(Int32Ty, SrcIdx, false));
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
