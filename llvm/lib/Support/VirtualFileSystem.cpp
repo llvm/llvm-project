@@ -2066,7 +2066,8 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
                "Overlay dir must be contained in RPath");
         RPath = RPath.slice(OverlayDirLen, RPath.size());
       }
-      writeEntry(path::filename(Entry.VPath), RPath);
+      if (!Entry.IsDirectory)
+        writeEntry(path::filename(Entry.VPath), RPath);
     }
 
     while (!DirStack.empty()) {
