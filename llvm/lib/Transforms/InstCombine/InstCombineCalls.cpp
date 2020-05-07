@@ -1942,9 +1942,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Changed) return II;
   }
 
-  // For vector result intrinsics, use the generic demanded vector support.
-  if (auto *IIVTy = dyn_cast<VectorType>(II->getType())) {
-    auto VWidth = IIVTy->getNumElements();
+  // For fixed width vector result intrinsics, use the generic demanded vector
+  // support.
+  if (auto *IIFVTy = dyn_cast<FixedVectorType>(II->getType())) {
+    auto VWidth = IIFVTy->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
