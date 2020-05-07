@@ -9,9 +9,14 @@
 #ifndef LLDB_UTILITY_SDK_H
 #define LLDB_UTILITY_SDK_H
 
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include <tuple>
+
+namespace llvm {
+class Triple;
+}
 
 namespace lldb_private {
 
@@ -66,11 +71,16 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
+  /// Whether this Xcode SDK supports Swift.
+  bool SupportsSwift() const;
 
+  /// Whether LLDB feels confident importing Clang modules from this SDK.
   static bool SDKSupportsModules(Type type, llvm::VersionTuple version);
   static bool SDKSupportsModules(Type desired_type, const FileSpec &sdk_path);
   /// Return the canonical SDK name, such as "macosx" for the macOS SDK.
   static std::string GetCanonicalName(Info info);
+  /// Return the best-matching SDK type for a specific triple.
+  static XcodeSDK::Type GetSDKTypeForTriple(const llvm::Triple &triple);
 };
 
 } // namespace lldb_private
