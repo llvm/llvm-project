@@ -305,7 +305,7 @@ bool SwiftREPL::SourceIsComplete(const std::string &source) {
       llvm::MemoryBuffer::getMemBuffer(source));
   swift::ide::SourceCompleteResult result =
       swift::ide::isSourceInputComplete(std::move(source_buffer_ap),
-                                        swift::SourceFileKind::REPL);
+                                        swift::SourceFileKind::Main);
   return result.IsComplete;
 }
 
@@ -340,7 +340,7 @@ lldb::offset_t SwiftREPL::GetDesiredIndentation(const StringList &lines,
       llvm::MemoryBuffer::getMemBuffer(source_string));
   swift::ide::SourceCompleteResult result =
       swift::ide::isSourceInputComplete(std::move(source_buffer_ap),
-                                        swift::SourceFileKind::REPL);
+                                        swift::SourceFileKind::Main);
 
   int desired_indent =
       (result.IndentLevel * tab_size) + result.IndentPrefix.length();
@@ -572,7 +572,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
                                             importInfo);
       llvm::Optional<unsigned> bufferID;
       swift::SourceFile *repl_source_file = new (*ast)
-          swift::SourceFile(*repl_module, swift::SourceFileKind::REPL, bufferID,
+          swift::SourceFile(*repl_module, swift::SourceFileKind::Main, bufferID,
                             /*Keep tokens*/false);
       repl_module->addFile(*repl_source_file);
       swift::performImportResolution(*repl_source_file);
@@ -580,7 +580,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
     }
     if (repl_module) {
       swift::SourceFile &repl_source_file =
-          repl_module->getMainSourceFile(swift::SourceFileKind::REPL);
+          repl_module->getMainSourceFile(swift::SourceFileKind::Main);
 
       // Swift likes to give us strings to append to the current token but
       // the CompletionRequest requires a replacement for the full current
