@@ -256,12 +256,15 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
 void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionAction Action,
                                    PragmaClangSectionKind SecKind, StringRef SecName) {
   PragmaClangSection *CSec;
+  int SectionFlags = ASTContext::PSF_Read;
   switch (SecKind) {
     case PragmaClangSectionKind::PCSK_BSS:
       CSec = &PragmaClangBSSSection;
+      SectionFlags |= ASTContext::PSF_Write | ASTContext::PSF_ZeroInit;
       break;
     case PragmaClangSectionKind::PCSK_Data:
       CSec = &PragmaClangDataSection;
+      SectionFlags |= ASTContext::PSF_Write;
       break;
     case PragmaClangSectionKind::PCSK_Rodata:
       CSec = &PragmaClangRodataSection;
@@ -271,6 +274,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
       break;
     case PragmaClangSectionKind::PCSK_Text:
       CSec = &PragmaClangTextSection;
+      SectionFlags |= ASTContext::PSF_Execute;
       break;
     default:
       llvm_unreachable("invalid clang section kind");
@@ -280,6 +284,9 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
     CSec->Valid = false;
     return;
   }
+
+  if (UnifySection(SecName, SectionFlags, PragmaLoc))
+    return;
 
   CSec->Valid = true;
   CSec->SectionName = std::string(SecName);
