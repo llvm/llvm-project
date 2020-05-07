@@ -611,7 +611,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
                                          Value *PermittedRHS,
                                          InstCombiner &IC) {
   assert(V->getType()->isVectorTy() && "Invalid shuffle!");
-  unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
   if (isa<UndefValue>(V)) {
     Mask.assign(NumElts, -1);
@@ -723,9 +723,14 @@ Instruction *InstCombiner::visitInsertValueInst(InsertValueInst &I) {
 }
 
 static bool isShuffleEquivalentToSelect(ShuffleVectorInst &Shuf) {
+  // Can not analyze scalable type, the number of elements is not a compile-time
+  // constant.
+  if (isa<ScalableVectorType>(Shuf.getOperand(0)->getType()))
+    return false;
+
   int MaskSize = Shuf.getShuffleMask().size();
   int VecSize =
-      cast<VectorType>(Shuf.getOperand(0)->getType())->getNumElements();
+      cast<FixedVectorType>(Shuf.getOperand(0)->getType())->getNumElements();
 
   // A vector select does not change the size of the operands.
   if (MaskSize != VecSize)
@@ -751,8 +756,12 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   if (InsElt.hasOneUse() && isa<InsertElementInst>(InsElt.user_back()))
     return nullptr;
 
-  auto *VecTy = cast<VectorType>(InsElt.getType());
-  unsigned NumElements = VecTy->getNumElements();
+  VectorType *VecTy = InsElt.getType();
+  // Can not handle scalable type, the number of elements is not a compile-time
+  // constant.
+  if (isa<ScalableVectorType>(VecTy))
+    return nullptr;
+  unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
 
   // Do not try to do this for a one-element vector, since that's a nop,
   // and will cause an inf-loop.
@@ -820,6 +829,11 @@ static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
   if (!Shuf || !Shuf->isZeroEltSplat())
     return nullptr;
 
+  // Bail out early if shuffle is scalable type. The number of elements in
+  // shuffle mask is unknown at compile-time.
+  if (isa<ScalableVectorType>(Shuf->getType()))
+    return nullptr;
+
   // Check for a constant insertion index.
   uint64_t IdxC;
   if (!match(InsElt.getOperand(2), m_ConstantInt(IdxC)))
@@ -850,6 +864,11 @@ static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
   auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
   if (!Shuf || !isa<UndefValue>(Shuf->getOperand(1)) ||
       !(Shuf->isIdentityWithExtract() || Shuf->isIdentityWithPadding()))
+    return nullptr;
+
+  // Bail out early if shuffle is scalable type. The number of elements in
+  // shuffle mask is unknown at compile-time.
+  if (isa<ScalableVectorType>(Shuf->getType()))
     return nullptr;
 
   // Check for a constant insertion index.
@@ -975,7 +994,12 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
   } else if (auto *IEI = dyn_cast<InsertElementInst>(Inst)) {
     // Transform sequences of insertelements ops with constant data/indexes into
     // a single shuffle op.
-    unsigned NumElts = InsElt.getType()->getNumElements();
+    // Can not handle scalable type, the number of elements needed to create
+    // shuffle mask is not a compile-time constant.
+    if (isa<ScalableVectorType>(InsElt.getType()))
+      return nullptr;
+    unsigned NumElts =
+        cast<FixedVectorType>(InsElt.getType())->getNumElements();
 
     uint64_t InsertIdx[2];
     Constant *Val[2];
@@ -1036,14 +1060,19 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
     return new BitCastInst(NewInsElt, IE.getType());
   }
 
-  // If the inserted element was extracted from some other vector and both
-  // indexes are valid constants, try to turn this into a shuffle.
+  // If the inserted element was extracted from some other fixed-length vector
+  // and both indexes are valid constants, try to turn this into a shuffle.
+  // Can not handle scalable vector type, the number of elements needed to
+  // create shuffle mask is not a compile-time constant.
   uint64_t InsertedIdx, ExtractedIdx;
   Value *ExtVecOp;
-  if (match(IdxOp, m_ConstantInt(InsertedIdx)) &&
+  if (isa<FixedVectorType>(IE.getType()) &&
+      match(IdxOp, m_ConstantInt(InsertedIdx)) &&
       match(ScalarOp,
             m_ExtractElement(m_Value(ExtVecOp), m_ConstantInt(ExtractedIdx))) &&
-      ExtractedIdx < cast<VectorType>(ExtVecOp->getType())->getNumElements()) {
+      isa<FixedVectorType>(ExtVecOp->getType()) &&
+      ExtractedIdx <
+          cast<FixedVectorType>(ExtVecOp->getType())->getNumElements()) {
     // TODO: Looking at the user(s) to determine if this insert is a
     // fold-to-shuffle opportunity does not match the usual instcombine
     // constraints. We should decide if the transform is worthy based only
@@ -1083,13 +1112,15 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
     }
   }
 
-  unsigned VWidth = cast<VectorType>(VecOp->getType())->getNumElements();
-  APInt UndefElts(VWidth, 0);
-  APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
-  if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask, UndefElts)) {
-    if (V != &IE)
-      return replaceInstUsesWith(IE, V);
-    return &IE;
+  if (auto VecTy = dyn_cast<FixedVectorType>(VecOp->getType())) {
+    unsigned VWidth = VecTy->getNumElements();
+    APInt UndefElts(VWidth, 0);
+    APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
+    if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask, UndefElts)) {
+      if (V != &IE)
+        return replaceInstUsesWith(IE, V);
+      return &IE;
+    }
   }
 
   if (Instruction *Shuf = foldConstantInsEltIntoShuffle(IE))
