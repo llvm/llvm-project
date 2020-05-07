@@ -1736,6 +1736,15 @@ def SVMLSLT_F_LANE : SInst<"svmlslt_lane[_{d}]", "ddhhi", "f",   MergeNone, "aar
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Floating-point integer binary logarithm
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVLOGB_M  : SInst<"svlogb[_{d}]", "xxPd", "hfd", MergeOp1,     "aarch64_sve_flogb">;
+def SVLOGB_X  : SInst<"svlogb[_{d}]", "xPd",  "hfd", MergeAnyExp,  "aarch64_sve_flogb">;
+def SVLOGB_Z  : SInst<"svlogb[_{d}]", "xPd",  "hfd", MergeZeroExp, "aarch64_sve_flogb">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Contiguous conflict detection
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw_b", [IsOverloadWhileRW]>;
