@@ -14587,6 +14587,30 @@ TEST_F(FormatTest, FormatsLambdas) {
                LLVMWithBeforeLambdaBody);
 }
 
+TEST_F(FormatTest, LambdaWithLineComments) {
+  FormatStyle LLVMWithBeforeLambdaBody = getLLVMStyle();
+  LLVMWithBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
+  LLVMWithBeforeLambdaBody.BraceWrapping.BeforeLambdaBody = true;
+  LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_All;
+
+  verifyFormat("auto k = []() { return; }", LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() // comment\n"
+               "{ return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() /* comment */ { return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() /* comment */ /* comment */ { return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() // X\n"
+               "{ return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "auto k = []() // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n"
+      "{ return; }",
+      LLVMWithBeforeLambdaBody);
+}
+
 TEST_F(FormatTest, EmptyLinesInLambdas) {
   verifyFormat("auto lambda = []() {\n"
                "  x(); //\n"
