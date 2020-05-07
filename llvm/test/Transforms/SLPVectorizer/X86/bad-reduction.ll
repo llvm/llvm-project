@@ -503,3 +503,21 @@ define void @PR39538(i8* %t0, i32* %t1) {
   store i32 %t75, i32* %t76, align 4
   ret void
 }
+
+; Do not crash on constant expressions.
+
+@g1 = external dso_local unnamed_addr constant [8 x i8], align 1
+@g2 = external dso_local unnamed_addr constant [5 x i8], align 1
+
+define void @load_combine_constant_expression(i64* %t1) {
+; CHECK-LABEL: @load_combine_constant_expression(
+; CHECK-NEXT:    store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* [[T1:%.*]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr i64, i64* [[T1]], i64 1
+; CHECK-NEXT:    store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* [[T3]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* %t1, align 4
+  %t3 = getelementptr i64, i64* %t1, i64 1
+  store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* %t3, align 4
+  ret void
+}
