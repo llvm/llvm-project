@@ -44615,7 +44615,7 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
   //(sext_in_reg (v4i64 anyext (v4i32 x )), ExtraVT) ->
   // (v4i64 sext (v4i32 sext_in_reg (v4i32 x , ExtraVT)))
   if (VT == MVT::v4i64 && (N0.getOpcode() == ISD::ANY_EXTEND ||
-      N0.getOpcode() == ISD::SIGN_EXTEND)) {
+                           N0.getOpcode() == ISD::SIGN_EXTEND)) {
     SDValue N00 = N0.getOperand(0);
 
     // EXTLOAD has a better solution on AVX2,
@@ -44624,9 +44624,14 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
       if (!ISD::isNormalLoad(N00.getNode()))
         return SDValue();
 
+    // Attempt to promote any comparison mask ops before moving the
+    // SIGN_EXTEND_INREG in the way.
+    if (SDValue Promote = PromoteMaskArithmetic(N0.getNode(), DAG, Subtarget))
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Promote, N1);
+
     if (N00.getValueType() == MVT::v4i32 && ExtraVT.getSizeInBits() < 128) {
-        SDValue Tmp = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::v4i32,
-                                  N00, N1);
+      SDValue Tmp =
+          DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::v4i32, N00, N1);
       return DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i64, Tmp);
     }
   }
