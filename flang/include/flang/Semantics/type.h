@@ -223,6 +223,7 @@ struct ArraySpec : public std::vector<ShapeSpec> {
   bool IsImpliedShape() const;
   bool IsAssumedSize() const;
   bool IsAssumedRank() const;
+  bool IsConstantShape() const; // explicit shape with constant bounds
 
 private:
   // Check non-empty and predicate is true for each element.
