@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "lldb/lldb-types.h"
+
+#include "llvm/ADT/Triple.h"
+
 #include <string>
 
 using namespace lldb;
@@ -189,4 +192,34 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
   if (sdk.GetType() != desired_type)
     return false;
   return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());
+}
+
+XcodeSDK::Type XcodeSDK::GetSDKTypeForTriple(const llvm::Triple &triple) {
+  using namespace llvm;
+  switch (triple.getOS()) {
+  case Triple::MacOSX:
+  case Triple::Darwin:
+    return XcodeSDK::MacOSX;
+  case Triple::IOS:
+    switch (triple.getEnvironment()) {
+    case Triple::MacABI:
+      return XcodeSDK::MacOSX;
+    case Triple::Simulator:
+      return XcodeSDK::iPhoneSimulator;
+    default:
+      return XcodeSDK::iPhoneOS;
+    }
+  case Triple::TvOS:
+    if (triple.getEnvironment() == Triple::Simulator)
+      return XcodeSDK::AppleTVSimulator;
+    return XcodeSDK::AppleTVOS;
+  case Triple::WatchOS:
+    if (triple.getEnvironment() == Triple::Simulator)
+      return XcodeSDK::WatchSimulator;
+    return XcodeSDK::watchOS;
+  case Triple::Linux:
+    return XcodeSDK::Linux;
+  default:
+    return XcodeSDK::unknown;
+  }
 }
