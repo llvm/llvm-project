@@ -1138,6 +1138,14 @@ def SVPTEST_FIRST : SInst<"svptest_first", "sPP", "Pc", MergeNone, "aarch64_sve_
 def SVPTEST_LAST  : SInst<"svptest_last",  "sPP", "Pc", MergeNone, "aarch64_sve_ptest_last">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// FFR manipulation
+
+def SVRDFFR   : SInst<"svrdffr",   "P",  "Pc", MergeNone, "", [IsOverloadNone]>;
+def SVRDFFR_Z : SInst<"svrdffr_z", "PP", "Pc", MergeNone, "", [IsOverloadNone]>;
+def SVSETFFR  : SInst<"svsetffr",  "v",  "",   MergeNone, "", [IsOverloadNone]>;
+def SVWRFFR   : SInst<"svwrffr",   "vP", "Pc", MergeNone, "", [IsOverloadNone]>;
+
+////////////////////////////////////////////////////////////////////////////////
 // Counting elements
 
 def SVCNTB_PAT : SInst<"svcntb_pat", "nI", "", MergeNone, "aarch64_sve_cntb", [IsOverloadNone]>;
