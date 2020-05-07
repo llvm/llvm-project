@@ -8593,6 +8593,10 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 static bool EvaluateArrayNewInitList(EvalInfo &Info, LValue &This,
                                      APValue &Result, const InitListExpr *ILE,
                                      QualType AllocType);
+static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
+                                          APValue &Result,
+                                          const CXXConstructExpr *CCE,
+                                          QualType AllocType);
 
 bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   if (!Info.getLangOpts().CPlusPlus2a)
@@ -8642,6 +8646,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
   const Expr *Init = E->getInitializer();
   const InitListExpr *ResizedArrayILE = nullptr;
+  const CXXConstructExpr *ResizedArrayCCE = nullptr;
 
   QualType AllocType = E->getAllocatedType();
   if (Optional<const Expr*> ArraySize = E->getArraySize()) {
@@ -8685,7 +8690,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     //   -- the new-initializer is a braced-init-list and the number of
     //      array elements for which initializers are provided [...]
     //      exceeds the number of elements to initialize
-    if (Init) {
+    if (Init && !isa<CXXConstructExpr>(Init)) {
       auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType());
       assert(CAT && "unexpected type for array initializer");
 
@@ -8708,6 +8713,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       // special handling for this case when we initialize.
       if (InitBound != AllocBound)
         ResizedArrayILE = cast<InitListExpr>(Init);
+      } else if (Init) {
+        ResizedArrayCCE = cast<CXXConstructExpr>(Init);
     }
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
@@ -8771,6 +8778,10 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   if (ResizedArrayILE) {
     if (!EvaluateArrayNewInitList(Info, Result, *Val, ResizedArrayILE,
                                   AllocType))
+      return false;
+  } else if (ResizedArrayCCE) {
+    if (!EvaluateArrayNewConstructExpr(Info, Result, *Val, ResizedArrayCCE,
+                                       AllocType))
       return false;
   } else if (Init) {
     if (!EvaluateInPlace(*Val, Info, Result, Init))
@@ -9595,6 +9606,16 @@ static bool EvaluateArrayNewInitList(EvalInfo &Info, LValue &This,
          "not an array rvalue");
   return ArrayExprEvaluator(Info, This, Result)
       .VisitInitListExpr(ILE, AllocType);
+}
+
+static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
+                                          APValue &Result,
+                                          const CXXConstructExpr *CCE,
+                                          QualType AllocType) {
+  assert(CCE->isRValue() && CCE->getType()->isArrayType() &&
+         "not an array rvalue");
+  return ArrayExprEvaluator(Info, This, Result)
+      .VisitCXXConstructExpr(CCE, This, &Result, AllocType);
 }
 
 // Return true iff the given array filler may depend on the element index.
