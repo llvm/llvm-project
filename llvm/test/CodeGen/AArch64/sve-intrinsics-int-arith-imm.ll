@@ -533,6 +533,168 @@ define <vscale x 2 x i64> @uqadd_d_highimm(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %out
 }
 
+; ASR
+
+define <vscale x 16 x i8> @asr_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: asr_i8:
+; CHECK: asr z0.b, z0.b, #8
+; CHECK-NEXT: ret
+  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %elt = insertelement <vscale x 16 x i8> undef, i8 8, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> %pg,
+                                                               <vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i8> %splat)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @asr_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: asr_i16:
+; CHECK: asr z0.h, z0.h, #16
+; CHECK-NEXT: ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %elt = insertelement <vscale x 8 x i16> undef, i16 16, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.nxv8i16(<vscale x 8 x i1> %pg,
+                                                               <vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @asr_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: asr_i32:
+; CHECK: asr z0.s, z0.s, #32
+; CHECK-NEXT: ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %elt = insertelement <vscale x 4 x i32> undef, i32 32, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.nxv4i32(<vscale x 4 x i1> %pg,
+                                                               <vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @asr_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: asr_i64:
+; CHECK: asr z0.d, z0.d, #64
+; CHECK-NEXT: ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %elt = insertelement <vscale x 2 x i64> undef, i64 64, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.nxv2i64(<vscale x 2 x i1> %pg,
+                                                               <vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
+; LSL
+
+define <vscale x 16 x i8> @lsl_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: lsl_i8:
+; CHECK: lsl z0.b, z0.b, #7
+; CHECK-NEXT: ret
+  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %elt = insertelement <vscale x 16 x i8> undef, i8 7, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1> %pg,
+                                                               <vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i8> %splat)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @lsl_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: lsl_i16:
+; CHECK: lsl z0.h, z0.h, #15
+; CHECK-NEXT: ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %elt = insertelement <vscale x 8 x i16> undef, i16 15, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.nxv8i16(<vscale x 8 x i1> %pg,
+                                                               <vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @lsl_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: lsl_i32:
+; CHECK: lsl z0.s, z0.s, #31
+; CHECK-NEXT: ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %elt = insertelement <vscale x 4 x i32> undef, i32 31, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.nxv4i32(<vscale x 4 x i1> %pg,
+                                                               <vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @lsl_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: lsl_i64:
+; CHECK: lsl z0.d, z0.d, #63
+; CHECK-NEXT: ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %elt = insertelement <vscale x 2 x i64> undef, i64 63, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.nxv2i64(<vscale x 2 x i1> %pg,
+                                                               <vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
+; LSR
+
+define <vscale x 16 x i8> @lsr_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: lsr_i8:
+; CHECK: lsr z0.b, z0.b, #8
+; CHECK-NEXT: ret
+  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %elt = insertelement <vscale x 16 x i8> undef, i8 8, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> %pg,
+                                                               <vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i8> %splat)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @lsr_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: lsr_i16:
+; CHECK: lsr z0.h, z0.h, #16
+; CHECK-NEXT: ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %elt = insertelement <vscale x 8 x i16> undef, i16 16, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.nxv8i16(<vscale x 8 x i1> %pg,
+                                                               <vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @lsr_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: lsr_i32:
+; CHECK: lsr z0.s, z0.s, #32
+; CHECK-NEXT: ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %elt = insertelement <vscale x 4 x i32> undef, i32 32, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.nxv4i32(<vscale x 4 x i1> %pg,
+                                                               <vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @lsr_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: lsr_i64:
+; CHECK: lsr z0.d, z0.d, #64
+; CHECK-NEXT: ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %elt = insertelement <vscale x 2 x i64> undef, i64 64, i64 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.nxv2i64(<vscale x 2 x i1> %pg,
+                                                               <vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.sqadd.x.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.sqadd.x.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sqadd.x.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
@@ -572,6 +734,21 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.umin.nxv16i8(<vscale x 16 x i1>, <v
 declare <vscale x 8 x i16> @llvm.aarch64.sve.umin.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.umin.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.umin.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.asr.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.asr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.asr.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.lsl.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.lsl.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.lsl.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.lsl.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.lsr.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.lsr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.lsr.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 %pattern)
