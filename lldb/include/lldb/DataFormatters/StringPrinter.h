@@ -24,6 +24,8 @@ public:
 
   enum class GetPrintableElementType { ASCII, UTF8 };
 
+  enum class EscapeStyle { CXX, Swift };
+
   class DumpToStreamOptions {
   public:
     DumpToStreamOptions() = default;
@@ -68,9 +70,9 @@ public:
 
     bool GetIgnoreMaxLength() const { return m_ignore_max_length; }
 
-    void SetLanguage(lldb::LanguageType l) { m_language_type = l; }
+    void SetEscapeStyle(EscapeStyle style) { m_escape_style = style; }
 
-    lldb::LanguageType GetLanguage() const { return m_language_type; }
+    EscapeStyle GetEscapeStyle() const { return m_escape_style; }
 
   private:
     /// The used output stream.
@@ -93,12 +95,8 @@ public:
     /// True iff a zero bytes ('\0') should terminate the memory region that
     /// is being dumped.
     bool m_zero_is_terminator = true;
-    /// The language that the generated string literal is supposed to be valid
-    /// for. This changes for example what and how certain characters are
-    /// escaped.
-    /// For example, printing the a string containing only a quote (") char
-    /// with eLanguageTypeC would escape the quote character.
-    lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
+    /// The language-specific style for escaping special characters.
+    EscapeStyle m_escape_style = EscapeStyle::CXX;
   };
 
   class ReadStringAndDumpToStreamOptions : public DumpToStreamOptions {
@@ -146,71 +144,6 @@ public:
     DataExtractor m_data;
     bool m_is_truncated = false;
   };
-
-  // I can't use a std::unique_ptr for this because the Deleter is a template
-  // argument there
-  // and I want the same type to represent both pointers I want to free and
-  // pointers I don't need to free - which is what this class essentially is
-  // It's very specialized to the needs of this file, and not suggested for
-  // general use
-  struct StringPrinterBufferPointer {
-  public:
-    typedef std::function<void(const uint8_t *)> Deleter;
-
-    StringPrinterBufferPointer(std::nullptr_t ptr)
-        : m_data(nullptr), m_size(0), m_deleter() {}
-
-    StringPrinterBufferPointer(const uint8_t *bytes, size_t size,
-                               Deleter deleter = nullptr)
-        : m_data(bytes), m_size(size), m_deleter(deleter) {}
-
-    StringPrinterBufferPointer(const char *bytes, size_t size,
-                               Deleter deleter = nullptr)
-        : m_data(reinterpret_cast<const uint8_t *>(bytes)), m_size(size),
-          m_deleter(deleter) {}
-
-    StringPrinterBufferPointer(StringPrinterBufferPointer &&rhs)
-        : m_data(rhs.m_data), m_size(rhs.m_size), m_deleter(rhs.m_deleter) {
-      rhs.m_data = nullptr;
-    }
-
-    ~StringPrinterBufferPointer() {
-      if (m_data && m_deleter)
-        m_deleter(m_data);
-      m_data = nullptr;
-    }
-
-    const uint8_t *GetBytes() const { return m_data; }
-
-    size_t GetSize() const { return m_size; }
-
-    StringPrinterBufferPointer &
-    operator=(StringPrinterBufferPointer &&rhs) {
-      if (m_data && m_deleter)
-        m_deleter(m_data);
-      m_data = rhs.m_data;
-      m_size = rhs.m_size;
-      m_deleter = rhs.m_deleter;
-      rhs.m_data = nullptr;
-      return *this;
-    }
-
-  private:
-    DISALLOW_COPY_AND_ASSIGN(StringPrinterBufferPointer);
-
-    const uint8_t *m_data;
-    size_t m_size;
-    Deleter m_deleter;
-  };
-
-  typedef std::function<StringPrinter::StringPrinterBufferPointer(
-      uint8_t *, uint8_t *, uint8_t *&)>
-      EscapingHelper;
-  typedef std::function<EscapingHelper(GetPrintableElementType)>
-      EscapingHelperGenerator;
-
-  static EscapingHelper
-  GetDefaultEscapingHelper(GetPrintableElementType elem_type);
 
   template <StringElementType element_type>
   static bool

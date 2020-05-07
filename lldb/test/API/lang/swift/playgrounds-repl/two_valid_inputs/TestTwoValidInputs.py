@@ -12,9 +12,9 @@
 """
 Test that statements made in one block can be referenced in a proceeding block
 """
+from __future__ import print_function
 import lldbsuite.test.lldbplaygroundrepl as repl
 from lldbsuite.test.lldbtest import *
-
 
 class TestTwoValidInputs(repl.PlaygroundREPLTest):
 
@@ -33,6 +33,10 @@ class TestTwoValidInputs(repl.PlaygroundREPLTest):
         if self.is_compile_or_runtime_error(result):
             self.did_crash(result)
             self.assertTrue(False)
+
+        with recording(self, self.TraceOn()) as sbuf:
+            print("playground output:", file=sbuf)
+            print(playground_output, file=sbuf)
 
         self.assertTrue(playground_output is not None)
         self.assertTrue("a=\\'3\\'" in playground_output)

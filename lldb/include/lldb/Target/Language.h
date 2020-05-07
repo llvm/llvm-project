@@ -180,10 +180,6 @@ public:
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic);
 
-  virtual lldb_private::formatters::StringPrinter::EscapingHelper
-      GetStringPrinterEscapingHelper(
-          lldb_private::formatters::StringPrinter::GetPrintableElementType);
-
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
