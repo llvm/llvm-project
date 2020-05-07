@@ -1,6 +1,7 @@
 // RUN: %clang --target=x86_64-apple-macosx -g -gmodules \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
+// RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck %s
 // Verify that the owning module information from DWARF is preserved in the AST.
 
 @import A;
@@ -51,10 +52,10 @@ SomeClass *obj1;
 
 // Template specializations are not yet supported, so they lack the ownership info:
 Template<int> t2;
-// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} struct Template
+// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} imported in A struct Template
 
 Namespace::InNamespace<int> t3;
-// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} struct InNamespace
+// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} imported in A struct InNamespace
 
 Namespace::AlsoInNamespace<int> t4;
-// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} struct AlsoInNamespace
+// CHECK-DAG: ClassTemplateSpecializationDecl {{.*}} imported in A.B struct AlsoInNamespace

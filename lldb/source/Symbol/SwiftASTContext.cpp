@@ -5351,6 +5351,11 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
         can_type->isAnyExistentialType())
       return true;
 
+    // Dynamic Self types are resolved inside DoArchetypeBindingForType(),
+    // right before the actual archetype binding.
+    if (can_type->hasDynamicSelfType())
+      return true;
+
     if (can_type->hasArchetype() || can_type->hasOpaqueArchetype() ||
         can_type->hasTypeParameter())
       return true;
@@ -5712,6 +5717,8 @@ SwiftASTContext::GetTypeInfo(void *type,
     swift_flags |= eTypeHasChildren | eTypeIsReference | eTypeHasValue;
     break;
   case swift::TypeKind::DynamicSelf:
+    swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasValue;
+    break;
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
