@@ -77,7 +77,7 @@ OPTIONS
 
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
- 
+
 .. option:: --papertrail
 
  When running dsymutil as part of your build system, it can be desirable for
@@ -92,6 +92,14 @@ OPTIONS
 .. option:: --remarks-prepend-path <path>
 
  Specify a directory to prepend the paths of the external remark files.
+
+.. option:: --statistics
+
+ Print statistics about the contribution of each object file to the linked
+ debug info. This prints a table after linking with the object file name, the
+ size of the debug info in the object file (in bytes) and the size contributed
+ (in bytes) to the linked dSYM. The table is sorted by the output size listing
+ the obj ect files with the largest contribution first.
 
 .. option:: --symbol-map <bcsymbolmap>
 
