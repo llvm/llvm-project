@@ -480,26 +480,6 @@ static mlir::GenRegistration
 // Serialization AutoGen
 //===----------------------------------------------------------------------===//
 
-// Writes the following function to `os`:
-//   inline uint32_t getOpcode(<op-class-name>) { return <opcode>; }
-static void emitGetOpcodeFunction(const Record *record, Operator const &op,
-                                  raw_ostream &os) {
-  os << formatv("template <> constexpr inline ::mlir::spirv::Opcode "
-                "getOpcode<{0}>() {{\n",
-                op.getQualCppClassName());
-  os << formatv("  return ::mlir::spirv::Opcode::{0};\n",
-                record->getValueAsString("spirvOpName"));
-  os << "}\n";
-}
-
-/// Forward declaration of function to return the SPIR-V opcode corresponding to
-/// an operation. This function will be generated for all SPV_Op instances that
-/// have hasOpcode = 1.
-static void declareOpcodeFn(raw_ostream &os) {
-  os << "template <typename OpClass> inline constexpr ::mlir::spirv::Opcode "
-        "getOpcode();\n";
-}
-
 /// Generates code to serialize attributes of a SPV_Op `op` into `os`. The
 /// generates code extracts the attribute with name `attrName` from
 /// `operandList` of `op`.
@@ -663,8 +643,9 @@ static void emitSerializationFunction(const Record *attrClass,
     // Emit debug info.
     os << formatv("  emitDebugLine(functionBody, {0}.getLoc());\n", opVar);
     os << formatv("  encodeInstructionInto("
-                  "functionBody, spirv::getOpcode<{0}>(), {1});\n",
-                  op.getQualCppClassName(), operands);
+                  "functionBody, spirv::Opcode::{1}, {2});\n",
+                  op.getQualCppClassName(),
+                  record->getValueAsString("spirvOpName"), operands);
   }
 
   // Process decorations.
@@ -1047,11 +1028,10 @@ static bool emitSerializationFns(const RecordKeeper &recordKeeper,
   std::string dSerFnString, dDesFnString, serFnString, deserFnString,
       utilsString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
-      serFn(serFnString), deserFn(deserFnString), utils(utilsString);
-  auto attrClass = recordKeeper.getClass("Attr");
+      serFn(serFnString), deserFn(deserFnString);
+  Record *attrClass = recordKeeper.getClass("Attr");
 
   // Emit the serialization and deserialization functions simultaneously.
-  declareOpcodeFn(utils);
   StringRef opVar("op");
   StringRef opcode("opcode"), words("words");
 
@@ -1067,7 +1047,6 @@ static bool emitSerializationFns(const RecordKeeper &recordKeeper,
       emitSerializationDispatch(op, "  ", opVar, dSerFn);
     }
     if (def->getValueAsBit("hasOpcode")) {
-      emitGetOpcodeFunction(def, op, utils);
       emitDeserializationDispatch(op, def, "  ", words, dDesFn);
     }
   }
@@ -1075,10 +1054,6 @@ static bool emitSerializationFns(const RecordKeeper &recordKeeper,
   finalizeDispatchDeserializationFn(opcode, dDesFn);
 
   emitExtendedSetDeserializationDispatch(recordKeeper, dDesFn);
-
-  os << "#ifdef GET_SPIRV_SERIALIZATION_UTILS\n";
-  os << utils.str();
-  os << "#endif // GET_SPIRV_SERIALIZATION_UTILS\n\n";
 
   os << "#ifdef GET_SERIALIZATION_FNS\n\n";
   os << serFn.str();
