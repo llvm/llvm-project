@@ -12,6 +12,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 
 #include <tuple>
 
@@ -146,4 +147,34 @@ TEST(XcodeSDKTest, GetCanonicalName) {
   info.type = XcodeSDK::Type::iPhoneOS;
   info.version = llvm::VersionTuple(7, 0);
   EXPECT_EQ("iphoneos7.0.internal", XcodeSDK::GetCanonicalName(info));
+}
+
+TEST(XcodeSDKTest, GetSDKTypeForTriple) {
+  EXPECT_EQ(
+      XcodeSDK::GetSDKTypeForTriple(llvm::Triple("x86_64-apple-macosx10.14")),
+      XcodeSDK::Type::MacOSX);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("x86_64-apple-darwin")),
+            XcodeSDK::Type::MacOSX);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(
+                llvm::Triple("x86_64-apple-ios13.4-simulator")),
+            XcodeSDK::Type::iPhoneSimulator);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("arm64-apple-ios13.4")),
+            XcodeSDK::Type::iPhoneOS);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(
+                llvm::Triple("x86_64-apple-ios13.4-macabi")),
+            XcodeSDK::Type::MacOSX);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(
+                llvm::Triple("x86_64-apple-tvos-simulator")),
+            XcodeSDK::Type::AppleTVSimulator);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("arm64-apple-tvos")),
+            XcodeSDK::Type::AppleTVOS);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(
+                llvm::Triple("x86_64-apple-watchos-simulator")),
+            XcodeSDK::Type::WatchSimulator);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("arm64-apple-watchos")),
+            XcodeSDK::Type::watchOS);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("x86_64-unknown-linux")),
+            XcodeSDK::Type::Linux);
+  EXPECT_EQ(XcodeSDK::GetSDKTypeForTriple(llvm::Triple("i386-unknown-netbsd")),
+            XcodeSDK::Type::unknown);
 }
