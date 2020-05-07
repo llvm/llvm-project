@@ -181,7 +181,7 @@ static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
   if (parser.parseOperandList(operands))
     return mlir::failure();
 
-  llvm::SmallVector<mlir::NamedAttribute, 4> attrs;
+  mlir::NamedAttrList attrs;
   mlir::SymbolRefAttr funcAttr;
   bool isDirect = operands.empty();
   if (isDirect)
@@ -259,7 +259,7 @@ template <typename OPTY>
 static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
                                     mlir::OperationState &result) {
   llvm::SmallVector<mlir::OpAsmParser::OperandType, 2> ops;
-  llvm::SmallVector<mlir::NamedAttribute, 4> attrs;
+  mlir::NamedAttrList attrs;
   mlir::Attribute predicateNameAttr;
   mlir::Type type;
   if (parser.parseAttribute(predicateNameAttr, OPTY::getPredicateAttrName(),
@@ -279,7 +279,8 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
   auto predicate = fir::CmpfOp::getPredicateByName(predicateName);
   auto builder = parser.getBuilder();
   mlir::Type i1Type = builder.getI1Type();
-  attrs[0].second = builder.getI64IntegerAttr(static_cast<int64_t>(predicate));
+  attrs.set(OPTY::getPredicateAttrName(),
+            builder.getI64IntegerAttr(static_cast<int64_t>(predicate)));
   result.attributes = attrs;
   result.addTypes({i1Type});
   return success();
@@ -1102,7 +1103,7 @@ static mlir::ParseResult parseSelectCase(mlir::OpAsmParser &parser,
     mlir::Attribute attr;
     mlir::Block *dest;
     llvm::SmallVector<mlir::Value, 8> destArg;
-    llvm::SmallVector<mlir::NamedAttribute, 1> temp;
+    mlir::NamedAttrList temp;
     if (parser.parseAttribute(attr, "a", temp) || isValidCaseAttr(attr) ||
         parser.parseComma())
       return mlir::failure();
@@ -1323,7 +1324,7 @@ static ParseResult parseSelectType(OpAsmParser &parser,
     mlir::Attribute attr;
     mlir::Block *dest;
     llvm::SmallVector<mlir::Value, 8> destArg;
-    llvm::SmallVector<mlir::NamedAttribute, 1> temp;
+    mlir::NamedAttrList temp;
     if (parser.parseAttribute(attr, "a", temp) || parser.parseComma() ||
         parser.parseSuccessorAndUseList(dest, destArg))
       return mlir::failure();

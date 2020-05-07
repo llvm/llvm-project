@@ -366,28 +366,28 @@ public:
   /// Parse an arbitrary attribute and return it in result.  This also adds the
   /// attribute to the specified attribute list with the specified name.
   ParseResult parseAttribute(Attribute &result, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) {
+                             NamedAttrList &attrs) {
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
   /// Parse an attribute of a specific kind and type.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) {
+                             NamedAttrList &attrs) {
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
   /// Parse an arbitrary attribute of a given type and return it in result. This
   /// also adds the attribute to the specified attribute list with the specified
   /// name.
-  virtual ParseResult
-  parseAttribute(Attribute &result, Type type, StringRef attrName,
-                 SmallVectorImpl<NamedAttribute> &attrs) = 0;
+  virtual ParseResult parseAttribute(Attribute &result, Type type,
+                                     StringRef attrName,
+                                     NamedAttrList &attrs) = 0;
 
   /// Parse an attribute of a specific kind and type.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) {
+                             NamedAttrList &attrs) {
     llvm::SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
@@ -404,13 +404,12 @@ public:
   }
 
   /// Parse a named dictionary into 'result' if it is present.
-  virtual ParseResult
-  parseOptionalAttrDict(SmallVectorImpl<NamedAttribute> &result) = 0;
+  virtual ParseResult parseOptionalAttrDict(NamedAttrList &result) = 0;
 
   /// Parse a named dictionary into 'result' if the `attributes` keyword is
   /// present.
   virtual ParseResult
-  parseOptionalAttrDictWithKeyword(SmallVectorImpl<NamedAttribute> &result) = 0;
+  parseOptionalAttrDictWithKeyword(NamedAttrList &result) = 0;
 
   /// Parse an affine map instance into 'map'.
   virtual ParseResult parseAffineMap(AffineMap &map) = 0;
@@ -425,7 +424,7 @@ public:
   /// Parse an @-identifier and store it (without the '@' symbol) in a string
   /// attribute named 'attrName'.
   ParseResult parseSymbolName(StringAttr &result, StringRef attrName,
-                              SmallVectorImpl<NamedAttribute> &attrs) {
+                              NamedAttrList &attrs) {
     if (failed(parseOptionalSymbolName(result, attrName, attrs)))
       return emitError(getCurrentLocation())
              << "expected valid '@'-identifier for symbol name";
@@ -434,9 +433,9 @@ public:
 
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
   /// string attribute named 'attrName'.
-  virtual ParseResult
-  parseOptionalSymbolName(StringAttr &result, StringRef attrName,
-                          SmallVectorImpl<NamedAttribute> &attrs) = 0;
+  virtual ParseResult parseOptionalSymbolName(StringAttr &result,
+                                              StringRef attrName,
+                                              NamedAttrList &attrs) = 0;
 
   //===--------------------------------------------------------------------===//
   // Operand Parsing
@@ -552,8 +551,7 @@ public:
   /// dimensions/symbol identifiers according to mlir::isValidDim/Symbol.
   virtual ParseResult
   parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands, Attribute &map,
-                         StringRef attrName,
-                         SmallVectorImpl<NamedAttribute> &attrs,
+                         StringRef attrName, NamedAttrList &attrs,
                          Delimiter delimiter = Delimiter::Square) = 0;
 
   //===--------------------------------------------------------------------===//

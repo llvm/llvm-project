@@ -84,24 +84,6 @@ bool BoolAttr::getValue() const { return getImpl()->value; }
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
-/// Perform a three-way comparison between the names of the specified
-/// NamedAttributes.
-static int compareNamedAttributes(const NamedAttribute *lhs,
-                                  const NamedAttribute *rhs) {
-  return strcmp(lhs->first.data(), rhs->first.data());
-}
-
-/// Returns if the name of the given attribute precedes that of 'name'.
-static bool compareNamedAttributeWithName(const NamedAttribute &attr,
-                                          StringRef name) {
-  // This is correct even when attr.first.data()[name.size()] is not a zero
-  // string terminator, because we only care about a less than comparison.
-  // This can't use memcmp, because it doesn't guarantee that it will stop
-  // reading both buffers if one is shorter than the other, even if there is
-  // a difference.
-  return strncmp(attr.first.data(), name.data(), name.size()) < 0;
-}
-
 /// Helper function that does either an in place sort or sorts from source array
 /// into destination. If inPlace then storage is both the source and the
 /// destination, else value is the source and storage destination. Returns
@@ -112,32 +94,35 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
   // Specialize for the common case.
   switch (value.size()) {
   case 0:
-  case 1:
-    // Zero or one elements are already sorted.
+    // Zero already sorted.
     break;
-  case 2:
+  case 1:
+    // One already sorted but may need to be copied.
+    if (!inPlace)
+      storage.assign({value[0]});
+    break;
+  case 2: {
     assert(value[0].first != value[1].first &&
            "DictionaryAttr element names must be unique");
-    if (compareNamedAttributes(&value[0], &value[1]) > 0) {
-      if (inPlace)
+    bool isSorted = value[0] < value[1];
+    if (inPlace) {
+      if (!isSorted)
         std::swap(storage[0], storage[1]);
-      else
-        storage.append({value[1], value[0]});
-      return true;
+    } else if (isSorted) {
+      storage.assign({value[0], value[1]});
+    } else {
+      storage.assign({value[1], value[0]});
     }
-    break;
+    return !isSorted;
+  }
   default:
+    if (!inPlace)
+      storage.assign(value.begin(), value.end());
     // Check to see they are sorted already.
-    bool isSorted =
-        llvm::is_sorted(value, [](NamedAttribute l, NamedAttribute r) {
-          return compareNamedAttributes(&l, &r) < 0;
-        });
+    bool isSorted = llvm::is_sorted(value);
     if (!isSorted) {
       // If not, do a general sort.
-      if (!inPlace)
-        storage.append(value.begin(), value.end());
-      llvm::array_pod_sort(storage.begin(), storage.end(),
-                           compareNamedAttributes);
+      llvm::array_pod_sort(storage.begin(), storage.end());
       value = storage;
     }
 
@@ -152,15 +137,19 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
   return false;
 }
 
-/// Sorts the NamedAttributes in the array ordered by name as expected by
-/// getWithSorted.
-/// Requires: uniquely named attributes.
-void DictionaryAttr::sort(SmallVectorImpl<NamedAttribute> &array) {
-  dictionaryAttrSort</*inPlace=*/true>(array, array);
+bool DictionaryAttr::sort(ArrayRef<NamedAttribute> value,
+                          SmallVectorImpl<NamedAttribute> &storage) {
+  return dictionaryAttrSort</*inPlace=*/false>(value, storage);
+}
+
+bool DictionaryAttr::sortInPlace(SmallVectorImpl<NamedAttribute> &array) {
+  return dictionaryAttrSort</*inPlace=*/true>(array, array);
 }
 
 DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
                                    MLIRContext *context) {
+  if (value.empty())
+    return DictionaryAttr::getEmpty(context);
   assert(llvm::all_of(value,
                       [](const NamedAttribute &attr) { return attr.second; }) &&
          "value cannot have null entries");
@@ -172,11 +161,12 @@ DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
 
   return Base::get(context, StandardAttributes::Dictionary, value);
 }
-
 /// Construct a dictionary with an array of values that is known to already be
 /// sorted by name and uniqued.
 DictionaryAttr DictionaryAttr::getWithSorted(ArrayRef<NamedAttribute> value,
                                              MLIRContext *context) {
+  if (value.empty())
+    return DictionaryAttr::getEmpty(context);
   // Ensure that the attribute elements are unique and sorted.
   assert(llvm::is_sorted(value,
                          [](NamedAttribute l, NamedAttribute r) {
@@ -208,7 +198,7 @@ Attribute DictionaryAttr::get(Identifier name) const {
 /// Return the specified named attribute if present, None otherwise.
 Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
   ArrayRef<NamedAttribute> values = getValue();
-  auto it = llvm::lower_bound(values, name, compareNamedAttributeWithName);
+  const auto *it = llvm::lower_bound(values, name);
   return it != values.end() && it->first == name ? *it
                                                  : Optional<NamedAttribute>();
 }
@@ -1369,6 +1359,15 @@ MutableDictionaryAttr::MutableDictionaryAttr(
   setAttrs(attributes);
 }
 
+/// Return the underlying dictionary attribute.
+DictionaryAttr
+MutableDictionaryAttr::getDictionary(MLIRContext *context) const {
+  // Construct empty DictionaryAttr if needed.
+  if (!attrs)
+    return DictionaryAttr::get({}, context);
+  return attrs;
+}
+
 ArrayRef<NamedAttribute> MutableDictionaryAttr::getAttrs() const {
   return attrs ? attrs.getValue() : llvm::None;
 }
@@ -1408,7 +1407,7 @@ void MutableDictionaryAttr::set(Identifier name, Attribute value) {
 
   // Look for an existing value for the given name, and set it in-place.
   ArrayRef<NamedAttribute> values = getAttrs();
-  auto it = llvm::find_if(
+  const auto *it = llvm::find_if(
       values, [name](NamedAttribute attr) { return attr.first == name; });
   if (it != values.end()) {
     // Bail out early if the value is the same as what we already have.
@@ -1422,7 +1421,7 @@ void MutableDictionaryAttr::set(Identifier name, Attribute value) {
   }
 
   // Otherwise, insert the new attribute into its sorted position.
-  it = llvm::lower_bound(values, name, compareNamedAttributeWithName);
+  it = llvm::lower_bound(values, name);
   SmallVector<NamedAttribute, 8> newAttrs;
   newAttrs.reserve(values.size() + 1);
   newAttrs.append(values.begin(), it);
@@ -1453,4 +1452,16 @@ auto MutableDictionaryAttr::remove(Identifier name) -> RemoveResult {
     }
   }
   return RemoveResult::NotFound;
+}
+
+bool mlir::operator<(const NamedAttribute &lhs, const NamedAttribute &rhs) {
+  return strcmp(lhs.first.data(), rhs.first.data()) < 0;
+}
+bool mlir::operator<(const NamedAttribute &lhs, StringRef rhs) {
+  // This is correct even when attr.first.data()[name.size()] is not a zero
+  // string terminator, because we only care about a less than comparison.
+  // This can't use memcmp, because it doesn't guarantee that it will stop
+  // reading both buffers if one is shorter than the other, even if there is
+  // a difference.
+  return strncmp(lhs.first.data(), rhs.data(), rhs.size()) < 0;
 }

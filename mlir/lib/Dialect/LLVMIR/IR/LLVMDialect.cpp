@@ -92,8 +92,8 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
     predicateValue = static_cast<int64_t>(predicate.getValue());
   }
 
-  result.attributes[0].second =
-      parser.getBuilder().getI64IntegerAttr(predicateValue);
+  result.attributes.set("predicate",
+                        parser.getBuilder().getI64IntegerAttr(predicateValue));
 
   // The result type is either i1 or a vector type <? x i1> if the inputs are
   // vectors.
@@ -1186,7 +1186,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
          "expected as many argument attribute lists as arguments");
   SmallString<8> argAttrName;
   for (unsigned i = 0; i < numInputs; ++i)
-    if (auto argDict = argAttrs[i].getDictionary())
+    if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
       result.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 
@@ -1249,8 +1249,8 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::OperandType, 8> entryArgs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 1> argAttrs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 1> resultAttrs;
+  SmallVector<NamedAttrList, 1> argAttrs;
+  SmallVector<NamedAttrList, 1> resultAttrs;
   SmallVector<Type, 8> argTypes;
   SmallVector<Type, 4> resultTypes;
   bool isVariadic;
