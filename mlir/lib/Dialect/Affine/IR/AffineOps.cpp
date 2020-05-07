@@ -2445,7 +2445,7 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
     return failure();
 
   AffineMapAttr stepsMapAttr;
-  SmallVector<NamedAttribute, 1> stepsAttrs;
+  NamedAttrList stepsAttrs;
   SmallVector<OpAsmParser::OperandType, 4> stepsMapOperands;
   if (failed(parser.parseOptionalKeyword("step"))) {
     SmallVector<int64_t, 4> steps(ivs.size(), 1);

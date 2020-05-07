@@ -70,9 +70,9 @@ Operation *Operation::create(Location location, OperationName name,
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
-  return Operation::create(
-      state.location, state.name, state.types, state.operands,
-      MutableDictionaryAttr(state.attributes), state.successors, state.regions);
+  return Operation::create(state.location, state.name, state.types,
+                           state.operands, state.attributes, state.successors,
+                           state.regions);
 }
 
 /// Create a new Operation with the specific fields.

@@ -105,7 +105,7 @@ static ParseResult
 parseEnumStrAttr(EnumClass &value, OpAsmParser &parser,
                  StringRef attrName = spirv::attributeName<EnumClass>()) {
   Attribute attrVal;
-  SmallVector<NamedAttribute, 1> attr;
+  NamedAttrList attr;
   auto loc = parser.getCurrentLocation();
   if (parser.parseAttribute(attrVal, parser.getBuilder().getNoneType(),
                             attrName, attr)) {
@@ -1019,7 +1019,7 @@ static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
   // Parse the optional branch weights.
   if (succeeded(parser.parseOptionalLSquare())) {
     IntegerAttr trueWeight, falseWeight;
-    SmallVector<NamedAttribute, 2> weights;
+    NamedAttrList weights;
 
     auto i32Type = builder.getIntegerType(32);
     if (parser.parseAttribute(trueWeight, i32Type, "weight", weights) ||
@@ -1443,7 +1443,7 @@ static ParseResult parseEntryPointOp(OpAsmParser &parser,
       // The name of the interface variable attribute isnt important
       auto attrName = "var_symbol";
       FlatSymbolRefAttr var;
-      SmallVector<NamedAttribute, 1> attrs;
+      NamedAttrList attrs;
       if (parser.parseAttribute(var, Type(), attrName, attrs)) {
         return failure();
       }
@@ -1497,7 +1497,7 @@ static ParseResult parseExecutionModeOp(OpAsmParser &parser,
   SmallVector<int32_t, 4> values;
   Type i32Type = parser.getBuilder().getIntegerType(32);
   while (!parser.parseOptionalComma()) {
-    SmallVector<NamedAttribute, 1> attr;
+    NamedAttrList attr;
     Attribute value;
     if (parser.parseAttribute(value, i32Type, "value", attr)) {
       return failure();
@@ -1529,8 +1529,8 @@ static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
 
 static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
   SmallVector<OpAsmParser::OperandType, 4> entryArgs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 4> argAttrs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 4> resultAttrs;
+  SmallVector<NamedAttrList, 4> argAttrs;
+  SmallVector<NamedAttrList, 4> resultAttrs;
   SmallVector<Type, 4> argTypes;
   SmallVector<Type, 4> resultTypes;
   auto &builder = parser.getBuilder();
