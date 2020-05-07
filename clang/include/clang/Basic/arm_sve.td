@@ -1382,6 +1382,21 @@ def SVXAR_N   : SInst<"svxar[_n_{d}]",   "dddi", "csilUcUsUiUl", MergeNone, "aar
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Large integer arithmetic
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVADCLB : SInst<"svadclb[_{d}]", "dddd", "UiUl", MergeNone, "aarch64_sve_adclb">;
+def SVADCLT : SInst<"svadclt[_{d}]", "dddd", "UiUl", MergeNone, "aarch64_sve_adclt">;
+def SVSBCLB : SInst<"svsbclb[_{d}]", "dddd", "UiUl", MergeNone, "aarch64_sve_sbclb">;
+def SVSBCLT : SInst<"svsbclt[_{d}]", "dddd", "UiUl", MergeNone, "aarch64_sve_sbclt">;
+
+def SVADCLB_N : SInst<"svadclb[_n_{d}]", "ddda", "UiUl", MergeNone, "aarch64_sve_adclb">;
+def SVADCLT_N : SInst<"svadclt[_n_{d}]", "ddda", "UiUl", MergeNone, "aarch64_sve_adclt">;
+def SVSBCLB_N : SInst<"svsbclb[_n_{d}]", "ddda", "UiUl", MergeNone, "aarch64_sve_sbclb">;
+def SVSBCLT_N : SInst<"svsbclt[_n_{d}]", "ddda", "UiUl", MergeNone, "aarch64_sve_sbclt">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 // Non-temporal gather load one vector (vector base)
