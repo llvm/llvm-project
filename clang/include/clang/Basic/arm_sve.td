@@ -1745,6 +1745,14 @@ def SVLOGB_Z  : SInst<"svlogb[_{d}]", "xPd",  "hfd", MergeZeroExp, "aarch64_sve_
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Vector Histogram count
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVHISTCNT  : SInst<"svhistcnt[_{d}]_z", "uPdd", "ilUiUl", MergeNone, "aarch64_sve_histcnt">;
+def SVHISTSEG  : SInst<"svhistseg[_{d}]",   "udd",  "cUc",    MergeNone, "aarch64_sve_histseg">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Contiguous conflict detection
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw_b", [IsOverloadWhileRW]>;
