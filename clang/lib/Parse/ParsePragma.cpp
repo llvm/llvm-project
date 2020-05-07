@@ -1873,6 +1873,7 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
       return;
     }
 
+    SourceLocation PragmaLocation = Tok.getLocation();
     PP.Lex(Tok); // eat ['bss'|'data'|'rodata'|'text']
     if (Tok.isNot(tok::equal)) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_clang_section_expected_equal) << SecKind;
@@ -1883,10 +1884,11 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
     if (!PP.LexStringLiteral(Tok, SecName, "pragma clang section", false))
       return;
 
-    Actions.ActOnPragmaClangSection(Tok.getLocation(),
-      (SecName.size()? Sema::PragmaClangSectionAction::PCSA_Set :
-                       Sema::PragmaClangSectionAction::PCSA_Clear),
-       SecKind, SecName);
+    Actions.ActOnPragmaClangSection(
+        PragmaLocation,
+        (SecName.size() ? Sema::PragmaClangSectionAction::PCSA_Set
+                        : Sema::PragmaClangSectionAction::PCSA_Clear),
+        SecKind, SecName);
   }
 }
 
