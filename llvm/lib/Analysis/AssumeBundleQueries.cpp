@@ -89,11 +89,13 @@ void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
   }
 }
 
-static RetainedKnowledge
-getKnowledgeFromBundle(CallInst &Assume, const CallBase::BundleOpInfo &BOI) {
+RetainedKnowledge
+llvm::getKnowledgeFromBundle(CallInst &Assume,
+                             const CallBase::BundleOpInfo &BOI) {
   RetainedKnowledge Result;
   Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
-  Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
+  if (bundleHasArgument(BOI, ABA_WasOn))
+    Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
   if (BOI.End - BOI.Begin > ABA_Argument)
     Result.ArgValue =
         cast<ConstantInt>(getValueFromBundleOpInfo(Assume, BOI, ABA_Argument))
@@ -116,7 +118,7 @@ bool llvm::isAssumeWithEmptyBundle(CallInst &CI) {
          "this function is intended to be used on llvm.assume");
   return none_of(Assume.bundle_op_infos(),
                  [](const CallBase::BundleOpInfo &BOI) {
-                   return BOI.Tag->getKey() != "ignore";
+                   return BOI.Tag->getKey() != IgnoreBundleTag;
                  });
 }
 
