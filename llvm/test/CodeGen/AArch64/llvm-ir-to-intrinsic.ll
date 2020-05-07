@@ -281,3 +281,183 @@ define <vscale x 2 x i64> @umax_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   %min = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   ret <vscale x 2 x i64> %min
 }
+
+;
+; ASR
+;
+
+define <vscale x 16 x i8> @asr_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b){
+; CHECK-LABEL: @asr_i8
+; CHECK-DAG: ptrue p0.b
+; CHECK-DAG: asr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT: ret
+  %shr = ashr <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i8> %shr
+}
+
+define <vscale x 8 x i16> @asr_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b){
+; CHECK-LABEL: @asr_i16
+; CHECK-DAG: ptrue p0.h
+; CHECK-DAG: asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT: ret
+  %shr = ashr <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i16> %shr
+}
+
+define <vscale x 4 x i32> @asr_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b){
+; CHECK-LABEL: @asr_i32
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT: ret
+  %shr = ashr <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i32> %shr
+}
+
+define <vscale x 2 x i64> @asr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b){
+; CHECK-LABEL: @asr_i64
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: asr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT: ret
+  %shr = ashr <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i64> %shr
+}
+
+define <vscale x 16 x i16> @asr_split_i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %b){
+; CHECK-LABEL: @asr_split_i16
+; CHECK-DAG: ptrue p0.h
+; CHECK-DAG: asr z0.h, p0/m, z0.h, z2.h
+; CHECK-DAG: asr z1.h, p0/m, z1.h, z3.h
+; CHECK-NEXT: ret
+  %shr = ashr <vscale x 16 x i16> %a, %b
+  ret <vscale x 16 x i16> %shr
+}
+
+define <vscale x 2 x i32> @asr_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b){
+; CHECK-LABEL: @asr_promote_i32
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: and z1.d, z1.d, #0xffffffff
+; CHECK-DAG: asr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT: ret
+  %shr = ashr <vscale x 2 x i32> %a, %b
+  ret <vscale x 2 x i32> %shr
+}
+
+;
+; LSL
+;
+
+define <vscale x 16 x i8> @lsl_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b){
+; CHECK-LABEL: @lsl_i8
+; CHECK-DAG: ptrue p0.b
+; CHECK-DAG: lsl z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT: ret
+  %shl = shl <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i8> %shl
+}
+
+define <vscale x 8 x i16> @lsl_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b){
+; CHECK-LABEL: @lsl_i16
+; CHECK-DAG: ptrue p0.h
+; CHECK-DAG: lsl z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT: ret
+  %shl = shl <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i16> %shl
+}
+
+define <vscale x 4 x i32> @lsl_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b){
+; CHECK-LABEL: @lsl_i32
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: lsl z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT: ret
+  %shl = shl <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i32> %shl
+}
+
+define <vscale x 2 x i64> @lsl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b){
+; CHECK-LABEL: @lsl_i64
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: lsl z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT: ret
+  %shl = shl <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i64> %shl
+}
+
+define <vscale x 4 x i64> @lsl_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b){
+; CHECK-LABEL: @lsl_split_i64
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: lsl z0.d, p0/m, z0.d, z2.d
+; CHECK-DAG: lsl z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT: ret
+  %shl = shl <vscale x 4 x i64> %a, %b
+  ret <vscale x 4 x i64> %shl
+}
+
+define <vscale x 4 x i16> @lsl_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b){
+; CHECK-LABEL: @lsl_promote_i16
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: and z1.s, z1.s, #0xffff
+; CHECK-DAG: lsl z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT: ret
+  %shl = shl <vscale x 4 x i16> %a, %b
+  ret <vscale x 4 x i16> %shl
+}
+
+;
+; LSR
+;
+
+define <vscale x 16 x i8> @lsr_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b){
+; CHECK-LABEL: @lsr_i8
+; CHECK-DAG: ptrue p0.b
+; CHECK-DAG: lsr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT: ret
+  %shr = lshr <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i8> %shr
+}
+
+define <vscale x 8 x i16> @lsr_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b){
+; CHECK-LABEL: @lsr_i16
+; CHECK-DAG: ptrue p0.h
+; CHECK-DAG: lsr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT: ret
+  %shr = lshr <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i16> %shr
+}
+
+define <vscale x 4 x i32> @lsr_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b){
+; CHECK-LABEL: @lsr_i32
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: lsr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT: ret
+  %shr = lshr <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i32> %shr
+}
+
+define <vscale x 2 x i64> @lsr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b){
+; CHECK-LABEL: @lsr_i64
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: lsr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT: ret
+  %shr = lshr <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i64> %shr
+}
+
+define <vscale x 8 x i8> @lsr_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b){
+; CHECK-LABEL: @lsr_promote_i8
+; CHECK-DAG: ptrue p0.h
+; CHECK-DAG: and z1.h, z1.h, #0xff
+; CHECK-DAG: lsr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT: ret
+  %shr = lshr <vscale x 8 x i8> %a, %b
+  ret <vscale x 8 x i8> %shr
+}
+
+define <vscale x 8 x i32> @lsr_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b){
+; CHECK-LABEL: @lsr_split_i32
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: lsr z0.s, p0/m, z0.s, z2.s
+; CHECK-DAG: lsr z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT: ret
+  %shr = lshr <vscale x 8 x i32> %a, %b
+  ret <vscale x 8 x i32> %shr
+}
