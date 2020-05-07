@@ -67,6 +67,7 @@
 // s: scalar of element type
 // a: scalar of element type (splat to vector type)
 // R: scalar of 1/2 width element type (splat to vector type)
+// r: scalar of 1/4 width element type (splat to vector type)
 // e: 1/2 width unsigned elements, 2x element count
 // h: 1/2 width elements, 2x element count
 // q: 1/4 width elements, 4x element count
@@ -675,6 +676,25 @@ defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla">;
 defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls">;
 defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb">;
 
+//------------------------------------------------------------------------------
+
+def SVDOT_S    : SInst<"svdot[_{0}]",    "ddqq", "il",       MergeNone, "aarch64_sve_sdot">;
+def SVDOT_U    : SInst<"svdot[_{0}]",    "ddqq", "UiUl",     MergeNone, "aarch64_sve_udot">;
+def SVQADD_S   : SInst<"svqadd[_{d}]",   "ddd",  "csil",     MergeNone, "aarch64_sve_sqadd_x">;
+def SVQADD_U   : SInst<"svqadd[_{d}]",   "ddd",  "UcUsUiUl", MergeNone, "aarch64_sve_uqadd_x">;
+def SVQSUB_S   : SInst<"svqsub[_{d}]",   "ddd",  "csil",     MergeNone, "aarch64_sve_sqsub_x">;
+def SVQSUB_U   : SInst<"svqsub[_{d}]",   "ddd",  "UcUsUiUl", MergeNone, "aarch64_sve_uqsub_x">;
+
+def SVDOT_N_S  : SInst<"svdot[_n_{0}]",  "ddqr", "il",       MergeNone, "aarch64_sve_sdot">;
+def SVDOT_N_U  : SInst<"svdot[_n_{0}]",  "ddqr", "UiUl",     MergeNone, "aarch64_sve_udot">;
+def SVQADD_N_S : SInst<"svqadd[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqadd_x">;
+def SVQADD_N_U : SInst<"svqadd[_n_{d}]", "dda",  "UcUsUiUl", MergeNone, "aarch64_sve_uqadd_x">;
+def SVQSUB_N_S : SInst<"svqsub[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqsub_x">;
+def SVQSUB_N_U : SInst<"svqsub[_n_{d}]", "dda",  "UcUsUiUl", MergeNone, "aarch64_sve_uqsub_x">;
+
+def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Logical operations
 
@@ -1179,11 +1199,6 @@ defm SVQINCW_S : SInst_SAT2<"svqincw", "aarch64_sve_sqincw", SignedWord>;
 defm SVQINCW_U : SInst_SAT2<"svqincw", "aarch64_sve_uqincw", UnsignedWord>;
 defm SVQINCD_S : SInst_SAT2<"svqincd", "aarch64_sve_sqincd", SignedDoubleWord>;
 defm SVQINCD_U : SInst_SAT2<"svqincd", "aarch64_sve_uqincd", UnsignedDoubleWord>;
-
-////////////////////////////////////////////////////////////////////////////////
-// Integer arithmetic
-def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
-def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT
