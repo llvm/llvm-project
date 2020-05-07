@@ -20,22 +20,22 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -74,6 +74,8 @@ public:
   }
 
 private:
+  LoopInfo *LI = nullptr;
+
   // Check this is a valid gather with correct alignment
   bool isLegalTypeAndAlignment(unsigned NumElements, unsigned ElemSize,
                                unsigned Alignment);
@@ -82,9 +84,17 @@ private:
   // Check for a getelementptr and deduce base and offsets from it, on success
   // returning the base directly and the offsets indirectly using the Offsets
   // argument
-  Value *checkGEP(Value *&Offsets, Type *Ty, Value *Ptr, IRBuilder<> &Builder);
+  Value *checkGEP(Value *&Offsets, Type *Ty, GetElementPtrInst *GEP,
+                  IRBuilder<> &Builder);
   // Compute the scale of this gather/scatter instruction
   int computeScale(unsigned GEPElemSize, unsigned MemoryElemSize);
+  // If the value is a constant, or derived from constants via additions
+  // and multilications, return its numeric value
+  Optional<int64_t> getIfConst(const Value *V);
+  // If Inst is an add instruction, check whether one summand is a
+  // constant. If so, scale this constant and return it together with
+  // the other summand.
+  std::pair<Value *, int64_t> getVarAndConst(Value *Inst, int TypeScale);
 
   Value *lowerGather(IntrinsicInst *I);
   // Create a gather from a base + vector of offsets
@@ -92,7 +102,22 @@ private:
                                      Instruction *&Root, IRBuilder<> &Builder);
   // Create a gather from a vector of pointers
   Value *tryCreateMaskedGatherBase(IntrinsicInst *I, Value *Ptr,
-                                   IRBuilder<> &Builder);
+                                   IRBuilder<> &Builder,
+                                   unsigned Increment = 0);
+  // Create a gather from a vector of pointers
+  Value *tryCreateMaskedGatherBaseWB(IntrinsicInst *I, Value *Ptr,
+                                     IRBuilder<> &Builder,
+                                     unsigned Increment = 0);
+  // QI gathers can increment their offsets on their own if the increment is
+  // a constant value (digit)
+  Value *tryCreateIncrementingGather(IntrinsicInst *I, Value *BasePtr,
+                                     Value *Ptr, GetElementPtrInst *GEP,
+                                     IRBuilder<> &Builder);
+  // QI gathers can increment their offsets on their own if the increment is
+  // a constant value (digit) - this creates a writeback QI gather
+  Value *tryCreateIncrementingWBGather(IntrinsicInst *I, Value *BasePtr,
+                                       Value *Ptr, unsigned TypeScale,
+                                       IRBuilder<> &Builder);
 
   Value *lowerScatter(IntrinsicInst *I);
   // Create a scatter to a base + vector of offsets
@@ -137,9 +162,9 @@ bool MVEGatherScatterLowering::isLegalTypeAndAlignment(unsigned NumElements,
   return false;
 }
 
-Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
+Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty,
+                                          GetElementPtrInst *GEP,
                                           IRBuilder<> &Builder) {
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP) {
     LLVM_DEBUG(
         dbgs() << "masked gathers/scatters: no getelementpointer found\n");
@@ -217,6 +242,56 @@ int MVEGatherScatterLowering::computeScale(unsigned GEPElemSize,
   return -1;
 }
 
+Optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
+  const Constant *C = dyn_cast<Constant>(V);
+  if (C != nullptr)
+    return Optional<int64_t>{C->getUniqueInteger().getSExtValue()};
+  if (!isa<Instruction>(V))
+    return Optional<int64_t>{};
+
+  const Instruction *I = cast<Instruction>(V);
+  if (I->getOpcode() == Instruction::Add ||
+              I->getOpcode() == Instruction::Mul) {
+    Optional<int64_t> Op0 = getIfConst(I->getOperand(0));
+    Optional<int64_t> Op1 = getIfConst(I->getOperand(1));
+    if (!Op0 || !Op1)
+      return Optional<int64_t>{};
+    if (I->getOpcode() == Instruction::Add)
+      return Optional<int64_t>{Op0.getValue() + Op1.getValue()};
+    if (I->getOpcode() == Instruction::Mul)
+      return Optional<int64_t>{Op0.getValue() * Op1.getValue()};
+  }
+  return Optional<int64_t>{};
+}
+
+std::pair<Value *, int64_t>
+MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
+  std::pair<Value *, int64_t> ReturnFalse =
+      std::pair<Value *, int64_t>(nullptr, 0);
+  // At this point, the instruction we're looking at must be an add or we
+  // bail out
+  Instruction *Add = dyn_cast<Instruction>(Inst);
+  if (Add == nullptr || Add->getOpcode() != Instruction::Add)
+    return ReturnFalse;
+
+  Value *Summand;
+  Optional<int64_t> Const;
+  // Find out which operand the value that is increased is
+  if ((Const = getIfConst(Add->getOperand(0))))
+    Summand = Add->getOperand(1);
+  else if ((Const = getIfConst(Add->getOperand(1))))
+    Summand = Add->getOperand(0);
+  else
+    return ReturnFalse;
+
+  // Check that the constant is small enough for an incrementing gather
+  int64_t Immediate = Const.getValue() << TypeScale;
+  if (Immediate > 512 || Immediate < -512 || Immediate % 4 != 0)
+    return ReturnFalse;
+
+  return std::pair<Value *, int64_t>(Summand, Immediate);
+}
+
 Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   using namespace PatternMatch;
   LLVM_DEBUG(dbgs() << "masked gathers: checking transform preconditions\n");
@@ -266,7 +341,8 @@ Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
 
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(IntrinsicInst *I,
                                                            Value *Ptr,
-                                                           IRBuilder<> &Builder) {
+                                                           IRBuilder<> &Builder,
+                                                           unsigned Increment) {
   using namespace PatternMatch;
   auto *Ty = cast<VectorType>(I->getType());
   LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
@@ -277,12 +353,34 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(IntrinsicInst *I,
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vldr_gather_base,
                                    {Ty, Ptr->getType()},
-                                   {Ptr, Builder.getInt32(0)});
+                                   {Ptr, Builder.getInt32(Increment)});
   else
     return Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_base_predicated,
         {Ty, Ptr->getType(), Mask->getType()},
-        {Ptr, Builder.getInt32(0), Mask});
+        {Ptr, Builder.getInt32(Increment), Mask});
+}
+
+Value *MVEGatherScatterLowering::tryCreateMaskedGatherBaseWB(
+    IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder, unsigned Increment) {
+  using namespace PatternMatch;
+  auto *Ty = cast<VectorType>(I->getType());
+  LLVM_DEBUG(
+      dbgs()
+      << "masked gathers: loading from vector of pointers with writeback\n");
+  if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
+    // Can't build an intrinsic for this
+    return nullptr;
+  Value *Mask = I->getArgOperand(2);
+  if (match(Mask, m_One()))
+    return Builder.CreateIntrinsic(Intrinsic::arm_mve_vldr_gather_base_wb,
+                                   {Ty, Ptr->getType()},
+                                   {Ptr, Builder.getInt32(Increment)});
+  else
+    return Builder.CreateIntrinsic(
+        Intrinsic::arm_mve_vldr_gather_base_wb_predicated,
+        {Ty, Ptr->getType(), Mask->getType()},
+        {Ptr, Builder.getInt32(Increment), Mask});
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
@@ -321,10 +419,17 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
     }
   }
 
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   Value *Offsets;
-  Value *BasePtr = checkGEP(Offsets, ResultTy, Ptr, Builder);
+  Value *BasePtr = checkGEP(Offsets, ResultTy, GEP, Builder);
   if (!BasePtr)
     return nullptr;
+  // Check whether the offset is a constant increment that could be merged into
+  // a QI gather
+  Value *Load =
+      tryCreateIncrementingGather(I, BasePtr, Offsets, GEP, Builder);
+  if (Load)
+    return Load;
 
   int Scale = computeScale(
       BasePtr->getType()->getPointerElementType()->getPrimitiveSizeInBits(),
@@ -346,6 +451,142 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
         {ResultTy, BasePtr->getType(), Offsets->getType()},
         {BasePtr, Offsets, Builder.getInt32(OriginalTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned)});
+}
+
+Value *MVEGatherScatterLowering::tryCreateIncrementingGather(
+    IntrinsicInst *I, Value *BasePtr, Value *Offsets, GetElementPtrInst *GEP,
+    IRBuilder<> &Builder) {
+  auto *Ty = cast<VectorType>(I->getType());
+  // Incrementing gathers only exist for v4i32
+  if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
+    return nullptr;
+  Loop *L = LI->getLoopFor(I->getParent());
+  if (L == nullptr)
+    // Incrementing gathers are not beneficial outside of a loop
+    return nullptr;
+  LLVM_DEBUG(
+      dbgs() << "masked gathers: trying to build incrementing wb gather\n");
+
+  // The gep was in charge of making sure the offsets are scaled correctly
+  // - calculate that factor so it can be applied by hand
+  DataLayout DT = I->getParent()->getParent()->getParent()->getDataLayout();
+  int TypeScale =
+      computeScale(DT.getTypeSizeInBits(GEP->getOperand(0)->getType()),
+                   DT.getTypeSizeInBits(GEP->getType()) /
+                       cast<VectorType>(GEP->getType())->getNumElements());
+  if (TypeScale == -1)
+    return nullptr;
+
+  if (GEP->hasOneUse()) {
+    // Only in this case do we want to build a wb gather, because the wb will
+    // change the phi which does affect other users of the gep (which will still
+    // be using the phi in the old way)
+    Value *Load =
+        tryCreateIncrementingWBGather(I, BasePtr, Offsets, TypeScale, Builder);
+    if (Load != nullptr)
+      return Load;
+  }
+  LLVM_DEBUG(
+      dbgs() << "masked gathers: trying to build incrementing non-wb gather\n");
+
+  std::pair<Value *, int64_t> Add = getVarAndConst(Offsets, TypeScale);
+  if (Add.first == nullptr)
+    return nullptr;
+  Value *OffsetsIncoming = Add.first;
+  int64_t Immediate = Add.second;
+
+  // Make sure the offsets are scaled correctly
+  Instruction *ScaledOffsets = BinaryOperator::Create(
+      Instruction::Shl, OffsetsIncoming,
+      Builder.CreateVectorSplat(Ty->getNumElements(), Builder.getInt32(TypeScale)),
+      "ScaledIndex", I);
+  // Add the base to the offsets
+  OffsetsIncoming = BinaryOperator::Create(
+      Instruction::Add, ScaledOffsets,
+      Builder.CreateVectorSplat(
+          Ty->getNumElements(),
+          Builder.CreatePtrToInt(
+              BasePtr,
+              cast<VectorType>(ScaledOffsets->getType())->getElementType())),
+      "StartIndex", I);
+
+  return cast<IntrinsicInst>(
+      tryCreateMaskedGatherBase(I, OffsetsIncoming, Builder, Immediate));
+}
+
+Value *MVEGatherScatterLowering::tryCreateIncrementingWBGather(
+    IntrinsicInst *I, Value *BasePtr, Value *Offsets, unsigned TypeScale,
+    IRBuilder<> &Builder) {
+  // Check whether this gather's offset is incremented by a constant - if so,
+  // and the load is of the right type, we can merge this into a QI gather
+  Loop *L = LI->getLoopFor(I->getParent());
+  // Offsets that are worth merging into this instruction will be incremented
+  // by a constant, thus we're looking for an add of a phi and a constant
+  PHINode *Phi = dyn_cast<PHINode>(Offsets);
+  if (Phi == nullptr || Phi->getNumIncomingValues() != 2 ||
+      Phi->getParent() != L->getHeader() || Phi->getNumUses() != 2)
+    // No phi means no IV to write back to; if there is a phi, we expect it
+    // to have exactly two incoming values; the only phis we are interested in
+    // will be loop IV's and have exactly two uses, one in their increment and
+    // one in the gather's gep
+    return nullptr;
+
+  unsigned IncrementIndex =
+      Phi->getIncomingBlock(0) == L->getLoopLatch() ? 0 : 1;
+  // Look through the phi to the phi increment
+  Offsets = Phi->getIncomingValue(IncrementIndex);
+
+  std::pair<Value *, int64_t> Add = getVarAndConst(Offsets, TypeScale);
+  if (Add.first == nullptr)
+    return nullptr;
+  Value *OffsetsIncoming = Add.first;
+  int64_t Immediate = Add.second;
+  if (OffsetsIncoming != Phi)
+    // Then the increment we are looking at is not an increment of the
+    // induction variable, and we don't want to do a writeback
+    return nullptr;
+
+  Builder.SetInsertPoint(&Phi->getIncomingBlock(1 - IncrementIndex)->back());
+  unsigned NumElems =
+      cast<VectorType>(OffsetsIncoming->getType())->getNumElements();
+
+  // Make sure the offsets are scaled correctly
+  Instruction *ScaledOffsets = BinaryOperator::Create(
+      Instruction::Shl, Phi->getIncomingValue(1 - IncrementIndex),
+      Builder.CreateVectorSplat(NumElems, Builder.getInt32(TypeScale)),
+      "ScaledIndex", &Phi->getIncomingBlock(1 - IncrementIndex)->back());
+  // Add the base to the offsets
+  OffsetsIncoming = BinaryOperator::Create(
+      Instruction::Add, ScaledOffsets,
+      Builder.CreateVectorSplat(
+          NumElems,
+          Builder.CreatePtrToInt(
+              BasePtr,
+              cast<VectorType>(ScaledOffsets->getType())->getElementType())),
+      "StartIndex", &Phi->getIncomingBlock(1 - IncrementIndex)->back());
+  // The gather is pre-incrementing
+  OffsetsIncoming = BinaryOperator::Create(
+      Instruction::Sub, OffsetsIncoming,
+      Builder.CreateVectorSplat(NumElems, Builder.getInt32(Immediate)),
+      "PreIncrementStartIndex",
+      &Phi->getIncomingBlock(1 - IncrementIndex)->back());
+  Phi->setIncomingValue(1 - IncrementIndex, OffsetsIncoming);
+
+  Builder.SetInsertPoint(I);
+
+  // Build the incrementing gather
+  Value *Load = tryCreateMaskedGatherBaseWB(I, Phi, Builder, Immediate);
+
+  // One value to be handed to whoever uses the gather, one is the loop
+  // increment
+  Value *ExtractedLoad = Builder.CreateExtractValue(Load, 0, "Gather");
+  Value *Inc = Builder.CreateExtractValue(Load, 1, "GatherIncrement");
+  Instruction *AddInst = cast<Instruction>(Offsets);
+  AddInst->replaceAllUsesWith(Inc);
+  AddInst->eraseFromParent();
+  Phi->setIncomingValue(IncrementIndex, Inc);
+
+  return ExtractedLoad;
 }
 
 Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
@@ -433,8 +674,9 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
     return nullptr;
   }
 
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   Value *Offsets;
-  Value *BasePtr = checkGEP(Offsets, InputTy, Ptr, Builder);
+  Value *BasePtr = checkGEP(Offsets, InputTy, GEP, Builder);
   if (!BasePtr)
     return nullptr;
   int Scale = computeScale(
@@ -512,27 +754,6 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
   Phi->removeIncomingValue((unsigned)0);
   Phi->removeIncomingValue((unsigned)0);
   return;
-}
-
-// Return true if the given intrinsic is a gather or scatter
-static bool isGatherScatter(IntrinsicInst *IntInst) {
-  if (IntInst == nullptr)
-    return false;
-  unsigned IntrinsicID = IntInst->getIntrinsicID();
-  return (IntrinsicID == Intrinsic::masked_gather ||
-          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base ||
-          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_predicated ||
-          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb ||
-          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated ||
-          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset ||
-          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset_predicated ||
-          IntrinsicID == Intrinsic::masked_scatter ||
-          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base ||
-          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_predicated ||
-          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb ||
-          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb_predicated ||
-          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset ||
-          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset_predicated);
 }
 
 // Check whether all usages of this instruction are as offsets of
@@ -717,29 +938,36 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
   if (!ST->hasMVEIntegerOps())
     return false;
+  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && II->getIntrinsicID() == Intrinsic::masked_gather)
+      if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
         Gathers.push_back(II);
-      else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter)
+        if (isa<GetElementPtrInst>(II->getArgOperand(0)))
+          optimiseOffsets(
+              cast<Instruction>(II->getArgOperand(0))->getOperand(1),
+              II->getParent(), LI);
+      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
         Scatters.push_back(II);
+        if (isa<GetElementPtrInst>(II->getArgOperand(1)))
+          optimiseOffsets(
+              cast<Instruction>(II->getArgOperand(1))->getOperand(1),
+              II->getParent(), LI);
+      }
     }
   }
 
   bool Changed = false;
   for (unsigned i = 0; i < Gathers.size(); i++) {
     IntrinsicInst *I = Gathers[i];
-    if (isa<GetElementPtrInst>(I->getArgOperand(0)))
-      optimiseOffsets(cast<Instruction>(I->getArgOperand(0))->getOperand(1),
-                      I->getParent(), &LI);
     Value *L = lowerGather(I);
     if (L == nullptr)
       continue;
+
     // Get rid of any now dead instructions
     SimplifyInstructionsInBlock(cast<Instruction>(L)->getParent());
     Changed = true;
@@ -747,12 +975,10 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
 
   for (unsigned i = 0; i < Scatters.size(); i++) {
     IntrinsicInst *I = Scatters[i];
-    if (isa<GetElementPtrInst>(I->getArgOperand(1)))
-      optimiseOffsets(cast<Instruction>(I->getArgOperand(1))->getOperand(1),
-                      I->getParent(), &LI);
     Value *S = lowerScatter(I);
     if (S == nullptr)
       continue;
+
     // Get rid of any now dead instructions
     SimplifyInstructionsInBlock(cast<Instruction>(S)->getParent());
     Changed = true;

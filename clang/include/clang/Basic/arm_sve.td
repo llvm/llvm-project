@@ -67,6 +67,7 @@
 // s: scalar of element type
 // a: scalar of element type (splat to vector type)
 // R: scalar of 1/2 width element type (splat to vector type)
+// r: scalar of 1/4 width element type (splat to vector type)
 // e: 1/2 width unsigned elements, 2x element count
 // h: 1/2 width elements, 2x element count
 // q: 1/4 width elements, 4x element count
@@ -611,6 +612,14 @@ def SVPRFW_GATHER_BASES_OFFSET : MInst<"svprfw_gather[_{2}base]_index",  "vPdlJ"
 def SVPRFD_GATHER_BASES_OFFSET : MInst<"svprfd_gather[_{2}base]_index",  "vPdlJ", "UiUl", [IsGatherPrefetch], MemEltTyInt64, "aarch64_sve_prfd_gather_scalar_offset">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Address calculations
+
+def SVADRB : SInst<"svadrb[_{0}base]_[{2}]offset", "uud", "ilUiUl", MergeNone, "aarch64_sve_adrb">;
+def SVADRH : SInst<"svadrh[_{0}base]_[{2}]index",  "uud", "ilUiUl", MergeNone, "aarch64_sve_adrh">;
+def SVADRW : SInst<"svadrw[_{0}base]_[{2}]index",  "uud", "ilUiUl", MergeNone, "aarch64_sve_adrw">;
+def SVADRD : SInst<"svadrd[_{0}base]_[{2}]index",  "uud", "ilUiUl", MergeNone, "aarch64_sve_adrd">;
+
+////////////////////////////////////////////////////////////////////////////////
 // Scalar to vector
 
 def SVDUPQ_8  : SInst<"svdupq[_n]_{d}", "dssssssssssssssss",  "cUc", MergeNone>;
@@ -675,6 +684,25 @@ defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla">;
 defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls">;
 defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb">;
 
+//------------------------------------------------------------------------------
+
+def SVDOT_S    : SInst<"svdot[_{0}]",    "ddqq", "il",       MergeNone, "aarch64_sve_sdot">;
+def SVDOT_U    : SInst<"svdot[_{0}]",    "ddqq", "UiUl",     MergeNone, "aarch64_sve_udot">;
+def SVQADD_S   : SInst<"svqadd[_{d}]",   "ddd",  "csil",     MergeNone, "aarch64_sve_sqadd_x">;
+def SVQADD_U   : SInst<"svqadd[_{d}]",   "ddd",  "UcUsUiUl", MergeNone, "aarch64_sve_uqadd_x">;
+def SVQSUB_S   : SInst<"svqsub[_{d}]",   "ddd",  "csil",     MergeNone, "aarch64_sve_sqsub_x">;
+def SVQSUB_U   : SInst<"svqsub[_{d}]",   "ddd",  "UcUsUiUl", MergeNone, "aarch64_sve_uqsub_x">;
+
+def SVDOT_N_S  : SInst<"svdot[_n_{0}]",  "ddqr", "il",       MergeNone, "aarch64_sve_sdot">;
+def SVDOT_N_U  : SInst<"svdot[_n_{0}]",  "ddqr", "UiUl",     MergeNone, "aarch64_sve_udot">;
+def SVQADD_N_S : SInst<"svqadd[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqadd_x">;
+def SVQADD_N_U : SInst<"svqadd[_n_{d}]", "dda",  "UcUsUiUl", MergeNone, "aarch64_sve_uqadd_x">;
+def SVQSUB_N_S : SInst<"svqsub[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqsub_x">;
+def SVQSUB_N_U : SInst<"svqsub[_n_{d}]", "dda",  "UcUsUiUl", MergeNone, "aarch64_sve_uqsub_x">;
+
+def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Logical operations
 
@@ -712,6 +740,10 @@ defm SVLSL : SInst_SHIFT<"svlsl", "aarch64_sve_lsl", "csilUcUsUiUl", "csiUcUsUi"
 defm SVLSR : SInst_SHIFT<"svlsr", "aarch64_sve_lsr", "UcUsUiUl", "UcUsUi">;
 
 def SVASRD_M : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeOp1,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVASRD_X : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeAny,  "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVASRD_Z : SInst<"svasrd[_n_{d}]", "dPdi", "csil",            MergeZero, "aarch64_sve_asrd", [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVINSR   : SInst<"svinsr[_n_{d}]", "dds",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_insr">;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer reductions
@@ -777,12 +809,6 @@ def SVCMPLS_WIDE_N : SInst<"svcmple_wide[_n_{d}]", "PPdj", "UcUsUi", MergeNone, 
 // SVE2 - Narrowing DSP operations
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVSHRNB      : SInst<"svshrnb[_n_{d}]",    "hdi",  "silUsUiUl", MergeNone, "aarch64_sve_shrnb",     [], [ImmCheck<1, ImmCheckShiftRightNarrow, 0>]>;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// SVE2 - Uniform DSP operations
-let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
-def SVQSHLU_M  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeOp1,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1118,6 +1144,14 @@ def SVPTEST_FIRST : SInst<"svptest_first", "sPP", "Pc", MergeNone, "aarch64_sve_
 def SVPTEST_LAST  : SInst<"svptest_last",  "sPP", "Pc", MergeNone, "aarch64_sve_ptest_last">;
 
 ////////////////////////////////////////////////////////////////////////////////
+// FFR manipulation
+
+def SVRDFFR   : SInst<"svrdffr",   "P",  "Pc", MergeNone, "", [IsOverloadNone]>;
+def SVRDFFR_Z : SInst<"svrdffr_z", "PP", "Pc", MergeNone, "", [IsOverloadNone]>;
+def SVSETFFR  : SInst<"svsetffr",  "v",  "",   MergeNone, "", [IsOverloadNone]>;
+def SVWRFFR   : SInst<"svwrffr",   "vP", "Pc", MergeNone, "", [IsOverloadNone]>;
+
+////////////////////////////////////////////////////////////////////////////////
 // Counting elements
 
 def SVCNTB_PAT : SInst<"svcntb_pat", "nI", "", MergeNone, "aarch64_sve_cntb", [IsOverloadNone]>;
@@ -1130,6 +1164,7 @@ def SVCNTH : SInst<"svcnth", "n", "", MergeNone, "aarch64_sve_cnth", [IsAppendSV
 def SVCNTW : SInst<"svcntw", "n", "", MergeNone, "aarch64_sve_cntw", [IsAppendSVALL, IsOverloadNone]>;
 def SVCNTD : SInst<"svcntd", "n", "", MergeNone, "aarch64_sve_cntd", [IsAppendSVALL, IsOverloadNone]>;
 
+def SVCNTP : SInst<"svcntp_{d}",  "nPP", "PcPsPiPl",        MergeNone, "aarch64_sve_cntp">;
 def SVLEN  : SInst<"svlen[_{d}]", "nd",  "csilUcUsUiUlhfd", MergeNone>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1180,10 +1215,19 @@ defm SVQINCW_U : SInst_SAT2<"svqincw", "aarch64_sve_uqincw", UnsignedWord>;
 defm SVQINCD_S : SInst_SAT2<"svqincd", "aarch64_sve_sqincd", SignedDoubleWord>;
 defm SVQINCD_U : SInst_SAT2<"svqincd", "aarch64_sve_uqincd", UnsignedDoubleWord>;
 
-////////////////////////////////////////////////////////////////////////////////
-// Integer arithmetic
-def SVDOT_LANE_S : SInst<"svdot_lane[_{d}]",  "ddqqi",  "il",   MergeNone, "aarch64_sve_sdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
-def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarch64_sve_udot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVQDECP_S : SInst<"svqdecp[_{d}]", "ddP", "sil",    MergeNone, "aarch64_sve_sqdecp">;
+def SVQDECP_U : SInst<"svqdecp[_{d}]", "ddP", "UsUiUl", MergeNone, "aarch64_sve_uqdecp">;
+def SVQINCP_S : SInst<"svqincp[_{d}]", "ddP", "sil",    MergeNone, "aarch64_sve_sqincp">;
+def SVQINCP_U : SInst<"svqincp[_{d}]", "ddP", "UsUiUl", MergeNone, "aarch64_sve_uqincp">;
+
+def SVQDECP_N_S32 : SInst<"svqdecp[_n_s32]_{d}", "kkP", "PcPsPiPl", MergeNone, "aarch64_sve_sqdecp_n32">;
+def SVQDECP_N_S64 : SInst<"svqdecp[_n_s64]_{d}", "llP", "PcPsPiPl", MergeNone, "aarch64_sve_sqdecp_n64">;
+def SVQDECP_N_U32 : SInst<"svqdecp[_n_u32]_{d}", "mmP", "PcPsPiPl", MergeNone, "aarch64_sve_uqdecp_n32">;
+def SVQDECP_N_U64 : SInst<"svqdecp[_n_u64]_{d}", "nnP", "PcPsPiPl", MergeNone, "aarch64_sve_uqdecp_n64">;
+def SVQINCP_N_S32 : SInst<"svqincp[_n_s32]_{d}", "kkP", "PcPsPiPl", MergeNone, "aarch64_sve_sqincp_n32">;
+def SVQINCP_N_S64 : SInst<"svqincp[_n_s64]_{d}", "llP", "PcPsPiPl", MergeNone, "aarch64_sve_sqincp_n64">;
+def SVQINCP_N_U32 : SInst<"svqincp[_n_u32]_{d}", "mmP", "PcPsPiPl", MergeNone, "aarch64_sve_uqincp_n32">;
+def SVQINCP_N_U64 : SInst<"svqincp[_n_u64]_{d}", "nnP", "PcPsPiPl", MergeNone, "aarch64_sve_uqincp_n64">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT
@@ -1198,6 +1242,89 @@ def SVWHILEHS_U32 : SInst<"svwhilege_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNon
 def SVWHILEHS_U64 : SInst<"svwhilege_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehs", [IsOverloadWhile]>;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Uniform DSP operations
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+defm SVQADD_S  : SInstZPZZ<"svqadd",  "csli",     "aarch64_sve_sqadd">;
+defm SVQADD_U  : SInstZPZZ<"svqadd",  "UcUsUiUl", "aarch64_sve_uqadd">;
+defm SVHADD_S  : SInstZPZZ<"svhadd",  "csli",     "aarch64_sve_shadd">;
+defm SVHADD_U  : SInstZPZZ<"svhadd",  "UcUsUiUl", "aarch64_sve_uhadd">;
+defm SVRHADD_S : SInstZPZZ<"svrhadd", "csli",     "aarch64_sve_srhadd">;
+defm SVRHADD_U : SInstZPZZ<"svrhadd", "UcUsUiUl", "aarch64_sve_urhadd">;
+
+defm SVQSUB_S  : SInstZPZZ<"svqsub",  "csli",     "aarch64_sve_sqsub">;
+defm SVQSUB_U  : SInstZPZZ<"svqsub",  "UcUsUiUl", "aarch64_sve_uqsub">;
+defm SVQSUBR_S : SInstZPZZ<"svqsubr", "csli",     "aarch64_sve_sqsubr">;
+defm SVQSUBR_U : SInstZPZZ<"svqsubr", "UcUsUiUl", "aarch64_sve_uqsubr">;
+defm SVHSUB_S  : SInstZPZZ<"svhsub",  "csli",     "aarch64_sve_shsub">;
+defm SVHSUB_U  : SInstZPZZ<"svhsub",  "UcUsUiUl", "aarch64_sve_uhsub">;
+defm SVHSUBR_S : SInstZPZZ<"svhsubr", "csli",     "aarch64_sve_shsubr">;
+defm SVHSUBR_U : SInstZPZZ<"svhsubr", "UcUsUiUl", "aarch64_sve_uhsubr">;
+
+defm SVQABS   : SInstZPZ<"svqabs",   "csil", "aarch64_sve_sqabs">;
+defm SVQNEG   : SInstZPZ<"svqneg",   "csil", "aarch64_sve_sqneg">;
+defm SVRECPE  : SInstZPZ<"svrecpe",  "Ui",   "aarch64_sve_urecpe">;
+defm SVRSQRTE : SInstZPZ<"svrsqrte", "Ui",   "aarch64_sve_ursqrte">;
+}
+
+//------------------------------------------------------------------------------
+
+multiclass SInstZPZxZ<string name, string types, string pat_v, string pat_n, string intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]", pat_v, types, MergeOp1,  intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]", pat_v, types, MergeAny,  intrinsic, flags>;
+  def _Z   : SInst<name # "[_{d}]", pat_v, types, MergeZero, intrinsic, flags>;
+
+  def _N_M : SInst<name # "[_n_{d}]", pat_n, types, MergeOp1,  intrinsic, flags>;
+  def _N_X : SInst<name # "[_n_{d}]", pat_n, types, MergeAny,  intrinsic, flags>;
+  def _N_Z : SInst<name # "[_n_{d}]", pat_n, types, MergeZero, intrinsic, flags>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+defm SVQRSHL_S : SInstZPZxZ<"svqrshl", "csil",     "dPdx", "dPdK", "aarch64_sve_sqrshl">;
+defm SVQRSHL_U : SInstZPZxZ<"svqrshl", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_uqrshl">;
+defm SVQSHL_S  : SInstZPZxZ<"svqshl",  "csil",     "dPdx", "dPdK", "aarch64_sve_sqshl">;
+defm SVQSHL_U  : SInstZPZxZ<"svqshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_uqshl">;
+defm SVRSHL_S  : SInstZPZxZ<"svrshl",  "csil",     "dPdx", "dPdK", "aarch64_sve_srshl">;
+defm SVRSHL_U  : SInstZPZxZ<"svrshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_urshl">;
+defm SVSQADD   : SInstZPZxZ<"svsqadd", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_usqadd">;
+defm SVUQADD   : SInstZPZxZ<"svuqadd", "csil",     "dPdu", "dPdL", "aarch64_sve_suqadd">;
+
+def SVABA_S        : SInst<"svaba[_{d}]",     "dddd", "csil"    , MergeNone, "aarch64_sve_saba">;
+def SVABA_U        : SInst<"svaba[_{d}]",     "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uaba">;
+def SVQDMULH       : SInst<"svqdmulh[_{d}]",  "ddd",  "csil",     MergeNone, "aarch64_sve_sqdmulh">;
+def SVQRDMULH      : SInst<"svqrdmulh[_{d}]", "ddd",  "csil",     MergeNone, "aarch64_sve_sqrdmulh">;
+def SVQRDMLAH      : SInst<"svqrdmlah[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sqrdmlah">;
+def SVQRDMLSH      : SInst<"svqrdmlsh[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sqrdmlsh">;
+
+def SVABA_S_N      : SInst<"svaba[_n_{d}]",     "ddda", "csil",     MergeNone, "aarch64_sve_saba">;
+def SVABA_U_N      : SInst<"svaba[_n_{d}]",     "ddda", "UcUsUiUl", MergeNone, "aarch64_sve_uaba">;
+def SVQDMULH_N     : SInst<"svqdmulh[_n_{d}]",  "dda",  "csil",     MergeNone, "aarch64_sve_sqdmulh">;
+def SVQRDMULH_N    : SInst<"svqrdmulh[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqrdmulh">;
+def SVQRDMLAH_N    : SInst<"svqrdmlah[_n_{d}]", "ddda", "csil",     MergeNone, "aarch64_sve_sqrdmlah">;
+def SVQRDMLSH_N    : SInst<"svqrdmlsh[_n_{d}]", "ddda", "csil",     MergeNone, "aarch64_sve_sqrdmlsh">;
+
+def SVQDMULH_LANE  : SInst<"svqdmulh_lane[_{d}]",  "dddi",  "sil", MergeNone, "aarch64_sve_sqdmulh_lane",  [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVQRDMULH_LANE : SInst<"svqrdmulh_lane[_{d}]", "dddi",  "sil", MergeNone, "aarch64_sve_sqrdmulh_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVQRDMLAH_LANE : SInst<"svqrdmlah_lane[_{d}]", "ddddi", "sil", MergeNone, "aarch64_sve_sqrdmlah_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVQRDMLSH_LANE : SInst<"svqrdmlsh_lane[_{d}]", "ddddi", "sil", MergeNone, "aarch64_sve_sqrdmlsh_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+
+def SVQSHLU_M  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeOp1,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
+def SVQSHLU_X  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeAny,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
+def SVQSHLU_Z  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeZero, "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
+def SVRSHR_M_S : SInst<"svrshr[_n_{d}]",  "dPdi", "csil",         MergeOp1,  "aarch64_sve_srshr",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSHR_M_U : SInst<"svrshr[_n_{d}]",  "dPdi", "UcUsUiUl",     MergeOp1,  "aarch64_sve_urshr",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSHR_X_S : SInst<"svrshr[_n_{d}]",  "dPdi", "csil",         MergeAny,  "aarch64_sve_srshr",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSHR_X_U : SInst<"svrshr[_n_{d}]",  "dPdi", "UcUsUiUl",     MergeAny,  "aarch64_sve_urshr",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSHR_Z_S : SInst<"svrshr[_n_{d}]",  "dPdi", "csil",         MergeZero, "aarch64_sve_srshr",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSHR_Z_U : SInst<"svrshr[_n_{d}]",  "dPdi", "UcUsUiUl",     MergeZero, "aarch64_sve_urshr",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSRA_S   : SInst<"svrsra[_n_{d}]",  "dddi", "csil",         MergeNone, "aarch64_sve_srsra",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVRSRA_U   : SInst<"svrsra[_n_{d}]",  "dddi", "UcUsUiUl",     MergeNone, "aarch64_sve_ursra",  [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVSLI      : SInst<"svsli[_n_{d}]",   "dddi", "csilUcUsUiUl", MergeNone, "aarch64_sve_sli",    [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
+def SVSRA_S    : SInst<"svsra[_n_{d}]",   "dddi", "csil",         MergeNone, "aarch64_sve_ssra",   [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVSRA_U    : SInst<"svsra[_n_{d}]",   "dddi", "UcUsUiUl",     MergeNone, "aarch64_sve_usra",   [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+def SVSRI      : SInst<"svsri[_n_{d}]",   "dddi", "csilUcUsUiUl", MergeNone, "aarch64_sve_sri",    [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
