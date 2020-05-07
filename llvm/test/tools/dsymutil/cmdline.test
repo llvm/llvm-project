@@ -18,6 +18,7 @@ HELP: {{ -o <filename> }}
 HELP: -papertrail
 HELP: -remarks-output-format <format>
 HELP: -remarks-prepend-path <path>
+HELP: -statistics
 HELP: -symbol-map
 HELP: -symtab
 HELP: {{ -S }}
