@@ -130,7 +130,7 @@ define <vscale x 4 x i32> @extractelement_insertelement_diff_positions(<vscale x
 ; CHECK-NEXT:    [[VEC_E1:%.*]] = extractelement <vscale x 4 x i32> [[VEC]], i32 5
 ; CHECK-NEXT:    [[VEC_E2:%.*]] = extractelement <vscale x 4 x i32> [[VEC]], i32 6
 ; CHECK-NEXT:    [[VEC_E3:%.*]] = extractelement <vscale x 4 x i32> [[VEC]], i32 7
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[VEC_E0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 4 x i32> [[VEC]], i32 [[VEC_E0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x i32> [[TMP1]], i32 [[VEC_E1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <vscale x 4 x i32> [[TMP2]], i32 [[VEC_E2]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <vscale x 4 x i32> [[TMP3]], i32 [[VEC_E3]], i32 3
