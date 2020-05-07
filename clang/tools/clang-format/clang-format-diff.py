@@ -56,8 +56,8 @@ def main():
   parser.add_argument('-v', '--verbose', action='store_true',
                       help='be more verbose, ineffective without -i')
   parser.add_argument('-style',
-                      help='formatting style to apply (LLVM, Google, Chromium, '
-                      'Mozilla, WebKit)')
+                      help='formatting style to apply (LLVM, GNU, Google, Chromium, '
+                      'Microsoft, Mozilla, WebKit)')
   parser.add_argument('-binary', default='clang-format',
                       help='location of binary to use for clang-format')
   args = parser.parse_args()
