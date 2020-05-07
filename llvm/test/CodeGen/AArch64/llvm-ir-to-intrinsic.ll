@@ -22,6 +22,37 @@ define <vscale x 2 x i64> @sdiv_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   ret <vscale x 2 x i64> %div
 }
 
+define <vscale x 8 x i32> @sdiv_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) {
+; CHECK-LABEL: @sdiv_split_i32
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: sdiv z0.s, p0/m, z0.s, z2.s
+; CHECK-DAG: sdiv z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT: ret
+  %div = sdiv <vscale x 8 x i32> %a, %b
+  ret <vscale x 8 x i32> %div
+}
+
+define <vscale x 2 x i32> @sdiv_widen_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: @sdiv_widen_i32
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: sxtw z1.d, p0/m, z1.d
+; CHECK-DAG: sxtw z0.d, p0/m, z0.d
+; CHECK-DAG: sdiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT: ret
+  %div = sdiv <vscale x 2 x i32> %a, %b
+  ret <vscale x 2 x i32> %div
+}
+
+define <vscale x 4 x i64> @sdiv_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b) {
+; CHECK-LABEL: @sdiv_split_i64
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: sdiv z0.d, p0/m, z0.d, z2.d
+; CHECK-DAG: sdiv z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT: ret
+  %div = sdiv <vscale x 4 x i64> %a, %b
+  ret <vscale x 4 x i64> %div
+}
+
 ;
 ; UDIV
 ;
@@ -42,6 +73,37 @@ define <vscale x 2 x i64> @udiv_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 ; CHECK-NEXT: ret
   %div = udiv <vscale x 2 x i64> %a, %b
   ret <vscale x 2 x i64> %div
+}
+
+define <vscale x 8 x i32> @udiv_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) {
+; CHECK-LABEL: @udiv_split_i32
+; CHECK-DAG: ptrue p0.s
+; CHECK-DAG: udiv z0.s, p0/m, z0.s, z2.s
+; CHECK-DAG: udiv z1.s, p0/m, z1.s, z3.s
+; CHECK-NEXT: ret
+  %div = udiv <vscale x 8 x i32> %a, %b
+  ret <vscale x 8 x i32> %div
+}
+
+define <vscale x 2 x i32> @udiv_widen_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: @udiv_widen_i32
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: and z1.d, z1.d, #0xffffffff
+; CHECK-DAG: and z0.d, z0.d, #0xffffffff
+; CHECK-DAG: udiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT: ret
+  %div = udiv <vscale x 2 x i32> %a, %b
+  ret <vscale x 2 x i32> %div
+}
+
+define <vscale x 4 x i64> @udiv_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b) {
+; CHECK-LABEL: @udiv_split_i64
+; CHECK-DAG: ptrue p0.d
+; CHECK-DAG: udiv z0.d, p0/m, z0.d, z2.d
+; CHECK-DAG: udiv z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT: ret
+  %div = udiv <vscale x 4 x i64> %a, %b
+  ret <vscale x 4 x i64> %div
 }
 
 ;
