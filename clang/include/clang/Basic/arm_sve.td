@@ -1290,6 +1290,25 @@ defm SVRSHL_U  : SInstZPZxZ<"svrshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_
 defm SVSQADD   : SInstZPZxZ<"svsqadd", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_usqadd">;
 defm SVUQADD   : SInstZPZxZ<"svuqadd", "csil",     "dPdu", "dPdL", "aarch64_sve_suqadd">;
 
+def SVABA_S        : SInst<"svaba[_{d}]",     "dddd", "csil"    , MergeNone, "aarch64_sve_saba">;
+def SVABA_U        : SInst<"svaba[_{d}]",     "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uaba">;
+def SVQDMULH       : SInst<"svqdmulh[_{d}]",  "ddd",  "csil",     MergeNone, "aarch64_sve_sqdmulh">;
+def SVQRDMULH      : SInst<"svqrdmulh[_{d}]", "ddd",  "csil",     MergeNone, "aarch64_sve_sqrdmulh">;
+def SVQRDMLAH      : SInst<"svqrdmlah[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sqrdmlah">;
+def SVQRDMLSH      : SInst<"svqrdmlsh[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sqrdmlsh">;
+
+def SVABA_S_N      : SInst<"svaba[_n_{d}]",     "ddda", "csil",     MergeNone, "aarch64_sve_saba">;
+def SVABA_U_N      : SInst<"svaba[_n_{d}]",     "ddda", "UcUsUiUl", MergeNone, "aarch64_sve_uaba">;
+def SVQDMULH_N     : SInst<"svqdmulh[_n_{d}]",  "dda",  "csil",     MergeNone, "aarch64_sve_sqdmulh">;
+def SVQRDMULH_N    : SInst<"svqrdmulh[_n_{d}]", "dda",  "csil",     MergeNone, "aarch64_sve_sqrdmulh">;
+def SVQRDMLAH_N    : SInst<"svqrdmlah[_n_{d}]", "ddda", "csil",     MergeNone, "aarch64_sve_sqrdmlah">;
+def SVQRDMLSH_N    : SInst<"svqrdmlsh[_n_{d}]", "ddda", "csil",     MergeNone, "aarch64_sve_sqrdmlsh">;
+
+def SVQDMULH_LANE  : SInst<"svqdmulh_lane[_{d}]",  "dddi",  "sil", MergeNone, "aarch64_sve_sqdmulh_lane",  [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVQRDMULH_LANE : SInst<"svqrdmulh_lane[_{d}]", "dddi",  "sil", MergeNone, "aarch64_sve_sqrdmulh_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVQRDMLAH_LANE : SInst<"svqrdmlah_lane[_{d}]", "ddddi", "sil", MergeNone, "aarch64_sve_sqrdmlah_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVQRDMLSH_LANE : SInst<"svqrdmlsh_lane[_{d}]", "ddddi", "sil", MergeNone, "aarch64_sve_sqrdmlsh_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+
 def SVQSHLU_M  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeOp1,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
 def SVQSHLU_X  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeAny,  "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
 def SVQSHLU_Z  : SInst<"svqshlu[_n_{d}]", "uPdi", "csil",         MergeZero, "aarch64_sve_sqshlu", [], [ImmCheck<2, ImmCheckShiftLeft,  1>]>;
