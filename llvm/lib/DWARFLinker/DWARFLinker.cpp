@@ -25,12 +25,28 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 #include <vector>
 
 namespace llvm {
+
+/// Hold the input and output of the debug info size in bytes.
+struct DebugInfoSize {
+  uint64_t Input;
+  uint64_t Output;
+};
+
+/// Compute the total size of the debug info.
+static uint64_t getDebugInfoSize(DWARFContext &Dwarf) {
+  uint64_t Size = 0;
+  for (auto &Unit : Dwarf.compile_units()) {
+    Size += Unit->getLength();
+  }
+  return Size;
+}
 
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
 /// CompileUnit object instead.
@@ -2071,12 +2087,13 @@ Error DWARFLinker::loadClangModule(
   return Error::success();
 }
 
-void DWARFLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext,
-                                                  const DwarfFile &File,
-                                                  OffsetsStringPool &StringPool,
-                                                  bool IsLittleEndian) {
+uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
+    DWARFContext &DwarfContext, const DwarfFile &File,
+    OffsetsStringPool &StringPool, bool IsLittleEndian) {
   uint64_t OutputDebugInfoSize =
       Linker.Options.NoOutput ? 0 : Emitter->getDebugInfoSectionSize();
+  const uint64_t StartOutputDebugInfoSize = OutputDebugInfoSize;
+
   for (auto &CurrentUnit : CompileUnits) {
     auto InputDIE = CurrentUnit->getOrigUnit().getUnitDIE();
     CurrentUnit->setStartOffset(OutputDebugInfoSize);
@@ -2141,6 +2158,8 @@ void DWARFLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext,
              CurrentUnit->computeNextUnitOffset());
     }
   }
+
+  return OutputDebugInfoSize - StartOutputDebugInfoSize;
 }
 
 void DWARFLinker::updateAccelKind(DWARFContext &Dwarf) {
@@ -2393,6 +2412,9 @@ bool DWARFLinker::link() {
     }
   };
 
+  // For each object file map how many bytes were emitted.
+  StringMap<DebugInfoSize> SizeByObject;
+
   // And then the remaining work in serial again.
   // Note, although this loop runs in serial, it can run in parallel with
   // the analyzeContextInfo loop so long as we process files with indices >=
@@ -2425,11 +2447,14 @@ bool DWARFLinker::link() {
     // need to reset the NextValidReloc index to the beginning.
     if (OptContext.File.Addresses->hasValidRelocs() ||
         LLVM_UNLIKELY(Options.Update)) {
-      DIECloner(*this, TheDwarfEmitter, OptContext.File, DIEAlloc,
-                OptContext.CompileUnits, Options.Update)
-          .cloneAllCompileUnits(*OptContext.File.Dwarf, OptContext.File,
-                                OffsetsStringPool,
-                                OptContext.File.Dwarf->isLittleEndian());
+      SizeByObject[OptContext.File.FileName].Input =
+          getDebugInfoSize(*OptContext.File.Dwarf);
+      SizeByObject[OptContext.File.FileName].Output =
+          DIECloner(*this, TheDwarfEmitter, OptContext.File, DIEAlloc,
+                    OptContext.CompileUnits, Options.Update)
+              .cloneAllCompileUnits(*OptContext.File.Dwarf, OptContext.File,
+                                    OffsetsStringPool,
+                                    OptContext.File.Dwarf->isLittleEndian());
     }
     if (!Options.NoOutput && !OptContext.CompileUnits.empty() &&
         LLVM_LIKELY(!Options.Update))
@@ -2503,6 +2528,53 @@ bool DWARFLinker::link() {
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();
+  }
+
+  if (Options.Statistics) {
+    // Create a vector sorted in descending order by output size.
+    std::vector<std::pair<StringRef, DebugInfoSize>> Sorted;
+    for (auto &E : SizeByObject)
+      Sorted.emplace_back(E.first(), E.second);
+    sort(Sorted.begin(), Sorted.end(), [](auto &LHS, auto &RHS) {
+      return LHS.second.Output > RHS.second.Output;
+    });
+
+    auto ComputePercentange = [](int64_t Input, int64_t Output) -> float {
+      const float Difference = Output - Input;
+      const float Sum = Input + Output;
+      if (Sum == 0)
+        return 0;
+      return (Difference / (Sum / 2));
+    };
+
+    int64_t InputTotal = 0;
+    int64_t OutputTotal = 0;
+    const char *FormatStr = "{0,-45} {1,10}b  {2,10}b {3,8:P}\n";
+
+    // Print header.
+    outs() << ".debug_info section size (in bytes)\n";
+    outs() << "----------------------------------------------------------------"
+              "---------------\n";
+    outs() << "Filename                                           Object       "
+              "  dSYM   Change\n";
+    outs() << "----------------------------------------------------------------"
+              "---------------\n";
+
+    // Print body.
+    for (auto &E : Sorted) {
+      InputTotal += E.second.Input;
+      OutputTotal += E.second.Output;
+      llvm::outs() << formatv(
+          FormatStr, sys::path::filename(E.first).take_back(45), E.second.Input,
+          E.second.Output, ComputePercentange(E.second.Input, E.second.Output));
+    }
+    // Print total and footer.
+    outs() << "----------------------------------------------------------------"
+              "---------------\n";
+    llvm::outs() << formatv(FormatStr, "Total", InputTotal, OutputTotal,
+                            ComputePercentange(InputTotal, OutputTotal));
+    outs() << "----------------------------------------------------------------"
+              "---------------\n\n";
   }
 
   return true;

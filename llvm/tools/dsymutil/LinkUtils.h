@@ -27,6 +27,9 @@ struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
 
+  /// Statistics
+  bool Statistics = false;
+
   /// Skip emitting output
   bool NoOutput = false;
 
