@@ -113,9 +113,6 @@ define i32 @test(i32* nocapture %f) #0 {
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[INDEX]], i32 0
-; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> undef, <2 x i32> zeroinitializer
-; VEC-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
 ; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[F:%.*]], i64 [[TMP0]]
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
@@ -458,25 +455,19 @@ define void @minimal_bit_widths(i1 %c) {
 ;
 ; VEC-LABEL: @minimal_bit_widths(
 ; VEC-NEXT:  entry:
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i1> undef, i1 [[C:%.*]], i32 0
-; VEC-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT5]], <2 x i1> undef, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> undef, i1 [[C:%.*]], i32 0
+; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> undef, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
-; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE8:%.*]] ]
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[INDEX]], i32 0
-; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> undef, <2 x i32> zeroinitializer
-; VEC-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE3:%.*]] ]
 ; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 undef, [[INDEX]]
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> undef, i64 [[OFFSET_IDX]], i32 0
-; VEC-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> undef, <2 x i32> zeroinitializer
-; VEC-NEXT:    [[INDUCTION4:%.*]] = add <2 x i64> [[BROADCAST_SPLAT3]], <i64 0, i64 -1>
 ; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* undef, i64 [[TMP0]]
 ; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* [[TMP2]], i32 0
 ; VEC-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to <2 x i8>*
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, <2 x i8>* [[TMP4]], align 1
-; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT6]], i32 0
+; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 0
 ; VEC-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
@@ -485,17 +476,17 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    store i8 [[TMP8]], i8* [[TMP2]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC:       pred.store.continue:
-; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT6]], i32 1
-; VEC-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
-; VEC:       pred.store.if7:
+; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
+; VEC-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
+; VEC:       pred.store.if2:
 ; VEC-NEXT:    [[TMP10:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
 ; VEC-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i8
 ; VEC-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP14:%.*]] = getelementptr i8, i8* undef, i64 [[TMP13]]
 ; VEC-NEXT:    store i8 [[TMP12]], i8* [[TMP14]], align 1
-; VEC-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; VEC:       pred.store.continue8:
+; VEC-NEXT:    br label [[PRED_STORE_CONTINUE3]]
+; VEC:       pred.store.continue3:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
 ; VEC-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !4
