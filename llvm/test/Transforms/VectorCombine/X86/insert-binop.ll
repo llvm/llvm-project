@@ -34,6 +34,19 @@ define <8 x i16> @ins0_ins0_sub_flags(i16 %x, i16 %y) {
   ret <8 x i16> %r
 }
 
+define <2 x i64> @ins1_ins1_xor(i64 %x, i64 %y) {
+; CHECK-LABEL: @ins1_ins1_xor(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i64 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i64> undef, i64 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i64> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %i0 = insertelement <2 x i64> undef, i64 %x, i64 1
+  %i1 = insertelement <2 x i64> undef, i64 %y, i32 1
+  %r = xor <2 x i64> %i0, %i1
+  ret <2 x i64> %r
+}
+
 ; The inserts are free, but it's still better to scalarize.
 
 define <2 x double> @ins0_ins0_fadd(double %x, double %y) {
@@ -49,8 +62,6 @@ define <2 x double> @ins0_ins0_fadd(double %x, double %y) {
   ret <2 x double> %r
 }
 
-; Negative test - mismatched indexes. This could simplify.
-
 define <16 x i8> @ins1_ins0_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ins1_ins0_add(
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <16 x i8> undef, i8 [[X:%.*]], i32 1
@@ -63,8 +74,6 @@ define <16 x i8> @ins1_ins0_add(i8 %x, i8 %y) {
   %r = add <16 x i8> %i0, %i1
   ret <16 x i8> %r
 }
-
-; Negative test - not undef base vector. This could fold.
 
 define <4 x i32> @ins0_ins0_mul(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ins0_ins0_mul(
@@ -79,7 +88,18 @@ define <4 x i32> @ins0_ins0_mul(i32 %x, i32 %y) {
   ret <4 x i32> %r
 }
 
-; Negative test - extra use. This could fold.
+define <2 x i64> @ins1_ins1_sdiv(i64 %x, i64 %y) {
+; CHECK-LABEL: @ins1_ins1_sdiv(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> <i64 42, i64 -42>, i64 [[X:%.*]], i64 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i64> <i64 -7, i64 128>, i64 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i64> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %i0 = insertelement <2 x i64> <i64 42, i64 -42>, i64 %x, i64 1
+  %i1 = insertelement <2 x i64> <i64 -7, i64 128>, i64 %y, i32 1
+  %r = sdiv <2 x i64> %i0, %i1
+  ret <2 x i64> %r
+}
 
 define <4 x i32> @ins0_ins0_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ins0_ins0_xor(
