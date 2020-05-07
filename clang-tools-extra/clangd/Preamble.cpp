@@ -9,6 +9,7 @@
 #include "Preamble.h"
 #include "Compiler.h"
 #include "Headers.h"
+#include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Basic/Diagnostic.h"
@@ -26,6 +27,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
@@ -270,6 +272,20 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                                     Inputs.FS.get());
 }
 
+void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
+  for (char C : Text) {
+    switch (C) {
+    case '\\':
+    case '"':
+      OS << '\\';
+      break;
+    default:
+      break;
+    }
+    OS << C;
+  }
+}
+
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
                                     const PreambleData &Baseline) {
@@ -298,6 +314,9 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
          ModifiedIncludes.takeError());
     return {};
   }
+  // No patch needed if includes are equal.
+  if (*BaselineIncludes == *ModifiedIncludes)
+    return {};
 
   PreamblePatch PP;
   // This shouldn't coincide with any real file name.
@@ -314,9 +333,19 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     ExistingIncludes.insert({Inc.Directive, Inc.Written});
   // Calculate extra includes that needs to be inserted.
   llvm::raw_string_ostream Patch(PP.PatchContents);
+  // Set default filename for subsequent #line directives
+  Patch << "#line 0 \"";
+  // FileName part of a line directive is subject to backslash escaping, which
+  // might lead to problems on windows especially.
+  escapeBackslashAndQuotes(FileName, Patch);
+  Patch << "\"\n";
   for (const auto &Inc : *ModifiedIncludes) {
     if (ExistingIncludes.count({Inc.Directive, Inc.Written}))
       continue;
+    // Include is new in the modified preamble. Inject it into the patch and use
+    // #line to set the presumed location to where it is spelled.
+    auto LineCol = offsetToClangLineColumn(Modified.Contents, Inc.HashOffset);
+    Patch << llvm::formatv("#line {0}\n", LineCol.first);
     Patch << llvm::formatv("#{0} {1}\n", spellingForIncDirective(Inc.Directive),
                            Inc.Written);
   }

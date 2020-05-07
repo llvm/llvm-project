@@ -283,5 +283,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Inclusion &Inc) {
             << " at line" << Inc.HashLine;
 }
 
+bool operator==(const Inclusion &LHS, const Inclusion &RHS) {
+  return std::tie(LHS.Directive, LHS.FileKind, LHS.HashOffset, LHS.HashLine,
+                  LHS.Resolved, LHS.Written) ==
+         std::tie(RHS.Directive, RHS.FileKind, RHS.HashOffset, RHS.HashLine,
+                  RHS.Resolved, RHS.Written);
+}
 } // namespace clangd
 } // namespace clang
