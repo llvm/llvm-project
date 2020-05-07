@@ -101,6 +101,32 @@ define <2 x i64> @ins1_ins1_sdiv(i64 %x, i64 %y) {
   ret <2 x i64> %r
 }
 
+define <2 x i64> @ins1_ins1_srem(i64 %x, i64 %y) {
+; CHECK-LABEL: @ins1_ins1_srem(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> <i64 42, i64 undef>, i64 [[X:%.*]], i64 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i64> <i64 -7, i64 undef>, i64 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = srem <2 x i64> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %i0 = insertelement <2 x i64> <i64 42, i64 undef>, i64 %x, i64 1
+  %i1 = insertelement <2 x i64> <i64 -7, i64 undef>, i64 %y, i32 1
+  %r = srem <2 x i64> %i0, %i1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @ins1_ins1_urem(i64 %x, i64 %y) {
+; CHECK-LABEL: @ins1_ins1_urem(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x i64> <i64 42, i64 undef>, i64 [[X:%.*]], i64 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x i64> <i64 undef, i64 128>, i64 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = urem <2 x i64> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %i0 = insertelement <2 x i64> <i64 42, i64 undef>, i64 %x, i64 1
+  %i1 = insertelement <2 x i64> <i64 undef, i64 128>, i64 %y, i32 1
+  %r = urem <2 x i64> %i0, %i1
+  ret <2 x i64> %r
+}
+
 define <4 x i32> @ins0_ins0_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ins0_ins0_xor(
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
