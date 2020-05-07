@@ -26,10 +26,10 @@ void register2();
 
 #if defined(TU1)
   namespace { struct A { bool x; }; }
-  void register1() { registry.emplace_back(std::type_index{typeid(A)}); }
+  void register1() { registry.push_back(std::type_index(typeid(A))); }
 #elif defined(TU2)
   namespace { struct A { int x, y; }; }
-  void register2() { registry.emplace_back(std::type_index{typeid(A)}); }
+  void register2() { registry.push_back(std::type_index(typeid(A))); }
 #elif defined(MAIN)
   std::vector<std::type_index> registry;
 
