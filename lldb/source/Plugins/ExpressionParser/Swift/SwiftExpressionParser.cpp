@@ -1437,6 +1437,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     return 2;
   }
 
+  swift::bindExtensions(parsed_expr->module);
   swift::performTypeChecking(parsed_expr->source_file);
 
   if (swift_ast_ctx->HasErrors()) {
