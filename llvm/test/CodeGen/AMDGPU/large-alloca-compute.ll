@@ -48,8 +48,8 @@
 ; GFX10HSA-DAG: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), [[FLAT_SCR_LO]]
 ; GFX10HSA-DAG: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), [[FLAT_SCR_HI]]
 
-; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
-; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
+; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
+; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
 
 ; Scratch size = alloca size + emergency stack slot, align {{.*}}, addrspace(5)
 ; ALL: ; ScratchSize: 32772

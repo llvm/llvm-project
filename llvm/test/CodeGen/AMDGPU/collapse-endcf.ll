@@ -225,7 +225,7 @@ bb.end:                                           ; preds = %bb.then, %bb
 ; GCN: s_andn2_b64 exec, exec,
 ; GCN-NEXT: s_cbranch_execnz [[BB1_LOOP]]
 
-; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offen
 
 ; GCN: s_and_saveexec_b64 [[SAVEEXEC_OUTER]], {{vcc|s\[[0-9:]+\]}}
 ; GCN-NEXT: s_cbranch_execz [[BB1_OUTER_LOOP]]

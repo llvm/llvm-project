@@ -308,7 +308,6 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   switch (RegNo) {
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
-  case AMDGPU::SCRATCH_WAVE_OFFSET_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
     llvm_unreachable("pseudo-register should not ever be emitted");
   case AMDGPU::SCC:

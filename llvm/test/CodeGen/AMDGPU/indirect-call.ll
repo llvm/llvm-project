@@ -75,11 +75,12 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     runtime_loader_kernel_symbol = 0
 ; GCN-NEXT:    .end_amd_kernel_code_t
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s33, s17
-; GCN-NEXT:    s_mov_b32 s32, s33
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GCN-NEXT:    s_add_u32 s12, s12, s33
+; GCN-NEXT:    s_add_u32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_add_u32 s0, s0, s17
+; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv.fptr0@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, gv.fptr0@rel32@hi+4
@@ -167,11 +168,12 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     runtime_loader_kernel_symbol = 0
 ; GCN-NEXT:    .end_amd_kernel_code_t
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s33, s17
-; GCN-NEXT:    s_mov_b32 s32, s33
+; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GCN-NEXT:    s_add_u32 s12, s12, s33
+; GCN-NEXT:    s_add_u32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_add_u32 s0, s0, s17
+; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv.fptr1@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, gv.fptr1@rel32@hi+4

@@ -7,7 +7,6 @@ name:            subvector-basic-bb
 tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
-  scratchWaveOffsetReg: $sgpr4
   frameOffsetReg: $sgpr5
   stackPtrOffsetReg: $sgpr32
 body:             |

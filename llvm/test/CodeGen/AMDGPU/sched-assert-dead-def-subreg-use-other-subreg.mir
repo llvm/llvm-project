@@ -10,7 +10,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr24_sgpr25_sgpr26_sgpr27'
-  scratchWaveOffsetReg: '$sgpr32'
   frameOffsetReg:  '$sgpr32'
   stackPtrOffsetReg: '$sgpr32'
   argumentInfo:

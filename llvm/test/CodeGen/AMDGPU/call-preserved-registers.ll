@@ -8,7 +8,7 @@ declare hidden void @external_void_func_void() #0
 ; GCN: s_getpc_b64 s[34:35]
 ; GCN-NEXT: s_add_u32 s34, s34,
 ; GCN-NEXT: s_addc_u32 s35, s35,
-; GCN-NEXT: s_mov_b32 s32, s33
+; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64 s[30:31], s[34:35]
 
 ; GCN-NEXT: #ASMSTART
@@ -23,9 +23,9 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void:
 ; GCN: buffer_store_dword
-; GCN: v_writelane_b32 v40, s34, 4
-; GCN: v_writelane_b32 v40, s36, 0
-; GCN: v_writelane_b32 v40, s37, 1
+; GCN: v_writelane_b32 v40, s33, 4
+; GCN: v_writelane_b32 v40, s34, 0
+; GCN: v_writelane_b32 v40, s35, 1
 ; GCN: v_writelane_b32 v40, s30, 2
 ; GCN: v_writelane_b32 v40, s31, 3
 
@@ -35,10 +35,10 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; GCN-NEXT: s_swappc_b64
 ; GCN-DAG: v_readlane_b32 s4, v40, 2
 ; GCN-DAG: v_readlane_b32 s5, v40, 3
-; GCN: v_readlane_b32 s37, v40, 1
-; GCN: v_readlane_b32 s36, v40, 0
+; GCN: v_readlane_b32 s35, v40, 1
+; GCN: v_readlane_b32 s34, v40, 0
 
-; GCN: v_readlane_b32 s34, v40, 4
+; GCN: v_readlane_b32 s33, v40, 4
 ; GCN: buffer_load_dword
 ; GCN: s_setpc_b64
 define void @test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() #0 {
@@ -50,14 +50,14 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_funcx2:
 ; GCN: buffer_store_dword v40
-; GCN: v_writelane_b32 v40, s34, 4
+; GCN: v_writelane_b32 v40, s33, 4
 
-; GCN: s_mov_b32 s34, s32
+; GCN: s_mov_b32 s33, s32
 ; GCN: s_add_u32 s32, s32, 0x400
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_swappc_b64
 
-; GCN: v_readlane_b32 s34, v40, 4
+; GCN: v_readlane_b32 s33, v40, 4
 ; GCN: buffer_load_dword v40,
 define void @test_func_call_external_void_funcx2() #0 {
   call void @external_void_func_void()
@@ -104,9 +104,9 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(i32 addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_mayclobber_s31:
-; GCN: s_mov_b32 s34, s31
+; GCN: s_mov_b32 s33, s31
 ; GCN-NEXT: s_swappc_b64
-; GCN-NEXT: s_mov_b32 s31, s34
+; GCN-NEXT: s_mov_b32 s31, s33
 define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace(1)* %out) #0 {
   %s31 = call i32 asm sideeffect "; def $0", "={s31}"()
   call void @external_void_func_void()
@@ -131,6 +131,7 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, external_void_func_void@rel32@hi+4
+; GCN: s_mov_b32 s32, 0
 ; GCN: #ASMSTART
 ; GCN-NEXT: ; def s33
 ; GCN-NEXT: #ASMEND
@@ -153,7 +154,7 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s33(i32 addrspace(
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, external_void_func_void@rel32@hi+4
-; GCN: s_mov_b32 s32, s33
+; GCN: s_mov_b32 s32, 0
 
 ; GCN-NOT: s34
 ; GCN: ;;#ASMSTART
@@ -182,7 +183,7 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s34(i32 addrspace(
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, external_void_func_void@rel32@hi+4
-; GCN: s_mov_b32 s32, s33
+; GCN: s_mov_b32 s32, 0
 ; GCN-NOT: v40
 
 ; GCN: ;;#ASMSTART
@@ -232,7 +233,7 @@ define hidden void @void_func_void_clobber_s34() #2 {
 ; GCN: s_getpc_b64
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
-; GCN-NEXT: s_mov_b32 s32, s33
+; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_void_func_void_clobber_s33() #0 {
@@ -244,7 +245,7 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_s33() #0 {
 ; GCN: s_getpc_b64
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
-; GCN-NEXT: s_mov_b32 s32, s33
+; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_void_func_void_clobber_s34() #0 {

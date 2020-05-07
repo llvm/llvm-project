@@ -11,7 +11,6 @@ frameInfo:
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
-  scratchWaveOffsetReg: '$sgpr101'
   frameOffsetReg:  '$sgpr101'
   stackPtrOffsetReg: '$sgpr101'
   argumentInfo:

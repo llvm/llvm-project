@@ -48,10 +48,10 @@ entry:
 }
 
 ; CHECK:   .name:       num_spilled_sgprs
-; GFX700:   .sgpr_spill_count: 40
-; GFX803:   .sgpr_spill_count: 24
-; GFX900:   .sgpr_spill_count: 24
-; GFX1010:  .sgpr_spill_count: 24
+; GFX700:   .sgpr_spill_count: 38
+; GFX803:   .sgpr_spill_count: 22
+; GFX900:   .sgpr_spill_count: 22
+; GFX1010:  .sgpr_spill_count: 22
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32],

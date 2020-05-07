@@ -9,7 +9,6 @@ tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
-  scratchWaveOffsetReg: '$sgpr101'
   frameOffsetReg:  '$sgpr101'
 body:             |
   ; GCN-LABEL: name: exec_src1_is_not_copy

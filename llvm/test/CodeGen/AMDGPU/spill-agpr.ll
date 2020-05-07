@@ -6,8 +6,8 @@
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
 ; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0
-; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
-; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI]] ; 4-byte Folded Reload
+; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
+; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
 ; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_24regs_32a_used(<16 x float> addrspace(1)* %arg, float addrspace(1)* %out) #0 {
@@ -35,8 +35,8 @@ bb:
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
 ; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a4
-; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
-; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI]] ; 4-byte Folded Reload
+; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
+; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
 ; A2V:        v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_12regs_13a_used(<4 x float> addrspace(1)* %arg, <4 x float> addrspace(1)* %out) #2 {
@@ -64,8 +64,8 @@ st:
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
 ; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0
-; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
-; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI]] ; 4-byte Folded Reload
+; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
+; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
 ; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #1 {
@@ -80,8 +80,8 @@ define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #1 {
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
 ; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0
-; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
-; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], s{{[0-9]+}} offset:[[FI]] ; 4-byte Folded Reload
+; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
+; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
 ; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
 ; A2V:        ScratchSize: 0
 define amdgpu_kernel void @max_32regs_mfma32(float addrspace(1)* %arg) #3 {

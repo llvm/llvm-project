@@ -44,7 +44,7 @@ entry:
 ; GFX9: v_mov_b32_dpp v[[FIRST_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
 ; GFX9: v_add_u32_e32 v[[FIRST_ADD:[0-9]+]], v{{[0-9]+}}, v[[FIRST_MOV]]
 ; GFX9: v_mov_b32_e32 v[[FIRST:[0-9]+]], v[[FIRST_ADD]]
-; GFX9-O0: buffer_store_dword v[[FIRST]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[FIRST_SGPR_OFFSET:[0-9]+]] offset:[[FIRST_IMM_OFFSET:[0-9]+]]
+; GFX9-O0: buffer_store_dword v[[FIRST]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[FIRST_IMM_OFFSET:[0-9]+]]
   %tmp120 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp105, i32 323, i32 12, i32 15, i1 false)
   %tmp121 = add i32 %tmp105, %tmp120
   %tmp122 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp121)
@@ -58,7 +58,7 @@ if:
 ; GFX9: v_mov_b32_dpp v[[SECOND_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
 ; GFX9: v_add_u32_e32 v[[SECOND_ADD:[0-9]+]], v{{[0-9]+}}, v[[SECOND_MOV]]
 ; GFX9: v_mov_b32_e32 v[[SECOND:[0-9]+]], v[[SECOND_ADD]]
-; GFX9-O0: buffer_store_dword v[[SECOND]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[SECOND_SGPR_OFFSET:[0-9]+]] offset:[[SECOND_IMM_OFFSET:[0-9]+]]
+; GFX9-O0: buffer_store_dword v[[SECOND]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[SECOND_IMM_OFFSET:[0-9]+]]
   %tmp135 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp107, i32 323, i32 12, i32 15, i1 false)
   %tmp136 = add i32 %tmp107, %tmp135
   %tmp137 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp136)
@@ -67,8 +67,8 @@ if:
 merge:
   %merge_value = phi i32 [ 0, %entry ], [%tmp137, %if ]
 ; GFX9-O3: v_cmp_eq_u32_e32 vcc, v[[FIRST]], v[[SECOND]]
-; GFX9-O0: buffer_load_dword v[[SECOND:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[SECOND_SGPR_OFFSET]] offset:[[SECOND_IMM_OFFSET]]
-; GFX9-O0: buffer_load_dword v[[FIRST:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, s[[FIRST_SGPR_OFFSET]] offset:[[FIRST_IMM_OFFSET]]
+; GFX9-O0: buffer_load_dword v[[SECOND:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[SECOND_IMM_OFFSET]]
+; GFX9-O0: buffer_load_dword v[[FIRST:[0-9]+]], off, s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, 0 offset:[[FIRST_IMM_OFFSET]]
 ; GFX9-O0: v_cmp_eq_u32_e64 s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, v[[FIRST]], v[[SECOND]]
   %tmp138 = icmp eq i32 %tmp122, %merge_value
   %tmp139 = sext i1 %tmp138 to i32

@@ -21,7 +21,6 @@ name: expecting_non_empty_interval
 tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
-  scratchWaveOffsetReg: $sgpr4
   stackPtrOffsetReg: $sgpr32
 body:             |
   bb.0:
@@ -55,7 +54,6 @@ name: rematerialize_empty_interval_has_reference
 tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
-  scratchWaveOffsetReg: $sgpr4
   stackPtrOffsetReg: $sgpr32
 body:             |
   bb.0:

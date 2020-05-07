@@ -371,9 +371,9 @@ supported for the ``amdgcn`` target.
   (scratch), and group (LDS) memory depending on if the address is within one
   of the aperture ranges. Flat access to scratch requires hardware aperture
   setup and setup in the kernel prologue (see
-  :ref:`amdgpu-amdhsa-flat-scratch`). Flat access to LDS requires hardware
-  aperture setup and M0 (GFX7-GFX8) register setup (see
-  :ref:`amdgpu-amdhsa-m0`).
+  :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`). Flat access to LDS requires
+  hardware aperture setup and M0 (GFX7-GFX8) register setup (see
+  :ref:`amdgpu-amdhsa-kernel-prolog-m0`).
 
   To convert between a private or group address space address (termed a segment
   address) and a flat address the base address of the corresponding aperture
@@ -3753,7 +3753,7 @@ SGPR register initial state is defined in
                                                   must be used to set up FLAT
                                                   SCRATCH for flat addressing
                                                   (see
-                                                  :ref:`amdgpu-amdhsa-flat-scratch`).
+                                                  :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`).
      ========== ========================== ====== ==============================
 
 The order of the VGPR registers is defined, but the compiler can specify which
@@ -3877,10 +3877,10 @@ pointer are replaced with immediate ``0`` offsets.
 Flat Scratch
 ++++++++++++
 
-If the kernel may use flat operations to access scratch memory, the prolog code
-must set up FLAT_SCRATCH register pair (FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which
-are in SGPRn-4/SGPRn-3). Initialization uses Flat Scratch Init and Scratch
-Wavefront Offset SGPR registers (see
+If the kernel or any function it calls may use flat operations to access
+scratch memory, the prolog code must set up the FLAT_SCRATCH register pair
+(FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which are in SGPRn-4/SGPRn-3). Initialization
+uses Flat Scratch Init and Scratch Wavefront Offset SGPR registers (see
 :ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
 
 GFX6
@@ -6397,6 +6397,8 @@ Call Convention
 See :ref:`amdgpu-dwarf-address-space-identifier` for information on swizzled
 addresses. Unswizzled addresses are normal linear addresses.
 
+.. _amdgpu-amdhsa-function-call-convention-kernel-functions:
+
 Kernel Functions
 ++++++++++++++++
 
@@ -6420,44 +6422,10 @@ how the AMDGPU implements function calls:
         by-value struct?
       - What is ABI for lambda values?
 
-2.  The CFI return address is undefined.
-3.  If the kernel contains no calls then:
+4.  The kernel performs certain setup in its prolog, as described in
+    :ref:`amdgpu-amdhsa-kernel-prolog`.
 
-    - If using the ``amdhsa`` OS ABI (see :ref:`amdgpu-os-table`), and know
-      during ISel that there is stack usage SGPR0-3 is reserved for use as the
-      scratch SRD and SGPR33 reserved for the wave scratch offset. Stack usage
-      is assumed if ``-O0``, if already aware of stack objects for locals, etc.,
-      or if there are any function calls.
-    - Otherwise, five high numbered SGPRs are reserved for the tentative scratch
-      SRD and wave scratch offset. These will be used if determine need to do
-      spilling.
-
-      - If no use is made of the tentative scratch SRD or wave scratch offset,
-        then they are unreserved and the register count is determined ignoring
-        them.
-      - If use is made of the tenatative scratch SRD or wave scratch offset,
-        then the register numbers used are shifted to be after the highest one
-        allocated by the register allocator, and all uses updated. The register
-        count will include them in the shifted location. Since register
-        allocation may introduce spills, this shifting allows them to be
-        eliminated without having to perform register allocation again.
-      - In either case, if the processor has the SGPR allocation bug, the
-        tentative allocation is not shifted or unreserved inorder to ensure the
-        register count is higher to workaround the bug.
-
-4.  If the kernel contains function calls:
-
-    - SP is set to the wave scratch offset.
-
-      - Since SP is an unswizzled address relative to the queue scratch base, an
-        wave scratch offset is an unswizzle offset, this means that if SP is
-        used to access swizzled scratch memory, it will access the private
-        segment address 0.
-
-      .. note::
-
-        This is planned to be changed to be the unswizzled base address of the
-        wavefront scratch backing memory.
+.. _amdgpu-amdhsa-function-call-convention-non-kernel-functions:
 
 Non-Kernel Functions
 ++++++++++++++++++++
@@ -6465,26 +6433,23 @@ Non-Kernel Functions
 This section describes the call convention ABI for functions other than the
 outer kernel function.
 
-If a kernel has function calls then scratch is always allocated and used for the
-call stack which grows from low address to high address using the swizzled
+If a kernel has function calls then scratch is always allocated and used for
+the call stack which grows from low address to high address using the swizzled
 scratch address space.
 
 On entry to a function:
 
-1.  SGPR0-3 contain a V# with the following properties:
+1.  SGPR0-3 contain a V# with the following properties (see
+    :ref:`amdgpu-amdhsa-kernel-prolog-private-segment-buffer`):
 
-    * Base address of the queue scratch backing memory.
-
-      .. note::
-
-        This is planned to be changed to be the unswizzled base address of the
-        wavefront scratch backing memory.
-
+    * Base address pointing to the beginning of the wavefront scratch backing
+      memory.
     * Swizzled with dword element size and stride of wavefront size elements.
 
 2.  The FLAT_SCRATCH register pair is setup. See
-    :ref:`amdgpu-amdhsa-flat-scratch`.
-3.  GFX6-8: M0 register set to the size of LDS in bytes.
+    :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
+3.  GFX6-8: M0 register set to the size of LDS in bytes. See
+    :ref:`amdgpu-amdhsa-kernel-prolog-m0`.
 4.  The EXEC register is set to the lanes active on entry to the function.
 5.  MODE register: *TBD*
 6.  VGPR0-31 and SGPR4-29 are used to pass function input arguments as described
@@ -6492,13 +6457,20 @@ On entry to a function:
 7.  SGPR30-31 return address (RA). The code address that the function must
     return to when it completes. The value is undefined if the function is *no
     return*.
-8.  SGPR32 is used for the stack pointer (SP). It is an unswizzled
-    scratch offset relative to the beginning of the queue scratch backing
-    memory.
+8.  SGPR32 is used for the stack pointer (SP). It is an unswizzled scratch
+    offset relative to the beginning of the wavefront scratch backing memory.
 
     The unswizzled SP can be used with buffer instructions as an unswizzled SGPR
     offset with the scratch V# in SGPR0-3 to access the stack in a swizzled
     manner.
+
+    The unswizzled SP value can be converted into the swizzled SP value by:
+
+      | swizzled SP = unswizzled SP / wavefront size
+
+    This may be used to obtain the private address space address of stack
+    objects and to convert this address to a flat address by adding the flat
+    scratch aperture base address.
 
     The swizzled SP value is always 4 bytes aligned for the ``r600``
     architecture and 16 byte aligned for the ``amdgcn`` architecture.
@@ -6522,67 +6494,24 @@ On entry to a function:
     arguments after the last local allocation and adjust SGPR32 to the address
     after the last local allocation.
 
-    .. note::
-
-      The SP value is planned to be changed to be the unswizzled offset relative
-      to the wavefront scratch backing memory.
-
-9.  SGPR33 wavefront scratch base offset. The unswizzled offset from the queue
-    scratch backing memory base to the base of the wavefront scratch backing
-    memory.
-
-    It is used to convert the unswizzled SP value to swizzled address in the
-    private address space by:
-
-      | private address = (unswizzled SP - wavefront scratch base offset) /
-        wavefront size
-
-    This may be used to obtain the private address of stack objects and to
-    convert these address to a flat address by adding the flat scratch aperture
-    base address.
-
-    .. note::
-
-      This is planned to be eliminated when SP is changed to be the unswizzled
-      offset relative to the wavefront scratch backing memory. The the
-      conversion simplifies to:
-
-        | private address = unswizzled SP / wavefront size
-
-10. All other registers are unspecified.
-11. Any necessary ``waitcnt`` has been performed to ensure memory is available
+9.  All other registers are unspecified.
+10. Any necessary ``waitcnt`` has been performed to ensure memory is available
     to the function.
 
 On exit from a function:
 
 1.  VGPR0-31 and SGPR4-29 are used to pass function result arguments as
-    described below. Any registers used are considered clobbered registers,
+    described below. Any registers used are considered clobbered registers.
 2.  The following registers are preserved and have the same value as on entry:
 
     * FLAT_SCRATCH
     * EXEC
     * GFX6-8: M0
-    * All SGPR registers except the clobbered registers of SGPR4-31.
-    * VGPR40-47
-      VGPR56-63
-      VGPR72-79
-      VGPR88-95
-      VGPR104-111
-      VGPR120-127
-      VGPR136-143
-      VGPR152-159
-      VGPR168-175
-      VGPR184-191
-      VGPR200-207
-      VGPR216-223
-      VGPR232-239
-      VGPR248-255
-        *Except the argument registers, the VGPR cloberred and the preserved
-        registers are intermixed at regular intervals in order to
-        get a better occupancy.*
+    * All SGPR and VGPR registers except the clobbered registers of SGPR4-31 and
+      VGPR0-31.
 
       For the AMDGPU backend, an inter-procedural register allocation (IPRA)
-      optimization may mark some of clobbered SGPR and VGPR registers as
+      optimization may mark some of clobbered SGPR4-31 and VGPR0-31 registers as
       preserved if it can be determined that the called function does not change
       their value.
 
@@ -6769,9 +6698,9 @@ registers and some in memory.
 The following is not part of the AMDGPU function calling convention but
 describes how the AMDGPU implements function calls:
 
-1.  SGPR34 is used as a frame pointer (FP) if necessary. Like the SP it is an
+1.  SGPR33 is used as a frame pointer (FP) if necessary. Like the SP it is an
     unswizzled scratch address. It is only needed if runtime sized ``alloca``
-    are used, or for the reasons defined in ``SiFrameLowering``.
+    are used, or for the reasons defined in ``SIFrameLowering``.
 2.  Runtime stack alignment is not currently supported.
 
     .. TODO::
@@ -6786,14 +6715,11 @@ describes how the AMDGPU implements function calls:
 
     ..note::
 
-      Before CFI is generated, the call convention will be changed so that SP is
-      an unswizzled address relative to the wave scratch base.
-
       CFI will be generated that defines the CFA as the unswizzled address
       relative to the wave scratch base in the unswizzled private address space
       of the lowest address stack allocated local variable.
 
-      ``DW_AT_frame_base`` will be defined as the swizelled address in the
+      ``DW_AT_frame_base`` will be defined as the swizzled address in the
       swizzled private address space by dividing the CFA by the wavefront size
       (since CFA is always at least dword aligned which matches the scratch
       swizzle element size).

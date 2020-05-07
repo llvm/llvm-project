@@ -1,4 +1,3 @@
-; XFAIL:*
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx900 -mattr=+max-private-element-size-16,+enable-scratch-bounds-checks < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx1010 -mattr=+max-private-element-size-16,+enable-scratch-bounds-checks < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
