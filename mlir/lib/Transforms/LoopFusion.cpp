@@ -1625,7 +1625,10 @@ public:
             // continue fusing based on new operands.
             for (auto *loadOpInst : dstLoopCollector.loadOpInsts) {
               auto loadMemRef = cast<AffineLoadOp>(loadOpInst).getMemRef();
-              if (visitedMemrefs.count(loadMemRef) == 0)
+              // NOTE: Change 'loads' to a hash set in case efficiency is an
+              // issue. We still use a vector since it's expected to be small.
+              if (visitedMemrefs.count(loadMemRef) == 0 &&
+                  !llvm::is_contained(loads, loadOpInst))
                 loads.push_back(loadOpInst);
             }
 
