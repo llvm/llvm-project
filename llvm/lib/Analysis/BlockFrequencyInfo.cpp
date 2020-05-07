@@ -287,6 +287,11 @@ void BlockFrequencyInfo::print(raw_ostream &OS) const {
     BFI->print(OS);
 }
 
+void BlockFrequencyInfo::verifyMatch(BlockFrequencyInfo &Other) const {
+  if (BFI)
+    BFI->verifyMatch(*Other.BFI);
+}
+
 INITIALIZE_PASS_BEGIN(BlockFrequencyInfoWrapperPass, "block-freq",
                       "Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
