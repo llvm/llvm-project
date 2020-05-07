@@ -12,7 +12,6 @@ class TestSwiftRewriteClangPaths(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @expectedFailureAll(debug_info='dwarf', bugnumber="rdar://problem/62750529")
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @swiftTest
