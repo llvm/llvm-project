@@ -1325,6 +1325,28 @@ def SVSRA_S    : SInst<"svsra[_n_{d}]",   "dddi", "csil",         MergeNone, "aa
 def SVSRA_U    : SInst<"svsra[_n_{d}]",   "dddi", "UcUsUiUl",     MergeNone, "aarch64_sve_usra",   [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
 def SVSRI      : SInst<"svsri[_n_{d}]",   "dddi", "csilUcUsUiUl", MergeNone, "aarch64_sve_sri",    [], [ImmCheck<2, ImmCheckShiftRight, 1>]>;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Non-widening pairwise arithmetic
+
+multiclass SInstPairwise<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]", "dPdd", types, MergeOp1, intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]", "dPdd", types, MergeAny, intrinsic, flags>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+defm SVADDP   : SInstPairwise<"svaddp",   "csliUcUsUiUl", "aarch64_sve_addp">;
+defm SVADDP_F : SInstPairwise<"svaddp",   "hfd",          "aarch64_sve_faddp">;
+defm SVMAXNMP : SInstPairwise<"svmaxnmp", "hfd",          "aarch64_sve_fmaxnmp">;
+defm SVMAXP_F : SInstPairwise<"svmaxp",   "hfd",          "aarch64_sve_fmaxp">;
+defm SVMAXP_S : SInstPairwise<"svmaxp",   "csli",         "aarch64_sve_smaxp">;
+defm SVMAXP_U : SInstPairwise<"svmaxp",   "UcUsUiUl",     "aarch64_sve_umaxp">;
+defm SVMINNMP : SInstPairwise<"svminnmp", "hfd",          "aarch64_sve_fminnmp">;
+defm SVMINP_F : SInstPairwise<"svminp",   "hfd",          "aarch64_sve_fminp">;
+defm SVMINP_S : SInstPairwise<"svminp",   "csli",         "aarch64_sve_sminp">;
+defm SVMINP_U : SInstPairwise<"svminp",   "UcUsUiUl",     "aarch64_sve_uminp">;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Non-temporal gather/scatter
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
