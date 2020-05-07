@@ -25,13 +25,7 @@ class XcodeSDK {
   std::string m_name;
 
 public:
-  XcodeSDK() = default;
-  /// Initialize an XcodeSDK object with an SDK name. The SDK name is the last
-  /// directory component of a path one would pass to clang's -isysroot
-  /// parameter. For example, "MacOSX.10.14.sdk".
-  XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
-  static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
-
+  /// Different types of Xcode SDKs.
   enum Type : int {
     MacOSX = 0,
     iPhoneSimulator,
@@ -42,18 +36,9 @@ public:
     watchOS,
     bridgeOS,
     Linux,
-    numSDKTypes,
     unknown = -1
   };
-
-  /// The merge function follows a strict order to maintain monotonicity:
-  /// 1. SDK with the higher SDKType wins.
-  /// 2. The newer SDK wins.
-  void Merge(XcodeSDK other);
-
-  XcodeSDK &operator=(XcodeSDK other);
-  XcodeSDK(const XcodeSDK&) = default;
-  bool operator==(XcodeSDK other);
+  static constexpr int numSDKTypes = Linux + 1;
 
   /// A parsed SDK directory name.
   struct Info {
@@ -63,7 +48,28 @@ public:
 
     Info() = default;
     bool operator<(const Info &other) const;
+    bool operator==(const Info &other) const;
   };
+
+
+  /// Default constructor, constructs an empty string.
+  XcodeSDK() = default;
+  /// Construct an XcodeSDK object from a specification.
+  XcodeSDK(Info info);
+  /// Initialize an XcodeSDK object with an SDK name. The SDK name is the last
+  /// directory component of a path one would pass to clang's -isysroot
+  /// parameter. For example, "MacOSX.10.14.sdk".
+  XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
+  static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
+
+  /// The merge function follows a strict order to maintain monotonicity:
+  /// 1. SDK with the higher SDKType wins.
+  /// 2. The newer SDK wins.
+  void Merge(XcodeSDK other);
+
+  XcodeSDK &operator=(XcodeSDK other);
+  XcodeSDK(const XcodeSDK&) = default;
+  bool operator==(XcodeSDK other);
 
   /// Return parsed SDK type and version number.
   Info Parse() const;
