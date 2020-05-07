@@ -2663,6 +2663,23 @@ using one::two::ff;
 
 void fun() {
   CALL(ff);
+})cpp"},
+            // Parent namespace != lexical parent namespace
+            {R"cpp(
+#include "test.hpp"
+namespace foo { void fun(); }
+
+void foo::fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+using one::two::ff;
+
+namespace foo { void fun(); }
+
+void foo::fun() {
+  ff();
 })cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {

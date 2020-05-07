@@ -141,10 +141,12 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   }
 
   // No relevant "using" statements. Try the nearest namespace level.
-  const auto *NS = Inputs.ASTSelection.commonAncestor()
-                       ->getDeclContext()
-                       .getEnclosingNamespaceContext();
-  if (auto *ND = dyn_cast<NamespaceDecl>(NS)) {
+  const DeclContext *ParentDeclCtx =
+      &Inputs.ASTSelection.commonAncestor()->getDeclContext();
+  while (ParentDeclCtx && !ParentDeclCtx->isFileContext()) {
+    ParentDeclCtx = ParentDeclCtx->getLexicalParent();
+  }
+  if (auto *ND = llvm::dyn_cast_or_null<NamespaceDecl>(ParentDeclCtx)) {
     auto Toks = Inputs.AST->getTokens().expandedTokens(ND->getSourceRange());
     const auto *Tok = llvm::find_if(Toks, [](const syntax::Token &Tok) {
       return Tok.kind() == tok::l_brace;
