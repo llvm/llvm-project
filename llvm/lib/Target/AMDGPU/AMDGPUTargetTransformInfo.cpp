@@ -723,10 +723,9 @@ static bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
-    // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
+    // For non-compute shaders, SGPR inputs are marked with either inreg.
     // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||
-           F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::ByVal);
+    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg);
   default:
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
