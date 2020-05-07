@@ -43579,9 +43579,9 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
   if (!VT.isVector() || VT.getVectorElementType() != MVT::i16)
     return SDValue();
 
-  // Input type should be vXi32.
+  // Input type should be at least vXi32.
   EVT InVT = Src.getValueType();
-  if (InVT.getVectorElementType() != MVT::i32)
+  if (InVT.getVectorElementType().getSizeInBits() < 32)
     return SDValue();
 
   // Need a shift by 16.
