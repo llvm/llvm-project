@@ -1034,6 +1034,8 @@ public:
   raw_ostream &printBlockFreq(raw_ostream &OS, const BlockT *BB) const {
     return BlockFrequencyInfoImplBase::printBlockFreq(OS, getNode(BB));
   }
+
+  void verifyMatch(BlockFrequencyInfoImpl<BT> &Other) const;
 };
 
 namespace bfi_detail {
@@ -1415,6 +1417,61 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
   // Add an extra newline for readability.
   OS << "\n";
   return OS;
+}
+
+template <class BT>
+void BlockFrequencyInfoImpl<BT>::verifyMatch(
+    BlockFrequencyInfoImpl<BT> &Other) const {
+  bool Match = true;
+  DenseMap<const BlockT *, BlockNode> ValidNodes;
+  DenseMap<const BlockT *, BlockNode> OtherValidNodes;
+  for (auto &Entry : Nodes) {
+    const BlockT *BB = Entry.first;
+    if (BB) {
+      ValidNodes[BB] = Entry.second.first;
+    }
+  }
+  for (auto &Entry : Other.Nodes) {
+    const BlockT *BB = Entry.first;
+    if (BB) {
+      OtherValidNodes[BB] = Entry.second.first;
+    }
+  }
+  unsigned NumValidNodes = ValidNodes.size();
+  unsigned NumOtherValidNodes = OtherValidNodes.size();
+  if (NumValidNodes != NumOtherValidNodes) {
+    Match = false;
+    dbgs() << "Number of blocks mismatch: " << NumValidNodes << " vs "
+           << NumOtherValidNodes << "\n";
+  } else {
+    for (auto &Entry : ValidNodes) {
+      const BlockT *BB = Entry.first;
+      BlockNode Node = Entry.second;
+      if (OtherValidNodes.count(BB)) {
+        BlockNode OtherNode = OtherValidNodes[BB];
+        auto Freq = Freqs[Node.Index];
+        auto OtherFreq = Other.Freqs[OtherNode.Index];
+        if (Freq.Integer != OtherFreq.Integer) {
+          Match = false;
+          dbgs() << "Freq mismatch: " << bfi_detail::getBlockName(BB) << " "
+                 << Freq.Integer << " vs " << OtherFreq.Integer << "\n";
+        }
+      } else {
+        Match = false;
+        dbgs() << "Block " << bfi_detail::getBlockName(BB) << " index "
+               << Node.Index << " does not exist in Other.\n";
+      }
+    }
+    // If there's a valid node in OtherValidNodes that's not in ValidNodes,
+    // either the above num check or the check on OtherValidNodes will fail.
+  }
+  if (!Match) {
+    dbgs() << "This\n";
+    print(dbgs());
+    dbgs() << "Other\n";
+    Other.print(dbgs());
+  }
+  assert(Match && "BFI mismatch");
 }
 
 // Graph trait base class for block frequency information graph

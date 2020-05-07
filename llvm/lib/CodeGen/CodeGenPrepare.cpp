@@ -229,6 +229,11 @@ static cl::opt<bool> EnableICMP_EQToICMP_ST(
     "cgp-icmp-eq2icmp-st", cl::Hidden, cl::init(false),
     cl::desc("Enable ICMP_EQ to ICMP_S(L|G)T conversion."));
 
+static cl::opt<bool>
+    VerifyBFIUpdates("cgp-verify-bfi-updates", cl::Hidden, cl::init(false),
+                     cl::desc("Enable BFI update verification for "
+                              "CodeGenPrepare."));
+
 namespace {
 
 enum ExtType {
@@ -405,6 +410,7 @@ class TypePromotionTransaction;
     bool optimizeCmp(CmpInst *Cmp, bool &ModifiedDT);
     bool combineToUSubWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
     bool combineToUAddWithOverflow(CmpInst *Cmp, bool &ModifiedDT);
+    void verifyBFIUpdates(Function &F);
   };
 
 } // end anonymous namespace
@@ -565,7 +571,21 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   // preparatory transforms.
   EverMadeChange |= placeDbgValues(F);
 
+#ifndef NDEBUG
+  if (VerifyBFIUpdates)
+    verifyBFIUpdates(F);
+#endif
+
   return EverMadeChange;
+}
+
+// Verify BFI has been updated correctly by recomputing BFI and comparing them.
+void CodeGenPrepare::verifyBFIUpdates(Function &F) {
+  DominatorTree NewDT(F);
+  LoopInfo NewLI(NewDT);
+  BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
+  BlockFrequencyInfo NewBFI(F, NewBPI, NewLI);
+  NewBFI.verifyMatch(*BFI);
 }
 
 /// Merge basic blocks which are connected by a single edge, where one of the
@@ -2204,6 +2224,11 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB, bool &ModifiedDT
 
     // Duplicate the return into TailCallBB.
     (void)FoldReturnIntoUncondBranch(RetI, BB, TailCallBB);
+    assert(!VerifyBFIUpdates ||
+           BFI->getBlockFreq(BB) >= BFI->getBlockFreq(TailCallBB));
+    BFI->setBlockFreq(
+        BB,
+        (BFI->getBlockFreq(BB) - BFI->getBlockFreq(TailCallBB)).getFrequency());
     ModifiedDT = Changed = true;
     ++NumRetsDup;
   }
