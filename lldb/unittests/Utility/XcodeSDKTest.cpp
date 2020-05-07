@@ -97,67 +97,82 @@ TEST(XcodeSDKTest, SDKSupportsSwift) {
   EXPECT_FALSE(XcodeSDK("EverythingElse.sdk").SupportsSwift());
 }
 
-TEST(XcodeSDKTest, GetCanonicalName) {
+TEST(XcodeSDKTest, GetCanonicalNameAndConstruct) {
   XcodeSDK::Info info;
   info.type = XcodeSDK::Type::MacOSX;
   EXPECT_EQ("macosx", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::iPhoneSimulator;
   EXPECT_EQ("iphonesimulator", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::iPhoneOS;
   EXPECT_EQ("iphoneos", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::AppleTVSimulator;
   EXPECT_EQ("appletvsimulator", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::AppleTVOS;
   EXPECT_EQ("appletvos", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::WatchSimulator;
   EXPECT_EQ("watchsimulator", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::watchOS;
   EXPECT_EQ("watchos", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::Linux;
   EXPECT_EQ("linux", XcodeSDK::GetCanonicalName(info));
-
-  info.type = XcodeSDK::Type::numSDKTypes;
-  EXPECT_EQ("", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::unknown;
   EXPECT_EQ("", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.internal = true;
   info.type = XcodeSDK::Type::MacOSX;
   EXPECT_EQ("macosx.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::iPhoneSimulator;
   EXPECT_EQ("iphonesimulator.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::iPhoneOS;
   EXPECT_EQ("iphoneos.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::AppleTVSimulator;
   EXPECT_EQ("appletvsimulator.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::AppleTVOS;
   EXPECT_EQ("appletvos.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::WatchSimulator;
   EXPECT_EQ("watchsimulator.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::watchOS;
   EXPECT_EQ("watchos.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::MacOSX;
   info.version = llvm::VersionTuple(10, 9);
   EXPECT_EQ("macosx10.9.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 
   info.type = XcodeSDK::Type::iPhoneOS;
   info.version = llvm::VersionTuple(7, 0);
   EXPECT_EQ("iphoneos7.0.internal", XcodeSDK::GetCanonicalName(info));
+  EXPECT_EQ(XcodeSDK(info).Parse(), info);
 }
 
 TEST(XcodeSDKTest, GetSDKTypeForTriple) {
