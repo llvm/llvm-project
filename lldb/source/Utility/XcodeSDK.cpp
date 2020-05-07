@@ -18,6 +18,41 @@
 using namespace lldb;
 using namespace lldb_private;
 
+static llvm::StringRef GetName(XcodeSDK::Type type) {
+  switch (type) {
+  case XcodeSDK::MacOSX:
+    return "MacOSX";
+  case XcodeSDK::iPhoneSimulator:
+    return "iPhoneSimulator";
+  case XcodeSDK::iPhoneOS:
+    return "iPhoneOS";
+  case XcodeSDK::AppleTVSimulator:
+    return "AppleTVSimulator";
+  case XcodeSDK::AppleTVOS:
+    return "AppleTVOS";
+  case XcodeSDK::WatchSimulator:
+    return "WatchSimulator";
+  case XcodeSDK::watchOS:
+    return "WatchOS";
+  case XcodeSDK::bridgeOS:
+    return "bridgeOS";
+  case XcodeSDK::Linux:
+    return "Linux";
+  case XcodeSDK::unknown:
+    return {};
+  }
+}
+
+XcodeSDK::XcodeSDK(XcodeSDK::Info info) : m_name(GetName(info.type).str()) {
+  if (!m_name.empty()) {
+    if (!info.version.empty())
+      m_name += info.version.getAsString();
+    if (info.internal)
+      m_name += ".Internal";
+    m_name += ".sdk";
+  }
+}
+
 XcodeSDK &XcodeSDK::operator=(XcodeSDK other) {
   m_name = other.m_name;
   return *this;
@@ -69,7 +104,7 @@ static llvm::VersionTuple ParseSDKVersion(llvm::StringRef &name) {
 }
 
 static bool ParseAppleInternalSDK(llvm::StringRef &name) {
-  return name.consume_front("Internal.");
+  return name.consume_front("Internal.") || name.consume_front(".Internal.");
 }
 
 XcodeSDK::Info XcodeSDK::Parse() const {
@@ -105,6 +140,12 @@ bool XcodeSDK::Info::operator<(const Info &other) const {
   return std::tie(type, version, internal) <
          std::tie(other.type, other.version, other.internal);
 }
+
+bool XcodeSDK::Info::operator==(const Info &other) const {
+  return std::tie(type, version, internal) ==
+         std::tie(other.type, other.version, other.internal);
+}
+
 void XcodeSDK::Merge(XcodeSDK other) {
   // The "bigger" SDK always wins.
   auto l = Parse();
@@ -150,7 +191,6 @@ std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
   case Linux:
     name = "linux";
     break;
-  case numSDKTypes:
   case unknown:
     return {};
   }
