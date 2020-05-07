@@ -1718,6 +1718,24 @@ def SVCDOT_LANE : SInst<"svcdot_lane[_{d}]", "ddqqii", "il",   MergeNone, "aarch
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Floating-point widening multiply-accumulate
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVMLALB_F      : SInst<"svmlalb[_{d}]",      "ddhh",  "f",   MergeNone, "aarch64_sve_fmlalb">;
+def SVMLALB_F_N    : SInst<"svmlalb[_n_{d}]",    "ddhR",  "f",   MergeNone, "aarch64_sve_fmlalb">;
+def SVMLALB_F_LANE : SInst<"svmlalb_lane[_{d}]", "ddhhi", "f",   MergeNone, "aarch64_sve_fmlalb_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLALT_F      : SInst<"svmlalt[_{d}]",      "ddhh",  "f",   MergeNone, "aarch64_sve_fmlalt">;
+def SVMLALT_F_N    : SInst<"svmlalt[_n_{d}]",    "ddhR",  "f",   MergeNone, "aarch64_sve_fmlalt">;
+def SVMLALT_F_LANE : SInst<"svmlalt_lane[_{d}]", "ddhhi", "f",   MergeNone, "aarch64_sve_fmlalt_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLSLB_F      : SInst<"svmlslb[_{d}]",      "ddhh",  "f",   MergeNone, "aarch64_sve_fmlslb">;
+def SVMLSLB_F_N    : SInst<"svmlslb[_n_{d}]",    "ddhR",  "f",   MergeNone, "aarch64_sve_fmlslb">;
+def SVMLSLB_F_LANE : SInst<"svmlslb_lane[_{d}]", "ddhhi", "f",   MergeNone, "aarch64_sve_fmlslb_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLSLT_F      : SInst<"svmlslt[_{d}]",      "ddhh",  "f",   MergeNone, "aarch64_sve_fmlslt">;
+def SVMLSLT_F_N    : SInst<"svmlslt[_n_{d}]",    "ddhR",  "f",   MergeNone, "aarch64_sve_fmlslt">;
+def SVMLSLT_F_LANE : SInst<"svmlslt_lane[_{d}]", "ddhhi", "f",   MergeNone, "aarch64_sve_fmlslt_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Contiguous conflict detection
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw_b", [IsOverloadWhileRW]>;

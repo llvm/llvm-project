@@ -33,3 +33,15 @@ svuint64_t test_svmlslb_lane_u64(svuint64_t op1, svuint32_t op2, svuint32_t op3)
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 3]}}
   return SVE_ACLE_FUNC(svmlslb_lane,_u64,,)(op1, op2, op3, 4);
 }
+
+svfloat32_t test_svmlslb_lane_f32(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
+  return SVE_ACLE_FUNC(svmlslb_lane,_f32,,)(op1, op2, op3, -1);
+}
+
+svfloat32_t test_svmlslb_lane_f32_1(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+{
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 7]}}
+  return SVE_ACLE_FUNC(svmlslb_lane,_f32,,)(op1, op2, op3, 8);
+}
