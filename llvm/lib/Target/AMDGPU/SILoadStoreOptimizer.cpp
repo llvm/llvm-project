@@ -886,7 +886,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
 
   MachineBasicBlock::iterator E = std::next(Paired.I);
   MachineBasicBlock::iterator MBBI = std::next(CI.I);
-  MachineBasicBlock::iterator MBBE = CI.I->getParent()->end();  
+  MachineBasicBlock::iterator MBBE = CI.I->getParent()->end();
   for (; MBBI != E; ++MBBI) {
 
     if (MBBI == MBBE) {

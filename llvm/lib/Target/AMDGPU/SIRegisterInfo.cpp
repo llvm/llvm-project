@@ -720,8 +720,8 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     if (RS)
       SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
 
-    if (SOffset == AMDGPU::NoRegister) {
-      if (ScratchOffsetReg == AMDGPU::NoRegister) {
+    if (!SOffset) {
+      if (!ScratchOffsetReg) {
         report_fatal_error("could not scavenge SGPR to spill in entry function");
       }
       // There are no free SGPRs, and since we are in the process of spilling

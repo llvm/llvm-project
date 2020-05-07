@@ -72,12 +72,12 @@ entry:
 
 ; SI-DAG:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
 ; SI-DAG:  v_cvt_f32_f16_e32 v[[B_F32_1:[0-9]+]], v[[B_F16_1]]
-; SI-DAG:  v_add_f32_e32 v[[R_F32_0:[0-9]+]], v[[A_F32:[0-9]]], v[[B_F32:[0-9]]]
-; SI-DAG:  v_add_f32_e32 v[[R_F32_1:[0-9]+]], v[[A_F32:[0-9]]], v[[B_F32:[0-9]]]
+; SI-DAG:  v_add_f32_e32 v[[R_F32_0:[0-9]+]], v[[A_F32_0]], v[[B_F32_0]]
+; SI-DAG:  v_add_f32_e32 v[[R_F32_1:[0-9]+]], v[[A_F32_1]], v[[B_F32_1]]
 ; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[R_F32_0]]
 ; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
-; SI: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16:[0-9]]]
-; SI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16:[0-9]]], v[[R_F16_HI]]
+; SI: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
+; SI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_HI]]
 
 ; VI-DAG: v_add_f16_e32 v[[R_F16_LO:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]]
 ; VI-DAG: v_add_f16_sdwa v[[R_F16_HI:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
