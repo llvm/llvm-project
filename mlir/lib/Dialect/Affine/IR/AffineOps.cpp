@@ -2089,6 +2089,38 @@ static ParseResult parseAffineMinMaxOp(OpAsmParser &parser,
       parser.addTypeToList(indexType, result.types));
 }
 
+/// Fold an affine min or max operation with the given operands. The operand
+/// list may contain nulls, which are interpreted as the operand not being a
+/// constant.
+template <typename T>
+OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
+  static_assert(llvm::is_one_of<T, AffineMinOp, AffineMaxOp>::value,
+                "expected affine min or max op");
+
+  // Fold the affine map.
+  // TODO(andydavis, ntv) Fold more cases:
+  // min(some_affine, some_affine + constant, ...), etc.
+  SmallVector<int64_t, 2> results;
+  auto foldedMap = op.map().partialConstantFold(operands, &results);
+
+  // If some of the map results are not constant, try changing the map in-place.
+  if (results.empty()) {
+    // If the map is the same, report that folding did not happen.
+    if (foldedMap == op.map())
+      return {};
+    op.setAttr("map", AffineMapAttr::get(foldedMap));
+    return op.getResult();
+  }
+
+  // Otherwise, completely fold the op into a constant.
+  auto resultIt = std::is_same<T, AffineMinOp>::value
+                      ? std::min_element(results.begin(), results.end())
+                      : std::max_element(results.begin(), results.end());
+  if (resultIt == results.end())
+    return {};
+  return IntegerAttr::get(IndexType::get(op.getContext()), *resultIt);
+}
+
 //===----------------------------------------------------------------------===//
 // AffineMinOp
 //===----------------------------------------------------------------------===//
@@ -2097,26 +2129,7 @@ static ParseResult parseAffineMinMaxOp(OpAsmParser &parser,
 //
 
 OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
-  // Fold the affine map.
-  // TODO(andydavis, ntv) Fold more cases: partial static information,
-  // min(some_affine, some_affine + constant, ...).
-  SmallVector<Attribute, 2> results;
-  if (failed(map().constantFold(operands, results)))
-    return {};
-
-  // Compute and return min of folded map results.
-  int64_t min = std::numeric_limits<int64_t>::max();
-  int minIndex = -1;
-  for (unsigned i = 0, e = results.size(); i < e; ++i) {
-    auto intAttr = results[i].cast<IntegerAttr>();
-    if (intAttr.getInt() < min) {
-      min = intAttr.getInt();
-      minIndex = i;
-    }
-  }
-  if (minIndex < 0)
-    return {};
-  return results[minIndex];
+  return foldMinMaxOp(*this, operands);
 }
 
 void AffineMinOp::getCanonicalizationPatterns(
@@ -2132,26 +2145,7 @@ void AffineMinOp::getCanonicalizationPatterns(
 //
 
 OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
-  // Fold the affine map.
-  // TODO(andydavis, ntv, ouhang) Fold more cases: partial static information,
-  // max(some_affine, some_affine + constant, ...).
-  SmallVector<Attribute, 2> results;
-  if (failed(map().constantFold(operands, results)))
-    return {};
-
-  // Compute and return max of folded map results.
-  int64_t max = std::numeric_limits<int64_t>::min();
-  int maxIndex = -1;
-  for (unsigned i = 0, e = results.size(); i < e; ++i) {
-    auto intAttr = results[i].cast<IntegerAttr>();
-    if (intAttr.getInt() > max) {
-      max = intAttr.getInt();
-      maxIndex = i;
-    }
-  }
-  if (maxIndex < 0)
-    return {};
-  return results[maxIndex];
+  return foldMinMaxOp(*this, operands);
 }
 
 void AffineMaxOp::getCanonicalizationPatterns(
