@@ -542,14 +542,13 @@ end:
 
 ; GCN-LABEL: {{^}}test_export_clustering:
 ; GCN-DAG: v_mov_b32_e32 [[W0:v[0-9]+]], 0
+; GCN-DAG: v_mov_b32_e32 [[W1:v[0-9]+]], 1.0
 ; GCN-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
 ; GCN-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
 ; GCN-DAG: v_add_f32_e32 [[Z0:v[0-9]+]]
-; GCN-DAG: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
 ; GCN-DAG: v_sub_f32_e32 [[Z1:v[0-9]+]]
-; GCN: s_waitcnt expcnt(0)
-; GCN: v_mov_b32_e32 [[W1:v[0-9]+]], 1.0
-; GCN: exp param1 [[X]], [[Y]], [[Z1]], [[W1]] done{{$}}
+; GCN: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
+; GCN-NEXT: exp param1 [[X]], [[Y]], [[Z1]], [[W1]] done{{$}}
 define amdgpu_kernel void @test_export_clustering(float %x, float %y) #0 {
   %z0 = fadd float %x, %y
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %x, float %y, float %z0, float 0.0, i1 false, i1 false)
