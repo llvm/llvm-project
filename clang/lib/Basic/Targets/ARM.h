@@ -182,6 +182,8 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
   bool hasSjLjLowering() const override;
+
+  bool hasExtIntType() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {
