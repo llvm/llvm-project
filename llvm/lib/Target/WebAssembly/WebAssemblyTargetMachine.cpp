@@ -273,20 +273,21 @@ private:
 
   void recordFeatures(Module &M, const FeatureBitset &Features, bool Stripped) {
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-      std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
-      if (KV.Value == WebAssembly::FeatureAtomics && Stripped) {
-        // "atomics" is special: code compiled without atomics may have had its
-        // atomics lowered to nonatomic operations. In that case, atomics is
-        // disallowed to prevent unsafe linking with atomics-enabled objects.
-        assert(!Features[WebAssembly::FeatureAtomics] ||
-               !Features[WebAssembly::FeatureBulkMemory]);
-        M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
-                        wasm::WASM_FEATURE_PREFIX_DISALLOWED);
-      } else if (Features[KV.Value]) {
-        // Otherwise features are marked Used or not mentioned
+      if (Features[KV.Value]) {
+        // Mark features as used
+        std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
         M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
                         wasm::WASM_FEATURE_PREFIX_USED);
       }
+    }
+    // Code compiled without atomics or bulk-memory may have had its atomics or
+    // thread-local data lowered to nonatomic operations or non-thread-local
+    // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
+    // to tell the linker that it would be unsafe to allow this code ot be used
+    // in a module with shared memory.
+    if (Stripped) {
+      M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
+                      wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
   }
 };
