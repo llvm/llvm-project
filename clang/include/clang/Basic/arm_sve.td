@@ -1753,6 +1753,14 @@ def SVHISTSEG  : SInst<"svhistseg[_{d}]",   "udd",  "cUc",    MergeNone, "aarch6
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// SVE2 - Character match
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
+def SVMATCH  : SInst<"svmatch[_{d}]",  "PPdd", "csUcUs", MergeNone, "aarch64_sve_match">;
+def SVNMATCH : SInst<"svnmatch[_{d}]", "PPdd", "csUcUs", MergeNone, "aarch64_sve_nmatch">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Contiguous conflict detection
 let ArchGuard = "defined(__ARM_FEATURE_SVE2)" in {
 def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw_b", [IsOverloadWhileRW]>;
