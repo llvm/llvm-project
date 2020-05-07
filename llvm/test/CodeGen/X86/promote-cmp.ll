@@ -72,12 +72,10 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vpslld $31, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
-; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpsllq $63, %xmm3, %xmm3
+; AVX1-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -85,11 +83,8 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; AVX2-LABEL: PR45808:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm2, %xmm2
-; AVX2-NEXT:    vpslld $31, %xmm2, %xmm2
-; AVX2-NEXT:    vpmovsxdq %xmm2, %ymm2
+; AVX2-NEXT:    vpxor {{.*}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vpsllq $63, %ymm2, %ymm2
 ; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
   %3 = icmp sgt <4 x i64> %0, %1
