@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -33,7 +34,7 @@ using namespace fs;
 
 TEST_SUITE(recursive_directory_iterator_move_assign_tests)
 
-recursive_directory_iterator createInterestingIterator(const static_test_env &static_env)
+recursive_directory_iterator createInterestingIterator()
     // Create an "interesting" iterator where all fields are
     // in a non-default state. The returned 'it' is in a
     // state such that:
@@ -41,7 +42,7 @@ recursive_directory_iterator createInterestingIterator(const static_test_env &st
     //   it.depth() == 1
     //   it.recursion_pending() == true
 {
-    const path testDir = static_env.Dir;
+    const path testDir = StaticEnv::Dir;
     const recursive_directory_iterator endIt;
     recursive_directory_iterator it(testDir,
                                     directory_options::skip_permission_denied);
@@ -55,7 +56,7 @@ recursive_directory_iterator createInterestingIterator(const static_test_env &st
     return it;
 }
 
-recursive_directory_iterator createDifferentInterestingIterator(const static_test_env &static_env)
+recursive_directory_iterator createDifferentInterestingIterator()
     // Create an "interesting" iterator where all fields are
     // in a non-default state. The returned 'it' is in a
     // state such that:
@@ -63,7 +64,7 @@ recursive_directory_iterator createDifferentInterestingIterator(const static_tes
     //   it.depth() == 2
     //   it.recursion_pending() == false
 {
-    const path testDir = static_env.Dir;
+    const path testDir = StaticEnv::Dir;
     const recursive_directory_iterator endIt;
     recursive_directory_iterator it(testDir,
                                     directory_options::follow_directory_symlink);
@@ -86,10 +87,9 @@ TEST_CASE(test_assignment_signature)
 
 TEST_CASE(test_move_to_end_iterator)
 {
-    static_test_env static_env;
     const recursive_directory_iterator endIt;
 
-    recursive_directory_iterator from = createInterestingIterator(static_env);
+    recursive_directory_iterator from = createInterestingIterator();
     const recursive_directory_iterator from_copy(from);
     const path entry = *from;
 
@@ -106,9 +106,8 @@ TEST_CASE(test_move_to_end_iterator)
 
 TEST_CASE(test_move_from_end_iterator)
 {
-    static_test_env static_env;
     recursive_directory_iterator from;
-    recursive_directory_iterator to = createInterestingIterator(static_env);
+    recursive_directory_iterator to = createInterestingIterator();
 
     to = std::move(from);
     TEST_REQUIRE(to == from);
@@ -117,14 +116,13 @@ TEST_CASE(test_move_from_end_iterator)
 
 TEST_CASE(test_move_valid_iterator)
 {
-    static_test_env static_env;
     const recursive_directory_iterator endIt;
 
-    recursive_directory_iterator it = createInterestingIterator(static_env);
+    recursive_directory_iterator it = createInterestingIterator();
     const recursive_directory_iterator it_copy(it);
     const path entry = *it;
 
-    recursive_directory_iterator it2 = createDifferentInterestingIterator(static_env);
+    recursive_directory_iterator it2 = createDifferentInterestingIterator();
     const recursive_directory_iterator it2_copy(it2);
     TEST_REQUIRE(it2 != it);
     TEST_CHECK(it2.options() != it.options());
@@ -151,10 +149,9 @@ TEST_CASE(test_returns_reference_to_self)
 
 TEST_CASE(test_self_move)
 {
-    static_test_env static_env;
     // Create two non-equal iterators that have exactly the same state.
-    recursive_directory_iterator it = createInterestingIterator(static_env);
-    recursive_directory_iterator it2 = createInterestingIterator(static_env);
+    recursive_directory_iterator it = createInterestingIterator();
+    recursive_directory_iterator it2 = createInterestingIterator();
     TEST_CHECK(it != it2);
     TEST_CHECK(it2.options()           == it.options());
     TEST_CHECK(it2.depth()             == it.depth());

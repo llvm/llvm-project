@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -29,10 +30,9 @@ TEST_SUITE(recursive_directory_iterator_depth_tests)
 
 TEST_CASE(test_depth)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const path DirDepth1 = static_env.Dir2;
-    const path DirDepth2 = static_env.Dir3;
+    const path testDir = StaticEnv::Dir;
+    const path DirDepth1 = StaticEnv::Dir2;
+    const path DirDepth2 = StaticEnv::Dir3;
     const recursive_directory_iterator endIt{};
 
     std::error_code ec;

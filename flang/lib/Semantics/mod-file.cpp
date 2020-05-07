@@ -243,8 +243,8 @@ void ModFileWriter::PutSymbol(
                  [&](const CommonBlockDetails &x) {
                    decls_ << "common/" << symbol.name();
                    char sep = '/';
-                   for (const Symbol &object : x.objects()) {
-                     decls_ << sep << object.name();
+                   for (const auto &object : x.objects()) {
+                     decls_ << sep << object->name();
                      sep = ',';
                    }
                    decls_ << '\n';
@@ -875,8 +875,8 @@ void SubprogramSymbolCollector::DoSymbol(
                    }
                  },
                  [this](const CommonBlockDetails &details) {
-                   for (const Symbol &object : details.objects()) {
-                     DoSymbol(object);
+                   for (const auto &object : details.objects()) {
+                     DoSymbol(*object);
                    }
                  },
                  [](const auto &) {},

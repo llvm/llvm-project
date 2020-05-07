@@ -4716,6 +4716,13 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
   }
 }
 
+static bool isTargetShuffleSplat(SDValue Op) {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::EXTRACT_SUBVECTOR)
+    return isTargetShuffleSplat(Op.getOperand(0));
+  return Opcode == X86ISD::VBROADCAST || Opcode == X86ISD::VBROADCAST_LOAD;
+}
+
 SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
@@ -7756,91 +7763,108 @@ static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
 
 /// Returns the scalar element that will make up the i'th
 /// element of the result of the vector shuffle.
-static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
-                                   unsigned Depth) {
+static SDValue getShuffleScalarElt(SDValue Op, unsigned Index,
+                                   SelectionDAG &DAG, unsigned Depth) {
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue(); // Limit search depth.
 
-  SDValue V = SDValue(N, 0);
-  EVT VT = V.getValueType();
-  unsigned Opcode = V.getOpcode();
+  EVT VT = Op.getValueType();
+  unsigned Opcode = Op.getOpcode();
+  unsigned NumElems = VT.getVectorNumElements();
 
   // Recurse into ISD::VECTOR_SHUFFLE node to find scalars.
-  if (auto *SV = dyn_cast<ShuffleVectorSDNode>(N)) {
+  if (auto *SV = dyn_cast<ShuffleVectorSDNode>(Op)) {
     int Elt = SV->getMaskElt(Index);
 
     if (Elt < 0)
       return DAG.getUNDEF(VT.getVectorElementType());
 
-    unsigned NumElems = VT.getVectorNumElements();
-    SDValue NewV =
-        (Elt < (int)NumElems) ? SV->getOperand(0) : SV->getOperand(1);
-    return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG, Depth + 1);
+    SDValue Src = (Elt < (int)NumElems) ? SV->getOperand(0) : SV->getOperand(1);
+    return getShuffleScalarElt(Src, Elt % NumElems, DAG, Depth + 1);
   }
 
   // Recurse into target specific vector shuffles to find scalars.
   if (isTargetShuffle(Opcode)) {
-    MVT ShufVT = V.getSimpleValueType();
+    MVT ShufVT = VT.getSimpleVT();
     MVT ShufSVT = ShufVT.getVectorElementType();
     int NumElems = (int)ShufVT.getVectorNumElements();
     SmallVector<int, 16> ShuffleMask;
     SmallVector<SDValue, 16> ShuffleOps;
     bool IsUnary;
 
-    if (!getTargetShuffleMask(N, ShufVT, true, ShuffleOps, ShuffleMask,
-                              IsUnary))
+    if (!getTargetShuffleMask(Op.getNode(), ShufVT, true, ShuffleOps,
+                              ShuffleMask, IsUnary))
       return SDValue();
 
     int Elt = ShuffleMask[Index];
     if (Elt == SM_SentinelZero)
-      return ShufSVT.isInteger() ? DAG.getConstant(0, SDLoc(N), ShufSVT)
-                                 : DAG.getConstantFP(+0.0, SDLoc(N), ShufSVT);
+      return ShufSVT.isInteger() ? DAG.getConstant(0, SDLoc(Op), ShufSVT)
+                                 : DAG.getConstantFP(+0.0, SDLoc(Op), ShufSVT);
     if (Elt == SM_SentinelUndef)
       return DAG.getUNDEF(ShufSVT);
 
     assert(0 <= Elt && Elt < (2 * NumElems) && "Shuffle index out of range");
-    SDValue NewV = (Elt < NumElems) ? ShuffleOps[0] : ShuffleOps[1];
-    return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG, Depth + 1);
+    SDValue Src = (Elt < NumElems) ? ShuffleOps[0] : ShuffleOps[1];
+    return getShuffleScalarElt(Src, Elt % NumElems, DAG, Depth + 1);
   }
 
   // Recurse into insert_subvector base/sub vector to find scalars.
   if (Opcode == ISD::INSERT_SUBVECTOR &&
-      isa<ConstantSDNode>(N->getOperand(2))) {
-    SDValue Vec = N->getOperand(0);
-    SDValue Sub = N->getOperand(1);
+      isa<ConstantSDNode>(Op.getOperand(2))) {
+    SDValue Vec = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
-    uint64_t SubIdx = N->getConstantOperandVal(2);
+    uint64_t SubIdx = Op.getConstantOperandVal(2);
 
     if (SubIdx <= Index && Index < (SubIdx + NumSubElts))
-      return getShuffleScalarElt(Sub.getNode(), Index - SubIdx, DAG, Depth + 1);
-    return getShuffleScalarElt(Vec.getNode(), Index, DAG, Depth + 1);
+      return getShuffleScalarElt(Sub, Index - SubIdx, DAG, Depth + 1);
+    return getShuffleScalarElt(Vec, Index, DAG, Depth + 1);
+  }
+
+  // Recurse into concat_vectors sub vector to find scalars.
+  if (Opcode == ISD::CONCAT_VECTORS) {
+    EVT SubVT = Op.getOperand(0).getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t SubIdx = Index / NumSubElts;
+    uint64_t SubElt = Index % NumSubElts;
+    return getShuffleScalarElt(Op.getOperand(SubIdx), SubElt, DAG, Depth + 1);
   }
 
   // Recurse into extract_subvector src vector to find scalars.
   if (Opcode == ISD::EXTRACT_SUBVECTOR &&
-      isa<ConstantSDNode>(N->getOperand(1))) {
-    SDValue Src = N->getOperand(0);
-    uint64_t SrcIdx = N->getConstantOperandVal(1);
-    return getShuffleScalarElt(Src.getNode(), Index + SrcIdx, DAG, Depth + 1);
+      isa<ConstantSDNode>(Op.getOperand(1))) {
+    SDValue Src = Op.getOperand(0);
+    uint64_t SrcIdx = Op.getConstantOperandVal(1);
+    return getShuffleScalarElt(Src, Index + SrcIdx, DAG, Depth + 1);
+  }
+
+  // We only peek through bitcasts of the same vector width.
+  if (Opcode == ISD::BITCAST) {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isVector() && SrcVT.getVectorNumElements() == NumElems)
+      return getShuffleScalarElt(Src, Index, DAG, Depth + 1);
+    return SDValue();
   }
 
   // Actual nodes that may contain scalar elements
-  if (Opcode == ISD::BITCAST) {
-    V = V.getOperand(0);
-    EVT SrcVT = V.getValueType();
-    unsigned NumElems = VT.getVectorNumElements();
 
-    if (!SrcVT.isVector() || SrcVT.getVectorNumElements() != NumElems)
-      return SDValue();
+  // For insert_vector_elt - either return the index matching scalar or recurse
+  // into the base vector.
+  if (Opcode == ISD::INSERT_VECTOR_ELT &&
+      isa<ConstantSDNode>(Op.getOperand(2))) {
+    if (Op.getConstantOperandAPInt(2) == Index)
+      return Op.getOperand(1);
+    return getShuffleScalarElt(Op.getOperand(0), Index, DAG, Depth + 1);
   }
 
-  if (V.getOpcode() == ISD::SCALAR_TO_VECTOR)
-    return (Index == 0) ? V.getOperand(0)
+  if (Opcode == ISD::SCALAR_TO_VECTOR)
+    return (Index == 0) ? Op.getOperand(0)
                         : DAG.getUNDEF(VT.getVectorElementType());
 
-  if (V.getOpcode() == ISD::BUILD_VECTOR)
-    return V.getOperand(Index);
+  if (Opcode == ISD::BUILD_VECTOR)
+    return Op.getOperand(Index);
 
   return SDValue();
 }
@@ -8492,13 +8516,13 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 // Combine a vector ops (shuffles etc.) that is equal to build_vector load1,
 // load2, load3, load4, <0, 1, 2, 3> into a vector load if the load addresses
 // are consecutive, non-overlapping, and in the right order.
-static SDValue combineToConsecutiveLoads(EVT VT, SDNode *N, const SDLoc &DL,
+static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget,
                                          bool isAfterLegalize) {
   SmallVector<SDValue, 64> Elts;
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
-    if (SDValue Elt = getShuffleScalarElt(N, i, DAG, 0)) {
+    if (SDValue Elt = getShuffleScalarElt(Op, i, DAG, 0)) {
       Elts.push_back(Elt);
       continue;
     }
@@ -34053,6 +34077,14 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
+  // If we are shuffling a broadcast (and not introducing zeros) then
+  // we can just use the broadcast directly. This works for smaller broadcast
+  // elements as well as they already repeat across each mask element
+  if (UnaryShuffle && isTargetShuffleSplat(V1) && !isAnyZero(BaseMask) &&
+      (BaseMaskEltSizeInBits % V1.getScalarValueSizeInBits()) == 0) {
+    return DAG.getBitcast(RootVT, V1);
+  }
+
   // Attempt to match a subvector broadcast.
   // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
   if (UnaryShuffle &&
@@ -36396,7 +36428,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   }
 
   // Attempt to combine into a vector load/broadcast.
-  if (SDValue LD = combineToConsecutiveLoads(VT, N, dl, DAG, Subtarget, true))
+  if (SDValue LD = combineToConsecutiveLoads(VT, SDValue(N, 0), dl, DAG,
+                                             Subtarget, true))
     return LD;
 
   // For AVX2, we sometimes want to combine
@@ -43546,9 +43579,9 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
   if (!VT.isVector() || VT.getVectorElementType() != MVT::i16)
     return SDValue();
 
-  // Input type should be vXi32.
+  // Input type should be at least vXi32.
   EVT InVT = Src.getValueType();
-  if (InVT.getVectorElementType() != MVT::i32)
+  if (InVT.getVectorElementType().getSizeInBits() < 32)
     return SDValue();
 
   // Need a shift by 16.
@@ -46647,6 +46680,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Op0.getOpcode() == X86ISD::SUBV_BROADCAST)
       return DAG.getNode(Op0.getOpcode(), DL, VT, Op0.getOperand(0));
 
+    // If this broadcast_load is inserted into both halves, use a larger
+    // broadcast_load. Update other uses to use an extracted subvector.
+    if (Op0.getOpcode() == X86ISD::VBROADCAST_LOAD) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Op0);
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = {MemIntr->getChain(), MemIntr->getBasePtr()};
+      SDValue BcastLd = DAG.getMemIntrinsicNode(
+          X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MemIntr->getMemoryVT(),
+          MemIntr->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(
+          Op0, extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits()));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
+      return BcastLd;
+    }
+
     // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
     if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
         (Subtarget.hasAVX2() || MayFoldLoad(Op0.getOperand(0))))
@@ -47932,7 +47980,6 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'y':
     case 'x':
     case 'v':
-    case 'Y':
     case 'l':
     case 'k': // AVX512 masking registers.
       return C_RegisterClass;
@@ -47969,7 +48016,6 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
       default:
         break;
       case 'z':
-      case '0':
         return C_Register;
       case 'i':
       case 'm':
@@ -48025,18 +48071,14 @@ TargetLowering::ConstraintWeight
     if (type->isX86_MMXTy() && Subtarget.hasMMX())
       weight = CW_SpecificReg;
     break;
-  case 'Y': {
-    unsigned Size = StringRef(constraint).size();
-    // Pick 'i' as the next char as 'Yi' and 'Y' are synonymous, when matching 'Y'
-    char NextChar = Size == 2 ? constraint[1] : 'i';
-    if (Size > 2)
+  case 'Y':
+    if (StringRef(constraint).size() != 2)
       break;
-    switch (NextChar) {
+    switch (constraint[1]) {
       default:
         return CW_Invalid;
       // XMM0
       case 'z':
-      case '0':
         if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
             ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()) ||
             ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512()))
@@ -48052,7 +48094,7 @@ TargetLowering::ConstraintWeight
         if (type->isX86_MMXTy() && Subtarget.hasMMX())
           return weight;
         return CW_Invalid;
-      // Any SSE reg when ISA >= SSE2, same as 'Y'
+      // Any SSE reg when ISA >= SSE2, same as 'x'
       case 'i':
       case 't':
       case '2':
@@ -48060,9 +48102,7 @@ TargetLowering::ConstraintWeight
           return CW_Invalid;
         break;
     }
-    // Fall through (handle "Y" constraint).
-    LLVM_FALLTHROUGH;
-  }
+    break;
   case 'v':
     if ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512())
       weight = CW_Register;
@@ -48144,8 +48184,6 @@ LowerXConstraint(EVT ConstraintVT) const {
   // FP X constraints get lowered to SSE1/2 registers if available, otherwise
   // 'f' like normal targets.
   if (ConstraintVT.isFloatingPoint()) {
-    if (Subtarget.hasSSE2())
-      return "Y";
     if (Subtarget.hasSSE1())
       return "x";
   }
@@ -48444,9 +48482,6 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'y':   // MMX_REGS if MMX allowed.
       if (!Subtarget.hasMMX()) break;
       return std::make_pair(0U, &X86::VR64RegClass);
-    case 'Y':   // SSE_REGS if SSE2 allowed
-      if (!Subtarget.hasSSE2()) break;
-      LLVM_FALLTHROUGH;
     case 'v':
     case 'x':   // SSE_REGS if SSE1 allowed or AVX_REGS if AVX allowed
       if (!Subtarget.hasSSE1()) break;
@@ -48509,12 +48544,11 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'i':
     case 't':
     case '2':
-      return getRegForInlineAsmConstraint(TRI, "Y", VT);
+      return getRegForInlineAsmConstraint(TRI, "x", VT);
     case 'm':
       if (!Subtarget.hasMMX()) break;
       return std::make_pair(0U, &X86::VR64RegClass);
     case 'z':
-    case '0':
       if (!Subtarget.hasSSE1()) break;
       switch (VT.SimpleTy) {
       default: break;

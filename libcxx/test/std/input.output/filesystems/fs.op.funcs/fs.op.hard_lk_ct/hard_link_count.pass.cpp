@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -37,15 +38,13 @@ TEST_CASE(signature_test)
 
 TEST_CASE(hard_link_count_for_file)
 {
-    static_test_env static_env;
-    TEST_CHECK(hard_link_count(static_env.File) == 1);
+    TEST_CHECK(hard_link_count(StaticEnv::File) == 1);
     std::error_code ec;
-    TEST_CHECK(hard_link_count(static_env.File, ec) == 1);
+    TEST_CHECK(hard_link_count(StaticEnv::File, ec) == 1);
 }
 
 TEST_CASE(hard_link_count_for_directory)
 {
-    static_test_env static_env;
     uintmax_t DirExpect = 3; // hard link from . .. and Dir2
     uintmax_t Dir3Expect = 2; // hard link from . ..
     uintmax_t DirExpectAlt = DirExpect;
@@ -57,20 +56,20 @@ TEST_CASE(hard_link_count_for_directory)
     DirExpectAlt = 5; // .  ..  Dir2  file1  file2
     Dir3Expect = 3; // .  ..  file5
 #endif
-    TEST_CHECK(hard_link_count(static_env.Dir) == DirExpect ||
-               hard_link_count(static_env.Dir) == DirExpectAlt ||
-               hard_link_count(static_env.Dir) == 1);
-    TEST_CHECK(hard_link_count(static_env.Dir3) == Dir3Expect ||
-               hard_link_count(static_env.Dir3) == Dir3ExpectAlt ||
-               hard_link_count(static_env.Dir3) == 1);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir) == DirExpect ||
+               hard_link_count(StaticEnv::Dir) == DirExpectAlt ||
+               hard_link_count(StaticEnv::Dir) == 1);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir3) == Dir3Expect ||
+               hard_link_count(StaticEnv::Dir3) == Dir3ExpectAlt ||
+               hard_link_count(StaticEnv::Dir3) == 1);
 
     std::error_code ec;
-    TEST_CHECK(hard_link_count(static_env.Dir, ec) == DirExpect ||
-               hard_link_count(static_env.Dir, ec) == DirExpectAlt ||
-               hard_link_count(static_env.Dir) == 1);
-    TEST_CHECK(hard_link_count(static_env.Dir3, ec) == Dir3Expect ||
-               hard_link_count(static_env.Dir3, ec) == Dir3ExpectAlt ||
-               hard_link_count(static_env.Dir3) == 1);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir, ec) == DirExpect ||
+               hard_link_count(StaticEnv::Dir, ec) == DirExpectAlt ||
+               hard_link_count(StaticEnv::Dir) == 1);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir3, ec) == Dir3Expect ||
+               hard_link_count(StaticEnv::Dir3, ec) == Dir3ExpectAlt ||
+               hard_link_count(StaticEnv::Dir3) == 1);
 }
 TEST_CASE(hard_link_count_increments_test)
 {
@@ -85,10 +84,9 @@ TEST_CASE(hard_link_count_increments_test)
 
 TEST_CASE(hard_link_count_error_cases)
 {
-    static_test_env static_env;
     const path testCases[] = {
-        static_env.BadSymlink,
-        static_env.DNE
+        StaticEnv::BadSymlink,
+        StaticEnv::DNE
     };
     const uintmax_t expect = static_cast<uintmax_t>(-1);
     for (auto& TC : testCases) {

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FILE_DEPENDENCIES: ../../Inputs/static_test_env
 // UNSUPPORTED: c++98, c++03
 
 // <filesystem>
@@ -42,10 +43,9 @@ TEST_CASE(test_increment_signatures)
 
 TEST_CASE(test_prefix_increment)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const std::set<path> dir_contents(static_env.RecDirIterationList.begin(),
-                                      static_env.RecDirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    const std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
+                                      std::end(  StaticEnv::RecDirIterationList));
     const recursive_directory_iterator endIt{};
 
     std::error_code ec;
@@ -66,10 +66,9 @@ TEST_CASE(test_prefix_increment)
 
 TEST_CASE(test_postfix_increment)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const std::set<path> dir_contents(static_env.RecDirIterationList.begin(),
-                                      static_env.RecDirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    const std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
+                                      std::end(  StaticEnv::RecDirIterationList));
     const recursive_directory_iterator endIt{};
 
     std::error_code ec;
@@ -90,10 +89,9 @@ TEST_CASE(test_postfix_increment)
 
 TEST_CASE(test_increment_method)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    const std::set<path> dir_contents(static_env.RecDirIterationList.begin(),
-                                      static_env.RecDirIterationList.end());
+    const path testDir = StaticEnv::Dir;
+    const std::set<path> dir_contents(std::begin(StaticEnv::RecDirIterationList),
+                                      std::end(  StaticEnv::RecDirIterationList));
     const recursive_directory_iterator endIt{};
 
     std::error_code ec;
@@ -115,11 +113,10 @@ TEST_CASE(test_increment_method)
 
 TEST_CASE(test_follow_symlinks)
 {
-    static_test_env static_env;
-    const path testDir = static_env.Dir;
-    auto const& IterList = static_env.RecDirFollowSymlinksIterationList;
+    const path testDir = StaticEnv::Dir;
+    auto const& IterList = StaticEnv::RecDirFollowSymlinksIterationList;
 
-    const std::set<path> dir_contents(IterList.begin(), IterList.end());
+    const std::set<path> dir_contents(std::begin(IterList), std::end(IterList));
     const recursive_directory_iterator endIt{};
 
     std::error_code ec;

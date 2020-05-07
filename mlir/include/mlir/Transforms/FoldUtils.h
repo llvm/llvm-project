@@ -77,14 +77,14 @@ public:
   void create(OpBuilder &builder, SmallVectorImpl<Value> &results,
               Location location, Args &&... args) {
     // The op needs to be inserted only if the fold (below) fails, or the number
-    // of results of the op is zero (which is treated as an in-place
-    // fold). Using create methods of the builder will insert the op, so not
-    // using it here.
+    // of results produced by the successful folding is zero (which is treated
+    // as an in-place fold). Using create methods of the builder will insert the
+    // op, so not using it here.
     OperationState state(location, OpTy::getOperationName());
     OpTy::build(builder, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 
-    if (failed(tryToFold(builder, op, results)) || op->getNumResults() == 0) {
+    if (failed(tryToFold(builder, op, results)) || results.empty()) {
       builder.insert(op);
       results.assign(op->result_begin(), op->result_end());
       return;

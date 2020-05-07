@@ -512,7 +512,6 @@ public:
 
   /// This callback will be called by SymbolFile implementations when
   /// parsing a compile unit that contains SDK information.
-  /// \param sdk will be merged with \p m_sdk.
   /// \param sysroot will be added to the path remapping dictionary.
   void RegisterXcodeSDK(llvm::StringRef sdk, llvm::StringRef sysroot);
 
@@ -864,11 +863,6 @@ public:
   bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
-  /// Return the Xcode SDK this module was compiled against.  This
-  /// is computed by merging the SDKs from each compilation unit in
-  /// the module.
-  XcodeSDK GetXcodeSDK() const { return m_xcode_sdk; }
-
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
@@ -984,9 +978,6 @@ protected:
   PathMappingList m_source_mappings =
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
 
-  /// The (Xcode) SDK this module was compiled with.
-  XcodeSDK m_xcode_sdk;
-  
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and and
                                      /// ObjectFile instances for the debug info

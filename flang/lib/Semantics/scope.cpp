@@ -62,7 +62,7 @@ Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
 
 template <typename T>
 static std::vector<common::Reference<T>> GetSortedSymbols(
-    std::map<SourceName, common::Reference<Symbol>> symbols) {
+    std::map<SourceName, MutableSymbolRef> symbols) {
   std::vector<common::Reference<T>> result;
   result.reserve(symbols.size());
   for (auto &pair : symbols) {
@@ -72,7 +72,7 @@ static std::vector<common::Reference<T>> GetSortedSymbols(
   return result;
 }
 
-std::vector<common::Reference<Symbol>> Scope::GetSymbols() {
+MutableSymbolVector Scope::GetSymbols() {
   return GetSortedSymbols<Symbol>(symbols_);
 }
 SymbolVector Scope::GetSymbols() const {
@@ -145,9 +145,6 @@ Symbol *Scope::CopySymbol(const Symbol &symbol) {
   }
 }
 
-const std::list<EquivalenceSet> &Scope::equivalenceSets() const {
-  return equivalenceSets_;
-}
 void Scope::add_equivalenceSet(EquivalenceSet &&set) {
   equivalenceSets_.emplace_back(std::move(set));
 }

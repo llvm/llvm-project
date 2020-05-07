@@ -4077,20 +4077,25 @@ multiclass sve_int_dup_imm_pred_merge<string asm> {
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, 0, 0), 0>;
 }
 
-multiclass sve_int_dup_imm_pred_zero<string asm> {
-  def _B : sve_int_dup_imm_pred<0b00, 0, asm, ZPR8,  "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm)>;
-  def _H : sve_int_dup_imm_pred<0b01, 0, asm, ZPR16, "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm)>;
-  def _S : sve_int_dup_imm_pred<0b10, 0, asm, ZPR32, "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm)>;
-  def _D : sve_int_dup_imm_pred<0b11, 0, asm, ZPR64, "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm)>;
+multiclass sve_int_dup_imm_pred_zero_inst<
+    bits<2> sz8_64, string asm, ZPRRegOp zprty, ValueType intty,
+    ValueType predty, imm8_opt_lsl cpyimm> {
+  def NAME : sve_int_dup_imm_pred<sz8_64, 0, asm, zprty, "/z", (ins PPRAny:$Pg, cpyimm:$imm)>;
+  def : InstAlias<"mov $Zd, $Pg/z, $imm",
+                  (!cast<Instruction>(NAME) zprty:$Zd, PPRAny:$Pg, cpyimm:$imm), 1>;
+  def : Pat<(intty (zext (predty PPRAny:$Ps1))),
+            (!cast<Instruction>(NAME) PPRAny:$Ps1, 1, 0)>;
+  def : Pat<(intty (sext (predty PPRAny:$Ps1))),
+            (!cast<Instruction>(NAME) PPRAny:$Ps1, -1, 0)>;
+  def : Pat<(intty (anyext (predty PPRAny:$Ps1))),
+            (!cast<Instruction>(NAME) PPRAny:$Ps1, 1, 0)>;
+}
 
-  def : InstAlias<"mov $Zd, $Pg/z, $imm",
-                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd,  PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm), 1>;
-  def : InstAlias<"mov $Zd, $Pg/z, $imm",
-                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm), 1>;
-  def : InstAlias<"mov $Zd, $Pg/z, $imm",
-                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm), 1>;
-  def : InstAlias<"mov $Zd, $Pg/z, $imm",
-                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm), 1>;
+multiclass sve_int_dup_imm_pred_zero<string asm> {
+  defm _B : sve_int_dup_imm_pred_zero_inst<0b00, asm, ZPR8,  nxv16i8, nxv16i1, cpy_imm8_opt_lsl_i8>;
+  defm _H : sve_int_dup_imm_pred_zero_inst<0b01, asm, ZPR16, nxv8i16, nxv8i1,  cpy_imm8_opt_lsl_i16>;
+  defm _S : sve_int_dup_imm_pred_zero_inst<0b10, asm, ZPR32, nxv4i32, nxv4i1,  cpy_imm8_opt_lsl_i32>;
+  defm _D : sve_int_dup_imm_pred_zero_inst<0b11, asm, ZPR64, nxv2i64, nxv2i1,  cpy_imm8_opt_lsl_i64>;
 }
 
 //===----------------------------------------------------------------------===//

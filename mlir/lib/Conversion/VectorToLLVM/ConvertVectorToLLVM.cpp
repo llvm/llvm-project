@@ -747,38 +747,64 @@ public:
 };
 
 template <typename ConcreteOp>
-void replaceTransferOp(ConversionPatternRewriter &rewriter,
-                       LLVMTypeConverter &typeConverter, Location loc,
-                       Operation *op, ArrayRef<Value> operands, Value dataPtr,
-                       Value mask);
+LogicalResult replaceTransferOp(ConversionPatternRewriter &rewriter,
+                                LLVMTypeConverter &typeConverter, Location loc,
+                                Operation *op, ArrayRef<Value> operands,
+                                Value dataPtr, Value mask);
+
+LogicalResult getLLVMTypeAndAlignment(LLVMTypeConverter &typeConverter,
+                                      Type type, LLVM::LLVMType &llvmType,
+                                      unsigned &align) {
+  auto convertedType = typeConverter.convertType(type);
+  if (!convertedType)
+    return failure();
+
+  llvmType = convertedType.template cast<LLVM::LLVMType>();
+  auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
+  align = dataLayout.getPrefTypeAlignment(llvmType.getUnderlyingType());
+  return success();
+}
 
 template <>
-void replaceTransferOp<TransferReadOp>(ConversionPatternRewriter &rewriter,
-                                       LLVMTypeConverter &typeConverter,
-                                       Location loc, Operation *op,
-                                       ArrayRef<Value> operands, Value dataPtr,
-                                       Value mask) {
+LogicalResult replaceTransferOp<TransferReadOp>(
+    ConversionPatternRewriter &rewriter, LLVMTypeConverter &typeConverter,
+    Location loc, Operation *op, ArrayRef<Value> operands, Value dataPtr,
+    Value mask) {
   auto xferOp = cast<TransferReadOp>(op);
   auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
   VectorType fillType = xferOp.getVectorType();
   Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
   fill = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(fillType), fill);
 
-  auto vecTy = toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
+  LLVM::LLVMType vecTy;
+  unsigned align;
+  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
+                                     vecTy, align)))
+    return failure();
+
   rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
       op, vecTy, dataPtr, mask, ValueRange{fill},
-      rewriter.getI32IntegerAttr(1));
+      rewriter.getI32IntegerAttr(align));
+  return success();
 }
 
 template <>
-void replaceTransferOp<TransferWriteOp>(ConversionPatternRewriter &rewriter,
-                                        LLVMTypeConverter &typeConverter,
-                                        Location loc, Operation *op,
-                                        ArrayRef<Value> operands, Value dataPtr,
-                                        Value mask) {
+LogicalResult replaceTransferOp<TransferWriteOp>(
+    ConversionPatternRewriter &rewriter, LLVMTypeConverter &typeConverter,
+    Location loc, Operation *op, ArrayRef<Value> operands, Value dataPtr,
+    Value mask) {
   auto adaptor = TransferWriteOpOperandAdaptor(operands);
+
+  auto xferOp = cast<TransferWriteOp>(op);
+  LLVM::LLVMType vecTy;
+  unsigned align;
+  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
+                                     vecTy, align)))
+    return failure();
+
   rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
-      op, adaptor.vector(), dataPtr, mask, rewriter.getI32IntegerAttr(1));
+      op, adaptor.vector(), dataPtr, mask, rewriter.getI32IntegerAttr(align));
+  return success();
 }
 
 static TransferReadOpOperandAdaptor
@@ -884,10 +910,8 @@ public:
                                                 mask);
 
     // 5. Rewrite as a masked read / write.
-    replaceTransferOp<ConcreteOp>(rewriter, typeConverter, loc, op, operands,
-                                  vectorDataPtr, mask);
-
-    return success();
+    return replaceTransferOp<ConcreteOp>(rewriter, typeConverter, loc, op,
+                                         operands, vectorDataPtr, mask);
   }
 };
 

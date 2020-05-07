@@ -28,7 +28,6 @@ TEST_SUITE(directory_entry_obs_suite)
 
 TEST_CASE(test_signature) {
   using namespace fs;
-  static_test_env static_env;
   {
     const directory_entry e("foo");
     std::error_code ec;
@@ -37,8 +36,8 @@ TEST_CASE(test_signature) {
     static_assert(noexcept(e.symlink_status()) == false, "");
     static_assert(noexcept(e.symlink_status(ec)) == true, "");
   }
-  path TestCases[] = {static_env.File, static_env.Dir, static_env.SymlinkToFile,
-                      static_env.DNE};
+  path TestCases[] = {StaticEnv::File, StaticEnv::Dir, StaticEnv::SymlinkToFile,
+                      StaticEnv::DNE};
   for (const auto& p : TestCases) {
     const directory_entry e(p);
     std::error_code pec = GetTestEC(), eec = GetTestEC(1);

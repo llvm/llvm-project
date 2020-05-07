@@ -476,3 +476,46 @@ define <4 x float> @sitofp_v4i32_v4f32_extra_use(<2 x i32> %x, <2 x i32> %y, <2 
   %r = shufflevector <2 x float> %s0, <2 x float> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %r
 }
+
+define <4 x float> @PR45794(<2 x i64> %x, <2 x i64> %y) {
+; SSE-LABEL: PR45794:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    psrad $16, %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR45794:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $16, %xmm1, %xmm1
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR45794:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrad $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrad $16, %xmm1, %xmm1
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR45794:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vpsraq $48, %zmm0, %zmm0
+; AVX512-NEXT:    vpsraq $48, %zmm1, %zmm1
+; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %a0 = ashr <2 x i64> %x, <i64 48, i64 48>
+  %s0 = sitofp <2 x i64> %a0 to <2 x float>
+  %a1 = ashr <2 x i64> %y, <i64 48, i64 48>
+  %s1 = sitofp <2 x i64> %a1 to <2 x float>
+  %r = shufflevector <2 x float> %s0, <2 x float> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %r
+}

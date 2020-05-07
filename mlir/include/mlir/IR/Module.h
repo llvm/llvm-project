@@ -30,7 +30,7 @@ class ModuleTerminatorOp;
 class ModuleOp
     : public Op<
           ModuleOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-          OpTrait::IsIsolatedFromAbove, OpTrait::PolyhedralScope,
+          OpTrait::IsIsolatedFromAbove, OpTrait::AffineScope,
           OpTrait::SymbolTable,
           OpTrait::SingleBlockImplicitTerminator<ModuleTerminatorOp>::Impl,
           SymbolOpInterface::Trait> {

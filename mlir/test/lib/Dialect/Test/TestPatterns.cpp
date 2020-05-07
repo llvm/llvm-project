@@ -8,9 +8,11 @@
 
 #include "TestDialect.h"
 #include "mlir/Conversion/StandardToStandard/StandardToStandard.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/FoldUtils.h"
 
 using namespace mlir;
 
@@ -39,13 +41,36 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 namespace {
+struct FoldingPattern : public RewritePattern {
+public:
+  FoldingPattern(MLIRContext *context)
+      : RewritePattern(TestOpInPlaceFoldAnchor::getOperationName(),
+                       /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    // Exercice OperationFolder API for a single-result operation that is folded
+    // upon construction. The operation being created through the folder has an
+    // in-place folder, and it should be still present in the output.
+    // Furthermore, the folder should not crash when attempting to recover the
+    // (unchanged) opeation result.
+    OperationFolder folder(op->getContext());
+    Value result = folder.create<TestOpInPlaceFold>(
+        rewriter, op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
+        rewriter.getI32IntegerAttr(0));
+    assert(result);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
 
     // Verify named pattern is generated with expected name.
-    patterns.insert<TestNamedPatternRule>(&getContext());
+    patterns.insert<FoldingPattern, TestNamedPatternRule>(&getContext());
 
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }

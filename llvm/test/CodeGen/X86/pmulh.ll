@@ -300,3 +300,39 @@ define <64 x i16> @mulhw_v64i16(<64 x i16> %a, <64 x i16> %b) {
   %e = trunc <64 x i32> %d to <64 x i16>
   ret <64 x i16> %e
 }
+
+define <8 x i16> @mulhuw_v8i16_i64(<8 x i16> %a, <8 x i16> %b) {
+; SSE-LABEL: mulhuw_v8i16_i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulhuw %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: mulhuw_v8i16_i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a1 = zext <8 x i16> %a to <8 x i64>
+  %b1 = zext <8 x i16> %b to <8 x i64>
+  %c = mul <8 x i64> %a1, %b1
+  %d = lshr <8 x i64> %c, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+  %e = trunc <8 x i64> %d to <8 x i16>
+  ret <8 x i16> %e
+}
+
+define <8 x i16> @mulhw_v8i16_i64(<8 x i16> %a, <8 x i16> %b) {
+; SSE-LABEL: mulhw_v8i16_i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulhw %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: mulhw_v8i16_i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %a1 = sext <8 x i16> %a to <8 x i64>
+  %b1 = sext <8 x i16> %b to <8 x i64>
+  %c = mul <8 x i64> %a1, %b1
+  %d = lshr <8 x i64> %c, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+  %e = trunc <8 x i64> %d to <8 x i16>
+  ret <8 x i16> %e
+}

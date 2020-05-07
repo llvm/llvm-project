@@ -58,7 +58,7 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
   real, dimension(iabs(iArg)) :: arrayVarWithIntrinsic
 
   type arrayType
-    !ERROR: Invalid specification expression: reference to variable 'var' not allowed for derived type components
+    !ERROR: Invalid specification expression: derived type component not allowed to reference variable 'var'
     real, dimension(var) :: varField
     !ERROR: Invalid specification expression: reference to impure function 'ivolatilestmtfunc'
     real, dimension(iVolatileStmtFunc()) :: arrayFieldWithVolatile
@@ -66,7 +66,7 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
     real, dimension(iImpureStmtFunc()) :: arrayFieldWithImpureFunction
     !ERROR: Invalid specification expression: reference to statement function 'ipurestmtfunc'
     real, dimension(iPureStmtFunc()) :: arrayFieldWithPureFunction
-    !ERROR: Invalid specification expression: reference to variable 'iarg' not allowed for derived type components
+    !ERROR: Invalid specification expression: derived type component not allowed to reference variable 'iarg'
     real, dimension(iabs(iArg)) :: arrayFieldWithIntrinsic
     !ERROR: Invalid specification expression: reference to intrinsic 'allocated' not allowed for derived type components
     real, dimension(merge(1, 2, allocated(allocArg))) :: realField1
@@ -74,7 +74,7 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
     real, dimension(merge(1, 2, associated(pointerArg))) :: realField2
     !ERROR: Invalid specification expression: non-constant reference to inquiry intrinsic 'is_contiguous' not allowed for derived type components
     real, dimension(merge(1, 2, is_contiguous(arrayArg))) :: realField3
-    !ERROR: Invalid specification expression: reference to variable 'ioarg' not allowed for derived type components
+    !ERROR: Invalid specification expression: derived type component not allowed to reference variable 'ioarg'
     real, dimension(ioArg) :: realField4
     !ERROR: Invalid specification expression: reference to intrinsic 'present' not allowed for derived type components
     real, dimension(merge(1, 2, present(optionalArg))) :: realField5
