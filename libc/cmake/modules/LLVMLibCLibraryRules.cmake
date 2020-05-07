@@ -32,6 +32,40 @@ function(get_object_files_for_entrypoint_library result)
   set(${result} ${object_files} PARENT_SCOPE)
 endfunction()
 
+# This is a helper function and not a build rule. Given an entrypoint object
+# target, it returns the object file produced by this target in |result|.
+# If the given entrypoint target is an alias, then it traverses up to the
+# aliasee to get the object file.
+function(get_entrypoint_object_file entrypoint_target result)
+  get_target_property(target_type ${entrypoint_target} "TARGET_TYPE")
+  if(NOT (${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}))
+    message(FATAL_ERROR
+            "Expected an target added using `add_entrypoint_object` rule.")
+  endif()
+
+  get_target_property(objfile ${entrypoint_target} "OBJECT_FILE")
+  if(objfile)
+    set(${result} ${objfile} PARENT_SCOPE)
+    return()
+  endif()
+
+  # If the entrypoint is an alias, fetch the object file from the aliasee.
+  get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
+  if(is_alias)
+    get_target_property(aliasee ${entrypoint_target} "DEPS")
+    if(NOT aliasee)
+      message(FATAL_ERROR
+              "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
+    endif()
+    get_entrypoint_object_file(${aliasee} objfile)
+    set(${result} ${objfile} PARENT_SCOPE)
+    return()
+  endif()
+
+  message(FATAL_ERROR
+          "Entrypoint ${entrypoint_target} does not produce an object file.")
+endfunction(get_entrypoint_object_file)
+
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
 #     add_entrypoint_library(
@@ -62,7 +96,7 @@ function(add_entrypoint_library target_name)
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
                           "not an 'add_entrypoint_object' target.")
     endif()
-    get_target_property(objfile ${dep} "OBJECT_FILE")
+    get_entrypoint_object_file(${dep} objfile)
     list(APPEND obj_list ${objfile})
   endforeach(dep)
   list(REMOVE_DUPLICATES obj_list)

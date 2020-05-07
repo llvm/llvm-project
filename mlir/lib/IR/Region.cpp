@@ -146,34 +146,32 @@ static bool isIsolatedAbove(Region &region, Region &limit,
 
   // Traverse all operations in the region.
   while (!pendingRegions.empty()) {
-    for (Block &block : *pendingRegions.pop_back_val()) {
-      for (Operation &op : block) {
-        for (Value operand : op.getOperands()) {
-          // operand should be non-null here if the IR is well-formed. But
-          // we don't assert here as this function is called from the verifier
-          // and so could be called on invalid IR.
-          if (!operand) {
-            if (noteLoc)
-              op.emitOpError("block's operand not defined").attachNote(noteLoc);
-            return false;
-          }
-
-          // Check that any value that is used by an operation is defined in the
-          // same region as either an operation result or a block argument.
-          if (operand.getParentRegion()->isProperAncestor(&limit)) {
-            if (noteLoc) {
-              op.emitOpError("using value defined outside the region")
-                      .attachNote(noteLoc)
-                  << "required by region isolation constraints";
-            }
-            return false;
-          }
+    for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
+      for (Value operand : op.getOperands()) {
+        // operand should be non-null here if the IR is well-formed. But
+        // we don't assert here as this function is called from the verifier
+        // and so could be called on invalid IR.
+        if (!operand) {
+          if (noteLoc)
+            op.emitOpError("block's operand not defined").attachNote(noteLoc);
+          return false;
         }
-        // Schedule any regions the operations contain for further checking.
-        pendingRegions.reserve(pendingRegions.size() + op.getNumRegions());
-        for (Region &subRegion : op.getRegions())
-          pendingRegions.push_back(&subRegion);
+
+        // Check that any value that is used by an operation is defined in the
+        // same region as either an operation result or a block argument.
+        if (operand.getParentRegion()->isProperAncestor(&limit)) {
+          if (noteLoc) {
+            op.emitOpError("using value defined outside the region")
+                    .attachNote(noteLoc)
+                << "required by region isolation constraints";
+          }
+          return false;
+        }
       }
+      // Schedule any regions the operations contain for further checking.
+      pendingRegions.reserve(pendingRegions.size() + op.getNumRegions());
+      for (Region &subRegion : op.getRegions())
+        pendingRegions.push_back(&subRegion);
     }
   }
   return true;
@@ -217,6 +215,40 @@ void llvm::ilist_traits<::mlir::Block>::transferNodesFromList(
   // Update the 'parent' member of each Block.
   for (; first != last; ++first)
     first->parentValidOpOrderPair.setPointer(curParent);
+}
+
+//===----------------------------------------------------------------------===//
+// Region::OpIterator
+//===----------------------------------------------------------------------===//
+
+Region::OpIterator::OpIterator(Region *region, bool end)
+    : region(region), block(end ? region->end() : region->begin()) {
+  if (!region->empty())
+    skipOverBlocksWithNoOps();
+}
+
+Region::OpIterator &Region::OpIterator::operator++() {
+  // We increment over operations, if we reach the last use then move to next
+  // block.
+  if (operation != block->end())
+    ++operation;
+  if (operation == block->end()) {
+    ++block;
+    skipOverBlocksWithNoOps();
+  }
+  return *this;
+}
+
+void Region::OpIterator::skipOverBlocksWithNoOps() {
+  while (block != region->end() && block->empty())
+    ++block;
+
+  // If we are at the last block, then set the operation to first operation of
+  // next block (sentinel value used for end).
+  if (block == region->end())
+    operation = {};
+  else
+    operation = block->begin();
 }
 
 //===----------------------------------------------------------------------===//

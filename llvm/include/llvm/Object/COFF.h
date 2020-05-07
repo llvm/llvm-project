@@ -878,6 +878,8 @@ public:
     return getRawNumberOfSymbols();
   }
 
+  uint32_t getStringTableSize() const { return StringTableSize; }
+
   const coff_load_configuration32 *getLoadConfig32() const {
     assert(!is64());
     return reinterpret_cast<const coff_load_configuration32 *>(LoadConfig);

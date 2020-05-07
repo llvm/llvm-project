@@ -139,6 +139,37 @@ bool BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ParseNumber(
   return true;
 }
 
+template <int PREC, int LOG10RADIX>
+void BigRadixFloatingPointNumber<PREC,
+    LOG10RADIX>::LoseLeastSignificantDigit() {
+  Digit LSD{digit_[0]};
+  for (int j{0}; j < digits_ - 1; ++j) {
+    digit_[j] = digit_[j + 1];
+  }
+  digit_[digits_ - 1] = 0;
+  bool incr{false};
+  switch (rounding_) {
+  case RoundNearest:
+  case RoundDefault:
+    incr = LSD > radix / 2 || (LSD == radix / 2 && digit_[0] % 2 != 0);
+    break;
+  case RoundUp:
+    incr = LSD > 0 && !isNegative_;
+    break;
+  case RoundDown:
+    incr = LSD > 0 && isNegative_;
+    break;
+  case RoundToZero:
+    break;
+  case RoundCompatible:
+    incr = LSD >= radix / 2;
+    break;
+  }
+  for (int j{0}; (digit_[j] += incr) == radix; ++j) {
+    digit_[j] = 0;
+  }
+}
+
 // This local utility class represents an unrounded nonnegative
 // binary floating-point value with an unbiased (i.e., signed)
 // binary exponent, an integer value (not a fraction) with an implied

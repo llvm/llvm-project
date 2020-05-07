@@ -1564,8 +1564,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
                                 LibFunc_exp10l, B, Attrs);
 
   // pow(n, x) -> exp2(log2(n) * x)
-  if (Pow->hasOneUse() && Pow->hasApproxFunc() && Pow->hasNoNaNs() &&
-      Pow->hasNoInfs() && BaseF->isNormal() && !BaseF->isNegative()) {
+  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && Pow->hasNoInfs() &&
+      BaseF->isFiniteNonZero() && !BaseF->isNegative()) {
     Value *Log = nullptr;
     if (Ty->isFloatTy())
       Log = ConstantFP::get(Ty, std::log2(BaseF->convertToFloat()));
@@ -1667,10 +1667,6 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   Value *Shrunk = nullptr;
   bool AllowApprox = Pow->hasApproxFunc();
   bool Ignored;
-
-  // Bail out if simplifying libcalls to pow() is disabled.
-  if (!hasFloatFn(TLI, Ty, LibFunc_pow, LibFunc_powf, LibFunc_powl))
-    return nullptr;
 
   // Propagate the math semantics from the call to any created instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);

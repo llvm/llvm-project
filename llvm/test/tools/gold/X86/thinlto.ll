@@ -32,6 +32,7 @@
 
 ; Ensure gold generates an index as well as a binary with save-temps in ThinLTO mode.
 ; First force single-threaded mode
+; RUN: rm -f %t4*
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
@@ -40,6 +41,8 @@
 ; RUN:    -shared %t.o %t2.o -o %t4
 ; RUN: llvm-bcanalyzer -dump %t4.index.bc | FileCheck %s --check-prefix=COMBINED
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
+; Ensure ld does not emit empty combined module in default.
+; RUN: ls %t4.o* | count 2
 
 ; Check with --no-map-whole-files
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
@@ -72,6 +75,8 @@
 ; RUN:    -shared %t.o %t2.o -o %t4
 ; RUN: llvm-nm %t5.o1 | FileCheck %s --check-prefix=NM2
 ; RUN: llvm-nm %t5.o2 | FileCheck %s --check-prefix=NM2
+; Ensure ld emits empty combined module if specific obj-path.
+; RUN: ls %t5.o* | count 3
 
 ; Test to ensure that thinlto-index-only with obj-path creates the file.
 ; RUN: rm -f %t5.o %t5.o1

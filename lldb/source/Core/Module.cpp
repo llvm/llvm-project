@@ -18,6 +18,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -33,7 +34,6 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -1598,15 +1598,10 @@ bool Module::RemapSourceFile(llvm::StringRef path,
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
   XcodeSDK sdk(sdk_name.str());
-  if (m_xcode_sdk == sdk)
-    return;
-  m_xcode_sdk.Merge(sdk);
-  PlatformSP module_platform =
-      Platform::GetPlatformForArchitecture(GetArchitecture(), nullptr);
-  ConstString sdk_path(module_platform->GetSDKPath(sdk));
+  ConstString sdk_path(HostInfo::GetXcodeSDKPath(sdk));
   if (!sdk_path)
     return;
-  // If merged SDK changed for a previously registered source path, update it.
+  // If the SDK changed for a previously registered source path, update it.
   // This could happend with -fdebug-prefix-map, otherwise it's unlikely.
   ConstString sysroot_cs(sysroot);
   if (!m_source_mappings.Replace(sysroot_cs, sdk_path, true))

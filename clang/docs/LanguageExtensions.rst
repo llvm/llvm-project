@@ -3173,16 +3173,36 @@ at the start of a compound statement (excluding comments). When using within a
 compound statement, the pragma is active within the scope of the compound
 statement.
 
-Currently, only FP contraction can be controlled with the pragma. ``#pragma
-clang fp contract`` specifies whether the compiler should contract a multiply
-and an addition (or subtraction) into a fused FMA operation when supported by
-the target.
+Currently, the following settings can be controlled with this pragma:
+
+``#pragma clang fp reassociate`` allows control over the reassociation
+of floating point expressions. When enabled, this pragma allows the expression
+``x + (y + z)`` to be reassociated as ``(x + y) + z``.
+Reassociation can also occur across multiple statements.
+This pragma can be used to disable reassociation when it is otherwise
+enabled for the translation unit with the ``-fassociative-math`` flag.
+The pragma can take two values: ``on`` and ``off``.
+
+.. code-block:: c++
+
+  float f(float x, float y, float z)
+  {
+    // Enable floating point reassociation across statements
+    #pragma fp reassociate(on)
+    float t = x + y;
+    float v = t + z;
+  }
+
+
+``#pragma clang fp contract`` specifies whether the compiler should
+contract a multiply and an addition (or subtraction) into a fused FMA
+operation when supported by the target.
 
 The pragma can take three values: ``on``, ``fast`` and ``off``.  The ``on``
 option is identical to using ``#pragma STDC FP_CONTRACT(ON)`` and it allows
-fusion as specified the language standard.  The ``fast`` option allows fusiong
+fusion as specified the language standard.  The ``fast`` option allows fusion
 in cases when the language standard does not make this possible (e.g. across
-statements in C)
+statements in C).
 
 .. code-block:: c++
 
@@ -3196,6 +3216,41 @@ statements in C)
 The pragma can also be used with ``off`` which turns FP contraction off for a
 section of the code. This can be useful when fast contraction is otherwise
 enabled for the translation unit with the ``-ffp-contract=fast`` flag.
+
+The ``#pragma float_control`` pragma allows precise floating-point
+semantics and floating-point exception behavior to be specified
+for a section of the source code. This pragma can only appear at file scope or
+at the start of a compound statement (excluding comments). When using within a
+compound statement, the pragma is active within the scope of the compound
+statement.  This pragma is modeled after a Microsoft pragma with the
+same spelling and syntax.  For pragmas specified at file scope, a stack
+is supported so that the ``pragma float_control`` settings can be pushed or popped.
+
+When ``pragma float_control(precise, on)`` is enabled, the section of code
+governed by the pragma uses precise floating point semantics, effectively
+``-ffast-math`` is disabled and ``-ffp-contract=on``
+(fused multiply add) is enabled.
+
+When ``pragma float_control(except, on)`` is enabled, the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-exception-behavior=strict`` is enabled,
+when ``pragma float_control(precise, off)`` is enabled, the section of code
+governed by the pragma behaves as though the command-line option
+``-ffp-exception-behavior=ignore`` is enabled.
+
+The full syntax this pragma supports is
+``float_control(except|precise, on|off [, push])`` and
+``float_control(push|pop)``.
+The ``push`` and ``pop`` forms, including using ``push`` as the optional
+third argument, can only occur at file scope.
+
+.. code-block:: c++
+
+  for(...) {
+    // This block will be compiled with -fno-fast-math and -ffp-contract=on
+    #pragma float_control(precise, on)
+    a = b[i] * c[i] + e;
+  }
 
 Specifying an attribute for multiple declarations (#pragma clang attribute)
 ===========================================================================

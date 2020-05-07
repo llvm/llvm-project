@@ -4,6 +4,12 @@ set(LLVM_OPTIONAL_SOURCES
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+  AsmParser
+  )
+
 set(LIBS
   ${dialect_libs}
   ${conversion_libs}
@@ -24,23 +30,30 @@ set(LIBS
   MLIRTestTransforms
   MLIRSupport
   MLIRIR
-  MLIROptLib
-  LLVMSupport
-  LLVMCore
-  LLVMAsmParser
   )
 
-add_llvm_library(MLIRMlirOptMain
+# Exclude from libMLIR.so because this has static options intended for
+# opt-like tools only.
+add_mlir_library(MLIRMlirOptMain
   mlir-opt.cpp
-)
-target_link_libraries(MLIRMlirOptMain
-  PUBLIC
+
+  EXCLUDE_FROM_LIBMLIR
+
+  LINK_LIBS PUBLIC
   ${LIBS}
-)
+
+  DEPENDS
+  intrinsics_gen
+  mlir-headers
+  )
 
 add_llvm_tool(mlir-opt
- mlir-opt.cpp
-)
+  mlir-opt.cpp
 
+  DEPENDS
+  ${LIBS}
+  )
+target_link_libraries(mlir-opt PRIVATE ${LIBS})
 llvm_update_compile_flags(mlir-opt)
-target_link_libraries(mlir-opt PRIVATE ${LIBS} ${targets_to_link})
+
+mlir_check_link_libraries(mlir-opt)

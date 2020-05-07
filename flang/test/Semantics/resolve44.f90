@@ -1,5 +1,8 @@
 ! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! Error tests for recursive use of derived types.
+! C744 If neither the POINTER nor the ALLOCATABLE attribute is specified, the
+! declaration-type-spec in the component-def-stmt shall specify an intrinsic
+! type or a previously defined derived type.
 
 program main
   type :: recursive1

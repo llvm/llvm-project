@@ -76,7 +76,7 @@ TEST(CosfTest, InFloatRange) {
     float x = as_float(v);
     if (isnan(x) || isinf(x))
       continue;
-    EXPECT_TRUE(mpfr::equalsCos(x, __llvm_libc::cosf(x), tolerance));
+    ASSERT_MPFR_MATCH(mpfr::OP_Cos, x, __llvm_libc::cosf(x), tolerance);
   }
 }
 
@@ -84,12 +84,12 @@ TEST(CosfTest, InFloatRange) {
 TEST(CosfTest, SmallValues) {
   float x = as_float(0x17800000);
   float result = __llvm_libc::cosf(x);
-  EXPECT_TRUE(mpfr::equalsCos(x, result, tolerance));
+  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result, tolerance);
   EXPECT_EQ(FloatBits::One, as_uint32_bits(result));
 
-  x = as_float(0x00400000);
+  x = as_float(0x0040000);
   result = __llvm_libc::cosf(x);
-  EXPECT_TRUE(mpfr::equalsCos(x, result, tolerance));
+  EXPECT_MPFR_MATCH(mpfr::OP_Cos, x, result, tolerance);
   EXPECT_EQ(FloatBits::One, as_uint32_bits(result));
 }
 
@@ -98,6 +98,6 @@ TEST(CosfTest, SmallValues) {
 TEST(CosfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
     float x = as_float(v);
-    EXPECT_TRUE(mpfr::equalsCos(x, __llvm_libc::cosf(x), tolerance));
+    ASSERT_MPFR_MATCH(mpfr::OP_Cos, x, __llvm_libc::cosf(x), tolerance);
   }
 }

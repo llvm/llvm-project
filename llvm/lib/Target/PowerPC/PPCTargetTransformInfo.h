@@ -45,12 +45,13 @@ public:
   /// @{
 
   using BaseT::getIntImmCost;
-  int getIntImmCost(const APInt &Imm, Type *Ty);
+  int getIntImmCost(const APInt &Imm, Type *Ty,
+                    TTI::TargetCostKind CostKind);
 
   int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                        Type *Ty);
+                        Type *Ty, TTI::TargetCostKind CostKind);
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty);
+                          Type *Ty, TTI::TargetCostKind CostKind);
 
   unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands,
                        TTI::TargetCostKind CostKind);
@@ -91,6 +92,7 @@ public:
   int vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1, Type *Ty2);
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -99,25 +101,34 @@ public:
       const Instruction *CxtI = nullptr);
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                       TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr);
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
   int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace, const Instruction *I = nullptr);
+                      unsigned AddressSpace,
+                      TTI::TargetCostKind CostKind,
+                      const Instruction *I = nullptr);
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                  unsigned Factor,
                                  ArrayRef<unsigned> Indices,
                                  unsigned Alignment,
                                  unsigned AddressSpace,
+                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
                                  bool UseMaskForCond = false,
                                  bool UseMaskForGaps = false);
-  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+  unsigned getIntrinsicInstrCost(
+    Intrinsic::ID ID, Type *RetTy,
                                  ArrayRef<Value *> Args, FastMathFlags FMF,
-                                 unsigned VF, const Instruction *I = nullptr);
+                                 unsigned VF,
+                                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                                 const Instruction *I = nullptr);
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                  ArrayRef<Type *> Tys, FastMathFlags FMF,
                                  unsigned ScalarizationCostPassed = UINT_MAX,
+                                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                                  const Instruction *I = nullptr);
 
   /// @}

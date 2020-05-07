@@ -583,6 +583,13 @@ class OneRegion : public TraitBase<ConcreteType, OneRegion> {
 public:
   Region &getRegion() { return this->getOperation()->getRegion(0); }
 
+  /// Returns a range of operations within the region of this operation.
+  auto getOps() { return getRegion().getOps(); }
+  template <typename OpT>
+  auto getOps() {
+    return getRegion().template getOps<OpT>();
+  }
+
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifyOneRegion(op);
   }
@@ -1038,9 +1045,9 @@ public:
 /// optimization purposes. Any SSA values of 'index' type that either dominate
 /// such an operation or are used at the top-level of such an operation
 /// automatically become valid symbols for the polyhedral scope defined by that
-/// operation. For more details, see `Traits.md#PolyhedralScope`.
+/// operation. For more details, see `Traits.md#AffineScope`.
 template <typename ConcreteType>
-class PolyhedralScope : public TraitBase<ConcreteType, PolyhedralScope> {
+class AffineScope : public TraitBase<ConcreteType, AffineScope> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
     static_assert(!ConcreteType::template hasTrait<ZeroRegion>(),

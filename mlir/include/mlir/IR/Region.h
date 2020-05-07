@@ -34,6 +34,10 @@ public:
   /// parent container. The region must have a valid parent container.
   Location getLoc();
 
+  //===--------------------------------------------------------------------===//
+  // Block list management
+  //===--------------------------------------------------------------------===//
+
   using BlockListType = llvm::iplist<Block>;
   BlockListType &getBlocks() { return blocks; }
 
@@ -57,6 +61,72 @@ public:
   static BlockListType Region::*getSublistAccess(Block *) {
     return &Region::blocks;
   }
+
+  //===--------------------------------------------------------------------===//
+  // Operation list utilities
+  //===--------------------------------------------------------------------===//
+
+  /// This class provides iteration over the held operations of blocks directly
+  /// within a region.
+  class OpIterator final
+      : public llvm::iterator_facade_base<OpIterator, std::forward_iterator_tag,
+                                          Operation> {
+  public:
+    /// Initialize OpIterator for a region, specify `end` to return the iterator
+    /// to last operation.
+    explicit OpIterator(Region *region, bool end = false);
+
+    using llvm::iterator_facade_base<OpIterator, std::forward_iterator_tag,
+                                     Operation>::operator++;
+    OpIterator &operator++();
+    Operation *operator->() const { return &*operation; }
+    Operation &operator*() const { return *operation; }
+
+    /// Compare this iterator with another.
+    bool operator==(const OpIterator &rhs) const {
+      return operation == rhs.operation;
+    }
+    bool operator!=(const OpIterator &rhs) const { return !(*this == rhs); }
+
+  private:
+    void skipOverBlocksWithNoOps();
+
+    /// The region whose operations are being iterated over.
+    Region *region;
+    /// The block of 'region' whose operations are being iterated over.
+    Region::iterator block;
+    /// The current operation within 'block'.
+    Block::iterator operation;
+  };
+
+  /// This class provides iteration over the held operations of a region for a
+  /// specific operation type.
+  template <typename OpT>
+  using op_iterator = detail::op_iterator<OpT, OpIterator>;
+
+  /// Return iterators that walk the operations nested directly within this
+  /// region.
+  OpIterator op_begin() { return OpIterator(this); }
+  OpIterator op_end() { return OpIterator(this, /*end=*/true); }
+  iterator_range<OpIterator> getOps() { return {op_begin(), op_end()}; }
+
+  /// Return iterators that walk operations of type 'T' nested directly within
+  /// this region.
+  template <typename OpT> op_iterator<OpT> op_begin() {
+    return detail::op_filter_iterator<OpT, OpIterator>(op_begin(), op_end());
+  }
+  template <typename OpT> op_iterator<OpT> op_end() {
+    return detail::op_filter_iterator<OpT, OpIterator>(op_end(), op_end());
+  }
+  template <typename OpT> iterator_range<op_iterator<OpT>> getOps() {
+    auto endIt = op_end();
+    return {detail::op_filter_iterator<OpT, OpIterator>(op_begin(), endIt),
+            detail::op_filter_iterator<OpT, OpIterator>(endIt, endIt)};
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Misc. utilities
+  //===--------------------------------------------------------------------===//
 
   /// Return the region containing this region or nullptr if the region is
   /// attached to a top-level operation.
@@ -120,6 +190,10 @@ public:
   /// they are to be deleted.
   void dropAllReferences();
 
+  //===--------------------------------------------------------------------===//
+  // Operation Walkers
+  //===--------------------------------------------------------------------===//
+
   /// Walk the operations in this region in postorder, calling the callback for
   /// each operation. This method is invoked for void-returning callbacks.
   /// See Operation::walk for more details.
@@ -141,6 +215,10 @@ public:
         return WalkResult::interrupt();
     return WalkResult::advance();
   }
+
+  //===--------------------------------------------------------------------===//
+  // CFG view utilities
+  //===--------------------------------------------------------------------===//
 
   /// Displays the CFG in a window. This is for use from the debugger and
   /// depends on Graphviz to generate the graph.

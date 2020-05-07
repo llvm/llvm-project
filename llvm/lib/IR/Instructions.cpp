@@ -1916,11 +1916,11 @@ void ShuffleVectorInst::commute() {
 bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
                                         ArrayRef<int> Mask) {
   // V1 and V2 must be vectors of the same type.
-  if (!V1->getType()->isVectorTy() || V1->getType() != V2->getType())
+  if (!isa<VectorType>(V1->getType()) || V1->getType() != V2->getType())
     return false;
 
   // Make sure the mask elements make sense.
-  int V1Size = cast<VectorType>(V1->getType())->getNumElements();
+  int V1Size = cast<VectorType>(V1->getType())->getElementCount().Min;
   for (int Elem : Mask)
     if (Elem != UndefMaskElem && Elem >= V1Size * 2)
       return false;

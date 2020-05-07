@@ -6,13 +6,11 @@ add_mlir_dialect_library(MLIRLinalgOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
 
   DEPENDS
-  intrinsics_gen
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgStructuredOpsInterfaceIncGen
-  )
-target_link_libraries(MLIRLinalgOps
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRSideEffects
   MLIRViewLikeInterface

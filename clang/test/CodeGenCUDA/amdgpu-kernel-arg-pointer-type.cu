@@ -67,3 +67,10 @@ __global__ void kernel6(struct T t) {
   t.x[0][0] += 1.f;
   t.x[1][0] += 2.f;
 }
+
+// Check that coerced pointers retain the noalias attribute when qualified with __restrict.
+// CHECK: define amdgpu_kernel void @_Z7kernel7Pi(i32 addrspace(1)* noalias %x.coerce)
+// HOST: define void @_Z22__device_stub__kernel7Pi(i32* noalias %x)
+__global__ void kernel7(int *__restrict x) {
+  x[0]++;
+}

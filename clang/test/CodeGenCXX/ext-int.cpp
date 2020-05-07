@@ -98,7 +98,7 @@ enum AsEnumUnderlyingType : _ExtInt(9) {
 };
 
 void UnderlyingTypeUsage(AsEnumUnderlyingType Param) {
-  // LIN: define void @_Z19UnderlyingTypeUsage20AsEnumUnderlyingType(i16 %
+  // LIN: define void @_Z19UnderlyingTypeUsage20AsEnumUnderlyingType(i9 signext %
   // WIN: define dso_local void @"?UnderlyingTypeUsage@@YAXW4AsEnumUnderlyingType@@@Z"(i9 %
   AsEnumUnderlyingType Var;
   // CHECK: alloca i9, align 2

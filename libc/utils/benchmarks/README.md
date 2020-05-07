@@ -18,6 +18,7 @@ Then make sure to have `matplotlib`, `scipy` and `numpy` setup correctly:
 apt-get install python3-pip
 pip3 install matplotlib scipy numpy
 ```
+You may need `python3-gtk` or similar package for displaying benchmark results.
 
 To get good reproducibility it is important to make sure that the system runs in
 `performance` mode. This is achieved by running:
@@ -37,6 +38,26 @@ cd llvm-project
 cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS=libc -DCMAKE_BUILD_TYPE=Release
 make -C /tmp/build -j display-libc-memcpy-benchmark-small
 ```
+
+The display target will attempt to open a window on the machine where you're
+running the benchmark. If this may not work for you then you may want `render`
+or `run` instead as detailed below.
+
+## Benchmarking targets
+
+The benchmarking process occurs in two steps:
+
+1. Benchmark the functions and produce a `json` file
+2. Display (or renders) the `json` file
+
+Targets are of the form `<action>-libc-<function>-benchmark-<configuration>`
+
+ - `action` is one of :
+    - `run`, runs the benchmark and writes the `json` file
+    - `display`, displays the graph on screen
+    - `render`, renders the graph on disk as a `png` file
+ - `function` is one of : `memcpy`, `memcmp`, `memset`
+ - `configuration` is one of : `small`, `big`
 
 ## Benchmarking regimes
 
@@ -61,22 +82,6 @@ Benchmarking configurations come in two flavors:
 
 _<sup>1</sup> - The size refers to the size of the buffers to compare and not
 the number of bytes until the first difference._
-
-## Benchmarking targets
-
-The benchmarking process occurs in two steps:
-
-1. Benchmark the functions and produce a `json` file
-2. Display (or renders) the `json` file
-
-Targets are of the form `<action>-libc-<function>-benchmark-<configuration>`
-
- - `action` is one of :
-    - `run`, runs the benchmark and writes the `json` file
-    - `display`, displays the graph on screen
-    - `render`, renders the graph on disk as a `png` file
- - `function` is one of : `memcpy`, `memcmp`, `memset`
- - `configuration` is one of : `small`, `big`
 
 ## Superposing curves
 

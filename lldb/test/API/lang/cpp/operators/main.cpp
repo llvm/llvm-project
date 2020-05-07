@@ -4,12 +4,11 @@ int side_effect = 0;
 
 struct B { int dummy = 2324; };
 struct C {
-  void *operator new(std::size_t size) { C* r = ::new C; r->custom_new = true; return r; }
-  void *operator new[](std::size_t size) { C* r = static_cast<C*>(std::malloc(size)); r->custom_new = true; return r; }
+  void *operator new(std::size_t size) { void *p = ::operator new(size); side_effect = 3; return p; }
+  void *operator new[](std::size_t size) { void *p = ::operator new(size); side_effect = 4; return p; }
   void operator delete(void *p) { std::free(p); side_effect = 1; }
   void operator delete[](void *p) { std::free(p); side_effect = 2; }
 
-  bool custom_new = false;
   B b;
   B* operator->() { return &b; }
   int operator->*(int) { return 2; }
@@ -171,8 +170,8 @@ int main(int argc, char **argv) {
   //% self.expect("expr static_cast<long>(c)", endstr=" 12\n")
   //% self.expect("expr c.operatorint()", endstr=" 13\n")
   //% self.expect("expr c.operatornew()", endstr=" 14\n")
-  //% self.expect("expr (new struct C)->custom_new", endstr=" true\n")
-  //% self.expect("expr (new struct C[1])->custom_new", endstr=" true\n")
+  //% self.expect("expr (new struct C); side_effect", endstr=" = 3\n")
+  //% self.expect("expr (new struct C[1]); side_effect", endstr=" = 4\n")
   //% self.expect("expr delete c2; side_effect", endstr=" = 1\n")
   //% self.expect("expr delete[] c3; side_effect", endstr=" = 2\n")
   delete c2;

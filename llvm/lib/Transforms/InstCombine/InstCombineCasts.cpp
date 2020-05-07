@@ -2484,11 +2484,11 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
   }
 
   if (VectorType *DestVTy = dyn_cast<VectorType>(DestTy)) {
-    if (DestVTy->getNumElements() == 1 && !SrcTy->isVectorTy()) {
+    // Beware: messing with this target-specific oddity may cause trouble.
+    if (DestVTy->getNumElements() == 1 && SrcTy->isX86_MMXTy()) {
       Value *Elem = Builder.CreateBitCast(Src, DestVTy->getElementType());
       return InsertElementInst::Create(UndefValue::get(DestTy), Elem,
                      Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
-      // FIXME: Canonicalize bitcast(insertelement) -> insertelement(bitcast)
     }
 
     if (isa<IntegerType>(SrcTy)) {

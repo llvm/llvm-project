@@ -51,7 +51,7 @@
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: local_int
+; CHECK:       DisplayName: foo::local_int
 ; CHECK:       LinkageName: ?local_int@?1??foo@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     BlockSym {
@@ -59,7 +59,7 @@
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: nested_int
+; CHECK:       DisplayName: foo::nested_int
 ; CHECK:       LinkageName: ?nested_int@?1??foo@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     ScopeEndSym {
@@ -78,7 +78,7 @@
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: local_int
+; CHECK:       DisplayName: bar::local_int
 ; CHECK:       LinkageName: ?local_int@?1??bar@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     BlockSym {
@@ -86,7 +86,7 @@
 ; CHECK:     }
 ; CHECK:     DataSym {
 ; CHECK:       Kind: S_LDATA32 (0x110C)
-; CHECK:       DisplayName: nested_int
+; CHECK:       DisplayName: bar::nested_int
 ; CHECK:       LinkageName: ?nested_int@?1??bar@@YAXXZ@4HA
 ; CHECK:     }
 ; CHECK:     ScopeEndSym {

@@ -118,10 +118,9 @@ protected:
   /// As a consequence we must allocate a new OpBuilder + ScopedContext and
   /// let the escape.
   void enter(mlir::Block *block) {
-    bodyScope = new ScopedContext(
-        ScopedContext::getBuilderRef(),
-        OpBuilder::InsertPoint(block, std::prev(block->end())),
-        ScopedContext::getLocation());
+    bodyScope = new ScopedContext(ScopedContext::getBuilderRef(),
+                                  OpBuilder::InsertPoint(block, block->end()),
+                                  ScopedContext::getLocation());
     if (!block->empty()) {
       auto &termOp = block->back();
       if (termOp.isKnownTerminator())

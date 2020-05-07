@@ -39,3 +39,7 @@ This document describes the available MLIR passes and their contracts.
 ## `spv` Dialect Passes
 
 [include "SPIRVPasses.md"]
+
+## `standard` Dialect Passes
+
+[include "StandardPasses.md"]

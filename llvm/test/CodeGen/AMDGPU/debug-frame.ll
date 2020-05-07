@@ -167,18 +167,18 @@ declare hidden void @ex() #0
 
 ; WAVE64: s_or_saveexec_b64 s[4:5], -1
 ; WAVE32: s_or_saveexec_b32 s4, -1
-; CHECK-NEXT: buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
-; VGPR32_wave64 = 2592
-; WAVE64-NEXT: .cfi_offset 2592, 0
-; VGPR32_wave32 = 1568
-; WAVE32-NEXT: .cfi_offset 1568, 0
+; CHECK-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
+; VGPR32_wave64 = 2600
+; WAVE64-NEXT: .cfi_offset 2600, 0
+; VGPR32_wave32 = 1576
+; WAVE32-NEXT: .cfi_offset 1576, 0
 ; CHECK-NOT: .cfi_{{.*}}
 ; WAVE64: s_mov_b64 exec, s[4:5]
 ; WAVE32: s_mov_b32 exec_lo, s4
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: v_writelane_b32 v32, s33, 2
+; CHECK: v_writelane_b32 v40, s33, 2
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
 ;   BLOCK_LENGTH ULEB128(5)=[0x05]
@@ -186,7 +186,7 @@ declare hidden void @ex() #0
 ;       VGPR32_wave64 ULEB128(2592)=[0xa0, 0x14]
 ;     DW_OP_LLVM_offset_uconst [0xe4]
 ;       OFFSET ULEB128(0x08) [0x08]
-; WAVE64-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa0, 0x14, 0xe4, 0x08
+; WAVE64-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x14, 0xe4, 0x08
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
 ;   BLOCK_LENGTH ULEB128(5)=[0x05]
@@ -194,7 +194,7 @@ declare hidden void @ex() #0
 ;       VGPR32_wave32 ULEB128(1568)=[0xa0, 0x0c]
 ;     DW_OP_LLVM_offset_uconst [0xe4]
 ;       OFFSET ULEB128(0x08) [0x08]
-; WAVE32-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa0, 0x0c, 0xe4, 0x08
+; WAVE32-NEXT: .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x0c, 0xe4, 0x08
 
 ; CHECK-NOT: .cfi_{{.*}}
 
@@ -205,7 +205,7 @@ declare hidden void @ex() #0
 ; CHECK-NOT: .cfi_{{.*}}
 
 ; CHECK: s_sub_u32 s32, s32,
-; CHECK-NEXT: v_readlane_b32 s33, v32, 2
+; CHECK-NEXT: v_readlane_b32 s33, v40, 2
 ; SGPR32 = 64
 ; CHECK-NEXT: .cfi_def_cfa_register 64
 
@@ -230,7 +230,7 @@ entry:
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; CHECK: buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 
 ; DW_CFA_expression [0x10]
 ;   VGPR33_wave64 ULEB128(1569)=[0xa1, 0x14]
@@ -247,7 +247,7 @@ entry:
 ;     DW_OP_LLVM_select_bit_piece [0xec]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x40]
-; WAVE64-NEXT: .cfi_escape 0x10, 0xa1, 0x14, 0x0e, 0x90, 0xa1, 0x14, 0x16, 0xe4, 0x80, 0x02, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; WAVE64-NEXT: .cfi_escape 0x10, 0xa9, 0x14, 0x0e, 0x90, 0xa9, 0x14, 0x16, 0xe4, 0x80, 0x02, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
 
 ; DW_CFA_expression [0x10]
 ;   VGPR33_wave32 ULEB128(1569)=[0xa1, 0x0c]
@@ -264,11 +264,11 @@ entry:
 ;     DW_OP_LLVM_select_bit_piece [0xec]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x20]
-; WAVE32-NEXT: .cfi_escape 0x10, 0xa1, 0x0c, 0x0e, 0x90, 0xa1, 0x0c, 0x16, 0xe4, 0x80, 0x01, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
+; WAVE32-NEXT: .cfi_escape 0x10, 0xa9, 0x0c, 0x0e, 0x90, 0xa9, 0x0c, 0x16, 0xe4, 0x80, 0x01, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK: buffer_store_dword v42, off, s[0:3], s32 ; 4-byte Folded Spill
 
 ; DW_CFA_expression [0x10]
 ;   VGPR34_wave64 ULEB128(2594)=[0xa2, 0x14]
@@ -285,7 +285,7 @@ entry:
 ;     DW_OP_LLVM_select_bit_piece [0xec]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x40]
-; WAVE64-NEXT: .cfi_escape 0x10, 0xa2, 0x14, 0x0d, 0x90, 0xa2, 0x14, 0x16, 0xe4, 0x00, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
+; WAVE64-NEXT: .cfi_escape 0x10, 0xaa, 0x14, 0x0d, 0x90, 0xaa, 0x14, 0x16, 0xe4, 0x00, 0xe6, 0x11, 0x94, 0x08, 0xec, 0x20, 0x40
 
 ; DW_CFA_expression [0x10]
 ;   VGPR34_wave32 ULEB128(1570)=[0xa2, 0x0c]
@@ -302,15 +302,15 @@ entry:
 ;     DW_OP_LLVM_select_bit_piece [0xec]
 ;       ELEMENT_SIZE [0x20]
 ;       ELEMENT_COUNT [0x20]
-; WAVE32-NEXT: .cfi_escape 0x10, 0xa2, 0x0c, 0x0d, 0x90, 0xa2, 0x0c, 0x16, 0xe4, 0x00, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
+; WAVE32-NEXT: .cfi_escape 0x10, 0xaa, 0x0c, 0x0d, 0x90, 0xaa, 0x0c, 0x16, 0xe4, 0x00, 0xe6, 0x01, 0x94, 0x04, 0xec, 0x20, 0x20
 
 ; CHECK-NOT: .cfi_{{.*}}
 
 ; CHECK: .cfi_endproc
 define hidden void @func3() #0 {
 entry:
-  call void asm sideeffect "; clobber", "~{v33}"() #0
-  call void asm sideeffect "; clobber", "~{v34}"() #0
+  call void asm sideeffect "; clobber", "~{v41}"() #0
+  call void asm sideeffect "; clobber", "~{v42}"() #0
   ret void
 }
 

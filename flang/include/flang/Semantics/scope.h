@@ -52,7 +52,7 @@ struct EquivalenceObject {
 using EquivalenceSet = std::vector<EquivalenceObject>;
 
 class Scope {
-  using mapType = std::map<SourceName, common::Reference<Symbol>>;
+  using mapType = std::map<SourceName, MutableSymbolRef>;
 
 public:
   ENUM_CLASS(Kind, Global, Module, MainProgram, Subprogram, BlockData,
@@ -110,7 +110,7 @@ public:
 
   // Return symbols in declaration order (the iterators above are in name order)
   SymbolVector GetSymbols() const;
-  std::vector<common::Reference<Symbol>> GetSymbols();
+  MutableSymbolVector GetSymbols();
 
   iterator find(const SourceName &name);
   const_iterator find(const SourceName &name) const {
@@ -147,7 +147,10 @@ public:
   // Make a copy of a symbol in this scope; nullptr if one is already there
   Symbol *CopySymbol(const Symbol &);
 
-  const std::list<EquivalenceSet> &equivalenceSets() const;
+  std::list<EquivalenceSet> &equivalenceSets() { return equivalenceSets_; }
+  const std::list<EquivalenceSet> &equivalenceSets() const {
+    return equivalenceSets_;
+  }
   void add_equivalenceSet(EquivalenceSet &&);
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
@@ -187,8 +190,8 @@ public:
 
   std::size_t size() const { return size_; }
   void set_size(std::size_t size) { size_ = size; }
-  std::size_t align() const { return align_; }
-  void set_align(std::size_t align) { align_ = align; }
+  std::size_t alignment() const { return alignment_; }
+  void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
   ImportKind GetImportKind() const;
   // Names appearing in IMPORT statements in this scope
@@ -226,7 +229,7 @@ private:
   Scope &parent_; // this is enclosing scope, not extended derived type base
   const Kind kind_;
   std::size_t size_{0}; // size in bytes
-  std::size_t align_{0}; // required alignment in bytes
+  std::size_t alignment_{0}; // required alignment in bytes
   parser::CharBlock sourceRange_;
   Symbol *const symbol_; // if not null, symbol_->scope() == this
   std::list<Scope> children_;

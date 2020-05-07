@@ -1340,13 +1340,24 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
     } else if (const Expr *TheExpr = Item.getExpr()) {
       ArgVal = EmitScalarExpr(TheExpr, /*Ignore*/ false);
 
-      // If this is a retainable type, push a lifetime-extended cleanup to
-      // ensure the lifetime of the argument is extended to the end of the
-      // enclosing block scope.
-      // FIXME: We only have to do this if the argument is a temporary, which
-      //        gets released after the full expression.
+      // If a temporary object that requires destruction after the full
+      // expression is passed, push a lifetime-extended cleanup to extend its
+      // lifetime to the end of the enclosing block scope.
+      auto LifetimeExtendObject = [&](const Expr *E) {
+        E = E->IgnoreParenCasts();
+        // Extend lifetimes of objects returned by function calls and message
+        // sends.
+
+        // FIXME: We should do this in other cases in which temporaries are
+        //        created including arguments of non-ARC types (e.g., C++
+        //        temporaries).
+        if (isa<CallExpr>(E) || isa<ObjCMessageExpr>(E))
+          return true;
+        return false;
+      };
+
       if (TheExpr->getType()->isObjCRetainableType() &&
-          getLangOpts().ObjCAutoRefCount) {
+          getLangOpts().ObjCAutoRefCount && LifetimeExtendObject(TheExpr)) {
         assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
                "Only scalar can be a ObjC retainable type");
         if (!isa<Constant>(ArgVal)) {
@@ -7562,6 +7573,15 @@ CodeGenFunction::getSVEPredType(SVETypeFlags TypeFlags) {
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 4);
   case SVETypeFlags::EltTyFloat64:
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 2);
+
+  case SVETypeFlags::EltTyBool8:
+    return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
+  case SVETypeFlags::EltTyBool16:
+    return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 8);
+  case SVETypeFlags::EltTyBool32:
+    return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 4);
+  case SVETypeFlags::EltTyBool64:
+    return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 2);
   }
 }
 
@@ -7597,6 +7617,12 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   case SVETypeFlags::EltTyBool64:
     return llvm::ScalableVectorType::get(Builder.getInt1Ty(), 2);
   }
+}
+
+llvm::Value *CodeGenFunction::EmitSVEAllTruePred(SVETypeFlags TypeFlags) {
+  Function *Ptrue =
+      CGM.getIntrinsic(Intrinsic::aarch64_sve_ptrue, getSVEPredType(TypeFlags));
+  return Builder.CreateCall(Ptrue, {Builder.getInt32(/*SV_ALL*/ 31)});
 }
 
 constexpr unsigned SVEBitsPerBlock = 128;
@@ -7902,6 +7928,19 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
 
+  llvm::Type *Ty = ConvertType(E->getType());
+  if (BuiltinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
+      BuiltinID <= SVE::BI__builtin_sve_reinterpret_f64_f64) {
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    // FIXME: For big endian this needs an additional REV, or needs a separate
+    // intrinsic that is code-generated as a no-op, because the LLVM bitcast
+    // instruction is defined as 'bitwise' equivalent from memory point of
+    // view (when storing/reloading), whereas the svreinterpret builtin
+    // implements bitwise equivalent cast from register point of view.
+    // LLVM CodeGen for a bitcast must add an explicit REV for big-endian.
+    return Builder.CreateBitCast(Val, Ty);
+  }
+
   llvm::SmallVector<Value *, 4> Ops;
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
     if ((ICEArguments & (1 << i)) == 0)
@@ -7924,7 +7963,6 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   auto *Builtin = findARMVectorIntrinsicInMap(AArch64SVEIntrinsicMap, BuiltinID,
                                               AArch64SVEIntrinsicsProvenSorted);
   SVETypeFlags TypeFlags(Builtin->TypeModifier);
-  llvm::Type *Ty = ConvertType(E->getType());
   if (TypeFlags.isLoad())
     return EmitSVEMaskedLoad(E, Ty, Ops, Builtin->LLVMIntrinsic,
                              TypeFlags.isZExtReturn());
@@ -8005,6 +8043,64 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     llvm::Type* OverloadedTy = getSVEType(TypeFlags);
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_eor_z, OverloadedTy);
     return Builder.CreateCall(F, {Ops[0], Ops[1], Ops[0]});
+  }
+
+  case SVE::BI__builtin_sve_svdupq_n_b8:
+  case SVE::BI__builtin_sve_svdupq_n_b16:
+  case SVE::BI__builtin_sve_svdupq_n_b32:
+  case SVE::BI__builtin_sve_svdupq_n_b64:
+  case SVE::BI__builtin_sve_svdupq_n_u8:
+  case SVE::BI__builtin_sve_svdupq_n_s8:
+  case SVE::BI__builtin_sve_svdupq_n_u64:
+  case SVE::BI__builtin_sve_svdupq_n_f64:
+  case SVE::BI__builtin_sve_svdupq_n_s64:
+  case SVE::BI__builtin_sve_svdupq_n_u16:
+  case SVE::BI__builtin_sve_svdupq_n_f16:
+  case SVE::BI__builtin_sve_svdupq_n_s16:
+  case SVE::BI__builtin_sve_svdupq_n_u32:
+  case SVE::BI__builtin_sve_svdupq_n_f32:
+  case SVE::BI__builtin_sve_svdupq_n_s32: {
+    // These builtins are implemented by storing each element to an array and using
+    // ld1rq to materialize a vector.
+    unsigned NumOpnds = Ops.size();
+
+    bool IsBoolTy =
+        cast<llvm::VectorType>(Ty)->getElementType()->isIntegerTy(1);
+
+    // For svdupq_n_b* the element type of is an integer of type 128/numelts,
+    // so that the compare can use the width that is natural for the expected
+    // number of predicate lanes.
+    llvm::Type *EltTy = Ops[0]->getType();
+    if (IsBoolTy)
+      EltTy = IntegerType::get(getLLVMContext(), SVEBitsPerBlock / NumOpnds);
+
+    Address Alloca = CreateTempAlloca(llvm::ArrayType::get(EltTy, NumOpnds),
+                                     CharUnits::fromQuantity(16));
+    for (unsigned I = 0; I < NumOpnds; ++I)
+      Builder.CreateDefaultAlignedStore(
+          IsBoolTy ? Builder.CreateZExt(Ops[I], EltTy) : Ops[I],
+          Builder.CreateGEP(Alloca.getPointer(),
+                            {Builder.getInt64(0), Builder.getInt64(I)}));
+
+    SVETypeFlags TypeFlags(Builtin->TypeModifier);
+    Value *Pred = EmitSVEAllTruePred(TypeFlags);
+
+    llvm::Type *OverloadedTy = getSVEVectorForElementType(EltTy);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_ld1rq, OverloadedTy);
+    Value *Alloca0 = Builder.CreateGEP(
+        Alloca.getPointer(), {Builder.getInt64(0), Builder.getInt64(0)});
+    Value *LD1RQ = Builder.CreateCall(F, {Pred, Alloca0});
+
+    if (!IsBoolTy)
+      return LD1RQ;
+
+    // For svdupq_n_b* we need to add an additional 'cmpne' with '0'.
+    F = CGM.getIntrinsic(NumOpnds == 2 ? Intrinsic::aarch64_sve_cmpne
+                                       : Intrinsic::aarch64_sve_cmpne_wide,
+                         OverloadedTy);
+    Value *Call =
+        Builder.CreateCall(F, {Pred, LD1RQ, EmitSVEDupX(Builder.getInt64(0))});
+    return EmitSVEPredicateCast(Call, cast<llvm::ScalableVectorType>(Ty));
   }
 
   case SVE::BI__builtin_sve_svpfalse_b:

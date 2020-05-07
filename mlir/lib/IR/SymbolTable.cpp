@@ -245,11 +245,9 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Look for a symbol with the given name.
-  for (auto &block : symbolTableOp->getRegion(0)) {
-    for (auto &op : block)
-      if (getNameIfSymbol(&op) == symbol)
-        return &op;
-  }
+  for (auto &op : symbolTableOp->getRegion(0).front().without_terminator())
+    if (getNameIfSymbol(&op) == symbol)
+      return &op;
   return nullptr;
 }
 Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
@@ -444,21 +442,19 @@ static Optional<WalkResult> walkSymbolUses(
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   SmallVector<Region *, 1> worklist(llvm::make_pointer_range(regions));
   while (!worklist.empty()) {
-    for (Block &block : *worklist.pop_back_val()) {
-      for (Operation &op : block) {
-        if (walkSymbolRefs(&op, callback).wasInterrupted())
-          return WalkResult::interrupt();
+    for (Operation &op : worklist.pop_back_val()->getOps()) {
+      if (walkSymbolRefs(&op, callback).wasInterrupted())
+        return WalkResult::interrupt();
 
-        // Check that this isn't a potentially unknown symbol table.
-        if (isPotentiallyUnknownSymbolTable(&op))
-          return llvm::None;
+      // Check that this isn't a potentially unknown symbol table.
+      if (isPotentiallyUnknownSymbolTable(&op))
+        return llvm::None;
 
-        // If this op defines a new symbol table scope, we can't traverse. Any
-        // symbol references nested within 'op' are different semantically.
-        if (!op.hasTrait<OpTrait::SymbolTable>()) {
-          for (Region &region : op.getRegions())
-            worklist.push_back(&region);
-        }
+      // If this op defines a new symbol table scope, we can't traverse. Any
+      // symbol references nested within 'op' are different semantically.
+      if (!op.hasTrait<OpTrait::SymbolTable>()) {
+        for (Region &region : op.getRegions())
+          worklist.push_back(&region);
       }
     }
   }

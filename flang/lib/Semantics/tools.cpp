@@ -270,6 +270,24 @@ bool IsPureProcedure(const Symbol &symbol) {
   } else if (!IsProcedure(symbol)) {
     return false;
   }
+  if (IsStmtFunction(symbol)) {
+    // Section 15.7(1) states that a statement function is PURE if it does not
+    // reference an IMPURE procedure or a VOLATILE variable
+    const MaybeExpr &expr{symbol.get<SubprogramDetails>().stmtFunction()};
+    if (expr) {
+      for (const Symbol &refSymbol : evaluate::CollectSymbols(*expr)) {
+        if (IsFunction(refSymbol) && !IsPureProcedure(refSymbol)) {
+          return false;
+        }
+        if (const Symbol * root{GetAssociationRoot(refSymbol)}) {
+          if (root->attrs().test(Attr::VOLATILE)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true; // statement function was not found to be impure
+  }
   return symbol.attrs().test(Attr::PURE) ||
       (symbol.attrs().test(Attr::ELEMENTAL) &&
           !symbol.attrs().test(Attr::IMPURE));
@@ -1356,4 +1374,5 @@ void LabelEnforce::SayWithConstruct(SemanticsContext &context,
   context.Say(stmtLocation, message)
       .Attach(constructLocation, GetEnclosingConstructMsg());
 }
+
 } // namespace Fortran::semantics

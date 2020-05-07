@@ -2319,7 +2319,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.AltiVec = 0;
     Opts.ZVector = 0;
     Opts.setLaxVectorConversions(LangOptions::LaxVectorConversionKind::None);
-    Opts.setDefaultFPContractMode(LangOptions::FPC_On);
+    Opts.setDefaultFPContractMode(LangOptions::FPM_On);
     Opts.NativeHalfType = 1;
     Opts.NativeHalfArgsAndReturns = 1;
     Opts.OpenCLCPlusPlus = Opts.CPlusPlus;
@@ -2333,7 +2333,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.CUDA = IK.getLanguage() == Language::CUDA || Opts.HIP;
   if (Opts.CUDA)
     // Set default FP_CONTRACT to FAST.
-    Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
+    Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
 
   Opts.RenderScript = IK.getLanguage() == Language::RenderScript;
   if (Opts.RenderScript) {
@@ -2450,7 +2450,7 @@ static const StringRef GetInputKindName(InputKind IK) {
 
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                           const TargetOptions &TargetOpts,
-                          PreprocessorOptions &PPOpts,
+                          PreprocessorOptions &PPOpts, CodeGenOptions &CGOpts,
                           DiagnosticsEngine &Diags) {
   // FIXME: Cleanup per-file based stuff.
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;
@@ -3182,15 +3182,24 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.UnsafeFPMath = Args.hasArg(OPT_menable_unsafe_fp_math) ||
                       Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
                       Args.hasArg(OPT_cl_fast_relaxed_math);
+  Opts.AllowFPReassoc = Opts.FastMath || CGOpts.Reassociate;
+  Opts.NoHonorNaNs =
+      Opts.FastMath || CGOpts.NoNaNsFPMath || Opts.FiniteMathOnly;
+  Opts.NoHonorInfs =
+      Opts.FastMath || CGOpts.NoInfsFPMath || Opts.FiniteMathOnly;
+  Opts.NoSignedZero = Opts.FastMath || CGOpts.NoSignedZeros;
+  Opts.AllowRecip = Opts.FastMath || CGOpts.ReciprocalMath;
+  // Currently there's no clang option to enable this individually
+  Opts.ApproxFunc = Opts.FastMath;
 
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
     if (Val == "fast")
-      Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
+      Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
     else if (Val == "on")
-      Opts.setDefaultFPContractMode(LangOptions::FPC_On);
+      Opts.setDefaultFPContractMode(LangOptions::FPM_On);
     else if (Val == "off")
-      Opts.setDefaultFPContractMode(LangOptions::FPC_Off);
+      Opts.setDefaultFPContractMode(LangOptions::FPM_Off);
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
@@ -3635,7 +3644,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     // Other LangOpts are only initialized when the input is not AST or LLVM IR.
     // FIXME: Should we really be calling this for an Language::Asm input?
     ParseLangArgs(LangOpts, Args, DashX, Res.getTargetOpts(),
-                  Res.getPreprocessorOpts(), Diags);
+                  Res.getPreprocessorOpts(), Res.getCodeGenOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
     if (T.isOSDarwin() && DashX.isPreprocessed()) {

@@ -393,9 +393,9 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
 
-AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(
-    MCStreamer &S, const MCSubtargetInfo &STI)
-    : AMDGPUTargetStreamer(S), Streamer(S) {
+AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(MCStreamer &S,
+                                                 const MCSubtargetInfo &STI)
+    : AMDGPUTargetStreamer(S), Streamer(S), Os(STI.getTargetTriple().getOS()) {
   MCAssembler &MCA = getStreamer().getAssembler();
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
@@ -438,9 +438,15 @@ void AMDGPUTargetELFStreamer::EmitNote(
 
   auto NameSZ = Name.size() + 1;
 
+  unsigned NoteFlags = 0;
+  // TODO Apparently, this is currently needed for OpenCL as mentioned in
+  // https://reviews.llvm.org/D74995
+  if (Os == Triple::AMDHSA)
+    NoteFlags = ELF::SHF_ALLOC;
+
   S.PushSection();
-  S.SwitchSection(Context.getELFSection(
-    ElfNote::SectionName, ELF::SHT_NOTE, ELF::SHF_ALLOC));
+  S.SwitchSection(
+      Context.getELFSection(ElfNote::SectionName, ELF::SHT_NOTE, NoteFlags));
   S.emitInt32(NameSZ);                                        // namesz
   S.emitValue(DescSZ, 4);                                     // descz
   S.emitInt32(NoteType);                                      // type

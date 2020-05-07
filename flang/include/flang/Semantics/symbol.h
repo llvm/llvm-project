@@ -35,6 +35,8 @@ class ProgramTree;
 
 using SymbolRef = common::Reference<const Symbol>;
 using SymbolVector = std::vector<SymbolRef>;
+using MutableSymbolRef = common::Reference<Symbol>;
+using MutableSymbolVector = std::vector<MutableSymbolRef>;
 
 // A module or submodule.
 class ModuleDetails {
@@ -299,14 +301,18 @@ private:
 
 class CommonBlockDetails {
 public:
-  const SymbolVector &objects() const { return objects_; }
-  void add_object(const Symbol &object) { objects_.emplace_back(object); }
+  MutableSymbolVector &objects() { return objects_; }
+  const MutableSymbolVector &objects() const { return objects_; }
+  void add_object(Symbol &object) { objects_.emplace_back(object); }
   MaybeExpr bindName() const { return bindName_; }
   void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
+  std::size_t alignment() const { return alignment_; }
+  void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
-  SymbolVector objects_;
+  MutableSymbolVector objects_;
   MaybeExpr bindName_;
+  std::size_t alignment_{0}; // required alignment in bytes
 };
 
 class FinalProcDetails {}; // TODO
@@ -670,7 +676,7 @@ private:
   Flags flags_;
   Scope *scope_{nullptr};
   std::size_t size_{0}; // size in bytes
-  std::size_t offset_{0}; // byte offset in enclosing scope
+  std::size_t offset_{0}; // byte offset in scope or common block
   Details details_;
 
   Symbol() {} // only created in class Symbols
@@ -736,8 +742,7 @@ inline bool ProcEntityDetails::HasExplicitInterface() const {
 }
 
 inline bool operator<(SymbolRef x, SymbolRef y) { return *x < *y; }
-inline bool operator<(
-    common::Reference<Symbol> x, common::Reference<Symbol> y) {
+inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
   return *x < *y;
 }
 using SymbolSet = std::set<SymbolRef>;

@@ -2,7 +2,7 @@
 ; RUN: echo '!_Z3foob' > %t
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=%t -unique-bb-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 
-define i32 @_Z3foob(i1 zeroext %0) #0 {
+define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4
   %3 = alloca i8, align 1
   %4 = zext i1 %0 to i8
@@ -31,7 +31,7 @@ define i32 @_Z3foob(i1 zeroext %0) #0 {
 declare i32 @_Z3barv() #1
 declare i32 @_Z3bazv() #1
 
-define i32 @_Z3zipb(i1 zeroext %0) #0 {
+define i32 @_Z3zipb(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4
   %3 = alloca i8, align 1
   %4 = zext i1 %0 to i8
@@ -59,18 +59,14 @@ define i32 @_Z3zipb(i1 zeroext %0) #0 {
 
 ; LINUX-SECTIONS: .section        .text._Z3foob,"ax",@progbits
 ; LINUX-SECTIONS: _Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob.a.BB._Z3foob,"ax",@progbits
-; LINUX-SECTIONS: a.BB._Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob.aa.BB._Z3foob,"ax",@progbits
-; LINUX-SECTIONS: aa.BB._Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob.raa.BB._Z3foob,"ax",@progbits
-; LINUX-SECTIONS: raa.BB._Z3foob:
+; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.1,"ax",@progbits
+; LINUX-SECTIONS: _Z3foob.1:
+; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.2,"ax",@progbits
+; LINUX-SECTIONS: _Z3foob.2:
+; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.3,"ax",@progbits
+; LINUX-SECTIONS: _Z3foob.3:
 
 ; LINUX-SECTIONS: .section        .text._Z3zipb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.a.BB._Z3zipb,"ax",@progbits
-; LINUX-SECTIONS-NOT: a.BB._Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.aa.BB._Z3zipb,"ax",@progbits
-; LINUX-SECTIONS-NOT: aa.BB._Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb.raa.BB._Z3zipb,"ax",@progbits
-; LINUX-SECTIONS-NOT: raa.BB._Z3zipb:
+; LINUX-SECTIONS-NOT: .section        .text._Z3zipb._Z3zipb.{{[0-9]+}},"ax",@progbits
+; LINUX-SECTIONS-NOT: _Z3zipb.{{[0-9]+}}:

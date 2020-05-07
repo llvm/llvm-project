@@ -765,9 +765,16 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 0;
 }
 
+#if __has_feature(ptrauth_calls)
+# include <ptrauth.h>
+#else
+# define ptrauth_strip(value, key) (value)
+#endif
+
 #if defined(__aarch64__) && defined(arm_thread_state64_get_sp)
   #define AARCH64_GET_REG(r) \
-    arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss)
+    (uptr)ptrauth_strip(     \
+        (void *)arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss), 0)
 #else
   #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
 #endif
@@ -799,7 +806,10 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 # endif
 }
 
-void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
+void SignalContext::InitPcSpBp() {
+  addr = (uptr)ptrauth_strip((void *)addr, 0);
+  GetPcSpBp(context, &pc, &sp, &bp);
+}
 
 void InitializePlatformEarly() {
   // Only use xnu_fast_mmap when on x86_64 and the OS supports it.
@@ -1136,7 +1146,7 @@ void SignalContext::DumpAllRegisters(void *context) {
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREGA64(r) \
-    Printf("%s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
+    Printf("   %s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);

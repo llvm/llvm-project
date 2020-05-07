@@ -269,7 +269,8 @@ public:
     AssociatedIterator() = default;
     AssociatedIterator(SectionChunk *head) : cur(head) {}
     bool operator==(const AssociatedIterator &r) const { return cur == r.cur; }
-    const SectionChunk &operator*() const { return *cur; }
+    // FIXME: Wrong const-ness, but it makes filter ranges work.
+    SectionChunk &operator*() const { return *cur; }
     SectionChunk &operator*() { return *cur; }
     AssociatedIterator &operator++() {
       cur = cur->assocChildren;

@@ -97,6 +97,17 @@ Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return Address::invalid();
 }
 
+bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
+  if (Ty->isPromotableIntegerType())
+    return true;
+
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() < getContext().getTypeSize(getContext().IntTy))
+      return true;
+
+  return false;
+}
+
 ABIInfo::~ABIInfo() {}
 
 /// Does the given lowering require more than the given number of
@@ -701,8 +712,16 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
 
-  return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                        : ABIArgInfo::getDirect());
+  ASTContext &Context = getContext();
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() >
+        Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
+                                ? Context.Int128Ty
+                                : Context.LongLongTy))
+      return getNaturalAlignIndirect(Ty);
+
+  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                            : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
@@ -716,8 +735,15 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  return (RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                           : ABIArgInfo::getDirect());
+  if (const auto *EIT = RetTy->getAs<ExtIntType>())
+    if (EIT->getNumBits() >
+        getContext().getTypeSize(getContext().getTargetInfo().hasInt128Type()
+                                     ? getContext().Int128Ty
+                                     : getContext().LongLongTy))
+      return getNaturalAlignIndirect(RetTy);
+
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                               : ABIArgInfo::getDirect());
 }
 
 //===----------------------------------------------------------------------===//
@@ -933,10 +959,15 @@ ABIArgInfo PNaClABIInfo::classifyArgumentType(QualType Ty) const {
   } else if (Ty->isFloatingType()) {
     // Floating-point types don't go inreg.
     return ABIArgInfo::getDirect();
+  } else if (const auto *EIT = Ty->getAs<ExtIntType>()) {
+    // Treat extended integers as integers if <=64, otherwise pass indirectly.
+    if (EIT->getNumBits() > 64)
+      return getNaturalAlignIndirect(Ty);
+    return ABIArgInfo::getDirect();
   }
 
-  return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                        : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                            : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo PNaClABIInfo::classifyReturnType(QualType RetTy) const {
@@ -947,12 +978,19 @@ ABIArgInfo PNaClABIInfo::classifyReturnType(QualType RetTy) const {
   if (isAggregateTypeForABI(RetTy))
     return getNaturalAlignIndirect(RetTy);
 
+  // Treat extended integers as integers if <=64, otherwise pass indirectly.
+  if (const auto *EIT = RetTy->getAs<ExtIntType>()) {
+    if (EIT->getNumBits() > 64)
+      return getNaturalAlignIndirect(RetTy);
+    return ABIArgInfo::getDirect();
+  }
+
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  return (RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                           : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                               : ABIArgInfo::getDirect());
 }
 
 /// IsX86_MMXType - Return true if this is an MMX type.
@@ -1498,8 +1536,12 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  return (RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                           : ABIArgInfo::getDirect());
+  if (const auto *EIT = RetTy->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 64)
+      return getIndirectReturnResult(RetTy, State);
+
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                               : ABIArgInfo::getDirect());
 }
 
 static bool isSSEVectorType(ASTContext &Context, QualType Ty) {
@@ -1816,7 +1858,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
 
   bool InReg = shouldPrimitiveUseInReg(Ty, State);
 
-  if (Ty->isPromotableIntegerType()) {
+  if (isPromotableIntegerTypeForABI(Ty)) {
     if (InReg)
       return ABIArgInfo::getExtendInReg(Ty);
     return ABIArgInfo::getExtend(Ty);
@@ -2977,9 +3019,11 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    if (!Ty->isExtIntType())
-      return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                            : ABIArgInfo::getDirect());
+    if (Ty->isExtIntType())
+      return getNaturalAlignIndirect(Ty);
+
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                              : ABIArgInfo::getDirect());
   }
 
   return getNaturalAlignIndirect(Ty);
@@ -3017,8 +3061,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                          : ABIArgInfo::getDirect());
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                              : ABIArgInfo::getDirect());
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
@@ -3400,7 +3444,7 @@ classifyReturnType(QualType RetTy) const {
         RetTy = EnumTy->getDecl()->getIntegerType();
 
       if (RetTy->isIntegralOrEnumerationType() &&
-          RetTy->isPromotableIntegerType())
+          isPromotableIntegerTypeForABI(RetTy))
         return ABIArgInfo::getExtend(RetTy);
     }
     break;
@@ -3545,7 +3589,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(
         Ty = EnumTy->getDecl()->getIntegerType();
 
       if (Ty->isIntegralOrEnumerationType() &&
-          Ty->isPromotableIntegerType())
+          isPromotableIntegerTypeForABI(Ty))
         return ABIArgInfo::getExtend(Ty);
     }
 
@@ -4252,7 +4296,7 @@ public:
 }
 
 CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
-  // Complex types are passed just like their elements
+  // Complex types are passed just like their elements.
   if (const ComplexType *CTy = Ty->getAs<ComplexType>())
     Ty = CTy->getElementType();
 
@@ -4662,7 +4706,7 @@ PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
     Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
-  if (Ty->isPromotableIntegerType())
+  if (isPromotableIntegerTypeForABI(Ty))
     return true;
 
   // In addition to the usual promotable integer types, we also need to
@@ -4675,6 +4719,10 @@ PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
     default:
       break;
     }
+
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() < 64)
+      return true;
 
   return false;
 }
@@ -4893,6 +4941,10 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
     }
   }
 
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 128)
+      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
@@ -4964,6 +5016,10 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
       return ABIArgInfo::getDirect(CoerceTy);
     }
   }
+
+  if (const auto *EIT = RetTy->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 128)
+      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
 
   if (isAggregateTypeForABI(RetTy)) {
     // ELFv2 homogeneous aggregates are returned as array types.
@@ -5301,7 +5357,11 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty) const {
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    return (Ty->isPromotableIntegerType() && isDarwinPCS()
+    if (const auto *EIT = Ty->getAs<ExtIntType>())
+      if (EIT->getNumBits() > 128)
+        return getNaturalAlignIndirect(Ty);
+
+    return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(Ty)
                 : ABIArgInfo::getDirect());
   }
@@ -5378,7 +5438,11 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
       RetTy = EnumTy->getDecl()->getIntegerType();
 
-    return (RetTy->isPromotableIntegerType() && isDarwinPCS()
+    if (const auto *EIT = RetTy->getAs<ExtIntType>())
+      if (EIT->getNumBits() > 128)
+        return getNaturalAlignIndirect(RetTy);
+
+    return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
                 : ABIArgInfo::getDirect());
   }
@@ -6068,8 +6132,12 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
       Ty = EnumTy->getDecl()->getIntegerType();
     }
 
-    return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                          : ABIArgInfo::getDirect());
+    if (const auto *EIT = Ty->getAs<ExtIntType>())
+      if (EIT->getNumBits() > 64)
+        return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                              : ABIArgInfo::getDirect());
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
@@ -6274,8 +6342,12 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
       RetTy = EnumTy->getDecl()->getIntegerType();
 
-    return RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                            : ABIArgInfo::getDirect();
+    if (const auto *EIT = RetTy->getAs<ExtIntType>())
+      if (EIT->getNumBits() > 64)
+        return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+
+    return isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                                : ABIArgInfo::getDirect();
   }
 
   // Are we following APCS?
@@ -6528,6 +6600,8 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
+  bool isUnsupportedType(QualType T) const;
+  ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, unsigned MaxSize) const;
 };
 
 class NVPTXTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -6591,18 +6665,22 @@ private:
 };
 
 /// Checks if the type is unsupported directly by the current target.
-static bool isUnsupportedType(ASTContext &Context, QualType T) {
+bool NVPTXABIInfo::isUnsupportedType(QualType T) const {
+  ASTContext &Context = getContext();
   if (!Context.getTargetInfo().hasFloat16Type() && T->isFloat16Type())
     return true;
   if (!Context.getTargetInfo().hasFloat128Type() &&
       (T->isFloat128Type() ||
        (T->isRealFloatingType() && Context.getTypeSize(T) == 128)))
     return true;
+  if (const auto *EIT = T->getAs<ExtIntType>())
+    return EIT->getNumBits() >
+           (Context.getTargetInfo().hasInt128Type() ? 128 : 64);
   if (!Context.getTargetInfo().hasInt128Type() && T->isIntegerType() &&
       Context.getTypeSize(T) > 64)
     return true;
   if (const auto *AT = T->getAsArrayTypeUnsafe())
-    return isUnsupportedType(Context, AT->getElementType());
+    return isUnsupportedType(AT->getElementType());
   const auto *RT = T->getAs<RecordType>();
   if (!RT)
     return false;
@@ -6611,24 +6689,23 @@ static bool isUnsupportedType(ASTContext &Context, QualType T) {
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     for (const CXXBaseSpecifier &I : CXXRD->bases())
-      if (isUnsupportedType(Context, I.getType()))
+      if (isUnsupportedType(I.getType()))
         return true;
 
   for (const FieldDecl *I : RD->fields())
-    if (isUnsupportedType(Context, I->getType()))
+    if (isUnsupportedType(I->getType()))
       return true;
   return false;
 }
 
 /// Coerce the given type into an array with maximum allowed size of elements.
-static ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, ASTContext &Context,
-                                            llvm::LLVMContext &LLVMContext,
-                                            unsigned MaxSize) {
+ABIArgInfo NVPTXABIInfo::coerceToIntArrayWithLimit(QualType Ty,
+                                                   unsigned MaxSize) const {
   // Alignment and Size are measured in bits.
-  const uint64_t Size = Context.getTypeSize(Ty);
-  const uint64_t Alignment = Context.getTypeAlign(Ty);
+  const uint64_t Size = getContext().getTypeSize(Ty);
+  const uint64_t Alignment = getContext().getTypeAlign(Ty);
   const unsigned Div = std::min<unsigned>(MaxSize, Alignment);
-  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Div);
+  llvm::Type *IntType = llvm::Type::getIntNTy(getVMContext(), Div);
   const uint64_t NumElements = (Size + Div - 1) / Div;
   return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
 }
@@ -6638,9 +6715,8 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (getContext().getLangOpts().OpenMP &&
-      getContext().getLangOpts().OpenMPIsDevice &&
-      isUnsupportedType(getContext(), RetTy))
-    return coerceToIntArrayWithLimit(RetTy, getContext(), getVMContext(), 64);
+      getContext().getLangOpts().OpenMPIsDevice && isUnsupportedType(RetTy))
+    return coerceToIntArrayWithLimit(RetTy, 64);
 
   // note: this is different from default ABI
   if (!RetTy->isScalarType())
@@ -6650,8 +6726,8 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  return (RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                           : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                               : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
@@ -6674,8 +6750,15 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
     return getNaturalAlignIndirect(Ty, /* byval */ true);
   }
 
-  return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                        : ABIArgInfo::getDirect());
+  if (const auto *EIT = Ty->getAs<ExtIntType>()) {
+    if ((EIT->getNumBits() > 128) ||
+        (!getContext().getTargetInfo().hasInt128Type() &&
+         EIT->getNumBits() > 64))
+      return getNaturalAlignIndirect(Ty, /* byval */ true);
+  }
+
+  return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                            : ABIArgInfo::getDirect());
 }
 
 void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
@@ -6794,7 +6877,7 @@ public:
   SystemZABIInfo(CodeGenTypes &CGT, bool HV, bool SF)
     : SwiftABIInfo(CGT), HasVector(HV), IsSoftFloatABI(SF) {}
 
-  bool isPromotableIntegerType(QualType Ty) const;
+  bool isPromotableIntegerTypeForABI(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
   bool isFPArgumentType(QualType Ty) const;
@@ -6831,14 +6914,18 @@ public:
 
 }
 
-bool SystemZABIInfo::isPromotableIntegerType(QualType Ty) const {
+bool SystemZABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
-  if (Ty->isPromotableIntegerType())
+  if (ABIInfo::isPromotableIntegerTypeForABI(Ty))
     return true;
+
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() < 64)
+      return true;
 
   // 32-bit values must also be promoted.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
@@ -7086,8 +7173,8 @@ ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getDirect();
   if (isCompoundType(RetTy) || getContext().getTypeSize(RetTy) > 64)
     return getNaturalAlignIndirect(RetTy);
-  return (isPromotableIntegerType(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                         : ABIArgInfo::getDirect());
+  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                               : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
@@ -7096,7 +7183,7 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
     return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
-  if (isPromotableIntegerType(Ty))
+  if (isPromotableIntegerTypeForABI(Ty))
     return ABIArgInfo::getExtend(Ty);
 
   // Handle vector types and vector-like structure types.  Note that
@@ -7391,6 +7478,13 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
 
+  // Make sure we pass indirectly things that are too large.
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 128 ||
+        (EIT->getNumBits() > 64 &&
+         !getContext().getTargetInfo().hasInt128Type()))
+      return getNaturalAlignIndirect(Ty);
+
   // All integral types are promoted to the GPR width.
   if (Ty->isIntegralOrEnumerationType())
     return extendType(Ty);
@@ -7475,7 +7569,14 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
     RetTy = EnumTy->getDecl()->getIntegerType();
 
-  if (RetTy->isPromotableIntegerType())
+  // Make sure we pass indirectly things that are too large.
+  if (const auto *EIT = RetTy->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 128 ||
+        (EIT->getNumBits() > 64 &&
+         !getContext().getTargetInfo().hasInt128Type()))
+      return getNaturalAlignIndirect(RetTy);
+
+  if (isPromotableIntegerTypeForABI(RetTy))
     return ABIArgInfo::getExtend(RetTy);
 
   if ((RetTy->isUnsignedIntegerOrEnumerationType() ||
@@ -7769,8 +7870,11 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
     if (Size <= 64)
       HexagonAdjustRegsLeft(Size, RegsLeft);
 
-    return Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
-                                         : ABIArgInfo::getDirect();
+    if (Size > 64 && Ty->isExtIntType())
+      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+
+    return isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                             : ABIArgInfo::getDirect();
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
@@ -7822,8 +7926,11 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
       RetTy = EnumTy->getDecl()->getIntegerType();
 
-    return RetTy->isPromotableIntegerType() ? ABIArgInfo::getExtend(RetTy)
-                                            : ABIArgInfo::getDirect();
+    if (Size > 64 && RetTy->isExtIntType())
+      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+
+    return isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                                : ABIArgInfo::getDirect();
   }
 
   if (isEmptyRecord(getContext(), RetTy, true))
@@ -8186,7 +8293,13 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
     Ty = EnumTy->getDecl()->getIntegerType();
 
   bool InReg = shouldUseInReg(Ty, State);
-  if (Ty->isPromotableIntegerType()) {
+
+  // Don't pass >64 bit integers in registers.
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 64)
+      return getIndirectResult(Ty, /*ByVal=*/true, State);
+
+  if (isPromotableIntegerTypeForABI(Ty)) {
     if (InReg)
       return ABIArgInfo::getDirectInReg();
     return ABIArgInfo::getExtend(Ty);
@@ -8896,6 +9009,10 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   if (Size < 64 && Ty->isIntegerType())
     return ABIArgInfo::getExtend(Ty);
 
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() < 64)
+      return ABIArgInfo::getExtend(Ty);
+
   // Other non-aggregates go in registers.
   if (!isAggregateTypeForABI(Ty))
     return ABIArgInfo::getDirect();
@@ -9145,11 +9262,15 @@ ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,
         ABIArgInfo::getDirect(Result, 0, nullptr, false);
   }
 
-  return Ty->isPromotableIntegerType() ?
-      (FreeRegs >= SizeInRegs ? ABIArgInfo::getExtendInReg(Ty) :
-                                ABIArgInfo::getExtend(Ty)) :
-      (FreeRegs >= SizeInRegs ? ABIArgInfo::getDirectInReg() :
-                                ABIArgInfo::getDirect());
+  if (const auto *EIT = Ty->getAs<ExtIntType>())
+    if (EIT->getNumBits() > 64)
+      return getIndirectByValue(Ty);
+
+  return isPromotableIntegerTypeForABI(Ty)
+             ? (FreeRegs >= SizeInRegs ? ABIArgInfo::getExtendInReg(Ty)
+                                       : ABIArgInfo::getExtend(Ty))
+             : (FreeRegs >= SizeInRegs ? ABIArgInfo::getDirectInReg()
+                                       : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo ARCABIInfo::classifyReturnType(QualType RetTy) const {
@@ -10178,6 +10299,15 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     // stack.
     if (Size < XLen && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
       return extendType(Ty);
+    }
+
+    if (const auto *EIT = Ty->getAs<ExtIntType>()) {
+      if (EIT->getNumBits() < XLen && !MustUseStack)
+        return extendType(Ty);
+      if (EIT->getNumBits() > 128 ||
+          (!getContext().getTargetInfo().hasInt128Type() &&
+           EIT->getNumBits() > 64))
+        return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
     }
 
     return ABIArgInfo::getDirect();

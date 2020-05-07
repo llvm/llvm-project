@@ -21,13 +21,6 @@ static bool requiresGOTAccess(const Symbol *sym) {
 }
 
 static bool allowUndefined(const Symbol* sym) {
-  // Historically --allow-undefined doesn't work for data symbols since we don't
-  // have any way to represent these as imports in the final binary.  The idea
-  // behind allowing undefined symbols is to allow importing these symbols from
-  // the embedder and we can't do this for data symbols (at least not without
-  // compiling with -fPIC)
-  if (isa<DataSymbol>(sym))
-    return false;
   // Undefined functions with explicit import name are allowed to be undefined
   // at link time.
   if (auto *F = dyn_cast<UndefinedFunction>(sym))

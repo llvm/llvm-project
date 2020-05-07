@@ -6,16 +6,15 @@ add_mlir_conversion_library(MLIRAffineToStandard
 
   DEPENDS
   MLIRConversionPassIncGen
-)
-target_link_libraries(
-  MLIRAffineToStandard
-  PUBLIC
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
   MLIRAffineOps
   MLIRLoopOps
   MLIRPass
   MLIRStandardOps
   MLIRTransforms
   MLIRIR
-  LLVMCore
-  LLVMSupport
   )

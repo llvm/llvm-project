@@ -145,8 +145,7 @@ void DivByZero(_ExtInt(11) E, int i) {
 
   // Also triggers signed integer overflow.
   E / E;
-  // CHECK: %[[E1LOAD:.+]] = load i11
-  // CHECK: store i11 %[[E1LOAD]], i11* %[[EADDR:.+]]
+  // CHECK: %[[EADDR:.+]] = alloca i11
   // CHECK: %[[E:.+]] = load i11, i11* %[[EADDR]]
   // CHECK: %[[E2:.+]] = load i11, i11* %[[EADDR]]
   // CHECK: %[[NEZERO:.+]] = icmp ne i11 %[[E2]], 0
@@ -163,8 +162,7 @@ void DivByZero(_ExtInt(11) E, int i) {
 // CHECK: define void @_Z6ShiftsU7_ExtIntILi9EEi
 void Shifts(_ExtInt(9) E) {
   E >> E;
-  // CHECK: %[[E1LOAD:.+]] = load i9, i9*
-  // CHECK: store i9 %[[E1LOAD]], i9* %[[EADDR:.+]]
+  // CHECK: %[[EADDR:.+]] = alloca i9
   // CHECK: %[[LHSE:.+]] = load i9, i9* %[[EADDR]]
   // CHECK: %[[RHSE:.+]] = load i9, i9* %[[EADDR]]
   // CHECK: %[[CMP:.+]] = icmp ule i9 %[[RHSE]], 8
@@ -227,8 +225,7 @@ void UnsignedIntegerOverflow(unsigned u,
                              unsigned _ExtInt(23) SmallE,
                              unsigned _ExtInt(35) BigE) {
   u = SmallE + SmallE;
-  // CHECK: %[[LOADBIGGESTE2:.+]] = load i23
-  // CHECK: store i23 %[[LOADBIGGESTE2]], i23* %[[BIGGESTEADDR:.+]]
+  // CHECK: %[[BIGGESTEADDR:.+]] = alloca i23
   // CHECK: %[[LOADE1:.+]] = load i23, i23* %[[BIGGESTEADDR]]
   // CHECK: %[[LOADE2:.+]] = load i23, i23* %[[BIGGESTEADDR]]
   // CHECK: %[[OFCALL:.+]] = call { i23, i1 } @llvm.uadd.with.overflow.i23(i23 %[[LOADE1]], i23 %[[LOADE2]])

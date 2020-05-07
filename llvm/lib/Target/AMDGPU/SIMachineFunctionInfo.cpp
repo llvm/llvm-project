@@ -439,6 +439,27 @@ MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
   return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
 }
 
+Register
+SIMachineFunctionInfo::getGITPtrLoReg(const MachineFunction &MF) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.isAmdPalOS())
+    return Register();
+  Register GitPtrLo = AMDGPU::SGPR0; // Low GIT address passed in
+  if (ST.hasMergedShaders()) {
+    switch (MF.getFunction().getCallingConv()) {
+    case CallingConv::AMDGPU_HS:
+    case CallingConv::AMDGPU_GS:
+      // Low GIT address is passed in s8 rather than s0 for an LS+HS or
+      // ES+GS merged shader on gfx9+.
+      GitPtrLo = AMDGPU::SGPR8;
+      return GitPtrLo;
+    default:
+      return GitPtrLo;
+    }
+  }
+  return GitPtrLo;
+}
+
 static yaml::StringValue regToString(Register Reg,
                                      const TargetRegisterInfo &TRI) {
   yaml::StringValue Dest;

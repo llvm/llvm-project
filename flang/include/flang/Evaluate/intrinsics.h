@@ -55,6 +55,11 @@ struct SpecificIntrinsicFunctionInterface : public characteristics::Procedure {
   // All argument and result types are intrinsic types with default kinds.
 };
 
+// Generic intrinsic classes from table 16.1
+ENUM_CLASS(IntrinsicClass, atomicSubroutine, collectiveSubroutine,
+    elementalFunction, elementalSubroutine, inquiryFunction, pureSubroutine,
+    impureSubroutine, transformationalFunction, noClass)
+
 class IntrinsicProcTable {
 private:
   class Implementation;
@@ -67,6 +72,9 @@ public:
   // Check whether a name should be allowed to appear on an INTRINSIC
   // statement.
   bool IsIntrinsic(const std::string &) const;
+
+  // Inquiry intrinsics are defined in section 16.7, table 16.1
+  IntrinsicClass GetIntrinsicClass(const std::string &) const;
 
   // Probe the intrinsics for a match against a specific call.
   // On success, the actual arguments are transferred to the result

@@ -280,21 +280,6 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                       ScalarEvolution &SE, const TargetTransformInfo &TTI,
                       AssumptionCache &AC, DependenceInfo &DI,
                       OptimizationRemarkEmitter &ORE, int OptLevel) {
-  // Quick checks of the correct loop form
-  if (!L->isLoopSimplifyForm() || L->getSubLoops().size() != 1)
-    return LoopUnrollResult::Unmodified;
-  Loop *SubLoop = L->getSubLoops()[0];
-  if (!SubLoop->isLoopSimplifyForm())
-    return LoopUnrollResult::Unmodified;
-
-  BasicBlock *Latch = L->getLoopLatch();
-  BasicBlock *Exit = L->getExitingBlock();
-  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-  BasicBlock *SubLoopExit = SubLoop->getExitingBlock();
-
-  if (Latch != Exit || SubLoopLatch != SubLoopExit)
-    return LoopUnrollResult::Unmodified;
-
   TargetTransformInfo::UnrollingPreferences UP =
       gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, OptLevel, None,
                                  None, None, None, None, None, None, None);
@@ -324,7 +309,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  if (!isSafeToUnrollAndJam(L, SE, DT, DI)) {
+  if (!isSafeToUnrollAndJam(L, SE, DT, DI, *LI)) {
     LLVM_DEBUG(dbgs() << "  Disabled due to not being safe.\n");
     return LoopUnrollResult::Unmodified;
   }
@@ -335,6 +320,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   bool Convergent;
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
+  Loop *SubLoop = L->getSubLoops()[0];
   unsigned InnerLoopSize =
       ApproximateLoopSize(SubLoop, NumInlineCandidates, NotDuplicatable,
                           Convergent, TTI, EphValues, UP.BEInsns);
@@ -372,6 +358,8 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     SubLoop->setLoopID(NewInnerEpilogueLoopID.getValue());
 
   // Find trip count and trip multiple
+  BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
   unsigned OuterTripCount = SE.getSmallConstantTripCount(L, Latch);
   unsigned OuterTripMultiple = SE.getSmallConstantTripMultiple(L, Latch);
   unsigned InnerTripCount = SE.getSmallConstantTripCount(SubLoop, SubLoopLatch);

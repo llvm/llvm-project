@@ -450,15 +450,15 @@ static void initTargetOptions(llvm::TargetOptions &Options,
 
   // Set FP fusion mode.
   switch (LangOpts.getDefaultFPContractMode()) {
-  case LangOptions::FPC_Off:
+  case LangOptions::FPM_Off:
     // Preserve any contraction performed by the front-end.  (Strict performs
     // splitting of the muladd intrinsic in the backend.)
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
-  case LangOptions::FPC_On:
+  case LangOptions::FPM_On:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
-  case LangOptions::FPC_Fast:
+  case LangOptions::FPM_Fast:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     break;
   }

@@ -202,7 +202,6 @@ static Expected<uint64_t> getCommonSize(ObjectFile *Obj) {
     Expected<uint32_t> SymFlagsOrErr =
         Obj->getSymbolFlags(Sym.getRawDataRefImpl());
     if (!SymFlagsOrErr)
-      // TODO: Test this error.
       return SymFlagsOrErr.takeError();
     if (*SymFlagsOrErr & SymbolRef::SF_Common)
       TotalCommons += Obj->getCommonSymbolSize(Sym.getRawDataRefImpl());

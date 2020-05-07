@@ -60,6 +60,9 @@ public:
 
   /// Set the flag specifying if multi-threading is disabled by the context.
   void disableMultithreading(bool disable = true);
+  void enableMultithreading(bool enable = true) {
+    disableMultithreading(!enable);
+  }
 
   /// Return true if we should attach the operation to diagnostics emitted via
   /// Operation::emit.

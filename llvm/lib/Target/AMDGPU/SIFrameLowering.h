@@ -66,9 +66,7 @@ private:
                                         const DebugLoc &DL,
                                         Register ScratchWaveOffsetReg) const;
 
-  Register
-  getEntryFunctionReservedScratchRsrcReg(MachineFunction &MF,
-                                         Register ScratchWaveOffsetReg) const;
+  Register getEntryFunctionReservedScratchRsrcReg(MachineFunction &MF) const;
 
   void emitEntryFunctionScratchRsrcRegSetup(
       MachineFunction &MF, MachineBasicBlock &MBB,

@@ -426,6 +426,10 @@ bool Sema::isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD) {
   if (CD->getParent()->isDynamicClass())
     return false;
 
+  // Union ctor does not call ctors of its data members.
+  if (CD->getParent()->isUnion())
+    return true;
+
   // The only form of initializer allowed is an empty constructor.
   // This will recursively check all base classes and member initializers
   if (!llvm::all_of(CD->inits(), [&](const CXXCtorInitializer *CI) {
@@ -464,6 +468,11 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
   // Its class has no virtual functions and no virtual base classes.
   if (ClassDecl->isDynamicClass())
     return false;
+
+  // Union does not have base class and union dtor does not call dtors of its
+  // data members.
+  if (DD->getParent()->isUnion())
+    return true;
 
   // Only empty destructors are allowed. This will recursively check
   // destructors for all base classes...

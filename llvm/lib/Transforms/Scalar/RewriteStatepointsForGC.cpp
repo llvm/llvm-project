@@ -1990,7 +1990,9 @@ chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
              "non noop cast is found during rematerialization");
 
       Type *SrcTy = CI->getOperand(0)->getType();
-      Cost += TTI.getCastInstrCost(CI->getOpcode(), CI->getType(), SrcTy, CI);
+      Cost += TTI.getCastInstrCost(CI->getOpcode(), CI->getType(), SrcTy,
+                                   TargetTransformInfo::TCK_SizeAndLatency,
+                                   CI);
 
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
       // Cost of the address calculation

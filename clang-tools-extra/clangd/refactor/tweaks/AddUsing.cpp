@@ -175,6 +175,12 @@ findInsertionPoint(const Tweak::Selection &Inputs,
 
 bool AddUsing::prepare(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
+
+  // Do not suggest "using" in header files. That way madness lies.
+  if (isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+                   Inputs.AST->getLangOpts()))
+    return false;
+
   auto *Node = Inputs.ASTSelection.commonAncestor();
   if (Node == nullptr)
     return false;

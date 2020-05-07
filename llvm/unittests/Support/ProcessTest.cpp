@@ -25,7 +25,7 @@ TEST(ProcessTest, GetProcessIdTest) {
   const Process::Pid pid = Process::getProcessId();
 
 #ifdef _WIN32
-  EXPECT_EQ(pid, ::GetCurrentProcessId());
+  EXPECT_EQ((DWORD)pid, ::GetCurrentProcessId());
 #else
   EXPECT_EQ(pid, ::getpid());
 #endif

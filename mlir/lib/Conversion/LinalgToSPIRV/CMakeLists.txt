@@ -8,10 +8,8 @@ add_mlir_conversion_library(MLIRLinalgToSPIRVTransforms
 
   DEPENDS
   MLIRConversionPassIncGen
-  )
 
-target_link_libraries(MLIRLinalgToSPIRVTransforms
-  PUBLIC
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRLinalgOps
   MLIRLinalgUtils

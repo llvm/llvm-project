@@ -419,11 +419,11 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
           eraseInstFromFunction(*Copy);
           ++NumGlobalCopies;
           return NewI;
-        } else {
-          PointerReplacer PtrReplacer(*this);
-          PtrReplacer.replacePointer(AI, Cast);
-          ++NumGlobalCopies;
         }
+
+        PointerReplacer PtrReplacer(*this);
+        PtrReplacer.replacePointer(AI, Cast);
+        ++NumGlobalCopies;
       }
     }
   }

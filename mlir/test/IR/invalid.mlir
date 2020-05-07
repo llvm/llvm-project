@@ -689,6 +689,22 @@ func @elementsattr_toolarge2() -> () {
 
 // -----
 
+"foo"(){bar = dense<[()]> : tensor<complex<i64>>} : () -> () // expected-error {{expected element literal of primitive type}}
+
+// -----
+
+"foo"(){bar = dense<[(10)]> : tensor<complex<i64>>} : () -> () // expected-error {{expected ',' between complex elements}}
+
+// -----
+
+"foo"(){bar = dense<[(10,)]> : tensor<complex<i64>>} : () -> () // expected-error {{expected element literal of primitive type}}
+
+// -----
+
+"foo"(){bar = dense<[(10,10]> : tensor<complex<i64>>} : () -> () // expected-error {{expected ')' after complex elements}}
+
+// -----
+
 func @elementsattr_malformed_opaque() -> () {
 ^bb0:
   "foo"(){bar = opaque<10, "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected dialect namespace}}
@@ -1495,4 +1511,19 @@ func @really_large_bound() {
 func @duplicate_dictionary_attr_key() {
   // expected-error @+1 {{duplicate key in dictionary attribute}}
   "foo.op"() {a, a} : () -> ()
+}
+
+// -----
+
+func @forward_reference_type_check() -> (i8) {
+  br ^bb2
+
+^bb1:
+  // expected-note @+1 {{previously used here with type 'i8'}}
+  return %1 : i8
+
+^bb2:
+  // expected-error @+1 {{definition of SSA value '%1#0' has type 'f32'}}
+  %1 = "bar"() : () -> (f32)
+  br ^bb1
 }

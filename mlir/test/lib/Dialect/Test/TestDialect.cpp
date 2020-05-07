@@ -201,18 +201,18 @@ static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// Test PolyhedralScopeOp
+// Test AffineScopeOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parsePolyhedralScopeOp(OpAsmParser &parser,
-                                          OperationState &result) {
+static ParseResult parseAffineScopeOp(OpAsmParser &parser,
+                                      OperationState &result) {
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
   return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
 }
 
-static void print(OpAsmPrinter &p, PolyhedralScopeOp op) {
-  p << "test.polyhedral_scope ";
+static void print(OpAsmPrinter &p, AffineScopeOp op) {
+  p << "test.affine_scope ";
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
 }
 
@@ -321,6 +321,15 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
     results.push_back(input);
   }
   return success();
+}
+
+OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1);
+  if (operands.front()) {
+    setAttr("attr", operands.front());
+    return getResult();
+  }
+  return {};
 }
 
 LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(

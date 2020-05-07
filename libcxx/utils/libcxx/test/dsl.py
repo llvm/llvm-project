@@ -81,10 +81,10 @@ def hasLocale(config, locale):
     with open(test.getSourcePath(), 'w') as source:
       source.write("""
       #include <locale.h>
-      int main(int, char** argv) {{
+      int main(int, char** argv) {
         if (::setlocale(LC_ALL, argv[1]) != NULL) return 0;
         else                                      return 1;
-      }}
+      }
       """)
     commands = [
       "mkdir -p %T",
@@ -197,9 +197,11 @@ class Feature(object):
 
     addTo = lambda subs, sub, flag: [(s, x + ' ' + flag) if s == sub else (s, x) for (s, x) in subs]
     if self._compileFlag:
-      config.substitutions = addTo(config.substitutions, '%{compile_flags}', self._compileFlag)
+      compileFlag = self._compileFlag(config) if callable(self._compileFlag) else self._compileFlag
+      config.substitutions = addTo(config.substitutions, '%{compile_flags}', compileFlag)
     if self._linkFlag:
-      config.substitutions = addTo(config.substitutions, '%{link_flags}', self._linkFlag)
+      linkFlag = self._linkFlag(config) if callable(self._linkFlag) else self._linkFlag
+      config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
 
     name = self._name(config) if callable(self._name) else self._name
     config.available_features.add(name)

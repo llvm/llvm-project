@@ -1456,37 +1456,74 @@ void ModulePrinter::printAttribute(Attribute attr,
   }
 }
 
-/// Print the integer element of the given DenseElementsAttr at 'index'.
-static void printDenseIntElement(DenseElementsAttr attr, raw_ostream &os,
-                                 unsigned index, bool isSigned) {
-  APInt value = *std::next(attr.int_value_begin(), index);
+/// Print the integer element of a DenseElementsAttr.
+static void printDenseIntElement(const APInt &value, raw_ostream &os,
+                                 bool isSigned) {
   if (value.getBitWidth() == 1)
     os << (value.getBoolValue() ? "true" : "false");
   else
     value.print(os, isSigned);
 }
 
-/// Print the float element of the given DenseElementsAttr at 'index'.
-static void printDenseFloatElement(DenseElementsAttr attr, raw_ostream &os,
-                                   unsigned index, bool isSigned) {
-  assert(isSigned && "floating point values are always signed");
-  APFloat value = *std::next(attr.float_value_begin(), index);
-  printFloatValue(value, os);
-}
+static void
+printDenseElementsAttrImpl(bool isSplat, ShapedType type, raw_ostream &os,
+                           function_ref<void(unsigned)> printEltFn) {
+  // Special case for 0-d and splat tensors.
+  if (isSplat)
+    return printEltFn(0);
 
-static void printDenseStringElement(DenseStringElementsAttr attr,
-                                    raw_ostream &os, unsigned index) {
-  os << "\"";
-  printEscapedString(attr.getRawStringData()[index], os);
-  os << "\"";
+  // Special case for degenerate tensors.
+  auto numElements = type.getNumElements();
+  int64_t rank = type.getRank();
+  if (numElements == 0) {
+    for (int i = 0; i < rank; ++i)
+      os << '[';
+    for (int i = 0; i < rank; ++i)
+      os << ']';
+    return;
+  }
+
+  // We use a mixed-radix counter to iterate through the shape. When we bump a
+  // non-least-significant digit, we emit a close bracket. When we next emit an
+  // element we re-open all closed brackets.
+
+  // The mixed-radix counter, with radices in 'shape'.
+  SmallVector<unsigned, 4> counter(rank, 0);
+  // The number of brackets that have been opened and not closed.
+  unsigned openBrackets = 0;
+
+  auto shape = type.getShape();
+  auto bumpCounter = [&] {
+    // Bump the least significant digit.
+    ++counter[rank - 1];
+    // Iterate backwards bubbling back the increment.
+    for (unsigned i = rank - 1; i > 0; --i)
+      if (counter[i] >= shape[i]) {
+        // Index 'i' is rolled over. Bump (i-1) and close a bracket.
+        counter[i] = 0;
+        ++counter[i - 1];
+        --openBrackets;
+        os << ']';
+      }
+  };
+
+  for (unsigned idx = 0, e = numElements; idx != e; ++idx) {
+    if (idx != 0)
+      os << ", ";
+    while (openBrackets++ < rank)
+      os << '[';
+    openBrackets = rank;
+    printEltFn(idx);
+    bumpCounter();
+  }
+  while (openBrackets-- > 0)
+    os << ']';
 }
 
 void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
                                            bool allowHex) {
-  if (auto stringAttr = attr.dyn_cast<DenseStringElementsAttr>()) {
-    printDenseStringElementsAttr(stringAttr);
-    return;
-  }
+  if (auto stringAttr = attr.dyn_cast<DenseStringElementsAttr>())
+    return printDenseStringElementsAttr(stringAttr);
 
   printDenseIntOrFPElementsAttr(attr.cast<DenseIntOrFPElementsAttr>(),
                                 allowHex);
@@ -1495,130 +1532,60 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
 void ModulePrinter::printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
                                                   bool allowHex) {
   auto type = attr.getType();
-  auto shape = type.getShape();
-  auto rank = type.getRank();
-  bool isSigned = !type.getElementType().isUnsignedInteger();
-
-  // The function used to print elements of this attribute.
-  auto printEltFn = type.getElementType().isIntOrIndex()
-                        ? printDenseIntElement
-                        : printDenseFloatElement;
-
-  // Special case for 0-d and splat tensors.
-  if (attr.isSplat()) {
-    printEltFn(attr, os, 0, isSigned);
-    return;
-  }
-
-  // Special case for degenerate tensors.
-  auto numElements = type.getNumElements();
-  if (numElements == 0) {
-    for (int i = 0; i < rank; ++i)
-      os << '[';
-    for (int i = 0; i < rank; ++i)
-      os << ']';
-    return;
-  }
+  auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  if (allowHex && shouldPrintElementsAttrWithHex(numElements)) {
+  auto numElements = type.getNumElements();
+  if (!attr.isSplat() && allowHex &&
+      shouldPrintElementsAttrWithHex(numElements)) {
     ArrayRef<char> rawData = attr.getRawData();
     os << '"' << "0x" << llvm::toHex(StringRef(rawData.data(), rawData.size()))
        << "\"";
     return;
   }
 
-  // We use a mixed-radix counter to iterate through the shape. When we bump a
-  // non-least-significant digit, we emit a close bracket. When we next emit an
-  // element we re-open all closed brackets.
+  if (ComplexType complexTy = elementType.dyn_cast<ComplexType>()) {
+    auto printComplexValue = [&](auto complexValues, auto printFn,
+                                 raw_ostream &os, auto &&... params) {
+      printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
+        auto complexValue = *(complexValues.begin() + index);
+        os << "(";
+        printFn(complexValue.real(), os, params...);
+        os << ",";
+        printFn(complexValue.imag(), os, params...);
+        os << ")";
+      });
+    };
 
-  // The mixed-radix counter, with radices in 'shape'.
-  SmallVector<unsigned, 4> counter(rank, 0);
-  // The number of brackets that have been opened and not closed.
-  unsigned openBrackets = 0;
-
-  auto bumpCounter = [&]() {
-    // Bump the least significant digit.
-    ++counter[rank - 1];
-    // Iterate backwards bubbling back the increment.
-    for (unsigned i = rank - 1; i > 0; --i)
-      if (counter[i] >= shape[i]) {
-        // Index 'i' is rolled over. Bump (i-1) and close a bracket.
-        counter[i] = 0;
-        ++counter[i - 1];
-        --openBrackets;
-        os << ']';
-      }
-  };
-
-  for (unsigned idx = 0, e = numElements; idx != e; ++idx) {
-    if (idx != 0)
-      os << ", ";
-    while (openBrackets++ < rank)
-      os << '[';
-    openBrackets = rank;
-    printEltFn(attr, os, idx, isSigned);
-    bumpCounter();
+    Type complexElementType = complexTy.getElementType();
+    if (complexElementType.isa<IntegerType>())
+      printComplexValue(attr.getComplexIntValues(), printDenseIntElement, os,
+                        /*isSigned=*/!complexElementType.isUnsignedInteger());
+    else
+      printComplexValue(attr.getComplexFloatValues(), printFloatValue, os);
+  } else if (elementType.isIntOrIndex()) {
+    bool isSigned = !elementType.isUnsignedInteger();
+    auto intValues = attr.getIntValues();
+    printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
+      printDenseIntElement(*(intValues.begin() + index), os, isSigned);
+    });
+  } else {
+    assert(elementType.isa<FloatType>() && "unexpected element type");
+    auto floatValues = attr.getFloatValues();
+    printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
+      printFloatValue(*(floatValues.begin() + index), os);
+    });
   }
-  while (openBrackets-- > 0)
-    os << ']';
 }
 
 void ModulePrinter::printDenseStringElementsAttr(DenseStringElementsAttr attr) {
-  auto type = attr.getType();
-  auto shape = type.getShape();
-  auto rank = type.getRank();
-
-  // Special case for 0-d and splat tensors.
-  if (attr.isSplat()) {
-    printDenseStringElement(attr, os, 0);
-    return;
-  }
-
-  // Special case for degenerate tensors.
-  auto numElements = type.getNumElements();
-  if (numElements == 0) {
-    for (int i = 0; i < rank; ++i)
-      os << '[';
-    for (int i = 0; i < rank; ++i)
-      os << ']';
-    return;
-  }
-
-  // We use a mixed-radix counter to iterate through the shape. When we bump a
-  // non-least-significant digit, we emit a close bracket. When we next emit an
-  // element we re-open all closed brackets.
-
-  // The mixed-radix counter, with radices in 'shape'.
-  SmallVector<unsigned, 4> counter(rank, 0);
-  // The number of brackets that have been opened and not closed.
-  unsigned openBrackets = 0;
-
-  auto bumpCounter = [&]() {
-    // Bump the least significant digit.
-    ++counter[rank - 1];
-    // Iterate backwards bubbling back the increment.
-    for (unsigned i = rank - 1; i > 0; --i)
-      if (counter[i] >= shape[i]) {
-        // Index 'i' is rolled over. Bump (i-1) and close a bracket.
-        counter[i] = 0;
-        ++counter[i - 1];
-        --openBrackets;
-        os << ']';
-      }
+  ArrayRef<StringRef> data = attr.getRawStringData();
+  auto printFn = [&](unsigned index) {
+    os << "\"";
+    printEscapedString(data[index], os);
+    os << "\"";
   };
-
-  for (unsigned idx = 0, e = numElements; idx != e; ++idx) {
-    if (idx != 0)
-      os << ", ";
-    while (openBrackets++ < rank)
-      os << '[';
-    openBrackets = rank;
-    printDenseStringElement(attr, os, idx);
-    bumpCounter();
-  }
-  while (openBrackets-- > 0)
-    os << ']';
+  printDenseElementsAttrImpl(attr.isSplat(), attr.getType(), os, printFn);
 }
 
 void ModulePrinter::printType(Type type) {
@@ -2302,11 +2269,11 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
 
     // Print out some context information about the predecessors of this block.
     if (!block->getParent()) {
-      os << "\t// block is not in a region!";
+      os << "  // block is not in a region!";
     } else if (block->hasNoPredecessors()) {
-      os << "\t// no predecessors";
+      os << "  // no predecessors";
     } else if (auto *pred = block->getSinglePredecessor()) {
-      os << "\t// pred: ";
+      os << "  // pred: ";
       printBlockName(pred);
     } else {
       // We want to print the predecessors in increasing numeric order, not in
@@ -2316,7 +2283,7 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
         predIDs.push_back({state->getSSANameState().getBlockID(pred), pred});
       llvm::array_pod_sort(predIDs.begin(), predIDs.end());
 
-      os << "\t// " << predIDs.size() << " preds: ";
+      os << "  // " << predIDs.size() << " preds: ";
 
       interleaveComma(predIDs, [&](std::pair<unsigned, Block *> pred) {
         printBlockName(pred.second);

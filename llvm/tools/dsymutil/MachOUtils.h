@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <string>
 
@@ -40,7 +41,8 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
                              StringRef SDKPath);
 
-bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
+bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                           const DebugMap &DM, SymbolMapTranslator &Translator,
                            MCStreamer &MS, raw_fd_ostream &OutFile);
 
 std::string getArchName(StringRef Arch);

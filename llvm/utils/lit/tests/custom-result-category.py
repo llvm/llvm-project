@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # Test lit.main.add_result_category() extension API.
 
 # RUN: not %{lit} -j 1 %{inputs}/custom-result-category | FileCheck %s

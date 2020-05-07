@@ -38,6 +38,7 @@ private:
       const std::string &CastBindName) const;
 
   const std::string CharTypdefsToIgnoreList;
+  const bool DiagnoseSignedUnsignedCharComparisons;
 };
 
 } // namespace bugprone
