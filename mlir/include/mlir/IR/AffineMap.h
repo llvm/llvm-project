@@ -144,6 +144,16 @@ public:
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,
                              SmallVectorImpl<Attribute> &results) const;
 
+  /// Propagates the constant operands into this affine map. Operands are
+  /// allowed to be null, at which point they are treated as non-constant. This
+  /// does not change the number of symbols and dimensions. Returns a new map,
+  /// which may be equal to the old map if no folding happened. If `results` is
+  /// provided and if all expressions in the map were folded to constants,
+  /// `results` will contain the values of these constants.
+  AffineMap
+  partialConstantFold(ArrayRef<Attribute> operandConstants,
+                      SmallVectorImpl<int64_t> *results = nullptr) const;
+
   /// Returns the AffineMap resulting from composing `this` with `map`.
   /// The resulting AffineMap has as many AffineDimExpr as `map` and as many
   /// AffineSymbolExpr as the concatenation of `this` and `map` (in which case
