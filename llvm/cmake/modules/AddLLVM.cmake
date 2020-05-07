@@ -1499,7 +1499,6 @@ string(CONCAT LLVM_LIT_PATH_FUNCTION
   "def path(p):\n"
   "    if not p: return ''\n"
   "    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
-  "    if os.name == 'nt' and os.path.isabs(p): return p[0].upper() + p[1:]\n"
   "    return p\n"
   )
 
