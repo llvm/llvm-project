@@ -1158,6 +1158,7 @@ def SVCNTH : SInst<"svcnth", "n", "", MergeNone, "aarch64_sve_cnth", [IsAppendSV
 def SVCNTW : SInst<"svcntw", "n", "", MergeNone, "aarch64_sve_cntw", [IsAppendSVALL, IsOverloadNone]>;
 def SVCNTD : SInst<"svcntd", "n", "", MergeNone, "aarch64_sve_cntd", [IsAppendSVALL, IsOverloadNone]>;
 
+def SVCNTP : SInst<"svcntp_{d}",  "nPP", "PcPsPiPl",        MergeNone, "aarch64_sve_cntp">;
 def SVLEN  : SInst<"svlen[_{d}]", "nd",  "csilUcUsUiUlhfd", MergeNone>;
 
 ////////////////////////////////////////////////////////////////////////////////
