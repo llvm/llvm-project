@@ -1344,6 +1344,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                                           std::numeric_limits<uint64_t>::max());
     AttrInfo.OrigCallReturnPc =
         dwarf::toAddress(InputDIE.find(dwarf::DW_AT_call_return_pc), 0);
+    AttrInfo.OrigCallPc =
+        dwarf::toAddress(InputDIE.find(dwarf::DW_AT_call_pc), 0);
   }
 
   // Reset the Offset to 0 as we will be working on the local copy of
