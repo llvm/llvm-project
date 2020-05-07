@@ -393,50 +393,34 @@ define void @PR39538(i8* %t0, i32* %t1) {
 ; CHECK-NEXT:    [[T63:%.*]] = load i8, i8* [[T62]], align 1
 ; CHECK-NEXT:    [[T68:%.*]] = load i8, i8* [[T67]], align 1
 ; CHECK-NEXT:    [[T73:%.*]] = load i8, i8* [[T72]], align 1
-; CHECK-NEXT:    [[T4:%.*]] = zext i8 [[T3]] to i32
-; CHECK-NEXT:    [[T8:%.*]] = zext i8 [[T7]] to i32
-; CHECK-NEXT:    [[T13:%.*]] = zext i8 [[T12]] to i32
-; CHECK-NEXT:    [[T18:%.*]] = zext i8 [[T17]] to i32
-; CHECK-NEXT:    [[T22:%.*]] = zext i8 [[T21]] to i32
-; CHECK-NEXT:    [[T26:%.*]] = zext i8 [[T25]] to i32
-; CHECK-NEXT:    [[T31:%.*]] = zext i8 [[T30]] to i32
-; CHECK-NEXT:    [[T36:%.*]] = zext i8 [[T35]] to i32
-; CHECK-NEXT:    [[T41:%.*]] = zext i8 [[T40]] to i32
-; CHECK-NEXT:    [[T45:%.*]] = zext i8 [[T44]] to i32
-; CHECK-NEXT:    [[T50:%.*]] = zext i8 [[T49]] to i32
-; CHECK-NEXT:    [[T55:%.*]] = zext i8 [[T54]] to i32
-; CHECK-NEXT:    [[T60:%.*]] = zext i8 [[T59]] to i32
-; CHECK-NEXT:    [[T64:%.*]] = zext i8 [[T63]] to i32
-; CHECK-NEXT:    [[T69:%.*]] = zext i8 [[T68]] to i32
-; CHECK-NEXT:    [[T74:%.*]] = zext i8 [[T73]] to i32
-; CHECK-NEXT:    [[T5:%.*]] = shl nuw i32 [[T4]], 24
-; CHECK-NEXT:    [[T23:%.*]] = shl nuw i32 [[T22]], 24
-; CHECK-NEXT:    [[T42:%.*]] = shl nuw i32 [[T41]], 24
-; CHECK-NEXT:    [[T61:%.*]] = shl nuw i32 [[T60]], 24
-; CHECK-NEXT:    [[T9:%.*]] = shl nuw nsw i32 [[T8]], 16
-; CHECK-NEXT:    [[T27:%.*]] = shl nuw nsw i32 [[T26]], 16
-; CHECK-NEXT:    [[T46:%.*]] = shl nuw nsw i32 [[T45]], 16
-; CHECK-NEXT:    [[T65:%.*]] = shl nuw nsw i32 [[T64]], 16
-; CHECK-NEXT:    [[T14:%.*]] = shl nuw nsw i32 [[T13]], 8
-; CHECK-NEXT:    [[T32:%.*]] = shl nuw nsw i32 [[T31]], 8
-; CHECK-NEXT:    [[T51:%.*]] = shl nuw nsw i32 [[T50]], 8
-; CHECK-NEXT:    [[T70:%.*]] = shl nuw nsw i32 [[T69]], 8
-; CHECK-NEXT:    [[T10:%.*]] = or i32 [[T9]], [[T5]]
-; CHECK-NEXT:    [[T15:%.*]] = or i32 [[T10]], [[T14]]
-; CHECK-NEXT:    [[T19:%.*]] = or i32 [[T15]], [[T18]]
-; CHECK-NEXT:    [[T28:%.*]] = or i32 [[T27]], [[T23]]
-; CHECK-NEXT:    [[T33:%.*]] = or i32 [[T28]], [[T32]]
-; CHECK-NEXT:    [[T37:%.*]] = or i32 [[T33]], [[T36]]
-; CHECK-NEXT:    [[T47:%.*]] = or i32 [[T46]], [[T42]]
-; CHECK-NEXT:    [[T52:%.*]] = or i32 [[T47]], [[T51]]
-; CHECK-NEXT:    [[T56:%.*]] = or i32 [[T52]], [[T55]]
-; CHECK-NEXT:    [[T66:%.*]] = or i32 [[T65]], [[T61]]
-; CHECK-NEXT:    [[T71:%.*]] = or i32 [[T66]], [[T70]]
-; CHECK-NEXT:    [[T75:%.*]] = or i32 [[T71]], [[T74]]
-; CHECK-NEXT:    store i32 [[T19]], i32* [[T1]], align 4
-; CHECK-NEXT:    store i32 [[T37]], i32* [[T38]], align 4
-; CHECK-NEXT:    store i32 [[T56]], i32* [[T57]], align 4
-; CHECK-NEXT:    store i32 [[T75]], i32* [[T76]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> undef, i8 [[T3]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[T21]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[T40]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[T59]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i8> undef, i8 [[T7]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> [[TMP6]], i8 [[T25]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> [[TMP7]], i8 [[T44]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i8> [[TMP8]], i8 [[T63]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i8> [[TMP9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> undef, i8 [[T12]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i8> [[TMP11]], i8 [[T30]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP12]], i8 [[T49]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[T68]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i8> [[TMP14]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> undef, i8 [[T17]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[T35]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[T54]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[T73]], i32 3
+; CHECK-NEXT:    [[TMP20:%.*]] = zext <4 x i8> [[TMP19]] to <4 x i32>
+; CHECK-NEXT:    [[TMP21:%.*]] = shl nuw <4 x i32> [[TMP5]], <i32 24, i32 24, i32 24, i32 24>
+; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw nsw <4 x i32> [[TMP10]], <i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw <4 x i32> [[TMP15]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[TMP24:%.*]] = or <4 x i32> [[TMP22]], [[TMP21]]
+; CHECK-NEXT:    [[TMP25:%.*]] = or <4 x i32> [[TMP24]], [[TMP23]]
+; CHECK-NEXT:    [[TMP26:%.*]] = or <4 x i32> [[TMP25]], [[TMP20]]
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i32* [[T1]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP26]], <4 x i32>* [[TMP27]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t6 = getelementptr inbounds i8, i8* %t0, i64 1
