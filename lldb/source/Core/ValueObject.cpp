@@ -2810,7 +2810,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     const bool transparent_pointers = false;
     CompilerType compiler_type = GetCompilerType();
     CompilerType child_compiler_type;
-    uint64_t language_flags;
+    uint64_t language_flags = 0;
 
     ExecutionContext exe_ctx(GetExecutionContextRef());
 

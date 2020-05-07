@@ -141,6 +141,12 @@ public:
     return I == Cycle.end() ? -1 : I->second;
   }
 
+  /// Set the stage of a newly created instruction.
+  void setStage(MachineInstr *MI, int MIStage) {
+    assert(Stage.count(MI) == 0);
+    Stage[MI] = MIStage;
+  }
+
   /// Return the rescheduled instructions in order.
   ArrayRef<MachineInstr *> getInstructions() { return ScheduledInstrs; }
 

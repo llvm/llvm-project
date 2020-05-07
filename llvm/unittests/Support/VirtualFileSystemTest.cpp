@@ -2197,8 +2197,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   ScopedFile _cd(TestDirectory + "/c/d", "");
   ScopedDir _e(TestDirectory + "/e");
   ScopedDir _ef(TestDirectory + "/e/f");
-  ScopedDir _g(TestDirectory + "/g");
-  ScopedFile _h(TestDirectory + "/h", "");
+  ScopedFile _g(TestDirectory + "/g", "");
+  ScopedDir _h(TestDirectory + "/h");
 
   vfs::YAMLVFSWriter VFSWriter;
   VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
@@ -2223,8 +2223,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   Lower->addRegularFile("//root/c/d");
   Lower->addDirectory("//root/e");
   Lower->addDirectory("//root/e/f");
-  Lower->addDirectory("//root/g");
-  Lower->addRegularFile("//root/h");
+  Lower->addRegularFile("//root/g");
+  Lower->addDirectory("//root/h");
 
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
   ASSERT_TRUE(FS.get() != nullptr);

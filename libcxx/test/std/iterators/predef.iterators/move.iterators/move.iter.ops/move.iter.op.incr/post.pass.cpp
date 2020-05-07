@@ -16,9 +16,19 @@
 
 #include <iterator>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+template <class It>
+void test_single_pass(It i, It x) {
+  std::move_iterator<It> r(std::move(i));
+  r++;
+  assert(std::move(r).base() == x);
+}
+#endif
 
 template <class It>
 void
@@ -33,7 +43,11 @@ test(It i, It x)
 int main(int, char**)
 {
     char s[] = "123";
+#if TEST_STD_VER > 17
+    test_single_pass(input_iterator<char*>(s), input_iterator<char*>(s + 1));
+#else
     test(input_iterator<char*>(s), input_iterator<char*>(s+1));
+#endif
     test(forward_iterator<char*>(s), forward_iterator<char*>(s+1));
     test(bidirectional_iterator<char*>(s), bidirectional_iterator<char*>(s+1));
     test(random_access_iterator<char*>(s), random_access_iterator<char*>(s+1));
