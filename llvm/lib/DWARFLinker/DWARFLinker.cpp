@@ -9,6 +9,7 @@
 #include "llvm/DWARFLinker/DWARFLinker.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
@@ -2535,7 +2536,7 @@ bool DWARFLinker::link() {
     std::vector<std::pair<StringRef, DebugInfoSize>> Sorted;
     for (auto &E : SizeByObject)
       Sorted.emplace_back(E.first(), E.second);
-    sort(Sorted.begin(), Sorted.end(), [](auto &LHS, auto &RHS) {
+    llvm::sort(Sorted.begin(), Sorted.end(), [](auto &LHS, auto &RHS) {
       return LHS.second.Output > RHS.second.Output;
     });
 
