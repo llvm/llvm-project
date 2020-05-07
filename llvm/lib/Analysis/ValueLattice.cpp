@@ -10,8 +10,10 @@
 
 namespace llvm {
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
-  if (Val.isUndefined())
-    return OS << "undefined";
+  if (Val.isUnknown())
+    return OS << "unknown";
+  if (Val.isUndef())
+    return OS << "undef";
   if (Val.isOverdefined())
     return OS << "overdefined";
 
