@@ -5,6 +5,16 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define internal fastcc i32 @term_SharingList(i32* %Term, i32* %List) nounwind {
+; IS__TUNIT____-LABEL: define {{[^@]+}}@term_SharingList
+; IS__TUNIT____-SAME: (i32* [[TERM:%.*]], i32* [[LIST:%.*]])
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    br i1 false, label [[BB:%.*]], label [[BB5:%.*]]
+; IS__TUNIT____:       bb:
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = call fastcc i32 @term_SharingList(i32* null, i32* [[LIST]])
+; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____:       bb5:
+; IS__TUNIT____-NEXT:    ret i32 0
+;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@term_SharingList()
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    br i1 false, label [[BB:%.*]], label [[BB5:%.*]]
