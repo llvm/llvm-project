@@ -107,10 +107,10 @@ Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
     llvm_unreachable("runtime does not support CHARACTER KIND");
   }
   auto fTy = beginFunc.getType();
-  auto lptr = builder.create<fir::ConvertOp>(loc, fTy.getInput(0), lhsBuff);
-  auto llen = builder.create<fir::ConvertOp>(loc, fTy.getInput(2), lhsLen);
-  auto rptr = builder.create<fir::ConvertOp>(loc, fTy.getInput(1), rhsBuff);
-  auto rlen = builder.create<fir::ConvertOp>(loc, fTy.getInput(3), rhsLen);
+  auto lptr = builder.createConvert(loc, fTy.getInput(0), lhsBuff);
+  auto llen = builder.createConvert(loc, fTy.getInput(2), lhsLen);
+  auto rptr = builder.createConvert(loc, fTy.getInput(1), rhsBuff);
+  auto rlen = builder.createConvert(loc, fTy.getInput(3), rhsLen);
   llvm::SmallVector<mlir::Value, 4> args = {lptr, rptr, llen, rlen};
   auto tri = builder.create<mlir::CallOp>(loc, beginFunc, args).getResult(0);
   auto zero = builder.createIntegerConstant(tri.getType(), 0);

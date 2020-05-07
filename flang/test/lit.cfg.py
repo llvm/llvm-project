@@ -75,6 +75,7 @@ if config.flang_standalone_build:
 
 config.substitutions.append(('%B', config.flang_obj_root))
 config.substitutions.append(("%L", config.flang_lib_dir))
+config.substitutions.append(("%moddir", config.flang_intrinsic_modules_dir)) 
 if len(config.macos_sysroot) > 0:
   config.substitutions.append(("%CXX", config.cplusplus_executable + " -isysroot " + config.macos_sysroot))
   config.substitutions.append(("%CC", config.c_executable + " -isysroot " + config.macos_sysroot))

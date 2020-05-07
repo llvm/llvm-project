@@ -610,10 +610,7 @@ mlir::Value IntrinsicLibrary::genRuntimeCall(llvm::StringRef name,
     }
   } else {
     // could not find runtime function
-    llvm::errs() << "missing intrinsic: " << name << "\n";
-    llvm_unreachable("no runtime found for this intrinsics");
-    // TODO: better error handling ?
-    //  - Try to have compile time check of runtime completeness ?
+    llvm::report_fatal_error("missing intrinsic: " + llvm::Twine(name) + "\n");
   }
   return {}; // gets rid of warnings
 }
@@ -622,7 +619,7 @@ mlir::Value IntrinsicLibrary::genConversion(mlir::Type resultType,
                                             llvm::ArrayRef<mlir::Value> args) {
   // There can be an optional kind in second argument.
   assert(args.size() >= 1);
-  return builder.convertOnAssign(builder.getLoc(), resultType, args[0]);
+  return builder.convertWithSemantics(builder.getLoc(), resultType, args[0]);
 }
 
 // ABS
