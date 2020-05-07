@@ -13,6 +13,10 @@
 #include "llvm/Support/VersionTuple.h"
 #include <tuple>
 
+namespace llvm {
+class Triple;
+}
+
 namespace lldb_private {
 
 /// An abstraction for Xcode-style SDKs that works like \ref ArchSpec.
@@ -71,6 +75,8 @@ public:
   static bool SDKSupportsModules(Type desired_type, const FileSpec &sdk_path);
   /// Return the canonical SDK name, such as "macosx" for the macOS SDK.
   static std::string GetCanonicalName(Info info);
+  /// Return the best-matching SDK type for a specific triple.
+  static XcodeSDK::Type GetSDKTypeForTriple(const llvm::Triple &triple);
 };
 
 } // namespace lldb_private
