@@ -11,8 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/Remark.h"
-#include "llvm-c/Remarks.h"
-#include "llvm/Support/CBindingWrapping.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
