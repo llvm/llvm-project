@@ -816,27 +816,32 @@ template <> struct MDNodeKeyImpl<DICommonBlock> {
 };
 
 template <> struct MDNodeKeyImpl<DIModule> {
+  Metadata *File;
   Metadata *Scope;
   MDString *Name;
   MDString *ConfigurationMacros;
   MDString *IncludePath;
   MDString *APINotesFile;
+  unsigned LineNo;
 
-  MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *ConfigurationMacros,
-                MDString *IncludePath, MDString *APINotesFile)
-      : Scope(Scope), Name(Name), ConfigurationMacros(ConfigurationMacros),
-        IncludePath(IncludePath), APINotesFile(APINotesFile) {}
+  MDNodeKeyImpl(Metadata *File, Metadata *Scope, MDString *Name,
+                MDString *ConfigurationMacros, MDString *IncludePath,
+                MDString *APINotesFile, unsigned LineNo)
+      : File(File), Scope(Scope), Name(Name),
+        ConfigurationMacros(ConfigurationMacros), IncludePath(IncludePath),
+        APINotesFile(APINotesFile), LineNo(LineNo) {}
   MDNodeKeyImpl(const DIModule *N)
-      : Scope(N->getRawScope()), Name(N->getRawName()),
+      : File(N->getRawFile()), Scope(N->getRawScope()), Name(N->getRawName()),
         ConfigurationMacros(N->getRawConfigurationMacros()),
         IncludePath(N->getRawIncludePath()),
-        APINotesFile(N->getRawAPINotesFile()) {}
+        APINotesFile(N->getRawAPINotesFile()), LineNo(N->getLineNo()) {}
 
   bool isKeyOf(const DIModule *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            ConfigurationMacros == RHS->getRawConfigurationMacros() &&
            IncludePath == RHS->getRawIncludePath() &&
-           APINotesFile == RHS->getRawAPINotesFile();
+           APINotesFile == RHS->getRawAPINotesFile() &&
+           File == RHS->getRawFile() && LineNo == RHS->getLineNo();
   }
 
   unsigned getHashValue() const {

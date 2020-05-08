@@ -732,16 +732,18 @@ DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DICommonBlock, (LineNo), Ops);
 }
 
-DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *Scope,
-                            MDString *Name, MDString *ConfigurationMacros,
+DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *File,
+                            Metadata *Scope, MDString *Name,
+                            MDString *ConfigurationMacros,
                             MDString *IncludePath, MDString *APINotesFile,
-                            StorageType Storage, bool ShouldCreate) {
+                            unsigned LineNo, StorageType Storage,
+                            bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(
-      DIModule, (Scope, Name, ConfigurationMacros, IncludePath, APINotesFile));
-  Metadata *Ops[] = {Scope, Name, ConfigurationMacros, IncludePath,
-                     APINotesFile};
-  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIModule, Ops);
+  DEFINE_GETIMPL_LOOKUP(DIModule, (File, Scope, Name, ConfigurationMacros,
+                                   IncludePath, APINotesFile, LineNo));
+  Metadata *Ops[] = {File,        Scope,       Name, ConfigurationMacros,
+                     IncludePath, APINotesFile};
+  DEFINE_GETIMPL_STORE(DIModule, (LineNo), Ops);
 }
 
 DITemplateTypeParameter *
