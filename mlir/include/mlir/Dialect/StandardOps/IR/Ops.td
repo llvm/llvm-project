@@ -109,6 +109,7 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 // integer tensor.  The custom assembly form of the operation is as follows
 //
 //     <op>i %0, %1 : i32
+//
 class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     ArithmeticOp<mnemonic, traits>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>;
@@ -121,9 +122,22 @@ class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 // is as follows
 //
 //     <op>f %0, %1 : f32
+//
 class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     ArithmeticOp<mnemonic, traits>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>;
+
+// Base class for standard arithmetic operations on complex numbers with a
+// floating-point element type.
+// These operations take two operands and return one result, all of which must
+// be complex numbers of the same type.
+// The assembly format is as follows
+//
+//     <op>cf %0, %1 : complex<f32>
+//
+class ComplexFloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
+    ArithmeticOp<mnemonic, traits>,
+    Arguments<(ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs)>;
 
 // Base class for memref allocating ops: alloca and alloc.
 //
@@ -197,6 +211,26 @@ def AbsFOp : FloatUnaryOp<"absf"> {
 
     // Tensor element-wise absolute value.
     %x = absf %y : tensor<4x?xf8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// AddCFOp
+//===----------------------------------------------------------------------===//
+
+def AddCFOp : ComplexFloatArithmeticOp<"addcf"> {
+  let summary = "complex number addition";
+  let description = [{
+    The `addcf` operation takes two complex number operands and returns their
+    sum, a single complex number.
+    All operands and result must be of the same type, a complex number with a
+    floating-point element type.
+
+    Example:
+
+    ```mlir
+    %a = addcf %b, %c : complex<f32>
     ```
   }];
 }
@@ -2404,6 +2438,26 @@ def StoreOp : Std_Op<"store",
 
   let assemblyFormat = [{
     $value `,` $memref `[` $indices `]` attr-dict `:` type($memref)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// SubCFOp
+//===----------------------------------------------------------------------===//
+
+def SubCFOp : ComplexFloatArithmeticOp<"subcf"> {
+  let summary = "complex number subtraction";
+  let description = [{
+    The `subcf` operation takes two complex number operands and returns their
+    difference, a single complex number.
+    All operands and result must be of the same type, a complex number with a
+    floating-point element type.
+
+    Example:
+
+    ```mlir
+    %a = subcf %b, %c : complex<f32>
+    ```
   }];
 }
 

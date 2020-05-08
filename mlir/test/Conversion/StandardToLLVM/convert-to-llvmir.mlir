@@ -83,6 +83,48 @@ func @complex_numbers() {
   return
 }
 
+// CHECK-LABEL: llvm.func @complex_addition()
+// CHECK-DAG:     %[[A_REAL:.*]] = llvm.extractvalue %[[A:.*]][0] : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[B_REAL:.*]] = llvm.extractvalue %[[B:.*]][0] : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[A_IMAG:.*]] = llvm.extractvalue %[[A]][1] : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[B_IMAG:.*]] = llvm.extractvalue %[[B]][1] : !llvm<"{ double, double }">
+// CHECK:         %[[C0:.*]] = llvm.mlir.undef : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[C_REAL:.*]] = llvm.fadd %[[A_REAL]], %[[B_REAL]] : !llvm.double
+// CHECK-DAG:     %[[C_IMAG:.*]] = llvm.fadd %[[A_IMAG]], %[[B_IMAG]] : !llvm.double
+// CHECK:         %[[C1:.*]] = llvm.insertvalue %[[C_REAL]], %[[C0]][0] : !llvm<"{ double, double }">
+// CHECK:         %[[C2:.*]] = llvm.insertvalue %[[C_IMAG]], %[[C1]][1] : !llvm<"{ double, double }">
+func @complex_addition() {
+  %a_re = constant 1.2 : f64
+  %a_im = constant 3.4 : f64
+  %a = create_complex %a_re, %a_im : complex<f64>
+  %b_re = constant 5.6 : f64
+  %b_im = constant 7.8 : f64
+  %b = create_complex %b_re, %b_im : complex<f64>
+  %c = addcf %a, %b : complex<f64>
+  return
+}
+
+// CHECK-LABEL: llvm.func @complex_substraction()
+// CHECK-DAG:     %[[A_REAL:.*]] = llvm.extractvalue %[[A:.*]][0] : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[B_REAL:.*]] = llvm.extractvalue %[[B:.*]][0] : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[A_IMAG:.*]] = llvm.extractvalue %[[A]][1] : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[B_IMAG:.*]] = llvm.extractvalue %[[B]][1] : !llvm<"{ double, double }">
+// CHECK:         %[[C0:.*]] = llvm.mlir.undef : !llvm<"{ double, double }">
+// CHECK-DAG:     %[[C_REAL:.*]] = llvm.fsub %[[A_REAL]], %[[B_REAL]] : !llvm.double
+// CHECK-DAG:     %[[C_IMAG:.*]] = llvm.fsub %[[A_IMAG]], %[[B_IMAG]] : !llvm.double
+// CHECK:         %[[C1:.*]] = llvm.insertvalue %[[C_REAL]], %[[C0]][0] : !llvm<"{ double, double }">
+// CHECK:         %[[C2:.*]] = llvm.insertvalue %[[C_IMAG]], %[[C1]][1] : !llvm<"{ double, double }">
+func @complex_substraction() {
+  %a_re = constant 1.2 : f64
+  %a_im = constant 3.4 : f64
+  %a = create_complex %a_re, %a_im : complex<f64>
+  %b_re = constant 5.6 : f64
+  %b_im = constant 7.8 : f64
+  %b = create_complex %b_re, %b_im : complex<f64>
+  %c = subcf %a, %b : complex<f64>
+  return
+}
+
 // CHECK-LABEL: func @simple_caller() {
 // CHECK-NEXT:  llvm.call @simple_loop() : () -> ()
 // CHECK-NEXT:  llvm.return
