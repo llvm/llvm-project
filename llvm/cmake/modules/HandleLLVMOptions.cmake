@@ -11,6 +11,7 @@ include(HandleLLVMStdlib)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckSymbolExists)
+include(CMakeDependentOption)
 
 if(CMAKE_LINKER MATCHES "lld-link" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld") OR LLVM_ENABLE_LLD)
   set(LINKER_IS_LLD_LINK TRUE)
@@ -971,12 +972,23 @@ elseif(LLVM_ENABLE_LTO)
   endif()
 endif()
 
+# Set an AIX default for LLVM_EXPORT_SYMBOLS_FOR_PLUGINS based on whether we are
+# doing dynamic linking (see below).
+set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default OFF)
+if (NOT (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB))
+  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default ON)
+endif()
+
 # This option makes utils/extract_symbols.py be used to determine the list of
-# symbols to export from LLVM tools. This is necessary when using MSVC if you
-# want to allow plugins, though note that the plugin has to explicitly link
-# against (exactly one) tool so we can't unilaterally turn on
+# symbols to export from LLVM tools. This is necessary when on AIX or when using
+# MSVC if you want to allow plugins. On AIX we don't show this option, and we
+# enable it by default except when the LLVM libraries are set up for dynamic
+# linking (due to incompatibility). With MSVC, note that the plugin has to
+# explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
-option(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS "Export symbols from LLVM tools so that plugins can import them" OFF)
+CMAKE_DEPENDENT_OPTION(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS
+       "Export symbols from LLVM tools so that plugins can import them" OFF
+       "NOT ${CMAKE_SYSTEM_NAME} MATCHES AIX" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default})
 if(BUILD_SHARED_LIBS AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
   message(FATAL_ERROR "BUILD_SHARED_LIBS not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
 endif()
