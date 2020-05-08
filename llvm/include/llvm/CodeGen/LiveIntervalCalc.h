@@ -17,24 +17,11 @@
 #ifndef LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
 #define LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/MC/LaneBitmask.h"
-#include <utility>
 
 namespace llvm {
 
 template <class NodeT> class DomTreeNodeBase;
-class MachineDominatorTree;
-class MachineFunction;
-class MachineRegisterInfo;
 
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
