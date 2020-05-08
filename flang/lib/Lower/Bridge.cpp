@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
+#include "../../runtime/iostat.h"
 #include "SymbolMap.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
@@ -578,10 +579,6 @@ private:
     builder->restoreInsertionPoint(pair.first);
   }
 
-  void genFIR(Fortran::lower::pft::Evaluation &eval,
-              const Fortran::parser::WaitStmt &stmt) {
-    genWaitStatement(*this, stmt);
-  }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::WhereStmt &) {
     TODO();
@@ -1166,27 +1163,35 @@ private:
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::BackspaceStmt &stmt) {
-    genBackspaceStatement(*this, stmt);
+    auto iostat = genBackspaceStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::CloseStmt &stmt) {
-    genCloseStatement(*this, stmt);
+    auto iostat = genCloseStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::EndfileStmt &stmt) {
-    genEndfileStatement(*this, stmt);
+    auto iostat = genEndfileStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::FlushStmt &stmt) {
-    genFlushStatement(*this, stmt);
+    auto iostat = genFlushStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::InquireStmt &stmt) {
-    genInquireStatement(*this, stmt);
+    auto iostat = genInquireStatement(*this, stmt);
+    genIoConditionBranches(
+        eval, std::get<std::list<Fortran::parser::InquireSpec>>(stmt.u),
+        iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::OpenStmt &stmt) {
-    genOpenStatement(*this, stmt);
+    auto iostat = genOpenStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::PrintStmt &stmt) {
@@ -1195,17 +1200,75 @@ private:
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::ReadStmt &stmt) {
-    genReadStatement(*this, stmt,
-                     eval.getOwningProcedure()->labelEvaluationMap);
+    auto iostat = genReadStatement(
+        *this, stmt, eval.getOwningProcedure()->labelEvaluationMap);
+    genIoConditionBranches(eval, stmt.controls, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::RewindStmt &stmt) {
-    genRewindStatement(*this, stmt);
+    auto iostat = genRewindStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
+  }
+  void genFIR(Fortran::lower::pft::Evaluation &eval,
+              const Fortran::parser::WaitStmt &stmt) {
+    auto iostat = genWaitStatement(*this, stmt);
+    genIoConditionBranches(eval, stmt.v, iostat);
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::WriteStmt &stmt) {
-    genWriteStatement(*this, stmt,
-                      eval.getOwningProcedure()->labelEvaluationMap);
+    auto iostat = genWriteStatement(
+        *this, stmt, eval.getOwningProcedure()->labelEvaluationMap);
+    genIoConditionBranches(eval, stmt.controls, iostat);
+  }
+
+  template <typename A>
+  void genIoConditionBranches(Fortran::lower::pft::Evaluation &eval,
+                              const A &specList, mlir::Value iostat) {
+    if (!iostat)
+      return;
+
+    mlir::Block *endBlock{};
+    mlir::Block *eorBlock{};
+    mlir::Block *errBlock{};
+    for (const auto &spec : specList) {
+      std::visit(Fortran::common::visitors{
+                     [&](const Fortran::parser::EndLabel &label) {
+                       endBlock = blockOfLabel(eval, label.v);
+                     },
+                     [&](const Fortran::parser::EorLabel &label) {
+                       eorBlock = blockOfLabel(eval, label.v);
+                     },
+                     [&](const Fortran::parser::ErrLabel &label) {
+                       errBlock = blockOfLabel(eval, label.v);
+                     },
+                     [](const auto &) {}},
+                 spec.u);
+    }
+    if (!endBlock && !eorBlock && !errBlock)
+      return;
+
+    auto indexType = builder->getIndexType();
+    auto selector = builder->createHere<fir::ConvertOp>(indexType, iostat);
+    llvm::SmallVector<int64_t, 5> indexList;
+    llvm::SmallVector<mlir::Block *, 4> blockList;
+    if (eorBlock) {
+      indexList.push_back(Fortran::runtime::io::IostatEor);
+      blockList.push_back(eorBlock);
+    }
+    if (endBlock) {
+      indexList.push_back(Fortran::runtime::io::IostatEnd);
+      blockList.push_back(endBlock);
+    }
+    if (errBlock) {
+      indexList.push_back(0);
+      blockList.push_back(eval.lexicalSuccessor->block);
+      // ERR label statement is the default successor.
+      blockList.push_back(errBlock);
+    } else {
+      // Fallthrough successor statement is the default successor.
+      blockList.push_back(eval.lexicalSuccessor->block);
+    }
+    builder->createHere<fir::SelectOp>(selector, indexList, blockList);
   }
 
   //===--------------------------------------------------------------------===//
