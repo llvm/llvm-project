@@ -1739,19 +1739,19 @@ Instruction *InstCombiner::visitFPExt(CastInst &CI) {
   return commonCastTransforms(CI);
 }
 
-// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
-// This is safe if the intermediate type has enough bits in its mantissa to
-// accurately represent all values of X.  For example, this won't work with
-// i64 -> float -> i64.
-Instruction *InstCombiner::FoldItoFPtoI(Instruction &FI) {
+/// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
+/// This is safe if the intermediate type has enough bits in its mantissa to
+/// accurately represent all values of X.  For example, this won't work with
+/// i64 -> float -> i64.
+Instruction *InstCombiner::foldItoFPtoI(CastInst &FI) {
   if (!isa<UIToFPInst>(FI.getOperand(0)) && !isa<SIToFPInst>(FI.getOperand(0)))
     return nullptr;
   Instruction *OpI = cast<Instruction>(FI.getOperand(0));
 
-  Value *SrcI = OpI->getOperand(0);
-  Type *FITy = FI.getType();
-  Type *OpITy = OpI->getType();
-  Type *SrcTy = SrcI->getType();
+  Value *X = OpI->getOperand(0);
+  Type *DestType = FI.getType();
+  Type *FPType = OpI->getType();
+  Type *XType = X->getType();
   bool IsInputSigned = isa<SIToFPInst>(OpI);
   bool IsOutputSigned = isa<FPToSIInst>(FI);
 
@@ -1764,34 +1764,34 @@ Instruction *InstCombiner::FoldItoFPtoI(Instruction &FI) {
 
   // This means this is also safe for a signed input and unsigned output, since
   // a negative input would lead to undefined behavior.
-  int InputSize = (int)SrcTy->getScalarSizeInBits() - IsInputSigned;
-  int OutputSize = (int)FITy->getScalarSizeInBits() - IsOutputSigned;
-  int ActualSize = std::min(InputSize, OutputSize);
+  int InputSize = (int)XType->getScalarSizeInBits() - IsInputSigned;
+  int OutputSize = (int)DestType->getScalarSizeInBits() - IsOutputSigned;
+  int MinIntWidth = std::min(InputSize, OutputSize);
 
-  if (ActualSize <= OpITy->getFPMantissaWidth()) {
-    if (FITy->getScalarSizeInBits() > SrcTy->getScalarSizeInBits()) {
-      if (IsInputSigned && IsOutputSigned)
-        return new SExtInst(SrcI, FITy);
-      return new ZExtInst(SrcI, FITy);
-    }
-    if (FITy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits())
-      return new TruncInst(SrcI, FITy);
-    if (SrcTy == FITy)
-      return replaceInstUsesWith(FI, SrcI);
-    return new BitCastInst(SrcI, FITy);
+  if (MinIntWidth > FPType->getFPMantissaWidth())
+    return nullptr;
+
+  if (DestType->getScalarSizeInBits() > XType->getScalarSizeInBits()) {
+    if (IsInputSigned && IsOutputSigned)
+      return new SExtInst(X, DestType);
+    return new ZExtInst(X, DestType);
   }
-  return nullptr;
+  if (DestType->getScalarSizeInBits() < XType->getScalarSizeInBits())
+    return new TruncInst(X, DestType);
+
+  assert(XType == DestType && "Unexpected types for int to FP to int casts");
+  return replaceInstUsesWith(FI, X);
 }
 
 Instruction *InstCombiner::visitFPToUI(FPToUIInst &FI) {
-  if (Instruction *I = FoldItoFPtoI(FI))
+  if (Instruction *I = foldItoFPtoI(FI))
     return I;
 
   return commonCastTransforms(FI);
 }
 
 Instruction *InstCombiner::visitFPToSI(FPToSIInst &FI) {
-  if (Instruction *I = FoldItoFPtoI(FI))
+  if (Instruction *I = foldItoFPtoI(FI))
     return I;
 
   return commonCastTransforms(FI);
