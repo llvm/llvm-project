@@ -95,6 +95,8 @@ public:
 
   virtual void Deactivate() { m_active = false; }
 
+  virtual void TerminalSizeChanged() {}
+
   virtual const char *GetPrompt() {
     // Prompt support isn't mandatory
     return nullptr;
@@ -368,6 +370,8 @@ public:
   void Activate() override;
 
   void Deactivate() override;
+
+  void TerminalSizeChanged() override;
 
   ConstString GetControlSequence(char ch) override {
     return m_delegate.IOHandlerGetControlSequence(ch);
