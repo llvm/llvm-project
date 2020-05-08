@@ -4425,8 +4425,11 @@ static NonCLikeKind getNonCLikeKindForAnonymousStruct(const CXXRecordDecl *RD) {
         isa<EnumDecl>(D))
       continue;
     auto *MemberRD = dyn_cast<CXXRecordDecl>(D);
-    if (!MemberRD)
+    if (!MemberRD) {
+      if (D->isImplicit())
+        continue;
       return {NonCLikeKind::OtherMember, D->getSourceRange()};
+    }
 
     //  -- contain a lambda-expression,
     if (MemberRD->isLambda())

@@ -7672,6 +7672,19 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
                MultiLineFunctions);
 }
 
+TEST_F(FormatTest, AttributePenaltyBreaking) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("void ABCDEFGH::ABCDEFGHIJKLMN(\n"
+               "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
+               Style);
+  verifyFormat("void ABCDEFGH::ABCDEFGHIJK(\n"
+               "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
+               Style);
+  verifyFormat("void ABCDEFGH::ABCDEFGH([[maybe_unused]] const "
+               "shared_ptr<ALongTypeName> &C d) {\n}",
+               Style);
+}
+
 TEST_F(FormatTest, UnderstandsEllipsis) {
   verifyFormat("int printf(const char *fmt, ...);");
   verifyFormat("template <class... Ts> void Foo(Ts... ts) { Foo(ts...); }");
@@ -14585,6 +14598,30 @@ TEST_F(FormatTest, FormatsLambdas) {
                "          });\n"
                "    });",
                LLVMWithBeforeLambdaBody);
+}
+
+TEST_F(FormatTest, LambdaWithLineComments) {
+  FormatStyle LLVMWithBeforeLambdaBody = getLLVMStyle();
+  LLVMWithBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
+  LLVMWithBeforeLambdaBody.BraceWrapping.BeforeLambdaBody = true;
+  LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_All;
+
+  verifyFormat("auto k = []() { return; }", LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() // comment\n"
+               "{ return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() /* comment */ { return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() /* comment */ /* comment */ { return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() // X\n"
+               "{ return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "auto k = []() // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n"
+      "{ return; }",
+      LLVMWithBeforeLambdaBody);
 }
 
 TEST_F(FormatTest, EmptyLinesInLambdas) {

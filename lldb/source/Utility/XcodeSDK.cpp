@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/Utility/FileSpec.h"
 
 #include "lldb/lldb-types.h"
+
+#include "llvm/ADT/Triple.h"
+
 #include <string>
 
 using namespace lldb;
@@ -178,6 +181,27 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
   return false;
 }
 
+bool XcodeSDK::SupportsSwift() const {
+  XcodeSDK::Info info = Parse();
+  switch (info.type) {
+  case Type::MacOSX:
+    return info.version.empty() || info.version >= llvm::VersionTuple(10, 10);
+  case Type::iPhoneOS:
+  case Type::iPhoneSimulator:
+    return info.version.empty() || info.version >= llvm::VersionTuple(8);
+  case Type::AppleTVSimulator:
+  case Type::AppleTVOS:
+    return info.version.empty() || info.version >= llvm::VersionTuple(9);
+  case Type::WatchSimulator:
+  case Type::watchOS:
+    return info.version.empty() || info.version >= llvm::VersionTuple(2);
+  case Type::Linux:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
   ConstString last_path_component = sdk_path.GetLastPathComponent();
@@ -189,4 +213,34 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
   if (sdk.GetType() != desired_type)
     return false;
   return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());
+}
+
+XcodeSDK::Type XcodeSDK::GetSDKTypeForTriple(const llvm::Triple &triple) {
+  using namespace llvm;
+  switch (triple.getOS()) {
+  case Triple::MacOSX:
+  case Triple::Darwin:
+    return XcodeSDK::MacOSX;
+  case Triple::IOS:
+    switch (triple.getEnvironment()) {
+    case Triple::MacABI:
+      return XcodeSDK::MacOSX;
+    case Triple::Simulator:
+      return XcodeSDK::iPhoneSimulator;
+    default:
+      return XcodeSDK::iPhoneOS;
+    }
+  case Triple::TvOS:
+    if (triple.getEnvironment() == Triple::Simulator)
+      return XcodeSDK::AppleTVSimulator;
+    return XcodeSDK::AppleTVOS;
+  case Triple::WatchOS:
+    if (triple.getEnvironment() == Triple::Simulator)
+      return XcodeSDK::WatchSimulator;
+    return XcodeSDK::watchOS;
+  case Triple::Linux:
+    return XcodeSDK::Linux;
+  default:
+    return XcodeSDK::unknown;
+  }
 }

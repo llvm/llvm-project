@@ -2001,6 +2001,12 @@ def funique_section_names : Flag <["-"], "funique-section-names">,
 def fno_unique_section_names : Flag <["-"], "fno-unique-section-names">,
   Group<f_Group>, Flags<[CC1Option]>;
 
+def funique_internal_linkage_names : Flag <["-"], "funique-internal-linkage-names">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Uniqueify Internal Linkage Symbol Names by appending the MD5 hash of the module path">;
+def fno_unique_internal_linkage_names : Flag <["-"], "fno-unique-internal-linkage-names">,
+  Group<f_Group>;
+
 def fstrict_return : Flag<["-"], "fstrict-return">, Group<f_Group>,
   HelpText<"Always treat control flow paths that fall off the end of a "
            "non-void function as unreachable">;

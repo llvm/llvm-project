@@ -1190,7 +1190,12 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                                 APInt &UndefElts,
                                                 unsigned Depth,
                                                 bool AllowMultipleUsers) {
-  unsigned VWidth = cast<VectorType>(V->getType())->getNumElements();
+  // Cannot analyze scalable type. The number of vector elements is not a
+  // compile-time constant.
+  if (isa<ScalableVectorType>(V->getType()))
+    return nullptr;
+
+  unsigned VWidth = cast<FixedVectorType>(V->getType())->getNumElements();
   APInt EltMask(APInt::getAllOnesValue(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 

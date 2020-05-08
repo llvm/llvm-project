@@ -40,7 +40,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       /*args=*/(ins "MLIRContext*":$context,
                     "Optional<Location>":$location,
                     "ValueRange":$operands,
-                    "ArrayRef<NamedAttribute>":$attributes,
+                    "DictionaryAttr":$attributes,
                     "RegionRange":$regions,
                     "SmallVectorImpl<Type>&":$inferredReturnTypes)
     >,
@@ -92,7 +92,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*args=*/(ins "MLIRContext*":$context,
                     "Optional<Location>":$location,
                     "ValueRange":$operands,
-                    "ArrayRef<NamedAttribute>":$attributes,
+                    "DictionaryAttr":$attributes,
                     "RegionRange":$regions,
                     "SmallVectorImpl<ShapedTypeComponents>&":
                       $inferredReturnShapes)
