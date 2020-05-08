@@ -1253,9 +1253,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // addressing modes, so treat them as having no offset like flat
     // instructions.
     return isLegalFlatAddressingMode(AM);
-  } else {
-    llvm_unreachable("unhandled address space");
   }
+
+  // Assume a user alias of global for unknown address spaces.
+  return isLegalGlobalAddressingMode(AM);
 }
 
 bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
