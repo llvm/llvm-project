@@ -130,6 +130,9 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
           DataExtractor Extractor(
               Data.getData().slice(*Offset, *Offset + ExprLength),
               Data.isLittleEndian(), Data.getAddressSize());
+          // Note. We do not pass the DWARF format to DWARFExpression, because
+          // DW_OP_call_ref, the only operation which depends on the format, is
+          // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
           Instructions.back().Expression =
               DWARFExpression(Extractor, Data.getAddressSize());
           *Offset += ExprLength;
@@ -143,6 +146,9 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
           DataExtractor Extractor(
               Data.getData().slice(*Offset, *Offset + BlockLength),
               Data.isLittleEndian(), Data.getAddressSize());
+          // Note. We do not pass the DWARF format to DWARFExpression, because
+          // DW_OP_call_ref, the only operation which depends on the format, is
+          // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
           Instructions.back().Expression =
               DWARFExpression(Extractor, Data.getAddressSize());
           *Offset += BlockLength;
