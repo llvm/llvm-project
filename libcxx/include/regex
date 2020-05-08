@@ -4438,9 +4438,6 @@ basic_regex<_CharT, _Traits>::__parse_character_class_escape(_ForwardIterator __
             __ml->__add_char('_');
             ++__first;
             break;
-        default:
-            __ml = __start_matching_list(true);
-            ++__first;
         }
     }
     return __first;
