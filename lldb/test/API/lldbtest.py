@@ -3,6 +3,7 @@ import os
 import tempfile
 import subprocess
 import sys
+import platform
 
 import lit.Test
 import lit.TestRunner
@@ -75,19 +76,21 @@ class LLDBTest(TestFormat):
         builddir = getBuildDir(cmd)
         mkdir_p(builddir)
 
-        # The macOS system integrity protection (SIP) doesn't allow injecting
-        # libraries into system binaries, but this can be worked around by
-        # copying the binary into a different location.
+        # On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim
+        # python binary as the ASan interceptors get loaded too late. Also,
+        # when SIP is enabled, we can't inject libraries into system binaries
+        # at all, so we need a copy of the "real" python to work with.
+        #
+        # Find the "real" python binary, copy it, and invoke it.
         if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
-                (executable.startswith('/System/') or \
-                executable.startswith('/usr/bin/')):
+                platform.system() == 'Darwin':
             copied_python = os.path.join(builddir, 'copied-system-python')
             if not os.path.isfile(copied_python):
                 import shutil, subprocess
                 python = subprocess.check_output([
                     executable,
-                    '-c',
-                    'import sys; print(sys.executable)'
+                    os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        'get_darwin_real_python.py')
                 ]).decode('utf-8').strip()
                 shutil.copy(python, copied_python)
             cmd[0] = copied_python
