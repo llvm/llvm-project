@@ -482,7 +482,7 @@ int main(int argc, char *argv[]) {
       R"(clangd is a language server that provides IDE-like features to editors.
 
 It should be used via an editor plugin rather than invoked directly. For more information, see:
-	https://clang.llvm.org/extra/clangd/
+	https://clangd.llvm.org/
 	https://microsoft.github.io/language-server-protocol/
 
 clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment variable.
