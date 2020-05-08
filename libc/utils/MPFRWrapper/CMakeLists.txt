@@ -12,7 +12,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     MPFRUtils.cpp
     MPFRUtils.h
   )
-  add_dependencies(libcMPFRWrapper libc.utils.CPP.standalone_cpp LibcUnitTest LLVMSupport)
+  add_dependencies(libcMPFRWrapper libc.utils.CPP.standalone_cpp libc.utils.FPUtil.fputil LibcUnitTest LLVMSupport)
   target_link_libraries(libcMPFRWrapper -lmpfr -lgmp LibcUnitTest LLVMSupport)
 else()
   message(WARNING "Math tests using MPFR will be skipped.")
