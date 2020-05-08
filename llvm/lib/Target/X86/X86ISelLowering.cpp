@@ -8694,7 +8694,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
           SDValue CP = DAG.getConstantPool(C, PVT);
           unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
-          Align Alignment(cast<ConstantPoolSDNode>(CP)->getAlignment());
+          Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
           SDVTList Tys =
               DAG.getVTList(MVT::getVectorVT(CVT, Repeat), MVT::Other);
           SDValue Ops[] = {DAG.getEntryNode(), CP};
@@ -8712,7 +8712,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
                                              *Ctx);
           SDValue VCP = DAG.getConstantPool(VecC, PVT);
           unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
-          Align Alignment(cast<ConstantPoolSDNode>(VCP)->getAlignment());
+          Align Alignment = cast<ConstantPoolSDNode>(VCP)->getAlign();
           Ld = DAG.getLoad(
               MVT::getVectorVT(CVT, NumElm), dl, DAG.getEntryNode(), VCP,
               MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
@@ -8782,7 +8782,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       SDValue CP =
           DAG.getConstantPool(C, TLI.getPointerTy(DAG.getDataLayout()));
-      Align Alignment(cast<ConstantPoolSDNode>(CP)->getAlignment());
+      Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
 
       SDVTList Tys = DAG.getVTList(VT, MVT::Other);
       SDValue Ops[] = {DAG.getEntryNode(), CP};
@@ -19910,7 +19910,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   APInt FF(64, 0x5F80000000000000ULL);
   SDValue FudgePtr = DAG.getConstantPool(
       ConstantInt::get(*DAG.getContext(), FF), PtrVT);
-  Align CPAlignment(cast<ConstantPoolSDNode>(FudgePtr)->getAlignment());
+  Align CPAlignment = cast<ConstantPoolSDNode>(FudgePtr)->getAlign();
 
   // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
   SDValue Zero = DAG.getIntPtrConstant(0, dl);

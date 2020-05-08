@@ -1625,7 +1625,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
     Offset = G->getOffset();
   } else if (ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
     AM.CP = CP->getConstVal();
-    AM.Align = CP->getAlignment();
+    AM.Align = CP->getAlign().value();
     AM.SymbolFlags = CP->getTargetFlags();
     Offset = CP->getOffset();
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
