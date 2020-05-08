@@ -35565,7 +35565,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // broadcast(bitcast(src)) -> bitcast(broadcast(src))
     // 32-bit targets have to bitcast i64 to f64, so better to bitcast upward.
     if (Src.getOpcode() == ISD::BITCAST &&
-        SrcVT.getScalarSizeInBits() == BCVT.getScalarSizeInBits()) {
+        SrcVT.getScalarSizeInBits() == BCVT.getScalarSizeInBits() &&
+        DAG.getTargetLoweringInfo().isTypeLegal(BCVT)) {
       EVT NewVT = EVT::getVectorVT(*DAG.getContext(), BCVT.getScalarType(),
                                    VT.getVectorNumElements());
       return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
