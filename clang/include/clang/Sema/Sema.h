@@ -3890,7 +3890,8 @@ public:
 
   /// Attempts to produce a RecoveryExpr after some AST node cannot be created.
   ExprResult CreateRecoveryExpr(SourceLocation Begin, SourceLocation End,
-                                ArrayRef<Expr *> SubExprs);
+                                ArrayRef<Expr *> SubExprs,
+                                QualType T = QualType());
 
   ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
                                           SourceLocation IdLoc,

@@ -565,6 +565,10 @@ def frecovery_ast : Flag<["-"], "frecovery-ast">,
   HelpText<"Preserve expressions in AST rather than dropping them when "
            "encountering semantic errors">;
 def fno_recovery_ast : Flag<["-"], "fno-recovery-ast">;
+def frecovery_ast_type : Flag<["-"], "frecovery-ast-type">,
+  HelpText<"Preserve the type for recovery expressions when possible "
+          "(experimental)">;
+def fno_recovery_ast_type : Flag<["-"], "fno-recovery-ast-type">;
 
 let Group = Action_Group in {
 
