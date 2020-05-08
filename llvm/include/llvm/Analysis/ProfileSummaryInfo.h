@@ -72,13 +72,6 @@ public:
            Summary->getKind() == ProfileSummary::PSK_Sample;
   }
 
-  /// Returns true if module \c M has partial-profile sample profile.
-  bool hasPartialSampleProfile() {
-    return hasProfileSummary() &&
-           Summary->getKind() == ProfileSummary::PSK_Sample &&
-           Summary->isPartialProfile();
-  }
-
   /// Returns true if module \c M has instrumentation profile.
   bool hasInstrumentationProfile() {
     return hasProfileSummary() &&
@@ -106,6 +99,8 @@ public:
   Optional<uint64_t> getProfileCount(const CallBase &CallInst,
                                      BlockFrequencyInfo *BFI,
                                      bool AllowSynthetic = false);
+  /// Returns true if module \c M has partial-profile sample profile.
+  bool hasPartialSampleProfile();
   /// Returns true if the working set size of the code is considered huge.
   bool hasHugeWorkingSetSize();
   /// Returns true if the working set size of the code is considered large.
@@ -118,6 +113,8 @@ public:
   bool isFunctionEntryCold(const Function *F);
   /// Returns true if \p F contains only cold code.
   bool isFunctionColdInCallGraph(const Function *F, BlockFrequencyInfo &BFI);
+  /// Returns true if the hotness of \p F is unknown.
+  bool isFunctionHotnessUnknown(const Function &F);
   /// Returns true if \p F contains hot code with regard to a given hot
   /// percentile cutoff value.
   bool isFunctionHotInCallGraphNthPercentile(int PercentileCutoff,
