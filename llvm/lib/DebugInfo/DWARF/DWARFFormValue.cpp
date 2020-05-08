@@ -481,12 +481,12 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DW_FORM_strp:
     if (DumpOpts.Verbose)
-      OS << format(" .debug_str[0x%8.8x] = ", (uint32_t)UValue);
+      OS << format(" .debug_str[0x%8.8" PRIx64 "] = ", UValue);
     dumpString(OS);
     break;
   case DW_FORM_line_strp:
     if (DumpOpts.Verbose)
-      OS << format(" .debug_line_str[0x%8.8x] = ", (uint32_t)UValue);
+      OS << format(" .debug_line_str[0x%8.8" PRIx64 "] = ", UValue);
     dumpString(OS);
     break;
   case DW_FORM_strx:
@@ -550,9 +550,8 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << format("indexed (0x%x) loclist = ", (uint32_t)UValue);
     break;
 
-  // Should be formatted to 64-bit for DWARF64.
   case DW_FORM_sec_offset:
-    AddrOS << format("0x%08x", (uint32_t)UValue);
+    AddrOS << format("0x%08" PRIx64, UValue);
     break;
 
   default:
