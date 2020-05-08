@@ -106,6 +106,17 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(i32 addrspace(4)* 
   ret void
 }
 
+; HSA-LABEl: {{^}}use_constant_to_global_addrspacecast:
+; HSA: s_load_dwordx2 s{{\[}}[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]{{\]}}
+; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
+; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
+; HSA: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[VPTRLO]]:[[VPTRHI]]{{\]}}
+define amdgpu_kernel void @use_constant_to_global_addrspacecast(i32 addrspace(4)* %ptr) #0 {
+  %stof = addrspacecast i32 addrspace(4)* %ptr to i32 addrspace(1)*
+  %ld = load volatile i32, i32 addrspace(1)* %stof
+  ret void
+}
+
 ; HSA-LABEL: {{^}}use_flat_to_group_addrspacecast:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 0
@@ -287,6 +298,38 @@ define amdgpu_kernel void @store_flat_scratch(i32 addrspace(1)* noalias %out, i3
   call void @llvm.amdgcn.s.barrier() #1
   %reload = load volatile i32, i32* %fptr, align 4
   store volatile i32 %reload, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; HSA-LABEL: {{^}}use_constant_to_constant32_addrspacecast
+; GFX9: s_load_dwordx2 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
+; GFX9: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0x8{{$}}
+; GFX9: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}, [[PTRPTR]], 0x0{{$}}
+; GFX9: s_mov_b32 s[[PTR_HI]], 0{{$}}
+; GFX9: s_add_i32 s[[PTR_LO]], s[[PTR_LO]], [[OFFSET]]
+; GFX9: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x0{{$}}
+define amdgpu_kernel void @use_constant_to_constant32_addrspacecast(i8 addrspace(4)* addrspace(4)* %ptr.ptr, i32 %offset) #0 {
+  %ptr = load volatile i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* %ptr.ptr
+  %addrspacecast = addrspacecast i8 addrspace(4)* %ptr to i8 addrspace(6)*
+  %gep = getelementptr i8, i8 addrspace(6)* %addrspacecast, i32 %offset
+  %ptr.cast = bitcast i8 addrspace(6)* %gep to i32 addrspace(6)*
+  %load = load volatile i32, i32 addrspace(6)* %ptr.cast, align 4
+  ret void
+}
+
+; HSA-LABEL: {{^}}use_global_to_constant32_addrspacecast
+; GFX9: s_load_dwordx2 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
+; GFX9: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0x8{{$}}
+; GFX9: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}, [[PTRPTR]], 0x0{{$}}
+; GFX9: s_mov_b32 s[[PTR_HI]], 0{{$}}
+; GFX9: s_add_i32 s[[PTR_LO]], s[[PTR_LO]], [[OFFSET]]
+; GFX9: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x0{{$}}
+define amdgpu_kernel void @use_global_to_constant32_addrspacecast(i8 addrspace(1)* addrspace(4)* %ptr.ptr, i32 %offset) #0 {
+  %ptr = load volatile i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* %ptr.ptr
+  %addrspacecast = addrspacecast i8 addrspace(1)* %ptr to i8 addrspace(6)*
+  %gep = getelementptr i8, i8 addrspace(6)* %addrspacecast, i32 %offset
+  %ptr.cast = bitcast i8 addrspace(6)* %gep to i32 addrspace(6)*
+  %load = load volatile i32, i32 addrspace(6)* %ptr.cast, align 4
   ret void
 }
 
