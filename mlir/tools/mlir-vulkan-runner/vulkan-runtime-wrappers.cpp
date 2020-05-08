@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
 #include <mutex>
 #include <numeric>
 
 #include "VulkanRuntime.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace {
 
@@ -51,7 +51,7 @@ public:
     if (failed(vulkanRuntime.initRuntime()) || failed(vulkanRuntime.run()) ||
         failed(vulkanRuntime.updateHostMemoryBuffers()) ||
         failed(vulkanRuntime.destroy())) {
-      llvm::errs() << "runOnVulkan failed";
+      std::cerr << "runOnVulkan failed";
     }
   }
 
