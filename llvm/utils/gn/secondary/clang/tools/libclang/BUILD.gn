@@ -9,6 +9,11 @@ import("//llvm/version.gni")
 #   in the CMake build), so libclang is always a static library on linux
 # - the GN build doesn't have LIBCLANG_BUILD_STATIC
 
+declare_args() {
+  # Whether to include code from clang-tools-extra in libclang.
+  libclang_include_clang_tools_extra = false
+}
+
 libclang_target_type = "shared_library"
 if (host_os != "win" && host_os != "mac") {
   # ELF targets need -fPIC to build shared libs but they aren't on by default.
@@ -41,9 +46,7 @@ target(libclang_target_type, "libclang") {
 
   # FIXME: Once the GN build has a way to select which bits to build,
   # only include this dependency if clang-tools-extra is part of the build.
-  # FIXME: libclang depending on anything in clang-tools-extra seems like
-  # a layering violation.
-  if (true) {
+  if (libclang_include_clang_tools_extra) {
     defines += [ "CLANG_TOOL_EXTRA_BUILD" ]
     deps += [
       "//clang-tools-extra/clang-include-fixer/plugin",

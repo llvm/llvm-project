@@ -240,7 +240,11 @@ Build System Changes
 These are major changes to the build system that have happened since the 10.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
-- ...
+- clang-tidy and clang-include-fixer are no longer compiled into libclang by
+  default. You can set ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=ON`` to undo that,
+  but it's expected that that setting will go away eventually. If this is
+  something you need, please reach out to the mailing list to discuss possible
+  ways forward.
 
 AST Matchers
 ------------
