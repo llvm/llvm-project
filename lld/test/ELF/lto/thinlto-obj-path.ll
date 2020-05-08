@@ -11,7 +11,7 @@
 
 ; Check that this also works without the --plugin-opt= prefix.
 ; RUN: rm -f %t4.o
-; RUN: ld.lld -thinlto-index-only -lto-obj-path=%t4.o -shared %t1.o %t2.o -o /dev/null
+; RUN: ld.lld --thinlto-index-only --lto-obj-path=%t4.o -shared %t1.o %t2.o -o /dev/null
 ; RUN: llvm-readobj -h %t4.o | FileCheck %s
 
 ;; Ensure lld emits empty combined module if specific obj-path.
