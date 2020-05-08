@@ -47,6 +47,7 @@ ReservedIdentifierCheck::ReservedIdentifierCheck(StringRef Name,
           Options.get("AllowedIdentifiers", ""))) {}
 
 void ReservedIdentifierCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  RenamerClangTidyCheck::storeOptions(Opts);
   Options.store(Opts, "Invert", Invert);
   Options.store(Opts, "AllowedIdentifiers",
                 utils::options::serializeStringList(AllowedIdentifiers));

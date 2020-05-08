@@ -40,6 +40,10 @@ public:
                            Preprocessor *ModuleExpanderPP) override final;
   void onEndOfTranslationUnit() override final;
 
+  /// Derived classes that override this function should call this method from
+  /// the overridden method.
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
   /// This enum will be used in %select of the diagnostic message.
   /// Each value below IgnoreFailureThreshold should have an error message.
   enum class ShouldFixStatus {
@@ -142,6 +146,7 @@ protected:
 
 private:
   NamingCheckFailureMap NamingCheckFailures;
+  const bool AggressiveDependentMemberLookup;
 };
 
 } // namespace tidy
