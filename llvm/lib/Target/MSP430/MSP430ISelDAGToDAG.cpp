@@ -146,7 +146,7 @@ bool MSP430DAGToDAGISel::MatchWrapper(SDValue N, MSP430ISelAddressMode &AM) {
     //AM.SymbolFlags = G->getTargetFlags();
   } else if (ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
     AM.CP = CP->getConstVal();
-    AM.Align = CP->getAlignment();
+    AM.Align = CP->getAlign().value();
     AM.Disp += CP->getOffset();
     //AM.SymbolFlags = CP->getTargetFlags();
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
