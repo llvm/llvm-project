@@ -399,13 +399,9 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
             if (IsImpliedShape(symbol)) {
               return (*this)(object.init());
             } else {
-              Shape shape;
               int n{object.shape().Rank()};
               NamedEntity base{symbol};
-              for (int dimension{0}; dimension < n; ++dimension) {
-                shape.emplace_back(GetExtent(context_, base, dimension));
-              }
-              return Result{shape};
+              return Result{CreateShape(n, base)};
             }
           },
           [](const semantics::EntityDetails &) {
@@ -419,7 +415,13 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
             }
           },
           [&](const semantics::AssocEntityDetails &assoc) {
-            return (*this)(assoc.expr());
+            if (!assoc.rank()) {
+              return (*this)(assoc.expr());
+            } else {
+              int n{assoc.rank().value()};
+              NamedEntity base{symbol};
+              return Result{CreateShape(n, base)};
+            }
           },
           [&](const semantics::SubprogramDetails &subp) {
             if (subp.isFunction()) {
@@ -448,12 +450,11 @@ auto GetShapeHelper::operator()(const Component &component) const -> Result {
   if (rank == 0) {
     return (*this)(component.base());
   } else if (symbol.has<semantics::ObjectEntityDetails>()) {
-    Shape shape;
     NamedEntity base{Component{component}};
-    for (int dimension{0}; dimension < rank; ++dimension) {
-      shape.emplace_back(GetExtent(context_, base, dimension));
-    }
-    return shape;
+    return CreateShape(rank, base);
+  } else if (symbol.has<semantics::AssocEntityDetails>()) {
+    NamedEntity base{Component{component}};
+    return Result{CreateShape(rank, base)};
   } else {
     return (*this)(symbol);
   }
