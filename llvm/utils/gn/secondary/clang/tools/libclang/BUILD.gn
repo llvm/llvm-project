@@ -1,4 +1,5 @@
 import("//clang/lib/ARCMigrate/enable.gni")
+import("//clang/tools/libclang/include_clang_tools_extra.gni")
 import("//llvm/version.gni")
 
 # This build file is just enough to get check-clang to pass, it's missing
@@ -8,11 +9,6 @@ import("//llvm/version.gni")
 # - the GN linux build always builds without -fPIC (as if LLVM_ENABLE_PIC=OFF
 #   in the CMake build), so libclang is always a static library on linux
 # - the GN build doesn't have LIBCLANG_BUILD_STATIC
-
-declare_args() {
-  # Whether to include code from clang-tools-extra in libclang.
-  libclang_include_clang_tools_extra = false
-}
 
 libclang_target_type = "shared_library"
 if (host_os != "win" && host_os != "mac") {
