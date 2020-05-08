@@ -869,7 +869,7 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
 
-  // Add linker option -u__llvm_runtime_variable to cause runtime
+  // Add linker option -u__llvm_profile_runtime to cause runtime
   // initialization module to be linked in.
   if ((!Args.hasArg(options::OPT_coverage)) &&
       (!Args.hasArg(options::OPT_ftest_coverage)))
