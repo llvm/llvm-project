@@ -778,6 +778,32 @@ define <32 x i8> @constant_fold_pshufb_256() {
   ret <32 x i8> %1
 }
 
+define i32 @broadcast_v2i64_multiuse(i64* %p0) {
+; X86-LABEL: broadcast_v2i64_multiuse:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X86-NEXT:    vextractps $2, %xmm0, %eax
+; X86-NEXT:    addl (%ecx), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: broadcast_v2i64_multiuse:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    retq
+entry:
+  %tmp = load i64, i64* %p0, align 8
+  %tmp1 = trunc i64 %tmp to i32
+  %tmp2 = insertelement <2 x i64> undef, i64 %tmp, i32 0
+  %tmp3 = shufflevector <2 x i64> %tmp2, <2 x i64> undef, <2 x i32> zeroinitializer
+  %tmp4 = trunc <2 x i64> %tmp3 to <2 x i32>
+  %tmp5 = extractelement <2 x i32> %tmp4, i32 1
+  %tmp6 = add i32 %tmp1, %tmp5
+  ret i32 %tmp6
+}
+
 define <32 x i8> @PR27320(<8 x i32> %a0) {
 ; CHECK-LABEL: PR27320:
 ; CHECK:       # %bb.0:
