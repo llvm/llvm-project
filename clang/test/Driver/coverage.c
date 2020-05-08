@@ -12,6 +12,9 @@
 // GCNO-LOCATION: "-coverage-notes-file" "{{.*}}/foo/bar.gcno"
 // GCNO-LOCATION-REL: "-coverage-notes-file" "{{.*}}{{/|\\\\}}foo/bar.gcno"
 
+/// Don't warn -Wunused-command-line-argument.
+// RUN: %clang -E -Werror --coverage -ftest-coverage -fprofile-arcs %s
+
 /// Test -fprofile-dir=
 // RUN: not %clang -S -Werror -fprofile-dir=abc %s
 // RUN: not %clang -S -Werror -ftest-coverage -fprofile-dir=abc %s
