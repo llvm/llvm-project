@@ -18,7 +18,7 @@ $(EXE): $(SWIFT_SOURCES)
 		SWIFTFLAGS_EXTRAS="$(SWIFTFLAGS_EXTRAS)" \
 		-f  $(SRCDIR)/helper.mk clean main.o a.swiftmodule
 	echo "Sanity check that our SDK shenanigns worked"
-	dwarfdump -r 0 $(BUILDDIR)/main.o | grep DW_AT_LLVM_isysroot | grep -q LocalSDK
+	dwarfdump -r 0 $(BUILDDIR)/main.o | egrep 'DW_AT_LLVM_i?sysroot' | grep -q LocalSDK
 	echo "Linking with regular SDK (otherwise the linker complains)"
 	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
