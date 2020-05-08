@@ -34,6 +34,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "vector-combine"
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
+STATISTIC(NumScalarBO, "Number of scalar binops formed");
 
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
@@ -308,6 +309,64 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
   return true;
 }
 
+/// Match a vector binop instruction with inserted scalar operands and convert
+/// to scalar binop followed by insertelement.
+static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
+  Instruction *Ins0, *Ins1;
+  if (!match(&I, m_BinOp(m_Instruction(Ins0), m_Instruction(Ins1))))
+    return false;
+
+  // TODO: Loosen restriction for one-use by adjusting cost equation.
+  // TODO: Deal with mismatched index constants and variable indexes?
+  Constant *VecC0, *VecC1;
+  Value *V0, *V1;
+  uint64_t Index;
+  if (!match(Ins0, m_OneUse(m_InsertElement(m_Constant(VecC0), m_Value(V0),
+                                            m_ConstantInt(Index)))) ||
+      !match(Ins1, m_OneUse(m_InsertElement(m_Constant(VecC1), m_Value(V1),
+                                            m_SpecificInt(Index)))))
+    return false;
+
+  Type *ScalarTy = V0->getType();
+  Type *VecTy = I.getType();
+  assert(VecTy->isVectorTy() && ScalarTy == V1->getType() &&
+         (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy()) &&
+         "Unexpected types for insert into binop");
+
+  Instruction::BinaryOps Opcode = cast<BinaryOperator>(&I)->getOpcode();
+  int ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
+  int VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
+
+  // Get cost estimate for the insert element. This cost will factor into
+  // both sequences.
+  int InsertCost =
+      TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, Index);
+  int OldCost = InsertCost + InsertCost + VectorOpCost;
+  int NewCost = ScalarOpCost + InsertCost;
+
+  // We want to scalarize unless the vector variant actually has lower cost.
+  if (OldCost < NewCost)
+    return false;
+
+  // vec_bo (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
+  // inselt NewVecC, (scalar_bo V0, V1), Index
+  ++NumScalarBO;
+  IRBuilder<> Builder(&I);
+  Value *Scalar = Builder.CreateBinOp(Opcode, V0, V1, I.getName() + ".scalar");
+
+  // All IR flags are safe to back-propagate. There is no potential for extra
+  // poison to be created by the scalar instruction.
+  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
+    ScalarInst->copyIRFlags(&I);
+
+  // Fold the vector constants in the original vectors into a new base vector.
+  Constant *NewVecC = ConstantExpr::get(Opcode, VecC0, VecC1);
+  Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
+  I.replaceAllUsesWith(Insert);
+  Insert->takeName(&I);
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
@@ -330,6 +389,7 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
         continue;
       MadeChange |= foldExtractExtract(I, TTI);
       MadeChange |= foldBitcastShuf(I, TTI);
+      MadeChange |= scalarizeBinop(I, TTI);
     }
   }
 
