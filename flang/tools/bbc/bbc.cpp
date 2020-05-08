@@ -98,21 +98,21 @@ static llvm::cl::opt<bool> dumpSymbols("dump-symbols",
                                        llvm::cl::desc("dump the symbol table"),
                                        llvm::cl::init(false));
 
-static llvm::cl::opt<bool> pftDumpTest("pft-test", llvm::cl::desc("parse the input, create a PFT, dump it, and exit"), llvm::cl::init(false));
+static llvm::cl::opt<bool> pftDumpTest(
+    "pft-test",
+    llvm::cl::desc("parse the input, create a PFT, dump it, and exit"),
+    llvm::cl::init(false));
 
-static llvm::cl::opt<bool> enableOpenMP("fopenmp", llvm::cl::desc("enable openmp"), llvm::cl::init(false));
+static llvm::cl::opt<bool> enableOpenMP("fopenmp",
+                                        llvm::cl::desc("enable openmp"),
+                                        llvm::cl::init(false));
+
+static llvm::cl::opt<bool> dumpModuleOnFailure("dump-module-on-failure",
+                                               llvm::cl::init(false));
 
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-// TODO: vestigal struct that should be deleted
-struct DriverOptions {
-  Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
-  std::string prefix;
-};
-
-} // namespace
+using ProgramName = std::string;
 
 static int exitStatus{EXIT_SUCCESS};
 
@@ -125,7 +125,8 @@ static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
 
 // Convert Fortran input to MLIR (target is FIR dialect)
 static void convertFortranSourceToMLIR(
-    std::string path, Fortran::parser::Options options, DriverOptions &driver,
+    std::string path, Fortran::parser::Options options,
+    const ProgramName &programPrefix,
     Fortran::semantics::SemanticsContext &semanticsContext) {
   if (!(fixedForm || freeForm)) {
     auto dot = path.rfind(".");
@@ -147,7 +148,7 @@ static void convertFortranSourceToMLIR(
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() &&
       (warnIsError || parsing.messages().AnyFatalError())) {
-    llvm::errs() << driver.prefix << "could not scan " << path << '\n';
+    llvm::errs() << programPrefix << "could not scan " << path << '\n';
     parsing.messages().Emit(llvm::errs(), parsing.cooked());
     exitStatus = EXIT_FAILURE;
     return;
@@ -165,7 +166,7 @@ static void convertFortranSourceToMLIR(
   if ((!parsing.messages().empty() &&
        (warnIsError || parsing.messages().AnyFatalError())) ||
       !parsing.parseTree().has_value()) {
-    llvm::errs() << driver.prefix << "could not parse " << path << '\n';
+    llvm::errs() << programPrefix << "could not parse " << path << '\n';
     exitStatus = EXIT_FAILURE;
     return;
   }
@@ -177,13 +178,13 @@ static void convertFortranSourceToMLIR(
   semantics.Perform();
   semantics.EmitMessages(llvm::errs());
   if (semantics.AnyFatalError()) {
-    llvm::errs() << driver.prefix << "semantic errors in " << path << '\n';
+    llvm::errs() << programPrefix << "semantic errors in " << path << '\n';
     exitStatus = EXIT_FAILURE;
     return;
   }
   if (dumpSymbols)
     semantics.DumpSymbols(llvm::outs());
-  
+
   if (pftDumpTest) {
     if (auto ast{Fortran::lower::createPFT(parseTree, semanticsContext)}) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
@@ -251,7 +252,8 @@ static void convertFortranSourceToMLIR(
   }
   // Something went wrong. Try to dump the MLIR module.
   llvm::errs() << "oops, pass manager reported failure\n";
-  mlirModule.dump();
+  if (dumpModuleOnFailure)
+    mlirModule.dump();
 }
 
 int main(int argc, char **argv) {
@@ -263,8 +265,8 @@ int main(int argc, char **argv) {
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   llvm::cl::ParseCommandLineOptions(argc, argv, "Burnside Bridge Compiler\n");
 
-  DriverOptions driver;
-  driver.prefix = argv[0] + ": "s;
+  ProgramName programPrefix;
+  programPrefix = argv[0] + ": "s;
 
   if (includeDirs.size() == 0)
     includeDirs.push_back(".");
@@ -290,6 +292,7 @@ int main(int argc, char **argv) {
       .set_warnOnNonstandardUsage(warnStdViolation)
       .set_warningsAreErrors(warnIsError);
 
-  convertFortranSourceToMLIR(inputFilename, options, driver, semanticsContext);
+  convertFortranSourceToMLIR(inputFilename, options, programPrefix,
+                             semanticsContext);
   return exitStatus;
 }
