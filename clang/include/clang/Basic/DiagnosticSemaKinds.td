@@ -1590,6 +1590,9 @@ def err_exception_spec_cycle : Error<
   "exception specification of %0 uses itself">;
 def err_exception_spec_incomplete_type : Error<
   "exception specification needed for member of incomplete class %0">;
+def warn_wasm_dynamic_exception_spec_ignored : ExtWarn<
+  "dynamic exception specifications with types are currently ignored in wasm">,
+  InGroup<WebAssemblyExceptionSpec>;
 
 // C++ access checking
 def err_class_redeclared_with_different_access : Error<
