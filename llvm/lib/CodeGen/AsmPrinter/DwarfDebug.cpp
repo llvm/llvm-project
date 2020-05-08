@@ -2337,7 +2337,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   DWARFDataExtractor Data(StringRef(DebugLocs.getBytes(Entry).data(),
                                     DebugLocs.getBytes(Entry).size()),
                           Asm->getDataLayout().isLittleEndian(), PtrSize);
-  DWARFExpression Expr(Data, PtrSize, Asm->OutContext.getDwarfFormat());
+  DWARFExpression Expr(Data, PtrSize);
 
   using Encoding = DWARFExpression::Operation::Encoding;
   uint64_t Offset = 0;

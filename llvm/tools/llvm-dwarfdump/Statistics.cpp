@@ -248,8 +248,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     DWARFUnit *U = Die.getDwarfUnit();
     DataExtractor Data(toStringRef(D),
                        Die.getDwarfUnit()->getContext().isLittleEndian(), 0);
-    DWARFExpression Expression(Data, U->getAddressByteSize(),
-                               U->getFormParams().Format);
+    DWARFExpression Expression(Data, U->getAddressByteSize());
     // Consider the expression containing the DW_OP_entry_value as
     // an entry value.
     return llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
