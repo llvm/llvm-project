@@ -210,8 +210,10 @@ bool AddUsing::prepare(const Selection &Inputs) {
     return false;
 
   if (auto *D = Node->ASTNode.get<DeclRefExpr>()) {
-    QualifierToRemove = D->getQualifierLoc();
-    Name = D->getDecl()->getName();
+    if (auto *II = D->getDecl()->getIdentifier()) {
+      QualifierToRemove = D->getQualifierLoc();
+      Name = II->getName();
+    }
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
     if (auto E = T->getAs<ElaboratedTypeLoc>()) {
       if (auto *BaseTypeIdentifier =
