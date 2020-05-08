@@ -2,7 +2,6 @@ NEED ATTENTION
 ______________
 
 [Eric]
-  . ConvertExpr.cpp:193 - function type mismatch
   . Bridge.cpp:1322 - array assignment
 
 [Varun]
@@ -16,16 +15,26 @@ ______________
   . have lowering call the runtime STOP function (instead of the dummy standin)
   . Intrinsics.cpp:613! - nint
 
+[Val]
+
+  . lapack/SRC/sgtsv.f - error: unreachable blocks were not converted
+  . lapack/SRC/dsyevd_2stage.f - operation with block successors must terminate its parent block
+  . lapack/SRC/cgbsvx.f - type mismatch for bb argument #_ of successor #_
 
 [unassigned]
 
-  . ConvertExpr.cpp:266 - character comparison
-  . ConvertExpr.cpp:458! - concat CHARs
-  . ConvertExpr.cpp:711! - Ev::Triplet
-  . error: unreachable blocks were not converted
+  . lapack/SRC/sgbcon.f - ConvertExpr.cpp:266 - character comparison
+  . lapack/SRC/sgesvd.f - ConvertExpr.cpp:458! - concat CHARs
+  . lapack/SRC/sbdsvdx.f - ConvertExpr.cpp:711! - Ev::Triplet
+  . lapack/INSTALL/second_INT_ETIME.f - 'etime' is not a known intrinsic procedure
+  . lapack/SRC/chla_transtype.f - type of return operand 0 ('!fir.array<1x!fir.char<1>>') doesn't match function result type ('!fir.char<1>')
+  . lapack/INSTALL/dsecnd_INT_ETIME.f - Failed in semantics
+  . lapack/INSTALL/second_INT_ETIME.f - Failed in semantics
 
 FIXED
 _____
 
 bbc: Missing LEN_TRIM lowering
 
+  . ConvertExpr.cpp:193 - function type mismatch
+  . 'std.call' op incorrect number of operands for callee
