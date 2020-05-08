@@ -14,11 +14,12 @@
 #ifndef LLVM_SUPPORT_ITANIUMMANGLINGCANONICALIZER_H
 #define LLVM_SUPPORT_ITANIUMMANGLINGCANONICALIZER_H
 
-#include "llvm/ADT/StringRef.h"
-
 #include <cstddef>
 
 namespace llvm {
+
+class StringRef;
+
 /// Canonicalizer for mangled names.
 ///
 /// This class allows specifying a list of "equivalent" manglings. For example,
