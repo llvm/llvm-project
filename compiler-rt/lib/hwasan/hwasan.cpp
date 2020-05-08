@@ -186,7 +186,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   Thread *t = GetCurrentThread();
   if (!t) {
-    // the thread is still being created.
+    // The thread is still being created, or has already been destroyed.
     size = 0;
     return;
   }
