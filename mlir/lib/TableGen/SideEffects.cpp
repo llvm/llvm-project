@@ -29,8 +29,7 @@ StringRef SideEffect::getInterfaceTrait() const {
 }
 
 StringRef SideEffect::getResource() const {
-  auto value = def->getValueAsString("resource");
-  return value.empty() ? "::mlir::SideEffects::DefaultResource" : value;
+  return def->getValueAsString("resource");
 }
 
 bool SideEffect::classof(const Operator::VariableDecorator *var) {
