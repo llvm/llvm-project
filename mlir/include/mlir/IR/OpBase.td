@@ -719,7 +719,6 @@ def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
     SignlessIntegerLike.predicate, FloatLike.predicate]>,
     "signless-integer-like or floating-point-like">;
 
-
 //===----------------------------------------------------------------------===//
 // Attribute definitions
 //===----------------------------------------------------------------------===//
