@@ -13,8 +13,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 
-#include <grpcpp/grpcpp.h>
-#include <grpcpp/health_check_service_interface.h>
+#include <grpc++/grpc++.h>
+#include <grpc++/health_check_service_interface.h>
 
 #include "Index.grpc.pb.h"
 
