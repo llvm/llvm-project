@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <grpcpp/grpcpp.h>
+#include <grpc++/grpc++.h>
 
 #include "Client.h"
 #include "Index.grpc.pb.h"
