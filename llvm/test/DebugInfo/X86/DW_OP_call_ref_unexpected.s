@@ -7,7 +7,7 @@
 
 # CHECK: .debug_loc contents:
 # CHECK-NEXT: 0x00000000:
-# CHECK-NEXT:   (0x0000000000000000, 0x0000000000000015): <decoding error> 9a ff 00 00 00
+# CHECK-NEXT:   (0x0000000000000000, 0x0000000000000015): <decoding error>
 
     .section .debug_loc, "", @progbits
     .quad 0                         # Beginning address offset
