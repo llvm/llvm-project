@@ -957,6 +957,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DataSections = Args.hasArg(OPT_fdata_sections);
   Opts.StackSizeSection = Args.hasArg(OPT_fstack_size_section);
   Opts.UniqueSectionNames = !Args.hasArg(OPT_fno_unique_section_names);
+  Opts.UniqueInternalLinkageNames =
+      Args.hasArg(OPT_funique_internal_linkage_names);
 
   Opts.MergeFunctions = Args.hasArg(OPT_fmerge_functions);
 

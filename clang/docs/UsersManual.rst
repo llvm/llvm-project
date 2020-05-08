@@ -1677,6 +1677,27 @@ are listed below.
    on ELF targets when using the integrated assembler. This flag currently
    only has an effect on ELF targets.
 
+**-f[no]-unique-internal-linkage-names**
+
+   Controls whether Clang emits a unique (best-effort) symbol name for internal
+   linkage symbols.  When this option is set, compiler hashes the main source
+   file path from the command line and appends it to all internal symbols. If a
+   program contains multiple objects compiled with the same command-line source
+   file path, the symbols are not guaranteed to be unique.  This option is
+   particularly useful in attributing profile information to the correct
+   function when multiple functions with the same private linkage name exist
+   in the binary.
+
+   It should be noted that this option cannot guarantee uniqueness and the
+   following is an example where it is not unique when two modules contain
+   symbols with the same private linkage name:
+
+   .. code-block:: console
+
+     $ cd $P/foo && clang -c -funique-internal-linkage-names name_conflict.c
+     $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
+     $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
+
 Profile Guided Optimization
 ---------------------------
 

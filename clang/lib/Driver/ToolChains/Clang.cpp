@@ -4253,6 +4253,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_fno_function_sections,
         options::OPT_fdata_sections,
         options::OPT_fno_data_sections,
+        options::OPT_funique_internal_linkage_names,
+        options::OPT_fno_unique_internal_linkage_names,
         options::OPT_funique_section_names,
         options::OPT_fno_unique_section_names,
         options::OPT_mrestrict_it,
@@ -4871,6 +4873,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_funique_section_names,
                     options::OPT_fno_unique_section_names, true))
     CmdArgs.push_back("-fno-unique-section-names");
+
+  if (Args.hasFlag(options::OPT_funique_internal_linkage_names,
+                   options::OPT_fno_unique_internal_linkage_names, false))
+    CmdArgs.push_back("-funique-internal-linkage-names");
 
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
