@@ -6,7 +6,7 @@ import os
 import unittest2
 
 
-class TestSwiftAppleInternalSDK(lldbtest.TestBase):
+class TestSwiftXcodeSDK(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
