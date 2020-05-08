@@ -545,10 +545,6 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
     // TODO: this error is untested.
     return createError("invalid empty dynamic section");
 
-  if (DynSecSize % sizeof(Elf_Dyn) != 0)
-    // TODO: this error is untested.
-    return createError("malformed dynamic section");
-
   if (Dyn.back().d_tag != ELF::DT_NULL)
     // TODO: this error is untested.
     return createError("dynamic sections must be DT_NULL terminated");
