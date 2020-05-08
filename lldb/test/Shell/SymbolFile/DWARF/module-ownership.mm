@@ -1,4 +1,4 @@
-// RUN: %clang --target=x86_64-apple-macosx -g -gmodules \
+// RUN: %clang --target=x86_64-apple-macosx -g -gmodules -Wno-objc-root-class \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
 // RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck --check-prefix CHECK-ANON-S1 %s
@@ -25,8 +25,8 @@ Struct s2;
 // CHECK-ANON-S1: CXXRecordDecl {{.*}} imported in A struct
 
 StructB s3;
-// CHECK-ANON-S2: CXXRecordDecl {{.*}} imported in A.B struct
-// CHECK-ANON-S2: -FieldDecl {{.*}} in A.B b 'int'
+// CHECK-ANON-S2: CXXRecordDecl {{.*}} imported in A.B {{.*}} struct
+// CHECK-ANON-S2: -FieldDecl {{.*}} in A.B anon_field_b 'int'
 
 Nested s4;
 // CHECK-DAG: CXXRecordDecl {{.*}} imported in A struct Nested

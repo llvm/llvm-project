@@ -1514,25 +1514,31 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
-/// Matches UIToFP.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::UIToFP>(Op);
 }
 
-/// Matches SIToFP.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::SIToFP>(Op);
 }
 
-/// Matches FPTrunc
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::FPToUI>(Op);
+}
+
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::FPToSI>(Op);
+}
+
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::FPTrunc> m_FPTrunc(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::FPTrunc>(Op);
 }
 
-/// Matches FPExt
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::FPExt>(Op);

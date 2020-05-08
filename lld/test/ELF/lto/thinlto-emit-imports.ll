@@ -43,10 +43,10 @@
 ; RUN: not ls %t2.o.imports
 ; RUN: not ls %t3.o.imports
 
-; Check that imports files are generated also when -thinlto-index-only
+; Check that imports files are generated also when --thinlto-index-only
 ; is specified without --plugin-opt=.
 ; RUN: rm -f %t1.o.imports
-; RUN: ld.lld -thinlto-index-only -thinlto-emit-imports-files -shared %t1.o %t2.o %t3.o -o %t4
+; RUN: ld.lld --thinlto-index-only --thinlto-emit-imports-files -shared %t1.o %t2.o %t3.o -o %t4
 ; RUN: count 1 < %t1.o.imports
 ; RUN: FileCheck %s --check-prefix=IMPORTS1 < %t1.o.imports
 
