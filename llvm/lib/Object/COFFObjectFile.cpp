@@ -147,11 +147,7 @@ void COFFObjectFile::moveSymbolNext(DataRefImpl &Ref) const {
 }
 
 Expected<StringRef> COFFObjectFile::getSymbolName(DataRefImpl Ref) const {
-  COFFSymbolRef Symb = getCOFFSymbol(Ref);
-  StringRef Result;
-  if (std::error_code EC = getSymbolName(Symb, Result))
-    return errorCodeToError(EC);
-  return Result;
+  return getSymbolName(getCOFFSymbol(Ref));
 }
 
 uint64_t COFFObjectFile::getSymbolValueImpl(DataRefImpl Ref) const {
@@ -174,10 +170,10 @@ Expected<uint64_t> COFFObjectFile::getSymbolAddress(DataRefImpl Ref) const {
       COFF::isReservedSectionNumber(SectionNumber))
     return Result;
 
-  const coff_section *Section = nullptr;
-  if (std::error_code EC = getSection(SectionNumber, Section))
-    return errorCodeToError(EC);
-  Result += Section->VirtualAddress;
+  Expected<const coff_section *> Section = getSection(SectionNumber);
+  if (!Section)
+    return Section.takeError();
+  Result += (*Section)->VirtualAddress;
 
   // The section VirtualAddress does not include ImageBase, and we want to
   // return virtual addresses.
@@ -250,11 +246,11 @@ COFFObjectFile::getSymbolSection(DataRefImpl Ref) const {
   COFFSymbolRef Symb = getCOFFSymbol(Ref);
   if (COFF::isReservedSectionNumber(Symb.getSectionNumber()))
     return section_end();
-  const coff_section *Sec = nullptr;
-  if (std::error_code EC = getSection(Symb.getSectionNumber(), Sec))
-    return errorCodeToError(EC);
+  Expected<const coff_section *> Sec = getSection(Symb.getSectionNumber());
+  if (!Sec)
+    return Sec.takeError();
   DataRefImpl Ret;
-  Ret.p = reinterpret_cast<uintptr_t>(Sec);
+  Ret.p = reinterpret_cast<uintptr_t>(*Sec);
   return section_iterator(SectionRef(Ret, this));
 }
 
@@ -961,67 +957,43 @@ COFFObjectFile::getDataDirectory(uint32_t Index,
   return std::error_code();
 }
 
-std::error_code COFFObjectFile::getSection(int32_t Index,
-                                           const coff_section *&Result) const {
-  Result = nullptr;
+Expected<const coff_section *> COFFObjectFile::getSection(int32_t Index) const {
+  // Perhaps getting the section of a reserved section index should be an error,
+  // but callers rely on this to return null.
   if (COFF::isReservedSectionNumber(Index))
-    return std::error_code();
+    return (const coff_section *)nullptr;
   if (static_cast<uint32_t>(Index) <= getNumberOfSections()) {
     // We already verified the section table data, so no need to check again.
-    Result = SectionTable + (Index - 1);
-    return std::error_code();
+    return SectionTable + (Index - 1);
   }
-  return object_error::parse_failed;
+  return errorCodeToError(object_error::parse_failed);
 }
 
-std::error_code COFFObjectFile::getSection(StringRef SectionName,
-                                           const coff_section *&Result) const {
-  Result = nullptr;
-  for (const SectionRef &Section : sections()) {
-    auto NameOrErr = Section.getName();
-    if (!NameOrErr)
-      return errorToErrorCode(NameOrErr.takeError());
-
-    if (*NameOrErr == SectionName) {
-      Result = getCOFFSection(Section);
-      return std::error_code();
-    }
-  }
-  return object_error::parse_failed;
-}
-
-std::error_code COFFObjectFile::getString(uint32_t Offset,
-                                          StringRef &Result) const {
+Expected<StringRef> COFFObjectFile::getString(uint32_t Offset) const {
   if (StringTableSize <= 4)
     // Tried to get a string from an empty string table.
-    return object_error::parse_failed;
+    return errorCodeToError(object_error::parse_failed);
   if (Offset >= StringTableSize)
-    return object_error::unexpected_eof;
-  Result = StringRef(StringTable + Offset);
-  return std::error_code();
+    return errorCodeToError(object_error::unexpected_eof);
+  return StringRef(StringTable + Offset);
 }
 
-std::error_code COFFObjectFile::getSymbolName(COFFSymbolRef Symbol,
-                                              StringRef &Res) const {
-  return getSymbolName(Symbol.getGeneric(), Res);
+Expected<StringRef> COFFObjectFile::getSymbolName(COFFSymbolRef Symbol) const {
+  return getSymbolName(Symbol.getGeneric());
 }
 
-std::error_code COFFObjectFile::getSymbolName(const coff_symbol_generic *Symbol,
-                                              StringRef &Res) const {
+Expected<StringRef>
+COFFObjectFile::getSymbolName(const coff_symbol_generic *Symbol) const {
   // Check for string table entry. First 4 bytes are 0.
-  if (Symbol->Name.Offset.Zeroes == 0) {
-    if (std::error_code EC = getString(Symbol->Name.Offset.Offset, Res))
-      return EC;
-    return std::error_code();
-  }
+  if (Symbol->Name.Offset.Zeroes == 0)
+    return getString(Symbol->Name.Offset.Offset);
 
+  // Null terminated, let ::strlen figure out the length.
   if (Symbol->Name.ShortName[COFF::NameSize - 1] == 0)
-    // Null terminated, let ::strlen figure out the length.
-    Res = StringRef(Symbol->Name.ShortName);
-  else
-    // Not null terminated, use all 8 bytes.
-    Res = StringRef(Symbol->Name.ShortName, COFF::NameSize);
-  return std::error_code();
+    return StringRef(Symbol->Name.ShortName);
+
+  // Not null terminated, use all 8 bytes.
+  return StringRef(Symbol->Name.ShortName, COFF::NameSize);
 }
 
 ArrayRef<uint8_t>
@@ -1079,8 +1051,7 @@ COFFObjectFile::getSectionName(const coff_section *Sec) const {
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     }
-    if (std::error_code EC = getString(Offset, Name))
-      return errorCodeToError(EC);
+    return getString(Offset);
   }
 
   return Name;
@@ -1829,15 +1800,16 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
     Expected<COFFSymbolRef> Sym = Obj->getSymbol(R.SymbolTableIndex);
     if (!Sym)
       return Sym.takeError();
-    const coff_section *Section = nullptr;
     // And the symbol's section
-    if (std::error_code EC = Obj->getSection(Sym->getSectionNumber(), Section))
-      return errorCodeToError(EC);
+    Expected<const coff_section *> Section =
+        Obj->getSection(Sym->getSectionNumber());
+    if (!Section)
+      return Section.takeError();
     // Add the initial value of DataRVA to the symbol's offset to find the
     // data it points at.
     uint64_t Offset = Entry.DataRVA + Sym->getValue();
     ArrayRef<uint8_t> Contents;
-    if (Error E = Obj->getSectionContents(Section, Contents))
+    if (Error E = Obj->getSectionContents(*Section, Contents))
       return std::move(E);
     if (Offset + Entry.DataSize > Contents.size())
       return createStringError(object_error::parse_failed,

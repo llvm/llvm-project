@@ -787,7 +787,7 @@ private:
   // Either coff_load_configuration32 or coff_load_configuration64.
   const void *LoadConfig = nullptr;
 
-  std::error_code getString(uint32_t offset, StringRef &Res) const;
+  Expected<StringRef> getString(uint32_t offset) const;
 
   template <typename coff_symbol_type>
   const coff_symbol_type *toSymb(DataRefImpl Symb) const;
@@ -985,32 +985,15 @@ public:
 
   std::error_code getDataDirectory(uint32_t index,
                                    const data_directory *&Res) const;
-  std::error_code getSection(int32_t index, const coff_section *&Res) const;
-  std::error_code getSection(StringRef SectionName,
-                             const coff_section *&Res) const;
+  Expected<const coff_section *> getSection(int32_t index) const;
 
-  template <typename coff_symbol_type>
-  std::error_code getSymbol(uint32_t Index,
-                            const coff_symbol_type *&Res) const {
-    if (Index >= getNumberOfSymbols())
-      return object_error::parse_failed;
-
-    Res = reinterpret_cast<coff_symbol_type *>(getSymbolTable()) + Index;
-    return std::error_code();
-  }
   Expected<COFFSymbolRef> getSymbol(uint32_t index) const {
-    if (SymbolTable16) {
-      const coff_symbol16 *Symb = nullptr;
-      if (std::error_code EC = getSymbol(index, Symb))
-        return errorCodeToError(EC);
-      return COFFSymbolRef(Symb);
-    }
-    if (SymbolTable32) {
-      const coff_symbol32 *Symb = nullptr;
-      if (std::error_code EC = getSymbol(index, Symb))
-        return errorCodeToError(EC);
-      return COFFSymbolRef(Symb);
-    }
+    if (index >= getNumberOfSymbols())
+      return errorCodeToError(object_error::parse_failed);
+    if (SymbolTable16)
+      return COFFSymbolRef(SymbolTable16 + index);
+    if (SymbolTable32)
+      return COFFSymbolRef(SymbolTable32 + index);
     return errorCodeToError(object_error::parse_failed);
   }
 
@@ -1023,9 +1006,8 @@ public:
     return std::error_code();
   }
 
-  std::error_code getSymbolName(COFFSymbolRef Symbol, StringRef &Res) const;
-  std::error_code getSymbolName(const coff_symbol_generic *Symbol,
-                                StringRef &Res) const;
+  Expected<StringRef> getSymbolName(COFFSymbolRef Symbol) const;
+  Expected<StringRef> getSymbolName(const coff_symbol_generic *Symbol) const;
 
   ArrayRef<uint8_t> getSymbolAuxData(COFFSymbolRef Symbol) const;
 
