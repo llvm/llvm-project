@@ -32,11 +32,15 @@ static bool error_escape_thrown(const char *pat)
 int main(int, char**)
 {
     assert(error_escape_thrown("[\\a]"));
+    assert(error_escape_thrown("\\a"));
     assert(error_escape_thrown("\\"));
 
     assert(error_escape_thrown("[\\e]"));
+    assert(error_escape_thrown("\\e"));
 
     assert(error_escape_thrown("[\\c:]"));
+    assert(error_escape_thrown("\\c:"));
+    assert(error_escape_thrown("\\c"));
     assert(!error_escape_thrown("[\\cA]"));
     assert(!error_escape_thrown("\\cA"));
 
