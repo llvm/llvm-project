@@ -169,8 +169,7 @@ void LazyObjFile::parse() {
     if (coffSym.isUndefined() || !coffSym.isExternal() ||
         coffSym.isWeakExternal())
       continue;
-    StringRef name;
-    coffObj->getSymbolName(coffSym, name);
+    StringRef name = check(coffObj->getSymbolName(coffSym));
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab->addLazyObject(this, name);
@@ -196,11 +195,11 @@ void ObjFile::parse() {
   initializeDependencies();
 }
 
-const coff_section* ObjFile::getSection(uint32_t i) {
-  const coff_section *sec;
-  if (auto ec = coffObj->getSection(i, sec))
-    fatal("getSection failed: #" + Twine(i) + ": " + ec.message());
-  return sec;
+const coff_section *ObjFile::getSection(uint32_t i) {
+  auto sec = coffObj->getSection(i);
+  if (!sec)
+    fatal("getSection failed: #" + Twine(i) + ": " + toString(sec.takeError()));
+  return *sec;
 }
 
 // We set SectionChunk pointers in the SparseChunks vector to this value
@@ -308,9 +307,9 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef sym,
   int32_t sectionNumber = sym.getSectionNumber();
 
   auto diag = [&]() {
-    StringRef name, parentName;
-    coffObj->getSymbolName(sym, name);
+    StringRef name = check(coffObj->getSymbolName(sym));
 
+    StringRef parentName;
     const coff_section *parentSec = getSection(parentIndex);
     if (Expected<StringRef> e = coffObj->getSectionName(parentSec))
       parentName = *e;
@@ -351,7 +350,7 @@ void ObjFile::recordPrevailingSymbolForMingw(
   SectionChunk *sc = sparseChunks[sectionNumber];
   if (sc && sc->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE) {
     StringRef name;
-    coffObj->getSymbolName(sym, name);
+    name = check(coffObj->getSymbolName(sym));
     if (getMachineType() == I386)
       name.consume_front("_");
     prevailingSectionMap[name] = sectionNumber;
@@ -361,8 +360,7 @@ void ObjFile::recordPrevailingSymbolForMingw(
 void ObjFile::maybeAssociateSEHForMingw(
     COFFSymbolRef sym, const coff_aux_section_definition *def,
     const DenseMap<StringRef, uint32_t> &prevailingSectionMap) {
-  StringRef name;
-  coffObj->getSymbolName(sym, name);
+  StringRef name = check(coffObj->getSymbolName(sym));
   if (name.consume_front(".pdata$") || name.consume_front(".xdata$") ||
       name.consume_front(".eh_frame$")) {
     // For MinGW, treat .[px]data$<func> and .eh_frame$<func> as implicitly
@@ -376,8 +374,7 @@ void ObjFile::maybeAssociateSEHForMingw(
 Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
   SectionChunk *sc = sparseChunks[sym.getSectionNumber()];
   if (sym.isExternal()) {
-    StringRef name;
-    coffObj->getSymbolName(sym, name);
+    StringRef name = check(coffObj->getSymbolName(sym));
     if (sc)
       return symtab->addRegular(this, name, sym.getGeneric(), sc,
                                 sym.getValue());
@@ -445,8 +442,7 @@ void ObjFile::initializeSymbols() {
         maybeAssociateSEHForMingw(sym, def, prevailingSectionMap);
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
-      StringRef name;
-      coffObj->getSymbolName(sym, name);
+      StringRef name = check(coffObj->getSymbolName(sym));
       log("comdat section " + name +
           " without leader and unassociated, discarding");
       continue;
@@ -462,8 +458,7 @@ void ObjFile::initializeSymbols() {
 }
 
 Symbol *ObjFile::createUndefined(COFFSymbolRef sym) {
-  StringRef name;
-  coffObj->getSymbolName(sym, name);
+  StringRef name = check(coffObj->getSymbolName(sym));
   return symtab->addUndefined(name, this, sym.isWeakExternal());
 }
 
@@ -559,8 +554,7 @@ void ObjFile::handleComdatSelection(COFFSymbolRef sym, COMDATType &selection,
   case IMAGE_COMDAT_SELECT_LARGEST:
     if (leaderChunk->getSize() < getSection(sym)->SizeOfRawData) {
       // Replace the existing comdat symbol with the new one.
-      StringRef name;
-      coffObj->getSymbolName(sym, name);
+      StringRef name = check(coffObj->getSymbolName(sym));
       // FIXME: This is incorrect: With /opt:noref, the previous sections
       // make it into the final executable as well. Correct handling would
       // be to undo reading of the whole old section that's being replaced,
@@ -584,11 +578,7 @@ Optional<Symbol *> ObjFile::createDefined(
     std::vector<const coff_aux_section_definition *> &comdatDefs,
     bool &prevailing) {
   prevailing = false;
-  auto getName = [&]() {
-    StringRef s;
-    coffObj->getSymbolName(sym, s);
-    return s;
-  };
+  auto getName = [&]() { return check(coffObj->getSymbolName(sym)); };
 
   if (sym.isCommon()) {
     auto *c = make<CommonChunk>(sym);
