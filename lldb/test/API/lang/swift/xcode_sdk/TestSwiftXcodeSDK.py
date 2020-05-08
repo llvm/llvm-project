@@ -14,16 +14,13 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
     @swiftTest
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
-    def test(self):
-        """Test that we can detect an Xcode SDK from the DW_AT_APPLE_sdk attribute."""
+    def test_decode(self):
+        """Test that we can detect an Xcode SDK from the DW_AT_LLVM_sdk attribute."""
         self.build()
         log = self.getBuildArtifact("types.log")
-        command_result = lldb.SBCommandReturnObject()
-        interpreter = self.dbg.GetCommandInterpreter()
-        interpreter.HandleCommand("log enable lldb types -f "+log, command_result)
+        self.expect("log enable lldb types -f " + log)
 
-        target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(
-            self, 'main')
+        lldbutil.run_to_name_breakpoint(self, 'main')
 
         self.expect("p 1")
         logfile = open(log, "r")
@@ -33,6 +30,35 @@ class TestSwiftXcodeSDK(lldbtest.TestBase):
             if line.startswith(" SwiftASTContextForExpressions::LogConfiguration"):
                 in_expr_log += 1
             if in_expr_log and "SDK path" in line and ".sdk" in line:
+                found += 1
+        self.assertEqual(in_expr_log, 1)
+        self.assertEqual(found, 1)
+
+    @swiftTest
+    @skipUnlessDarwin
+    @skipIfDarwinEmbedded
+    def test_override(self):
+        """Test that we can override the Xcode SDK using the target setting."""
+        self.build()
+        log = self.getBuildArtifact("types.log")
+        self.expect("log enable lldb types -f " + log)
+        ios_sdk = subprocess.check_output(
+            ['xcrun', '--show-sdk-path', '--sdk', 'iphonesimulator']
+            ).decode("utf-8").strip()
+        self.assertGreater(len(ios_sdk), len('iphonesimulator'),
+                           "couldn't find an iOS SDK")
+        self.expect("settings set target.sdk-path " + str(ios_sdk))
+
+        lldbutil.run_to_name_breakpoint(self, 'main')
+
+        self.expect("p 1")
+        logfile = open(log, "r")
+        in_expr_log = 0
+        found = 0
+        for line in logfile:
+            if line.startswith(" SwiftASTContextForExpressions::LogConfiguration"):
+                in_expr_log += 1
+            if in_expr_log and "SDK path" in line and ios_sdk in line:
                 found += 1
         self.assertEqual(in_expr_log, 1)
         self.assertEqual(found, 1)
