@@ -663,18 +663,29 @@ std::error_code COFFObjectFile::initLoadConfigPtr() {
   return std::error_code();
 }
 
-COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
+Expected<std::unique_ptr<COFFObjectFile>>
+COFFObjectFile::create(MemoryBufferRef Object) {
+  std::unique_ptr<COFFObjectFile> Obj(new COFFObjectFile(std::move(Object)));
+  if (Error E = Obj->initialize())
+    return std::move(E);
+  return std::move(Obj);
+}
+
+COFFObjectFile::COFFObjectFile(MemoryBufferRef Object)
     : ObjectFile(Binary::ID_COFF, Object), COFFHeader(nullptr),
       COFFBigObjHeader(nullptr), PE32Header(nullptr), PE32PlusHeader(nullptr),
       DataDirectory(nullptr), SectionTable(nullptr), SymbolTable16(nullptr),
       SymbolTable32(nullptr), StringTable(nullptr), StringTableSize(0),
-      ImportDirectory(nullptr),
-      DelayImportDirectory(nullptr), NumberOfDelayImportDirectory(0),
-      ExportDirectory(nullptr), BaseRelocHeader(nullptr), BaseRelocEnd(nullptr),
-      DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr) {
+      ImportDirectory(nullptr), DelayImportDirectory(nullptr),
+      NumberOfDelayImportDirectory(0), ExportDirectory(nullptr),
+      BaseRelocHeader(nullptr), BaseRelocEnd(nullptr),
+      DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr) {}
+
+Error COFFObjectFile::initialize() {
   // Check that we at least have enough room for a header.
+  std::error_code EC;
   if (!checkSize(Data, EC, sizeof(coff_file_header)))
-    return;
+    return errorCodeToError(EC);
 
   // The current location in the file where we are looking at.
   uint64_t CurPtr = 0;
@@ -692,8 +703,7 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
       CurPtr = DH->AddressOfNewExeHeader;
       // Check the PE magic bytes. ("PE\0\0")
       if (memcmp(base() + CurPtr, COFF::PEMagic, sizeof(COFF::PEMagic)) != 0) {
-        EC = object_error::parse_failed;
-        return;
+        return errorCodeToError(object_error::parse_failed);
       }
       CurPtr += sizeof(COFF::PEMagic); // Skip the PE magic bytes.
       HasPEHeader = true;
@@ -701,7 +711,7 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
   }
 
   if ((EC = getObject(COFFHeader, Data, base() + CurPtr)))
-    return;
+    return errorCodeToError(EC);
 
   // It might be a bigobj file, let's check.  Note that COFF bigobj and COFF
   // import libraries share a common prefix but bigobj is more restrictive.
@@ -709,7 +719,7 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
       COFFHeader->NumberOfSections == uint16_t(0xffff) &&
       checkSize(Data, EC, sizeof(coff_bigobj_file_header))) {
     if ((EC = getObject(COFFBigObjHeader, Data, base() + CurPtr)))
-      return;
+      return errorCodeToError(EC);
 
     // Verify that we are dealing with bigobj.
     if (COFFBigObjHeader->Version >= COFF::BigObjHeader::MinBigObjectVersion &&
@@ -729,13 +739,13 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
     CurPtr += sizeof(coff_file_header);
 
     if (COFFHeader->isImportLibrary())
-      return;
+      return errorCodeToError(EC);
   }
 
   if (HasPEHeader) {
     const pe32_header *Header;
     if ((EC = getObject(Header, Data, base() + CurPtr)))
-      return;
+      return errorCodeToError(EC);
 
     const uint8_t *DataDirAddr;
     uint64_t DataDirSize;
@@ -749,11 +759,10 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
       DataDirSize = sizeof(data_directory) * PE32PlusHeader->NumberOfRvaAndSize;
     } else {
       // It's neither PE32 nor PE32+.
-      EC = object_error::parse_failed;
-      return;
+      return errorCodeToError(object_error::parse_failed);
     }
     if ((EC = getObject(DataDirectory, Data, DataDirAddr, DataDirSize)))
-      return;
+      return errorCodeToError(EC);
   }
 
   if (COFFHeader)
@@ -761,7 +770,7 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
 
   if ((EC = getObject(SectionTable, Data, base() + CurPtr,
                       (uint64_t)getNumberOfSections() * sizeof(coff_section))))
-    return;
+    return errorCodeToError(EC);
 
   // Initialize the pointer to the symbol table.
   if (getPointerToSymbolTable() != 0) {
@@ -774,33 +783,32 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
   } else {
     // We had better not have any symbols if we don't have a symbol table.
     if (getNumberOfSymbols() != 0) {
-      EC = object_error::parse_failed;
-      return;
+      return errorCodeToError(object_error::parse_failed);
     }
   }
 
   // Initialize the pointer to the beginning of the import table.
   if ((EC = initImportTablePtr()))
-    return;
+    return errorCodeToError(EC);
   if ((EC = initDelayImportTablePtr()))
-    return;
+    return errorCodeToError(EC);
 
   // Initialize the pointer to the export table.
   if ((EC = initExportTablePtr()))
-    return;
+    return errorCodeToError(EC);
 
   // Initialize the pointer to the base relocation table.
   if ((EC = initBaseRelocPtr()))
-    return;
+    return errorCodeToError(EC);
 
   // Initialize the pointer to the export table.
   if ((EC = initDebugDirectoryPtr()))
-    return;
+    return errorCodeToError(EC);
 
   if ((EC = initLoadConfigPtr()))
-    return;
+    return errorCodeToError(EC);
 
-  EC = std::error_code();
+  return Error::success();
 }
 
 basic_symbol_iterator COFFObjectFile::symbol_begin() const {
@@ -1598,11 +1606,7 @@ std::error_code ImportedSymbolRef::getOrdinal(uint16_t &Result) const {
 
 Expected<std::unique_ptr<COFFObjectFile>>
 ObjectFile::createCOFFObjectFile(MemoryBufferRef Object) {
-  std::error_code EC;
-  std::unique_ptr<COFFObjectFile> Ret(new COFFObjectFile(Object, EC));
-  if (EC)
-    return errorCodeToError(EC);
-  return std::move(Ret);
+  return COFFObjectFile::create(Object);
 }
 
 bool BaseRelocRef::operator==(const BaseRelocRef &Other) const {

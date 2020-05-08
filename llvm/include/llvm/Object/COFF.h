@@ -764,6 +764,8 @@ struct debug_h_header {
 
 class COFFObjectFile : public ObjectFile {
 private:
+  COFFObjectFile(MemoryBufferRef Object);
+
   friend class ImportDirectoryEntryRef;
   friend class ExportDirectoryEntryRef;
   const coff_file_header *COFFHeader;
@@ -794,6 +796,9 @@ private:
   const coff_section *toSec(DataRefImpl Sec) const;
   const coff_relocation *toRel(DataRefImpl Rel) const;
 
+  // Finish initializing the object and return success or an error.
+  Error initialize();
+
   std::error_code initSymbolTablePtr();
   std::error_code initImportTablePtr();
   std::error_code initDelayImportTablePtr();
@@ -803,6 +808,9 @@ private:
   std::error_code initLoadConfigPtr();
 
 public:
+  static Expected<std::unique_ptr<COFFObjectFile>>
+  create(MemoryBufferRef Object);
+
   uintptr_t getSymbolTable() const {
     if (SymbolTable16)
       return reinterpret_cast<uintptr_t>(SymbolTable16);
@@ -926,8 +934,6 @@ protected:
                              SmallVectorImpl<char> &Result) const override;
 
 public:
-  COFFObjectFile(MemoryBufferRef Object, std::error_code &EC);
-
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
   section_iterator section_begin() const override;
