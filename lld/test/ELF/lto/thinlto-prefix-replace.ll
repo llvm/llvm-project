@@ -11,7 +11,7 @@
 
 ; Check that this also works without the --plugin-opt= prefix.
 ; RUN: rm -f %t/newpath/thinlto_prefix_replace.o.thinlto.bc
-; RUN: ld.lld -thinlto-index-only -thinlto-prefix-replace="%t/oldpath/;%t/newpath/" -shared %t/oldpath/thinlto_prefix_replace.o -o %t/thinlto_prefix_replace
+; RUN: ld.lld --thinlto-index-only --thinlto-prefix-replace="%t/oldpath/;%t/newpath/" -shared %t/oldpath/thinlto_prefix_replace.o -o %t/thinlto_prefix_replace
 ; RUN: ls %t/newpath/thinlto_prefix_replace.o.thinlto.bc
 
 ; Ensure that lld generates error if prefix replace option does not have 'old;new' format
