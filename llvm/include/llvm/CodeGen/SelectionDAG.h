@@ -662,18 +662,19 @@ public:
   SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
-  SDValue getConstantPool(const Constant *C, EVT VT, unsigned Align = 0,
+  SDValue getConstantPool(const Constant *C, EVT VT, MaybeAlign Align = None,
                           int Offs = 0, bool isT = false,
                           unsigned TargetFlags = 0);
-  SDValue getTargetConstantPool(const Constant *C, EVT VT, unsigned Align = 0,
-                                int Offset = 0, unsigned TargetFlags = 0) {
+  SDValue getTargetConstantPool(const Constant *C, EVT VT,
+                                MaybeAlign Align = None, int Offset = 0,
+                                unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
   SDValue getConstantPool(MachineConstantPoolValue *C, EVT VT,
-                          unsigned Align = 0, int Offs = 0, bool isT=false,
-                          unsigned TargetFlags = 0);
+                          MaybeAlign Align = None, int Offs = 0,
+                          bool isT = false, unsigned TargetFlags = 0);
   SDValue getTargetConstantPool(MachineConstantPoolValue *C, EVT VT,
-                                unsigned Align = 0, int Offset = 0,
+                                MaybeAlign Align = None, int Offset = 0,
                                 unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }

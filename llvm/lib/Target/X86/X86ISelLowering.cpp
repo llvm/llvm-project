@@ -18533,7 +18533,7 @@ X86TargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetConstantPool(
-      CP->getConstVal(), PtrVT, CP->getAlignment(), CP->getOffset(), OpFlag);
+      CP->getConstVal(), PtrVT, CP->getAlign(), CP->getOffset(), OpFlag);
   SDLoc DL(CP);
   Result = DAG.getNode(getGlobalWrapperKind(), DL, PtrVT, Result);
   // With PIC, the address is actually $g + Offset.
@@ -19471,7 +19471,7 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
   static const uint32_t CV0[] = { 0x43300000, 0x45300000, 0, 0 };
   Constant *C0 = ConstantDataVector::get(*Context, CV0);
   auto PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
-  SDValue CPIdx0 = DAG.getConstantPool(C0, PtrVT, 16);
+  SDValue CPIdx0 = DAG.getConstantPool(C0, PtrVT, Align(16));
 
   SmallVector<Constant*,2> CV1;
   CV1.push_back(
@@ -19481,7 +19481,7 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
     ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble(),
                                       APInt(64, 0x4530000000000000ULL))));
   Constant *C1 = ConstantVector::get(CV1);
-  SDValue CPIdx1 = DAG.getConstantPool(C1, PtrVT, 16);
+  SDValue CPIdx1 = DAG.getConstantPool(C1, PtrVT, Align(16));
 
   // Load the 64-bit value into an XMM register.
   SDValue XR1 =
@@ -19686,7 +19686,7 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
         *DAG.getContext(),
         APFloat(APFloat::IEEEdouble(), APInt(64, 0x4330000000000000ULL)));
     auto PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
-    SDValue CPIdx = DAG.getConstantPool(Bias, PtrVT, /*Alignment*/ 8);
+    SDValue CPIdx = DAG.getConstantPool(Bias, PtrVT, Align(8));
     SDVTList Tys = DAG.getVTList(MVT::v4f64, MVT::Other);
     SDValue Ops[] = {DAG.getEntryNode(), CPIdx};
     SDValue VBias = DAG.getMemIntrinsicNode(
