@@ -259,6 +259,50 @@ define float @test18(half %x, half %y) nounwind  {
   ret float %t56
 }
 
+define double @ItoFtoF_s25_f32_f64(i25 %i) {
+; CHECK-LABEL: @ItoFtoF_s25_f32_f64(
+; CHECK-NEXT:    [[X:%.*]] = sitofp i25 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x = sitofp i25 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+define fp128 @ItoFtoF_u24_f32_f128(i24 %i) {
+; CHECK-LABEL: @ItoFtoF_u24_f32_f128(
+; CHECK-NEXT:    [[X:%.*]] = uitofp i24 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to fp128
+; CHECK-NEXT:    ret fp128 [[R]]
+;
+  %x = uitofp i24 %i to float
+  %r = fpext float %x to fp128
+  ret fp128 %r
+}
+
+define double @ItoFtoF_s26_f32_f64(i26 %i) {
+; CHECK-LABEL: @ItoFtoF_s26_f32_f64(
+; CHECK-NEXT:    [[X:%.*]] = sitofp i26 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x = sitofp i26 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
+define double @ItoFtoF_u25_f32_f64(i25 %i) {
+; CHECK-LABEL: @ItoFtoF_u25_f32_f64(
+; CHECK-NEXT:    [[X:%.*]] = uitofp i25 [[I:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x = uitofp i25 %i to float
+  %r = fpext float %x to double
+  ret double %r
+}
+
 define double @FtoItoFtoF_f32_s32_f32_f64(float %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f32_s32_f32_f64(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i32
@@ -322,28 +366,28 @@ define fp128 @FtoItoFtoF_f32_s64_f64_f128(float %f) {
   ret fp128 %r
 }
 
-define x86_fp80 @FtoItoFtoF_f64_u32_f64_f80(double %f) {
-; CHECK-LABEL: @FtoItoFtoF_f64_u32_f64_f80(
-; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i32
-; CHECK-NEXT:    [[X:%.*]] = uitofp i32 [[I]] to double
+define x86_fp80 @FtoItoFtoF_f64_u54_f64_f80(double %f) {
+; CHECK-LABEL: @FtoItoFtoF_f64_u54_f64_f80(
+; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i54
+; CHECK-NEXT:    [[X:%.*]] = uitofp i54 [[I]] to double
 ; CHECK-NEXT:    [[R:%.*]] = fpext double [[X]] to x86_fp80
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
-  %i = fptoui double %f to i32
-  %x = uitofp i32 %i to double
+  %i = fptoui double %f to i54
+  %x = uitofp i54 %i to double
   %r = fpext double %x to x86_fp80
   ret x86_fp80 %r
 }
 
-define ppc_fp128 @FtoItoFtoF_f64_u32_f64_p128(double %f) {
-; CHECK-LABEL: @FtoItoFtoF_f64_u32_f64_p128(
-; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i32
-; CHECK-NEXT:    [[X:%.*]] = uitofp i32 [[I]] to double
+define ppc_fp128 @FtoItoFtoF_f64_u54_f64_p128(double %f) {
+; CHECK-LABEL: @FtoItoFtoF_f64_u54_f64_p128(
+; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i54
+; CHECK-NEXT:    [[X:%.*]] = uitofp i54 [[I]] to double
 ; CHECK-NEXT:    [[R:%.*]] = fpext double [[X]] to ppc_fp128
 ; CHECK-NEXT:    ret ppc_fp128 [[R]]
 ;
-  %i = fptoui double %f to i32
-  %x = uitofp i32 %i to double
+  %i = fptoui double %f to i54
+  %x = uitofp i54 %i to double
   %r = fpext double %x to ppc_fp128
   ret ppc_fp128 %r
 }
