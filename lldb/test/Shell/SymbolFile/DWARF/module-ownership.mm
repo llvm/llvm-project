@@ -1,4 +1,4 @@
-// RUN: %clang --target=x86_64-apple-macosx -g -gmodules \
+// RUN: %clang --target=x86_64-apple-macosx -g -gmodules -Wno-objc-root-class \
 // RUN:    -fmodules -fmodules-cache-path=%t.cache \
 // RUN:    -c -o %t.o %s -I%S/Inputs
 // RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck --check-prefix CHECK-ANON-S1 %s
