@@ -492,6 +492,20 @@ void Operation::moveBefore(Block *block,
                                 getIterator());
 }
 
+/// Unlink this operation from its current block and insert it right after
+/// `existingOp` which may be in the same or another block in the same function.
+void Operation::moveAfter(Operation *existingOp) {
+  moveAfter(existingOp->getBlock(), existingOp->getIterator());
+}
+
+/// Unlink this operation from its current block and insert it right after
+/// `iterator` in the specified block.
+void Operation::moveAfter(Block *block,
+                          llvm::iplist<Operation>::iterator iterator) {
+  assert(iterator != block->end() && "cannot move after end of block");
+  moveBefore(&*std::next(iterator));
+}
+
 /// This drops all operand uses from this operation, which is an essential
 /// step in breaking cyclic dependences between references when they are to
 /// be deleted.
