@@ -155,6 +155,14 @@ public:
 
   StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
 
+  bool doInitialization(Module &M) override {
+    if (M.alias_size() > 0u)
+      report_fatal_error(
+          "module has aliases, which LLVM does not yet support for AIX");
+
+    return PPCAsmPrinter::doInitialization(M);
+  }
+
   void SetupMachineFunction(MachineFunction &MF) override;
 
   void emitGlobalVariable(const GlobalVariable *GV) override;
