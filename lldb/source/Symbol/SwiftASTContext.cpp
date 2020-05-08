@@ -2557,11 +2557,6 @@ void SwiftASTContext::InitializeSearchPathOptions(
   ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
                         triple);
 
-  auto is_simulator = [&]() -> bool {
-    return triple.getEnvironment() == llvm::Triple::Simulator ||
-           !triple.getArchName().startswith("arm");
-  };
-
   if (!set_sdk) {
     XcodeSDK::Info info;
     info.type = XcodeSDK::GetSDKTypeForTriple(triple);
