@@ -112,6 +112,13 @@ public:
   /// Add a usage of a macro if it already has a violation.
   void expandMacro(const Token &MacroNameTok, const MacroInfo *MI);
 
+  void addUsage(const RenamerClangTidyCheck::NamingCheckId &Decl,
+                SourceRange Range, SourceManager *SourceMgr = nullptr);
+
+  /// Convenience method when the usage to be added is a NamedDecl.
+  void addUsage(const NamedDecl *Decl, SourceRange Range,
+                SourceManager *SourceMgr = nullptr);
+
 protected:
   /// Overridden by derived classes, returns information about if and how a Decl
   /// failed the check. A 'None' result means the Decl did not fail the check.
