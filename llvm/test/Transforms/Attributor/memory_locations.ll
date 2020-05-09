@@ -5,6 +5,8 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
+@G = external dso_local global i32, align 4
+
 ; CHECK: Function Attrs: inaccessiblememonly
 declare noalias i8* @malloc(i64) inaccessiblememonly
 
@@ -397,7 +399,6 @@ define void @callerE(i8* %arg) {
   ret void
 }
 
-@G = external dso_local global i32, align 4
 
 ; CHECK: Function Attrs:
 ; CHECK-SAME: writeonly
@@ -600,4 +601,26 @@ define i8 @readnone_caller2(i1 %c) {
 ;
   %r = call i8 @recursive_not_readnone_internal2(i8* undef, i1 %c)
   ret i8 %r
+}
+
+; CHECK: Function Attrs:
+; CHECK-NOT: argmemonly
+define internal void @argmemonly_before_ipconstprop(i32* %p) argmemonly {
+; CHECK-LABEL: define {{[^@]+}}@argmemonly_before_ipconstprop()
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %p
+  ret void
+}
+
+; CHECK: Function Attrs:
+; CHECK-NOT: argmemonly
+define void @argmemonky_caller() {
+; CHECK-LABEL: define {{[^@]+}}@argmemonky_caller()
+; CHECK-NEXT:    call void @argmemonly_before_ipconstprop()
+; CHECK-NEXT:    ret void
+;
+  call void @argmemonly_before_ipconstprop(i32* @G)
+  ret void
 }
