@@ -1768,7 +1768,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     Constant *C2;
 
     // C-(C2-X) --> X+(C-C2)
-    if (match(Op1, m_Sub(m_Constant(C2), m_Value(X))))
+    if (match(Op1, m_Sub(m_Constant(C2), m_Value(X))) && !isa<ConstantExpr>(C2))
       return BinaryOperator::CreateAdd(X, ConstantExpr::getSub(C, C2));
 
     // C-(X+C2) --> (C-C2)-X
