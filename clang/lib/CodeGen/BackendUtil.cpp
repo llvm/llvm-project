@@ -46,6 +46,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
