@@ -13090,6 +13090,12 @@ static SDValue PerformVMOVrhCombine(SDNode *N,
     return Load;
   }
 
+  // Fold VMOVrh(extract(x, n)) -> vgetlaneu(x, n)
+  if (N0->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      isa<ConstantSDNode>(N0->getOperand(1)))
+    return DCI.DAG.getNode(ARMISD::VGETLANEu, SDLoc(N), VT, N0->getOperand(0),
+                           N0->getOperand(1));
+
   return SDValue();
 }
 
@@ -13840,8 +13846,21 @@ static bool CombineVLDDUP(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 /// PerformVDUPLANECombine - Target-specific dag combine xforms for
 /// ARMISD::VDUPLANE.
 static SDValue PerformVDUPLANECombine(SDNode *N,
-                                      TargetLowering::DAGCombinerInfo &DCI) {
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const ARMSubtarget *Subtarget) {
   SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // On MVE, we just convert the VDUPLANE to a VDUP with an extract.
+  if (Subtarget->hasMVEIntegerOps()) {
+    EVT ExtractVT = VT.getVectorElementType();
+    // We need to ensure we are creating a legal type.
+    if (!DCI.DAG.getTargetLoweringInfo().isTypeLegal(ExtractVT))
+      ExtractVT = MVT::i32;
+    SDValue Extract = DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N), ExtractVT,
+                              N->getOperand(0), N->getOperand(1));
+    return DCI.DAG.getNode(ARMISD::VDUP, SDLoc(N), VT, Extract);
+  }
 
   // If the source is a vldN-lane (N > 1) intrinsic, and all the other uses
   // of that intrinsic are also VDUPLANEs, combine them to a vldN-dup operation.
@@ -13862,7 +13881,6 @@ static SDValue PerformVDUPLANECombine(SDNode *N,
   unsigned EltBits;
   if (ARM_AM::decodeVMOVModImm(Imm, EltBits) == 0)
     EltSize = 8;
-  EVT VT = N->getValueType(0);
   if (EltSize > VT.getScalarSizeInBits())
     return SDValue();
 
@@ -15343,7 +15361,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT: return PerformExtractEltCombine(N, DCI);
   case ISD::VECTOR_SHUFFLE: return PerformVECTOR_SHUFFLECombine(N, DCI.DAG);
-  case ARMISD::VDUPLANE: return PerformVDUPLANECombine(N, DCI);
+  case ARMISD::VDUPLANE: return PerformVDUPLANECombine(N, DCI, Subtarget);
   case ARMISD::VDUP: return PerformVDUPCombine(N, DCI, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
