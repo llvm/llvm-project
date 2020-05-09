@@ -120,13 +120,12 @@ static DWARFExpression::Operation::Description getOpDesc(unsigned OpCode) {
 bool DWARFExpression::Operation::extract(DataExtractor Data,
                                          uint8_t AddressSize, uint64_t Offset,
                                          Optional<DwarfFormat> Format) {
+  EndOffset = Offset;
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
-  if (Desc.Version == Operation::DwarfNA) {
-    EndOffset = Offset;
+  if (Desc.Version == Operation::DwarfNA)
     return false;
-  }
 
   for (unsigned Operand = 0; Operand < 2; ++Operand) {
     unsigned Size = Desc.Op[Operand];
@@ -135,7 +134,6 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
     if (Size == Operation::SizeNA)
       break;
 
-    EndOffset = Offset;
     switch (Size & ~Operation::SignBit) {
     case Operation::Size1:
       Operands[Operand] = Data.getU8(&Offset);
