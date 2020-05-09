@@ -2557,16 +2557,22 @@ void SwiftASTContext::InitializeSearchPathOptions(
   ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
                         triple);
 
-  auto is_simulator = [&]() -> bool {
-    return triple.getEnvironment() == llvm::Triple::Simulator ||
-           !triple.getArchName().startswith("arm");
-  };
+  std::string sdk_path;
+  if (TargetSP target_sp = m_target_wp.lock())
+    if (FileSpec &manual_override_sdk = target_sp->GetSDKPath()) {
+      set_sdk = false;
+      sdk_path = manual_override_sdk.GetPath();
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Override target.sdk-path \"%s\"",
+                 sdk_path.c_str());
+    }
 
   if (!set_sdk) {
-    XcodeSDK::Info info;
-    info.type = XcodeSDK::GetSDKTypeForTriple(triple);
-    XcodeSDK sdk(info);
-    StringRef sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+    if (sdk_path.empty()) {
+      XcodeSDK::Info info;
+      info.type = XcodeSDK::GetSDKTypeForTriple(triple);
+      XcodeSDK sdk(info);
+      StringRef sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+    }
     if (sdk_path.empty()) {
       // This fallback is questionable. Perhaps it should be removed.
       XcodeSDK::Info info;
