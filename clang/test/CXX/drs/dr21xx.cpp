@@ -42,6 +42,15 @@ namespace dr2140 { // dr2140: 9
 #endif
 }
 
+namespace dr2157 { // dr2157: 11
+#if __cplusplus >= 201103L
+  enum E : int;
+  struct X {
+    enum dr2157::E : int(); // expected-error {{only allows ':' in member enumeration declaration to introduce a fixed underlying type}}
+  };
+#endif
+}
+
 namespace dr2170 { // dr2170: 9
 #if __cplusplus >= 201103L
   void f() {

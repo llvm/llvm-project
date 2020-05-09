@@ -8,3 +8,14 @@ void foo(void) {
       default: 0,  // expected-note {{previous default generic association is here}}
       default: 0); // expected-error {{duplicate default generic association}}
 }
+
+enum E { e };
+int bar(int n) {
+  // PR45726
+  return _Generic(0, enum E: n, default: 0);
+}
+
+int baz(int n) {
+  // PR39979
+  return _Generic(0, enum { e }: n, default: 0);
+}
