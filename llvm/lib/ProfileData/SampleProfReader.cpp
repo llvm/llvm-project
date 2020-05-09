@@ -1076,7 +1076,7 @@ std::error_code SampleProfileReaderGCC::readHeader() {
   if (!GcovBuffer.readGCOVVersion(version))
     return sampleprof_error::unrecognized_format;
 
-  if (version != GCOV::V704)
+  if (version != GCOV::V407)
     return sampleprof_error::unsupported_version;
 
   // Skip the empty integer.

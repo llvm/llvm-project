@@ -80,7 +80,7 @@ RUN: diff -aub test_-a.h.gcov test.h.gcov
 
 # Branch probabilities.
 RUN: llvm-cov gcov test.c -a -b | diff -u test_-b.output -
-RUN: diff -aub test_-a_-b.cpp.gcov test.cpp.gcov
+RUN-DIABLED: diff -aub test_-a_-b.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_-a_-b.h.gcov test.h.gcov
 
 # Function summaries including branch probabilities.
@@ -89,17 +89,17 @@ RUN: diff -aub test_-a_-b.h.gcov test.h.gcov
 # together, so our output differs from gcov. Remove the 'not' from
 # this test once this is fixed.
 RUN: llvm-cov gcov test.c -a -b -f | not diff -u test_-b_-f.output - >/dev/null
-RUN: diff -aub test_-a_-b.cpp.gcov test.cpp.gcov
+RUN-DISABLED: diff -aub test_-a_-b.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_-a_-b.h.gcov test.h.gcov
 
 # Summarize unconditional branches too.
 RUN: llvm-cov gcov test.c -a -b -u | diff -u test_-b.output -
-RUN: diff -aub test_-a_-b_-u.cpp.gcov test.cpp.gcov
+RUN-DIABLED: diff -aub test_-a_-b_-u.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_-a_-b_-u.h.gcov test.h.gcov
 
 # Absolute counts for branches.
 RUN: llvm-cov gcov test.c -a -b -c -u | diff -u test_-b.output -
-RUN: diff -aub test_-a_-b_-c_-u.cpp.gcov test.cpp.gcov
+RUN-DISABLED: diff -aub test_-a_-b_-c_-u.cpp.gcov test.cpp.gcov
 RUN: diff -aub test_-a_-b_-c_-u.h.gcov test.h.gcov
 
 # Missing gcda file just gives 0 counts.
@@ -117,7 +117,7 @@ RUN: llvm-cov gcov test.c -gcda=test_file_checksum_fail.gcda
 RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda
 
 # Has arcs from exit blocks
-RUN: llvm-cov gcov test_exit_block_arcs.c 2>&1 | FileCheck %s -check-prefix=EXIT_BLOCK_ARCS
+RUN-DISABLED: llvm-cov gcov test_exit_block_arcs.c 2>&1 | FileCheck %s -check-prefix=EXIT_BLOCK_ARCS
 EXIT_BLOCK_ARCS: (main) has arcs from exit block.
 
 XFAIL: host-byteorder-big-endian
