@@ -924,6 +924,47 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
+void ToolChain::AddFortranStdlibLibArgs(const ArgList &Args,
+                                        ArgStringList &CmdArgs) const {
+  bool staticFlangLibs = false;
+  bool useOpenMP = false;
+
+  if (Args.hasArg(options::OPT_staticFlangLibs)) {
+    for (auto *A : Args.filtered(options::OPT_staticFlangLibs)) {
+      A->claim();
+      staticFlangLibs = true;
+    }
+  }
+
+  Arg *A = Args.getLastArg(options::OPT_mp, options::OPT_nomp,
+                           options::OPT_fopenmp, options::OPT_fno_openmp);
+  if (A && (A->getOption().matches(options::OPT_mp) ||
+            A->getOption().matches(options::OPT_fopenmp))) {
+    useOpenMP = true;
+  }
+
+  if (staticFlangLibs) {
+    CmdArgs.push_back("-Bstatic");
+  }
+  CmdArgs.push_back("-lpgmath");
+  CmdArgs.push_back("-lflang");
+  CmdArgs.push_back("-lflangrti");
+  if (useOpenMP) {
+    CmdArgs.push_back("-lomp");
+  } else {
+    CmdArgs.push_back("-lompstub");
+  }
+  if (staticFlangLibs) {
+    CmdArgs.push_back("-Bdynamic");
+  }
+
+  CmdArgs.push_back("-lm");
+  CmdArgs.push_back("-lrt");
+
+  // Allways link Fortran executables with Pthreads
+  CmdArgs.push_back("-lpthread");
+}
+
 void ToolChain::AddFilePathLibArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
   for (const auto &LibPath : getFilePaths())

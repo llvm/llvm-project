@@ -534,6 +534,48 @@ void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 }
 
+/// Convert path list to Fortran frontend argument
+static void AddFlangSysIncludeArg(const ArgList &DriverArgs,
+                                  ArgStringList &Flang1args,
+                                  ToolChain::path_list IncludePathList) {
+  std::string ArgValue; // Path argument value
+
+  // Make up argument value consisting of paths separated by colons
+  bool first = true;
+  for (auto P : IncludePathList) {
+    if (first) {
+      first = false;
+    } else {
+      ArgValue += ":";
+    }
+    ArgValue += P;
+  }
+
+  // Add the argument
+  Flang1args.push_back("-stdinc");
+  Flang1args.push_back(DriverArgs.MakeArgString(ArgValue));
+}
+
+/// Currently only adding include dir from install directory
+void AMDGPUOpenMPToolChain::AddFlangSystemIncludeArgs(const ArgList &DriverArgs,
+                                            ArgStringList &Flang1args) const {
+  path_list IncludePathList;
+  const Driver &D = getDriver();
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  {
+    SmallString<128> P(D.InstalledDir);
+    llvm::sys::path::append(P, "../include");
+    IncludePathList.push_back(DriverArgs.MakeArgString(P.str()));
+  }
+
+  AddFlangSysIncludeArg(DriverArgs, Flang1args, IncludePathList);
+  return;
+}
+
+
 void AMDGPUOpenMPToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                                  ArgStringList &CC1Args) const {
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);

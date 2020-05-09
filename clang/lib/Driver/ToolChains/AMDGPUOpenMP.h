@@ -115,6 +115,9 @@ public:
       llvm::opt::ArgStringList &CC1Args) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  AddFlangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &FlangArgs) const override;
 
   SanitizerMask getSupportedSanitizers() const override;
 

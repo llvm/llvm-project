@@ -2,6 +2,11 @@
 ! being supported by gfortran to GCC when falling back to GCC for
 ! a fortran input file.
 !
+! AOCC team xfails this test as its thought to be f18.
+
+! XFAIL: *
+! UNSUPPORTED
+
 ! RUN: %clang -no-canonical-prefixes -target i386-linux -### %s -o %t 2>&1 \
 ! RUN:     -Aquestion=answer \
 ! RUN:     -A-question=answer \

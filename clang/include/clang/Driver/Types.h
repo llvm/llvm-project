@@ -112,6 +112,14 @@ namespace types {
   /// Lookup header file input type that corresponds to given
   /// source file type (used for clang-cl emulation of \Yc).
   ID lookupHeaderTypeForSourceType(ID Id);
+  /// isFortran -- is it a Fortran input
+  bool isFortran(ID Id);
+
+  /// isFreeFormFortran -- is it a free form layout Fortran input
+  bool isFreeFormFortran(ID Id);
+
+  /// isFixedFormFortran -- is it a fixed form layout Fortran input
+  bool isFixedFormFortran(ID Id);
 
 } // end namespace types
 } // end namespace driver
