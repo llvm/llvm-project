@@ -60,26 +60,35 @@ DocNode &ArrayDocNode::operator[](size_t Index) {
 
 // A level in the document reading stack.
 struct StackLevel {
+  StackLevel(DocNode Node, size_t Length, DocNode *MapEntry = nullptr)
+      : Node(Node), Length(Length), MapEntry(MapEntry), Count(0) {}
   DocNode Node;
   size_t Length;
   // Points to map entry when we have just processed a map key.
   DocNode *MapEntry;
+  DocNode MapKey;
+  size_t Count;
 };
 
-// Read a document from a binary msgpack blob.
+// Read a document from a binary msgpack blob, merging into anything already in
+// the Document.
 // The blob data must remain valid for the lifetime of this Document (because a
 // string object in the document contains a StringRef into the original blob).
 // If Multi, then this sets root to an array and adds top-level objects to it.
 // If !Multi, then it only reads a single top-level object, even if there are
 // more, and sets root to that.
-// Returns false if failed due to illegal format.
-bool Document::readFromBlob(StringRef Blob, bool Multi) {
+// Returns false if failed due to illegal format or merge error.
+
+bool Document::readFromBlob(
+    StringRef Blob, bool Multi,
+    function_ref<bool(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
+        Merger) {
   msgpack::Reader MPReader(Blob);
   SmallVector<StackLevel, 4> Stack;
   if (Multi) {
     // Create the array for multiple top-level objects.
     Root = getArrayNode();
-    Stack.push_back(StackLevel({Root, (size_t)-1, nullptr}));
+    Stack.push_back(StackLevel(Root, (size_t)-1));
   }
   do {
     // On to next element (or key if doing a map key next).
@@ -124,29 +133,47 @@ bool Document::readFromBlob(StringRef Blob, bool Multi) {
     }
 
     // Store it.
+    DocNode *DestNode = nullptr;
     if (Stack.empty())
-      Root = Node;
+      DestNode = &Root;
     else if (Stack.back().Node.getKind() == Type::Array) {
       // Reading an array entry.
       auto &Array = Stack.back().Node.getArray();
-      Array.push_back(Node);
+      DestNode = &Array[Stack.back().Count++];
     } else {
       auto &Map = Stack.back().Node.getMap();
       if (!Stack.back().MapEntry) {
         // Reading a map key.
+        Stack.back().MapKey = Node;
         Stack.back().MapEntry = &Map[Node];
-      } else {
-        // Reading the value for the map key read in the last iteration.
-        *Stack.back().MapEntry = Node;
-        Stack.back().MapEntry = nullptr;
+        continue;
       }
+      // Reading the value for the map key read in the last iteration.
+      DestNode = Stack.back().MapEntry;
+      Stack.back().MapEntry = nullptr;
+      if (DestNode->isEmpty())
+        *DestNode = getNode();
+      ++Stack.back().Count;
     }
+    if (!DestNode->isNil()) {
+      // In a merge, there is already a value at this position. Call the
+      // callback to attempt to resolve the conflict. The resolution must result
+      // in an array or map if Node is an array or map respectively.
+      DocNode MapKey = !Stack.empty() && !Stack.back().MapKey.isEmpty()
+                           ? Stack.back().MapKey
+                           : getNode();
+      if (!Merger(DestNode, Node, MapKey))
+        return false; // Merge conflict resolution failed
+      assert(!((Node.isMap() && !DestNode->isMap()) ||
+               (Node.isArray() && !DestNode->isArray())));
+    } else
+      *DestNode = Node;
 
     // See if we're starting a new array or map.
-    switch (Node.getKind()) {
+    switch (DestNode->getKind()) {
     case msgpack::Type::Array:
     case msgpack::Type::Map:
-      Stack.push_back(StackLevel({Node, Obj.Length, nullptr}));
+      Stack.push_back(StackLevel(*DestNode, Obj.Length, nullptr));
       break;
     default:
       break;
@@ -154,14 +181,10 @@ bool Document::readFromBlob(StringRef Blob, bool Multi) {
 
     // Pop finished stack levels.
     while (!Stack.empty()) {
-      if (Stack.back().Node.getKind() == msgpack::Type::Array) {
-        if (Stack.back().Node.getArray().size() != Stack.back().Length)
-          break;
-      } else {
-        if (Stack.back().MapEntry ||
-            Stack.back().Node.getMap().size() != Stack.back().Length)
-          break;
-      }
+      if (Stack.back().MapEntry)
+        break;
+      if (Stack.back().Count != Stack.back().Length)
+        break;
       Stack.pop_back();
     }
   } while (!Stack.empty());

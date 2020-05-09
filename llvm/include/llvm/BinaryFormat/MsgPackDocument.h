@@ -65,6 +65,7 @@ public:
   DocNode() : KindAndDoc(nullptr) {}
 
   // Type methods
+  bool isNil() const { return getKind() == Type::Nil; }
   bool isMap() const { return getKind() == Type::Map; }
   bool isArray() const { return getKind() == Type::Array; }
   bool isScalar() const { return !isMap() && !isArray(); }
@@ -345,15 +346,30 @@ public:
     return N.getArray();
   }
 
-  /// Read a MsgPack document from a binary MsgPack blob.
-  /// The blob data must remain valid for the lifetime of this Document (because
-  /// a string object in the document contains a StringRef into the original
-  /// blob).
-  /// If Multi, then this sets root to an array and adds top-level objects to
-  /// it. If !Multi, then it only reads a single top-level object, even if there
-  /// are more, and sets root to that.
-  /// Returns false if failed due to illegal format.
-  bool readFromBlob(StringRef Blob, bool Multi);
+  /// Read a document from a binary msgpack blob, merging into anything already
+  /// in the Document. The blob data must remain valid for the lifetime of this
+  /// Document (because a string object in the document contains a StringRef
+  /// into the original blob). If Multi, then this sets root to an array and
+  /// adds top-level objects to it. If !Multi, then it only reads a single
+  /// top-level object, even if there are more, and sets root to that. Returns
+  /// false if failed due to illegal format or merge error.
+  ///
+  /// The Merger arg is a callback function that is called when the merge has a
+  /// conflict, that is, it is trying to set an item that is already set. If the
+  /// conflict can be resolved, the callback function must set *DestNode to the
+  /// resolved node and return true, otherwise it returns false. If SrcNode is
+  /// an array or map, the resolution must be that *DestNode is an array or map
+  /// respectively, although it could be the array or map (respectively) that
+  /// was already there. MapKey is the key if *DestNode is a map entry, a nil
+  /// node otherwise. The default for Merger is to allow array and map merging,
+  /// and disallow any other conflict.
+  bool readFromBlob(
+      StringRef Blob, bool Multi,
+      function_ref<bool(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
+          Merger = [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+            return (DestNode->isMap() && SrcNode.isMap()) ||
+                   (DestNode->isArray() && SrcNode.isArray());
+          });
 
   /// Write a MsgPack document to a binary MsgPack blob.
   void writeToBlob(std::string &Blob);
