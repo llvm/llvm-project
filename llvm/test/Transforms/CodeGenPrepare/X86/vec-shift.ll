@@ -74,10 +74,8 @@ define <16 x i16> @vector_variable_shift_right_v16i16(<16 x i1> %cond, <16 x i16
 ; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
 ; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
 ; XOP-NEXT:    [[SEL:%.*]] = select <16 x i1> [[COND:%.*]], <16 x i16> [[SPLAT1]], <16 x i16> [[SPLAT2]]
-; XOP-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> [[Z:%.*]], [[SPLAT1]]
-; XOP-NEXT:    [[TMP2:%.*]] = lshr <16 x i16> [[Z]], [[SPLAT2]]
-; XOP-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[COND]], <16 x i16> [[TMP1]], <16 x i16> [[TMP2]]
-; XOP-NEXT:    ret <16 x i16> [[TMP3]]
+; XOP-NEXT:    [[SH:%.*]] = lshr <16 x i16> [[Z:%.*]], [[SEL]]
+; XOP-NEXT:    ret <16 x i16> [[SH]]
 ;
   %splat1 = shufflevector <16 x i16> %x, <16 x i16> undef, <16 x i32> zeroinitializer
   %splat2 = shufflevector <16 x i16> %y, <16 x i16> undef, <16 x i32> zeroinitializer
