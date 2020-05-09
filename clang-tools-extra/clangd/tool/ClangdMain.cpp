@@ -539,18 +539,23 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Setup tracing facilities if CLANGD_TRACE is set. In practice enabling a
   // trace flag in your editor's config is annoying, launching with
   // `CLANGD_TRACE=trace.json vim` is easier.
-  llvm::Optional<llvm::raw_fd_ostream> TraceStream;
+  llvm::Optional<llvm::raw_fd_ostream> TracerStream;
   std::unique_ptr<trace::EventTracer> Tracer;
-  if (auto *TraceFile = getenv("CLANGD_TRACE")) {
+  const char *JSONTraceFile = getenv("CLANGD_TRACE");
+  const char *MetricsCSVFile = getenv("CLANGD_METRICS");
+  const char *TracerFile = JSONTraceFile ? JSONTraceFile : MetricsCSVFile;
+  if (TracerFile) {
     std::error_code EC;
-    TraceStream.emplace(TraceFile, /*ref*/ EC,
-                        llvm::sys::fs::FA_Read | llvm::sys::fs::FA_Write);
+    TracerStream.emplace(TracerFile, /*ref*/ EC,
+                         llvm::sys::fs::FA_Read | llvm::sys::fs::FA_Write);
     if (EC) {
-      TraceStream.reset();
-      llvm::errs() << "Error while opening trace file " << TraceFile << ": "
+      TracerStream.reset();
+      llvm::errs() << "Error while opening trace file " << TracerFile << ": "
                    << EC.message();
     } else {
-      Tracer = trace::createJSONTracer(*TraceStream, PrettyPrint);
+      Tracer = (TracerFile == JSONTraceFile)
+                   ? trace::createJSONTracer(*TracerStream, PrettyPrint)
+                   : trace::createCSVMetricTracer(*TracerStream);
     }
   }
 
