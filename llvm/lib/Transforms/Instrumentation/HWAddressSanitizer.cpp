@@ -305,7 +305,10 @@ public:
 
   explicit HWAddressSanitizerLegacyPass(bool CompileKernel = false,
                                         bool Recover = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {}
+      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {
+    initializeHWAddressSanitizerLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 

@@ -630,7 +630,9 @@ struct MemorySanitizerLegacyPass : public FunctionPass {
   static char ID;
 
   MemorySanitizerLegacyPass(MemorySanitizerOptions Options = {})
-      : FunctionPass(ID), Options(Options) {}
+      : FunctionPass(ID), Options(Options) {
+    initializeMemorySanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
   StringRef getPassName() const override { return "MemorySanitizerLegacyPass"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
