@@ -48,6 +48,8 @@ add_entrypoint_library(
   DEPENDS
     # math.h entrypoints
     libc.src.math.cosf
+    libc.src.math.fabs
+    libc.src.math.fabsf
     libc.src.math.round
     libc.src.math.sincosf
     libc.src.math.sinf

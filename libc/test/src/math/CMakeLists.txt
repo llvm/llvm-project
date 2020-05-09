@@ -70,3 +70,29 @@ add_math_unittest(
     libc.utils.CPP.standalone_cpp
     libc.utils.FPUtil.fputil
 )
+
+add_math_unittest(
+  fabs_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    fabs_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fabs
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  fabsf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    fabsf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fabsf
+    libc.utils.FPUtil.fputil
+)

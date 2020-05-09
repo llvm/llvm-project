@@ -86,6 +86,9 @@ public:
     mpfr_init2(value, mpfrPrecision);
     MPFRNumber mpfrInput(rawValue);
     switch (op) {
+    case OP_Abs:
+      mpfr_abs(value, mpfrInput.value, MPFR_RNDN);
+      break;
     case OP_Cos:
       mpfr_cos(value, mpfrInput.value, MPFR_RNDN);
       break;
