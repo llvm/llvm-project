@@ -26,6 +26,7 @@ namespace llvm {
 struct DILineInfo;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
+class NativeSession;
 }
 namespace lto {
 class InputFile;
@@ -64,6 +65,7 @@ public:
     ArchiveKind,
     ObjectKind,
     LazyObjectKind,
+    PDBKind,
     ImportKind,
     BitcodeKind
   };
@@ -297,6 +299,32 @@ private:
   std::vector<Symbol *> symbols;
 
   DWARFCache *dwarf = nullptr;
+};
+
+// This is a PDB type server dependency, that is not a input file per se, but
+// needs to be treated like one. Such files are discovered from the debug type
+// stream.
+class PDBInputFile : public InputFile {
+public:
+  explicit PDBInputFile(MemoryBufferRef m);
+  ~PDBInputFile();
+  static bool classof(const InputFile *f) { return f->kind() == PDBKind; }
+  void parse() override;
+
+  static void enqueue(StringRef path, ObjFile *fromFile);
+
+  static PDBInputFile *findFromRecordPath(StringRef path, ObjFile *fromFile);
+
+  static std::map<std::string, PDBInputFile *> instances;
+
+  // Record possible errors while opening the PDB file
+  llvm::Optional<Error> loadErr;
+
+  // This is the actual interface to the PDB (if it was opened successfully)
+  std::unique_ptr<llvm::pdb::NativeSession> session;
+
+  // If the PDB has a .debug$T stream, this tells how it will be handled.
+  TpiSource *debugTypesObj = nullptr;
 };
 
 // This type represents import library members that contain DLL names
