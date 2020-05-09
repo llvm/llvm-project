@@ -60,7 +60,8 @@ private:
 /// be used to invoke the JIT-compiled function.
 class ExecutionEngine {
 public:
-  ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener);
+  ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener,
+                  bool enablePerfNotificationListener);
 
   /// Creates an execution engine for the given module.  If `transformer` is
   /// provided, it will be called on the LLVM module during JIT-compilation and
@@ -70,14 +71,17 @@ public:
   /// JIT-compilation will open and link the shared libraries for symbol
   /// resolution. If `enableObjectCache` is set, the JIT compiler will create
   /// one to store the object generated for the given module. If enable
-  // `enableGDBNotificationListener` is set, the JIT compiler will notify
-  /// the llvm's global GDB notification listener.
+  /// `enableGDBNotificationListener` is set, the JIT compiler will notify
+  /// the llvm's global GDB notification listener. If
+  /// `enablePerfNotificationListener` is set, the JIT compiler will notify
+  /// the llvm's global Perf notification listener.
   static llvm::Expected<std::unique_ptr<ExecutionEngine>>
   create(ModuleOp m,
          std::function<llvm::Error(llvm::Module *)> transformer = {},
          Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel = llvm::None,
          ArrayRef<StringRef> sharedLibPaths = {}, bool enableObjectCache = true,
-         bool enableGDBNotificationListener = true);
+         bool enableGDBNotificationListener = true,
+         bool enablePerfNotificationListener = true);
 
   /// Looks up a packed-argument function with the given name and returns a
   /// pointer to it.  Propagates errors in case of failure.
@@ -114,6 +118,9 @@ private:
 
   /// GDB notification listener.
   llvm::JITEventListener *gdbListener;
+
+  /// Perf notification listener.
+  llvm::JITEventListener *perfListener;
 };
 
 template <typename... Args>
