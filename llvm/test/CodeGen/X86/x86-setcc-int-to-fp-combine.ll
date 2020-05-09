@@ -97,17 +97,16 @@ define void @foo4(<4 x float>* noalias %result) nounwind {
   ret void
 }
 
-; TODO: Test when we're masking against a sign extended setcc.
+; Test when we're masking against a sign extended setcc.
 define <4 x float> @foo5(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: LCPI5_0:
-; CHECK-NEXT: .long 1                       ## 0x1
+; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-NEXT: .long 0                       ## 0x0
-; CHECK-NEXT: .long 1                       ## 0x1
+; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-NEXT: .long 0                       ## 0x0
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = icmp sgt <4 x i32> %a0, %a1
   %2 = sext <4 x i1> %1 to <4 x i32>
@@ -116,12 +115,12 @@ define <4 x float> @foo5(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x float> %4
 }
 
-; TODO: Test when we're masking against mask arithmetic, not the setcc's directly.
+; Test when we're masking against mask arithmetic, not the setcc's directly.
 define <4 x float> @foo6(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: LCPI6_0:
-; CHECK-NEXT: .long 1                       ## 0x1
+; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-NEXT: .long 0                       ## 0x0
-; CHECK-NEXT: .long 1                       ## 0x1
+; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-NEXT: .long 0                       ## 0x0
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
@@ -130,7 +129,6 @@ define <4 x float> @foo6(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
 ; CHECK-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = icmp sgt <4 x i32> %a0, %a1
   %2 = icmp sgt <4 x i32> %a0, zeroinitializer
