@@ -18,6 +18,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Transforms/Instrumentation.h"
 
 namespace llvm {
@@ -30,12 +31,26 @@ class ModuleSanitizerCoveragePass
     : public PassInfoMixin<ModuleSanitizerCoveragePass> {
 public:
   explicit ModuleSanitizerCoveragePass(
-      SanitizerCoverageOptions Options = SanitizerCoverageOptions())
-      : Options(Options) {}
+      SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
+      const std::vector<std::string> &WhitelistFiles =
+          std::vector<std::string>(),
+      const std::vector<std::string> &BlacklistFiles =
+          std::vector<std::string>())
+      : Options(Options) {
+    if (WhitelistFiles.size() > 0)
+      Whitelist = SpecialCaseList::createOrDie(WhitelistFiles,
+                                               *vfs::getRealFileSystem());
+    if (BlacklistFiles.size() > 0)
+      Blacklist = SpecialCaseList::createOrDie(BlacklistFiles,
+                                               *vfs::getRealFileSystem());
+  }
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   SanitizerCoverageOptions Options;
+
+  std::unique_ptr<SpecialCaseList> Whitelist;
+  std::unique_ptr<SpecialCaseList> Blacklist;
 };
 
 // Insert SanitizerCoverage instrumentation.
