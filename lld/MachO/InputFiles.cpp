@@ -134,6 +134,7 @@ InputFile::parseSections(ArrayRef<section_64> sections) {
   for (const section_64 &sec : sections) {
     InputSection *isec = make<InputSection>();
     isec->file = this;
+    isec->header = &sec;
     isec->name = StringRef(sec.sectname, strnlen(sec.sectname, 16));
     isec->segname = StringRef(sec.segname, strnlen(sec.segname, 16));
     isec->data = {buf + sec.offset, static_cast<size_t>(sec.size)};
@@ -165,11 +166,14 @@ void InputFile::parseRelocations(const section_64 &sec,
       r.type = rel.r_type;
       r.offset = rel.r_address;
       r.addend = target->getImplicitAddend(buf + sec.offset + r.offset, r.type);
-      if (rel.r_extern)
+      if (rel.r_extern) {
         r.target = symbols[rel.r_symbolnum];
-      else {
-        error("TODO: Non-extern relocations are not supported");
-        continue;
+      } else {
+        if (rel.r_symbolnum == 0 || rel.r_symbolnum > sections.size())
+          fatal("invalid section index in relocation for offset " +
+                std::to_string(r.offset) + " in section " + sec.sectname +
+                " of " + getName());
+        r.target = sections[rel.r_symbolnum - 1];
       }
     }
     relocs.push_back(r);
