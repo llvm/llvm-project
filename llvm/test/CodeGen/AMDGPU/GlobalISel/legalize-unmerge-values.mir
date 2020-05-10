@@ -944,3 +944,20 @@ body: |
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
     $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %2
 ...
+
+---
+name: test_unmerge_v2s1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_unmerge_v2s1
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s32)
+    ; CHECK: S_NOP 0, implicit [[TRUNC]](s1)
+    ; CHECK: S_NOP 0, implicit [[TRUNC1]](s1)
+    %0:_(<2 x s1>) = G_IMPLICIT_DEF
+    %1:_(s1), %2:_(s1) = G_UNMERGE_VALUES %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+...
