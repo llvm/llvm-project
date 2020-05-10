@@ -61,7 +61,6 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.EmitData = true;
   Options.UseCfgChecksum = false;
   Options.NoRedZone = false;
-  Options.FunctionNamesInData = true;
   Options.ExitBlockBeforeBody = DefaultExitBlockBeforeBody;
 
   if (DefaultGCOVVersion.size() != 4) {
@@ -945,7 +944,6 @@ FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
 FunctionCallee GCOVProfiler::getEmitFunctionFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
     Type::getInt32Ty(*Ctx),    // uint32_t ident
-    Type::getInt8PtrTy(*Ctx),  // const char *function_name
     Type::getInt32Ty(*Ctx),    // uint32_t func_checksum
     Type::getInt8Ty(*Ctx),     // uint8_t use_extra_checksum
     Type::getInt32Ty(*Ctx),    // uint32_t cfg_checksum
@@ -1016,9 +1014,9 @@ Function *GCOVProfiler::insertCounterWriteout(
   // walk to write out everything.
   StructType *StartFileCallArgsTy = StructType::create(
       {Builder.getInt8PtrTy(), Builder.getInt8PtrTy(), Builder.getInt32Ty()});
-  StructType *EmitFunctionCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt8PtrTy(), Builder.getInt32Ty(),
-       Builder.getInt8Ty(), Builder.getInt32Ty()});
+  StructType *EmitFunctionCallArgsTy =
+      StructType::create({Builder.getInt32Ty(), Builder.getInt32Ty(),
+                          Builder.getInt8Ty(), Builder.getInt32Ty()});
   StructType *EmitArcsCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()});
   StructType *FileInfoTy =
@@ -1048,14 +1046,10 @@ Function *GCOVProfiler::insertCounterWriteout(
     SmallVector<Constant *, 8> EmitFunctionCallArgsArray;
     SmallVector<Constant *, 8> EmitArcsCallArgsArray;
     for (int j : llvm::seq<int>(0, CountersBySP.size())) {
-      auto *SP = cast_or_null<DISubprogram>(CountersBySP[j].second);
       uint32_t FuncChecksum = Funcs.empty() ? 0 : Funcs[j]->getFuncChecksum();
       EmitFunctionCallArgsArray.push_back(ConstantStruct::get(
           EmitFunctionCallArgsTy,
           {Builder.getInt32(j),
-           Options.FunctionNamesInData
-               ? Builder.CreateGlobalStringPtr(getFunctionName(SP))
-               : Constant::getNullValue(Builder.getInt8PtrTy()),
            Builder.getInt32(FuncChecksum),
            Builder.getInt8(Options.UseCfgChecksum),
            Builder.getInt32(CfgChecksum)}));
@@ -1189,16 +1183,13 @@ Function *GCOVProfiler::insertCounterWriteout(
                                                   EmitFunctionCallArgsPtr, 2)),
        Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(3),
                           Builder.CreateStructGEP(EmitFunctionCallArgsTy,
-                                                  EmitFunctionCallArgsPtr, 3)),
-       Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(4),
-                          Builder.CreateStructGEP(EmitFunctionCallArgsTy,
                                                   EmitFunctionCallArgsPtr,
-                                                  4))});
+                                                  3))});
   if (auto AK = TLI->getExtAttrForI32Param(false)) {
     EmitFunctionCall->addParamAttr(0, AK);
+    EmitFunctionCall->addParamAttr(1, AK);
     EmitFunctionCall->addParamAttr(2, AK);
     EmitFunctionCall->addParamAttr(3, AK);
-    EmitFunctionCall->addParamAttr(4, AK);
   }
   auto *EmitArcsCallArgsPtr =
       Builder.CreateInBoundsGEP(EmitArcsCallArgsTy, EmitArcsCallArgsArray, JV);

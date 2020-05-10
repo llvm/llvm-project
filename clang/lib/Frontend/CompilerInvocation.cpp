@@ -1018,8 +1018,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.CoverageNotesFile =
         std::string(Args.getLastArgValue(OPT_coverage_notes_file));
     Opts.CoverageExtraChecksum = Args.hasArg(OPT_coverage_cfg_checksum);
-    Opts.CoverageNoFunctionNamesInData =
-        Args.hasArg(OPT_coverage_no_function_names_in_data);
     Opts.ProfileFilterFiles =
         std::string(Args.getLastArgValue(OPT_fprofile_filter_files_EQ));
     Opts.ProfileExcludeFiles =
