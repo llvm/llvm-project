@@ -187,12 +187,9 @@ public:
   }
 
   bool readString(StringRef &Str) {
-    uint32_t Len = 0;
-    // Keep reading until we find a non-zero length. This emulates gcov's
-    // behaviour, which appears to do the same.
-    while (Len == 0)
-      if (!readInt(Len))
-        return false;
+    uint32_t Len;
+    if (!readInt(Len) || Len == 0)
+      return false;
     Len *= 4;
     if (Buffer->getBuffer().size() < Cursor + Len) {
       errs() << "Unexpected end of memory buffer: " << Cursor + Len << ".\n";
