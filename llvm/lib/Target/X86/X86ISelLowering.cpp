@@ -45564,10 +45564,11 @@ static SDValue combineBrCond(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// TODO: Could we move this to DAGCombine?
 static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
                                                   SelectionDAG &DAG) {
-  // Take advantage of vector comparisons producing 0 or -1 in each lane to
-  // optimize away operation when it's from a constant.
+  // Take advantage of vector comparisons (etc.) producing 0 or -1 in each lane
+  // to optimize away operation when it's from a constant.
   //
   // The general transformation is:
   //    UNARYOP(AND(VECTOR_CMP(x,y), constant)) -->
@@ -45579,10 +45580,10 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   // aren't the same.
   EVT VT = N->getValueType(0);
   bool IsStrict = N->isStrictFPOpcode();
+  unsigned NumEltBits = VT.getScalarSizeInBits();
   SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
-  if (!VT.isVector() || Op0->getOpcode() != ISD::AND ||
-      Op0->getOperand(0)->getOpcode() != ISD::SETCC ||
-      VT.getSizeInBits() != Op0.getValueSizeInBits())
+  if (!VT.isVector() || Op0.getOpcode() != ISD::AND ||
+      DAG.ComputeNumSignBits(Op0.getOperand(0)) != NumEltBits)
     return SDValue();
 
   // Now check that the other operand of the AND is a constant. We could
