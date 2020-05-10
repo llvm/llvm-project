@@ -2275,14 +2275,6 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
   return std::make_pair(FirstInst, Check);
 }
 
-std::pair<Instruction *, Instruction *>
-LoopAccessInfo::addRuntimeChecks(Instruction *Loc) const {
-  if (!PtrRtChecking->Need)
-    return std::make_pair(nullptr, nullptr);
-
-  return addRuntimeChecks(Loc, PtrRtChecking->getChecks());
-}
-
 void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   Value *Ptr = nullptr;
   if (LoadInst *LI = dyn_cast<LoadInst>(MemAccess))
