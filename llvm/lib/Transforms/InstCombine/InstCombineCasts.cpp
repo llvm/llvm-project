@@ -1757,8 +1757,18 @@ static bool isKnownExactCastIntToFP(CastInst &I) {
   return false;
 }
 
-Instruction *InstCombiner::visitFPExt(CastInst &CI) {
-  return commonCastTransforms(CI);
+Instruction *InstCombiner::visitFPExt(CastInst &FPExt) {
+  // If the source operand is a cast from integer to FP and known exact, then
+  // cast the integer operand directly to the destination type.
+  Type *Ty = FPExt.getType();
+  Value *Src = FPExt.getOperand(0);
+  if (isa<SIToFPInst>(Src) || isa<UIToFPInst>(Src)) {
+    auto *FPCast = cast<CastInst>(Src);
+    if (isKnownExactCastIntToFP(*FPCast))
+      return CastInst::Create(FPCast->getOpcode(), FPCast->getOperand(0), Ty);
+  }
+
+  return commonCastTransforms(FPExt);
 }
 
 /// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
