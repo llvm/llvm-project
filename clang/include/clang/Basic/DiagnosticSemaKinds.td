@@ -2387,9 +2387,6 @@ def err_enum_redeclare_fixed_mismatch : Error<
   "enumeration previously declared with %select{non|}0fixed underlying type">;
 def err_enum_redeclare_scoped_mismatch : Error<
   "enumeration previously declared as %select{un|}0scoped">;
-def err_enum_class_reference : Error<
-  "reference to %select{|scoped }0enumeration must use 'enum' "
-  "not 'enum class'">;
 def err_only_enums_have_underlying_types : Error<
   "only enumeration types have underlying types">;
 def err_underlying_type_of_incomplete_enum : Error<
