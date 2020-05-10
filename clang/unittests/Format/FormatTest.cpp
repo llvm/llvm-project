@@ -7647,6 +7647,10 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
   verifyFormat("void f() [[deprecated(\"so sorry\")]];");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    [[unused]] aaaaaaaaaaaaaaaaaaaaaaa(int i);");
+  verifyFormat("[[nodiscard]] bool f() { return false; }");
+  verifyFormat("class [[nodiscard]] f {\npublic:\n  f() {}\n}");
+  verifyFormat("class [[deprecated(\"so sorry\")]] f {\npublic:\n  f() {}\n}");
+  verifyFormat("class [[gnu::unused]] f {\npublic:\n  f() {}\n}");
 
   // Make sure we do not mistake attributes for array subscripts.
   verifyFormat("int a() {}\n"
