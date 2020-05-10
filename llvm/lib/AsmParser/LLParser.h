@@ -21,7 +21,6 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/ValueHandle.h"
 #include <map>
 
 namespace llvm {
