@@ -64,7 +64,7 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  if (wasInserted)
+  if (wasInserted || isa<Undefined>(s))
     replaceSymbol<DylibSymbol>(s, file, name);
   return s;
 }
