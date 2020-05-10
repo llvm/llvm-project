@@ -696,7 +696,7 @@ f:
 define i8 @parent6(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
 ; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = load volatile i8, i8* [[B]]
+; CHECK-NEXT:    [[C:%.*]] = load volatile i8, i8* [[B]], align 1
 ; CHECK-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
@@ -802,7 +802,7 @@ define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
 ; FIXME: We should propagate dereferenceable here but *not* nonnull
 define i32 addrspace(3)* @as(i32 addrspace(3)* dereferenceable(4) %p) {
 ; CHECK-LABEL: define {{[^@]+}}@as
-; CHECK-SAME: (i32 addrspace(3)* nofree readnone returned dereferenceable(4) dereferenceable_or_null(4) "no-capture-maybe-returned" [[P:%.*]])
+; CHECK-SAME: (i32 addrspace(3)* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[P:%.*]])
 ; CHECK-NEXT:    ret i32 addrspace(3)* [[P]]
 ;
   ret i32 addrspace(3)* %p

@@ -1643,8 +1643,8 @@ define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
-; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
-; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* [[B]], i32* [[A]], i64 -1, i32** null)
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)
@@ -1657,8 +1657,8 @@ define internal void @call_via_pointer_with_dead_args_internal_b(i32* %a, i32* %
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
-; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
-; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* [[B]], i32* [[A]], i64 -1, i32** null)
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)

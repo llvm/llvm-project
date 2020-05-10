@@ -144,7 +144,7 @@ define internal i8* @internal_only_rec_static_malloc_noescape(i32 %arg) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
 ; CHECK-NEXT:    [[CALL1:%.*]] = call noalias i8* @malloc(i64 [[CONV]])
-; CHECK-NEXT:    store i8 0, i8* [[CALL1]]
+; CHECK-NEXT:    store i8 0, i8* [[CALL1]], align 1
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
@@ -368,7 +368,7 @@ define void @callerC2() {
 define void @callerD1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD1()
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @argmem_only(i8* noalias nocapture align 536870912 null)
-; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
+; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %unknown = call i8* @argmem_only(i8* null)
@@ -379,7 +379,7 @@ define void @callerD1() {
 define void @callerD2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD2()
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noalias nocapture align 536870912 null)
-; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
+; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %unknown = call i8* @inaccesible_argmem_only_decl(i8* null)

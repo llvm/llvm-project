@@ -198,7 +198,7 @@ define void @unsound_readnone(i8* %ignored, i8* %escaped_then_written) {
 ; CHECK-NEXT:    [[ADDR:%.*]] = alloca i8*
 ; CHECK-NEXT:    call void @escape_readnone_ptr(i8** nonnull align 8 dereferenceable(8) [[ADDR]], i8* noalias readnone [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load i8*, i8** [[ADDR]], align 8
-; CHECK-NEXT:    store i8 0, i8* [[ADDR_LD]]
+; CHECK-NEXT:    store i8 0, i8* [[ADDR_LD]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %addr = alloca i8*
@@ -214,7 +214,7 @@ define void @unsound_readonly(i8* %ignored, i8* %escaped_then_written) {
 ; CHECK-NEXT:    [[ADDR:%.*]] = alloca i8*
 ; CHECK-NEXT:    call void @escape_readonly_ptr(i8** nonnull align 8 dereferenceable(8) [[ADDR]], i8* readonly [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load i8*, i8** [[ADDR]], align 8
-; CHECK-NEXT:    store i8 0, i8* [[ADDR_LD]]
+; CHECK-NEXT:    store i8 0, i8* [[ADDR_LD]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %addr = alloca i8*
@@ -231,8 +231,8 @@ declare void @escape_i8(i8* %ptr)
 
 define void @byval_not_readonly_1(i8* byval %written) readonly {
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readonly_1
-; CHECK-SAME: (i8* noalias byval [[WRITTEN:%.*]])
-; CHECK-NEXT:    call void @escape_i8(i8* [[WRITTEN]])
+; CHECK-SAME: (i8* noalias nonnull byval dereferenceable(1) [[WRITTEN:%.*]])
+; CHECK-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
 ; CHECK-NEXT:    ret void
 ;
   call void @escape_i8(i8* %written)
@@ -242,7 +242,7 @@ define void @byval_not_readonly_1(i8* byval %written) readonly {
 define void @byval_not_readonly_2(i8* byval %written) readonly {
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readonly_2
 ; CHECK-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]])
-; CHECK-NEXT:    store i8 0, i8* [[WRITTEN]]
+; CHECK-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, i8* %written
@@ -251,8 +251,8 @@ define void @byval_not_readonly_2(i8* byval %written) readonly {
 
 define void @byval_not_readnone_1(i8* byval %written) readnone {
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readnone_1
-; CHECK-SAME: (i8* noalias byval [[WRITTEN:%.*]])
-; CHECK-NEXT:    call void @escape_i8(i8* [[WRITTEN]])
+; CHECK-SAME: (i8* noalias nonnull byval dereferenceable(1) [[WRITTEN:%.*]])
+; CHECK-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
 ; CHECK-NEXT:    ret void
 ;
   call void @escape_i8(i8* %written)
@@ -262,7 +262,7 @@ define void @byval_not_readnone_1(i8* byval %written) readnone {
 define void @byval_not_readnone_2(i8* byval %written) readnone {
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readnone_2
 ; CHECK-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]])
-; CHECK-NEXT:    store i8 0, i8* [[WRITTEN]]
+; CHECK-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, i8* %written
@@ -272,7 +272,7 @@ define void @byval_not_readnone_2(i8* byval %written) readnone {
 define void @byval_no_fnarg(i8* byval %written) {
 ; CHECK-LABEL: define {{[^@]+}}@byval_no_fnarg
 ; CHECK-SAME: (i8* noalias nocapture nofree nonnull writeonly byval dereferenceable(1) [[WRITTEN:%.*]])
-; CHECK-NEXT:    store i8 0, i8* [[WRITTEN]]
+; CHECK-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i8 0, i8* %written
@@ -287,8 +287,8 @@ define void @testbyval(i8* %read_only) {
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@testbyval
-; IS__CGSCC____-SAME: (i8* nocapture readonly [[READ_ONLY:%.*]])
-; IS__CGSCC____-NEXT:    call void @byval_not_readonly_1(i8* noalias nocapture readonly [[READ_ONLY]])
+; IS__CGSCC____-SAME: (i8* nocapture nonnull readonly dereferenceable(1) [[READ_ONLY:%.*]])
+; IS__CGSCC____-NEXT:    call void @byval_not_readonly_1(i8* noalias nocapture nonnull readonly dereferenceable(1) [[READ_ONLY]])
 ; IS__CGSCC____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture nonnull readnone dereferenceable(1) [[READ_ONLY]])
 ; IS__CGSCC____-NEXT:    ret void
 ;

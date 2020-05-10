@@ -1601,14 +1601,20 @@ struct AANonNullImpl : AANonNull {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
+    Value &V = getAssociatedValue();
     if (!NullIsDefined &&
         hasAttr({Attribute::NonNull, Attribute::Dereferenceable},
                 /* IgnoreSubsumingPositions */ false, &A))
       indicateOptimisticFixpoint();
-    else if (isa<ConstantPointerNull>(getAssociatedValue()))
+    else if (isa<ConstantPointerNull>(V))
       indicatePessimisticFixpoint();
     else
       AANonNull::initialize(A);
+
+    bool CanBeNull = true;
+    if (V.getPointerDereferenceableBytes(A.getDataLayout(), CanBeNull))
+      if (!CanBeNull)
+        indicateOptimisticFixpoint();
 
     if (!getState().isAtFixpoint())
       if (Instruction *CtxI = getCtxI())
@@ -3219,10 +3225,15 @@ struct AADereferenceableImpl : AADereferenceable {
     for (const Attribute &Attr : Attrs)
       takeKnownDerefBytesMaximum(Attr.getValueAsInt());
 
-    NonNullAA = &A.getAAFor<AANonNull>(*this, getIRPosition(),
+    const IRPosition &IRP = this->getIRPosition();
+    NonNullAA = &A.getAAFor<AANonNull>(*this, IRP,
                                        /* TrackDependence */ false);
 
-    const IRPosition &IRP = this->getIRPosition();
+    bool CanBeNull;
+    takeKnownDerefBytesMaximum(
+        IRP.getAssociatedValue().getPointerDereferenceableBytes(
+            A.getDataLayout(), CanBeNull));
+
     bool IsFnInterface = IRP.isFnInterfaceKind();
     Function *FnScope = IRP.getAnchorScope();
     if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope))) {
@@ -3530,6 +3541,16 @@ struct AAAlignImpl : AAAlign {
     getAttrs({Attribute::Alignment}, Attrs);
     for (const Attribute &Attr : Attrs)
       takeKnownMaximum(Attr.getValueAsInt());
+
+    Value &V = getAssociatedValue();
+    // TODO: This is a HACK to avoid getPointerAlignment to introduce a ptr2int
+    //       use of the function pointer. This was caused by D73131. We want to
+    //       avoid this for function pointers especially because we iterate
+    //       their uses and int2ptr is not handled. It is not a correctness
+    //       problem though!
+    if (!V.getType()->getPointerElementType()->isFunctionTy())
+      takeKnownMaximum(
+          V.getPointerAlignment(A.getDataLayout()).valueOrOne().value());
 
     if (getIRPosition().isFnInterfaceKind() &&
         (!getAnchorScope() ||

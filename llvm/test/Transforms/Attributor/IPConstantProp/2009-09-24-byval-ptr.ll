@@ -10,12 +10,12 @@
 @mystr = internal global %struct.MYstr zeroinitializer ; <%struct.MYstr*> [#uses=3]
 define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@vfu1
-; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull writeonly byval align 4 dereferenceable(1) [[U:%.*]])
+; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[U:%.*]])
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS__CGSCC_OPM-NEXT:    store i32 99, i32* [[TMP0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    store i8 97, i8* [[TMP1]], align 4
+; IS__CGSCC_OPM-NEXT:    store i8 97, i8* [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    br label [[RETURN:%.*]]
 ; IS__CGSCC_OPM:       return:
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -25,13 +25,13 @@ define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]]
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
-; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]]
+; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 1
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 99, i32* [[TMP2]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS__CGSCC_NPM-NEXT:    store i8 97, i8* [[TMP3]], align 4
+; IS__CGSCC_NPM-NEXT:    store i8 97, i8* [[TMP3]], align 8
 ; IS__CGSCC_NPM-NEXT:    br label [[RETURN:%.*]]
 ; IS__CGSCC_NPM:       return:
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -80,7 +80,7 @@ define internal i32 @vfu2(%struct.MYstr* byval align 4 %u) nounwind readonly {
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 4
+; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
 ; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; IS__CGSCC____-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
 ; IS__CGSCC____-NEXT:    ret i32 [[TMP5]]
@@ -122,18 +122,18 @@ entry:
 }
 
 define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly {
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@vfu2_v2
-; IS__TUNIT_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
-; IS__TUNIT_OPM-NEXT:    store i32 99, i32* [[Z]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP5]]
+; IS________OPM-LABEL: define {{[^@]+}}@vfu2_v2
+; IS________OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
+; IS________OPM-NEXT:    store i32 99, i32* [[Z]], align 4
+; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
+; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
+; IS________OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
+; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
+; IS________OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
+; IS________OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
+; IS________OPM-NEXT:    ret i32 [[TMP5]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@vfu2_v2
 ; IS__TUNIT_NPM-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]])
@@ -153,25 +153,12 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly 
 ; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP7]]
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@vfu2_v2
-; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull byval align 4 dereferenceable(1) [[U:%.*]])
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
-; IS__CGSCC_OPM-NEXT:    store i32 99, i32* [[Z]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
-; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; IS__CGSCC_OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
-; IS__CGSCC_OPM-NEXT:    ret i32 [[TMP5]]
-;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@vfu2_v2
 ; IS__CGSCC_NPM-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]])
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]]
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
-; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]]
+; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 1
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
@@ -179,7 +166,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly 
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 4
+; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP7]]

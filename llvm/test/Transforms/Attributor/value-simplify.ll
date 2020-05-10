@@ -265,13 +265,9 @@ define i32 @ipccp3() {
 ; Do not touch complicated arguments (for now)
 %struct.X = type { i8* }
 define internal i32* @test_inalloca(i32* inalloca %a) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__TUNIT____-SAME: (i32* inalloca noalias nofree returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]])
-; IS__TUNIT____-NEXT:    ret i32* [[A]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__CGSCC____-SAME: (i32* inalloca noalias nofree returned writeonly "no-capture-maybe-returned" [[A:%.*]])
-; IS__CGSCC____-NEXT:    ret i32* [[A]]
+; CHECK-LABEL: define {{[^@]+}}@test_inalloca
+; CHECK-SAME: (i32* inalloca noalias nofree returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; CHECK-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
 }
@@ -286,15 +282,10 @@ define i32* @complicated_args_inalloca() {
 
 define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 ;
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_sret
-; IS__TUNIT____-SAME: (%struct.X* noalias nofree sret writeonly align 536870912 [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
-; IS__TUNIT____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_sret
-; IS__CGSCC____-SAME: (%struct.X* noalias nofree sret writeonly [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
-; IS__CGSCC____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test_sret
+; CHECK-SAME: (%struct.X* noalias nofree nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
+; CHECK-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
+; CHECK-NEXT:    ret void
 ;
   store %struct.X* %a, %struct.X** %b
   ret void
@@ -309,7 +300,7 @@ define void @complicated_args_sret(%struct.X** %b) {
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__CGSCC____-SAME: (%struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
-; IS__CGSCC____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree writeonly align 536870912 null, %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B]])
+; IS__CGSCC____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree nonnull writeonly align 536870912 dereferenceable(8) null, %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B]])
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)
@@ -317,13 +308,9 @@ define void @complicated_args_sret(%struct.X** %b) {
 }
 
 define internal %struct.X* @test_nest(%struct.X* nest %a) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_nest
-; IS__TUNIT____-SAME: (%struct.X* nest noalias nofree readnone returned align 536870912 "no-capture-maybe-returned" [[A:%.*]])
-; IS__TUNIT____-NEXT:    ret %struct.X* [[A]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_nest
-; IS__CGSCC____-SAME: (%struct.X* nest noalias nofree readnone returned "no-capture-maybe-returned" [[A:%.*]])
-; IS__CGSCC____-NEXT:    ret %struct.X* [[A]]
+; CHECK-LABEL: define {{[^@]+}}@test_nest
+; CHECK-SAME: (%struct.X* nest noalias nofree readnone returned align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; CHECK-NEXT:    ret %struct.X* [[A]]
 ;
   ret %struct.X* %a
 }
@@ -401,7 +388,7 @@ define void @fixpoint_changed(i32* %p) {
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[X_0:%.*]] = phi i32 [ 255, [[FOR_BODY]] ], [ 253, [[SW_BB]] ]
-; CHECK-NEXT:    store i32 [[X_0]], i32* [[P]]
+; CHECK-NEXT:    store i32 [[X_0]], i32* [[P]], align 1
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
