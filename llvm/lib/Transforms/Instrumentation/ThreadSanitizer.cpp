@@ -139,7 +139,9 @@ private:
 };
 
 struct ThreadSanitizerLegacyPass : FunctionPass {
-  ThreadSanitizerLegacyPass() : FunctionPass(ID) {}
+  ThreadSanitizerLegacyPass() : FunctionPass(ID) {
+    initializeThreadSanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
   StringRef getPassName() const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
