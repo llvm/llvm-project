@@ -48,3 +48,8 @@ Options
 
    If set to non-zero, the check will not give warnings inside macros. Default
    is `1`.
+
+Automatic Fixes
+^^^^^^^^^^^^^^^
+
+The check provides suggested fixes. See the documentation above for the details.
