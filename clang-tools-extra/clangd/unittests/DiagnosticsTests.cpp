@@ -502,8 +502,8 @@ TEST(DiagnosticsTest, ToLSP) {
       URIForFile::canonicalize(testPath("foo/bar/header.h"), "");
 
   clangd::Diag D;
-  D.ID = clang::diag::err_enum_class_reference;
-  D.Name = "enum_class_reference";
+  D.ID = clang::diag::err_undeclared_var_use;
+  D.Name = "undeclared_var_use";
   D.Source = clangd::Diag::Clang;
   D.Message = "something terrible happened";
   D.Range = {pos(1, 2), pos(3, 4)};
@@ -539,7 +539,7 @@ TEST(DiagnosticsTest, ToLSP) {
   clangd::Diagnostic MainLSP;
   MainLSP.range = D.Range;
   MainLSP.severity = getSeverity(DiagnosticsEngine::Error);
-  MainLSP.code = "enum_class_reference";
+  MainLSP.code = "undeclared_var_use";
   MainLSP.source = "clang";
   MainLSP.message =
       R"(Something terrible happened (fix available)
@@ -570,7 +570,7 @@ main.cpp:2:3: error: something terrible happened)";
       LSPDiags,
       ElementsAre(Pair(EqualToLSPDiag(MainLSP), ElementsAre(EqualToFix(F))),
                   Pair(EqualToLSPDiag(NoteInMainLSP), IsEmpty())));
-  EXPECT_EQ(LSPDiags[0].first.code, "enum_class_reference");
+  EXPECT_EQ(LSPDiags[0].first.code, "undeclared_var_use");
   EXPECT_EQ(LSPDiags[0].first.source, "clang");
   EXPECT_EQ(LSPDiags[1].first.code, "");
   EXPECT_EQ(LSPDiags[1].first.source, "");
