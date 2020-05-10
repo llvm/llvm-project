@@ -500,6 +500,9 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(TC.getTriple().isNVPTX() && "Wrong platform");
 
   ArgStringList CmdArgs;
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetProgramPath("nvlink"));
+  CmdArgs.push_back(Exec);
 
   // OpenMP uses nvlink to link cubin files. The result will be embedded in the
   // host binary by the host linker.
@@ -562,9 +565,13 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CubinF);
   }
 
-  const char *Exec =
-      Args.MakeArgString(getToolChain().GetProgramPath("nvlink"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "nvptx", GPUArch,
+                      false, false);
+
+  const char *NVLinkWrapper =
+      Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper"));
+  C.addCommand(
+      std::make_unique<Command>(JA, *this, NVLinkWrapper, CmdArgs, Inputs));
 }
 
 /// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,
@@ -717,6 +724,12 @@ void CudaToolChain::addClangTargetOptions(
     if (!FoundBCLibrary)
       getDriver().Diag(diag::warn_drv_omp_offload_target_missingbcruntime)
           << LibOmpTargetName;
+
+    // Add user-specified (-l)  static device libs.
+    // These are bitcode SDLs that get linked with -mlink-builtin-bitcode option
+    if (DeviceOffloadingKind == Action::OFK_OpenMP)
+      AddStaticDeviceLibs(getDriver(), DriverArgs, CC1Args, "nvptx", GpuArch,
+                          /* bitcode SDL?*/ true, /* PostClang Link? */ true);
   }
 }
 
