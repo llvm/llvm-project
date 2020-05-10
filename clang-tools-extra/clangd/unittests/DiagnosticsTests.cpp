@@ -374,23 +374,17 @@ n]] = 10; // error-ok
                   Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
 }
 
-TEST(DiagnosticTest, ClangTidyWarningAsErrorTrumpsSuppressionComment) {
+TEST(DiagnosticTest, ClangTidySuppressionCommentTrumpsWarningAsError) {
   Annotations Main(R"cpp(
     int main() {
       int i = 3;
-      double f = [[8]] / i;  // NOLINT // error-ok
+      double f = [[8]] / i;  // NOLINT
     }
   )cpp");
   TestTU TU = TestTU::withCode(Main.code());
   TU.ClangTidyChecks = "bugprone-integer-division";
   TU.ClangTidyWarningsAsErrors = "bugprone-integer-division";
-  EXPECT_THAT(
-      TU.build().getDiagnostics(),
-      UnorderedElementsAre(::testing::AllOf(
-          Diag(Main.range(), "result of integer division used in a floating "
-                             "point context; possible loss of precision"),
-          DiagSource(Diag::ClangTidy), DiagName("bugprone-integer-division"),
-          DiagSeverity(DiagnosticsEngine::Error))));
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
