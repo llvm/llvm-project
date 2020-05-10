@@ -142,8 +142,9 @@ RetainedKnowledge getKnowledgeFromUse(const Use *U,
 RetainedKnowledge getKnowledgeForValue(
     const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
     AssumptionCache *AC = nullptr,
-    function_ref<bool(RetainedKnowledge, Instruction *)> Filter =
-        [](RetainedKnowledge, Instruction *) { return true; });
+    function_ref<bool(RetainedKnowledge, Instruction *,
+                            const CallBase::BundleOpInfo *)>
+        Filter = [](auto...) { return true; });
 
 /// Return a valid Knowledge associated to the Value V if its Attribute kind is
 /// in AttrKinds and the knowledge is suitable to be used in the context of

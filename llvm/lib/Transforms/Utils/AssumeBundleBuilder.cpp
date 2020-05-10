@@ -9,7 +9,8 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -74,10 +75,45 @@ struct AssumeBuilderState {
   using MapKey = std::pair<Value *, Attribute::AttrKind>;
   SmallDenseMap<MapKey, unsigned, 8> AssumedKnowledgeMap;
   Instruction *InsertBeforeInstruction = nullptr;
+  AssumptionCache* AC = nullptr;
+  DominatorTree* DT = nullptr;
 
-  AssumeBuilderState(Module *M) : M(M) {}
+  AssumeBuilderState(Module *M, Instruction *I = nullptr,
+                     AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr)
+      : M(M), InsertBeforeInstruction(I), AC(AC), DT(DT) {}
+
+  bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
+    if (!InsertBeforeInstruction || !AC || !RK.WasOn)
+      return false;
+    bool HasBeenPreserved = false;
+    Use* ToUpdate = nullptr;
+    getKnowledgeForValue(
+        RK.WasOn, {RK.AttrKind}, AC,
+        [&](RetainedKnowledge RKOther, Instruction *Assume,
+            const CallInst::BundleOpInfo *Bundle) {
+          if (!isValidAssumeForContext(Assume, InsertBeforeInstruction, DT))
+            return false;
+          if (RKOther.ArgValue >= RK.ArgValue) {
+            HasBeenPreserved = true;
+            return true;
+          } else if (isValidAssumeForContext(InsertBeforeInstruction, Assume,
+                                             DT)) {
+            HasBeenPreserved = true;
+            IntrinsicInst *Intr = cast<IntrinsicInst>(Assume);
+            ToUpdate = &Intr->op_begin()[Bundle->Begin + ABA_Argument];
+            return true;
+          }
+          return false;
+        });
+    if (ToUpdate)
+      ToUpdate->set(
+          ConstantInt::get(Type::getInt64Ty(M->getContext()), RK.ArgValue));
+    return HasBeenPreserved;
+  }
 
   void addKnowledge(RetainedKnowledge RK) {
+    if (tryToPreserveWithoutAddingAssume(RK))
+      return;
     MapKey Key{RK.WasOn, RK.AttrKind};
     auto Lookup = AssumedKnowledgeMap.find(Key);
     if (Lookup == AssumedKnowledgeMap.end()) {
@@ -185,11 +221,10 @@ IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   return Builder.build();
 }
 
-void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC) {
+void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC, DominatorTree* DT) {
   if (!EnableKnowledgeRetention)
     return;
-  AssumeBuilderState Builder(I->getModule());
-  Builder.InsertBeforeInstruction = I;
+  AssumeBuilderState Builder(I->getModule(), I, AC, DT);
   Builder.addInstruction(I);
   if (IntrinsicInst *Intr = Builder.build()) {
     Intr->insertBefore(I);
@@ -200,8 +235,9 @@ void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC) {
 
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
+  AssumptionCache* AC = AM.getCachedResult<AssumptionAnalysis>(F);
+  DominatorTree* DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   for (Instruction &I : instructions(F))
-    if (Instruction *Assume = buildAssumeFromInst(&I))
-      Assume->insertBefore(&I);
+    salvageKnowledge(&I, AC, DT);
   return PreservedAnalyses::all();
 }
