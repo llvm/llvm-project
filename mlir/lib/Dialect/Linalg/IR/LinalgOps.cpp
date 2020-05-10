@@ -52,7 +52,7 @@ static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op);
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto castOp = dyn_cast_or_null<MemRefCastOp>(operand.get().getDefiningOp());
+    auto castOp = operand.get().getDefiningOp<MemRefCastOp>();
     if (castOp && canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
       folded = true;

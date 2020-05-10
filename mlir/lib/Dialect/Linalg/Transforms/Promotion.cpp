@@ -88,7 +88,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
 /// Otherwise return size.
 static Value extractSmallestConstantBoundingSize(OpBuilder &b, Location loc,
                                                  Value size) {
-  auto affineMinOp = dyn_cast_or_null<AffineMinOp>(size.getDefiningOp());
+  auto affineMinOp = size.getDefiningOp<AffineMinOp>();
   if (!affineMinOp)
     return size;
   int64_t minConst = std::numeric_limits<int64_t>::max();
@@ -112,7 +112,7 @@ static Value allocBuffer(Type elementType, Value size, bool dynamicBuffers,
     alignment_attr =
         IntegerAttr::get(IntegerType::get(64, ctx), alignment.getValue());
   if (!dynamicBuffers)
-    if (auto cst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp()))
+    if (auto cst = size.getDefiningOp<ConstantIndexOp>())
       return std_alloc(
           MemRefType::get(width * cst.getValue(), IntegerType::get(8, ctx)),
           ValueRange{}, alignment_attr);

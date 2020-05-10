@@ -193,12 +193,9 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// it can be determined that the loop has a single iteration.
 LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
-  auto lbCstOp =
-      dyn_cast_or_null<ConstantIndexOp>(forOp.lowerBound().getDefiningOp());
-  auto ubCstOp =
-      dyn_cast_or_null<ConstantIndexOp>(forOp.upperBound().getDefiningOp());
-  auto stepCstOp =
-      dyn_cast_or_null<ConstantIndexOp>(forOp.step().getDefiningOp());
+  auto lbCstOp = forOp.lowerBound().getDefiningOp<ConstantIndexOp>();
+  auto ubCstOp = forOp.upperBound().getDefiningOp<ConstantIndexOp>();
+  auto stepCstOp = forOp.step().getDefiningOp<ConstantIndexOp>();
   if (!lbCstOp || !ubCstOp || !stepCstOp || lbCstOp.getValue() < 0 ||
       ubCstOp.getValue() < 0 || stepCstOp.getValue() < 0)
     return failure();
@@ -590,12 +587,9 @@ LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  auto lbCstOp =
-      dyn_cast_or_null<ConstantIndexOp>(forOp.lowerBound().getDefiningOp());
-  auto ubCstOp =
-      dyn_cast_or_null<ConstantIndexOp>(forOp.upperBound().getDefiningOp());
-  auto stepCstOp =
-      dyn_cast_or_null<ConstantIndexOp>(forOp.step().getDefiningOp());
+  auto lbCstOp = forOp.lowerBound().getDefiningOp<ConstantIndexOp>();
+  auto ubCstOp = forOp.upperBound().getDefiningOp<ConstantIndexOp>();
+  auto stepCstOp = forOp.step().getDefiningOp<ConstantIndexOp>();
   if (lbCstOp && ubCstOp && stepCstOp) {
     // Constant loop bounds computation.
     int64_t lbCst = lbCstOp.getValue();
@@ -1313,12 +1307,11 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
   bool isZeroBased = false;
-  if (auto ubCst =
-          dyn_cast_or_null<ConstantIndexOp>(lowerBound.getDefiningOp()))
+  if (auto ubCst = lowerBound.getDefiningOp<ConstantIndexOp>())
     isZeroBased = ubCst.getValue() == 0;
 
   bool isStepOne = false;
-  if (auto stepCst = dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp()))
+  if (auto stepCst = step.getDefiningOp<ConstantIndexOp>())
     isStepOne = stepCst.getValue() == 1;
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)

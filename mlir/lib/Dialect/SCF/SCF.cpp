@@ -55,7 +55,7 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 static LogicalResult verify(ForOp op) {
-  if (auto cst = dyn_cast_or_null<ConstantIndexOp>(op.step().getDefiningOp()))
+  if (auto cst = op.step().getDefiningOp<ConstantIndexOp>())
     if (cst.getValue() <= 0)
       return op.emitOpError("constant step operand must be positive");
 
@@ -403,7 +403,7 @@ static LogicalResult verify(ParallelOp op) {
 
   // Check whether all constant step values are positive.
   for (Value stepValue : stepValues)
-    if (auto cst = dyn_cast_or_null<ConstantIndexOp>(stepValue.getDefiningOp()))
+    if (auto cst = stepValue.getDefiningOp<ConstantIndexOp>())
       if (cst.getValue() <= 0)
         return op.emitOpError("constant step operand must be positive");
 

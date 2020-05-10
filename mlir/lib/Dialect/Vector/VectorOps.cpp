@@ -1611,7 +1611,7 @@ public:
 
     // Return if the input of 'transposeOp' is not defined by another transpose.
     TransposeOp parentTransposeOp =
-        dyn_cast_or_null<TransposeOp>(transposeOp.vector().getDefiningOp());
+        transposeOp.vector().getDefiningOp<TransposeOp>();
     if (!parentTransposeOp)
       return failure();
 
@@ -1684,7 +1684,7 @@ OpFoldResult TupleGetOp::fold(ArrayRef<Attribute> operands) {
   // into:
   //    %t = vector.tuple .., %e_i, ..  // one less use
   //    %x = %e_i
-  if (auto tupleOp = dyn_cast_or_null<TupleOp>(getOperand().getDefiningOp()))
+  if (auto tupleOp = getOperand().getDefiningOp<TupleOp>())
     return tupleOp.getOperand(getIndex());
   return {};
 }
