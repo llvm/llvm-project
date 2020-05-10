@@ -4543,8 +4543,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     if (CanBeBitfield && !isEnumBase(CanBeOpaqueEnumDeclaration)) {
       // Outside C++11, do not interpret the tokens as an enum-base if they do
       // not make sense as one. In C++11, it's an error if this happens.
-      if (getLangOpts().CPlusPlus11 && !getLangOpts().ObjC &&
-          !getLangOpts().MicrosoftExt)
+      if (getLangOpts().CPlusPlus11)
         Diag(Tok.getLocation(), diag::err_anonymous_enum_bitfield);
     } else if (CanHaveEnumBase || !ColonIsSacred) {
       SourceLocation ColonLoc = ConsumeToken();
