@@ -127,9 +127,9 @@ void RenamerClangTidyCheck::registerPPCallbacks(
                                                          this));
 }
 
-static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
-                     const RenamerClangTidyCheck::NamingCheckId &Decl,
-                     SourceRange Range, SourceManager *SourceMgr = nullptr) {
+void RenamerClangTidyCheck::addUsage(
+    const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
+    SourceManager *SourceMgr) {
   // Do nothing if the provided range is invalid.
   if (Range.isInvalid())
     return;
@@ -146,7 +146,8 @@ static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
 
   // Try to insert the identifier location in the Usages map, and bail out if it
   // is already in there
-  RenamerClangTidyCheck::NamingCheckFailure &Failure = Failures[Decl];
+  RenamerClangTidyCheck::NamingCheckFailure &Failure =
+      NamingCheckFailures[Decl];
   if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
     return;
 
@@ -157,12 +158,10 @@ static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
     Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
 }
 
-/// Convenience method when the usage to be added is a NamedDecl
-static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
-                     const NamedDecl *Decl, SourceRange Range,
-                     SourceManager *SourceMgr = nullptr) {
-  return addUsage(Failures,
-                  RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
+void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
+                                     SourceManager *SourceMgr) {
+
+  return addUsage(RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
                                                        Decl->getNameAsString()),
                   Range, SourceMgr);
 }
@@ -243,15 +242,13 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Decl =
           Result.Nodes.getNodeAs<CXXConstructorDecl>("classRef")) {
 
-    addUsage(NamingCheckFailures, Decl->getParent(),
-             Decl->getNameInfo().getSourceRange());
+    addUsage(Decl->getParent(), Decl->getNameInfo().getSourceRange());
 
     for (const auto *Init : Decl->inits()) {
       if (!Init->isWritten() || Init->isInClassMemberInitializer())
         continue;
       if (const FieldDecl *FD = Init->getAnyMember())
-        addUsage(NamingCheckFailures, FD,
-                 SourceRange(Init->getMemberLocation()));
+        addUsage(FD, SourceRange(Init->getMemberLocation()));
       // Note: delegating constructors and base class initializers are handled
       // via the "typeLoc" matcher.
     }
@@ -268,7 +265,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     // we want instead to replace the next token, that will be the identifier.
     Range.setBegin(CharSourceRange::getTokenRange(Range).getEnd());
 
-    addUsage(NamingCheckFailures, Decl->getParent(), Range);
+    addUsage(Decl->getParent(), Range);
     return;
   }
 
@@ -286,7 +283,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     // further TypeLocs handled below
 
     if (Decl) {
-      addUsage(NamingCheckFailures, Decl, Loc->getSourceRange());
+      addUsage(Decl, Loc->getSourceRange());
       return;
     }
 
@@ -297,7 +294,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
       SourceRange Range(Ref.getTemplateNameLoc(), Ref.getTemplateNameLoc());
       if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
         if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-          addUsage(NamingCheckFailures, TemplDecl, Range);
+          addUsage(TemplDecl, Range);
         return;
       }
     }
@@ -305,7 +302,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto &Ref =
             Loc->getAs<DependentTemplateSpecializationTypeLoc>()) {
       if (const TagDecl *Decl = Ref.getTypePtr()->getAsTagDecl())
-        addUsage(NamingCheckFailures, Decl, Loc->getSourceRange());
+        addUsage(Decl, Loc->getSourceRange());
       return;
     }
   }
@@ -314,7 +311,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("nestedNameLoc")) {
     if (const NestedNameSpecifier *Spec = Loc->getNestedNameSpecifier()) {
       if (const NamespaceDecl *Decl = Spec->getAsNamespace()) {
-        addUsage(NamingCheckFailures, Decl, Loc->getLocalSourceRange());
+        addUsage(Decl, Loc->getLocalSourceRange());
         return;
       }
     }
@@ -322,23 +319,20 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Decl = Result.Nodes.getNodeAs<UsingDecl>("using")) {
     for (const auto *Shadow : Decl->shadows())
-      addUsage(NamingCheckFailures, Shadow->getTargetDecl(),
-               Decl->getNameInfo().getSourceRange());
+      addUsage(Shadow->getTargetDecl(), Decl->getNameInfo().getSourceRange());
     return;
   }
 
   if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>("declRef")) {
     SourceRange Range = DeclRef->getNameInfo().getSourceRange();
-    addUsage(NamingCheckFailures, DeclRef->getDecl(), Range,
-             Result.SourceManager);
+    addUsage(DeclRef->getDecl(), Range, Result.SourceManager);
     return;
   }
 
   if (const auto *MemberRef =
           Result.Nodes.getNodeAs<MemberExpr>("memberExpr")) {
     SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
-    addUsage(NamingCheckFailures, MemberRef->getMemberDecl(), Range,
-             Result.SourceManager);
+    addUsage(MemberRef->getMemberDecl(), Range, Result.SourceManager);
     return;
   }
 
@@ -361,8 +355,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     if (NameLookup Resolved = findDeclInBases(
             *Base, DependentName, AggressiveDependentMemberLookup)) {
       if (*Resolved)
-        addUsage(NamingCheckFailures, *Resolved,
-                 DepMemberRef->getMemberNameInfo().getSourceRange(),
+        addUsage(*Resolved, DepMemberRef->getMemberNameInfo().getSourceRange(),
                  Result.SourceManager);
     }
     return;
@@ -371,7 +364,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl")) {
     // Fix using namespace declarations.
     if (const auto *UsingNS = dyn_cast<UsingDirectiveDecl>(Decl))
-      addUsage(NamingCheckFailures, UsingNS->getNominatedNamespaceAsWritten(),
+      addUsage(UsingNS->getNominatedNamespaceAsWritten(),
                UsingNS->getIdentLocation());
 
     if (!Decl->getIdentifier() || Decl->getName().empty() || Decl->isImplicit())
@@ -381,8 +374,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto *Value = Result.Nodes.getNodeAs<ValueDecl>("decl")) {
       if (const Type *TypePtr = Value->getType().getTypePtrOrNull()) {
         if (const auto *Typedef = TypePtr->getAs<TypedefType>())
-          addUsage(NamingCheckFailures, Typedef->getDecl(),
-                   Value->getSourceRange());
+          addUsage(Typedef->getDecl(), Value->getSourceRange());
       }
     }
 
@@ -390,13 +382,11 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto *Value = Result.Nodes.getNodeAs<FunctionDecl>("decl")) {
       if (const auto *Typedef =
               Value->getReturnType().getTypePtr()->getAs<TypedefType>())
-        addUsage(NamingCheckFailures, Typedef->getDecl(),
-                 Value->getSourceRange());
+        addUsage(Typedef->getDecl(), Value->getSourceRange());
       for (const ParmVarDecl *Param : Value->parameters()) {
         if (const TypedefType *Typedef =
                 Param->getType().getTypePtr()->getAs<TypedefType>())
-          addUsage(NamingCheckFailures, Typedef->getDecl(),
-                   Value->getSourceRange());
+          addUsage(Typedef->getDecl(), Value->getSourceRange());
       }
     }
 
@@ -427,7 +417,7 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     Failure.Info = std::move(Info);
-    addUsage(NamingCheckFailures, Decl, Range);
+    addUsage(Decl, Range);
   }
 }
 
@@ -445,7 +435,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
   SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
 
   Failure.Info = std::move(Info);
-  addUsage(NamingCheckFailures, ID, Range);
+  addUsage(ID, Range);
 }
 
 void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
@@ -458,7 +448,7 @@ void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
     return;
 
   SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
-  addUsage(NamingCheckFailures, ID, Range);
+  addUsage(ID, Range);
 }
 
 static std::string
