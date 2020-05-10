@@ -530,7 +530,6 @@ static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts) {
   Options.EmitNotes = CodeGenOpts.EmitGcovNotes;
   Options.EmitData = CodeGenOpts.EmitGcovArcs;
   llvm::copy(CodeGenOpts.CoverageVersion, std::begin(Options.Version));
-  Options.UseCfgChecksum = CodeGenOpts.CoverageExtraChecksum;
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
   Options.Filter = CodeGenOpts.ProfileFilterFiles;
   Options.Exclude = CodeGenOpts.ProfileExcludeFiles;
