@@ -295,9 +295,9 @@ define void @example25() nounwind {
 ; SSE2-NEXT:    packssdw %xmm3, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, dj+4112(%rax)
 ; SSE2-NEXT:    movdqa %xmm1, dj+4096(%rax)
@@ -326,7 +326,7 @@ define void @example25() nounwind {
 ; SSE41-NEXT:    pand %xmm1, %xmm2
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; SSE41-NEXT:    pand %xmm0, %xmm1
-; SSE41-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
 ; SSE41-NEXT:    pand %xmm0, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, dj+4112(%rax)
 ; SSE41-NEXT:    movdqa %xmm1, dj+4096(%rax)
