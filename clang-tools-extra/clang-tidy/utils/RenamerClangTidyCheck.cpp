@@ -14,8 +14,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
+#include "llvm/ADT/PointerIntPair.h"
 
 #define DEBUG_TYPE "clang-tidy"
 
@@ -93,8 +92,15 @@ private:
 
 RenamerClangTidyCheck::RenamerClangTidyCheck(StringRef CheckName,
                                              ClangTidyContext *Context)
-    : ClangTidyCheck(CheckName, Context) {}
+    : ClangTidyCheck(CheckName, Context),
+      AggressiveDependentMemberLookup(
+          Options.getLocalOrGlobal("AggressiveDependentMemberLookup", false)) {}
 RenamerClangTidyCheck::~RenamerClangTidyCheck() = default;
+
+void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AggressiveDependentMemberLookup",
+                AggressiveDependentMemberLookup);
+}
 
 void RenamerClangTidyCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(namedDecl().bind("decl"), this);
@@ -106,20 +112,12 @@ void RenamerClangTidyCheck::registerMatchers(MatchFinder *Finder) {
                      this);
   Finder->addMatcher(typeLoc().bind("typeLoc"), this);
   Finder->addMatcher(nestedNameSpecifierLoc().bind("nestedNameLoc"), this);
+  auto MemberRestrictions =
+      unless(forFunction(anyOf(isDefaulted(), isImplicit())));
+  Finder->addMatcher(memberExpr(MemberRestrictions).bind("memberExpr"), this);
   Finder->addMatcher(
-      functionDecl(unless(cxxMethodDecl(isImplicit())),
-                   hasBody(forEachDescendant(memberExpr().bind("memberExpr")))),
+      cxxDependentScopeMemberExpr(MemberRestrictions).bind("depMemberExpr"),
       this);
-  Finder->addMatcher(
-      cxxConstructorDecl(
-          unless(isImplicit()),
-          forEachConstructorInitializer(
-              allOf(isWritten(), withInitializer(forEachDescendant(
-                                     memberExpr().bind("memberExpr")))))),
-      this);
-  Finder->addMatcher(fieldDecl(hasInClassInitializer(
-                         forEachDescendant(memberExpr().bind("memberExpr")))),
-                     this);
 }
 
 void RenamerClangTidyCheck::registerPPCallbacks(
@@ -167,6 +165,78 @@ static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
                   RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
                                                        Decl->getNameAsString()),
                   Range, SourceMgr);
+}
+
+const NamedDecl *findDecl(const RecordDecl &RecDecl, StringRef DeclName) {
+  for (const Decl *D : RecDecl.decls()) {
+    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+      if (ND->getDeclName().isIdentifier() && ND->getName().equals(DeclName))
+        return ND;
+    }
+  }
+  return nullptr;
+}
+
+namespace {
+class NameLookup {
+  llvm::PointerIntPair<const NamedDecl *, 1, bool> Data;
+
+public:
+  explicit NameLookup(const NamedDecl *ND) : Data(ND, false) {}
+  explicit NameLookup(llvm::NoneType) : Data(nullptr, true) {}
+  explicit NameLookup(std::nullptr_t) : Data(nullptr, false) {}
+  NameLookup() : NameLookup(nullptr) {}
+
+  bool hasMultipleResolutions() const { return Data.getInt(); }
+  bool hasDecl() const {
+    assert(!hasMultipleResolutions() && "Found multiple decls");
+    return Data.getPointer() != nullptr;
+  }
+  const NamedDecl *getDecl() const {
+    assert(!hasMultipleResolutions() && "Found multiple decls");
+    return Data.getPointer();
+  }
+  operator bool() const { return !hasMultipleResolutions(); }
+  const NamedDecl *operator*() const { return getDecl(); }
+};
+} // namespace
+
+/// Returns a decl matching the \p DeclName in \p Parent or one of its base
+/// classes. If \p AggressiveTemplateLookup is `true` then it will check
+/// template dependent base classes as well.
+/// If a matching decl is found in multiple base classes then it will return a
+/// flag indicating the multiple resolutions.
+NameLookup findDeclInBases(const CXXRecordDecl &Parent, StringRef DeclName,
+                           bool AggressiveTemplateLookup) {
+  if (const NamedDecl *InClassRef = findDecl(Parent, DeclName))
+    return NameLookup(InClassRef);
+  const NamedDecl *Found = nullptr;
+
+  for (CXXBaseSpecifier Base : Parent.bases()) {
+    const auto *Record = Base.getType()->getAsCXXRecordDecl();
+    if (!Record && AggressiveTemplateLookup) {
+      if (const auto *TST =
+              Base.getType()->getAs<TemplateSpecializationType>()) {
+        if (const auto *TD = llvm::dyn_cast_or_null<ClassTemplateDecl>(
+                TST->getTemplateName().getAsTemplateDecl()))
+          Record = TD->getTemplatedDecl();
+      }
+    }
+    if (!Record)
+      continue;
+    if (auto Search =
+            findDeclInBases(*Record, DeclName, AggressiveTemplateLookup)) {
+      if (*Search) {
+        if (Found)
+          return NameLookup(
+              llvm::None); // Multiple decls found in different base classes.
+        Found = *Search;
+        continue;
+      }
+    } else
+      return NameLookup(llvm::None); // Propagate multiple resolution back up.
+  }
+  return NameLookup(Found); // If nullptr, decl wasnt found.
 }
 
 void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
@@ -269,6 +339,32 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
     addUsage(NamingCheckFailures, MemberRef->getMemberDecl(), Range,
              Result.SourceManager);
+    return;
+  }
+
+  if (const auto *DepMemberRef =
+          Result.Nodes.getNodeAs<CXXDependentScopeMemberExpr>(
+              "depMemberExpr")) {
+    QualType BaseType = DepMemberRef->isArrow()
+                            ? DepMemberRef->getBaseType()->getPointeeType()
+                            : DepMemberRef->getBaseType();
+    if (BaseType.isNull())
+      return;
+    const CXXRecordDecl *Base = BaseType.getTypePtr()->getAsCXXRecordDecl();
+    if (!Base)
+      return;
+    DeclarationName DeclName = DepMemberRef->getMemberNameInfo().getName();
+    if (!DeclName.isIdentifier())
+      return;
+    StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
+
+    if (NameLookup Resolved = findDeclInBases(
+            *Base, DependentName, AggressiveDependentMemberLookup)) {
+      if (*Resolved)
+        addUsage(NamingCheckFailures, *Resolved,
+                 DepMemberRef->getMemberNameInfo().getSourceRange(),
+                 Result.SourceManager);
+    }
     return;
   }
 

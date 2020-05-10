@@ -170,6 +170,7 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
 IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  RenamerClangTidyCheck::storeOptions(Opts);
   for (size_t i = 0; i < SK_Count; ++i) {
     if (NamingStyles[i]) {
       if (NamingStyles[i]->Case) {
