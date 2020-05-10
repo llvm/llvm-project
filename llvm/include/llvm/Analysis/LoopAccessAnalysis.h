@@ -465,6 +465,8 @@ public:
     return Pointers[PtrIdx];
   }
 
+  ScalarEvolution *getSE() const { return SE; }
+
 private:
   /// Groups pointers such that a single memcheck is required
   /// between two different groups. This will clear the CheckingGroups vector
@@ -540,16 +542,6 @@ public:
   uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
   unsigned getNumStores() const { return NumStores; }
   unsigned getNumLoads() const { return NumLoads;}
-
-  /// Add code that checks at runtime if the accessed arrays \in p PointerChecks
-  /// overlap.
-  ///
-  /// Returns a pair of instructions where the first element is the first
-  /// instruction generated in possibly a sequence of instructions and the
-  /// second value is the final comparator value or NULL if no check is needed.
-  std::pair<Instruction *, Instruction *> addRuntimeChecks(
-      Instruction *Loc,
-      const SmallVectorImpl<RuntimePointerCheck> &PointerChecks) const;
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
