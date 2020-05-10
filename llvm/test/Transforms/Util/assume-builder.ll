@@ -14,13 +14,13 @@ declare void @func_argattr(i32* align 8, i32* nonnull) nounwind
 
 define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-LABEL: @test(
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 16), "nonnull"(i32* [[P]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; BASIC-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 12), "nonnull"(i32* [[P]]) ]
 ; BASIC-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12), "cold"() ]
 ; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #0
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12), "cold"() ]
 ; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; BASIC-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
 ; BASIC-NEXT:    call void @func_strbool(i32* [[P1]])
@@ -30,18 +30,18 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-NEXT:    call void @func_many(i32* align 8 [[P1]])
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2:%.*]], i64 8), "nonnull"(i32* [[P3:%.*]]) ]
 ; BASIC-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "nonnull"(i32* [[P1]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "nonnull"(i32* [[P]]) ]
 ; BASIC-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
 ; BASIC-NEXT:    ret void
 ;
 ; ALL-LABEL: @test(
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 16), "nonnull"(i32* [[P]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; ALL-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 12), "nonnull"(i32* [[P]]) ]
 ; ALL-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12), "cold"() ]
 ; ALL-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #0
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12), "cold"() ]
 ; ALL-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; ALL-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
 ; ALL-NEXT:    call void @func_strbool(i32* [[P1]])
@@ -51,12 +51,12 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; ALL-NEXT:    call void @func_many(i32* align 8 [[P1]])
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2:%.*]], i64 8), "nonnull"(i32* [[P3:%.*]]), "nounwind"() ]
 ; ALL-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P]]), "nonnull"(i32* [[P1]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "nonnull"(i32* [[P]]) ]
 ; ALL-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
 ; ALL-NEXT:    ret void
 ;
 ; WITH-AC-LABEL: @test(
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 16), "nonnull"(i32* [[P]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; WITH-AC-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 12) ]
 ; WITH-AC-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
@@ -77,7 +77,7 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; WITH-AC-NEXT:    ret void
 ;
 ; CROSS-BLOCK-LABEL: @test(
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 16), "nonnull"(i32* [[P]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]), "dereferenceable"(i32* [[P]], i64 16) ]
 ; CROSS-BLOCK-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 12) ]
 ; CROSS-BLOCK-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
@@ -119,18 +119,18 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; BASIC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; BASIC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; BASIC-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; BASIC-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
 ; BASIC-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]]
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; BASIC-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
 ; BASIC-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; BASIC-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8) ]
 ; BASIC-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP6]], align 8
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP11]], i64 1), "nonnull"(i8* [[TMP11]]) ]
 ; BASIC-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
@@ -139,24 +139,24 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; BASIC-NEXT:    [[TMP13:%.*]] = load %struct.S*, %struct.S** [[TMP4]]
 ; BASIC-NEXT:    [[TMP14:%.*]] = bitcast %struct.S* [[TMP13]] to i8*
 ; BASIC-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]), "align"(i32* [[TMP17]], i64 8) ]
 ; BASIC-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]), "align"(i8* [[TMP20]], i64 4) ]
 ; BASIC-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; BASIC-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; BASIC-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP25]], i64 8), "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]), "align"(i32** [[TMP25]], i64 8) ]
 ; BASIC-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]), "align"(i32* [[TMP26]], i64 4) ]
 ; BASIC-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; BASIC-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; BASIC-NEXT:    ret i32 [[TMP28]]
@@ -166,18 +166,18 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; ALL-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; ALL-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; ALL-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; ALL-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
 ; ALL-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]]
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; ALL-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
 ; ALL-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; ALL-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8) ]
 ; ALL-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP6]], align 8
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP11]], i64 1), "nonnull"(i8* [[TMP11]]) ]
 ; ALL-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
@@ -186,24 +186,24 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; ALL-NEXT:    [[TMP13:%.*]] = load %struct.S*, %struct.S** [[TMP4]]
 ; ALL-NEXT:    [[TMP14:%.*]] = bitcast %struct.S* [[TMP13]] to i8*
 ; ALL-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]), "align"(i32* [[TMP17]], i64 8) ]
 ; ALL-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]), "align"(i8* [[TMP20]], i64 4) ]
 ; ALL-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; ALL-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; ALL-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP25]], i64 8), "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]), "align"(i32** [[TMP25]], i64 8) ]
 ; ALL-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]), "align"(i32* [[TMP26]], i64 4) ]
 ; ALL-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; ALL-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; ALL-NEXT:    ret i32 [[TMP28]]
@@ -213,14 +213,14 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; WITH-AC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; WITH-AC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; WITH-AC-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; WITH-AC-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; WITH-AC-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
 ; WITH-AC-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]]
 ; WITH-AC-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; WITH-AC-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8) ]
@@ -233,19 +233,19 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; WITH-AC-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
 ; WITH-AC-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; WITH-AC-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]), "align"(i32* [[TMP17]], i64 8) ]
 ; WITH-AC-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
 ; WITH-AC-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; WITH-AC-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]), "align"(i8* [[TMP20]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; WITH-AC-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; WITH-AC-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
 ; WITH-AC-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; WITH-AC-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP25]], i64 8), "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]), "align"(i32** [[TMP25]], i64 8) ]
 ; WITH-AC-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]), "align"(i32* [[TMP26]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; WITH-AC-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; WITH-AC-NEXT:    ret i32 [[TMP28]]
@@ -255,14 +255,14 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; CROSS-BLOCK-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
 ; CROSS-BLOCK-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]]
 ; CROSS-BLOCK-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8) ]
@@ -275,19 +275,19 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; CROSS-BLOCK-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
 ; CROSS-BLOCK-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]), "align"(i32* [[TMP17]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]), "align"(i8* [[TMP20]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; CROSS-BLOCK-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
 ; CROSS-BLOCK-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP25]], i64 8), "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]), "align"(i32** [[TMP25]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]), "align"(i32* [[TMP26]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP28]]
@@ -330,15 +330,15 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; BASIC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; BASIC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; BASIC-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "align"(i32** [[TMP5]], i64 8) ]
 ; BASIC-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "align"(i8** [[TMP6]], i64 8) ]
 ; BASIC-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "align"(i32** [[TMP5]], i64 8) ]
 ; BASIC-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "align"(i32* [[TMP8]], i64 4) ]
 ; BASIC-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; BASIC-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8) ]
@@ -346,28 +346,28 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP11]], i64 1) ]
 ; BASIC-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
 ; BASIC-NEXT:    [[TMP12:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 32), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 32) ]
 ; BASIC-NEXT:    [[TMP13:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 32
 ; BASIC-NEXT:    [[TMP14:%.*]] = bitcast %struct.S* [[TMP13]] to i8*
 ; BASIC-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "align"(i32* [[TMP17]], i64 8) ]
 ; BASIC-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "align"(i8* [[TMP20]], i64 4) ]
 ; BASIC-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; BASIC-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; BASIC-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; BASIC-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8) ]
 ; BASIC-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]]
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "align"(i32* [[TMP26]], i64 4) ]
 ; BASIC-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; BASIC-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; BASIC-NEXT:    ret i32 [[TMP28]]
@@ -377,15 +377,15 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; ALL-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; ALL-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; ALL-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "align"(i32** [[TMP5]], i64 8) ]
 ; ALL-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "align"(i8** [[TMP6]], i64 8) ]
 ; ALL-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "align"(i32** [[TMP5]], i64 8) ]
 ; ALL-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "align"(i32* [[TMP8]], i64 4) ]
 ; ALL-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; ALL-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8) ]
@@ -393,28 +393,28 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP11]], i64 1) ]
 ; ALL-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
 ; ALL-NEXT:    [[TMP12:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 32), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 32) ]
 ; ALL-NEXT:    [[TMP13:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 32
 ; ALL-NEXT:    [[TMP14:%.*]] = bitcast %struct.S* [[TMP13]] to i8*
 ; ALL-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "align"(i32* [[TMP17]], i64 8) ]
 ; ALL-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "align"(i8* [[TMP20]], i64 4) ]
 ; ALL-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; ALL-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; ALL-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 8) ]
 ; ALL-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8) ]
 ; ALL-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]]
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "align"(i32* [[TMP26]], i64 4) ]
 ; ALL-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; ALL-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; ALL-NEXT:    ret i32 [[TMP28]]
@@ -424,14 +424,14 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; WITH-AC-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; WITH-AC-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; WITH-AC-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 32), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 32) ]
 ; WITH-AC-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "align"(i32** [[TMP5]], i64 8) ]
 ; WITH-AC-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "align"(i8** [[TMP6]], i64 8) ]
 ; WITH-AC-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]], align 8
 ; WITH-AC-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "align"(i32* [[TMP8]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; WITH-AC-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
 ; WITH-AC-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP6]]
@@ -443,11 +443,11 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; WITH-AC-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
 ; WITH-AC-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; WITH-AC-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "align"(i32* [[TMP17]], i64 8) ]
 ; WITH-AC-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
 ; WITH-AC-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; WITH-AC-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "align"(i8* [[TMP20]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; WITH-AC-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; WITH-AC-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
@@ -455,7 +455,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; WITH-AC-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8) ]
 ; WITH-AC-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]]
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "align"(i32* [[TMP26]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; WITH-AC-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; WITH-AC-NEXT:    ret i32 [[TMP28]]
@@ -465,14 +465,14 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; CROSS-BLOCK-NEXT:    [[TMP5:%.*]] = alloca i32*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP6:%.*]] = alloca i8*, align 8
 ; CROSS-BLOCK-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(%struct.S** [[TMP4]], i64 32), "dereferenceable"(%struct.S** [[TMP4]], i64 8) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "align"(%struct.S** [[TMP4]], i64 32) ]
 ; CROSS-BLOCK-NEXT:    store %struct.S* [[TMP0:%.*]], %struct.S** [[TMP4]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "align"(i32** [[TMP5]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    store i32* [[TMP1:%.*]], i32** [[TMP5]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "align"(i8** [[TMP6]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    store i8* [[TMP2:%.*]], i8** [[TMP6]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i32* [[TMP8]], i64 4) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "align"(i32* [[TMP8]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
 ; CROSS-BLOCK-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP6]]
@@ -484,11 +484,11 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; CROSS-BLOCK-NEXT:    [[TMP15:%.*]] = bitcast %struct.S* [[TMP7]] to i8*
 ; CROSS-BLOCK-NEXT:    [[TMP16:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP16]], i32 0, i32 0
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i32* [[TMP17]], i64 4) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP17]], i64 4), "align"(i32* [[TMP17]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP17]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP19:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP19]], i32 0, i32 1
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i8* [[TMP20]], i64 1) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP20]], i64 1), "align"(i8* [[TMP20]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP20]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP22:%.*]] = sext i8 [[TMP21]] to i32
 ; CROSS-BLOCK-NEXT:    [[TMP23:%.*]] = add nsw i32 [[TMP18]], [[TMP22]]
@@ -496,7 +496,7 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 ; CROSS-BLOCK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP25]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]]
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP26]], i64 4), "dereferenceable"(i32* [[TMP26]], i64 4) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP26]], i64 4), "align"(i32* [[TMP26]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; CROSS-BLOCK-NEXT:    ret i32 [[TMP28]]
@@ -535,59 +535,59 @@ define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true"
 
 define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; BASIC-LABEL: @_Z6squarePi(
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P:%.*]], i64 4), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P]], align 4
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1:%.*]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P1]], align 8
 ; BASIC-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
 ; BASIC:       A:
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 8) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 4), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 4) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P1]], align 4
 ; BASIC-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; BASIC:       B:
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 8) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P1]], align 8
 ; BASIC-NEXT:    br label [[C]]
 ; BASIC:       C:
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 32), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 32) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P]], align 32
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 4), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 4) ]
 ; BASIC-NEXT:    store i32 0, i32* [[P1]], align 4
 ; BASIC-NEXT:    ret i32 0
 ;
 ; ALL-LABEL: @_Z6squarePi(
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P:%.*]], i64 4), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; ALL-NEXT:    store i32 0, i32* [[P]], align 4
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1:%.*]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; ALL-NEXT:    store i32 0, i32* [[P1]], align 8
 ; ALL-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
 ; ALL:       A:
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 8) ]
 ; ALL-NEXT:    store i32 0, i32* [[P]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 4), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 4) ]
 ; ALL-NEXT:    store i32 0, i32* [[P1]], align 4
 ; ALL-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; ALL:       B:
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 8) ]
 ; ALL-NEXT:    store i32 0, i32* [[P]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; ALL-NEXT:    store i32 0, i32* [[P1]], align 8
 ; ALL-NEXT:    br label [[C]]
 ; ALL:       C:
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 32), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 32) ]
 ; ALL-NEXT:    store i32 0, i32* [[P]], align 32
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 4), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 4) ]
 ; ALL-NEXT:    store i32 0, i32* [[P1]], align 4
 ; ALL-NEXT:    ret i32 0
 ;
 ; WITH-AC-LABEL: @_Z6squarePi(
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P:%.*]], i64 4), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P]], align 4
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1:%.*]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P1]], align 8
 ; WITH-AC-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
 ; WITH-AC:       A:
@@ -596,22 +596,22 @@ define dso_local i32 @_Z6squarePi(i32* %P, i32* %P1, i1 %cond) {
 ; WITH-AC-NEXT:    store i32 0, i32* [[P1]], align 4
 ; WITH-AC-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[B]]
 ; WITH-AC:       B:
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 8), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 8) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P1]], align 8
 ; WITH-AC-NEXT:    br label [[C]]
 ; WITH-AC:       C:
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P]], i64 32), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 32) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P]], align 32
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 4), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 4) ]
 ; WITH-AC-NEXT:    store i32 0, i32* [[P1]], align 4
 ; WITH-AC-NEXT:    ret i32 0
 ;
 ; CROSS-BLOCK-LABEL: @_Z6squarePi(
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P:%.*]], i64 4), "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    store i32 0, i32* [[P]], align 4
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1:%.*]], i64 8), "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 4), "nonnull"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    store i32 0, i32* [[P1]], align 8
 ; CROSS-BLOCK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
 ; CROSS-BLOCK:       A:
