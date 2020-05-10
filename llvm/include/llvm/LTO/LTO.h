@@ -17,28 +17,24 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
-#include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/thread.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
 namespace llvm {
 
 class BitcodeModule;
 class Error;
+class IRMover;
 class LLVMContext;
 class MemoryBufferRef;
 class Module;
-class Target;
 class raw_pwrite_stream;
+class Target;
+class ToolOutputFile;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
 /// recorded in the index and the ThinLTO backends must apply the changes to
