@@ -2159,20 +2159,30 @@ static Instruction *matchOrConcat(Instruction &Or,
       LowerSrc->getType()->getScalarSizeInBits() != HalfWidth)
     return nullptr;
 
-  // Find matching bswap instructions.
-  // TODO: Add more patterns (bitreverse?)
-  Value *LowerBSwap, *UpperBSwap;
-  if (!match(LowerSrc, m_BSwap(m_Value(LowerBSwap))) ||
-      !match(UpperSrc, m_BSwap(m_Value(UpperBSwap))))
-    return nullptr;
+  auto ConcatIntrinsicCalls = [&](Intrinsic::ID id, Value *Lo, Value *Hi) {
+    Value *NewLower = Builder.CreateZExt(Lo, Ty);
+    Value *NewUpper = Builder.CreateZExt(Hi, Ty);
+    NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
+    Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
+    Function *F = Intrinsic::getDeclaration(Or.getModule(), id, Ty);
+    return Builder.CreateCall(F, BinOp);
+  };
 
-  // Push the concat down, swapping the lower/upper sources.
-  Value *NewLower = Builder.CreateZExt(UpperBSwap, Ty);
-  Value *NewUpper = Builder.CreateZExt(LowerBSwap, Ty);
-  NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
-  Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
-  Function *F = Intrinsic::getDeclaration(Or.getModule(), Intrinsic::bswap, Ty);
-  return Builder.CreateCall(F, BinOp);
+  // BSWAP: Push the concat down, swapping the lower/upper sources.
+  // concat(bswap(x),bswap(y)) -> bswap(concat(x,y))
+  Value *LowerBSwap, *UpperBSwap;
+  if (match(LowerSrc, m_BSwap(m_Value(LowerBSwap))) &&
+      match(UpperSrc, m_BSwap(m_Value(UpperBSwap))))
+    return ConcatIntrinsicCalls(Intrinsic::bswap, UpperBSwap, LowerBSwap);
+
+  // BITREVERSE: Push the concat down, swapping the lower/upper sources.
+  // concat(bitreverse(x),bitreverse(y)) -> bitreverse(concat(x,y))
+  Value *LowerBRev, *UpperBRev;
+  if (match(LowerSrc, m_BitReverse(m_Value(LowerBRev))) &&
+      match(UpperSrc, m_BitReverse(m_Value(UpperBRev))))
+    return ConcatIntrinsicCalls(Intrinsic::bitreverse, UpperBRev, LowerBRev);
+
+  return nullptr;
 }
 
 /// If all elements of two constant vectors are 0/-1 and inverses, return true.
