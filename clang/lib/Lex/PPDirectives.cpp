@@ -1716,11 +1716,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 }
 
 Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
-    const DirectoryLookup *&CurDir, StringRef Filename,
+    const DirectoryLookup *&CurDir, StringRef& Filename,
     SourceLocation FilenameLoc, CharSourceRange FilenameRange,
     const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
     bool &IsMapped, const DirectoryLookup *LookupFrom,
-    const FileEntry *LookupFromFile, StringRef LookupFilename,
+    const FileEntry *LookupFromFile, StringRef& LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
   Optional<FileEntryRef> File = LookupFile(
@@ -1789,21 +1789,10 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       return Filename;
     };
     StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
-
-#ifndef _WIN32
-    // Normalize slashes when compiling with -fms-extensions on non-Windows.
-    // This is unnecessary on Windows since the filesystem there handles
-    // backslashes.
-    SmallString<128> NormalizedTypoCorrectionPath;
-    if (LangOpts.MicrosoftExt) {
-      NormalizedTypoCorrectionPath = TypoCorrectionName;
-      llvm::sys::path::native(NormalizedTypoCorrectionPath);
-      TypoCorrectionName = NormalizedTypoCorrectionPath;
-    }
-#endif
+    StringRef TypoCorrectionLookupName = CorrectTypoFilename(LookupFilename);
 
     Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc, TypoCorrectionName, isAngled, LookupFrom, LookupFromFile,
+        FilenameLoc, TypoCorrectionLookupName, isAngled, LookupFrom, LookupFromFile,
         CurDir, Callbacks ? &SearchPath : nullptr,
         Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
@@ -1818,6 +1807,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       // We found the file, so set the Filename to the name after typo
       // correction.
       Filename = TypoCorrectionName;
+      LookupFilename = TypoCorrectionLookupName;
       return File;
     }
   }
@@ -2074,8 +2064,6 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (Callbacks && !IsImportDecl) {
     // Notify the callback object that we've seen an inclusion directive.
     // FIXME: Use a different callback for a pp-import?
-    // FIXME: Passes wrong filename if LookupHeaderIncludeOrImport() did
-    // typo correction.
     Callbacks->InclusionDirective(
         HashLoc, IncludeTok, LookupFilename, isAngled, FilenameRange,
         File ? &File->getFileEntry() : nullptr, SearchPath, RelativePath,
@@ -2102,7 +2090,6 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       !IsMapped && !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
-    // FIXME: Looks at the wrong filename if we did typo correction.
     StringRef Name = LookupFilename;
     StringRef NameWithoriginalSlashes = Filename;
 #if defined(_WIN32)

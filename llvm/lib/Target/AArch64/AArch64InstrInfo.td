@@ -2483,7 +2483,7 @@ def alignedglobal : PatLeaf<(iPTR iPTR:$label), [{
     return Align && *Align >= 4 && G->getOffset() % 4 == 0;
   }
   if (auto *C = dyn_cast<ConstantPoolSDNode>(N))
-    return C->getAlignment() >= 4 && C->getOffset() % 4 == 0;
+    return C->getAlign() >= 4 && C->getOffset() % 4 == 0;
   return false;
 }]>;
 

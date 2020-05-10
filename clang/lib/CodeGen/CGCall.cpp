@@ -1262,11 +1262,9 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 
   // Otherwise do coercion through memory. This is stupid, but simple.
   Address Tmp = CreateTempAllocaForCoercion(CGF, Ty, Src.getAlignment());
-  Address Casted = CGF.Builder.CreateElementBitCast(Tmp,CGF.Int8Ty);
-  Address SrcCasted = CGF.Builder.CreateElementBitCast(Src,CGF.Int8Ty);
-  CGF.Builder.CreateMemCpy(Casted, SrcCasted,
-      llvm::ConstantInt::get(CGF.IntPtrTy, SrcSize),
-      false);
+  CGF.Builder.CreateMemCpy(Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
+                           Src.getPointer(), Src.getAlignment().getAsAlign(),
+                           llvm::ConstantInt::get(CGF.IntPtrTy, SrcSize));
   return CGF.Builder.CreateLoad(Tmp);
 }
 
@@ -1349,11 +1347,9 @@ static void CreateCoercedStore(llvm::Value *Src,
     // to that information.
     Address Tmp = CreateTempAllocaForCoercion(CGF, SrcTy, Dst.getAlignment());
     CGF.Builder.CreateStore(Src, Tmp);
-    Address Casted = CGF.Builder.CreateElementBitCast(Tmp,CGF.Int8Ty);
-    Address DstCasted = CGF.Builder.CreateElementBitCast(Dst,CGF.Int8Ty);
-    CGF.Builder.CreateMemCpy(DstCasted, Casted,
-        llvm::ConstantInt::get(CGF.IntPtrTy, DstSize),
-        false);
+    CGF.Builder.CreateMemCpy(Dst.getPointer(), Dst.getAlignment().getAsAlign(),
+                             Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
+                             llvm::ConstantInt::get(CGF.IntPtrTy, DstSize));
   }
 }
 
@@ -2404,10 +2400,10 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           // FIXME: We should have a common utility for generating an aggregate
           // copy.
           CharUnits Size = getContext().getTypeSizeInChars(Ty);
-          auto SizeVal = llvm::ConstantInt::get(IntPtrTy, Size.getQuantity());
-          Address Dst = Builder.CreateBitCast(AlignedTemp, Int8PtrTy);
-          Address Src = Builder.CreateBitCast(ParamAddr, Int8PtrTy);
-          Builder.CreateMemCpy(Dst, Src, SizeVal, false);
+          Builder.CreateMemCpy(
+              AlignedTemp.getPointer(), AlignedTemp.getAlignment().getAsAlign(),
+              ParamAddr.getPointer(), ParamAddr.getAlignment().getAsAlign(),
+              llvm::ConstantInt::get(IntPtrTy, Size.getQuantity()));
           V = AlignedTemp;
         }
         ArgVals.push_back(ParamValue::forIndirect(V));

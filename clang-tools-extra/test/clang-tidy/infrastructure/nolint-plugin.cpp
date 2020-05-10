@@ -1,4 +1,4 @@
-// REQUIRES: static-analyzer
+// REQUIRES: static-analyzer, libclang_include_clang_tools_extra
 // RUN: c-index-test -test-load-source-reparse 2 all %s -Xclang -add-plugin -Xclang clang-tidy -Xclang -plugin-arg-clang-tidy -Xclang -checks='-*,google-explicit-constructor,clang-diagnostic-unused-variable,clang-analyzer-core.UndefinedBinaryOperatorResult' -Wunused-variable -I%S/Inputs/nolint 2>&1 | FileCheck %s
 
 #include "trigger_warning.h"

@@ -1,5 +1,6 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -S | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -profile-unknown-in-special-section -partial-profile -S | FileCheck %s --check-prefix UNKNOWN
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -profile-sample-accurate -S | FileCheck %s --check-prefix ACCURATE
 
 target triple = "x86_64-pc-linux-gnu"
@@ -11,7 +12,8 @@ target triple = "x86_64-pc-linux-gnu"
 declare void @hot_func()
 
 ; CHECK-NOT: foo_not_in_profile{{.*}}!section_prefix
-; CHECK: foo_not_in_profile{{.*}}!prof ![[UNKNOWN_ID:[0-9]+]]
+; CHECK: foo_not_in_profile{{.*}}!prof ![[NOPROFILE_ID:[0-9]+]]
+; UNKNOWN: foo_not_in_profile{{.*}}!prof ![[NOPROFILE_ID:[0-9]+]] !section_prefix ![[UNKNOWN_ID:[0-9]+]]
 ; ACCURATE: foo_not_in_profile{{.*}}!prof ![[ZERO_ID:[0-9]+]] !section_prefix ![[COLD_ID:[0-9]+]]
 ; The function not appearing in profile is cold when -profile-sample-accurate
 ; is on.
@@ -31,9 +33,11 @@ define void @bar_not_in_profile() #0 {
 
 attributes #0 = { "profile-sample-accurate" }
 
-; CHECK: ![[UNKNOWN_ID]] = !{!"function_entry_count", i64 -1}
+; CHECK: ![[NOPROFILE_ID]] = !{!"function_entry_count", i64 -1}
 ; CHECK: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
 ; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".unlikely"}
+; UNKNOWN: ![[NOPROFILE_ID]] = !{!"function_entry_count", i64 -1}
+; UNKNOWN: ![[UNKNOWN_ID]] = !{!"function_section_prefix", !".unknown"}
 ; ACCURATE: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
 ; ACCURATE: ![[COLD_ID]] = !{!"function_section_prefix", !".unlikely"}
 !llvm.module.flags = !{!1}

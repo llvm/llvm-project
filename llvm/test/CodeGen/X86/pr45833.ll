@@ -37,7 +37,7 @@ define void @mstore_split9(<9 x float> %value, <9 x float>* %addr, <9 x i1> %mas
 ; CHECK-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
@@ -75,7 +75,7 @@ define void @mstore_split13(<13 x float> %value, <13 x float>* %addr, <13 x i1> 
 ; CHECK-NEXT:    vpslld $31, %xmm3, %xmm3
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    vpinsrw $4, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; CHECK-NEXT:    vmaskmovps %ymm1, %ymm2, 32(%rdi)
@@ -92,7 +92,7 @@ define void @mstore_split13(<13 x float> %value, <13 x float>* %addr, <13 x i1> 
 ; CHECK-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
@@ -133,7 +133,7 @@ define void @mstore_split14(<14 x float> %value, <14 x float>* %addr, <14 x i1> 
 ; CHECK-NEXT:    vpinsrw $4, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    vpinsrw $5, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; CHECK-NEXT:    vmaskmovps %ymm1, %ymm2, 32(%rdi)
@@ -150,7 +150,7 @@ define void @mstore_split14(<14 x float> %value, <14 x float>* %addr, <14 x i1> 
 ; CHECK-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
@@ -195,7 +195,7 @@ define void @mstore_split17(<17 x float> %value, <17 x float>* %addr, <17 x i1> 
 ; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; CHECK-NEXT:    vmaskmovps %ymm1, %ymm2, 32(%rdi)
@@ -209,7 +209,7 @@ define void @mstore_split17(<17 x float> %value, <17 x float>* %addr, <17 x i1> 
 ; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
@@ -257,7 +257,7 @@ define void @mstore_split23(<23 x float> %value, <23 x float>* %addr, <23 x i1> 
 ; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm3[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm3, %xmm3
 ; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; CHECK-NEXT:    vmaskmovps %ymm2, %ymm3, 32(%rdi)
@@ -270,7 +270,7 @@ define void @mstore_split23(<23 x float> %value, <23 x float>* %addr, <23 x i1> 
 ; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; CHECK-NEXT:    vmaskmovps %ymm1, %ymm2, 64(%rdi)
@@ -284,7 +284,7 @@ define void @mstore_split23(<23 x float> %value, <23 x float>* %addr, <23 x i1> 
 ; CHECK-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; CHECK-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
 ; CHECK-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)

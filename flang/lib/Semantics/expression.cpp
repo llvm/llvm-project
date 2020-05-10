@@ -184,6 +184,8 @@ private:
   std::optional<ActualArgument> AnalyzeExpr(const parser::Expr &);
   bool AreConformable() const;
   const Symbol *FindBoundOp(parser::CharBlock, int passIndex);
+  void AddAssignmentConversion(
+      const DynamicType &lhsType, const DynamicType &rhsType);
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
   std::optional<DynamicType> GetType(std::size_t) const;
   int GetRank(std::size_t) const;
@@ -2809,6 +2811,9 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   Tristate isDefined{
       semantics::IsDefinedAssignment(lhsType, lhsRank, rhsType, rhsRank)};
   if (isDefined == Tristate::No) {
+    if (lhsType && rhsType) {
+      AddAssignmentConversion(*lhsType, *rhsType);
+    }
     return std::nullopt; // user-defined assignment not allowed for these args
   }
   auto restorer{context_.GetContextualMessages().SetLocation(source_)};
@@ -2937,6 +2942,19 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
     context_.EmitGenericResolutionError(*symbol);
   }
   return result;
+}
+
+// If there is an implicit conversion between intrinsic types, make it explicit
+void ArgumentAnalyzer::AddAssignmentConversion(
+    const DynamicType &lhsType, const DynamicType &rhsType) {
+  if (lhsType.category() == rhsType.category() &&
+      lhsType.kind() == rhsType.kind()) {
+    // no conversion necessary
+  } else if (auto rhsExpr{evaluate::ConvertToType(lhsType, MoveExpr(1))}) {
+    actuals_[1] = ActualArgument{*rhsExpr};
+  } else {
+    actuals_[1] = std::nullopt;
+  }
 }
 
 std::optional<DynamicType> ArgumentAnalyzer::GetType(std::size_t i) const {

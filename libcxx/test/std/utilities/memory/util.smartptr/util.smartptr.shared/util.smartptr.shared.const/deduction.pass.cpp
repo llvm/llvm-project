@@ -23,7 +23,10 @@
 struct A {};
 
 struct D {
-  void operator()(void*) const {}
+  void operator()(A* ptr) const
+  {
+    delete ptr;
+  }
 };
 
 int main(int, char**)

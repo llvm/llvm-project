@@ -543,7 +543,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::ConstantPool:
   case ISD::TargetConstantPool: {
     const ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(N);
-    ID.AddInteger(CP->getAlignment());
+    ID.AddInteger(CP->getAlign().value());
     ID.AddInteger(CP->getOffset());
     if (CP->isMachineConstantPoolEntry())
       CP->getMachineCPVal()->addSelectionDAGCSEId(ID);
@@ -1471,19 +1471,18 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
 }
 
 SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
-                                      unsigned Alignment, int Offset,
-                                      bool isTarget,
-                                      unsigned TargetFlags) {
+                                      MaybeAlign Alignment, int Offset,
+                                      bool isTarget, unsigned TargetFlags) {
   assert((TargetFlags == 0 || isTarget) &&
          "Cannot set target flags on target-independent globals");
-  if (Alignment == 0)
+  if (!Alignment)
     Alignment = shouldOptForSize()
-                    ? getDataLayout().getABITypeAlignment(C->getType())
-                    : getDataLayout().getPrefTypeAlignment(C->getType());
+                    ? getDataLayout().getABITypeAlign(C->getType())
+                    : getDataLayout().getPrefTypeAlign(C->getType());
   unsigned Opc = isTarget ? ISD::TargetConstantPool : ISD::ConstantPool;
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opc, getVTList(VT), None);
-  ID.AddInteger(Alignment);
+  ID.AddInteger(Alignment->value());
   ID.AddInteger(Offset);
   ID.AddPointer(C);
   ID.AddInteger(TargetFlags);
@@ -1491,25 +1490,26 @@ SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VT, Offset, Alignment,
+  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VT, Offset, *Alignment,
                                           TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
-  return SDValue(N, 0);
+  SDValue V = SDValue(N, 0);
+  NewSDValueDbgMsg(V, "Creating new constant pool: ", this);
+  return V;
 }
 
 SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
-                                      unsigned Alignment, int Offset,
-                                      bool isTarget,
-                                      unsigned TargetFlags) {
+                                      MaybeAlign Alignment, int Offset,
+                                      bool isTarget, unsigned TargetFlags) {
   assert((TargetFlags == 0 || isTarget) &&
          "Cannot set target flags on target-independent globals");
-  if (Alignment == 0)
-    Alignment = getDataLayout().getPrefTypeAlignment(C->getType());
+  if (!Alignment)
+    Alignment = getDataLayout().getPrefTypeAlign(C->getType());
   unsigned Opc = isTarget ? ISD::TargetConstantPool : ISD::ConstantPool;
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opc, getVTList(VT), None);
-  ID.AddInteger(Alignment);
+  ID.AddInteger(Alignment->value());
   ID.AddInteger(Offset);
   C->addSelectionDAGCSEId(ID);
   ID.AddInteger(TargetFlags);
@@ -1517,7 +1517,7 @@ SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VT, Offset, Alignment,
+  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VT, Offset, *Alignment,
                                           TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);

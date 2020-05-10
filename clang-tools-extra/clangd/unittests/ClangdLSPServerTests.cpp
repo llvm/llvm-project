@@ -156,7 +156,7 @@ TEST_F(LSPTest, RecordsLatencies) {
   llvm::StringLiteral MethodName = "method_name";
   EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(0));
   llvm::consumeError(Client.call(MethodName, {}).take().takeError());
-  Client.sync();
+  stop();
   EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(1));
 }
 } // namespace

@@ -2151,9 +2151,9 @@ struct PointerBounds {
 /// in \p TheLoop.  \return the values for the bounds.
 static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
-                                  SCEVExpander &Exp, ScalarEvolution *SE,
-                                  const RuntimePointerChecking &PtrRtChecking) {
-  Value *Ptr = PtrRtChecking.Pointers[CG->Members[0]].PointerValue;
+                                  SCEVExpander &Exp, ScalarEvolution *SE) {
+  Value *Ptr = CG->RtCheck.Pointers[CG->Members[0]].PointerValue;
+
   const SCEV *Sc = SE->getSCEV(Ptr);
 
   unsigned AS = Ptr->getType()->getPointerAddressSpace();
@@ -2190,8 +2190,7 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
 /// lower bounds for both pointers in the check.
 static SmallVector<std::pair<PointerBounds, PointerBounds>, 4>
 expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
-             Instruction *Loc, ScalarEvolution *SE, SCEVExpander &Exp,
-             const RuntimePointerChecking &PtrRtChecking) {
+             Instruction *Loc, ScalarEvolution *SE, SCEVExpander &Exp) {
   SmallVector<std::pair<PointerBounds, PointerBounds>, 4> ChecksWithBounds;
 
   // Here we're relying on the SCEV Expander's cache to only emit code for the
@@ -2200,8 +2199,8 @@ expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
       PointerChecks, std::back_inserter(ChecksWithBounds),
       [&](const RuntimePointerCheck &Check) {
         PointerBounds
-          First = expandBounds(Check.first, L, Loc, Exp, SE, PtrRtChecking),
-          Second = expandBounds(Check.second, L, Loc, Exp, SE, PtrRtChecking);
+          First = expandBounds(Check.first, L, Loc, Exp, SE),
+          Second = expandBounds(Check.second, L, Loc, Exp, SE);
         return std::make_pair(First, Second);
       });
 
@@ -2214,8 +2213,7 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
   const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
   auto *SE = PSE->getSE();
   SCEVExpander Exp(*SE, DL, "induction");
-  auto ExpandedChecks =
-      expandBounds(PointerChecks, TheLoop, Loc, SE, Exp, *PtrRtChecking);
+  auto ExpandedChecks = expandBounds(PointerChecks, TheLoop, Loc, SE, Exp);
 
   LLVMContext &Ctx = Loc->getContext();
   Instruction *FirstInst = nullptr;

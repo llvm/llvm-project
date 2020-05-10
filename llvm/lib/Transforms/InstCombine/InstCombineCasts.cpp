@@ -1735,28 +1735,55 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitFPExt(CastInst &CI) {
-  return commonCastTransforms(CI);
+/// Return true if the cast from integer to FP can be proven to be exact for all
+/// possible inputs (the conversion does not lose any precision).
+static bool isKnownExactCastIntToFP(CastInst &I) {
+  CastInst::CastOps Opcode = I.getOpcode();
+  assert((Opcode == CastInst::SIToFP || Opcode == CastInst::UIToFP) &&
+         "Unexpected cast");
+  Value *Src = I.getOperand(0);
+  Type *SrcTy = Src->getType();
+  Type *FPTy = I.getType();
+  bool IsSigned = Opcode == Instruction::SIToFP;
+  int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
+
+  // Easy case - if the source integer type has less bits than the FP mantissa,
+  // then the cast must be exact.
+  if (SrcSize <= FPTy->getFPMantissaWidth())
+    return true;
+
+  // TODO:
+  // Try harder to find if the source integer type has less significant bits.
+  return false;
 }
 
-// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
-// This is safe if the intermediate type has enough bits in its mantissa to
-// accurately represent all values of X.  For example, this won't work with
-// i64 -> float -> i64.
-Instruction *InstCombiner::FoldItoFPtoI(Instruction &FI) {
+Instruction *InstCombiner::visitFPExt(CastInst &FPExt) {
+  // If the source operand is a cast from integer to FP and known exact, then
+  // cast the integer operand directly to the destination type.
+  Type *Ty = FPExt.getType();
+  Value *Src = FPExt.getOperand(0);
+  if (isa<SIToFPInst>(Src) || isa<UIToFPInst>(Src)) {
+    auto *FPCast = cast<CastInst>(Src);
+    if (isKnownExactCastIntToFP(*FPCast))
+      return CastInst::Create(FPCast->getOpcode(), FPCast->getOperand(0), Ty);
+  }
+
+  return commonCastTransforms(FPExt);
+}
+
+/// fpto{s/u}i({u/s}itofp(X)) --> X or zext(X) or sext(X) or trunc(X)
+/// This is safe if the intermediate type has enough bits in its mantissa to
+/// accurately represent all values of X.  For example, this won't work with
+/// i64 -> float -> i64.
+Instruction *InstCombiner::foldItoFPtoI(CastInst &FI) {
   if (!isa<UIToFPInst>(FI.getOperand(0)) && !isa<SIToFPInst>(FI.getOperand(0)))
     return nullptr;
-  Instruction *OpI = cast<Instruction>(FI.getOperand(0));
 
-  Value *SrcI = OpI->getOperand(0);
-  Type *FITy = FI.getType();
-  Type *OpITy = OpI->getType();
-  Type *SrcTy = SrcI->getType();
-  bool IsInputSigned = isa<SIToFPInst>(OpI);
+  auto *OpI = cast<CastInst>(FI.getOperand(0));
+  Value *X = OpI->getOperand(0);
+  Type *XType = X->getType();
+  Type *DestType = FI.getType();
   bool IsOutputSigned = isa<FPToSIInst>(FI);
-
-  // We can safely assume the conversion won't overflow the output range,
-  // because (for example) (uint8_t)18293.f is undefined behavior.
 
   // Since we can assume the conversion won't overflow, our decision as to
   // whether the input will fit in the float should depend on the minimum
@@ -1764,34 +1791,39 @@ Instruction *InstCombiner::FoldItoFPtoI(Instruction &FI) {
 
   // This means this is also safe for a signed input and unsigned output, since
   // a negative input would lead to undefined behavior.
-  int InputSize = (int)SrcTy->getScalarSizeInBits() - IsInputSigned;
-  int OutputSize = (int)FITy->getScalarSizeInBits() - IsOutputSigned;
-  int ActualSize = std::min(InputSize, OutputSize);
-
-  if (ActualSize <= OpITy->getFPMantissaWidth()) {
-    if (FITy->getScalarSizeInBits() > SrcTy->getScalarSizeInBits()) {
-      if (IsInputSigned && IsOutputSigned)
-        return new SExtInst(SrcI, FITy);
-      return new ZExtInst(SrcI, FITy);
-    }
-    if (FITy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits())
-      return new TruncInst(SrcI, FITy);
-    if (SrcTy == FITy)
-      return replaceInstUsesWith(FI, SrcI);
-    return new BitCastInst(SrcI, FITy);
+  if (!isKnownExactCastIntToFP(*OpI)) {
+    // The first cast may not round exactly based on the source integer width
+    // and FP width, but the overflow UB rules can still allow this to fold.
+    // If the destination type is narrow, that means the intermediate FP value
+    // must be large enough to hold the source value exactly.
+    // For example, (uint8_t)((float)(uint32_t 16777217) is undefined behavior.
+    int OutputSize = (int)DestType->getScalarSizeInBits() - IsOutputSigned;
+    if (OutputSize > OpI->getType()->getFPMantissaWidth())
+      return nullptr;
   }
-  return nullptr;
+
+  if (DestType->getScalarSizeInBits() > XType->getScalarSizeInBits()) {
+    bool IsInputSigned = isa<SIToFPInst>(OpI);
+    if (IsInputSigned && IsOutputSigned)
+      return new SExtInst(X, DestType);
+    return new ZExtInst(X, DestType);
+  }
+  if (DestType->getScalarSizeInBits() < XType->getScalarSizeInBits())
+    return new TruncInst(X, DestType);
+
+  assert(XType == DestType && "Unexpected types for int to FP to int casts");
+  return replaceInstUsesWith(FI, X);
 }
 
 Instruction *InstCombiner::visitFPToUI(FPToUIInst &FI) {
-  if (Instruction *I = FoldItoFPtoI(FI))
+  if (Instruction *I = foldItoFPtoI(FI))
     return I;
 
   return commonCastTransforms(FI);
 }
 
 Instruction *InstCombiner::visitFPToSI(FPToSIInst &FI) {
-  if (Instruction *I = FoldItoFPtoI(FI))
+  if (Instruction *I = foldItoFPtoI(FI))
     return I;
 
   return commonCastTransforms(FI);

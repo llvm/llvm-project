@@ -148,7 +148,7 @@ define <4 x i32> @shuffle3_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vmov.i8 q0, #0x0
 ; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vmov.32 r0, q0[0]
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vdup.32 q0, r0
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vcmp.i32 ne, q0, zr

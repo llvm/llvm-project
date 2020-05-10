@@ -47,6 +47,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.ClaimAllArgs(options::OPT_w);
 
   CmdArgs.push_back("-z");
+  CmdArgs.push_back("max-page-size=4096");
+
+  CmdArgs.push_back("-z");
   CmdArgs.push_back("now");
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
@@ -56,6 +59,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("rodynamic");
     CmdArgs.push_back("-z");
     CmdArgs.push_back("separate-loadable-segments");
+    CmdArgs.push_back("--pack-dyn-relocs=relr");
   }
 
   if (!D.SysRoot.empty())

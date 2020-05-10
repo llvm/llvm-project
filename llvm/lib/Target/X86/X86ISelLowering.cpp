@@ -8694,7 +8694,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
           SDValue CP = DAG.getConstantPool(C, PVT);
           unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
-          Align Alignment(cast<ConstantPoolSDNode>(CP)->getAlignment());
+          Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
           SDVTList Tys =
               DAG.getVTList(MVT::getVectorVT(CVT, Repeat), MVT::Other);
           SDValue Ops[] = {DAG.getEntryNode(), CP};
@@ -8712,7 +8712,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
                                              *Ctx);
           SDValue VCP = DAG.getConstantPool(VecC, PVT);
           unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
-          Align Alignment(cast<ConstantPoolSDNode>(VCP)->getAlignment());
+          Align Alignment = cast<ConstantPoolSDNode>(VCP)->getAlign();
           Ld = DAG.getLoad(
               MVT::getVectorVT(CVT, NumElm), dl, DAG.getEntryNode(), VCP,
               MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
@@ -8782,7 +8782,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       SDValue CP =
           DAG.getConstantPool(C, TLI.getPointerTy(DAG.getDataLayout()));
-      Align Alignment(cast<ConstantPoolSDNode>(CP)->getAlignment());
+      Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
 
       SDVTList Tys = DAG.getVTList(VT, MVT::Other);
       SDValue Ops[] = {DAG.getEntryNode(), CP};
@@ -18533,7 +18533,7 @@ X86TargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetConstantPool(
-      CP->getConstVal(), PtrVT, CP->getAlignment(), CP->getOffset(), OpFlag);
+      CP->getConstVal(), PtrVT, CP->getAlign(), CP->getOffset(), OpFlag);
   SDLoc DL(CP);
   Result = DAG.getNode(getGlobalWrapperKind(), DL, PtrVT, Result);
   // With PIC, the address is actually $g + Offset.
@@ -19471,7 +19471,7 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
   static const uint32_t CV0[] = { 0x43300000, 0x45300000, 0, 0 };
   Constant *C0 = ConstantDataVector::get(*Context, CV0);
   auto PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
-  SDValue CPIdx0 = DAG.getConstantPool(C0, PtrVT, 16);
+  SDValue CPIdx0 = DAG.getConstantPool(C0, PtrVT, Align(16));
 
   SmallVector<Constant*,2> CV1;
   CV1.push_back(
@@ -19481,7 +19481,7 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
     ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble(),
                                       APInt(64, 0x4530000000000000ULL))));
   Constant *C1 = ConstantVector::get(CV1);
-  SDValue CPIdx1 = DAG.getConstantPool(C1, PtrVT, 16);
+  SDValue CPIdx1 = DAG.getConstantPool(C1, PtrVT, Align(16));
 
   // Load the 64-bit value into an XMM register.
   SDValue XR1 =
@@ -19686,7 +19686,7 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
         *DAG.getContext(),
         APFloat(APFloat::IEEEdouble(), APInt(64, 0x4330000000000000ULL)));
     auto PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
-    SDValue CPIdx = DAG.getConstantPool(Bias, PtrVT, /*Alignment*/ 8);
+    SDValue CPIdx = DAG.getConstantPool(Bias, PtrVT, Align(8));
     SDVTList Tys = DAG.getVTList(MVT::v4f64, MVT::Other);
     SDValue Ops[] = {DAG.getEntryNode(), CPIdx};
     SDValue VBias = DAG.getMemIntrinsicNode(
@@ -19910,7 +19910,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   APInt FF(64, 0x5F80000000000000ULL);
   SDValue FudgePtr = DAG.getConstantPool(
       ConstantInt::get(*DAG.getContext(), FF), PtrVT);
-  Align CPAlignment(cast<ConstantPoolSDNode>(FudgePtr)->getAlignment());
+  Align CPAlignment = cast<ConstantPoolSDNode>(FudgePtr)->getAlign();
 
   // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
   SDValue Zero = DAG.getIntPtrConstant(0, dl);
@@ -22231,8 +22231,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitIntVSETCC(Op, DAG);
 
-  if (VT == MVT::v32i16 || VT == MVT::v64i8)
+  if (VT == MVT::v32i16 || VT == MVT::v64i8) {
+    assert(!Subtarget.hasBWI() && "Unexpected VT with AVX512BW!");
     return splitIntVSETCC(Op, DAG);
+  }
 
   // If this is a SETNE against the signed minimum value, change it to SETGT.
   // If this is a SETNE against the signed maximum value, change it to SETLT.
@@ -30517,7 +30519,8 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
     return false;
 
   // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
-  if (Subtarget.hasXOP() && Ty->getPrimitiveSizeInBits() == 128 &&
+  // Splitting for v32i8/v16i16 on XOP+AVX2 targets is still preferred.
+  if (Subtarget.hasXOP() &&
       (Bits == 8 || Bits == 16 || Bits == 32 || Bits == 64))
     return false;
 
@@ -45564,10 +45567,11 @@ static SDValue combineBrCond(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// TODO: Could we move this to DAGCombine?
 static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
                                                   SelectionDAG &DAG) {
-  // Take advantage of vector comparisons producing 0 or -1 in each lane to
-  // optimize away operation when it's from a constant.
+  // Take advantage of vector comparisons (etc.) producing 0 or -1 in each lane
+  // to optimize away operation when it's from a constant.
   //
   // The general transformation is:
   //    UNARYOP(AND(VECTOR_CMP(x,y), constant)) -->
@@ -45579,10 +45583,10 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   // aren't the same.
   EVT VT = N->getValueType(0);
   bool IsStrict = N->isStrictFPOpcode();
+  unsigned NumEltBits = VT.getScalarSizeInBits();
   SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
-  if (!VT.isVector() || Op0->getOpcode() != ISD::AND ||
-      Op0->getOperand(0)->getOpcode() != ISD::SETCC ||
-      VT.getSizeInBits() != Op0.getValueSizeInBits())
+  if (!VT.isVector() || Op0.getOpcode() != ISD::AND ||
+      DAG.ComputeNumSignBits(Op0.getOperand(0)) != NumEltBits)
     return SDValue();
 
   // Now check that the other operand of the AND is a constant. We could

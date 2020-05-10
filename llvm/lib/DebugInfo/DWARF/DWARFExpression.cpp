@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Format.h"
 #include <cassert>
@@ -119,14 +118,14 @@ static DWARFExpression::Operation::Description getOpDesc(unsigned OpCode) {
 }
 
 bool DWARFExpression::Operation::extract(DataExtractor Data,
-                                         uint8_t AddressSize, uint64_t Offset) {
+                                         uint8_t AddressSize, uint64_t Offset,
+                                         Optional<DwarfFormat> Format) {
+  EndOffset = Offset;
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
-  if (Desc.Version == Operation::DwarfNA) {
-    EndOffset = Offset;
+  if (Desc.Version == Operation::DwarfNA)
     return false;
-  }
 
   for (unsigned Operand = 0; Operand < 2; ++Operand) {
     unsigned Size = Desc.Op[Operand];
@@ -158,8 +157,10 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       Operands[Operand] = Data.getUnsigned(&Offset, AddressSize);
       break;
     case Operation::SizeRefAddr:
-      // TODO: Add support for 64-bit DWARF format.
-      Operands[Operand] = Data.getU32(&Offset);
+      if (!Format)
+        return false;
+      Operands[Operand] =
+          Data.getUnsigned(&Offset, dwarf::getDwarfOffsetByteSize(*Format));
       break;
     case Operation::SizeLEB:
       if (Signed)

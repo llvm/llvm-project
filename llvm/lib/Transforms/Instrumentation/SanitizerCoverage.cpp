@@ -322,7 +322,8 @@ private:
 
 PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
                                                    ModuleAnalysisManager &MAM) {
-  ModuleSanitizerCoverage ModuleSancov(Options);
+  ModuleSanitizerCoverage ModuleSancov(Options, Whitelist.get(),
+                                       Blacklist.get());
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto DTCallback = [&FAM](Function &F) -> const DominatorTree * {
     return &FAM.getResult<DominatorTreeAnalysis>(F);

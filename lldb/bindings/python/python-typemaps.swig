@@ -59,37 +59,25 @@
   $result = list.release();
 }
 
-
 %typemap(in) lldb::tid_t {
-  if (PythonInteger::Check($input))
-  {
-    PythonInteger py_int(PyRefType::Borrowed, $input);
-    $1 = static_cast<lldb::tid_t>(py_int.GetInteger());
-  }
-  else
-  {
-    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+  PythonObject obj = Retain<PythonObject>($input);
+  lldb::tid_t value = unwrapOrSetPythonException(As<unsigned long long>(obj)); 
+  if (PyErr_Occurred())
     return nullptr;
-  }
+  $1 = value;
 }
 
 %typemap(in) lldb::StateType {
-  if (PythonInteger::Check($input))
-  {
-    PythonInteger py_int(PyRefType::Borrowed, $input);
-    int64_t state_type_value = py_int.GetInteger() ;
-
-    if (state_type_value > lldb::StateType::kLastStateType) {
-      PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
-      return nullptr;
-    }
-    $1 = static_cast<lldb::StateType>(state_type_value);
-  }
-  else
-  {
-    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+  PythonObject obj = Retain<PythonObject>($input);
+  unsigned long long state_type_value =
+    unwrapOrSetPythonException(As<unsigned long long>(obj));
+  if (PyErr_Occurred())
+    return nullptr;
+  if (state_type_value > lldb::StateType::kLastStateType) {
+    PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
     return nullptr;
   }
+  $1 = static_cast<lldb::StateType>(state_type_value);
 }
 
 /* Typemap definitions to allow SWIG to properly handle char buffer. */

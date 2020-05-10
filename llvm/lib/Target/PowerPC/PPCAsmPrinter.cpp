@@ -151,9 +151,21 @@ private:
 
 public:
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : PPCAsmPrinter(TM, std::move(Streamer)) {}
+      : PPCAsmPrinter(TM, std::move(Streamer)) {
+    if (MAI->isLittleEndian())
+      report_fatal_error(
+          "cannot create AIX PPC Assembly Printer for a little-endian target");
+  }
 
   StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
+
+  bool doInitialization(Module &M) override {
+    if (M.alias_size() > 0u)
+      report_fatal_error(
+          "module has aliases, which LLVM does not yet support for AIX");
+
+    return PPCAsmPrinter::doInitialization(M);
+  }
 
   void SetupMachineFunction(MachineFunction &MF) override;
 

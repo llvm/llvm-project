@@ -8,8 +8,9 @@ bugprone-reserved-identifier
 Checks for usages of identifiers reserved for use by the implementation. 
 
 The C and C++ standards both reserve the following names for such use:
-* identifiers that begin with an underscore followed by an uppercase letter;
-* identifiers in the global namespace that begin with an underscore.
+
+- identifiers that begin with an underscore followed by an uppercase letter;
+- identifiers in the global namespace that begin with an underscore.
 
 The C standard additionally reserves names beginning with a double underscore,
 while the C++ standard strengthens this to reserve names with a double 

@@ -5,6 +5,6 @@
 // REQUIRES: system-windows
 // RUN: mkdir -p %t.dir
 // RUN: touch %t.dir/foo.h
-// RUN: not %clang_cl /FI\\?\%t.dir\FOO.h /WX -Xclang -verify -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: not %clang_cl /FI\\?\%t.dir\FOO.h /WX -fsyntax-only %s 2>&1 | FileCheck %s
 
 // CHECK: non-portable path to file '"\\?\
