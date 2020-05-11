@@ -343,7 +343,6 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ;
 ; XOP-LABEL: vector_variable_shift_left_loop:
 ; XOP:       # %bb.0: # %entry
-; XOP-NEXT:    subq $24, %rsp
 ; XOP-NEXT:    testl %edx, %edx
 ; XOP-NEXT:    jle .LBB0_9
 ; XOP-NEXT:  # %bb.1: # %for.body.preheader
@@ -358,90 +357,62 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; XOP-NEXT:    movl %eax, %edx
 ; XOP-NEXT:    andl $-32, %edx
 ; XOP-NEXT:    vmovd %r9d, %xmm0
+; XOP-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm9
 ; XOP-NEXT:    vmovd %r8d, %xmm1
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm14
 ; XOP-NEXT:    xorl %ecx, %ecx
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; XOP-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
-; XOP-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; XOP-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm13 = xmm0[0],zero,xmm0[1],zero
-; XOP-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm14 = xmm1[0],zero,xmm1[1],zero
-; XOP-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm15 = xmm0[0],zero,xmm0[1],zero
-; XOP-NEXT:    vpxor %xmm11, %xmm11, %xmm11
-; XOP-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; XOP-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; XOP-NEXT:    vextractf128 $1, %ymm9, %xmm15
+; XOP-NEXT:    vextractf128 $1, %ymm14, %xmm4
 ; XOP-NEXT:    .p2align 4, 0x90
 ; XOP-NEXT:  .LBB0_4: # %vector.body
 ; XOP-NEXT:    # =>This Inner Loop Header: Depth=1
-; XOP-NEXT:    vpmovzxdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; XOP-NEXT:    # xmm1 = mem[0],zero,mem[1],zero
-; XOP-NEXT:    vpmovzxdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; XOP-NEXT:    # xmm2 = mem[0],zero,mem[1],zero
-; XOP-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
-; XOP-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
 ; XOP-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
 ; XOP-NEXT:    vmovq {{.*#+}} xmm6 = mem[0],zero
-; XOP-NEXT:    vpcomeqb %xmm11, %xmm3, %xmm3
-; XOP-NEXT:    vpmovsxbd %xmm3, %xmm7
-; XOP-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; XOP-NEXT:    vpmovsxbd %xmm3, %xmm3
-; XOP-NEXT:    vpcomeqb %xmm11, %xmm4, %xmm4
-; XOP-NEXT:    vpmovsxbd %xmm4, %xmm8
-; XOP-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,2,3]
-; XOP-NEXT:    vpmovsxbd %xmm4, %xmm4
-; XOP-NEXT:    vpcomeqb %xmm11, %xmm5, %xmm5
-; XOP-NEXT:    vmovdqu (%rdi,%rcx,4), %xmm9
-; XOP-NEXT:    vpslld %xmm2, %xmm9, %xmm10
-; XOP-NEXT:    vpslld %xmm1, %xmm9, %xmm0
-; XOP-NEXT:    vblendvps %xmm7, %xmm10, %xmm0, %xmm9
-; XOP-NEXT:    vpmovsxbd %xmm5, %xmm7
+; XOP-NEXT:    vmovq {{.*#+}} xmm7 = mem[0],zero
+; XOP-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; XOP-NEXT:    vpcomeqb %xmm8, %xmm5, %xmm5
+; XOP-NEXT:    vpmovsxbd %xmm5, %xmm0
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
 ; XOP-NEXT:    vpmovsxbd %xmm5, %xmm5
-; XOP-NEXT:    vpcomeqb %xmm11, %xmm6, %xmm6
-; XOP-NEXT:    vmovdqu 16(%rdi,%rcx,4), %xmm0
-; XOP-NEXT:    vpslld %xmm2, %xmm0, %xmm2
-; XOP-NEXT:    vpslld %xmm1, %xmm0, %xmm0
-; XOP-NEXT:    vpmovsxbd %xmm6, %xmm1
+; XOP-NEXT:    vpcomeqb %xmm8, %xmm6, %xmm6
+; XOP-NEXT:    vpmovsxbd %xmm6, %xmm10
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,1,2,3]
 ; XOP-NEXT:    vpmovsxbd %xmm6, %xmm6
-; XOP-NEXT:    vblendvps %xmm3, %xmm2, %xmm0, %xmm10
-; XOP-NEXT:    vmovdqu 32(%rdi,%rcx,4), %xmm2
-; XOP-NEXT:    vpslld %xmm15, %xmm2, %xmm3
-; XOP-NEXT:    vpslld %xmm14, %xmm2, %xmm2
-; XOP-NEXT:    vblendvps %xmm8, %xmm3, %xmm2, %xmm8
-; XOP-NEXT:    vmovdqu 48(%rdi,%rcx,4), %xmm3
-; XOP-NEXT:    vpslld %xmm15, %xmm3, %xmm0
-; XOP-NEXT:    vpslld %xmm14, %xmm3, %xmm3
-; XOP-NEXT:    vblendvps %xmm4, %xmm0, %xmm3, %xmm0
-; XOP-NEXT:    vmovdqu 64(%rdi,%rcx,4), %xmm3
-; XOP-NEXT:    vpslld %xmm13, %xmm3, %xmm4
-; XOP-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; XOP-NEXT:    vpslld %xmm2, %xmm3, %xmm3
-; XOP-NEXT:    vblendvps %xmm7, %xmm4, %xmm3, %xmm3
-; XOP-NEXT:    vmovdqu 80(%rdi,%rcx,4), %xmm4
-; XOP-NEXT:    vpslld %xmm13, %xmm4, %xmm7
-; XOP-NEXT:    vpslld %xmm2, %xmm4, %xmm4
-; XOP-NEXT:    vblendvps %xmm5, %xmm7, %xmm4, %xmm4
-; XOP-NEXT:    vmovdqu 96(%rdi,%rcx,4), %xmm5
-; XOP-NEXT:    vpslld %xmm12, %xmm5, %xmm7
-; XOP-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; XOP-NEXT:    vpslld %xmm2, %xmm5, %xmm5
-; XOP-NEXT:    vblendvps %xmm1, %xmm7, %xmm5, %xmm1
-; XOP-NEXT:    vmovdqu 112(%rdi,%rcx,4), %xmm5
-; XOP-NEXT:    vpslld %xmm12, %xmm5, %xmm7
-; XOP-NEXT:    vpslld %xmm2, %xmm5, %xmm5
-; XOP-NEXT:    vblendvps %xmm6, %xmm7, %xmm5, %xmm5
-; XOP-NEXT:    vmovups %xmm9, (%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm10, 16(%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm8, 32(%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm0, 48(%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm3, 64(%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm4, 80(%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm1, 96(%rdi,%rcx,4)
-; XOP-NEXT:    vmovups %xmm5, 112(%rdi,%rcx,4)
+; XOP-NEXT:    vpcomeqb %xmm8, %xmm7, %xmm7
+; XOP-NEXT:    vpmovsxbd %xmm7, %xmm11
+; XOP-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,2,3]
+; XOP-NEXT:    vpmovsxbd %xmm7, %xmm7
+; XOP-NEXT:    vpcomeqb %xmm8, %xmm2, %xmm2
+; XOP-NEXT:    vpmovsxbd %xmm2, %xmm12
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; XOP-NEXT:    vpmovsxbd %xmm2, %xmm2
+; XOP-NEXT:    vblendvps %xmm5, %xmm15, %xmm4, %xmm5
+; XOP-NEXT:    vpshld %xmm5, 16(%rdi,%rcx,4), %xmm13
+; XOP-NEXT:    vblendvps %xmm0, %xmm9, %xmm14, %xmm0
+; XOP-NEXT:    vpshld %xmm0, (%rdi,%rcx,4), %xmm0
+; XOP-NEXT:    vblendvps %xmm6, %xmm15, %xmm4, %xmm6
+; XOP-NEXT:    vpshld %xmm6, 48(%rdi,%rcx,4), %xmm6
+; XOP-NEXT:    vblendvps %xmm10, %xmm9, %xmm14, %xmm5
+; XOP-NEXT:    vpshld %xmm5, 32(%rdi,%rcx,4), %xmm5
+; XOP-NEXT:    vblendvps %xmm7, %xmm15, %xmm4, %xmm7
+; XOP-NEXT:    vpshld %xmm7, 80(%rdi,%rcx,4), %xmm7
+; XOP-NEXT:    vblendvps %xmm11, %xmm9, %xmm14, %xmm1
+; XOP-NEXT:    vpshld %xmm1, 64(%rdi,%rcx,4), %xmm1
+; XOP-NEXT:    vblendvps %xmm2, %xmm15, %xmm4, %xmm2
+; XOP-NEXT:    vpshld %xmm2, 112(%rdi,%rcx,4), %xmm2
+; XOP-NEXT:    vblendvps %xmm12, %xmm9, %xmm14, %xmm3
+; XOP-NEXT:    vpshld %xmm3, 96(%rdi,%rcx,4), %xmm3
+; XOP-NEXT:    vmovdqu %xmm0, (%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm13, 16(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm5, 32(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm6, 48(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm1, 64(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm7, 80(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm3, 96(%rdi,%rcx,4)
+; XOP-NEXT:    vmovdqu %xmm2, 112(%rdi,%rcx,4)
 ; XOP-NEXT:    addq $32, %rcx
 ; XOP-NEXT:    cmpq %rcx, %rdx
 ; XOP-NEXT:    jne .LBB0_4
@@ -449,7 +420,6 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; XOP-NEXT:    cmpq %rax, %rdx
 ; XOP-NEXT:    jne .LBB0_6
 ; XOP-NEXT:  .LBB0_9: # %for.cond.cleanup
-; XOP-NEXT:    addq $24, %rsp
 ; XOP-NEXT:    vzeroupper
 ; XOP-NEXT:    retq
 ; XOP-NEXT:    .p2align 4, 0x90

@@ -30519,7 +30519,8 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
     return false;
 
   // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
-  if (Subtarget.hasXOP() && Ty->getPrimitiveSizeInBits() == 128 &&
+  // Splitting for v32i8/v16i16 on XOP+AVX2 targets is still preferred.
+  if (Subtarget.hasXOP() &&
       (Bits == 8 || Bits == 16 || Bits == 32 || Bits == 64))
     return false;
 
