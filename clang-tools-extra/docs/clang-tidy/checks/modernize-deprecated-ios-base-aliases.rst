@@ -15,8 +15,3 @@ Deprecated member type               Replacement
 ``std::ios_base::streamoff``          
 ``std::ios_base::streampos``         
 ===================================  ===========================
-
-Automatic Fixes
-^^^^^^^^^^^^^^^
-
-The check provides suggested fixes. See the documentation above for the details.

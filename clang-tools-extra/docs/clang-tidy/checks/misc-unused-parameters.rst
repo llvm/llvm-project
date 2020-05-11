@@ -40,8 +40,3 @@ Options
    constructors - no constructor initializers). When the function body is empty,
    an unused parameter is unlikely to be unnoticed by a human reader, and
    there's basically no place for a bug to hide.
-
-Automatic Fixes
-^^^^^^^^^^^^^^^
-
-The check provides suggested fixes. See the documentation above for the details.
