@@ -1098,19 +1098,20 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
       isVTi1Type = true;
     }
   }
-  unsigned Align = CPN->getAlignment();
+  Align Alignment = CPN->getAlign();
   bool IsPositionIndependent = isPositionIndependent();
   unsigned char TF = IsPositionIndependent ? HexagonII::MO_PCREL : 0;
 
   unsigned Offset = 0;
   SDValue T;
   if (CPN->isMachineConstantPoolEntry())
-    T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, Offset,
-                                  TF);
+    T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Alignment,
+                                  Offset, TF);
   else if (isVTi1Type)
-    T = DAG.getTargetConstantPool(CVal, ValTy, Align, Offset, TF);
+    T = DAG.getTargetConstantPool(CVal, ValTy, Alignment, Offset, TF);
   else
-    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset, TF);
+    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Alignment, Offset,
+                                  TF);
 
   assert(cast<ConstantPoolSDNode>(T)->getTargetFlags() == TF &&
          "Inconsistent target flag encountered");

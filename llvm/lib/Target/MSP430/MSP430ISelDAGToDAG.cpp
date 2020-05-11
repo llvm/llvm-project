@@ -263,8 +263,8 @@ bool MSP430DAGToDAGISel::SelectAddr(SDValue N,
                                           MVT::i16, AM.Disp,
                                           0/*AM.SymbolFlags*/);
   else if (AM.CP)
-    Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i16,
-                                         AM.Align, AM.Disp, 0/*AM.SymbolFlags*/);
+    Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i16, Align(AM.Align),
+                                         AM.Disp, 0 /*AM.SymbolFlags*/);
   else if (AM.ES)
     Disp = CurDAG->getTargetExternalSymbol(AM.ES, MVT::i16, 0/*AM.SymbolFlags*/);
   else if (AM.JT != -1)
