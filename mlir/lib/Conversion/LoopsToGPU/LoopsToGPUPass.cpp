@@ -11,7 +11,7 @@
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPU.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -22,7 +22,7 @@
 #define LOOPOP_TO_GPU_PASS_NAME "convert-loop-op-to-gpu"
 
 using namespace mlir;
-using namespace mlir::loop;
+using namespace mlir::scf;
 
 namespace {
 // A pass that traverses top-level loops in the function and converts them to
@@ -98,8 +98,8 @@ struct ParallelLoopToGpuPass
     target.addLegalDialect<StandardOpsDialect>();
     target.addLegalDialect<AffineDialect>();
     target.addLegalDialect<gpu::GPUDialect>();
-    target.addLegalDialect<loop::LoopOpsDialect>();
-    target.addIllegalOp<loop::ParallelOp>();
+    target.addLegalDialect<scf::SCFDialect>();
+    target.addIllegalOp<scf::ParallelOp>();
     if (failed(applyPartialConversion(getOperation(), target, patterns)))
       signalPassFailure();
   }

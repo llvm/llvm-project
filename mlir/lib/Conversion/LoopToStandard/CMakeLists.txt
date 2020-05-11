@@ -11,6 +11,6 @@ add_mlir_conversion_library(MLIRLoopToStandard
   Core
 
   LINK_LIBS PUBLIC
-  MLIRLoopOps
+  MLIRSCF
   MLIRTransforms
   )

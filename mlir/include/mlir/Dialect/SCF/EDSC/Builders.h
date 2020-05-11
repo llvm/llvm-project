@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LOOPOPS_EDSC_BUILDERS_H_
-#define MLIR_DIALECT_LOOPOPS_EDSC_BUILDERS_H_
+#ifndef MLIR_DIALECT_SCF_EDSC_BUILDERS_H_
+#define MLIR_DIALECT_SCF_EDSC_BUILDERS_H_
 
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"
@@ -22,13 +22,13 @@
 namespace mlir {
 namespace edsc {
 
-/// Constructs a new loop::ParallelOp and captures the associated induction
+/// Constructs a new scf::ParallelOp and captures the associated induction
 /// variables. An array of Value pointers is passed as the first
 /// argument and is the *only* way to capture loop induction variables.
 LoopBuilder makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
                                     ArrayRef<Value> lbs, ArrayRef<Value> ubs,
                                     ArrayRef<Value> steps);
-/// Constructs a new loop::ForOp and captures the associated induction
+/// Constructs a new scf::ForOp and captures the associated induction
 /// variable. A Value pointer is passed as the first argument and is the
 /// *only* way to capture the loop induction variable.
 LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
@@ -74,4 +74,4 @@ private:
 } // namespace edsc
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LOOPOPS_EDSC_BUILDERS_H_
+#endif // MLIR_DIALECT_SCF_EDSC_BUILDERS_H_

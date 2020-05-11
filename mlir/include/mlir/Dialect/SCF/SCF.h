@@ -1,4 +1,4 @@
-//===- Ops.h - Loop MLIR Operations -----------------------------*- C++ -*-===//
+//===- SCFOps.h - Structured Control Flow -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines convenience types for working with loop operations.
+// This file defines structured control flow operations.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LOOPOPS_OPS_H_
-#define MLIR_LOOPOPS_OPS_H_
+#ifndef MLIR_DIALECT_SCF_H_
+#define MLIR_DIALECT_SCF_H_
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -22,12 +22,12 @@
 #include "mlir/Interfaces/SideEffects.h"
 
 namespace mlir {
-namespace loop {
+namespace scf {
 
-#include "mlir/Dialect/LoopOps/LoopOpsDialect.h.inc"
+#include "mlir/Dialect/SCF/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LoopOps/LoopOps.h.inc"
+#include "mlir/Dialect/SCF/SCFOps.h.inc"
 
 // Insert `loop.terminator` at the end of the only region's only block if it
 // does not have a terminator already.  If a new `loop.terminator` is inserted,
@@ -43,6 +43,6 @@ ForOp getForInductionVarOwner(Value val);
 // value is not an induction variable, then return nullptr.
 ParallelOp getParallelForInductionVarOwner(Value val);
 
-} // end namespace loop
+} // end namespace scf
 } // end namespace mlir
-#endif // MLIR_LOOPOPS_OPS_H_
+#endif // MLIR_DIALECT_SCF_H_

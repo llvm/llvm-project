@@ -14,7 +14,7 @@
 namespace mlir {
 
 #define GEN_PASS_CLASSES
-#include "mlir/Dialect/LoopOps/Passes.h.inc"
+#include "mlir/Dialect/SCF/Passes.h.inc"
 
 } // end namespace mlir
 

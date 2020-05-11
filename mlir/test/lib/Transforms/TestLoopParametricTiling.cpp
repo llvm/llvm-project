@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -33,9 +33,9 @@ public:
 
   void runOnFunction() override {
     FuncOp func = getFunction();
-    func.walk([this](loop::ForOp op) {
+    func.walk([this](scf::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentRegion()->getParentOfType<loop::ForOp>())
+      if (op.getParentRegion()->getParentOfType<scf::ForOp>())
         return;
       extractFixedOuterLoops(op, sizes);
     });

@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -90,7 +90,7 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
        llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();
-    auto loop = cast<loop::ForOp>(v.getParentRegion()->getParentOp());
+    auto loop = cast<scf::ForOp>(v.getParentRegion()->getParentOp());
     mapLoopToProcessorIds(loop, {threadIds[en.index()]},
                           {blockDims[en.index()]});
   }

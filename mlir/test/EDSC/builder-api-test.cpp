@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
-#include "mlir/Dialect/LoopOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/EDSC/Builders.h"
@@ -39,7 +39,7 @@ static MLIRContext &globalContext() {
   static bool init_once = []() {
     registerDialect<AffineDialect>();
     registerDialect<linalg::LinalgDialect>();
-    registerDialect<loop::LoopOpsDialect>();
+    registerDialect<scf::SCFDialect>();
     registerDialect<StandardOpsDialect>();
     registerDialect<vector::VectorDialect>();
     return true;

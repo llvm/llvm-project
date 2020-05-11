@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 
@@ -82,7 +82,7 @@ LoopBuilder mlir::edsc::makeParallelLoopBuilder(MutableArrayRef<Value> ivs,
                                                 ArrayRef<Value> lbs,
                                                 ArrayRef<Value> ubs,
                                                 ArrayRef<Value> steps) {
-  loop::ParallelOp parallelOp = OperationBuilder<loop::ParallelOp>(
+  scf::ParallelOp parallelOp = OperationBuilder<scf::ParallelOp>(
       SmallVector<Value, 4>(lbs.begin(), lbs.end()),
       SmallVector<Value, 4>(ubs.begin(), ubs.end()),
       SmallVector<Value, 4>(steps.begin(), steps.end()));
@@ -98,10 +98,10 @@ mlir::edsc::makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
                             MutableArrayRef<Value> iterArgsHandles,
                             ValueRange iterArgsInitValues) {
   mlir::edsc::LoopBuilder result;
-  loop::ForOp forOp =
-      OperationBuilder<loop::ForOp>(lb, ub, step, iterArgsInitValues);
+  scf::ForOp forOp =
+      OperationBuilder<scf::ForOp>(lb, ub, step, iterArgsInitValues);
   *iv = Value(forOp.getInductionVar());
-  auto *body = loop::getForInductionVarOwner(*iv).getBody();
+  auto *body = scf::getForInductionVarOwner(*iv).getBody();
   for (size_t i = 0, e = iterArgsHandles.size(); i < e; ++i) {
     // Skipping the induction variable.
     iterArgsHandles[i] = body->getArgument(i + 1);

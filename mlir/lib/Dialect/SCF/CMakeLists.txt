@@ -1,5 +1,5 @@
 file(GLOB globbed *.c *.cpp)
-add_mlir_dialect_library(MLIRLoopOps
+add_mlir_dialect_library(MLIRSCF
   ${globbed}
   EDSC/Builders.cpp
 
@@ -7,7 +7,7 @@ add_mlir_dialect_library(MLIRLoopOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/LoopOps
 
   DEPENDS
-  MLIRLoopOpsIncGen
+  MLIRSCFOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIREDSC

@@ -31,8 +31,8 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/LoopOps/Passes.h"
 #include "mlir/Dialect/Quant/Passes.h"
+#include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Transforms/LocationSnapshot.h"
@@ -78,7 +78,7 @@ inline void registerAllPasses() {
 
   // Loop
 #define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/LoopOps/Passes.h.inc"
+#include "mlir/Dialect/SCF/Passes.h.inc"
 
   // Quant
 #define GEN_PASS_REGISTRATION

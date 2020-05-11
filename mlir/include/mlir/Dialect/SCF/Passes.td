@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LOOP_PASSES
-#define MLIR_DIALECT_LOOP_PASSES
+#ifndef MLIR_DIALECT_SCF_PASSES
+#define MLIR_DIALECT_SCF_PASSES
 
 include "mlir/Pass/PassBase.td"
 
@@ -32,4 +32,4 @@ def LoopParallelLoopTiling : FunctionPass<"parallel-loop-tiling"> {
   ];
 }
 
-#endif // MLIR_DIALECT_LOOP_PASSES
+#endif // MLIR_DIALECT_SCF_PASSES

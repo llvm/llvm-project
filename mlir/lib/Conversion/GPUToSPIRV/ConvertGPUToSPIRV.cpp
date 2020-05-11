@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRV.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -21,34 +21,34 @@ using namespace mlir;
 
 namespace {
 
-/// Pattern to convert a loop::ForOp within kernel functions into spirv::LoopOp.
-class ForOpConversion final : public SPIRVOpLowering<loop::ForOp> {
+/// Pattern to convert a scf::ForOp within kernel functions into spirv::LoopOp.
+class ForOpConversion final : public SPIRVOpLowering<scf::ForOp> {
 public:
-  using SPIRVOpLowering<loop::ForOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<scf::ForOp>::SPIRVOpLowering;
 
   LogicalResult
-  matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to convert a loop::IfOp within kernel functions into
+/// Pattern to convert a scf::IfOp within kernel functions into
 /// spirv::SelectionOp.
-class IfOpConversion final : public SPIRVOpLowering<loop::IfOp> {
+class IfOpConversion final : public SPIRVOpLowering<scf::IfOp> {
 public:
-  using SPIRVOpLowering<loop::IfOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<scf::IfOp>::SPIRVOpLowering;
 
   LogicalResult
-  matchAndRewrite(loop::IfOp IfOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::IfOp IfOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to erase a loop::YieldOp.
-class TerminatorOpConversion final : public SPIRVOpLowering<loop::YieldOp> {
+/// Pattern to erase a scf::YieldOp.
+class TerminatorOpConversion final : public SPIRVOpLowering<scf::YieldOp> {
 public:
-  using SPIRVOpLowering<loop::YieldOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<scf::YieldOp>::SPIRVOpLowering;
 
   LogicalResult
-  matchAndRewrite(loop::YieldOp terminatorOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::YieldOp terminatorOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.eraseOp(terminatorOp);
     return success();
@@ -117,18 +117,18 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// loop::ForOp.
+// scf::ForOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
+ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
                                  ConversionPatternRewriter &rewriter) const {
-  // loop::ForOp can be lowered to the structured control flow represented by
+  // scf::ForOp can be lowered to the structured control flow represented by
   // spirv::LoopOp by making the continue block of the spirv::LoopOp the loop
   // latch and the merge block the exit block. The resulting spirv::LoopOp has a
   // single back edge from the continue to header block, and a single exit from
   // header to merge.
-  loop::ForOpOperandAdaptor forOperands(operands);
+  scf::ForOpOperandAdaptor forOperands(operands);
   auto loc = forOp.getLoc();
   auto loopControl = rewriter.getI32IntegerAttr(
       static_cast<uint32_t>(spirv::LoopControl::None));
@@ -190,16 +190,16 @@ ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
 }
 
 //===----------------------------------------------------------------------===//
-// loop::IfOp.
+// scf::IfOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-IfOpConversion::matchAndRewrite(loop::IfOp ifOp, ArrayRef<Value> operands,
+IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter) const {
-  // When lowering `loop::IfOp` we explicitly create a selection header block
+  // When lowering `scf::IfOp` we explicitly create a selection header block
   // before the control flow diverges and a merge block where control flow
   // subsequently converges.
-  loop::IfOpOperandAdaptor ifOperands(operands);
+  scf::IfOpOperandAdaptor ifOperands(operands);
   auto loc = ifOp.getLoc();
 
   // Create `spv.selection` operation, selection header block and merge block.
