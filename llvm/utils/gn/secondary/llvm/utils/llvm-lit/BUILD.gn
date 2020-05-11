@@ -7,6 +7,8 @@ import("//llvm/utils/gn/build/write_cmake_config.gni")
 
 write_cmake_config("llvm-lit") {
   input = "llvm-lit.in"
+
+  # The rebase_path() calls below assume that this is in $root_out_dir/bin.
   output = "$root_out_dir/bin/llvm-lit"
 
   if (host_os == "win") {
@@ -76,16 +78,18 @@ write_cmake_config("llvm-lit") {
   # generated llvm.site.cfg.py file, so llvm-lit depends on all the targets to
   # generate the site.cfg.py file.
   # Note: \n is converted to a newline by write_cmake_config.py, not by gn.
-  # FIXME: Write relative paths for path()s.
-  config_map = "def path(p): return p if p else \"\"\n"
+  config_map =
+      "def path(p):\n" + "    if not p: return ''\n" +
+      "    return os.path.abspath(os.path.join(__file__, '..', '..', p))\n"
 
   foreach(entry, entries) {
-    config_map += "map_config('" + rebase_path(entry[0]) + "', '" +
-                  rebase_path(entry[1]) + "')\n"
+    config_map +=
+        "\nmap_config(\n    path(r'" + rebase_path(entry[0], root_out_dir) +
+        "'),\n    path(r'" + rebase_path(entry[1], root_out_dir) + "'))"
   }
 
   values = [
-    "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),
+    "LLVM_SOURCE_DIR=" + rebase_path("//llvm", root_out_dir),
     "BUILD_MODE=.",
     "LLVM_LIT_CONFIG_MAP=" + config_map,
   ]
