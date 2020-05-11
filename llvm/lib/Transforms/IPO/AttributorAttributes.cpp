@@ -2613,9 +2613,12 @@ struct AAIsDeadValueImpl : public AAIsDead {
       return false;
 
     const IRPosition &CallIRP = IRPosition::callsite_function(*CB);
-    const auto &NoUnwindAA = A.getAndUpdateAAFor<AANoUnwind>(*this, CallIRP);
+    const auto &NoUnwindAA = A.getAndUpdateAAFor<AANoUnwind>(
+        *this, CallIRP, /* TrackDependence */ false);
     if (!NoUnwindAA.isAssumedNoUnwind())
       return false;
+    if (!NoUnwindAA.isKnownNoUnwind())
+      A.recordDependence(NoUnwindAA, *this, DepClassTy::OPTIONAL);
 
     const auto &MemBehaviorAA = A.getAndUpdateAAFor<AAMemoryBehavior>(
         *this, CallIRP, /* TrackDependence */ false);
@@ -2900,7 +2903,8 @@ struct AAIsDeadFunction : public AAIsDead {
       if (!CB)
         continue;
       const auto &NoReturnAA = A.getAndUpdateAAFor<AANoReturn>(
-          *this, IRPosition::callsite_function(*CB));
+          *this, IRPosition::callsite_function(*CB), /* TrackDependence */ true,
+          DepClassTy::OPTIONAL);
       bool MayReturn = !NoReturnAA.isAssumedNoReturn();
       if (MayReturn && (!Invoke2CallAllowed || !isa<InvokeInst>(CB)))
         continue;
@@ -3013,7 +3017,8 @@ identifyAliveSuccessors(Attributor &A, const CallBase &CB,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   const IRPosition &IPos = IRPosition::callsite_function(CB);
 
-  const auto &NoReturnAA = A.getAndUpdateAAFor<AANoReturn>(AA, IPos);
+  const auto &NoReturnAA = A.getAndUpdateAAFor<AANoReturn>(
+      AA, IPos, /* TrackDependence */ true, DepClassTy::OPTIONAL);
   if (NoReturnAA.isAssumedNoReturn())
     return !NoReturnAA.isKnownNoReturn();
   if (CB.isTerminator())
