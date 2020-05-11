@@ -2470,7 +2470,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
   ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
                         triple);
 
-  std::string sdk_path;
+  std::string sdk_path = GetPlatformSDKPath();
   if (TargetSP target_sp = m_target_wp.lock())
     if (FileSpec &manual_override_sdk = target_sp->GetSDKPath()) {
       set_sdk = false;
