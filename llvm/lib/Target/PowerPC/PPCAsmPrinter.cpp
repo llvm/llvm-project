@@ -159,13 +159,7 @@ public:
 
   StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
 
-  bool doInitialization(Module &M) override {
-    if (M.alias_size() > 0u)
-      report_fatal_error(
-          "module has aliases, which LLVM does not yet support for AIX");
-
-    return PPCAsmPrinter::doInitialization(M);
-  }
+  bool doInitialization(Module &M) override;
 
   void SetupMachineFunction(MachineFunction &MF) override;
 
@@ -1723,6 +1717,39 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (TS != nullptr)
       TS->emitTCEntry(*I.first);
   }
+}
+
+bool PPCAIXAsmPrinter::doInitialization(Module &M) {
+  if (M.alias_size() > 0u)
+    report_fatal_error(
+        "module has aliases, which LLVM does not yet support for AIX");
+
+  const bool Result = PPCAsmPrinter::doInitialization(M);
+
+  auto setCsectAlignment = [this](const GlobalObject *GO) {
+    // Declarations have 0 alignment which is set by default.
+    if (GO->isDeclaration())
+      return;
+
+    SectionKind GOKind = getObjFileLowering().getKindForGlobal(GO, TM);
+    MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+        getObjFileLowering().SectionForGlobal(GO, GOKind, TM));
+
+    Align GOAlign = getGVAlignment(GO, GO->getParent()->getDataLayout());
+    if (GOAlign > Csect->getAlignment())
+      Csect->setAlignment(GOAlign);
+  };
+
+  // We need to know, up front, the alignment of csects for the assembly path,
+  // because once a .csect directive gets emitted, we could not change the
+  // alignment value on it.
+  for (const auto &G : M.globals())
+    setCsectAlignment(&G);
+
+  for (const auto &F : M)
+    setCsectAlignment(&F);
+
+  return Result;
 }
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code

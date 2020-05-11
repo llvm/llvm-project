@@ -38,10 +38,10 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:      .csect .text[PR]
+; CHECK:      .csect .text[PR], 2
 ; CHECK-NEXT:  .file
 
-; CHECK:      .csect .data[RW]
+; CHECK:      .csect .data[RW], 5
 ; CHECK-NEXT: .globl  ivar
 ; CHECK-NEXT: .align  2
 ; CHECK-NEXT: ivar:
@@ -186,7 +186,7 @@
 ; SYMS-NEXT:       SectionLen: 0
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
-; SYMS-NEXT:       SymbolAlignmentLog2: 0
+; SYMS-NEXT:       SymbolAlignmentLog2: 2
 ; SYMS-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYMS-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYMS-NEXT:       StabInfoIndex: 0x0
