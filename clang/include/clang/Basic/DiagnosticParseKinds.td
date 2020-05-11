@@ -105,6 +105,14 @@ def ext_clang_c_enum_fixed_underlying_type : Extension<
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_enum_base_in_type_specifier : ExtWarn<
+  "non-defining declaration of enumeration with a fixed underlying type is "
+  "only permitted as a standalone declaration"
+  "%select{|; missing list of enumerators?}0">, InGroup<DiagGroup<"enum-base">>;
+def err_anonymous_enum_bitfield : Error<
+  "ISO C++ only allows ':' in member enumeration declaration to introduce "
+  "a fixed underlying type, not an anonymous bit-field">;
+
 def warn_cxx98_compat_alignof : Warning<
   "alignof expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
