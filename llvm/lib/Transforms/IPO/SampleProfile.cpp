@@ -944,7 +944,7 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
   for (auto I : Candidates) {
     Function *CalledFunction = I->getCalledFunction();
     if (CalledFunction) {
-      ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineAttempt", 
+      ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineAttempt",
                                            I->getDebugLoc(), I->getParent())
                 << "previous inlining reattempted for "
                 << (Hot ? "hotness: '" : "size: '")
@@ -1025,7 +1025,7 @@ bool SampleProfileLoader::inlineHotFunctions(
                                      PSI->getOrCompHotCountThreshold());
             continue;
           }
-          auto CalleeFunctionName = FS->getFuncNameInModule(F.getParent());
+          auto CalleeFunctionName = FS->getFuncName();
           // If it is a recursive call, we do not inline it as it could bloat
           // the code exponentially. There is way to better handle this, e.g.
           // clone the caller first, and inline the cloned caller if it is
