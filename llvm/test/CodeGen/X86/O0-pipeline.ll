@@ -55,6 +55,10 @@
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       X86 FP Stackifier
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Natural Loop Construction
+; CHECK-NEXT:       Machine Dominance Frontier Construction
+; CHECK-NEXT:       X86 Load Value Injection (LVI) Load Hardening
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
@@ -82,3 +86,4 @@
 define void @f() {
   ret void
 }
+

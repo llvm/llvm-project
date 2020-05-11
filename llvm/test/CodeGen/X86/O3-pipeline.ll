@@ -138,9 +138,11 @@
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       X86 FP Stackifier
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Dominance Frontier Construction
+; CHECK-NEXT:       X86 Load Value Injection (LVI) Load Hardening
 ; CHECK-NEXT:       PostRA Machine Sink
 ; CHECK-NEXT:       Machine Block Frequency Analysis
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
@@ -191,3 +193,4 @@
 define void @f() {
   ret void
 }
+

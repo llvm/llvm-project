@@ -2267,6 +2267,10 @@ def mspeculative_load_hardening : Flag<["-"], "mspeculative-load-hardening">,
   Group<m_Group>, Flags<[CoreOption,CC1Option]>;
 def mno_speculative_load_hardening : Flag<["-"], "mno-speculative-load-hardening">,
   Group<m_Group>, Flags<[CoreOption]>;
+def mlvi_hardening : Flag<["-"], "mlvi-hardening">, Group<m_Group>, Flags<[CoreOption,DriverOption]>,
+  HelpText<"Enable all mitigations for Load Value Injection (LVI)">;
+def mno_lvi_hardening : Flag<["-"], "mno-lvi-hardening">, Group<m_Group>, Flags<[CoreOption,DriverOption]>,
+  HelpText<"Disable mitigations for Load Value Injection (LVI)">;
 def mlvi_cfi : Flag<["-"], "mlvi-cfi">, Group<m_Group>, Flags<[CoreOption,DriverOption]>,
   HelpText<"Enable only control-flow mitigations for Load Value Injection (LVI)">;
 def mno_lvi_cfi : Flag<["-"], "mno-lvi-cfi">, Group<m_Group>, Flags<[CoreOption,DriverOption]>,
