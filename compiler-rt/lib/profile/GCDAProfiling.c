@@ -203,7 +203,12 @@ static uint32_t length_of_string(const char *s) {
   return (strlen(s) / 4) + 1;
 }
 
-static void write_string(const char *s) {
+// Remove when we support libgcov 9 current_working_directory.
+#if !defined(_MSC_VER) && defined(__clang__)
+__attribute__((unused))
+#endif
+static void
+write_string(const char *s) {
   uint32_t len = length_of_string(s);
   write_32bit_value(len);
   write_bytes(s, strlen(s));
@@ -445,30 +450,25 @@ void llvm_gcda_increment_indirect_counter(uint32_t *predecessor,
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_gcda_emit_function(uint32_t ident, const char *function_name,
-                             uint32_t func_checksum, uint8_t use_extra_checksum,
+void llvm_gcda_emit_function(uint32_t ident, uint32_t func_checksum,
+                             uint8_t use_extra_checksum,
                              uint32_t cfg_checksum) {
   uint32_t len = 2;
 
   if (use_extra_checksum)
     len++;
 #ifdef DEBUG_GCDAPROFILING
-  fprintf(stderr, "llvmgcda: function id=0x%08x name=%s\n", ident,
-          function_name ? function_name : "NULL");
+  fprintf(stderr, "llvmgcda: function id=0x%08x\n", ident);
 #endif
   if (!output_file) return;
 
   /* function tag */
   write_bytes("\0\0\0\1", 4);
-  if (function_name)
-    len += 1 + length_of_string(function_name);
   write_32bit_value(len);
   write_32bit_value(ident);
   write_32bit_value(func_checksum);
   if (use_extra_checksum)
     write_32bit_value(cfg_checksum);
-  if (function_name)
-    write_string(function_name);
 }
 
 COMPILER_RT_VISIBILITY
