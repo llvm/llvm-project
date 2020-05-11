@@ -25,14 +25,6 @@ class OptimizationRemarkEmitter;
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
 
-/// Return true if inlining of CB can block the caller from being
-/// inlined which is proved to be more beneficial. \p IC is the
-/// estimated inline cost associated with callsite \p CB.
-/// \p TotalSecondaryCost will be set to the estimated cost of inlining the
-/// caller if \p CB is suppressed for inlining.
-bool shouldBeDeferred(Function *Caller, InlineCost IC, int &TotalSecondaryCost,
-                      function_ref<InlineCost(CallBase &CB)> GetInlineCost);
-
 /// Return the cost only if the inliner should attempt to inline at the given
 /// CallSite. If we return the cost, we will emit an optimisation remark later
 /// using that cost, so we won't do so from this function. Return None if
