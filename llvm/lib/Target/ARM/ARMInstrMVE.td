@@ -1690,9 +1690,13 @@ let Predicates = [HasMVEInt] in {
             (MVE_VMOV_from_lane_s8 MQPR:$src, imm:$lane)>;
   def : Pat<(ARMvgetlanes (v8i16 MQPR:$src), imm:$lane),
             (MVE_VMOV_from_lane_s16 MQPR:$src, imm:$lane)>;
+  def : Pat<(ARMvgetlanes (v8f16 MQPR:$src), imm:$lane),
+            (MVE_VMOV_from_lane_s16 MQPR:$src, imm:$lane)>;
   def : Pat<(ARMvgetlaneu (v16i8 MQPR:$src), imm:$lane),
             (MVE_VMOV_from_lane_u8 MQPR:$src, imm:$lane)>;
   def : Pat<(ARMvgetlaneu (v8i16 MQPR:$src), imm:$lane),
+            (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane)>;
+  def : Pat<(ARMvgetlaneu (v8f16 MQPR:$src), imm:$lane),
             (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane)>;
 
   def : Pat<(v16i8 (scalar_to_vector GPR:$src)),
@@ -2227,24 +2231,10 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(v4i32 (ARMvdup (i32 rGPR:$elem))),
             (MVE_VDUP32 rGPR:$elem)>;
 
-  def : Pat<(v4i32 (ARMvduplane (v4i32 MQPR:$src), imm:$lane)),
-            (MVE_VDUP32 (MVE_VMOV_from_lane_32 MQPR:$src, imm:$lane))>;
-  // For the 16-bit and 8-bit vduplanes we don't care about the signedness
-  // of the lane move operation as we only want the lowest 8/16 bits anyway.
-  def : Pat<(v8i16 (ARMvduplane (v8i16 MQPR:$src), imm:$lane)),
-            (MVE_VDUP16 (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane))>;
-  def : Pat<(v16i8 (ARMvduplane (v16i8 MQPR:$src), imm:$lane)),
-            (MVE_VDUP8  (MVE_VMOV_from_lane_u8 MQPR:$src, imm:$lane))>;
-
   def : Pat<(v8f16 (ARMvdup (i32 rGPR:$elem))),
             (MVE_VDUP16 rGPR:$elem)>;
   def : Pat<(v4f32 (ARMvdup (i32 rGPR:$elem))),
             (MVE_VDUP32 rGPR:$elem)>;
-
-  def : Pat<(v4f32 (ARMvduplane (v4f32 MQPR:$src), imm:$lane)),
-            (MVE_VDUP32 (MVE_VMOV_from_lane_32 MQPR:$src, imm:$lane))>;
-  def : Pat<(v8f16 (ARMvduplane (v8f16 MQPR:$src), imm:$lane)),
-            (MVE_VDUP16 (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane))>;
 
   // Match a vselect with an ARMvdup as a predicated MVE_VDUP
   def : Pat<(v16i8 (vselect (v16i1 VCCR:$pred),

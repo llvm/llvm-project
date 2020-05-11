@@ -243,9 +243,8 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-NEXT:    vmov.32 r0, q0[1]
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vadd.f32 q0, q0, q1
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vadd.f32 q0, q0, r0
 ; CHECK-NEXT:    @ kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB1_4:
@@ -513,9 +512,8 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-NEXT:    vmov.32 r0, q0[1]
-; CHECK-NEXT:    vdup.32 q1, r0
-; CHECK-NEXT:    vadd.f32 q0, q0, q1
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vadd.f32 q0, q0, r0
 ; CHECK-NEXT:    b .LBB2_23
 ; CHECK-NEXT:  .LBB2_22:
 ; CHECK-NEXT:    vldr s0, .LCPI2_0
