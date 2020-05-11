@@ -1,3 +1,4 @@
+UNSUPPORTED: host-byteorder-big-endian
 XFAIL: *
 
 RUN: mkdir -p %t.d
