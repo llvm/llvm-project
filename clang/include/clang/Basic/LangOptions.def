@@ -368,6 +368,8 @@ ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddres
              "Key used for return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, "Branch-target enforcement enabled")
 
+LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT
