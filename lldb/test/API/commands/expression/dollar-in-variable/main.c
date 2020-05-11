@@ -17,5 +17,6 @@ int main() {
   //%self.expect("expr $foo", substrs=['(int)', ' = 12'])
   //%self.expect("expr $R0", substrs=['(int)', ' = 13'])
   //%self.expect("expr int $foo = 123", error=True, substrs=["declaration conflicts"])
-  return 0; //%self.expect("expr $0", substrs=['(int)', ' = 14'])
+  //%self.expect("expr $0", substrs=['(int)', ' = 11'])
+  return 0;
 }
