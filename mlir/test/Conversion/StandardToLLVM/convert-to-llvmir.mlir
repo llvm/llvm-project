@@ -618,6 +618,20 @@ func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
   return
 }
 
+// Checking conversion of floating point to integer types.
+// CHECK-LABEL: @fptosi
+func @fptosi(%arg0 : f32, %arg1 : f64) {
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.float to !llvm.i32
+  %0 = fptosi %arg0: f32 to i32
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.float to !llvm.i64
+  %1 = fptosi %arg0: f32 to i64
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.double to !llvm.i32
+  %2 = fptosi %arg1: f64 to i32
+// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.double to !llvm.i64
+  %3 = fptosi %arg1: f64 to i64
+  return
+}
+
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
 func @fptrunc(%arg0 : f32, %arg1 : f64) {
