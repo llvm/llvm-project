@@ -119,6 +119,10 @@ int gcovMain(int argc, const char *argv[]) {
                               cl::desc("Preserve path components"));
   cl::alias PreservePathsA("preserve-paths", cl::aliasopt(PreservePaths));
 
+  cl::opt<bool> UseStdout("t", cl::Grouping, cl::init(false),
+                          cl::desc("Print to stdout"));
+  cl::alias UseStdoutA("stdout", cl::aliasopt(UseStdout));
+
   cl::opt<bool> UncondBranch("u", cl::Grouping, cl::init(false),
                              cl::desc("Display unconditional branch info "
                                       "(requires -b)"));
@@ -141,7 +145,7 @@ int gcovMain(int argc, const char *argv[]) {
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
                         PreservePaths, UncondBranch, LongNames, NoOutput,
-                        HashFilenames);
+                        UseStdout, HashFilenames);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,
