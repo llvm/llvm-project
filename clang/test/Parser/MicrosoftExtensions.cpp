@@ -443,3 +443,16 @@ namespace pr36638 {
 struct A;
 void (A::*mp1)(int) __unaligned;
 }
+
+namespace enum_class {
+  // MSVC allows opaque-enum-declaration syntax anywhere an
+  // elaborated-type-specifier can appear.
+  // FIXME: Most of these are missing warnings.
+  enum E0 *p0; // expected-warning {{Microsoft extension}}
+  enum class E1 : int *p1;
+  enum E2 : int *p2;
+  enum class E3 *p3;
+  auto f4() -> enum class E4 { return {}; }
+  auto f5() -> enum E5 : int { return {}; } // FIXME: MSVC rejects this and crashes if the body is {}.
+  auto f6() -> enum E6 { return {}; } // expected-warning {{Microsoft extension}}
+}
