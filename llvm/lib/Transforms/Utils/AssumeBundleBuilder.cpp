@@ -201,8 +201,9 @@ IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   return Builder.build();
 }
 
-void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC, DominatorTree* DT) {
-  if (!EnableKnowledgeRetention)
+void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
+                            DominatorTree *DT) {
+  if (!EnableKnowledgeRetention || I->isTerminator())
     return;
   AssumeBuilderState Builder(I->getModule(), I, AC, DT);
   Builder.addInstruction(I);
