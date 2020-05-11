@@ -1874,33 +1874,37 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
   return StartPos;
 }
 
-// A check prefix must contain only alphanumeric, hyphens and underscores.
-static bool ValidateCheckPrefix(StringRef CheckPrefix) {
-  static const Regex Validator("^[a-zA-Z0-9_-]*$");
-  return Validator.match(CheckPrefix);
+static bool ValidatePrefixes(StringSet<> &UniquePrefixes,
+                             ArrayRef<StringRef> SuppliedPrefixes) {
+  for (StringRef Prefix : SuppliedPrefixes) {
+    if (Prefix.empty()) {
+      errs() << "error: supplied check prefix must not be the empty string\n";
+      return false;
+    }
+    static const Regex Validator("^[a-zA-Z0-9_-]*$");
+    if (!Validator.match(Prefix)) {
+      errs() << "error: supplied check prefix must start with a letter and "
+             << "contain only alphanumeric characters, hyphens, and "
+             << "underscores: '" << Prefix << "'\n";
+      return false;
+    }
+    if (!UniquePrefixes.insert(Prefix).second) {
+      errs() << "error: supplied check prefix must be unique among check "
+             << "prefixes: '" << Prefix << "'\n";
+      return false;
+    }
+  }
+  return true;
 }
 
 bool FileCheck::ValidateCheckPrefixes() {
-  StringSet<> PrefixSet;
-
-  for (StringRef Prefix : Req.CheckPrefixes) {
-    // Reject empty prefixes.
-    if (Prefix.empty())
-      return false;
-
-    if (!PrefixSet.insert(Prefix).second)
-      return false;
-
-    if (!ValidateCheckPrefix(Prefix))
-      return false;
-  }
-
+  StringSet<> UniquePrefixes;
+  if (!ValidatePrefixes(UniquePrefixes, Req.CheckPrefixes))
+    return false;
   return true;
 }
 
 Regex FileCheck::buildCheckPrefixRegex() {
-  // I don't think there's a way to specify an initial value for cl::list,
-  // so if nothing was specified, add the default
   if (Req.CheckPrefixes.empty()) {
     Req.CheckPrefixes.push_back("CHECK");
     Req.IsDefaultCheckPrefix = true;
