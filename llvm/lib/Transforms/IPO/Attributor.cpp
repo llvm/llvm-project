@@ -1341,6 +1341,13 @@ bool Attributor::isValidFunctionSignatureRewrite(
     Argument &Arg, ArrayRef<Type *> ReplacementTypes) {
 
   auto CallSiteCanBeChanged = [](AbstractCallSite ACS) {
+    // Forbid the call site to cast the function return type. If we need to
+    // rewrite these functions we need to re-create a cast for the new call site
+    // (if the old had uses).
+    if (!ACS.getCalledFunction() ||
+        ACS.getInstruction()->getType() !=
+            ACS.getCalledFunction()->getReturnType())
+      return false;
     // Forbid must-tail calls for now.
     return !ACS.isCallbackCall() && !ACS.getInstruction()->isMustTailCall();
   };
@@ -1594,10 +1601,11 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     for (auto &CallSitePair : CallSitePairs) {
       CallBase &OldCB = *CallSitePair.first;
       CallBase &NewCB = *CallSitePair.second;
+      assert(OldCB.getType() == NewCB.getType() &&
+             "Cannot handle call sites with different types!");
       ModifiedFns.insert(OldCB.getFunction());
       CGUpdater.replaceCallSite(OldCB, NewCB);
-      if (!OldCB.use_empty())
-        OldCB.replaceAllUsesWith(&NewCB);
+      OldCB.replaceAllUsesWith(&NewCB);
       OldCB.eraseFromParent();
     }
 
