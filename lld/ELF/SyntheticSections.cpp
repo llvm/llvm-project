@@ -3263,7 +3263,7 @@ ARMExidxSyntheticSection::ARMExidxSyntheticSection()
 
 static InputSection *findExidxSection(InputSection *isec) {
   for (InputSection *d : isec->dependentSections)
-    if (d->type == SHT_ARM_EXIDX)
+    if (d->type == SHT_ARM_EXIDX && d->isLive())
       return d;
   return nullptr;
 }
