@@ -117,6 +117,7 @@ static_library("LLVMX86CodeGen") {
     "X86RegisterInfo.cpp",
     "X86SelectionDAGInfo.cpp",
     "X86ShuffleDecodeConstantPool.cpp",
+    "X86SpeculativeExecutionSideEffectSuppression.cpp",
     "X86SpeculativeLoadHardening.cpp",
     "X86Subtarget.cpp",
     "X86TargetMachine.cpp",
