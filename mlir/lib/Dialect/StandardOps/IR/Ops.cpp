@@ -2759,8 +2759,8 @@ static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
       parser.parseOperandList(offsetInfo, OpAsmParser::Delimiter::Square))
     return failure();
 
-  if (offsetInfo.size() > 1)
-    return parser.emitError(offsetLoc) << "expects 0 or 1 offset operand";
+  if (offsetInfo.size() != 1)
+    return parser.emitError(offsetLoc) << "expects 1 offset operand";
 
   return failure(
       parser.parseOperandList(sizesInfo, OpAsmParser::Delimiter::Square) ||
@@ -2775,44 +2775,15 @@ static ParseResult parseViewOp(OpAsmParser &parser, OperationState &result) {
 
 static void print(OpAsmPrinter &p, ViewOp op) {
   p << op.getOperationName() << ' ' << op.getOperand(0) << '[';
-  auto dynamicOffset = op.getDynamicOffset();
-  if (dynamicOffset != nullptr)
-    p.printOperand(dynamicOffset);
-  p << "][" << op.getDynamicSizes() << ']';
+  p.printOperand(op.byte_shift());
+  p << "][" << op.sizes() << ']';
   p.printOptionalAttrDict(op.getAttrs());
   p << " : " << op.getOperand(0).getType() << " to " << op.getType();
 }
 
-Value ViewOp::getDynamicOffset() {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto result =
-      succeeded(mlir::getStridesAndOffset(getType(), strides, offset));
-  assert(result);
-  if (result && offset == MemRefType::getDynamicStrideOrOffset())
-    return getOperand(1);
-  return nullptr;
-}
-
-static LogicalResult verifyDynamicStrides(MemRefType memrefType,
-                                          ArrayRef<int64_t> strides) {
-  unsigned rank = memrefType.getRank();
-  assert(rank == strides.size());
-  bool dynamicStrides = false;
-  for (int i = rank - 2; i >= 0; --i) {
-    // If size at dim 'i + 1' is dynamic, set the 'dynamicStrides' flag.
-    if (memrefType.isDynamicDim(i + 1))
-      dynamicStrides = true;
-    // If stride at dim 'i' is not dynamic, return error.
-    if (dynamicStrides && strides[i] != MemRefType::getDynamicStrideOrOffset())
-      return failure();
-  }
-  return success();
-}
-
 static LogicalResult verify(ViewOp op) {
   auto baseType = op.getOperand(0).getType().cast<MemRefType>();
-  auto viewType = op.getResult().getType().cast<MemRefType>();
+  auto viewType = op.getType();
 
   // The base memref should have identity layout map (or none).
   if (baseType.getAffineMaps().size() > 1 ||
@@ -2820,32 +2791,24 @@ static LogicalResult verify(ViewOp op) {
        !baseType.getAffineMaps()[0].isIdentity()))
     return op.emitError("unsupported map for base memref type ") << baseType;
 
+  // The result memref should have identity layout map (or none).
+  if (viewType.getAffineMaps().size() > 1 ||
+      (viewType.getAffineMaps().size() == 1 &&
+       !viewType.getAffineMaps()[0].isIdentity()))
+    return op.emitError("unsupported map for result memref type ") << viewType;
+
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != viewType.getMemorySpace())
     return op.emitError("different memory spaces specified for base memref "
                         "type ")
            << baseType << " and view memref type " << viewType;
 
-  // Verify that the result memref type has a strided layout map.
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(viewType, strides, offset)))
-    return op.emitError("result type ") << viewType << " is not strided";
-
-  // Verify that we have the correct number of operands for the result type.
-  unsigned memrefOperandCount = 1;
+  // Verify that we have the correct number of sizes for the result type.
   unsigned numDynamicDims = viewType.getNumDynamicDims();
-  unsigned dynamicOffsetCount =
-      offset == MemRefType::getDynamicStrideOrOffset() ? 1 : 0;
-  if (op.getNumOperands() !=
-      memrefOperandCount + numDynamicDims + dynamicOffsetCount)
-    return op.emitError("incorrect number of operands for type ") << viewType;
-
-  // Verify dynamic strides symbols were added to correct dimensions based
-  // on dynamic sizes.
-  if (failed(verifyDynamicStrides(viewType, strides)))
-    return op.emitError("incorrect dynamic strides in view memref type ")
+  if (op.sizes().size() != numDynamicDims)
+    return op.emitError("incorrect number of size operands for type ")
            << viewType;
+
   return success();
 }
 
@@ -2866,42 +2829,23 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
 
     // Get result memref type.
     auto memrefType = viewOp.getType();
-    if (memrefType.getAffineMaps().size() > 1)
-      return failure();
-    auto map = memrefType.getAffineMaps().empty()
-                   ? AffineMap::getMultiDimIdentityMap(memrefType.getRank(),
-                                                       rewriter.getContext())
-                   : memrefType.getAffineMaps()[0];
 
     // Get offset from old memref view type 'memRefType'.
     int64_t oldOffset;
     SmallVector<int64_t, 4> oldStrides;
     if (failed(getStridesAndOffset(memrefType, oldStrides, oldOffset)))
       return failure();
+    assert(oldOffset == 0 && "Expected 0 offset");
 
     SmallVector<Value, 4> newOperands;
 
-    // Fold dynamic offset operand if it is produced by a constant.
-    auto dynamicOffset = viewOp.getDynamicOffset();
-    int64_t newOffset = oldOffset;
-    unsigned dynamicOffsetOperandCount = 0;
-    if (dynamicOffset != nullptr) {
-      auto *defOp = dynamicOffset.getDefiningOp();
-      if (auto constantIndexOp = dyn_cast_or_null<ConstantIndexOp>(defOp)) {
-        // Dynamic offset will be folded into the map.
-        newOffset = constantIndexOp.getValue();
-      } else {
-        // Unable to fold dynamic offset. Add it to 'newOperands' list.
-        newOperands.push_back(dynamicOffset);
-        dynamicOffsetOperandCount = 1;
-      }
-    }
+    // Offset cannot be folded into result type.
 
     // Fold any dynamic dim operands which are produced by a constant.
     SmallVector<int64_t, 4> newShapeConstants;
     newShapeConstants.reserve(memrefType.getRank());
 
-    unsigned dynamicDimPos = viewOp.getDynamicSizesOperandStart();
+    unsigned dynamicDimPos = 0;
     unsigned rank = memrefType.getRank();
     for (unsigned dim = 0, e = rank; dim < e; ++dim) {
       int64_t dimSize = memrefType.getDimSize(dim);
@@ -2910,46 +2854,29 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
         newShapeConstants.push_back(dimSize);
         continue;
       }
-      auto *defOp = viewOp.getOperand(dynamicDimPos).getDefiningOp();
+      auto *defOp = viewOp.sizes()[dynamicDimPos].getDefiningOp();
       if (auto constantIndexOp = dyn_cast_or_null<ConstantIndexOp>(defOp)) {
         // Dynamic shape dimension will be folded.
         newShapeConstants.push_back(constantIndexOp.getValue());
       } else {
         // Dynamic shape dimension not folded; copy operand from old memref.
         newShapeConstants.push_back(dimSize);
-        newOperands.push_back(viewOp.getOperand(dynamicDimPos));
+        newOperands.push_back(viewOp.sizes()[dynamicDimPos]);
       }
       dynamicDimPos++;
     }
 
-    // Compute new strides based on 'newShapeConstants'.
-    SmallVector<int64_t, 4> newStrides(rank);
-    newStrides[rank - 1] = 1;
-    bool dynamicStrides = false;
-    for (int i = rank - 2; i >= 0; --i) {
-      if (ShapedType::isDynamic(newShapeConstants[i + 1]))
-        dynamicStrides = true;
-      if (dynamicStrides)
-        newStrides[i] = MemRefType::getDynamicStrideOrOffset();
-      else
-        newStrides[i] = newShapeConstants[i + 1] * newStrides[i + 1];
-    }
-
-    // Regenerate strided layout map with 'newStrides' and 'newOffset'.
-    map = makeStridedLinearLayoutMap(newStrides, newOffset,
-                                     rewriter.getContext());
-
-    // Create new memref type with constant folded dims and/or offset/strides.
-    MemRefType newMemRefType = MemRefType::Builder(memrefType)
-                                   .setShape(newShapeConstants)
-                                   .setAffineMaps({map});
-    (void)dynamicOffsetOperandCount; // unused in opt mode
-    assert(static_cast<int64_t>(newOperands.size()) ==
-           dynamicOffsetOperandCount + newMemRefType.getNumDynamicDims());
+    // Create new memref type with constant folded dims.
+    MemRefType newMemRefType =
+        MemRefType::Builder(memrefType).setShape(newShapeConstants);
+    // Nothing new, don't fold.
+    if (newMemRefType == memrefType)
+      return failure();
 
     // Create new ViewOp.
     auto newViewOp = rewriter.create<ViewOp>(viewOp.getLoc(), newMemRefType,
-                                             viewOp.getOperand(0), newOperands);
+                                             viewOp.getOperand(0),
+                                             viewOp.byte_shift(), newOperands);
     // Insert a cast so we have the same type as the old memref type.
     rewriter.replaceOpWithNewOp<MemRefCastOp>(viewOp, newViewOp,
                                               viewOp.getType());
@@ -2972,7 +2899,7 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
     if (!allocOp)
       return failure();
     rewriter.replaceOpWithNewOp<ViewOp>(viewOp, viewOp.getType(), allocOperand,
-                                        viewOp.operands());
+                                        viewOp.byte_shift(), viewOp.sizes());
     return success();
   }
 };
