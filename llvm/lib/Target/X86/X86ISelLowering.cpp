@@ -45586,7 +45586,8 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   unsigned NumEltBits = VT.getScalarSizeInBits();
   SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
   if (!VT.isVector() || Op0.getOpcode() != ISD::AND ||
-      DAG.ComputeNumSignBits(Op0.getOperand(0)) != NumEltBits)
+      DAG.ComputeNumSignBits(Op0.getOperand(0)) != NumEltBits ||
+      VT.getSizeInBits() != Op0.getValueSizeInBits())
     return SDValue();
 
   // Now check that the other operand of the AND is a constant. We could
