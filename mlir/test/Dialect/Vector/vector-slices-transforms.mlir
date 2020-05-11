@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-vector-slices-conversion | FileCheck %s
 
 // CHECK-LABEL: func @extract_slices(%arg0: vector<3x3xf32>)
-//       CHECK: %[[SS:.*]] = vector.strided_slice %arg0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}
+//       CHECK: %[[SS:.*]] = vector.extract_strided_slice %arg0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}
 //       CHECK: return %[[SS]]
 
 func @extract_slices(%arg0: vector<3x3xf32>) -> vector<2x2xf32> {
@@ -32,10 +32,10 @@ func @insert_slices(%arg0: vector<2x2xf32>,
 
 // CHECK-LABEL: func @extract_insert_slices(%arg0: vector<3x3xf32>)
 //       CHECK: %[[C:.*]] = constant dense<0.000000e+00> : vector<3x3xf32>
-//       CHECK: %[[X0:.*]] = vector.strided_slice %arg0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}
-//       CHECK: %[[X1:.*]] = vector.strided_slice %arg0 {offsets = [0, 2], sizes = [2, 1], strides = [1, 1]}
-//       CHECK: %[[X2:.*]] = vector.strided_slice %arg0 {offsets = [2, 0], sizes = [1, 2], strides = [1, 1]}
-//       CHECK: %[[X3:.*]] = vector.strided_slice %arg0 {offsets = [2, 2], sizes = [1, 1], strides = [1, 1]}
+//       CHECK: %[[X0:.*]] = vector.extract_strided_slice %arg0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}
+//       CHECK: %[[X1:.*]] = vector.extract_strided_slice %arg0 {offsets = [0, 2], sizes = [2, 1], strides = [1, 1]}
+//       CHECK: %[[X2:.*]] = vector.extract_strided_slice %arg0 {offsets = [2, 0], sizes = [1, 2], strides = [1, 1]}
+//       CHECK: %[[X3:.*]] = vector.extract_strided_slice %arg0 {offsets = [2, 2], sizes = [1, 1], strides = [1, 1]}
 //       CHECK: %[[X4:.*]] = vector.insert_strided_slice %[[X0]], %[[C0]] {offsets = [0, 0], strides = [1, 1]}
 //       CHECK: %[[X5:.*]] = vector.insert_strided_slice %[[X1]], %[[X4]] {offsets = [0, 2], strides = [1, 1]}
 //       CHECK: %[[X6:.*]] = vector.insert_strided_slice %[[X2]], %[[X5]] {offsets = [2, 0], strides = [1, 1]}
@@ -51,8 +51,8 @@ func @extract_insert_slices(%arg0: vector<3x3xf32>) -> vector<3x3xf32> {
 }
 
 // CHECK-LABEL: func @extract_slices_tuple_leaks(%arg0: vector<4xf32>)
-//       CHECK: %[[X0:.*]] = vector.strided_slice %arg0 {offsets = [0], sizes = [2], strides = [1]}
-//       CHECK: %[[X1:.*]] = vector.strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]}
+//       CHECK: %[[X0:.*]] = vector.extract_strided_slice %arg0 {offsets = [0], sizes = [2], strides = [1]}
+//       CHECK: %[[X1:.*]] = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]}
 //       CHECK: %[[X2:.*]] = vector.tuple %[[X0]], %[[X1]]
 //       CHECK: return %[[X2]]
 

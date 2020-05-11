@@ -880,7 +880,7 @@ struct TupleGetFolderOp : public OpRewritePattern<vector::TupleGetOp> {
   }
 };
 
-/// Progressive lowering of ExtractSlicesOp to tuple of StridedSliceOp.
+/// Progressive lowering of ExtractSlicesOp to tuple of ExtractStridedSliceOp.
 /// One:
 ///   %x = vector.extract_slices %0
 /// is replaced by:
@@ -916,7 +916,7 @@ public:
           computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
       auto sliceSizes = computeSliceSizes(shape, sizes, elementOffsets);
       // Insert in tuple.
-      tupleValues[i] = rewriter.create<vector::StridedSliceOp>(
+      tupleValues[i] = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, op.vector(), elementOffsets, sliceSizes, strides);
     }
 
@@ -1595,7 +1595,7 @@ public:
     Value desc = rewriter.create<SplatOp>(loc, resultVectorType, zero);
     unsigned mostMinorVectorSize = resultVectorType.getShape()[1];
     for (int64_t i = 0, e = resultVectorType.getShape().front(); i != e; ++i) {
-      Value vec = rewriter.create<vector::StridedSliceOp>(
+      Value vec = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, op.source(), /*offsets=*/i * mostMinorVectorSize,
           /*sizes=*/mostMinorVectorSize,
           /*strides=*/1);
