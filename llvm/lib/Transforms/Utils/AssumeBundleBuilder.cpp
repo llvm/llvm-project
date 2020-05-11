@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -31,29 +32,6 @@ cl::opt<bool> EnableKnowledgeRetention(
 
 namespace {
 
-/// Deterministically compare OperandBundleDef.
-/// The ordering is:
-/// - by the attribute's name aka operand bundle tag, (doesn't change)
-/// - then by the numeric Value of the argument, (doesn't change)
-/// - lastly by the Name of the current Value it WasOn. (may change)
-/// This order is deterministic and allows looking for the right kind of
-/// attribute with binary search. However finding the right WasOn needs to be
-/// done via linear search because values can get replaced.
-bool isLowerOpBundle(const OperandBundleDef &LHS, const OperandBundleDef &RHS) {
-  auto getTuple = [](const OperandBundleDef &Op) {
-    return std::make_tuple(
-        Op.getTag(),
-        Op.input_size() <= ABA_Argument
-            ? 0
-            : cast<ConstantInt>(*(Op.input_begin() + ABA_Argument))
-                  ->getZExtValue(),
-        Op.input_size() <= ABA_WasOn
-            ? StringRef("")
-            : (*(Op.input_begin() + ABA_WasOn))->getName());
-  };
-  return getTuple(LHS) < getTuple(RHS);
-}
-
 bool isUsefullToPreserve(Attribute::AttrKind Kind) {
   switch (Kind) {
     case Attribute::NonNull:
@@ -73,7 +51,7 @@ struct AssumeBuilderState {
   Module *M;
 
   using MapKey = std::pair<Value *, Attribute::AttrKind>;
-  SmallDenseMap<MapKey, unsigned, 8> AssumedKnowledgeMap;
+  SmallMapVector<MapKey, unsigned, 8> AssumedKnowledgeMap;
   Instruction *InsertBeforeInstruction = nullptr;
   AssumptionCache* AC = nullptr;
   DominatorTree* DT = nullptr;
@@ -174,7 +152,6 @@ struct AssumeBuilderState {
           std::string(Attribute::getNameFromAttrKind(MapElem.first.second)),
           Args));
     }
-    llvm::sort(OpBundle, isLowerOpBundle);
     return cast<IntrinsicInst>(CallInst::Create(
         FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
