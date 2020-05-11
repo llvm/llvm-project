@@ -4838,6 +4838,13 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
                               bool ForLoadFold = false) {
   // Set the OpNum parameter to the first source operand.
   switch (Opcode) {
+  case X86::MMX_PUNPCKHBWirr:
+  case X86::MMX_PUNPCKHWDirr:
+  case X86::MMX_PUNPCKHDQirr:
+  case X86::MMX_PUNPCKLBWirr:
+  case X86::MMX_PUNPCKLWDirr:
+  case X86::MMX_PUNPCKLDQirr:
+  case X86::MOVHLPSrr:
   case X86::PACKSSWBrr:
   case X86::PACKUSWBrr:
   case X86::PACKSSDWrr:
@@ -4850,6 +4857,8 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::PUNPCKLDQrr:
   case X86::PUNPCKHQDQrr:
   case X86::PUNPCKLQDQrr:
+  case X86::SHUFPDrri:
+  case X86::SHUFPSrri:
     // These instructions are sometimes used with an undef first or second
     // source. Return true here so BreakFalseDeps will assign this source to the
     // same register as the first source to avoid a false dependency.
@@ -4857,6 +4866,8 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
     // VEX counterparts.
     return OpNum == 2 && !ForLoadFold;
 
+  case X86::VMOVLHPSrr:
+  case X86::VMOVLHPSZrr:
   case X86::VPACKSSWBrr:
   case X86::VPACKUSWBrr:
   case X86::VPACKSSDWrr:
@@ -4865,6 +4876,16 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VPACKUSWBZ128rr:
   case X86::VPACKSSDWZ128rr:
   case X86::VPACKUSDWZ128rr:
+  case X86::VPERM2F128rr:
+  case X86::VPERM2I128rr:
+  case X86::VSHUFF32X4Z256rri:
+  case X86::VSHUFF32X4Zrri:
+  case X86::VSHUFF64X2Z256rri:
+  case X86::VSHUFF64X2Zrri:
+  case X86::VSHUFI32X4Z256rri:
+  case X86::VSHUFI32X4Zrri:
+  case X86::VSHUFI64X2Z256rri:
+  case X86::VSHUFI64X2Zrri:
   case X86::VPUNPCKHBWrr:
   case X86::VPUNPCKLBWrr:
   case X86::VPUNPCKHBWYrr:

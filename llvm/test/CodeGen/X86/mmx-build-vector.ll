@@ -455,7 +455,7 @@ define void @build_v8i8_0u2345z7(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X64-NEXT:    movd %ecx, %mm2
 ; X64-NEXT:    punpcklbw %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1],mm2[2],mm1[2],mm2[3],mm1[3]
 ; X64-NEXT:    movd %esi, %mm1
-; X64-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
+; X64-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
 ; X64-NEXT:    punpcklwd %mm2, %mm1 # mm1 = mm1[0],mm2[0],mm1[1],mm2[1]
 ; X64-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X64-NEXT:    paddd %mm1, %mm1
@@ -488,7 +488,7 @@ define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X86-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
 ; X86-NEXT:    pxor %mm0, %mm0
 ; X86-NEXT:    pxor %mm1, %mm1
-; X86-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
+; X86-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
 ; X86-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
 ; X86-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X86-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
@@ -507,7 +507,7 @@ define void @build_v8i8_0123zzzu(x86_mmx *%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i
 ; X64-NEXT:    punpcklwd %mm1, %mm2 # mm2 = mm2[0],mm1[0],mm2[1],mm1[1]
 ; X64-NEXT:    pxor %mm0, %mm0
 ; X64-NEXT:    pxor %mm1, %mm1
-; X64-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
+; X64-NEXT:    punpcklbw %mm1, %mm1 # mm1 = mm1[0,0,1,1,2,2,3,3]
 ; X64-NEXT:    punpcklbw %mm0, %mm0 # mm0 = mm0[0,0,1,1,2,2,3,3]
 ; X64-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X64-NEXT:    punpckldq %mm0, %mm2 # mm2 = mm2[0],mm0[0]
