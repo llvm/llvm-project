@@ -110,10 +110,74 @@ struct LoadImmediateInfo {
   unsigned SetCR : 1;
 };
 
+// Index into the OpcodesForSpill array.
+enum SpillOpcodeKey {
+  SOK_Int4Spill,
+  SOK_Int8Spill,
+  SOK_Float8Spill,
+  SOK_Float4Spill,
+  SOK_CRSpill,
+  SOK_CRBitSpill,
+  SOK_VRVectorSpill,
+  SOK_VSXVectorSpill,
+  SOK_VectorFloat8Spill,
+  SOK_VectorFloat4Spill,
+  SOK_VRSaveSpill,
+  SOK_QuadFloat8Spill,
+  SOK_QuadFloat4Spill,
+  SOK_QuadBitSpill,
+  SOK_SpillToVSR,
+  SOK_SPESpill,
+  SOK_LastOpcodeSpill // This must be last on the enum.
+};
+
+// Define list of load and store spill opcodes.
+#define Pwr8LoadOpcodes                                                        \
+  {                                                                            \
+    PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
+        PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,    \
+        PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs, PPC::QVLFDXb,          \
+        PPC::SPILLTOVSR_LD, PPC::EVLDD                                         \
+  }
+
+#define Pwr9LoadOpcodes                                                        \
+  {                                                                            \
+    PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
+        PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
+        PPC::DFLOADf32, PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs,        \
+        PPC::QVLFDXb, PPC::SPILLTOVSR_LD                                       \
+  }
+
+#define Pwr8StoreOpcodes                                                       \
+  {                                                                            \
+    PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
+        PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX, PPC::SPILL_VRSAVE, \
+        PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb, PPC::SPILLTOVSR_ST,        \
+        PPC::EVSTDD                                                            \
+  }
+
+#define Pwr9StoreOpcodes                                                       \
+  {                                                                            \
+    PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
+        PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
+        PPC::SPILL_VRSAVE, PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb,         \
+        PPC::SPILLTOVSR_ST                                                     \
+  }
+
+// Initialize arrays for load and store spill opcodes on supported subtargets.
+#define StoreOpcodesForSpill                                                   \
+  { Pwr8StoreOpcodes, Pwr9StoreOpcodes }
+#define LoadOpcodesForSpill                                                    \
+  { Pwr8LoadOpcodes, Pwr9LoadOpcodes }
+
 class PPCSubtarget;
 class PPCInstrInfo : public PPCGenInstrInfo {
   PPCSubtarget &Subtarget;
   const PPCRegisterInfo RI;
+  const unsigned StoreSpillOpcodesArray[2][SOK_LastOpcodeSpill] =
+      StoreOpcodesForSpill;
+  const unsigned LoadSpillOpcodesArray[2][SOK_LastOpcodeSpill] =
+      LoadOpcodesForSpill;
 
   void StoreRegToStackSlot(MachineFunction &MF, unsigned SrcReg, bool isKill,
                            int FrameIdx, const TargetRegisterClass *RC,
@@ -158,6 +222,7 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                                  const MachineInstr &DefMI,
                                  const MachineInstr &MI, bool KillDefMI,
                                  bool &IsFwdFeederRegKilled) const;
+  unsigned getSpillTarget() const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
   virtual void anchor();
@@ -326,11 +391,9 @@ public:
                                  const TargetRegisterClass *RC,
                                  const TargetRegisterInfo *TRI) const;
 
-  unsigned getStoreOpcodeForSpill(unsigned Reg,
-                                  const TargetRegisterClass *RC = nullptr) const;
+  unsigned getStoreOpcodeForSpill(const TargetRegisterClass *RC) const;
 
-  unsigned getLoadOpcodeForSpill(unsigned Reg,
-                                 const TargetRegisterClass *RC = nullptr) const;
+  unsigned getLoadOpcodeForSpill(const TargetRegisterClass *RC) const;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
