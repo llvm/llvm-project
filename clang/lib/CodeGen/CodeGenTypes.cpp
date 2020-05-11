@@ -82,6 +82,13 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// a type.  For example, the scalar representation for _Bool is i1, but the
 /// memory representation is usually i8 or i32, depending on the target.
 llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
+  if (T->isConstantMatrixType()) {
+    const Type *Ty = Context.getCanonicalType(T).getTypePtr();
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
+                                MT->getNumRows() * MT->getNumColumns());
+  }
+
   llvm::Type *R = ConvertType(T);
 
   // If this is a bool type, or an ExtIntType in a bitfield representation,
@@ -644,6 +651,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     const VectorType *VT = cast<VectorType>(Ty);
     ResultType = llvm::VectorType::get(ConvertType(VT->getElementType()),
                                        VT->getNumElements());
+    break;
+  }
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    ResultType = llvm::VectorType::get(ConvertType(MT->getElementType()),
+                                       MT->getNumRows() * MT->getNumColumns());
     break;
   }
   case Type::FunctionNoProto:

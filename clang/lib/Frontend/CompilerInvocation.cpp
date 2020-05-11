@@ -3337,6 +3337,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
 
+  Opts.MatrixTypes = Args.hasArg(OPT_fenable_matrix);
+
   Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens_EQ, 0, Diags);
 
   if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {

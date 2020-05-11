@@ -194,6 +194,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentAddressSpaceTypes;
   mutable llvm::FoldingSet<VectorType> VectorTypes;
   mutable llvm::FoldingSet<DependentVectorType> DependentVectorTypes;
+  mutable llvm::FoldingSet<ConstantMatrixType> MatrixTypes;
+  mutable llvm::FoldingSet<DependentSizedMatrixType> DependentSizedMatrixTypes;
   mutable llvm::FoldingSet<FunctionNoProtoType> FunctionNoProtoTypes;
   mutable llvm::ContextualFoldingSet<FunctionProtoType, ASTContext&>
     FunctionProtoTypes;
@@ -1325,6 +1327,20 @@ public:
   QualType getDependentSizedExtVectorType(QualType VectorType,
                                           Expr *SizeExpr,
                                           SourceLocation AttrLoc) const;
+
+  /// Return the unique reference to the matrix type of the specified element
+  /// type and size
+  ///
+  /// \pre \p ElementType must be a valid matrix element type (see
+  /// MatrixType::isValidElementType).
+  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
+                                 unsigned NumColumns) const;
+
+  /// Return the unique reference to the matrix type of the specified element
+  /// type and size
+  QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
+                                       Expr *ColumnExpr,
+                                       SourceLocation AttrLoc) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,

@@ -145,8 +145,19 @@ Address CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
 
 Address CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
                                        const Twine &Name, Address *Alloca) {
-  return CreateTempAlloca(ConvertTypeForMem(Ty), Align, Name,
-                          /*ArraySize=*/nullptr, Alloca);
+  Address Result = CreateTempAlloca(ConvertTypeForMem(Ty), Align, Name,
+                                    /*ArraySize=*/nullptr, Alloca);
+
+  if (Ty->isConstantMatrixType()) {
+    auto *ArrayTy = cast<llvm::ArrayType>(Result.getType()->getElementType());
+    auto *VectorTy = llvm::VectorType::get(ArrayTy->getElementType(),
+                                           ArrayTy->getNumElements());
+
+    Result = Address(
+        Builder.CreateBitCast(Result.getPointer(), VectorTy->getPointerTo()),
+        Result.getAlignment());
+  }
+  return Result;
 }
 
 Address CodeGenFunction::CreateMemTempWithoutCast(QualType Ty, CharUnits Align,
@@ -1732,6 +1743,42 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   return Value;
 }
 
+// Convert the pointer of \p Addr to a pointer to a vector (the value type of
+// MatrixType), if it points to a array (the memory type of MatrixType).
+static Address MaybeConvertMatrixAddress(Address Addr, CodeGenFunction &CGF,
+                                         bool IsVector = true) {
+  auto *ArrayTy = dyn_cast<llvm::ArrayType>(
+      cast<llvm::PointerType>(Addr.getPointer()->getType())->getElementType());
+  if (ArrayTy && IsVector) {
+    auto *VectorTy = llvm::VectorType::get(ArrayTy->getElementType(),
+                                           ArrayTy->getNumElements());
+
+    return Address(CGF.Builder.CreateElementBitCast(Addr, VectorTy));
+  }
+  auto *VectorTy = dyn_cast<llvm::VectorType>(
+      cast<llvm::PointerType>(Addr.getPointer()->getType())->getElementType());
+  if (VectorTy && !IsVector) {
+    auto *ArrayTy = llvm::ArrayType::get(VectorTy->getElementType(),
+                                         VectorTy->getNumElements());
+
+    return Address(CGF.Builder.CreateElementBitCast(Addr, ArrayTy));
+  }
+
+  return Addr;
+}
+
+// Emit a store of a matrix LValue. This may require casting the original
+// pointer to memory address (ArrayType) to a pointer to the value type
+// (VectorType).
+static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
+                                    bool isInit, CodeGenFunction &CGF) {
+  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(CGF), CGF,
+                                           value->getType()->isVectorTy());
+  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
+                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
+                        lvalue.isNontemporal());
+}
+
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                                         bool Volatile, QualType Ty,
                                         LValueBaseInfo BaseInfo,
@@ -1779,9 +1826,24 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
                                         bool isInit) {
+  if (lvalue.getType()->isConstantMatrixType()) {
+    EmitStoreOfMatrixScalar(value, lvalue, isInit, *this);
+    return;
+  }
+
   EmitStoreOfScalar(value, lvalue.getAddress(*this), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(),
                     lvalue.getTBAAInfo(), isInit, lvalue.isNontemporal());
+}
+
+// Emit a load of a LValue of matrix type. This may require casting the pointer
+// to memory address (ArrayType) to a pointer to the value type (VectorType).
+static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
+                                     CodeGenFunction &CGF) {
+  assert(LV.getType()->isConstantMatrixType());
+  Address Addr = MaybeConvertMatrixAddress(LV.getAddress(CGF), CGF);
+  LV.setAddress(Addr);
+  return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
 }
 
 /// EmitLoadOfLValue - Given an expression that represents a value lvalue, this
@@ -1808,6 +1870,9 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
 
   if (LV.isSimple()) {
     assert(!LV.getType()->isFunctionType());
+
+    if (LV.getType()->isConstantMatrixType())
+      return EmitLoadOfMatrixLValue(LV, Loc, *this);
 
     // Everything needs a load.
     return RValue::get(EmitLoadOfScalar(LV, Loc));

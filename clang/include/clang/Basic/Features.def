@@ -253,6 +253,7 @@ EXTENSION(pragma_clang_attribute_namespaces, true)
 EXTENSION(pragma_clang_attribute_external_declaration, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
+EXTENSION(matrix_types, LangOpts.MatrixTypes)
 
 #undef EXTENSION
 #undef FEATURE
