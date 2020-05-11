@@ -62,3 +62,8 @@ func @test_parse_const_shape() {
   %1 = shape.const_shape [1, 2, 3]
   return
 }
+
+func @test_shape_of(%arg0: tensor<?xf32>) -> !shape.shape {
+  %0 = shape.shape_of %arg0 : tensor<?xf32>
+  return %0 : !shape.shape
+}
