@@ -10,11 +10,10 @@
 #define LLVM_SUPPORT_NATIVE_FORMATTING_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/raw_ostream.h"
-
 #include <cstdint>
 
 namespace llvm {
+class raw_ostream;
 enum class FloatStyle { Exponent, ExponentUpper, Fixed, Percent };
 enum class IntegerStyle {
   Integer,
