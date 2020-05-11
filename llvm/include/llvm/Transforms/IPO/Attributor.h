@@ -903,6 +903,11 @@ struct Attributor {
            Functions.size() == Functions.front()->getParent()->size();
   }
 
+  /// Return true if we derive attributes for \p Fn
+  bool isRunOn(Function &Fn) const {
+    return Functions.empty() || Functions.count(&Fn);
+  }
+
   /// Determine opportunities to derive 'default' attributes in \p F and create
   /// abstract attribute objects for them.
   ///
