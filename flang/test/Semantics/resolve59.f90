@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Testing 15.6.2.2 point 4 (What function-name refers to depending on the
 ! presence of RESULT).
 

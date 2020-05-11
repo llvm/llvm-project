@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Check that non-logical expressions are not allowed.
 ! Check that non-scalar expressions are not allowed.
 ! TODO: Insure all non-logicals are prohibited.

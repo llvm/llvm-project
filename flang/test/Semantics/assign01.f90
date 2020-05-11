@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! 10.2.3.1(2) All masks and LHS of assignments in a WHERE must conform
 
 subroutine s1

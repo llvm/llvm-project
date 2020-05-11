@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 implicit none
 integer :: x
 !ERROR: No explicit type declared for 'y'

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C737 If EXTENDS appears and the type being defined has a potential 
 ! subobject component of type EVENT_TYPE or LOCK_TYPE from the intrinsic 
 ! module ISO_FORTRAN_ENV, its parent type shall be EVENT_TYPE or LOCK_TYPE 

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Check subroutine with alt return
 
        SUBROUTINE TEST (N, *, *)

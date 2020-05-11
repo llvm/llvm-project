@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C1107 -- COMMON, EQUIVALENCE, INTENT, NAMELIST, OPTIONAL, VALUE or
 !          STATEMENT FUNCTIONS not allow in specification part
 

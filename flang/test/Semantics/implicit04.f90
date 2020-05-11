@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 subroutine s
   parameter(a=1.0)
   !ERROR: IMPLICIT NONE statement after PARAMETER statement

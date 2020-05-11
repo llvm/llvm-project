@@ -1,4 +1,5 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
+
 !Tests for SELECT RANK Construct(R1148)
 program select_rank
    implicit none
