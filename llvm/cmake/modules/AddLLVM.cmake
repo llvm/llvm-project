@@ -1504,8 +1504,7 @@ string(CONCAT LLVM_LIT_PATH_FUNCTION
   "# Allow generated file to be relocatable.\n"
   "def path(p):\n"
   "    if not p: return ''\n"
-  "    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
-  "    return p\n"
+  "    return os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
   )
 
 # This function provides an automatic way to 'configure'-like generate a file
