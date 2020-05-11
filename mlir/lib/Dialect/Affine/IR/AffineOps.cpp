@@ -85,13 +85,18 @@ Operation *AffineDialect::materializeConstant(OpBuilder &builder,
 }
 
 /// A utility function to check if a value is defined at the top level of an
-/// op with trait `AffineScope`. A value of index type defined at the top
-/// level is always a valid symbol.
+/// op with trait `AffineScope`. If the value is defined in an unlinked region,
+/// conservatively assume it is not top-level. A value of index type defined at
+/// the top level is always a valid symbol.
 bool mlir::isTopLevelValue(Value value) {
   if (auto arg = value.dyn_cast<BlockArgument>()) {
+    // The block owning the argument may be unlinked, e.g. when the surrounding
+    // region has not yet been attached to an Op, at which point the parent Op
+    // is null.
     Operation *parentOp = arg.getOwner()->getParentOp();
     return parentOp && parentOp->hasTrait<OpTrait::AffineScope>();
   }
+  // The defining Op may live in an unlinked block so its parent Op may be null.
   Operation *parentOp = value.getDefiningOp()->getParentOp();
   return parentOp && parentOp->hasTrait<OpTrait::AffineScope>();
 }
@@ -103,7 +108,7 @@ bool mlir::isTopLevelValue(Value value) {
 static bool isTopLevelValue(Value value, Region *region) {
   if (auto arg = value.dyn_cast<BlockArgument>())
     return arg.getParentRegion() == region;
-  return value.getDefiningOp()->getParentOp() == region->getParentOp();
+  return value.getDefiningOp()->getParentRegion() == region;
 }
 
 /// Returns the closest region enclosing `op` that is held by an operation with
