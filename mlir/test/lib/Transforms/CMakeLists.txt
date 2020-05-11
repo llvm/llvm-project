@@ -39,7 +39,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRGPUtoCUDATransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
-  MLIRLoopOps
+  MLIRSCF
   MLIRGPU
   MLIRPass
   MLIRStandardToStandard

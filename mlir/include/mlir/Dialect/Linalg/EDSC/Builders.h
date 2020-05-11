@@ -26,9 +26,9 @@ class AffineForOp;
 class BlockArgument;
 class SubViewOp;
 
-namespace loop {
+namespace scf {
 class ParallelOp;
-} // namespace loop
+} // namespace scf
 
 namespace edsc {
 class AffineLoopNestBuilder;
@@ -85,7 +85,7 @@ private:
       typename std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
                                   AffineLoopNestBuilder, LoopNestRangeBuilder>;
   using BuilderType =
-      typename std::conditional_t<std::is_same<LoopTy, loop::ParallelOp>::value,
+      typename std::conditional_t<std::is_same<LoopTy, scf::ParallelOp>::value,
                                   ParallelLoopNestBuilder,
                                   LoopOrAffineLoopBuilder>;
 

@@ -1,4 +1,4 @@
-//===- Ops.cpp - Loop MLIR Operations -------------------------------------===//
+//===- SCF.cpp - Structured Control Flow Operations -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -21,17 +21,17 @@
 #include "mlir/Support/MathExtras.h"
 
 using namespace mlir;
-using namespace mlir::loop;
+using namespace mlir::scf;
 
 //===----------------------------------------------------------------------===//
-// LoopOpsDialect
+// SCFDialect
 //===----------------------------------------------------------------------===//
 
-LoopOpsDialect::LoopOpsDialect(MLIRContext *context)
+SCFDialect::SCFDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/LoopOps/LoopOps.cpp.inc"
+#include "mlir/Dialect/SCF/SCFOps.cpp.inc"
       >();
 }
 
@@ -187,7 +187,7 @@ LogicalResult ForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
   return success();
 }
 
-ForOp mlir::loop::getForInductionVarOwner(Value val) {
+ForOp mlir::scf::getForInductionVarOwner(Value val) {
   auto ivArg = val.dyn_cast<BlockArgument>();
   if (!ivArg)
     return ForOp();
@@ -542,7 +542,7 @@ LogicalResult ParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
   return success();
 }
 
-ParallelOp mlir::loop::getParallelForInductionVarOwner(Value val) {
+ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   auto ivArg = val.dyn_cast<BlockArgument>();
   if (!ivArg)
     return ParallelOp();
@@ -682,4 +682,4 @@ static void print(OpAsmPrinter &p, YieldOp op) {
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LoopOps/LoopOps.cpp.inc"
+#include "mlir/Dialect/SCF/SCFOps.cpp.inc"

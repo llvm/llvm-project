@@ -29,7 +29,7 @@ class Region;
 
 #include "mlir/Dialect/GPU/ParallelLoopMapperAttr.h.inc"
 
-namespace loop {
+namespace scf {
 class ParallelOp;
 }
 
@@ -54,7 +54,7 @@ ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
 /// - the number of DimMapperAttr provided is same as the number of loops of
 ///   the `ploopOp`.
 /// - the mapping does not map multiple loops to the same processor.
-LogicalResult setMappingAttr(loop::ParallelOp ploopOp,
+LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
                              ArrayRef<ParallelLoopDimMapping> mapping);
 } // end namespace gpu
 

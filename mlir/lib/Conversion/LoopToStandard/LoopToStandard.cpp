@@ -13,7 +13,7 @@
 
 #include "../PassDetail.h"
 #include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -25,7 +25,7 @@
 #include "mlir/Transforms/Utils.h"
 
 using namespace mlir;
-using namespace mlir::loop;
+using namespace mlir::scf;
 
 namespace {
 
@@ -195,10 +195,10 @@ struct IfLowering : public OpRewritePattern<IfOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-struct ParallelLowering : public OpRewritePattern<mlir::loop::ParallelOp> {
-  using OpRewritePattern<mlir::loop::ParallelOp>::OpRewritePattern;
+struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
+  using OpRewritePattern<mlir::scf::ParallelOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(mlir::loop::ParallelOp parallelOp,
+  LogicalResult matchAndRewrite(mlir::scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override;
 };
 } // namespace

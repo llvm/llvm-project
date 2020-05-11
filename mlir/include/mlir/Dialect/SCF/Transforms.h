@@ -1,4 +1,4 @@
-//===- Transforms.h - Pass Entrypoints --------------------------*- C++ -*-===//
+//===- Transforms.h - SCF dialect transformation utilities ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file defines transformations on loop operations.
+// This header file defines transformations on SCF operations.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LOOPOPS_TRANSFORMS_H_
-#define MLIR_DIALECT_LOOPOPS_TRANSFORMS_H_
+#ifndef MLIR_DIALECT_SCF_TRANSFORMS_H_
+#define MLIR_DIALECT_SCF_TRANSFORMS_H_
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -19,7 +19,7 @@ namespace mlir {
 
 class Region;
 
-namespace loop {
+namespace scf {
 
 class ParallelOp;
 
@@ -42,7 +42,7 @@ void naivelyFuseParallelOps(Region &region);
 /// The old loop is replaced with the new one.
 void tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
 
-} // namespace loop
+} // namespace scf
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LOOPOPS_TRANSFORMS_H_
+#endif // MLIR_DIALECT_SCF_TRANSFORMS_H_
