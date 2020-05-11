@@ -4686,8 +4686,10 @@ RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
     : Expr(RecoveryExprClass, T, VK_LValue, OK_Ordinary), BeginLoc(BeginLoc),
       EndLoc(EndLoc), NumExprs(SubExprs.size()) {
   assert(!T.isNull());
+#ifndef NDEBUG // avoid -Wunused warnings.
   for (auto *E : SubExprs)
     assert(E != nullptr);
+#endif
 
   llvm::copy(SubExprs, getTrailingObjects<Expr *>());
   setDependence(computeDependence(this));
