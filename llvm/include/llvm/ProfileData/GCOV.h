@@ -45,10 +45,11 @@ enum GCOVVersion { V402, V407, V800, V900 };
 
 /// A struct for passing gcov options between functions.
 struct Options {
-  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N, bool X)
+  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N,
+          bool T, bool X)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),
         PreservePaths(P), UncondBranch(U), LongFileNames(L), NoOutput(N),
-        HashFilenames(X) {}
+        UseStdout(T), HashFilenames(X) {}
 
   bool AllBlocks;
   bool BranchInfo;
@@ -58,6 +59,7 @@ struct Options {
   bool UncondBranch;
   bool LongFileNames;
   bool NoOutput;
+  bool UseStdout;
   bool HashFilenames;
 };
 
