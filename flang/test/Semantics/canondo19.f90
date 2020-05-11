@@ -1,4 +1,4 @@
-! RUN: %S/test_any.sh %s %flang %t
+! RUN: %S/test_any.sh %s %t %f18
 ! Check that if there is a label or a name on an label-do-stmt,
 ! then it is not lost when rewriting it to an non-label-do-stmt.
 

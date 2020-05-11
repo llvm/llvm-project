@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C736 If EXTENDS appears and the type being defined has a coarray ultimate 
 ! component, its parent type shall have a coarray ultimate component.
 !

@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %flang %t
+! RUN: %S/test_symbols.sh %s %t %f18
 ! Test that intent-stmt and subprogram prefix and suffix are resolved.
 
 !DEF: /m Module

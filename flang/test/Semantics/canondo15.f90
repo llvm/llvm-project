@@ -1,4 +1,4 @@
-! RUN: %S/test_any.sh %s %flang %t
+! RUN: %S/test_any.sh %s %t %f18
 ! Error test -- DO loop uses obsolete loop termination statement
 ! See R1131 and C1133
 

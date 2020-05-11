@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C712 The value of scalar-int-constant-expr shall be nonnegative and 
 ! shall specify a representation method that exists on the processor.
 ! C714 The value of kind-param shall be nonnegative.

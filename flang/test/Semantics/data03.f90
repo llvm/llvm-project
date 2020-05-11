@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 !Testing data constraints : C874 - C875, C878 - C881 
 module m
     integer, target :: modarray(1)
