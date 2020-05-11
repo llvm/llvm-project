@@ -468,7 +468,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
     IRBuilder<> Builder(Inst);
     switch (Inst->getOpcode()) {
     case Instruction::Load: {
-      if (Inst->getType() == AllocaTy)
+      if (Inst->getType() == AllocaTy || Inst->getType()->isVectorTy())
         break;
 
       Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
@@ -486,7 +486,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
     }
     case Instruction::Store: {
       StoreInst *SI = cast<StoreInst>(Inst);
-      if (SI->getValueOperand()->getType() == AllocaTy)
+      if (SI->getValueOperand()->getType() == AllocaTy ||
+          SI->getValueOperand()->getType()->isVectorTy())
         break;
 
       Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
