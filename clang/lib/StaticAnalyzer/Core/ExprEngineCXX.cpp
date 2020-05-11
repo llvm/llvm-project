@@ -303,12 +303,12 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // Operator arguments do not correspond to operator parameters
         // because this-argument is implemented as a normal argument in
         // operator call expressions but not in operator declarations.
-        const VarRegion *VR = Caller->getParameterLocation(
+        const TypedValueRegion *TVR = Caller->getParameterLocation(
             *Caller->getAdjustedParameterIndex(Idx), currBldrCtx->blockCount());
-        if (!VR)
+        if (!TVR)
           return None;
 
-        return loc::MemRegionVal(VR);
+        return loc::MemRegionVal(TVR);
       };
 
       if (const auto *CE = dyn_cast<CallExpr>(E)) {

@@ -222,39 +222,17 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   return ADC->getManager()->getStackFrame(ADC, LCtx, E, B, BlockCount, Idx);
 }
 
-const VarRegion *CallEvent::getParameterLocation(unsigned Index,
-                                                 unsigned BlockCount) const {
+const ParamVarRegion
+*CallEvent::getParameterLocation(unsigned Index, unsigned BlockCount) const {
   const StackFrameContext *SFC = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
   if (!SFC)
     return nullptr;
 
-  // Retrieve parameters of the definition, which are different from
-  // CallEvent's parameters() because getDecl() isn't necessarily
-  // the definition. SFC contains the definition that would be used
-  // during analysis.
-  const Decl *D = SFC->getDecl();
-
-  // TODO: Refactor into a virtual method of CallEvent, like parameters().
-  const ParmVarDecl *PVD = nullptr;
-  if (const auto *FD = dyn_cast<FunctionDecl>(D))
-    PVD = FD->parameters()[Index];
-  else if (const auto *BD = dyn_cast<BlockDecl>(D))
-    PVD = BD->parameters()[Index];
-  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
-    PVD = MD->parameters()[Index];
-  else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D))
-    PVD = CD->parameters()[Index];
-  assert(PVD && "Unexpected Decl kind!");
-
-  const VarRegion *VR =
-      State->getStateManager().getRegionManager().getVarRegion(PVD, SFC);
-
-  // This sanity check would fail if our parameter declaration doesn't
-  // correspond to the stack frame's function declaration.
-  assert(VR->getStackFrame() == SFC);
-
-  return VR;
+  const ParamVarRegion *PVR =
+    State->getStateManager().getRegionManager().getParamVarRegion(
+        getOriginExpr(), Index, SFC);
+  return PVR;
 }
 
 /// Returns true if a type is a pointer-to-const or reference-to-const
@@ -325,8 +303,9 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     if (getKind() != CE_CXXAllocator)
       if (isArgumentConstructedDirectly(Idx))
         if (auto AdjIdx = getAdjustedParameterIndex(Idx))
-          if (const VarRegion *VR = getParameterLocation(*AdjIdx, BlockCount))
-            ValuesToInvalidate.push_back(loc::MemRegionVal(VR));
+          if (const TypedValueRegion *TVR =
+                  getParameterLocation(*AdjIdx, BlockCount))
+            ValuesToInvalidate.push_back(loc::MemRegionVal(TVR));
   }
 
   // Invalidate designated regions using the batch invalidation API.
@@ -527,7 +506,8 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
     // which makes getArgSVal() fail and return UnknownVal.
     SVal ArgVal = Call.getArgSVal(Idx);
     if (!ArgVal.isUnknown()) {
-      Loc ParamLoc = SVB.makeLoc(MRMgr.getVarRegion(ParamDecl, CalleeCtx));
+      Loc ParamLoc = SVB.makeLoc(
+          MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
       Bindings.push_back(std::make_pair(ParamLoc, ArgVal));
     }
   }

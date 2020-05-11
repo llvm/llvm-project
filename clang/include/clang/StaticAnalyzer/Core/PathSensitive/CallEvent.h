@@ -402,9 +402,10 @@ public:
   const StackFrameContext *getCalleeStackFrame(unsigned BlockCount) const;
 
   /// Returns memory location for a parameter variable within the callee stack
-  /// frame. May fail; returns null on failure.
-  const VarRegion *getParameterLocation(unsigned Index,
-                                        unsigned BlockCount) const;
+  /// frame. The behavior is undefined if the block count is different from the
+  /// one that is there when call happens. May fail; returns null on failure.
+  const ParamVarRegion *getParameterLocation(unsigned Index,
+                                             unsigned BlockCount) const;
 
   /// Returns true if on the current path, the argument was constructed by
   /// calling a C++ constructor over it. This is an internal detail of the

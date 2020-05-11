@@ -218,7 +218,7 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
     auto CE = BD->capture_end();
     for (; I != E; ++I) {
       const VarRegion *capturedR = I.getCapturedRegion();
-      const VarRegion *originalR = I.getOriginalRegion();
+      const TypedValueRegion *originalR = I.getOriginalRegion();
 
       // If the capture had a copy expression, use the result of evaluating
       // that expression, otherwise use the original value.
