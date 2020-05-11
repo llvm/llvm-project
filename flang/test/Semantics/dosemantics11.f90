@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C1135 A cycle-stmt shall not appear within a CHANGE TEAM, CRITICAL, or DO 
 ! CONCURRENT construct if it belongs to an outer construct.
 !

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Check for type errors in DEALLOCATE statements
 
 INTEGER, PARAMETER :: maxvalue=1024

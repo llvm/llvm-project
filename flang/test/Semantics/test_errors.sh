@@ -3,7 +3,7 @@
 # Change the compiler by setting the F18 environment variable.
 
 F18_OPTIONS="-fdebug-resolve-names -fparse-only"
-srcdir="@CMAKE_CURRENT_SOURCE_DIR@"
+srcdir=$(dirname $0)
 source $srcdir/common.sh
 [[ ! -f $src ]] && die "File not found: $src"
 
@@ -12,8 +12,7 @@ actual=$temp/actual
 expect=$temp/expect
 diffs=$temp/diffs
 
-include="@FLANG_INTRINSIC_MODULES_DIR@"
-cmd="$F18 $F18_OPTIONS $USER_OPTIONS -I$include $src"
+cmd="$F18 $F18_OPTIONS $src"
 ( cd $temp; $cmd ) > $log 2>&1
 if [[ $? -ge 128 ]]; then
   cat $log

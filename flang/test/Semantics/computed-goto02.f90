@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Check that computed goto express must be a scalar integer expression
 ! TODO: PGI, for example, accepts a float & converts the value to int.
 

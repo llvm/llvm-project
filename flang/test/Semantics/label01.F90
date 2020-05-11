@@ -1,4 +1,4 @@
-! RUN: %S/test_any.sh %s %flang %t
+! RUN: %S/test_any.sh %s %t %f18
 ! EXEC: ${F18} -funparse-with-symbols %s -o /dev/null 2>&1 | grep -v 'procedure conflicts' | ${FileCheck} %s
 ! CHECK-NOT: error:[[:space:]]
 

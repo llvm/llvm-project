@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %flang %t
+! RUN: %S/test_symbols.sh %s %t %f18
 !DEF: /s1 (Subroutine) Subprogram
 subroutine s1
  implicit none

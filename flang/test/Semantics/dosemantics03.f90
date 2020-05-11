@@ -1,4 +1,5 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18 -Mstandard -Werror
+
 ! Issue 458 -- semantic checks for a normal DO loop.  The DO variable
 ! and the initial, final, and step expressions must be INTEGER if the
 ! options for standard conformance and turning warnings into errors
@@ -6,8 +7,6 @@
 ! conformance and turning warnings into errors.  This produces error
 ! messages for the cases where REAL and DOUBLE PRECISION variables
 ! and expressions are used in the DO controls.
-
-!OPTIONS: -Mstandard -Werror
 
 ! C1120 -- DO variable (and associated expressions) must be INTEGER.
 ! This is extended by allowing REAL and DOUBLE PRECISION

@@ -1,5 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
-!OPTIONS: -fopenmp
+! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
 
 ! 2.4 An array section designates a subset of the elements in an array. Although
 ! Substring shares similar syntax but cannot be treated as valid array section.

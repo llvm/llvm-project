@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %f18 %t
+! RUN: %S/test_modfile.sh %s %t %f18
 ! Test modfiles for entities with initialization
 module m
   integer, parameter :: k8 = 8
