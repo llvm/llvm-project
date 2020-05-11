@@ -95,8 +95,8 @@ define void @gep0(i8* %unused, i8* %other, i8* %ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@gep0
 ; CHECK-SAME: (i8* nocapture nofree readnone [[UNUSED:%.*]], i8* nocapture nofree nonnull writeonly dereferenceable(1) [[OTHER:%.*]], i8* nocapture nofree nonnull readonly dereferenceable(3) [[PTR:%.*]])
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, i8* [[PTR]], i64 2
-; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[ARRAYIDX2]]
-; CHECK-NEXT:    store i8 [[T2]], i8* [[OTHER]]
+; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    store i8 [[T2]], i8* [[OTHER]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx0 = getelementptr i8, i8* %ptr, i64 0
@@ -527,10 +527,10 @@ define i32 @require_cfg_analysis(i32 %c, i32* %p) {
 ; IS________OPM-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[C]], 4
 ; IS________OPM-NEXT:    br i1 [[TOBOOL4]], label [[L6:%.*]], label [[L7:%.*]]
 ; IS________OPM:       l6:
-; IS________OPM-NEXT:    store i32 0, i32* [[P]]
+; IS________OPM-NEXT:    store i32 0, i32* [[P]], align 1
 ; IS________OPM-NEXT:    br label [[END:%.*]]
 ; IS________OPM:       l7:
-; IS________OPM-NEXT:    store i32 1, i32* [[P]]
+; IS________OPM-NEXT:    store i32 1, i32* [[P]], align 1
 ; IS________OPM-NEXT:    br label [[END]]
 ; IS________OPM:       end:
 ; IS________OPM-NEXT:    ret i32 1

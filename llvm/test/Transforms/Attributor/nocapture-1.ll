@@ -89,7 +89,7 @@ define i1 @c5(i32* %q, i32 %bitno) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP]], [[BITNO]]
 ; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[LOOKUP:%.*]] = getelementptr [2 x i1], [2 x i1]* @lookup_table, i32 0, i32 [[BIT]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i1, i1* [[LOOKUP]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i1, i1* [[LOOKUP]], align 1
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %tmp = ptrtoint i32* %q to i32
@@ -147,7 +147,7 @@ define i1 @c7(i32* %q, i32 %bitno) {
 ; CHECK-LABEL: define {{[^@]+}}@c7
 ; CHECK-SAME: (i32* nofree readonly [[Q:%.*]], i32 [[BITNO:%.*]])
 ; CHECK-NEXT:    [[PTR:%.*]] = call i1* @lookup_bit(i32* noalias nofree readnone [[Q]], i32 [[BITNO]])
-; CHECK-NEXT:    [[VAL:%.*]] = load i1, i1* [[PTR]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i1, i1* [[PTR]], align 1
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %ptr = call i1* @lookup_bit(i32* %q, i32 %bitno)
@@ -419,7 +419,7 @@ define void @nocaptureLaunder(i8* %p) {
 ; CHECK-SAME: (i8* nocapture [[P:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[P]])
-; CHECK-NEXT:    store i8 42, i8* [[B]]
+; CHECK-NEXT:    store i8 42, i8* [[B]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -446,7 +446,7 @@ define void @nocaptureStrip(i8* %p) {
 ; CHECK-SAME: (i8* nocapture writeonly [[P:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias readnone [[P]])
-; CHECK-NEXT:    store i8 42, i8* [[B]]
+; CHECK-NEXT:    store i8 42, i8* [[B]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -586,7 +586,7 @@ declare void @val_use(i8 %ptr) readonly nounwind
 define void @ptr_uses(i8* %ptr, i8* %wptr) {
 ; CHECK-LABEL: define {{[^@]+}}@ptr_uses
 ; CHECK-SAME: (i8* [[PTR:%.*]], i8* nocapture nonnull writeonly dereferenceable(1) [[WPTR:%.*]])
-; CHECK-NEXT:    store i8 0, i8* [[WPTR]]
+; CHECK-NEXT:    store i8 0, i8* [[WPTR]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %call_ptr = call i8* @maybe_returned_ptr(i8* %ptr)

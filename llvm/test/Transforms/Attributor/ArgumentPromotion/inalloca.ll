@@ -63,7 +63,7 @@ entry:
 ; Argpromote can't promote %a because of the icmp use.
 define internal i1 @g(%struct.ss* %a, %struct.ss* inalloca %b) nounwind  {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g
-; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree readnone [[A:%.*]], %struct.ss* inalloca nocapture nofree writeonly [[B:%.*]])
+; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* inalloca nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[B:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;
