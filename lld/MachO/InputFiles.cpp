@@ -263,6 +263,16 @@ DylibFile::DylibFile(MemoryBufferRef mb) : InputFile(DylibKind, mb) {
   }
 }
 
+DylibFile::DylibFile() : InputFile(DylibKind, MemoryBufferRef()) {}
+
+DylibFile *DylibFile::createLibSystemMock() {
+  auto *file = make<DylibFile>();
+  file->mb = MemoryBufferRef("", "/usr/lib/libSystem.B.dylib");
+  file->dylibName = "/usr/lib/libSystem.B.dylib";
+  file->symbols.push_back(symtab->addDylib("dyld_stub_binder", file));
+  return file;
+}
+
 // Returns "<internal>" or "baz.o".
 std::string lld::toString(const InputFile *file) {
   return file ? std::string(file->getName()) : "<internal>";
