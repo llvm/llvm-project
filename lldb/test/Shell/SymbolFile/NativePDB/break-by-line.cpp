@@ -1,3 +1,4 @@
+// XFAIL: target-arm && linux-gnu
 // clang-format off
 // REQUIRES: lld
 
