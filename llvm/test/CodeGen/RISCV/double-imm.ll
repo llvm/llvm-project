@@ -38,8 +38,7 @@ define double @double_imm_op(double %a) nounwind {
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft0, 8(sp)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_0)
-; RV32IFD-NEXT:    fld ft1, 0(a0)
+; RV32IFD-NEXT:    fld ft1, %lo(.LCPI1_0)(a0)
 ; RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
@@ -50,8 +49,7 @@ define double @double_imm_op(double %a) nounwind {
 ; RV64IFD-LABEL: double_imm_op:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64IFD-NEXT:    addi a1, a1, %lo(.LCPI1_0)
-; RV64IFD-NEXT:    fld ft0, 0(a1)
+; RV64IFD-NEXT:    fld ft0, %lo(.LCPI1_0)(a1)
 ; RV64IFD-NEXT:    fmv.d.x ft1, a0
 ; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
