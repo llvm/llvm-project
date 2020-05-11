@@ -141,6 +141,9 @@
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       X86 FP Stackifier
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Dominance Frontier Construction
+; CHECK-NEXT:       X86 Load Value Injection (LVI) Load Hardening
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       PostRA Machine Sink
 ; CHECK-NEXT:       MachineDominator Tree Construction
