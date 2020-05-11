@@ -201,7 +201,7 @@ void ASTDumper::dump(const VarType &type) {
 /// parameters names.
 void ASTDumper::dump(PrototypeAST *node) {
   INDENT();
-  llvm::errs() << "Proto '" << node->getName() << "' " << loc(node) << "'\n";
+  llvm::errs() << "Proto '" << node->getName() << "' " << loc(node) << "\n";
   indent();
   llvm::errs() << "Params: [";
   llvm::interleaveComma(node->getArgs(), llvm::errs(),
