@@ -1,5 +1,5 @@
 # RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
-# RUN:     | llvm-dwarfdump - | FileCheck %s
+# RUN:     | llvm-dwarfdump -v --name local* --regex - | FileCheck %s
 #
 # Generated with opt -sroa, llc -stop-after=livedebugvalues, with some metadata
 # removed by hand:
@@ -28,19 +28,15 @@
 # Check that the local variables each have a location range which reflects the
 # fact that they're both unavailable at the start of the functions.
 #
-# CHECK:      DW_TAG_subprogram
-# CHECK:        DW_AT_name       ("funone")
-# CHECK:        DW_TAG_variable
-# CHECK:          DW_AT_location
-# CHECK-NEXT:         [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}):
-# CHECK-NEXT:     DW_AT_name     ("localone")
-
-# CHECK:      DW_TAG_subprogram
-# CHECK:        DW_AT_name       ("funtwo")
-# CHECK:        DW_TAG_variable
-# CHECK:          DW_AT_location
-# CHECK-NEXT:         [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}):
-# CHECK-NEXT:     DW_AT_name     ("localtwo")
+# CHECK:        DW_TAG_variable [
+# CHECK-NEXT:     DW_AT_location [DW_FORM_sec_offset]
+# CHECK-NEXT:         [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}})
+# CHECK-NEXT:     DW_AT_name {{.*}} = "localone"
+#
+# CHECK:        DW_TAG_variable [
+# CHECK-NEXT:     DW_AT_location [DW_FORM_sec_offset]
+# CHECK-NEXT:         [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}})
+# CHECK-NEXT:     DW_AT_name {{.*}} = "localtwo"
 
 --- |
   target triple = "x86_64-unknown-linux-gnu"
