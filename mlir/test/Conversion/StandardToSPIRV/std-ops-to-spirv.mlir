@@ -531,6 +531,20 @@ func @trunci2(%arg0: i32) -> i16 {
   return %0 : i16
 }
 
+// CHECK-LABEL: @fptosi1
+func @fptosi1(%arg0 : f32) -> i32 {
+  // CHECK: spv.ConvertFToS %{{.*}} : f32 to i32
+  %0 = std.fptosi %arg0 : f32 to i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @fptosi2
+func @fptosi2(%arg0 : f16) -> i16 {
+  // CHECK: spv.ConvertFToS %{{.*}} : f16 to i16
+  %0 = std.fptosi %arg0 : f16 to i16
+  return %0 : i16
+}
+
 } // end module
 
 // -----
