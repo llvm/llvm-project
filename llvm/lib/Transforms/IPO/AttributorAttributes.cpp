@@ -2613,11 +2613,11 @@ struct AAIsDeadValueImpl : public AAIsDead {
       return false;
 
     const IRPosition &CallIRP = IRPosition::callsite_function(*CB);
-    const auto &NoUnwindAA = A.getAAFor<AANoUnwind>(*this, CallIRP);
+    const auto &NoUnwindAA = A.getAndUpdateAAFor<AANoUnwind>(*this, CallIRP);
     if (!NoUnwindAA.isAssumedNoUnwind())
       return false;
 
-    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+    const auto &MemBehaviorAA = A.getAndUpdateAAFor<AAMemoryBehavior>(
         *this, CallIRP, /* TrackDependence */ false);
     if (MemBehaviorAA.isAssumedReadOnly()) {
       if (!MemBehaviorAA.isKnownReadOnly())
@@ -2899,8 +2899,8 @@ struct AAIsDeadFunction : public AAIsDead {
       auto *CB = dyn_cast<CallBase>(DeadEndI);
       if (!CB)
         continue;
-      const auto &NoReturnAA =
-          A.getAAFor<AANoReturn>(*this, IRPosition::callsite_function(*CB));
+      const auto &NoReturnAA = A.getAndUpdateAAFor<AANoReturn>(
+          *this, IRPosition::callsite_function(*CB));
       bool MayReturn = !NoReturnAA.isAssumedNoReturn();
       if (MayReturn && (!Invoke2CallAllowed || !isa<InvokeInst>(CB)))
         continue;
@@ -3013,7 +3013,7 @@ identifyAliveSuccessors(Attributor &A, const CallBase &CB,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   const IRPosition &IPos = IRPosition::callsite_function(CB);
 
-  const auto &NoReturnAA = A.getAAFor<AANoReturn>(AA, IPos);
+  const auto &NoReturnAA = A.getAndUpdateAAFor<AANoReturn>(AA, IPos);
   if (NoReturnAA.isAssumedNoReturn())
     return !NoReturnAA.isKnownNoReturn();
   if (CB.isTerminator())
@@ -3037,7 +3037,7 @@ identifyAliveSuccessors(Attributor &A, const InvokeInst &II,
     AliveSuccessors.push_back(&II.getUnwindDest()->front());
   } else {
     const IRPosition &IPos = IRPosition::callsite_function(II);
-    const auto &AANoUnw = A.getAAFor<AANoUnwind>(
+    const auto &AANoUnw = A.getAndUpdateAAFor<AANoUnwind>(
         AA, IPos, /* TrackDependence */ true, DepClassTy::OPTIONAL);
     if (AANoUnw.isAssumedNoUnwind()) {
       UsedAssumedInformation |= !AANoUnw.isKnownNoUnwind();
