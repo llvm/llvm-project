@@ -78,15 +78,10 @@ entry:
 declare !callback !0 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*, i8* (i8*)*, i8*)
 
 define internal i8* @foo(i8* %arg) {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; NOT_CGSCC_NPM-SAME: (i8* noalias nofree readnone returned align 536870912 "no-capture-maybe-returned" [[ARG:%.*]])
-; NOT_CGSCC_NPM-NEXT:  entry:
-; NOT_CGSCC_NPM-NEXT:    ret i8* null
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC_NPM-SAME: (i8* noalias nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret i8* null
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i8* noalias nofree readnone returned align 536870912 "no-capture-maybe-returned" [[ARG:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i8* null
 ;
 entry:
   ret i8* %arg
@@ -118,15 +113,10 @@ define internal i8* @baz(i8* %arg) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i8* [[ARG]]
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@baz
-; IS__CGSCC_OPM-SAME: (i8* nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    ret i8* [[ARG]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@baz
-; IS__CGSCC_NPM-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret i8* [[ARG]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@baz
+; IS__CGSCC____-SAME: (i8* nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i8* [[ARG]]
 ;
 entry:
   ret i8* %arg
@@ -138,15 +128,10 @@ define internal i8* @buz(i8* %arg) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i8* [[ARG]]
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@buz
-; IS__CGSCC_OPM-SAME: (i8* nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    ret i8* [[ARG]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@buz
-; IS__CGSCC_NPM-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret i8* [[ARG]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@buz
+; IS__CGSCC____-SAME: (i8* nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i8* [[ARG]]
 ;
 entry:
   ret i8* %arg

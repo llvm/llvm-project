@@ -182,7 +182,7 @@ define i8* @test7() nounwind {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    store i8 7, i8* [[A]]
+; CHECK-NEXT:    store i8 7, i8* [[A]], align 1
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8* [ [[A]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
@@ -211,7 +211,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32* [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
 ; CHECK:       4:
-; CHECK-NEXT:    store i8 10, i8* [[TMP2]]
+; CHECK-NEXT:    store i8 10, i8* [[TMP2]], align 1
 ; CHECK-NEXT:    br label [[TMP5]]
 ; CHECK:       5:
 ; CHECK-NEXT:    ret i8* [[TMP2]]

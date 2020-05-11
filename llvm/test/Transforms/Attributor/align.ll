@@ -403,7 +403,7 @@ define i32* @test10a(i32* align 32 %p) {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[R:%.*]] = call i32* @test10a(i32* nofree nonnull align 32 dereferenceable(4) "no-capture-maybe-returned" [[P]])
-; CHECK-NEXT:    store i32 1, i32* [[R]]
+; CHECK-NEXT:    store i32 1, i32* [[R]], align 1
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr i32, i32* [[P]], i32 8
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       f:
@@ -445,7 +445,7 @@ define i32* @test10b(i32* align 32 %p) {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[R:%.*]] = call i32* @test10b(i32* nofree nonnull align 32 dereferenceable(4) "no-capture-maybe-returned" [[P]])
-; CHECK-NEXT:    store i32 1, i32* [[R]]
+; CHECK-NEXT:    store i32 1, i32* [[R]], align 1
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr i32, i32* [[P]], i32 8
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       f:
@@ -715,7 +715,7 @@ define void @align_call_op_not_store(i8* align 2048 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@align_call_op_not_store
 ; CHECK-SAME: (i8* align 2048 [[ARG:%.*]])
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @some_func(i8* align 2048 [[ARG]])
-; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]]
+; CHECK-NEXT:    store i8 0, i8* [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %unknown = call i8* @some_func(i8* %arg)
