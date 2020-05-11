@@ -8,7 +8,6 @@
 // RUN:     %p/Inputs/source-list.lldbinit | FileCheck %s
 
 
-
 // Some context lines before
 // the function.
 
