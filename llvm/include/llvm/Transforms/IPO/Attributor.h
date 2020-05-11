@@ -853,8 +853,8 @@ struct Attributor {
   const AAType &getAAFor(const AbstractAttribute &QueryingAA,
                          const IRPosition &IRP, bool TrackDependence = true,
                          DepClassTy DepClass = DepClassTy::REQUIRED) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence,
-                                    DepClass, /* ForceUpdate */ false);
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence, DepClass,
+                                    /* ForceUpdate */ false);
   }
 
   /// Similar to getAAFor but the return abstract attribute will be updated (via
@@ -864,10 +864,11 @@ struct Attributor {
   /// was assumed dead.
   template <typename AAType>
   const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
-                         const IRPosition &IRP, bool TrackDependence = true,
-                         DepClassTy DepClass = DepClassTy::REQUIRED) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence,
-                                    DepClass, /* ForceUpdate */ true);
+                                  const IRPosition &IRP,
+                                  bool TrackDependence = true,
+                                  DepClassTy DepClass = DepClassTy::REQUIRED) {
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence, DepClass,
+                                    /* ForceUpdate */ true);
   }
 
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if

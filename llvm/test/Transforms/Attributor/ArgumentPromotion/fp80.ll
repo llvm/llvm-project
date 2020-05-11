@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @run() {
 ; CHECK-LABEL: define {{[^@]+}}@run()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ;
 entry:
   tail call i8 @UseLongDoubleUnsafely(%union.u* byval align 16 bitcast (%struct.s* @b to %union.u*))
