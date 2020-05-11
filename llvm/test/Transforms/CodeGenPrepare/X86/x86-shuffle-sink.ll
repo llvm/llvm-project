@@ -178,3 +178,44 @@ if_false:
   %res = lshr <2 x i64> %lhs, %mask
   ret <2 x i64> %res
 }
+
+define void @funnel_splatvar(i32* nocapture %arr, i32 %rot) {
+; CHECK-LABEL: @funnel_splatvar(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <8 x i32> undef, i32 [[ROT:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT15]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[T0:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i32* [[T0]] to <8 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, <8 x i32>* [[T1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD]], <8 x i32> [[WIDE_LOAD]], <8 x i32> [[BROADCAST_SPLAT16]])
+; CHECK-NEXT:    store <8 x i32> [[T2]], <8 x i32>* [[T1]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[T3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 65536
+; CHECK-NEXT:    br i1 [[T3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %broadcast.splatinsert15 = insertelement <8 x i32> undef, i32 %rot, i32 0
+  %broadcast.splat16 = shufflevector <8 x i32> %broadcast.splatinsert15, <8 x i32> undef, <8 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %t0 = getelementptr inbounds i32, i32* %arr, i64 %index
+  %t1 = bitcast i32* %t0 to <8 x i32>*
+  %wide.load = load <8 x i32>, <8 x i32>* %t1, align 4
+  %t2 = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> %wide.load, <8 x i32> %wide.load, <8 x i32> %broadcast.splat16)
+  store <8 x i32> %t2, <8 x i32>* %t1, align 4
+  %index.next = add i64 %index, 8
+  %t3 = icmp eq i64 %index.next, 65536
+  br i1 %t3, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+declare <8 x i32> @llvm.fshl.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
