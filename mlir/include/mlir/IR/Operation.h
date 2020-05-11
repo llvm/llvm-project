@@ -185,6 +185,15 @@ public:
   /// `iterator` in the specified block.
   void moveBefore(Block *block, llvm::iplist<Operation>::iterator iterator);
 
+  /// Unlink this operation from its current block and insert it right after
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveAfter(Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `iterator` in the specified block.
+  void moveAfter(Block *block, llvm::iplist<Operation>::iterator iterator);
+
   /// Given an operation 'other' that is within the same parent block, return
   /// whether the current operation is before 'other' in the operation list
   /// of the parent block.
