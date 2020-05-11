@@ -6229,9 +6229,13 @@ void AAMemoryLocationImpl::categorizePtrValue(
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<AllocaInst>(V))
+    } else if (isa<ConstantPointerNull>(V) &&
+               !NullPointerIsDefined(getAssociatedFunction(),
+                                     V.getType()->getPointerAddressSpace())) {
+      return true;
+    } else if (isa<AllocaInst>(V)) {
       MLK = NO_LOCAL_MEM;
-    else if (const auto *CB = dyn_cast<CallBase>(&V)) {
+    } else if (const auto *CB = dyn_cast<CallBase>(&V)) {
       const auto &NoAliasAA =
           A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(*CB));
       if (NoAliasAA.isAssumedNoAlias())
