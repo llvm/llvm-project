@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-no-function-names-in-data %s -o - | FileCheck %s --check-prefix WITHOUTNAMES
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -dwarf-column-info -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO
 
 // RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -femit-coverage-data %s 2>&1 | FileCheck --check-prefix=NEWPM %s
@@ -27,16 +26,8 @@ int test2(int b) {
   return b * 2;
 }
 
-// Inside function emission data structure, check that
-// -coverage-no-function-names-in-data uses null as the function name.
-// CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant
-// CHECK-SAME: { i32 {{[0-9]+}}, i8* getelementptr inbounds ({{[^,]*}}, {{[^,]*}}* @
-// CHECK-SAME: { i32 {{[0-9]+}}, i8* getelementptr inbounds ({{[^,]*}}, {{[^,]*}}* @
-// WITHOUTNAMES: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant
-// WITHOUTNAMES-NOT: getelementptr inbounds ({{.*}}@
-// WITHOUTNAMES-SAME: zeroinitializer,
-// WITHOUTNAMES-NOT: getelementptr inbounds ({{.*}}@
-// WITHOUTNAMES-SAME: { i32 {{[0-9]+}}, i8* null,
+// CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant [2 x %0]
+// CHECK-SAME: [%0 zeroinitializer, %0 { i32 1, i32 0, i8 0, i32 0 }]
 
 // Check that the noredzone flag is set on the generated functions.
 
