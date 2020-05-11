@@ -7,7 +7,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-I386 %s
 //
 // CHECK-LINUX-I386: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-LINUX-I386-NOT: "-u__llvm_profile_runtime"
 // CHECK-LINUX-I386: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-i386.a" {{.*}} "-lc"
+// CHECK-LINUX-I386-NOT: "-u__llvm_profile_runtime"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux --coverage -fuse-ld=ld \
