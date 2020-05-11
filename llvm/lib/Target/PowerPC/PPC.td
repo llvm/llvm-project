@@ -229,6 +229,12 @@ def FeaturePCRelativeMemops :
                    "Enable PC relative Memory Ops",
                    [FeatureISA3_0]>;
 
+def FeaturePredictableSelectIsExpensive :
+  SubtargetFeature<"predictable-select-expensive",
+                   "PredictableSelectIsExpensive",
+                   "true",
+                   "Prefer likely predicted branches over selects">;
+
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
 // less error prone and easier to read.
@@ -281,14 +287,18 @@ def ProcessorFeatures {
     !listconcat(P7InheritableFeatures, P7SpecificFeatures);
 
   // Power8
-  list<SubtargetFeature> P8AdditionalFeatures = [DirectivePwr8,
-                                                 FeatureP8Altivec,
-                                                 FeatureP8Vector,
-                                                 FeatureP8Crypto,
-                                                 FeatureHTM,
-                                                 FeatureDirectMove,
-                                                 FeatureICBT,
-                                                 FeaturePartwordAtomic];
+  list<SubtargetFeature> P8AdditionalFeatures =
+    [DirectivePwr8,
+     FeatureP8Altivec,
+     FeatureP8Vector,
+     FeatureP8Crypto,
+     FeatureHTM,
+     FeatureDirectMove,
+     FeatureICBT,
+     FeaturePartwordAtomic,
+     FeaturePredictableSelectIsExpensive
+    ];
+
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
                                                FeatureAddisLoadFusion];
   list<SubtargetFeature> P8InheritableFeatures =
@@ -297,10 +307,14 @@ def ProcessorFeatures {
     !listconcat(P8InheritableFeatures, P8SpecificFeatures);
 
   // Power9
-  list<SubtargetFeature> P9AdditionalFeatures = [DirectivePwr9,
-                                                 FeatureP9Altivec,
-                                                 FeatureP9Vector,
-                                                 FeatureISA3_0];
+  list<SubtargetFeature> P9AdditionalFeatures =
+    [DirectivePwr9,
+     FeatureP9Altivec,
+     FeatureP9Vector,
+     FeatureISA3_0,
+     FeaturePredictableSelectIsExpensive
+    ];
+
   // Some features are unique to Power9 and there is no reason to assume
   // they will be part of any future CPUs. One example is the narrower
   // dispatch for vector operations than scalar ones. For the time being,

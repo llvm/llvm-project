@@ -1323,6 +1323,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     MaxLoadsPerMemcmp = 8;
     MaxLoadsPerMemcmpOptSize = 4;
   }
+
+  // Let the subtarget (CPU) decide if a predictable select is more expensive
+  // than the corresponding branch. This information is used in CGP to decide
+  // when to convert selects into branches.
+  PredictableSelectIsExpensive = Subtarget.isPredictableSelectIsExpensive();
 }
 
 /// getMaxByValAlign - Helper for getByValTypeAlignment to determine

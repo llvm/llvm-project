@@ -120,6 +120,7 @@ void PPCSubtarget::initializeEnvironment() {
   VectorsUseTwoUnits = false;
   UsePPCPreRASchedStrategy = false;
   UsePPCPostRASchedStrategy = false;
+  PredictableSelectIsExpensive = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }
