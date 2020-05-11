@@ -134,15 +134,14 @@ define <2 x i64> @ins1_ins1_urem(i64 %x, i64 %y) {
   ret <2 x i64> %r
 }
 
-; Negative test
-; TODO: extra use can be accounted for in cost calculation.
+; Extra use is accounted for in cost calculation.
 
 define <4 x i32> @ins0_ins0_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ins0_ins0_xor(
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    call void @use(<4 x i32> [[I0]])
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = xor <4 x i32> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = xor i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[R_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %i0 = insertelement <4 x i32> undef, i32 %x, i32 0
@@ -152,12 +151,14 @@ define <4 x i32> @ins0_ins0_xor(i32 %x, i32 %y) {
   ret <4 x i32> %r
 }
 
+; Extra use is accounted for in cost calculation.
+
 define <4 x float> @ins1_ins1_fmul(float %x, float %y) {
 ; CHECK-LABEL: @ins1_ins1_fmul(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 1
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 1
 ; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x float> [[I0]], [[I1]]
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = fmul float [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %i0 = insertelement <4 x float> undef, float %x, i32 1
@@ -166,6 +167,8 @@ define <4 x float> @ins1_ins1_fmul(float %x, float %y) {
   %r = fmul <4 x float> %i0, %i1
   ret <4 x float> %r
 }
+
+; If the scalar binop is not cheaper than the vector binop, extra uses can prevent the transform.
 
 define <4 x float> @ins2_ins2_fsub(float %x, float %y) {
 ; CHECK-LABEL: @ins2_ins2_fsub(
@@ -184,14 +187,25 @@ define <4 x float> @ins2_ins2_fsub(float %x, float %y) {
   ret <4 x float> %r
 }
 
+; It may be worth scalarizing an expensive binop even if both inserts have extra uses.
+
 define <4 x float> @ins3_ins3_fdiv(float %x, float %y) {
-; CHECK-LABEL: @ins3_ins3_fdiv(
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 3
-; CHECK-NEXT:    call void @usef(<4 x float> [[I0]])
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 3
-; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x float> [[I0]], [[I1]]
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; SSE-LABEL: @ins3_ins3_fdiv(
+; SSE-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 3
+; SSE-NEXT:    call void @usef(<4 x float> [[I0]])
+; SSE-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 3
+; SSE-NEXT:    call void @usef(<4 x float> [[I1]])
+; SSE-NEXT:    [[R_SCALAR:%.*]] = fdiv float [[X]], [[Y]]
+; SSE-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[R_SCALAR]], i64 3
+; SSE-NEXT:    ret <4 x float> [[R]]
+;
+; AVX-LABEL: @ins3_ins3_fdiv(
+; AVX-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 3
+; AVX-NEXT:    call void @usef(<4 x float> [[I0]])
+; AVX-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 3
+; AVX-NEXT:    call void @usef(<4 x float> [[I1]])
+; AVX-NEXT:    [[R:%.*]] = fdiv <4 x float> [[I0]], [[I1]]
+; AVX-NEXT:    ret <4 x float> [[R]]
 ;
   %i0 = insertelement <4 x float> undef, float %x, i32 3
   call void @usef(<4 x float> %i0)

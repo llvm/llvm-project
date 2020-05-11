@@ -316,15 +316,14 @@ static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
   if (!match(&I, m_BinOp(m_Instruction(Ins0), m_Instruction(Ins1))))
     return false;
 
-  // TODO: Loosen restriction for one-use by adjusting cost equation.
   // TODO: Deal with mismatched index constants and variable indexes?
   Constant *VecC0, *VecC1;
   Value *V0, *V1;
   uint64_t Index;
-  if (!match(Ins0, m_OneUse(m_InsertElement(m_Constant(VecC0), m_Value(V0),
-                                            m_ConstantInt(Index)))) ||
-      !match(Ins1, m_OneUse(m_InsertElement(m_Constant(VecC1), m_Value(V1),
-                                            m_SpecificInt(Index)))))
+  if (!match(Ins0, m_InsertElement(m_Constant(VecC0), m_Value(V0),
+                                   m_ConstantInt(Index))) ||
+      !match(Ins1, m_InsertElement(m_Constant(VecC1), m_Value(V1),
+                                   m_SpecificInt(Index))))
     return false;
 
   Type *ScalarTy = V0->getType();
@@ -342,7 +341,9 @@ static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
   int InsertCost =
       TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, Index);
   int OldCost = InsertCost + InsertCost + VectorOpCost;
-  int NewCost = ScalarOpCost + InsertCost;
+  int NewCost = ScalarOpCost + InsertCost +
+                !Ins0->hasOneUse() * InsertCost +
+                !Ins1->hasOneUse() * InsertCost;
 
   // We want to scalarize unless the vector variant actually has lower cost.
   if (OldCost < NewCost)
