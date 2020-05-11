@@ -298,7 +298,7 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
         SBPrefix = "scan-build " + SBOptions + " "
         for Command in SBCommandFile:
             Command = Command.strip()
-            if len(Command) == 0:
+            if len(Command) == 0 or Command.startswith("#"):
                 continue
 
             # Custom analyzer invocation specified by project.
