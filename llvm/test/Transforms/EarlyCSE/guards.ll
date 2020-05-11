@@ -229,7 +229,6 @@ define void @test08(i32 %a, i32 %b, i32* %ptr) {
 ; USE_ASSUME-NEXT:    store i32 100, i32* [[PTR:%.*]]
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]]
 ; USE_ASSUME-NEXT:    ret void
 ;
@@ -270,7 +269,6 @@ define void @test09(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; USE_ASSUME-NEXT:    store i32 100, i32* [[PTR:%.*]]
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]]
 ; USE_ASSUME-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
@@ -410,8 +408,6 @@ define void @test13(i32 %a, i32 %b, i32* %ptr) {
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR:%.*]], i64 4), "nonnull"(i32* [[PTR]]) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]]
 ; USE_ASSUME-NEXT:    ret void
 ;
@@ -452,8 +448,6 @@ define void @test14(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR:%.*]], i64 4), "nonnull"(i32* [[PTR]]) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]]
 ; USE_ASSUME-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; USE_ASSUME:       if.true:

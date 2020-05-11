@@ -18,7 +18,6 @@ define void @f_0(i32* %ptr) {
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[VAL0]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[VAL0]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[VAL0]])
 ; USE_ASSUME-NEXT:    ret void
 ;
@@ -194,7 +193,6 @@ define void @test_scope_start_without_load(i32* %p) {
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
 ; USE_ASSUME-NEXT:    [[ADD:%.*]] = add i32 [[V1]], [[V1]]
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[ADD]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[V1]])
 ; USE_ASSUME-NEXT:    ret void
 ;
@@ -225,7 +223,6 @@ define void @test_scope_restart(i32* %p) {
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
 ; USE_ASSUME-NEXT:    [[ADD:%.*]] = add i32 [[V1]], [[V1]]
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[ADD]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[V1]])
 ; USE_ASSUME-NEXT:    ret void
 ;

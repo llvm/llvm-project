@@ -36,7 +36,6 @@ define i32 @different_array_test(i64 %A, i64 %B) {
 ; USE_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY11_SUB]])
 ; USE_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY22_SUB]])
 ; USE_ASSUME-NEXT:    [[POINTER:%.*]] = getelementptr [100 x i32], [100 x i32]* [[ARRAY11]], i64 0, i64 [[A:%.*]]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[POINTER]], i64 4), "nonnull"(i32* [[POINTER]]) ]
 ; USE_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 [[B:%.*]]
 ; USE_ASSUME-NEXT:    store i32 7, i32* [[POINTER2]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[POINTER]], i64 4), "nonnull"(i32* [[POINTER]]) ]
@@ -78,7 +77,6 @@ define i32 @constant_array_index_test() {
 ; USE_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY1_SUB]])
 ; USE_ASSUME-NEXT:    [[P1:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[ARRAY1]], i64 0, i64 7
 ; USE_ASSUME-NEXT:    [[P2:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[ARRAY1]], i64 0, i64 6
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
 ; USE_ASSUME-NEXT:    store i32 1, i32* [[P2]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 4), "nonnull"(i32* [[P1]]) ]
 ; USE_ASSUME-NEXT:    ret i32 0
@@ -105,8 +103,7 @@ define i32 @gep_distance_test(i32* %A) {
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test(
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A:%.*]], i64 4), "nonnull"(i32* [[A]]) ]
-; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i32, i32* [[A]], i64 2
+; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 2
 ; USE_ASSUME-NEXT:    store i32 7, i32* [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A]], i64 4), "nonnull"(i32* [[A]]) ]
 ; USE_ASSUME-NEXT:    ret i32 0
@@ -129,7 +126,6 @@ define i32 @gep_distance_test2({i32,i32}* %A, i64 %distance) {
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test2(
 ; USE_ASSUME-NEXT:    [[A1:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[A:%.*]], i64 0, i32 0
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A1]], i64 4), "nonnull"(i32* [[A1]]) ]
 ; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[A]], i64 [[DISTANCE:%.*]], i32 1
 ; USE_ASSUME-NEXT:    store i32 7, i32* [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A1]], i64 4), "nonnull"(i32* [[A1]]) ]
@@ -154,8 +150,7 @@ define i32 @gep_distance_test3(i32 * %A) {
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test3(
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A:%.*]], i64 4), "nonnull"(i32* [[A]]) ]
-; USE_ASSUME-NEXT:    [[C1:%.*]] = getelementptr i32, i32* [[A]], i64 1
+; USE_ASSUME-NEXT:    [[C1:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 1
 ; USE_ASSUME-NEXT:    [[C:%.*]] = bitcast i32* [[C1]] to i8*
 ; USE_ASSUME-NEXT:    store i8 42, i8* [[C]], align 1
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[A]], i64 4), "nonnull"(i32* [[A]]) ]
@@ -181,7 +176,6 @@ define i32 @constexpr_test() {
 ; USE_ASSUME-LABEL: @constexpr_test(
 ; USE_ASSUME-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; USE_ASSUME-NEXT:    call void @external(i32* nonnull [[X]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[X]], i64 4), "nonnull"(i32* [[X]]) ]
 ; USE_ASSUME-NEXT:    store i32 5, i32* getelementptr inbounds ({ i32 }, { i32 }* @Global, i64 0, i32 0), align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[X]], i64 4), "nonnull"(i32* [[X]]) ]
 ; USE_ASSUME-NEXT:    ret i32 0
