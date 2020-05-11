@@ -89,6 +89,7 @@ static uint64_t cur_buffer_size = 0;
 static uint64_t cur_pos = 0;
 static uint64_t file_size = 0;
 static int new_file = 0;
+static int gcov_version;
 #if defined(_WIN32)
 static HANDLE mmap_handle = NULL;
 #endif
@@ -414,6 +415,18 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
   }
 
   /* gcda file, version, stamp checksum. */
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  gcov_version = version[3] >= 'A'
+                     ? (version[3] - 'A') * 100 + (version[2] - '0') * 10 +
+                           version[1] - '0'
+                     : (version[3] - '0') * 10 + version[1] - '0';
+#else
+  gcov_version = version[0] >= 'A'
+                     ? (version[0] - 'A') * 100 + (version[1] - '0') * 10 +
+                           version[2] - '0'
+                     : (version[0] - '0') * 10 + version[2] - '0';
+#endif
+
   write_bytes("adcg", 4);
   write_bytes(version, 4);
   write_32bit_value(checksum);
@@ -451,9 +464,9 @@ void llvm_gcda_increment_indirect_counter(uint32_t *predecessor,
 
 COMPILER_RT_VISIBILITY
 void llvm_gcda_emit_function(uint32_t ident, uint32_t func_checksum,
-                             uint8_t use_extra_checksum,
                              uint32_t cfg_checksum) {
   uint32_t len = 2;
+  int use_extra_checksum = gcov_version >= 47;
 
   if (use_extra_checksum)
     len++;

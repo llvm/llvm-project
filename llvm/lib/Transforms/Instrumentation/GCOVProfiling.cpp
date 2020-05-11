@@ -49,9 +49,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "insert-gcov-profiling"
 
-static cl::opt<std::string>
-DefaultGCOVVersion("default-gcov-version", cl::init("402*"), cl::Hidden,
-                   cl::ValueRequired);
+static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
+                                               cl::init("407*"), cl::Hidden,
+                                               cl::ValueRequired);
 static cl::opt<bool> DefaultExitBlockBeforeBody("gcov-exit-block-before-body",
                                                 cl::init(false), cl::Hidden);
 
@@ -59,7 +59,6 @@ GCOVOptions GCOVOptions::getDefault() {
   GCOVOptions Options;
   Options.EmitNotes = true;
   Options.EmitData = true;
-  Options.UseCfgChecksum = false;
   Options.NoRedZone = false;
   Options.ExitBlockBeforeBody = DefaultExitBlockBeforeBody;
 
@@ -747,9 +746,10 @@ void GCOVProfiler::emitProfileNotes() {
         ++It;
       EntryBlock.splitBasicBlock(It);
 
-      Funcs.push_back(std::make_unique<GCOVFunction>(SP, &F, &out, FunctionIdent++,
-                                                Options.UseCfgChecksum,
-                                                Options.ExitBlockBeforeBody));
+      bool UseCfgChecksum = strncmp(Options.Version, "407", 3) >= 0;
+      Funcs.push_back(std::make_unique<GCOVFunction>(
+          SP, &F, &out, FunctionIdent++, UseCfgChecksum,
+          Options.ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();
 
       // Add the function line number to the lines of the entry block
@@ -945,16 +945,14 @@ FunctionCallee GCOVProfiler::getEmitFunctionFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
     Type::getInt32Ty(*Ctx),    // uint32_t ident
     Type::getInt32Ty(*Ctx),    // uint32_t func_checksum
-    Type::getInt8Ty(*Ctx),     // uint8_t use_extra_checksum
     Type::getInt32Ty(*Ctx),    // uint32_t cfg_checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   AttributeList AL;
   if (auto AK = TLI->getExtAttrForI32Param(false)) {
     AL = AL.addParamAttribute(*Ctx, 0, AK);
+    AL = AL.addParamAttribute(*Ctx, 1, AK);
     AL = AL.addParamAttribute(*Ctx, 2, AK);
-    AL = AL.addParamAttribute(*Ctx, 3, AK);
-    AL = AL.addParamAttribute(*Ctx, 4, AK);
   }
   return M->getOrInsertFunction("llvm_gcda_emit_function", FTy);
 }
@@ -1014,9 +1012,8 @@ Function *GCOVProfiler::insertCounterWriteout(
   // walk to write out everything.
   StructType *StartFileCallArgsTy = StructType::create(
       {Builder.getInt8PtrTy(), Builder.getInt8PtrTy(), Builder.getInt32Ty()});
-  StructType *EmitFunctionCallArgsTy =
-      StructType::create({Builder.getInt32Ty(), Builder.getInt32Ty(),
-                          Builder.getInt8Ty(), Builder.getInt32Ty()});
+  StructType *EmitFunctionCallArgsTy = StructType::create(
+      {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()});
   StructType *EmitArcsCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()});
   StructType *FileInfoTy =
@@ -1051,7 +1048,6 @@ Function *GCOVProfiler::insertCounterWriteout(
           EmitFunctionCallArgsTy,
           {Builder.getInt32(j),
            Builder.getInt32(FuncChecksum),
-           Builder.getInt8(Options.UseCfgChecksum),
            Builder.getInt32(CfgChecksum)}));
 
       GlobalVariable *GV = CountersBySP[j].first;
@@ -1180,16 +1176,12 @@ Function *GCOVProfiler::insertCounterWriteout(
                                                   EmitFunctionCallArgsPtr, 1)),
        Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(2),
                           Builder.CreateStructGEP(EmitFunctionCallArgsTy,
-                                                  EmitFunctionCallArgsPtr, 2)),
-       Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(3),
-                          Builder.CreateStructGEP(EmitFunctionCallArgsTy,
                                                   EmitFunctionCallArgsPtr,
-                                                  3))});
+                                                  2))});
   if (auto AK = TLI->getExtAttrForI32Param(false)) {
     EmitFunctionCall->addParamAttr(0, AK);
     EmitFunctionCall->addParamAttr(1, AK);
     EmitFunctionCall->addParamAttr(2, AK);
-    EmitFunctionCall->addParamAttr(3, AK);
   }
   auto *EmitArcsCallArgsPtr =
       Builder.CreateInBoundsGEP(EmitArcsCallArgsTy, EmitArcsCallArgsArray, JV);

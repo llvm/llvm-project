@@ -63,10 +63,6 @@ struct GCOVOptions {
   // gcc's gcov-io.h
   char Version[4];
 
-  // Emit a "cfg checksum" that follows the "line number checksum" of a
-  // function. This affects both .gcno and .gcda files.
-  bool UseCfgChecksum;
-
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone;
 
