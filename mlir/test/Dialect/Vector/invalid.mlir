@@ -451,65 +451,65 @@ func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets, sizes and strides attributes of same size}}
-  %1 = vector.strided_slice %arg0 {offsets = [100], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [100], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets attribute of rank smaller than vector rank}}
-  %1 = vector.strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets attribute of rank smaller than vector rank}}
-  %1 = vector.strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected offsets dimension 0 to be confined to [0, 4)}}
-  %1 = vector.strided_slice %arg0 {offsets = [100], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [100], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected sizes dimension 0 to be confined to [1, 5)}}
-  %1 = vector.strided_slice %arg0 {offsets = [2], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected strides to be confined to [1, 2)}}
-  %1 = vector.strided_slice %arg0 {offsets = [2], sizes = [1], strides = [100]} : vector<4x8x16xf32> to vector<1x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [1], strides = [100]} : vector<4x8x16xf32> to vector<1x8x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected strides to be confined to [1, 2)}}
-  %1 = vector.strided_slice %arg0 {offsets = [2], sizes = [1], strides = [100]} : vector<4x8x16xf32> to vector<1x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [1], strides = [100]} : vector<4x8x16xf32> to vector<1x8x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected sum(offsets, sizes) dimension 0 to be confined to [1, 5)}}
-  %1 = vector.strided_slice %arg0 {offsets = [2], sizes = [3], strides = [1]} : vector<4x8x16xf32> to vector<3x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [3], strides = [1]} : vector<4x8x16xf32> to vector<3x8x16xf32>
 }
 
 // -----
 
-func @strided_slice(%arg0: vector<4x8x16xf32>) {
+func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected result type to be 'vector<2x8x16xf32>'}}
-  %1 = vector.strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4x8x16xf32> to vector<3x1xf32>
+  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4x8x16xf32> to vector<3x1xf32>
 }
 
 // -----
