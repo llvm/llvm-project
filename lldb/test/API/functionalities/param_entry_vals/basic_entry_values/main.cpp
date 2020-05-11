@@ -18,7 +18,7 @@ __attribute__((noinline)) void func1(int &sink) {
   use<int &>(dummy);
 
   ++global;
-  //% self.filecheck("image lookup -va $pc", "main.cpp", "-check-prefix=FUNC1-DESC")
+  //% self.filecheck("image lookup -v -a $pc", "main.cpp", "-check-prefix=FUNC1-DESC")
   // FUNC1-DESC: name = "sink", type = "int &", location = DW_OP_entry_value
 }
 
