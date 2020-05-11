@@ -1496,11 +1496,6 @@ endfunction()
 # path. Since this uses __file__, it has to be emitted into python files that
 # use it and can't be in a lit module. Use with make_paths_relative().
 string(CONCAT LLVM_LIT_PATH_FUNCTION
-  # Lit converts config paths to lower case in discovery.py, before
-  # loading the config. This causes __file__ to be all lower-case (including
-  # the drive letter), but several clang tests pass -include %s and a
-  # clang warning checks that passed case matches on-disk cache. So it's
-  # important that this restores the on-disk case of the prefix.
   "# Allow generated file to be relocatable.\n"
   "def path(p):\n"
   "    if not p: return ''\n"
