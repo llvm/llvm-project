@@ -209,7 +209,7 @@ static detail::op_matcher<ConstantIndexOp> m_ConstantIndex() {
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto cast = dyn_cast_or_null<MemRefCastOp>(operand.get().getDefiningOp());
+    auto cast = operand.get().getDefiningOp<MemRefCastOp>();
     if (cast && !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
       operand.set(cast.getOperand());
       folded = true;
@@ -1696,7 +1696,7 @@ bool IndexCastOp::areCastCompatible(Type a, Type b) {
 
 OpFoldResult IndexCastOp::fold(ArrayRef<Attribute> cstOperands) {
   // Fold IndexCast(IndexCast(x)) -> x
-  auto cast = dyn_cast_or_null<IndexCastOp>(getOperand().getDefiningOp());
+  auto cast = getOperand().getDefiningOp<IndexCastOp>();
   if (cast && cast.getOperand().getType() == getType())
     return cast.getOperand();
 
@@ -2617,8 +2617,7 @@ OpFoldResult SubViewOp::fold(ArrayRef<Attribute>) {
   auto folds = [](Operation *op) {
     bool folded = false;
     for (OpOperand &operand : op->getOpOperands()) {
-      auto castOp =
-          dyn_cast_or_null<MemRefCastOp>(operand.get().getDefiningOp());
+      auto castOp = operand.get().getDefiningOp<MemRefCastOp>();
       if (castOp && canFoldIntoConsumerOp(castOp)) {
         operand.set(castOp.getOperand());
         folded = true;
@@ -2890,12 +2889,11 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
     Value memrefOperand = viewOp.getOperand(0);
-    MemRefCastOp memrefCastOp =
-        dyn_cast_or_null<MemRefCastOp>(memrefOperand.getDefiningOp());
+    MemRefCastOp memrefCastOp = memrefOperand.getDefiningOp<MemRefCastOp>();
     if (!memrefCastOp)
       return failure();
     Value allocOperand = memrefCastOp.getOperand();
-    AllocOp allocOp = dyn_cast_or_null<AllocOp>(allocOperand.getDefiningOp());
+    AllocOp allocOp = allocOperand.getDefiningOp<AllocOp>();
     if (!allocOp)
       return failure();
     rewriter.replaceOpWithNewOp<ViewOp>(viewOp, viewOp.getType(), allocOperand,

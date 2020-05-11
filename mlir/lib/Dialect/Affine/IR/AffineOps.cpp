@@ -591,7 +591,7 @@ AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
     // 2. Compose AffineApplyOps and dispatch dims or symbols.
     for (unsigned i = 0, e = operands.size(); i < e; ++i) {
       auto t = operands[i];
-      auto affineApply = dyn_cast_or_null<AffineApplyOp>(t.getDefiningOp());
+      auto affineApply = t.getDefiningOp<AffineApplyOp>();
       if (affineApply) {
         // a. Compose affine.apply operations.
         LLVM_DEBUG(affineApply.getOperation()->print(
@@ -912,7 +912,7 @@ void AffineApplyOp::getCanonicalizationPatterns(
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto cast = dyn_cast_or_null<MemRefCastOp>(operand.get().getDefiningOp());
+    auto cast = operand.get().getDefiningOp<MemRefCastOp>();
     if (cast && !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
       operand.set(cast.getOperand());
       folded = true;
