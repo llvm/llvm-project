@@ -120,15 +120,13 @@ static void applyPatterns(FuncOp funcOp) {
   // Linalg subview operands promotion.
   //===--------------------------------------------------------------------===//
   patterns.insert<LinalgPromotionPattern<MatmulOp>>(
-      ctx, LinalgMarker({"_promote_views_"}, "_views_promoted_"));
+      ctx, LinalgPromotionOptions(),
+      LinalgMarker({"_promote_views_"}, "_views_promoted_"));
   patterns.insert<LinalgPromotionPattern<MatmulOp>>(
-      ctx,
-      /*operandsToPromote=*/ArrayRef<unsigned>{0},
+      ctx, LinalgPromotionOptions().setOperandsToPromote({0}),
       LinalgMarker({"_promote_first_view_"}, "_first_view_promoted_"));
   patterns.insert<LinalgPromotionPattern<FillOp>>(
-      ctx,
-      /*operandsToPromote=*/ArrayRef<unsigned>{0},
-      /*alignment=*/32,
+      ctx, LinalgPromotionOptions().setOperandsToPromote({0}).setAlignment(32),
       LinalgMarker({"_promote_views_aligned_"}, "_views_aligned_promoted_"));
 
   applyPatternsAndFoldGreedily(funcOp, patterns);
