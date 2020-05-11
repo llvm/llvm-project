@@ -247,7 +247,7 @@ static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
     function_ref<bool(Value &, const Instruction *, StateTy &, bool)>
         VisitValueCB,
-    const Instruction *CtxI, int MaxValues = 16,
+    const Instruction *CtxI, bool UseValueSimplify = true, int MaxValues = 16,
     function_ref<Value *(Value *)> StripCB = nullptr) {
 
   const AAIsDead *LivenessAA = nullptr;
@@ -322,6 +322,18 @@ static bool genericValueTraversal(
             {PHI->getIncomingValue(u), IncomingBB->getTerminator()});
       }
       continue;
+    }
+
+    if (UseValueSimplify && !isa<Constant>(V)) {
+      bool UsedAssumedInformation = false;
+      Optional<Constant *> C =
+          A.getAssumedConstant(*V, QueryingAA, UsedAssumedInformation);
+      if (!C.hasValue())
+        continue;
+      if (Value *NewV = C.getValue()) {
+        Worklist.push_back({NewV, CtxI});
+        continue;
+      }
     }
 
     // Once a leaf is reached we inform the user through the callback.
@@ -979,7 +991,8 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
                                 const Instruction *CtxI) {
     IRPosition RetValPos = IRPosition::value(RV);
     return genericValueTraversal<AAReturnedValues, RVState>(
-        A, RetValPos, *this, RVS, VisitValueCB, CtxI);
+        A, RetValPos, *this, RVS, VisitValueCB, CtxI,
+        /* UseValueSimplify */ false);
   };
 
   // Callback for all "return intructions" live in the associated function.
@@ -4551,7 +4564,8 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
 
     bool Dummy = false;
     if (!genericValueTraversal<AAValueSimplify, bool>(
-            A, getIRPosition(), *this, Dummy, VisitValueCB, getCtxI()))
+            A, getIRPosition(), *this, Dummy, VisitValueCB, getCtxI(),
+            /* UseValueSimplify */ false))
       if (!askSimplifiedValueForAAValueConstantRange(A))
         return indicatePessimisticFixpoint();
 
@@ -6257,6 +6271,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
 
   if (!genericValueTraversal<AAMemoryLocation, AAMemoryLocation::StateType>(
           A, IRPosition::value(Ptr), *this, State, VisitValueCB, getCtxI(),
+          /* UseValueSimplify */ true,
           /* MaxValues */ 32, StripGEPCB)) {
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
@@ -6897,7 +6912,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     IntegerRangeState T(getBitWidth());
 
     if (!genericValueTraversal<AAValueConstantRange, IntegerRangeState>(
-            A, getIRPosition(), *this, T, VisitValueCB, getCtxI()))
+            A, getIRPosition(), *this, T, VisitValueCB, getCtxI(),
+            /* UseValueSimplify */ false))
       return indicatePessimisticFixpoint();
 
     return clampStateAndIndicateChange(getState(), T);
