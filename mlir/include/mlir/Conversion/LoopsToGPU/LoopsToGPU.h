@@ -17,9 +17,9 @@ class OwningRewritePatternList;
 struct LogicalResult;
 class Value;
 
-namespace loop {
+namespace scf {
 class ForOp;
-} // end namespace loop
+} // end namespace scf
 
 /// Convert a perfect affine loop nest with the outermost loop identified by
 /// `forOp` into a gpu::Launch operation.  Map `numBlockDims` outer loops to
@@ -45,7 +45,7 @@ LogicalResult convertAffineLoopNestToGPULaunch(AffineForOp forOp,
 /// parallelization is performed, it is under the responsibility of the caller
 /// to strip-mine the loops and to perform the dependence analysis before
 /// calling the conversion.
-LogicalResult convertLoopNestToGPULaunch(loop::ForOp forOp,
+LogicalResult convertLoopNestToGPULaunch(scf::ForOp forOp,
                                          unsigned numBlockDims,
                                          unsigned numThreadDims);
 
@@ -70,7 +70,7 @@ LogicalResult convertLoopNestToGPULaunch(loop::ForOp forOp,
 ///   TODO(ravishankarm) : Add checks that verify 2(b) above.
 /// The above conditions are assumed to be satisfied by the computation rooted
 /// at `forOp`.
-LogicalResult convertLoopToGPULaunch(loop::ForOp forOp,
+LogicalResult convertLoopToGPULaunch(scf::ForOp forOp,
                                      ArrayRef<Value> numWorkGroups,
                                      ArrayRef<Value> workGroupSizes);
 

@@ -1,4 +1,4 @@
-//===- Intrinsics.h - MLIR EDSC Intrinsics for Linalg -----------*- C++ -*-===//
+//===- Intrinsics.h - MLIR EDSC Intrinsics for SCF --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -6,19 +6,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_DIALECT_LOOPOPS_EDSC_INTRINSICS_H_
-#define MLIR_DIALECT_LOOPOPS_EDSC_INTRINSICS_H_
+#ifndef MLIR_DIALECT_SCF_EDSC_INTRINSICS_H_
+#define MLIR_DIALECT_SCF_EDSC_INTRINSICS_H_
 
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
 
 namespace mlir {
 namespace edsc {
 namespace intrinsics {
 
-using loop_yield = OperationBuilder<loop::YieldOp>;
+using loop_yield = OperationBuilder<scf::YieldOp>;
 
 } // namespace intrinsics
 } // namespace edsc
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LOOPOPS_EDSC_INTRINSICS_H_
+#endif // MLIR_DIALECT_SCF_EDSC_INTRINSICS_H_

@@ -11,16 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Dialect/LoopOps/Passes.h"
-#include "mlir/Dialect/LoopOps/Transforms.h"
+#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
 
 using namespace mlir;
-using namespace mlir::loop;
+using namespace mlir::scf;
 
 /// Verify there are no nested ParallelOps.
 static bool hasNestedParallelOp(ParallelOp ploop) {
@@ -128,7 +128,7 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp secondPloop,
   firstPloop.erase();
 }
 
-void mlir::loop::naivelyFuseParallelOps(Region &region) {
+void mlir::scf::naivelyFuseParallelOps(Region &region) {
   OpBuilder b(region);
   // Consider every single block and attempt to fuse adjacent loops.
   for (auto &block : region) {

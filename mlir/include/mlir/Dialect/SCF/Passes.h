@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LOOPOPS_PASSES_H_
-#define MLIR_DIALECT_LOOPOPS_PASSES_H_
+#ifndef MLIR_DIALECT_SCF_PASSES_H_
+#define MLIR_DIALECT_SCF_PASSES_H_
 
 #include "llvm/ADT/ArrayRef.h"
 #include <memory>
@@ -33,4 +33,4 @@ createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LOOPOPS_PASSES_H_
+#endif // MLIR_DIALECT_SCF_PASSES_H_

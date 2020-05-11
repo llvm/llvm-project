@@ -12,14 +12,14 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
-#include "mlir/Dialect/LoopOps/Passes.h"
+#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 
 using namespace mlir;
-using loop::ParallelOp;
+using scf::ParallelOp;
 
 /// Rewrite a loop with bounds defined by an affine.min with a constant into 2
 /// loops after checking if the bounds are equal to that constant. This is
@@ -52,7 +52,7 @@ static void specializeLoopForUnrolling(ParallelOp op) {
     cond = cond ? b.create<AndOp>(op.getLoc(), cond, cmp) : cmp;
     map.map(std::get<0>(bound), constant);
   }
-  auto ifOp = b.create<loop::IfOp>(op.getLoc(), cond, /*withElseRegion=*/true);
+  auto ifOp = b.create<scf::IfOp>(op.getLoc(), cond, /*withElseRegion=*/true);
   ifOp.getThenBodyBuilder().clone(*op.getOperation(), map);
   ifOp.getElseBodyBuilder().clone(*op.getOperation());
   op.erase();

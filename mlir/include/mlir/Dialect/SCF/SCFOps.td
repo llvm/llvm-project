@@ -1,4 +1,4 @@
-//===- Ops.td - Loop operation definitions ---------------*- tablegen -*-===//
+//===- SCFOps.td - Structured Control Flow operations ------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines MLIR loop operations.
+// Defines MLIR structured control flow operations.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LOOP_OPS
-#define LOOP_OPS
+#ifndef MLIR_DIALECT_SCF_SCFOPS
+#define MLIR_DIALECT_SCF_SCFOPS
 
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def LoopOps_Dialect : Dialect {
+def SCF_Dialect : Dialect {
   let name = "loop";
   let cppNamespace = "";
 }
 
-// Base class for Loop dialect ops.
-class Loop_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<LoopOps_Dialect, mnemonic, traits> {
+// Base class for SCF dialect ops.
+class SCF_Op<string mnemonic, list<OpTrait> traits = []> :
+    Op<SCF_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
   //   * LogicalResult verify(${C++ class of Op} op)
@@ -36,7 +36,7 @@ class Loop_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def ForOp : Loop_Op<"for",
+def ForOp : SCF_Op<"for",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"YieldOp">,
@@ -176,7 +176,7 @@ def ForOp : Loop_Op<"for",
   }];
 }
 
-def IfOp : Loop_Op<"if",
+def IfOp : SCF_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
   let summary = "if-then-else operation";
@@ -250,7 +250,7 @@ def IfOp : Loop_Op<"if",
   }];
 }
 
-def ParallelOp : Loop_Op<"parallel",
+def ParallelOp : SCF_Op<"parallel",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>,
      RecursiveSideEffects,
@@ -324,7 +324,7 @@ def ParallelOp : Loop_Op<"parallel",
   }];
 }
 
-def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
+def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
   let summary = "reduce operation for parallel for";
   let description = [{
     "loop.reduce" is an operation occurring inside "loop.parallel" operations.
@@ -372,7 +372,7 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
 }
 
 def ReduceReturnOp :
-    Loop_Op<"reduce.return", [HasParent<"ReduceOp">, NoSideEffect,
+    SCF_Op<"reduce.return", [HasParent<"ReduceOp">, NoSideEffect,
                               Terminator]> {
   let summary = "terminator for reduce operation";
   let description = [{
@@ -389,7 +389,7 @@ def ReduceReturnOp :
   let assemblyFormat = "$result attr-dict `:` type($result)";
 }
 
-def YieldOp : Loop_Op<"yield", [NoSideEffect, ReturnLike, Terminator]> {
+def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "loop.yield" yields an SSA value from a loop dialect op region and
@@ -409,4 +409,4 @@ def YieldOp : Loop_Op<"yield", [NoSideEffect, ReturnLike, Terminator]> {
               [{ /* nothing to do */ }]>
   ];
 }
-#endif // LOOP_OPS
+#endif // MLIR_DIALECT_SCF_SCFOPS
