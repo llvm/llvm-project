@@ -409,9 +409,26 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY]](<2 x s32>)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY1]](<2 x s32>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<2 x s16>)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC1]](<2 x s16>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV]](s8), implicit [[UV1]](s8), implicit [[UV2]](s8), implicit [[UV3]](s8), implicit [[UV4]](s8), implicit [[UV5]](s8), implicit [[UV6]](s8), implicit [[UV7]](s8)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC]](<2 x s16>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[BITCAST]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C1]](s32)
+    ; CHECK: [[TRUNC4:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR1]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C2]](s32)
+    ; CHECK: [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR2]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC1]](<2 x s16>)
+    ; CHECK: [[TRUNC6:%[0-9]+]]:_(s8) = G_TRUNC [[BITCAST1]](s32)
+    ; CHECK: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; CHECK: [[TRUNC7:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR3]](s32)
+    ; CHECK: [[LSHR4:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; CHECK: [[TRUNC8:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR4]](s32)
+    ; CHECK: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C2]](s32)
+    ; CHECK: [[TRUNC9:%[0-9]+]]:_(s8) = G_TRUNC [[LSHR5]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[TRUNC2]](s8), implicit [[TRUNC3]](s8), implicit [[TRUNC4]](s8), implicit [[TRUNC5]](s8), implicit [[TRUNC6]](s8), implicit [[TRUNC7]](s8), implicit [[TRUNC8]](s8), implicit [[TRUNC9]](s8)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<4 x s32>) = G_CONCAT_VECTORS %0, %1
