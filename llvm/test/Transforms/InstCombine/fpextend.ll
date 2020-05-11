@@ -259,10 +259,11 @@ define float @test18(half %x, half %y) nounwind  {
   ret float %t56
 }
 
+; Convert from integer is exact, so convert directly to double.
+
 define double @ItoFtoF_s25_f32_f64(i25 %i) {
 ; CHECK-LABEL: @ItoFtoF_s25_f32_f64(
-; CHECK-NEXT:    [[X:%.*]] = sitofp i25 [[I:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    [[R:%.*]] = sitofp i25 [[I:%.*]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %x = sitofp i25 %i to float
@@ -270,16 +271,19 @@ define double @ItoFtoF_s25_f32_f64(i25 %i) {
   ret double %r
 }
 
+; Convert from integer is exact, so convert directly to fp128.
+
 define fp128 @ItoFtoF_u24_f32_f128(i24 %i) {
 ; CHECK-LABEL: @ItoFtoF_u24_f32_f128(
-; CHECK-NEXT:    [[X:%.*]] = uitofp i24 [[I:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to fp128
+; CHECK-NEXT:    [[R:%.*]] = uitofp i24 [[I:%.*]] to fp128
 ; CHECK-NEXT:    ret fp128 [[R]]
 ;
   %x = uitofp i24 %i to float
   %r = fpext float %x to fp128
   ret fp128 %r
 }
+
+; Negative test - intermediate rounding in float type.
 
 define double @ItoFtoF_s26_f32_f64(i26 %i) {
 ; CHECK-LABEL: @ItoFtoF_s26_f32_f64(
@@ -291,6 +295,8 @@ define double @ItoFtoF_s26_f32_f64(i26 %i) {
   %r = fpext float %x to double
   ret double %r
 }
+
+; Negative test - intermediate rounding in float type.
 
 define double @ItoFtoF_u25_f32_f64(i25 %i) {
 ; CHECK-LABEL: @ItoFtoF_u25_f32_f64(
