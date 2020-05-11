@@ -198,3 +198,24 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
   rewriter.eraseOp(op);
   return success();
 }
+
+LogicalResult mlir::linalg::applyStagedPatterns(
+    Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
+    const OwningRewritePatternList &stage2Patterns,
+    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda) {
+  for (const auto &patterns : stage1Patterns) {
+    if (!applyPatternsAndFoldGreedily(op, patterns)) {
+      llvm::dbgs() << "Underlying first stage rewrite did not converge";
+      return failure();
+    }
+    if (!applyPatternsAndFoldGreedily(op, stage2Patterns)) {
+      llvm::dbgs() << "Underlying second stage rewrite did not converge";
+      return failure();
+    }
+    if (stage3Lambda) {
+      if (failed(stage3Lambda(op)))
+        return failure();
+    }
+  }
+  return success();
+}
