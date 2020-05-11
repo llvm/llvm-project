@@ -481,41 +481,15 @@ bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
                                        std::vector<lldb::addr_t> &args,
                                        lldb::addr_t struct_address,
                                        DiagnosticManager &diagnostic_manager) {
-  lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
-
-  if (m_needs_object_ptr) {
-    lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
-    if (!frame_sp)
-      return true;
-
-    ConstString object_name("self");
-
-    Status object_ptr_error;
-
-    object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
-
-    if (!object_ptr_error.Success()) {
-      diagnostic_manager.Printf(
-          eDiagnosticSeverityWarning,
-          "couldn't get required object pointer (substituting NULL): %s\n",
-          object_ptr_error.AsCString());
-      object_ptr = 0;
-    }
-
-    if (m_options.GetPlaygroundTransformEnabled() ||
-        m_options.GetREPLEnabled()) {
-      // When calling the playground function we are calling a main
-      // function which takes two arguments: argc and argv So we pass
-      // two zeroes as arguments.
-      args.push_back(0); // argc
-      args.push_back(0); // argv
-    } else {
-      args.push_back(struct_address);
-      args.push_back(object_ptr);
-    }
-  } else {
-    args.push_back(struct_address);
+  if (m_options.GetPlaygroundTransformEnabled() || m_options.GetREPLEnabled()) {
+    // When calling the playground function we are calling a main
+    // function which takes two arguments: argc and argv So we pass
+    // two zeroes as arguments.
+    args.push_back(0); // argc
+    args.push_back(0); // argv
+    return true;
   }
+  args.push_back(struct_address);
   return true;
 }
 
