@@ -367,6 +367,23 @@ private:
   LinalgLoweringType loweringType;
 };
 
+//===----------------------------------------------------------------------===//
+// Support for staged pattern application.
+//===----------------------------------------------------------------------===//
+/// Helper function to allow applying rewrite patterns, interleaved with more
+/// global transformations, in a staged fashion:
+///   1. the first stage consists of a list of OwningRewritePatternList. Each
+///   OwningRewritePatternList in this list is applied once, in order.
+///   2. the second stage consists of a single OwningRewritePattern that is
+///   applied greedily until convergence.
+///   3. the third stage consists of applying a lambda, generally used for
+///   non-local transformation effects. This allows creating custom fused
+///   transformations where patterns can be ordered and applied at a finer
+///   granularity than a sequence of traditional compiler passes.
+LogicalResult applyStagedPatterns(
+    Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
+    const OwningRewritePatternList &stage2Patterns,
+    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 } // namespace linalg
 } // namespace mlir
 
