@@ -545,6 +545,18 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = sin %arg0 : tensor<4x4x?xf32>
   %149 = sin %t : tensor<4x4x?xf32>
 
+  // CHECK: = fptosi {{.*}} : f32 to i32
+  %159 = fptosi %f : f32 to i32
+
+  // CHECK: = fptosi {{.*}} : f32 to i64
+  %160 = fptosi %f : f32 to i64
+
+  // CHECK: = fptosi {{.*}} : f16 to i32
+  %161 = fptosi %half : f16 to i32
+
+  // CHECK: = fptosi {{.*}} : f16 to i64
+  %162 = fptosi %half : f16 to i64
+
   return
 }
 
