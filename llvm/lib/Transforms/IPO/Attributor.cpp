@@ -1596,7 +1596,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       CallBase &NewCB = *CallSitePair.second;
       ModifiedFns.insert(OldCB.getFunction());
       CGUpdater.replaceCallSite(OldCB, NewCB);
-      OldCB.replaceAllUsesWith(&NewCB);
+      if (!OldCB.use_empty())
+        OldCB.replaceAllUsesWith(&NewCB);
       OldCB.eraseFromParent();
     }
 
