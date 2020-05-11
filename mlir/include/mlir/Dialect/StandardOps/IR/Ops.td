@@ -2982,14 +2982,24 @@ def ViewOp : Std_Op<"view", [
     DeclareOpInterfaceMethods<ViewLikeOpInterface>, NoSideEffect]> {
   let summary = "memref view operation";
   let description = [{
-    The "view" operation converts a 1-D memref with i8 element type,
-    to an N-D memref with arbitrary element type. In addition, the ViewOp
-    supports the following arguments:
-    *) A single dynamic offset operand can be specified which represents a
-       a dynamic offset within the base 1-D memref at which to create the
-       resulting memref view.
-    *) A dynamic size operand must be specified for each dynamic dimension
+    The "view" operation extracts an N-D contiguous memref with empty layout map
+    with arbitrary element type from a 1-D contiguous memref with empty layout
+    map of i8 element  type. The ViewOp supports the following arguments:
+    *) A single dynamic byte-shift operand must be specified which represents a
+       a shift of the base 1-D memref pointer from which to create the resulting
+       contiguous memref view with identity layout.
+    *) A dynamic size operand that must be specified for each dynamic dimension
        in the resulting view memref type.
+
+    The "view" operation gives a structured indexing form to a flat 1-D buffer.
+    Unlike "subview" it can perform a type change. The type change behavior
+    requires the op to have special semantics because, e.g. a byte shift of 3
+    cannot be represented as an offset on f64.
+    For now, a "view" op:
+      1) Only takes a contiguous source memref with 0 offset and empty layout.
+      2) Must specify a byte_shift operand (in the future, a special integer
+      attribute may be added to support the folded case).
+      3) Returns a contiguous memref with 0 offset and empty layout.
 
     Example:
 
@@ -2997,48 +3007,33 @@ def ViewOp : Std_Op<"view", [
     // Allocate a flat 1D/i8 memref.
     %0 = alloc() : memref<2048xi8>
 
-    // ViewOp with static offset and sizes.
-    %1 = view %0[][] : memref<2048xi8> to memref<64x4xf32>
+    // ViewOp with dynamic offset and static sizes.
+    %1 = view %0[%offset_1024][] : memref<2048xi8> to memref<64x4xf32>
 
-    // ViewOp with dynamic offset and one dynamic size.
-    %2 = view %0[%offset_1024][%size0]
-      : memref<2048xi8> to memref<?x4xf32, (d0, d1)[s0] -> (d0 * 4 + d1 + s0)>
-
-    // ViewOp creating 3D shape where two of the dim sizes are dynamic.
-    // *) The dynamic offset specified in the ViewOp is applied to the
-    //    base 1-D memref, and is represented by the symbol 's0' in the
-    //    layout map of the ViewOp result memref type.
-    // *) The dynamic size for the second dimension induces a dynamic
-    //    stride for the first dimension, which is represented by the
-    //    symbol 's1' in the layout map of the ViewOp result memref type.
-    //    Note that this dynamic stride will be computed from the view
-    //    shape and dynamic sizes.
-    %3 = view %0[%offset_1024][%size0, %size1]
-      : memref<2048xi8> to memref<?x?x4xf32,
-        (d0, d1, d2)[s0, s1] -> (d0 * s1 + d1 * 4 + d2 + s0)>
+    // ViewOp with dynamic offset and two dynamic size.
+    %2 = view %0[%offset_1024][%size0, %size1] :
+      memref<2048xi8> to memref<?x4x?xf32>
     ```
   }];
 
   let arguments = (ins MemRefRankOf<[I8], [1]>:$source,
-                       Variadic<Index>:$operands);
+                   Index:$byte_shift,
+                   Variadic<Index>:$sizes);
   let results = (outs AnyMemRef);
 
   let extraClassDeclaration = [{
     /// The result of a view is always a memref.
     MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
 
-    /// Returns the dynamic offset for this view operation if specified.
-    /// Returns nullptr if no dynamic offset was specified.
-    Value getDynamicOffset();
-
-    /// Returns the starting operand list position of the dynamic size operands.
-    unsigned getDynamicSizesOperandStart() {
-      return getDynamicOffset() == nullptr ? 1 : 2;
-    }
-
-    /// Returns the dynamic sizes for this view operation.
+    /// Returns the dynamic sizes for this view operation. This is redundant
+    /// with `sizes` but needed in template implementations. More specifically:
+    /// ```
+    /// template <typename AnyMemRefDefOp>
+    /// bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
+    ///                              Region *region)
+    /// ```
     operand_range getDynamicSizes() {
-      return {operand_begin() + getDynamicSizesOperandStart(), operand_end()};
+      return {sizes().begin(), sizes().end()};
     }
   }];
 
