@@ -833,6 +833,22 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
 
   // The TOC-base always has 0 size, but 4 byte alignment.
   TOCBaseSection->setAlignment(Align(4));
+
+  // DWARF sections for XCOFF are not csects. They are special STYP_DWARF
+  // sections, and the individual DWARF sections are distinguished by their
+  // section subtype.
+  // TODO: Populate the DWARF sections appropriately.
+  DwarfAbbrevSection = nullptr;   // SSUBTYP_DWABREV
+  DwarfInfoSection = nullptr;     // SSUBTYP_DWINFO
+  DwarfLineSection = nullptr;     // SSUBTYP_DWLINE
+  DwarfFrameSection = nullptr;    // SSUBTYP_DWFRAME
+  DwarfPubNamesSection = nullptr; // SSUBTYP_DWPBNMS
+  DwarfPubTypesSection = nullptr; // SSUBTYP_DWPBTYP
+  DwarfStrSection = nullptr;      // SSUBTYP_DWSTR
+  DwarfLocSection = nullptr;      // SSUBTYP_DWLOC
+  DwarfARangesSection = nullptr;  // SSUBTYP_DWARNGE
+  DwarfRangesSection = nullptr;   // SSUBTYP_DWRNGES
+  DwarfMacinfoSection = nullptr;  // SSUBTYP_DWMAC
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
