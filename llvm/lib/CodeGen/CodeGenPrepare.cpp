@@ -6415,18 +6415,6 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   return true;
 }
 
-static bool isBroadcastShuffle(ShuffleVectorInst *SVI) {
-  ArrayRef<int> Mask(SVI->getShuffleMask());
-  int SplatElem = -1;
-  for (unsigned i = 0; i < Mask.size(); ++i) {
-    if (SplatElem != -1 && Mask[i] != -1 && Mask[i] != SplatElem)
-      return false;
-    SplatElem = Mask[i];
-  }
-
-  return true;
-}
-
 /// Some targets have expensive vector shifts if the lanes aren't all the same
 /// (e.g. x86 only introduced "vpsllvd" and friends with AVX2). In these cases
 /// it's often worth sinking a shufflevector splat down to its use so that
@@ -6440,7 +6428,7 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
 
   // We only expect better codegen by sinking a shuffle if we can recognise a
   // constant splat.
-  if (!isBroadcastShuffle(SVI))
+  if (getSplatIndex(SVI->getShuffleMask()) < 0)
     return false;
 
   // InsertedShuffles - Only insert a shuffle in each block once.
