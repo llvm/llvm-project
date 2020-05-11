@@ -3,6 +3,7 @@
 ; RUN: opt < %s -vector-combine -S -mtriple=x86_64-- -mattr=AVX2 | FileCheck %s --check-prefixes=CHECK,AVX
 
 declare void @use(<4 x i32>)
+declare void @usef(<4 x float>)
 
 ; Eliminating an insert is profitable.
 
@@ -149,4 +150,53 @@ define <4 x i32> @ins0_ins0_xor(i32 %x, i32 %y) {
   %i1 = insertelement <4 x i32> undef, i32 %y, i32 0
   %r = xor <4 x i32> %i0, %i1
   ret <4 x i32> %r
+}
+
+define <4 x float> @ins1_ins1_fmul(float %x, float %y) {
+; CHECK-LABEL: @ins1_ins1_fmul(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 1
+; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x float> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %i0 = insertelement <4 x float> undef, float %x, i32 1
+  %i1 = insertelement <4 x float> undef, float %y, i32 1
+  call void @usef(<4 x float> %i1)
+  %r = fmul <4 x float> %i0, %i1
+  ret <4 x float> %r
+}
+
+define <4 x float> @ins2_ins2_fsub(float %x, float %y) {
+; CHECK-LABEL: @ins2_ins2_fsub(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 2
+; CHECK-NEXT:    call void @usef(<4 x float> [[I0]])
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 2
+; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
+; CHECK-NEXT:    [[R:%.*]] = fsub <4 x float> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %i0 = insertelement <4 x float> undef, float %x, i32 2
+  call void @usef(<4 x float> %i0)
+  %i1 = insertelement <4 x float> undef, float %y, i32 2
+  call void @usef(<4 x float> %i1)
+  %r = fsub <4 x float> %i0, %i1
+  ret <4 x float> %r
+}
+
+define <4 x float> @ins3_ins3_fdiv(float %x, float %y) {
+; CHECK-LABEL: @ins3_ins3_fdiv(
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 3
+; CHECK-NEXT:    call void @usef(<4 x float> [[I0]])
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 3
+; CHECK-NEXT:    call void @usef(<4 x float> [[I1]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x float> [[I0]], [[I1]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %i0 = insertelement <4 x float> undef, float %x, i32 3
+  call void @usef(<4 x float> %i0)
+  %i1 = insertelement <4 x float> undef, float %y, i32 3
+  call void @usef(<4 x float> %i1)
+  %r = fdiv <4 x float> %i0, %i1
+  ret <4 x float> %r
 }
