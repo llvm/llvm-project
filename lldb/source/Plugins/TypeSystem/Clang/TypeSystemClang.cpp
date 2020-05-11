@@ -4061,6 +4061,11 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::MacroQualified:
     break;
+
+  // Matrix types that we're not sure how to display at the moment.
+  case clang::Type::ConstantMatrix:
+  case clang::Type::DependentSizedMatrix:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -4878,6 +4883,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     break;
   case clang::Type::MacroQualified:
     break;
+
+  case clang::Type::ConstantMatrix:
+  case clang::Type::DependentSizedMatrix:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5023,6 +5032,11 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::DependentAddressSpace:
     break;
   case clang::Type::MacroQualified:
+    break;
+
+  // Matrix types we're not sure how to display yet.
+  case clang::Type::ConstantMatrix:
+  case clang::Type::DependentSizedMatrix:
     break;
   }
   // We don't know hot to display this type...
