@@ -650,9 +650,6 @@ std::string FileInfo::getCoveragePath(StringRef Filename,
 
 std::unique_ptr<raw_ostream>
 FileInfo::openCoveragePath(StringRef CoveragePath) {
-  if (Options.NoOutput)
-    return std::make_unique<raw_null_ostream>();
-
   std::error_code EC;
   auto OS =
       std::make_unique<raw_fd_ostream>(CoveragePath, EC, sys::fs::OF_Text);
@@ -676,8 +673,13 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     auto AllLines = LineConsumer(Filename);
 
     std::string CoveragePath = getCoveragePath(Filename, MainFilename);
-    std::unique_ptr<raw_ostream> CovStream = openCoveragePath(CoveragePath);
-    raw_ostream &CovOS = *CovStream;
+    std::unique_ptr<raw_ostream> CovStream;
+    if (Options.NoOutput)
+      CovStream = std::make_unique<raw_null_ostream>();
+    else if (!Options.UseStdout)
+      CovStream = openCoveragePath(CoveragePath);
+    raw_ostream &CovOS =
+        !Options.NoOutput && Options.UseStdout ? llvm::outs() : *CovStream;
 
     CovOS << "        -:    0:Source:" << Filename << "\n";
     CovOS << "        -:    0:Graph:" << GCNOFile << "\n";
@@ -774,10 +776,12 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     FileCoverages.push_back(std::make_pair(CoveragePath, FileCoverage));
   }
 
-  // FIXME: There is no way to detect calls given current instrumentation.
-  if (Options.FuncCoverage)
-    printFuncCoverage(InfoOS);
-  printFileCoverage(InfoOS);
+  if (!Options.UseStdout) {
+    // FIXME: There is no way to detect calls given current instrumentation.
+    if (Options.FuncCoverage)
+      printFuncCoverage(InfoOS);
+    printFileCoverage(InfoOS);
+  }
 }
 
 /// printFunctionSummary - Print function and block summary.

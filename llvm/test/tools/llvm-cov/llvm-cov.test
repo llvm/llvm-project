@@ -35,6 +35,12 @@ RUN: diff -aub test_objdir.h.gcov test.h.gcov
 # With gcov output disabled
 RUN: llvm-cov gcov -n test.c | diff -u test_no_output.output -
 
+# Print to stdout.
+RUN: llvm-cov gcov -t test.c > stdout
+RUN: llvm-cov gcov --stdout test.c | cmp stdout -
+RUN: cat test_no_options.h.gcov test_no_options.cpp.gcov | diff -u - stdout
+RUN: llvm-cov gcov -n -t test.c | count 0
+
 # Missing source files. This test is fragile, as it depends on being
 # run before we copy some sources into place in the next test.
 RUN: llvm-cov gcov test_paths.cpp 2>/dev/null | diff -u test_missing.output -
