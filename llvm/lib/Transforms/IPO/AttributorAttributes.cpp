@@ -6017,14 +6017,25 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     intersectAssumedBits(BEST_STATE);
-    getKnownStateFromValue(getIRPosition(), getState());
+    getKnownStateFromValue(A, getIRPosition(), getState());
     IRAttribute::initialize(A);
   }
 
   /// Return the memory behavior information encoded in the IR for \p IRP.
-  static void getKnownStateFromValue(const IRPosition &IRP,
+  static void getKnownStateFromValue(Attributor &A, const IRPosition &IRP,
                                      BitIntegerState &State,
                                      bool IgnoreSubsumingPositions = false) {
+    // For internal functions we ignore `argmemonly` and
+    // `inaccessiblememorargmemonly` as we might break it via interprocedural
+    // constant propagation. It is unclear if this is the best way but it is
+    // unlikely this will cause real performance problems. If we are deriving
+    // attributes for the anchor function we even remove the attribute in
+    // addition to ignoring it.
+    bool UseArgMemOnly = true;
+    Function *AnchorFn = IRP.getAnchorScope();
+    if (AnchorFn && A.isRunOn(*AnchorFn))
+      UseArgMemOnly = !AnchorFn->hasLocalLinkage();
+
     SmallVector<Attribute, 2> Attrs;
     IRP.getAttrs(AttrKinds, Attrs, IgnoreSubsumingPositions);
     for (const Attribute &Attr : Attrs) {
@@ -6036,11 +6047,17 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
         State.addKnownBits(inverseLocation(NO_INACCESSIBLE_MEM, true, true));
         break;
       case Attribute::ArgMemOnly:
-        State.addKnownBits(inverseLocation(NO_ARGUMENT_MEM, true, true));
+        if (UseArgMemOnly)
+          State.addKnownBits(inverseLocation(NO_ARGUMENT_MEM, true, true));
+        else
+          IRP.removeAttrs({Attribute::ArgMemOnly});
         break;
       case Attribute::InaccessibleMemOrArgMemOnly:
-        State.addKnownBits(
-            inverseLocation(NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+        if (UseArgMemOnly)
+          State.addKnownBits(inverseLocation(
+              NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+        else
+          IRP.removeAttrs({Attribute::InaccessibleMemOrArgMemOnly});
         break;
       default:
         llvm_unreachable("Unexpected attribute!");
