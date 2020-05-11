@@ -26,7 +26,6 @@ using DomTreeNode = DomTreeNodeBase<BasicBlock>;
 class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
-class DataLayout;
 class IRBuilderBase;
 class Loop;
 class LoopInfo;
@@ -34,7 +33,6 @@ class MemoryAccess;
 class MemorySSA;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
-class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
@@ -116,7 +114,7 @@ struct SinkAndHoistLICMFlags {
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
-/// DataLayout, TargetLibraryInfo, Loop, AliasSet information for all
+/// TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
@@ -128,7 +126,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// dominated by the specified block, and that are in the current loop) in depth
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
-/// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree, DataLayout,
+/// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
 /// TargetLibraryInfo, Loop, AliasSet information for all instructions of the
 /// loop and loop safety information as arguments. Diagnostics is emitted via \p
 /// ORE. It returns changed status.
