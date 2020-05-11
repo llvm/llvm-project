@@ -527,14 +527,20 @@ public:
                             uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
-    S.insert(getGUID(Name));
+    auto isDeclaration = [](const Function *F) {
+      return !F || F->isDeclaration();
+    };
+    if (isDeclaration(M->getFunction(getFuncName()))) {
+      // Add to the import list only when it's defined out of module.
+      S.insert(getGUID(Name));
+    }
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
         if (TS.getValue() > Threshold) {
           const Function *Callee = M->getFunction(getFuncName(TS.getKey()));
-          if (!Callee || !Callee->getSubprogram())
+          if (isDeclaration(Callee))
             S.insert(getGUID(TS.getKey()));
         }
     for (const auto &CS : CallsiteSamples)
