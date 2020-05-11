@@ -578,7 +578,7 @@ public:
 
   virtual lldb::ValueObjectSP GetNonSyntheticValue();
 
-  lldb::ValueObjectSP GetSyntheticValue(bool use_synthetic = true);
+  lldb::ValueObjectSP GetSyntheticValue();
 
   virtual bool HasSyntheticValue();
 
@@ -933,7 +933,7 @@ protected:
 
   virtual bool HasDynamicValueTypeInfo() { return false; }
 
-  virtual void CalculateSyntheticValue(bool use_synthetic = true);
+  virtual void CalculateSyntheticValue();
 
   // Should only be called by ValueObject::GetChildAtIndex() Returns a
   // ValueObject managed by this ValueObject's manager.

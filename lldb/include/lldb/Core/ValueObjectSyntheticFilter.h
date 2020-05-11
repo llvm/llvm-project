@@ -72,7 +72,7 @@ public:
     return false;
   }
 
-  void CalculateSyntheticValue(bool use_synthetic) override {}
+  void CalculateSyntheticValue() override {}
 
   bool IsDynamic() override {
     return ((m_parent != nullptr) ? m_parent->IsDynamic() : false);
