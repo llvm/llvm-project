@@ -478,10 +478,10 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('register write rbx ',
                               [])
 
-    def test_breakpoint_enable_disable_delete_modify_with_ids(self):
-        """These four breakpoint subcommands should be completed with a list of breakpoint ids"""
+    def test_complete_breakpoint_with_ids(self):
+        """These breakpoint subcommands should be completed with a list of breakpoint ids"""
 
-        subcommands = ['enable', 'disable', 'delete', 'modify']
+        subcommands = ['enable', 'disable', 'delete', 'modify', 'name add', 'name delete', 'write']
 
         # The tab completion here is unavailable without a target
         for subcommand in subcommands:
