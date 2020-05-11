@@ -742,11 +742,6 @@ bool TypeSystemSwiftTypeRef::IsImportedType(CompilerType type,
       {m_swift_ast_context, ReconstructType(type.GetOpaqueQualType())},
       original_type);
 }
-bool TypeSystemSwiftTypeRef::IsErrorType(CompilerType compiler_type) {
-  return m_swift_ast_context->IsErrorType(
-      {m_swift_ast_context,
-       ReconstructType(compiler_type.GetOpaqueQualType())});
-}
 CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
   return m_swift_ast_context->GetErrorType();
 }

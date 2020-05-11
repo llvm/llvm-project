@@ -257,6 +257,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     m_is_class |= info.type_flags.Test(lldb::eTypeIsClass);
 
   // Handle weak self.
+
   auto *ref_type =
       llvm::dyn_cast_or_null<swift::ReferenceStorageType>(info.swift_type);
   if (ref_type && ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {

@@ -139,7 +139,6 @@ public:
                              const lldb::TypeSP &type_sp) = 0;
   virtual bool IsImportedType(CompilerType type,
                               CompilerType *original_type) = 0;
-  virtual bool IsErrorType(CompilerType compiler_type) = 0;
   virtual CompilerType GetErrorType() = 0;
   virtual CompilerType GetReferentType(CompilerType compiler_type) = 0;
   static CompilerType GetInstanceType(CompilerType ct);
@@ -413,7 +412,6 @@ public:
   lldb::TypeSP GetCachedType(ConstString mangled) override;
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
   bool IsImportedType(CompilerType type, CompilerType *original_type) override;
-  bool IsErrorType(CompilerType compiler_type) override;
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(CompilerType compiler_type) override;
   CompilerType GetInstanceType(void *type) override;
@@ -841,7 +839,8 @@ public:
 
   static bool IsGenericType(const CompilerType &compiler_type);
 
-  bool IsErrorType(CompilerType compiler_type) override;
+  /// Whether this is the Swift error type.
+  bool IsErrorType(void *type);
 
   static bool IsFullyRealized(const CompilerType &compiler_type);
 
