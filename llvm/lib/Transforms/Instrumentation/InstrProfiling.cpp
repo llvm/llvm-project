@@ -152,7 +152,9 @@ public:
 
   InstrProfilingLegacyPass() : ModulePass(ID) {}
   InstrProfilingLegacyPass(const InstrProfOptions &Options, bool IsCS = false)
-      : ModulePass(ID), InstrProf(Options, IsCS) {}
+      : ModulePass(ID), InstrProf(Options, IsCS) {
+    initializeInstrProfilingLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override {
     return "Frontend instrumentation-based coverage lowering";
