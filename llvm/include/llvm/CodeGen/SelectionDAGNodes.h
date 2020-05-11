@@ -1855,8 +1855,6 @@ public:
   // Return the alignment of this constant pool object, which is either 0 (for
   // default alignment) or the desired value.
   Align getAlign() const { return Alignment; }
-  // TODO: Remove once transition to getAlign is over.
-  unsigned getAlignment() const { return Alignment.value(); }
   unsigned getTargetFlags() const { return TargetFlags; }
 
   Type *getType() const;
