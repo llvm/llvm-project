@@ -601,12 +601,8 @@ int main(int argc, char **argv) {
     Req.Verbose = true;
 
   FileCheck FC(Req);
-  if (!FC.ValidateCheckPrefixes()) {
-    errs() << "Supplied check-prefix is invalid! Prefixes must be unique and "
-              "start with a letter and contain only alphanumeric characters, "
-              "hyphens and underscores\n";
+  if (!FC.ValidateCheckPrefixes())
     return 2;
-  }
 
   Regex PrefixRE = FC.buildCheckPrefixRegex();
   std::string REError;
