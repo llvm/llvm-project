@@ -819,6 +819,14 @@ public:
 
   ~CommandObjectBreakpointModify() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_options; }
 
 protected:
@@ -884,6 +892,14 @@ public:
   }
 
   ~CommandObjectBreakpointEnable() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -992,6 +1008,14 @@ the second re-enables the first location.");
   }
 
   ~CommandObjectBreakpointDisable() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1370,6 +1394,14 @@ public:
   }
 
   ~CommandObjectBreakpointDelete() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
   Options *GetOptions() override { return &m_options; }
 
