@@ -108,7 +108,18 @@ def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
 def ext_enum_base_in_type_specifier : ExtWarn<
   "non-defining declaration of enumeration with a fixed underlying type is "
   "only permitted as a standalone declaration"
-  "%select{|; missing list of enumerators?}0">, InGroup<DiagGroup<"enum-base">>;
+  "%select{|; missing list of enumerators?}0">,
+  InGroup<DiagGroup<"elaborated-enum-base">>, DefaultError;
+def ext_elaborated_enum_class : ExtWarn<
+  "reference to enumeration must use 'enum' not 'enum %select{struct|class}0'">,
+  InGroup<DiagGroup<"elaborated-enum-class">>, DefaultError;
+def err_scoped_enum_missing_identifier : Error<
+  "scoped enumeration requires a name">;
+def ext_scoped_enum : ExtWarn<
+  "scoped enumerations are a C++11 extension">, InGroup<CXX11>;
+def warn_cxx98_compat_scoped_enum : Warning<
+  "scoped enumerations are incompatible with C++98">,
+  InGroup<CXX98Compat>, DefaultIgnore;
 def err_anonymous_enum_bitfield : Error<
   "ISO C++ only allows ':' in member enumeration declaration to introduce "
   "a fixed underlying type, not an anonymous bit-field">;
@@ -892,14 +903,6 @@ def err_access_specifier_interface : Error<
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
-
-def err_scoped_enum_missing_identifier : Error<
-  "scoped enumeration requires a name">;
-def ext_scoped_enum : ExtWarn<
-  "scoped enumerations are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_scoped_enum : Warning<
-  "scoped enumerations are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 
 def err_expected_parameter_pack : Error<
   "expected the name of a parameter pack">;

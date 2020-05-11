@@ -2662,13 +2662,15 @@ private:
       D.takeAttributes(attrs, endLoc);
     }
   }
-  void MaybeParseCXX11Attributes(ParsedAttributes &attrs,
+  bool MaybeParseCXX11Attributes(ParsedAttributes &attrs,
                                  SourceLocation *endLoc = nullptr) {
     if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
       ParsedAttributesWithRange attrsWithRange(AttrFactory);
       ParseCXX11Attributes(attrsWithRange, endLoc);
       attrs.takeAllFrom(attrsWithRange);
+      return true;
     }
+    return false;
   }
   void MaybeParseCXX11Attributes(ParsedAttributesWithRange &attrs,
                                  SourceLocation *endLoc = nullptr,
