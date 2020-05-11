@@ -152,10 +152,6 @@ llvm::getKnowledgeForValue(const Value *V,
                                              const CallBase::BundleOpInfo *)>
                                Filter) {
   if (AC) {
-#ifndef NDEBUG
-    RetainedKnowledge RKCheck =
-        getKnowledgeForValue(V, AttrKinds, nullptr, Filter);
-#endif
     for (AssumptionCache::ResultElem &Elem : AC->assumptionsFor(V)) {
       IntrinsicInst *II = cast_or_null<IntrinsicInst>(Elem.Assume);
       if (!II || Elem.Index == AssumptionCache::ExprResultIdx)
@@ -163,12 +159,9 @@ llvm::getKnowledgeForValue(const Value *V,
       if (RetainedKnowledge RK = getKnowledgeFromBundle(
               *II, II->bundle_op_info_begin()[Elem.Index]))
         if (is_contained(AttrKinds, RK.AttrKind) &&
-            Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index])) {
-          assert(!!RKCheck && "invalid Assumption cache");
+            Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index]))
           return RK;
-        }
     }
-    assert(!RKCheck && "invalid Assumption cache");
     return RetainedKnowledge::none();
   }
   for (auto &U : V->uses()) {

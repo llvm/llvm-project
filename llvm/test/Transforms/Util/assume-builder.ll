@@ -901,3 +901,81 @@ define dso_local i32 @test4A(i32* %0, i32* %1, i32 %2, i32 %3) {
 12:                                               ; preds = %6, %4
   ret i32 0
 }
+
+declare void @may_throwv2(i32* %P)
+
+define dso_local i32 @terminator(i32* %P) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; BASIC-LABEL: define {{[^@]+}}@terminator
+; BASIC-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; BASIC-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
+; BASIC-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; BASIC:       Catch:
+; BASIC-NEXT:    [[V:%.*]] = landingpad { i8*, i32 }
+; BASIC-NEXT:    catch i8* null
+; BASIC-NEXT:    br label [[EXIT]]
+; BASIC:       Exit:
+; BASIC-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ 0, [[CATCH]] ]
+; BASIC-NEXT:    ret i32 [[DOT0]]
+;
+; ALL-LABEL: define {{[^@]+}}@terminator
+; ALL-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; ALL-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
+; ALL-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; ALL:       Catch:
+; ALL-NEXT:    [[V:%.*]] = landingpad { i8*, i32 }
+; ALL-NEXT:    catch i8* null
+; ALL-NEXT:    br label [[EXIT]]
+; ALL:       Exit:
+; ALL-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ 0, [[CATCH]] ]
+; ALL-NEXT:    ret i32 [[DOT0]]
+;
+; WITH-AC-LABEL: define {{[^@]+}}@terminator
+; WITH-AC-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; WITH-AC-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
+; WITH-AC-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; WITH-AC:       Catch:
+; WITH-AC-NEXT:    [[V:%.*]] = landingpad { i8*, i32 }
+; WITH-AC-NEXT:    catch i8* null
+; WITH-AC-NEXT:    br label [[EXIT]]
+; WITH-AC:       Exit:
+; WITH-AC-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ 0, [[CATCH]] ]
+; WITH-AC-NEXT:    ret i32 [[DOT0]]
+;
+; CROSS-BLOCK-LABEL: define {{[^@]+}}@terminator
+; CROSS-BLOCK-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CROSS-BLOCK-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
+; CROSS-BLOCK-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; CROSS-BLOCK:       Catch:
+; CROSS-BLOCK-NEXT:    [[V:%.*]] = landingpad { i8*, i32 }
+; CROSS-BLOCK-NEXT:    catch i8* null
+; CROSS-BLOCK-NEXT:    br label [[EXIT]]
+; CROSS-BLOCK:       Exit:
+; CROSS-BLOCK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ 0, [[CATCH]] ]
+; CROSS-BLOCK-NEXT:    ret i32 [[DOT0]]
+;
+; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@terminator
+; FULL-SIMPLIFY-SAME: (i32* [[P:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; FULL-SIMPLIFY-NEXT:    invoke void @may_throwv2(i32* nonnull [[P]])
+; FULL-SIMPLIFY-NEXT:    to label [[EXIT:%.*]] unwind label [[CATCH:%.*]]
+; FULL-SIMPLIFY:       Catch:
+; FULL-SIMPLIFY-NEXT:    [[V:%.*]] = landingpad { i8*, i32 }
+; FULL-SIMPLIFY-NEXT:    catch i8* null
+; FULL-SIMPLIFY-NEXT:    br label [[EXIT]]
+; FULL-SIMPLIFY:       Exit:
+; FULL-SIMPLIFY-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ 0, [[CATCH]] ]
+; FULL-SIMPLIFY-NEXT:    ret i32 [[DOT0]]
+;
+  invoke void @may_throwv2(i32* nonnull %P)
+  to label %Exit unwind label %Catch
+
+Catch:                                                ; preds = %0
+  %v = landingpad { i8*, i32 }
+  catch i8* null
+  br label %Exit
+
+Exit:                                                ; preds = %7, %5
+  %.0 = phi i32 [ 1, %0 ], [ 0, %Catch ]
+  ret i32 %.0
+}
+
+declare dso_local i32 @__gxx_personality_v0(...)
