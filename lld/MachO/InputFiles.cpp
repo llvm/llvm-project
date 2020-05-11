@@ -42,6 +42,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "ExportTrie.h"
 #include "InputSection.h"
 #include "OutputSection.h"
 #include "SymbolTable.h"
@@ -245,21 +246,14 @@ DylibFile::DylibFile(MemoryBufferRef mb) : InputFile(DylibKind, mb) {
   }
 
   // Initialize symbols.
-  if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
-    auto *c = reinterpret_cast<const symtab_command *>(cmd);
-    const char *strtab = reinterpret_cast<const char *>(buf + c->stroff);
-    ArrayRef<const nlist_64> nList(
-        reinterpret_cast<const nlist_64 *>(buf + c->symoff), c->nsyms);
-
-    symbols.reserve(c->nsyms);
-
-    for (const nlist_64 &sym : nList) {
-      StringRef name = strtab + sym.n_strx;
-      // TODO: Figure out what to do about undefined symbols: ignore or warn
-      // if unsatisfied? Also make sure we handle re-exported symbols
-      // correctly.
-      symbols.push_back(symtab->addDylib(name, this));
-    }
+  if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
+    auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
+    parseTrie(buf + c->export_off, c->export_size,
+              [&](const Twine &name, uint64_t flags) {
+                symbols.push_back(symtab->addDylib(saver.save(name), this));
+              });
+  } else {
+    error("LC_DYLD_INFO_ONLY not found in " + getName());
   }
 }
 
