@@ -5210,14 +5210,12 @@ static CompilerType BindAllArchetypes(CompilerType type,
   return type;
 }
 
-bool SwiftASTContext::IsErrorType(CompilerType compiler_type) {
-  if (!compiler_type.IsValid())
+bool SwiftASTContext::IsErrorType(void *type) {
+  if (!type)
     return false;
-  if (!llvm::isa<TypeSystemSwift>(compiler_type.GetTypeSystem()))
-    return false;
-  ProtocolInfo protocol_info;
 
-  if (GetProtocolTypeInfo(compiler_type, protocol_info))
+  ProtocolInfo protocol_info;
+  if (GetProtocolTypeInfo({this, type}, protocol_info))
     return protocol_info.m_is_errortype;
   return false;
 }

@@ -1312,11 +1312,11 @@ Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
       if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
               static_type.GetTypeSystem()))
         static_type = ts->ReconstructType(static_type);
-      TypeSystemSwift *swift_ast_ctx =
-          llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
+      SwiftASTContext *swift_ast_ctx =
+          llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
       if (!swift_ast_ctx)
         return {};
-      if (swift_ast_ctx->IsErrorType(static_type)) {
+      if (swift_ast_ctx->IsErrorType(static_type.GetOpaqueQualType())) {
         // ErrorType values are always a pointer
         return Value::eValueTypeLoadAddress;
       }
