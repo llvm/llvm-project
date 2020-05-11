@@ -2544,6 +2544,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case G_FMINNUM:
   case G_FMAXNUM:
     return lowerFMinNumMaxNum(MI);
+  case G_MERGE_VALUES:
+    return lowerMergeValues(MI);
   case G_UNMERGE_VALUES:
     return lowerUnmergeValues(MI);
   case TargetOpcode::G_SEXT_INREG: {
@@ -4856,6 +4858,47 @@ LegalizerHelper::lowerFFloor(MachineInstr &MI) {
   auto AddVal = MIRBuilder.buildSITOFP(Ty, And);
 
   MIRBuilder.buildFAdd(DstReg, Trunc, AddVal, Flags);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
+  const unsigned NumOps = MI.getNumOperands();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src0Reg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(Src0Reg);
+  unsigned PartSize = SrcTy.getSizeInBits();
+
+  LLT WideTy = LLT::scalar(DstTy.getSizeInBits());
+  Register ResultReg = MIRBuilder.buildZExt(WideTy, Src0Reg).getReg(0);
+
+  for (unsigned I = 2; I != NumOps; ++I) {
+    const unsigned Offset = (I - 1) * PartSize;
+
+    Register SrcReg = MI.getOperand(I).getReg();
+    auto ZextInput = MIRBuilder.buildZExt(WideTy, SrcReg);
+
+    Register NextResult = I + 1 == NumOps && WideTy == DstTy ? DstReg :
+      MRI.createGenericVirtualRegister(WideTy);
+
+    auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Offset);
+    auto Shl = MIRBuilder.buildShl(WideTy, ZextInput, ShiftAmt);
+    MIRBuilder.buildOr(NextResult, ResultReg, Shl);
+    ResultReg = NextResult;
+  }
+
+  if (DstTy.isPointer()) {
+    if (MIRBuilder.getDataLayout().isNonIntegralAddressSpace(
+          DstTy.getAddressSpace())) {
+      LLVM_DEBUG(dbgs() << "Not casting nonintegral address space\n");
+      return UnableToLegalize;
+    }
+
+    MIRBuilder.buildIntToPtr(DstReg, ResultReg);
+  }
+
   MI.eraseFromParent();
   return Legalized;
 }
