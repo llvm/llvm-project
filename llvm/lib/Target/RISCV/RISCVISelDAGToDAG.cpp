@@ -223,6 +223,10 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
       ImmOperand = CurDAG->getTargetGlobalAddress(
           GA->getGlobal(), SDLoc(ImmOperand), ImmOperand.getValueType(),
           GA->getOffset(), GA->getTargetFlags());
+    } else if (auto CP = dyn_cast<ConstantPoolSDNode>(ImmOperand)) {
+      ImmOperand = CurDAG->getTargetConstantPool(
+          CP->getConstVal(), ImmOperand.getValueType(), CP->getAlignment(),
+          CP->getOffset(), CP->getTargetFlags());
     } else {
       continue;
     }
