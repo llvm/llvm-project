@@ -164,6 +164,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_platform_limits_solaris.h
   sanitizer_posix.h
   sanitizer_procmaps.h
+  sanitizer_ptrauth.h
   sanitizer_quarantine.h
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
