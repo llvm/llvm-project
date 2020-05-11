@@ -1481,6 +1481,11 @@ def SVSHLLB_U_N : SInst<"svshllb[_n_{d}]", "dhi", "UsUiUl", MergeNone, "aarch64_
 def SVSHLLT_S_N : SInst<"svshllt[_n_{d}]", "dhi", "sil",    MergeNone, "aarch64_sve_sshllt", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
 def SVSHLLT_U_N : SInst<"svshllt[_n_{d}]", "dhi", "UsUiUl", MergeNone, "aarch64_sve_ushllt", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
 
+def SVMOVLB_S_N : SInst<"svmovlb[_{d}]", "dh",  "sil",    MergeNone>;
+def SVMOVLB_U_N : SInst<"svmovlb[_{d}]", "dh",  "UsUiUl", MergeNone>;
+def SVMOVLT_S_N : SInst<"svmovlt[_{d}]", "dh",  "sil",    MergeNone>;
+def SVMOVLT_U_N : SInst<"svmovlt[_{d}]", "dh",  "UsUiUl", MergeNone>;
+
 def SVMLALB_S_LANE : SInst<"svmlalb_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlalb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 def SVMLALB_U_LANE : SInst<"svmlalb_lane[_{d}]",   "ddhhi", "UiUl", MergeNone, "aarch64_sve_umlalb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 def SVMLALT_S_LANE : SInst<"svmlalt_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlalt_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
