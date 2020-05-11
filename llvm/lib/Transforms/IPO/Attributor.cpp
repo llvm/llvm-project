@@ -492,11 +492,6 @@ Attributor::~Attributor() {
   // thus we cannot delete them. We can, and want to, destruct them though.
   for (AbstractAttribute *AA : AllAbstractAttributes)
     AA->~AbstractAttribute();
-
-  // The QueryMapValueTy objects are allocated via a BumpPtrAllocator, we call
-  // the destructor manually.
-  for (auto &It : QueryMap)
-    It.getSecond()->~QueryMapValueTy();
 }
 
 bool Attributor::isAssumedDead(const AbstractAttribute &AA,
@@ -926,40 +921,33 @@ ChangeStatus Attributor::run() {
       AbstractAttribute *InvalidAA = InvalidAAs[u];
 
       // Check the dependences to fast track invalidation.
-      auto *QuerriedAAs = QueryMap.lookup(InvalidAA);
-      if (!QuerriedAAs)
-        continue;
-
       LLVM_DEBUG(dbgs() << "[Attributor] InvalidAA: " << *InvalidAA << " has "
-                        << QuerriedAAs->RequiredAAs.size() << "/"
-                        << QuerriedAAs->OptionalAAs.size()
-                        << " required/optional dependences\n");
-      for (AbstractAttribute *DepOnInvalidAA : QuerriedAAs->RequiredAAs) {
-        AbstractState &DOIAAState = DepOnInvalidAA->getState();
-        DOIAAState.indicatePessimisticFixpoint();
-        ++NumAttributesFixedDueToRequiredDependences;
-        assert(DOIAAState.isAtFixpoint() && "Expected fixpoint state!");
-        if (!DOIAAState.isValidState())
-          InvalidAAs.insert(DepOnInvalidAA);
+                        << InvalidAA->Deps.size()
+                        << " required & optional dependences\n");
+      while (!InvalidAA->Deps.empty()) {
+        const auto &Dep = InvalidAA->Deps.back();
+        InvalidAA->Deps.pop_back();
+        AbstractAttribute *DepAA = Dep.getPointer();
+        if (Dep.getInt() == unsigned(DepClassTy::OPTIONAL)) {
+          Worklist.insert(DepAA);
+          continue;
+        }
+        DepAA->getState().indicatePessimisticFixpoint();
+        assert(DepAA->getState().isAtFixpoint() && "Expected fixpoint state!");
+        if (!DepAA->getState().isValidState())
+          InvalidAAs.insert(DepAA);
         else
-          ChangedAAs.push_back(DepOnInvalidAA);
+          ChangedAAs.push_back(DepAA);
       }
-      Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
-                      QuerriedAAs->OptionalAAs.end());
-      QuerriedAAs->clear();
     }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
-    for (AbstractAttribute *ChangedAA : ChangedAAs) {
-      if (auto *QuerriedAAs = QueryMap.lookup(ChangedAA)) {
-        Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
-                        QuerriedAAs->OptionalAAs.end());
-        Worklist.insert(QuerriedAAs->RequiredAAs.begin(),
-                        QuerriedAAs->RequiredAAs.end());
-        QuerriedAAs->clear();
+    for (AbstractAttribute *ChangedAA : ChangedAAs)
+      while (!ChangedAA->Deps.empty()) {
+        Worklist.insert(ChangedAA->Deps.back().getPointer());
+        ChangedAA->Deps.pop_back();
       }
-    }
 
     LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist+Dependent size: " << Worklist.size()
@@ -1020,13 +1008,9 @@ ChangeStatus Attributor::run() {
       NumAttributesTimedOut++;
     }
 
-    if (auto *QuerriedAAs = QueryMap.lookup(ChangedAA)) {
-      ChangedAAs.append(QuerriedAAs->OptionalAAs.begin(),
-                        QuerriedAAs->OptionalAAs.end());
-      ChangedAAs.append(QuerriedAAs->RequiredAAs.begin(),
-                        QuerriedAAs->RequiredAAs.end());
-      // Release the memory early.
-      QuerriedAAs->clear();
+    while (!ChangedAA->Deps.empty()) {
+      ChangedAAs.push_back(ChangedAA->Deps.back().getPointer());
+      ChangedAA->Deps.pop_back();
     }
   }
 
@@ -1722,14 +1706,9 @@ void Attributor::rememberDependences() {
   assert(!DependenceStack.empty() && "No dependences to remember!");
 
   for (DepInfo &DI : *DependenceStack.back()) {
-    QueryMapValueTy *&DepAAs = QueryMap[DI.FromAA];
-    if (!DepAAs)
-      DepAAs = new (Allocator) QueryMapValueTy();
-
-    if (DI.DepClass == DepClassTy::REQUIRED)
-      DepAAs->RequiredAAs.insert(const_cast<AbstractAttribute *>(DI.ToAA));
-    else
-      DepAAs->OptionalAAs.insert(const_cast<AbstractAttribute *>(DI.ToAA));
+    auto &DepAAs = const_cast<AbstractAttribute &>(*DI.FromAA).Deps;
+    DepAAs.push_back(AbstractAttribute::DepTy(
+        const_cast<AbstractAttribute *>(DI.ToAA), unsigned(DI.DepClass)));
   }
 }
 
