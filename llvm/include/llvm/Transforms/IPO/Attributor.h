@@ -854,7 +854,20 @@ struct Attributor {
                          const IRPosition &IRP, bool TrackDependence = true,
                          DepClassTy DepClass = DepClassTy::REQUIRED) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence,
-                                    DepClass);
+                                    DepClass, /* ForceUpdate */ false);
+  }
+
+  /// Similar to getAAFor but the return abstract attribute will be updated (via
+  /// `AbstractAttribute::update`) even if it is found in the cache. This is
+  /// especially useful for AAIsDead as changes in liveness can make updates
+  /// possible/useful that were not happening before as the abstract attribute
+  /// was assumed dead.
+  template <typename AAType>
+  const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
+                         const IRPosition &IRP, bool TrackDependence = true,
+                         DepClassTy DepClass = DepClassTy::REQUIRED) {
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence,
+                                    DepClass, /* ForceUpdate */ true);
   }
 
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if
@@ -1224,10 +1237,13 @@ private:
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
                                  const AbstractAttribute *QueryingAA = nullptr,
                                  bool TrackDependence = false,
-                                 DepClassTy DepClass = DepClassTy::OPTIONAL) {
-    if (const AAType *AAPtr =
-            lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence))
+                                 DepClassTy DepClass = DepClassTy::OPTIONAL,
+                                 bool ForceUpdate = false) {
+    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence)) {
+      if (ForceUpdate)
+        updateAA(*AAPtr);
       return *AAPtr;
+    }
 
     // No matching attribute found, create one.
     // Use the static create method.
@@ -1269,10 +1285,10 @@ private:
 
   /// Return the attribute of \p AAType for \p IRP if existing.
   template <typename AAType>
-  const AAType *lookupAAFor(const IRPosition &IRP,
-                            const AbstractAttribute *QueryingAA = nullptr,
-                            bool TrackDependence = false,
-                            DepClassTy DepClass = DepClassTy::OPTIONAL) {
+  AAType *lookupAAFor(const IRPosition &IRP,
+                      const AbstractAttribute *QueryingAA = nullptr,
+                      bool TrackDependence = false,
+                      DepClassTy DepClass = DepClassTy::OPTIONAL) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
