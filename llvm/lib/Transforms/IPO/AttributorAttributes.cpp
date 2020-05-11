@@ -539,7 +539,7 @@ static void followUsesInContext(AAType &AA, Attributor &A,
 ///
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
-                            Instruction &CtxI) {
+                             Instruction &CtxI) {
 
   // Container for (transitive) uses of the associated value.
   SetVector<const Use *> Uses;

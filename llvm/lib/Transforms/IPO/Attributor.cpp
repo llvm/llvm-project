@@ -1455,7 +1455,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     if (ToBeDeletedFunctions.count(OldFn))
       continue;
 
-    const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs = It.getSecond();
+    const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs =
+        It.getSecond();
     assert(ARIs.size() == OldFn->arg_size() && "Inconsistent state!");
 
     SmallVector<Type *, 16> NewArgumentTypes;
@@ -1464,7 +1465,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // Collect replacement argument types and copy over existing attributes.
     AttributeList OldFnAttributeList = OldFn->getAttributes();
     for (Argument &Arg : OldFn->args()) {
-      if (const std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[Arg.getArgNo()]) {
+      if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =
+              ARIs[Arg.getArgNo()]) {
         NewArgumentTypes.append(ARI->ReplacementTypes.begin(),
                                 ARI->ReplacementTypes.end());
         NewArgumentAttributes.append(ARI->getNumReplacementArgs(),
@@ -1526,7 +1528,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       for (unsigned OldArgNum = 0; OldArgNum < ARIs.size(); ++OldArgNum) {
         unsigned NewFirstArgNum = NewArgOperands.size();
         (void)NewFirstArgNum; // only used inside assert.
-        if (const std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[OldArgNum]) {
+        if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =
+                ARIs[OldArgNum]) {
           if (ARI->ACSRepairCB)
             ARI->ACSRepairCB(*ARI, ACS, NewArgOperands);
           assert(ARI->getNumReplacementArgs() + NewFirstArgNum ==
