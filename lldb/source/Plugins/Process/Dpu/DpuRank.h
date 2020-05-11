@@ -48,11 +48,19 @@ public:
   std::recursive_mutex &GetLock() { return m_lock; }
 
   Dpu *GetDpuFromSliceIdAndDpuId(unsigned int slice_id, unsigned int dpu_id);
+  bool ResumeDpus();
+  bool StopDpus();
+
+  bool SaveContext();
+  bool RestoreContext();
+  bool RestoreMuxContext();
 
   void SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
                     uint64_t slice_target, dpu_bitfield_t host_mux_mram_state);
 
   struct _dpu_context_t *AllocContext();
+
+  uint8_t GetNrCis();
 
 private:
   dpu_rank_t *m_rank;

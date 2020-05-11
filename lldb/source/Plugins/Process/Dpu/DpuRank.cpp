@@ -84,6 +84,18 @@ Dpu *DpuRank::GetDpu(size_t index) {
   return index < m_dpus.size() ? m_dpus[index] : nullptr;
 }
 
+bool DpuRank::SaveContext() {
+  return dpu_save_context_for_rank(m_rank) == DPU_OK;
+}
+
+bool DpuRank::RestoreContext() {
+  return dpu_restore_context_for_rank(m_rank) == DPU_OK;
+}
+
+bool DpuRank::RestoreMuxContext() {
+  return dpu_restore_mux_context_for_rank(m_rank) == DPU_OK;
+}
+
 void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
                            uint64_t slice_target,
                            dpu_bitfield_t host_mux_mram_state) {
@@ -93,4 +105,24 @@ void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
 
 struct _dpu_context_t *DpuRank::AllocContext() {
   return dpu_alloc_dpu_context(m_rank);
+}
+
+bool DpuRank::ResumeDpus() {
+  for (Dpu *dpu : m_dpus) {
+    if (!dpu->ResumeThreads(NULL, false))
+      return false;
+  }
+  return true;
+}
+
+bool DpuRank::StopDpus() {
+  for (Dpu *dpu : m_dpus) {
+    if (!dpu->StopThreads(true))
+      return false;
+  }
+  return true;
+}
+
+uint8_t DpuRank::GetNrCis() {
+  return dpu_get_description(m_rank)->topology.nr_of_control_interfaces;
 }

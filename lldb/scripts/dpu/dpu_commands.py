@@ -244,42 +244,50 @@ def dpu_attach(debugger, command, result, internal_dict):
     if region_id == -1 or rank_id == -1:
         print("Could not attach to simulator (hardware only)")
         return None
-
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
-
-    slice_info = rank.GetChildMemberWithName("runtime") \
-        .GetChildMemberWithName("control_interface") \
-        .GetChildMemberWithName("slice_info").GetChildAtIndex(slice_id)
-    if not(slice_info.IsValid()):
-        print("Could not find dpu slice_info")
-        return None
-    slice_target = slice_info.GetChildMemberWithName("slice_target")
-    if not(slice_target.IsValid()):
-        print("Could not find dpu slice_target")
-        return None
-
-    structure_value = slice_info.GetChildMemberWithName("structure_value") \
-        .GetValueAsUnsigned()
-    host_mux_mram_state = \
-        slice_info.GetChildMemberWithName("host_mux_mram_state")
-    slice_target_type = slice_target.GetChildMemberWithName("type") \
-        .GetValueAsUnsigned()
-    slice_target_dpu_group_id = slice_target.GetChildMemberWithName("dpu_id") \
-        .GetValueAsUnsigned()
-    slice_target = (slice_target_dpu_group_id << 32) + slice_target_type
-
     pid = compute_dpu_pid(region_id, rank_id, slice_id, dpu_id)
+
+    nb_slices, nb_dpus_per_slice = get_nb_slices_and_nb_dpus_per_slice(rank, target)
+    structures_value_env = ""
+    slices_target_env = ""
+    host_muxs_mram_state_env = ""
+    slices_info = rank.GetChildMemberWithName("runtime") \
+                      .GetChildMemberWithName("control_interface") \
+                      .GetChildMemberWithName("slice_info")
+    for each_slice in range(nb_slices):
+        structures_value_env += str(each_slice) + ":"
+        slices_target_env += str(each_slice) + ":"
+        host_muxs_mram_state_env += str(each_slice) + ":"
+
+        slice_info = slices_info.GetChildAtIndex(each_slice)
+        if not(slice_info.IsValid()):
+            print("Could not find dpu slice_info")
+            return None
+        slice_target = slice_info.GetChildMemberWithName("slice_target")
+        if not(slice_target.IsValid()):
+            print("Could not find dpu slice_target")
+            return None
+
+        structures_value_env += str(slice_info.GetChildMemberWithName("structure_value")
+                                    .GetValueAsUnsigned()) + "&"
+        host_muxs_mram_state_env += \
+            str(slice_info.GetChildMemberWithName("host_mux_mram_state").GetValueAsUnsigned()) + "&"
+        slice_target_type = slice_target.GetChildMemberWithName("type") \
+                                        .GetValueAsUnsigned()
+        slice_target_dpu_group_id = slice_target.GetChildMemberWithName("dpu_id") \
+                                                .GetValueAsUnsigned()
+        slices_target_env += str((slice_target_dpu_group_id << 32) + slice_target_type) + "&"
 
     if not(set_debug_mode(debugger, rank, 1)):
         print("Could not set dpu in debug mode")
         return None
 
     lldb_server_dpu_env = os.environ.copy()
-    lldb_server_dpu_env["UPMEM_LLDB_STRUCTURE_VALUE"] = str(structure_value)
-    lldb_server_dpu_env["UPMEM_LLDB_SLICE_TARGET"] = str(slice_target)
-    lldb_server_dpu_env["UPMEM_LLDB_HOST_MUX_MRAM_STATE"] = \
-        str(host_mux_mram_state)
+    lldb_server_dpu_env["UPMEM_LLDB_STRUCTURES_VALUE"] = structures_value_env
+    lldb_server_dpu_env["UPMEM_LLDB_SLICES_TARGET"] = slices_target_env
+    lldb_server_dpu_env["UPMEM_LLDB_HOST_MUXS_MRAM_STATE"] = \
+        host_muxs_mram_state_env
 
     if not(program_path is None):
         module_spec = lldb.SBModuleSpec()

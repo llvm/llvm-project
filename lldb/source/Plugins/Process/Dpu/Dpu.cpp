@@ -770,21 +770,6 @@ unsigned int Dpu::GetSliceID() { return dpu_get_slice_id(m_dpu); }
 
 unsigned int Dpu::GetDpuID() { return dpu_get_member_id(m_dpu); }
 
-bool Dpu::SaveSliceContext(uint64_t structure_value, uint64_t slice_target,
-                           dpu_bitfield_t host_mux_mram_state) {
-  bool success = dpu_save_slice_context_for_dpu(m_dpu) == DPU_OK;
-  if (!success)
-    return false;
-
-  m_rank->SetSliceInfo(dpu_get_slice_id(m_dpu), structure_value, slice_target,
-                       host_mux_mram_state);
-  return true;
-}
-
-bool Dpu::RestoreSliceContext() {
-  return dpu_restore_slice_context_for_dpu(m_dpu) == DPU_OK;
-}
-
 void Dpu::SetAttachSession() { attach_session = true; }
 
 bool Dpu::AttachSession() { return attach_session; }

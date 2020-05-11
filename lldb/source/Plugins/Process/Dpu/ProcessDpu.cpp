@@ -22,6 +22,7 @@
 #include <string>
 
 // Other libraries and framework includes
+#include "dpu_types.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
@@ -110,6 +111,28 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
       pid, terminal_fd, native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
 
+#define SLICE_DELIM ":"
+#define VALUE_DELIM "&"
+#define PARSE_ENV(env_var, nr_cis, buffer)                                     \
+  do {                                                                         \
+    char *_PARSE_ENV_env = std::getenv(env_var);                               \
+    if (_PARSE_ENV_env == NULL) {                                              \
+      break;                                                                   \
+    }                                                                          \
+    char *_PARSE_ENV_ptr = strtok(_PARSE_ENV_env, SLICE_DELIM);                \
+    if (_PARSE_ENV_ptr == NULL) {                                              \
+      break;                                                                   \
+    }                                                                          \
+    do {                                                                       \
+      uint32_t _PARSE_ENV_slice_id = ::strtoll(_PARSE_ENV_ptr, NULL, 10);      \
+      _PARSE_ENV_ptr = strtok(NULL, VALUE_DELIM);                              \
+      if (_PARSE_ENV_ptr == NULL) {                                            \
+        return Status("Could not parse " env_var " correctly ").ToError();     \
+      }                                                                        \
+      buffer[_PARSE_ENV_slice_id] = ::strtoll(_PARSE_ENV_ptr, NULL, 10);       \
+    } while ((_PARSE_ENV_ptr = strtok(NULL, SLICE_DELIM)) != NULL);            \
+  } while (0)
+
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 ProcessDpu::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
@@ -153,39 +176,40 @@ ProcessDpu::Factory::Attach(
   if (dpu == nullptr)
     return Status("Cannot find the DPU in the rank ").ToError();
 
-  char *structure_value_ptr = std::getenv("UPMEM_LLDB_STRUCTURE_VALUE");
-  char *slice_target_ptr = std::getenv("UPMEM_LLDB_SLICE_TARGET");
-  char *host_mux_mram_state_ptr = std::getenv("UPMEM_LLDB_HOST_MUX_MRAM_STATE");
   char *nr_tasklets_ptr = std::getenv("UPMEM_LLDB_NR_TASKLETS");
-  uint64_t structure_value = structure_value_ptr == NULL
-                                 ? 0ULL
-                                 : ::strtoll(structure_value_ptr, NULL, 10);
-  uint64_t slice_target =
-      slice_target_ptr == NULL ? 0ULL : ::strtoll(slice_target_ptr, NULL, 10);
-  uint32_t host_mux_mram_state =
-      host_mux_mram_state_ptr == NULL
-          ? 0U
-          : ::strtoll(host_mux_mram_state_ptr, NULL, 10);
-  LLDB_LOG(log, "saving slice context ({0:x}, {1:x}, {2:x})", structure_value,
-           slice_target, host_mux_mram_state);
+
   if (nr_tasklets_ptr != NULL)
     dpu->SetNrThreads(::strtoll(nr_tasklets_ptr, NULL, 10));
 
-  success =
-      dpu->SaveSliceContext(structure_value, slice_target, host_mux_mram_state);
+  success = rank->SaveContext();
   if (!success)
-    return Status("Cannot save the DPU slice context ").ToError();
+    return Status("Cannot save the rank context ").ToError();
 
-  success = dpu->StopThreads(true);
-  if (!success)
-    return Status("Cannot stop the DPU ").ToError();
+  uint8_t nr_cis = rank->GetNrCis();
+  uint64_t *structures_value = new uint64_t[nr_cis];
+  uint64_t *slices_target = new uint64_t[nr_cis];
+  dpu_bitfield_t *host_muxs_mram_state = new dpu_bitfield_t[nr_cis];
+  memset(structures_value, 0, sizeof(uint64_t) * nr_cis);
+  memset(slices_target, 0, sizeof(uint64_t) * nr_cis);
+  memset(host_muxs_mram_state, 0, sizeof(dpu_bitfield_t) * nr_cis);
+  PARSE_ENV("UPMEM_LLDB_STRUCTURES_VALUE", nr_cis, structures_value);
+  PARSE_ENV("UPMEM_LLDB_SLICES_TARGET", nr_cis, slices_target);
+  PARSE_ENV("UPMEM_LLDB_HOST_MUXS_MRAM_STATE", nr_cis, host_muxs_mram_state);
 
-  Dpu *dpu_neighbor = rank->GetDpuFromSliceIdAndDpuId(slice_id, dpu_id ^ 0x1);
-  if (dpu_neighbor != nullptr) {
-    success = dpu_neighbor->StopThreads(true);
-    if (!success)
-      return Status("Cannot stop the DPU neighbor ").ToError();
+  for (uint32_t each_ci = 0; each_ci < nr_cis; each_ci++) {
+    rank->SetSliceInfo(each_ci, structures_value[each_ci],
+                       slices_target[each_ci], host_muxs_mram_state[each_ci]);
+    LLDB_LOG(log, "saving slice context ([{0}]: {1:x}, {2:x}, {3:x})", each_ci,
+             structures_value[each_ci], slices_target[each_ci],
+             host_muxs_mram_state[each_ci]);
   }
+  delete[] structures_value;
+  delete[] slices_target;
+  delete[] host_muxs_mram_state;
+
+  success = rank->StopDpus();
+  if (!success)
+    return Status("Cannot stop the rank ").ToError();
 
   dpu->SetAttachSession();
 
@@ -363,17 +387,17 @@ Status ProcessDpu::Detach() {
                              k_dpu_iram_base);
   }
 
-  m_dpu->ResumeThreads(NULL, false);
-
-  Dpu *dpu_neighbor = m_rank->GetDpuFromSliceIdAndDpuId(
-      m_dpu->GetSliceID(), m_dpu->GetDpuID() ^ 0x1);
-  if (dpu_neighbor != nullptr) {
-    dpu_neighbor->ResumeThreads(NULL, false);
-  }
-
-  success = m_dpu->RestoreSliceContext();
+  success = m_rank->RestoreMuxContext();
   if (!success)
-    return Status("Cannot restore the DPU slice context");
+    return Status("Cannot restore the muxs context");
+
+  success = m_rank->ResumeDpus();
+  if (!success)
+    return Status("Cannot resume DPUs");
+
+  success = m_rank->RestoreContext();
+  if (!success)
+    return Status("Cannot restore the rank context context");
 
   return error;
 }
