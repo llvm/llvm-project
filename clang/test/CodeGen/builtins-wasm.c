@@ -724,5 +724,14 @@ i32x4 widen_high_u_i32x4_i16x8(i16x8 v) {
 i8x16 swizzle_v8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_swizzle_v8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)
+}
+
+i8x16 shuffle(i8x16 x, i8x16 y) {
+  return __builtin_wasm_shuffle_v8x16(x, y, 0, 1, 2, 3, 4, 5, 6, 7,
+                                      8, 9, 10, 11, 12, 13, 14, 15);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.shuffle(<16 x i8> %x, <16 x i8> %y,
+  // WEBASSEMBLY-SAME: i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+  // WEBASSEMBLY-SAME: i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14,
+  // WEBASSEMBLY-SAME: i32 15
   // WEBASSEMBLY-NEXT: ret
 }
