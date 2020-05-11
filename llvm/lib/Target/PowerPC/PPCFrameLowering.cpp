@@ -1983,11 +1983,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
       std::min<unsigned>(TRI->getEncodingValue(MinGPR),
                          TRI->getEncodingValue(MinG8R));
 
-    if (Subtarget.isPPC64()) {
-      LowerBound -= (31 - MinReg + 1) * 8;
-    } else {
-      LowerBound -= (31 - MinReg + 1) * 4;
-    }
+    const unsigned GPRegSize = Subtarget.isPPC64() ? 8 : 4;
+    LowerBound -= (31 - MinReg + 1) * GPRegSize;
   }
 
   // For 32-bit only, the CR save area is below the general register
