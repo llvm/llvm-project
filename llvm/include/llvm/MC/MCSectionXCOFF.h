@@ -36,6 +36,7 @@ class MCSectionXCOFF final : public MCSection {
   XCOFF::SymbolType Type;
   XCOFF::StorageClass StorageClass;
   MCSymbolXCOFF *const QualName;
+  static constexpr unsigned DefaultAlignVal = 4;
 
   MCSectionXCOFF(StringRef Name, XCOFF::StorageMappingClass SMC,
                  XCOFF::SymbolType ST, XCOFF::StorageClass SC, SectionKind K,
@@ -47,7 +48,12 @@ class MCSectionXCOFF final : public MCSection {
     assert(QualName != nullptr && "QualName is needed.");
     QualName->setStorageClass(SC);
     QualName->setRepresentedCsect(this);
+    // A csect is 4 byte aligned by default, except for undefined symbol csects.
+    if (Type != XCOFF::XTY_ER)
+      setAlignment(Align(DefaultAlignVal));
   }
+
+  void printCsectDirective(raw_ostream &OS) const;
 
 public:
   ~MCSectionXCOFF();

@@ -29,40 +29,43 @@ entry:
 
 ; CHECK: .globl foo[DS]
 ; CHECK: .globl .foo
-; CHECK: .csect foo[DS]
-; 32BIT: .long .foo
+; 32BIT: .csect foo[DS], 2
+; 32BIT-NEXT: .long .foo
 ; 32BIT-NEXT: .long TOC[TC0]
 ; 32BIT-NEXT: .long 0
-; 64BIT: .llong .foo
+; 64BIT: .csect foo[DS], 3
+; 64BIT-NEXT: .llong .foo
 ; 64BIT-NEXT: .llong TOC[TC0]
 ; 64BIT-NEXT: .llong 0
-; CHECK-NEXT: .csect .text[PR]
+; CHECK-NEXT: .csect .text[PR], 2
 ; CHECK-LABEL: .foo:
 
 ; CHECK: .globl main[DS]
 ; CHECK: .globl .main
-; CHECK: .csect main[DS]
-; 32BIT: .long .main
+; 32BIT: .csect main[DS], 2
+; 32BIT-NEXT: .long .main
 ; 32BIT-NEXT: .long TOC[TC0]
 ; 32BIT-NEXT: .long 0
-; 64BIT: .llong .main
+; 64BIT: .csect main[DS], 3
+; 64BIT-NEXT: .llong .main
 ; 64BIT-NEXT: .llong TOC[TC0]
 ; 64BIT-NEXT: .llong 0
-; CHECK-NEXT: .csect .text[PR]
+; CHECK-NEXT: .csect .text[PR], 2
 ; CHECK-LABEL: .main:
 ; CHECK: bl .foo
 ; CHECK: bl .extern_foo
 ; CHECK: bl .static_foo
 
 ; CHECK: .lglobl .static_foo
-; CHECK: .csect static_foo[DS]
-; 32BIT: .long .static_foo
+; 32BIT: .csect static_foo[DS], 2
+; 32BIT-NEXT: .long .static_foo
 ; 32BIT-NEXT: .long TOC[TC0]
 ; 32BIT-NEXT: .long 0
-; 64BIT: .llong .static_foo
+; 64BIT: .csect static_foo[DS], 3
+; 64BIT-NEXT: .llong .static_foo
 ; 64BIT-NEXT: .llong TOC[TC0]
 ; 64BIT-NEXT: .llong 0
-; CHECK-NEXT: .csect .text[PR]
+; CHECK-NEXT: .csect .text[PR], 2
 ; CHECK-LABEL: .static_foo:
 
 ; CHECK-NOT: .csect extern_foo
