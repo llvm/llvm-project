@@ -3416,9 +3416,9 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
 
     case clang::Type::ObjCObjectPointer:
       if (check_objc) {
-        if (auto objc_pointee_type =
+        if (const auto *objc_pointee_type =
                 qual_type->getPointeeType().getTypePtrOrNull()) {
-          if (auto objc_object_type =
+          if (const auto *objc_object_type =
                   llvm::dyn_cast_or_null<clang::ObjCObjectType>(
                       objc_pointee_type)) {
             if (objc_object_type->isObjCClass())
@@ -7092,7 +7092,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
 
       field_clang_type.GetCompleteType();
 
-      auto ivar = clang::ObjCIvarDecl::CreateDeserialized(clang_ast, 0);
+      auto *ivar = clang::ObjCIvarDecl::CreateDeserialized(clang_ast, 0);
       ivar->setDeclContext(class_interface_decl);
       ivar->setDeclName(ident);
       ivar->setType(ClangUtil::GetQualType(field_clang_type));
@@ -8570,7 +8570,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   // every enumerator is either a one bit value or a superset of the previous
   // enumerators. Also 0 doesn't make sense when the enumerators are used as
   // flags.
-  for (auto enumerator : enum_decl->enumerators()) {
+  for (auto *enumerator : enum_decl->enumerators()) {
     uint64_t val = enumerator->getInitVal().getSExtValue();
     val = llvm::SignExtend64(val, 8*byte_size);
     if (llvm::countPopulation(val) != 1 && (val & ~covered_bits) != 0)
@@ -8602,7 +8602,7 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream *s,
   uint64_t remaining_value = enum_uvalue;
   std::vector<std::pair<uint64_t, llvm::StringRef>> values;
   values.reserve(num_enumerators);
-  for (auto enumerator : enum_decl->enumerators())
+  for (auto *enumerator : enum_decl->enumerators())
     if (auto val = enumerator->getInitVal().getZExtValue())
       values.emplace_back(val, enumerator->getName());
 
