@@ -287,7 +287,7 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
       // accesses, unless we statically know the subview size divides the view
       // size evenly.
       int64_t viewSize = viewType.getDimSize(r);
-      auto sizeCst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp());
+      auto sizeCst = size.getDefiningOp<ConstantIndexOp>();
       if (ShapedType::isDynamic(viewSize) || !sizeCst ||
           (viewSize % sizeCst.getValue()) != 0) {
         // Compute min(size, dim - offset) to avoid out-of-bounds accesses.

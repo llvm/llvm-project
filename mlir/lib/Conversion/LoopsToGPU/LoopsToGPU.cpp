@@ -219,7 +219,7 @@ struct LoopToGpuConverter {
 
 // Return true if the value is obviously a constant "one".
 static bool isConstantOne(Value value) {
-  if (auto def = dyn_cast_or_null<ConstantIndexOp>(value.getDefiningOp()))
+  if (auto def = value.getDefiningOp<ConstantIndexOp>())
     return def.getValue() == 1;
   return false;
 }
@@ -505,11 +505,11 @@ struct ParallelToGpuLaunchLowering : public OpRewritePattern<ParallelOp> {
 /// `upperBound`.
 static Value deriveStaticUpperBound(Value upperBound,
                                     PatternRewriter &rewriter) {
-  if (auto op = dyn_cast_or_null<ConstantIndexOp>(upperBound.getDefiningOp())) {
+  if (auto op = upperBound.getDefiningOp<ConstantIndexOp>()) {
     return op;
   }
 
-  if (auto minOp = dyn_cast_or_null<AffineMinOp>(upperBound.getDefiningOp())) {
+  if (auto minOp = upperBound.getDefiningOp<AffineMinOp>()) {
     for (const AffineExpr &result : minOp.map().getResults()) {
       if (auto constExpr = result.dyn_cast<AffineConstantExpr>()) {
         return rewriter.create<ConstantIndexOp>(minOp.getLoc(),
@@ -518,7 +518,7 @@ static Value deriveStaticUpperBound(Value upperBound,
     }
   }
 
-  if (auto multiplyOp = dyn_cast_or_null<MulIOp>(upperBound.getDefiningOp())) {
+  if (auto multiplyOp = upperBound.getDefiningOp<MulIOp>()) {
     if (auto lhs = dyn_cast_or_null<ConstantIndexOp>(
             deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
                 .getDefiningOp()))
@@ -607,7 +607,7 @@ static LogicalResult processParallelLoop(
                                   launchIndependent](Value val) -> Value {
     if (launchIndependent(val))
       return val;
-    if (ConstantOp constOp = dyn_cast_or_null<ConstantOp>(val.getDefiningOp()))
+    if (ConstantOp constOp = val.getDefiningOp<ConstantOp>())
       return rewriter.create<ConstantOp>(constOp.getLoc(), constOp.getValue());
     return {};
   };

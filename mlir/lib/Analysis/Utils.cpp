@@ -64,7 +64,7 @@ ComputationSliceState::getAsConstraints(FlatAffineConstraints *cst) {
     assert(cst->containsId(value) && "value expected to be present");
     if (isValidSymbol(value)) {
       // Check if the symbol is a constant.
-      if (auto cOp = dyn_cast_or_null<ConstantIndexOp>(value.getDefiningOp()))
+      if (auto cOp = value.getDefiningOp<ConstantIndexOp>())
         cst->setIdToConstant(value, cOp.getValue());
     } else if (auto loop = getForInductionVarOwner(value)) {
       if (failed(cst->addAffineForOpDomain(loop)))

@@ -425,9 +425,8 @@ static LogicalResult verify(LandingpadOp op) {
     } else {
       // catch - global addresses only.
       // Bitcast ops should have global addresses as their args.
-      if (auto bcOp = dyn_cast_or_null<BitcastOp>(value.getDefiningOp())) {
-        if (auto addrOp =
-                dyn_cast_or_null<AddressOfOp>(bcOp.arg().getDefiningOp()))
+      if (auto bcOp = value.getDefiningOp<BitcastOp>()) {
+        if (auto addrOp = bcOp.arg().getDefiningOp<AddressOfOp>())
           continue;
         return op.emitError("constant clauses expected")
                    .attachNote(bcOp.getLoc())
@@ -435,9 +434,9 @@ static LogicalResult verify(LandingpadOp op) {
                   "bitcast used in clauses for landingpad";
       }
       // NullOp and AddressOfOp allowed
-      if (dyn_cast_or_null<NullOp>(value.getDefiningOp()))
+      if (value.getDefiningOp<NullOp>())
         continue;
-      if (dyn_cast_or_null<AddressOfOp>(value.getDefiningOp()))
+      if (value.getDefiningOp<AddressOfOp>())
         continue;
       return op.emitError("clause #")
              << idx << " is not a known constant - null, addressof, bitcast";
