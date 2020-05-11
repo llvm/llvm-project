@@ -16044,6 +16044,20 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(IntNo, {ConvertType(E->getType()), Vec->getType()});
     return Builder.CreateCall(Callee, Vec);
   }
+  case WebAssembly::BI__builtin_wasm_shuffle_v8x16: {
+    Value *Ops[18];
+    size_t OpIdx = 0;
+    Ops[OpIdx++] = EmitScalarExpr(E->getArg(0));
+    Ops[OpIdx++] = EmitScalarExpr(E->getArg(1));
+    while (OpIdx < 18) {
+      llvm::APSInt LaneConst;
+      if (!E->getArg(OpIdx)->isIntegerConstantExpr(LaneConst, getContext()))
+        llvm_unreachable("Constant arg isn't actually constant?");
+      Ops[OpIdx++] = llvm::ConstantInt::get(getLLVMContext(), LaneConst);
+    }
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_shuffle);
+    return Builder.CreateCall(Callee, Ops);
+  }
   default:
     return nullptr;
   }
