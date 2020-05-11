@@ -927,29 +927,9 @@ func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect number of operands for type}}
+  // expected-error@+1 {{expects 1 offset operand}}
   %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
-  return
-}
-
-// -----
-
-func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{is not strided}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0, d1, s0)>>
-  return
-}
-
-// -----
-
-func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xf32>
-  // expected-error@+1 {{must be 1D memref of 8-bit signless integer values}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
+    : memref<2048xi8> to memref<?x?xf32>
   return
 }
 
@@ -957,8 +937,8 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8, affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>>
-  // expected-error@+1 {{unsupported map for base memref}}
-  %1 = view %0[][%arg0, %arg1]
+  // expected-error@+1 {{unsupported map for base memref type}}
+  %1 = view %0[%arg2][%arg0, %arg1]
     : memref<2048xi8, affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>> to
       memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
   return
@@ -967,11 +947,19 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<2048xi8>
+  // expected-error@+1 {{unsupported map for result memref type}}
+  %1 = view %0[%arg2][%arg0, %arg1]
+    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0, d1, s0)>>
+  return
+}
+
+// -----
+
+func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8, 2>
   // expected-error@+1 {{different memory spaces}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8, 2> to
-      memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>, 1>
+  %1 = view %0[%arg2][%arg0, %arg1] :  memref<2048xi8, 2> to memref<?x?xf32, 1>
   return
 }
 
@@ -979,32 +967,9 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect dynamic strides}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to
-      memref<?x?x4xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
-  return
-}
-
-// -----
-
-func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect dynamic strides}}
-  %1 = view %0[%arg0][]
-    : memref<2048xi8> to
-      memref<16x4x?xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
-  return
-}
-
-// -----
-
-func @multiple_offsets(%arg0: index) {
-  %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{expects 0 or 1 offset operand}}
-  %1 = view %0[%arg0, %arg0][%arg0]
-    : memref<2048xi8> to
-      memref<?x?x4xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
+  // expected-error@+1 {{incorrect number of size operands for type}}
+  %1 = view %0[%arg2][%arg0]
+    : memref<2048xi8> to memref<?x?xf32>
   return
 }
 

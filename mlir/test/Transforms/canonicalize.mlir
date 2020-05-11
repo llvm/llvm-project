@@ -445,9 +445,9 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
     %ub = dim %3, 0 : memref<?xi8>
     affine.for %arg4 = 0 to %ub {
       %s = dim %0, 0 : memref<?x?xf32>
-      %v = std.view %3[%c0][%arg4, %s] : memref<?xi8> to memref<?x?xf32, #map1>
+      %v = std.view %3[%c0][%arg4, %s] : memref<?xi8> to memref<?x?xf32>
       %sv = subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, #map1>
-      %l = dim %v, 1 : memref<?x?xf32, #map1>
+      %l = dim %v, 1 : memref<?x?xf32>
       %u = dim %sv, 0 : memref<?x?xf32, #map1>
       affine.for %arg5 = %l to %u {
         "foo"() : () -> ()
@@ -462,13 +462,13 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
   // CHECK-NEXT:   }
   // CHECK-NEXT: }
 
-  %A = view %BUF[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %B = view %BUF[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %C = view %BUF[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %A = view %BUF[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
+  %B = view %BUF[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
+  %C = view %BUF[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
 
-  %M_ = dim %A, 0 : memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %K_ = dim %A, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %N_ = dim %C, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %M_ = dim %A, 0 : memref<?x?xf32>
+  %K_ = dim %A, 1 : memref<?x?xf32>
+  %N_ = dim %C, 1 : memref<?x?xf32>
   loop.for %i = %c0 to %M_ step %c1 {
     loop.for %j = %c0 to %N_ step %c1 {
       loop.for %k = %c0 to %K_ step %c1 {
@@ -642,19 +642,9 @@ func @cast_values(%arg0: tensor<*xi32>, %arg1: memref<?xi32>) -> (tensor<2xi32>,
 
 // -----
 
-#TEST_VIEW_MAP0 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
-#TEST_VIEW_MAP1 = affine_map<(d0, d1, d2)[s0, s1] -> (d0 * s1 + d1 * s0 + d2)>
-#TEST_VIEW_MAP2 = affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>
-
-// CHECK-DAG: #[[VIEW_MAP0:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 11 + d1 + 15)>
-// CHECK-DAG: #[[VIEW_MAP1:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * 11 + s0 + d1)>
-// CHECK-DAG: #[[VIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1 + 15)>
-// CHECK-DAG: #[[VIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 7 + d2)>
-// CHECK-DAG: #[[VIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1 + 15)>
-// CHECK-DAG: #[[VIEW_MAP5:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 7 + d1)>
-
 // CHECK-LABEL: func @view
-func @view(%arg0 : index) -> (f32, f32, f32, f32, f32, f32) {
+func @view(%arg0 : index) -> (f32, f32, f32, f32) {
+  // CHECK: %[[C15:.*]] = constant 15 : index
   // CHECK: %[[ALLOC_MEM:.*]] = alloc() : memref<2048xi8>
   %0 = alloc() : memref<2048xi8>
   %c0 = constant 0 : index
@@ -662,45 +652,27 @@ func @view(%arg0 : index) -> (f32, f32, f32, f32, f32, f32) {
   %c11 = constant 11 : index
   %c15 = constant 15 : index
 
-  // Test: fold constant sizes and offset, update map with static stride/offset.
-  // CHECK: std.view %[[ALLOC_MEM]][][] : memref<2048xi8> to memref<7x11xf32, #[[VIEW_MAP0]]>
-  %1 = view %0[%c15][%c7, %c11]
-    : memref<2048xi8> to memref<?x?xf32, #TEST_VIEW_MAP0>
-  %r0 = load %1[%c0, %c0] : memref<?x?xf32, #TEST_VIEW_MAP0>
+  // Test: fold constant sizes.
+  // CHECK: std.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<7x11xf32>
+  %1 = view %0[%c15][%c7, %c11] : memref<2048xi8> to memref<?x?xf32>
+  %r0 = load %1[%c0, %c0] : memref<?x?xf32>
 
-  // Test: fold constant sizes but not offset, update map with static stride.
-  // Test that we do not a fold dynamic dim which is not produced by a constant.
-  // CHECK: std.view %[[ALLOC_MEM]][%arg0][] : memref<2048xi8> to memref<7x11xf32, #[[VIEW_MAP1]]>
-  %2 = view %0[%arg0][%c7, %c11]
-    : memref<2048xi8> to memref<?x?xf32, #TEST_VIEW_MAP0>
-  %r1 = load %2[%c0, %c0] : memref<?x?xf32, #TEST_VIEW_MAP0>
+  // Test: fold one constant size.
+  // CHECK: std.view %[[ALLOC_MEM]][%[[C15]]][%arg0, %arg0] : memref<2048xi8> to memref<?x?x7xf32>
+  %2 = view %0[%c15][%arg0, %arg0, %c7] : memref<2048xi8> to memref<?x?x?xf32>
+  %r1 = load %2[%c0, %c0, %c0] : memref<?x?x?xf32>
 
-  // Test: fold constant offset but not sizes, update map with constant offset.
-  // Test that we fold constant offset but not dynamic dims.
-  // CHECK: std.view %[[ALLOC_MEM]][][%arg0, %arg0] : memref<2048xi8> to memref<?x?xf32, #[[VIEW_MAP2]]>
-  %3 = view %0[%c15][%arg0, %arg0]
-    : memref<2048xi8> to memref<?x?xf32,  #TEST_VIEW_MAP0>
-  %r2 = load %3[%c0, %c0] : memref<?x?xf32, #TEST_VIEW_MAP0>
-
-  // Test: fold one constant dim, no offset, should update with constant
-  // stride on dim 1, but leave dynamic stride on dim 0.
-  // CHECK: std.view %[[ALLOC_MEM]][][%arg0, %arg0] : memref<2048xi8> to memref<?x?x7xf32, #[[VIEW_MAP3]]>
-  %4 = view %0[][%arg0, %arg0, %c7]
-    : memref<2048xi8> to memref<?x?x?xf32, #TEST_VIEW_MAP1>
-  %r3 = load %4[%c0, %c0, %c0] : memref<?x?x?xf32, #TEST_VIEW_MAP1>
-
-  // Test: preserve an existing static dim size while folding a dynamic
-  // dimension and offset.
-  // CHECK: std.view %[[ALLOC_MEM]][][] : memref<2048xi8> to memref<7x4xf32, #[[VIEW_MAP4]]>
-  %5 = view %0[%c15][%c7] : memref<2048xi8> to memref<?x4xf32, #TEST_VIEW_MAP2>
-  %r4 = load %5[%c0, %c0] : memref<?x4xf32, #TEST_VIEW_MAP2>
+  // Test: preserve an existing static size.
+  // CHECK: std.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<7x4xf32>
+  %3 = view %0[%c15][%c7] : memref<2048xi8> to memref<?x4xf32>
+  %r2 = load %3[%c0, %c0] : memref<?x4xf32>
 
   // Test: folding static alloc and memref_cast into a view.
-  // CHECK: std.view %[[ALLOC_MEM]][][] : memref<2048xi8> to memref<15x7xf32, #[[VIEW_MAP5]]>
-  %6 = memref_cast %0 : memref<2048xi8> to memref<?xi8>
-  %7 = view %6[%c15][%c7] : memref<?xi8> to memref<?x?xf32>
-  %r5 = load %7[%c0, %c0] : memref<?x?xf32>
-  return %r0, %r1, %r2, %r3, %r4, %r5 : f32, f32, f32, f32, f32, f32
+  // CHECK: std.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
+  %4 = memref_cast %0 : memref<2048xi8> to memref<?xi8>
+  %5 = view %4[%c15][%c15, %c7] : memref<?xi8> to memref<?x?xf32>
+  %r3 = load %5[%c0, %c0] : memref<?x?xf32>
+  return %r0, %r1, %r2, %r3 : f32, f32, f32, f32
 }
 
 // -----

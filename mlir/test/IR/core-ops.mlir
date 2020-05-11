@@ -8,10 +8,6 @@
 
 // CHECK: #map1 = affine_map<()[s0] -> (s0 + 1)>
 
-// CHECK-DAG: #[[VIEW_MAP1:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
-// CHECK-DAG: #[[VIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
-// CHECK-DAG: #[[VIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
-
 // CHECK-DAG: #[[BASE_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>
 // CHECK-DAG: #[[BASE_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
 // CHECK-DAG: #[[SUBVIEW_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>
@@ -692,29 +688,17 @@ func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64
 func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
   // Test two dynamic sizes and dynamic offset.
-  // CHECK: %{{.*}} = std.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32, #[[VIEW_MAP2]]>
-  %1 = view %0[%arg2][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>>
-
-  // Test two dynamic sizes and static offset.
-  // CHECK: %{{.*}} = std.view %0[][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32, #[[VIEW_MAP3]]>
-  %2 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>
+  // CHECK: %{{.*}} = std.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
+  %1 = view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
 
   // Test one dynamic size and dynamic offset.
-  // CHECK: %{{.*}} = std.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32, #[[VIEW_MAP2]]>
-  %3 = view %0[%arg2][%arg1]
-    : memref<2048xi8> to memref<4x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>>
-
-  // Test one dynamic size and static offset.
-  // CHECK: %{{.*}} = std.view %0[][%arg0] : memref<2048xi8> to memref<?x4xf32, #[[VIEW_MAP1]]>
-  %4 = view %0[][%arg0]
-    : memref<2048xi8> to memref<?x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>
+  // CHECK: %{{.*}} = std.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  %3 = view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
 
   // Test static sizes and static offset.
-  // CHECK: %{{.*}} = std.view %0[][] : memref<2048xi8> to memref<64x4xf32, #[[VIEW_MAP1]]>
-  %5 = view %0[][]
-    : memref<2048xi8> to memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>
+  // CHECK: %{{.*}} = std.view %0[{{.*}}][] : memref<2048xi8> to memref<64x4xf32>
+  %c0 = constant 0: index
+  %5 = view %0[%c0][] : memref<2048xi8> to memref<64x4xf32>
   return
 }
 
