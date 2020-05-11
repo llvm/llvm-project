@@ -36,6 +36,7 @@ Options
 The following options are describe below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`
+ - :option:`AggressiveDependentMemberLookup`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`
@@ -125,6 +126,64 @@ After:
     class pre_abstract_class_post {
     public:
       pre_abstract_class_post();
+    };
+
+.. option:: AggressiveDependentMemberLookup
+
+    When set to `1` the check will look in dependent base classes for dependent
+    member references that need changing. This can lead to errors with template
+    specializations so the default value is `0`.
+
+For example using values of:
+
+   - ClassMemberCase of ``lower_case``
+
+Before:
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Base {
+      T BadNamedMember;
+    };
+
+    template <typename T>
+    struct Derived : Base<T> {
+      void reset() {
+        this->BadNamedMember = 0;
+      }
+    };
+
+After if AggressiveDependentMemberLookup is ``0``:
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Base {
+      T bad_named_member;
+    };
+
+    template <typename T>
+    struct Derived : Base<T> {
+      void reset() {
+        this->BadNamedMember = 0;
+      }
+    };
+
+After if AggressiveDependentMemberLookup is ``1``:
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Base {
+      T bad_named_member;
+    };
+
+    template <typename T>
+    struct Derived : Base<T> {
+      void reset() {
+        this->bad_named_member = 0;
+      }
     };
 
 .. option:: ClassCase
