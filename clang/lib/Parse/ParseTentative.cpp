@@ -450,7 +450,7 @@ bool Parser::isEnumBase(bool AllowSemi) {
 
     // If we get to the end of the enum-base, we hit either a '{' or a ';'.
     // Don't bother checking the enumerator-list.
-    if (Tok.is(tok::colon) || (AllowSemi && Tok.is(tok::semi)))
+    if (Tok.is(tok::l_brace) || (AllowSemi && Tok.is(tok::semi)))
       return true;
 
     // A second decl-specifier unambiguously indicatges an enum-base.
