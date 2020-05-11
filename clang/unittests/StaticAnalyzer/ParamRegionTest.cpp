@@ -16,6 +16,15 @@ namespace ento {
 namespace {
 
 class ParamRegionTestConsumer : public ExprEngineConsumer {
+  void checkForSameParamRegions(MemRegionManager &MRMgr,
+                                const StackFrameContext *SFC,
+                                const ParmVarDecl *PVD) {
+    for (const auto *D2: PVD->redecls()) {
+      const auto *PVD2 = cast<ParmVarDecl>(D2);
+      assert(MRMgr.getVarRegion(PVD, SFC) == MRMgr.getVarRegion(PVD2, SFC));
+    }
+  }
+
   void performTest(const Decl *D) {
     StoreManager &StMgr = Eng.getStoreManager();
     MemRegionManager &MRMgr = StMgr.getRegionManager();
@@ -29,6 +38,7 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
           assert(isa<NonParamVarRegion>(Reg));
         else
           assert(isa<ParamVarRegion>(Reg));
+        checkForSameParamRegions(MRMgr, SFC, P);
       }
     } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
       for (const auto *P : CD->parameters()) {
@@ -37,6 +47,7 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
           assert(isa<NonParamVarRegion>(Reg));
         else
           assert(isa<ParamVarRegion>(Reg));
+        checkForSameParamRegions(MRMgr, SFC, P);
       }
     } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
       for (const auto *P : MD->parameters()) {
@@ -45,6 +56,7 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
           assert(isa<NonParamVarRegion>(Reg));
         else
           assert(isa<ParamVarRegion>(Reg));
+        checkForSameParamRegions(MRMgr, SFC, P);
       }
     }
   }
@@ -71,7 +83,10 @@ public:
 TEST(ParamRegion, ParamRegionTest) {
   EXPECT_TRUE(
       tooling::runToolOnCode(std::make_unique<ParamRegionTestAction>(),
-                             R"(void foo(int n) {
+                             R"(void foo(int n);
+                                void baz(int p);
+
+                                void foo(int n) {
                                   auto lambda = [n](int m) {
                                     return n + m;
                                   };
@@ -90,7 +105,10 @@ TEST(ParamRegion, ParamRegionTest) {
 
                                 void baz(int p) {
                                   S s(p);
-                                })"));
+                                }
+
+                                void bar(int l);
+                                void baz(int p);)"));
   EXPECT_TRUE(
       tooling::runToolOnCode(std::make_unique<ParamRegionTestAction>(),
                              R"(@interface O

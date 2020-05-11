@@ -172,22 +172,8 @@ AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
   if (!D)
     return nullptr;
 
-  // TODO: For now we skip functions without definitions, even if we have
-  // our own getDecl(), because it's hard to find out which re-declaration
-  // is going to be used, and usually clients don't really care about this
-  // situation because there's a loss of precision anyway because we cannot
-  // inline the call.
-  RuntimeDefinition RD = getRuntimeDefinition();
-  if (!RD.getDecl())
-    return nullptr;
-
   AnalysisDeclContext *ADC =
       LCtx->getAnalysisDeclContext()->getManager()->getContext(D);
-
-  // TODO: For now we skip virtual functions, because this also rises
-  // the problem of which decl to use, but now it's across different classes.
-  if (RD.mayHaveOtherDefinitions() || RD.getDecl() != ADC->getDecl())
-    return nullptr;
 
   return ADC;
 }
