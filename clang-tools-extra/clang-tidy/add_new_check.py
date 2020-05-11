@@ -391,6 +391,30 @@ def write_docs(module_path, module, check_name):
 %(underline)s
 
 FIXME: Describe what patterns does the check detect and why. Give examples.
+
+FIXME: Remove of the following section:
+
+Automatic Fixes
+^^^^^^^^^^^^^^^
+
+The check doesn't provide an automatic fix.
+
+or
+
+Automatic Fixes
+^^^^^^^^^^^^^^^
+
+The check provides suggested fixes. See the documentation above for the details.
+
+or
+
+Automatic Fixes
+^^^^^^^^^^^^^^^
+
+The check provides suggested fixes in the following cases:
+1.
+2.
+3.
 """ % {'check_name_dashes': check_name_dashes,
        'underline': '=' * len(check_name_dashes)})
 
