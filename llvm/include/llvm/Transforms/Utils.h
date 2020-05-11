@@ -147,6 +147,13 @@ FunctionPass *createUnifyLoopExitsPass();
 // into a natural loop.
 //
 FunctionPass *createFixIrreduciblePass();
-}
+
+//===----------------------------------------------------------------------===//
+//
+// AssumeSimplify - remove redundant assumes and merge assumes in the same
+// BasicBlock when possible.
+//
+FunctionPass *createAssumeSimplifyPass();
+} // namespace llvm
 
 #endif

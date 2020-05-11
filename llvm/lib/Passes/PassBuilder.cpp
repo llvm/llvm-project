@@ -259,6 +259,7 @@ extern cl::opt<bool> EnableOrderFileInstrumentation;
 extern cl::opt<bool> FlattenedProfileUsed;
 
 extern cl::opt<AttributorRunOption> AttributorRun;
+extern cl::opt<bool> EnableKnowledgeRetention;
 
 const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::O0 = {
     /*SpeedLevel*/ 0,
@@ -425,6 +426,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
+  if (EnableKnowledgeRetention)
+    FPM.addPass(AssumeSimplifyPass());
 
   // Hoisting of scalars and load expressions.
   if (Level.getSpeedupLevel() > 1) {
