@@ -5017,11 +5017,13 @@ void ASTContext::adjustObjCTypeParamBoundType(const ObjCTypeParamDecl *Orig,
                                               ObjCTypeParamDecl *New) const {
   New->setTypeSourceInfo(getTrivialTypeSourceInfo(Orig->getUnderlyingType()));
   // Update TypeForDecl after updating TypeSourceInfo.
-  auto NewTypeParamTy = cast<ObjCTypeParamType>(New->getTypeForDecl());
-  SmallVector<ObjCProtocolDecl *, 8> protocols;
-  protocols.append(NewTypeParamTy->qual_begin(), NewTypeParamTy->qual_end());
-  QualType UpdatedTy = getObjCTypeParamType(New, protocols);
-  New->setTypeForDecl(UpdatedTy.getTypePtr());
+  if (const Type *TypeForDecl = New->getTypeForDecl()) {
+    auto NewTypeParamTy = cast<ObjCTypeParamType>(TypeForDecl);
+    SmallVector<ObjCProtocolDecl *, 8> protocols;
+    protocols.append(NewTypeParamTy->qual_begin(), NewTypeParamTy->qual_end());
+    QualType UpdatedTy = getObjCTypeParamType(New, protocols);
+    New->setTypeForDecl(UpdatedTy.getTypePtr());
+  }
 }
 
 /// ObjCObjectAdoptsQTypeProtocols - Checks that protocols in IC's
