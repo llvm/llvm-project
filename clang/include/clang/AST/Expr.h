@@ -6097,21 +6097,25 @@ public:
 /// subexpressions of some expression that we could not construct and source
 /// range covered by the expression.
 ///
-/// For now, RecoveryExpr is type-, value- and instantiation-dependent to take
-/// advantage of existing machinery to deal with dependent code in C++, e.g.
-/// RecoveryExpr is preserved in `decltype(<broken-expr>)` as part of the
+/// By default, RecoveryExpr is type-, value- and instantiation-dependent to
+/// take advantage of existing machinery to deal with dependent code in C++,
+/// e.g. RecoveryExpr is preserved in `decltype(<broken-expr>)` as part of the
 /// `DependentDecltypeType`. In addition to that, clang does not report most
 /// errors on dependent expressions, so we get rid of bogus errors for free.
 /// However, note that unlike other dependent expressions, RecoveryExpr can be
 /// produced in non-template contexts.
+/// In addition, we will preserve the type in RecoveryExpr when the type is
+/// known, e.g. preserving the return type for a broken non-overloaded function
+/// call, a overloaded call where all candidates have the same return type.
 ///
 /// One can also reliably suppress all bogus errors on expressions containing
 /// recovery expressions by examining results of Expr::containsErrors().
 class RecoveryExpr final : public Expr,
                            private llvm::TrailingObjects<RecoveryExpr, Expr *> {
 public:
-  static RecoveryExpr *Create(ASTContext &Ctx, SourceLocation BeginLoc,
-                              SourceLocation EndLoc, ArrayRef<Expr *> SubExprs);
+  static RecoveryExpr *Create(ASTContext &Ctx, QualType T,
+                              SourceLocation BeginLoc, SourceLocation EndLoc,
+                              ArrayRef<Expr *> SubExprs);
   static RecoveryExpr *CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs);
 
   ArrayRef<Expr *> subExpressions() {
@@ -6136,8 +6140,8 @@ public:
   }
 
 private:
-  RecoveryExpr(ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc,
-               ArrayRef<Expr *> SubExprs);
+  RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
+               SourceLocation EndLoc, ArrayRef<Expr *> SubExprs);
   RecoveryExpr(EmptyShell Empty, unsigned NumSubExprs)
       : Expr(RecoveryExprClass, Empty), NumExprs(NumSubExprs) {}
 
