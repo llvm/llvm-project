@@ -2791,8 +2791,9 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
     return;
   Instruction *FirstCheckInst;
   Instruction *MemRuntimeCheck;
-  std::tie(FirstCheckInst, MemRuntimeCheck) = LAI->addRuntimeChecks(
-      MemCheckBlock->getTerminator(), RtPtrChecking.getChecks());
+  std::tie(FirstCheckInst, MemRuntimeCheck) =
+      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
+                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
   if (!MemRuntimeCheck)
     return;
 
