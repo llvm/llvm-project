@@ -1,7 +1,7 @@
         -:    0:Source:./test.h
         -:    0:Graph:objdir/test.gcno
         -:    0:Data:objdir/test.gcda
-        -:    0:Runs:2
+        -:    0:Runs:0
         -:    0:Programs:1
         4:    1:struct A {
         -:    2:  virtual void B();

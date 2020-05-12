@@ -66,6 +66,14 @@ typedef unsigned long long uint64_t;
 
 /* #define DEBUG_GCDAPROFILING */
 
+enum {
+  GCOV_TAG_FUNCTION = 0x01000000,
+  GCOV_TAG_COUNTER_ARCS = 0x01a10000,
+  // GCOV_TAG_OBJECT_SUMMARY superseded GCOV_TAG_PROGRAM_SUMMARY in GCC 9.
+  GCOV_TAG_OBJECT_SUMMARY = 0xa1000000,
+  GCOV_TAG_PROGRAM_SUMMARY = 0xa3000000,
+};
+
 /*
  * --- GCOV file format I/O primitives ---
  */
@@ -538,8 +546,6 @@ void llvm_gcda_emit_arcs(uint32_t num_counters, uint64_t *counters) {
 
 COMPILER_RT_VISIBILITY
 void llvm_gcda_summary_info() {
-  const uint32_t obj_summary_len = 9; /* Length for gcov compatibility. */
-  uint32_t i;
   uint32_t runs = 1;
   static uint32_t run_counted = 0; // We only want to increase the run count once.
   uint32_t val = 0;
@@ -551,42 +557,43 @@ void llvm_gcda_summary_info() {
 
   if (val != (uint32_t)-1) {
     /* There are counters present in the file. Merge them. */
-    if (val != 0xa1000000) {
-      fprintf(stderr, "profiling: %s: cannot merge previous run count: "
-                      "corrupt object tag (0x%08x)\n",
+    if (val != (gcov_version >= 90 ? GCOV_TAG_OBJECT_SUMMARY
+                                   : GCOV_TAG_PROGRAM_SUMMARY)) {
+      fprintf(stderr,
+              "profiling: %s: cannot merge previous run count: "
+              "corrupt object tag (0x%08x)\n",
               filename, val);
       return;
     }
 
     val = read_32bit_value(); /* length */
-    if (val != obj_summary_len) {
-      fprintf(stderr, "profiling: %s: cannot merge previous run count: "
-                      "mismatched object length (%d)\n",
-              filename, val);
-      return;
-    }
-
-    read_32bit_value(); /* checksum, unused */
-    read_32bit_value(); /* num, unused */
+    read_32bit_value();
+    if (gcov_version < 90)
+      read_32bit_value();
     uint32_t prev_runs = read_32bit_value();
+    for (uint32_t i = gcov_version < 90 ? 3 : 2; i < val; ++i)
+      read_32bit_value();
     /* Add previous run count to new counter, if not already counted before. */
     runs = run_counted ? prev_runs : prev_runs + 1;
   }
 
   cur_pos = save_cur_pos;
 
-  /* Object summary tag */
-  write_bytes("\0\0\0\xa1", 4);
-  write_32bit_value(obj_summary_len);
-  write_32bit_value(0); /* checksum, unused */
-  write_32bit_value(0); /* num, unused */
-  write_32bit_value(runs);
-  for (i = 3; i < obj_summary_len; ++i)
+  if (gcov_version >= 90) {
+    write_32bit_value(GCOV_TAG_OBJECT_SUMMARY);
+    write_32bit_value(2);
+    write_32bit_value(runs);
+    write_32bit_value(0); // sum_max
+  } else {
+    // Before gcov 4.8 (r190952), GCOV_TAG_SUMMARY_LENGTH was 9. r190952 set
+    // GCOV_TAG_SUMMARY_LENGTH to 22. We simply use the smallest length which
+    // can make gcov read "Runs:".
+    write_32bit_value(GCOV_TAG_PROGRAM_SUMMARY);
+    write_32bit_value(3);
     write_32bit_value(0);
-
-  /* Program summary tag */
-  write_bytes("\0\0\0\xa3", 4); /* tag indicates 1 program */
-  write_32bit_value(0); /* 0 length */
+    write_32bit_value(0);
+    write_32bit_value(runs);
+  }
 
   run_counted = 1;
 

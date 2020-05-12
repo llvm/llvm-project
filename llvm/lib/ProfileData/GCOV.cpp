@@ -97,10 +97,12 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
       return false;
     uint32_t cursor = buf.getCursor();
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
+      buf.readInt(RunCount);
+      buf.readInt(dummy);
+    } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
       buf.readInt(dummy);
       buf.readInt(dummy);
       buf.readInt(RunCount);
-    } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
       ++ProgramCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
       if (length == 0) // Placeholder

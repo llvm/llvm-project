@@ -1,7 +1,7 @@
         -:    0:Source:./test.h
         -:    0:Graph:test.gcno
         -:    0:Data:test.gcda
-        -:    0:Runs:2
+        -:    0:Runs:0
         -:    0:Programs:1
         4:    1:struct A {
         2:    1-block  0
