@@ -138,6 +138,10 @@ enum NodeType : unsigned {
   SRSHR_I,
   URSHR_I,
 
+  // Vector shift by constant and insert
+  VSLI,
+  VSRI,
+
   // Vector comparisons
   CMEQ,
   CMGE,
@@ -213,8 +217,10 @@ enum NodeType : unsigned {
   UMULL,
 
   // Reciprocal estimates and steps.
-  FRECPE, FRECPS,
-  FRSQRTE, FRSQRTS,
+  FRECPE,
+  FRECPS,
+  FRSQRTE,
+  FRSQRTS,
 
   SUNPKHI,
   SUNPKLO,
