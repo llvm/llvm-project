@@ -652,9 +652,9 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     return;
 
   auto *MBB = CallMI->getParent();
-  const auto &TRI = MF->getSubtarget().getRegisterInfo();
-  const auto &TII = MF->getSubtarget().getInstrInfo();
-  const auto &TLI = MF->getSubtarget().getTargetLowering();
+  const auto &TRI = *MF->getSubtarget().getRegisterInfo();
+  const auto &TII = *MF->getSubtarget().getInstrInfo();
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
 
   // Skip the call instruction.
   auto I = std::next(CallMI->getReverseIterator());
@@ -715,7 +715,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       if (MO.isReg() && MO.isDef() &&
           Register::isPhysicalRegister(MO.getReg())) {
         for (auto FwdReg : ForwardedRegWorklist)
-          if (TRI->regsOverlap(FwdReg.first, MO.getReg()))
+          if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
       }
     }
@@ -743,17 +743,17 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       continue;
 
     for (auto ParamFwdReg : FwdRegDefs) {
-      if (auto ParamValue = TII->describeLoadedValue(*I, ParamFwdReg)) {
+      if (auto ParamValue = TII.describeLoadedValue(*I, ParamFwdReg)) {
         if (ParamValue->first.isImm()) {
           int64_t Val = ParamValue->first.getImm();
           finishCallSiteParams(Val, ParamValue->second,
                                ForwardedRegWorklist[ParamFwdReg], Params);
         } else if (ParamValue->first.isReg()) {
           Register RegLoc = ParamValue->first.getReg();
-          unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-          Register FP = TRI->getFrameRegister(*MF);
+          unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+          Register FP = TRI.getFrameRegister(*MF);
           bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
-          if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
+          if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
             MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
             finishCallSiteParams(MLoc, ParamValue->second,
                                  ForwardedRegWorklist[ParamFwdReg], Params);
