@@ -1138,9 +1138,11 @@ bool SwiftASTManipulator::AddExternalVariables(
           variable.m_type.GetTypeSystem());
 
       CompilerType referent_type;
-
       if (swift_ast_ctx)
-        referent_type = swift_ast_ctx->GetReferentType(variable.m_type);
+        referent_type =
+            swift_ast_ctx->GetReferentType(variable.m_type.GetOpaqueQualType());
+      if (!referent_type)
+        continue;
 
       // One tricky bit here is that this var may be an argument to the function
       // whose context we are

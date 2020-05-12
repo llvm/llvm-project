@@ -746,10 +746,8 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
 }
 
 CompilerType
-TypeSystemSwiftTypeRef::GetReferentType(CompilerType compiler_type) {
-  return m_swift_ast_context->GetReferentType(
-      {m_swift_ast_context,
-       ReconstructType(compiler_type.GetOpaqueQualType())});
+TypeSystemSwiftTypeRef::GetReferentType(void *type) {
+  return m_swift_ast_context->GetReferentType(ReconstructType(type));
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetInstanceType(void *type) {

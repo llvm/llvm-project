@@ -137,7 +137,7 @@ public:
   virtual bool IsImportedType(lldb::opaque_compiler_type_t type,
                               CompilerType *original_type) = 0;
   virtual CompilerType GetErrorType() = 0;
-  virtual CompilerType GetReferentType(CompilerType compiler_type) = 0;
+  virtual CompilerType GetReferentType(lldb::opaque_compiler_type_t type) = 0;
   static CompilerType GetInstanceType(CompilerType ct);
   virtual CompilerType GetInstanceType(void *type) = 0;
   enum class TypeAllocationStrategy { eInline, ePointer, eDynamic, eUnknown };
@@ -411,7 +411,7 @@ public:
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
   CompilerType GetErrorType() override;
-  CompilerType GetReferentType(CompilerType compiler_type) override;
+  CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(void *type) override;
   TypeAllocationStrategy GetAllocationStrategy(CompilerType type) override;
   CompilerType
@@ -1078,7 +1078,7 @@ public:
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
 
-  CompilerType GetReferentType(CompilerType compiler_type) override;
+  CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
 
   lldb::TypeSP GetCachedType(ConstString mangled) override;
 
