@@ -1613,10 +1613,17 @@ private:
                           : eval.block);
     }
     eval.visit([&](const auto &stmt) { genFIR(eval, stmt); });
-    if (unstructuredContext && eval.isActionStmt() && eval.controlSuccessor &&
-        eval.controlSuccessor->block && blockIsUnterminated()) {
+    if (unstructuredContext && blockIsUnterminated()) {
       // Exit from an unstructured IF or SELECT construct block.
-      genBranch(eval.controlSuccessor->block);
+      Fortran::lower::pft::Evaluation *successor{};
+      if (eval.isActionStmt())
+        successor = eval.controlSuccessor;
+      else if (eval.isConstruct() &&
+               eval.evaluationList->back()
+                   .lexicalSuccessor->isIntermediateConstructStmt())
+        successor = eval.constructExit;
+      if (successor && successor->block)
+        genBranch(successor->block);
     }
   }
 
