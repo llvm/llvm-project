@@ -2239,6 +2239,38 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   EXPECT_TRUE(FS->exists(_h.Path));
 }
 
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedFile _ab(TestDirectory + "/a/b", "");
+  ScopedDir _ac(TestDirectory + "/a/c");
+  ScopedFile _acd(TestDirectory + "/a/c/d", "");
+  ScopedFile _ace(TestDirectory + "/a/c/e", "");
+  ScopedFile _acf(TestDirectory + "/a/c/f", "");
+  ScopedDir _ag(TestDirectory + "/a/g");
+  ScopedFile _agh(TestDirectory + "/a/g/h", "");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
+  VFSWriter.addDirectoryMapping(_ac.Path, "//root/a/c");
+  VFSWriter.addFileMapping(_acd.Path, "//root/a/c/d");
+  VFSWriter.addFileMapping(_ace.Path, "//root/a/c/e");
+  VFSWriter.addFileMapping(_acf.Path, "//root/a/c/f");
+  VFSWriter.addDirectoryMapping(_ag.Path, "//root/a/g");
+  VFSWriter.addFileMapping(_agh.Path, "//root/a/g/h");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  // FIXME: Missing comma separator between file entries.
+  EXPECT_FALSE(FS.get() != nullptr);
+}
+
 TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
   ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   ScopedDir _a(TestDirectory + "/a");
