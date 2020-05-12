@@ -18945,11 +18945,6 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
       ObjCAvailabilityCheckExpr(Version, AtLoc, RParen, Context.BoolTy);
 }
 
-bool Sema::IsDependentFunctionNameExpr(Expr *E) {
-  assert(E->isTypeDependent());
-  return isa<UnresolvedLookupExpr>(E);
-}
-
 ExprResult Sema::CreateRecoveryExpr(SourceLocation Begin, SourceLocation End,
                                     ArrayRef<Expr *> SubExprs, QualType T) {
   // FIXME: enable it for C++, RecoveryExpr is type-dependent to suppress
