@@ -3784,7 +3784,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
     PICBase = X86::RIP;
 
   // Create the load from the constant pool.
-  unsigned CPI = MCP.getConstantPoolIndex(CFP, Alignment.value());
+  unsigned CPI = MCP.getConstantPoolIndex(CFP, Alignment);
   unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT.SimpleTy));
 
   if (CM == CodeModel::Large) {

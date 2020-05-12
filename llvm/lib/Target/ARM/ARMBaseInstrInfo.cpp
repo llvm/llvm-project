@@ -1737,7 +1737,7 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
              cast<ARMConstantPoolMBB>(ACPV)->getMBB(), PCLabelId, 4);
   else
     llvm_unreachable("Unexpected ARM constantpool value type!!");
-  CPI = MCP->getConstantPoolIndex(NewCPV, MCPE.getAlignment());
+  CPI = MCP->getConstantPoolIndex(NewCPV, MCPE.getAlign());
   return PCLabelId;
 }
 

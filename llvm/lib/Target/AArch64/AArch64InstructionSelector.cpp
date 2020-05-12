@@ -3522,12 +3522,10 @@ unsigned
 AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
                                                   MachineFunction &MF) const {
   Type *CPTy = CPVal->getType();
-  unsigned Align = MF.getDataLayout().getPrefTypeAlignment(CPTy);
-  if (Align == 0)
-    Align = MF.getDataLayout().getTypeAllocSize(CPTy);
+  Align Alignment = MF.getDataLayout().getPrefTypeAlign(CPTy);
 
   MachineConstantPool *MCP = MF.getConstantPool();
-  return MCP->getConstantPoolIndex(CPVal, Align);
+  return MCP->getConstantPoolIndex(CPVal, Alignment);
 }
 
 MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(

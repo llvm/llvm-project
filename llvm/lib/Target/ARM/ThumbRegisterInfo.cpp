@@ -70,7 +70,7 @@ static void emitThumb1LoadConstPool(MachineBasicBlock &MBB,
   MachineConstantPool *ConstantPool = MF.getConstantPool();
   const Constant *C = ConstantInt::get(
           Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Val);
-  unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
+  unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::tLDRpci))
     .addReg(DestReg, getDefRegState(true), SubIdx)
@@ -89,7 +89,7 @@ static void emitThumb2LoadConstPool(MachineBasicBlock &MBB,
   MachineConstantPool *ConstantPool = MF.getConstantPool();
   const Constant *C = ConstantInt::get(
            Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Val);
-  unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
+  unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::t2LDRpci))
       .addReg(DestReg, getDefRegState(true), SubIdx)
