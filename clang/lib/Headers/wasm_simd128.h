@@ -937,6 +937,16 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_max(v128_t __a,
   return (v128_t)__builtin_wasm_max_f32x4((__f32x4)__a, (__f32x4)__b);
 }
 
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_pmin(v128_t __a,
+                                                            v128_t __b) {
+  return (v128_t)__builtin_wasm_pmin_f32x4((__f32x4)__a, (__f32x4)__b);
+}
+
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_pmax(v128_t __a,
+                                                            v128_t __b) {
+  return (v128_t)__builtin_wasm_pmax_f32x4((__f32x4)__a, (__f32x4)__b);
+}
+
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_abs(v128_t __a) {
   return (v128_t)__builtin_wasm_abs_f64x2((__f64x2)__a);
 }
@@ -995,6 +1005,16 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_min(v128_t __a,
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_max(v128_t __a,
                                                            v128_t __b) {
   return (v128_t)__builtin_wasm_max_f64x2((__f64x2)__a, (__f64x2)__b);
+}
+
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_pmin(v128_t __a,
+                                                            v128_t __b) {
+  return (v128_t)__builtin_wasm_pmin_f64x2((__f64x2)__a, (__f64x2)__b);
+}
+
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_pmax(v128_t __a,
+                                                            v128_t __b) {
+  return (v128_t)__builtin_wasm_pmax_f64x2((__f64x2)__a, (__f64x2)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
