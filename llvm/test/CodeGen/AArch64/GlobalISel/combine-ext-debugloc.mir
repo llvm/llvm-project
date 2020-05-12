@@ -1,6 +1,6 @@
 # RUN: llc -O0 -verify-machineinstrs -mtriple aarch64-- -run-pass=legalizer %s -o - | FileCheck %s
 
-# Check that when we combine SEXT/ZEXT/ANYEXT we assign the correct location.
+# Check that when we combine ZEXT/ANYEXT we assign the correct location.
 # CHECK: !8 = !DILocation(line: 23, column: 5, scope: !4)
 # CHECK:  G_AND %16, %15, debug-location !8
 
