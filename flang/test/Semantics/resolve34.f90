@@ -27,9 +27,13 @@ module m3
     !ERROR: 't1' is a parent type of this type and so cannot be a component
     real :: t1
   end type
-  type, extends(t2) :: t3
-    !ERROR: 't1' is a parent type of this type and so cannot be a component
-    real :: t1
+  type :: t3
+  end type
+  type, extends(t3) :: t4
+  end type
+  type, extends(t4) :: t5
+    !ERROR: 't3' is a parent type of this type and so cannot be a component
+    real :: t3
   end type
 end
 
