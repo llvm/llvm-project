@@ -1997,8 +1997,7 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   // All FP constants are loaded from the constant pool.
   Align Alignment = DL.getPrefTypeAlign(CFP->getType());
-  unsigned Idx =
-      MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment.value());
+  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
   const bool HasSPE = PPCSubTarget->hasSPE();
   const TargetRegisterClass *RC;
   if (HasSPE)

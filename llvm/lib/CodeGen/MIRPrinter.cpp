@@ -517,7 +517,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
     YamlConstant.Value = StrOS.str();
-    YamlConstant.Alignment = MaybeAlign(Constant.getAlignment());
+    YamlConstant.Alignment = Constant.getAlign();
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
     MF.Constants.push_back(YamlConstant);

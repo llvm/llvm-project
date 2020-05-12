@@ -443,12 +443,8 @@ unsigned ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
   if (!Subtarget->hasVFP2Base()) return false;
 
   // MachineConstantPool wants an explicit alignment.
-  unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
-  if (Align == 0) {
-    // TODO: Figure out if this is correct.
-    Align = DL.getTypeAllocSize(CFP->getType());
-  }
-  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Align);
+  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
+  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
   unsigned DestReg = createResultReg(TLI.getRegClassFor(VT));
   unsigned Opc = is64bit ? ARM::VLDRD : ARM::VLDRS;
 
@@ -507,12 +503,8 @@ unsigned ARMFastISel::ARMMaterializeInt(const Constant *C, MVT VT) {
     return 0;
 
   // MachineConstantPool wants an explicit alignment.
-  unsigned Align = DL.getPrefTypeAlignment(C->getType());
-  if (Align == 0) {
-    // TODO: Figure out if this is correct.
-    Align = DL.getTypeAllocSize(C->getType());
-  }
-  unsigned Idx = MCP.getConstantPoolIndex(C, Align);
+  Align Alignment = DL.getPrefTypeAlign(C->getType());
+  unsigned Idx = MCP.getConstantPoolIndex(C, Alignment);
   ResultReg = createResultReg(TLI.getRegClassFor(VT));
   if (isThumb2)
     AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
@@ -580,7 +572,7 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
     ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(GV, Id,
                                                                 ARMCP::CPValue,
                                                                 PCAdj);
-    unsigned Idx = MCP.getConstantPoolIndex(CPV, Alignment.value());
+    unsigned Idx = MCP.getConstantPoolIndex(CPV, Alignment);
 
     // Load value.
     MachineInstrBuilder MIB;
@@ -2953,8 +2945,8 @@ unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV, MVT VT) {
       UseGOT_PREL ? ARMCP::GOT_PREL : ARMCP::no_modifier,
       /*AddCurrentAddress=*/UseGOT_PREL);
 
-  unsigned ConstAlign =
-      MF->getDataLayout().getPrefTypeAlignment(Type::getInt32PtrTy(*Context));
+  Align ConstAlign =
+      MF->getDataLayout().getPrefTypeAlign(Type::getInt32PtrTy(*Context));
   unsigned Idx = MF->getConstantPool()->getConstantPoolIndex(CPV, ConstAlign);
   MachineMemOperand *CPMMO =
       MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),
