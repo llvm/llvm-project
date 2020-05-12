@@ -67,6 +67,8 @@ typedef unsigned long long uint64_t;
 /* #define DEBUG_GCDAPROFILING */
 
 enum {
+  GCOV_DATA_MAGIC = 0x67636461, // "gcda"
+
   GCOV_TAG_FUNCTION = 0x01000000,
   GCOV_TAG_COUNTER_ARCS = 0x01a10000,
   // GCOV_TAG_OBJECT_SUMMARY superseded GCOV_TAG_PROGRAM_SUMMARY in GCC 9.
@@ -423,7 +425,7 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
                      : (version[0] - '0') * 10 + version[2] - '0';
 #endif
 
-  write_bytes("adcg", 4);
+  write_32bit_value(GCOV_DATA_MAGIC);
   write_bytes(version, 4);
   write_32bit_value(checksum);
 
@@ -472,7 +474,7 @@ void llvm_gcda_emit_function(uint32_t ident, uint32_t func_checksum,
   if (!output_file) return;
 
   /* function tag */
-  write_bytes("\0\0\0\1", 4);
+  write_32bit_value(GCOV_TAG_FUNCTION);
   write_32bit_value(len);
   write_32bit_value(ident);
   write_32bit_value(func_checksum);
@@ -493,7 +495,7 @@ void llvm_gcda_emit_arcs(uint32_t num_counters, uint64_t *counters) {
 
   if (val != (uint32_t)-1) {
     /* There are counters present in the file. Merge them. */
-    if (val != 0x01a10000) {
+    if (val != GCOV_TAG_COUNTER_ARCS) {
       fprintf(stderr, "profiling: %s: cannot merge previous GCDA file: "
                       "corrupt arc tag (0x%08x)\n",
               filename, val);
@@ -516,7 +518,7 @@ void llvm_gcda_emit_arcs(uint32_t num_counters, uint64_t *counters) {
   cur_pos = save_cur_pos;
 
   /* Counter #1 (arcs) tag */
-  write_bytes("\0\0\xa1\1", 4);
+  write_32bit_value(GCOV_TAG_COUNTER_ARCS);
   write_32bit_value(num_counters * 2);
   for (i = 0; i < num_counters; ++i) {
     counters[i] += (old_ctrs ? old_ctrs[i] : 0);
