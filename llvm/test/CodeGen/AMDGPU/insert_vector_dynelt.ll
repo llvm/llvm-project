@@ -268,30 +268,35 @@ entry:
   ret void
 }
 
+; TODO: We should be able not to write to m0 twice and just increment base.
+
 ; GCN-LABEL: {{^}}double8_inselt:
 ; GCN-NOT: v_cndmask
-; GCN: buffer_store_dword
-; GCN: buffer_store_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
-; GCN: buffer_load_dword
+; GCN-NOT: buffer_
+; GCN-DAG: s_or_b32 [[IND1:s[0-9]+]], [[IND0:s[0-9]+]], 1
+; GCN-DAG: s_mov_b32 m0, [[IND0]]
+; GCN-DAG: v_movreld_b32_e32 [[BASE:v[0-9]+]],
+; GCN:     s_mov_b32 m0, [[IND1]]
+; GCN:     v_movreld_b32_e32 [[BASE]]
 define amdgpu_kernel void @double8_inselt(<8 x double> addrspace(1)* %out, <8 x double> %vec, i32 %sel) {
 entry:
   %v = insertelement <8 x double> %vec, double 1.000000e+00, i32 %sel
   store <8 x double> %v, <8 x double> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double7_inselt:
+; GCN-NOT: v_cndmask
+; GCN-NOT: buffer_
+; GCN-DAG: s_or_b32 [[IND1:s[0-9]+]], [[IND0:s[0-9]+]], 1
+; GCN-DAG: s_mov_b32 m0, [[IND0]]
+; GCN-DAG: v_movreld_b32_e32 [[BASE:v[0-9]+]],
+; GCN:     s_mov_b32 m0, [[IND1]]
+; GCN:     v_movreld_b32_e32 [[BASE]]
+define amdgpu_kernel void @double7_inselt(<7 x double> addrspace(1)* %out, <7 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <7 x double> %vec, double 1.000000e+00, i32 %sel
+  store <7 x double> %v, <7 x double> addrspace(1)* %out
   ret void
 }
 
