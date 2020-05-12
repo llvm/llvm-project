@@ -1,24 +1,24 @@
 ; Inject metadata to set the .gcno file location
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: echo '!19 = !{!"%/t/return-block.ll", !0}' > %t/1
+; RUN: echo '!19 = !{!"%/t/exit-block.ll", !0}' > %t/1
 ; RUN: cat %s %t/1 > %t/2
 
-; By default, the return block is last.
+; By default, the exit block is the second.
 ; RUN: opt -insert-gcov-profiling -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
+; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
 
-; But we can optionally emit it second, to match newer gcc versions.
-; RUN: opt -insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
-; RUN: rm  %t/return-block.gcno
+; But we can optionally emit it last, to match GCC<4.8 (r189778).
+; RUN: opt -insert-gcov-profiling -default-gcov-version='407*' -disable-output %t/2
+; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-LAST %s
+; RUN: rm  %t/exit-block.gcno
 
-; By default, the return block is last.
+; By default, the exit block is the second.
 ; RUN: opt -passes=insert-gcov-profiling -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
+; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
 
-; But we can optionally emit it second, to match newer gcc versions.
-; RUN: opt -passes=insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
+; But we can optionally emit it last, to match GCC<4.8 (r189778).
+; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='407*' -disable-output %t/2
+; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-LAST %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -55,10 +55,10 @@ attributes #2 = { nounwind }
 !llvm.ident = !{!13}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223182)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !8, imports: !2)
-!1 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/return-block.ll", directory: "")
+!1 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/exit-block.ll", directory: "")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "test", line: 5, isLocal: false, isDefinition: true, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, retainedNodes: !2)
-!5 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/return-block.ll", directory: "")
+!5 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/exit-block.ll", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{!9}
@@ -75,10 +75,10 @@ attributes #2 = { nounwind }
 
 ; There should be no destination edges for the exit block.
 ; CHECK: Block : 1 Counter : 0
-; RETURN-LAST:       Destination Edges
-; RETURN-SECOND-NOT: Destination Edges
+; EXIT-LAST:       Destination Edges
+; EXIT-SECOND-NOT: Destination Edges
 ; CHECK: Block : 2 Counter : 0
 ; CHECK: Block : 4 Counter : 0
-; RETURN-LAST-NOT: Destination Edges
-; RETURN-SECOND:   Destination Edges
+; EXIT-LAST-NOT: Destination Edges
+; EXIT-SECOND:   Destination Edges
 ; CHECK-NOT: Block :

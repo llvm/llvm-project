@@ -2,7 +2,7 @@
 ; RUN: echo '!9 = !{!"%/t/version.ll", !0}' > %t/1
 ; RUN: cat %s %t/1 > %t/2
 ; RUN: opt -insert-gcov-profiling -disable-output < %t/2
-; RUN: head -c8 %t/version.gcno | grep '^oncg.704'
+; RUN: head -c8 %t/version.gcno | grep '^oncg.804'
 ; RUN: rm %t/version.gcno
 ; RUN: not --crash opt -insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
 ; RUN: opt -insert-gcov-profiling -default-gcov-version='402*' -disable-output < %t/2
@@ -10,7 +10,7 @@
 ; RUN: rm %t/version.gcno
 
 ; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/2
-; RUN: head -c8 %t/version.gcno | grep '^oncg.704'
+; RUN: head -c8 %t/version.gcno | grep '^oncg.804'
 ; RUN: rm %t/version.gcno
 ; RUN: not --crash opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
 ; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='402*' -disable-output < %t/2

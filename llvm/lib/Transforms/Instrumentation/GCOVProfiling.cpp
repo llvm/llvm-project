@@ -50,17 +50,14 @@ using namespace llvm;
 #define DEBUG_TYPE "insert-gcov-profiling"
 
 static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("407*"), cl::Hidden,
+                                               cl::init("408*"), cl::Hidden,
                                                cl::ValueRequired);
-static cl::opt<bool> DefaultExitBlockBeforeBody("gcov-exit-block-before-body",
-                                                cl::init(false), cl::Hidden);
 
 GCOVOptions GCOVOptions::getDefault() {
   GCOVOptions Options;
   Options.EmitNotes = true;
   Options.EmitData = true;
   Options.NoRedZone = false;
-  Options.ExitBlockBeforeBody = DefaultExitBlockBeforeBody;
 
   if (DefaultGCOVVersion.size() != 4) {
     llvm::report_fatal_error(std::string("Invalid -default-gcov-version: ") +
@@ -747,9 +744,9 @@ void GCOVProfiler::emitProfileNotes() {
       EntryBlock.splitBasicBlock(It);
 
       bool UseCfgChecksum = strncmp(Options.Version, "407", 3) >= 0;
+      bool ExitBlockBeforeBody = strncmp(Options.Version, "408", 3) >= 0;
       Funcs.push_back(std::make_unique<GCOVFunction>(
-          SP, &F, &out, FunctionIdent++, UseCfgChecksum,
-          Options.ExitBlockBeforeBody));
+          SP, &F, &out, FunctionIdent++, UseCfgChecksum, ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();
 
       // Add the function line number to the lines of the entry block
