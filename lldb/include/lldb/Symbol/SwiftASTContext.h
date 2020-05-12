@@ -141,7 +141,8 @@ public:
   static CompilerType GetInstanceType(CompilerType ct);
   virtual CompilerType GetInstanceType(void *type) = 0;
   enum class TypeAllocationStrategy { eInline, ePointer, eDynamic, eUnknown };
-  virtual TypeAllocationStrategy GetAllocationStrategy(CompilerType type) = 0;
+  virtual TypeAllocationStrategy
+  GetAllocationStrategy(lldb::opaque_compiler_type_t type) = 0;
   struct TupleElement {
     ConstString element_name;
     CompilerType element_type;
@@ -413,7 +414,8 @@ public:
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(void *type) override;
-  TypeAllocationStrategy GetAllocationStrategy(CompilerType type) override;
+  TypeAllocationStrategy
+  GetAllocationStrategy(lldb::opaque_compiler_type_t type) override;
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   void DumpTypeDescription(
@@ -859,7 +861,8 @@ public:
   static bool GetProtocolTypeInfo(const CompilerType &type,
                                   ProtocolInfo &protocol_info);
 
-  TypeAllocationStrategy GetAllocationStrategy(CompilerType type) override;
+  TypeAllocationStrategy
+  GetAllocationStrategy(lldb::opaque_compiler_type_t type) override;
 
   enum class NonTriviallyManagedReferenceStrategy {
     eWeak,

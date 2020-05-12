@@ -754,9 +754,8 @@ CompilerType TypeSystemSwiftTypeRef::GetInstanceType(void *type) {
   return m_swift_ast_context->GetInstanceType(ReconstructType(type));
 }
 TypeSystemSwift::TypeAllocationStrategy
-TypeSystemSwiftTypeRef::GetAllocationStrategy(CompilerType type) {
-  return m_swift_ast_context->GetAllocationStrategy(
-      {m_swift_ast_context, ReconstructType(type.GetOpaqueQualType())});
+TypeSystemSwiftTypeRef::GetAllocationStrategy(void * type) {
+  return m_swift_ast_context->GetAllocationStrategy(ReconstructType(type));
 }
 CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     const std::vector<TupleElement> &elements) {
