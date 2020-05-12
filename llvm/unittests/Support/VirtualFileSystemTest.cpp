@@ -2267,8 +2267,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
-  // FIXME: Missing comma separator between file entries.
-  EXPECT_FALSE(FS.get() != nullptr);
+  EXPECT_TRUE(FS.get() != nullptr);
 }
 
 TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
@@ -2301,8 +2300,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
-  // FIXME: Spurious comma separator before first file entry in directory.
-  EXPECT_FALSE(FS.get() != nullptr);
+  EXPECT_TRUE(FS.get() != nullptr);
 }
 
 TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
