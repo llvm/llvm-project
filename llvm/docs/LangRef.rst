@@ -1528,6 +1528,14 @@ example:
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
     with the ``alwaysinline`` attribute.
+``nomerge``
+    This attribute indicates that calls to this function should never be merged
+    during optimization. For example, it will prevent tail merging otherwise
+    identical code sequences that raise an exception or terminate the program.
+    Tail merging normally reduces the precision of source location information,
+    making stack traces less useful for debugging. This attribute gives the
+    user control over the tradeoff between code size and debug information
+    precision.
 ``nonlazybind``
     This attribute suppresses lazy symbol binding for the function. This
     may make calls to the function faster, at the cost of extra program
