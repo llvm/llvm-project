@@ -280,8 +280,8 @@ define float @fmul_fma_fast2(float %x) {
 define float @sqrt_afn_ieee(float %x) #0 {
 ; FMF-LABEL: sqrt_afn_ieee:
 ; FMF:       # %bb.0:
+; FMF-NEXT:    xsabsdp 0, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI10_2@toc@ha
-; FMF-NEXT:    fabs 0, 1
 ; FMF-NEXT:    lfs 2, .LCPI10_2@toc@l(3)
 ; FMF-NEXT:    fcmpu 0, 0, 2
 ; FMF-NEXT:    xxlxor 0, 0, 0
@@ -303,8 +303,8 @@ define float @sqrt_afn_ieee(float %x) #0 {
 ;
 ; GLOBAL-LABEL: sqrt_afn_ieee:
 ; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xsabsdp 0, 1
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI10_2@toc@ha
-; GLOBAL-NEXT:    fabs 0, 1
 ; GLOBAL-NEXT:    lfs 2, .LCPI10_2@toc@l(3)
 ; GLOBAL-NEXT:    fcmpu 0, 0, 2
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
@@ -418,8 +418,8 @@ define float @sqrt_afn_preserve_sign_inf(float %x) #1 {
 define float @sqrt_fast_ieee(float %x) #0 {
 ; FMF-LABEL: sqrt_fast_ieee:
 ; FMF:       # %bb.0:
+; FMF-NEXT:    xsabsdp 0, 1
 ; FMF-NEXT:    addis 3, 2, .LCPI14_2@toc@ha
-; FMF-NEXT:    fabs 0, 1
 ; FMF-NEXT:    lfs 2, .LCPI14_2@toc@l(3)
 ; FMF-NEXT:    fcmpu 0, 0, 2
 ; FMF-NEXT:    xxlxor 0, 0, 0
@@ -440,8 +440,8 @@ define float @sqrt_fast_ieee(float %x) #0 {
 ;
 ; GLOBAL-LABEL: sqrt_fast_ieee:
 ; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xsabsdp 0, 1
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI14_2@toc@ha
-; GLOBAL-NEXT:    fabs 0, 1
 ; GLOBAL-NEXT:    lfs 2, .LCPI14_2@toc@l(3)
 ; GLOBAL-NEXT:    fcmpu 0, 0, 2
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0

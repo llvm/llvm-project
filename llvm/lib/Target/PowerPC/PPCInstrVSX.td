@@ -2602,6 +2602,16 @@ def : Pat<(v2f64 (any_fmaxnum v2f64:$src1, v2f64:$src2)),
 def : Pat<(v2f64 (any_fminnum v2f64:$src1, v2f64:$src2)),
           (v2f64 (XVMINDP $src1, $src2))>;
 
+// f32 abs
+def : Pat<(f32 (fabs f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSABSDP
+               (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+
+// f32 nabs
+def : Pat<(f32 (fneg (fabs f32:$S))),
+          (f32 (COPY_TO_REGCLASS (XSNABSDP
+               (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
+
 // f32 Min.
 def : Pat<(f32 (fminnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Min)>;
@@ -2998,6 +3008,14 @@ def : Pat<(fma (fneg f32:$A), f32:$B, f32:$C),
           (XSNMSUBASP $C, $A, $B)>;
 def : Pat<(fma f32:$A, (fneg f32:$B), f32:$C),
           (XSNMSUBASP $C, $A, $B)>;
+
+// f32 neg
+// Although XSNEGDP is available in P7, we want to select it starting from P8,
+// so that FNMSUBS can be selected for fneg-fmsub pattern on P7. (VSX version,
+// XSNMSUBASP, is available since P8)
+def : Pat<(f32 (fneg f32:$S)),
+          (f32 (COPY_TO_REGCLASS (XSNEGDP
+               (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
 
 // Instructions for converting float to i32 feeding a store.
 def : Pat<(PPCstore_scal_int_from_vsr
