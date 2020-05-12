@@ -737,3 +737,34 @@ ARMVCC::VPTCodes llvm::getVPTInstrPredicate(const MachineInstr &MI,
   PredReg = MI.getOperand(PIdx+1).getReg();
   return (ARMVCC::VPTCodes)MI.getOperand(PIdx).getImm();
 }
+
+void llvm::recomputeVPTBlockMask(MachineInstr &Instr) {
+  assert(isVPTOpcode(Instr.getOpcode()) && "Not a VPST or VPT Instruction!");
+
+  MachineOperand &MaskOp = Instr.getOperand(0);
+  assert(MaskOp.isImm() && "Operand 0 is not the block mask of the VPT/VPST?!");
+
+  MachineBasicBlock::iterator Iter = ++Instr.getIterator(),
+                              End = Instr.getParent()->end();
+
+  // Verify that the instruction after the VPT/VPST is predicated (it should
+  // be), and skip it.
+  ARMVCC::VPTCodes Pred = getVPTInstrPredicate(*Iter);
+  assert(
+      Pred == ARMVCC::Then &&
+      "VPT/VPST should be followed by an instruction with a 'then' predicate!");
+  ++Iter;
+
+  // Iterate over the predicated instructions, updating the BlockMask as we go.
+  ARM::PredBlockMask BlockMask = ARM::PredBlockMask::T;
+  while (Iter != End) {
+    ARMVCC::VPTCodes Pred = getVPTInstrPredicate(*Iter);
+    if (Pred == ARMVCC::None)
+      break;
+    BlockMask = expandPredBlockMask(BlockMask, Pred);
+    ++Iter;
+  }
+
+  // Rewrite the BlockMask.
+  MaskOp.setImm((int64_t)(BlockMask));
+}
