@@ -3180,9 +3180,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     if (!Ty.isVector())
       report_fatal_error("Unexpected type for aarch64_neon_vsli");
 
-    uint64_t ShiftAmount = Op.getConstantOperandVal(3);
-    unsigned ElemSizeInBits = Ty.getScalarSizeInBits();
-    assert(ShiftAmount <= ElemSizeInBits);
+    assert(Op.getConstantOperandVal(3) <= Ty.getScalarSizeInBits());
 
     bool IsShiftRight = IntNo == Intrinsic::aarch64_neon_vsri;
     unsigned Opcode = IsShiftRight ? AArch64ISD::VSRI : AArch64ISD::VSLI;

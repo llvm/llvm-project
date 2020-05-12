@@ -749,9 +749,8 @@ void llvm::recomputeVPTBlockMask(MachineInstr &Instr) {
 
   // Verify that the instruction after the VPT/VPST is predicated (it should
   // be), and skip it.
-  ARMVCC::VPTCodes Pred = getVPTInstrPredicate(*Iter);
   assert(
-      Pred == ARMVCC::Then &&
+      getVPTInstrPredicate(*Iter) == ARMVCC::Then &&
       "VPT/VPST should be followed by an instruction with a 'then' predicate!");
   ++Iter;
 
