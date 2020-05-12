@@ -1,0 +1,589 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -start-before=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test folding of a memory operand into an fp memory instruction.
+
+--- |
+  define void @fun0(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun1(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun2(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun3(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun4(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun5(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun6(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun7(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun8(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun9(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun10(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun11(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun12(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun13(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun14(float %arg0, float %arg1, float* %Dst) { ret void }
+  define void @fun15(float %arg0, float %arg1, float* %Dst) { ret void }
+
+...
+
+# CHECK-LABEL: fun0:
+# CHECK: madb    %f0, %f1, 160(%r15)             # 8-byte Folded Reload
+---
+name:            fun0
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMADB %0, %1, %4, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun1:
+# CHECK: madb    %f0, %f1, 160(%r15)             # 8-byte Folded Reload
+---
+name:            fun1
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMADB %1, %0, %4, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+# MADB can't be used if one operand is a VR64 (and not FP64).
+# CHECK-LABEL: fun2:
+# CHECK: wfmadb  %f0, %v16, %f1, %f0
+---
+name:            fun2
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: vr64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:vr64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMADB %1, %0, %4, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# MADB can't be used unless accumulator and result registers are the same.
+# CHECK-LABEL: fun3:
+# CHECK: wfmadb  %f0, %f0, %f1, %f2
+---
+name:            fun3
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMADB %4, %1, %0, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun4:
+# CHECK: maeb    %f0, %f1, 160(%r15)             # 4-byte Folded Reload
+---
+name:            fun4
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: fp32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMASB %0, %1, %4, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun5:
+# CHECK: maeb    %f0, %f1, 160(%r15)             # 4-byte Folded Reload
+---
+name:            fun5
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: fp32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMASB %1, %0, %4, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# MAEB can't be used if one operand is a VR32 (and not FP32).
+# CHECK-LABEL: fun6:
+# CHECK: wfmasb  %f0, %v16, %f1, %f0
+---
+name:            fun6
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: vr32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:vr32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMASB %1, %0, %4, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# MAEB can't be used unless accumulator and result registers are the same.
+# CHECK-LABEL: fun7:
+# CHECK: wfmasb  %f0, %f0, %f1, %f2
+---
+name:            fun7
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: fp32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMASB %4, %1, %0, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun8:
+# CHECK: msdb    %f0, %f1, 160(%r15)             # 8-byte Folded Reload
+---
+name:            fun8
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMSDB %0, %1, %4, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun9:
+# CHECK: msdb    %f0, %f1, 160(%r15)             # 8-byte Folded Reload
+---
+name:            fun9
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMSDB %1, %0, %4, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+# MSDB can't be used if one operand is a VR64 (and not FP64).
+# CHECK-LABEL: fun10:
+# CHECK: wfmsdb  %f0, %v16, %f1, %f0
+---
+name:            fun10
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: vr64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:vr64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMSDB %1, %0, %4, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# MSDB can't be used unless accumulator and result registers are the same.
+# CHECK-LABEL: fun11:
+# CHECK: wfmsdb  %f0, %f0, %f1, %f2
+---
+name:            fun11
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: fp64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    %4:fp64bit = COPY $f2d
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFMSDB %4, %1, %0, implicit $fpc
+    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun12:
+# CHECK: mseb    %f0, %f1, 160(%r15)             # 4-byte Folded Reload
+---
+name:            fun12
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: fp32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMSSB %0, %1, %4, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# CHECK-LABEL: fun13:
+# CHECK: mseb    %f0, %f1, 160(%r15)             # 4-byte Folded Reload
+---
+name:            fun13
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: fp32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMSSB %1, %0, %4, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# MSEB can't be used if one operand is a VR32 (and not FP32).
+# CHECK-LABEL: fun14:
+# CHECK: wfmssb  %f0, %v16, %f1, %f0
+---
+name:            fun14
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: vr32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:vr32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMSSB %1, %0, %4, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
+
+
+# MSEB can't be used unless accumulator and result registers are the same.
+# CHECK-LABEL: fun15:
+# CHECK: wfmssb  %f0, %f0, %f1, %f2
+---
+name:            fun15
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp32bit }
+  - { id: 1, class: fp32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr32bit }
+  - { id: 4, class: fp32bit }
+liveins:
+  - { reg: '$f0s', virtual-reg: '%0' }
+  - { reg: '$f2s', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp32bit = COPY $f2s
+    %0:fp32bit = COPY $f0s
+    %4:fp32bit = COPY $f2s
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr32bit = nofpexcept WFMSSB %4, %1, %0, implicit $fpc
+    VST32 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    Return
+
+...
