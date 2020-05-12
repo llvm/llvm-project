@@ -39,7 +39,6 @@ CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe
 CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
 CODEGENOPT(ControlFlowGuardNoChecks  , 1, 0) ///< -cfguard-no-checks
 CODEGENOPT(ControlFlowGuard  , 1, 0) ///< -cfguard
-CODEGENOPT(CoverageExitBlockBeforeBody, 1, 0) ///< Whether to emit the exit block before the body blocks in GCNO files.
 CODEGENOPT(CXAAtExit         , 1, 1) ///< Use __cxa_atexit for calling destructors.
 CODEGENOPT(RegisterGlobalDtorsWithAtExit, 1, 1) ///< Use atexit or __cxa_atexit to register global destructors.
 CODEGENOPT(CXXCtorDtorAliases, 1, 0) ///< Emit complete ctors/dtors as linker

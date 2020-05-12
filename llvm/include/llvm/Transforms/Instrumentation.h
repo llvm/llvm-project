@@ -66,10 +66,6 @@ struct GCOVOptions {
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone;
 
-  // Emit the exit block immediately after the start block, rather than after
-  // all of the function body's blocks.
-  bool ExitBlockBeforeBody;
-
   // Regexes separated by a semi-colon to filter the files to instrument.
   std::string Filter;
 
