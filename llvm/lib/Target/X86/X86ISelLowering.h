@@ -1032,6 +1032,8 @@ namespace llvm {
     int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS) const override;
 
+    /// This is used to enable splatted operand transforms for vector shifts
+    /// and vector funnel shifts.
     bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
     /// Add x86-specific opcodes to the default list.
@@ -1059,6 +1061,9 @@ namespace llvm {
     bool isZExtFree(Type *Ty1, Type *Ty2) const override;
     bool isZExtFree(EVT VT1, EVT VT2) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
+
+    bool shouldSinkOperands(Instruction *I,
+                            SmallVectorImpl<Use *> &Ops) const override;
 
     /// Return true if folding a vector load into ExtVal (a sign, zero, or any
     /// extend node) is profitable.

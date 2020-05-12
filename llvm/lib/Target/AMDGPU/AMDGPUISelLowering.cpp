@@ -107,6 +107,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v2f64, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v2f64, MVT::v4i32);
 
+  setOperationAction(ISD::LOAD, MVT::v4i64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v4i64, MVT::v8i32);
+
+  setOperationAction(ISD::LOAD, MVT::v4f64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v4f64, MVT::v8i32);
+
+  setOperationAction(ISD::LOAD, MVT::v8i64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v8i64, MVT::v16i32);
+
+  setOperationAction(ISD::LOAD, MVT::v8f64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v8f64, MVT::v16i32);
+
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -207,6 +219,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::v2f64, Promote);
   AddPromotedToType(ISD::STORE, MVT::v2f64, MVT::v4i32);
 
+  setOperationAction(ISD::STORE, MVT::v4i64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v4i64, MVT::v8i32);
+
+  setOperationAction(ISD::STORE, MVT::v4f64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v4f64, MVT::v8i32);
+
+  setOperationAction(ISD::STORE, MVT::v8i64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v8i64, MVT::v16i32);
+
+  setOperationAction(ISD::STORE, MVT::v8f64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v8f64, MVT::v16i32);
+
   setTruncStoreAction(MVT::i64, MVT::i1, Expand);
   setTruncStoreAction(MVT::i64, MVT::i8, Expand);
   setTruncStoreAction(MVT::i64, MVT::i16, Expand);
@@ -231,6 +255,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v2f64, MVT::v2f32, Expand);
   setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
 
+  setTruncStoreAction(MVT::v4i64, MVT::v4i32, Expand);
+  setTruncStoreAction(MVT::v4i64, MVT::v4i16, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f32, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f16, Expand);
 

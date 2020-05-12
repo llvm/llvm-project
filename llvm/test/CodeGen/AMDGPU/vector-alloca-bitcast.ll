@@ -158,14 +158,17 @@ bb15:                                             ; preds = %.preheader
 ; OPT:  %bc = bitcast <6 x double> %0 to <6 x i64>
 ; OPT:  %1 = extractelement <6 x i64> %bc, i32 %tmp20
 
-; TODO: Fix selection to eliminate scratch
-
 ; GCN-LABEL: {{^}}vector_write_read_bitcast_to_double:
-; GCN-COUNT-2: buffer_store_dword
+
+; GCN-ALLOCA-COUNT-2: buffer_store_dword
+; GCN-PROMOTE-COUNT-2: v_movreld_b32_e32
 
 ; GCN: s_cbranch
 
-; GCN-COUNT-2: buffer_load_dword
+; GCN-ALLOCA-COUNT-2: buffer_load_dword
+; GCN-PROMOTE-COUNT-2: v_movrels_b32_e32
+
+; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_double(double addrspace(1)* %arg) {
 bb:
@@ -220,14 +223,17 @@ bb15:                                             ; preds = %.preheader
 ; OPT: .preheader:
 ; OPT:  %1 = extractelement <6 x i64> %0, i32 %tmp18
 
-; TODO: Fix selection to eliminate scratch
-
 ; GCN-LABEL: {{^}}vector_write_read_bitcast_to_i64:
-; GCN-COUNT-2: buffer_store_dword
+
+; GCN-ALLOCA-COUNT-2: buffer_store_dword
+; GCN-PROMOTE-COUNT-2: v_movreld_b32_e32
 
 ; GCN: s_cbranch
 
-; GCN-COUNT-2: buffer_load_dword
+; GCN-ALLOCA-COUNT-2: buffer_load_dword
+; GCN-PROMOTE-COUNT-2: v_movrels_b32_e32
+
+; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_i64(i64 addrspace(1)* %arg) {
 bb:

@@ -2027,10 +2027,10 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 
   if (!Entries.empty()) {
     const YAMLVFSEntry &Entry = Entries.front();
-    bool first_entry_is_directory = Entry.IsDirectory;
-    StringRef Dir =
-        first_entry_is_directory ? Entry.VPath : path::parent_path(Entry.VPath);
-    startDirectory(Dir);
+
+    startDirectory(
+      Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath)
+    );
 
     StringRef RPath = Entry.RPath;
     if (UseOverlayRelative) {
@@ -2040,24 +2040,31 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       RPath = RPath.slice(OverlayDirLen, RPath.size());
     }
 
-    if (!first_entry_is_directory)
+    bool IsCurrentDirEmpty = true;
+    if (!Entry.IsDirectory) {
       writeEntry(path::filename(Entry.VPath), RPath);
+      IsCurrentDirEmpty = false;
+    }
 
     for (const auto &Entry : Entries.slice(1)) {
       StringRef Dir =
           Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath);
       if (Dir == DirStack.back()) {
-        if (!first_entry_is_directory) {
+        if (!IsCurrentDirEmpty) {
           OS << ",\n";
-          first_entry_is_directory = false;
         }
       } else {
+        bool IsDirPoppedFromStack = false;
         while (!DirStack.empty() && !containedIn(DirStack.back(), Dir)) {
           OS << "\n";
           endDirectory();
+          IsDirPoppedFromStack = true;
         }
-        OS << ",\n";
+        if (IsDirPoppedFromStack || !IsCurrentDirEmpty) {
+          OS << ",\n";
+        }
         startDirectory(Dir);
+        IsCurrentDirEmpty = true;
       }
       StringRef RPath = Entry.RPath;
       if (UseOverlayRelative) {
@@ -2066,8 +2073,10 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
                "Overlay dir must be contained in RPath");
         RPath = RPath.slice(OverlayDirLen, RPath.size());
       }
-      if (!Entry.IsDirectory)
+      if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
+        IsCurrentDirEmpty = false;
+      }
     }
 
     while (!DirStack.empty()) {

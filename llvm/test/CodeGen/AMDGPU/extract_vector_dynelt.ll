@@ -8,7 +8,7 @@
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1.0, [[C1]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], 2.0, [[V1]], [[C2]]
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], 4.0, [[V2]], [[C3]]
-; GCN: store_dword v[{{[0-9:]+}}], [[V3]]
+; GCN:     store_dword v[{{[0-9:]+}}], [[V3]]
 define amdgpu_kernel void @float4_extelt(float addrspace(1)* %out, i32 %sel) {
 entry:
   %ext = extractelement <4 x float> <float 0.0, float 1.0, float 2.0, float 4.0>, i32 %sel
@@ -157,6 +157,40 @@ define amdgpu_kernel void @float8_extelt(float addrspace(1)* %out, i32 %sel) {
 entry:
   %ext = extractelement <8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, i32 %sel
   store float %ext, float addrspace(1)* %out
+  ret void
+}
+
+; TODO: Should be able to copy to m0 only once and increment base instead.
+
+; GCN-LABEL: {{^}}double8_extelt:
+; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN-DAG: v_mov_b32_e32 [[BASE:v[0-9]+]], [[ZERO]]
+; GCN-DAG: s_mov_b32 m0, [[IND0:s[0-9]+]]
+; GCN-DAG: s_or_b32 [[IND1:s[0-9]+]], [[IND0]], 1
+; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], [[BASE]]
+; GCN:     s_mov_b32 m0, [[IND1:s[0-9]+]]
+; GCN:     v_movrels_b32_e32 v[[RES_HI:[0-9]+]], [[BASE]]
+; GCN:     store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[RES_LO]]:[[RES_HI]]]
+define amdgpu_kernel void @double8_extelt(double addrspace(1)* %out, i32 %sel) {
+entry:
+  %ext = extractelement <8 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0>, i32 %sel
+  store double %ext, double addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double7_extelt:
+; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN-DAG: v_mov_b32_e32 [[BASE:v[0-9]+]], [[ZERO]]
+; GCN-DAG: s_mov_b32 m0, [[IND0:s[0-9]+]]
+; GCN-DAG: s_or_b32 [[IND1:s[0-9]+]], [[IND0]], 1
+; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], [[BASE]]
+; GCN:     s_mov_b32 m0, [[IND1:s[0-9]+]]
+; GCN:     v_movrels_b32_e32 v[[RES_HI:[0-9]+]], [[BASE]]
+; GCN:     store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[RES_LO]]:[[RES_HI]]]
+define amdgpu_kernel void @double7_extelt(double addrspace(1)* %out, i32 %sel) {
+entry:
+  %ext = extractelement <7 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0>, i32 %sel
+  store double %ext, double addrspace(1)* %out
   ret void
 }
 

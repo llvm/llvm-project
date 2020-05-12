@@ -449,7 +449,7 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
                                   MemoryBuffer *Buffer,
                                   sampleprof::ProfileSymbolList &WriterList,
                                   bool CompressAllSections, bool UseMD5,
-                                  bool PartialProfile) {
+                                  bool GenPartialProfile) {
   populateProfileSymbolList(Buffer, WriterList);
   if (WriterList.size() > 0 && OutputFormat != PF_Ext_Binary)
     warn("Profile Symbol list is not empty but the output format is not "
@@ -469,9 +469,9 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
     else
       Writer.setUseMD5();
   }
-  if (PartialProfile) {
+  if (GenPartialProfile) {
     if (OutputFormat != PF_Ext_Binary)
-      warn("-partial-profile is ignored. Specify -extbinary to enable it");
+      warn("-gen-partial-profile is ignored. Specify -extbinary to enable it");
     else
       Writer.setPartialProfile();
   }
@@ -481,7 +481,7 @@ static void
 mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    StringRef OutputFilename, ProfileFormat OutputFormat,
                    StringRef ProfileSymbolListFile, bool CompressAllSections,
-                   bool UseMD5, bool PartialProfile, FailureMode FailMode) {
+                   bool UseMD5, bool GenPartialProfile, FailureMode FailMode) {
   using namespace sampleprof;
   StringMap<FunctionSamples> ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -538,7 +538,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   // Make sure Buffer lives as long as WriterList.
   auto Buffer = getInputFileBuf(ProfileSymbolListFile);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
-                        CompressAllSections, UseMD5, PartialProfile);
+                        CompressAllSections, UseMD5, GenPartialProfile);
   Writer->write(ProfileMap);
 }
 
@@ -670,10 +670,9 @@ static int merge_main(int argc, const char *argv[]) {
       "use-md5", cl::init(false), cl::Hidden,
       cl::desc("Choose to use MD5 to represent string in name table (only "
                "meaningful for -extbinary)"));
-  cl::opt<bool> PartialProfile(
-      "partial-profile", cl::init(false), cl::Hidden,
-      cl::desc("Set the profile to be a partial profile (only meaningful "
-               "for -extbinary)"));
+  cl::opt<bool> GenPartialProfile(
+      "gen-partial-profile", cl::init(false), cl::Hidden,
+      cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
@@ -708,7 +707,7 @@ static int merge_main(int argc, const char *argv[]) {
   else
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
                        OutputFormat, ProfileSymbolListFile, CompressAllSections,
-                       UseMD5, PartialProfile, FailureMode);
+                       UseMD5, GenPartialProfile, FailureMode);
 
   return 0;
 }

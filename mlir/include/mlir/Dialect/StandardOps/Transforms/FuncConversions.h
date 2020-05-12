@@ -1,4 +1,4 @@
-//===- StandardToStandard.h - Std intra-dialect conversion  -----*- C++ -*-===//
+//===- FuncConversions.h - Patterns for converting std.funcs ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files contains patterns for lowering within the Standard dialect.
+// This files contains patterns for converting standard functions.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_STANDARDTOSTANDARD_STANDARDTOSTANDARD_H_
-#define MLIR_CONVERSION_STANDARDTOSTANDARD_STANDARDTOSTANDARD_H_
+#ifndef MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_
+#define MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_
 
 namespace mlir {
 
@@ -28,4 +28,4 @@ void populateCallOpTypeConversionPattern(OwningRewritePatternList &patterns,
 
 } // end namespace mlir
 
-#endif // MLIR_CONVERSION_STANDARDTOSTANDARD_STANDARDTOSTANDARD_H_
+#endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_

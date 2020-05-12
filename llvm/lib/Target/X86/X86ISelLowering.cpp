@@ -3337,9 +3337,9 @@ public:
                         SelectionDAG &DAG, const X86Subtarget &Subtarget,
                         CallingConv::ID CallConv, CCState &CCInfo)
       : FuncInfo(FuncInfo), DL(Loc), DAG(DAG), Subtarget(Subtarget),
-        MachineFunction(DAG.getMachineFunction()),
-        Function(MachineFunction.getFunction()),
-        FrameInfo(MachineFunction.getFrameInfo()),
+        TheMachineFunction(DAG.getMachineFunction()),
+        TheFunction(TheMachineFunction.getFunction()),
+        FrameInfo(TheMachineFunction.getFrameInfo()),
         FrameLowering(*Subtarget.getFrameLowering()),
         TargLowering(DAG.getTargetLoweringInfo()), CallConv(CallConv),
         CCInfo(CCInfo) {}
@@ -3359,8 +3359,8 @@ private:
   const SDLoc &DL;
   SelectionDAG &DAG;
   const X86Subtarget &Subtarget;
-  MachineFunction &MachineFunction;
-  const Function &Function;
+  MachineFunction &TheMachineFunction;
+  const Function &TheFunction;
   MachineFrameInfo &FrameInfo;
   const TargetFrameLowering &FrameLowering;
   const TargetLowering &TargLowering;
@@ -3381,7 +3381,7 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
 
   // Figure out if XMM registers are in use.
   assert(!(Subtarget.useSoftFloat() &&
-           Function.hasFnAttribute(Attribute::NoImplicitFloat)) &&
+           TheFunction.hasFnAttribute(Attribute::NoImplicitFloat)) &&
          "SSE register cannot be used when SSE is disabled!");
 
   // 64-bit calling conventions support varargs and register parameters, so we
@@ -3390,7 +3390,7 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
     // Find the first unallocated argument registers.
     ArrayRef<MCPhysReg> ArgGPRs = get64BitArgumentGPRs(CallConv, Subtarget);
     ArrayRef<MCPhysReg> ArgXMMs =
-        get64BitArgumentXMMs(MachineFunction, CallConv, Subtarget);
+        get64BitArgumentXMMs(TheMachineFunction, CallConv, Subtarget);
     unsigned NumIntRegs = CCInfo.getFirstUnallocated(ArgGPRs);
     unsigned NumXMMRegs = CCInfo.getFirstUnallocated(ArgXMMs);
 
@@ -3424,15 +3424,15 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
 
     // Gather all the live in physical registers.
     for (MCPhysReg Reg : ArgGPRs.slice(NumIntRegs)) {
-      unsigned GPR = MachineFunction.addLiveIn(Reg, &X86::GR64RegClass);
+      unsigned GPR = TheMachineFunction.addLiveIn(Reg, &X86::GR64RegClass);
       LiveGPRs.push_back(DAG.getCopyFromReg(Chain, DL, GPR, MVT::i64));
     }
     const auto &AvailableXmms = ArgXMMs.slice(NumXMMRegs);
     if (!AvailableXmms.empty()) {
-      unsigned AL = MachineFunction.addLiveIn(X86::AL, &X86::GR8RegClass);
+      unsigned AL = TheMachineFunction.addLiveIn(X86::AL, &X86::GR8RegClass);
       ALVal = DAG.getCopyFromReg(Chain, DL, AL, MVT::i8);
       for (MCPhysReg Reg : AvailableXmms) {
-        unsigned XMMReg = MachineFunction.addLiveIn(Reg, &X86::VR128RegClass);
+        unsigned XMMReg = TheMachineFunction.addLiveIn(Reg, &X86::VR128RegClass);
         LiveXMMRegs.push_back(
             DAG.getCopyFromReg(Chain, DL, XMMReg, MVT::v4f32));
       }
@@ -3504,7 +3504,7 @@ void VarArgsLoweringHelper::forwardMustTailParameters(SDValue &Chain) {
 
   // Forward AL for SysV x86_64 targets, since it is used for varargs.
   if (is64Bit() && !isWin64() && !CCInfo.isAllocated(X86::AL)) {
-    unsigned ALVReg = MachineFunction.addLiveIn(X86::AL, &X86::GR8RegClass);
+    unsigned ALVReg = TheMachineFunction.addLiveIn(X86::AL, &X86::GR8RegClass);
     Forwards.push_back(ForwardedRegister(ALVReg, X86::AL, MVT::i8));
   }
 
@@ -3512,7 +3512,7 @@ void VarArgsLoweringHelper::forwardMustTailParameters(SDValue &Chain) {
   for (ForwardedRegister &FR : Forwards) {
     // FIXME: Can we use a less constrained schedule?
     SDValue RegVal = DAG.getCopyFromReg(Chain, DL, FR.VReg, FR.VT);
-    FR.VReg = MachineFunction.getRegInfo().createVirtualRegister(
+    FR.VReg = TheMachineFunction.getRegInfo().createVirtualRegister(
         TargLowering.getRegClassFor(FR.VT));
     Chain = DAG.getCopyToReg(Chain, DL, FR.VReg, RegVal);
   }
@@ -30670,6 +30670,28 @@ bool X86TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   case MVT::i32:
     // X86 has 8, 16, and 32-bit zero-extending loads.
     return true;
+  }
+
+  return false;
+}
+
+bool X86TargetLowering::shouldSinkOperands(Instruction *I,
+                                           SmallVectorImpl<Use *> &Ops) const {
+  // A uniform shift amount in a vector shift or funnel shift may be much
+  // cheaper than a generic variable vector shift, so make that pattern visible
+  // to SDAG by sinking the shuffle instruction next to the shift.
+  // TODO: This should handle normal shift opcodes too.
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    Intrinsic::ID ID = II->getIntrinsicID();
+    if (ID == Intrinsic::fshl || ID == Intrinsic::fshr) {
+      // The shift amount operand for these intrinsics is operand 2.
+      auto *Shuf = dyn_cast<ShuffleVectorInst>(II->getOperand(2));
+      if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
+          isVectorShiftByScalarCheap(I->getType())) {
+        Ops.push_back(&I->getOperandUse(2));
+        return true;
+      }
+    }
   }
 
   return false;
