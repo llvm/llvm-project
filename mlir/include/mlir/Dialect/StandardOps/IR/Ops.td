@@ -2504,7 +2504,7 @@ def SubIOp : IntArithmeticOp<"subi"> {
 //===----------------------------------------------------------------------===//
 
 def SubViewOp : Std_Op<"subview", [
-    AttrSizedOperandSegments,
+    AttrSizedOperandSegments, 
     DeclareOpInterfaceMethods<ViewLikeOpInterface>,
     NoSideEffect,
   ]> {
@@ -2516,14 +2516,17 @@ def SubViewOp : Std_Op<"subview", [
 
     The SubView operation supports the following arguments:
     *) Memref: the "base" memref on which to create a "view" memref.
-    *) Offsets: memref-rank number of dynamic offsets or static integer
-                attributes into the "base" memref at which to create the "view"
-                memref.
-    *) Sizes: memref-rank number of dynamic sizes or static integer attributes
-              which specify the sizes of the result "view" memref type.
-    *) Strides: memref-rank number of dynamic strides or static integer
-                attributes multiplicatively to the base memref strides in each
-                dimension.
+    *) Offsets: zero or memref-rank number of dynamic offsets into the "base"
+                memref at which to create the "view" memref.
+    *) Sizes: zero or memref-rank dynamic size operands which specify the
+              dynamic sizes of the result "view" memref type.
+    *) Strides: zero or memref-rank number of dynamic strides which are applied
+                multiplicatively to the base memref strides in each dimension.
+
+    Note on the number of operands for offsets, sizes and strides: For
+    each of these, the number of operands must either be same as the
+    memref-rank number or empty. For the latter, those values will be
+    treated as constants.
 
     Example 1:
 
@@ -2534,7 +2537,7 @@ def SubViewOp : Std_Op<"subview", [
     // dynamic sizes for each dimension, and stride arguments '%c1'.
     %1 = subview %0[%c0, %c0][%size0, %size1][%c1, %c1]
       : memref<64x4xf32, (d0, d1) -> (d0 * 4 + d1) > to
-        memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>
+        memref<?x?xf32, (d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
     ```
 
     Example 2:
@@ -2561,9 +2564,9 @@ def SubViewOp : Std_Op<"subview", [
     %0 = alloc() : memref<8x16x4xf32, (d0, d1, d1) -> (d0 * 64 + d1 * 4 + d2)>
 
     // Subview with constant offsets, sizes and strides.
-    %1 = subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
+    %1 = subview %0[][][]
       : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
-        memref<4x4x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>
+        memref<4x4x4xf32, (d0, d1, d2) -> (d0 * 16 + d1 * 4 + d2 + 8)>
     ```
 
     Example 4:
@@ -2605,7 +2608,7 @@ def SubViewOp : Std_Op<"subview", [
     // #map2 = (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)
     //
     // where, r0 = o0 * s1 + o1 * s2 + s0, r1 = s1 * t0, r2 = s2 * t1.
-    %1 = subview %0[%i, %j][4, 4][%x, %y] :
+    %1 = subview %0[%i, %j][][%x, %y] :
       : memref<?x?xf32, (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)> to
         memref<4x4xf32, (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)>
 
@@ -2621,25 +2624,24 @@ def SubViewOp : Std_Op<"subview", [
     AnyMemRef:$source,
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
-    Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    Variadic<Index>:$strides
   );
   let results = (outs AnyMemRef:$result);
 
+  let assemblyFormat = [{
+    $source `[` $offsets `]` `[` $sizes `]` `[` $strides `]` attr-dict `:`
+    type($source) `to` type($result)
+  }];
+
   let builders = [
-    // Build a SubViewOp with mized static and dynamic entries.
     OpBuilder<
       "OpBuilder &b, OperationState &result, Value source, "
-      "ArrayRef<int64_t> staticOffsets, ArrayRef<int64_t> staticSizes,"
-      "ArrayRef<int64_t> staticStrides, ValueRange offsets, ValueRange sizes, "
-      "ValueRange strides, ArrayRef<NamedAttribute> attrs = {}">,
-    // Build a SubViewOp with all dynamic entries.
+      "ValueRange offsets, ValueRange sizes, "
+      "ValueRange strides, Type resultType = Type(), "
+      "ArrayRef<NamedAttribute> attrs = {}">,
     OpBuilder<
-      "OpBuilder &b, OperationState &result, Value source, "
-      "ValueRange offsets, ValueRange sizes, ValueRange strides, "
-      "ArrayRef<NamedAttribute> attrs = {}">
+      "OpBuilder &builder, OperationState &result, "
+      "Type resultType, Value source">
   ];
 
   let extraClassDeclaration = [{
@@ -2668,34 +2670,13 @@ def SubViewOp : Std_Op<"subview", [
     /// operands could not be retrieved.
     LogicalResult getStaticStrides(SmallVectorImpl<int64_t> &staticStrides);
 
-    /// Auxiliary range data structure and helper function that unpacks the
-    /// offset, size and stride operands of the SubViewOp into a list of triples.
-    /// Such a list of triple is sometimes more convenient to manipulate.
+    // Auxiliary range data structure and helper function that unpacks the
+    // offset, size and stride operands of the SubViewOp into a list of triples.
+    // Such a list of triple is sometimes more convenient to manipulate.
     struct Range {
       Value offset, size, stride;
     };
     SmallVector<Range, 8> getRanges();
-
-    /// Return the rank of the result MemRefType.
-    unsigned getRank() { return getType().getRank(); }
-
-    static StringRef getStaticOffsetsAttrName() {
-      return "static_offsets";
-    }
-    static StringRef getStaticSizesAttrName() {
-      return "static_sizes";
-    }
-    static StringRef getStaticStridesAttrName() {
-      return "static_strides";
-    }
-    static ArrayRef<StringRef> getSpecialAttrNames() {
-      static SmallVector<StringRef, 4> names{
-        getStaticOffsetsAttrName(),
-        getStaticSizesAttrName(),
-        getStaticStridesAttrName(),
-        getOperandSegmentSizeAttr()};
-      return names;
-   }
   }];
 
   let hasCanonicalizer = 1;
