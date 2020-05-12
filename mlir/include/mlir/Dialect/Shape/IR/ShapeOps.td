@@ -226,13 +226,11 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
 }
 
 def Shape_ShapeOfOp : Shape_Op<"shape_of",
-    [NoSideEffect, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+    [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Returns shape of a value or shaped type operand";
 
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeType:$result);
-
-  let assemblyFormat = "attr-dict $arg `:` type($arg)";
 
   let hasFolder = 1;
 }
