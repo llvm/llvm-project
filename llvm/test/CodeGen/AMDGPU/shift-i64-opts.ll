@@ -304,12 +304,10 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}trunc_shl_vec_vec:
-; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 3, v{{[0-9]+}}
-; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 4, v{{[0-9]+}}
-; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}
-; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 6, v{{[0-9]+}}
-; GCN-NOT: v_lshl_b64
-; GCN-NOT: v_lshlrev_b64
+; GCN-DAG: v_lshl_b64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 3
+; GCN-DAG: v_lshl_b64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 4
+; GCN-DAG: v_lshl_b64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 5
+; GCN-DAG: v_lshl_b64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 6
 define amdgpu_kernel void @trunc_shl_vec_vec(<4 x i64> addrspace(1)* %arg) {
 bb:
   %v = load <4 x i64>, <4 x i64> addrspace(1)* %arg, align 32
