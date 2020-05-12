@@ -65,30 +65,18 @@ RocmInstallationDetector::RocmInstallationDetector(
     if (InstallPath.empty() || !D.getVFS().exists(InstallPath))
       continue;
 
-    // FIXME: The install path situation is a real mess.
-
-    // For a cmake install, these are placed directly in
-    // ${INSTALL_PREFIX}/lib
-
-    // In the separate OpenCL builds, the bitcode libraries are placed in
-    // ${OPENCL_ROOT}/lib/x86_64/bitcode/*
-
-    // For the rocm installed packages, these are placed at
-    // /opt/rocm/opencl/lib/x86_64/bitcode
-
-    // An additional copy is installed, in scattered locations between
-    // /opt/rocm/hcc/rocdl/oclc
-    // /opt/rocm/hcc/rocdl/ockl
-    // /opt/rocm/hcc/rocdl/lib
+    // The install path situation in old versions of ROCm is a real mess, and
+    // use a different install layout. Multiple copies of the device libraries
+    // exist for each frontend project, and differ depending on which build
+    // system produced the packages. Standalone OpenCL builds also have a
+    // different directory structure from the ROCm OpenCL package.
     //
-    // Yet another complete set is installed to
-    // /opt/rocm/hcc/rocdl/lib
-
-    // For now just recognize the opencl package layout.
+    // The desired structure is (${ROCM_ROOT} or
+    // ${OPENCL_ROOT})/amdgcn/bitcode/*, so try to detect this layout.
 
     // BinPath = InstallPath + "/bin";
     llvm::sys::path::append(IncludePath, InstallPath, "include");
-    llvm::sys::path::append(LibDevicePath, InstallPath, "lib");
+    llvm::sys::path::append(LibDevicePath, InstallPath, "amdgcn", "bitcode");
 
     auto &FS = D.getVFS();
 
@@ -99,7 +87,7 @@ RocmInstallationDetector::RocmInstallationDetector(
     if (CheckLibDevice && !FS.exists(LibDevicePath))
       continue;
 
-    const StringRef Suffix(".amdgcn.bc");
+    const StringRef Suffix(".bc");
 
     std::error_code EC;
     for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
