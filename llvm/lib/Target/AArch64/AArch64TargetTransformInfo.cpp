@@ -299,7 +299,7 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   EVT DstTy = TLI->getValueType(DL, Dst);
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
 
   static const TypeConversionCostTblEntry
   ConversionTbl[] = {
@@ -403,7 +403,7 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                                  SrcTy.getSimpleVT()))
     return Entry->Cost;
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
 }
 
 int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
