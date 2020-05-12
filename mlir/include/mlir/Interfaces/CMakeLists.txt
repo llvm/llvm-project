@@ -28,7 +28,7 @@ mlir_tablegen(LoopLikeInterface.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRLoopLikeInterfaceIncGen)
 add_dependencies(mlir-generic-headers MLIRLoopLikeInterfaceIncGen)
 
-set(LLVM_TARGET_DEFINITIONS SideEffects.td)
+set(LLVM_TARGET_DEFINITIONS SideEffectInterfaces.td)
 mlir_tablegen(SideEffectInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(SideEffectInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRSideEffectOpInterfacesIncGen)
