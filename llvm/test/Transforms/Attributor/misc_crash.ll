@@ -75,3 +75,36 @@ ret_bb:
   %2 = load i32, i32* @var2
   ret i32 %2
 }
+
+define void @func4() {
+; CHECK-LABEL: define {{[^@]+}}@func4
+; CHECK-NEXT:    call void @func5()
+; CHECK-NEXT:    ret void
+;
+  call void @func5(i32 0)
+  ret void
+}
+
+define internal void @func5(i32 %0) {
+; CHECK-LABEL: define {{[^@]+}}@func5
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8*
+; CHECK-NEXT:    br label %block
+; CHECK:       block:
+; CHECK-NEXT:    store i8* blockaddress(@func5, %block), i8** [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[TMP1]]
+; CHECK-NEXT:    call void @func6(i8* [[TMP2]])
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i8*
+  br label %block
+
+block:
+  store i8* blockaddress(@func5, %block), i8** %tmp
+  %addr = load i8*, i8** %tmp
+  call void @func6(i8* %addr)
+  ret void
+}
+
+; CHECK-LABEL: declare {{[^@]+}}@func6
+; CHECK-SAME: (i8*)
+declare void @func6(i8*)
