@@ -23,9 +23,9 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   loop.for %arg4 = %c0 to %6 step %c2 {
     loop.for %arg5 = %c0 to %8 step %c3 {
       loop.for %arg6 = %c0 to %7 step %c4 {
-        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         linalg.matmul(%11, %14, %17) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
       }
     }
@@ -88,9 +88,9 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   loop.for %arg4 = %c0 to %6 step %c2 {
     loop.for %arg5 = %c0 to %8 step %c3 {
       loop.for %arg6 = %c0 to %7 step %c4 {
-        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
-        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
-        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
+        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
+        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
+        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         linalg.matmul(%11, %14, %17) : memref<?x?xf64, offset: ?, strides: [?, 1]>, memref<?x?xf64, offset: ?, strides: [?, 1]>, memref<?x?xf64, offset: ?, strides: [?, 1]>
       }
     }
@@ -153,9 +153,9 @@ func @matmul_i32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   loop.for %arg4 = %c0 to %6 step %c2 {
     loop.for %arg5 = %c0 to %8 step %c3 {
       loop.for %arg6 = %c0 to %7 step %c4 {
-        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
-        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
-        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
+        %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
+        %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
+        %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
         linalg.matmul(%11, %14, %17) : memref<?x?xi32, offset: ?, strides: [?, 1]>, memref<?x?xi32, offset: ?, strides: [?, 1]>, memref<?x?xi32, offset: ?, strides: [?, 1]>
       }
     }
