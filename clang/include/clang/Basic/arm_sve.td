@@ -627,6 +627,13 @@ def SVDUPQ_16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "sUsh", MergeNone>;
 def SVDUPQ_32 : SInst<"svdupq[_n]_{d}", "dssss",  "iUif", MergeNone>;
 def SVDUPQ_64 : SInst<"svdupq[_n]_{d}", "dss",  "lUld", MergeNone>;
 
+def SVDUP   : SInst<"svdup[_n]_{d}", "ds",   "csilUcUsUiUlhfd", MergeNone,    "aarch64_sve_dup_x">;
+def SVDUP_M : SInst<"svdup[_n]_{d}", "ddPs", "csilUcUsUiUlhfd", MergeOp1,     "aarch64_sve_dup">;
+def SVDUP_X : SInst<"svdup[_n]_{d}", "dPs",  "csilUcUsUiUlhfd", MergeAnyExp,  "aarch64_sve_dup">;
+def SVDUP_Z : SInst<"svdup[_n]_{d}", "dPs",  "csilUcUsUiUlhfd", MergeZeroExp, "aarch64_sve_dup">;
+
+def SVINDEX : SInst<"svindex_{d}",   "dss",  "csilUcUsUiUl",    MergeNone,    "aarch64_sve_index">;
+
 // Integer arithmetic
 
 multiclass SInstZPZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
@@ -1061,7 +1068,11 @@ def SVCLASTA_N   : SInst<"svclasta[_n_{d}]",  "sPsd", "csilUcUsUiUlhfd", MergeNo
 def SVCLASTB     : SInst<"svclastb[_{d}]",    "dPdd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_clastb">;
 def SVCLASTB_N   : SInst<"svclastb[_n_{d}]",  "sPsd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_clastb_n">;
 def SVCOMPACT    : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd",        MergeNone, "aarch64_sve_compact">;
-//  SVDUP_LANE    (to land in D78750)
+// Note: svdup_lane is implemented using the intrinsic for TBL to represent a
+// splat of any possible lane. It is upto LLVM to pick a more efficient
+// instruction such as DUP (indexed) if the lane index fits the range of the
+// instruction's immediate.
+def SVDUP_LANE   : SInst<"svdup_lane[_{d}]",  "ddL",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl">;
 def SVDUPQ_LANE  : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_dupq_lane">;
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
 def SVLASTA      : SInst<"svlasta[_{d}]",     "sPd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_lasta">;
@@ -1104,6 +1115,7 @@ def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeN
 def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone>;
 def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone>;
 def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone>;
+def SVDUP_N_B      : SInst<"svdup[_n]_{d}",  "Ps", "PcPsPiPl", MergeNone>;
 
 
 ////////////////////////////////////////////////////////////////////////////////
