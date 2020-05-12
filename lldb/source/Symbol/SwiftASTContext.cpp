@@ -5305,19 +5305,18 @@ bool SwiftASTContext::IsErrorType(void *type) {
   return false;
 }
 
-CompilerType SwiftASTContext::GetReferentType(CompilerType compiler_type) {
+CompilerType SwiftASTContext::GetReferentType(void *type) {
   VALID_OR_RETURN(CompilerType());
 
-  if (swift::Type swift_type = ::GetSwiftType(compiler_type)) {
-    swift::TypeBase *swift_typebase = swift_type.getPointer();
-    if (swift_type && llvm::isa<swift::WeakStorageType>(swift_typebase))
-      return compiler_type;
+  swift::Type swift_type = GetSwiftType(type);
+  if (!swift_type)
+    return {};
+  swift::TypeBase *swift_typebase = swift_type.getPointer();
+  if (swift_type && llvm::isa<swift::WeakStorageType>(swift_typebase))
+    return {this, type};
 
-    auto ref_type = swift_type->getReferenceStorageReferent();
-    return ToCompilerType({ref_type});
-  }
-
-  return {};
+  auto ref_type = swift_type->getReferenceStorageReferent();
+  return ToCompilerType({ref_type});
 }
 
 bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
