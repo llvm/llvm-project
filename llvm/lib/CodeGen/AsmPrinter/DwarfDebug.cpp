@@ -706,21 +706,20 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
 
   // If the MI is an instruction defining one or more parameters' forwarding
   // registers, add those defines.
-  auto getForwardingRegsDefinedByMI =
-      [&TRI](const MachineInstr &MI, SmallSetVector<unsigned, 4> &Defs,
-             const FwdRegWorklist &ForwardedRegWorklist) {
-        if (MI.isDebugInstr())
-          return;
+  auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
+                                          SmallSetVector<unsigned, 4> &Defs) {
+    if (MI.isDebugInstr())
+      return;
 
-        for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isReg() && MO.isDef() &&
-              Register::isPhysicalRegister(MO.getReg())) {
-            for (auto FwdReg : ForwardedRegWorklist)
-              if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
-                Defs.insert(FwdReg.first);
-          }
-        }
-      };
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isDef() &&
+          Register::isPhysicalRegister(MO.getReg())) {
+        for (auto FwdReg : ForwardedRegWorklist)
+          if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
+            Defs.insert(FwdReg.first);
+      }
+    }
+  };
 
   // Search for a loading value in forwarding registers.
   for (; I != MBB->rend(); ++I) {
@@ -739,7 +738,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     // Set of worklist registers that are defined by this instruction.
     SmallSetVector<unsigned, 4> FwdRegDefs;
 
-    getForwardingRegsDefinedByMI(*I, FwdRegDefs, ForwardedRegWorklist);
+    getForwardingRegsDefinedByMI(*I, FwdRegDefs);
     if (FwdRegDefs.empty())
       continue;
 
