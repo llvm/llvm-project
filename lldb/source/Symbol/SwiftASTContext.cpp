@@ -5377,23 +5377,22 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
 }
 
 TypeSystemSwift::TypeAllocationStrategy
-SwiftASTContext::GetAllocationStrategy(CompilerType type) {
-  if (swift::Type swift_type = ::GetSwiftType(type)) {
-    auto *ast = GetSwiftASTContext(&swift_type->getASTContext());
-    const swift::irgen::TypeInfo *type_info =
-        ast->GetSwiftTypeInfo(swift_type.getPointer());
-    if (!type_info)
-      return TypeAllocationStrategy::eUnknown;
-    switch (type_info->getFixedPacking(ast->GetIRGenModule())) {
-    case swift::irgen::FixedPacking::OffsetZero:
-      return TypeAllocationStrategy::eInline;
-    case swift::irgen::FixedPacking::Allocate:
-      return TypeAllocationStrategy::ePointer;
-    case swift::irgen::FixedPacking::Dynamic:
-      return TypeAllocationStrategy::eDynamic;
-    }
+SwiftASTContext::GetAllocationStrategy(void *type) {
+  swift::Type swift_type = GetSwiftType(type);
+  if (!swift_type)
+    return TypeAllocationStrategy::eUnknown;
+  const swift::irgen::TypeInfo *type_info =
+      GetSwiftTypeInfo(swift_type.getPointer());
+  if (!type_info)
+    return TypeAllocationStrategy::eUnknown;
+  switch (type_info->getFixedPacking(GetIRGenModule())) {
+  case swift::irgen::FixedPacking::OffsetZero:
+    return TypeAllocationStrategy::eInline;
+  case swift::irgen::FixedPacking::Allocate:
+    return TypeAllocationStrategy::ePointer;
+  case swift::irgen::FixedPacking::Dynamic:
+    return TypeAllocationStrategy::eDynamic;
   }
-
   return TypeAllocationStrategy::eUnknown;
 }
 
