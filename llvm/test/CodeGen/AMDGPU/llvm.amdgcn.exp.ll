@@ -3,6 +3,7 @@
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
+declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32) #2
 
 ; GCN-LABEL: {{^}}test_export_zeroes_f32:
 ; GCN: exp mrt0 off, off, off, off{{$}}
@@ -557,5 +558,50 @@ define amdgpu_kernel void @test_export_clustering(float %x, float %y) #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}test_export_pos_before_param:
+; GCN: exp pos0
+; GCN-NOT: s_waitcnt
+; GCN: exp param0
+define amdgpu_kernel void @test_export_pos_before_param(float %x, float %y) #0 {
+  %z0 = fadd float %x, %y
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
+  %z1 = fsub float %y, %x
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 true, i1 false)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_export_pos_before_param_ordered:
+; GCN: exp pos0
+; GCN: exp pos1
+; GCN: exp pos2
+; GCN-NOT: s_waitcnt
+; GCN: exp param0
+; GCN: exp param1
+; GCN: exp param2
+define amdgpu_kernel void @test_export_pos_before_param_ordered(float %x, float %y) #0 {
+  %z0 = fadd float %x, %y
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 34, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
+  %z1 = fsub float %y, %x
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 13, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 14, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 true, i1 false)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_export_pos_before_param_across_load:
+; GCN: exp pos0
+; GCN-NEXT: exp param0
+; GCN-NEXT: exp param1
+define amdgpu_kernel void @test_export_pos_before_param_across_load(i32 %idx) #0 {
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float 1.0, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float 1.0, float 1.0, float 1.0, float 0.5, i1 false, i1 false)
+  %load = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i32 0)
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %load, i1 true, i1 false)
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind inaccessiblememonly }
+attributes #2 = { nounwind readnone }
