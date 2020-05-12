@@ -65,10 +65,6 @@ public:
     return SI.getNumCases();
   }
 
-  int getExtCost(const Instruction *I, const Value *Src) {
-    return TTI::TCC_Basic;
-  }
-
   unsigned getInliningThresholdMultiplier() { return 1; }
 
   int getInlinerVectorBonusPercent() { return 150; }
@@ -866,7 +862,7 @@ public:
     case Instruction::FPExt:
     case Instruction::SExt:
     case Instruction::ZExt:
-      if (I && TargetTTI->getExtCost(I, Operands.back()) == TTI::TCC_Free)
+      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
         return TTI::TCC_Free;
       break;
     }
