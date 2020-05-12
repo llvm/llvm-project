@@ -25,6 +25,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Parser.h"
 #include "mlir/Target/LLVMIR.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -54,11 +55,6 @@ static llvm::cl::opt<std::size_t>
                                       " will use a hash value as their symbol "
                                       "name"),
                        llvm::cl::init(32));
-
-static llvm::cl::opt<bool>
-    useOldInitializerCode("enable-old-initializer-lowering",
-                          llvm::cl::desc("TODO: remove the old code!"),
-                          llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 /// Information for generating a structured or unstructured increment loop.
@@ -103,31 +99,12 @@ static bool symIsChar(const Fortran::semantics::Symbol &sym) {
 
 static bool symIsArray(const Fortran::semantics::Symbol &sym) {
   const auto *det = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-  return det ? det->IsArray() : false;
+  return det && det->IsArray();
 }
 
 static bool isExplicitShape(const Fortran::semantics::Symbol &sym) {
   const auto *det = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-  if (det && det->IsArray())
-    return det->shape().IsExplicitShape();
-  return false;
-}
-
-/// Temporary helper to detect shapes that do not require evaluating
-/// bound expressions at runtime or to get the shape from a descriptor.
-static bool isConstantShape(const Fortran::semantics::ArraySpec &shape) {
-  auto isConstant = [](const auto &bound) {
-    const auto &expr = bound.GetExplicit();
-    return expr.has_value() && Fortran::evaluate::IsConstantExpr(*expr);
-  };
-  for (const auto &susbcript : shape) {
-    const auto &lb = susbcript.lbound();
-    const auto &ub = susbcript.ubound();
-    if (isConstant(lb) && (isConstant(ub) || ub.isAssumed()))
-      continue;
-    return false;
-  }
-  return true;
+  return det && det->IsArray() && det->shape().IsExplicitShape();
 }
 
 namespace {
@@ -1635,85 +1612,6 @@ private:
     return Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
   }
 
-  /// Evaluate specification expressions of local symbol and add
-  /// the resulting `mlir::Value` to localSymbols.
-  /// Before evaluating a specification expression, the symbols
-  /// appearing in the expression are gathered, and if they are also
-  /// local symbols, their specification are evaluated first. In case
-  /// a circular dependency occurs, this will crash.
-  void instantiateLocalVariable(
-      const Fortran::semantics::Symbol &symbol,
-      Fortran::lower::SymMap &dummyArgs,
-      llvm::DenseSet<Fortran::semantics::SymbolRef> attempted) {
-    if (lookupSymbol(symbol))
-      return; // already instantiated
-
-    if (IsProcedure(symbol))
-      return;
-
-    if (symbol.has<Fortran::semantics::UseDetails>() ||
-        symbol.has<Fortran::semantics::HostAssocDetails>())
-      TODO(); // Need to keep the localSymbols of other units ?
-
-    if (attempted.find(symbol) != attempted.end())
-      TODO(); // Complex dependencies in specification expressions.
-
-    attempted.insert(symbol);
-    mlir::Value localValue;
-    auto *type = symbol.GetType();
-    assert(type && "expected type for local symbol");
-
-    if (type->category() == Fortran::semantics::DeclTypeSpec::Character) {
-      const auto &lengthParam = type->characterTypeSpec().length();
-      if (auto expr = lengthParam.GetExplicit()) {
-        for (const auto &requiredSymbol :
-             Fortran::evaluate::CollectSymbols(*expr)) {
-          instantiateLocalVariable(requiredSymbol, dummyArgs, attempted);
-        }
-        auto lenValue =
-            genExprValue(Fortran::evaluate::AsGenericExpr(std::move(*expr)));
-        if (auto actual = dummyArgs.lookupSymbol(symbol)) {
-          auto unboxed = builder->createUnboxChar(actual);
-          localValue = builder->createEmboxChar(unboxed.first, lenValue);
-        } else {
-          // TODO: propagate symbol name to FIR.
-          localValue = builder->createCharacterTemp(genType(symbol), lenValue);
-        }
-      } else if (lengthParam.isDeferred()) {
-        TODO();
-      } else {
-        // Assumed
-        localValue = dummyArgs.lookupSymbol(symbol);
-        assert(localValue &&
-               "expected dummy arguments when length not explicit");
-      }
-      addSymbol(symbol, localValue);
-    } else if (!type->AsIntrinsic()) {
-      TODO(); // Derived type / polymorphic
-    } else {
-      if (auto actualValue = dummyArgs.lookupSymbol(symbol))
-        addSymbol(symbol, actualValue);
-      else
-        createTemp(toLocation(), symbol);
-    }
-    if (const auto *details =
-            symbol.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-      // For now, only allow compile time constant shapes that do no require
-      // to evaluate bounds expression here. Assumed size are also supported.
-      if (!isConstantShape(details->shape()))
-        TODO();
-      // handle bounds specification expressions
-      if (!details->coshape().empty())
-        TODO(); // handle cobounds specification expressions
-      if (details->init())
-        TODO(); // init
-    } else {
-      assert(symbol.has<Fortran::semantics::ProcEntityDetails>());
-      TODO(); // Procedure pointers
-    }
-    attempted.erase(symbol);
-  }
-
   /// Instantiate a global variable. If it hasn't already been processed, add
   /// the global to the ModuleOp as a new uniqued symbol and initialize it with
   /// the correct value. It will be referenced on demand using `fir.addr_of`.
@@ -1730,11 +1628,14 @@ private:
         if (!sym.GetType()->AsIntrinsic()) {
           TODO(); // Derived type / polymorphic
         }
+        auto symTy = genType(sym);
+        auto loc = toLocation();
         global = builder->createGlobal(
-            toLocation(), genType(sym), globalName, isConst,
+            loc, symTy, globalName, isConst,
             [&](Fortran::lower::FirOpBuilder &builder) {
               auto initVal = genExprValue(details->init().value());
-              builder.create<fir::HasValueOp>(toLocation(), initVal);
+              auto castTo = builder.createConvert(loc, symTy, initVal);
+              builder.create<fir::HasValueOp>(loc, castTo);
             });
       } else {
         global = builder->createGlobal(toLocation(), genType(sym), globalName);
@@ -1977,11 +1878,10 @@ private:
   }
 
   void instantiateVar(const Fortran::lower::pft::Variable &var) {
-    if (var.isGlobal()) {
+    if (var.isGlobal())
       instantiateGlobal(var);
-      return;
-    }
-    instantiateLocal(var);
+    else
+      instantiateLocal(var);
   }
 
   /// Prepare to translate a new function
@@ -2004,55 +1904,20 @@ private:
     builder->setInsertionPointToStart(&func.front());
     bool hasAlternateReturns = false;
 
-    if (useOldInitializerCode) {
-      Fortran::lower::SymMap dummyAssociations;
-      // plumb function's arguments
-      if (funit.symbol && !funit.isMainProgram()) {
-        auto *entryBlock = &func.front();
-        const auto &details =
-            funit.symbol->get<Fortran::semantics::SubprogramDetails>();
-        for (const auto &v :
-             llvm::zip(details.dummyArgs(), entryBlock->getArguments())) {
-          if (std::get<0>(v)) {
-            dummyAssociations.addSymbol(*std::get<0>(v), std::get<1>(v));
-          } else {
-            TODO(); // [alt return; code under useOldInitializerCode is dead]
-          }
-        }
-
-        // Go through the symbol scope and evaluate specification expressions
-        llvm::DenseSet<Fortran::semantics::SymbolRef> attempted;
-        assert(funit.symbol->scope() && "subprogram symbol must have a scope");
-        // TODO: This loop through scope symbols offers no stability guarantee
-        // regarding the order. This should not be a problem given how
-        // instantiateLocalVariable is implemented, but may harm
-        // reproducibility. A solution would be to sort the symbol based on
-        // their source location.
-        for (const auto &iter : *funit.symbol->scope()) {
-          instantiateLocalVariable(iter.second.get(), dummyAssociations,
-                                   attempted);
-        }
-
-        // if (details.isFunction())
-        //  createTemp(toLocation(), details.result());
+    auto *entryBlock = &func.front();
+    if (funit.symbol && !funit.isMainProgram()) {
+      const auto &details =
+          funit.symbol->get<Fortran::semantics::SubprogramDetails>();
+      auto blockIter = entryBlock->getArguments().begin();
+      for (const auto &dummy : details.dummyArgs()) {
+        if (dummy)
+          addSymbol(*dummy, *blockIter++);
+        else
+          hasAlternateReturns = true;
       }
-    } else {
-      auto *entryBlock = &func.front();
-      if (funit.symbol && !funit.isMainProgram()) {
-        const auto &details =
-            funit.symbol->get<Fortran::semantics::SubprogramDetails>();
-        auto blockIter = entryBlock->getArguments().begin();
-        for (const auto &dummy : details.dummyArgs()) {
-          if (dummy) {
-            addSymbol(*dummy, *blockIter++);
-          } else {
-            hasAlternateReturns = true;
-          }
-        }
-      }
-      for (const auto &var : funit.getOrderedSymbolTable())
-        instantiateVar(var);
     }
+    for (const auto &var : funit.getOrderedSymbolTable())
+      instantiateVar(var);
 
     // Create most function blocks in advance.
     createEmptyBlocks(funit.evaluationList);
@@ -2129,6 +1994,8 @@ private:
     else
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
 
+    // immediately throw away any dead code just created
+    mlir::simplifyRegions({builder->getRegion()});
     delete builder;
     builder = nullptr;
     localSymbols.clear();

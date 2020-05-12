@@ -1247,6 +1247,7 @@ struct EmboxProcOpConversion : public FIROpConversion<fir::EmboxProcOp> {
   }
 };
 
+// Code shared between insert_value and extract_value Ops.
 struct ValueOpCommon {
   static mlir::Attribute getValue(mlir::Value value) {
     auto defOp = value.getDefiningOp();
@@ -1256,6 +1257,45 @@ struct ValueOpCommon {
       return v.value();
     llvm_unreachable("must be a constant op");
     return {};
+  }
+
+  // Translate the arguments pertaining to any multidimensional array to
+  // row-major order for LLVM-IR.
+  static void toRowMajor(llvm::SmallVectorImpl<mlir::Attribute> &attrs,
+                         mlir::LLVM::LLVMType ty) {
+    assert(ty && "type is null");
+    auto *llTy = ty.getUnderlyingType();
+    const auto end = attrs.size();
+    for (std::remove_const_t<decltype(end)> i = 0; i < end; ++i) {
+      if (auto *seq = dyn_cast<llvm::ArrayType>(llTy)) {
+        const auto dim = getDimension(seq);
+        if (dim > 1) {
+          std::reverse(attrs.begin() + i, attrs.begin() + i + dim);
+          i += dim - 1;
+        }
+        llTy = getArrayElementType(seq);
+      } else if (auto *st = dyn_cast<llvm::StructType>(llTy)) {
+        llTy = st->getElementType(attrs[i].cast<mlir::IntegerAttr>().getInt());
+      } else {
+        llvm_unreachable("index into invalid type");
+      }
+    }
+  }
+
+private:
+  static unsigned getDimension(llvm::ArrayType *ty) {
+    unsigned result = 1;
+    for (auto *eleTy = dyn_cast<llvm::ArrayType>(ty->getElementType()); eleTy;
+         eleTy = dyn_cast<llvm::ArrayType>(eleTy->getElementType()))
+      ++result;
+    return result;
+  }
+
+  static llvm::Type *getArrayElementType(llvm::ArrayType *ty) {
+    auto *eleTy = ty->getElementType();
+    while (auto *arrTy = dyn_cast<llvm::ArrayType>(eleTy))
+      eleTy = arrTy->getElementType();
+    return eleTy;
   }
 };
 
@@ -1274,6 +1314,7 @@ struct ExtractValueOpConversion
     SmallVector<mlir::Attribute, 8> attrs;
     for (std::size_t i = 1, end{operands.size()}; i < end; ++i)
       attrs.push_back(getValue(operands[i]));
+    toRowMajor(attrs, lowering.unwrap(operands[0].getType()));
     auto position = mlir::ArrayAttr::get(attrs, extractVal.getContext());
     rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
         extractVal, ty, operands[0], position);
@@ -1296,6 +1337,7 @@ struct InsertValueOpConversion
     SmallVector<mlir::Attribute, 8> attrs;
     for (std::size_t i = 2, end{operands.size()}; i < end; ++i)
       attrs.push_back(getValue(operands[i]));
+    toRowMajor(attrs, lowering.unwrap(operands[0].getType()));
     auto position = mlir::ArrayAttr::get(attrs, insertVal.getContext());
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
         insertVal, ty, operands[0], operands[1], position);

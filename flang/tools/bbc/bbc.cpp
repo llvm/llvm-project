@@ -225,7 +225,7 @@ static void convertFortranSourceToMLIR(
   pm.addPass(mlir::createLowerToCFGPass());
   // pm.addPass(fir::createMemToRegPass());
   pm.addPass(fir::createCSEPass());
-  pm.addPass(mlir::createCanonicalizerPass());
+  //pm.addPass(mlir::createCanonicalizerPass());
 
   if (emitLLVM) {
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.

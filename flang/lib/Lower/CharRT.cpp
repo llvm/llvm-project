@@ -123,8 +123,6 @@ Fortran::lower::genBoxCharCompare(Fortran::lower::AbstractConverter &converter,
                                   mlir::Value lhs, mlir::Value rhs) {
   auto &builder = converter.getFirOpBuilder();
   builder.setLocation(loc);
-  assert(lhs.getType().isa<fir::BoxCharType>() && "not a boxchar");
-  assert(rhs.getType().isa<fir::BoxCharType>() && "not a boxchar");
   auto lhsPair = builder.materializeCharacter(lhs);
   auto rhsPair = builder.materializeCharacter(rhs);
   return genRawCharCompare(converter, loc, cmp, lhsPair.first, lhsPair.second,
