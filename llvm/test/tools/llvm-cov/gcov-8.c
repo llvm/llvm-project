@@ -27,11 +27,10 @@ int main() {                                      // GCOV:      1: [[@LINE]]:int
 // RUN: FileCheck --input-file=%t/gcov-8.c.gcov --check-prefix=HEADER %s
 // RUN: FileCheck --input-file=%t/gcov-8.c.gcov --check-prefix=GCOV %s
 
-/// FIXME Runs:1
 // HEADER: {{^}} -:    0:Source:gcov-8.c
 // HEADER-NEXT:  -:    0:Graph:gcov-8.gcno
 // HEADER-NEXT:  -:    0:Data:gcov-8.gcda
-// HEADER-NEXT:  -:    0:Runs:0
+// HEADER-NEXT:  -:    0:Runs:1{{$}}
 // HEADER-NEXT:  -:    0:Programs:1
 // HEADER-NEXT:  -:    1:/// Test that llvm-cov
 
