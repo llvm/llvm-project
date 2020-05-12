@@ -298,7 +298,7 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
         SBPrefix = "scan-build " + SBOptions + " "
         for Command in SBCommandFile:
             Command = Command.strip()
-            if len(Command) == 0 or Command.startswith("#"):
+            if len(Command) == 0:
                 continue
 
             # Custom analyzer invocation specified by project.
@@ -309,6 +309,9 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
                 ExtraEnv['OUTPUT'] = SBOutputDir
                 ExtraEnv['CC'] = Clang
                 ExtraEnv['ANALYZER_CONFIG'] = generateAnalyzerConfig(Args)
+                continue
+
+            if Command.startswith("#"):
                 continue
 
             # If using 'make', auto imply a -jX argument
