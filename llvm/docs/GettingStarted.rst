@@ -1105,25 +1105,33 @@ following options with cmake:
    incremental builds, and improves your memory usage.
 
  * -DLLVM_USE_LINKER
-   Setting this option to either gold or lld will significantly improve
-   performance. In the case that you are compiling lld, you may wish to use the
-   gold linker as a faster alternative.
+   Setting this option to lld will significantly reduce linking time for LLVM
+   executables on ELF-based platforms, such as Linux. If you are building LLVM
+   for the first time and lld is not available to you as a binary package, then
+   you may want to use the gold linker as a faster alternative to GNU ld.
 
  * -DCMAKE_BUILD_TYPE
-   This option defaults to Debug; however, this may consume more memory during
-   the linking phase. So, you may wish to use the build type Release. Another
-   build type you may wish to consider is release-with-asserts which compiles at
-   nearly the same rate as the Release build; however, it may not be as easy
-   to debug. MinSizeRel is another build type you may wish to consider, if you
-   are still having problems with slow build time.
+
+    - Debug --- This is the default build type. This disables optimizations while
+      compiling LLVM and enables debug info. On ELF-based platforms (e.g. Linux)
+      linking with debug info may consume a large amount of memory.
+
+    - Release --- Turns on optimizations and disables debug info. Combining the
+      Release build type with -DLLVM_ENABLE_ASSERTIONS=ON may be a good trade-off
+      between speed and debugability during development, particularly for running
+      the test suite.
+
+ * -DLLVM_ENABLE_ASSERTIONS
+   This option defaults to ON for Debug builds and defaults to OFF for Release
+   builds. As mentioned in the previous option, using the Release build type and
+   enabling assertions may be a good alternative to using the Debug build type.
 
  * -DLLVM_PARALLEL_LINK_JOBS
    Set this equal to number of jobs you wish to run simultaneously. This is
    similar to the -j option used with make, but only for link jobs. This option
-   is of course only meaningful if you plan to build with ninja. You may wish to
-   use a very low number of jobs, as this will greatly reduce the amount memory
-   used during the build process. If you have limited memory, you may wish to
-   set this to 1.
+   can only be used with ninja. You may wish to use a very low number of jobs,
+   as this will greatly reduce the amount of memory used during the build
+   process. If you have limited memory, you may wish to set this to 1.
 
  * -DLLVM_TARGETS_TO_BUILD
    Set this equal to the target you wish to build. You may wish to set this to
@@ -1131,24 +1139,25 @@ following options with cmake:
    llvm-project/llvm/lib/Target directory.
 
  * -DLLVM_OPTIMIZED_TABLEGEN
-   Set this to ON to generate a fully optimized tablegen during build. This will
-   significantly improve your build time.
+   Set this to ON to generate a fully optimized tablegen during your build. This
+   will significantly improve your build time. This is only useful if you are
+   using the Debug build type.
 
  * -DLLVM_ENABLE_PROJECTS
    Set this equal to the projects you wish to compile (e.g. clang, lld, etc.) If
-   compiling more than one project, deliniate the list with a semicolon. Should
+   compiling more than one project, separate the items with a semicolon. Should
    you run into issues with the semicolon, try surrounding it with single quotes.
 
  * -DCLANG_ENABLE_STATIC_ANALYZER
    Set this option to OFF if you do not require the clang static analyzer. This
-   should improve your build time significantly.
+   should improve your build time slightly.
 
  * -DLLVM_USE_SPLIT_DWARF
    Consider setting this to ON if you require a debug build, as this will ease
    memory pressure on the linker. This will make linking much faster, as the
    binaries will not contain any of the debug information; however, this will
    generate the debug information in the form of a DWARF object file (with the
-   extension .dwo).
+   extension .dwo). This only applies to host platforms using ELF, such as Linux.
 
 .. _links:
 
