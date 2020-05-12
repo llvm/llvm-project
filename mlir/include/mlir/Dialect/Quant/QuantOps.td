@@ -14,7 +14,7 @@
 #define DIALECT_QUANT_QUANT_OPS_
 
 include "mlir/Dialect/Quant/QuantOpsBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // Base classes
