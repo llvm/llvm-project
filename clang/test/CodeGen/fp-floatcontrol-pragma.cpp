@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -DEXCEPT=1 -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NS %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -verify -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
@@ -59,3 +60,56 @@ void callt() {
   z = z * z;
 //CHECK: = fmul float
 }
+
+#if EXCEPT
+namespace ns {
+// Check that pragma float_control can appear in namespace.
+#pragma float_control(except, on, push)
+float exc_on(double x, float zero) {
+// CHECK-NS: define {{.*}}exc_on{{.*}}
+  {} try {
+    x = 1.0 / zero; /* division by zero, the result unused */
+//CHECK-NS: llvm.experimental.constrained.fdiv{{.*}}
+  } catch (...) {}
+  return zero;
+}
+}
+
+// Check pragma is still effective after namespace closes
+float exc_still_on(double x, float zero) {
+// CHECK-NS: define {{.*}}exc_still_on{{.*}}
+  {} try {
+    x = 1.0 / zero; /* division by zero, the result unused */
+//CHECK-NS: llvm.experimental.constrained.fdiv{{.*}}
+  } catch (...) {}
+  return zero;
+}
+
+#pragma float_control(pop)
+float exc_off(double x, float zero) {
+// CHECK-NS: define {{.*}}exc_off{{.*}}
+  {} try {
+    x = 1.0 / zero; /* division by zero, the result unused */
+//CHECK-NS: fdiv contract double
+  } catch (...) {}
+  return zero;
+}
+
+namespace fc_template_namespace {
+#pragma float_control(except, on, push)
+template <class T>
+T exc_on(double x, T zero) {
+// CHECK-NS: define {{.*}}fc_template_namespace{{.*}}
+  {} try {
+    x = 1.0 / zero; /* division by zero, the result unused */
+//CHECK-NS: llvm.experimental.constrained.fdiv{{.*}}
+  } catch (...) {}
+  return zero;
+}
+}
+
+#pragma float_control(pop)
+float xx(double x, float z) {
+  return fc_template_namespace::exc_on<float>(x, z);
+}
+#endif // EXCEPT

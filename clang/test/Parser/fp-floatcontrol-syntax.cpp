@@ -10,10 +10,10 @@ float function_scope(float a) {
 #pragma float_control(pop)
 #pragma float_control(precise, on, push)
 void check_stack() {
-#pragma float_control(push)                   // expected-error {{can only appear at file scope}}
-#pragma float_control(pop)                    // expected-error {{can only appear at file scope}}
-#pragma float_control(precise, on, push)      // expected-error {{can only appear at file scope}}
-#pragma float_control(except, on, push)       // expected-error {{can only appear at file scope}}
+#pragma float_control(push)                   // expected-error {{can only appear at file scope or namespace scope}}
+#pragma float_control(pop)                    // expected-error {{can only appear at file scope or namespace scope}}
+#pragma float_control(precise, on, push)      // expected-error {{can only appear at file scope or namespace scope}}
+#pragma float_control(except, on, push)       // expected-error {{can only appear at file scope or namespace scope}}
 #pragma float_control(except, on, push, junk) // expected-error {{float_control is malformed}}
   return;
 }
