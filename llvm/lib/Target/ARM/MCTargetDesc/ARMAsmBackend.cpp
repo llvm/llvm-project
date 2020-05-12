@@ -116,26 +116,22 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // ARMFixupKinds.h.
       //
       // Name                      Offset (bits) Size (bits)     Flags
-      {"fixup_arm_ldst_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_arm_ldst_pcrel_12", 0, 32, IsPCRelConstant},
       {"fixup_t2_ldst_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_pcrel_10_unscaled", 0, 32, IsPCRelConstant},
+      {"fixup_arm_pcrel_10", 0, 32, IsPCRelConstant},
       {"fixup_t2_pcrel_10", 0, 32,
        MCFixupKindInfo::FKF_IsPCRel |
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_thumb_adr_pcrel_10", 8, 8,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_adr_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_adr_pcrel_12", 0, 32, IsPCRelConstant},
       {"fixup_t2_adr_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_condbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_uncondbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_condbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
