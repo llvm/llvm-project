@@ -42,6 +42,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "Config.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
 #include "OutputSection.h"
@@ -54,10 +55,12 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support::endian;
+using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
@@ -236,7 +239,11 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
   }
 }
 
-DylibFile::DylibFile(MemoryBufferRef mb) : InputFile(DylibKind, mb) {
+DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
+    : InputFile(DylibKind, mb) {
+  if (umbrella == nullptr)
+    umbrella = this;
+
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
 
@@ -254,10 +261,34 @@ DylibFile::DylibFile(MemoryBufferRef mb) : InputFile(DylibKind, mb) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
-                symbols.push_back(symtab->addDylib(saver.save(name), this));
+                symbols.push_back(symtab->addDylib(saver.save(name), umbrella));
               });
   } else {
     error("LC_DYLD_INFO_ONLY not found in " + getName());
+    return;
+  }
+
+  if (hdr->flags & MH_NO_REEXPORTED_DYLIBS)
+    return;
+
+  const uint8_t *p =
+      reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
+  for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
+    auto *cmd = reinterpret_cast<const load_command *>(p);
+    p += cmd->cmdsize;
+    if (cmd->cmd != LC_REEXPORT_DYLIB)
+      continue;
+
+    auto *c = reinterpret_cast<const dylib_command *>(cmd);
+    StringRef reexportPath =
+        reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
+    // TODO: Expand @loader_path, @executable_path etc in reexportPath
+    Optional<MemoryBufferRef> buffer = readFile(reexportPath);
+    if (!buffer) {
+      error("unable to read re-exported dylib at " + reexportPath);
+      return;
+    }
+    reexported.push_back(make<DylibFile>(*buffer, umbrella));
   }
 }
 

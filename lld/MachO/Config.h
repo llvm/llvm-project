@@ -21,9 +21,10 @@ class Symbol;
 
 struct Configuration {
   Symbol *entry;
-  llvm::MachO::HeaderFileType outputType;
+  bool hasReexports = false;
   llvm::StringRef installName;
   llvm::StringRef outputFile;
+  llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> searchPaths;
 };
 
