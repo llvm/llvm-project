@@ -31,7 +31,7 @@ def main() {
 
 # CHECK: Module:
 # CHECK-NEXT:     Function
-# CHECK-NEXT:       Proto 'multiply_transpose' @{{.*}}ast.toy:4:1'
+# CHECK-NEXT:       Proto 'multiply_transpose' @{{.*}}ast.toy:4:1
 # CHECK-NEXT:       Params: [a, b]
 # CHECK-NEXT:       Block {
 # CHECK-NEXT:         Return
@@ -44,7 +44,7 @@ def main() {
 # CHECK-NEXT:             ]
 # CHECK-NEXT:       } // Block
 # CHECK-NEXT:     Function
-# CHECK-NEXT:       Proto 'main' @{{.*}}ast.toy:8:1'
+# CHECK-NEXT:       Proto 'main' @{{.*}}ast.toy:8:1
 # CHECK-NEXT:       Params: []
 # CHECK-NEXT:       Block {
 # CHECK-NEXT:         VarDecl a<> @{{.*}}ast.toy:11:3

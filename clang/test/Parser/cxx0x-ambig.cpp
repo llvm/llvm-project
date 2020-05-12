@@ -81,6 +81,14 @@ namespace bitfield {
   struct S8 {
     enum E : int { a = id(U()) }; // expected-error {{no viable conversion}}
   };
+
+  // PR26249: Disambiguate 'enum :' as an enum-base always, even if that would
+  // be ill-formed. It cannot be an elaborated-type-specifier.
+  struct S {
+    enum : undeclared_type { v = 0 }; // expected-error {{unknown type name 'undeclared_type'}}
+    enum E : undeclared_type { w = 0 }; // expected-error {{unknown type name 'undeclared_type'}}
+    enum X : undeclared_type { x = 0 }; // expected-error {{unknown type name 'undeclared_type'}}
+  };
 }
 
 namespace trailing_return {

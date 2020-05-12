@@ -31,7 +31,7 @@ define void @test_udiv7_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; X86-NEXT:    pmuludq %xmm1, %xmm3
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
@@ -81,7 +81,7 @@ define void @test_urem7_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; X86-NEXT:    pmuludq %xmm1, %xmm3
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
@@ -137,7 +137,7 @@ define void @test_sdiv7_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; X86-NEXT:    pmuludq %xmm1, %xmm3
 ; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
@@ -198,7 +198,7 @@ define void @test_srem7_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; X86-NEXT:    pmuludq %xmm1, %xmm3
 ; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
@@ -358,7 +358,7 @@ define void @test_udiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    movd %eax, %xmm2
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X86-NEXT:    movd %xmm1, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %esi
@@ -412,7 +412,7 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    movd %edx, %xmm2
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X86-NEXT:    movd %xmm1, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %esi
@@ -465,7 +465,7 @@ define void @test_sdiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    movd %xmm1, %edi
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X86-NEXT:    movd %xmm1, %ebx
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl %ebx
@@ -524,7 +524,7 @@ define void @test_srem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    movd %xmm1, %edi
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X86-NEXT:    movd %xmm1, %ebx
 ; X86-NEXT:    cltd
 ; X86-NEXT:    idivl %ebx

@@ -461,6 +461,34 @@ module attributes {
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
 
+// CHECK-LABEL: index_cast1
+func @index_cast1(%arg0: i16) {
+  // CHECK: spv.SConvert %{{.+}} : i16 to i32
+  %0 = index_cast %arg0 : i16 to index
+  return
+}
+
+// CHECK-LABEL: index_cast2
+func @index_cast2(%arg0: index) {
+  // CHECK: spv.SConvert %{{.+}} : i32 to i16
+  %0 = index_cast %arg0 : index to i16
+  return
+}
+
+// CHECK-LABEL: index_cast3
+func @index_cast3(%arg0: i32) {
+  // CHECK-NOT: spv.SConvert
+  %0 = index_cast %arg0 : i32 to index
+  return
+}
+
+// CHECK-LABEL: index_cast4
+func @index_cast4(%arg0: index) {
+  // CHECK-NOT: spv.SConvert
+  %0 = index_cast %arg0 : index to i32
+  return
+}
+
 // CHECK-LABEL: @fpext1
 func @fpext1(%arg0: f16) -> f64 {
   // CHECK: spv.FConvert %{{.*}} : f16 to f64
@@ -528,6 +556,20 @@ func @trunci1(%arg0 : i64) -> i16 {
 func @trunci2(%arg0: i32) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i32 to i16
   %0 = std.trunci %arg0 : i32 to i16
+  return %0 : i16
+}
+
+// CHECK-LABEL: @fptosi1
+func @fptosi1(%arg0 : f32) -> i32 {
+  // CHECK: spv.ConvertFToS %{{.*}} : f32 to i32
+  %0 = std.fptosi %arg0 : f32 to i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @fptosi2
+func @fptosi2(%arg0 : f16) -> i16 {
+  // CHECK: spv.ConvertFToS %{{.*}} : f16 to i16
+  %0 = std.fptosi %arg0 : f16 to i16
   return %0 : i16
 }
 

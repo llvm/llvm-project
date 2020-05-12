@@ -89,11 +89,30 @@ LinalgOp interchange(LinalgOp op, ArrayRef<unsigned> interchangeVector);
 /// Returns a list of PromotionInfo which hold the promoted buffer and the
 /// full and partial views indexing into the buffer.
 // TODO: revisit dynamicBuffers option.
-LinalgOp promoteSubViewOperands(OpBuilder &b, LinalgOp op,
-                                llvm::SetVector<Value> subViews,
-                                bool dynamicBuffers = false,
-                                int64_t alignment = 0,
-                                OperationFolder *folder = nullptr);
+struct LinalgPromotionOptions {
+  /// Indices of subViews to promote. If `None`, try to promote all operands.
+  Optional<DenseSet<unsigned>> operandsToPromote = None;
+  LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
+    operandsToPromote = DenseSet<unsigned>();
+    operandsToPromote->insert(operands.begin(), operands.end());
+    return *this;
+  }
+  /// Allow the use of dynamicaly-sized buffers.
+  bool dynamicBuffers = false;
+  LinalgPromotionOptions &setDynamicBuffers(unsigned dynamic) {
+    dynamicBuffers = dynamic;
+    return *this;
+  }
+  /// Alignment of promoted buffer. If `None` do not specify alignment.
+  Optional<unsigned> alignment = None;
+  LinalgPromotionOptions &setAlignment(unsigned align) {
+    alignment = align;
+    return *this;
+  }
+};
+LinalgOp promoteSubViews(OpBuilder &b, LinalgOp op,
+                         LinalgPromotionOptions options,
+                         OperationFolder *folder = nullptr);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
@@ -125,8 +144,8 @@ interchangeGenericLinalgOpPrecondition(Operation *op,
                                        ArrayRef<unsigned> interchangeVector);
 
 /// Promote std.subviews feeding linalg operations.
-LogicalResult promoteSubviewsLinalgOpPrecondition(
-    Operation *op, Optional<DenseSet<unsigned>> operandIndicesToPromote = None);
+LogicalResult promoteSubviewsPrecondition(Operation *op,
+                                          LinalgPromotionOptions options);
 
 /// Rewrite a linalg.generic into a suitable vector.contraction op.
 LogicalResult vectorizeLinalgOpPrecondition(Operation *op);
@@ -242,13 +261,12 @@ struct LinalgInterchangePattern : public LinalgBaseInterchangePattern {
 ///
 /// Linalg promotion patterns.
 ///
-/// Apply the `promoteSubViewOperands` transformation as a pattern.
+/// Apply the `promoteSubViews` transformation as a pattern.
 /// `marker` controls LinalgTransformMarker matching and update when specified.
-/// See `promoteSubViewOperands` for more details.
+/// See `promoteSubViews` for more details.
 struct LinalgBasePromotionPattern : public RewritePattern {
   LinalgBasePromotionPattern(StringRef opName, MLIRContext *context,
-                             ArrayRef<unsigned> operandsToPromote = {},
-                             unsigned alignment = 0,
+                             LinalgPromotionOptions options,
                              LinalgMarker marker = LinalgMarker(),
                              PatternBenefit benefit = 1);
   LogicalResult matchAndRewrite(Operation *op,
@@ -257,35 +275,17 @@ struct LinalgBasePromotionPattern : public RewritePattern {
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
   LinalgMarker marker;
-  /// Indices of subViews to promote.
-  SmallVector<unsigned, 4> operandsToPromote;
-  /// Alignment of promoted buffer.
-  unsigned alignment;
+  /// Promotion options.
+  LinalgPromotionOptions options;
 };
 
 template <typename OpTy>
 struct LinalgPromotionPattern : public LinalgBasePromotionPattern {
-  LinalgPromotionPattern(MLIRContext *context,
-                         ArrayRef<unsigned> operandsToPromote = {},
-                         unsigned alignment = 0,
+  LinalgPromotionPattern(MLIRContext *context, LinalgPromotionOptions options,
                          LinalgMarker marker = LinalgMarker(),
                          PatternBenefit benefit = 1)
-      : LinalgBasePromotionPattern(OpTy::getOperationName(), context,
-                                   operandsToPromote, alignment, marker,
-                                   benefit) {}
-  LinalgPromotionPattern(MLIRContext *context,
-                         ArrayRef<unsigned> operandsToPromote,
-                         LinalgMarker marker = LinalgMarker(),
-                         PatternBenefit benefit = 1)
-      : LinalgPromotionPattern(context, operandsToPromote, 0, marker, benefit) {
-  }
-  LinalgPromotionPattern(MLIRContext *context, unsigned alignment,
-                         LinalgMarker marker = LinalgMarker(),
-                         PatternBenefit benefit = 1)
-      : LinalgPromotionPattern(context, {}, alignment, marker, benefit) {}
-  LinalgPromotionPattern(MLIRContext *context, LinalgMarker marker,
-                         PatternBenefit benefit = 1)
-      : LinalgPromotionPattern(context, {}, 0, marker, benefit) {}
+      : LinalgBasePromotionPattern(OpTy::getOperationName(), context, options,
+                                   marker, benefit) {}
 };
 
 ///
@@ -342,8 +342,6 @@ struct LinalgLoweringPattern : public RewritePattern {
       return failure();
     if (failed(marker.checkAndNotify(rewriter, linalgOp)))
       return failure();
-    if (failed(promoteSubviewsLinalgOpPrecondition(op)))
-      return failure();
 
     if (loweringType == LinalgLoweringType::LibraryCall) {
       // TODO: Move lowering to library calls here.
@@ -369,6 +367,23 @@ private:
   LinalgLoweringType loweringType;
 };
 
+//===----------------------------------------------------------------------===//
+// Support for staged pattern application.
+//===----------------------------------------------------------------------===//
+/// Helper function to allow applying rewrite patterns, interleaved with more
+/// global transformations, in a staged fashion:
+///   1. the first stage consists of a list of OwningRewritePatternList. Each
+///   OwningRewritePatternList in this list is applied once, in order.
+///   2. the second stage consists of a single OwningRewritePattern that is
+///   applied greedily until convergence.
+///   3. the third stage consists of applying a lambda, generally used for
+///   non-local transformation effects. This allows creating custom fused
+///   transformations where patterns can be ordered and applied at a finer
+///   granularity than a sequence of traditional compiler passes.
+LogicalResult applyStagedPatterns(
+    Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
+    const OwningRewritePatternList &stage2Patterns,
+    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 } // namespace linalg
 } // namespace mlir
 

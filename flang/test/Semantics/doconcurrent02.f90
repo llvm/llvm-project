@@ -1,4 +1,4 @@
-! RUN: %S/test_any.sh %s %flang %t
+! RUN: %S/test_any.sh %s %t %f18
 ! negative tests: we don't want DO CONCURRENT semantics constraints checked
 ! when the loops are not DO CONCURRENT
 

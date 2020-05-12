@@ -176,7 +176,7 @@ def ConvertSimpleLoopsToGPU : FunctionPass<"convert-loops-to-gpu"> {
 }
 
 def ConvertLoopsToGPU : FunctionPass<"convert-loop-op-to-gpu"> {
-  let summary = "Convert top-level loop::ForOp to GPU kernels";
+  let summary = "Convert top-level scf::ForOp to GPU kernels";
   let constructor = "mlir::createLoopToGPUPass()";
   let options = [
     ListOption<"numWorkGroups", "gpu-num-workgroups", "int64_t",

@@ -443,3 +443,29 @@ namespace pr36638 {
 struct A;
 void (A::*mp1)(int) __unaligned;
 }
+
+namespace enum_class {
+  // MSVC allows opaque-enum-declaration syntax anywhere an
+  // elaborated-type-specifier can appear.
+  // FIXME: Most of these are missing warnings.
+  enum E0 *p0; // expected-warning {{Microsoft extension}}
+  enum class E1 : int *p1;
+  enum E2 : int *p2;
+  enum class E3 *p3;
+  auto f4() -> enum class E4 { return {}; }
+  auto f5() -> enum E5 : int { return {}; } // FIXME: MSVC rejects this and crashes if the body is {}.
+  auto f6() -> enum E6 { return {}; } // expected-warning {{Microsoft extension}}
+
+  // MSVC does not perform disambiguation for a colon that could introduce an
+  // enum-base or a bit-field.
+  enum E {};
+  struct S {
+    enum E : int(1); // expected-error {{anonymous bit-field}}
+    enum E : int : 1; // OK, bit-field
+    enum F : int a = {}; // OK, default member initializer
+    // MSVC produces a "C4353 constant 0 as function expression" for this,
+    // considering the final {} to be part of the bit-width. We follow P0683R1
+    // and treat it as a default member initializer.
+    enum E : int : int{}{}; // expected-error {{anonymous bit-field cannot have a default member initializer}} expected-warning {{C++20 extension}}
+  };
+}

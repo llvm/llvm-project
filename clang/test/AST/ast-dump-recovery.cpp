@@ -1,12 +1,13 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -frecovery-ast -ast-dump %s | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -frecovery-ast -frecovery-ast-type -ast-dump %s | FileCheck -strict-whitespace %s
 // RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -fno-recovery-ast -ast-dump %s | FileCheck --check-prefix=DISABLED -strict-whitespace %s
 
 int some_func(int *);
 
 // CHECK:     VarDecl {{.*}} invalid_call
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
-// CHECK-NEXT:  |-UnresolvedLookupExpr {{.*}} 'some_func'
-// CHECK-NEXT:  `-IntegerLiteral {{.*}} 123
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:  `-RecoveryExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:    |-UnresolvedLookupExpr {{.*}} 'some_func'
+// CHECK-NEXT:    `-IntegerLiteral {{.*}} 123
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int invalid_call = some_func(123);
 
@@ -14,14 +15,15 @@ int ambig_func(double);
 int ambig_func(float);
 
 // CHECK:     VarDecl {{.*}} ambig_call
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
-// CHECK-NEXT:  |-UnresolvedLookupExpr {{.*}} 'ambig_func'
-// CHECK-NEXT:  `-IntegerLiteral {{.*}} 123
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:  `-RecoveryExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:    |-UnresolvedLookupExpr {{.*}} 'ambig_func'
+// CHECK-NEXT:    `-IntegerLiteral {{.*}} 123
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int ambig_call = ambig_func(123);
 
 // CHECK:     VarDecl {{.*}} unresolved_call1
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:`-RecoveryExpr {{.*}} '<dependent type>' contains-errors
 // CHECK-NEXT:  `-UnresolvedLookupExpr {{.*}} 'bar'
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int unresolved_call1 = bar();

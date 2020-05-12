@@ -22,7 +22,7 @@ add_mlir_library(MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
-  MLIRLoopOps
+  MLIRSCF
   )
 
 add_mlir_library(MLIRLoopAnalysis
@@ -40,5 +40,5 @@ add_mlir_library(MLIRLoopAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
-  MLIRLoopOps
+  MLIRSCF
   )

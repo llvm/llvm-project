@@ -853,8 +853,22 @@ struct Attributor {
   const AAType &getAAFor(const AbstractAttribute &QueryingAA,
                          const IRPosition &IRP, bool TrackDependence = true,
                          DepClassTy DepClass = DepClassTy::REQUIRED) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence,
-                                    DepClass);
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence, DepClass,
+                                    /* ForceUpdate */ false);
+  }
+
+  /// Similar to getAAFor but the return abstract attribute will be updated (via
+  /// `AbstractAttribute::update`) even if it is found in the cache. This is
+  /// especially useful for AAIsDead as changes in liveness can make updates
+  /// possible/useful that were not happening before as the abstract attribute
+  /// was assumed dead.
+  template <typename AAType>
+  const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
+                                  const IRPosition &IRP,
+                                  bool TrackDependence = true,
+                                  DepClassTy DepClass = DepClassTy::REQUIRED) {
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence, DepClass,
+                                    /* ForceUpdate */ true);
   }
 
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if
@@ -901,6 +915,11 @@ struct Attributor {
   bool isModulePass() const {
     return !Functions.empty() &&
            Functions.size() == Functions.front()->getParent()->size();
+  }
+
+  /// Return true if we derive attributes for \p Fn
+  bool isRunOn(Function &Fn) const {
+    return Functions.empty() || Functions.count(&Fn);
   }
 
   /// Determine opportunities to derive 'default' attributes in \p F and create
@@ -1219,10 +1238,13 @@ private:
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
                                  const AbstractAttribute *QueryingAA = nullptr,
                                  bool TrackDependence = false,
-                                 DepClassTy DepClass = DepClassTy::OPTIONAL) {
-    if (const AAType *AAPtr =
-            lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence))
+                                 DepClassTy DepClass = DepClassTy::OPTIONAL,
+                                 bool ForceUpdate = false) {
+    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence)) {
+      if (ForceUpdate)
+        updateAA(*AAPtr);
       return *AAPtr;
+    }
 
     // No matching attribute found, create one.
     // Use the static create method.
@@ -1264,10 +1286,10 @@ private:
 
   /// Return the attribute of \p AAType for \p IRP if existing.
   template <typename AAType>
-  const AAType *lookupAAFor(const IRPosition &IRP,
-                            const AbstractAttribute *QueryingAA = nullptr,
-                            bool TrackDependence = false,
-                            DepClassTy DepClass = DepClassTy::OPTIONAL) {
+  AAType *lookupAAFor(const IRPosition &IRP,
+                      const AbstractAttribute *QueryingAA = nullptr,
+                      bool TrackDependence = false,
+                      DepClassTy DepClass = DepClassTy::OPTIONAL) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
@@ -1307,28 +1329,6 @@ private:
   ///{
   using AAMapKeyTy = std::pair<const char *, IRPosition>;
   DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
-  ///}
-
-  /// A map from abstract attributes to the ones that queried them through calls
-  /// to the getAAFor<...>(...) method.
-  ///{
-  struct QueryMapValueTy {
-    /// Set of abstract attributes which were used but not necessarily required
-    /// for a potential optimistic state.
-    SetVector<AbstractAttribute *> OptionalAAs;
-
-    /// Set of abstract attributes which were used and which were necessarily
-    /// required for any potential optimistic state.
-    SetVector<AbstractAttribute *> RequiredAAs;
-
-    /// Clear the sets but keep the allocated storage as it is likely be resued.
-    void clear() {
-      OptionalAAs.clear();
-      RequiredAAs.clear();
-    }
-  };
-  using QueryMapTy = DenseMap<const AbstractAttribute *, QueryMapValueTy *>;
-  QueryMapTy QueryMap;
   ///}
 
   /// Map to remember all requested signature changes (= argument replacements).
@@ -2031,6 +2031,12 @@ protected:
   ///
   /// \Return CHANGED if the internal state changed, otherwise UNCHANGED.
   virtual ChangeStatus updateImpl(Attributor &A) = 0;
+
+private:
+  /// Set of abstract attributes which were queried by this one. The bit encodes
+  /// if there is an optional of required dependence.
+  using DepTy = PointerIntPair<AbstractAttribute *, 1>;
+  TinyPtrVector<DepTy> Deps;
 };
 
 /// Forward declarations of output streams for debug purposes.

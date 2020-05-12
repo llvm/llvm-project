@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C1134 A CYCLE statement must be within a DO construct
 !
 ! C1166 An EXIT statement must be within a DO construct

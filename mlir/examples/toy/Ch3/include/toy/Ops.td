@@ -124,7 +124,7 @@ def GenericCallOp : Toy_Op<"generic_call"> {
   // The generic call operation returns a single value of TensorType.
   let results = (outs F64Tensor);
 
-  // The return operation only emits the input in the format if it is present.
+  // Specialize assembly printing and parsing using a declarative format.
   let assemblyFormat = [{
     $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)
   }];

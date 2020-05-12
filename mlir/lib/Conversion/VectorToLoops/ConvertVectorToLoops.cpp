@@ -14,8 +14,8 @@
 
 #include "mlir/Conversion/VectorToLoops/ConvertVectorToLoops.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
-#include "mlir/Dialect/LoopOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -168,7 +168,7 @@ void NDTransferOpHelper<ConcreteOp>::emitInBounds(
     inBounds = inBounds && inBounds2;
   }
 
-  auto ifOp = ScopedContext::getBuilderRef().create<loop::IfOp>(
+  auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
       ScopedContext::getLocation(), TypeRange{}, inBounds,
       /*withElseRegion=*/std::is_same<ConcreteOp, TransferReadOp>());
   BlockBuilder(&ifOp.thenRegion().front(),

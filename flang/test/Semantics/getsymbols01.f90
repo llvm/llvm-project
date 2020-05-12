@@ -1,4 +1,4 @@
-!RUN: %S/test_any.sh %s %flang %t
+!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-symbols-sources finding all symbols in file.
 module mm1
  private :: f

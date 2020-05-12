@@ -1,4 +1,4 @@
-!RUN: %S/test_any.sh %s %flang %t
+!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-symbols-sources with BLOCK that contains same variable name as 
 ! another in an outer scope.
 program main

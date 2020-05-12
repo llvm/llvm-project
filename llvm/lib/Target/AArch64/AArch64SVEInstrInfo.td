@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def SVE8BitLslImm : ComplexPattern<i32, 2, "SelectSVE8BitLslImm", [imm]>;
-
 // Contiguous loads - node definitions
 //
 def SDT_AArch64_LD1 : SDTypeProfile<1, 3, [

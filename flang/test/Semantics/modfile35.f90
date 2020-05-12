@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %f18 %t
+! RUN: %S/test_modfile.sh %s %t %f18
 module m1
   type :: t1
   contains

@@ -263,7 +263,10 @@ std::unique_ptr<DWARFDebugMacro>
 DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
   auto Macro = std::make_unique<DWARFDebugMacro>();
   auto ParseAndDump = [&](DWARFDataExtractor &Data, bool IsMacro) {
-    if (Error Err = Macro->parse(getStringExtractor(), Data, IsMacro)) {
+    // FIXME: Add support for debug_macro.dwo section.
+    if (Error Err = IsMacro ? Macro->parseMacro(compile_units(),
+                                                getStringExtractor(), Data)
+                            : Macro->parseMacinfo(Data)) {
       RecoverableErrorHandler(std::move(Err));
       Macro = nullptr;
     }

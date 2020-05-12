@@ -560,11 +560,13 @@ bool fromJSON(const llvm::json::Value &Params, Diagnostic &R) {
 }
 
 llvm::json::Value toJSON(const PublishDiagnosticsParams &PDP) {
-  return llvm::json::Object{
+  llvm::json::Object Result{
       {"uri", PDP.uri},
       {"diagnostics", PDP.diagnostics},
-      {"version", PDP.version},
   };
+  if (PDP.version)
+    Result["version"] = PDP.version;
+  return std::move(Result);
 }
 
 bool fromJSON(const llvm::json::Value &Params, CodeActionContext &R) {

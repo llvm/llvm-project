@@ -319,8 +319,8 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
 
     // Must be a subview or a slice to guarantee there are loops we can fuse
     // into.
-    auto subView = dyn_cast_or_null<SubViewOp>(consumedView.getDefiningOp());
-    auto slice = dyn_cast_or_null<SliceOp>(consumedView.getDefiningOp());
+    auto subView = consumedView.getDefiningOp<SubViewOp>();
+    auto slice = consumedView.getDefiningOp<SliceOp>();
     if (!subView && !slice) {
       LLVM_DEBUG(dbgs() << "\nNot fusable (not a subview or slice)");
       continue;

@@ -338,14 +338,14 @@ func @shape_casts(%a: vector<2x2xf32>) -> (vector<4xf32>, vector<2x2xf32>) {
   // CHECK: %[[add:.*]] = addf %[[in2]], %[[in2]] : vector<4xf32>
   %r0 = addf %0, %0: vector<4xf32>
   //
-  // CHECK: %[[ss0:.*]] = vector.strided_slice %[[add]]
+  // CHECK: %[[ss0:.*]] = vector.extract_strided_slice %[[add]]
   // CHECK-SAME: {offsets = [0], sizes = [2], strides = [1]} :
   // CHECK-SAME: vector<4xf32> to vector<2xf32>
   //
   // CHECK: %[[res0:.*]] = vector.insert %[[ss0]], %[[cst22]] [0] :
   // CHECK-SAME: vector<2xf32> into vector<2x2xf32>
   //
-  // CHECK: %[[s2:.*]] = vector.strided_slice %[[add]]
+  // CHECK: %[[s2:.*]] = vector.extract_strided_slice %[[add]]
   // CHECK-SAME: {offsets = [2], sizes = [2], strides = [1]} :
   // CHECK-SAME: vector<4xf32> to vector<2xf32>
   //
@@ -377,9 +377,9 @@ func @shape_casts(%a: vector<2x2xf32>) -> (vector<4xf32>, vector<2x2xf32>) {
 //      MATRIX:  %[[b6:.*]] = vector.extract %[[B]][3] : vector<4x3xf32>
 //      MATRIX:  %[[b7:.*]] = vector.insert_strided_slice %[[b6]], %[[b5]] {offsets = [9], strides = [1]} : vector<3xf32> into vector<12xf32>
 //      MATRIX:  %[[mm1:.*]] = vector.matrix_multiply %[[a3]], %[[b7]] {lhs_columns = 4 : i32, lhs_rows = 2 : i32, rhs_columns = 3 : i32} : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
-//      MATRIX:  %[[mm2:.*]] = vector.strided_slice %[[mm1]] {offsets = [0], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
+//      MATRIX:  %[[mm2:.*]] = vector.extract_strided_slice %[[mm1]] {offsets = [0], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
 //      MATRIX:  %[[mm3:.*]] = vector.insert %[[mm2]], %[[vcst_1]] [0] : vector<3xf32> into vector<2x3xf32>
-//      MATRIX:  %[[mm4:.*]] = vector.strided_slice %[[mm1]] {offsets = [3], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
+//      MATRIX:  %[[mm4:.*]] = vector.extract_strided_slice %[[mm1]] {offsets = [3], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
 //      MATRIX:  %[[mm5:.*]] = vector.insert %[[mm4]], %[[mm3]] [1] : vector<3xf32> into vector<2x3xf32>
 //      MATRIX:  %[[mm6:.*]] = addf %[[C]], %[[mm5]] : vector<2x3xf32>
 func @matmul(%arg0: vector<2x4xf32>,

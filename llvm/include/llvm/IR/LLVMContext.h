@@ -31,6 +31,7 @@ class LLVMContextImpl;
 class Module;
 class OptPassGate;
 template <typename T> class SmallVectorImpl;
+template <typename T> class StringMapEntry;
 class SMDiagnostic;
 class StringRef;
 class Twine;
@@ -106,6 +107,10 @@ public:
   /// by increasing bundle IDs.
   /// \see LLVMContext::getOperandBundleTagID
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
+
+  /// getOrInsertBundleTag - Returns the Tag to use for an operand bundle of
+  /// name TagName.
+  StringMapEntry<uint32_t> *getOrInsertBundleTag(StringRef TagName) const;
 
   /// getOperandBundleTagID - Maps a bundle tag to an integer ID.  Every bundle
   /// tag registered with an LLVMContext has an unique ID.

@@ -103,6 +103,8 @@ config.available_features.add(config.host_os.lower())
 if re.match(r'^x86_64.*-linux', config.target_triple):
   config.available_features.add("x86_64-linux")
 
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+
 if config.have_zlib == "1":
   config.available_features.add("zlib")
 

@@ -7,7 +7,7 @@ func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
   %c8 = constant 8 : index
   %c16 = constant 16 : index
   %1 = alloc (%b) : memref<?xi8>
-  %2 = view %1[][] : memref<?xi8> to memref<16x16xf32>
+  %2 = view %1[%c0][] : memref<?xi8> to memref<16x16xf32>
   %3 = memref_cast %2 : memref<16x16xf32> to memref<?x?xf32>
   %r0 = linalg.range %c0:%c8:%c1 : !linalg.range
 

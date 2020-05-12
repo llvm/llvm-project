@@ -477,3 +477,40 @@ class CommandLineCompletionTestCase(TestBase):
         # register write can only take exact one register name as argument
         self.complete_from_to('register write rbx ',
                               [])
+
+    def test_complete_breakpoint_with_ids(self):
+        """These breakpoint subcommands should be completed with a list of breakpoint ids"""
+
+        subcommands = ['enable', 'disable', 'delete', 'modify', 'name add', 'name delete', 'write']
+
+        # The tab completion here is unavailable without a target
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  'breakpoint ' + subcommand + ' ')
+
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+
+        bp = target.BreakpointCreateByName('main', 'a.out')
+        self.assertTrue(bp)
+        self.assertEqual(bp.GetNumLocations(), 1)
+
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  ['1'])
+        
+        bp2 = target.BreakpointCreateByName('Bar', 'a.out')
+        self.assertTrue(bp2)
+        self.assertEqual(bp2.GetNumLocations(), 1)
+
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  ['1',
+                                   '2'])
+        
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' 1 ',
+                                  ['1',
+                                   '2'])
+

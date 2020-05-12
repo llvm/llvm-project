@@ -4394,7 +4394,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 ///         ':' type-specifier-seq
 ///
 /// [C++] elaborated-type-specifier:
-/// [C++]   'enum' '::'[opt] nested-name-specifier[opt] identifier
+/// [C++]   'enum' nested-name-specifier[opt] identifier
 ///
 void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                 const ParsedTemplateInfo &TemplateInfo,
@@ -4511,7 +4511,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   TypeResult BaseType;
   SourceRange BaseRange;
 
-  bool CanBeBitfield = getCurScope()->getFlags() & Scope::ClassScope;
+  bool CanBeBitfield = (getCurScope()->getFlags() & Scope::ClassScope) &&
+                       ScopedEnumKWLoc.isInvalid() && Name;
 
   // Parse the fixed underlying type.
   if (Tok.is(tok::colon)) {
@@ -4535,21 +4536,28 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     //   the decl-specifier-seq of a member-declaration is parsed as part of
     //   an enum-base.
     //
-    // Other lamguage modes supporting enumerations with fixed underlying types
+    // Other language modes supporting enumerations with fixed underlying types
     // do not have clear rules on this, so we disambiguate to determine whether
     // the tokens form a bit-field width or an enum-base.
 
     if (CanBeBitfield && !isEnumBase(CanBeOpaqueEnumDeclaration)) {
       // Outside C++11, do not interpret the tokens as an enum-base if they do
       // not make sense as one. In C++11, it's an error if this happens.
-      if (getLangOpts().CPlusPlus11 && !getLangOpts().ObjC &&
-          !getLangOpts().MicrosoftExt)
+      if (getLangOpts().CPlusPlus11)
         Diag(Tok.getLocation(), diag::err_anonymous_enum_bitfield);
     } else if (CanHaveEnumBase || !ColonIsSacred) {
       SourceLocation ColonLoc = ConsumeToken();
 
-      BaseType = ParseTypeName(&BaseRange);
-      BaseRange.setBegin(ColonLoc);
+      // Parse a type-specifier-seq as a type. We can't just ParseTypeName here,
+      // because under -fms-extensions,
+      //   enum E : int *p;
+      // declares 'enum E : int; E *p;' not 'enum E : int*; E p;'.
+      DeclSpec DS(AttrFactory);
+      ParseSpecifierQualifierList(DS, AS, DeclSpecContext::DSC_type_specifier);
+      Declarator DeclaratorInfo(DS, DeclaratorContext::TypeNameContext);
+      BaseType = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+
+      BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
       if (!getLangOpts().ObjC) {
         if (getLangOpts().CPlusPlus11)
@@ -4587,6 +4595,11 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
         << SourceRange(DS.getFriendSpecLoc());
       ConsumeBrace();
       SkipUntil(tok::r_brace, StopAtSemi);
+      // Discard any other definition-only pieces.
+      attrs.clear();
+      ScopedEnumKWLoc = SourceLocation();
+      IsScopedUsingClassTag = false;
+      BaseType = TypeResult();
       TUK = Sema::TUK_Friend;
     } else {
       TUK = Sema::TUK_Definition;
@@ -4595,6 +4608,9 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
              (Tok.is(tok::semi) ||
               (Tok.isAtStartOfLine() &&
                !isValidAfterTypeSpecifier(CanBeBitfield)))) {
+    // An opaque-enum-declaration is required to be standalone (no preceding or
+    // following tokens in the declaration). Sema enforces this separately by
+    // diagnosing anything else in the DeclSpec.
     TUK = DS.isFriendSpecified() ? Sema::TUK_Friend : Sema::TUK_Declaration;
     if (Tok.isNot(tok::semi)) {
       // A semicolon was missing after this declaration. Diagnose and recover.
@@ -4606,19 +4622,13 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     TUK = Sema::TUK_Reference;
   }
 
-  // If this is an elaborated type specifier, and we delayed
-  // diagnostics before, just merge them into the current pool.
+  bool IsElaboratedTypeSpecifier =
+      TUK == Sema::TUK_Reference || TUK == Sema::TUK_Friend;
+
+  // If this is an elaborated type specifier nested in a larger declaration,
+  // and we delayed diagnostics before, just merge them into the current pool.
   if (TUK == Sema::TUK_Reference && shouldDelayDiagsInTag) {
     diagsFromTag.redelay();
-  }
-
-  // A C++11 enum-base can only appear as part of an enum definition or an
-  // opaque-enum-declaration. MSVC and ObjC permit an enum-base anywhere.
-  if (BaseType.isUsable() && TUK != Sema::TUK_Definition &&
-      !getLangOpts().ObjC && !getLangOpts().MicrosoftExt &&
-      !(CanBeOpaqueEnumDeclaration && Tok.is(tok::semi))) {
-    Diag(BaseRange.getBegin(), diag::ext_enum_base_in_type_specifier)
-        << (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes) << BaseRange;
   }
 
   MultiTemplateParamsArg TParams;
@@ -4643,15 +4653,31 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                      TemplateInfo.TemplateParams->size());
   }
 
-  if (TUK == Sema::TUK_Reference)
-    ProhibitAttributes(attrs);
-
   if (!Name && TUK != Sema::TUK_Definition) {
     Diag(Tok, diag::err_enumerator_unnamed_no_def);
 
     // Skip the rest of this declarator, up until the comma or semicolon.
     SkipUntil(tok::comma, StopAtSemi);
     return;
+  }
+
+  // An elaborated-type-specifier has a much more constrained grammar:
+  //
+  //   'enum' nested-name-specifier[opt] identifier
+  //
+  // If we parsed any other bits, reject them now.
+  //
+  // MSVC and (for now at least) Objective-C permit a full enum-specifier
+  // or opaque-enum-declaration anywhere.
+  if (IsElaboratedTypeSpecifier && !getLangOpts().MicrosoftExt &&
+      !getLangOpts().ObjC) {
+    ProhibitAttributes(attrs);
+    if (BaseType.isUsable())
+      Diag(BaseRange.getBegin(), diag::ext_enum_base_in_type_specifier)
+          << (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes) << BaseRange;
+    else if (ScopedEnumKWLoc.isValid())
+      Diag(ScopedEnumKWLoc, diag::ext_elaborated_enum_class)
+        << FixItHint::CreateRemoval(ScopedEnumKWLoc) << IsScopedUsingClassTag;
   }
 
   stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
@@ -4728,7 +4754,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     return;
   }
 
-  if (Tok.is(tok::l_brace) && TUK != Sema::TUK_Reference) {
+  if (Tok.is(tok::l_brace) && TUK == Sema::TUK_Definition) {
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
     ParseEnumBody(StartLoc, D);
     if (SkipBody.CheckSameAsPrevious &&

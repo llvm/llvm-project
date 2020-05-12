@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/WithColor.h"
@@ -101,13 +102,25 @@ public:
   /// Print the macro list found within the debug_macinfo/debug_macro section.
   void dump(raw_ostream &OS) const;
 
-  /// Parse the debug_macinfo/debug_macro section accessible via the 'Data'
-  /// parameter.
-  Error parse(DataExtractor StringExtractor, DWARFDataExtractor Data,
-              bool IsMacro);
+  Error parseMacro(DWARFUnitVector::iterator_range Units,
+                   DataExtractor StringExtractor,
+                   DWARFDataExtractor MacroData) {
+    return parseImpl(Units, StringExtractor, MacroData, /*IsMacro=*/true);
+  }
+
+  Error parseMacinfo(DWARFDataExtractor MacroData) {
+    return parseImpl(None, None, MacroData, /*IsMacro=*/false);
+  }
 
   /// Return whether the section has any entries.
   bool empty() const { return MacroLists.empty(); }
+
+private:
+  /// Parse the debug_macinfo/debug_macro section accessible via the 'MacroData'
+  /// parameter.
+  Error parseImpl(Optional<DWARFUnitVector::iterator_range> Units,
+                  Optional<DataExtractor> StringExtractor,
+                  DWARFDataExtractor Data, bool IsMacro);
 };
 
 } // end namespace llvm

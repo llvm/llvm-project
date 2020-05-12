@@ -122,6 +122,9 @@ inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
                                          U->getOperandNo());
 }
 
+/// Tag in operand bundle indicating that this bundle should be ignored.
+constexpr StringRef IgnoreBundleTag = "ignore";
+
 /// Return true iff the operand bundles of the provided llvm.assume doesn't
 /// contain any valuable information. This is true when:
 ///  - The operand bundle is empty
@@ -142,8 +145,9 @@ RetainedKnowledge getKnowledgeFromUse(const Use *U,
 RetainedKnowledge getKnowledgeForValue(
     const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
     AssumptionCache *AC = nullptr,
-    function_ref<bool(RetainedKnowledge, Instruction *)> Filter =
-        [](RetainedKnowledge, Instruction *) { return true; });
+    function_ref<bool(RetainedKnowledge, Instruction *,
+                            const CallBase::BundleOpInfo *)>
+        Filter = [](auto...) { return true; });
 
 /// Return a valid Knowledge associated to the Value V if its Attribute kind is
 /// in AttrKinds and the knowledge is suitable to be used in the context of
@@ -152,6 +156,11 @@ RetainedKnowledge getKnowledgeValidInContext(
     const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
     const Instruction *CtxI, const DominatorTree *DT = nullptr,
     AssumptionCache *AC = nullptr);
+
+/// This extracts the Knowledge from an element of an operand bundle.
+/// This is mostly for use in the assume builder.
+RetainedKnowledge getKnowledgeFromBundle(CallInst &Assume,
+                                         const CallBase::BundleOpInfo &BOI);
 
 } // namespace llvm
 
