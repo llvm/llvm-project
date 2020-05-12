@@ -9,9 +9,14 @@
 /// \file This pass does a few optimisations related to MVE VPT blocks before
 /// register allocation is performed. The goal is to maximize the sizes of the
 /// blocks that will be created by the MVE VPT Block Insertion pass (which runs
-/// after register allocation). Currently, this pass replaces VCMPs with VPNOTs
-/// when possible, so the Block Insertion pass can delete them later to create
-/// larger VPT blocks.
+/// after register allocation). The first optimisation done by this pass is the
+/// replacement of "opposite" VCMPs with VPNOTs, so the Block Insertion pass
+/// can delete them later to create larger VPT blocks.
+/// The second optimisation replaces re-uses of old VCCR values with VPNOTs when
+/// inside a block of predicated instructions. This is done to avoid
+/// spill/reloads of VPR in the middle of a block, which prevents the Block
+/// Insertion pass from creating large blocks.
+//
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
@@ -46,6 +51,11 @@ public:
   }
 
 private:
+  MachineInstr &ReplaceRegisterUseWithVPNOT(MachineBasicBlock &MBB,
+                                            MachineInstr &Instr,
+                                            MachineOperand &User,
+                                            Register Target);
+  bool ReduceOldVCCRValueUses(MachineBasicBlock &MBB);
   bool ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB);
 };
 
@@ -129,6 +139,226 @@ static bool IsWritingToVCCR(MachineInstr &Instr) {
   MachineRegisterInfo &RegInfo = Instr.getMF()->getRegInfo();
   const TargetRegisterClass *RegClass = RegInfo.getRegClassOrNull(DstReg);
   return RegClass && (RegClass->getID() == ARM::VCCRRegClassID);
+}
+
+// Transforms
+//    <Instr that uses %A ('User' Operand)>
+// Into
+//    %K = VPNOT %Target
+//    <Instr that uses %K ('User' Operand)>
+// And returns the newly inserted VPNOT.
+// This optimization is done in the hopes of preventing spills/reloads of VPR by
+// reducing the number of VCCR values with overlapping lifetimes.
+MachineInstr &MVEVPTOptimisations::ReplaceRegisterUseWithVPNOT(
+    MachineBasicBlock &MBB, MachineInstr &Instr, MachineOperand &User,
+    Register Target) {
+  Register NewResult = MRI->createVirtualRegister(MRI->getRegClass(Target));
+
+  MachineInstrBuilder MIBuilder =
+      BuildMI(MBB, &Instr, Instr.getDebugLoc(), TII->get(ARM::MVE_VPNOT))
+          .addDef(NewResult)
+          .addReg(Target);
+  addUnpredicatedMveVpredNOp(MIBuilder);
+
+  // Make the user use NewResult instead, and clear its kill flag.
+  User.setReg(NewResult);
+  User.setIsKill(false);
+
+  LLVM_DEBUG(dbgs() << "  Inserting VPNOT (for spill prevention): ";
+             MIBuilder.getInstr()->dump());
+
+  return *MIBuilder.getInstr();
+}
+
+// Moves a VPNOT before its first user if an instruction that uses Reg is found
+// in-between the VPNOT and its user.
+// Returns true if there is at least one user of the VPNOT in the block.
+static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator Iter,
+                                     Register Reg) {
+  assert(Iter->getOpcode() == ARM::MVE_VPNOT && "Not a VPNOT!");
+  assert(getVPTInstrPredicate(*Iter) == ARMVCC::None &&
+         "The VPNOT cannot be predicated");
+
+  MachineInstr &VPNOT = *Iter;
+  Register VPNOTResult = VPNOT.getOperand(0).getReg();
+  Register VPNOTOperand = VPNOT.getOperand(1).getReg();
+
+  // Whether the VPNOT will need to be moved, and whether we found a user of the
+  // VPNOT.
+  bool MustMove = false, HasUser = false;
+  MachineOperand *VPNOTOperandKiller = nullptr;
+  for (; Iter != MBB.end(); ++Iter) {
+    if (MachineOperand *MO =
+            Iter->findRegisterUseOperand(VPNOTOperand, /*isKill*/ true)) {
+      // If we find the operand that kills the VPNOTOperand's result, save it.
+      VPNOTOperandKiller = MO;
+    }
+
+    if (Iter->findRegisterUseOperandIdx(Reg) != -1) {
+      MustMove = true;
+      continue;
+    }
+
+    if (Iter->findRegisterUseOperandIdx(VPNOTResult) == -1)
+      continue;
+
+    HasUser = true;
+    if (!MustMove)
+      break;
+
+    // Move the VPNOT right before Iter
+    LLVM_DEBUG(dbgs() << "Moving: "; VPNOT.dump(); dbgs() << "  Before: ";
+               Iter->dump());
+    MBB.splice(Iter, &MBB, VPNOT.getIterator());
+    // If we move the instr, and its operand was killed earlier, remove the kill
+    // flag.
+    if (VPNOTOperandKiller)
+      VPNOTOperandKiller->setIsKill(false);
+
+    break;
+  }
+  return HasUser;
+}
+
+// This optimisation attempts to reduce the number of overlapping lifetimes of
+// VCCR values by replacing uses of old VCCR values with VPNOTs. For example,
+// this replaces
+//    %A:vccr = (something)
+//    %B:vccr = VPNOT %A
+//    %Foo = (some op that uses %B)
+//    %Bar = (some op that uses %A)
+// With
+//    %A:vccr = (something)
+//    %B:vccr = VPNOT %A
+//    %Foo = (some op that uses %B)
+//    %TMP2:vccr = VPNOT %B
+//    %Bar = (some op that uses %A)
+bool MVEVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
+  MachineBasicBlock::iterator Iter = MBB.begin(), End = MBB.end();
+  SmallVector<MachineInstr *, 4> DeadInstructions;
+  bool Modified = false;
+
+  while (Iter != End) {
+    Register VCCRValue, OppositeVCCRValue;
+    // The first loop looks for 2 unpredicated instructions:
+    //    %A:vccr = (instr)     ; A is stored in VCCRValue
+    //    %B:vccr = VPNOT %A    ; B is stored in OppositeVCCRValue
+    for (; Iter != End; ++Iter) {
+      // We're only interested in unpredicated instructions that write to VCCR.
+      if (!IsWritingToVCCR(*Iter) ||
+          getVPTInstrPredicate(*Iter) != ARMVCC::None)
+        continue;
+      Register Dst = Iter->getOperand(0).getReg();
+
+      // If we already have a VCCRValue, and this is a VPNOT on VCCRValue, we've
+      // found what we were looking for.
+      if (VCCRValue && Iter->getOpcode() == ARM::MVE_VPNOT &&
+          Iter->findRegisterUseOperandIdx(VCCRValue) != -1) {
+        // Move the VPNOT closer to its first user if needed, and ignore if it
+        // has no users.
+        if (!MoveVPNOTBeforeFirstUser(MBB, Iter, VCCRValue))
+          continue;
+
+        OppositeVCCRValue = Dst;
+        ++Iter;
+        break;
+      }
+
+      // Else, just set VCCRValue.
+      VCCRValue = Dst;
+    }
+
+    // If the first inner loop didn't find anything, stop here.
+    if (Iter == End)
+      break;
+
+    assert(VCCRValue && OppositeVCCRValue &&
+           "VCCRValue and OppositeVCCRValue shouldn't be empty if the loop "
+           "stopped before the end of the block!");
+    assert(VCCRValue != OppositeVCCRValue &&
+           "VCCRValue should not be equal to OppositeVCCRValue!");
+
+    // LastVPNOTResult always contains the same value as OppositeVCCRValue.
+    Register LastVPNOTResult = OppositeVCCRValue;
+
+    // This second loop tries to optimize the remaining instructions.
+    for (; Iter != End; ++Iter) {
+      bool IsInteresting = false;
+
+      if (MachineOperand *MO = Iter->findRegisterUseOperand(VCCRValue)) {
+        IsInteresting = true;
+
+        // - If the instruction is a VPNOT, it can be removed, and we can just
+        //   replace its uses with LastVPNOTResult.
+        // - Else, insert a new VPNOT on LastVPNOTResult to recompute VCCRValue.
+        if (Iter->getOpcode() == ARM::MVE_VPNOT) {
+          Register Result = Iter->getOperand(0).getReg();
+
+          MRI->replaceRegWith(Result, LastVPNOTResult);
+          DeadInstructions.push_back(&*Iter);
+          Modified = true;
+
+          LLVM_DEBUG(dbgs()
+                     << "Replacing all uses of '" << printReg(Result)
+                     << "' with '" << printReg(LastVPNOTResult) << "'\n");
+        } else {
+          MachineInstr &VPNOT =
+              ReplaceRegisterUseWithVPNOT(MBB, *Iter, *MO, LastVPNOTResult);
+          Modified = true;
+
+          LastVPNOTResult = VPNOT.getOperand(0).getReg();
+          std::swap(VCCRValue, OppositeVCCRValue);
+
+          LLVM_DEBUG(dbgs() << "Replacing use of '" << printReg(VCCRValue)
+                            << "' with '" << printReg(LastVPNOTResult)
+                            << "' in instr: " << *Iter);
+        }
+      } else {
+        // If the instr uses OppositeVCCRValue, make it use LastVPNOTResult
+        // instead as they contain the same value.
+        if (MachineOperand *MO =
+                Iter->findRegisterUseOperand(OppositeVCCRValue)) {
+          IsInteresting = true;
+
+          // This is pointless if LastVPNOTResult == OppositeVCCRValue.
+          if (LastVPNOTResult != OppositeVCCRValue) {
+            LLVM_DEBUG(dbgs() << "Replacing usage of '"
+                              << printReg(OppositeVCCRValue) << "' with '"
+                              << printReg(LastVPNOTResult) << " for instr: ";
+                       Iter->dump());
+            MO->setReg(LastVPNOTResult);
+            Modified = true;
+          }
+
+          MO->setIsKill(false);
+        }
+
+        // If this is an unpredicated VPNOT on
+        // LastVPNOTResult/OppositeVCCRValue, we can act like we inserted it.
+        if (Iter->getOpcode() == ARM::MVE_VPNOT &&
+            getVPTInstrPredicate(*Iter) == ARMVCC::None) {
+          Register VPNOTOperand = Iter->getOperand(1).getReg();
+          if (VPNOTOperand == LastVPNOTResult ||
+              VPNOTOperand == OppositeVCCRValue) {
+            IsInteresting = true;
+
+            std::swap(VCCRValue, OppositeVCCRValue);
+            LastVPNOTResult = Iter->getOperand(0).getReg();
+          }
+        }
+      }
+
+      // If this instruction was not interesting, and it writes to VCCR, stop.
+      if (!IsInteresting && IsWritingToVCCR(*Iter))
+        break;
+    }
+  }
+
+  for (MachineInstr *DeadInstruction : DeadInstructions)
+    DeadInstruction->removeFromParent();
+
+  return Modified;
 }
 
 // This optimisation replaces VCMPs with VPNOTs when they are equivalent.
@@ -219,8 +449,10 @@ bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
                     << "********** Function: " << Fn.getName() << '\n');
 
   bool Modified = false;
-  for (MachineBasicBlock &MBB : Fn)
+  for (MachineBasicBlock &MBB : Fn) {
     Modified |= ReplaceVCMPsByVPNOTs(MBB);
+    Modified |= ReduceOldVCCRValueUses(MBB);
+  }
 
   LLVM_DEBUG(dbgs() << "**************************************\n");
   return Modified;

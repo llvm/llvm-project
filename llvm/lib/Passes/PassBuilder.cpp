@@ -698,6 +698,14 @@ ModulePassManager PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
                                                     bool DebugLogging) {
   ModulePassManager MPM(DebugLogging);
 
+  // Require the GlobalsAA analysis for the module so we can query it within
+  // the CGSCC pipeline.
+  MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
+
+  // Require the ProfileSummaryAnalysis for the module so we can query it within
+  // the inliner pass.
+  MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+
   // Now begin the main postorder CGSCC pipeline.
   // FIXME: The current CGSCC pipeline has its origins in the legacy pass
   // manager and trying to emulate its precise behavior. Much of this doesn't
@@ -887,14 +895,6 @@ ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
   // Synthesize function entry counts for non-PGO compilation.
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
-
-  // Require the GlobalsAA analysis for the module so we can query it within
-  // the CGSCC pipeline.
-  MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
-
-  // Require the ProfileSummaryAnalysis for the module so we can query it within
-  // the inliner pass.
-  MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
 
   MPM.addPass(buildInlinerPipeline(Level, Phase, DebugLogging));
   return MPM;

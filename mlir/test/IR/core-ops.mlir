@@ -10,14 +10,15 @@
 
 // CHECK-DAG: #[[BASE_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>
 // CHECK-DAG: #[[BASE_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
+// CHECK-DAG: #[[SUBVIEW_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>
 
 // CHECK-DAG: #[[BASE_MAP1:map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECK-DAG: #[[SUBVIEW_MAP1:map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 // CHECK-DAG: #[[BASE_MAP2:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 22 + d1)>
-// CHECK-DAG: #[[SUBVIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-// CHECK-DAG: #[[SUBVIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>
-// CHECK-DAG: #[[SUBVIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[SUBVIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>
+// CHECK-DAG: #[[SUBVIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 16 + d1 * 4 + d2 + 8)>
+// CHECK-DAG: #[[SUBVIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 // CHECK-DAG: #[[SUBVIEW_MAP5:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * 8 + s0 + d1 * 2)>
 
 // CHECK-LABEL: func @func_with_ops(%arg0: f32) {
@@ -707,56 +708,41 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %c1 = constant 1 : index
 
   %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
-  // CHECK: subview %0[%c0, %c0, %c0] [%arg0, %arg1, %arg2] [%c1, %c1, %c1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[BASE_MAP0]]>
-  // CHECK-SAME: to memref<?x?x?xf32, #[[BASE_MAP3]]>
+  // CHECK: subview %0[%c0, %c0, %c0] [%arg0, %arg1, %arg2] [%c1, %c1, %c1] : memref<8x16x4xf32, #[[BASE_MAP0]]> to memref<?x?x?xf32, #[[SUBVIEW_MAP0]]>
   %1 = subview %0[%c0, %c0, %c0][%arg0, %arg1, %arg2][%c1, %c1, %c1]
-    : memref<8x16x4xf32, offset:0, strides: [64, 4, 1]> to
-      memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
+      memref<?x?x?xf32,
+       affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>>
 
   %2 = alloc()[%arg2] : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-  // CHECK: subview %2[%c1] [%arg0] [%c1] :
-  // CHECK-SAME: memref<64xf32, #[[BASE_MAP1]]>
-  // CHECK-SAME: to memref<?xf32, #[[SUBVIEW_MAP1]]>
+ // CHECK: subview %2[%c1] [%arg0] [%c1] : memref<64xf32, #[[BASE_MAP1]]> to memref<?xf32, #[[SUBVIEW_MAP1]]>
   %3 = subview %2[%c1][%arg0][%c1]
     : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to
       memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
 
   %4 = alloc() : memref<64x22xf32, affine_map<(d0, d1) -> (d0 * 22 + d1)>>
-  // CHECK: subview %4[%c0, %c1] [%arg0, %arg1] [%c1, %c0] :
-  // CHECK-SAME: memref<64x22xf32, #[[BASE_MAP2]]>
-  // CHECK-SAME: to memref<?x?xf32, #[[SUBVIEW_MAP2]]>
+  // CHECK: subview %4[%c0, %c1] [%arg0, %arg1] [%c1, %c0] : memref<64x22xf32, #[[BASE_MAP2]]> to memref<?x?xf32, #[[SUBVIEW_MAP2]]>
   %5 = subview %4[%c0, %c1][%arg0, %arg1][%c1, %c0]
-    : memref<64x22xf32, offset:0, strides: [22, 1]> to
-      memref<?x?xf32, offset:?, strides: [?, ?]>
+    : memref<64x22xf32, affine_map<(d0, d1) -> (d0 * 22 + d1)>> to
+      memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
 
-  // CHECK: subview %0[0, 2, 0] [4, 4, 4] [1, 1, 1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[BASE_MAP0]]>
-  // CHECK-SAME: to memref<4x4x4xf32, #[[SUBVIEW_MAP3]]>
-  %6 = subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
-    : memref<8x16x4xf32, offset:0, strides: [64, 4, 1]> to
-      memref<4x4x4xf32, offset:8, strides: [64, 4, 1]>
+  // CHECK: subview %0[] [] [] : memref<8x16x4xf32, #[[BASE_MAP0]]> to memref<4x4x4xf32, #[[SUBVIEW_MAP3]]>
+  %6 = subview %0[][][]
+    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
+      memref<4x4x4xf32, affine_map<(d0, d1, d2) -> (d0 * 16 + d1 * 4 + d2 + 8)>>
 
   %7 = alloc(%arg1, %arg2) : memref<?x?xf32>
-  // CHECK: subview {{%.*}}[0, 0] [4, 4] [1, 1] :
-  // CHECK-SAME: memref<?x?xf32>
-  // CHECK-SAME: to memref<4x4xf32, #[[SUBVIEW_MAP4]]>
-  %8 = subview %7[0, 0][4, 4][1, 1]
-    : memref<?x?xf32> to memref<4x4xf32, offset: ?, strides:[?, 1]>
+  // CHECK: subview {{%.*}}[] [] [] : memref<?x?xf32> to memref<4x4xf32, #[[SUBVIEW_MAP4]]>
+  %8 = subview %7[][][]
+    : memref<?x?xf32> to memref<4x4xf32, offset: ?, strides:[?, ?]>
 
   %9 = alloc() : memref<16x4xf32>
-  // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [{{%.*}}, {{%.*}}] :
-  // CHECK-SAME: memref<16x4xf32>
-  // CHECK-SAME: to memref<4x4xf32, #[[SUBVIEW_MAP2]]
-  %10 = subview %9[%arg1, %arg1][4, 4][%arg2, %arg2]
+  // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [] [{{%.*}}, {{%.*}}] : memref<16x4xf32> to memref<4x4xf32, #[[SUBVIEW_MAP4]]
+  %10 = subview %9[%arg1, %arg1][][%arg2, %arg2]
     : memref<16x4xf32> to memref<4x4xf32, offset: ?, strides:[?, ?]>
-
-  // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [2, 2] :
-  // CHECK-SAME: memref<16x4xf32>
-  // CHECK-SAME: to memref<4x4xf32, #[[SUBVIEW_MAP5]]
-  %11 = subview %9[%arg1, %arg2][4, 4][2, 2]
+  // CHECK: subview {{%.*}}[{{%.*}}, {{%.*}}] [] [] : memref<16x4xf32> to memref<4x4xf32, #[[SUBVIEW_MAP5]]
+  %11 = subview %9[%arg1, %arg2][][]
     : memref<16x4xf32> to memref<4x4xf32, offset: ?, strides:[8, 2]>
-
   return
 }
 

@@ -78,6 +78,13 @@ inline ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI) {
   Register PredReg;
   return getVPTInstrPredicate(MI, PredReg);
 }
+
+// Recomputes the Block Mask of Instr, a VPT or VPST instruction.
+// This rebuilds the block mask of the instruction depending on the predicates
+// of the instructions following it. This should only be used after the
+// MVEVPTBlockInsertion pass has run, and should be used whenever a predicated
+// instruction is added to/removed from the block.
+void recomputeVPTBlockMask(MachineInstr &Instr);
 } // namespace llvm
 
 #endif

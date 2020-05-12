@@ -191,9 +191,13 @@ public:
   StringTableSection *stringTableSection = nullptr;
 };
 
-class LCLoadDylib : public LoadCommand {
+// There are several dylib load commands that share the same structure:
+//   * LC_LOAD_DYLIB
+//   * LC_ID_DYLIB
+//   * LC_REEXPORT_DYLIB
+class LCDylib : public LoadCommand {
 public:
-  LCLoadDylib(StringRef path) : path(path) {}
+  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {}
 
   uint32_t getSize() const override {
     return alignTo(sizeof(dylib_command) + path.size() + 1, 8);
@@ -203,7 +207,7 @@ public:
     auto *c = reinterpret_cast<dylib_command *>(buf);
     buf += sizeof(dylib_command);
 
-    c->cmd = LC_LOAD_DYLIB;
+    c->cmd = type;
     c->cmdsize = getSize();
     c->dylib.name = sizeof(dylib_command);
 
@@ -212,31 +216,8 @@ public:
   }
 
 private:
+  LoadCommandType type;
   StringRef path;
-};
-
-class LCIdDylib : public LoadCommand {
-public:
-  LCIdDylib(StringRef name) : name(name) {}
-
-  uint32_t getSize() const override {
-    return alignTo(sizeof(dylib_command) + name.size() + 1, 8);
-  }
-
-  void writeTo(uint8_t *buf) const override {
-    auto *c = reinterpret_cast<dylib_command *>(buf);
-    buf += sizeof(dylib_command);
-
-    c->cmd = LC_ID_DYLIB;
-    c->cmdsize = getSize();
-    c->dylib.name = sizeof(dylib_command);
-
-    memcpy(buf, name.data(), name.size());
-    buf[name.size()] = '\0';
-  }
-
-private:
-  StringRef name;
 };
 
 class LCLoadDylinker : public LoadCommand {
@@ -285,7 +266,8 @@ void Writer::createLoadCommands() {
     headerSection->addLoadCommand(make<LCLoadDylinker>());
     break;
   case MH_DYLIB:
-    headerSection->addLoadCommand(make<LCIdDylib>(config->installName));
+    headerSection->addLoadCommand(
+        make<LCDylib>(LC_ID_DYLIB, config->installName));
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -300,8 +282,13 @@ void Writer::createLoadCommands() {
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      headerSection->addLoadCommand(make<LCLoadDylib>(dylibFile->dylibName));
+      headerSection->addLoadCommand(
+          make<LCDylib>(LC_LOAD_DYLIB, dylibFile->dylibName));
       dylibFile->ordinal = dylibOrdinal++;
+
+      if (dylibFile->reexport)
+        headerSection->addLoadCommand(
+            make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
     }
   }
 }

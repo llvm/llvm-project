@@ -9,6 +9,7 @@
 #include "Selection.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -34,6 +35,21 @@ namespace clangd {
 namespace {
 using Node = SelectionTree::Node;
 using ast_type_traits::DynTypedNode;
+
+// Measure the fraction of selections that were enabled by recovery AST.
+void recordMetrics(const SelectionTree &S) {
+  static constexpr trace::Metric SelectionUsedRecovery(
+      "selection_recovery", trace::Metric::Distribution);
+  const auto *Common = S.commonAncestor();
+  for (const auto *N = Common; N; N = N->Parent) {
+    if (N->ASTNode.get<RecoveryExpr>()) {
+      SelectionUsedRecovery.record(1); // used recovery ast.
+      return;
+    }
+  }
+  if (Common)
+    SelectionUsedRecovery.record(0); // unused.
+}
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
 //
@@ -774,6 +790,7 @@ SelectionTree::SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
            .printToString(SM));
   Nodes = SelectionVisitor::collect(AST, Tokens, PrintPolicy, Begin, End, FID);
   Root = Nodes.empty() ? nullptr : &Nodes.front();
+  recordMetrics(*this);
   dlog("Built selection tree\n{0}", *this);
 }
 

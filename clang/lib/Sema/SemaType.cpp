@@ -2574,17 +2574,17 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
   assert(Context.getLangOpts().MatrixTypes &&
          "Should never build a matrix type when it is disabled");
 
-  if (NumRows->isTypeDependent() || NumCols->isTypeDependent() ||
-      NumRows->isValueDependent() || NumCols->isValueDependent())
-    return Context.getDependentSizedMatrixType(ElementTy, NumRows, NumCols,
-                                               AttrLoc);
-
   // Check element type, if it is not dependent.
   if (!ElementTy->isDependentType() &&
       !MatrixType::isValidElementType(ElementTy)) {
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
+
+  if (NumRows->isTypeDependent() || NumCols->isTypeDependent() ||
+      NumRows->isValueDependent() || NumCols->isValueDependent())
+    return Context.getDependentSizedMatrixType(ElementTy, NumRows, NumCols,
+                                               AttrLoc);
 
   // Both row and column values can only be 20 bit wide currently.
   llvm::APSInt ValueRows(32), ValueColumns(32);

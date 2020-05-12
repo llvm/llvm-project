@@ -21,6 +21,67 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
+void RocmInstallationDetector::scanLibDevicePath() {
+  assert(!LibDevicePath.empty());
+
+  const StringRef Suffix(".bc");
+
+  std::error_code EC;
+  for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
+       !EC && LI != LE; LI = LI.increment(EC)) {
+    StringRef FilePath = LI->path();
+    StringRef FileName = llvm::sys::path::filename(FilePath);
+    if (!FileName.endswith(Suffix))
+      continue;
+
+    StringRef BaseName = FileName.drop_back(Suffix.size());
+
+    if (BaseName == "ocml") {
+      OCML = FilePath;
+    } else if (BaseName == "ockl") {
+      OCKL = FilePath;
+    } else if (BaseName == "opencl") {
+      OpenCL = FilePath;
+    } else if (BaseName == "hip") {
+      HIP = FilePath;
+    } else if (BaseName == "oclc_finite_only_off") {
+      FiniteOnly.Off = FilePath;
+    } else if (BaseName == "oclc_finite_only_on") {
+      FiniteOnly.On = FilePath;
+    } else if (BaseName == "oclc_daz_opt_on") {
+      DenormalsAreZero.On = FilePath;
+    } else if (BaseName == "oclc_daz_opt_off") {
+      DenormalsAreZero.Off = FilePath;
+    } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
+      CorrectlyRoundedSqrt.On = FilePath;
+    } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
+      CorrectlyRoundedSqrt.Off = FilePath;
+    } else if (BaseName == "oclc_unsafe_math_on") {
+      UnsafeMath.On = FilePath;
+    } else if (BaseName == "oclc_unsafe_math_off") {
+      UnsafeMath.Off = FilePath;
+    } else if (BaseName == "oclc_wavefrontsize64_on") {
+      WavefrontSize64.On = FilePath;
+    } else if (BaseName == "oclc_wavefrontsize64_off") {
+      WavefrontSize64.Off = FilePath;
+    } else {
+      // Process all bitcode filenames that look like
+      // ocl_isa_version_XXX.amdgcn.bc
+      const StringRef DeviceLibPrefix = "oclc_isa_version_";
+      if (!BaseName.startswith(DeviceLibPrefix))
+        continue;
+
+      StringRef IsaVersionNumber =
+        BaseName.drop_front(DeviceLibPrefix.size());
+
+      llvm::Twine GfxName = Twine("gfx") + IsaVersionNumber;
+      SmallString<8> Tmp;
+      LibDeviceMap.insert(
+        std::make_pair(GfxName.toStringRef(Tmp), FilePath.str()));
+    }
+  }
+}
+
 RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args)
@@ -60,35 +121,44 @@ RocmInstallationDetector::RocmInstallationDetector(
 
   bool NoBuiltinLibs = Args.hasArg(options::OPT_nogpulib);
 
+  assert(LibDevicePath.empty());
+
+  if (Args.hasArg(clang::driver::options::OPT_hip_device_lib_path_EQ)) {
+    LibDevicePath
+      = Args.getLastArgValue(clang::driver::options::OPT_hip_device_lib_path_EQ);
+  } else if (const char *LibPathEnv = ::getenv("HIP_DEVICE_LIB_PATH")) {
+    LibDevicePath = LibPathEnv;
+  }
+
+  if (!LibDevicePath.empty()) {
+    // Maintain compatability with HIP flag/envvar pointing directly at the
+    // bitcode library directory. This points directly at the library path instead
+    // of the rocm root installation.
+    if (!D.getVFS().exists(LibDevicePath))
+      return;
+
+    scanLibDevicePath();
+    IsValid = allGenericLibsValid() && !LibDeviceMap.empty();
+    return;
+  }
+
   for (const auto &Candidate : Candidates) {
     InstallPath = Candidate.Path;
     if (InstallPath.empty() || !D.getVFS().exists(InstallPath))
       continue;
 
-    // FIXME: The install path situation is a real mess.
-
-    // For a cmake install, these are placed directly in
-    // ${INSTALL_PREFIX}/lib
-
-    // In the separate OpenCL builds, the bitcode libraries are placed in
-    // ${OPENCL_ROOT}/lib/x86_64/bitcode/*
-
-    // For the rocm installed packages, these are placed at
-    // /opt/rocm/opencl/lib/x86_64/bitcode
-
-    // An additional copy is installed, in scattered locations between
-    // /opt/rocm/hcc/rocdl/oclc
-    // /opt/rocm/hcc/rocdl/ockl
-    // /opt/rocm/hcc/rocdl/lib
+    // The install path situation in old versions of ROCm is a real mess, and
+    // use a different install layout. Multiple copies of the device libraries
+    // exist for each frontend project, and differ depending on which build
+    // system produced the packages. Standalone OpenCL builds also have a
+    // different directory structure from the ROCm OpenCL package.
     //
-    // Yet another complete set is installed to
-    // /opt/rocm/hcc/rocdl/lib
-
-    // For now just recognize the opencl package layout.
+    // The desired structure is (${ROCM_ROOT} or
+    // ${OPENCL_ROOT})/amdgcn/bitcode/*, so try to detect this layout.
 
     // BinPath = InstallPath + "/bin";
     llvm::sys::path::append(IncludePath, InstallPath, "include");
-    llvm::sys::path::append(LibDevicePath, InstallPath, "lib");
+    llvm::sys::path::append(LibDevicePath, InstallPath, "amdgcn", "bitcode");
 
     auto &FS = D.getVFS();
 
@@ -99,62 +169,7 @@ RocmInstallationDetector::RocmInstallationDetector(
     if (CheckLibDevice && !FS.exists(LibDevicePath))
       continue;
 
-    const StringRef Suffix(".amdgcn.bc");
-
-    std::error_code EC;
-    for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
-         !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef FilePath = LI->path();
-      StringRef FileName = llvm::sys::path::filename(FilePath);
-      if (!FileName.endswith(Suffix))
-        continue;
-
-      StringRef BaseName = FileName.drop_back(Suffix.size());
-
-      if (BaseName == "ocml") {
-        OCML = FilePath;
-      } else if (BaseName == "ockl") {
-        OCKL = FilePath;
-      } else if (BaseName == "opencl") {
-        OpenCL = FilePath;
-      } else if (BaseName == "hip") {
-        HIP = FilePath;
-      } else if (BaseName == "oclc_finite_only_off") {
-        FiniteOnly.Off = FilePath;
-      } else if (BaseName == "oclc_finite_only_on") {
-        FiniteOnly.On = FilePath;
-      } else if (BaseName == "oclc_daz_opt_on") {
-        DenormalsAreZero.On = FilePath;
-      } else if (BaseName == "oclc_daz_opt_off") {
-        DenormalsAreZero.Off = FilePath;
-      } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
-        CorrectlyRoundedSqrt.On = FilePath;
-      } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
-        CorrectlyRoundedSqrt.Off = FilePath;
-      } else if (BaseName == "oclc_unsafe_math_on") {
-        UnsafeMath.On = FilePath;
-      } else if (BaseName == "oclc_unsafe_math_off") {
-        UnsafeMath.Off = FilePath;
-      } else if (BaseName == "oclc_wavefrontsize64_on") {
-        WavefrontSize64.On = FilePath;
-      } else if (BaseName == "oclc_wavefrontsize64_off") {
-        WavefrontSize64.Off = FilePath;
-      } else {
-        // Process all bitcode filenames that look like
-        // ocl_isa_version_XXX.amdgcn.bc
-        const StringRef DeviceLibPrefix = "oclc_isa_version_";
-        if (!BaseName.startswith(DeviceLibPrefix))
-          continue;
-
-        StringRef IsaVersionNumber =
-            BaseName.drop_front(DeviceLibPrefix.size());
-
-        llvm::Twine GfxName = Twine("gfx") + IsaVersionNumber;
-        SmallString<8> Tmp;
-        LibDeviceMap.insert(
-            std::make_pair(GfxName.toStringRef(Tmp), FilePath.str()));
-      }
-    }
+    scanLibDevicePath();
 
     if (!NoBuiltinLibs) {
       // Check that the required non-target libraries are all available.
@@ -310,6 +325,16 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
                llvm::DenormalMode::getIEEE();
 }
 
+bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
+                               llvm::AMDGPU::GPUKind Kind) {
+  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+  static bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+
+  return !HasWave32 || DriverArgs.hasFlag(
+    options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);
+}
+
+
 /// ROCM Toolchain
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
@@ -354,11 +379,7 @@ void ROCMToolChain::addClangTargetOptions(
     return;
   }
 
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
-  static bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
-
-  bool Wave64 = !HasWave32 || DriverArgs.hasFlag(
-    options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);
+  bool Wave64 = isWave64(DriverArgs, Kind);
 
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
