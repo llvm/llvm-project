@@ -30675,6 +30675,28 @@ bool X86TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return false;
 }
 
+bool X86TargetLowering::shouldSinkOperands(Instruction *I,
+                                           SmallVectorImpl<Use *> &Ops) const {
+  // A uniform shift amount in a vector shift or funnel shift may be much
+  // cheaper than a generic variable vector shift, so make that pattern visible
+  // to SDAG by sinking the shuffle instruction next to the shift.
+  // TODO: This should handle normal shift opcodes too.
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    Intrinsic::ID ID = II->getIntrinsicID();
+    if (ID == Intrinsic::fshl || ID == Intrinsic::fshr) {
+      // The shift amount operand for these intrinsics is operand 2.
+      auto *Shuf = dyn_cast<ShuffleVectorInst>(II->getOperand(2));
+      if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
+          isVectorShiftByScalarCheap(I->getType())) {
+        Ops.push_back(&I->getOperandUse(2));
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 bool X86TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   if (isa<MaskedLoadSDNode>(ExtVal.getOperand(0)))
     return false;
