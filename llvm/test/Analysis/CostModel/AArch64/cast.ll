@@ -552,51 +552,125 @@ define i32 @casts_no_users() {
   ret i32 undef
 }
 
-define i64 @casts_with_users(i8 %a) {
+define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-LABEL: 'casts_with_users'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r0 = sext i8 %a to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r1 = sext i16 %r0 to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r2 = sext i32 %r1 to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r3 = trunc i64 %r2 to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r4 = trunc i32 %r3 to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r5 = trunc i16 %r4 to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r6 = zext i8 %r5 to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r7 = zext i16 %r6 to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r8 = zext i32 %r7 to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r9 = zext i8 %r5 to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r10 = trunc i32 %r9 to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r11 = zext i8 %r10 to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r12 = trunc i64 %r11 to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r13 = zext i16 %r12 to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r14 = trunc i64 %r13 to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r15 = sext i8 %r14 to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r16 = trunc i32 %r15 to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r17 = sext i8 %r16 to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r18 = trunc i64 %r17 to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r19 = sext i16 %r18 to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r19
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r1 = sext i8 %a to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r2 = sext i8 %a to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r3 = sext i16 %b to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r4 = sext i16 %b to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r5 = sext i32 %c to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r0, i16* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r1, i32* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r2, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r3, i32* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r4, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r5, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r6 = zext i8 %a to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r7 = zext i8 %a to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r8 = zext i8 %a to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r9 = zext i16 %b to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r10 = zext i16 %b to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r11 = zext i32 %c to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r6, i16* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r7, i32* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r8, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r9, i32* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r10, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r11, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r12 = trunc i64 %d to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r13 = trunc i64 %d to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r14 = trunc i64 %d to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r15 = trunc i32 %c to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r16 = trunc i32 %c to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r17 = trunc i16 %b to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tie.trunc.8 = add i8 %r14, %r16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tie.trunc.8.1 = add i8 %tie.trunc.8, %r17
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tie.trunc.16 = add i16 %r13, %r15
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %free.trunc.16.8 = trunc i16 %r6 to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %free.trunc.32.8 = trunc i32 %r7 to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %free.trunc.32.16 = trunc i32 %r9 to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %free.trunc.64.8 = trunc i64 %r8 to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %free.trunc.64.16 = trunc i64 %r10 to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %free.trunc.64.32 = trunc i64 %r11 to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r18 = sext i1 %e to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r19 = sext i1 %e to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r20 = sext i1 %e to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r21 = sext i1 %e to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r22 = zext i1 %e to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r23 = zext i1 %e to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r24 = zext i1 %e to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r25 = zext i1 %e to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r18, i8* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r19, i16* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r20, i32* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r21, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r22, i8* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r23, i16* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r24, i32* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r25, i64* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r12
 ;
   %r0 = sext i8 %a to i16
-  %r1 = sext i16 %r0 to i32
-  %r2 = sext i32 %r1 to i64
-  %r3 = trunc i64 %r2 to i32
-  %r4 = trunc i32 %r3 to i16
-  %r5 = trunc i16 %r4 to i8
-  %r6 = zext i8 %r5 to i16
-  %r7 = zext i16 %r6 to i32
-  %r8 = zext i32 %r7 to i64
-  %r9 = zext i8 %r5 to i32
-  %r10 = trunc i32 %r9 to i8
-  %r11 = zext i8 %r10 to i64
-  %r12 = trunc i64 %r11 to i16
-  %r13 = zext i16 %r12 to i64
-  %r14 = trunc i64 %r13 to i8
-  %r15 = sext i8 %r14 to i32
-  %r16 = trunc i32 %r15 to i8
-  %r17 = sext i8 %r16 to i64
-  %r18 = trunc i64 %r17 to i16
-  %r19 = sext i16 %r18 to i64
-  ret i64 %r19
+  %r1 = sext i8 %a to i32
+  %r2 = sext i8 %a to i64
+  %r3 = sext i16 %b to i32
+  %r4 = sext i16 %b to i64
+  %r5 = sext i32 %c to i64
+  store i16 %r0, i16* undef
+  store i32 %r1, i32* undef
+  store i64 %r2, i64* undef
+  store i32 %r3, i32* undef
+  store i64 %r4, i64* undef
+  store i64 %r5, i64* undef
+
+  %r6 = zext i8 %a to i16
+  %r7 = zext i8 %a to i32
+  %r8 = zext i8 %a to i64
+  %r9 = zext i16 %b to i32
+  %r10 = zext i16 %b to i64
+  %r11 = zext i32 %c to i64
+  store i16 %r6, i16* undef
+  store i32 %r7, i32* undef
+  store i64 %r8, i64* undef
+  store i32 %r9, i32* undef
+  store i64 %r10, i64* undef
+  store i64 %r11, i64* undef
+
+  %r12 = trunc i64 %d to i32
+  %r13 = trunc i64 %d to i16
+  %r14 = trunc i64 %d to i8
+  %r15 = trunc i32 %c to i16
+  %r16 = trunc i32 %c to i8
+  %r17 = trunc i16 %b to i8
+  %tie.trunc.8 = add i8 %r14, %r16
+  %tie.trunc.8.1 = add i8 %tie.trunc.8, %r17
+  %tie.trunc.16 = add i16 %r13, %r15
+
+  %free.trunc.16.8 = trunc i16 %r6 to i8
+  %free.trunc.32.8 = trunc i32 %r7 to i8
+  %free.trunc.32.16 = trunc i32 %r9 to i16
+  %free.trunc.64.8 = trunc i64 %r8 to i8
+  %free.trunc.64.16 = trunc i64 %r10 to i16
+  %free.trunc.64.32 = trunc i64 %r11 to i32
+
+  %r18 = sext i1 %e to i8
+  %r19 = sext i1 %e to i16
+  %r20 = sext i1 %e to i32
+  %r21 = sext i1 %e to i64
+  %r22 = zext i1 %e to i8
+  %r23 = zext i1 %e to i16
+  %r24 = zext i1 %e to i32
+  %r25 = zext i1 %e to i64
+  store i8 %r18, i8* undef
+  store i16 %r19, i16* undef
+  store i32 %r20, i32* undef
+  store i64 %r21, i64* undef
+  store i8 %r22, i8* undef
+  store i16 %r23, i16* undef
+  store i32 %r24, i32* undef
+  store i64 %r25, i64* undef
+  ret i32 %r12
 }
 
 define i32 @bitcasts() {
