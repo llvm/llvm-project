@@ -794,6 +794,12 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 // NaN-propagating maximum: max
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
+// Pseudo-minimum: pmin
+defm PMIN : SIMDBinaryFP<int_wasm_pmin, "pmin", 234>;
+
+// Pseudo-maximum: pmax
+defm PMAX : SIMDBinaryFP<int_wasm_pmax, "pmax", 235>;
+
 //===----------------------------------------------------------------------===//
 // Conversions
 //===----------------------------------------------------------------------===//

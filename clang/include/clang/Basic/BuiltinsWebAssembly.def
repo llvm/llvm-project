@@ -139,8 +139,12 @@ TARGET_BUILTIN(__builtin_wasm_abs_f64x2, "V2dV2d", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_min_f32x4, "V4fV4fV4f", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_max_f32x4, "V4fV4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_pmin_f32x4, "V4fV4fV4f", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_pmax_f32x4, "V4fV4fV4f", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_min_f64x2, "V2dV2dV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_max_f64x2, "V2dV2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_pmin_f64x2, "V2dV2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_pmax_f64x2, "V2dV2dV2d", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_dot_s_i32x4_i16x8, "V4iV8sV8s", "nc", "simd128")
 
