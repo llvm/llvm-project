@@ -176,6 +176,17 @@ def int_wasm_widen_high_unsigned :
             [llvm_anyvector_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
+// TODO: Replace these intrinsics with normal ISel patterns once the
+// pmin/pmax instructions are merged to the spec proposal.
+def int_wasm_pmin :
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>],
+            [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_pmax :
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>],
+            [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Bulk memory intrinsics
 //===----------------------------------------------------------------------===//
