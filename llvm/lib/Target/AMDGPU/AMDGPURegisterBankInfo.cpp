@@ -541,7 +541,6 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     LLT PtrTy = MRI.getType(MI.getOperand(1).getReg());
     unsigned PtrSize = PtrTy.getSizeInBits();
     unsigned AS = PtrTy.getAddressSpace();
-    LLT LoadTy = MRI.getType(MI.getOperand(0).getReg());
 
     if ((AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
          AS != AMDGPUAS::PRIVATE_ADDRESS) &&
@@ -555,9 +554,10 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     }
 
     const InstructionMapping &VVMapping = getInstructionMapping(
-        2, 1, getOperandsMapping(
-          {AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID, LoadTy),
-           AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, PtrSize)}),
+        2, 1,
+        getOperandsMapping(
+            {AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
+             AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, PtrSize)}),
         2); // Num Operands
     AltMappings.push_back(&VVMapping);
 
@@ -1102,23 +1102,6 @@ void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
   MI.getOperand(OpIdx).setReg(SGPR);
 }
 
-// When regbankselect repairs registers, it will insert a repair instruction
-// which defines the repaired register.  Then it calls applyMapping and expects
-// that the targets will either delete or rewrite the originally wrote to the
-// repaired registers.  Beccause of this, we end up in a situation where
-// we have 2 instructions defining the same registers.
-static MachineInstr *getOtherVRegDef(const MachineRegisterInfo &MRI,
-                                     Register Reg,
-                                     const MachineInstr &MI) {
-  // Is there some way we can assert that there are exactly 2 def instructions?
-  for (MachineInstr &Other : MRI.def_instructions(Reg)) {
-    if (&Other != &MI)
-      return &Other;
-  }
-
-  return nullptr;
-}
-
 bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
                         const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
                                               MachineRegisterInfo &MRI) const {
@@ -1144,11 +1127,6 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
 
   assert(LoadSize % MaxNonSmrdLoadSize == 0);
 
-  // We want to get the repair instruction now, because it will help us
-  // determine which instruction the legalizer inserts that will also
-  // write to DstReg.
-  MachineInstr *RepairInst = getOtherVRegDef(MRI, DstReg, MI);
-
   // RegBankSelect only emits scalar types, so we need to reset the pointer
   // operand to a pointer type.
   Register BasePtrReg = SrcRegs[0];
@@ -1166,26 +1144,6 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
   LegalizerHelper Helper(B.getMF(), Observer, B);
   if (Helper.fewerElementsVector(MI, 0, LoadSplitTy) != LegalizerHelper::Legalized)
     return false;
-
-  // At this point, the legalizer has split the original load into smaller
-  // loads.  At the end of lowering, it inserts an instruction (LegalizedInst)
-  // that combines the outputs of the lower loads and writes it to DstReg.
-  // The register bank selector has also added the RepairInst which writes to
-  // DstReg as well.
-
-  MachineInstr *LegalizedInst = getOtherVRegDef(MRI, DstReg, *RepairInst);
-
-  // Replace the output of the LegalizedInst with a temporary register, since
-  // RepairInst already defines DstReg.
-  Register TmpReg = MRI.createGenericVirtualRegister(MRI.getType(DstReg));
-  LegalizedInst->getOperand(0).setReg(TmpReg);
-  B.setInsertPt(*RepairInst->getParent(), RepairInst);
-
-  for (unsigned DefIdx = 0, e = DefRegs.size(); DefIdx != e; ++DefIdx) {
-    Register IdxReg = B.buildConstant(LLT::scalar(32), DefIdx).getReg(0);
-    MRI.setRegBank(IdxReg, AMDGPU::VGPRRegBank);
-    B.buildExtractVectorElement(DefRegs[DefIdx], TmpReg, IdxReg);
-  }
 
   MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
   return true;
@@ -2972,7 +2930,6 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<const ValueMapping*, 2> OpdsMapping(2);
   unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
-  LLT LoadTy = MRI.getType(MI.getOperand(0).getReg());
   Register PtrReg = MI.getOperand(1).getReg();
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AS = PtrTy.getAddressSpace();
@@ -2998,11 +2955,9 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
         AMDGPU::VGPRRegBankID : AMDGPU::SGPRRegBankID;
 
       PtrMapping = AMDGPU::getValueMapping(PtrBankID, PtrSize);
-      ValMapping = AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID,
-                                                       LoadTy);
     }
   } else {
-    ValMapping = AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID, LoadTy);
+    ValMapping = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     PtrMapping = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, PtrSize);
   }
 
