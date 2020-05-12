@@ -409,7 +409,7 @@ let hasSideEffects = 0 in {
   def XSMADDADP : XX3Form<60, 33,
                           (outs vsfrc:$XT), (ins vsfrc:$XTi, vsfrc:$XA, vsfrc:$XB),
                           "xsmaddadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f64:$XT, (fma f64:$XA, f64:$XB, f64:$XTi))]>,
+                          [(set f64:$XT, (any_fma f64:$XA, f64:$XB, f64:$XTi))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -425,7 +425,7 @@ let hasSideEffects = 0 in {
   def XSMSUBADP : XX3Form<60, 49,
                           (outs vsfrc:$XT), (ins vsfrc:$XTi, vsfrc:$XA, vsfrc:$XB),
                           "xsmsubadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f64:$XT, (fma f64:$XA, f64:$XB, (fneg f64:$XTi)))]>,
+                          [(set f64:$XT, (any_fma f64:$XA, f64:$XB, (fneg f64:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -441,7 +441,7 @@ let hasSideEffects = 0 in {
   def XSNMADDADP : XX3Form<60, 161,
                           (outs vsfrc:$XT), (ins vsfrc:$XTi, vsfrc:$XA, vsfrc:$XB),
                           "xsnmaddadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f64:$XT, (fneg (fma f64:$XA, f64:$XB, f64:$XTi)))]>,
+                          [(set f64:$XT, (fneg (any_fma f64:$XA, f64:$XB, f64:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -457,7 +457,7 @@ let hasSideEffects = 0 in {
   def XSNMSUBADP : XX3Form<60, 177,
                           (outs vsfrc:$XT), (ins vsfrc:$XTi, vsfrc:$XA, vsfrc:$XB),
                           "xsnmsubadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f64:$XT, (fneg (fma f64:$XA, f64:$XB, (fneg f64:$XTi))))]>,
+                          [(set f64:$XT, (fneg (any_fma f64:$XA, f64:$XB, (fneg f64:$XTi))))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -473,7 +473,7 @@ let hasSideEffects = 0 in {
   def XVMADDADP : XX3Form<60, 97,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvmaddadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v2f64:$XT, (fma v2f64:$XA, v2f64:$XB, v2f64:$XTi))]>,
+                          [(set v2f64:$XT, (any_fma v2f64:$XA, v2f64:$XB, v2f64:$XTi))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -489,7 +489,7 @@ let hasSideEffects = 0 in {
   def XVMADDASP : XX3Form<60, 65,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvmaddasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v4f32:$XT, (fma v4f32:$XA, v4f32:$XB, v4f32:$XTi))]>,
+                          [(set v4f32:$XT, (any_fma v4f32:$XA, v4f32:$XB, v4f32:$XTi))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -505,7 +505,7 @@ let hasSideEffects = 0 in {
   def XVMSUBADP : XX3Form<60, 113,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvmsubadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v2f64:$XT, (fma v2f64:$XA, v2f64:$XB, (fneg v2f64:$XTi)))]>,
+                          [(set v2f64:$XT, (any_fma v2f64:$XA, v2f64:$XB, (fneg v2f64:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -521,7 +521,7 @@ let hasSideEffects = 0 in {
   def XVMSUBASP : XX3Form<60, 81,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvmsubasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v4f32:$XT, (fma v4f32:$XA, v4f32:$XB, (fneg v4f32:$XTi)))]>,
+                          [(set v4f32:$XT, (any_fma v4f32:$XA, v4f32:$XB, (fneg v4f32:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -537,7 +537,7 @@ let hasSideEffects = 0 in {
   def XVNMADDADP : XX3Form<60, 225,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvnmaddadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v2f64:$XT, (fneg (fma v2f64:$XA, v2f64:$XB, v2f64:$XTi)))]>,
+                          [(set v2f64:$XT, (fneg (any_fma v2f64:$XA, v2f64:$XB, v2f64:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -569,7 +569,7 @@ let hasSideEffects = 0 in {
   def XVNMSUBADP : XX3Form<60, 241,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvnmsubadp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v2f64:$XT, (fneg (fma v2f64:$XA, v2f64:$XB, (fneg v2f64:$XTi))))]>,
+                          [(set v2f64:$XT, (fneg (any_fma v2f64:$XA, v2f64:$XB, (fneg v2f64:$XTi))))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -585,7 +585,7 @@ let hasSideEffects = 0 in {
   def XVNMSUBASP : XX3Form<60, 209,
                           (outs vsrc:$XT), (ins vsrc:$XTi, vsrc:$XA, vsrc:$XB),
                           "xvnmsubasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v4f32:$XT, (fneg (fma v4f32:$XA, v4f32:$XB, (fneg v4f32:$XTi))))]>,
+                          [(set v4f32:$XT, (fneg (any_fma v4f32:$XA, v4f32:$XB, (fneg v4f32:$XTi))))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   let IsVSXFMAAlt = 1 in
@@ -604,7 +604,7 @@ let hasSideEffects = 0 in {
   def XSSQRTDP : XX2Form<60, 75,
                         (outs vsfrc:$XT), (ins vsfrc:$XB),
                         "xssqrtdp $XT, $XB", IIC_FPSqrtD,
-                        [(set f64:$XT, (fsqrt f64:$XB))]>;
+                        [(set f64:$XT, (any_fsqrt f64:$XB))]>;
 
   def XSREDP : XX2Form<60, 90,
                         (outs vsfrc:$XT), (ins vsfrc:$XB),
@@ -634,11 +634,11 @@ let hasSideEffects = 0 in {
   def XVSQRTDP : XX2Form<60, 203,
                         (outs vsrc:$XT), (ins vsrc:$XB),
                         "xvsqrtdp $XT, $XB", IIC_FPSqrtD,
-                        [(set v2f64:$XT, (fsqrt v2f64:$XB))]>;
+                        [(set v2f64:$XT, (any_fsqrt v2f64:$XB))]>;
   def XVSQRTSP : XX2Form<60, 139,
                         (outs vsrc:$XT), (ins vsrc:$XB),
                         "xvsqrtsp $XT, $XB", IIC_FPSqrtS,
-                        [(set v4f32:$XT, (fsqrt v4f32:$XB))]>;
+                        [(set v4f32:$XT, (any_fsqrt v4f32:$XB))]>;
 
   def XVTDIVDP : XX3Form_1<60, 125,
                          (outs crrc:$crD), (ins vsrc:$XA, vsrc:$XB),
@@ -1157,7 +1157,6 @@ let Predicates = [HasVSX, HasP8Vector] in {
                         (outs vssrc:$XT), (ins vssrc:$XA, vssrc:$XB),
                         "xsdivsp $XT, $XA, $XB", IIC_FPDivS,
                         [(set f32:$XT, (any_fdiv f32:$XA, f32:$XB))]>;
-  } // mayRaiseFPException
 
   def XSRESP : XX2Form<60, 26,
                         (outs vssrc:$XT), (ins vssrc:$XB),
@@ -1171,7 +1170,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def XSSQRTSP : XX2Form<60, 11,
                         (outs vssrc:$XT), (ins vssrc:$XB),
                         "xssqrtsp $XT, $XB", IIC_FPSqrtS,
-                        [(set f32:$XT, (fsqrt f32:$XB))]>;
+                        [(set f32:$XT, (any_fsqrt f32:$XB))]>;
   def XSRSQRTESP : XX2Form<60, 10,
                            (outs vssrc:$XT), (ins vssrc:$XB),
                            "xsrsqrtesp $XT, $XB", IIC_VecFP,
@@ -1184,7 +1183,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
                           (outs vssrc:$XT),
                           (ins vssrc:$XTi, vssrc:$XA, vssrc:$XB),
                           "xsmaddasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f32:$XT, (fma f32:$XA, f32:$XB, f32:$XTi))]>,
+                          [(set f32:$XT, (any_fma f32:$XA, f32:$XB, f32:$XTi))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
@@ -1203,7 +1202,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
                           (outs vssrc:$XT),
                           (ins vssrc:$XTi, vssrc:$XA, vssrc:$XB),
                           "xsmsubasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f32:$XT, (fma f32:$XA, f32:$XB,
+                          [(set f32:$XT, (any_fma f32:$XA, f32:$XB,
                                               (fneg f32:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
@@ -1223,7 +1222,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
                           (outs vssrc:$XT),
                           (ins vssrc:$XTi, vssrc:$XA, vssrc:$XB),
                           "xsnmaddasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f32:$XT, (fneg (fma f32:$XA, f32:$XB,
+                          [(set f32:$XT, (fneg (any_fma f32:$XA, f32:$XB,
                                                     f32:$XTi)))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
@@ -1243,7 +1242,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
                           (outs vssrc:$XT),
                           (ins vssrc:$XTi, vssrc:$XA, vssrc:$XB),
                           "xsnmsubasp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f32:$XT, (fneg (fma f32:$XA, f32:$XB,
+                          [(set f32:$XT, (fneg (any_fma f32:$XA, f32:$XB,
                                                     (fneg f32:$XTi))))]>,
                           RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">,
                           AltVSXFMARel;
@@ -1272,6 +1271,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
                           "xscvdpspn $XT, $XB", IIC_VecFP, []>;
   def XSCVSPDPN : XX2Form<60, 331, (outs vssrc:$XT), (ins vsrc:$XB),
                           "xscvspdpn $XT, $XB", IIC_VecFP, []>;
+  } // mayRaiseFPException
 
   let Predicates = [HasVSX, HasDirectMove] in {
   // VSX direct move instructions
@@ -1367,27 +1367,25 @@ let Predicates = [HasVSX, HasP9Vector] in {
                                    [(set f128:$vT, (any_fsub f128:$vA, f128:$vB))]>;
   def XSDIVQP   : X_VT5_VA5_VB5   <63, 548, "xsdivqp",
                                    [(set f128:$vT, (any_fdiv f128:$vA, f128:$vB))]>;
-  } // mayRaiseFPException
   // Square-Root
   def XSSQRTQP  : X_VT5_XO5_VB5   <63, 27, 804, "xssqrtqp",
-                                   [(set f128:$vT, (fsqrt f128:$vB))]>;
+                                   [(set f128:$vT, (any_fsqrt f128:$vB))]>;
   // (Negative) Multiply-{Add/Subtract}
   def XSMADDQP : X_VT5_VA5_VB5_FMA <63, 388, "xsmaddqp",
                                     [(set f128:$vT,
-                                          (fma f128:$vA, f128:$vB,
-                                               f128:$vTi))]>;
+                                          (any_fma f128:$vA, f128:$vB, f128:$vTi))]>;
   def XSMSUBQP  : X_VT5_VA5_VB5_FMA   <63, 420, "xsmsubqp"  ,
                                        [(set f128:$vT,
-                                             (fma f128:$vA, f128:$vB,
-                                                  (fneg f128:$vTi)))]>;
+                                             (any_fma f128:$vA, f128:$vB,
+                                                      (fneg f128:$vTi)))]>;
   def XSNMADDQP : X_VT5_VA5_VB5_FMA <63, 452, "xsnmaddqp",
                                      [(set f128:$vT,
-                                           (fneg (fma f128:$vA, f128:$vB,
-                                                      f128:$vTi)))]>;
+                                           (fneg (any_fma f128:$vA, f128:$vB,
+                                                          f128:$vTi)))]>;
   def XSNMSUBQP : X_VT5_VA5_VB5_FMA <63, 484, "xsnmsubqp",
                                      [(set f128:$vT,
-                                           (fneg (fma f128:$vA, f128:$vB,
-                                                      (fneg f128:$vTi))))]>;
+                                           (fneg (any_fma f128:$vA, f128:$vB,
+                                                          (fneg f128:$vTi))))]>;
 
   let isCommutable = 1 in {
   def XSADDQPO : X_VT5_VA5_VB5_Ro<63, 4, "xsaddqpo",
@@ -1429,6 +1427,7 @@ let Predicates = [HasVSX, HasP9Vector] in {
                                       [(set f128:$vT,
                                       (fneg (int_ppc_fmaf128_round_to_odd
                                       f128:$vA, f128:$vB, (fneg f128:$vTi))))]>;
+  } // mayRaiseFPException
 
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   // QP Compare Ordered/Unordered
@@ -2594,13 +2593,13 @@ def : Pat<(vselect v4i32:$vA, v4f32:$vB, v4f32:$vC),
 def : Pat<(vselect v2i64:$vA, v2f64:$vB, v2f64:$vC),
           (XXSEL $vC, $vB, $vA)>;
 
-def : Pat<(v4f32 (fmaxnum v4f32:$src1, v4f32:$src2)),
+def : Pat<(v4f32 (any_fmaxnum v4f32:$src1, v4f32:$src2)),
           (v4f32 (XVMAXSP $src1, $src2))>;
-def : Pat<(v4f32 (fminnum v4f32:$src1, v4f32:$src2)),
+def : Pat<(v4f32 (any_fminnum v4f32:$src1, v4f32:$src2)),
           (v4f32 (XVMINSP $src1, $src2))>;
-def : Pat<(v2f64 (fmaxnum v2f64:$src1, v2f64:$src2)),
+def : Pat<(v2f64 (any_fmaxnum v2f64:$src1, v2f64:$src2)),
           (v2f64 (XVMAXDP $src1, $src2))>;
-def : Pat<(v2f64 (fminnum v2f64:$src1, v2f64:$src2)),
+def : Pat<(v2f64 (any_fminnum v2f64:$src1, v2f64:$src2)),
           (v2f64 (XVMINDP $src1, $src2))>;
 
 // f32 Min.

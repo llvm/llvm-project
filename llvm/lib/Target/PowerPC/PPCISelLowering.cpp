@@ -291,11 +291,18 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
 
   setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
+
+  if (Subtarget.hasFSQRT()) {
+    setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Legal);
+  }
 
   // We don't support sin/cos/sqrt/fmod/pow
   setOperationAction(ISD::FSIN , MVT::f64, Expand);
@@ -933,11 +940,19 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STRICT_FSUB, MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FMUL, MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FDIV, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FMA, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FSQRT, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FMAXNUM, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FMINNUM, MVT::v4f32, Legal);
 
       setOperationAction(ISD::STRICT_FADD, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FSUB, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FMUL, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FDIV, MVT::v2f64, Legal);
+      setOperationAction(ISD::STRICT_FMA, MVT::v2f64, Legal);
+      setOperationAction(ISD::STRICT_FSQRT, MVT::v2f64, Legal);
+      setOperationAction(ISD::STRICT_FMAXNUM, MVT::v2f64, Legal);
+      setOperationAction(ISD::STRICT_FMINNUM, MVT::v2f64, Legal);
 
       addRegisterClass(MVT::v2i64, &PPC::VSRCRegClass);
     }
@@ -1001,6 +1016,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::STRICT_FSUB, MVT::f128, Legal);
         setOperationAction(ISD::STRICT_FMUL, MVT::f128, Legal);
         setOperationAction(ISD::STRICT_FDIV, MVT::f128, Legal);
+        setOperationAction(ISD::STRICT_FMA, MVT::f128, Legal);
+        setOperationAction(ISD::STRICT_FSQRT, MVT::f128, Legal);
       }
       setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Custom);
       setOperationAction(ISD::BSWAP, MVT::v8i16, Legal);
