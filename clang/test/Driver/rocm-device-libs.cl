@@ -121,6 +121,21 @@
 
 
 
+// Test --hip-device-lib-path format
+// RUN: %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx900 \
+// RUN:   --hip-device-lib-path=%S/Inputs/rocm-device-libs/amdgcn/bitcode \
+// RUN:   %S/opencl.cl \
+// RUN: 2>&1 | FileCheck -dump-input-on-failure --check-prefixes=COMMON,COMMON-DEFAULT,GFX900-DEFAULT,GFX900,WAVE64 %s
+
+// Test environment variable HIP_DEVICE_LIB_PATH
+// RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm-device-libs/amdgcn/bitcode %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx900 \
+// RUN:   %S/opencl.cl \
+// RUN: 2>&1 | FileCheck -dump-input-on-failure --check-prefixes=COMMON,COMMON-DEFAULT,GFX900-DEFAULT,GFX900,WAVE64 %s
+
+
+
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/opencl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ocml.bc"
