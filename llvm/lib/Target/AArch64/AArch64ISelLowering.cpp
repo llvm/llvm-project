@@ -876,6 +876,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
       if (isTypeLegal(VT)) {
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        setOperationAction(ISD::SELECT, VT, Custom);
         setOperationAction(ISD::SDIV, VT, Custom);
         setOperationAction(ISD::UDIV, VT, Custom);
         setOperationAction(ISD::SMIN, VT, Custom);
@@ -893,6 +894,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : MVT::fp_scalable_vector_valuetypes()) {
       if (isTypeLegal(VT)) {
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        setOperationAction(ISD::SELECT, VT, Custom);
       }
     }
   }
@@ -5709,6 +5711,14 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   SDValue TVal = Op->getOperand(1);
   SDValue FVal = Op->getOperand(2);
   SDLoc DL(Op);
+
+  EVT Ty = Op.getValueType();
+  if (Ty.isScalableVector()) {
+    SDValue TruncCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, CCVal);
+    MVT PredVT = MVT::getVectorVT(MVT::i1, Ty.getVectorElementCount());
+    SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, PredVT, TruncCC);
+    return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
+  }
 
   // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a select
   // instruction.
