@@ -535,6 +535,12 @@ main:
     # CHECK: f32x4.max # encoding: [0xfd,0xe9,0x01]
     f32x4.max
 
+    # CHECK: f32x4.pmin # encoding: [0xfd,0xea,0x01]
+    f32x4.pmin
+
+    # CHECK: f32x4.pmax # encoding: [0xfd,0xeb,0x01]
+    f32x4.pmax
+
     # CHECK: f64x2.abs # encoding: [0xfd,0xec,0x01]
     f64x2.abs
 
@@ -561,6 +567,12 @@ main:
 
     # CHECK: f64x2.max # encoding: [0xfd,0xf5,0x01]
     f64x2.max
+
+    # CHECK: f64x2.pmin # encoding: [0xfd,0xf6,0x01]
+    f64x2.pmin
+
+    # CHECK: f64x2.pmax # encoding: [0xfd,0xf7,0x01]
+    f64x2.pmax
 
     # CHECK: i32x4.trunc_sat_f32x4_s # encoding: [0xfd,0xf8,0x01]
     i32x4.trunc_sat_f32x4_s
