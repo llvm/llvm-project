@@ -15,11 +15,21 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::shared_ptr<int> p;
-    assert(p.use_count() == 0);
-    assert(p.get() == 0);
+struct A {};
+
+template <class T>
+void test() {
+  std::shared_ptr<T> p;
+  assert(p.use_count() == 0);
+  assert(p.get() == 0);
+}
+
+int main(int, char**) {
+  test<int>();
+  test<A>();
+  test<int*>();
+  test<int[]>();
+  test<int[8]>();
 
   return 0;
 }
