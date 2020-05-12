@@ -1177,10 +1177,31 @@ def : BitConvert <v8i32, v8f32, SReg_256>;
 def : BitConvert <v8f32, v8i32, SReg_256>;
 def : BitConvert <v8i32, v8f32, VReg_256>;
 def : BitConvert <v8f32, v8i32, VReg_256>;
+def : BitConvert <v4i64, v4f64, VReg_256>;
+def : BitConvert <v4f64, v4i64, VReg_256>;
+def : BitConvert <v4i64, v8i32, VReg_256>;
+def : BitConvert <v4i64, v8f32, VReg_256>;
+def : BitConvert <v4f64, v8i32, VReg_256>;
+def : BitConvert <v4f64, v8f32, VReg_256>;
+def : BitConvert <v8i32, v4i64, VReg_256>;
+def : BitConvert <v8f32, v4i64, VReg_256>;
+def : BitConvert <v8i32, v4f64, VReg_256>;
+def : BitConvert <v8f32, v4f64, VReg_256>;
+
 
 // 512-bit bitcast
 def : BitConvert <v16i32, v16f32, VReg_512>;
 def : BitConvert <v16f32, v16i32, VReg_512>;
+def : BitConvert <v8i64,  v8f64, VReg_512>;
+def : BitConvert <v8f64,  v8i64, VReg_512>;
+def : BitConvert <v8i64,  v16i32, VReg_512>;
+def : BitConvert <v8f64,  v16i32, VReg_512>;
+def : BitConvert <v16i32, v8i64,  VReg_512>;
+def : BitConvert <v16i32, v8f64,  VReg_512>;
+def : BitConvert <v8i64,  v16f32, VReg_512>;
+def : BitConvert <v8f64,  v16f32, VReg_512>;
+def : BitConvert <v16f32, v8i64,  VReg_512>;
+def : BitConvert <v16f32, v8f64,  VReg_512>;
 
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;
