@@ -95,6 +95,10 @@ static cl::opt<bool> DisableLoopAlignment(
   cl::desc("Do not align and prefetch loops"),
   cl::init(false));
 
+static cl::opt<bool> VGPRReserveforSGPRSpill(
+    "amdgpu-reserve-vgpr-for-sgpr-spill",
+    cl::desc("Allocates one VGPR for future SGPR Spill"), cl::init(true));
+
 static bool hasFP32Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().allFP32Denormals();
@@ -10858,6 +10862,13 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   }
 
   TargetLoweringBase::finalizeLowering(MF);
+
+  // Allocate a VGPR for future SGPR Spill if
+  // "amdgpu-reserve-vgpr-for-sgpr-spill" option is used
+  // FIXME: We won't need this hack if we split SGPR allocation from VGPR
+  if (VGPRReserveforSGPRSpill && !Info->VGPRReservedForSGPRSpill &&
+      !Info->isEntryFunction() && MF.getFrameInfo().hasStackObjects())
+    Info->reserveVGPRforSGPRSpills(MF);
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
