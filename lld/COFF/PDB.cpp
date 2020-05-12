@@ -416,7 +416,7 @@ PDBLinker::mergeDebugT(ObjFile *file, CVIndexMap *objectIndexMap) {
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(err)));
   } else {
-    if (auto err = mergeTypeAndIdRecords(tMerger.iDTable, tMerger.typeTable,
+    if (auto err = mergeTypeAndIdRecords(tMerger.idTable, tMerger.typeTable,
                                          objectIndexMap->tpiMap, types,
                                          file->pchSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
@@ -504,7 +504,7 @@ Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *file) {
 
     // Merge IPI.
     if (maybeIpi) {
-      if (auto err = mergeIdRecords(tMerger.iDTable, indexMap.tpiMap,
+      if (auto err = mergeIdRecords(tMerger.idTable, indexMap.tpiMap,
                                     indexMap.ipiMap, maybeIpi->typeArray()))
         fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
     }
@@ -695,7 +695,7 @@ static SymbolKind symbolKind(ArrayRef<uint8_t> recordData) {
 
 /// MSVC translates S_PROC_ID_END to S_END, and S_[LG]PROC32_ID to S_[LG]PROC32
 static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
-                               TypeCollection &iDTable) {
+                               TypeCollection &idTable) {
   RecordPrefix *prefix = reinterpret_cast<RecordPrefix *>(recordData.data());
 
   SymbolKind kind = symbolKind(recordData);
@@ -725,7 +725,7 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
     // Note that LF_FUNC_ID and LF_MEMFUNC_ID have the same record layout, and
     // in both cases we just need the second type index.
     if (!ti->isSimple() && !ti->isNoneType()) {
-      CVType funcIdData = iDTable.getType(*ti);
+      CVType funcIdData = idTable.getType(*ti);
       ArrayRef<uint8_t> tiBuf = funcIdData.data().slice(8, 4);
       assert(tiBuf.size() == 4 && "corrupt LF_[MEM]FUNC_ID record");
       *ti = *reinterpret_cast<const TypeIndex *>(tiBuf.data());

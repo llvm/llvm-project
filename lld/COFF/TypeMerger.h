@@ -20,7 +20,7 @@ namespace coff {
 class TypeMerger {
 public:
   TypeMerger(llvm::BumpPtrAllocator &alloc)
-      : typeTable(alloc), iDTable(alloc), globalTypeTable(alloc),
+      : typeTable(alloc), idTable(alloc), globalTypeTable(alloc),
         globalIDTable(alloc) {}
 
   /// Get the type table or the global type table if /DEBUG:GHASH is enabled.
@@ -34,14 +34,14 @@ public:
   inline llvm::codeview::TypeCollection &getIDTable() {
     if (config->debugGHashes)
       return globalIDTable;
-    return iDTable;
+    return idTable;
   }
 
   /// Type records that will go into the PDB TPI stream.
   llvm::codeview::MergingTypeTableBuilder typeTable;
 
   /// Item records that will go into the PDB IPI stream.
-  llvm::codeview::MergingTypeTableBuilder iDTable;
+  llvm::codeview::MergingTypeTableBuilder idTable;
 
   /// Type records that will go into the PDB TPI stream (for /DEBUG:GHASH)
   llvm::codeview::GlobalTypeTableBuilder globalTypeTable;
