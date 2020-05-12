@@ -261,7 +261,8 @@ Register SIMachineFunctionInfo::addImplicitBufferPtr(const SIRegisterInfo &TRI) 
   return ArgInfo.ImplicitBufferPtr.getRegister();
 }
 
-static bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) {
+bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
+                                             MCPhysReg Reg) {
   for (unsigned I = 0; CSRegs[I]; ++I) {
     if (CSRegs[I] == Reg)
       return true;
@@ -295,6 +296,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned WaveSize = ST.getWavefrontSize();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned Size = FrameInfo.getObjectSize(FI);
   assert(Size >= 4 && Size <= 64 && "invalid sgpr spill size");
@@ -310,7 +312,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
     Register LaneVGPR;
     unsigned VGPRIndex = (NumVGPRSpillLanes % WaveSize);
 
-    if (VGPRIndex == 0) {
+    if (VGPRIndex == 0 && !FuncInfo->VGPRReservedForSGPRSpill) {
       LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
       if (LaneVGPR == AMDGPU::NoRegister) {
         // We have no VGPRs left for spilling SGPRs. Reset because we will not
@@ -339,6 +341,19 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
     SpillLanes.push_back(SpilledReg(LaneVGPR, VGPRIndex));
   }
 
+  return true;
+}
+
+/// Reserve a VGPR for spilling of SGPRs
+bool SIMachineFunctionInfo::reserveVGPRforSGPRSpills(MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  Register LaneVGPR = TRI->findUnusedRegister(
+      MF.getRegInfo(), &AMDGPU::VGPR_32RegClass, MF, true);
+  SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, None));
+  FuncInfo->VGPRReservedForSGPRSpill = LaneVGPR;
   return true;
 }
 
@@ -552,5 +567,23 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
+  return false;
+}
+
+// Remove VGPR which was reserved for SGPR spills if there are no spilled SGPRs
+bool SIMachineFunctionInfo::removeVGPRForSGPRSpill(Register ReservedVGPR,
+                                                   MachineFunction &MF) {
+  for (auto *i = SpillVGPRs.begin(); i < SpillVGPRs.end(); i++) {
+    if (i->VGPR == ReservedVGPR) {
+      SpillVGPRs.erase(i);
+
+      for (MachineBasicBlock &MBB : MF) {
+        MBB.removeLiveIn(ReservedVGPR);
+        MBB.sortUniqueLiveIns();
+      }
+      this->VGPRReservedForSGPRSpill = AMDGPU::NoRegister;
+      return true;
+    }
+  }
   return false;
 }
