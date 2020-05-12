@@ -839,7 +839,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK32:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.i32,
 // CHECK32:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.i32,
 // CHECK32:         %[[ARG2:.*]]: !llvm.i32)
-func @subview(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg0 : index, %arg1 : index, %arg2 : index) {
+func @subview(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
   // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
@@ -883,8 +883,7 @@ func @subview(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg0 : index, 
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
 
   %1 = subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
-    memref<64x4xf32, offset: 0, strides: [4, 1]>
-  to memref<?x?xf32, offset: ?, strides: [?, ?]>
+    memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
   return
 }
 
@@ -900,7 +899,7 @@ func @subview(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg0 : index, 
 // CHECK32:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.i32,
 // CHECK32:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.i32,
 // CHECK32:         %[[ARG2:.*]]: !llvm.i32)
-func @subview_non_zero_addrspace(%0 : memref<64x4xf32, offset: 0, strides: [4, 1], 3>, %arg0 : index, %arg1 : index, %arg2 : index) {
+func @subview_non_zero_addrspace(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>, 3>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
   // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
@@ -944,14 +943,13 @@ func @subview_non_zero_addrspace(%0 : memref<64x4xf32, offset: 0, strides: [4, 1
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
 
   %1 = subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
-    memref<64x4xf32, offset: 0, strides: [4, 1], 3>
-    to memref<?x?xf32, offset: ?, strides: [?, ?], 3>
+    memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>, 3> to memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>, 3>
   return
 }
 
 // CHECK-LABEL: func @subview_const_size(
 // CHECK32-LABEL: func @subview_const_size(
-func @subview_const_size(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg0 : index, %arg1 : index, %arg2 : index) {
+func @subview_const_size(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
   // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
@@ -998,15 +996,14 @@ func @subview_const_size(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST4]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
   // CHECK32: llvm.insertvalue %[[DESCSTRIDE0]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
-  %1 = subview %0[%arg0, %arg1][4, 2][%arg0, %arg1] :
-    memref<64x4xf32, offset: 0, strides: [4, 1]>
-    to memref<4x2xf32, offset: ?, strides: [?, ?]>
+  %1 = subview %0[%arg0, %arg1][][%arg0, %arg1] :
+    memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<4x2xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
   return
 }
 
 // CHECK-LABEL: func @subview_const_stride(
 // CHECK32-LABEL: func @subview_const_stride(
-func @subview_const_stride(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg0 : index, %arg1 : index, %arg2 : index) {
+func @subview_const_stride(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
   // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
@@ -1049,15 +1046,14 @@ func @subview_const_stride(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %a
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
   // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
   // CHECK32: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
-  %1 = subview %0[%arg0, %arg1][%arg0, %arg1][1, 2] :
-    memref<64x4xf32, offset: 0, strides: [4, 1]>
-    to memref<?x?xf32, offset: ?, strides: [4, 2]>
+  %1 = subview %0[%arg0, %arg1][%arg0, %arg1][] :
+    memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 * 2 + s0)>>
   return
 }
 
 // CHECK-LABEL: func @subview_const_stride_and_offset(
 // CHECK32-LABEL: func @subview_const_stride_and_offset(
-func @subview_const_stride_and_offset(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>) {
+func @subview_const_stride_and_offset(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
   // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
@@ -1096,9 +1092,8 @@ func @subview_const_stride_and_offset(%0 : memref<64x4xf32, offset: 0, strides: 
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST62]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
   // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
   // CHECK32: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
-  %1 = subview %0[0, 8][62, 3][1, 1] :
-    memref<64x4xf32, offset: 0, strides: [4, 1]>
-    to memref<62x3xf32, offset: 8, strides: [4, 1]>
+  %1 = subview %0[][][] :
+    memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<62x3xf32, affine_map<(d0, d1) -> (d0 * 4 + d1 + 8)>>
   return
 }
 
