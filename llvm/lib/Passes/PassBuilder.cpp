@@ -857,7 +857,7 @@ ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
   // constants.
   MPM.addPass(createModuleToFunctionPassAdaptor(PromotePass()));
 
-  // Remove any dead arguments exposed by cleanups and constand folding
+  // Remove any dead arguments exposed by cleanups and constant folding
   // globals.
   MPM.addPass(DeadArgumentEliminationPass());
 
