@@ -240,18 +240,19 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(
   m_description = "TypeSystemSwiftTypeRef";
 }
 
-const char *TypeSystemSwiftTypeRef::AsMangledName(void *type) {
+const char *TypeSystemSwiftTypeRef::AsMangledName(opaque_compiler_type_t type) {
   assert(type && *reinterpret_cast<const char *>(type) == '$' &&
          "wrong type system");
   return reinterpret_cast<const char *>(type);
 }
 
-ConstString TypeSystemSwiftTypeRef::GetMangledTypeName(void *type) {
+ConstString
+TypeSystemSwiftTypeRef::GetMangledTypeName(opaque_compiler_type_t type) {
   // FIXME: Suboptimal performance, because the ConstString is looked up again.
   return ConstString(AsMangledName(type));
 }
 
-void *TypeSystemSwiftTypeRef::ReconstructType(void *type) {
+void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type) {
   Status error;
   return m_swift_ast_context->ReconstructType(GetMangledTypeName(type), error);
 }
@@ -262,7 +263,7 @@ CompilerType TypeSystemSwiftTypeRef::ReconstructType(CompilerType type) {
 
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
     ConstString mangled_typename) {
-  return {this, (void *)mangled_typename.AsCString()};
+  return {this, (opaque_compiler_type_t)mangled_typename.AsCString()};
 }
 
 lldb::TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
@@ -302,7 +303,7 @@ DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
 // Tests
 
 #ifndef NDEBUG
-bool TypeSystemSwiftTypeRef::Verify(lldb::opaque_compiler_type_t type) {
+bool TypeSystemSwiftTypeRef::Verify(opaque_compiler_type_t type) {
   if (!type)
     return true;
 
@@ -325,7 +326,7 @@ template <typename T> bool Equivalent(T l, T r) { return l == r; }
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   return l.GetMangledTypeName() == r.GetMangledTypeName();
 }
-}
+} // namespace
 #endif
 
 // This can be removed once the transition is complete.
@@ -354,9 +355,8 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &Dem,
   return GetTypeFromMangledTypename(mangled_element);
 }
 
-swift::Demangle::NodePointer
-TypeSystemSwiftTypeRef::DemangleCanonicalType(swift::Demangle::Demangler &Dem,
-                                              void *opaque_type) {
+swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
+    swift::Demangle::Demangler &Dem, opaque_compiler_type_t opaque_type) {
   using namespace swift::Demangle;
   if (!opaque_type)
     return nullptr;
@@ -377,7 +377,8 @@ TypeSystemSwiftTypeRef::DemangleCanonicalType(swift::Demangle::Demangler &Dem,
   return node;
 }
 
-bool TypeSystemSwiftTypeRef::IsArrayType(void *type, CompilerType *element_type,
+bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
+                                         CompilerType *element_type,
                                          uint64_t *size, bool *is_incomplete) {
   auto impl = [&]() {
     using namespace swift::Demangle;
@@ -421,19 +422,21 @@ bool TypeSystemSwiftTypeRef::IsArrayType(void *type, CompilerType *element_type,
       impl, m_swift_ast_context->IsArrayType(ReconstructType(type), nullptr,
                                              nullptr, nullptr));
 }
-bool TypeSystemSwiftTypeRef::IsAggregateType(void *type) {
+bool TypeSystemSwiftTypeRef::IsAggregateType(opaque_compiler_type_t type) {
   return m_swift_ast_context->IsAggregateType(ReconstructType(type));
 }
-bool TypeSystemSwiftTypeRef::IsDefined(void *type) {
+bool TypeSystemSwiftTypeRef::IsDefined(opaque_compiler_type_t type) {
   return m_swift_ast_context->IsDefined(ReconstructType(type));
 }
-bool TypeSystemSwiftTypeRef::IsFloatingPointType(void *type, uint32_t &count,
+bool TypeSystemSwiftTypeRef::IsFloatingPointType(opaque_compiler_type_t type,
+                                                 uint32_t &count,
                                                  bool &is_complex) {
   return m_swift_ast_context->IsFloatingPointType(ReconstructType(type), count,
                                                   is_complex);
 }
 
-bool TypeSystemSwiftTypeRef::IsFunctionType(void *type, bool *is_variadic_ptr) {
+bool TypeSystemSwiftTypeRef::IsFunctionType(opaque_compiler_type_t type,
+                                            bool *is_variadic_ptr) {
   auto impl = [&]() -> bool {
     using namespace swift::Demangle;
     Demangler Dem;
@@ -444,7 +447,8 @@ bool TypeSystemSwiftTypeRef::IsFunctionType(void *type, bool *is_variadic_ptr) {
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->IsFunctionType(
                                 ReconstructType(type), nullptr));
 }
-size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(void *type) {
+size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(
+    opaque_compiler_type_t type) {
   auto impl = [&]() -> size_t {
     using namespace swift::Demangle;
     Demangler Dem;
@@ -459,8 +463,7 @@ size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(void *type) {
       if (child->getKind() == Node::Kind::ArgumentTuple &&
           child->getNumChildren() == 1) {
         NodePointer node = child->getFirstChild();
-        if (node->getNumChildren() != 1 ||
-            node->getKind() != Node::Kind::Type)
+        if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
           break;
         node = node->getFirstChild();
         if (node->getKind() == Node::Kind::Tuple)
@@ -473,7 +476,7 @@ size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(void *type) {
                                 ReconstructType(type)));
 }
 CompilerType
-TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(void *type,
+TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(opaque_compiler_type_t type,
                                                    const size_t index) {
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
@@ -494,8 +497,7 @@ TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(void *type,
       if (child->getKind() == Node::Kind::ArgumentTuple &&
           child->getNumChildren() == 1) {
         NodePointer node = child->getFirstChild();
-        if (node->getNumChildren() != 1 ||
-            node->getKind() != Node::Kind::Type)
+        if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
           break;
         node = node->getFirstChild();
         if (node->getKind() == Node::Kind::Tuple)
@@ -515,22 +517,24 @@ TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(void *type,
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentAtIndex(
                                 ReconstructType(type), index));
 }
-bool TypeSystemSwiftTypeRef::IsFunctionPointerType(void *type) {
+bool TypeSystemSwiftTypeRef::IsFunctionPointerType(
+    opaque_compiler_type_t type) {
   auto impl = [&]() -> bool { return IsFunctionType(type, nullptr); };
   VALIDATE_AND_RETURN(
       impl, m_swift_ast_context->IsFunctionPointerType(ReconstructType(type)));
 }
-bool TypeSystemSwiftTypeRef::IsIntegerType(void *type, bool &is_signed) {
+bool TypeSystemSwiftTypeRef::IsIntegerType(opaque_compiler_type_t type,
+                                           bool &is_signed) {
   return m_swift_ast_context->IsIntegerType(ReconstructType(type), is_signed);
 }
-bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(void *type,
+bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
                                                    CompilerType *target_type,
                                                    bool check_cplusplus,
                                                    bool check_objc) {
   return m_swift_ast_context->IsPossibleDynamicType(
       ReconstructType(type), target_type, check_cplusplus, check_objc);
 }
-bool TypeSystemSwiftTypeRef::IsPointerType(void *type,
+bool TypeSystemSwiftTypeRef::IsPointerType(opaque_compiler_type_t type,
                                            CompilerType *pointee_type) {
   auto impl = [&]() {
     using namespace swift::Demangle;
@@ -544,13 +548,13 @@ bool TypeSystemSwiftTypeRef::IsPointerType(void *type,
             (node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT) ||
             (node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT));
   };
-  VALIDATE_AND_RETURN(impl, m_swift_ast_context->IsPointerType(ReconstructType(type),
-                                                               pointee_type));
+  VALIDATE_AND_RETURN(impl, m_swift_ast_context->IsPointerType(
+                                ReconstructType(type), pointee_type));
 }
-bool TypeSystemSwiftTypeRef::IsScalarType(void *type) {
+bool TypeSystemSwiftTypeRef::IsScalarType(opaque_compiler_type_t type) {
   return m_swift_ast_context->IsScalarType(ReconstructType(type));
 }
-bool TypeSystemSwiftTypeRef::IsVoidType(void *type) {
+bool TypeSystemSwiftTypeRef::IsVoidType(opaque_compiler_type_t type) {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler Dem;
@@ -562,7 +566,7 @@ bool TypeSystemSwiftTypeRef::IsVoidType(void *type) {
                       m_swift_ast_context->IsVoidType(ReconstructType(type)));
 }
 // Type Completion
-bool TypeSystemSwiftTypeRef::GetCompleteType(void *type) {
+bool TypeSystemSwiftTypeRef::GetCompleteType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetCompleteType(ReconstructType(type));
 }
 // AST related queries
@@ -570,29 +574,32 @@ uint32_t TypeSystemSwiftTypeRef::GetPointerByteSize() {
   return m_swift_ast_context->GetPointerByteSize();
 }
 // Accessors
-ConstString TypeSystemSwiftTypeRef::GetTypeName(void *type) {
+ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypeName(ReconstructType(type));
 }
 ConstString
-TypeSystemSwiftTypeRef::GetDisplayTypeName(void *type,
+TypeSystemSwiftTypeRef::GetDisplayTypeName(opaque_compiler_type_t type,
                                            const SymbolContext *sc) {
   return m_swift_ast_context->GetDisplayTypeName(ReconstructType(type), sc);
 }
 uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
-    void *type, CompilerType *pointee_or_element_clang_type) {
+    opaque_compiler_type_t type, CompilerType *pointee_or_element_clang_type) {
   return m_swift_ast_context->GetTypeInfo(ReconstructType(type),
                                           pointee_or_element_clang_type);
 }
-lldb::LanguageType TypeSystemSwiftTypeRef::GetMinimumLanguage(void *type) {
+lldb::LanguageType
+TypeSystemSwiftTypeRef::GetMinimumLanguage(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetMinimumLanguage(ReconstructType(type));
 }
-lldb::TypeClass TypeSystemSwiftTypeRef::GetTypeClass(void *type) {
+lldb::TypeClass
+TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypeClass(ReconstructType(type));
 }
 
 // Creating related types
-CompilerType TypeSystemSwiftTypeRef::GetArrayElementType(void *type,
-                                                         uint64_t *stride) {
+CompilerType
+TypeSystemSwiftTypeRef::GetArrayElementType(opaque_compiler_type_t type,
+                                            uint64_t *stride) {
   auto impl = [&]() {
     CompilerType element_type;
     IsArrayType(type, &element_type, nullptr, nullptr);
@@ -601,21 +608,24 @@ CompilerType TypeSystemSwiftTypeRef::GetArrayElementType(void *type,
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetArrayElementType(
                                 ReconstructType(type), nullptr));
 }
-CompilerType TypeSystemSwiftTypeRef::GetCanonicalType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetCanonicalType(ReconstructType(type));
 }
-int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(void *type) {
+int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(
+    opaque_compiler_type_t type) {
   auto impl = [&]() -> int { return GetNumberOfFunctionArguments(type); };
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentCount(
                                 ReconstructType(type)));
 }
-CompilerType
-TypeSystemSwiftTypeRef::GetFunctionArgumentTypeAtIndex(void *type, size_t idx) {
+CompilerType TypeSystemSwiftTypeRef::GetFunctionArgumentTypeAtIndex(
+    opaque_compiler_type_t type, size_t idx) {
   auto impl = [&] { return GetFunctionArgumentAtIndex(type, idx); };
   VALIDATE_AND_RETURN(impl, m_swift_ast_context->GetFunctionArgumentTypeAtIndex(
                                 ReconstructType(type), idx));
 }
-CompilerType TypeSystemSwiftTypeRef::GetFunctionReturnType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetFunctionReturnType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
     Demangler Dem;
@@ -646,57 +656,63 @@ CompilerType TypeSystemSwiftTypeRef::GetFunctionReturnType(void *type) {
   VALIDATE_AND_RETURN(
       impl, m_swift_ast_context->GetFunctionReturnType(ReconstructType(type)));
 }
-size_t TypeSystemSwiftTypeRef::GetNumMemberFunctions(void *type) {
+size_t
+TypeSystemSwiftTypeRef::GetNumMemberFunctions(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumMemberFunctions(ReconstructType(type));
 }
 TypeMemberFunctionImpl
-TypeSystemSwiftTypeRef::GetMemberFunctionAtIndex(void *type, size_t idx) {
+TypeSystemSwiftTypeRef::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
+                                                 size_t idx) {
   return m_swift_ast_context->GetMemberFunctionAtIndex(ReconstructType(type),
                                                        idx);
 }
-CompilerType TypeSystemSwiftTypeRef::GetPointeeType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetPointeeType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetPointeeType(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetPointerType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetPointerType(ReconstructType(type));
 }
 
 // Exploring the type
 llvm::Optional<uint64_t>
-TypeSystemSwiftTypeRef::GetBitSize(lldb::opaque_compiler_type_t type,
+TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) {
   return m_swift_ast_context->GetBitSize(ReconstructType(type), exe_scope);
 }
 llvm::Optional<uint64_t>
-TypeSystemSwiftTypeRef::GetByteStride(lldb::opaque_compiler_type_t type,
+TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
                                       ExecutionContextScope *exe_scope) {
   return m_swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
 }
-lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(void *type,
+lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
                                                    uint64_t &count) {
   return m_swift_ast_context->GetEncoding(ReconstructType(type), count);
 }
-lldb::Format TypeSystemSwiftTypeRef::GetFormat(void *type) {
+lldb::Format TypeSystemSwiftTypeRef::GetFormat(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetFormat(ReconstructType(type));
 }
 uint32_t
-TypeSystemSwiftTypeRef::GetNumChildren(void *type, bool omit_empty_base_classes,
+TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
+                                       bool omit_empty_base_classes,
                                        const ExecutionContext *exe_ctx) {
   return m_swift_ast_context->GetNumChildren(ReconstructType(type),
                                              omit_empty_base_classes, exe_ctx);
 }
-uint32_t TypeSystemSwiftTypeRef::GetNumFields(void *type) {
+uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumFields(ReconstructType(type));
 }
 CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
-    void *type, size_t idx, std::string &name, uint64_t *bit_offset_ptr,
-    uint32_t *bitfield_bit_size_ptr, bool *is_bitfield_ptr) {
+    opaque_compiler_type_t type, size_t idx, std::string &name,
+    uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
+    bool *is_bitfield_ptr) {
   return m_swift_ast_context->GetFieldAtIndex(
       ReconstructType(type), idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
       is_bitfield_ptr);
 }
 CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
-    void *type, ExecutionContext *exe_ctx, size_t idx,
+    opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
     bool ignore_array_bounds, std::string &child_name,
     uint32_t &child_byte_size, int32_t &child_byte_offset,
@@ -710,33 +726,38 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       child_is_base_class, child_is_deref_of_parent, valobj, language_flags);
 }
 uint32_t
-TypeSystemSwiftTypeRef::GetIndexOfChildWithName(void *type, const char *name,
+TypeSystemSwiftTypeRef::GetIndexOfChildWithName(opaque_compiler_type_t type,
+                                                const char *name,
                                                 bool omit_empty_base_classes) {
   return m_swift_ast_context->GetIndexOfChildWithName(
       ReconstructType(type), name, omit_empty_base_classes);
 }
 size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
-    void *type, const char *name, bool omit_empty_base_classes,
+    opaque_compiler_type_t type, const char *name, bool omit_empty_base_classes,
     std::vector<uint32_t> &child_indexes) {
   return m_swift_ast_context->GetIndexOfChildMemberWithName(
       ReconstructType(type), name, omit_empty_base_classes, child_indexes);
 }
-size_t TypeSystemSwiftTypeRef::GetNumTemplateArguments(void *type) {
+size_t
+TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumTemplateArguments(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetTypeForFormatters(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetTypeForFormatters(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypeForFormatters(ReconstructType(type));
 }
-LazyBool TypeSystemSwiftTypeRef::ShouldPrintAsOneLiner(void *type,
-                                                       ValueObject *valobj) {
+LazyBool
+TypeSystemSwiftTypeRef::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
+                                              ValueObject *valobj) {
   return m_swift_ast_context->ShouldPrintAsOneLiner(ReconstructType(type),
                                                     valobj);
 }
-bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(void *type) {
+bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
+    opaque_compiler_type_t type) {
   return m_swift_ast_context->IsMeaninglessWithoutDynamicResolution(
       ReconstructType(type));
 }
-bool TypeSystemSwiftTypeRef::IsImportedType(void *type,
+bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
                                             CompilerType *original_type) {
   return m_swift_ast_context->IsImportedType(ReconstructType(type),
                                              original_type);
@@ -746,15 +767,16 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
 }
 
 CompilerType
-TypeSystemSwiftTypeRef::GetReferentType(void *type) {
+TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetReferentType(ReconstructType(type));
 }
 
-CompilerType TypeSystemSwiftTypeRef::GetInstanceType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetInstanceType(ReconstructType(type));
 }
 TypeSystemSwift::TypeAllocationStrategy
-TypeSystemSwiftTypeRef::GetAllocationStrategy(void * type) {
+TypeSystemSwiftTypeRef::GetAllocationStrategy(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetAllocationStrategy(ReconstructType(type));
 }
 CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
@@ -762,14 +784,14 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
   return m_swift_ast_context->CreateTupleType(elements);
 }
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
-    void *type, bool print_help_if_available,
+    opaque_compiler_type_t type, bool print_help_if_available,
     bool print_extensions_if_available, lldb::DescriptionLevel level) {
   return m_swift_ast_context->DumpTypeDescription(
       ReconstructType(type), print_help_if_available, print_help_if_available,
       level);
 }
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
-    void *type, Stream *s, bool print_help_if_available,
+    opaque_compiler_type_t type, Stream *s, bool print_help_if_available,
     bool print_extensions_if_available, lldb::DescriptionLevel level) {
   return m_swift_ast_context->DumpTypeDescription(
       ReconstructType(type), s, print_help_if_available,
@@ -780,14 +802,14 @@ void TypeSystemSwiftTypeRef::DumpTypeDescription(
 #ifndef NDEBUG
 /// Convenience LLVM-style dump method for use in the debugger only.
 LLVM_DUMP_METHOD void
-TypeSystemSwiftTypeRef::dump(lldb::opaque_compiler_type_t type) const {
+TypeSystemSwiftTypeRef::dump(opaque_compiler_type_t type) const {
   llvm::dbgs() << reinterpret_cast<const char *>(type) << "\n";
 }
 #endif
 
 void TypeSystemSwiftTypeRef::DumpValue(
-    void *type, ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
-    const DataExtractor &data, lldb::offset_t data_offset,
+    opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
+    lldb::Format format, const DataExtractor &data, lldb::offset_t data_offset,
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
     bool verbose, uint32_t depth) {
@@ -798,69 +820,77 @@ void TypeSystemSwiftTypeRef::DumpValue(
 }
 
 bool TypeSystemSwiftTypeRef::DumpTypeValue(
-    void *type, Stream *s, lldb::Format format, const DataExtractor &data,
-    lldb::offset_t data_offset, size_t data_byte_size,
-    uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-    ExecutionContextScope *exe_scope, bool is_base_class) {
+    opaque_compiler_type_t type, Stream *s, lldb::Format format,
+    const DataExtractor &data, lldb::offset_t data_offset,
+    size_t data_byte_size, uint32_t bitfield_bit_size,
+    uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
+    bool is_base_class) {
   return m_swift_ast_context->DumpTypeValue(
       ReconstructType(type), s, format, data, data_offset, data_byte_size,
       bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
 }
 
-void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type,
+void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
                                                  lldb::DescriptionLevel level) {
   return m_swift_ast_context->DumpTypeDescription(ReconstructType(type), level);
 }
-void TypeSystemSwiftTypeRef::DumpTypeDescription(void *type, Stream *s,
+void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
+                                                 Stream *s,
                                                  lldb::DescriptionLevel level) {
   return m_swift_ast_context->DumpTypeDescription(ReconstructType(type), s,
                                                   level);
 }
-void TypeSystemSwiftTypeRef::DumpSummary(void *type, ExecutionContext *exe_ctx,
-                                         Stream *s, const DataExtractor &data,
+void TypeSystemSwiftTypeRef::DumpSummary(opaque_compiler_type_t type,
+                                         ExecutionContext *exe_ctx, Stream *s,
+                                         const DataExtractor &data,
                                          lldb::offset_t data_offset,
                                          size_t data_byte_size) {
   return m_swift_ast_context->DumpSummary(ReconstructType(type), exe_ctx, s,
                                           data, data_offset, data_byte_size);
 }
 bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
-    void *type, CompilerType *pointee_type) {
+    opaque_compiler_type_t type, CompilerType *pointee_type) {
   return m_swift_ast_context->IsPointerOrReferenceType(ReconstructType(type),
                                                        pointee_type);
 }
 llvm::Optional<size_t>
-TypeSystemSwiftTypeRef::GetTypeBitAlign(void *type,
+TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
                                         ExecutionContextScope *exe_scope) {
   return m_swift_ast_context->GetTypeBitAlign(ReconstructType(type), exe_scope);
 }
-bool TypeSystemSwiftTypeRef::IsTypedefType(void *type) {
+bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   return m_swift_ast_context->IsTypedefType(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetTypedefedType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypedefedType(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetFullyUnqualifiedType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetFullyUnqualifiedType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetFullyUnqualifiedType(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetNonReferenceType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetNonReferenceType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNonReferenceType(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetLValueReferenceType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetLValueReferenceType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetLValueReferenceType(ReconstructType(type));
 }
-CompilerType TypeSystemSwiftTypeRef::GetRValueReferenceType(void *type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetRValueReferenceType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetRValueReferenceType(ReconstructType(type));
 }
-uint32_t TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(void *type) {
+uint32_t
+TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumDirectBaseClasses(ReconstructType(type));
 }
-CompilerType
-TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(void *type, size_t idx,
-                                                  uint32_t *bit_offset_ptr) {
+CompilerType TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(
+    opaque_compiler_type_t type, size_t idx, uint32_t *bit_offset_ptr) {
   return m_swift_ast_context->GetDirectBaseClassAtIndex(ReconstructType(type),
                                                         idx, bit_offset_ptr);
 }
-bool TypeSystemSwiftTypeRef::IsReferenceType(void *type,
+bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
                                              CompilerType *pointee_type,
                                              bool *is_rvalue) {
   auto impl = [&]() {
@@ -889,7 +919,7 @@ bool TypeSystemSwiftTypeRef::IsReferenceType(void *type,
                                                  pointee_type, is_rvalue));
 }
 bool TypeSystemSwiftTypeRef::ShouldTreatScalarValueAsAddress(
-    lldb::opaque_compiler_type_t type) {
+    opaque_compiler_type_t type) {
   return m_swift_ast_context->ShouldTreatScalarValueAsAddress(
       ReconstructType(type));
 }
