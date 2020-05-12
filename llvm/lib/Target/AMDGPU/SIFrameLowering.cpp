@@ -696,8 +696,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (HasFPSaveIndex && SpillFPToMemory) {
-    const int FI = FuncInfo->FramePointerSaveIndex.getValue();
-    assert(!MFI.isDeadObjectIndex(FI));
+    assert(!MFI.isDeadObjectIndex(FuncInfo->FramePointerSaveIndex.getValue()));
 
     if (!ScratchExecCopy)
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, true);
