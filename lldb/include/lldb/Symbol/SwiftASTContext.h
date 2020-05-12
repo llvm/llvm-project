@@ -137,7 +137,7 @@ public:
   virtual lldb::TypeSP GetCachedType(ConstString mangled) = 0;
   virtual void SetCachedType(ConstString mangled,
                              const lldb::TypeSP &type_sp) = 0;
-  virtual bool IsImportedType(CompilerType type,
+  virtual bool IsImportedType(lldb::opaque_compiler_type_t type,
                               CompilerType *original_type) = 0;
   virtual CompilerType GetErrorType() = 0;
   virtual CompilerType GetReferentType(CompilerType compiler_type) = 0;
@@ -411,7 +411,8 @@ public:
   // Swift-specific methods.
   lldb::TypeSP GetCachedType(ConstString mangled) override;
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
-  bool IsImportedType(CompilerType type, CompilerType *original_type) override;
+  bool IsImportedType(lldb::opaque_compiler_type_t type,
+                      CompilerType *original_type) override;
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(CompilerType compiler_type) override;
   CompilerType GetInstanceType(void *type) override;
@@ -1085,7 +1086,8 @@ public:
 
   uint32_t GetNumPointeeChildren(void *type);
 
-  bool IsImportedType(CompilerType type, CompilerType *original_type) override;
+  bool IsImportedType(lldb::opaque_compiler_type_t type,
+                      CompilerType *original_type) override;
 
   CompilerType GetReferentType(CompilerType compiler_type) override;
 

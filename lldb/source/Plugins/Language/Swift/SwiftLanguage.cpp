@@ -782,8 +782,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
                 TypeSystemSwift *swift_ast_ctx =
                     llvm::dyn_cast_or_null<TypeSystemSwift>(
                         type.GetTypeSystem());
-                if (swift_ast_ctx &&
-                    swift_ast_ctx->IsImportedType(type, nullptr))
+                if (swift_ast_ctx && swift_ast_ctx->IsImportedType(
+                                         type.GetOpaqueQualType(), nullptr))
                   is_imported = true;
               }
 

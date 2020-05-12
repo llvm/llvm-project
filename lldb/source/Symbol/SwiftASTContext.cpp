@@ -4245,8 +4245,10 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
   DWARFASTParserClang *clang_ast_parser =
       static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
   CompilerType clang_type;
-  m_typeref_typesystem.IsImportedType(GetTypeFromMangledTypename(mangled_name),
-                                      &clang_type);
+  CompilerType imported_type = GetCompilerType(mangled_name);
+  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(
+          imported_type.GetTypeSystem()))
+    ts->IsImportedType(imported_type.GetOpaqueQualType(), &clang_type);
 
   // Import the Clang type into the Clang context.
   if (!clang_type)
@@ -7622,7 +7624,8 @@ LazyBool SwiftASTContext::ShouldPrintAsOneLiner(void *type,
                                                 ValueObject *valobj) {
   if (type) {
     CompilerType can_compiler_type(GetCanonicalType(type));
-    if (IsImportedType(can_compiler_type, nullptr))
+    auto *ts = llvm::cast<TypeSystemSwift>(can_compiler_type.GetTypeSystem());
+    if (ts->IsImportedType(can_compiler_type.GetOpaqueQualType(), nullptr))
       return eLazyBoolNo;
   }
   if (valobj) {
@@ -7848,11 +7851,10 @@ bool SwiftASTContext::DumpTypeValue(
   return 0;
 }
 
-bool SwiftASTContext::IsImportedType(CompilerType type,
-                                     CompilerType *original_type) {
+bool SwiftASTContext::IsImportedType(void *type, CompilerType *original_type) {
   bool success = false;
 
-  if (swift::CanType swift_can_type = ::GetCanonicalSwiftType(type)) {
+  if (swift::CanType swift_can_type = GetCanonicalSwiftType(type)) {
     do {
       swift::NominalType *nominal_type =
           swift_can_type->getAs<swift::NominalType>();

@@ -736,11 +736,10 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(void *type) {
   return m_swift_ast_context->IsMeaninglessWithoutDynamicResolution(
       ReconstructType(type));
 }
-bool TypeSystemSwiftTypeRef::IsImportedType(CompilerType type,
+bool TypeSystemSwiftTypeRef::IsImportedType(void *type,
                                             CompilerType *original_type) {
-  return m_swift_ast_context->IsImportedType(
-      {m_swift_ast_context, ReconstructType(type.GetOpaqueQualType())},
-      original_type);
+  return m_swift_ast_context->IsImportedType(ReconstructType(type),
+                                             original_type);
 }
 CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
   return m_swift_ast_context->GetErrorType();
