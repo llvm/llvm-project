@@ -244,12 +244,13 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     self_type = ToCompilerType(object_type.getPointer());
 
   // Handle weak self.
-  if (auto *ref_type = llvm::dyn_cast_or_null<swift::ReferenceStorageType>(
-          GetSwiftType(self_type).getPointer())) {
-    if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
-      m_is_class = true;
-      m_is_weak_self = true;
-    }
+  using Strategy = SwiftASTContext::NonTriviallyManagedReferenceStrategy;
+  Strategy strategy;
+  if (SwiftASTContext::IsNonTriviallyManagedReferenceType(self_type,
+                                                          strategy) &&
+      strategy == Strategy::eWeak) {
+    m_is_class = true;
+    m_is_weak_self = true;
   }
 
   if (Flags(self_type.GetTypeInfo())
