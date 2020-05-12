@@ -131,6 +131,18 @@ static bool markSubLibrary(StringRef searchName) {
   return false;
 }
 
+static void handlePlatformVersion(opt::ArgList::iterator &it,
+                                  const opt::ArgList::iterator &end) {
+  // -platform_version takes 3 args, which LLVM's option library doesn't
+  // support directly.  So this explicitly handles that.
+  // FIXME: stash skipped args for later use.
+  for (int i = 0; i < 3; ++i) {
+    ++it;
+    if (it == end || (*it)->getOption().getID() != OPT_INPUT)
+      fatal("usage: -platform_version platform min_version sdk_version");
+  }
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -162,7 +174,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     return !errorCount();
   }
 
-  for (opt::Arg *arg : args) {
+  for (opt::ArgList::iterator it = args.begin(), end = args.end(); it != end;
+       ++it) {
+    const opt::Arg *arg = *it;
     switch (arg->getOption().getID()) {
     case OPT_INPUT:
       addFile(arg->getValue());
@@ -171,6 +185,10 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       if (Optional<std::string> path = findDylib(arg->getValue()))
         addFile(*path);
       break;
+    case OPT_platform_version: {
+      handlePlatformVersion(it, end); // Can advance "it".
+      break;
+    }
     }
   }
 
