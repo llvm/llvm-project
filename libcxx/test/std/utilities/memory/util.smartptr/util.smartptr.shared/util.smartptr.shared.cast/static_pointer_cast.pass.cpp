@@ -67,6 +67,20 @@ int main(int, char**)
         assert(pB.get() == pA.get());
         assert(!pB.owner_before(pA) && !pA.owner_before(pB));
     }
+#if TEST_STD_VER > 14
+    {
+      const std::shared_ptr<A[8]> pA;
+      std::shared_ptr<B[8]> pB = std::static_pointer_cast<B[8]>(pA);
+      assert(pB.get() == pA.get());
+      assert(!pB.owner_before(pA) && !pA.owner_before(pB));
+    }
+    {
+      const std::shared_ptr<B[8]> pA;
+      std::shared_ptr<A[8]> pB = std::static_pointer_cast<A[8]>(pA);
+      assert(pB.get() == pA.get());
+      assert(!pB.owner_before(pA) && !pA.owner_before(pB));
+    }
+#endif // TEST_STD_VER > 14
 
-  return 0;
+    return 0;
 }
