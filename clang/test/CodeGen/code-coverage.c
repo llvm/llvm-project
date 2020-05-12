@@ -1,11 +1,12 @@
-/// We support coverage versions 4.2 and 4.7.
-/// 4.7 (default, compatible with gcov 7) enables cfg_checksum.
+/// We support coverage versions 4.2, 4.7 and 4.8.
+/// 4.7 enables cfg_checksum.
+/// 4.8 (default, compatible with gcov 7) emits the exit block the second.
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-version='402*' %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,402 %s
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-version='407*' %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,407 %s
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data %s -o - | \
-// RUN:   FileCheck --check-prefixes=CHECK,407 %s
+// RUN:   FileCheck --check-prefixes=CHECK,408 %s
 
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -dwarf-column-info -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO
 
@@ -36,6 +37,7 @@ int test2(int b) {
 
 // 402: private unnamed_addr constant [5 x i8] c"*204\00"
 // 407: private unnamed_addr constant [5 x i8] c"*704\00"
+// 408: private unnamed_addr constant [5 x i8] c"*804\00"
 
 // CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant [2 x %0]
 // CHECK-SAME: [%0 zeroinitializer, %0 { i32 1, i32 0, i32 0 }]
