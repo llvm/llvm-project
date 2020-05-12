@@ -46,9 +46,6 @@ function(generate_pch version)
 
   add_custom_target(opencl${version}-c.pch_target ALL
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/opencl${version}-c.pch)
-
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/opencl${version}-c.pch
-    DESTINATION include)
 endfunction()
 
 generate_pch(1.2)
