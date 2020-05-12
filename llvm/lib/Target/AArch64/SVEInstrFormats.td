@@ -167,8 +167,8 @@ def SVEAddSubImmOperand32 : SVEShiftedImmOperand<32, "AddSub", "isSVEAddSubImm<i
 def SVEAddSubImmOperand64 : SVEShiftedImmOperand<64, "AddSub", "isSVEAddSubImm<int64_t>">;
 
 class imm8_opt_lsl<int ElementWidth, string printType,
-                   AsmOperandClass OpndClass, code Predicate>
-    : Operand<i32>, ImmLeaf<i32, Predicate> {
+                   AsmOperandClass OpndClass>
+    : Operand<i32> {
   let EncoderMethod = "getImm8OptLsl";
   let DecoderMethod = "DecodeImm8OptLsl<" # ElementWidth # ">";
   let PrintMethod = "printImm8OptLsl<" # printType # ">";
@@ -176,31 +176,15 @@ class imm8_opt_lsl<int ElementWidth, string printType,
   let MIOperandInfo = (ops i32imm, i32imm);
 }
 
-def cpy_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "int8_t",  SVECpyImmOperand8,  [{
-  return AArch64_AM::isSVECpyImm<int8_t>(Imm);
-}]>;
-def cpy_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "int16_t", SVECpyImmOperand16, [{
-  return AArch64_AM::isSVECpyImm<int16_t>(Imm);
-}]>;
-def cpy_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "int32_t", SVECpyImmOperand32, [{
-  return AArch64_AM::isSVECpyImm<int32_t>(Imm);
-}]>;
-def cpy_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "int64_t", SVECpyImmOperand64, [{
-  return AArch64_AM::isSVECpyImm<int64_t>(Imm);
-}]>;
+def cpy_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "int8_t",  SVECpyImmOperand8>;
+def cpy_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "int16_t", SVECpyImmOperand16>;
+def cpy_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "int32_t", SVECpyImmOperand32>;
+def cpy_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "int64_t", SVECpyImmOperand64>;
 
-def addsub_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "uint8_t",  SVEAddSubImmOperand8,  [{
-  return AArch64_AM::isSVEAddSubImm<int8_t>(Imm);
-}]>;
-def addsub_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "uint16_t", SVEAddSubImmOperand16, [{
-  return AArch64_AM::isSVEAddSubImm<int16_t>(Imm);
-}]>;
-def addsub_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "uint32_t", SVEAddSubImmOperand32, [{
-  return AArch64_AM::isSVEAddSubImm<int32_t>(Imm);
-}]>;
-def addsub_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "uint64_t", SVEAddSubImmOperand64, [{
-  return AArch64_AM::isSVEAddSubImm<int64_t>(Imm);
-}]>;
+def addsub_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "uint8_t",  SVEAddSubImmOperand8>;
+def addsub_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "uint16_t", SVEAddSubImmOperand16>;
+def addsub_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "uint32_t", SVEAddSubImmOperand32>;
+def addsub_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "uint64_t", SVEAddSubImmOperand64>;
 
 def SVEAddSubImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i8>", []>;
 def SVEAddSubImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i16>", []>;
@@ -211,6 +195,8 @@ def SVELogicalImm8Pat  : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i8>", 
 def SVELogicalImm16Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i16>", []>;
 def SVELogicalImm32Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i32>", []>;
 def SVELogicalImm64Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i64>", []>;
+
+def SVE8BitLslImm : ComplexPattern<i32, 2, "SelectSVE8BitLslImm", [imm]>;
 
 def SVEArithUImmPat  : ComplexPattern<i32, 1, "SelectSVEArithImm", []>;
 def SVEArithSImmPat  : ComplexPattern<i32, 1, "SelectSVESignedArithImm", []>;
@@ -4086,8 +4072,9 @@ multiclass sve_int_dup_imm_pred_merge<string asm> {
 
 multiclass sve_int_dup_imm_pred_zero_inst<
     bits<2> sz8_64, string asm, ZPRRegOp zprty, ValueType intty,
-    ValueType predty, imm8_opt_lsl cpyimm> {
-  def NAME : sve_int_dup_imm_pred<sz8_64, 0, asm, zprty, "/z", (ins PPRAny:$Pg, cpyimm:$imm)>;
+    ValueType predty, ValueType scalarty, imm8_opt_lsl cpyimm> {
+  def NAME : sve_int_dup_imm_pred<sz8_64, 0, asm, zprty, "/z",
+                                  (ins PPRAny:$Pg, cpyimm:$imm)>;
   def : InstAlias<"mov $Zd, $Pg/z, $imm",
                   (!cast<Instruction>(NAME) zprty:$Zd, PPRAny:$Pg, cpyimm:$imm), 1>;
   def : Pat<(intty (zext (predty PPRAny:$Ps1))),
@@ -4096,13 +4083,22 @@ multiclass sve_int_dup_imm_pred_zero_inst<
             (!cast<Instruction>(NAME) PPRAny:$Ps1, -1, 0)>;
   def : Pat<(intty (anyext (predty PPRAny:$Ps1))),
             (!cast<Instruction>(NAME) PPRAny:$Ps1, 1, 0)>;
+  def : Pat<(intty
+              (vselect predty:$Pg,
+                (intty (AArch64dup (scalarty (SVE8BitLslImm i32:$imm, i32:$shift)))),
+                (intty (AArch64dup (scalarty 0))))),
+            (!cast<Instruction>(NAME) $Pg, i32:$imm, i32:$shift)>;
 }
 
 multiclass sve_int_dup_imm_pred_zero<string asm> {
-  defm _B : sve_int_dup_imm_pred_zero_inst<0b00, asm, ZPR8,  nxv16i8, nxv16i1, cpy_imm8_opt_lsl_i8>;
-  defm _H : sve_int_dup_imm_pred_zero_inst<0b01, asm, ZPR16, nxv8i16, nxv8i1,  cpy_imm8_opt_lsl_i16>;
-  defm _S : sve_int_dup_imm_pred_zero_inst<0b10, asm, ZPR32, nxv4i32, nxv4i1,  cpy_imm8_opt_lsl_i32>;
-  defm _D : sve_int_dup_imm_pred_zero_inst<0b11, asm, ZPR64, nxv2i64, nxv2i1,  cpy_imm8_opt_lsl_i64>;
+  defm _B : sve_int_dup_imm_pred_zero_inst<0b00, asm, ZPR8,  nxv16i8, nxv16i1,
+                                           i32, cpy_imm8_opt_lsl_i8>;
+  defm _H : sve_int_dup_imm_pred_zero_inst<0b01, asm, ZPR16, nxv8i16, nxv8i1,
+                                           i32, cpy_imm8_opt_lsl_i16>;
+  defm _S : sve_int_dup_imm_pred_zero_inst<0b10, asm, ZPR32, nxv4i32, nxv4i1,
+                                           i32, cpy_imm8_opt_lsl_i32>;
+  defm _D : sve_int_dup_imm_pred_zero_inst<0b11, asm, ZPR64, nxv2i64, nxv2i1,
+                                           i64, cpy_imm8_opt_lsl_i64>;
 }
 
 //===----------------------------------------------------------------------===//
