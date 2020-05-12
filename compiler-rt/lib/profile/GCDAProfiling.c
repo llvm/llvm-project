@@ -235,18 +235,6 @@ static uint32_t read_32bit_value() {
   return val;
 }
 
-static uint32_t read_le_32bit_value() {
-  uint32_t val = 0;
-  int i;
-
-  if (new_file)
-    return (uint32_t)-1;
-
-  for (i = 0; i < 4; i++)
-    val |= write_buffer[cur_pos++] << (8*i);
-  return val;
-}
-
 static uint64_t read_64bit_value() {
   // GCOV uses a lo-/hi-word format even on big-endian systems.
   // See also GCOVBuffer::readInt64 in LLVM.
@@ -501,7 +489,7 @@ void llvm_gcda_emit_arcs(uint32_t num_counters, uint64_t *counters) {
 
   if (!output_file) return;
 
-  val = read_le_32bit_value();
+  val = read_32bit_value();
 
   if (val != (uint32_t)-1) {
     /* There are counters present in the file. Merge them. */
@@ -553,7 +541,7 @@ void llvm_gcda_summary_info() {
 
   if (!output_file) return;
 
-  val = read_le_32bit_value();
+  val = read_32bit_value();
 
   if (val != (uint32_t)-1) {
     /* There are counters present in the file. Merge them. */
