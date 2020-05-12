@@ -5461,44 +5461,40 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     break;
   case ISD::EXTRACT_SUBVECTOR:
-    if (VT.isSimple() && N1.getValueType().isSimple()) {
-      assert(VT.isVector() && N1.getValueType().isVector() &&
-             "Extract subvector VTs must be a vectors!");
-      assert(VT.getVectorElementType() ==
-             N1.getValueType().getVectorElementType() &&
-             "Extract subvector VTs must have the same element type!");
-      assert(VT.getSimpleVT() <= N1.getSimpleValueType() &&
-             "Extract subvector must be from larger vector to smaller vector!");
+    assert(VT.isVector() && N1.getValueType().isVector() &&
+           "Extract subvector VTs must be a vectors!");
+    assert(VT.getVectorElementType() ==
+               N1.getValueType().getVectorElementType() &&
+           "Extract subvector VTs must have the same element type!");
+    assert(VT.getVectorNumElements() <=
+               N1.getValueType().getVectorNumElements() &&
+           "Extract subvector must be from larger vector to smaller vector!");
+    assert(N2C && "Extract subvector index must be a constant");
+    assert(VT.getVectorNumElements() + N2C->getZExtValue() <=
+               N1.getValueType().getVectorNumElements() &&
+           "Extract subvector overflow!");
 
-      if (N2C) {
-        assert((VT.getVectorNumElements() + N2C->getZExtValue()
-                <= N1.getValueType().getVectorNumElements())
-               && "Extract subvector overflow!");
-      }
+    // Trivial extraction.
+    if (VT == N1.getValueType())
+      return N1;
 
-      // Trivial extraction.
-      if (VT.getSimpleVT() == N1.getSimpleValueType())
-        return N1;
+    // EXTRACT_SUBVECTOR of an UNDEF is an UNDEF.
+    if (N1.isUndef())
+      return getUNDEF(VT);
 
-      // EXTRACT_SUBVECTOR of an UNDEF is an UNDEF.
-      if (N1.isUndef())
-        return getUNDEF(VT);
-
-      // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
-      // the concat have the same type as the extract.
-      if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
-          N1.getNumOperands() > 0 &&
-          VT == N1.getOperand(0).getValueType()) {
-        unsigned Factor = VT.getVectorNumElements();
-        return N1.getOperand(N2C->getZExtValue() / Factor);
-      }
-
-      // EXTRACT_SUBVECTOR of INSERT_SUBVECTOR is often created
-      // during shuffle legalization.
-      if (N1.getOpcode() == ISD::INSERT_SUBVECTOR && N2 == N1.getOperand(2) &&
-          VT == N1.getOperand(1).getValueType())
-        return N1.getOperand(1);
+    // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
+    // the concat have the same type as the extract.
+    if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
+        N1.getNumOperands() > 0 && VT == N1.getOperand(0).getValueType()) {
+      unsigned Factor = VT.getVectorNumElements();
+      return N1.getOperand(N2C->getZExtValue() / Factor);
     }
+
+    // EXTRACT_SUBVECTOR of INSERT_SUBVECTOR is often created
+    // during shuffle legalization.
+    if (N1.getOpcode() == ISD::INSERT_SUBVECTOR && N2 == N1.getOperand(2) &&
+        VT == N1.getOperand(1).getValueType())
+      return N1.getOperand(1);
     break;
   }
 
@@ -5670,32 +5666,29 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.isUndef() && N2.isUndef())
       return getUNDEF(VT);
     SDValue Index = N3;
-    if (VT.isSimple() && N1.getValueType().isSimple()
-        && N2.getValueType().isSimple()) {
-      assert(VT.isVector() && N1.getValueType().isVector() &&
-             N2.getValueType().isVector() &&
-             "Insert subvector VTs must be a vectors");
-      assert(VT == N1.getValueType() &&
-             "Dest and insert subvector source types must match!");
-      assert(N2.getSimpleValueType() <= N1.getSimpleValueType() &&
-             "Insert subvector must be from smaller vector to larger vector!");
-      if (isa<ConstantSDNode>(Index)) {
-        assert((N2.getValueType().getVectorNumElements() +
-                cast<ConstantSDNode>(Index)->getZExtValue()
-                <= VT.getVectorNumElements())
-               && "Insert subvector overflow!");
-      }
+    assert(VT.isVector() && N1.getValueType().isVector() &&
+           N2.getValueType().isVector() &&
+           "Insert subvector VTs must be a vectors");
+    assert(VT == N1.getValueType() &&
+           "Dest and insert subvector source types must match!");
+    assert(N2.getSimpleValueType() <= N1.getSimpleValueType() &&
+           "Insert subvector must be from smaller vector to larger vector!");
+    assert(isa<ConstantSDNode>(Index) &&
+           "Insert subvector index must be constant");
+    assert(N2.getValueType().getVectorNumElements() +
+                   cast<ConstantSDNode>(Index)->getZExtValue() <=
+               VT.getVectorNumElements() &&
+           "Insert subvector overflow!");
 
-      // Trivial insertion.
-      if (VT.getSimpleVT() == N2.getSimpleValueType())
-        return N2;
+    // Trivial insertion.
+    if (VT == N2.getValueType())
+      return N2;
 
-      // If this is an insert of an extracted vector into an undef vector, we
-      // can just use the input to the extract.
-      if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-          N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
-        return N2.getOperand(0);
-    }
+    // If this is an insert of an extracted vector into an undef vector, we
+    // can just use the input to the extract.
+    if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
+      return N2.getOperand(0);
     break;
   }
   case ISD::BITCAST:
