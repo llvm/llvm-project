@@ -98,7 +98,7 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
       return failure();
 
     // Otherwise, we have a redundant transpose. Use the rewriter.
-    rewriter.replaceOp(op, {transposeInputOp.getOperand()}, {transposeInputOp});
+    rewriter.replaceOp(op, {transposeInputOp.getOperand()});
     return success();
   }
 };

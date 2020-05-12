@@ -146,8 +146,6 @@ This handling can be observed by crafting what should be an invalid IR for Toy
 and seeing it round-trip without tripping the verifier:
 
 ```mlir
-// RUN: toyc %s -emit=mlir
-
 func @main() {
   %0 = "toy.print"() : () -> tensor<2x3xf64>
 }

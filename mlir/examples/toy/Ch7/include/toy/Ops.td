@@ -163,7 +163,7 @@ def GenericCallOp : Toy_Op<"generic_call",
   // StructType.
   let results = (outs Toy_Type);
 
-  // The return operation only emits the input in the format if it is present.
+  // Specialize assembly printing and parsing using a declarative format.
   let assemblyFormat = [{
     $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)
   }];

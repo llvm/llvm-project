@@ -268,8 +268,8 @@ func @main() {
   }
 
   // Multiply and store into the output buffer.
-  affine.for %arg0 = 0 to 2 {
-    affine.for %arg1 = 0 to 3 {
+  affine.for %arg0 = 0 to 3 {
+    affine.for %arg1 = 0 to 2 {
       %3 = affine.load %1[%arg0, %arg1] : memref<3x2xf64>
       %4 = affine.load %1[%arg0, %arg1] : memref<3x2xf64>
       %5 = mulf %3, %4 : f64
