@@ -32,5 +32,7 @@ def v: Flag<["-"], "v">, HelpText<"Display the version number and exit">;
 def: Flag<["-"], "demangle">;
 def: Flag<["-"], "dynamic">;
 def: Flag<["-"], "no_deduplicate">;
+def platform_version: Flag<["-"], "platform_version">;
 def: Separate<["-"], "lto_library">;
 def: Separate<["-"], "macosx_version_min">;
+def: Separate<["-"], "syslibroot">;
