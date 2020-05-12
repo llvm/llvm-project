@@ -42,7 +42,7 @@ add_mlir_library(MLIRTestTransforms
   MLIRSCF
   MLIRGPU
   MLIRPass
-  MLIRStandardToStandard
+  MLIRStandardOpsTransforms
   MLIRTestDialect
   MLIRTransformUtils
   MLIRVectorToLoops
