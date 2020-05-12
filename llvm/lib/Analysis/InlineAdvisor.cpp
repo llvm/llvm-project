@@ -51,9 +51,9 @@ static cl::opt<int>
 /// estimated inline cost associated with callsite \p CB.
 /// \p TotalSecondaryCost will be set to the estimated cost of inlining the
 /// caller if \p CB is suppressed for inlining.
-bool llvm::shouldBeDeferred(
-    Function *Caller, InlineCost IC, int &TotalSecondaryCost,
-    function_ref<InlineCost(CallBase &CB)> GetInlineCost) {
+static bool
+shouldBeDeferred(Function *Caller, InlineCost IC, int &TotalSecondaryCost,
+                 function_ref<InlineCost(CallBase &CB)> GetInlineCost) {
   // For now we only handle local or inline functions.
   if (!Caller->hasLocalLinkage() && !Caller->hasLinkOnceODRLinkage())
     return false;
