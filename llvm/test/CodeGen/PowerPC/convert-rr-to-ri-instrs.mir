@@ -1615,7 +1615,7 @@ body:             |
     %0 = LI8 89
     %2 = CMPDI %0, 87
     %4 = ISEL8 $zero8, %0, %2.sub_gt
-    ; CHECK: LI8 0
+    ; CHECK: ADDI8 %1, 0
     %5 = ADD8 killed %4, %1
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2017,7 +2017,7 @@ body:             |
     %3 = LI -3
     %4 = CMPLWI %3, 87
     %6 = ISEL $zero, %3, %4.sub_gt
-    ; CHECK: LI 0
+    ; CHECK: ADDI killed %2, 0
     %7 = ADD4 killed %6, killed %2
     %9 = IMPLICIT_DEF
     %8 = INSERT_SUBREG %9, killed %7, 1
