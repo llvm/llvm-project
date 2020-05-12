@@ -1720,6 +1720,8 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                     : &AMDGPU::SReg_64_XEXECRegClass;
   case AMDGPU::SGPRRegBankID:
     return getSGPRClassForBitWidth(std::max(32u, Size));
+  case AMDGPU::AGPRRegBankID:
+    return getAGPRClassForBitWidth(std::max(32u, Size));
   default:
     llvm_unreachable("unknown register bank");
   }
