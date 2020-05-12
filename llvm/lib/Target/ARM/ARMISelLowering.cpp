@@ -9554,7 +9554,7 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
   unsigned PCAdj = (isThumb || isThumb2) ? 4 : 8;
   ARMConstantPoolValue *CPV =
     ARMConstantPoolMBB::Create(F.getContext(), DispatchBB, PCLabelId, PCAdj);
-  unsigned CPI = MCP->getConstantPoolIndex(CPV, 4);
+  unsigned CPI = MCP->getConstantPoolIndex(CPV, Align(4));
 
   const TargetRegisterClass *TRC = isThumb ? &ARM::tGPRRegClass
                                            : &ARM::GPRRegClass;
@@ -9843,10 +9843,8 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       const Constant *C = ConstantInt::get(Int32Ty, NumLPads);
 
       // MachineConstantPool wants an explicit alignment.
-      unsigned Align = MF->getDataLayout().getPrefTypeAlignment(Int32Ty);
-      if (Align == 0)
-        Align = MF->getDataLayout().getTypeAllocSize(C->getType());
-      unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
+      Align Alignment = MF->getDataLayout().getPrefTypeAlign(Int32Ty);
+      unsigned Idx = ConstantPool->getConstantPoolIndex(C, Alignment);
 
       Register VReg1 = MRI->createVirtualRegister(TRC);
       BuildMI(DispatchBB, dl, TII->get(ARM::tLDRpci))
@@ -9945,10 +9943,8 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       const Constant *C = ConstantInt::get(Int32Ty, NumLPads);
 
       // MachineConstantPool wants an explicit alignment.
-      unsigned Align = MF->getDataLayout().getPrefTypeAlignment(Int32Ty);
-      if (Align == 0)
-        Align = MF->getDataLayout().getTypeAllocSize(C->getType());
-      unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
+      Align Alignment = MF->getDataLayout().getPrefTypeAlign(Int32Ty);
+      unsigned Idx = ConstantPool->getConstantPoolIndex(C, Alignment);
 
       Register VReg1 = MRI->createVirtualRegister(TRC);
       BuildMI(DispatchBB, dl, TII->get(ARM::LDRcp))
@@ -10349,7 +10345,7 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
 
     // MachineConstantPool wants an explicit alignment.
     Align Alignment = MF->getDataLayout().getPrefTypeAlign(Int32Ty);
-    unsigned Idx = ConstantPool->getConstantPoolIndex(C, Alignment.value());
+    unsigned Idx = ConstantPool->getConstantPoolIndex(C, Alignment);
     MachineMemOperand *CPMMO =
         MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),
                                  MachineMemOperand::MOLoad, 4, Align(4));

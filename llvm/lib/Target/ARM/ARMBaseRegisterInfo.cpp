@@ -477,7 +477,7 @@ void ARMBaseRegisterInfo::emitLoadConstPool(
   MachineConstantPool *ConstantPool = MF.getConstantPool();
   const Constant *C =
         ConstantInt::get(Type::getInt32Ty(MF.getFunction().getContext()), Val);
-  unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
+  unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::LDRcp))
       .addReg(DestReg, getDefRegState(true), SubIdx)

@@ -6013,7 +6013,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                       Opc == X86::AVX1_SETALLONES);
     const Constant *C = IsAllOnes ? Constant::getAllOnesValue(Ty) :
                                     Constant::getNullValue(Ty);
-    unsigned CPI = MCP.getConstantPoolIndex(C, Alignment.value());
+    unsigned CPI = MCP.getConstantPoolIndex(C, Alignment);
 
     // Create operands to load from the constant pool entry.
     MOs.push_back(MachineOperand::CreateReg(PICBase, false));

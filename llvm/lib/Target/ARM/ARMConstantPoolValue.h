@@ -76,13 +76,11 @@ protected:
                        bool AddCurrentAddress);
 
   template <typename Derived>
-  int getExistingMachineCPValueImpl(MachineConstantPool *CP,
-                                    unsigned Alignment) {
-    unsigned AlignMask = Alignment - 1;
+  int getExistingMachineCPValueImpl(MachineConstantPool *CP, Align Alignment) {
     const std::vector<MachineConstantPoolEntry> &Constants = CP->getConstants();
     for (unsigned i = 0, e = Constants.size(); i != e; ++i) {
       if (Constants[i].isMachineConstantPoolEntry() &&
-          (Constants[i].getAlignment() & AlignMask) == 0) {
+          Constants[i].getAlign() >= Alignment) {
         auto *CPV =
           static_cast<ARMConstantPoolValue*>(Constants[i].Val.MachineCPVal);
         if (Derived *APC = dyn_cast<Derived>(CPV))
@@ -114,7 +112,7 @@ public:
   bool isPromotedGlobal() const{ return Kind == ARMCP::CPPromotedGlobal; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
-                                unsigned Alignment) override;
+                                Align Alignment) override;
 
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
 
@@ -187,7 +185,7 @@ public:
   }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
-                                unsigned Alignment) override;
+                                Align Alignment) override;
 
   /// hasSameValue - Return true if this ARM constpool value can share the same
   /// constantpool entry as another ARM constpool value.
@@ -223,7 +221,7 @@ public:
   StringRef getSymbol() const { return S; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
-                                unsigned Alignment) override;
+                                Align Alignment) override;
 
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
 
@@ -259,7 +257,7 @@ public:
   const MachineBasicBlock *getMBB() const { return MBB; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
-                                unsigned Alignment) override;
+                                Align Alignment) override;
 
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
 

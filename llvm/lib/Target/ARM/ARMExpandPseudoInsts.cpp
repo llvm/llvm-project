@@ -1426,9 +1426,10 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             ARMConstantPoolSymbol::Create(MF->getFunction().getContext(),
                                           "__aeabi_read_tp", PCLabelID, 0);
         Register Reg = MI.getOperand(0).getReg();
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get(Thumb ? ARM::tLDRpci : ARM::LDRi12), Reg)
-                  .addConstantPoolIndex(MCP->getConstantPoolIndex(CPV, 4));
+        MIB =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Thumb ? ARM::tLDRpci : ARM::LDRi12), Reg)
+                .addConstantPoolIndex(MCP->getConstantPoolIndex(CPV, Align(4)));
         if (!Thumb)
           MIB.addImm(0);
         MIB.add(predOps(ARMCC::AL));
@@ -1514,7 +1515,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       MachineInstrBuilder MIB =
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(LDRLITOpc), DstReg)
-            .addConstantPoolIndex(MCP->getConstantPoolIndex(CPV, 4));
+              .addConstantPoolIndex(MCP->getConstantPoolIndex(CPV, Align(4)));
       if (IsARM)
         MIB.addImm(0);
       MIB.add(predOps(ARMCC::AL));
