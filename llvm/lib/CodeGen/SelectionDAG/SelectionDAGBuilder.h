@@ -406,6 +406,8 @@ public:
     SelectionDAGBuilder *SDB;
   };
 
+  // Data related to deferred switch lowerings. Used to construct additional
+  // Basic Blocks in SelectionDAGISel::FinishBasicBlock.
   std::unique_ptr<SDAGSwitchLowering> SL;
 
   /// A StackProtectorDescriptor structure used to communicate stack protector
