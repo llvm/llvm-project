@@ -1442,11 +1442,9 @@ static void DumpModuleSections(CommandInterpreter &interpreter, Stream &strm,
       strm.Printf("Sections for '%s' (%s):\n",
                   module->GetSpecificationDescription().c_str(),
                   module->GetArchitecture().GetArchitectureName());
-      strm.IndentMore();
-      section_list->Dump(&strm,
+      section_list->Dump(strm.AsRawOstream(), strm.GetIndentLevel() + 2,
                          interpreter.GetExecutionContext().GetTargetPtr(), true,
                          UINT32_MAX);
-      strm.IndentLess();
     }
   }
 }
