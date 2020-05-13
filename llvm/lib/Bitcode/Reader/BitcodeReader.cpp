@@ -3428,6 +3428,22 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
   SmallVector<uint64_t, 64> Record;
 
+  // Parts of bitcode parsing depend on the datalayout.  Make sure we
+  // finalize the datalayout before we run any of that code.
+  bool ResolvedDataLayout = false;
+  auto ResolveDataLayout = [&] {
+    if (ResolvedDataLayout)
+      return;
+
+    // datalayout and triple can't be parsed after this point.
+    ResolvedDataLayout = true;
+
+    // Upgrade data layout string.
+    std::string DL = llvm::UpgradeDataLayoutString(
+        TheModule->getDataLayoutStr(), TheModule->getTargetTriple());
+    TheModule->setDataLayout(DL);
+  };
+
   // Read all the records for this module.
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
@@ -3439,6 +3455,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
+      ResolveDataLayout();
       return globalCleanup();
 
     case BitstreamEntry::SubBlock:
@@ -3503,6 +3520,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           return Err;
         break;
       case bitc::FUNCTION_BLOCK_ID:
+        ResolveDataLayout();
+
         // If this is the first function body we've seen, reverse the
         // FunctionsWithBodies list.
         if (!SeenFirstFunctionBody) {
@@ -3589,6 +3608,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       break;
     }
     case bitc::MODULE_CODE_TRIPLE: {  // TRIPLE: [strchr x N]
+      if (ResolvedDataLayout)
+        return error("target triple too late in module");
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
@@ -3596,6 +3617,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
+      if (ResolvedDataLayout)
+        return error("datalayout too late in module");
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
@@ -3640,6 +3663,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         return Err;
       break;
     case bitc::MODULE_CODE_FUNCTION:
+      ResolveDataLayout();
       if (Error Err = parseFunctionRecord(Record))
         return Err;
       break;
@@ -3667,11 +3691,6 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       break;
     }
     Record.clear();
-
-    // Upgrade data layout string.
-    std::string DL = llvm::UpgradeDataLayoutString(
-        TheModule->getDataLayoutStr(), TheModule->getTargetTriple());
-    TheModule->setDataLayout(DL);
   }
 }
 
