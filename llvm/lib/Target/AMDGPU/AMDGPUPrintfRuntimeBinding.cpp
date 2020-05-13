@@ -218,10 +218,10 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
         //
         if (ArgSize % DWORD_ALIGN != 0) {
           llvm::Type *ResType = llvm::Type::getInt32Ty(Ctx);
-          VectorType *LLVMVecType = llvm::dyn_cast<llvm::VectorType>(ArgType);
+          auto *LLVMVecType = llvm::dyn_cast<llvm::FixedVectorType>(ArgType);
           int NumElem = LLVMVecType ? LLVMVecType->getNumElements() : 1;
           if (LLVMVecType && NumElem > 1)
-            ResType = llvm::VectorType::get(ResType, NumElem);
+            ResType = llvm::FixedVectorType::get(ResType, NumElem);
           Builder.SetInsertPoint(CI);
           Builder.SetCurrentDebugLocation(CI->getDebugLoc());
           if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
@@ -479,7 +479,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
           }
         } else if (isa<FixedVectorType>(ArgType)) {
           Type *IType = NULL;
-          uint32_t EleCount = cast<VectorType>(ArgType)->getNumElements();
+          uint32_t EleCount = cast<FixedVectorType>(ArgType)->getNumElements();
           uint32_t EleSize = ArgType->getScalarSizeInBits();
           uint32_t TotalSize = EleCount * EleSize;
           if (EleCount == 3) {
