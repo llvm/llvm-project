@@ -824,7 +824,6 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 */
 
 #include <__config>
-#include <__debug>
 #include <ctime>
 #include <type_traits>
 #include <ratio>
@@ -2455,7 +2454,6 @@ chrono::day year_month_day_last::day() const noexcept
         chrono::day(31), chrono::day(31), chrono::day(30),
         chrono::day(31), chrono::day(30), chrono::day(31)
     };
-    _LIBCPP_ASSERT(ok(), "year_month_day_last::day(): year_month_day_last is invalid");
     return month() != February || !__y.is_leap() ?
         __d[static_cast<unsigned>(month()) - 1] : chrono::day{29};
 }
