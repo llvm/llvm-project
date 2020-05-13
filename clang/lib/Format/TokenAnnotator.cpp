@@ -2818,7 +2818,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                     tok::l_square));
   if (Right.is(tok::star) && Left.is(tok::l_paren))
     return false;
-  if (Right.is(tok::star) && Left.is(tok::star))
+  if (Left.is(tok::star) && Right.isOneOf(tok::star, tok::amp, tok::ampamp))
     return false;
   if (Right.isOneOf(tok::star, tok::amp, tok::ampamp)) {
     const FormatToken *Previous = &Left;
