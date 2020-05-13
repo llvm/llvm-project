@@ -590,12 +590,11 @@ entry:
 ; GCN-LABEL: {{^}}extractelement_v16i32_or_index:
 ; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
 ; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
-; GCN: s_or_b32 [[IDX_FIN:s[0-9]+]], [[IDX_SHL]], 1
 
-; MOVREL: s_mov_b32 m0, [[IDX_FIN]]
+; MOVREL: s_mov_b32 m0, [[IDX_SHL]]
 ; MOVREL: v_movrels_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 
-; IDXMODE: s_set_gpr_idx_on [[IDX_FIN]], gpr_idx(SRC0)
+; IDXMODE: s_set_gpr_idx_on [[IDX_SHL]], gpr_idx(SRC0)
 ; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; IDXMODE: s_set_gpr_idx_off
 define amdgpu_kernel void @extractelement_v16i32_or_index(i32 addrspace(1)* %out, <16 x i32> addrspace(1)* %in, i32 %idx.in) {
@@ -611,12 +610,11 @@ entry:
 ; GCN-LABEL: {{^}}insertelement_v16f32_or_index:
 ; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
 ; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
-; GCN: s_or_b32 [[IDX_FIN:s[0-9]+]], [[IDX_SHL]], 1
 
-; MOVREL: s_mov_b32 m0, [[IDX_FIN]]
+; MOVREL: s_mov_b32 m0, [[IDX_SHL]]
 ; MOVREL: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 
-; IDXMODE: s_set_gpr_idx_on [[IDX_FIN]], gpr_idx(DST)
+; IDXMODE: s_set_gpr_idx_on [[IDX_SHL]], gpr_idx(DST)
 ; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; IDXMODE: s_set_gpr_idx_off
 define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(1)* %out, <16 x float> %a, i32 %idx.in) nounwind {
