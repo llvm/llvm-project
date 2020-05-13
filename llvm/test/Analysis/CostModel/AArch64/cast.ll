@@ -677,12 +677,12 @@ define i32 @bitcasts() {
 ; CHECK-LABEL: 'bitcasts'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a = bitcast i32 undef to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %b = bitcast float undef to float
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c = bitcast i32 undef to float
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d = bitcast float undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %e = bitcast i64 undef to double
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = bitcast double undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = bitcast i32 undef to float
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = bitcast float undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = bitcast i64 undef to double
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = bitcast double undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %h = bitcast i16 undef to half
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %a = bitcast i32 undef to i32
