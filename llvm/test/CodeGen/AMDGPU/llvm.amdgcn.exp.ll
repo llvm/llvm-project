@@ -602,6 +602,27 @@ define amdgpu_kernel void @test_export_pos_before_param_across_load(i32 %idx) #0
   ret void
 }
 
+; GCN-LABEL: {{^}}test_export_across_store_load:
+; GCN: buffer_store
+; GCN: buffer_load
+; GCN: exp pos0
+; GCN: exp param0
+; GCN: exp param1
+define amdgpu_kernel void @test_export_across_store_load(i32 %idx, float %v) #0 {
+  %data0 = alloca <4 x float>, align 8, addrspace(5)
+  %data1 = alloca <4 x float>, align 8, addrspace(5)
+  %cmp = icmp eq i32 %idx, 1
+  %data = select i1 %cmp, <4 x float> addrspace(5)* %data0, <4 x float> addrspace(5)* %data1
+  %sptr = getelementptr inbounds <4 x float>, <4 x float> addrspace(5)* %data, i32 0, i32 0
+  store float %v, float addrspace(5)* %sptr, align 8
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float 1.0, i1 true, i1 false)
+  %ptr0 = getelementptr inbounds <4 x float>, <4 x float> addrspace(5)* %data0, i32 0, i32 0
+  %load0 = load float, float addrspace(5)* %ptr0, align 8
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %load0, float 0.0, float 1.0, float 0.0, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float %load0, float 0.0, float 1.0, float 0.0, i1 false, i1 false)
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind inaccessiblememonly }
 attributes #2 = { nounwind readnone }
