@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -Wimplicit-int-conversion -triple x86_64-gnu-linux
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wimplicit-int-conversion -triple x86_64-gnu-linux -fasm-blocks
 
 template<int Bounds>
 struct HasExtInt {
@@ -276,3 +276,12 @@ void ImplicitCasts(_ExtInt(31) s31, _ExtInt(33) s33, int i) {
   i = s33;
 }
 
+
+void NotAllowedInInlineAsm(_ExtInt(9) in, _ExtInt(9) out) {
+  __asm { mov eax, in} // expected-error{{invalid type '_ExtInt(9)' in asm input}}
+  __asm { mov out, eax} // expected-error{{invalid type '_ExtInt(9)' in asm output}}
+
+  asm("" : "=g" (in));// expected-error{{invalid type '_ExtInt(9)' in asm input}}
+  asm("" :: "r" (out));// expected-error{{invalid type '_ExtInt(9)' in asm output}}
+
+}
