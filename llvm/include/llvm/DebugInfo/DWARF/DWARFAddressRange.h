@@ -45,6 +45,24 @@ struct DWARFAddressRange {
     return LowPC < RHS.HighPC && RHS.LowPC < HighPC;
   }
 
+  /// Union two address ranges if they intersect.
+  ///
+  /// This function will union two address ranges if they intersect by
+  /// modifying this range to be the union of both ranges. If the two ranges
+  /// don't intersect this range will be left alone.
+  ///
+  /// \param RHS Another address range to combine with.
+  ///
+  /// \returns false if the ranges don't intersect, true if they do and the
+  /// ranges were combined.
+  bool merge(const DWARFAddressRange &RHS) {
+    if (!intersects(RHS))
+      return false;
+    LowPC = std::min<uint64_t>(LowPC, RHS.LowPC);
+    HighPC = std::max<uint64_t>(HighPC, RHS.HighPC);
+    return true;
+  }
+
   void dump(raw_ostream &OS, uint32_t AddressSize, DIDumpOptions DumpOpts = {},
             const DWARFObject *Obj = nullptr) const;
 };

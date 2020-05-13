@@ -26,24 +26,26 @@ using namespace llvm;
 using namespace dwarf;
 using namespace object;
 
-DWARFVerifier::DieRangeInfo::address_range_iterator
+Optional<DWARFAddressRange>
 DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
   auto Begin = Ranges.begin();
   auto End = Ranges.end();
   auto Pos = std::lower_bound(Begin, End, R);
 
   if (Pos != End) {
-    if (Pos->intersects(R))
-      return std::move(Pos);
-    if (Pos != Begin) {
-      auto Iter = Pos - 1;
-      if (Iter->intersects(R))
-        return std::move(Iter);
-    }
+    DWARFAddressRange Range(*Pos);
+    if (Pos->merge(R))
+      return Range;
+  }
+  if (Pos != Begin) {
+    auto Iter = Pos - 1;
+    DWARFAddressRange Range(*Iter);
+    if (Iter->merge(R))
+      return Range;
   }
 
   Ranges.insert(Pos, R);
-  return Ranges.end();
+  return None;
 }
 
 DWARFVerifier::DieRangeInfo::die_range_info_iterator
@@ -397,22 +399,30 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   // processing an object file.
 
   if (!IsObjectFile || IsMachOObject || Die.getTag() != DW_TAG_compile_unit) {
+    bool DumpDieAfterError = false;
     for (auto Range : Ranges) {
       if (!Range.valid()) {
         ++NumErrors;
         error() << "Invalid address range " << Range << "\n";
+        DumpDieAfterError = true;
         continue;
       }
 
-      // Verify that ranges don't intersect.
-      const auto IntersectingRange = RI.insert(Range);
-      if (IntersectingRange != RI.Ranges.end()) {
+      // Verify that ranges don't intersect and also build up the DieRangeInfo
+      // address ranges. Don't break out of the loop below early, or we will
+      // think this DIE doesn't have all of the address ranges it is supposed
+      // to have. Compile units often have DW_AT_ranges that can contain one or
+      // more dead stripped address ranges which tend to all be at the same
+      // address: 0 or -1.
+      if (auto PrevRange = RI.insert(Range)) {
         ++NumErrors;
-        error() << "DIE has overlapping address ranges: " << Range << " and "
-                << *IntersectingRange << "\n";
-        break;
+        error() << "DIE has overlapping ranges in DW_AT_ranges attribute: "
+                << *PrevRange << " and " << Range << '\n';
+        DumpDieAfterError = true;
       }
     }
+    if (DumpDieAfterError)
+      dump(Die, 2) << '\n';
   }
 
   // Verify that children don't intersect.
