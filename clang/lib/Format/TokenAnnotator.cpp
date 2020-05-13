@@ -118,9 +118,9 @@ private:
         if (Style.Language == FormatStyle::LK_TextProto ||
             (Style.Language == FormatStyle::LK_Proto && Left->Previous &&
              Left->Previous->isOneOf(TT_SelectorName, TT_DictLiteral)))
-          CurrentToken->Type = TT_DictLiteral;
+          CurrentToken->setType(TT_DictLiteral);
         else
-          CurrentToken->Type = TT_TemplateCloser;
+          CurrentToken->setType(TT_TemplateCloser);
         next();
         return true;
       }
@@ -151,7 +151,7 @@ private:
           if (CurrentToken->is(tok::colon) ||
               (CurrentToken->isOneOf(tok::l_brace, tok::less) &&
                Previous->isNot(tok::colon)))
-            Previous->Type = TT_SelectorName;
+            Previous->setType(TT_SelectorName);
         }
       }
       if (!consumeToken())
@@ -217,7 +217,7 @@ private:
       // This is the parameter list of an ObjC block.
       Contexts.back().IsExpression = false;
     } else if (Left->Previous && Left->Previous->is(tok::kw___attribute)) {
-      Left->Type = TT_AttributeParen;
+      Left->setType(TT_AttributeParen);
     } else if (Left->Previous && Left->Previous->is(TT_ForEachMacro)) {
       // The first argument to a foreach macro is a declaration.
       Contexts.back().IsForEachMacro = true;
@@ -233,7 +233,7 @@ private:
 
     if (StartsObjCMethodExpr) {
       Contexts.back().ColonIsObjCMethodExpr = true;
-      Left->Type = TT_ObjCMethodExpr;
+      Left->setType(TT_ObjCMethodExpr);
     }
 
     // MightBeFunctionType and ProbablyFunctionType are used for
@@ -264,7 +264,7 @@ private:
           if (PrevPrev && PrevPrev->is(tok::identifier) &&
               Prev->isOneOf(tok::star, tok::amp, tok::ampamp) &&
               CurrentToken->is(tok::identifier) && Next->isNot(tok::equal)) {
-            Prev->Type = TT_BinaryOperator;
+            Prev->setType(TT_BinaryOperator);
             LookForDecls = false;
           }
         }
@@ -282,8 +282,8 @@ private:
         if (MightBeFunctionType && ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
              (CurrentToken->Next->is(tok::l_square) && Line.MustBeDeclaration)))
-          Left->Type = Left->Next->is(tok::caret) ? TT_ObjCBlockLParen
-                                                  : TT_FunctionTypeLParen;
+          Left->setType(Left->Next->is(tok::caret) ? TT_ObjCBlockLParen
+                                                   : TT_FunctionTypeLParen);
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
 
@@ -295,12 +295,12 @@ private:
           for (FormatToken *Tok = Left; Tok != CurrentToken; Tok = Tok->Next) {
             if (Tok->is(TT_BinaryOperator) &&
                 Tok->isOneOf(tok::star, tok::amp, tok::ampamp))
-              Tok->Type = TT_PointerOrReference;
+              Tok->setType(TT_PointerOrReference);
           }
         }
 
         if (StartsObjCMethodExpr) {
-          CurrentToken->Type = TT_ObjCMethodExpr;
+          CurrentToken->setType(TT_ObjCMethodExpr);
           if (Contexts.back().FirstObjCSelectorName) {
             Contexts.back().FirstObjCSelectorName->LongestObjCSelectorName =
                 Contexts.back().LongestObjCSelectorName;
@@ -308,13 +308,13 @@ private:
         }
 
         if (Left->is(TT_AttributeParen))
-          CurrentToken->Type = TT_AttributeParen;
+          CurrentToken->setType(TT_AttributeParen);
         if (Left->Previous && Left->Previous->is(TT_JavaAnnotation))
-          CurrentToken->Type = TT_JavaAnnotation;
+          CurrentToken->setType(TT_JavaAnnotation);
         if (Left->Previous && Left->Previous->is(TT_LeadingJavaAnnotation))
-          CurrentToken->Type = TT_LeadingJavaAnnotation;
+          CurrentToken->setType(TT_LeadingJavaAnnotation);
         if (Left->Previous && Left->Previous->is(TT_AttributeSquare))
-          CurrentToken->Type = TT_AttributeSquare;
+          CurrentToken->setType(TT_AttributeSquare);
 
         if (!HasMultipleLines)
           Left->PackingKind = PPK_Inconclusive;
@@ -330,7 +330,7 @@ private:
         return false;
 
       if (CurrentToken->is(tok::l_brace))
-        Left->Type = TT_Unknown; // Not TT_ObjCBlockLParen
+        Left->setType(TT_Unknown); // Not TT_ObjCBlockLParen
       if (CurrentToken->is(tok::comma) && CurrentToken->Next &&
           !CurrentToken->Next->HasUnescapedNewline &&
           !CurrentToken->Next->isTrailingComment())
@@ -342,13 +342,13 @@ private:
       if (CurrentToken->isOneOf(tok::semi, tok::colon)) {
         MightBeObjCForRangeLoop = false;
         if (PossibleObjCForInToken) {
-          PossibleObjCForInToken->Type = TT_Unknown;
+          PossibleObjCForInToken->setType(TT_Unknown);
           PossibleObjCForInToken = nullptr;
         }
       }
       if (MightBeObjCForRangeLoop && CurrentToken->is(Keywords.kw_in)) {
         PossibleObjCForInToken = CurrentToken;
-        PossibleObjCForInToken->Type = TT_ObjCForIn;
+        PossibleObjCForInToken->setType(TT_ObjCForIn);
       }
       // When we discover a 'new', we set CanBeExpression to 'false' in order to
       // parse the type correctly. Reset that after a comma.
@@ -495,26 +495,26 @@ private:
 
     unsigned BindingIncrease = 1;
     if (IsCppStructuredBinding) {
-      Left->Type = TT_StructuredBindingLSquare;
+      Left->setType(TT_StructuredBindingLSquare);
     } else if (Left->is(TT_Unknown)) {
       if (StartsObjCMethodExpr) {
-        Left->Type = TT_ObjCMethodExpr;
+        Left->setType(TT_ObjCMethodExpr);
       } else if (InsideInlineASM) {
-        Left->Type = TT_InlineASMSymbolicNameLSquare;
+        Left->setType(TT_InlineASMSymbolicNameLSquare);
       } else if (IsCpp11AttributeSpecifier) {
-        Left->Type = TT_AttributeSquare;
+        Left->setType(TT_AttributeSquare);
       } else if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
                  Contexts.back().ContextKind == tok::l_brace &&
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
-        Left->Type = TT_JsComputedPropertyName;
+        Left->setType(TT_JsComputedPropertyName);
       } else if (Style.isCpp() && Contexts.back().ContextKind == tok::l_brace &&
                  Parent && Parent->isOneOf(tok::l_brace, tok::comma)) {
-        Left->Type = TT_DesignatedInitializerLSquare;
+        Left->setType(TT_DesignatedInitializerLSquare);
       } else if (IsCSharpAttributeSpecifier) {
-        Left->Type = TT_AttributeSquare;
+        Left->setType(TT_AttributeSquare);
       } else if (CurrentToken->is(tok::r_square) && Parent &&
                  Parent->is(TT_TemplateCloser)) {
-        Left->Type = TT_ArraySubscriptLSquare;
+        Left->setType(TT_ArraySubscriptLSquare);
       } else if (Style.Language == FormatStyle::LK_Proto ||
                  Style.Language == FormatStyle::LK_TextProto) {
         // Square braces in LK_Proto can either be message field attributes:
@@ -543,13 +543,13 @@ private:
         //
         // In the first and the third case we want to spread the contents inside
         // the square braces; in the second we want to keep them inline.
-        Left->Type = TT_ArrayInitializerLSquare;
+        Left->setType(TT_ArrayInitializerLSquare);
         if (!Left->endsSequence(tok::l_square, tok::numeric_constant,
                                 tok::equal) &&
             !Left->endsSequence(tok::l_square, tok::numeric_constant,
                                 tok::identifier) &&
             !Left->endsSequence(tok::l_square, tok::colon, TT_SelectorName)) {
-          Left->Type = TT_ProtoExtensionLSquare;
+          Left->setType(TT_ProtoExtensionLSquare);
           BindingIncrease = 10;
         }
       } else if (!CppArrayTemplates && Parent &&
@@ -558,10 +558,10 @@ private:
                                  tok::question, tok::colon, tok::kw_return,
                                  // Should only be relevant to JavaScript:
                                  tok::kw_default)) {
-        Left->Type = TT_ArrayInitializerLSquare;
+        Left->setType(TT_ArrayInitializerLSquare);
       } else {
         BindingIncrease = 10;
-        Left->Type = TT_ArraySubscriptLSquare;
+        Left->setType(TT_ArraySubscriptLSquare);
       }
     }
 
@@ -578,9 +578,9 @@ private:
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_square)) {
         if (IsCpp11AttributeSpecifier)
-          CurrentToken->Type = TT_AttributeSquare;
+          CurrentToken->setType(TT_AttributeSquare);
         if (IsCSharpAttributeSpecifier)
-          CurrentToken->Type = TT_AttributeSquare;
+          CurrentToken->setType(TT_AttributeSquare);
         else if (((CurrentToken->Next &&
                    CurrentToken->Next->is(tok::l_paren)) ||
                   (CurrentToken->Previous &&
@@ -591,26 +591,26 @@ private:
           // will be expanded to more tokens.
           // FIXME: Do we incorrectly label ":" with this?
           StartsObjCMethodExpr = false;
-          Left->Type = TT_Unknown;
+          Left->setType(TT_Unknown);
         }
         if (StartsObjCMethodExpr && CurrentToken->Previous != Left) {
-          CurrentToken->Type = TT_ObjCMethodExpr;
+          CurrentToken->setType(TT_ObjCMethodExpr);
           // If we haven't seen a colon yet, make sure the last identifier
           // before the r_square is tagged as a selector name component.
           if (!ColonFound && CurrentToken->Previous &&
               CurrentToken->Previous->is(TT_Unknown) &&
               canBeObjCSelectorComponent(*CurrentToken->Previous))
-            CurrentToken->Previous->Type = TT_SelectorName;
+            CurrentToken->Previous->setType(TT_SelectorName);
           // determineStarAmpUsage() thinks that '*' '[' is allocating an
           // array of pointers, but if '[' starts a selector then '*' is a
           // binary operator.
           if (Parent && Parent->is(TT_PointerOrReference))
-            Parent->Type = TT_BinaryOperator;
+            Parent->setType(TT_BinaryOperator);
         }
         // An arrow after an ObjC method expression is not a lambda arrow.
-        if (CurrentToken->Type == TT_ObjCMethodExpr && CurrentToken->Next &&
-            CurrentToken->Next->is(TT_LambdaArrow))
-          CurrentToken->Next->Type = TT_Unknown;
+        if (CurrentToken->getType() == TT_ObjCMethodExpr &&
+            CurrentToken->Next && CurrentToken->Next->is(TT_LambdaArrow))
+          CurrentToken->Next->setType(TT_Unknown);
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
         // FirstObjCSelectorName is set when a colon is found. This does
@@ -644,21 +644,21 @@ private:
                                        tok::kw_using)) {
           // Remember that this is a [[using ns: foo]] C++ attribute, so we
           // don't add a space before the colon (unlike other colons).
-          CurrentToken->Type = TT_AttributeColon;
+          CurrentToken->setType(TT_AttributeColon);
         } else if (Left->isOneOf(TT_ArraySubscriptLSquare,
                                  TT_DesignatedInitializerLSquare)) {
-          Left->Type = TT_ObjCMethodExpr;
+          Left->setType(TT_ObjCMethodExpr);
           StartsObjCMethodExpr = true;
           Contexts.back().ColonIsObjCMethodExpr = true;
           if (Parent && Parent->is(tok::r_paren))
             // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
-            Parent->Type = TT_CastRParen;
+            Parent->setType(TT_CastRParen);
         }
         ColonFound = true;
       }
       if (CurrentToken->is(tok::comma) && Left->is(TT_ObjCMethodExpr) &&
           !ColonFound)
-        Left->Type = TT_ArrayInitializerLSquare;
+        Left->setType(TT_ArrayInitializerLSquare);
       FormatToken *Tok = CurrentToken;
       if (!consumeToken())
         return false;
@@ -673,7 +673,7 @@ private:
       Left->ParentBracket = Contexts.back().ContextKind;
 
       if (Contexts.back().CaretFound)
-        Left->Type = TT_ObjCBlockLBrace;
+        Left->setType(TT_ObjCBlockLBrace);
       Contexts.back().CaretFound = false;
 
       ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
@@ -702,18 +702,18 @@ private:
                (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
               Style.Language == FormatStyle::LK_Proto ||
               Style.Language == FormatStyle::LK_TextProto) {
-            Left->Type = TT_DictLiteral;
+            Left->setType(TT_DictLiteral);
             if (Previous->Tok.getIdentifierInfo() ||
                 Previous->is(tok::string_literal))
-              Previous->Type = TT_SelectorName;
+              Previous->setType(TT_SelectorName);
           }
           if (CurrentToken->is(tok::colon) ||
               Style.Language == FormatStyle::LK_JavaScript)
-            Left->Type = TT_DictLiteral;
+            Left->setType(TT_DictLiteral);
         }
         if (CurrentToken->is(tok::comma) &&
             Style.Language == FormatStyle::LK_JavaScript)
-          Left->Type = TT_DictLiteral;
+          Left->setType(TT_DictLiteral);
         if (!consumeToken())
           return false;
       }
@@ -740,7 +740,7 @@ private:
   bool parseConditional() {
     while (CurrentToken) {
       if (CurrentToken->is(tok::colon)) {
-        CurrentToken->Type = TT_ConditionalExpr;
+        CurrentToken->setType(TT_ConditionalExpr);
         next();
         return true;
       }
@@ -752,7 +752,7 @@ private:
 
   bool parseTemplateDeclaration() {
     if (CurrentToken && CurrentToken->is(tok::less)) {
-      CurrentToken->Type = TT_TemplateOpener;
+      CurrentToken->setType(TT_TemplateOpener);
       next();
       if (!parseAngle())
         return false;
@@ -770,7 +770,7 @@ private:
     case tok::plus:
     case tok::minus:
       if (!Tok->Previous && Line.MustBeDeclaration)
-        Tok->Type = TT_ObjCMethodSpecifier;
+        Tok->setType(TT_ObjCMethodSpecifier);
       break;
     case tok::colon:
       if (!Tok->Previous)
@@ -787,30 +787,30 @@ private:
             (Contexts.size() == 1 &&
              Line.MustBeDeclaration)) { // method/property declaration
           Contexts.back().IsExpression = false;
-          Tok->Type = TT_JsTypeColon;
+          Tok->setType(TT_JsTypeColon);
           break;
         }
       } else if (Style.isCSharp()) {
         if (Contexts.back().InCSharpAttributeSpecifier) {
-          Tok->Type = TT_AttributeColon;
+          Tok->setType(TT_AttributeColon);
           break;
         }
         if (Contexts.back().ContextKind == tok::l_paren) {
-          Tok->Type = TT_CSharpNamedArgumentColon;
+          Tok->setType(TT_CSharpNamedArgumentColon);
           break;
         }
       }
       if (Contexts.back().ColonIsDictLiteral ||
           Style.Language == FormatStyle::LK_Proto ||
           Style.Language == FormatStyle::LK_TextProto) {
-        Tok->Type = TT_DictLiteral;
+        Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
           if (FormatToken *Previous = Tok->getPreviousNonComment())
-            Previous->Type = TT_SelectorName;
+            Previous->setType(TT_SelectorName);
         }
       } else if (Contexts.back().ColonIsObjCMethodExpr ||
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
-        Tok->Type = TT_ObjCMethodExpr;
+        Tok->setType(TT_ObjCMethodExpr);
         const FormatToken *BeforePrevious = Tok->Previous->Previous;
         // Ensure we tag all identifiers in method declarations as
         // TT_SelectorName.
@@ -825,7 +825,7 @@ private:
             BeforePrevious->is(tok::r_square) ||
             Contexts.back().LongestObjCSelectorName == 0 ||
             UnknownIdentifierInMethodDeclaration) {
-          Tok->Previous->Type = TT_SelectorName;
+          Tok->Previous->setType(TT_SelectorName);
           if (!Contexts.back().FirstObjCSelectorName)
             Contexts.back().FirstObjCSelectorName = Tok->Previous;
           else if (Tok->Previous->ColumnWidth >
@@ -837,30 +837,30 @@ private:
           ++Contexts.back().FirstObjCSelectorName->ObjCSelectorNameParts;
         }
       } else if (Contexts.back().ColonIsForRangeExpr) {
-        Tok->Type = TT_RangeBasedForLoopColon;
+        Tok->setType(TT_RangeBasedForLoopColon);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
-        Tok->Type = TT_BitFieldColon;
+        Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept))
-          Tok->Type = TT_CtorInitializerColon;
+          Tok->setType(TT_CtorInitializerColon);
         else if (Prev->is(tok::kw_try)) {
           // Member initializer list within function try block.
           FormatToken *PrevPrev = Prev->getPreviousNonComment();
           if (PrevPrev && PrevPrev->isOneOf(tok::r_paren, tok::kw_noexcept))
-            Tok->Type = TT_CtorInitializerColon;
+            Tok->setType(TT_CtorInitializerColon);
         } else
-          Tok->Type = TT_InheritanceColon;
+          Tok->setType(TT_InheritanceColon);
       } else if (canBeObjCSelectorComponent(*Tok->Previous) && Tok->Next &&
                  (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||
                   (canBeObjCSelectorComponent(*Tok->Next) && Tok->Next->Next &&
                    Tok->Next->Next->is(tok::colon)))) {
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
-        Tok->Type = TT_ObjCMethodExpr;
+        Tok->setType(TT_ObjCMethodExpr);
       } else if (Contexts.back().ContextKind == tok::l_paren) {
-        Tok->Type = TT_InlineASMColon;
+        Tok->setType(TT_InlineASMColon);
       }
       break;
     case tok::pipe:
@@ -869,7 +869,7 @@ private:
       // intersection types, respectively.
       if (Style.Language == FormatStyle::LK_JavaScript &&
           !Contexts.back().IsExpression)
-        Tok->Type = TT_JsTypeOperator;
+        Tok->setType(TT_JsTypeOperator);
       break;
     case tok::kw_if:
     case tok::kw_while:
@@ -905,9 +905,9 @@ private:
       if (Tok->Previous && Tok->Previous->is(tok::r_paren) &&
           Tok->Previous->MatchingParen &&
           Tok->Previous->MatchingParen->is(TT_OverloadedOperatorLParen)) {
-        Tok->Previous->Type = TT_OverloadedOperator;
-        Tok->Previous->MatchingParen->Type = TT_OverloadedOperator;
-        Tok->Type = TT_OverloadedOperatorLParen;
+        Tok->Previous->setType(TT_OverloadedOperator);
+        Tok->Previous->MatchingParen->setType(TT_OverloadedOperator);
+        Tok->setType(TT_OverloadedOperatorLParen);
       }
 
       if (!parseParens())
@@ -926,15 +926,15 @@ private:
     case tok::l_brace:
       if (Style.Language == FormatStyle::LK_TextProto) {
         FormatToken *Previous = Tok->getPreviousNonComment();
-        if (Previous && Previous->Type != TT_DictLiteral)
-          Previous->Type = TT_SelectorName;
+        if (Previous && Previous->getType() != TT_DictLiteral)
+          Previous->setType(TT_SelectorName);
       }
       if (!parseBrace())
         return false;
       break;
     case tok::less:
       if (parseAngle()) {
-        Tok->Type = TT_TemplateOpener;
+        Tok->setType(TT_TemplateOpener);
         // In TT_Proto, we must distignuish between:
         //   map<key, value>
         //   msg < item: data >
@@ -943,13 +943,13 @@ private:
         if (Style.Language == FormatStyle::LK_TextProto ||
             (Style.Language == FormatStyle::LK_Proto && Tok->Previous &&
              Tok->Previous->isOneOf(TT_SelectorName, TT_DictLiteral))) {
-          Tok->Type = TT_DictLiteral;
+          Tok->setType(TT_DictLiteral);
           FormatToken *Previous = Tok->getPreviousNonComment();
-          if (Previous && Previous->Type != TT_DictLiteral)
-            Previous->Type = TT_SelectorName;
+          if (Previous && Previous->getType() != TT_DictLiteral)
+            Previous->setType(TT_SelectorName);
         }
       } else {
-        Tok->Type = TT_BinaryOperator;
+        Tok->setType(TT_BinaryOperator);
         NonTemplateLess.insert(Tok);
         CurrentToken = Tok;
         next();
@@ -965,7 +965,7 @@ private:
       break;
     case tok::greater:
       if (Style.Language != FormatStyle::LK_TextProto)
-        Tok->Type = TT_BinaryOperator;
+        Tok->setType(TT_BinaryOperator);
       if (Tok->Previous && Tok->Previous->is(TT_TemplateCloser))
         Tok->SpacesRequiredBefore = 1;
       break;
@@ -976,17 +976,17 @@ private:
       while (CurrentToken &&
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
-          CurrentToken->Type = TT_PointerOrReference;
+          CurrentToken->setType(TT_PointerOrReference);
         consumeToken();
         if (CurrentToken && CurrentToken->Previous->isOneOf(
                                 TT_BinaryOperator, TT_UnaryOperator, tok::comma,
                                 tok::star, tok::arrow, tok::amp, tok::ampamp))
-          CurrentToken->Previous->Type = TT_OverloadedOperator;
+          CurrentToken->Previous->setType(TT_OverloadedOperator);
       }
       if (CurrentToken) {
-        CurrentToken->Type = TT_OverloadedOperatorLParen;
+        CurrentToken->setType(TT_OverloadedOperatorLParen);
         if (CurrentToken->Previous->is(TT_BinaryOperator))
-          CurrentToken->Previous->Type = TT_OverloadedOperator;
+          CurrentToken->Previous->setType(TT_OverloadedOperator);
       }
       break;
     case tok::question:
@@ -1004,7 +1004,7 @@ private:
         // types (fields, parameters), e.g.
         //   function(x?: string, y?) {...}
         //   class X { y?; }
-        Tok->Type = TT_JsTypeOptionalQuestion;
+        Tok->setType(TT_JsTypeOptionalQuestion);
         break;
       }
       // Declarations cannot be conditional expressions, this can only be part
@@ -1020,7 +1020,7 @@ private:
             (Tok->Next && Tok->Next->isOneOf(tok::r_paren, tok::greater)) ||
             (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
              Tok->Next->Next->is(tok::equal))) {
-          Tok->Type = TT_CSharpNullable;
+          Tok->setType(TT_CSharpNullable);
           break;
         }
       }
@@ -1031,9 +1031,9 @@ private:
       break;
     case tok::comma:
       if (Contexts.back().InCtorInitializer)
-        Tok->Type = TT_CtorInitializerComma;
+        Tok->setType(TT_CtorInitializerComma);
       else if (Contexts.back().InInheritanceList)
-        Tok->Type = TT_InheritanceComma;
+        Tok->setType(TT_InheritanceComma);
       else if (Contexts.back().FirstStartOfName &&
                (Contexts.size() == 1 || Line.startsWith(tok::kw_for))) {
         Contexts.back().FirstStartOfName->PartOfMultiVariableDeclStmt = true;
@@ -1049,7 +1049,7 @@ private:
       }
       if (Style.isCSharp() && Tok->is(Keywords.kw_where) && Tok->Next &&
           Tok->Next->isNot(tok::l_paren)) {
-        Tok->Type = TT_CSharpGenericTypeConstraint;
+        Tok->setType(TT_CSharpGenericTypeConstraint);
         parseCSharpGenericTypeConstraint();
       }
       break;
@@ -1064,23 +1064,23 @@ private:
     while (CurrentToken) {
       if (CurrentToken->is(tok::less)) {
         // parseAngle is too greedy and will consume the whole line.
-        CurrentToken->Type = TT_TemplateOpener;
+        CurrentToken->setType(TT_TemplateOpener);
         ++OpenAngleBracketsCount;
         next();
       } else if (CurrentToken->is(tok::greater)) {
-        CurrentToken->Type = TT_TemplateCloser;
+        CurrentToken->setType(TT_TemplateCloser);
         --OpenAngleBracketsCount;
         next();
       } else if (CurrentToken->is(tok::comma) && OpenAngleBracketsCount == 0) {
         // We allow line breaks after GenericTypeConstraintComma's
         // so do not flag commas in Generics as GenericTypeConstraintComma's.
-        CurrentToken->Type = TT_CSharpGenericTypeConstraintComma;
+        CurrentToken->setType(TT_CSharpGenericTypeConstraintComma);
         next();
       } else if (CurrentToken->is(Keywords.kw_where)) {
-        CurrentToken->Type = TT_CSharpGenericTypeConstraint;
+        CurrentToken->setType(TT_CSharpGenericTypeConstraint);
         next();
       } else if (CurrentToken->is(tok::colon)) {
-        CurrentToken->Type = TT_CSharpGenericTypeConstraintColon;
+        CurrentToken->setType(TT_CSharpGenericTypeConstraintColon);
         next();
       } else {
         next();
@@ -1096,7 +1096,7 @@ private:
         // literals.
         if (CurrentToken->isNot(tok::comment) &&
             !CurrentToken->TokenText.startswith("//"))
-          CurrentToken->Type = TT_ImplicitStringLiteral;
+          CurrentToken->setType(TT_ImplicitStringLiteral);
         next();
       }
     }
@@ -1108,7 +1108,7 @@ private:
     // warning or error.
     next();
     while (CurrentToken) {
-      CurrentToken->Type = TT_ImplicitStringLiteral;
+      CurrentToken->setType(TT_ImplicitStringLiteral);
       next();
     }
   }
@@ -1122,7 +1122,7 @@ private:
       next(); // Consume first token (so we fix leading whitespace).
       while (CurrentToken) {
         if (IsMark || CurrentToken->Previous->is(TT_BinaryOperator))
-          CurrentToken->Type = TT_ImplicitStringLiteral;
+          CurrentToken->setType(TT_ImplicitStringLiteral);
         next();
       }
     }
@@ -1149,7 +1149,7 @@ private:
       // Treat these like C++ #include directives.
       while (CurrentToken) {
         // Tokens cannot be comments here.
-        CurrentToken->Type = TT_ImplicitStringLiteral;
+        CurrentToken->setType(TT_ImplicitStringLiteral);
         next();
       }
       return LT_ImportStatement;
@@ -1310,7 +1310,7 @@ private:
             TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow, TT_NamespaceMacro,
             TT_OverloadedOperator, TT_RegexLiteral, TT_TemplateString,
             TT_ObjCStringLiteral))
-      CurrentToken->Type = TT_Unknown;
+      CurrentToken->setType(TT_Unknown);
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
     CurrentToken->FakeLParens.clear();
@@ -1398,7 +1398,7 @@ private:
           if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
               Previous->isOneOf(tok::star, tok::amp, tok::ampamp) &&
               Previous->Previous && Previous->Previous->isNot(tok::equal))
-            Previous->Type = TT_PointerOrReference;
+            Previous->setType(TT_PointerOrReference);
         }
       }
     } else if (Current.is(tok::lessless) &&
@@ -1420,7 +1420,7 @@ private:
       for (FormatToken *Previous = Current.Previous;
            Previous && Previous->isOneOf(tok::star, tok::amp);
            Previous = Previous->Previous)
-        Previous->Type = TT_PointerOrReference;
+        Previous->setType(TT_PointerOrReference);
       if (Line.MustBeDeclaration && !Contexts.front().InCtorInitializer)
         Contexts.back().IsExpression = false;
     } else if (Current.is(tok::kw_new)) {
@@ -1506,15 +1506,15 @@ private:
 
     if (Style.isCSharp() && CurrentToken->is(tok::question)) {
       if (CurrentToken->TokenText == "??") {
-        Current.Type = TT_CSharpNullCoalescing;
+        Current.setType(TT_CSharpNullCoalescing);
         return;
       }
       if (CurrentToken->TokenText == "?.") {
-        Current.Type = TT_CSharpNullConditional;
+        Current.setType(TT_CSharpNullConditional);
         return;
       }
       if (CurrentToken->TokenText == "?[") {
-        Current.Type = TT_CSharpNullConditionalLSquare;
+        Current.setType(TT_CSharpNullConditionalLSquare);
         return;
       }
     }
@@ -1528,12 +1528,12 @@ private:
                  tok::kw_namespace, tok::r_paren, tok::r_square, tok::r_brace,
                  Keywords.kw_type, Keywords.kw_get, Keywords.kw_set) ||
              Current.Previous->Tok.isLiteral())) {
-          Current.Type = TT_JsNonNullAssertion;
+          Current.setType(TT_JsNonNullAssertion);
           return;
         }
         if (Current.Next &&
             Current.Next->isOneOf(TT_BinaryOperator, Keywords.kw_as)) {
-          Current.Type = TT_JsNonNullAssertion;
+          Current.setType(TT_JsNonNullAssertion);
           return;
         }
       }
@@ -1543,11 +1543,11 @@ private:
     // function declaration have been found. In this case, 'Current' is a
     // trailing token of this declaration and thus cannot be a name.
     if (Current.is(Keywords.kw_instanceof)) {
-      Current.Type = TT_BinaryOperator;
+      Current.setType(TT_BinaryOperator);
     } else if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
       Contexts.back().FirstStartOfName = &Current;
-      Current.Type = TT_StartOfName;
+      Current.setType(TT_StartOfName);
     } else if (Current.is(tok::semi)) {
       // Reset FirstStartOfName after finding a semicolon so that a for loop
       // with multiple increment statements is not confused with a for loop
@@ -1557,57 +1557,57 @@ private:
       AutoFound = true;
     } else if (Current.is(tok::arrow) &&
                Style.Language == FormatStyle::LK_Java) {
-      Current.Type = TT_LambdaArrow;
+      Current.setType(TT_LambdaArrow);
     } else if (Current.is(tok::arrow) && AutoFound && Line.MustBeDeclaration &&
                Current.NestingLevel == 0 &&
                !Current.Previous->is(tok::kw_operator)) {
       // not auto operator->() -> xxx;
-      Current.Type = TT_TrailingReturnArrow;
+      Current.setType(TT_TrailingReturnArrow);
 
     } else if (isDeductionGuide(Current)) {
       // Deduction guides trailing arrow " A(...) -> A<T>;".
-      Current.Type = TT_TrailingReturnArrow;
+      Current.setType(TT_TrailingReturnArrow);
     } else if (Current.isOneOf(tok::star, tok::amp, tok::ampamp)) {
-      Current.Type = determineStarAmpUsage(Current,
-                                           Contexts.back().CanBeExpression &&
-                                               Contexts.back().IsExpression,
-                                           Contexts.back().InTemplateArgument);
+      Current.setType(determineStarAmpUsage(
+          Current,
+          Contexts.back().CanBeExpression && Contexts.back().IsExpression,
+          Contexts.back().InTemplateArgument));
     } else if (Current.isOneOf(tok::minus, tok::plus, tok::caret)) {
-      Current.Type = determinePlusMinusCaretUsage(Current);
+      Current.setType(determinePlusMinusCaretUsage(Current));
       if (Current.is(TT_UnaryOperator) && Current.is(tok::caret))
         Contexts.back().CaretFound = true;
     } else if (Current.isOneOf(tok::minusminus, tok::plusplus)) {
-      Current.Type = determineIncrementUsage(Current);
+      Current.setType(determineIncrementUsage(Current));
     } else if (Current.isOneOf(tok::exclaim, tok::tilde)) {
-      Current.Type = TT_UnaryOperator;
+      Current.setType(TT_UnaryOperator);
     } else if (Current.is(tok::question)) {
       if (Style.Language == FormatStyle::LK_JavaScript &&
           Line.MustBeDeclaration && !Contexts.back().IsExpression) {
         // In JavaScript, `interface X { foo?(): bar; }` is an optional method
         // on the interface, not a ternary expression.
-        Current.Type = TT_JsTypeOptionalQuestion;
+        Current.setType(TT_JsTypeOptionalQuestion);
       } else {
-        Current.Type = TT_ConditionalExpr;
+        Current.setType(TT_ConditionalExpr);
       }
     } else if (Current.isBinaryOperator() &&
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
                (!Current.is(tok::greater) &&
                 Style.Language != FormatStyle::LK_TextProto)) {
-      Current.Type = TT_BinaryOperator;
+      Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::comment)) {
       if (Current.TokenText.startswith("/*")) {
         if (Current.TokenText.endswith("*/"))
-          Current.Type = TT_BlockComment;
+          Current.setType(TT_BlockComment);
         else
           // The lexer has for some reason determined a comment here. But we
           // cannot really handle it, if it isn't properly terminated.
           Current.Tok.setKind(tok::unknown);
       } else {
-        Current.Type = TT_LineComment;
+        Current.setType(TT_LineComment);
       }
     } else if (Current.is(tok::r_paren)) {
       if (rParenEndsCast(Current))
-        Current.Type = TT_CastRParen;
+        Current.setType(TT_CastRParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
           !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
@@ -1622,7 +1622,7 @@ private:
                   BeforeParen->TokenText == BeforeParen->TokenText.upper() &&
                   (!BeforeParen->Previous ||
                    BeforeParen->Previous->ClosesTemplateDeclaration))
-                Current.Type = TT_FunctionAnnotationRParen;
+                Current.setType(TT_FunctionAnnotationRParen);
           }
         }
     } else if (Current.is(tok::at) && Current.Next &&
@@ -1634,10 +1634,10 @@ private:
       case tok::objc_interface:
       case tok::objc_implementation:
       case tok::objc_protocol:
-        Current.Type = TT_ObjCDecl;
+        Current.setType(TT_ObjCDecl);
         break;
       case tok::objc_property:
-        Current.Type = TT_ObjCProperty;
+        Current.setType(TT_ObjCProperty);
         break;
       default:
         break;
@@ -1646,11 +1646,11 @@ private:
       FormatToken *PreviousNoComment = Current.getPreviousNonComment();
       if (PreviousNoComment &&
           PreviousNoComment->isOneOf(tok::comma, tok::l_brace))
-        Current.Type = TT_DesignatedInitializerPeriod;
+        Current.setType(TT_DesignatedInitializerPeriod);
       else if (Style.Language == FormatStyle::LK_Java && Current.Previous &&
                Current.Previous->isOneOf(TT_JavaAnnotation,
                                          TT_LeadingJavaAnnotation)) {
-        Current.Type = Current.Previous->Type;
+        Current.setType(Current.Previous->getType());
       }
     } else if (canBeObjCSelectorComponent(Current) &&
                // FIXME(bug 36976): ObjC return types shouldn't use
@@ -1663,7 +1663,7 @@ private:
       // This is the first part of an Objective-C selector name. (If there's no
       // colon after this, this is the only place which annotates the identifier
       // as a selector.)
-      Current.Type = TT_SelectorName;
+      Current.setType(TT_SelectorName);
     } else if (Current.isOneOf(tok::identifier, tok::kw_const,
                                tok::kw_noexcept) &&
                Current.Previous &&
@@ -1671,7 +1671,7 @@ private:
                Line.MightBeFunctionDecl && Contexts.size() == 1) {
       // Line.MightBeFunctionDecl can only be true after the parentheses of a
       // function declaration have been found.
-      Current.Type = TT_TrailingAnnotation;
+      Current.setType(TT_TrailingAnnotation);
     } else if ((Style.Language == FormatStyle::LK_Java ||
                 Style.Language == FormatStyle::LK_JavaScript) &&
                Current.Previous) {
@@ -1680,13 +1680,13 @@ private:
         const FormatToken &AtToken = *Current.Previous;
         const FormatToken *Previous = AtToken.getPreviousNonComment();
         if (!Previous || Previous->is(TT_LeadingJavaAnnotation))
-          Current.Type = TT_LeadingJavaAnnotation;
+          Current.setType(TT_LeadingJavaAnnotation);
         else
-          Current.Type = TT_JavaAnnotation;
+          Current.setType(TT_JavaAnnotation);
       } else if (Current.Previous->is(tok::period) &&
                  Current.Previous->isOneOf(TT_JavaAnnotation,
                                            TT_LeadingJavaAnnotation)) {
-        Current.Type = Current.Previous->Type;
+        Current.setType(Current.Previous->getType());
       }
     }
   }
@@ -2390,7 +2390,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
   bool InFunctionDecl = Line.MightBeFunctionDecl;
   while (Current) {
     if (isFunctionDeclarationName(*Current, Line))
-      Current->Type = TT_FunctionDeclarationName;
+      Current->setType(TT_FunctionDeclarationName);
     if (Current->is(TT_LineComment)) {
       if (Current->Previous->BlockKind == BK_BracedInit &&
           Current->Previous->opensScope())
@@ -2952,7 +2952,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       Right.MatchingParen->endsSequence(TT_DictLiteral, tok::at))
     // Objective-C dictionary literal -> no space before closing brace.
     return false;
-  if (Right.Type == TT_TrailingAnnotation &&
+  if (Right.getType() == TT_TrailingAnnotation &&
       Right.isOneOf(tok::amp, tok::ampamp) &&
       Left.isOneOf(tok::kw_const, tok::kw_volatile) &&
       (!Right.Next || Right.Next->is(tok::semi)))
@@ -3960,7 +3960,7 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
   while (Tok) {
     llvm::errs() << " M=" << Tok->MustBreakBefore
                  << " C=" << Tok->CanBreakBefore
-                 << " T=" << getTokenTypeName(Tok->Type)
+                 << " T=" << getTokenTypeName(Tok->getType())
                  << " S=" << Tok->SpacesRequiredBefore
                  << " B=" << Tok->BlockParameterCount
                  << " BK=" << Tok->BlockKind << " P=" << Tok->SplitPenalty
