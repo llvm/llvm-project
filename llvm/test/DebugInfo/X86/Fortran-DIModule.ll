@@ -1,10 +1,10 @@
 ; This test checks attributes of a Fortran module.
-; RUN: %llc_dwarf -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o - | \
+; RUN: %llc_dwarf %s -filetype=obj -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: DW_TAG_module
 ; CHECK-NEXT: DW_AT_name      ("dummy")
-; CHECK-NEXT: DW_AT_decl_file ("/fortran/module.f90")
+; CHECK-NEXT: DW_AT_decl_file ("/fortran{{[/\\]}}module.f90")
 ; CHECK-NEXT: DW_AT_decl_line (2)
 
 ; Generated from flang compiler, Fortran source to regenerate:
