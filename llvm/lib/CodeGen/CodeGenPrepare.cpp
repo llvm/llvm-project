@@ -392,6 +392,8 @@ class TypePromotionTransaction;
     bool optimizeLoadExt(LoadInst *Load);
     bool optimizeShiftInst(BinaryOperator *BO);
     bool optimizeSelectInst(SelectInst *SI);
+    bool sinkShuffleVectorToShift(ShuffleVectorInst *SVI);
+    bool convertSplatType(ShuffleVectorInst *SVI);
     bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
     bool optimizeSwitchInst(SwitchInst *SI);
     bool optimizeExtractElementInst(Instruction *Inst);
@@ -6419,7 +6421,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 /// (e.g. x86 only introduced "vpsllvd" and friends with AVX2). In these cases
 /// it's often worth sinking a shufflevector splat down to its use so that
 /// codegen can spot all lanes are identical.
-bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
+bool CodeGenPrepare::sinkShuffleVectorToShift(ShuffleVectorInst *SVI) {
   BasicBlock *DefBB = SVI->getParent();
 
   // Only do this xform if variable vector shifts are particularly expensive.
@@ -6469,6 +6471,58 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   }
 
   return MadeChange;
+}
+
+/// Some targets only accept certain types for splat inputs. For example a VDUP
+/// in MVE takes a GPR (integer) register, and the instruction that incorporate
+/// a VDUP (such as a VADD qd, qm, rm) also require a gpr register.
+bool CodeGenPrepare::convertSplatType(ShuffleVectorInst *SVI) {
+  if (!match(SVI,
+             m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
+                             m_Undef(), m_ZeroMask())))
+    return false;
+  Type *NewType = TLI->shouldConvertSplatType(SVI);
+  if (!NewType)
+    return false;
+
+  VectorType *SVIVecType = cast<VectorType>(SVI->getType());
+  Type *SVIType = SVIVecType->getScalarType();
+  assert(!NewType->isVectorTy() && "Expected a scalar type!");
+  assert(NewType->getScalarSizeInBits() == SVIType->getScalarSizeInBits() &&
+         "Expected a type of the same size!");
+  Type *NewVecType = VectorType::get(NewType, SVIVecType->getNumElements());
+
+  // Create a bitcast (shuffle (insert (bitcast(..))))
+  IRBuilder<> Builder(SVI->getContext());
+  Builder.SetInsertPoint(SVI);
+  Value *BC1 = Builder.CreateBitCast(
+      cast<Instruction>(SVI->getOperand(0))->getOperand(1), NewType);
+  Value *Insert = Builder.CreateInsertElement(UndefValue::get(NewVecType), BC1,
+                                              (uint64_t)0);
+  Value *Shuffle = Builder.CreateShuffleVector(
+      Insert, UndefValue::get(NewVecType), SVI->getShuffleMask());
+  Value *BC2 = Builder.CreateBitCast(Shuffle, SVIVecType);
+
+  SVI->replaceAllUsesWith(BC2);
+  RecursivelyDeleteTriviallyDeadInstructions(SVI);
+
+  // Also hoist the bitcast up to its operand if it they are not in the same
+  // block.
+  if (auto *BCI = dyn_cast<Instruction>(BC1))
+    if (auto *Op = dyn_cast<Instruction>(BCI->getOperand(0)))
+      if (BCI->getParent() != Op->getParent() && !isa<PHINode>(Op) &&
+          !Op->isTerminator() && !Op->isEHPad())
+        BCI->moveAfter(Op);
+
+  return true;
+}
+
+bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
+  if (sinkShuffleVectorToShift(SVI))
+    return true;
+  if (convertSplatType(SVI))
+    return true;
+  return false;
 }
 
 bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {

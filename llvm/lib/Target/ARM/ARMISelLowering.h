@@ -384,6 +384,7 @@ class VectorType;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
     bool shouldSinkOperands(Instruction *I,
                             SmallVectorImpl<Use *> &Ops) const override;
+    Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const override;
 
     bool isFNegFree(EVT VT) const override;
 
