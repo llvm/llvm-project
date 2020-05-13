@@ -132,7 +132,7 @@ define void @promote(<4 x i64>* %arg) #0 {
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
 ; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* [[TMP]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* [[TMP]], align 32
 ; IS__TUNIT_NPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2

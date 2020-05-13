@@ -77,7 +77,7 @@ ret_bb:
 }
 
 define void @func4() {
-; CHECK-LABEL: define {{[^@]+}}@func4
+; CHECK-LABEL: define {{[^@]+}}@func4()
 ; CHECK-NEXT:    call void @func5()
 ; CHECK-NEXT:    ret void
 ;
@@ -86,13 +86,13 @@ define void @func4() {
 }
 
 define internal void @func5(i32 %0) {
-; CHECK-LABEL: define {{[^@]+}}@func5
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8*
-; CHECK-NEXT:    br label %block
+; CHECK-LABEL: define {{[^@]+}}@func5()
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i8*
+; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
-; CHECK-NEXT:    store i8* blockaddress(@func5, %block), i8** [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[TMP1]]
-; CHECK-NEXT:    call void @func6(i8* [[TMP2]])
+; CHECK-NEXT:    store i8* blockaddress(@func5, [[BLOCK]]), i8** [[TMP]], align 8
+; CHECK-NEXT:    [[ADDR:%.*]] = load i8*, i8** [[TMP]], align 8
+; CHECK-NEXT:    call void @func6(i8* [[ADDR]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i8*

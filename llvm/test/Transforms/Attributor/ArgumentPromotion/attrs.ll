@@ -107,10 +107,10 @@ define i32 @test(i32* %X) {
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 1
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 8
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]], i32 zeroext 0)
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[C]]
 ;
@@ -126,7 +126,7 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[C]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test
-; IS__CGSCC_NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[X:%.*]])
+; IS__CGSCC_NPM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X:%.*]])
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
@@ -136,8 +136,8 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_NPM-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 1
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 1
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 8
+; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]])
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
 ;

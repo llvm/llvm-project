@@ -5053,6 +5053,11 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     if (!PrivatizableType.getValue())
       return indicatePessimisticFixpoint();
 
+    // The dependence is optional so we don't give up once we give up on the
+    // alignment.
+    A.getAAFor<AAAlign>(*this, IRPosition::value(getAssociatedValue()),
+                        /* TrackDependence */ true, DepClassTy::OPTIONAL);
+
     // Avoid arguments with padding for now.
     if (!getIRPosition().hasAttr(Attribute::ByVal) &&
         !ArgumentPromotionPass::isDenselyPacked(PrivatizableType.getValue(),
@@ -5267,8 +5272,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
 
   /// Extract values from \p Base according to the type \p PrivType at the
   /// call position \p ACS. The values are appended to \p ReplacementValues.
-  void createReplacementValues(Type *PrivType, AbstractCallSite ACS,
-                               Value *Base,
+  void createReplacementValues(Align Alignment, Type *PrivType,
+                               AbstractCallSite ACS, Value *Base,
                                SmallVectorImpl<Value *> &ReplacementValues) {
     assert(Base && "Expected base value!");
     assert(PrivType && "Expected privatizable type!");
@@ -5281,7 +5286,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       Base = BitCastInst::CreateBitOrPointerCast(Base, PrivType->getPointerTo(),
                                                  "", ACS.getInstruction());
 
-    // TODO: Improve the alignment of the loads.
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
       const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
@@ -5291,7 +5295,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             constructPointer(PointeeTy->getPointerTo(), Base,
                              PrivStructLayout->getElementOffset(u), IRB, DL);
         LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP);
-        L->setAlignment(Align(1));
+        L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
@@ -5302,12 +5306,12 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         Value *Ptr =
             constructPointer(PointeePtrTy, Base, u * PointeeTySize, IRB, DL);
         LoadInst *L = new LoadInst(PointeePtrTy, Ptr, "", IP);
-        L->setAlignment(Align(1));
+        L->setAlignment(Alignment);
         ReplacementValues.push_back(L);
       }
     } else {
       LoadInst *L = new LoadInst(PrivType, Base, "", IP);
-      L->setAlignment(Align(1));
+      L->setAlignment(Alignment);
       ReplacementValues.push_back(L);
     }
   }
@@ -5333,6 +5337,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
 
     Argument *Arg = getAssociatedArgument();
+    // Query AAAlign attribute for alignment of associated argument to
+    // determine the best alignment of loads.
+    const auto &AlignAA = A.getAAFor<AAAlign>(*this, IRPosition::value(*Arg));
 
     // Callback to repair the associated function. A new alloca is placed at the
     // beginning and initialized with the values passed through arguments. The
@@ -5356,9 +5363,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // of the privatizable type are loaded prior to the call and passed to the
     // new function version.
     Attributor::ArgumentReplacementInfo::ACSRepairCBTy ACSRepairCB =
-        [=](const Attributor::ArgumentReplacementInfo &ARI,
-            AbstractCallSite ACS, SmallVectorImpl<Value *> &NewArgOperands) {
+        [=, &AlignAA](const Attributor::ArgumentReplacementInfo &ARI,
+                      AbstractCallSite ACS,
+                      SmallVectorImpl<Value *> &NewArgOperands) {
+          // When no alignment is specified for the load instruction,
+          // natural alignment is assumed.
           createReplacementValues(
+              assumeAligned(AlignAA.getAssumedAlign()),
               PrivatizableType.getValue(), ACS,
               ACS.getCallArgOperand(ARI.getReplacedArg().getArgNo()),
               NewArgOperands);
