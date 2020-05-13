@@ -251,7 +251,7 @@ void collapseParallelLoops(scf::ParallelOp loops,
 /// numProcessors = [gridDim.x, blockDim.x], the loop:
 ///
 /// ```
-///    loop.for %i = %lb to %ub step %step {
+///    scf.for %i = %lb to %ub step %step {
 ///      ...
 ///    }
 /// ```
@@ -259,7 +259,7 @@ void collapseParallelLoops(scf::ParallelOp loops,
 /// is rewritten into a version resembling the following pseudo-IR:
 ///
 /// ```
-///    loop.for %i = %lb + %step * (threadIdx.x + blockIdx.x * blockDim.x)
+///    scf.for %i = %lb + %step * (threadIdx.x + blockIdx.x * blockDim.x)
 ///       to %ub step %gridDim.x * blockDim.x * %step {
 ///      ...
 ///    }

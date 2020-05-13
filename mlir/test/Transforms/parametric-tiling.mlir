@@ -28,16 +28,16 @@ func @rectangular(%arg0: memref<?x?xf32>) {
   // TILE_74-NEXT: %[[diff2_adj:.*]] = addi %[[diff2]], %[[adjustment2]]
   // TILE_74-NEXT: %[[range2:.*]] = divi_signed %[[diff2_adj]], %c2
 
-  // Ceildiv to get the parametric tile size for the second original loop.
+  // Ceildiv to get the parametric tile size for the second original scf.
   // TILE_74:      %[[sum2:.*]] = addi %[[range2]], %c3
   // TILE_74-NEXT: %[[size2:.*]] = divi_signed %[[sum2]], %c4
   // New inner step (original is %c2).
   // TILE_74-NEXT:     %[[step2:.*]] = muli %c2, %[[size2]]
 
   // Updated outer loop(s) use new steps.
-  // COMMON: loop.for %[[i:.*]] = %c2 to %c44 step %[[step]]
-  // TILE_74:loop.for %[[j:.*]] = %c1 to %c44 step %[[step2]]
- loop.for %i = %c2 to %c44 step %c1 {
+  // COMMON: scf.for %[[i:.*]] = %c2 to %c44 step %[[step]]
+  // TILE_74:scf.for %[[j:.*]] = %c1 to %c44 step %[[step2]]
+ scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = addi %[[i]], %[[step]]
     // COMMON-NEXT: cmpi "slt", %c44, %[[stepped]]
@@ -47,15 +47,15 @@ func @rectangular(%arg0: memref<?x?xf32>) {
     // TILE_74-NEXT: cmpi "slt", %c44, %[[stepped2]]
     // TILE_74-NEXT: %[[ub2:.*]] = select {{.*}}, %c44, %[[stepped2]]
 
-    // Created inner loop.
-    // COMMON:loop.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
+    // Created inner scf.
+    // COMMON:scf.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
 
     // This loop is not modified in TILE_7 case.
-    // TILE_7: loop.for %[[j:.*]] = %c1 to %c44 step %c2
+    // TILE_7: scf.for %[[j:.*]] = %c1 to %c44 step %c2
     //
     // But is modified in TILE_74 case.
-    // TILE_74:loop.for %[[jj:.*]] = %[[j]] to %[[ub2]] step %c2
-   loop.for %j = %c1 to %c44 step %c2 {
+    // TILE_74:scf.for %[[jj:.*]] = %[[j]] to %[[ub2]] step %c2
+   scf.for %j = %c1 to %c44 step %c2 {
       // The right iterator are used.
       // TILE_7:  load %arg0[%[[ii]], %[[j]]]
       // TILE_74: load %arg0[%[[ii]], %[[jj]]]
@@ -87,8 +87,8 @@ func @triangular(%arg0: memref<?x?xf32>) {
   // Constant adjustment for inner loop has been hoisted out.
   // TILE_74:      %[[adjustment2:.*]] = subi %c2, %c1_{{.*}}
 
-  // New outer loop.
-  // COMMON: loop.for %[[i:.*]] = %c2 to %c44 step %[[step]]
+  // New outer scf.
+  // COMMON: scf.for %[[i:.*]] = %c2 to %c44 step %[[step]]
 
   // Range of the original inner loop
   //   (upper - lower + step - 1) / step
@@ -97,15 +97,15 @@ func @triangular(%arg0: memref<?x?xf32>) {
   // TILE_74-NEXT: %[[diff2_adj:.*]] = addi %[[diff2]], %[[adjustment2]]
   // TILE_74-NEXT: %[[range2:.*]] = divi_signed %[[diff2_adj]], %c2
 
-  // Ceildiv to get the parametric tile size for the second original loop.
+  // Ceildiv to get the parametric tile size for the second original scf.
   // TILE_74:      %[[sum2:.*]] = addi %[[range2]], %c3
   // TILE_74-NEXT: %[[size2:.*]] = divi_signed %[[sum2]], %c4
   // New inner step (original is %c2).
   // TILE_74-NEXT:     %[[step2:.*]] = muli %c2, %[[size2]]
 
-  // New inner loop.
-  // TILE_74:loop.for %[[j:.*]] = %c1 to %[[i]] step %[[step2]]
- loop.for %i = %c2 to %c44 step %c1 {
+  // New inner scf.
+  // TILE_74:scf.for %[[j:.*]] = %c1 to %[[i]] step %[[step2]]
+ scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = addi %[[i]], %[[step]]
     // COMMON-NEXT: cmpi "slt", %c44, %[[stepped]]
@@ -114,15 +114,15 @@ func @triangular(%arg0: memref<?x?xf32>) {
     // TILE_74-NEXT: cmpi "slt", %[[i]], %[[stepped2]]
     // TILE_74-NEXT: %[[ub2:.*]] = select {{.*}}, %[[i]], %[[stepped2]]
     //
-    // Created inner loop.
-    // COMMON:loop.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
+    // Created inner scf.
+    // COMMON:scf.for %[[ii:.*]] = %[[i]] to %[[ub:.*]] step %c1
 
     // This loop is not modified in TILE_7 case.
-    // TILE_7: loop.for %[[j:.*]] = %c1 to %[[ii]] step %c2
+    // TILE_7: scf.for %[[j:.*]] = %c1 to %[[ii]] step %c2
     //
     // But is modified in TILE_74 case.
-    // TILE_74:loop.for %[[jj:.*]] = %[[j]] to %[[ub2]] step %c2
-   loop.for %j = %c1 to %i step %c2 {
+    // TILE_74:scf.for %[[jj:.*]] = %[[j]] to %[[ub2]] step %c2
+   scf.for %j = %c1 to %i step %c2 {
       // The right iterator are used.
       // TILE_7:  load %arg0[%[[ii]], %[[j]]]
       // TILE_74: load %arg0[%[[ii]], %[[jj]]]

@@ -12,15 +12,15 @@ module {
     // CHECK: [[TEMP1:%.*]] = muli [[ARG3]], [[ARG6]] : index
     // CHECK: [[BLOCKLOOPYLB:%.*]] = addi {{%.*}}, [[TEMP1]] : index
     // CHECK: [[BLOCKLOOPYSTEP:%.*]] = muli [[ARG3]], [[ARG12]] : index
-    // CHECK: loop.for [[BLOCKLOOPYIV:%.*]] = [[BLOCKLOOPYLB]] to {{%.*}} step [[BLOCKLOOPYSTEP]]
-    loop.for %iv1 = %c0 to %0 step %arg3 {
+    // CHECK: scf.for [[BLOCKLOOPYIV:%.*]] = [[BLOCKLOOPYLB]] to {{%.*}} step [[BLOCKLOOPYSTEP]]
+    scf.for %iv1 = %c0 to %0 step %arg3 {
 
       // CHECK: [[TEMP2:%.*]] = muli [[ARG4]], [[ARG5]] : index
       // CHECK: [[BLOCKLOOPXLB:%.*]] = addi  {{%.*}}, [[TEMP2]] : index
       // CHECK: [[BLOCKLOOPXSTEP:%.*]] = muli [[ARG4]], [[ARG11]] : index
-      // CHECK: loop.for [[BLOCKLOOPXIV:%.*]] = [[BLOCKLOOPXLB]] to {{%.*}} step [[BLOCKLOOPXSTEP]]
+      // CHECK: scf.for [[BLOCKLOOPXIV:%.*]] = [[BLOCKLOOPXLB]] to {{%.*}} step [[BLOCKLOOPXSTEP]]
 
-      loop.for %iv2 = %c0 to %1 step %arg4 {
+      scf.for %iv2 = %c0 to %1 step %arg4 {
 
         // TODO: This is effectively shared memory. Lower it to a
         // shared memory.
@@ -30,13 +30,13 @@ module {
         // CHECK: [[TEMP3:%.*]] = muli [[ARG20:%.*]], [[ARG9:%.*]] : index
         // CHECK: [[THREADLOOP1YLB:%.*]] = addi {{%.*}}, [[TEMP3]] : index
         // CHECK: [[THREADLOOP1YSTEP:%.*]] = muli [[ARG20]], [[ARG15]] : index
-        // CHECK: loop.for [[THREADLOOP1YIV:%.*]] = [[THREADLOOP1YLB]] to {{%.*}} step [[THREADLOOP1YSTEP]]
-        loop.for %iv3 = %c0 to %arg3 step %c1 {
+        // CHECK: scf.for [[THREADLOOP1YIV:%.*]] = [[THREADLOOP1YLB]] to {{%.*}} step [[THREADLOOP1YSTEP]]
+        scf.for %iv3 = %c0 to %arg3 step %c1 {
           // CHECK: [[TEMP4:%.*]] = muli [[ARG20]], [[ARG8]] : index
           // CHECK: [[THREADLOOP1XLB:%.*]] = addi {{%.*}}, [[TEMP4]] : index
           // CHECK: [[THREADLOOP1XSTEP:%.*]] = muli [[ARG20]], [[ARG14]] : index
-          // CHECK: loop.for [[THREADLOOP1XIV:%.*]] = [[THREADLOOP1XLB]] to {{%.*}} step [[THREADLOOP1XSTEP]]
-          loop.for %iv4 = %c1 to %arg4 step %c1 {
+          // CHECK: scf.for [[THREADLOOP1XIV:%.*]] = [[THREADLOOP1XLB]] to {{%.*}} step [[THREADLOOP1XSTEP]]
+          scf.for %iv4 = %c1 to %arg4 step %c1 {
             // CHECK: [[INDEX2:%.*]] = addi [[BLOCKLOOPYIV]], [[THREADLOOP1YIV]] : index
             %10 = addi %iv1, %iv3 : index
             // CHECK: [[INDEX1:%.*]] = addi [[BLOCKLOOPXIV]], [[THREADLOOP1XIV]] : index
@@ -54,13 +54,13 @@ module {
         // CHECK: [[TEMP5:%.*]] = muli [[ARG20]], [[ARG9]] : index
         // CHECK: [[THREADLOOP2YLB:%.*]] = addi {{%.*}}, [[TEMP5]] : index
         // CHECK: [[THREADLOOP2YSTEP:%.*]] = muli [[ARG20]], [[ARG15]] : index
-        // CHECK: loop.for [[THREADLOOP2YIV:%.*]] = [[THREADLOOP2YLB]] to {{%.*}} step [[THREADLOOP2YSTEP]]
-        loop.for %iv3 = %c0 to %arg3 step %c1 {
+        // CHECK: scf.for [[THREADLOOP2YIV:%.*]] = [[THREADLOOP2YLB]] to {{%.*}} step [[THREADLOOP2YSTEP]]
+        scf.for %iv3 = %c0 to %arg3 step %c1 {
           // CHECK: [[TEMP6:%.*]] = muli [[ARG20]], [[ARG8]] : index
           // CHECK: [[THREADLOOP2XLB:%.*]] = addi {{%.*}}, [[TEMP6]] : index
           // CHECK: [[THREADLOOP2XSTEP:%.*]] = muli [[ARG20]], [[ARG14]] : index
-          // CHECK: loop.for [[THREADLOOP2XIV:%.*]] = [[THREADLOOP2XLB]] to {{%.*}} step [[THREADLOOP2XSTEP]]
-          loop.for %iv4 = %c1 to %arg4 step %c1 {
+          // CHECK: scf.for [[THREADLOOP2XIV:%.*]] = [[THREADLOOP2XLB]] to {{%.*}} step [[THREADLOOP2XSTEP]]
+          scf.for %iv4 = %c1 to %arg4 step %c1 {
             // CHECK: [[INDEX3:%.*]] = addi [[BLOCKLOOPYIV]], [[THREADLOOP2YIV]] : index
             %13 = addi %iv1, %iv3 : index
             // CHECK: [[INDEX4:%.*]] = addi [[BLOCKLOOPXIV]], [[THREADLOOP2XIV]] : index

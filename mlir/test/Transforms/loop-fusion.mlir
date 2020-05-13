@@ -242,7 +242,7 @@ func @should_fuse_first_and_second_loops() {
   }
 
   // Should fuse first loop into the second (last loop should not be fused).
-  // Should create private memref '%2' for fused loop.
+  // Should create private memref '%2' for fused scf.
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>

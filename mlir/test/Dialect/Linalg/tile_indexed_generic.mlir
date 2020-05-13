@@ -21,7 +21,7 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 }
 // TILE-10n25-LABEL: func @indexed_generic_vector
 // TILE-10n25: %[[C10:.*]] = constant 10 : index
-// TILE-10n25: loop.for %[[J:.*]] = {{.*}} step %[[C10]]
+// TILE-10n25: scf.for %[[J:.*]] = {{.*}} step %[[C10]]
 // TILE-10n25:   linalg.indexed_generic
 // TILE-10n25:   ^bb0(%[[I:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32)
 // TILE-10n25:     %[[NEW_I:.*]] = addi %[[I]], %[[J]] : index
@@ -31,7 +31,7 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 
 // TILE-25n0-LABEL: func @indexed_generic_vector
 // TILE-25n0: %[[C25:.*]] = constant 25 : index
-// TILE-25n0: loop.for %[[J:.*]] = {{.*}} step %[[C25]]
+// TILE-25n0: scf.for %[[J:.*]] = {{.*}} step %[[C25]]
 // TILE-25n0:   linalg.indexed_generic
 // TILE-25n0:   ^bb0(%[[I:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32)
 // TILE-25n0:     %[[NEW_I:.*]] = addi %[[I]], %[[J]] : index
@@ -40,7 +40,7 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 // TILE-25n0:     %[[OUT:.*]] = addf %[[IN]], %[[NEW_I_FLOAT]] : f32
 
 // TILE-0n25-LABEL: func @indexed_generic_vector
-// TILE-0n25-NOT: loop.for %[[J:.*]] = {{.*}} step %[[C25]]
+// TILE-0n25-NOT: scf.for %[[J:.*]] = {{.*}} step %[[C25]]
 // TILE-0n25: linalg.indexed_generic
 
 #combined_indices_trait = {
@@ -67,8 +67,8 @@ func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x10
 // TILE-10n25-LABEL: func @indexed_generic_matrix
 // TILE-10n25: %[[C25:.*]] = constant 25 : index
 // TILE-10n25: %[[C10:.*]] = constant 10 : index
-// TILE-10n25: loop.for %[[K:.*]] = {{.*}} step %[[C10]]
-// TILE-10n25:   loop.for %[[L:.*]] = {{.*}} step %[[C25]]
+// TILE-10n25: scf.for %[[K:.*]] = {{.*}} step %[[C10]]
+// TILE-10n25:   scf.for %[[L:.*]] = {{.*}} step %[[C25]]
 // TILE-10n25:     linalg.indexed_generic
 // TILE-10n25:     ^bb0(%[[I:.*]]: index, %[[J:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32):
 // TILE-10n25:       %[[NEW_I:.*]] = addi %[[I]], %[[K]] : index
@@ -81,7 +81,7 @@ func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x10
 
 // TILE-25n0-LABEL: func @indexed_generic_matrix
 // TILE-25n0: %[[C25:.*]] = constant 25 : index
-// TILE-25n0: loop.for %[[L:.*]] = {{.*}} step %[[C25]]
+// TILE-25n0: scf.for %[[L:.*]] = {{.*}} step %[[C25]]
 // TILE-25n0:   linalg.indexed_generic
 // TILE-25n0:   ^bb0(%[[I:.*]]: index, %[[J:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32):
 // TILE-25n0:     %[[NEW_I:.*]] = addi %[[I]], %[[L]] : index
@@ -93,7 +93,7 @@ func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x10
 
 // TILE-0n25-LABEL: func @indexed_generic_matrix
 // TILE-0n25: %[[C25:.*]] = constant 25 : index
-// TILE-0n25: loop.for %[[L:.*]] = {{.*}} step %[[C25]]
+// TILE-0n25: scf.for %[[L:.*]] = {{.*}} step %[[C25]]
 // TILE-0n25:   linalg.indexed_generic
 // TILE-0n25:   ^bb0(%[[I:.*]]: index, %[[J:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32):
 // TILE-0n25:     %[[NEW_J:.*]] = addi %[[J]], %[[L]] : index

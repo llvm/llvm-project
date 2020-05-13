@@ -144,8 +144,8 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 // %c10 = constant 10 : index
 // operand_dim_0 = dim %operand, 0 : memref<50x100xf32>
 // operand_dim_1 = dim %operand, 1 : memref<50x100xf32>
-// loop.for %k = %c0 to operand_dim_0 step %c10 {
-//   loop.for %l = %c0 to operand_dim_1 step %c25 {
+// scf.for %k = %c0 to operand_dim_0 step %c10 {
+//   scf.for %l = %c0 to operand_dim_1 step %c25 {
 //     %4 = std.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
 //       : memref<50x100xf32> to memref<?x?xf32, #strided>
 //     %5 = std.subview %result[%k, %l][%c10, %c25][%c1, %c1]

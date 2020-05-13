@@ -40,7 +40,7 @@ createLoopToGPUPass(ArrayRef<int64_t> numWorkGroups,
                     ArrayRef<int64_t> workGroupSize);
 std::unique_ptr<OperationPass<FuncOp>> createLoopToGPUPass();
 
-/// Creates a pass that converts loop.parallel operations into a gpu.launch
+/// Creates a pass that converts scf.parallel operations into a gpu.launch
 /// operation. The mapping of loop dimensions to launch dimensions is derived
 /// from mapping attributes. See ParallelToGpuLaunchLowering::matchAndRewrite
 /// for a description of the used attributes.
