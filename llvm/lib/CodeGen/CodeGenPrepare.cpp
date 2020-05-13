@@ -6486,9 +6486,8 @@ bool CodeGenPrepare::convertSplatType(ShuffleVectorInst *SVI) {
     return false;
 
   VectorType *SVIVecType = cast<VectorType>(SVI->getType());
-  Type *SVIType = SVIVecType->getScalarType();
   assert(!NewType->isVectorTy() && "Expected a scalar type!");
-  assert(NewType->getScalarSizeInBits() == SVIType->getScalarSizeInBits() &&
+  assert(NewType->getScalarSizeInBits() == SVIVecType->getScalarSizeInBits() &&
          "Expected a type of the same size!");
   Type *NewVecType = VectorType::get(NewType, SVIVecType->getNumElements());
 
