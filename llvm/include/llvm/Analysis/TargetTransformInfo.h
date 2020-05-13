@@ -519,6 +519,9 @@ public:
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) const;
 
+  /// \returns true if LSR should not optimize a chain that includes \p I.
+  bool isProfitableLSRChainElement(Instruction *I) const;
+
   /// Return true if the target can fuse a compare and branch.
   /// Loop-strength-reduction (LSR) uses that knowledge to adjust its cost
   /// calculation for the instructions in a loop.
@@ -1233,6 +1236,7 @@ public:
                                      Instruction *I) = 0;
   virtual bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                              TargetTransformInfo::LSRCost &C2) = 0;
+  virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                           LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
@@ -1541,6 +1545,9 @@ public:
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) override {
     return Impl.isLSRCostLess(C1, C2);
+  }
+  bool isProfitableLSRChainElement(Instruction *I) override {
+    return Impl.isProfitableLSRChainElement(I);
   }
   bool canMacroFuseCmp() override { return Impl.canMacroFuseCmp(); }
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
