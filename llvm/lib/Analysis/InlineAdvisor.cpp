@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements inlining decision-making APIs.
+// This file implements InlineAdvisorAnalysis and DefaultInlineAdvisor, and
+// related types.
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,6 +46,126 @@ static cl::opt<int>
     InlineDeferralScale("inline-deferral-scale",
                         cl::desc("Scale to limit the cost of inline deferral"),
                         cl::init(-1), cl::Hidden);
+
+namespace {
+class DefaultInlineAdvice : public InlineAdvice {
+public:
+  DefaultInlineAdvice(DefaultInlineAdvisor *Advisor, CallBase &CB,
+                      Optional<InlineCost> OIC, OptimizationRemarkEmitter &ORE)
+      : InlineAdvice(Advisor, CB, OIC.hasValue()), OriginalCB(&CB), OIC(OIC),
+        ORE(ORE), DLoc(CB.getDebugLoc()), Block(CB.getParent()) {}
+
+private:
+  void recordUnsuccessfulInliningImpl(const InlineResult &Result) override {
+    using namespace ore;
+    llvm::setInlineRemark(*OriginalCB, std::string(Result.getFailureReason()) +
+                                           "; " + inlineCostStr(*OIC));
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+             << NV("Callee", Callee) << " will not be inlined into "
+             << NV("Caller", Caller) << ": "
+             << NV("Reason", Result.getFailureReason());
+    });
+  }
+
+  void recordInliningWithCalleeDeletedImpl() override {
+    emitInlinedInto(ORE, DLoc, Block, *Callee, *Caller, *OIC);
+  }
+
+  void recordInliningImpl() override {
+    emitInlinedInto(ORE, DLoc, Block, *Callee, *Caller, *OIC);
+  }
+
+private:
+  CallBase *const OriginalCB;
+  Optional<InlineCost> OIC;
+  OptimizationRemarkEmitter &ORE;
+
+  // Capture the context of CB before inlining, as a successful inlining may
+  // change that context, and we want to report success or failure in the
+  // original context.
+  const DebugLoc DLoc;
+  const BasicBlock *const Block;
+};
+
+} // namespace
+
+std::unique_ptr<InlineAdvice>
+DefaultInlineAdvisor::getAdvice(CallBase &CB, FunctionAnalysisManager &FAM) {
+  Function &Callee = *CB.getCalledFunction();
+  Function &F = *CB.getCaller();
+  ProfileSummaryInfo *PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
+                                .getCachedResult<ProfileSummaryAnalysis>(
+                                    *CB.getParent()->getParent()->getParent());
+
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  // FIXME: make GetAssumptionCache's decl similar to the other 2 below. May
+  // need changing the type of getInlineCost parameters? Also see similar case
+  // in Inliner.cpp
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+      [&](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(Callee);
+  };
+  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+
+  auto GetInlineCost = [&](CallBase &CB) {
+    Function &Callee = *CB.getCalledFunction();
+    auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
+    bool RemarksEnabled =
+        Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
+            DEBUG_TYPE);
+    return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, {GetBFI},
+                         GetTLI, PSI, RemarksEnabled ? &ORE : nullptr);
+  };
+  auto OIC = llvm::shouldInline(CB, GetInlineCost, ORE);
+  return std::make_unique<DefaultInlineAdvice>(this, CB, OIC, ORE);
+}
+
+InlineAdvice::InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
+                           bool IsInliningRecommended)
+    : Advisor(Advisor), Caller(CB.getCaller()), Callee(CB.getCalledFunction()),
+      IsInliningRecommended(IsInliningRecommended) {}
+
+void InlineAdvisor::markFunctionAsDeleted(Function *F) {
+  assert((!DeletedFunctions.count(F)) &&
+         "Cannot put cause a function to become dead twice!");
+  DeletedFunctions.insert(F);
+}
+
+void InlineAdvisor::freeDeletedFunctions() {
+  for (auto *F : DeletedFunctions)
+    delete F;
+  DeletedFunctions.clear();
+}
+
+void InlineAdvice::recordInliningWithCalleeDeleted() {
+  markRecorded();
+  Advisor->markFunctionAsDeleted(Callee);
+  recordInliningWithCalleeDeletedImpl();
+}
+
+AnalysisKey InlineAdvisorAnalysis::Key;
+
+bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
+                                              InliningAdvisorMode Mode) {
+  switch (Mode) {
+  case InliningAdvisorMode::Default:
+    Advisor.reset(new DefaultInlineAdvisor(Params));
+    break;
+  case InliningAdvisorMode::Development:
+    // To be added subsequently under conditional compilation.
+    break;
+  case InliningAdvisorMode::Release:
+    // To be added subsequently under conditional compilation.
+    break;
+  }
+  return !!Advisor;
+}
 
 /// Return true if inlining of CB can block the caller from being
 /// inlined which is proved to be more beneficial. \p IC is the

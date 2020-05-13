@@ -6,6 +6,7 @@
 ; a 'ret 10'
 ;
 ; RUN: opt -passes=inline -S < %s | FileCheck %s --check-prefix=INLINE --check-prefix=CHECK
+; RUN: opt -passes=inliner-wrapper -S < %s | FileCheck %s --check-prefix=INLINE --check-prefix=CHECK
 ; RUN: opt -passes=scc-oz-module-inliner -S < %s | FileCheck %s --check-prefix=MODULE --check-prefix=CHECK
 
 define void @modify_value({i32, float}* %v) {
