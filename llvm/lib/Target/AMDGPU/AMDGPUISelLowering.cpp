@@ -4141,12 +4141,12 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
 
 SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
                                                    const TargetRegisterClass *RC,
-                                                   unsigned Reg, EVT VT,
+                                                   Register Reg, EVT VT,
                                                    const SDLoc &SL,
                                                    bool RawReg) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  unsigned VReg;
+  Register VReg;
 
   if (!MRI.isLiveIn(Reg)) {
     VReg = MRI.createVirtualRegister(RC);
