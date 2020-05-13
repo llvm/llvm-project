@@ -380,10 +380,15 @@ class FunctionAnalysisManagerCGSCCProxy
 public:
   class Result {
   public:
+    explicit Result() : FAM(nullptr) {}
     explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
 
+    void updateFAM(FunctionAnalysisManager &FAM) { this->FAM = &FAM; }
     /// Accessor for the analysis manager.
-    FunctionAnalysisManager &getManager() { return *FAM; }
+    FunctionAnalysisManager &getManager() {
+      assert(FAM);
+      return *FAM;
+    }
 
     bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
                     CGSCCAnalysisManager::Invalidator &Inv);
@@ -415,7 +420,8 @@ using CGSCCAnalysisManagerFunctionProxy =
 /// update result struct for the overall CGSCC walk.
 LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
-    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR);
+    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
+    FunctionAnalysisManager &FAM);
 
 /// Helper to update the call graph after running a CGSCC pass.
 ///
@@ -425,7 +431,8 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
 /// update result struct for the overall CGSCC walk.
 LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
-    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR);
+    CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
+    FunctionAnalysisManager &FAM);
 
 /// Adaptor that maps from a SCC to its functions.
 ///
@@ -516,7 +523,7 @@ public:
       auto PAC = PA.getChecker<LazyCallGraphAnalysis>();
       if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Module>>()) {
         CurrentC = &updateCGAndAnalysisManagerForFunctionPass(CG, *CurrentC, *N,
-                                                              AM, UR);
+                                                              AM, UR, FAM);
         assert(
             CG.lookupSCC(*N) == CurrentC &&
             "Current SCC not updated to the SCC containing the current node!");
@@ -719,6 +726,7 @@ public:
       // Update the analysis manager with each run and intersect the total set
       // of preserved analyses so we're ready to iterate.
       AM.invalidate(*C, PassPA);
+
       PA.intersect(std::move(PassPA));
     }
 
@@ -753,6 +761,10 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
 
   // Get the call graph for this module.
   LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
+
+  // Get Function analysis manager from its proxy.
+  FunctionAnalysisManager &FAM =
+      AM.getCachedResult<FunctionAnalysisManagerModuleProxy>(M)->getManager();
 
   // We keep worklists to allow us to push more work onto the pass manager as
   // the passes are run.
@@ -829,11 +841,12 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
           continue;
         }
 
-        // Ensure we can proxy analysis updates from from the CGSCC analysis
-        // manager into the Function analysis manager by getting a proxy here.
-        // FIXME: This seems like a bit of a hack. We should find a cleaner
-        // or more costructive way to ensure this happens.
-        (void)CGAM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG);
+        // Ensure we can proxy analysis updates from the CGSCC analysis manager
+        // into the the Function analysis manager by getting a proxy here.
+        // This also needs to update the FunctionAnalysisManager, as this may be
+        // the first time we see this SCC.
+        CGAM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG).updateFAM(
+            FAM);
 
         // Each time we visit a new SCC pulled off the worklist,
         // a transformation of a child SCC may have also modified this parent
@@ -887,6 +900,13 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
           // Update the SCC and RefSCC if necessary.
           C = UR.UpdatedC ? UR.UpdatedC : C;
           RC = UR.UpdatedRC ? UR.UpdatedRC : RC;
+
+          if (UR.UpdatedC) {
+            // If we're updating the SCC, also update the FAM inside the proxy's
+            // result.
+            CGAM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG).updateFAM(
+                FAM);
+          }
 
           // If the CGSCC pass wasn't able to provide a valid updated SCC,
           // the current SCC may simply need to be skipped if invalid.
