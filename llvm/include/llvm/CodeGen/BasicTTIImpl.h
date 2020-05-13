@@ -262,6 +262,10 @@ public:
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
+  bool isProfitableLSRChainElement(Instruction *I) {
+    return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
+  }
+
   int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                            bool HasBaseReg, int64_t Scale, unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;

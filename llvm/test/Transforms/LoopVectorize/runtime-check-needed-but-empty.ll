@@ -33,9 +33,6 @@ define void @test(float* %A, i32 %x) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> undef, i64 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP16]] to i32
@@ -46,9 +43,6 @@ define void @test(float* %A, i32 %x) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = bitcast float* [[TMP21]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP23]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION6:%.*]] = add <4 x i32> [[BROADCAST_SPLAT5]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[TMP24]], [[X]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64

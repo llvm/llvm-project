@@ -2820,9 +2820,10 @@ bool IVChain::isProfitableIncrement(const SCEV *OperExpr,
 /// increments can be computed in fewer registers when chained.
 ///
 /// TODO: Consider IVInc free if it's already used in another chains.
-static bool
-isProfitableChain(IVChain &Chain, SmallPtrSetImpl<Instruction*> &Users,
-                  ScalarEvolution &SE) {
+static bool isProfitableChain(IVChain &Chain,
+                              SmallPtrSetImpl<Instruction *> &Users,
+                              ScalarEvolution &SE,
+                              const TargetTransformInfo &TTI) {
   if (StressIVChain)
     return true;
 
@@ -2851,7 +2852,14 @@ isProfitableChain(IVChain &Chain, SmallPtrSetImpl<Instruction*> &Users,
   unsigned NumConstIncrements = 0;
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
+
+  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
+    return true;
+
   for (const IVInc &Inc : Chain) {
+    if (TTI.isProfitableLSRChainElement(Inc.UserInst))
+      return true;
+
     if (Inc.IncExpr->isZero())
       continue;
 
@@ -3082,7 +3090,7 @@ void LSRInstance::CollectChains() {
   for (unsigned UsersIdx = 0, NChains = IVChainVec.size();
        UsersIdx < NChains; ++UsersIdx) {
     if (!isProfitableChain(IVChainVec[UsersIdx],
-                           ChainUsersVec[UsersIdx].FarUsers, SE))
+                           ChainUsersVec[UsersIdx].FarUsers, SE, TTI))
       continue;
     // Preserve the chain at UsesIdx.
     if (ChainIdx != UsersIdx)
