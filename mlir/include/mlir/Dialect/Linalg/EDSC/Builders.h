@@ -34,13 +34,13 @@ namespace edsc {
 class AffineLoopNestBuilder;
 class ParallelLoopNestBuilder;
 
-/// A LoopRangeBuilder is a generic NestedBuilder for loop.for operations.
+/// A LoopRangeBuilder is a generic NestedBuilder for scf.for operations.
 /// More specifically it is meant to be used as a temporary object for
 /// representing any nested MLIR construct that is "related to" an mlir::Value
 /// (for now an induction variable).
 class LoopRangeBuilder : public NestedBuilder {
 public:
-  /// Constructs a new loop.for and captures the associated induction
+  /// Constructs a new scf.for and captures the associated induction
   /// variable. A Value pointer is passed as the first argument and is the
   /// *only* way to capture the loop induction variable.
   LoopRangeBuilder(Value *iv, Value range);
@@ -58,9 +58,9 @@ public:
   Value operator()(std::function<void(void)> fun = nullptr);
 };
 
-/// Helper class to sugar building loop.for loop nests from ranges.
+/// Helper class to sugar building scf.for loop nests from ranges.
 /// This is similar to edsc::AffineLoopNestBuilder except it works on ranges
-/// directly. In the current implementation it produces loop.for operations.
+/// directly. In the current implementation it produces scf.for operations.
 class LoopNestRangeBuilder {
 public:
   LoopNestRangeBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> ranges);
@@ -72,7 +72,7 @@ private:
   SmallVector<LoopRangeBuilder, 4> loops;
 };
 
-/// Helper template class for building loop.for and affine.loop nests from
+/// Helper template class for building scf.for and affine.loop nests from
 /// ranges.
 template <typename LoopTy> class GenericLoopNestRangeBuilder {
 public:

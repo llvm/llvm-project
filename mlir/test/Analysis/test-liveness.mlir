@@ -205,17 +205,17 @@ func @nested_region(
   // CHECK-NEXT: val_7
   // CHECK-NEXT:    %0 = addi
   // CHECK-NEXT:    %1 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // %2 = addi
   // CHECK-NEXT:    %3 = addi
   // CHECK-NEXT: val_8
   // CHECK-NEXT:    %1 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // return %1
   // CHECK: EndLiveness
   %0 = addi %arg3, %arg4 : i32
   %1 = addi %arg4, %arg5 : i32
-  loop.for %arg6 = %arg0 to %arg1 step %arg2 {
+  scf.for %arg6 = %arg0 to %arg1 step %arg2 {
     // CHECK: Block: 1
     // CHECK-NEXT: LiveIn: arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
@@ -238,13 +238,13 @@ func @nested_region2(
   // CHECK-NEXT: val_7
   // CHECK-NEXT:    %0 = addi
   // CHECK-NEXT:    %1 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // %2 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // %3 = addi
   // CHECK-NEXT: val_8
   // CHECK-NEXT:    %1 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // return %1
   // CHECK: EndLiveness
   %arg0 : index, %arg1 : index, %arg2 : index,
@@ -252,18 +252,18 @@ func @nested_region2(
   %buffer : memref<i32>) -> i32 {
   %0 = addi %arg3, %arg4 : i32
   %1 = addi %arg4, %arg5 : i32
-  loop.for %arg6 = %arg0 to %arg1 step %arg2 {
+  scf.for %arg6 = %arg0 to %arg1 step %arg2 {
     // CHECK: Block: 1
     // CHECK-NEXT: LiveIn: arg0@0 arg1@0 arg2@0 arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
     // CHECK-NEXT: BeginLiveness
     // CHECK-NEXT: val_10
     // CHECK-NEXT:    %2 = addi
-    // CHECK-NEXT:    loop.for
+    // CHECK-NEXT:    scf.for
     // CHECK:         // %3 = addi
     // CHECK: EndLiveness
     %2 = addi %0, %arg5 : i32
-    loop.for %arg7 = %arg0 to %arg1 step %arg2 {
+    scf.for %arg7 = %arg0 to %arg1 step %arg2 {
       %3 = addi %2, %0 : i32
       store %3, %buffer[] : memref<i32>
     }
@@ -283,10 +283,10 @@ func @nested_region3(
   // CHECK-NEXT: val_7
   // CHECK-NEXT:    %0 = addi
   // CHECK-NEXT:    %1 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // br ^bb1
   // CHECK-NEXT:    %2 = addi
-  // CHECK-NEXT:    loop.for
+  // CHECK-NEXT:    scf.for
   // CHECK:         // %2 = addi
   // CHECK: EndLiveness
   %arg0 : index, %arg1 : index, %arg2 : index,
@@ -294,7 +294,7 @@ func @nested_region3(
   %buffer : memref<i32>) -> i32 {
   %0 = addi %arg3, %arg4 : i32
   %1 = addi %arg4, %arg5 : i32
-  loop.for %arg6 = %arg0 to %arg1 step %arg2 {
+  scf.for %arg6 = %arg0 to %arg1 step %arg2 {
     // CHECK: Block: 1
     // CHECK-NEXT: LiveIn: arg5@0 arg6@0 val_7
     // CHECK-NEXT: LiveOut:{{ *$}}
@@ -307,7 +307,7 @@ func @nested_region3(
   // CHECK: Block: 2
   // CHECK-NEXT: LiveIn: arg0@0 arg1@0 arg2@0 arg6@0 val_7 val_8
   // CHECK-NEXT: LiveOut:{{ *$}}
-  loop.for %arg7 = %arg0 to %arg1 step %arg2 {
+  scf.for %arg7 = %arg0 to %arg1 step %arg2 {
     // CHECK: Block: 3
     // CHECK-NEXT: LiveIn: arg6@0 val_7 val_8
     // CHECK-NEXT: LiveOut:{{ *$}}

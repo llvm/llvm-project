@@ -21,9 +21,9 @@ gpu.module @foo {
     // Verify that loops for the copy are emitted. We only check the number of
     // loops here since their bounds are produced by mapLoopToProcessorIds,
     // tested separately.
-    // CHECK: loop.for %[[i0:.*]] =
-    // CHECK:   loop.for %[[i1:.*]] =
-    // CHECK:     loop.for %[[i2:.*]] =
+    // CHECK: scf.for %[[i0:.*]] =
+    // CHECK:   scf.for %[[i1:.*]] =
+    // CHECK:     scf.for %[[i2:.*]] =
 
     // Verify that the copy is emitted and uses only the last two loops.
     // CHECK:       %[[v:.*]] = load %[[arg]][%[[i1]], %[[i2]]]
@@ -37,9 +37,9 @@ gpu.module @foo {
     // Verify that loops for the copy are emitted. We only check the number of
     // loops here since their bounds are produced by mapLoopToProcessorIds,
     // tested separately.
-    // CHECK: loop.for %[[i0:.*]] =
-    // CHECK:   loop.for %[[i1:.*]] =
-    // CHECK:     loop.for %[[i2:.*]] =
+    // CHECK: scf.for %[[i0:.*]] =
+    // CHECK:   scf.for %[[i1:.*]] =
+    // CHECK:     scf.for %[[i2:.*]] =
 
     // Verify that the copy is emitted and uses only the last two loops.
     // CHECK:       %[[v:.*]] = load %[[promoted]][%[[i1]], %[[i2]]]
@@ -73,11 +73,11 @@ gpu.module @foo {
     // CHECK-DAG: %[[bdz:.*]] = "gpu.block_dim"() {dimension = "z"}
 
     // Verify that loops for the copy are emitted.
-    // CHECK: loop.for %[[i0:.*]] =
-    // CHECK:   loop.for %[[i1:.*]] =
-    // CHECK:     loop.for %[[i2:.*]] =
-    // CHECK:       loop.for %[[i3:.*]] =
-    // CHECK:         loop.for %[[i4:.*]] =
+    // CHECK: scf.for %[[i0:.*]] =
+    // CHECK:   scf.for %[[i1:.*]] =
+    // CHECK:     scf.for %[[i2:.*]] =
+    // CHECK:       scf.for %[[i3:.*]] =
+    // CHECK:         scf.for %[[i4:.*]] =
 
     // Verify that the copy is emitted.
     // CHECK:           %[[v:.*]] = load %[[arg]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
@@ -88,11 +88,11 @@ gpu.module @foo {
     "use"(%arg0) : (memref<8x7x6x5x4xf32>) -> ()
 
     // Verify that loop loops for the copy are emitted.
-    // CHECK: loop.for %[[i0:.*]] =
-    // CHECK:   loop.for %[[i1:.*]] =
-    // CHECK:     loop.for %[[i2:.*]] =
-    // CHECK:       loop.for %[[i3:.*]] =
-    // CHECK:         loop.for %[[i4:.*]] =
+    // CHECK: scf.for %[[i0:.*]] =
+    // CHECK:   scf.for %[[i1:.*]] =
+    // CHECK:     scf.for %[[i2:.*]] =
+    // CHECK:       scf.for %[[i3:.*]] =
+    // CHECK:         scf.for %[[i4:.*]] =
 
     // Verify that the copy is emitted.
     // CHECK:           %[[v:.*]] = load %[[promoted]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]

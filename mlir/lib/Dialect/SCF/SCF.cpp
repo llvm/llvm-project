@@ -582,7 +582,7 @@ static LogicalResult verify(ReduceOp op) {
   // Check that the block is terminated by a ReduceReturnOp.
   if (!isa<ReduceReturnOp>(block.getTerminator()))
     return op.emitOpError("the block inside reduce should be terminated with a "
-                          "'loop.reduce.return' op");
+                          "'scf.reduce.return' op");
 
   return success();
 }
@@ -649,7 +649,7 @@ static LogicalResult verify(YieldOp op) {
   } else if (isa<ParallelOp>(parentOp)) {
     if (op.getNumOperands() != 0)
       return op.emitOpError()
-             << "yield inside loop.parallel is not allowed to have operands";
+             << "yield inside scf.parallel is not allowed to have operands";
   } else {
     return op.emitOpError()
            << "yield only terminates If, For or Parallel regions";

@@ -7,13 +7,13 @@ module {
     %2 = dim %arg0, 2 : memref<?x?x?xf32>
     %c0 = constant 0 : index
     // CHECK: gpu.launch
-    // CHECK:   loop.for {{.*}} {
-    // CHECK:     loop.for {{.*}} {
-    // CHECK:       loop.for {{.*}} {
+    // CHECK:   scf.for {{.*}} {
+    // CHECK:     scf.for {{.*}} {
+    // CHECK:       scf.for {{.*}} {
     // CHECK:         alloc
-    // CHECK:         loop.for {{.*}} {
-    // CHECK:           loop.for {{.*}} {
-    // CHECK:             loop.for {{.*}} {
+    // CHECK:         scf.for {{.*}} {
+    // CHECK:           scf.for {{.*}} {
+    // CHECK:             scf.for {{.*}} {
     // CHECK:               load
     // CHECK:               load
     // CHECK:               addf
@@ -21,9 +21,9 @@ module {
     // CHECK:             }
     // CHECK-NEXT:      }
     // CHECK-NEXT:    }
-    // CHECK:         loop.for {{.*}} {
-    // CHECK:           loop.for {{.*}} {
-    // CHECK:             loop.for {{.*}} {
+    // CHECK:         scf.for {{.*}} {
+    // CHECK:           scf.for {{.*}} {
+    // CHECK:             scf.for {{.*}} {
     // CHECK:               load
     // CHECK:               load
     // CHECK:               mulf
@@ -32,9 +32,9 @@ module {
     // CHECK-NEXT:      }
     // CHECK-NEXT:    }
     // CHECK:         dealloc
-    loop.for %iv1 = %c0 to %0 step %t1 {
-      loop.for %iv2 = %c0 to %1 step %t2 {
-        loop.for %iv3 = %c0 to %2 step %t3 {
+    scf.for %iv1 = %c0 to %0 step %t1 {
+      scf.for %iv2 = %c0 to %1 step %t2 {
+        scf.for %iv3 = %c0 to %2 step %t3 {
           %6 = alloc(%t1, %t2, %t3) : memref<?x?x?xf32>
           %ubcmp1 = cmpi "slt", %0, %t1 : index
           %ub1 = select %ubcmp1, %0, %t1 : index
@@ -42,9 +42,9 @@ module {
           %ub2 = select %ubcmp2, %1, %t2 : index
           %ubcmp3 = cmpi "slt", %2, %t3 : index
           %ub3 = select %ubcmp3, %2, %t3 : index
-          loop.for %iv4 = %iv1 to %ub1 step %step1 {
-            loop.for %iv5 = %iv2 to %ub2 step %step2 {
-              loop.for %iv6 = %iv3 to %ub3 step %step3 {
+          scf.for %iv4 = %iv1 to %ub1 step %step1 {
+            scf.for %iv5 = %iv2 to %ub2 step %step2 {
+              scf.for %iv6 = %iv3 to %ub3 step %step3 {
                 %7 = load %arg0[%iv4, %iv5, %iv6] : memref<?x?x?xf32>
                 %8 = load %arg1[%iv4, %iv6, %iv5] : memref<?x?x?xf32>
                 %9 = addf %7, %8 : f32
@@ -58,9 +58,9 @@ module {
               }
             }
           }
-          loop.for %iv7 = %iv1 to %ub1 step %step1 {
-            loop.for %iv8 = %iv2 to %ub2 step %step2 {
-              loop.for %iv9 = %iv3 to %ub3 step %step3 {
+          scf.for %iv7 = %iv1 to %ub1 step %step1 {
+            scf.for %iv8 = %iv2 to %ub2 step %step2 {
+              scf.for %iv9 = %iv3 to %ub3 step %step3 {
                 %16 = subi %iv7, %iv1 : index
                 %17 = divi_signed %16, %step1 : index
                 %18 = subi %iv8, %iv2 : index

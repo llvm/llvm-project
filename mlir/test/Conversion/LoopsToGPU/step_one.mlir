@@ -57,7 +57,7 @@ func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
         // CHECK-22-SAME: blocks
         // CHECK-22-SAME: threads
 
-          // Remapping of the loop induction variables in the last mapped loop.
+          // Remapping of the loop induction variables in the last mapped scf.
           // CHECK-22:        %[[i:.*]] = addi %{{.*}}, %{{.*}} : index
           // CHECK-22-NEXT:   %[[j:.*]] = addi %{{.*}}, %{{.*}} : index
           // CHECK-22-NEXT:   %[[ii:.*]] = addi %{{.*}}, %{{.*}} : index

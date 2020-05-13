@@ -91,7 +91,7 @@ func @func_loop(%arg0 : i32, %arg1 : i32) {
 
 // CHECK-LABEL: Testing : nested_region
 func @nested_region(%arg0 : index, %arg1 : index, %arg2 : index) {
-  loop.for %arg3 = %arg0 to %arg1 step %arg2 { }
+  scf.for %arg3 = %arg0 to %arg1 step %arg2 { }
   return
 }
 
@@ -110,9 +110,9 @@ func @nested_region(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // CHECK-LABEL: Testing : nested_region2
 func @nested_region2(%arg0 : index, %arg1 : index, %arg2 : index) {
-  loop.for %arg3 = %arg0 to %arg1 step %arg2 {
-    loop.for %arg4 = %arg0 to %arg1 step %arg2 {
-      loop.for %arg5 = %arg0 to %arg1 step %arg2 { }
+  scf.for %arg3 = %arg0 to %arg1 step %arg2 {
+    scf.for %arg4 = %arg0 to %arg1 step %arg2 {
+      scf.for %arg5 = %arg0 to %arg1 step %arg2 { }
     }
   }
   return
@@ -160,8 +160,8 @@ func @func_loop_nested_region(
 ^loopBody:
   %const0 = constant 1 : i32
   %inc = addi %counter, %const0 : i32
-  loop.for %arg5 = %arg2 to %arg3 step %arg4 {
-    loop.for %arg6 = %arg2 to %arg3 step %arg4 { }
+  scf.for %arg5 = %arg2 to %arg3 step %arg4 {
+    scf.for %arg6 = %arg2 to %arg3 step %arg4 { }
   }
   br ^loopHeader(%inc : i32)
 ^exit:

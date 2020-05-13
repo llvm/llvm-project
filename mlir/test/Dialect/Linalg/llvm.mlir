@@ -62,7 +62,7 @@ func @slice_with_range_and_index(%arg0: memref<?x?xf64, offset: ?, strides: [?, 
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %R = linalg.range %c0:%c1:%c1 : !linalg.range
-  loop.for %i0 = %c0 to %c1 step %c1 {
+  scf.for %i0 = %c0 to %c1 step %c1 {
     %1 = linalg.slice %arg0[%i0, %R] : memref<?x?xf64, offset: ?, strides: [?, 1]>, index, !linalg.range, memref<?xf64, offset: ?, strides: [1]>
   }
   return
@@ -180,9 +180,9 @@ func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C
 // LLVM-LOOPS: %[[T0:.*]] = dim %[[A]], 0 : memref<?x?xvector<4xf32>>
 // LLVM-LOOPS: %[[T1:.*]] = dim %[[A]], 1 : memref<?x?xvector<4xf32>>
 // LLVM-LOOPS: %[[T2:.*]] = dim %[[B]], 1 : memref<?x?xvector<4xf32>>
-// LLVM-LOOPS: loop.for %[[I:.*]] = %[[C0]] to %[[T0]] step %[[C1]] {
-// LLVM-LOOPS: loop.for %[[J:.*]] = %[[C0]] to %[[T2]] step %[[C1]] {
-// LLVM-LOOPS: loop.for %[[K:.*]] = %[[C0]] to %[[T1]] step %[[C1]] {
+// LLVM-LOOPS: scf.for %[[I:.*]] = %[[C0]] to %[[T0]] step %[[C1]] {
+// LLVM-LOOPS: scf.for %[[J:.*]] = %[[C0]] to %[[T2]] step %[[C1]] {
+// LLVM-LOOPS: scf.for %[[K:.*]] = %[[C0]] to %[[T1]] step %[[C1]] {
 // LLVM-LOOPS:   %[[T3:.*]] = load %[[A]][%[[I]], %[[K]]] : memref<?x?xvector<4xf32>>
 // LLVM-LOOPS:   %[[T4:.*]] = load %[[B]][%[[K]], %[[J]]] : memref<?x?xvector<4xf32>>
 // LLVM-LOOPS:   %[[T5:.*]] = load %[[C]][%[[I]], %[[J]]] : memref<?x?xvector<4x4xf32>>
