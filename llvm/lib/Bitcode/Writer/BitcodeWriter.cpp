@@ -1809,6 +1809,7 @@ void ModuleBitcodeWriter::writeDIModule(const DIModule *N,
   Record.push_back(N->isDistinct());
   for (auto &I : N->operands())
     Record.push_back(VE.getMetadataOrNullID(I));
+  Record.push_back(N->getLineNo());
 
   Stream.EmitRecord(bitc::METADATA_MODULE, Record, Abbrev);
   Record.clear();

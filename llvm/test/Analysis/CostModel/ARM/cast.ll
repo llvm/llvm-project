@@ -1868,56 +1868,56 @@ define i32 @bitcasts() {
 ; CHECK-NEON-LABEL: 'bitcasts'
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a = bitcast i32 undef to i32
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %b = bitcast float undef to float
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c = bitcast i32 undef to float
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d = bitcast float undef to i32
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %e = bitcast i64 undef to double
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = bitcast double undef to i64
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %g = bitcast half undef to i16
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %h = bitcast i16 undef to half
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = bitcast i32 undef to float
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = bitcast float undef to i32
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = bitcast i64 undef to double
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = bitcast double undef to i64
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-MVE-LABEL: 'bitcasts'
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a = bitcast i32 undef to i32
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %b = bitcast float undef to float
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c = bitcast i32 undef to float
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d = bitcast float undef to i32
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %e = bitcast i64 undef to double
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = bitcast double undef to i64
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = bitcast i32 undef to float
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = bitcast float undef to i32
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = bitcast i64 undef to double
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = bitcast double undef to i64
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %h = bitcast i16 undef to half
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-LABEL: 'bitcasts'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a = bitcast i32 undef to i32
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %b = bitcast float undef to float
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c = bitcast i32 undef to float
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d = bitcast float undef to i32
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %e = bitcast i64 undef to double
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = bitcast double undef to i64
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %g = bitcast half undef to i16
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %h = bitcast i16 undef to half
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = bitcast i32 undef to float
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = bitcast float undef to i32
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %e = bitcast i64 undef to double
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f = bitcast double undef to i64
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-BASE-LABEL: 'bitcasts'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a = bitcast i32 undef to i32
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %b = bitcast float undef to float
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c = bitcast i32 undef to float
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d = bitcast float undef to i32
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %e = bitcast i64 undef to double
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = bitcast double undef to i64
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %g = bitcast half undef to i16
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %h = bitcast i16 undef to half
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = bitcast i32 undef to float
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = bitcast float undef to i32
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %e = bitcast i64 undef to double
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f = bitcast double undef to i64
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-V8R-LABEL: 'bitcasts'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a = bitcast i32 undef to i32
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %b = bitcast float undef to float
-; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c = bitcast i32 undef to float
-; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d = bitcast float undef to i32
-; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %e = bitcast i64 undef to double
-; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f = bitcast double undef to i64
-; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %g = bitcast half undef to i16
-; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %h = bitcast i16 undef to half
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = bitcast i32 undef to float
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = bitcast float undef to i32
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = bitcast i64 undef to double
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = bitcast double undef to i64
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = bitcast half undef to i16
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = bitcast i16 undef to half
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %a = bitcast i32 undef to i32

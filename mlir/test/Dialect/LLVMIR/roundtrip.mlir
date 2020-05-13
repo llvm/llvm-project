@@ -97,6 +97,9 @@ func @ops(%arg0 : !llvm.i32, %arg1 : !llvm.float) {
 // CHECK:  %29 = llvm.fneg %arg1 : !llvm.float
   %29 = llvm.fneg %arg1 : !llvm.float
 
+// CHECK: "llvm.intr.sin"(%arg1) : (!llvm.float) -> !llvm.float
+  %30 = "llvm.intr.sin"(%arg1) : (!llvm.float) -> !llvm.float
+
 // CHECK:  llvm.return
   llvm.return
 }

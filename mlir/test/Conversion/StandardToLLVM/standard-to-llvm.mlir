@@ -30,6 +30,16 @@ func @rsqrt(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @sine(
+// CHECK-SAME: !llvm.float
+func @sine(%arg0 : f32) {
+  // CHECK: "llvm.intr.sin"(%arg0) : (!llvm.float) -> !llvm.float
+  %0 = sin %arg0 : f32
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt_double(
 // CHECK-SAME: !llvm.double
 func @rsqrt_double(%arg0 : f64) {

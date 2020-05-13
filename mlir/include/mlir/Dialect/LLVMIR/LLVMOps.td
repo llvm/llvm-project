@@ -788,6 +788,7 @@ def LLVM_LogOp : LLVM_UnaryIntrinsicOp<"log">;
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]>,
                     Arguments<(ins LLVM_Type:$addr, LLVM_Type:$rw,
                                LLVM_Type:$hint, LLVM_Type:$cache)>;
+def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 
 //

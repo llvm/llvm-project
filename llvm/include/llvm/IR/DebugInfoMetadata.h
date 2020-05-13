@@ -2097,64 +2097,72 @@ public:
   }
 };
 
-/// A (clang) module that has been imported by the compile unit.
-///
+/// Represents a module in the programming language, for example, a Clang
+/// module, or a Fortran module.
 class DIModule : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
+  unsigned LineNo;
 
-  DIModule(LLVMContext &Context, StorageType Storage, ArrayRef<Metadata *> Ops)
-      : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops) {}
+  DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
+           ArrayRef<Metadata *> Ops)
+      : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops),
+        LineNo(LineNo) {}
   ~DIModule() = default;
 
-  static DIModule *getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
-                           StringRef ConfigurationMacros, StringRef IncludePath,
-                           StringRef APINotesFile, StorageType Storage,
+  static DIModule *getImpl(LLVMContext &Context, DIFile *File, DIScope *Scope,
+                           StringRef Name, StringRef ConfigurationMacros,
+                           StringRef IncludePath, StringRef APINotesFile,
+                           unsigned LineNo, StorageType Storage,
                            bool ShouldCreate = true) {
-    return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
+    return getImpl(Context, File, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, ConfigurationMacros),
                    getCanonicalMDString(Context, IncludePath),
-                   getCanonicalMDString(Context, APINotesFile),
-                   Storage, ShouldCreate);
+                   getCanonicalMDString(Context, APINotesFile), LineNo, Storage,
+                   ShouldCreate);
   }
-  static DIModule *getImpl(LLVMContext &Context, Metadata *Scope,
-                           MDString *Name, MDString *ConfigurationMacros,
-                           MDString *IncludePath, MDString *APINotesFile,
+  static DIModule *getImpl(LLVMContext &Context, Metadata *File,
+                           Metadata *Scope, MDString *Name,
+                           MDString *ConfigurationMacros, MDString *IncludePath,
+                           MDString *APINotesFile, unsigned LineNo,
                            StorageType Storage, bool ShouldCreate = true);
 
   TempDIModule cloneImpl() const {
-    return getTemporary(getContext(), getScope(), getName(),
+    return getTemporary(getContext(), getFile(), getScope(), getName(),
                         getConfigurationMacros(), getIncludePath(),
-                        getAPINotesFile());
+                        getAPINotesFile(), getLineNo());
   }
 
 public:
   DEFINE_MDNODE_GET(DIModule,
-                    (DIScope * Scope, StringRef Name,
+                    (DIFile * File, DIScope *Scope, StringRef Name,
                      StringRef ConfigurationMacros, StringRef IncludePath,
-                     StringRef APINotesFile),
-                    (Scope, Name, ConfigurationMacros, IncludePath,
-                     APINotesFile))
+                     StringRef APINotesFile, unsigned LineNo),
+                    (File, Scope, Name, ConfigurationMacros, IncludePath,
+                     APINotesFile, LineNo))
   DEFINE_MDNODE_GET(DIModule,
-                    (Metadata * Scope, MDString *Name,
+                    (Metadata * File, Metadata *Scope, MDString *Name,
                      MDString *ConfigurationMacros, MDString *IncludePath,
-                     MDString *APINotesFile),
-                    (Scope, Name, ConfigurationMacros, IncludePath,
-                     APINotesFile))
+                     MDString *APINotesFile, unsigned LineNo),
+                    (File, Scope, Name, ConfigurationMacros, IncludePath,
+                     APINotesFile, LineNo))
 
   TempDIModule clone() const { return cloneImpl(); }
 
   DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
-  StringRef getName() const { return getStringOperand(1); }
-  StringRef getConfigurationMacros() const { return getStringOperand(2); }
-  StringRef getIncludePath() const { return getStringOperand(3); }
-  StringRef getAPINotesFile() const { return getStringOperand(4); }
+  StringRef getName() const { return getStringOperand(2); }
+  StringRef getConfigurationMacros() const { return getStringOperand(3); }
+  StringRef getIncludePath() const { return getStringOperand(4); }
+  StringRef getAPINotesFile() const { return getStringOperand(5); }
+  unsigned getLineNo() const { return LineNo; }
 
-  Metadata *getRawScope() const { return getOperand(0); }
-  MDString *getRawName() const { return getOperandAs<MDString>(1); }
-  MDString *getRawConfigurationMacros() const { return getOperandAs<MDString>(2); }
-  MDString *getRawIncludePath() const { return getOperandAs<MDString>(3); }
-  MDString *getRawAPINotesFile() const { return getOperandAs<MDString>(4); }
+  Metadata *getRawScope() const { return getOperand(1); }
+  MDString *getRawName() const { return getOperandAs<MDString>(2); }
+  MDString *getRawConfigurationMacros() const {
+    return getOperandAs<MDString>(3);
+  }
+  MDString *getRawIncludePath() const { return getOperandAs<MDString>(4); }
+  MDString *getRawAPINotesFile() const { return getOperandAs<MDString>(5); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIModuleKind;

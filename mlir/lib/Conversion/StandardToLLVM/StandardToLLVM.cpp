@@ -1315,6 +1315,7 @@ using SignedRemIOpLowering =
     VectorConvertToLLVMPattern<SignedRemIOp, LLVM::SRemOp>;
 using SignedShiftRightOpLowering =
     OneToOneConvertToLLVMPattern<SignedShiftRightOp, LLVM::AShrOp>;
+using SinOpLowering = VectorConvertToLLVMPattern<SinOp, LLVM::SinOp>;
 using SqrtOpLowering = VectorConvertToLLVMPattern<SqrtOp, LLVM::SqrtOp>;
 using SubFOpLowering = VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp>;
 using SubIOpLowering = VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp>;
@@ -2972,6 +2973,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SignedDivIOpLowering,
       SignedRemIOpLowering,
       SignedShiftRightOpLowering,
+      SinOpLowering,
       SplatOpLowering,
       SplatNdOpLowering,
       SqrtOpLowering,

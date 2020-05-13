@@ -246,6 +246,108 @@ static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
+/// Collapse reassociation maps that are used in pair of reshape ops where one
+/// is a producer and other is the consumer. Only valid to use this method when
+/// both the producer and consumer are collapsing dimensions or both are
+/// expanding dimensions.
+///
+/// For example,
+///   mapsProducer = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1)>,
+///                   affine_map<(d0, d1, d2, d3, d4) -> (d2)>,
+///                   affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
+///   mapsConsumer = [affine_map<(d0, d1, d2) -> (d0, d1)>,
+///                   affine_map<(d0, d1, d2) -> (d2)>]
+///
+/// is folded into
+///
+///   result = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>,
+///             affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
+static ArrayAttr collapseReassociationMaps(ArrayRef<AffineMap> mapsProducer,
+                                           ArrayRef<AffineMap> mapsConsumer,
+                                           MLIRContext *context) {
+  if (mapsProducer.size() == 0 || mapsConsumer.size() == 0 ||
+      mapsProducer[0].getNumDims() < mapsConsumer[0].getNumDims() ||
+      mapsProducer.size() != mapsConsumer[0].getNumDims())
+    return nullptr;
+  unsigned numLhsDims = mapsProducer[0].getNumDims();
+  unsigned currDim = 0;
+  SmallVector<AffineExpr, 4> reassociations;
+  SmallVector<Attribute, 4> reassociationMaps;
+  for (AffineMap rhs : mapsConsumer) {
+    for (AffineExpr rhsExpr : rhs.getResults()) {
+      AffineDimExpr dimExpr = rhsExpr.cast<AffineDimExpr>();
+      for (int i = 0, e = mapsProducer[dimExpr.getPosition()].getNumResults();
+           i != e; ++i) {
+        reassociations.push_back(getAffineDimExpr(currDim++, context));
+      }
+    }
+    reassociationMaps.push_back(AffineMapAttr::get(AffineMap::get(
+        numLhsDims, /*numSymbols =*/0, reassociations, context)));
+    reassociations.clear();
+  }
+  return ArrayAttr::get(reassociationMaps, context);
+}
+
+namespace {
+/// Pattern to collapse producer/consumer reshape ops that are both collapsing
+/// dimensions or are both expanding dimensions.
+template <typename ReshapeOpTy>
+struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
+  using OpRewritePattern<ReshapeOpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(ReshapeOpTy reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcReshapeOp =
+        dyn_cast_or_null<ReshapeOpTy>(reshapeOp.src().getDefiningOp());
+    if (!srcReshapeOp)
+      return failure();
+
+    auto areReshapeOpsFoldable = [](ShapedType largerType,
+                                    ShapedType intermediateType,
+                                    ShapedType smallerType) -> bool {
+      return largerType.getRank() > intermediateType.getRank() &&
+             intermediateType.getRank() > smallerType.getRank() &&
+             smallerType.getRank() > 0;
+    };
+    // Check if producer and consumer are both expanding dims.
+    if (areReshapeOpsFoldable(reshapeOp.getResultType(), reshapeOp.getSrcType(),
+                              srcReshapeOp.getSrcType())) {
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, reshapeOp.getResultType(), srcReshapeOp.src(),
+          collapseReassociationMaps(reshapeOp.getReassociationMaps(),
+                                    srcReshapeOp.getReassociationMaps(),
+                                    rewriter.getContext()));
+      return success();
+    }
+    // Check if producer and consumer are both collapsing dims.
+    else if (areReshapeOpsFoldable(srcReshapeOp.getSrcType(),
+                                   reshapeOp.getSrcType(),
+                                   reshapeOp.getResultType())) {
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, reshapeOp.getResultType(), srcReshapeOp.src(),
+          collapseReassociationMaps(srcReshapeOp.getReassociationMaps(),
+                                    reshapeOp.getReassociationMaps(),
+                                    rewriter.getContext()));
+      return success();
+    }
+    return failure();
+  }
+};
+} // namespace
+
+template <typename ReshapeOpTy>
+static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp) {
+  // Fold producer-consumer reshape ops that where the operand type of the
+  // producer is same as the return type of the consumer. This can only be
+  // verified if the shapes in question are static.
+  ReshapeOpTy reshapeSrcOp =
+      dyn_cast_or_null<ReshapeOpTy>(reshapeOp.src().getDefiningOp());
+  if (reshapeSrcOp && reshapeSrcOp.getSrcType().hasStaticShape() &&
+      reshapeOp.getResultType().hasStaticShape() &&
+      reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
+    return reshapeSrcOp.src();
+  return nullptr;
+};
+
 /// Return true if the reassociation specification is valid, false otherwise.
 /// When false, the `invalidIndex` integer pointer is optionally filled with the
 /// index of the offending reassociation map.
@@ -438,11 +540,21 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
     std::swap(expandedRank, collapsedRank);
     std::swap(expandedType, collapsedType);
   }
-  if (expandedRank == 0 || collapsedRank == 0)
+  if (expandedRank == 0)
     return op.emitOpError("expected non-zero memref ranks");
   if (expandedRank == collapsedRank)
     return op.emitOpError("expected to collapse or expand dims");
 
+  if (collapsedRank == 0) {
+    // If collapsed rank is 0, then expanded type must be static shaped and of
+    // sizes 1.
+    if (llvm::any_of(expandedType.getShape(),
+                     [](int64_t dim) -> bool { return dim != 1; }))
+      return op.emitOpError(
+          "invalid to reshape tensor/memref with non-unit extent dimensions to "
+          "zero-rank tensor/memref");
+    return success();
+  }
   if (collapsedRank != op.reassociation().size())
     return op.emitOpError("expected rank of the collapsed type(")
            << collapsedRank << ") to be the number of reassociation maps("
@@ -470,6 +582,11 @@ static LogicalResult verify(ReshapeOp op) {
     return op.emitOpError("expected collapsed type to be ")
            << expectedType << ", but got " << collapsedType;
   return success();
+}
+
+void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                            MLIRContext *context) {
+  results.insert<CollapseReshapeOps<ReshapeOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -539,6 +656,11 @@ static LogicalResult verify(TensorReshapeOp op) {
     return op.emitOpError("expected collapsed type to be ")
            << expectedType << ", but got " << collapsedType;
   return success();
+}
+
+void TensorReshapeOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<CollapseReshapeOps<TensorReshapeOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1000,12 +1122,17 @@ LogicalResult MatmulOp::fold(ArrayRef<Attribute>,
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
-  return {};
+  return foldReshapeOp(*this);
 }
 OpFoldResult SliceOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
   return {};
+}
+OpFoldResult TensorReshapeOp::fold(ArrayRef<Attribute>) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return foldReshapeOp(*this);
 }
 OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldMemRefCast(*this)))

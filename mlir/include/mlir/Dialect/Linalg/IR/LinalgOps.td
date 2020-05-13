@@ -77,6 +77,10 @@ class Linalg_ReshapeLikeOp<string mnemonic> :
 
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrName() { return "reassociation"; }
+    SmallVector<AffineMap, 4> getReassociationMaps() {
+      return llvm::to_vector<4>(llvm::map_range(reassociation(), [
+      ](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
+    }
   }];
   let assemblyFormat = [{
     $src $reassociation attr-dict `:` type($src) `into` type(results)
@@ -111,6 +115,13 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape">,
     rank to obtain the memref with the smaller rank. In the case of a dimension
     expansion, the reassociation maps can be interpreted as inverse maps.
 
+    The result memref type of a reshape when dimensions are collapsed
+    (operand memref type when dimensions are expanded) can be
+    zero-ranked if the operand memref type (or the result memref type
+    when dimensions are expanded) is statically shaped with all
+    dimensions being unit extent. In such cases the reassociation map
+    is empty.
+
     Examples:
 
     ```mlir
@@ -130,6 +141,7 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape">,
     MemRefType getResultType() { return result().getType().cast<MemRefType>(); }
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
@@ -152,6 +164,13 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
     rank to obtain the tensor with the smaller rank. In the case of a dimension
     expansion, the reassociation maps can be interpreted as inverse maps.
 
+    The result tensor type of a reshape when dimensions are collapsed
+    (operand tensor type when dimensions are expanded) can be
+    zero-ranked if the operand tensor type (or the result tensor type
+    when dimensions are expanded) is statically shaped with all
+    dimensions being unit extent. In such cases the reassociation map
+    is empty.
+
     Examples:
 
     ```mlir
@@ -173,11 +192,9 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
     RankedTensorType getResultType() {
       return result().getType().cast<RankedTensorType>();
     }
-    SmallVector<AffineMap, 4> getReassociationMaps() {
-      return llvm::to_vector<4>(llvm::map_range(reassociation(),
-        [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
-    }
   }];
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Linalg_SliceOp : Linalg_Op<"slice", [

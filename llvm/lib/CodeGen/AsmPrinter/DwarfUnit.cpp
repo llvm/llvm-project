@@ -1128,6 +1128,11 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
     addString(MDie, dwarf::DW_AT_LLVM_include_path, M->getIncludePath());
   if (!M->getAPINotesFile().empty())
     addString(MDie, dwarf::DW_AT_LLVM_apinotes, M->getAPINotesFile());
+  if (M->getFile())
+    addUInt(MDie, dwarf::DW_AT_decl_file, None,
+            getOrCreateSourceID(M->getFile()));
+  if (M->getLineNo())
+    addUInt(MDie, dwarf::DW_AT_decl_line, None, M->getLineNo());
 
   return &MDie;
 }

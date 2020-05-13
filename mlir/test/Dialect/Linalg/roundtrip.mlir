@@ -630,3 +630,26 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 //       CHECK:   linalg.batch_matmul
 //       CHECK:   linalg.batch_matmul
 
+// -----
+
+func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>) -> (tensor<f32>, tensor<1x1xf32>)
+{
+  %0 = linalg.tensor_reshape %arg0 [] : tensor<1x1xf32> into tensor<f32>
+  %1 = linalg.tensor_reshape %0 [] : tensor<f32> into tensor<1x1xf32>
+  return %0, %1 : tensor<f32>, tensor<1x1xf32>
+}
+// CHECK-LABEL: func @tensor_reshape_zero_dim
+//       CHECK:   linalg.tensor_reshape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
+//       CHECK:   linalg.tensor_reshape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
+
+// -----
+
+func @memref_reshape_zero_dim(%arg0 : memref<1x1xf32>, %arg1 : memref<f32>) -> (memref<f32>, memref<1x1xf32>)
+{
+  %0 = linalg.reshape %arg0 [] : memref<1x1xf32> into memref<f32>
+  %1 = linalg.reshape %0 [] : memref<f32> into memref<1x1xf32>
+  return %0, %1 : memref<f32>, memref<1x1xf32>
+}
+// CHECK-LABEL: func @memref_reshape_zero_dim
+//       CHECK:   linalg.reshape %{{.*}} [] : memref<1x1xf32> into memref<f32>
+//       CHECK:   linalg.reshape %{{.*}} [] : memref<f32> into memref<1x1xf32>

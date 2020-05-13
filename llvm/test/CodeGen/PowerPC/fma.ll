@@ -198,6 +198,9 @@ define float @test_XSNMADDASP(float %A, float %B, float %C) {
 	ret float %F
 ; CHECK-P8-LABEL: test_XSNMADDASP:
 ; CHECK-P8: xsnmaddasp
+
+; CHECK-VSX-LABEL: test_XSNMADDASP:
+; CHECK-VSX: fnmadds
 }
 
 define float @test_XSNMSUBASP(float %A, float %B, float %C) {
@@ -208,4 +211,7 @@ define float @test_XSNMSUBASP(float %A, float %B, float %C) {
 	ret float %F
 ; CHECK-P8-LABEL: test_XSNMSUBASP:
 ; CHECK-P8: xsnmsubasp
+
+; CHECK-VSX-LABEL: test_XSNMSUBASP:
+; CHECK-VSX: fnmsubs
 }

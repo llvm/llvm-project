@@ -871,12 +871,9 @@ public:
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
     case Instruction::Trunc:
-      if (getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free ||
-          TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
     case Instruction::BitCast:
-      if (getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
+      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) ==
+          TTI::TCC_Free)
         return TTI::TCC_Free;
       break;
     case Instruction::FPExt:

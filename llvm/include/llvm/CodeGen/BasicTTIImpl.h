@@ -692,6 +692,9 @@ public:
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                             TTI::TargetCostKind CostKind,
                             const Instruction *I = nullptr) {
+    if (BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I) == 0)
+      return 0;
+
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -700,6 +703,8 @@ public:
 
     unsigned SrcSize = SrcLT.second.getSizeInBits();
     unsigned DstSize = DstLT.second.getSizeInBits();
+    bool IntOrPtrSrc = Src->isIntegerTy() || Src->isPointerTy();
+    bool IntOrPtrDst = Dst->isIntegerTy() || Dst->isPointerTy();
 
     switch (Opcode) {
     default:
@@ -710,8 +715,10 @@ public:
         return 0;
       LLVM_FALLTHROUGH;
     case Instruction::BitCast:
-      // Bitcast between types that are legalized to the same type are free.
-      if (SrcLT.first == DstLT.first && SrcSize == DstSize)
+      // Bitcast between types that are legalized to the same type are free and
+      // assume int to/from ptr of the same size is also free.
+      if (SrcLT.first == DstLT.first && IntOrPtrSrc == IntOrPtrDst &&
+          SrcSize == DstSize)
         return 0;
       break;
     case Instruction::ZExt:
@@ -748,10 +755,6 @@ public:
 
     // Handle scalar conversions.
     if (!SrcVTy && !DstVTy) {
-      // Scalar bitcasts are usually free.
-      if (Opcode == Instruction::BitCast)
-        return 0;
-
       // Just check the op cost. If the operation is legal then assume it costs
       // 1.
       if (!TLI->isOperationExpand(ISD, DstLT.second))
