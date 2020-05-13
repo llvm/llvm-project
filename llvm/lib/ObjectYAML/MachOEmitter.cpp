@@ -287,6 +287,8 @@ void MachOWriter::writeSectionData(raw_ostream &OS) {
             DWARFYAML::EmitDebugAbbrev(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16)) {
             DWARFYAML::EmitDebugAranges(OS, Obj.DWARF);
+          } else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16)) {
+            DWARFYAML::EmitDebugRanges(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
             DWARFYAML::EmitPubSection(OS, Obj.DWARF.PubNames,
                                       Obj.IsLittleEndian);
