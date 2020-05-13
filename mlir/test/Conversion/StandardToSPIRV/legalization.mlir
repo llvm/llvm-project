@@ -11,7 +11,7 @@ func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : in
   // CHECK: [[STRIDE2:%.*]] = muli [[ARG4]], [[C3]] : index
   // CHECK: [[INDEX2:%.*]] = addi [[ARG2]], [[STRIDE2]] : index
   // CHECK: load [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
-  %0 = subview %arg0[%arg1, %arg2][][] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
+  %0 = subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   %1 = load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
   return %1 : f32
 }
@@ -25,7 +25,8 @@ func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : i
   // CHECK: [[STRIDE2:%.*]] = muli [[ARG4]], [[ARG6]] : index
   // CHECK: [[INDEX2:%.*]] = addi [[ARG2]], [[STRIDE2]] : index
   // CHECK: load [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
-  %0 = subview %arg0[%arg1, %arg2][][%arg5, %arg6] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
+  %0 = subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] :
+    memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   %1 = load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [?, ?]>
   return %1 : f32
 }
@@ -41,7 +42,8 @@ func @fold_static_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : i
   // CHECK: [[STRIDE2:%.*]] = muli [[ARG4]], [[C3]] : index
   // CHECK: [[INDEX2:%.*]] = addi [[ARG2]], [[STRIDE2]] : index
   // CHECK: store [[ARG5]], [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
-  %0 = subview %arg0[%arg1, %arg2][][] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
+  %0 = subview %arg0[%arg1, %arg2][4, 4][2, 3] :
+    memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   store %arg5, %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
   return
 }
@@ -55,7 +57,8 @@ func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : 
   // CHECK: [[STRIDE2:%.*]] = muli [[ARG4]], [[ARG6]] : index
   // CHECK: [[INDEX2:%.*]] = addi [[ARG2]], [[STRIDE2]] : index
   // CHECK: store [[ARG7]], [[ARG0]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}}
-  %0 = subview %arg0[%arg1, %arg2][][%arg5, %arg6] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
+  %0 = subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] :
+    memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   store %arg7, %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [?, ?]>
   return
 }
