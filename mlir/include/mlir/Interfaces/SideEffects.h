@@ -122,6 +122,13 @@ struct DefaultResource : public Resource::Base<DefaultResource> {
   StringRef getName() final { return "<Default>"; }
 };
 
+/// An automatic allocation-scope resource that is valid in the context of a
+/// parent AutomaticAllocationScope trait.
+struct AutomaticAllocationScopeResource
+    : public Resource::Base<AutomaticAllocationScopeResource> {
+  StringRef getName() final { return "AutomaticAllocationScope"; }
+};
+
 /// This class represents a specific instance of an effect. It contains the
 /// effect being applied, a resource that corresponds to where the effect is
 /// applied, and an optional value(either operand, result, or region entry
