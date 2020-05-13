@@ -348,37 +348,37 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
 }
 
 static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
-  if (ClangModulesDeclVendor *decl_vendor =
-          target->GetClangModulesDeclVendor()) {
-    auto *persistent_state = llvm::cast<ClangPersistentVariables>(
-        target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
-    if (!persistent_state)
-      return;
-    const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
-        persistent_state->GetHandLoadedClangModules();
-    ClangModulesDeclVendor::ModuleVector modules_for_macros;
+  ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
+  if (!decl_vendor)
+    return;
 
-    for (ClangModulesDeclVendor::ModuleID module : hand_imported_modules) {
-      modules_for_macros.push_back(module);
-    }
+  if (!target->GetEnableAutoImportClangModules())
+    return;
 
-    if (target->GetEnableAutoImportClangModules()) {
-      if (StackFrame *frame = exe_ctx.GetFramePtr()) {
-        if (Block *block = frame->GetFrameBlock()) {
-          SymbolContext sc;
+  auto *persistent_state = llvm::cast<ClangPersistentVariables>(
+      target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+  if (!persistent_state)
+    return;
 
-          block->CalculateSymbolContext(&sc);
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (!frame)
+    return;
 
-          if (sc.comp_unit) {
-            StreamString error_stream;
+  Block *block = frame->GetFrameBlock();
+  if (!block)
+    return;
+  SymbolContext sc;
 
-            decl_vendor->AddModulesForCompileUnit(
-                *sc.comp_unit, modules_for_macros, error_stream);
-          }
-        }
-      }
-    }
-  }
+  block->CalculateSymbolContext(&sc);
+
+  if (!sc.comp_unit)
+    return;
+  StreamString error_stream;
+
+  ClangModulesDeclVendor::ModuleVector modules_for_macros =
+      persistent_state->GetHandLoadedClangModules();
+  decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
+                                        error_stream);
 }
 
 void ClangUserExpression::UpdateLanguageForExpr() {
