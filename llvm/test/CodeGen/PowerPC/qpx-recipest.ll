@@ -23,8 +23,8 @@ define <4 x double> @foo_fmf(<4 x double> %a, <4 x double> %b) nounwind {
 ; CHECK-NEXT:    qvfmul 1, 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %x = call fast <4 x double> @llvm.sqrt.v4f64(<4 x double> %b)
-  %r = fdiv fast <4 x double> %a, %x
+  %x = call ninf afn reassoc <4 x double> @llvm.sqrt.v4f64(<4 x double> %b)
+  %r = fdiv arcp reassoc <4 x double> %a, %x
   ret <4 x double> %r
 }
 
@@ -71,9 +71,9 @@ define <4 x double> @foof_fmf(<4 x double> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    qvfmul 1, 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %x = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
+  %x = call afn ninf reassoc <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
   %y = fpext <4 x float> %x to <4 x double>
-  %r = fdiv fast <4 x double> %a, %y
+  %r = fdiv arcp reassoc nsz <4 x double> %a, %y
   ret <4 x double> %r
 }
 
@@ -131,9 +131,9 @@ define <4 x float> @food_fmf(<4 x float> %a, <4 x double> %b) nounwind {
 ; CHECK-NEXT:    qvfmuls 1, 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %x = call fast <4 x double> @llvm.sqrt.v4f64(<4 x double> %b)
+  %x = call afn ninf reassoc <4 x double> @llvm.sqrt.v4f64(<4 x double> %b)
   %y = fptrunc <4 x double> %x to <4 x float>
-  %r = fdiv fast <4 x float> %a, %y
+  %r = fdiv arcp reassoc <4 x float> %a, %y
   ret <4 x float> %r
 }
 
@@ -188,8 +188,8 @@ define <4 x float> @goo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    qvfmuls 1, 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %x = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
-  %r = fdiv fast <4 x float> %a, %x
+  %x = call afn ninf reassoc <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
+  %r = fdiv arcp reassoc nsz <4 x float> %a, %x
   ret <4 x float> %r
 }
 
@@ -236,7 +236,7 @@ define <4 x double> @foo2_fmf(<4 x double> %a, <4 x double> %b) nounwind {
 ; CHECK-NEXT:    qvfmadd 1, 0, 1, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = fdiv fast <4 x double> %a, %b
+  %r = fdiv arcp reassoc nsz <4 x double> %a, %b
   ret <4 x double> %r
 }
 
@@ -272,7 +272,7 @@ define <4 x float> @goo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    qvfmadds 1, 0, 1, 3
 ; CHECK-NEXT:    blr
 entry:
-  %r = fdiv fast <4 x float> %a, %b
+  %r = fdiv arcp reassoc <4 x float> %a, %b
   ret <4 x float> %r
 }
 
@@ -326,7 +326,7 @@ define <4 x double> @foo3_fmf_denorm_on(<4 x double> %a) #0 {
 ; CHECK-NEXT:    qvfsel 1, 1, 3, 0
 ; CHECK-NEXT:    blr
 entry:
-  %r = call fast <4 x double> @llvm.sqrt.v4f64(<4 x double> %a)
+  %r = call reassoc ninf afn <4 x double> @llvm.sqrt.v4f64(<4 x double> %a)
   ret <4 x double> %r
 }
 
@@ -352,7 +352,7 @@ define <4 x double> @foo3_fmf_denorm_off(<4 x double> %a) #1 {
 ; CHECK-NEXT:    qvfsel 1, 1, 2, 0
 ; CHECK-NEXT:    blr
 entry:
-  %r = call fast <4 x double> @llvm.sqrt.v4f64(<4 x double> %a)
+  %r = call afn reassoc ninf <4 x double> @llvm.sqrt.v4f64(<4 x double> %a)
   ret <4 x double> %r
 }
 
@@ -421,7 +421,7 @@ define <4 x float> @goo3_fmf_denorm_on(<4 x float> %a) #0 {
 ; CHECK-NEXT:    qvfsel 1, 1, 4, 0
 ; CHECK-NEXT:    blr
 entry:
-  %r = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+  %r = call reassoc afn ninf nsz <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
   ret <4 x float> %r
 }
 
@@ -444,7 +444,7 @@ define <4 x float> @goo3_fmf_denorm_off(<4 x float> %a) #1 {
 ; CHECK-NEXT:    qvfsel 1, 1, 3, 0
 ; CHECK-NEXT:    blr
 entry:
-  %r = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+  %r = call reassoc ninf afn nsz <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
   ret <4 x float> %r
 }
 

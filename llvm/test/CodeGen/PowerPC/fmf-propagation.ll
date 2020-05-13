@@ -107,7 +107,7 @@ define float @fmul_fadd_reassoc2(float %x, float %y, float %z) {
 ; The fadd is now fully 'fast'. This implies that contraction is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_fast1:'
-; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_fast1:'
 
 define float @fmul_fadd_fast1(float %x, float %y, float %z) {
@@ -122,15 +122,15 @@ define float @fmul_fadd_fast1(float %x, float %y, float %z) {
 ; GLOBAL-NEXT:    xsmaddasp 3, 1, 2
 ; GLOBAL-NEXT:    fmr 1, 3
 ; GLOBAL-NEXT:    blr
-  %mul = fmul fast float %x, %y
-  %add = fadd fast float %mul, %z
+  %mul = fmul reassoc float %x, %y
+  %add = fadd reassoc float %mul, %z
   ret float %add
 }
 
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_fast2:'
-; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_fast2:'
 
 define float @fmul_fadd_fast2(float %x, float %y, float %z) {
@@ -145,8 +145,8 @@ define float @fmul_fadd_fast2(float %x, float %y, float %z) {
 ; GLOBAL-NEXT:    xsmaddasp 3, 1, 2
 ; GLOBAL-NEXT:    fmr 1, 3
 ; GLOBAL-NEXT:    blr
-  %mul = fmul fast float %x, %y
-  %add = fadd fast float %mul, %z
+  %mul = fmul reassoc float %x, %y
+  %add = fadd reassoc float %mul, %z
   ret float %add
 }
 
@@ -212,11 +212,11 @@ define float @fmul_fma_reassoc2(float %x) {
 ; The FMA is now fully 'fast'. This implies that reassociation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 define float @fmul_fma_fast1(float %x) {
@@ -234,18 +234,18 @@ define float @fmul_fma_fast1(float %x) {
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    blr
   %mul = fmul float %x, 42.0
-  %fma = call fast float @llvm.fma.f32(float %x, float 7.0, float %mul)
+  %fma = call reassoc float @llvm.fma.f32(float %x, float 7.0, float %mul)
   ret float %fma
 }
 
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 define float @fmul_fma_fast2(float %x) {
@@ -262,8 +262,8 @@ define float @fmul_fma_fast2(float %x) {
 ; GLOBAL-NEXT:    lfs 0, .LCPI9_0@toc@l(3)
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    blr
-  %mul = fmul fast float %x, 42.0
-  %fma = call fast float @llvm.fma.f32(float %x, float 7.0, float %mul)
+  %mul = fmul reassoc float %x, 42.0
+  %fma = call reassoc float @llvm.fma.f32(float %x, float 7.0, float %mul)
   ret float %fma
 }
 
@@ -408,11 +408,11 @@ define float @sqrt_afn_preserve_sign_inf(float %x) #1 {
 ; The call is now fully 'fast'. This implies that approximation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_ieee:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_ieee:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_ieee:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_ieee:'
 
 define float @sqrt_fast_ieee(float %x) #0 {
@@ -459,18 +459,18 @@ define float @sqrt_fast_ieee(float %x) #0 {
 ; GLOBAL-NEXT:  .LBB14_2:
 ; GLOBAL-NEXT:    fmr 1, 0
 ; GLOBAL-NEXT:    blr
-  %rt = call fast float @llvm.sqrt.f32(float %x)
+  %rt = call reassoc afn ninf float @llvm.sqrt.f32(float %x)
   ret float %rt
 }
 
 ; The call is now fully 'fast'. This implies that approximation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
-; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
-; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul ninf afn reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast_preserve_sign:'
 
 define float @sqrt_fast_preserve_sign(float %x) #1 {
@@ -511,7 +511,7 @@ define float @sqrt_fast_preserve_sign(float %x) #1 {
 ; GLOBAL-NEXT:  .LBB15_2:
 ; GLOBAL-NEXT:    fmr 1, 0
 ; GLOBAL-NEXT:    blr
-  %rt = call fast float @llvm.sqrt.f32(float %x)
+  %rt = call reassoc ninf afn float @llvm.sqrt.f32(float %x)
   ret float %rt
 }
 

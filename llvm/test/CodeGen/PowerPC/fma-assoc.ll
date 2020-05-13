@@ -364,10 +364,10 @@ define double @test_fast_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-VSX-NEXT:    fmr 1, 3
 ; CHECK-VSX-NEXT:    blr
                                  double %D, double %E) {
-  %F = fmul fast double %A, %B         ; <double> [#uses=1]
-  %G = fmul fast double %C, %D         ; <double> [#uses=1]
-  %H = fadd fast double %F, %G         ; <double> [#uses=1]
-  %I = fsub fast double %E, %H         ; <double> [#uses=1]
+  %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
+  %G = fmul reassoc double %C, %D         ; <double> [#uses=1]
+  %H = fadd reassoc double %F, %G         ; <double> [#uses=1]
+  %I = fsub reassoc nsz double %E, %H         ; <double> [#uses=1]
   ret double %I
 }
 
