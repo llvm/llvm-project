@@ -36,6 +36,9 @@ int counter(void *arg) {
 }
 
 TEST(MutexTest, RelayCounter) {
+  ASSERT_EQ(__llvm_libc::mtx_init(&mutex, mtx_plain),
+            static_cast<int>(thrd_success));
+
   // The idea of this test is that two competing threads will update
   // a counter only if the other thread has updated it.
   thrd_t thread;
@@ -43,7 +46,7 @@ TEST(MutexTest, RelayCounter) {
 
   int last_count = START;
   while (true) {
-    ASSERT_EQ(__llvm_libc::mtx_lock(&mutex), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::mtx_lock(&mutex), static_cast<int>(thrd_success));
     if (shared_int == START) {
       ++shared_int;
       last_count = shared_int;
@@ -52,7 +55,7 @@ TEST(MutexTest, RelayCounter) {
       ++shared_int;
       last_count = shared_int;
     }
-    ASSERT_EQ(__llvm_libc::mtx_unlock(&mutex), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::mtx_unlock(&mutex), static_cast<int>(thrd_success));
     if (last_count > MAX)
       break;
   }
@@ -77,21 +80,28 @@ int stepper(void *arg) {
 }
 
 TEST(MutexTest, WaitAndStep) {
+  ASSERT_EQ(__llvm_libc::mtx_init(&start_lock, mtx_plain),
+            static_cast<int>(thrd_success));
+  ASSERT_EQ(__llvm_libc::mtx_init(&step_lock, mtx_plain),
+            static_cast<int>(thrd_success));
+
   // In this test, we start a new thread but block it before it can make a
   // step. Once we ensure that the thread is blocked, we unblock it.
   // After unblocking, we then verify that the thread was indeed unblocked.
   step = false;
   start = false;
-  ASSERT_EQ(__llvm_libc::mtx_lock(&step_lock), (int)thrd_success);
+  ASSERT_EQ(__llvm_libc::mtx_lock(&step_lock), static_cast<int>(thrd_success));
 
   thrd_t thread;
   __llvm_libc::thrd_create(&thread, stepper, nullptr);
 
   while (true) {
     // Make sure the thread actually started.
-    ASSERT_EQ(__llvm_libc::mtx_lock(&start_lock), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::mtx_lock(&start_lock),
+              static_cast<int>(thrd_success));
     bool s = start;
-    ASSERT_EQ(__llvm_libc::mtx_unlock(&start_lock), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::mtx_unlock(&start_lock),
+              static_cast<int>(thrd_success));
     if (s)
       break;
   }
@@ -100,12 +110,15 @@ TEST(MutexTest, WaitAndStep) {
   ASSERT_FALSE(step);
 
   // Unlock the step lock and wait until the step is made.
-  ASSERT_EQ(__llvm_libc::mtx_unlock(&step_lock), (int)thrd_success);
+  ASSERT_EQ(__llvm_libc::mtx_unlock(&step_lock),
+            static_cast<int>(thrd_success));
 
   while (true) {
-    ASSERT_EQ(__llvm_libc::mtx_lock(&step_lock), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::mtx_lock(&step_lock),
+              static_cast<int>(thrd_success));
     bool current_step_value = step;
-    ASSERT_EQ(__llvm_libc::mtx_unlock(&step_lock), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::mtx_unlock(&step_lock),
+              static_cast<int>(thrd_success));
     if (current_step_value)
       break;
   }
