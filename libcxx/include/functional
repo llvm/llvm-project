@@ -2387,7 +2387,7 @@ public:
     function& operator=(const function&);
     function& operator=(function&&) _NOEXCEPT;
     function& operator=(nullptr_t) _NOEXCEPT;
-    template<class _Fp, class = _EnableIfCallable<_Fp>>
+    template<class _Fp, class = _EnableIfCallable<typename decay<_Fp>::type>>
     function& operator=(_Fp&&);
 
     ~function();

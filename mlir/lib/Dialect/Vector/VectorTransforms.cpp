@@ -1187,6 +1187,55 @@ public:
   }
 };
 
+/// Progressive lowering of ConstantMaskOp.
+/// One:
+///   %x = vector.constant_mask_op [a,b]
+/// is replaced by:
+///   %z = zero-result
+///   %l = vector.constant_mask_op [b]
+///   %4 = vector.insert %l, %z[0]
+///   ..
+///   %x = vector.insert %l, %..[a-1]
+/// which will be folded at LLVM IR level.
+class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
+public:
+  using OpRewritePattern<vector::ConstantMaskOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ConstantMaskOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto dstType = op.getResult().getType().cast<VectorType>();
+    auto eltType = dstType.getElementType();
+    auto dimSizes = op.mask_dim_sizes();
+    int64_t rank = dimSizes.size();
+    int64_t trueDim = dimSizes[0].cast<IntegerAttr>().getInt();
+
+    Value trueVal;
+    if (rank == 1) {
+      trueVal = rewriter.create<ConstantOp>(
+          loc, eltType, rewriter.getIntegerAttr(eltType, 1));
+    } else {
+      VectorType lowType =
+          VectorType::get(dstType.getShape().drop_front(), eltType);
+      SmallVector<int64_t, 4> newDimSizes;
+      for (int64_t r = 1; r < rank; r++)
+        newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
+      trueVal = rewriter.create<vector::ConstantMaskOp>(
+          loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
+    }
+
+    Value result = rewriter.create<ConstantOp>(loc, dstType,
+                                               rewriter.getZeroAttr(dstType));
+    for (int64_t d = 0; d < trueDim; d++) {
+      auto pos = rewriter.getI64ArrayAttr(d);
+      result =
+          rewriter.create<vector::InsertOp>(loc, dstType, trueVal, result, pos);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// Progressive lowering of ContractionOp.
 /// One:
 ///   %x = vector.contract with at least one free/batch dimension
@@ -1609,6 +1658,7 @@ void mlir::vector::populateVectorContractLoweringPatterns(
     VectorTransformsOptions parameters) {
   patterns.insert<ShapeCastOp2DDownCastRewritePattern,
                   ShapeCastOp2DUpCastRewritePattern, BroadcastOpLowering,
-                  TransposeOpLowering, OuterProductOpLowering>(context);
+                  TransposeOpLowering, OuterProductOpLowering,
+                  ConstantMaskOpLowering>(context);
   patterns.insert<ContractionOpLowering>(parameters, context);
 }
