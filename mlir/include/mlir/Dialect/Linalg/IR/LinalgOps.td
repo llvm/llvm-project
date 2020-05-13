@@ -111,6 +111,13 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape">,
     rank to obtain the memref with the smaller rank. In the case of a dimension
     expansion, the reassociation maps can be interpreted as inverse maps.
 
+    The result memref type of a reshape when dimensions are collapsed
+    (operand memref type when dimensions are expanded) can be
+    zero-ranked if the operand memref type (or the result memref type
+    when dimensions are expanded) is statically shaped with all
+    dimensions being unit extent. In such cases the reassociation map
+    is empty.
+
     Examples:
 
     ```mlir
@@ -151,6 +158,13 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
     is that the reassociation maps are applied to the tensor with the larger
     rank to obtain the tensor with the smaller rank. In the case of a dimension
     expansion, the reassociation maps can be interpreted as inverse maps.
+
+    The result tensor type of a reshape when dimensions are collapsed
+    (operand tensor type when dimensions are expanded) can be
+    zero-ranked if the operand tensor type (or the result tensor type
+    when dimensions are expanded) is statically shaped with all
+    dimensions being unit extent. In such cases the reassociation map
+    is empty.
 
     Examples:
 
