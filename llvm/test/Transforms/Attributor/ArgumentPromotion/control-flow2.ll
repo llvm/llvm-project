@@ -56,7 +56,7 @@ define i32 @foo() {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@foo()
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32
 ; IS__TUNIT_NPM-NEXT:    store i32 17, i32* [[A]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32 [[TMP1]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;

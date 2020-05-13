@@ -155,8 +155,8 @@ define i32 @visible_local_2() {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@visible_local_2()
 ; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 1
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[B]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 4
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[B]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 [[TMP1]], i32 [[TMP2]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
