@@ -251,10 +251,13 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
   if (UnreachableEdges.empty())
     return false;
 
+  SmallVector<BranchProbability, 4> EdgeProbabilities(
+      BB->getTerminator()->getNumSuccessors(), BranchProbability::getUnknown());
   if (ReachableEdges.empty()) {
     BranchProbability Prob(1, UnreachableEdges.size());
     for (unsigned SuccIdx : UnreachableEdges)
-      setEdgeProbability(BB, SuccIdx, Prob);
+      EdgeProbabilities[SuccIdx] = Prob;
+    setEdgeProbability(BB, EdgeProbabilities);
     return true;
   }
 
@@ -264,10 +267,11 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
       ReachableEdges.size();
 
   for (unsigned SuccIdx : UnreachableEdges)
-    setEdgeProbability(BB, SuccIdx, UnreachableProb);
+    EdgeProbabilities[SuccIdx] = UnreachableProb;
   for (unsigned SuccIdx : ReachableEdges)
-    setEdgeProbability(BB, SuccIdx, ReachableProb);
+    EdgeProbabilities[SuccIdx] = ReachableProb;
 
+  setEdgeProbability(BB, EdgeProbabilities);
   return true;
 }
 
@@ -363,8 +367,7 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
     }
   }
 
-  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-    setEdgeProbability(BB, i, BP[i]);
+  setEdgeProbability(BB, BP);
 
   return true;
 }
@@ -397,10 +400,13 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
   if (ColdEdges.empty())
     return false;
 
+  SmallVector<BranchProbability, 4> EdgeProbabilities(
+      BB->getTerminator()->getNumSuccessors(), BranchProbability::getUnknown());
   if (NormalEdges.empty()) {
     BranchProbability Prob(1, ColdEdges.size());
     for (unsigned SuccIdx : ColdEdges)
-      setEdgeProbability(BB, SuccIdx, Prob);
+      EdgeProbabilities[SuccIdx] = Prob;
+    setEdgeProbability(BB, EdgeProbabilities);
     return true;
   }
 
@@ -412,10 +418,11 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
       (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) * uint64_t(NormalEdges.size()));
 
   for (unsigned SuccIdx : ColdEdges)
-    setEdgeProbability(BB, SuccIdx, ColdProb);
+    EdgeProbabilities[SuccIdx] = ColdProb;
   for (unsigned SuccIdx : NormalEdges)
-    setEdgeProbability(BB, SuccIdx, NormalProb);
+    EdgeProbabilities[SuccIdx] = NormalProb;
 
+  setEdgeProbability(BB, EdgeProbabilities);
   return true;
 }
 
@@ -438,19 +445,21 @@ bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
 
   assert(CI->getOperand(1)->getType()->isPointerTy());
 
+  BranchProbability TakenProb(PH_TAKEN_WEIGHT,
+                              PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
+  BranchProbability UntakenProb(PH_NONTAKEN_WEIGHT,
+                                PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
+
   // p != 0   ->   isProb = true
   // p == 0   ->   isProb = false
   // p != q   ->   isProb = true
   // p == q   ->   isProb = false;
-  unsigned TakenIdx = 0, NonTakenIdx = 1;
   bool isProb = CI->getPredicate() == ICmpInst::ICMP_NE;
   if (!isProb)
-    std::swap(TakenIdx, NonTakenIdx);
+    std::swap(TakenProb, UntakenProb);
 
-  BranchProbability TakenProb(PH_TAKEN_WEIGHT,
-                              PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
-  setEdgeProbability(BB, TakenIdx, TakenProb);
-  setEdgeProbability(BB, NonTakenIdx, TakenProb.getCompl());
+  setEdgeProbability(
+      BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
   return true;
 }
 
@@ -647,18 +656,20 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
                    (UnlikelyEdges.empty() ? 0 : LBH_UNLIKELY_WEIGHT) +
                    (ExitingEdges.empty() ? 0 : LBH_NONTAKEN_WEIGHT);
 
+  SmallVector<BranchProbability, 4> EdgeProbabilities(
+      BB->getTerminator()->getNumSuccessors(), BranchProbability::getUnknown());
   if (uint32_t numBackEdges = BackEdges.size()) {
     BranchProbability TakenProb = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
     auto Prob = TakenProb / numBackEdges;
     for (unsigned SuccIdx : BackEdges)
-      setEdgeProbability(BB, SuccIdx, Prob);
+      EdgeProbabilities[SuccIdx] = Prob;
   }
 
   if (uint32_t numInEdges = InEdges.size()) {
     BranchProbability TakenProb = BranchProbability(LBH_TAKEN_WEIGHT, Denom);
     auto Prob = TakenProb / numInEdges;
     for (unsigned SuccIdx : InEdges)
-      setEdgeProbability(BB, SuccIdx, Prob);
+      EdgeProbabilities[SuccIdx] = Prob;
   }
 
   if (uint32_t numExitingEdges = ExitingEdges.size()) {
@@ -666,7 +677,7 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
                                                        Denom);
     auto Prob = NotTakenProb / numExitingEdges;
     for (unsigned SuccIdx : ExitingEdges)
-      setEdgeProbability(BB, SuccIdx, Prob);
+      EdgeProbabilities[SuccIdx] = Prob;
   }
 
   if (uint32_t numUnlikelyEdges = UnlikelyEdges.size()) {
@@ -674,9 +685,10 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
                                                        Denom);
     auto Prob = UnlikelyProb / numUnlikelyEdges;
     for (unsigned SuccIdx : UnlikelyEdges)
-      setEdgeProbability(BB, SuccIdx, Prob);
+      EdgeProbabilities[SuccIdx] = Prob;
   }
 
+  setEdgeProbability(BB, EdgeProbabilities);
   return true;
 }
 
@@ -787,15 +799,15 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
     return false;
   }
 
-  unsigned TakenIdx = 0, NonTakenIdx = 1;
-
-  if (!isProb)
-    std::swap(TakenIdx, NonTakenIdx);
-
   BranchProbability TakenProb(ZH_TAKEN_WEIGHT,
                               ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
-  setEdgeProbability(BB, TakenIdx, TakenProb);
-  setEdgeProbability(BB, NonTakenIdx, TakenProb.getCompl());
+  BranchProbability UntakenProb(ZH_NONTAKEN_WEIGHT,
+                                ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
+  if (!isProb)
+    std::swap(TakenProb, UntakenProb);
+
+  setEdgeProbability(
+      BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
   return true;
 }
 
@@ -830,14 +842,13 @@ bool BranchProbabilityInfo::calcFloatingPointHeuristics(const BasicBlock *BB) {
     return false;
   }
 
-  unsigned TakenIdx = 0, NonTakenIdx = 1;
-
-  if (!isProb)
-    std::swap(TakenIdx, NonTakenIdx);
-
   BranchProbability TakenProb(TakenWeight, TakenWeight + NontakenWeight);
-  setEdgeProbability(BB, TakenIdx, TakenProb);
-  setEdgeProbability(BB, NonTakenIdx, TakenProb.getCompl());
+  BranchProbability UntakenProb(NontakenWeight, TakenWeight + NontakenWeight);
+  if (!isProb)
+    std::swap(TakenProb, UntakenProb);
+
+  setEdgeProbability(
+      BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
   return true;
 }
 
@@ -848,8 +859,8 @@ bool BranchProbabilityInfo::calcInvokeHeuristics(const BasicBlock *BB) {
 
   BranchProbability TakenProb(IH_TAKEN_WEIGHT,
                               IH_TAKEN_WEIGHT + IH_NONTAKEN_WEIGHT);
-  setEdgeProbability(BB, 0 /*Index for Normal*/, TakenProb);
-  setEdgeProbability(BB, 1 /*Index for Unwind*/, TakenProb.getCompl());
+  setEdgeProbability(
+      BB, SmallVector<BranchProbability, 2>({TakenProb, TakenProb.getCompl()}));
   return true;
 }
 
@@ -960,6 +971,28 @@ void BranchProbabilityInfo::setEdgeProbability(const BasicBlock *Src,
   LLVM_DEBUG(dbgs() << "set edge " << Src->getName() << " -> "
                     << IndexInSuccessors << " successor probability to " << Prob
                     << "\n");
+}
+
+/// Set the edge probability for all edges at once.
+void BranchProbabilityInfo::setEdgeProbability(
+    const BasicBlock *Src, const SmallVectorImpl<BranchProbability> &Probs) {
+  assert(Src->getTerminator()->getNumSuccessors() == Probs.size());
+  if (Probs.size() == 0)
+    return; // Nothing to set.
+
+  uint64_t TotalNumerator = 0;
+  for (unsigned SuccIdx = 0; SuccIdx < Probs.size(); ++SuccIdx) {
+    setEdgeProbability(Src, SuccIdx, Probs[SuccIdx]);
+    TotalNumerator += Probs[SuccIdx].getNumerator();
+  }
+
+  // Because of rounding errors the total probability cannot be checked to be
+  // 1.0 exactly. That is TotalNumerator == BranchProbability::getDenominator.
+  // Instead, every single probability in Probs must be as accurate as possible.
+  // This results in error 1/denominator at most, thus the total absolute error
+  // should be within Probs.size / BranchProbability::getDenominator.
+  assert(TotalNumerator <= BranchProbability::getDenominator() + Probs.size());
+  assert(TotalNumerator >= BranchProbability::getDenominator() - Probs.size());
 }
 
 raw_ostream &
