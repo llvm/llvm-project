@@ -167,8 +167,8 @@ define double @test_fast_mul_sub_f64(double %a, double %b, double %c) {
 ; NO-VSX-NEXT:    fnmsub 1, 2, 3, 1
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fmul fast double %b, %c
-  %1 = fsub fast double %a, %0
+  %0 = fmul reassoc double %b, %c
+  %1 = fsub reassoc double %a, %0
   ret double %1
 }
 
@@ -187,9 +187,9 @@ define double @test_fast_2mul_sub_f64(double %a, double %b, double %c,
 ; NO-VSX-NEXT:    blr
                                       double %d) {
 entry:
-  %0 = fmul fast double %a, %b
-  %1 = fmul fast double %c, %d
-  %2 = fsub fast double %0, %1
+  %0 = fmul reassoc double %a, %b
+  %1 = fmul reassoc double %c, %d
+  %2 = fsub reassoc double %0, %1
   ret double %2
 }
 
@@ -205,8 +205,8 @@ define double @test_fast_neg_fma_f64(double %a, double %b, double %c) {
 ; NO-VSX-NEXT:    fnmsub 1, 1, 2, 3
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fsub fast double -0.0, %a
-  %1 = call fast double @llvm.fma.f64(double %0, double %b, double %c)
+  %0 = fsub reassoc double -0.0, %a
+  %1 = call reassoc double @llvm.fma.f64(double %0, double %b, double %c)
   ret double %1
 }
 
@@ -221,8 +221,8 @@ define float @test_fast_mul_sub_f32(float %a, float %b, float %c) {
 ; NO-VSX-NEXT:    fnmsubs 1, 2, 3, 1
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fmul fast float %b, %c
-  %1 = fsub fast float %a, %0
+  %0 = fmul reassoc float %b, %c
+  %1 = fsub reassoc float %a, %0
   ret float %1
 }
 
@@ -240,9 +240,9 @@ define float @test_fast_2mul_sub_f32(float %a, float %b, float %c, float %d) {
 ; NO-VSX-NEXT:    fmsubs 1, 1, 2, 0
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fmul fast float %a, %b
-  %1 = fmul fast float %c, %d
-  %2 = fsub fast float %0, %1
+  %0 = fmul reassoc float %a, %b
+  %1 = fmul reassoc float %c, %d
+  %2 = fsub reassoc float %0, %1
   ret float %2
 }
 
@@ -258,8 +258,8 @@ define float @test_fast_neg_fma_f32(float %a, float %b, float %c) {
 ; NO-VSX-NEXT:    fnmsubs 1, 1, 2, 3
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fsub fast float -0.0, %a
-  %1 = call fast float @llvm.fma.f32(float %0, float %b, float %c)
+  %0 = fsub reassoc float -0.0, %a
+  %1 = call reassoc float @llvm.fma.f32(float %0, float %b, float %c)
   ret float %1
 }
 
@@ -277,8 +277,8 @@ define <2 x double> @test_fast_neg_fma_v2f64(<2 x double> %a, <2 x double> %b,
 ; NO-VSX-NEXT:    blr
                                              <2 x double> %c) {
 entry:
-  %0 = fsub fast <2 x double> <double -0.0, double -0.0>, %a
-  %1 = call fast <2 x double> @llvm.fma.v2f64(<2 x double> %0, <2 x double> %b,
+  %0 = fsub reassoc <2 x double> <double -0.0, double -0.0>, %a
+  %1 = call reassoc <2 x double> @llvm.fma.v2f64(<2 x double> %0, <2 x double> %b,
                                               <2 x double> %c)
   ret <2 x double> %1
 }
@@ -299,10 +299,10 @@ define <4 x float> @test_fast_neg_fma_v4f32(<4 x float> %a, <4 x float> %b,
 ; NO-VSX-NEXT:    blr
                                             <4 x float> %c) {
 entry:
-  %0 = fsub fast <4 x float> <float -0.0, float -0.0, float -0.0,
-                              float -0.0>, %a
-  %1 = call fast <4 x float> @llvm.fma.v4f32(<4 x float> %0, <4 x float> %b,
-                                             <4 x float> %c)
+  %0 = fsub reassoc <4 x float> <float -0.0, float -0.0, float -0.0,
+                                          float -0.0>, %a
+  %1 = call reassoc <4 x float> @llvm.fma.v4f32(<4 x float> %0, <4 x float> %b,
+                                                         <4 x float> %c)
   ret <4 x float> %1
 }
 
