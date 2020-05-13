@@ -41,7 +41,7 @@
 # in the .dynsym section of the main binary. The bits removing .rela.plt,
 # .rela.dyn and .dynsym sections can be removed once llvm-objcopy
 # --only-keep-debug starts to work.
-# RUN: llvm-objcopy --remove-section=.rela.plt --remove-section=.rela.dyn \
+# RUN: llvm-objcopy --remove-section=.rela.plt --remove-section=.rela.dyn --remove-section=.rel.plt --remove-section=.rel.dyn \
 # RUN:   --remove-section=.gnu.version --remove-section=.gnu.hash --remove-section=.hash --remove-section=.dynsym %t.mini_debuginfo
 
 # Drop the full debug info from the original binary.
