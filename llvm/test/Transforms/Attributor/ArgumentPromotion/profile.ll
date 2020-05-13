@@ -17,7 +17,7 @@ define void @caller() #0 {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@caller()
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32
 ; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[X]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 4
 ; IS__TUNIT_NPM-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof !0
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
