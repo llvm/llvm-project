@@ -122,21 +122,43 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
   const char *Thread() { return Green(); }
 };
 
-// Returns the index of the rb element that matches tagged_addr (plus one),
-// or zero if found nothing.
-uptr FindHeapAllocation(HeapAllocationsRingBuffer *rb,
-                        uptr tagged_addr,
-                        HeapAllocationRecord *har) {
-  if (!rb) return 0;
+static bool FindHeapAllocation(HeapAllocationsRingBuffer *rb, uptr tagged_addr,
+                               HeapAllocationRecord *har, uptr *ring_index,
+                               uptr *num_matching_addrs,
+                               uptr *num_matching_addrs_4b) {
+  if (!rb) return false;
+
+  *num_matching_addrs = 0;
+  *num_matching_addrs_4b = 0;
   for (uptr i = 0, size = rb->size(); i < size; i++) {
     auto h = (*rb)[i];
     if (h.tagged_addr <= tagged_addr &&
         h.tagged_addr + h.requested_size > tagged_addr) {
       *har = h;
-      return i + 1;
+      *ring_index = i;
+      return true;
+    }
+
+    // Measure the number of heap ring buffer entries that would have matched
+    // if we had only one entry per address (e.g. if the ring buffer data was
+    // stored at the address itself). This will help us tune the allocator
+    // implementation for MTE.
+    if (UntagAddr(h.tagged_addr) <= UntagAddr(tagged_addr) &&
+        UntagAddr(h.tagged_addr) + h.requested_size > UntagAddr(tagged_addr)) {
+      ++*num_matching_addrs;
+    }
+
+    // Measure the number of heap ring buffer entries that would have matched
+    // if we only had 4 tag bits, which is the case for MTE.
+    auto untag_4b = [](uptr p) {
+      return p & ((1ULL << 60) - 1);
+    };
+    if (untag_4b(h.tagged_addr) <= untag_4b(tagged_addr) &&
+        untag_4b(h.tagged_addr) + h.requested_size > untag_4b(tagged_addr)) {
+      ++*num_matching_addrs_4b;
     }
   }
-  return 0;
+  return false;
 }
 
 static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
@@ -309,7 +331,10 @@ void PrintAddressDescription(
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
     // Scan all threads' ring buffers to find if it's a heap-use-after-free.
     HeapAllocationRecord har;
-    if (uptr D = FindHeapAllocation(t->heap_allocations(), tagged_addr, &har)) {
+    uptr ring_index, num_matching_addrs, num_matching_addrs_4b;
+    if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
+                           &ring_index, &num_matching_addrs,
+                           &num_matching_addrs_4b)) {
       Printf("%s", d.Location());
       Printf("%p is located %zd bytes inside of %zd-byte region [%p,%p)\n",
              untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
@@ -327,8 +352,11 @@ void PrintAddressDescription(
 
       // Print a developer note: the index of this heap object
       // in the thread's deallocation ring buffer.
-      Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", D,
+      Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ring_index + 1,
              flags()->heap_history_size);
+      Printf("hwasan_dev_note_num_matching_addrs: %zd\n", num_matching_addrs);
+      Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
+             num_matching_addrs_4b);
 
       t->Announce();
       num_descriptions_printed++;
