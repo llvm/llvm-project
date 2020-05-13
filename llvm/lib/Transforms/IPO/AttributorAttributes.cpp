@@ -1009,20 +1009,23 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     return indicatePessimisticFixpoint();
 
   // Once returned values "directly" present in the code are handled we try to
-  // resolve returned calls.
+  // resolve returned calls. To avoid modifications to the ReturnedValues map
+  // while we iterate over it we kept record of potential new entries in a copy
+  // map, NewRVsMap.
   decltype(ReturnedValues) NewRVsMap;
-  for (auto &It : ReturnedValues) {
-    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned value: " << *It.first
-                      << " by #" << It.second.size() << " RIs\n");
-    CallBase *CB = dyn_cast<CallBase>(It.first);
+
+  auto HandleReturnValue = [&](Value *RV, SmallSetVector<ReturnInst *, 4> &RIs) {
+    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned value: " << *RV
+                      << " by #" << RIs.size() << " RIs\n");
+    CallBase *CB = dyn_cast<CallBase>(RV);
     if (!CB || UnresolvedCalls.count(CB))
-      continue;
+      return;
 
     if (!CB->getCalledFunction()) {
       LLVM_DEBUG(dbgs() << "[AAReturnedValues] Unresolved call: " << *CB
                         << "\n");
       UnresolvedCalls.insert(CB);
-      continue;
+      return;
     }
 
     // TODO: use the function scope once we have call site AAReturnedValues.
@@ -1037,7 +1040,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
       LLVM_DEBUG(dbgs() << "[AAReturnedValues] Unresolved call: " << *CB
                         << "\n");
       UnresolvedCalls.insert(CB);
-      continue;
+      return;
     }
 
     // Do not try to learn partial information. If the callee has unresolved
@@ -1045,7 +1048,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     auto &RetValAAUnresolvedCalls = RetValAA.getUnresolvedCalls();
     if (!RetValAAUnresolvedCalls.empty()) {
       UnresolvedCalls.insert(CB);
-      continue;
+      return;
     }
 
     // Now check if we can track transitively returned values. If possible, thus
@@ -1067,14 +1070,14 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     }
 
     if (Unresolved)
-      continue;
+      return;
 
     // Now track transitively returned values.
     unsigned &NumRetAA = NumReturnedValuesPerKnownAA[CB];
     if (NumRetAA == RetValAA.getNumReturnValues()) {
       LLVM_DEBUG(dbgs() << "[AAReturnedValues] Skip call as it has not "
                            "changed since it was seen last\n");
-      continue;
+      return;
     }
     NumRetAA = RetValAA.getNumReturnValues();
 
@@ -1093,21 +1096,32 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
         continue;
       } else if (isa<Constant>(RetVal)) {
         // Constants are valid everywhere, we can simply take them.
-        NewRVsMap[RetVal].insert(It.second.begin(), It.second.end());
+        NewRVsMap[RetVal].insert(RIs.begin(), RIs.end());
         continue;
       }
     }
-  }
+  };
 
-  // To avoid modifications to the ReturnedValues map while we iterate over it
-  // we kept record of potential new entries in a copy map, NewRVsMap.
-  for (auto &It : NewRVsMap) {
+  for (auto &It : ReturnedValues)
+    HandleReturnValue(It.first, It.second);
+
+  // Because processing the new information can again lead to new return values
+  // we have to be careful and iterate until this iteration is complete. The
+  // idea is that we are in a stable state at the end of an update. All return
+  // values have been handled and properly categorized. We might not update
+  // again if we have not requested a non-fix attribute so we cannot "wait" for
+  // the next update to analyze a new return value.
+  while (!NewRVsMap.empty()) {
+    auto It = std::move(NewRVsMap.back());
+    NewRVsMap.pop_back();
+
     assert(!It.second.empty() && "Entry does not add anything.");
     auto &ReturnInsts = ReturnedValues[It.first];
     for (ReturnInst *RI : It.second)
       if (ReturnInsts.insert(RI)) {
         LLVM_DEBUG(dbgs() << "[AAReturnedValues] Add new returned value "
                           << *It.first << " => " << *RI << "\n");
+        HandleReturnValue(It.first, ReturnInsts);
         Changed = true;
       }
   }
