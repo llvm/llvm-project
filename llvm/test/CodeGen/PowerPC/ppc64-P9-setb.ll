@@ -1195,8 +1195,8 @@ define i64 @setbuc(i8 %a, i8 %b) {
 
 ; select_cc lhs, rhs, -1, (zext (setcc rhs, lhs, setlt)), setlt
 define i64 @setbf1(float %a, float %b) {
-  %t1 = fcmp fast olt float %a, %b
-  %t2 = fcmp fast olt float %b, %a
+  %t1 = fcmp nnan olt float %a, %b
+  %t2 = fcmp nnan olt float %b, %a
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
@@ -1215,8 +1215,8 @@ define i64 @setbf1(float %a, float %b) {
 
 ; select_cc lhs, rhs, -1, (zext (setcc lhs, rhs, setlt)), setgt
 define i64 @setbf2(float %a, float %b) {
-  %t1 = fcmp fast ogt float %b, %a
-  %t2 = fcmp fast olt float %b, %a
+  %t1 = fcmp nnan ogt float %b, %a
+  %t2 = fcmp nnan olt float %b, %a
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
@@ -1235,8 +1235,8 @@ define i64 @setbf2(float %a, float %b) {
 
 ; select_cc lhs, rhs, 0, (select_cc lhs, rhs, -1, 1, setgt), seteq
 define i64 @setbdf1(double %a, double %b) {
-  %t1 = fcmp fast oeq double %b, %a
-  %t2 = fcmp fast ogt double %b, %a
+  %t1 = fcmp nnan oeq double %b, %a
+  %t2 = fcmp nnan ogt double %b, %a
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
@@ -1254,8 +1254,8 @@ define i64 @setbdf1(double %a, double %b) {
 
 ; select_cc lhs, rhs, 1, (sext (setcc lhs, rhs, setgt)), setlt
 define i64 @setbdf2(double %a, double %b) {
-  %t1 = fcmp fast olt double %b, %a
-  %t2 = fcmp fast ogt double %b, %a
+  %t1 = fcmp nnan olt double %b, %a
+  %t2 = fcmp nnan ogt double %b, %a
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
@@ -1274,8 +1274,8 @@ define i64 @setbdf2(double %a, double %b) {
 }
 
 define i64 @setbf128(fp128 %a, fp128 %b) {
-  %t1 = fcmp fast ogt fp128 %a, %b
-  %t2 = fcmp fast olt fp128 %a, %b
+  %t1 = fcmp nnan ogt fp128 %a, %b
+  %t2 = fcmp nnan olt fp128 %a, %b
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4

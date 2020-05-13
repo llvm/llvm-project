@@ -90,7 +90,7 @@ define double @testoeq_fast(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-NEXT:    fsel f1, f1, f0, f4
 ; NO-FAST-P8-NEXT:    blr
 entry:
-  %cmp = fcmp fast oeq double %a, %b
-  %cond = select fast i1 %cmp, double %c, double %d
+  %cmp = fcmp nnan ninf nsz oeq double %a, %b
+  %cond = select nnan ninf nsz i1 %cmp, double %c, double %d
   ret double %cond
 }
