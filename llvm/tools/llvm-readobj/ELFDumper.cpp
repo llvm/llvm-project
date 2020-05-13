@@ -221,7 +221,7 @@ public:
   void printProgramHeaders(bool PrintProgramHeaders,
                            cl::boolOrDefault PrintSectionMapping) override;
   void printHashTable() override;
-  void printGnuHashTable() override;
+  void printGnuHashTable(const object::ObjectFile *Obj) override;
   void printLoadName() override;
   void printVersionInfo() override;
   void printGroupSections() override;
@@ -2666,7 +2666,8 @@ template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
   W.printList("Chains", HashTable->chains());
 }
 
-template <typename ELFT> void ELFDumper<ELFT>::printGnuHashTable() {
+template <typename ELFT>
+void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
   DictScope D(W, "GnuHashTable");
   if (!GnuHashTable)
     return;
@@ -2674,6 +2675,25 @@ template <typename ELFT> void ELFDumper<ELFT>::printGnuHashTable() {
   W.printNumber("First Hashed Symbol Index", GnuHashTable->symndx);
   W.printNumber("Num Mask Words", GnuHashTable->maskwords);
   W.printNumber("Shift Count", GnuHashTable->shift2);
+
+  MemoryBufferRef File = Obj->getMemoryBufferRef();
+  const char *TableData = reinterpret_cast<const char *>(GnuHashTable);
+  assert(TableData >= File.getBufferStart() &&
+         TableData < File.getBufferEnd() &&
+         "GnuHashTable must always point to a location inside the file");
+
+  uint64_t TableOffset = TableData - File.getBufferStart();
+  if (TableOffset +
+          /*Header size:*/ 16 + GnuHashTable->nbuckets * 4 +
+          GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
+      File.getBufferSize()) {
+    reportWarning(createError("unable to dump the SHT_GNU_HASH "
+                              "section at 0x" +
+                              Twine::utohexstr(TableOffset) +
+                              ": it goes past the end of the file"),
+                  ObjF->getFileName());
+    return;
+  }
 
   ArrayRef<typename ELFT::Off> BloomFilter = GnuHashTable->filter();
   W.printHexList("Bloom Filter", BloomFilter);
