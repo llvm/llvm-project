@@ -820,6 +820,11 @@ public:
   Status GetFatalErrors();
   void DiagnoseWarnings(Process &process, Module &module) const override;
 
+  /// Return a list of warnings collected from ClangImporter.
+  const std::vector<std::string> &GetModuleImportWarnings() const {
+    return m_module_import_warnings;
+  }
+
   const swift::irgen::TypeInfo *
   GetSwiftTypeInfo(lldb::opaque_compiler_type_t type);
 
