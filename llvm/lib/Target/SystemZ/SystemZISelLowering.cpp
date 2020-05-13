@@ -4450,6 +4450,13 @@ static SDValue getPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
   return Op;
 }
 
+static bool isZeroVector(SDValue N) {
+  if (N->getOpcode() == ISD::SPLAT_VECTOR)
+    if (auto *Op = dyn_cast<ConstantSDNode>(N->getOperand(0)))
+      return Op->getZExtValue() == 0;
+  return ISD::isBuildVectorAllZeros(N.getNode());
+}
+
 // Bytes is a VPERM-like permute vector, except that -1 is used for
 // undefined bytes.  Implement it on operands Ops[0] and Ops[1] using
 // VSLDB or VPERM.
@@ -4466,7 +4473,54 @@ static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
                        Ops[OpNo1],
                        DAG.getTargetConstant(StartIndex, DL, MVT::i32));
 
-  // Fall back on VPERM.  Construct an SDNode for the permute vector.
+  // Fall back on VPERM.  Construct an SDNode for the permute vector.  Try to
+  // eliminate a zero vector by reusing any zero index in the permute vector.
+  unsigned ZeroVecIdx =
+    isZeroVector(Ops[0]) ? 0 : (isZeroVector(Ops[1]) ? 1 : UINT_MAX);
+  if (ZeroVecIdx != UINT_MAX) {
+    bool MaskFirst = true;
+    int ZeroIdx = -1;
+    for (unsigned I = 0; I < SystemZ::VectorBytes; ++I) {
+      unsigned OpNo = unsigned(Bytes[I]) / SystemZ::VectorBytes;
+      unsigned Byte = unsigned(Bytes[I]) % SystemZ::VectorBytes;
+      if (OpNo == ZeroVecIdx && I == 0) {
+        // If the first byte is zero, use mask as first operand.
+        ZeroIdx = 0;
+        break;
+      }
+      if (OpNo != ZeroVecIdx && Byte == 0) {
+        // If mask contains a zero, use it by placing that vector first.
+        ZeroIdx = I + SystemZ::VectorBytes;
+        MaskFirst = false;
+        break;
+      }
+    }
+    if (ZeroIdx != -1) {
+      SDValue IndexNodes[SystemZ::VectorBytes];
+      for (unsigned I = 0; I < SystemZ::VectorBytes; ++I) {
+        if (Bytes[I] >= 0) {
+          unsigned OpNo = unsigned(Bytes[I]) / SystemZ::VectorBytes;
+          unsigned Byte = unsigned(Bytes[I]) % SystemZ::VectorBytes;
+          if (OpNo == ZeroVecIdx)
+            IndexNodes[I] = DAG.getConstant(ZeroIdx, DL, MVT::i32);
+          else {
+            unsigned BIdx = MaskFirst ? Byte + SystemZ::VectorBytes : Byte;
+            IndexNodes[I] = DAG.getConstant(BIdx, DL, MVT::i32);
+          }
+        } else
+          IndexNodes[I] = DAG.getUNDEF(MVT::i32);
+      }
+      SDValue Mask = DAG.getBuildVector(MVT::v16i8, DL, IndexNodes);
+      SDValue Src = ZeroVecIdx == 0 ? Ops[1] : Ops[0];
+      if (MaskFirst)
+        return DAG.getNode(SystemZISD::PERMUTE, DL, MVT::v16i8, Mask, Src,
+                           Mask);
+      else
+        return DAG.getNode(SystemZISD::PERMUTE, DL, MVT::v16i8, Src, Mask,
+                           Mask);
+    }
+  }
+
   SDValue IndexNodes[SystemZ::VectorBytes];
   for (unsigned I = 0; I < SystemZ::VectorBytes; ++I)
     if (Bytes[I] >= 0)
