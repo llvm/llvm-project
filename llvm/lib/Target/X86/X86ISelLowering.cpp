@@ -48541,7 +48541,9 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::RFP32RegClass);
       if (VT == MVT::f64 && !isScalarFPTypeInSSEReg(VT))
         return std::make_pair(0U, &X86::RFP64RegClass);
-      return std::make_pair(0U, &X86::RFP80RegClass);
+      if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f80)
+        return std::make_pair(0U, &X86::RFP80RegClass);
+      break;
     case 'y':   // MMX_REGS if MMX allowed.
       if (!Subtarget.hasMMX()) break;
       return std::make_pair(0U, &X86::VR64RegClass);
