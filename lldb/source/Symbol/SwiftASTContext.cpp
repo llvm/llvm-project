@@ -2206,7 +2206,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     logError("couldn't load the Swift stdlib");
     return {};
   }
-
+  
   return swift_ast_sp;
 }
 
@@ -3198,15 +3198,17 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       // Handle any errors.
       if (!clang_importer_ap || HasErrors()) {
         std::string message;
-        if (!HasErrors())
+        if (!HasErrors()) {
           message = "failed to create ClangImporter.";
-        else {
+          m_module_import_warnings.push_back(message);
+        } else {
           DiagnosticManager diagnostic_manager;
           PrintDiagnostics(diagnostic_manager);
+          std::string underlying_error = diagnostic_manager.GetString();
           message = "failed to initialize ClangImporter: ";
-          message += diagnostic_manager.GetString();
+          message += underlying_error;
+          m_module_import_warnings.push_back(underlying_error);
         }
-        m_module_import_warnings.push_back(message);
         LOG_PRINTF(LIBLLDB_LOG_TYPES, "%s", message.c_str());
       }
       if (clang_importer_ap)
