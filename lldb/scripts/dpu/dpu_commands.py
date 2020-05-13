@@ -12,9 +12,8 @@ def check_target(target):
     return True
 
 
-def compute_dpu_pid(region_id, rank_id, slice_id, dpu_id):
-    return dpu_id + 100 * (slice_id + 100 * (rank_id + 100 *
-                                             (region_id + 100)))
+def compute_dpu_pid(rank_id, slice_id, dpu_id):
+    return dpu_id + 100 * (slice_id + 100 * (rank_id + 100))
 
 
 def get_value_from_command(debugger, command, base):
@@ -58,7 +57,7 @@ def get_dpu_from_command(command, debugger, target):
         "dpu", "(struct dpu_t *)" + str(addr))
 
 
-def get_region_id_and_rank_id(rank, target):
+def get_rank_id(rank, target):
     hw_dpu_rank_allocation_parameters_type = \
         target.FindFirstType("hw_dpu_rank_allocation_parameters_t")
     if not(hw_dpu_rank_allocation_parameters_type.IsValid()):
@@ -71,9 +70,8 @@ def get_region_id_and_rank_id(rank, target):
         .GetChildMemberWithName("rank_fs")
         .GetChildMemberWithName("rank_path")
         )
-    region_id = int(re.search('dpu_region(.+)/', rank_path).group(1))
     rank_id = int(re.search('dpu_rank(.+)"', rank_path).group(1))
-    return region_id, rank_id
+    return rank_id
 
 
 def get_nb_slices_and_nb_dpus_per_slice(rank, target):
@@ -240,13 +238,13 @@ def dpu_attach(debugger, command, result, internal_dict):
         print("Could not find dpu rank")
         return None
 
-    region_id, rank_id = get_region_id_and_rank_id(rank, target)
-    if region_id == -1 or rank_id == -1:
+    rank_id = get_rank_id(rank, target)
+    if rank_id == -1:
         print("Could not attach to simulator (hardware only)")
         return None
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
-    pid = compute_dpu_pid(region_id, rank_id, slice_id, dpu_id)
+    pid = compute_dpu_pid(rank_id, slice_id, dpu_id)
 
     nb_slices, nb_dpus_per_slice = get_nb_slices_and_nb_dpus_per_slice(rank, target)
     structures_value_env = ""
@@ -369,12 +367,11 @@ def print_list(list, result):
     if result is None:
         return
     result.PutCString("ADDR \t\t\tID \t\tSTATUS \t\tPROGRAM")
-    for (dpu_addr, region_id, rank_id, slice_id, dpu_id,
+    for (dpu_addr, rank_id, slice_id, dpu_id,
          status, program) in list:
         result.PutCString(
             "'" + str(hex(dpu_addr)) + "' \t"
-            + str(region_id) + "." + str(rank_id) + "."
-            + str(slice_id) + "." + str(dpu_id)
+            + str(rank_id) + "." + str(slice_id) + "." + str(dpu_id)
             + " \t" + status + " \t'" + program + "'")
 
 
@@ -404,7 +401,7 @@ def dpu_list(debugger, command, result, internal_dict):
         if rank.GetValueAsUnsigned() == 0:
             continue
 
-        region_id, rank_id = get_region_id_and_rank_id(rank, target)
+        rank_id = get_rank_id(rank, target)
 
         nb_slices, nb_dpus_per_slice = \
             get_nb_slices_and_nb_dpus_per_slice(rank, target)
@@ -439,7 +436,7 @@ def dpu_list(debugger, command, result, internal_dict):
                                             dpu_id)
 
                 result_list.append((int(str(dpu.GetAddress()), 16),
-                                    region_id, rank_id, slice_id, dpu_id,
+                                    rank_id, slice_id, dpu_id,
                                     dpu_status, program_path))
 
     print_list(result_list, result)

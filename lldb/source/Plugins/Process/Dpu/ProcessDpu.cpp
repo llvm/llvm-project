@@ -140,15 +140,22 @@ ProcessDpu::Factory::Attach(
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   LLDB_LOG(log, "attaching to pid = {0:x}", pid);
 
-  unsigned int region_id, rank_id, slice_id, dpu_id;
+  unsigned int rank_id, slice_id, dpu_id;
   dpu_id = pid % 100;
   slice_id = (pid / 100) % 100;
   rank_id = (pid / (100 * 100)) % 100;
-  region_id = (pid / (100 * 100 * 100)) % 100;
+
+  char rank_path[128];
+  sprintf(rank_path, "/dev/dpu_rank%u", rank_id);
+
+  if (access(rank_path, F_OK) != 0) {
+    return Status("'%s' does not exist. Run 'dpu-diag' for a full diagnostic  ",
+                  rank_path)
+        .ToError();
+  }
 
   char profile[256];
-  sprintf(profile, "backend=hw,rankPath=/dev/dpu_region%u/dpu_rank%u",
-          region_id, rank_id);
+  sprintf(profile, "backend=hw,rankPath=%s", rank_id, rank_path);
 
   PseudoTerminal pseudo_terminal;
   if (!pseudo_terminal.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, nullptr,
