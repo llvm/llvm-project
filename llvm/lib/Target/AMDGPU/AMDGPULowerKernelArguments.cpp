@@ -135,7 +135,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
         continue;
     }
 
-    VectorType *VT = dyn_cast<VectorType>(ArgTy);
+    auto *VT = dyn_cast<FixedVectorType>(ArgTy);
     bool IsV3 = VT && VT->getNumElements() == 3;
     bool DoShiftOpt = Size < 32 && !ArgTy->isAggregateType();
 
