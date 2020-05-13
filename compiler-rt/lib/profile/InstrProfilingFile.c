@@ -854,13 +854,12 @@ static void parseAndSetFilename(const char *FilenamePat,
 
   truncateCurrentFile();
   if (__llvm_profile_is_continuous_mode_enabled()) {
-    if (lprofRuntimeCounterRelocation()) {
+    if (lprofRuntimeCounterRelocation())
       relocateCounters();
-    } else {
+    else
       initializeProfileForContinuousMode();
-      installExitSignalHandlers();
-    }
   }
+  installExitSignalHandlers();
 }
 
 /* Return buffer length that is required to store the current profile
