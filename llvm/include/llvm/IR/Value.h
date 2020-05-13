@@ -593,17 +593,22 @@ public:
   }
 
   /// Accumulate the constant offset this value has compared to a base pointer.
-  /// Only 'getelementptr' instructions (GEPs) with constant indices are
-  /// accumulated but other instructions, e.g., casts, are stripped away as
-  /// well. The accumulated constant offset is added to \p Offset and the base
+  /// Only 'getelementptr' instructions (GEPs) are accumulated but other
+  /// instructions, e.g., casts, are stripped away as well.
+  /// The accumulated constant offset is added to \p Offset and the base
   /// pointer is returned.
   ///
   /// The APInt \p Offset has to have a bit-width equal to the IntPtr type for
   /// the address space of 'this' pointer value, e.g., use
   /// DataLayout::getIndexTypeSizeInBits(Ty).
   ///
-  /// If \p AllowNonInbounds is true, constant offsets in GEPs are stripped and
+  /// If \p AllowNonInbounds is true, offsets in GEPs are stripped and
   /// accumulated even if the GEP is not "inbounds".
+  ///
+  /// If \p ExternalAnalysis is provided it will be used to calculate a offset
+  /// when a operand of GEP is not constant.
+  /// For example, for a value \p ExternalAnalysis might try to calculate a
+  /// lower bound. If \p ExternalAnalysis is successful, it should return true.
   ///
   /// If this is called on a non-pointer value, it returns 'this' and the
   /// \p Offset is not modified.
@@ -613,9 +618,10 @@ public:
   /// between the underlying value and the returned one. Thus, if no constant
   /// offset was found, the returned value is the underlying one and \p Offset
   /// is unchanged.
-  const Value *stripAndAccumulateConstantOffsets(const DataLayout &DL,
-                                                 APInt &Offset,
-                                                 bool AllowNonInbounds) const;
+  const Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr) const;
   Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
                                            bool AllowNonInbounds) {
     return const_cast<Value *>(

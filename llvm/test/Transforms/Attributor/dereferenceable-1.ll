@@ -298,6 +298,32 @@ define void @deref_or_null_and_nonnull(i32* dereferenceable_or_null(100) %0) {
 ;   fill_range(p, *range);
 ; }
 
+; FIXME: %ptr should be dereferenceable(31)
+define void @test8(i8* %ptr) #0 {
+  br label %1
+1:                                                ; preds = %5, %0
+  %i.0 = phi i32 [ 20, %0 ], [ %4, %5 ]
+  %2 = sext i32 %i.0 to i64
+  %3 = getelementptr inbounds i8, i8* %ptr, i64 %2
+  store i8 32, i8* %3, align 1
+  %4 = add nsw i32 %i.0, 1
+  br label %5
+5:                                                ; preds = %1
+  %6 = icmp slt i32 %4, 30
+  br i1 %6, label %1, label %7
+
+7:                                                ; preds = %5
+  ret void
+}
+
+; 8.2 (negative case)
+define void @test8_neg(i32 %i, i8* %ptr) #0 {
+  %1 = sext i32 %i to i64
+  %2 = getelementptr inbounds i8, i8* %ptr, i64 %1
+  store i8 65, i8* %2, align 1
+  ret void
+}
+
 ; void fill_range(int* p, long long int start){
 ;   for(long long int i = start;i<start+10;i++){
 ;     // If p[i] is inbounds, p is dereferenceable(40) at least.

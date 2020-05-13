@@ -349,6 +349,43 @@ static bool genericValueTraversal(
   return true;
 }
 
+const Value *stripAndAccumulateMinimalOffsets(
+    Attributor &A, const AbstractAttribute &QueryingAA, const Value *Val,
+    const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+    bool UseAssumed = false) {
+
+  auto AttributorAnalysis = [&](Value &V, APInt &ROffset) -> bool {
+    const IRPosition &Pos = IRPosition::value(V);
+    // Only track dependence if we are going to use the assumed info.
+    const AAValueConstantRange &ValueConstantRangeAA =
+        A.getAAFor<AAValueConstantRange>(QueryingAA, Pos,
+                                         /* TrackDependence */ UseAssumed);
+    ConstantRange Range = UseAssumed ? ValueConstantRangeAA.getAssumed()
+                                     : ValueConstantRangeAA.getKnown();
+    // We can only use the lower part of the range because the upper part can
+    // be higher than what the value can really be.
+    ROffset = Range.getSignedMin();
+    return true;
+  };
+
+  return Val->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds,
+                                                AttributorAnalysis);
+}
+
+static const Value *getMinimalBaseOfAccsesPointerOperand(
+    Attributor &A, const AbstractAttribute &QueryingAA, const Instruction *I,
+    int64_t &BytesOffset, const DataLayout &DL, bool AllowNonInbounds = false) {
+  const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
+  if (!Ptr)
+    return nullptr;
+  APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  const Value *Base = stripAndAccumulateMinimalOffsets(
+      A, QueryingAA, Ptr, DL, OffsetAPInt, AllowNonInbounds);
+
+  BytesOffset = OffsetAPInt.getSExtValue();
+  return Base;
+}
+
 static const Value *
 getBasePointerOfAccessPointerOperand(const Instruction *I, int64_t &BytesOffset,
                                      const DataLayout &DL,
@@ -1586,14 +1623,16 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
     TrackUse = true;
     return 0;
   }
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
-    if (GEP->hasAllConstantIndices()) {
-      TrackUse = true;
-      return 0;
-    }
+
+  if (isa<GetElementPtrInst>(I)) {
+    TrackUse = true;
+    return 0;
+  }
 
   int64_t Offset;
-  if (const Value *Base = getBasePointerOfAccessPointerOperand(I, Offset, DL)) {
+  const Value *Base =
+      getMinimalBaseOfAccsesPointerOperand(A, QueryingAA, I, Offset, DL);
+  if (Base) {
     if (Base == &AssociatedValue &&
         getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
       int64_t DerefBytes =
@@ -1605,8 +1644,9 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   }
 
   /// Corner case when an offset is 0.
-  if (const Value *Base = getBasePointerOfAccessPointerOperand(
-          I, Offset, DL, /*AllowNonInbounds*/ true)) {
+  Base = getBasePointerOfAccessPointerOperand(I, Offset, DL,
+                                              /*AllowNonInbounds*/ true);
+  if (Base) {
     if (Offset == 0 && Base == &AssociatedValue &&
         getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
       int64_t DerefBytes =
@@ -3311,6 +3351,8 @@ struct AADereferenceableImpl : AADereferenceable {
     bool TrackUse = false;
     int64_t DerefBytes = getKnownNonNullAndDerefBytesForUse(
         A, *this, getAssociatedValue(), U, I, IsNonNull, TrackUse);
+    LLVM_DEBUG(dbgs() << "[AADereferenceable] Deref bytes: " << DerefBytes
+                      << " for instruction " << *I << "\n");
 
     addAccessedBytesForUse(A, U, I, State);
     State.takeKnownDerefBytesMaximum(DerefBytes);
@@ -3359,13 +3401,13 @@ struct AADereferenceableFloating : AADereferenceableImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     const DataLayout &DL = A.getDataLayout();
 
-    auto VisitValueCB = [&](Value &V, const Instruction *, DerefState &T,
+    auto VisitValueCB = [&](const Value &V, const Instruction *, DerefState &T,
                             bool Stripped) -> bool {
       unsigned IdxWidth =
           DL.getIndexSizeInBits(V.getType()->getPointerAddressSpace());
       APInt Offset(IdxWidth, 0);
       const Value *Base =
-          V.stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+          stripAndAccumulateMinimalOffsets(A, *this, &V, DL, Offset, false);
 
       const auto &AA =
           A.getAAFor<AADereferenceable>(*this, IRPosition::value(*Base));
@@ -3382,7 +3424,6 @@ struct AADereferenceableFloating : AADereferenceableImpl {
         T.GlobalState &= DS.GlobalState;
       }
 
-      // TODO: Use `AAConstantRange` to infer dereferenceable bytes.
 
       // For now we do not try to "increase" dereferenceability due to negative
       // indices as we first have to come up with code to deal with loops and
