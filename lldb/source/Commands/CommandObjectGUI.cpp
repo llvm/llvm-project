@@ -47,7 +47,7 @@ bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
   }
   return true;
 #else
-  result.AppendError("lldb was not build with gui support");
+  result.AppendError("lldb was not built with gui support");
   return false;
 #endif
 }
