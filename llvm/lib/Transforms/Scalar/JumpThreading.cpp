@@ -2513,7 +2513,8 @@ void JumpThreadingPass::UpdateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   }
 
   // Update edge probabilities in BPI.
-  BPI->setEdgeProbability(BB, BBSuccProbs);
+  for (int I = 0, E = BBSuccProbs.size(); I < E; I++)
+    BPI->setEdgeProbability(BB, I, BBSuccProbs[I]);
 
   // Update the profile metadata as well.
   //
