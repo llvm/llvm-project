@@ -426,20 +426,35 @@ declare i32 @__gxx_personality_v0(...)
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
-; CHECK-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; CHECK-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]])
-; CHECK-NEXT:    br label [[TMP3:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    ret i32 [[TMP8:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
-; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
+; IS________OPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
+; IS________OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]])
+; IS________OPM-NEXT:    br label [[TMP3:%.*]]
+; IS________OPM:       2:
+; IS________OPM-NEXT:    ret i32 [[TMP8:%.*]]
+; IS________OPM:       3:
+; IS________OPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
+; IS________OPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
+; IS________OPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
+; IS________OPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
+; IS________OPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IS________OPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
+; IS________OPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
+; IS________OPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
+;
+; IS________NPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
+; IS________NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]])
+; IS________NPM-NEXT:    br label [[TMP3:%.*]]
+; IS________NPM:       2:
+; IS________NPM-NEXT:    ret i32 [[TMP8:%.*]]
+; IS________NPM:       3:
+; IS________NPM-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
+; IS________NPM-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
+; IS________NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP4]]
+; IS________NPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
+; IS________NPM-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
+; IS________NPM-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
+; IS________NPM-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
+; IS________NPM-NEXT:    br i1 [[TMP10]], label [[TMP2:%.*]], label [[TMP3]]
 ;
   br label %3
 
