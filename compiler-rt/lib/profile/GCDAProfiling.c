@@ -265,8 +265,8 @@ static int map_file() {
   fseek(output_file, 0L, SEEK_END);
   file_size = ftell(output_file);
 
-  /* A size of 0 is invalid to `mmap'. Return a fail here, but don't issue an
-   * error message because it should "just work" for the user. */
+  /* A size of 0 means the file has been created just now (possibly by another
+   * process in lock-after-open race condition). No need to mmap. */
   if (file_size == 0)
     return -1;
 
@@ -355,21 +355,18 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
   filename = mangle_filename(orig_filename);
 
   /* Try just opening the file. */
-  new_file = 0;
   fd = open(filename, O_RDWR | O_BINARY);
 
   if (fd == -1) {
     /* Try creating the file. */
     fd = open(filename, O_RDWR | O_CREAT | O_EXCL | O_BINARY, 0644);
     if (fd != -1) {
-      new_file = 1;
       mode = "w+b";
     } else {
       /* Try creating the directories first then opening the file. */
       __llvm_profile_recursive_mkdir(filename);
       fd = open(filename, O_RDWR | O_CREAT | O_EXCL | O_BINARY, 0644);
       if (fd != -1) {
-        new_file = 1;
         mode = "w+b";
       } else {
         /* Another process may have created the file just now.
@@ -394,22 +391,18 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
   output_file = fdopen(fd, mode);
 
   /* Initialize the write buffer. */
+  new_file = 0;
   write_buffer = NULL;
   cur_buffer_size = 0;
   cur_pos = 0;
 
-  if (new_file) {
+  if (map_file() == -1) {
+    /* The file has been created just now (file_size == 0) or mmap failed
+     * unexpectedly. In the latter case, try to recover by clobbering. */
+    new_file = 1;
+    write_buffer = NULL;
     resize_write_buffer(WRITE_BUFFER_SIZE);
     memset(write_buffer, 0, WRITE_BUFFER_SIZE);
-  } else {
-    if (map_file() == -1) {
-      /* mmap failed, try to recover by clobbering */
-      new_file = 1;
-      write_buffer = NULL;
-      cur_buffer_size = 0;
-      resize_write_buffer(WRITE_BUFFER_SIZE);
-      memset(write_buffer, 0, WRITE_BUFFER_SIZE);
-    }
   }
 
   /* gcda file, version, stamp checksum. */
