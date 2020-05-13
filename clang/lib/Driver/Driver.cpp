@@ -1817,6 +1817,11 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_targets)) {
+    llvm::TargetRegistry::printRegisteredTargetsForVersion(llvm::outs());
+    return false;
+  }
+
   return true;
 }
 
