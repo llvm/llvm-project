@@ -4045,22 +4045,30 @@ class sve_int_dup_imm_pred<bits<2> sz8_64, bit m, string asm,
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve_int_dup_imm_pred_merge<string asm> {
-  let Constraints = "$Zd = $_Zd" in {
-  def _B : sve_int_dup_imm_pred<0b00, 1, asm, ZPR8,  "/m", (ins ZPR8:$_Zd,  PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm)>;
-  def _H : sve_int_dup_imm_pred<0b01, 1, asm, ZPR16, "/m", (ins ZPR16:$_Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm)>;
-  def _S : sve_int_dup_imm_pred<0b10, 1, asm, ZPR32, "/m", (ins ZPR32:$_Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm)>;
-  def _D : sve_int_dup_imm_pred<0b11, 1, asm, ZPR64, "/m", (ins ZPR64:$_Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm)>;
-  }
+multiclass sve_int_dup_imm_pred_merge_inst<
+    bits<2> sz8_64, string asm, ZPRRegOp zprty, ValueType intty,
+    ValueType predty, ValueType scalarty, imm8_opt_lsl cpyimm> {
+  let Constraints = "$Zd = $_Zd" in
+  def NAME : sve_int_dup_imm_pred<sz8_64, 1, asm, zprty,  "/m",
+                                  (ins zprty:$_Zd, PPRAny:$Pg, cpyimm:$imm)>;
+  def : InstAlias<"mov $Zd, $Pg/m, $imm",
+                  (!cast<Instruction>(NAME) zprty:$Zd, PPRAny:$Pg, cpyimm:$imm), 1>;
+  def : Pat<(intty
+              (vselect predty:$Pg,
+                (intty (AArch64dup (scalarty (SVE8BitLslImm i32:$imm, i32:$shift)))),
+                intty:$Zd)),
+            (!cast<Instruction>(NAME) zprty:$Zd, $Pg, i32:$imm, i32:$shift)>;
+}
 
-  def : InstAlias<"mov $Zd, $Pg/m, $imm",
-                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd,  PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm), 1>;
-  def : InstAlias<"mov $Zd, $Pg/m, $imm",
-                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm), 1>;
-  def : InstAlias<"mov $Zd, $Pg/m, $imm",
-                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm), 1>;
-  def : InstAlias<"mov $Zd, $Pg/m, $imm",
-                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm), 1>;
+multiclass sve_int_dup_imm_pred_merge<string asm> {
+  defm _B : sve_int_dup_imm_pred_merge_inst<0b00, asm, ZPR8, nxv16i8, nxv16i1,
+                                            i32, cpy_imm8_opt_lsl_i8>;
+  defm _H : sve_int_dup_imm_pred_merge_inst<0b01, asm, ZPR16, nxv8i16, nxv8i1,
+                                            i32, cpy_imm8_opt_lsl_i16>;
+  defm _S : sve_int_dup_imm_pred_merge_inst<0b10, asm, ZPR32, nxv4i32, nxv4i1,
+                                            i32, cpy_imm8_opt_lsl_i32>;
+  defm _D : sve_int_dup_imm_pred_merge_inst<0b11, asm, ZPR64, nxv2i64, nxv2i1,
+                                            i64, cpy_imm8_opt_lsl_i64>;
 
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
                   (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, 0, 0), 0>;
