@@ -152,6 +152,10 @@ AARCH64_CPU_NAME("kryo", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("thunderx2t99", ARMV8_1A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_NONE))
+AARCH64_CPU_NAME("thunderx3t110", ARMV8_3A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_CRC | AEK_CRYPTO | AEK_FP | AEK_SIMD |
+                  AEK_LSE | AEK_RAND | AArch64::AEK_PROFILE |
+                  AArch64::AEK_RAS))
 AARCH64_CPU_NAME("thunderx", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_CRC | AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("thunderxt88", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,

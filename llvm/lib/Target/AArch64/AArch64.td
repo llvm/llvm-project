@@ -443,6 +443,10 @@ def SVEUnsupported : AArch64Unsupported {
            HasSVE2BitPerm];
 }
 
+def PAUnsupported : AArch64Unsupported {
+  let F = [HasPA];
+}
+
 include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
@@ -453,6 +457,7 @@ include "AArch64SchedExynosM4.td"
 include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
+include "AArch64SchedThunderX3T110.td"
 
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors", [
@@ -780,6 +785,25 @@ def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
                                           FeatureLSE,
                                           HasV8_1aOps]>;
 
+def ProcThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
+                                         "ThunderX3T110",
+                                         "Marvell ThunderX3 processors", [
+                                          FeatureAggressiveFMA,
+                                          FeatureCRC,
+                                          FeatureCrypto,
+                                          FeatureFPARMv8,
+                                          FeatureArithmeticBccFusion,
+                                          FeatureNEON,
+                                          FeaturePostRAScheduler,
+                                          FeaturePredictableSelectIsExpensive,
+                                          FeatureLSE,
+                                          FeaturePA,
+                                          FeatureUseAA,
+                                          FeatureBalanceFPOps,
+                                          FeaturePerfMon,
+                                          FeatureStrictAlign,
+                                          HasV8_3aOps]>;
+
 def ProcThunderX : SubtargetFeature<"thunderx", "ARMProcFamily", "ThunderX",
                                     "Cavium ThunderX processors", [
                                     FeatureCRC,
@@ -878,6 +902,8 @@ def : ProcessorModel<"thunderxt81", ThunderXT8XModel,  [ProcThunderXT81]>;
 def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
+// Marvell ThunderX3T110 Processors.
+def : ProcessorModel<"thunderx3t110", ThunderX3T110Model, [ProcThunderX3T110]>;
 // FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
 def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
 

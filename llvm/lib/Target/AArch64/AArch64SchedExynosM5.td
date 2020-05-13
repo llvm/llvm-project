@@ -24,7 +24,8 @@ def ExynosM5Model : SchedMachineModel {
   let MispredictPenalty     =  15; // Minimum branch misprediction penalty.
   let CompleteModel         =   1; // Use the default model otherwise.
 
-  list<Predicate> UnsupportedFeatures = SVEUnsupported.F;
+  list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
+                                                    PAUnsupported.F);
 }
 
 //===----------------------------------------------------------------------===//
