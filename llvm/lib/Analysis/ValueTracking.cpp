@@ -4821,12 +4821,17 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   if (!CtxI || !CtxI->getParent() || !DT)
     return false;
 
+  auto *DNode = DT->getNode(CtxI->getParent());
+  if (!DNode)
+    // Unreachable block
+    return false;
+
   // If V is used as a branch condition before reaching CtxI, V cannot be
   // undef or poison.
   //   br V, BB1, BB2
   // BB1:
   //   CtxI ; V cannot be undef or poison here
-  auto Dominator = DT->getNode(CtxI->getParent())->getIDom();
+  auto *Dominator = DNode->getIDom();
   while (Dominator) {
     auto *TI = Dominator->getBlock()->getTerminator();
 
