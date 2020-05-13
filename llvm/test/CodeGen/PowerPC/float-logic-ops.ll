@@ -5,7 +5,7 @@
 define float @absf(float %a) {
 ; CHECK-LABEL: absf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fabs f1, f1
+; CHECK-NEXT:    xsabsdp f1, f1
 ; CHECK-NEXT:    blr
 entry:
   %conv = bitcast float %a to i32
@@ -80,7 +80,7 @@ entry:
 define float @negf(float %a) {
 ; CHECK-LABEL: negf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fneg f1, f1
+; CHECK-NEXT:    xsnegdp f1, f1
 ; CHECK-NEXT:    blr
 entry:
   %conv = bitcast float %a to i32
@@ -127,7 +127,7 @@ entry:
 define float @nabsf(float %a) {
 ; CHECK-LABEL: nabsf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fnabs f1, f1
+; CHECK-NEXT:    xsnabsdp f1, f1
 ; CHECK-NEXT:    blr
 entry:
   %conv = bitcast float %a to i32
