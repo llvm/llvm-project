@@ -33,6 +33,8 @@ static_library("PDB") {
     "Native/NativeEnumModules.cpp",
     "Native/NativeEnumTypes.cpp",
     "Native/NativeExeSymbol.cpp",
+    "Native/NativeFunctionSymbol.cpp",
+    "Native/NativePublicSymbol.cpp",
     "Native/NativeRawSymbol.cpp",
     "Native/NativeSession.cpp",
     "Native/NativeSymbolEnumerator.cpp",
