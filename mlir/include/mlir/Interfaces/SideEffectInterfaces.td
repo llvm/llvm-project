@@ -33,6 +33,9 @@ class IntrinsicResource<string resourceName> :
 
 // A link to the DefaultResource class.
 def DefaultResource : IntrinsicResource<"DefaultResource">;
+// A link to the AutomaticAllocationScopeResource class.
+def AutomaticAllocationScopeResource :
+  IntrinsicResource<"AutomaticAllocationScopeResource">;
 
 //===----------------------------------------------------------------------===//
 // EffectOpInterface
