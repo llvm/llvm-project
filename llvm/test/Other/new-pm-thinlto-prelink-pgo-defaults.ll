@@ -1,7 +1,7 @@
 ; Validate ThinLTO prelink pipeline when we have instrumentation PGO
 ;
 ; RUN: llvm-profdata merge %S/Inputs/new-pm-thinlto-prelink-pgo-defaults.proftext -o %t.profdata
-; 
+;
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -passes='thinlto-pre-link<O1>,name-anon-globals' -S %s 2>&1 \
@@ -65,6 +65,9 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
+; CHECK-O123-NEXT: Running pass: ModuleInlinerWrapperPass
+; CHECK-O123-NEXT: Running analysis: InlineAdvisorAnalysis
+; CHECK-O123-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O123-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}PassManager<{{.*}}LazyCallGraph::SCC
 ; CHECK-O123-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Running analysis: LazyCallGraphAnalysis
@@ -75,6 +78,7 @@
 ; CHECK-O123-NEXT: Running pass: InlinerPass on (foo)
 ; CHECK-O123-NEXT: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O123-NEXT: Finished CGSCC pass manager run.
+; CHECK-O123-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O123-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
 ; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
@@ -93,7 +97,9 @@
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PassInstrumentationAnalysis on foo
-; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
+; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
+; CHECK-Os-NEXT: Running analysis: InlineAdvisorAnalysis
+; CHECK-Oz-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
