@@ -160,16 +160,14 @@ entry:
   ret void
 }
 
-; TODO: Should be able to copy to m0 only once and increment base instead.
-
 ; GCN-LABEL: {{^}}double8_extelt:
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
 ; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
-; GCN-DAG: v_mov_b32_e32 [[BASE:v[0-9]+]], [[ZERO]]
-; GCN-DAG: s_mov_b32 m0, [[IND0:s[0-9]+]]
-; GCN-DAG: s_or_b32 [[IND1:s[0-9]+]], [[IND0]], 1
-; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], [[BASE]]
-; GCN:     s_mov_b32 m0, [[IND1:s[0-9]+]]
-; GCN:     v_movrels_b32_e32 v[[RES_HI:[0-9]+]], [[BASE]]
+; GCN-DAG: v_mov_b32_e32 v[[#BASE:]], [[ZERO]]
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], v[[#BASE]]
+; GCN-DAG: v_movrels_b32_e32 v[[RES_HI:[0-9]+]], v[[#BASE+1]]
 ; GCN:     store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[RES_LO]]:[[RES_HI]]]
 define amdgpu_kernel void @double8_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
@@ -179,13 +177,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}double7_extelt:
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
 ; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
-; GCN-DAG: v_mov_b32_e32 [[BASE:v[0-9]+]], [[ZERO]]
-; GCN-DAG: s_mov_b32 m0, [[IND0:s[0-9]+]]
-; GCN-DAG: s_or_b32 [[IND1:s[0-9]+]], [[IND0]], 1
-; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], [[BASE]]
-; GCN:     s_mov_b32 m0, [[IND1:s[0-9]+]]
-; GCN:     v_movrels_b32_e32 v[[RES_HI:[0-9]+]], [[BASE]]
+; GCN-DAG: v_mov_b32_e32 v[[#BASE:]], [[ZERO]]
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movrels_b32_e32 v[[RES_LO:[0-9]+]], v[[#BASE]]
+; GCN-DAG: v_movrels_b32_e32 v[[RES_HI:[0-9]+]], v[[#BASE+1]]
 ; GCN:     store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[RES_LO]]:[[RES_HI]]]
 define amdgpu_kernel void @double7_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
