@@ -4,7 +4,7 @@ set(LLVM_OPTIONAL_SOURCES
   DerivedAttributeOpInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
-  SideEffects.cpp
+  SideEffectInterfaces.cpp
   ViewLikeInterface.cpp
   )
 
@@ -73,8 +73,8 @@ add_mlir_library(MLIRLoopLikeInterface
   MLIRIR
   )
 
-add_mlir_library(MLIRSideEffects
-  SideEffects.cpp
+add_mlir_library(MLIRSideEffectInterfaces
+  SideEffectInterfaces.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces

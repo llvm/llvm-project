@@ -43,7 +43,7 @@ target_link_libraries(toyc-ch7
     MLIRIR
     MLIRParser
     MLIRPass
-    MLIRSideEffects
+    MLIRSideEffectInterfaces
     MLIRTargetLLVMIR
     MLIRTransforms
     )

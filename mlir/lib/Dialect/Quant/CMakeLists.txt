@@ -19,7 +19,7 @@ add_mlir_dialect_library(MLIRQuant
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRPass
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRSupport
   MLIRStandardOps
   MLIRTransformUtils

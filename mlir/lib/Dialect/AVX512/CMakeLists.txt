@@ -9,6 +9,6 @@ add_mlir_dialect_library(MLIRAVX512
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRVectorToLLVM
   )
