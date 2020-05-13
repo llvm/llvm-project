@@ -2275,10 +2275,10 @@ Wrapper operator*(Wrapper a, int64_t b) {
 /// A subview result type can be fully inferred from the source type and the
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
-static Type inferSubViewResultType(MemRefType sourceMemRefType,
-                                   ArrayRef<int64_t> staticOffsets,
-                                   ArrayRef<int64_t> staticSizes,
-                                   ArrayRef<int64_t> staticStrides) {
+Type SubViewOp::inferSubViewResultType(MemRefType sourceMemRefType,
+                                       ArrayRef<int64_t> staticOffsets,
+                                       ArrayRef<int64_t> staticSizes,
+                                       ArrayRef<int64_t> staticStrides) {
   unsigned rank = sourceMemRefType.getRank();
   (void)rank;
   assert(staticOffsets.size() == rank &&
@@ -2474,7 +2474,7 @@ static LogicalResult verify(SubViewOp op) {
     return failure();
 
   // Verify result type against inferred type.
-  auto expectedType = inferSubViewResultType(
+  auto expectedType = SubViewOp::inferSubViewResultType(
       op.getBaseMemRefType(), extractFromI64ArrayAttr(op.static_offsets()),
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
@@ -2487,16 +2487,6 @@ static LogicalResult verify(SubViewOp op) {
 raw_ostream &mlir::operator<<(raw_ostream &os, SubViewOp::Range &range) {
   return os << "range " << range.offset << ":" << range.size << ":"
             << range.stride;
-}
-
-SmallVector<SubViewOp::Range, 8> SubViewOp::getRanges() {
-  SmallVector<Range, 8> res;
-  unsigned rank = getType().getRank();
-  res.reserve(rank);
-  for (unsigned i = 0; i < rank; ++i)
-    res.emplace_back(Range{*(offsets().begin() + i), *(sizes().begin() + i),
-                           *(strides().begin() + i)});
-  return res;
 }
 
 static unsigned getNumDynamicEntriesUpToIdx(
@@ -2538,6 +2528,29 @@ unsigned SubViewOp::getIndexOfDynamicStride(unsigned idx) {
       getNumDynamicEntriesUpToIdx(static_strides().cast<ArrayAttr>(),
                                   ShapedType::isDynamicStrideOrOffset, idx);
   return 1 + offsets().size() + sizes().size() + numDynamic;
+}
+
+/// Return the list of SubViewOp::Range (i.e. offset, size, stride). Each Range
+/// entry contains either the dynamic value or a ConstantIndexOp constructed
+/// with `b` at location `loc`.
+SmallVector<SubViewOp::Range, 8> SubViewOp::getOrCreateRanges(OpBuilder &b,
+                                                              Location loc) {
+  SmallVector<Range, 8> res;
+  unsigned rank = getType().getRank();
+  res.reserve(rank);
+  for (unsigned idx = 0; idx < rank; ++idx) {
+    auto offset = isDynamicOffset(idx)
+                      ? getDynamicOffset(idx)
+                      : b.create<ConstantIndexOp>(loc, getStaticOffset(idx));
+    auto size = isDynamicSize(idx)
+                    ? getDynamicSize(idx)
+                    : b.create<ConstantIndexOp>(loc, getStaticSize(idx));
+    auto stride = isDynamicStride(idx)
+                      ? getDynamicStride(idx)
+                      : b.create<ConstantIndexOp>(loc, getStaticStride(idx));
+    res.emplace_back(Range{offset, size, stride});
+  }
+  return res;
 }
 
 LogicalResult
@@ -2583,7 +2596,8 @@ void canonicalizeSubViewPart(SmallVectorImpl<Value> &values,
 }
 
 /// Pattern to rewrite a subview op with constant arguments.
-class SubViewOpFolder final : public OpRewritePattern<SubViewOp> {
+class SubViewOpConstantArgumentFolder final
+    : public OpRewritePattern<SubViewOp> {
 public:
   using OpRewritePattern<SubViewOp>::OpRewritePattern;
 
@@ -2718,27 +2732,63 @@ bool mlir::canFoldIntoConsumerOp(MemRefCastOp castOp) {
   return true;
 }
 
-OpFoldResult SubViewOp::fold(ArrayRef<Attribute>) {
-  auto folds = [](Operation *op) {
-    bool folded = false;
-    for (OpOperand &operand : op->getOpOperands()) {
-      auto castOp = operand.get().getDefiningOp<MemRefCastOp>();
-      if (castOp && canFoldIntoConsumerOp(castOp)) {
-        operand.set(castOp.getOperand());
-        folded = true;
-      }
-    }
-    return folded ? success() : failure();
-  };
+/// Pattern to rewrite a subview op with MemRefCast arguments.
+/// This essentially pushes memref_cast past its consuming subview when
+/// `canFoldIntoConsumerOp` is true.
+///
+/// Example:
+/// ```
+///   %0 = memref_cast %V : memref<16x16xf32> to memref<?x?xf32>
+///   %1 = subview %0[0, 0][3, 4][1, 1] :
+///     memref<?x?xf32> to memref<3x4xf32, offset:?, strides:[?, 1]>
+/// ```
+/// is rewritten into:
+/// ```
+///   %0 = subview %V: memref<16x16xf32> to memref<3x4xf32, #[[map0]]>
+///   %1 = memref_cast %0: memref<3x4xf32, offset:0, strides:[16, 1]> to
+///     memref<3x4xf32, offset:?, strides:[?, 1]>
+/// ```
+class SubViewOpMemRefCastFolder final : public OpRewritePattern<SubViewOp> {
+public:
+  using OpRewritePattern<SubViewOp>::OpRewritePattern;
 
-  if (succeeded(folds(*this)))
-    return getResult();
-  return {};
-}
+  LogicalResult matchAndRewrite(SubViewOp subViewOp,
+                                PatternRewriter &rewriter) const override {
+    // Any constant operand, just return to let SubViewOpConstantFolder kick in.
+    if (llvm::any_of(subViewOp.getOperands(), [](Value operand) {
+          return matchPattern(operand, m_ConstantIndex());
+        }))
+      return failure();
+
+    auto castOp = subViewOp.source().getDefiningOp<MemRefCastOp>();
+    if (!castOp)
+      return failure();
+
+    if (!canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    /// Deduce the resultType of the SubViewOp using `inferSubViewResultType` on
+    /// the cast source operand type and the SubViewOp static information. This
+    /// is the resulting type if the MemRefCastOp were folded.
+    Type resultType = SubViewOp::inferSubViewResultType(
+        castOp.source().getType().cast<MemRefType>(),
+        extractFromI64ArrayAttr(subViewOp.static_offsets()),
+        extractFromI64ArrayAttr(subViewOp.static_sizes()),
+        extractFromI64ArrayAttr(subViewOp.static_strides()));
+    Value newSubView = rewriter.create<SubViewOp>(
+        subViewOp.getLoc(), resultType, castOp.source(), subViewOp.offsets(),
+        subViewOp.sizes(), subViewOp.strides(), subViewOp.static_offsets(),
+        subViewOp.static_sizes(), subViewOp.static_strides());
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(subViewOp, subViewOp.getType(),
+                                              newSubView);
+    return success();
+  }
+};
 
 void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
-  results.insert<SubViewOpFolder>(context);
+  results.insert<SubViewOpConstantArgumentFolder, SubViewOpMemRefCastFolder>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
