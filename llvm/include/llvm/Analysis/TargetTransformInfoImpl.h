@@ -166,6 +166,8 @@ public:
                     C2.ScaleCost, C2.ImmCost, C2.SetupCost);
   }
 
+  bool isProfitableLSRChainElement(Instruction *I) { return false; }
+
   bool canMacroFuseCmp() { return false; }
 
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
