@@ -401,7 +401,9 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
-      BPI->setEdgeProbability(BodyBlock, EdgeProbabilities);
+      for (unsigned I = 0, E = BodyBlock->getTerminator()->getNumSuccessors();
+           I < E; ++I)
+        BPI->setEdgeProbability(BodyBlock, I, EdgeProbabilities[I]);
       BFI->setBlockFreq(BodyBlock, BFI->getBlockFreq(Target).getFrequency());
     }
     // It's possible Target was its own successor through an indirectbr.
