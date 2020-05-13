@@ -2780,6 +2780,27 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                    "       // line 2 about b\n"
                    "       long b;",
                    getLLVMStyleWithColumns(80)));
+
+  // Checks an edge case in preprocessor handling.
+  // These comments should *not* be aligned
+  EXPECT_EQ(
+      "#if FOO\n"
+      "#else\n"
+      "long a; // Line about a\n"
+      "#endif\n"
+      "#if BAR\n"
+      "#else\n"
+      "long b_long_name; // Line about b\n"
+      "#endif\n",
+      format("#if FOO\n"
+             "#else\n"
+             "long a;           // Line about a\n" // Previous (bad) behavior
+             "#endif\n"
+             "#if BAR\n"
+             "#else\n"
+             "long b_long_name; // Line about b\n"
+             "#endif\n",
+             getLLVMStyleWithColumns(80)));
 }
 
 TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
