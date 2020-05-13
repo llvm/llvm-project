@@ -15746,30 +15746,50 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
   };
 
   for (auto OpIdx : enumerate(I->operands())) {
-    Value *Op = OpIdx.value().get();
+    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
     // Make sure we are not already sinking this operand
-    if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+    if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
+
+    Instruction *Shuffle = Op;
+    if (Shuffle->getOpcode() == Instruction::BitCast)
+      Shuffle = dyn_cast<Instruction>(Shuffle->getOperand(0));
     // We are looking for a splat that can be sunk.
-    if (!match(Op, m_ShuffleVector(
-                       m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
-                       m_Undef(), m_ZeroMask())))
+    if (!Shuffle ||
+        !match(Shuffle, m_ShuffleVector(
+                            m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
+                            m_Undef(), m_ZeroMask())))
       continue;
     if (!IsSinker(I, OpIdx.index()))
       continue;
 
-    Instruction *Shuffle = cast<Instruction>(Op);
     // All uses of the shuffle should be sunk to avoid duplicating it across gpr
     // and vector registers
-    for (Use &U : Shuffle->uses()) {
+    for (Use &U : Op->uses()) {
       Instruction *Insn = cast<Instruction>(U.getUser());
       if (!IsSinker(Insn, U.getOperandNo()))
         return false;
     }
+
     Ops.push_back(&Shuffle->getOperandUse(0));
+    if (Shuffle != Op)
+      Ops.push_back(&Op->getOperandUse(0));
     Ops.push_back(&OpIdx.value());
   }
   return true;
+}
+
+Type *ARMTargetLowering::shouldConvertSplatType(ShuffleVectorInst *SVI) const {
+  if (!Subtarget->hasMVEIntegerOps())
+    return nullptr;
+  Type *SVIType = SVI->getType();
+  Type *ScalarType = SVIType->getScalarType();
+
+  if (ScalarType->isFloatTy())
+    return Type::getInt32Ty(SVIType->getContext());
+  if (ScalarType->isHalfTy())
+    return Type::getInt16Ty(SVIType->getContext());
+  return nullptr;
 }
 
 bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
