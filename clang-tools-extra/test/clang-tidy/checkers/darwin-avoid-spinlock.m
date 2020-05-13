@@ -2,6 +2,10 @@
 
 typedef int OSSpinLock;
 
+void OSSpinlockLock(OSSpinLock *l);
+void OSSpinlockTry(OSSpinLock *l);
+void OSSpinlockUnlock(OSSpinLock *l);
+
 @implementation Foo
 - (void)f {
     int i = 1;
