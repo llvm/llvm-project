@@ -204,6 +204,7 @@ enum Kind {
   kw_noinline,
   kw_norecurse,
   kw_nonlazybind,
+  kw_nomerge,
   kw_nonnull,
   kw_noredzone,
   kw_noreturn,

@@ -634,6 +634,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NOSYNC = 63,
   ATTR_KIND_SANITIZE_MEMTAG = 64,
   ATTR_KIND_PREALLOCATED = 65,
+  ATTR_KIND_NO_MERGE = 66,
 };
 
 enum ComdatSelectionKindCodes {

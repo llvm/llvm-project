@@ -1306,6 +1306,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
       B.addAttribute(Attribute::NoImplicitFloat); break;
     case lltok::kw_noinline: B.addAttribute(Attribute::NoInline); break;
     case lltok::kw_nonlazybind: B.addAttribute(Attribute::NonLazyBind); break;
+    case lltok::kw_nomerge: B.addAttribute(Attribute::NoMerge); break;
     case lltok::kw_noredzone: B.addAttribute(Attribute::NoRedZone); break;
     case lltok::kw_noreturn: B.addAttribute(Attribute::NoReturn); break;
     case lltok::kw_nosync: B.addAttribute(Attribute::NoSync); break;
@@ -1698,6 +1699,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_noimplicitfloat:
     case lltok::kw_noinline:
     case lltok::kw_nonlazybind:
+    case lltok::kw_nomerge:
     case lltok::kw_noredzone:
     case lltok::kw_noreturn:
     case lltok::kw_nocf_check:
@@ -1797,6 +1799,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_noimplicitfloat:
     case lltok::kw_noinline:
     case lltok::kw_nonlazybind:
+    case lltok::kw_nomerge:
     case lltok::kw_noredzone:
     case lltok::kw_noreturn:
     case lltok::kw_nocf_check:
