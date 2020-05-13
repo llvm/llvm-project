@@ -963,10 +963,10 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
       continue;
     }
 
-    // If one of the blocks is the entire common tail (and not the entry
-    // block, which we can't jump to), we can treat all blocks with this same
-    // tail at once.  Use PredBB if that is one of the possibilities, as that
-    // will not introduce any extra branches.
+    // If one of the blocks is the entire common tail (and is not the entry
+    // block/an EH pad, which we can't jump to), we can treat all blocks with
+    // this same tail at once.  Use PredBB if that is one of the possibilities,
+    // as that will not introduce any extra branches.
     MachineBasicBlock *EntryBB =
         &MergePotentials.front().getBlock()->getParent()->front();
     unsigned commonTailIndex = SameTails.size();
@@ -974,19 +974,21 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
     // into the other.
     if (SameTails.size() == 2 &&
         SameTails[0].getBlock()->isLayoutSuccessor(SameTails[1].getBlock()) &&
-        SameTails[1].tailIsWholeBlock())
+        SameTails[1].tailIsWholeBlock() && !SameTails[1].getBlock()->isEHPad())
       commonTailIndex = 1;
     else if (SameTails.size() == 2 &&
              SameTails[1].getBlock()->isLayoutSuccessor(
-                                                     SameTails[0].getBlock()) &&
-             SameTails[0].tailIsWholeBlock())
+                 SameTails[0].getBlock()) &&
+             SameTails[0].tailIsWholeBlock() &&
+             !SameTails[0].getBlock()->isEHPad())
       commonTailIndex = 0;
     else {
       // Otherwise just pick one, favoring the fall-through predecessor if
       // there is one.
       for (unsigned i = 0, e = SameTails.size(); i != e; ++i) {
         MachineBasicBlock *MBB = SameTails[i].getBlock();
-        if (MBB == EntryBB && SameTails[i].tailIsWholeBlock())
+        if ((MBB == EntryBB || MBB->isEHPad()) &&
+            SameTails[i].tailIsWholeBlock())
           continue;
         if (MBB == PredBB) {
           commonTailIndex = i;
