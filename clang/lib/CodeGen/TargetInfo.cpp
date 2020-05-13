@@ -6675,9 +6675,9 @@ bool NVPTXABIInfo::isUnsupportedType(QualType T) const {
     return true;
   if (const auto *EIT = T->getAs<ExtIntType>())
     return EIT->getNumBits() >
-           (Context.getTargetInfo().hasInt128Type() ? 128 : 64);
+           (Context.getTargetInfo().hasInt128Type() ? 128U : 64U);
   if (!Context.getTargetInfo().hasInt128Type() && T->isIntegerType() &&
-      Context.getTypeSize(T) > 64)
+      Context.getTypeSize(T) > 64U)
     return true;
   if (const auto *AT = T->getAsArrayTypeUnsafe())
     return isUnsupportedType(AT->getElementType());
