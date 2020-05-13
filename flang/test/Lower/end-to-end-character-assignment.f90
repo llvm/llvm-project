@@ -1,4 +1,4 @@
-! RUN: bbc -emit-llvm -o - %s | tco | llc | as -o %t
+! RUN: bbc -emit-llvm -o - %s | tco | llc --relocation-model=pic | as -o %t
 ! RUN: %CXX -std=c++17 %t %S/end-to-end-character-assignment-driver.cpp
 ! RUN: ./a.out
 
@@ -74,3 +74,13 @@ subroutine assign_spec_expr_len4(s1, s2, l1, l2)
   character(l2, 4) :: s2
   s1 = s2
 end subroutine
+
+! Test string concatenation
+subroutine concat1(s1, s2)
+  character(*) :: s1, s2
+  s2 = s1 // " another piece of string"
+end subroutine
+! FIXME: concat test for other kind not written because there constant
+! character with kind !=1 have issues (most likely due to the presence null
+! bytes in the middle of the string. This has nothing to do with concat it
+! just prevent running the tests.
