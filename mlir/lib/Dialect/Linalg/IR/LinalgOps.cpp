@@ -296,8 +296,7 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
   using OpRewritePattern<ReshapeOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ReshapeOpTy reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    auto srcReshapeOp =
-        dyn_cast_or_null<ReshapeOpTy>(reshapeOp.src().getDefiningOp());
+    auto srcReshapeOp = reshapeOp.src().template getDefiningOp<ReshapeOpTy>();
     if (!srcReshapeOp)
       return failure();
 
@@ -340,7 +339,7 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp) {
   // producer is same as the return type of the consumer. This can only be
   // verified if the shapes in question are static.
   ReshapeOpTy reshapeSrcOp =
-      dyn_cast_or_null<ReshapeOpTy>(reshapeOp.src().getDefiningOp());
+      reshapeOp.src().template getDefiningOp<ReshapeOpTy>();
   if (reshapeSrcOp && reshapeSrcOp.getSrcType().hasStaticShape() &&
       reshapeOp.getResultType().hasStaticShape() &&
       reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
