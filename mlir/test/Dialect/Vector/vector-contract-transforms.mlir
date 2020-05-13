@@ -559,3 +559,49 @@ func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2xf32>
   %0 = vector.broadcast %arg0 : vector<4x1x2xf32> to vector<4x3x2xf32>
   return %0 : vector<4x3x2xf32>
 }
+
+// CHECK-LABEL: func @genbool_1d
+// CHECK: %[[TT:.*]] = constant 1 : i1
+// CHECK: %[[C1:.*]] = constant dense<false> : vector<8xi1>
+// CHECK: %[[T0.*]] = vector.insert %[[TT]], %[[C1]] [0] : i1 into vector<8xi1>
+// CHECK: %[[T1.*]] = vector.insert %[[TT]], %[[T0]] [1] : i1 into vector<8xi1>
+// CHECK: %[[T2.*]] = vector.insert %[[TT]], %[[T1]] [2] : i1 into vector<8xi1>
+// CHECK: %[[T3.*]] = vector.insert %[[TT]], %[[T2]] [3] : i1 into vector<8xi1>
+// CHECK: return %[[T3]] : vector<8xi1>
+
+func @genbool_1d() -> vector<8xi1> {
+  %0 = vector.constant_mask [4] : vector<8xi1>
+  return %0 : vector<8xi1>
+}
+
+// CHECK-LABEL: func @genbool_2d
+// CHECK: %[[TT:.*]] = constant 1 : i1
+// CHECK: %[[C1:.*]] = constant dense<false> : vector<4xi1>
+// CHECK: %[[C2:.*]] = constant dense<false> : vector<4x4xi1>
+// CHECK: %[[T0:.*]] = vector.insert %[[TT]], %[[C1]] [0] : i1 into vector<4xi1>
+// CHECK: %[[T1:.*]] = vector.insert %[[TT]], %[[T0]] [1] : i1 into vector<4xi1>
+// CHECK: %[[T2:.*]] = vector.insert %[[T1]], %[[C2]] [0] : vector<4xi1> into vector<4x4xi1>
+// CHECK: %[[T3:.*]] = vector.insert %[[T1]], %[[T2]] [1] : vector<4xi1> into vector<4x4xi1>
+// CHECK: return %[[T3]] : vector<4x4xi1>
+
+func @genbool_2d() -> vector<4x4xi1> {
+  %v = vector.constant_mask [2, 2] : vector<4x4xi1>
+  return %v: vector<4x4xi1>
+}
+
+// CHECK-LABEL: func @genbool_3d
+// CHECK: %[[Tt:.*]] = constant 1 : i1
+// CHECK: %[[C1:.*]] = constant dense<false> : vector<4xi1>
+// CHECK: %[[C2:.*]] = constant dense<false> : vector<3x4xi1>
+// CHECK: %[[C3:.*]] = constant dense<false> : vector<2x3x4xi1>
+// CHECK: %[[T0:.*]] = vector.insert %[[TT]], %[[C1]] [0] : i1 into vector<4xi1>
+// CHECK: %[[T1:.*]] = vector.insert %[[TT]], %[[T0]] [1] : i1 into vector<4xi1>
+// CHECK: %[[T2:.*]] = vector.insert %[[TT]], %[[T1]] [2] : i1 into vector<4xi1>
+// CHECK: %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<4xi1> into vector<3x4xi1>
+// CHECK: %[[T4:.*]] = vector.insert %[[T3]], %[[C3]] [0] : vector<3x4xi1> into vector<2x3x4xi1>
+// CHECK: return %[[T4]] : vector<2x3x4xi1>
+
+func @genbool_3d() -> vector<2x3x4xi1> {
+  %v = vector.constant_mask [1, 1, 3] : vector<2x3x4xi1>
+  return %v: vector<2x3x4xi1>
+}
