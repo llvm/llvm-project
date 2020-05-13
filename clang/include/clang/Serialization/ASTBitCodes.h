@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 10;
+const unsigned VERSION_MAJOR = 11;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -242,14 +242,16 @@ public:
       /// Raw source location.
       unsigned Loc = 0;
 
-      /// Offset in the AST file. Keep structure alignment 32-bit and avoid
-      /// padding gap because undefined value in the padding affects AST hash.
+      /// Offset relative to the start of the DECLTYPES_BLOCK block. Keep
+      /// structure alignment 32-bit and avoid padding gap because undefined
+      /// value in the padding affects AST hash.
       UnderalignedInt64 BitOffset;
 
       DeclOffset() = default;
-      DeclOffset(SourceLocation Loc, uint64_t BitOffset) {
+      DeclOffset(SourceLocation Loc, uint64_t BitOffset,
+                 uint64_t DeclTypesBlockStartOffset) {
         setLocation(Loc);
-        setBitOffset(BitOffset);
+        setBitOffset(BitOffset, DeclTypesBlockStartOffset);
       }
 
       void setLocation(SourceLocation L) {
@@ -260,12 +262,13 @@ public:
         return SourceLocation::getFromRawEncoding(Loc);
       }
 
-      void setBitOffset(uint64_t Offset) {
-        BitOffset.setBitOffset(Offset);
+      void setBitOffset(uint64_t Offset,
+                        const uint64_t DeclTypesBlockStartOffset) {
+        BitOffset.setBitOffset(Offset - DeclTypesBlockStartOffset);
       }
 
-      uint64_t getBitOffset() const {
-        return BitOffset.getBitOffset();
+      uint64_t getBitOffset(const uint64_t DeclTypesBlockStartOffset) const {
+        return BitOffset.getBitOffset() + DeclTypesBlockStartOffset;
       }
     };
 
@@ -393,6 +396,9 @@ public:
     enum UnhashedControlBlockRecordTypes {
       /// Record code for the signature that identifiers this AST file.
       SIGNATURE = 1,
+
+      /// Record code for the content hash of the AST block.
+      AST_BLOCK_HASH,
 
       /// Record code for the diagnostic options table.
       DIAGNOSTIC_OPTIONS,

@@ -1336,6 +1336,7 @@ bool ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
     Error(std::move(Err));
     return true;
   }
+  F.SourceManagerBlockStartOffset = SLocEntryCursor.GetCurrentBitNo();
 
   RecordData Record;
   while (true) {
@@ -1628,12 +1629,16 @@ SourceLocation ASTReader::getImportLocation(ModuleFile *F) {
 /// Enter a subblock of the specified BlockID with the specified cursor. Read
 /// the abbreviations that are at the top of the block and then leave the cursor
 /// pointing into the block.
-bool ASTReader::ReadBlockAbbrevs(BitstreamCursor &Cursor, unsigned BlockID) {
+bool ASTReader::ReadBlockAbbrevs(BitstreamCursor &Cursor, unsigned BlockID,
+                                 uint64_t *StartOfBlockOffset) {
   if (llvm::Error Err = Cursor.EnterSubBlock(BlockID)) {
     // FIXME this drops errors on the floor.
     consumeError(std::move(Err));
     return true;
   }
+
+  if (StartOfBlockOffset)
+    *StartOfBlockOffset = Cursor.GetCurrentBitNo();
 
   while (true) {
     uint64_t Offset = Cursor.GetCurrentBitNo();
@@ -2933,6 +2938,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     Error(std::move(Err));
     return Failure;
   }
+  F.ASTBlockStartOffset = Stream.GetCurrentBitNo();
 
   // Read all of the records and blocks for the AST file.
   RecordData Record;
@@ -2973,7 +2979,8 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
           Error(std::move(Err));
           return Failure;
         }
-        if (ReadBlockAbbrevs(F.DeclsCursor, DECLTYPES_BLOCK_ID)) {
+        if (ReadBlockAbbrevs(F.DeclsCursor, DECLTYPES_BLOCK_ID,
+                             &F.DeclsBlockStartOffset)) {
           Error("malformed block record in AST file");
           return Failure;
         }
@@ -3377,7 +3384,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       F.SLocEntryOffsets = (const uint32_t *)Blob.data();
       F.LocalNumSLocEntries = Record[0];
       unsigned SLocSpaceSize = Record[1];
-      F.SLocEntryOffsetsBase = Record[2];
+      F.SLocEntryOffsetsBase = Record[2] + F.SourceManagerBlockStartOffset;
       std::tie(F.SLocEntryBaseID, F.SLocEntryBaseOffset) =
           SourceMgr.AllocateLoadedSLocEntries(F.LocalNumSLocEntries,
                                               SLocSpaceSize);
@@ -3696,7 +3703,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       F.MacroOffsets = (const uint32_t *)Blob.data();
       F.LocalNumMacros = Record[0];
       unsigned LocalBaseMacroID = Record[1];
-      F.MacroOffsetsBase = Record[2];
+      F.MacroOffsetsBase = Record[2] + F.ASTBlockStartOffset;
       F.BaseMacroID = getTotalNumMacros();
 
       if (F.LocalNumMacros > 0) {
@@ -3837,17 +3844,18 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
 
   while (Data < DataEnd) {
     // FIXME: Looking up dependency modules by filename is horrible. Let's
-    // start fixing this with prebuilt and explicit modules and see how it
-    // goes...
+    // start fixing this with prebuilt, explicit and implicit modules and see
+    // how it goes...
     using namespace llvm::support;
     ModuleKind Kind = static_cast<ModuleKind>(
       endian::readNext<uint8_t, little, unaligned>(Data));
     uint16_t Len = endian::readNext<uint16_t, little, unaligned>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule
-                      ? ModuleMgr.lookupByModuleName(Name)
-                      : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
+                              Kind == MK_ImplicitModule
+                          ? ModuleMgr.lookupByModuleName(Name)
+                          : ModuleMgr.lookupByFileName(Name));
     if (!OM) {
       std::string Msg =
           "SourceLocation remap refers to unknown module, cannot find ";
@@ -4735,6 +4743,11 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
     case SIGNATURE:
       if (F)
         F->Signature = ASTFileSignature::create(Record.begin(), Record.end());
+      break;
+    case AST_BLOCK_HASH:
+      if (F)
+        F->ASTBlockHash =
+            ASTFileSignature::create(Record.begin(), Record.end());
       break;
     case DIAGNOSTIC_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
@@ -6350,7 +6363,8 @@ ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
   assert(I != GlobalTypeMap.end() && "Corrupted global type map");
   ModuleFile *M = I->second;
   return RecordLocation(
-      M, M->TypeOffsets[Index - M->BaseTypeIndex].getBitOffset());
+      M, M->TypeOffsets[Index - M->BaseTypeIndex].getBitOffset() +
+             M->DeclsBlockStartOffset);
 }
 
 static llvm::Optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
