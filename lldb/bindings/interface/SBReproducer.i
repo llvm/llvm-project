@@ -13,5 +13,6 @@ class SBReproducer
         static const char *Capture(const char *path);
         static const char *PassiveReplay(const char *path);
         static bool SetAutoGenerate(bool b);
+        static void SetWorkingDirectory(const char *path);
 };
 }
