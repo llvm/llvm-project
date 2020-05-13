@@ -1909,11 +1909,12 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
     return;
   }
 
-  // If we haven't yet vectorized the induction variable, splat the scalar
-  // induction variable, and build the necessary step vectors.
-  // TODO: Don't do it unless the vectorized IV is really required.
+  // All IV users are scalar instructions, so only emit a scalar IV, not a
+  // vectorised IV. Except when we tail-fold, then the splat IV feeds the
+  // predicate used by the masked loads/stores.
   Value *ScalarIV = CreateScalarIV(Step);
-  CreateSplatIV(ScalarIV, Step);
+  if (!Cost->isScalarEpilogueAllowed())
+    CreateSplatIV(ScalarIV, Step);
   buildScalarSteps(ScalarIV, Step, EntryVal, ID);
 }
 
@@ -4592,6 +4593,11 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
     // TODO: Once we are able to vectorize pointer induction variables we
     //       should no longer skip over them here.
     if (Induction.second.getKind() == InductionDescriptor::IK_PtrInduction)
+      continue;
+
+    // If tail-folding is applied, the primary induction variable will be used
+    // to feed a vector compare.
+    if (Ind == Legal->getPrimaryInduction() && foldTailByMasking())
       continue;
 
     // Determine if all users of the induction variable are scalar after

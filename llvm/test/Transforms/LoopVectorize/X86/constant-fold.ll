@@ -32,6 +32,25 @@ define void @f1() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 2, 2
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[BB3:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[BB1:%.*]] ]
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[C_1_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[_TMP9:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[_TMP1:%.*]] = zext i16 0 to i64
+; CHECK-NEXT:    [[_TMP2:%.*]] = getelementptr [1 x %rec8], [1 x %rec8]* @a, i16 0, i64 [[_TMP1]]
+; CHECK-NEXT:    [[_TMP4:%.*]] = bitcast %rec8* [[_TMP2]] to i16*
+; CHECK-NEXT:    [[_TMP6:%.*]] = sext i16 [[C_1_0]] to i64
+; CHECK-NEXT:    [[_TMP7:%.*]] = getelementptr [2 x i16*], [2 x i16*]* @b, i16 0, i64 [[_TMP6]]
+; CHECK-NEXT:    store i16* [[_TMP4]], i16** [[_TMP7]]
+; CHECK-NEXT:    [[_TMP9]] = add nsw i16 [[C_1_0]], 1
+; CHECK-NEXT:    [[_TMP11:%.*]] = icmp slt i16 [[_TMP9]], 2
+; CHECK-NEXT:    br i1 [[_TMP11]], label [[BB2]], label [[BB3]], !llvm.loop !2
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
 
 bb1:
   br label %bb2
