@@ -1267,6 +1267,7 @@ static void speculatePHINodeLoads(PHINode &PN) {
 
   LoadInst *SomeLoad = cast<LoadInst>(PN.user_back());
   Type *LoadTy = SomeLoad->getType();
+  const DataLayout &DL = PN.getModule()->getDataLayout();
   IRBuilderTy PHIBuilder(&PN);
   PHINode *NewPN = PHIBuilder.CreatePHI(LoadTy, PN.getNumIncomingValues(),
                                         PN.getName() + ".sroa.speculated");
@@ -1275,7 +1276,8 @@ static void speculatePHINodeLoads(PHINode &PN) {
   // matter which one we get and if any differ.
   AAMDNodes AATags;
   SomeLoad->getAAMetadata(AATags);
-  const MaybeAlign Align = MaybeAlign(SomeLoad->getAlignment());
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(SomeLoad->getAlign(), SomeLoad->getType());
 
   // Rewrite all loads of the PN to use the new PHI.
   while (!PN.use_empty()) {
@@ -1306,7 +1308,7 @@ static void speculatePHINodeLoads(PHINode &PN) {
         LoadTy, InVal,
         (PN.getName() + ".sroa.speculate.load." + Pred->getName()));
     ++NumLoadsSpeculated;
-    Load->setAlignment(Align);
+    Load->setAlignment(Alignment);
     if (AATags)
       Load->setAAMetadata(AATags);
     NewPN->addIncoming(Load, Pred);
@@ -2445,14 +2447,10 @@ private:
   ///
   /// You can optionally pass a type to this routine and if that type's ABI
   /// alignment is itself suitable, this will return zero.
-  MaybeAlign getSliceAlign(Type *Ty = nullptr) {
-    const MaybeAlign NewAIAlign = DL.getValueOrABITypeAlignment(
+  Align getSliceAlign() {
+    Align NewAIAlign = DL.getValueOrABITypeAlignment(
         MaybeAlign(NewAI.getAlignment()), NewAI.getAllocatedType());
-    const MaybeAlign Align =
-        commonAlignment(NewAIAlign, NewBeginOffset - NewAllocaBeginOffset);
-    return (Ty && Align && Align->value() == DL.getABITypeAlignment(Ty))
-               ? None
-               : Align;
+    return commonAlignment(NewAIAlign, NewBeginOffset - NewAllocaBeginOffset);
   }
 
   unsigned getIndex(uint64_t Offset) {
@@ -2568,9 +2566,9 @@ private:
           }
     } else {
       Type *LTy = TargetTy->getPointerTo(AS);
-      LoadInst *NewLI = IRB.CreateAlignedLoad(
-          TargetTy, getNewAllocaSlicePtr(IRB, LTy), getSliceAlign(TargetTy),
-          LI.isVolatile(), LI.getName());
+      LoadInst *NewLI =
+          IRB.CreateAlignedLoad(TargetTy, getNewAllocaSlicePtr(IRB, LTy),
+                                getSliceAlign(), LI.isVolatile(), LI.getName());
       if (AATags)
         NewLI->setAAMetadata(AATags);
       if (LI.isVolatile())
@@ -2596,7 +2594,8 @@ private:
       // the computed value, and then replace the placeholder with LI, leaving
       // LI only used for this computation.
       Value *Placeholder = new LoadInst(
-          LI.getType(), UndefValue::get(LI.getType()->getPointerTo(AS)));
+          LI.getType(), UndefValue::get(LI.getType()->getPointerTo(AS)), "",
+          false, Align(1));
       V = insertInteger(DL, IRB, Placeholder, V, NewBeginOffset - BeginOffset,
                         "insert");
       LI.replaceAllUsesWith(V);
@@ -2721,8 +2720,8 @@ private:
     } else {
       unsigned AS = SI.getPointerAddressSpace();
       Value *NewPtr = getNewAllocaSlicePtr(IRB, V->getType()->getPointerTo(AS));
-      NewSI = IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(V->getType()),
-                                     SI.isVolatile());
+      NewSI =
+          IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(), SI.isVolatile());
     }
     NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
@@ -3140,14 +3139,14 @@ private:
       Instruction *I = Uses.pop_back_val();
 
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-        MaybeAlign LoadAlign = DL.getValueOrABITypeAlignment(
-            MaybeAlign(LI->getAlignment()), LI->getType());
+        Align LoadAlign =
+            DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
         LI->setAlignment(std::min(LoadAlign, getSliceAlign()));
         continue;
       }
       if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
           Value *Op = SI->getOperand(0);
-          MaybeAlign StoreAlign = DL.getValueOrABITypeAlignment(
+          Align StoreAlign = DL.getValueOrABITypeAlignment(
               MaybeAlign(SI->getAlignment()), Op->getType());
           SI->setAlignment(std::min(StoreAlign, getSliceAlign()));
           continue;
