@@ -92,7 +92,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     case FK_Data_4:
       switch (Modifier) {
       default:
-        llvm_unreachable("Unsupported Modifier");
+        Ctx.reportError(Fixup.getLoc(),
+                        "invalid fixup for 4-byte pc-relative data relocation");
+        return ELF::R_ARM_NONE;
       case MCSymbolRefExpr::VK_None: {
         if (const MCSymbolRefExpr *SymRef = Target.getSymA()) {
           // For GNU AS compatibility expressions such as
@@ -162,21 +164,27 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case FK_Data_1:
     switch (Modifier) {
     default:
-      llvm_unreachable("unsupported Modifier");
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 1-byte data relocation");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_None:
       return ELF::R_ARM_ABS8;
     }
   case FK_Data_2:
     switch (Modifier) {
     default:
-      llvm_unreachable("unsupported modifier");
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 2-byte data relocation");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_None:
       return ELF::R_ARM_ABS16;
     }
   case FK_Data_4:
     switch (Modifier) {
     default:
-      llvm_unreachable("Unsupported Modifier");
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 4-byte data relocation");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_ARM_NONE:
       return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_GOT:
@@ -218,7 +226,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARM::fixup_arm_movt_hi16:
     switch (Modifier) {
     default:
-      llvm_unreachable("Unsupported Modifier");
+      Ctx.reportError(Fixup.getLoc(), "invalid fixup for ARM MOVT instruction");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_None:
       return ELF::R_ARM_MOVT_ABS;
     case MCSymbolRefExpr::VK_ARM_SBREL:
@@ -227,7 +236,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARM::fixup_arm_movw_lo16:
     switch (Modifier) {
     default:
-      llvm_unreachable("Unsupported Modifier");
+      Ctx.reportError(Fixup.getLoc(), "invalid fixup for ARM MOVW instruction");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_None:
       return ELF::R_ARM_MOVW_ABS_NC;
     case MCSymbolRefExpr::VK_ARM_SBREL:
@@ -236,7 +246,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARM::fixup_t2_movt_hi16:
     switch (Modifier) {
     default:
-      llvm_unreachable("Unsupported Modifier");
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for Thumb MOVT instruction");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_None:
       return ELF::R_ARM_THM_MOVT_ABS;
     case MCSymbolRefExpr::VK_ARM_SBREL:
@@ -245,7 +257,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARM::fixup_t2_movw_lo16:
     switch (Modifier) {
     default:
-      llvm_unreachable("Unsupported Modifier");
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for Thumb MOVW instruction");
+      return ELF::R_ARM_NONE;
     case MCSymbolRefExpr::VK_None:
       return ELF::R_ARM_THM_MOVW_ABS_NC;
     case MCSymbolRefExpr::VK_ARM_SBREL:
