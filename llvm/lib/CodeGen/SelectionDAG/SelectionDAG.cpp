@@ -5665,7 +5665,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Inserting undef into undef is still undef.
     if (N1.isUndef() && N2.isUndef())
       return getUNDEF(VT);
-    SDValue Index = N3;
     assert(VT.isVector() && N1.getValueType().isVector() &&
            N2.getValueType().isVector() &&
            "Insert subvector VTs must be a vectors");
@@ -5673,10 +5672,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Dest and insert subvector source types must match!");
     assert(N2.getSimpleValueType() <= N1.getSimpleValueType() &&
            "Insert subvector must be from smaller vector to larger vector!");
-    assert(isa<ConstantSDNode>(Index) &&
+    assert(isa<ConstantSDNode>(N3) &&
            "Insert subvector index must be constant");
     assert(N2.getValueType().getVectorNumElements() +
-                   cast<ConstantSDNode>(Index)->getZExtValue() <=
+                   cast<ConstantSDNode>(N3)->getZExtValue() <=
                VT.getVectorNumElements() &&
            "Insert subvector overflow!");
 
