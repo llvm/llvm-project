@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=mips -mcpu=mips32 -mattr=+micromips -filetype=obj < %s \
-# RUN:   | llvm-objdump -d - | FileCheck %s
+# RUN:   | llvm-objdump -d - | FileCheck %s
 
 .set noreorder
 
