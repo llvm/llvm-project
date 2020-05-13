@@ -134,9 +134,9 @@ namespace {
 /// An example output may resemble:
 ///
 /// ```
-///    loop.for %i = %c0 to %0 step %c1 {
-///      loop.for %j = %c0 to %1 step %c1 {
-///        loop.for %k = %c0 to %4 step %c1 {
+///    scf.for %i = %c0 to %0 step %c1 {
+///      scf.for %j = %c0 to %1 step %c1 {
+///        scf.for %k = %c0 to %4 step %c1 {
 ///          %11 = load %arg0[%i, %j] :
 ///            memref<?x?xf32, stride_specification>
 ///          %12 = load %arg1[%i, %j, %k] :
@@ -419,9 +419,9 @@ public:
 /// An example output may resemble:
 ///
 /// ```
-///    loop.for %i = %c0 to %0 step %c1 {
-///      loop.for %j = %c0 to %1 step %c1 {
-///        loop.for %k = %c0 to %4 step %c1 {
+///    scf.for %i = %c0 to %0 step %c1 {
+///      scf.for %j = %c0 to %1 step %c1 {
+///        scf.for %k = %c0 to %4 step %c1 {
 ///          %11 = load %arg0[%i, %j] :
 ///            memref<?x?xf32, stride_specification>
 ///          %12 = load %arg1[%i, %j, %k] :
@@ -509,8 +509,8 @@ public:
   }
 };
 
-/// Generates loop nest using loop.parallel. loop.parallel is only used for the
-/// outer parallel loops. All other loops are generated using loop.for
+/// Generates loop nest using scf.parallel. scf.parallel is only used for the
+/// outer parallel loops. All other loops are generated using scf.for
 /// operation.
 template <typename ConcreteOpTy>
 class GenerateLoopNest<scf::ParallelOp, ConcreteOpTy> {
@@ -519,9 +519,9 @@ public:
 
   static void doit(ConcreteOpTy linalgOp, ArrayRef<Value> loopRanges,
                    MutableArrayRef<Value> allIvs) {
-    // Only generate loop.parallel for outer consecutive "parallel"
+    // Only generate scf.parallel for outer consecutive "parallel"
     // iterator_types.
-    // TODO(ravishankarm): Generate loop.parallel for all "parallel" iterator
+    // TODO(ravishankarm): Generate scf.parallel for all "parallel" iterator
     // types, not just the outer most ones. Also handle "reduction" iterator
     // types.
     auto nOuterPar = linalgOp.iterator_types()
@@ -532,7 +532,7 @@ public:
                          })
                          .size();
     // If there are no outer parallel loops, then number of loop ops is same as
-    // the number of loops, and they are all loop.for ops.
+    // the number of loops, and they are all scf.for ops.
     if (nOuterPar) {
       GenericLoopNestRangeBuilder<scf::ParallelOp>(
           allIvs.take_front(nOuterPar), loopRanges.take_front(nOuterPar))([&] {
@@ -545,7 +545,7 @@ public:
         });
       });
     } else {
-      // If there are no parallel loops then fallback to generating all loop.for
+      // If there are no parallel loops then fallback to generating all scf.for
       // operations.
       GenericLoopNestRangeBuilder<scf::ForOp>(allIvs, loopRanges)([&] {
         SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
@@ -595,7 +595,7 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
   assert(loopRanges.size() == allIvs.size());
   Impl::doit(linalgOp, loopRanges, allIvs);
   // Number of loop ops might be different from the number of ivs since some
-  // loops like affine.parallel and loop.parallel have multiple ivs.
+  // loops like affine.parallel and scf.parallel have multiple ivs.
   llvm::SetVector<Operation *> loopSet;
   for (Value iv : allIvs) {
     if (!iv)
@@ -747,7 +747,7 @@ Optional<LinalgLoops> mlir::linalg::linalgLowerOpToLoops(OpBuilder &builder,
   return linalgOpToLoopsImpl<LoopTy, ConcreteOp>(op, builder);
 }
 
-/// Emits a loop nest of `loop.for` with the proper body for `op`.
+/// Emits a loop nest of `scf.for` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult mlir::linalg::linalgOpToLoops(OpBuilder &builder, Operation *op) {
   Optional<LinalgLoops> loops =
@@ -764,7 +764,7 @@ LogicalResult mlir::linalg::linalgOpToAffineLoops(OpBuilder &builder,
   return loops ? success() : failure();
 }
 
-/// Emits a loop nest of `loop.parallel` with the proper body for `op`.
+/// Emits a loop nest of `scf.parallel` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult mlir::linalg::linalgOpToParallelLoops(OpBuilder &builder,
                                                     Operation *op) {

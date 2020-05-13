@@ -11,7 +11,7 @@ func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
   %c1 = constant 1 : index
   %cst = constant 1.000000e+00 : f32
   %cst_0 = constant 2.000000e+00 : f32
-  loop.for %arg2 = %c0 to %c2 step %c1 {
+  scf.for %arg2 = %c0 to %c2 step %c1 {
     %0 = load %arg0[%arg2] : memref<2xf32>
     %1 = addf %0, %cst : f32
     store %1, %arg0[%arg2] : memref<2xf32>
@@ -46,7 +46,7 @@ func @print_newline()
 //  %cst_0 = constant 2.000000e+00 : f32
 //  %a = alloc() : memref<2xf32>
 //  %b = alloc() : memref<2xf32>
-//  loop.for %i = %c0 to %c2 step %c1 {
+//  scf.for %i = %c0 to %c2 step %c1 {
 //    store %cst, %a[%i] : memref<2xf32>
 //    store %cst, %b[%i] : memref<2xf32>
 //  }

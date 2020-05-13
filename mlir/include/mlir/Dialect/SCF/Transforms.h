@@ -23,20 +23,20 @@ namespace scf {
 
 class ParallelOp;
 
-/// Fuses all adjacent loop.parallel operations with identical bounds and step
-/// into one loop.parallel operations. Uses a naive aliasing and dependency
+/// Fuses all adjacent scf.parallel operations with identical bounds and step
+/// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
 void naivelyFuseParallelOps(Region &region);
 
 /// Tile a parallel loop of the form
-///   loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4, %arg5)
 ///
 /// into
-///   loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4*tileSize[0],
 ///                                                   %arg5*tileSize[1])
-///     loop.parallel (%j0, %j1) = (0, 0) to (min(tileSize[0], %arg2-%j0)
+///     scf.parallel (%j0, %j1) = (0, 0) to (min(tileSize[0], %arg2-%j0)
 ///                                           min(tileSize[1], %arg3-%j1))
 ///                                        step (%arg4, %arg5)
 /// The old loop is replaced with the new one.

@@ -21,13 +21,13 @@ class RewritePattern;
 // Owning list of rewriting patterns.
 class OwningRewritePatternList;
 
-/// Collect a set of patterns to lower from loop.for, loop.if, and
+/// Collect a set of patterns to lower from scf.for, scf.if, and
 /// loop.terminator to CFG operations within the Standard dialect, in particular
 /// convert structured control flow into CFG branch-based control flow.
 void populateLoopToStdConversionPatterns(OwningRewritePatternList &patterns,
                                          MLIRContext *ctx);
 
-/// Creates a pass to convert loop.for, loop.if and loop.terminator ops to CFG.
+/// Creates a pass to convert scf.for, scf.if and loop.terminator ops to CFG.
 std::unique_ptr<Pass> createLowerToCFGPass();
 
 } // namespace mlir

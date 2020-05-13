@@ -469,9 +469,9 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
   %M_ = dim %A, 0 : memref<?x?xf32>
   %K_ = dim %A, 1 : memref<?x?xf32>
   %N_ = dim %C, 1 : memref<?x?xf32>
-  loop.for %i = %c0 to %M_ step %c1 {
-    loop.for %j = %c0 to %N_ step %c1 {
-      loop.for %k = %c0 to %K_ step %c1 {
+  scf.for %i = %c0 to %M_ step %c1 {
+    scf.for %j = %c0 to %N_ step %c1 {
+      scf.for %k = %c0 to %K_ step %c1 {
       }
     }
   }

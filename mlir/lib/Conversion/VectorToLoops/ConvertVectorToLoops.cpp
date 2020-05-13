@@ -350,9 +350,9 @@ namespace {
 ///    // Read the slice `%A[%i0, %i1:%i1+256, %i2:%i2+32]` into
 ///    // vector<32x256xf32> and pad with %f0 to handle the boundary case:
 ///    %f0 = constant 0.0f : f32
-///    loop.for %i0 = 0 to %0 {
-///      loop.for %i1 = 0 to %1 step %c256 {
-///        loop.for %i2 = 0 to %2 step %c32 {
+///    scf.for %i0 = 0 to %0 {
+///      scf.for %i1 = 0 to %1 step %c256 {
+///        scf.for %i2 = 0 to %2 step %c32 {
 ///          %v = vector.transfer_read %A[%i0, %i1, %i2], %f0
 ///               {permutation_map: (d0, d1, d2) -> (d2, d1)} :
 ///               memref<?x?x?xf32>, vector<32x256xf32>
@@ -364,8 +364,8 @@ namespace {
 /// abstraction):
 ///
 /// ```mlir
-///    loop.for %d2 = 0 to %c256 {
-///      loop.for %d1 = 0 to %c32 {
+///    scf.for %d2 = 0 to %c256 {
+///      scf.for %d1 = 0 to %c32 {
 ///        %s = %A[%i0, %i1 + %d1, %i2 + %d2] : f32
 ///        %tmp[%d2, %d1] = %s
 ///      }

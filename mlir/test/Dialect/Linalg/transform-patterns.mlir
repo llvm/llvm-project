@@ -23,8 +23,8 @@ func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 // CHECK-DAG:     %[[c0:.*]] = constant 0 : index
 // CHECK-DAG:     %[[c1:.*]] = constant 1 : index
 // CHECK-DAG:     %[[c8000:.*]] = constant 8000 : index
-// CHECK:         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c8000]] {
-// CHECK:             loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c1]] {
+// CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c8000]] {
+// CHECK:             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c1]] {
 // CHECK:               load
 // CHECK:               load
 // CHECK:               mulf
@@ -44,7 +44,7 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c0:.*]] = constant 0 : index
 // CHECK-DAG:     %[[c5:.*]] = constant 5 : index
 // CHECK-DAG:     %[[c6:.*]] = constant 6 : index
-// CHECK:         loop.parallel {{.*}} step (%[[c5]], %[[c6]])
+// CHECK:         scf.parallel {{.*}} step (%[[c5]], %[[c6]])
 // CHECK:             linalg.matvec({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?xf32, #[[STRIDED_1D]]>, memref<?xf32, #[[STRIDED_1D]]>
 
 func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -69,18 +69,18 @@ func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c2000:.*]] = constant 2000 : index
 // CHECK-DAG:     %[[c3000:.*]] = constant 3000 : index
 // CHECK-DAG:     %[[c4000:.*]] = constant 4000 : index
-// CHECK:         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
-// CHECK:           loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
-// CHECK:             loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
-// CHECK:               loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c200]] {
-// CHECK:                 loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c300]] {
-// CHECK:                   loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c400]] {
-// CHECK:                     loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c20]] {
-// CHECK:                       loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
-// CHECK:                         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
-// CHECK:                           loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c2]] {
-// CHECK:                             loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c3]] {
-// CHECK:                               loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c4]] {
+// CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
+// CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
+// CHECK:             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
+// CHECK:               scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c200]] {
+// CHECK:                 scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c300]] {
+// CHECK:                   scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c400]] {
+// CHECK:                     scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c20]] {
+// CHECK:                       scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
+// CHECK:                         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
+// CHECK:                           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c2]] {
+// CHECK:                             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3]] {
+// CHECK:                               scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4]] {
 // CHECK:                                 linalg.matmul({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
 
 #matmul_trait = {
@@ -208,8 +208,8 @@ func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c0:.*]] = constant 0 : index
 // CHECK-DAG:     %[[c5:.*]] = constant 5 : index
 // CHECK-DAG:     %[[c6:.*]] = constant 6 : index
-// CHECK:         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c6]]
-// CHECK:           loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c5]]
+// CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c6]]
+// CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c5]]
 // CHECK:             linalg.matvec({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?xf32, #[[STRIDED_1D]]>, memref<?xf32, #[[STRIDED_1D]]>
 
 func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -232,15 +232,15 @@ func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-DAG:     %[[c2000:.*]] = constant 2000 : index
 // CHECK-DAG:     %[[c3000:.*]] = constant 3000 : index
 // CHECK-DAG:     %[[c4000:.*]] = constant 4000 : index
-// CHECK:         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
-// CHECK:           loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
-// CHECK:             loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
-// CHECK:               loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c300]] {
-// CHECK:                 loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c200]] {
-// CHECK:                   loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c400]] {
-// CHECK:                     loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c20]] {
-// CHECK:                       loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
-// CHECK:                         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
+// CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
+// CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
+// CHECK:             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
+// CHECK:               scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c300]] {
+// CHECK:                 scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c200]] {
+// CHECK:                   scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c400]] {
+// CHECK:                     scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c20]] {
+// CHECK:                       scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
+// CHECK:                         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
 // CHECK:                                 linalg.matmul({{.*}}, {{.*}}, {{.*}}) : memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>, memref<?x?xf32, #[[STRIDED_2D]]>
 
 func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -254,9 +254,9 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
   %0 = dim %arg0, 0 : memref<?x?xf32, offset: ?, strides: [?, 1]>
   %1 = dim %arg0, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
   %2 = dim %arg1, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
-  loop.for %arg3 = %c0 to %0 step %c2000 {
-    loop.for %arg4 = %c0 to %2 step %c3000 {
-      loop.for %arg5 = %c0 to %1 step %c4000 {
+  scf.for %arg3 = %c0 to %0 step %c2000 {
+    scf.for %arg4 = %c0 to %2 step %c3000 {
+      scf.for %arg5 = %c0 to %1 step %c4000 {
         %3 = subview %arg0[%arg3, %arg5][%c2000, %c4000][%c1, %c1] :
              memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
         %4 = subview %arg1[%arg5, %arg4][%c4000, %c3000][%c1, %c1] :
@@ -273,9 +273,9 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
   return
 }
 // CHECK-LABEL: func @promote_subview_matmul
-// CHECK:         loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
-// CHECK:           loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
-// CHECK:             loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
+// CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
+// CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
+// CHECK:             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
 // CHECK:               %[[s0:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:               %[[s1:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:               %[[s2:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
@@ -304,9 +304,9 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
   %0 = dim %arg0, 0 : memref<?x?xf32, offset: ?, strides: [?, 1]>
   %1 = dim %arg0, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
   %2 = dim %arg1, 1 : memref<?x?xf32, offset: ?, strides: [?, 1]>
-  loop.for %arg3 = %c0 to %0 step %c2000 {
-    loop.for %arg4 = %c0 to %2 step %c3000 {
-      loop.for %arg5 = %c0 to %1 step %c4000 {
+  scf.for %arg3 = %c0 to %0 step %c2000 {
+    scf.for %arg4 = %c0 to %2 step %c3000 {
+      scf.for %arg5 = %c0 to %1 step %c4000 {
         %3 = std.subview %arg0[%arg3, %arg5][%c2000, %c4000][%c1, %c1] :
              memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
         %4 = std.subview %arg1[%arg5, %arg4][%c4000, %c3000][%c1, %c1] :
@@ -323,9 +323,9 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
   return
 }
 // CHECK-LABEL: func @promote_first_subview_matmul
-// CHECK:   loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
-// CHECK:     loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
-// CHECK:       loop.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
+// CHECK:   scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c2000]] {
+// CHECK:     scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3000]] {
+// CHECK:       scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4000]] {
 // CHECK:         %[[s0:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         %[[s1:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         %[[s2:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>

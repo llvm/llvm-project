@@ -11,7 +11,7 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
   %d1 = dim %A, 1 : memref<?x?xf32>
   %b0 = affine.min #map0()[%d0, %outer_i0]
   %b1 = affine.min #map1()[%d1, %outer_i1]
-  loop.parallel (%i0, %i1) = (%c0, %c0) to (%b0, %b1) step (%c1, %c1) {
+  scf.parallel (%i0, %i1) = (%c0, %c0) to (%b0, %b1) step (%c1, %c1) {
     %B_elem = load %B[%i0, %i1] : memref<?x?xf32>
     %C_elem = load %C[%i0, %i1] : memref<?x?xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
@@ -33,12 +33,12 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
 // CHECK:           [[VAL_14:%.*]] = constant 64 : index
 // CHECK:           [[VAL_15:%.*]] = cmpi "eq", [[VAL_11]], [[VAL_14]] : index
 // CHECK:           [[VAL_16:%.*]] = and [[VAL_13]], [[VAL_15]] : i1
-// CHECK:           loop.if [[VAL_16]] {
-// CHECK:             loop.parallel ([[VAL_17:%.*]], [[VAL_18:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_12]], [[VAL_14]]) step ([[VAL_7]], [[VAL_7]]) {
+// CHECK:           scf.if [[VAL_16]] {
+// CHECK:             scf.parallel ([[VAL_17:%.*]], [[VAL_18:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_12]], [[VAL_14]]) step ([[VAL_7]], [[VAL_7]]) {
 // CHECK:               store
 // CHECK:             }
 // CHECK:           } else {
-// CHECK:             loop.parallel ([[VAL_22:%.*]], [[VAL_23:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_10]], [[VAL_11]]) step ([[VAL_7]], [[VAL_7]]) {
+// CHECK:             scf.parallel ([[VAL_22:%.*]], [[VAL_23:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_10]], [[VAL_11]]) step ([[VAL_7]], [[VAL_7]]) {
 // CHECK:               store
 // CHECK:             }
 // CHECK:           }

@@ -16,16 +16,16 @@ include "mlir/Pass/PassBase.td"
 //===----------------------------------------------------------------------===//
 
 def ConvertAffineToStandard : FunctionPass<"lower-affine"> {
-  let summary = "Lower Affine operations to a combination of Standard and Loop "
+  let summary = "Lower Affine operations to a combination of Standard and SCF "
                 "operations";
   let description = [{
 
     Convert operations from the affine dialect into operations from the loop and
     standard dialects.
 
-    `affine.for` operations are converted to `loop.for` operations that are free
+    `affine.for` operations are converted to `scf.for` operations that are free
     of certain structural restrictions (on their bounds and step). `affine.if`
-    is similarly converted to the `loop.if` operation. `affine.apply` operations
+    is similarly converted to the `scf.if` operation. `affine.apply` operations
     are converted into sequences of primitive arithmetic operations from the
     standard dialect that have the same effect, using operands of the `index`
     type. Consequently, named maps and sets thare are no longer in use may be
@@ -155,7 +155,7 @@ def ConvertLinalgToSPIRV : Pass<"convert-linalg-to-spirv", "ModuleOp"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertLoopToStandard : Pass<"convert-loop-to-std"> {
-  let summary = "Convert Loop dialect to Standard dialect, replacing structured"
+  let summary = "Convert SCF dialect to Standard dialect, replacing structured"
                 " control flow with a CFG";
   let constructor = "mlir::createLowerToCFGPass()";
 }
@@ -189,7 +189,7 @@ def ConvertLoopsToGPU : FunctionPass<"convert-loop-op-to-gpu"> {
 }
 
 def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
-  let summary = "Convert mapped loop.parallel ops to gpu launch operations";
+  let summary = "Convert mapped scf.parallel ops to gpu launch operations";
   let constructor = "mlir::createParallelLoopToGpuPass()";
 }
 

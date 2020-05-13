@@ -74,7 +74,7 @@ LogicalResult convertLoopToGPULaunch(scf::ForOp forOp,
                                      ArrayRef<Value> numWorkGroups,
                                      ArrayRef<Value> workGroupSizes);
 
-/// Adds the conversion pattern from `loop.parallel` to `gpu.launch` to the
+/// Adds the conversion pattern from `scf.parallel` to `gpu.launch` to the
 /// provided pattern list.
 void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
                                        MLIRContext *ctx);

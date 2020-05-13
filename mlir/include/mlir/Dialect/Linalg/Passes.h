@@ -37,11 +37,11 @@ std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers);
 std::unique_ptr<OperationPass<FuncOp>> createLinalgPromotionPass();
 
-/// Create a pass to convert Linalg operations to loop.for loops and
+/// Create a pass to convert Linalg operations to scf.for loops and
 /// std.load/std.store accesses.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToLoopsPass();
 
-/// Create a pass to convert Linalg operations to loop.parallel loops and
+/// Create a pass to convert Linalg operations to scf.parallel loops and
 /// std.load/std.store accesses.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToParallelLoopsPass();
 
