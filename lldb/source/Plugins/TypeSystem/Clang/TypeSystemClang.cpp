@@ -1130,13 +1130,22 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_UTF:
-    if (!type_name.empty()) {
-      if (type_name == "char16_t")
-        return GetType(ast.Char16Ty);
-      if (type_name == "char32_t")
-        return GetType(ast.Char32Ty);
-      if (type_name == "char8_t")
-        return GetType(ast.Char8Ty);
+    switch (bit_size) {
+    case 8:
+      return GetType(ast.Char8Ty);
+    case 16:
+      return GetType(ast.Char16Ty);
+    case 32:
+      return GetType(ast.Char32Ty);
+    default:
+      if (!type_name.empty()) {
+        if (type_name == "char16_t")
+          return GetType(ast.Char16Ty);
+        if (type_name == "char32_t")
+          return GetType(ast.Char32Ty);
+        if (type_name == "char8_t")
+          return GetType(ast.Char8Ty);
+      }
     }
     break;
   }
@@ -8885,7 +8894,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
         if (clang::TagDecl *tag_decl = tag_type->getDecl()) {
           if (level == eDescriptionLevelVerbose)
             tag_decl->dump(llvm_ostrm);
-          else 
+          else
             tag_decl->print(llvm_ostrm, 0);
         }
       } else {
