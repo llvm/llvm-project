@@ -163,6 +163,10 @@ static cl::opt<DIPrinter::OutputStyle>
                              clEnumValN(DIPrinter::OutputStyle::GNU, "GNU",
                                         "GNU addr2line style")));
 
+static cl::opt<bool>
+    ClUseNativePDBReader("use-native-pdb-reader", cl::init(0),
+                         cl::desc("Use native PDB functionality"));
+
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
@@ -313,6 +317,7 @@ int main(int argc, char **argv) {
   Opts.FallbackDebugPath = ClFallbackDebugPath;
   Opts.DWPName = ClDwpName;
   Opts.DebugFileDirectory = ClDebugFileDirectory;
+  Opts.UseNativePDBReader = ClUseNativePDBReader;
   Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
   // If both --basenames and --relativenames are specified then pick the last
   // one.
