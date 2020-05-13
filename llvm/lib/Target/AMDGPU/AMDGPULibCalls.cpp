@@ -1126,8 +1126,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
     Type* rTy = opr0->getType();
     Type* nTyS = eltType->isDoubleTy() ? B.getInt64Ty() : B.getInt32Ty();
     Type *nTy = nTyS;
-    if (const VectorType *vTy = dyn_cast<VectorType>(rTy))
-      nTy = VectorType::get(nTyS, vTy->getNumElements());
+    if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
+      nTy = FixedVectorType::get(nTyS, vTy);
     unsigned size = nTy->getScalarSizeInBits();
     opr_n = CI->getArgOperand(1);
     if (opr_n->getType()->isIntegerTy())
