@@ -55,7 +55,7 @@ define i32 @test3(i32* %g_addr) nounwind {
 
 define void @test4(i32* %Q) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]]
 ; CHECK-NEXT:    ret void
 ;
@@ -66,7 +66,7 @@ define void @test4(i32* %Q) {
 
 define void @test5(i32* %Q) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = load volatile i32, i32* [[Q:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = load volatile i32, i32* %Q

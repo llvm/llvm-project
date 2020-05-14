@@ -348,7 +348,7 @@ define i8 @unoptimizable2() {
 ; CHECK-NEXT: call void @use(i8* %ptr3)
   call void @use(i8* %ptr3)
 ; CHECK: MemoryUse(7)
-; CHECK-NEXT: %v = load i8, i8* %ptr3, !invariant.group !0
+; CHECK-NEXT: %v = load i8, i8* %ptr3, align 1, !invariant.group !0
   %v = load i8, i8* %ptr3, !invariant.group !0
   ret i8 %v
 }

@@ -18,7 +18,7 @@ define i32 @test0(i32* %ptr, i1 %cond) {
 ; USE_ASSUME-LABEL: @test0(
 ; USE_ASSUME-NEXT:    store i32 40, i32* [[PTR:%.*]]
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]), "align"(i32* [[PTR]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 40
 ;
 
@@ -31,14 +31,14 @@ define i32 @test0(i32* %ptr, i1 %cond) {
 define i32 @test1(i32* %val, i1 %cond) {
 ; We can CSE loads over a guard, since it does not clobber memory
 ; NO_ASSUME-LABEL: @test1(
-; NO_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, i32* [[VAL:%.*]]
+; NO_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, i32* [[VAL:%.*]], align 4
 ; NO_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @test1(
-; USE_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, i32* [[VAL:%.*]]
+; USE_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, i32* [[VAL:%.*]], align 4
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[VAL]], i64 4), "nonnull"(i32* [[VAL]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[VAL]], i64 4), "nonnull"(i32* [[VAL]]), "align"(i32* [[VAL]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
 
@@ -80,13 +80,13 @@ define i32 @test3(i32 %val) {
 define i32 @test3.unhandled(i32 %val) {
 ; After a guard has executed the condition it was guarding is known to
 ; be true.
-
 ; CHECK-LABEL: @test3.unhandled(
-; CHECK-NEXT:  %cond0 = icmp slt i32 %val, 40
-; CHECK-NEXT:  call void (i1, ...) @llvm.experimental.guard(i1 %cond0) [ "deopt"() ]
-; CHECK-NEXT:  %cond1 = icmp sge i32 %val, 40
-; CHECK-NEXT:  call void (i1, ...) @llvm.experimental.guard(i1 %cond1) [ "deopt"() ]
-; CHECK-NEXT:  ret i32 0
+; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[VAL:%.*]], 40
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND0]]) [ "deopt"() ]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp sge i32 [[VAL]], 40
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND1]]) [ "deopt"() ]
+; CHECK-NEXT:    ret i32 0
+;
 
 ; Demonstrates a case we do not yet handle (it is legal to fold %cond2
 ; to false)

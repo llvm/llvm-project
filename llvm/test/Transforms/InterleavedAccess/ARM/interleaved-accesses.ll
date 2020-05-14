@@ -557,21 +557,21 @@ define void @store_undef_mask_factor4(<16 x i32>* %ptr, <4 x i32> %v0, <4 x i32>
 define void @load_address_space(<8 x i32> addrspace(1)* %ptr) {
 ; CHECK-NEON-LABEL: @load_address_space(
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> addrspace(1)* [[PTR:%.*]] to i8 addrspace(1)*
-; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p1i8(i8 addrspace(1)* [[TMP1]], i32 0)
+; CHECK-NEON-NEXT:    [[VLDN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.arm.neon.vld3.v2i32.p1i8(i8 addrspace(1)* [[TMP1]], i32 32)
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 2
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 1
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[VLDN]], 0
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @load_address_space(
-; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32> addrspace(1)* [[PTR:%.*]]
+; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32> addrspace(1)* [[PTR:%.*]], align 32
 ; CHECK-MVE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> undef, <2 x i32> <i32 0, i32 3>
 ; CHECK-MVE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> undef, <2 x i32> <i32 1, i32 4>
 ; CHECK-MVE-NEXT:    [[V2:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> undef, <2 x i32> <i32 2, i32 5>
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @load_address_space(
-; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32> addrspace(1)* [[PTR:%.*]]
+; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <8 x i32>, <8 x i32> addrspace(1)* [[PTR:%.*]], align 32
 ; CHECK-NONE-NEXT:    [[V0:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> undef, <2 x i32> <i32 0, i32 3>
 ; CHECK-NONE-NEXT:    [[V1:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> undef, <2 x i32> <i32 1, i32 4>
 ; CHECK-NONE-NEXT:    [[V2:%.*]] = shufflevector <8 x i32> [[INTERLEAVED_VEC]], <8 x i32> undef, <2 x i32> <i32 2, i32 5>

@@ -10,7 +10,7 @@ entry:
   br label %0, !md !1
 
 ; <label:0>
-  ; CHECK: %1 = load i32, i32* %retval, !md !2
+  ; CHECK: %1 = load i32, i32* %retval, align 4, !md !2
   ; CHECK: ret i32 %1, !md !3
   %1 = load i32, i32* %retval, !md !2
   ret i32 %1, !md !3

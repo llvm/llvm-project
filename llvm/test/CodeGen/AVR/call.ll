@@ -169,7 +169,7 @@ define void @testcallprologue() {
   ret void
 }
 
-define i32 @icall(i32 (i32)* %foo) {
+define i32 @icall(i32 (i32) addrspace(1)* %foo) {
 ; CHECK-LABEL: icall:
 ; CHECK: movw r30, r24
 ; CHECK: ldi r22, 147

@@ -13,7 +13,7 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i32 17
 ; CHECK:       F:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 1
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:

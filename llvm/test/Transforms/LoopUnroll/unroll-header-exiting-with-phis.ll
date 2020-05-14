@@ -10,7 +10,7 @@ define i16 @full_unroll(i16* %A) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[A:%.*]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[DOTLCSSA10_LCSSA:%.*]] = phi i16 [ [[TMP2_2:%.*]], [[FOR_COND_CLEANUP3_2:%.*]] ]
@@ -18,15 +18,15 @@ define i16 @full_unroll(i16* %A) {
 ; CHECK-NEXT:    ret i16 0
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 1
-; CHECK-NEXT:    [[TMP2_1:%.*]] = load i16, i16* [[PTR_1]]
+; CHECK-NEXT:    [[TMP2_1:%.*]] = load i16, i16* [[PTR_1]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_1:%.*]]
 ; CHECK:       for.cond.cleanup3.1:
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 2
-; CHECK-NEXT:    [[TMP2_2]] = load i16, i16* [[PTR_2]]
+; CHECK-NEXT:    [[TMP2_2]] = load i16, i16* [[PTR_2]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_2]]
 ; CHECK:       for.cond.cleanup3.2:
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 3
-; CHECK-NEXT:    [[TMP2_3:%.*]] = load i16, i16* [[PTR_3]]
+; CHECK-NEXT:    [[TMP2_3:%.*]] = load i16, i16* [[PTR_3]], align 2
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP3_3:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup3.3:
 ; CHECK-NEXT:    unreachable
@@ -60,7 +60,7 @@ define i16 @partial_unroll(i16* %A) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC9_2:%.*]], [[FOR_COND_CLEANUP3_2:%.*]] ]
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 [[I_0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[PTR]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* [[PTR]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[DOTLCSSA10_LCSSA:%.*]] = phi i16 [ [[TMP2_1:%.*]], [[FOR_COND_CLEANUP3_1:%.*]] ]
@@ -69,12 +69,12 @@ define i16 @partial_unroll(i16* %A) {
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[INC9:%.*]] = add nuw nsw i64 [[I_0]], 1
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 [[INC9]]
-; CHECK-NEXT:    [[TMP2_1]] = load i16, i16* [[PTR_1]]
+; CHECK-NEXT:    [[TMP2_1]] = load i16, i16* [[PTR_1]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_1]]
 ; CHECK:       for.cond.cleanup3.1:
 ; CHECK-NEXT:    [[INC9_1:%.*]] = add nuw nsw i64 [[INC9]], 1
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i16, i16* [[A]], i64 [[INC9_1]]
-; CHECK-NEXT:    [[TMP2_2:%.*]] = load i16, i16* [[PTR_2]]
+; CHECK-NEXT:    [[TMP2_2:%.*]] = load i16, i16* [[PTR_2]], align 2
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i64 [[INC9_1]], 200
 ; CHECK-NEXT:    br i1 [[CMP_2]], label [[FOR_COND_CLEANUP3_2]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup3.2:
