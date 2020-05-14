@@ -51,6 +51,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
+FunctionPass *createWebAssemblyDebugFixup();
 FunctionPass *createWebAssemblyPeephole();
 
 // PassRegistry initialization declarations.
@@ -75,6 +76,7 @@ void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
+void initializeWebAssemblyDebugFixupPass(PassRegistry &);
 void initializeWebAssemblyPeepholePass(PassRegistry &);
 
 namespace WebAssembly {
