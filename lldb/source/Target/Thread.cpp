@@ -396,7 +396,7 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo() {
     // "m_stop_info_stop_id != process_stop_id" as the condition for the if
     // statement below, we must also check the stop info to see if we need to
     // override it. See the header documentation in
-    // Process::GetStopInfoOverrideCallback() for more information on the stop
+    // Architecture::OverrideStopInfo() for more information on the stop
     // info override callback.
     if (m_stop_info_override_stop_id != process_stop_id) {
       m_stop_info_override_stop_id = process_stop_id;
