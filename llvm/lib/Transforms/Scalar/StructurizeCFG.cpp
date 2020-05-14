@@ -215,6 +215,7 @@ class StructurizeCFG : public RegionPass {
   void orderNodes();
 
   Loop *getAdjustedLoop(RegionNode *RN);
+  unsigned getAdjustedLoopDepth(RegionNode *RN);
 
   void analyzeLoops(RegionNode *N);
 
@@ -323,108 +324,65 @@ Loop *StructurizeCFG::getAdjustedLoop(RegionNode *RN) {
   return LI->getLoopFor(RN->getEntry());
 }
 
-/// Build up the general order of nodes, by performing a topology sort of the
-/// parent region's nodes, while ensuring that there is no outer loop node
-/// between any two inner loop nodes.
+/// Use the exit block to determine the loop depth if RN is a SubRegion.
+unsigned StructurizeCFG::getAdjustedLoopDepth(RegionNode *RN) {
+  if (RN->isSubRegion()) {
+    Region *SubR = RN->getNodeAs<Region>();
+    return LI->getLoopDepth(SubR->getExit());
+  }
+
+  return LI->getLoopDepth(RN->getEntry());
+}
+
+/// Build up the general order of nodes
 void StructurizeCFG::orderNodes() {
-  SmallVector<RegionNode *, 32> POT;
-  SmallDenseMap<Loop *, unsigned, 8> LoopSizes;
-  for (RegionNode *RN : post_order(ParentRegion)) {
-    POT.push_back(RN);
+  ReversePostOrderTraversal<Region*> RPOT(ParentRegion);
+  SmallDenseMap<Loop*, unsigned, 8> LoopBlocks;
 
-    // Accumulate the number of nodes inside the region that belong to a loop.
+  // The reverse post-order traversal of the list gives us an ordering close
+  // to what we want.  The only problem with it is that sometimes backedges
+  // for outer loops will be visited before backedges for inner loops.
+  for (RegionNode *RN : RPOT) {
     Loop *Loop = getAdjustedLoop(RN);
-    ++LoopSizes[Loop];
+    ++LoopBlocks[Loop];
   }
-  // A quick exit for the case where all nodes belong to the same loop (or no
-  // loop at all).
-  if (LoopSizes.size() <= 1U) {
-    Order.assign(POT.begin(), POT.end());
-    return;
-  }
-  Order.resize(POT.size());
 
-  // The post-order traversal of the list gives us an ordering close to what we
-  // want. The only problem with it is that sometimes backedges for outer loops
-  // will be visited before backedges for inner loops. So now we fix that by
-  // inserting the nodes in order, while making sure that encountered inner loop
-  // are complete before their parents (outer loops).
-
-  SmallVector<Loop *, 8> WorkList;
-  // Get the size of the outermost region (the nodes that don't belong to any
-  // loop inside ParentRegion).
-  unsigned ZeroCurrentLoopSize = 0U;
-  auto LSI = LoopSizes.find(nullptr);
-  unsigned *CurrentLoopSize =
-      LSI != LoopSizes.end() ? &LSI->second : &ZeroCurrentLoopSize;
+  unsigned CurrentLoopDepth = 0;
   Loop *CurrentLoop = nullptr;
+  for (auto I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
+    RegionNode *RN = cast<RegionNode>(*I);
+    unsigned LoopDepth = getAdjustedLoopDepth(RN);
 
-  // The "skipped" list is actually located at the (reversed) beginning of the
-  // POT. This saves us the use of an intermediate container.
-  // Note that there is always enough room, for the skipped nodes, before the
-  // current location, as we have just passed at least that amount of nodes.
+    if (is_contained(Order, *I))
+      continue;
 
-  auto Begin = POT.rbegin();
-  auto I = Begin, SkippedEnd = Begin;
-  auto O = Order.rbegin(), OE = Order.rend();
-  while (O != OE) {
-    // If we have any skipped nodes, then erase the gap between the end of the
-    // "skipped" list, and the current location.
-    if (SkippedEnd != Begin) {
-      POT.erase(I.base(), SkippedEnd.base());
-      I = SkippedEnd = Begin = POT.rbegin();
-    }
+    if (LoopDepth < CurrentLoopDepth) {
+      // Make sure we have visited all blocks in this loop before moving back to
+      // the outer loop.
 
-    // Keep processing outer loops, in order (from inner most, to outer).
-    if (!WorkList.empty()) {
-      CurrentLoop = WorkList.pop_back_val();
-      CurrentLoopSize = &LoopSizes.find(CurrentLoop)->second;
-    }
-
-    // Keep processing loops while only going deeper (into inner loops).
-    do {
-      assert(I != POT.rend());
-      RegionNode *RN = *I++;
-
-      Loop *L = getAdjustedLoop(RN);
-      if (L != CurrentLoop) {
-        // If L is a loop inside CurrentLoop, then CurrentLoop must be the
-        // parent of L.
-        // To prove this, we will contradict the opposite:
-        //   Let P be the parent of L. If CurrentLoop is the parent of P, then
-        //   the header of P must have been processed already, as it must
-        //   dominate the other blocks of P (otherwise P is an irreducible loop,
-        //   and won't be recorded in the LoopInfo), especially L (inside). But
-        //   then CurrentLoop must have been updated to P at the time of
-        //   processing the header of P, which conflicts with the assumption
-        //   that CurrentLoop is not P.
-
-        // If L is not a loop inside CurrentLoop, then skip RN.
-        if (!L || L->getParentLoop() != CurrentLoop) {
-          // Skip the node by pushing it to the end of the "skipped" list.
-          *SkippedEnd++ = RN;
-          continue;
+      auto LoopI = I;
+      while (unsigned &BlockCount = LoopBlocks[CurrentLoop]) {
+        LoopI++;
+        if (getAdjustedLoop(cast<RegionNode>(*LoopI)) == CurrentLoop) {
+          --BlockCount;
+          Order.push_back(*LoopI);
         }
-
-        // If we still haven't processed all the nodes that belong to
-        // CurrentLoop, then make sure we come back later, to finish the job, by
-        // pushing it to the WorkList.
-        if (*CurrentLoopSize)
-          WorkList.push_back(CurrentLoop);
-
-        CurrentLoop = L;
-        CurrentLoopSize = &LoopSizes.find(CurrentLoop)->second;
       }
+    }
 
-      assert(O != OE);
-      *O++ = RN;
+    CurrentLoop = getAdjustedLoop(RN);
+    if (CurrentLoop)
+      LoopBlocks[CurrentLoop]--;
 
-      // If we have finished processing the current loop, then we are done here.
-      --*CurrentLoopSize;
-    } while (*CurrentLoopSize);
+    CurrentLoopDepth = LoopDepth;
+    Order.push_back(*I);
   }
-  assert(WorkList.empty());
-  assert(SkippedEnd == Begin);
+
+  // This pass originally used a post-order traversal and then operated on
+  // the list in reverse. Now that we are using a reverse post-order traversal
+  // rather than re-working the whole pass to operate on the list in order,
+  // we just reverse the list and continue to operate on it in reverse.
+  std::reverse(Order.begin(), Order.end());
 }
 
 /// Determine the end of the loops
