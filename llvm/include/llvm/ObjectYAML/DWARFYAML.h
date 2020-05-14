@@ -159,7 +159,7 @@ struct Data {
   std::vector<Abbrev> AbbrevDecls;
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;
-  std::vector<Ranges> Ranges;
+  std::vector<Ranges> DebugRanges;
   PubSection PubNames;
   PubSection PubTypes;
 

@@ -116,18 +116,18 @@ void DWARFYAML::EmitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 void DWARFYAML::EmitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   const size_t RangesOffset = OS.tell();
-  for (auto Ranges : DI.Ranges) {
+  for (auto DebugRanges : DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
-    assert(Ranges.Offset <= CurrOffset);
-    if (Ranges.Offset > CurrOffset)
-      ZeroFillBytes(OS, Ranges.Offset - CurrOffset);
-    for (auto Entry : Ranges.Entries) {
-      writeVariableSizedInteger(Entry.LowOffset, Ranges.AddrSize, OS,
+    assert(DebugRanges.Offset <= CurrOffset);
+    if (DebugRanges.Offset > CurrOffset)
+      ZeroFillBytes(OS, DebugRanges.Offset - CurrOffset);
+    for (auto Entry : DebugRanges.Entries) {
+      writeVariableSizedInteger(Entry.LowOffset, DebugRanges.AddrSize, OS,
                                 DI.IsLittleEndian);
-      writeVariableSizedInteger(Entry.HighOffset, Ranges.AddrSize, OS,
+      writeVariableSizedInteger(Entry.HighOffset, DebugRanges.AddrSize, OS,
                                 DI.IsLittleEndian);
     }
-    ZeroFillBytes(OS, Ranges.AddrSize * 2);
+    ZeroFillBytes(OS, DebugRanges.AddrSize * 2);
   }
 }
 
