@@ -279,7 +279,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   else if (name == ".gljmp$y")
     guardLJmpChunks.push_back(c);
   else if (name == ".sxdata")
-    sXDataChunks.push_back(c);
+    sxDataChunks.push_back(c);
   else if (config->tailMerge && sec->NumberOfRelocations == 0 &&
            name == ".rdata" && leaderName.startswith("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
