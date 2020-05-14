@@ -1979,7 +1979,7 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
     Example:
 
     ```mlir
-    %1 = rank %0 : index
+    %1 = rank %0 : tensor<*xf32>
     ```
   }];
 
