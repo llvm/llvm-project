@@ -26,11 +26,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
-#include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
-#include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
-#include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
@@ -114,44 +110,11 @@ public:
   /// Link CodeView from a single object file into the target (output) PDB.
   /// When a precompiled headers object is linked, its TPI map might be provided
   /// externally.
-  void addObjFile(ObjFile *file, CVIndexMap *externIndexMap = nullptr);
+  void addDebug(TpiSource *source);
 
-  /// Produce a mapping from the type and item indices used in the object
-  /// file to those in the destination PDB.
-  ///
-  /// If the object file uses a type server PDB (compiled with /Zi), merge TPI
-  /// and IPI from the type server PDB and return a map for it. Each unique type
-  /// server PDB is merged at most once, so this may return an existing index
-  /// mapping.
-  ///
-  /// If the object does not use a type server PDB (compiled with /Z7), we merge
-  /// all the type and item records from the .debug$S stream and fill in the
-  /// caller-provided objectIndexMap.
-  Expected<const CVIndexMap &> mergeDebugT(ObjFile *file,
-                                           CVIndexMap *objectIndexMap);
+  const CVIndexMap *mergeTypeRecords(TpiSource *source, CVIndexMap *localMap);
 
-  /// Reads and makes available a PDB.
-  Expected<const CVIndexMap &> maybeMergeTypeServerPDB(ObjFile *file);
-
-  /// Merges a precompiled headers TPI map into the current TPI map. The
-  /// precompiled headers object will also be loaded and remapped in the
-  /// process.
-  Error mergeInPrecompHeaderObj(ObjFile *file, CVIndexMap *objectIndexMap);
-
-  /// Reads and makes available a precompiled headers object.
-  ///
-  /// This is a requirement for objects compiled with cl.exe /Yu. In that
-  /// case, the referenced object (which was compiled with /Yc) has to be loaded
-  /// first. This is mainly because the current object's TPI stream has external
-  /// references to the precompiled headers object.
-  ///
-  /// If the precompiled headers object was already loaded, this function will
-  /// simply return its (remapped) TPI map.
-  Expected<const CVIndexMap &> aquirePrecompObj(ObjFile *file);
-
-  /// Adds a precompiled headers object signature -> TPI mapping.
-  std::pair<CVIndexMap &, bool /*already there*/>
-  registerPrecompiledHeaders(uint32_t signature);
+  void addDebugSymbols(ObjFile *file, const CVIndexMap *indexMap);
 
   void mergeSymbolRecords(ObjFile *file, const CVIndexMap &indexMap,
                           std::vector<ulittle32_t *> &stringTableRefs,
@@ -180,22 +143,10 @@ private:
 
   llvm::SmallString<128> nativePath;
 
-  /// Type index mappings of type server PDBs that we've loaded so far.
-  std::map<codeview::GUID, CVIndexMap> typeServerIndexMappings;
-
-  /// Type index mappings of precompiled objects type map that we've loaded so
-  /// far.
-  std::map<uint32_t, CVIndexMap> precompTypeIndexMappings;
-
   // For statistics
   uint64_t globalSymbols = 0;
   uint64_t moduleSymbols = 0;
   uint64_t publicSymbols = 0;
-
-  // When showSummary is enabled, these are histograms of TPI and IPI records
-  // keyed by type index.
-  SmallVector<uint32_t, 0> tpiCounts;
-  SmallVector<uint32_t, 0> ipiCounts;
 };
 
 class DebugSHandler {
@@ -205,7 +156,7 @@ class DebugSHandler {
   ObjFile &file;
 
   /// The result of merging type indices.
-  const CVIndexMap &indexMap;
+  const CVIndexMap *indexMap;
 
   /// The DEBUG_S_STRINGTABLE subsection.  These strings are referred to by
   /// index from other records in the .debug$S section.  All of these strings
@@ -239,7 +190,7 @@ class DebugSHandler {
   std::vector<ulittle32_t *> stringTableReferences;
 
 public:
-  DebugSHandler(PDBLinker &linker, ObjFile &file, const CVIndexMap &indexMap)
+  DebugSHandler(PDBLinker &linker, ObjFile &file, const CVIndexMap *indexMap)
       : linker(linker), file(file), indexMap(indexMap) {}
 
   void handleDebugS(lld::coff::SectionChunk &debugS);
@@ -290,42 +241,6 @@ static void pdbMakeAbsolute(SmallVectorImpl<char> &fileName) {
   fileName = std::move(absoluteFileName);
 }
 
-// A COFF .debug$H section is currently a clang extension.  This function checks
-// if a .debug$H section is in a format that we expect / understand, so that we
-// can ignore any sections which are coincidentally also named .debug$H but do
-// not contain a format we recognize.
-static bool canUseDebugH(ArrayRef<uint8_t> debugH) {
-  if (debugH.size() < sizeof(object::debug_h_header))
-    return false;
-  auto *header =
-      reinterpret_cast<const object::debug_h_header *>(debugH.data());
-  debugH = debugH.drop_front(sizeof(object::debug_h_header));
-  return header->Magic == COFF::DEBUG_HASHES_SECTION_MAGIC &&
-         header->Version == 0 &&
-         header->HashAlgorithm == uint16_t(GlobalTypeHashAlg::SHA1_8) &&
-         (debugH.size() % 8 == 0);
-}
-
-static Optional<ArrayRef<uint8_t>> getDebugH(ObjFile *file) {
-  SectionChunk *sec =
-      SectionChunk::findByName(file->getDebugChunks(), ".debug$H");
-  if (!sec)
-    return llvm::None;
-  ArrayRef<uint8_t> contents = sec->getContents();
-  if (!canUseDebugH(contents))
-    return None;
-  return contents;
-}
-
-static ArrayRef<GloballyHashedType>
-getHashesFromDebugH(ArrayRef<uint8_t> debugH) {
-  assert(canUseDebugH(debugH));
-
-  debugH = debugH.drop_front(sizeof(object::debug_h_header));
-  uint32_t count = debugH.size() / sizeof(GloballyHashedType);
-  return {reinterpret_cast<const GloballyHashedType *>(debugH.data()), count};
-}
-
 static void addTypeInfo(pdb::TpiStreamBuilder &tpiBuilder,
                         TypeCollection &typeTable) {
   // Start the TPI or IPI stream header.
@@ -338,281 +253,6 @@ static void addTypeInfo(pdb::TpiStreamBuilder &tpiBuilder,
       fatal("type hashing error");
     tpiBuilder.addTypeRecord(type.RecordData, *hash);
   });
-}
-
-Expected<const CVIndexMap &>
-PDBLinker::mergeDebugT(ObjFile *file, CVIndexMap *objectIndexMap) {
-  ScopedTimer t(typeMergingTimer);
-
-  if (!file->debugTypesObj)
-    return *objectIndexMap; // no Types stream
-
-  // Precompiled headers objects need to save the index map for further
-  // reference by other objects which use the precompiled headers.
-  if (file->debugTypesObj->kind == TpiSource::PCH) {
-    uint32_t pchSignature = file->pchSignature.getValueOr(0);
-    if (pchSignature == 0)
-      fatal("No signature found for the precompiled headers OBJ (" +
-            file->getName() + ")");
-
-    // When a precompiled headers object comes first on the command-line, we
-    // update the mapping here. Otherwise, if an object referencing the
-    // precompiled headers object comes first, the mapping is created in
-    // aquirePrecompObj(), thus we would skip this block.
-    if (!objectIndexMap->isPrecompiledTypeMap) {
-      auto r = registerPrecompiledHeaders(pchSignature);
-      if (r.second)
-        fatal(
-            "A precompiled headers OBJ with the same signature was already "
-            "provided! (" +
-            file->getName() + ")");
-
-      objectIndexMap = &r.first;
-    }
-  }
-
-  if (file->debugTypesObj->kind == TpiSource::UsingPDB) {
-    // Look through type servers. If we've already seen this type server,
-    // don't merge any type information.
-    return maybeMergeTypeServerPDB(file);
-  }
-
-  CVTypeArray types;
-  BinaryStreamReader reader(file->debugTypes, support::little);
-  cantFail(reader.readArray(types, reader.getLength()));
-
-  if (file->debugTypesObj->kind == TpiSource::UsingPCH) {
-    // This object was compiled with /Yu, so process the corresponding
-    // precompiled headers object (/Yc) first. Some type indices in the current
-    // object are referencing data in the precompiled headers object, so we need
-    // both to be loaded.
-    Error e = mergeInPrecompHeaderObj(file, objectIndexMap);
-    if (e)
-      return std::move(e);
-
-    // Drop LF_PRECOMP record from the input stream, as it has been replaced
-    // with the precompiled headers Type stream in the mergeInPrecompHeaderObj()
-    // call above. Note that we can't just call Types.drop_front(), as we
-    // explicitly want to rebase the stream.
-    CVTypeArray::Iterator firstType = types.begin();
-    types.setUnderlyingStream(
-        types.getUnderlyingStream().drop_front(firstType->RecordData.size()));
-  }
-
-  // Fill in the temporary, caller-provided ObjectIndexMap.
-  if (config->debugGHashes) {
-    ArrayRef<GloballyHashedType> hashes;
-    std::vector<GloballyHashedType> ownedHashes;
-    if (Optional<ArrayRef<uint8_t>> debugH = getDebugH(file))
-      hashes = getHashesFromDebugH(*debugH);
-    else {
-      ownedHashes = GloballyHashedType::hashTypes(types);
-      hashes = ownedHashes;
-    }
-
-    if (auto err = mergeTypeAndIdRecords(
-            tMerger.globalIDTable, tMerger.globalTypeTable,
-            objectIndexMap->tpiMap, types, hashes, file->pchSignature))
-      fatal("codeview::mergeTypeAndIdRecords failed: " +
-            toString(std::move(err)));
-  } else {
-    if (auto err = mergeTypeAndIdRecords(tMerger.idTable, tMerger.typeTable,
-                                         objectIndexMap->tpiMap, types,
-                                         file->pchSignature))
-      fatal("codeview::mergeTypeAndIdRecords failed: " +
-            toString(std::move(err)));
-  }
-
-  if (config->showSummary) {
-    // Count how many times we saw each type record in our input. This
-    // calculation requires a second pass over the type records to classify each
-    // record as a type or index. This is slow, but this code executes when
-    // collecting statistics.
-    tpiCounts.resize(tMerger.getTypeTable().size());
-    ipiCounts.resize(tMerger.getIDTable().size());
-    uint32_t srcIdx = 0;
-    for (CVType &ty : types) {
-      TypeIndex dstIdx = objectIndexMap->tpiMap[srcIdx++];
-      // Type merging may fail, so a complex source type may become the simple
-      // NotTranslated type, which cannot be used as an array index.
-      if (dstIdx.isSimple())
-        continue;
-      SmallVectorImpl<uint32_t> &counts =
-          isIdRecord(ty.kind()) ? ipiCounts : tpiCounts;
-      ++counts[dstIdx.toArrayIndex()];
-    }
-  }
-
-  return *objectIndexMap;
-}
-
-Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *file) {
-  Expected<llvm::pdb::NativeSession *> pdbSession = findTypeServerSource(file);
-  if (!pdbSession)
-    return pdbSession.takeError();
-
-  pdb::PDBFile &pdbFile = pdbSession.get()->getPDBFile();
-  pdb::InfoStream &info = cantFail(pdbFile.getPDBInfoStream());
-
-  auto it = typeServerIndexMappings.emplace(info.getGuid(), CVIndexMap());
-  CVIndexMap &indexMap = it.first->second;
-  if (!it.second)
-    return indexMap; // already merged
-
-  // Mark this map as a type server map.
-  indexMap.isTypeServerMap = true;
-
-  Expected<pdb::TpiStream &> expectedTpi = pdbFile.getPDBTpiStream();
-  if (auto e = expectedTpi.takeError())
-    fatal("Type server does not have TPI stream: " + toString(std::move(e)));
-  pdb::TpiStream *maybeIpi = nullptr;
-  if (pdbFile.hasPDBIpiStream()) {
-    Expected<pdb::TpiStream &> expectedIpi = pdbFile.getPDBIpiStream();
-    if (auto e = expectedIpi.takeError())
-      fatal("Error getting type server IPI stream: " + toString(std::move(e)));
-    maybeIpi = &*expectedIpi;
-  }
-
-  if (config->debugGHashes) {
-    // PDBs do not actually store global hashes, so when merging a type server
-    // PDB we have to synthesize global hashes.  To do this, we first synthesize
-    // global hashes for the TPI stream, since it is independent, then we
-    // synthesize hashes for the IPI stream, using the hashes for the TPI stream
-    // as inputs.
-    auto tpiHashes = GloballyHashedType::hashTypes(expectedTpi->typeArray());
-    Optional<uint32_t> endPrecomp;
-    // Merge TPI first, because the IPI stream will reference type indices.
-    if (auto err =
-            mergeTypeRecords(tMerger.globalTypeTable, indexMap.tpiMap,
-                             expectedTpi->typeArray(), tpiHashes, endPrecomp))
-      fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
-
-    // Merge IPI.
-    if (maybeIpi) {
-      auto ipiHashes =
-          GloballyHashedType::hashIds(maybeIpi->typeArray(), tpiHashes);
-      if (auto err =
-              mergeIdRecords(tMerger.globalIDTable, indexMap.tpiMap,
-                             indexMap.ipiMap, maybeIpi->typeArray(), ipiHashes))
-        fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
-    }
-  } else {
-    // Merge TPI first, because the IPI stream will reference type indices.
-    if (auto err = mergeTypeRecords(tMerger.typeTable, indexMap.tpiMap,
-                                    expectedTpi->typeArray()))
-      fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
-
-    // Merge IPI.
-    if (maybeIpi) {
-      if (auto err = mergeIdRecords(tMerger.idTable, indexMap.tpiMap,
-                                    indexMap.ipiMap, maybeIpi->typeArray()))
-        fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
-    }
-  }
-
-  if (config->showSummary) {
-    // Count how many times we saw each type record in our input. If a
-    // destination type index is present in the source to destination type index
-    // map, that means we saw it once in the input. Add it to our histogram.
-    tpiCounts.resize(tMerger.getTypeTable().size());
-    ipiCounts.resize(tMerger.getIDTable().size());
-    for (TypeIndex ti : indexMap.tpiMap)
-      if (!ti.isSimple())
-        ++tpiCounts[ti.toArrayIndex()];
-    for (TypeIndex ti : indexMap.ipiMap)
-      if (!ti.isSimple())
-        ++ipiCounts[ti.toArrayIndex()];
-  }
-
-  return indexMap;
-}
-
-Error PDBLinker::mergeInPrecompHeaderObj(ObjFile *file,
-                                         CVIndexMap *objectIndexMap) {
-  const PrecompRecord &precomp =
-      retrieveDependencyInfo<PrecompRecord>(file->debugTypesObj);
-
-  Expected<const CVIndexMap &> e = aquirePrecompObj(file);
-  if (!e)
-    return e.takeError();
-
-  const CVIndexMap &precompIndexMap = *e;
-  assert(precompIndexMap.isPrecompiledTypeMap);
-
-  if (precompIndexMap.tpiMap.empty())
-    return Error::success();
-
-  assert(precomp.getStartTypeIndex() == TypeIndex::FirstNonSimpleIndex);
-  assert(precomp.getTypesCount() <= precompIndexMap.tpiMap.size());
-  // Use the previously remapped index map from the precompiled headers.
-  objectIndexMap->tpiMap.append(precompIndexMap.tpiMap.begin(),
-                                precompIndexMap.tpiMap.begin() +
-                                    precomp.getTypesCount());
-  return Error::success();
-}
-
-static bool equals_path(StringRef path1, StringRef path2) {
-#if defined(_WIN32)
-  return path1.equals_lower(path2);
-#else
-  return path1.equals(path2);
-#endif
-}
-// Find by name an OBJ provided on the command line
-static ObjFile *findObjWithPrecompSignature(StringRef fileNameOnly,
-                                            uint32_t precompSignature) {
-  for (ObjFile *f : ObjFile::instances) {
-    StringRef currentFileName = sys::path::filename(f->getName());
-
-    if (f->pchSignature.hasValue() &&
-        f->pchSignature.getValue() == precompSignature &&
-        equals_path(fileNameOnly, currentFileName))
-      return f;
-  }
-  return nullptr;
-}
-
-std::pair<CVIndexMap &, bool /*already there*/>
-PDBLinker::registerPrecompiledHeaders(uint32_t signature) {
-  auto insertion = precompTypeIndexMappings.insert({signature, CVIndexMap()});
-  CVIndexMap &indexMap = insertion.first->second;
-  if (!insertion.second)
-    return {indexMap, true};
-  // Mark this map as a precompiled types map.
-  indexMap.isPrecompiledTypeMap = true;
-  return {indexMap, false};
-}
-
-Expected<const CVIndexMap &> PDBLinker::aquirePrecompObj(ObjFile *file) {
-  const PrecompRecord &precomp =
-      retrieveDependencyInfo<PrecompRecord>(file->debugTypesObj);
-
-  // First, check if we already loaded the precompiled headers object with this
-  // signature. Return the type index mapping if we've already seen it.
-  auto r = registerPrecompiledHeaders(precomp.getSignature());
-  if (r.second)
-    return r.first;
-
-  CVIndexMap &indexMap = r.first;
-
-  // Cross-compile warning: given that Clang doesn't generate LF_PRECOMP
-  // records, we assume the OBJ comes from a Windows build of cl.exe. Thusly,
-  // the paths embedded in the OBJs are in the Windows format.
-  SmallString<128> precompFileName = sys::path::filename(
-      precomp.getPrecompFilePath(), sys::path::Style::windows);
-
-  // link.exe requires that a precompiled headers object must always be provided
-  // on the command-line, even if that's not necessary.
-  auto precompFile =
-      findObjWithPrecompSignature(precompFileName, precomp.Signature);
-  if (!precompFile)
-    return createFileError(
-        precomp.getPrecompFilePath().str(),
-        make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
-
-  addObjFile(precompFile, &indexMap);
-
-  return indexMap;
 }
 
 static bool remapTypeIndex(TypeIndex &ti, ArrayRef<TypeIndex> typeIndexMap) {
@@ -1040,6 +680,11 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &debugS) {
   BinaryStreamReader reader(relocatedDebugContents, support::little);
   exitOnErr(reader.readArray(subsections, relocatedDebugContents.size()));
 
+  // If there is no index map, use an empty one.
+  CVIndexMap tempIndexMap;
+  if (!indexMap)
+    indexMap = &tempIndexMap;
+
   for (const DebugSubsectionRecord &ss : subsections) {
     // Ignore subsections with the 'ignore' bit. Some versions of the Visual C++
     // runtime have subsections with this bit set.
@@ -1078,7 +723,7 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &debugS) {
       break;
     }
     case DebugSubsectionKind::Symbols: {
-      linker.mergeSymbolRecords(&file, indexMap, stringTableReferences,
+      linker.mergeSymbolRecords(&file, *indexMap, stringTableReferences,
                                 ss.getRecordData());
       break;
     }
@@ -1129,7 +774,7 @@ DebugSHandler::mergeInlineeLines(DebugChecksumsSubsection *newChecksums) {
     uint32_t sourceLine = line.Header->SourceLineNum;
 
     ArrayRef<TypeIndex> typeOrItemMap =
-        indexMap.isTypeServerMap ? indexMap.ipiMap : indexMap.tpiMap;
+        indexMap->isTypeServerMap ? indexMap->ipiMap : indexMap->tpiMap;
     if (!remapTypeIndex(inlinee, typeOrItemMap)) {
       log("ignoring inlinee line record in " + file.getName() +
           " with bad inlinee index 0x" + utohexstr(inlinee.getIndex()));
@@ -1205,35 +850,39 @@ void DebugSHandler::finish() {
   file.moduleDBI->addDebugSubsection(std::move(newChecksums));
 }
 
-void PDBLinker::addObjFile(ObjFile *file, CVIndexMap *externIndexMap) {
-  if (file->mergedIntoPDB)
+static void warnUnusable(InputFile *f, Error e) {
+  if (!config->warnDebugInfoUnusable) {
+    consumeError(std::move(e));
     return;
-  file->mergedIntoPDB = true;
+  }
+  auto msg = "Cannot use debug info for '" + toString(f) + "' [LNK4099]";
+  if (e)
+    warn(msg + "\n>>> failed to load reference " + toString(std::move(e)));
+  else
+    warn(msg);
+}
 
+const CVIndexMap *PDBLinker::mergeTypeRecords(TpiSource *source,
+                                              CVIndexMap *localMap) {
+  ScopedTimer t(typeMergingTimer);
   // Before we can process symbol substreams from .debug$S, we need to process
   // type information, file checksums, and the string table.  Add type info to
   // the PDB first, so that we can get the map from object file type and item
   // indices to PDB type and item indices.
-  CVIndexMap objectIndexMap;
-  auto indexMapResult =
-      mergeDebugT(file, externIndexMap ? externIndexMap : &objectIndexMap);
+  Expected<const CVIndexMap *> r = source->mergeDebugT(&tMerger, localMap);
 
   // If the .debug$T sections fail to merge, assume there is no debug info.
-  if (!indexMapResult) {
-    if (!config->warnDebugInfoUnusable) {
-      consumeError(indexMapResult.takeError());
-      return;
-    }
-    warn("Cannot use debug info for '" + toString(file) + "' [LNK4099]\n" +
-         ">>> failed to load reference " +
-         StringRef(toString(indexMapResult.takeError())));
-    return;
+  if (!r) {
+    warnUnusable(source->file, r.takeError());
+    return nullptr;
   }
+  return *r;
+}
 
+void PDBLinker::addDebugSymbols(ObjFile *file, const CVIndexMap *indexMap) {
   ScopedTimer t(symbolMergingTimer);
-
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
-  DebugSHandler dsh(*this, *file, *indexMapResult);
+  DebugSHandler dsh(*this, *file, indexMap);
   // Now do all live .debug$S and .debug$F sections.
   for (SectionChunk *debugChunk : file->getDebugChunks()) {
     if (!debugChunk->live || debugChunk->getSize() == 0)
@@ -1269,32 +918,39 @@ void PDBLinker::addObjFile(ObjFile *file, CVIndexMap *externIndexMap) {
 // path to the object into the PDB. If this is a plain object, we make its
 // path absolute. If it's an object in an archive, we make the archive path
 // absolute.
-static void createModuleDBI(pdb::PDBFileBuilder &builder) {
+static void createModuleDBI(pdb::PDBFileBuilder &builder, ObjFile *file) {
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
   SmallString<128> objName;
 
-  for (ObjFile *file : ObjFile::instances) {
+  bool inArchive = !file->parentName.empty();
+  objName = inArchive ? file->parentName : file->getName();
+  pdbMakeAbsolute(objName);
+  StringRef modName = inArchive ? file->getName() : StringRef(objName);
 
-    bool inArchive = !file->parentName.empty();
-    objName = inArchive ? file->parentName : file->getName();
-    pdbMakeAbsolute(objName);
-    StringRef modName = inArchive ? file->getName() : StringRef(objName);
+  file->moduleDBI = &exitOnErr(dbiBuilder.addModuleInfo(modName));
+  file->moduleDBI->setObjFileName(objName);
 
-    file->moduleDBI = &exitOnErr(dbiBuilder.addModuleInfo(modName));
-    file->moduleDBI->setObjFileName(objName);
+  ArrayRef<Chunk *> chunks = file->getChunks();
+  uint32_t modi = file->moduleDBI->getModuleIndex();
 
-    ArrayRef<Chunk *> chunks = file->getChunks();
-    uint32_t modi = file->moduleDBI->getModuleIndex();
-
-    for (Chunk *c : chunks) {
-      auto *secChunk = dyn_cast<SectionChunk>(c);
-      if (!secChunk || !secChunk->live)
-        continue;
-      pdb::SectionContrib sc = createSectionContrib(secChunk, modi);
-      file->moduleDBI->setFirstSectionContrib(sc);
-      break;
-    }
+  for (Chunk *c : chunks) {
+    auto *secChunk = dyn_cast<SectionChunk>(c);
+    if (!secChunk || !secChunk->live)
+      continue;
+    pdb::SectionContrib sc = createSectionContrib(secChunk, modi);
+    file->moduleDBI->setFirstSectionContrib(sc);
+    break;
   }
+}
+
+void PDBLinker::addDebug(TpiSource *source) {
+  CVIndexMap localMap;
+  const CVIndexMap *indexMap = mergeTypeRecords(source, &localMap);
+
+  if (source->kind == TpiSource::PDB)
+    return; // No symbols in TypeServer PDBs
+
+  addDebugSymbols(source->file, indexMap);
 }
 
 static pdb::BulkPublic createPublic(Defined *def) {
@@ -1323,10 +979,30 @@ static pdb::BulkPublic createPublic(Defined *def) {
 void PDBLinker::addObjectsToPDB() {
   ScopedTimer t1(addObjectsTimer);
 
-  createModuleDBI(builder);
+  // Create module descriptors
+  for_each(ObjFile::instances,
+           [&](ObjFile *obj) { createModuleDBI(builder, obj); });
 
-  for (ObjFile *file : ObjFile::instances)
-    addObjFile(file);
+  // Merge OBJs that do not have debug types
+  for_each(ObjFile::instances, [&](ObjFile *obj) {
+    if (obj->debugTypesObj)
+      return;
+    // Even if there're no types, still merge non-symbol .Debug$S and .Debug$F
+    // sections
+    addDebugSymbols(obj, nullptr);
+  });
+
+  // Merge dependencies
+  TpiSource::forEachSource([&](TpiSource *source) {
+    if (source->isDependency())
+      addDebug(source);
+  });
+
+  // Merge regular and dependent OBJs
+  TpiSource::forEachSource([&](TpiSource *source) {
+    if (!source->isDependency())
+      addDebug(source);
+  });
 
   builder.getStringTableBuilder().setStrings(pdbStrTab);
   t1.stop();
@@ -1373,8 +1049,8 @@ void PDBLinker::printStats() {
 
   print(ObjFile::instances.size(),
         "Input OBJ files (expanded from all cmd-line inputs)");
-  print(typeServerIndexMappings.size(), "PDB type server dependencies");
-  print(precompTypeIndexMappings.size(), "Precomp OBJ dependencies");
+  print(TpiSource::countTypeServerPDBs(), "PDB type server dependencies");
+  print(TpiSource::countPrecompObjs(), "Precomp OBJ dependencies");
   print(tMerger.getTypeTable().size() + tMerger.getIDTable().size(),
         "Merged TPI records");
   print(pdbStrTab.size(), "Output PDB strings");
@@ -1428,8 +1104,8 @@ void PDBLinker::printStats() {
     }
   };
 
-  printLargeInputTypeRecs("TPI", tpiCounts, tMerger.getTypeTable());
-  printLargeInputTypeRecs("IPI", ipiCounts, tMerger.getIDTable());
+  printLargeInputTypeRecs("TPI", tMerger.tpiCounts, tMerger.getTypeTable());
+  printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
 
   message(buffer);
 }

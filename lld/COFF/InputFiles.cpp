@@ -25,6 +25,8 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -68,6 +70,7 @@ std::string lld::toString(const coff::InputFile *file) {
 }
 
 std::vector<ObjFile *> ObjFile::instances;
+std::map<std::string, PDBInputFile *> PDBInputFile::instances;
 std::vector<ImportFile *> ImportFile::instances;
 std::vector<BitcodeFile *> BitcodeFile::instances;
 
@@ -755,10 +758,11 @@ void ObjFile::initializeDependencies() {
   if (data.empty())
     return;
 
+  // Get the first type record. It will indicate if this object uses a type
+  // server (/Zi) or a PCH file (/Yu).
   CVTypeArray types;
   BinaryStreamReader reader(data, support::little);
   cantFail(reader.readArray(types, reader.getLength()));
-
   CVTypeArray::Iterator firstType = types.begin();
   if (firstType == types.end())
     return;
@@ -766,26 +770,118 @@ void ObjFile::initializeDependencies() {
   // Remember the .debug$T or .debug$P section.
   debugTypes = data;
 
+  // This object file is a PCH file that others will depend on.
   if (isPCH) {
     debugTypesObj = makePrecompSource(this);
     return;
   }
 
+  // This object file was compiled with /Zi. Enqueue the PDB dependency.
   if (firstType->kind() == LF_TYPESERVER2) {
     TypeServer2Record ts = cantFail(
         TypeDeserializer::deserializeAs<TypeServer2Record>(firstType->data()));
-    debugTypesObj = makeUseTypeServerSource(this, &ts);
+    debugTypesObj = makeUseTypeServerSource(this, ts);
+    PDBInputFile::enqueue(ts.getName(), this);
     return;
   }
 
+  // This object was compiled with /Yu. It uses types from another object file
+  // with a matching signature.
   if (firstType->kind() == LF_PRECOMP) {
     PrecompRecord precomp = cantFail(
         TypeDeserializer::deserializeAs<PrecompRecord>(firstType->data()));
-    debugTypesObj = makeUsePrecompSource(this, &precomp);
+    debugTypesObj = makeUsePrecompSource(this, precomp);
     return;
   }
 
+  // This is a plain old object file.
   debugTypesObj = makeTpiSource(this);
+}
+
+// Make a PDB path assuming the PDB is in the same folder as the OBJ
+static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
+  StringRef localPath =
+      !file->parentName.empty() ? file->parentName : file->getName();
+  SmallString<128> path = sys::path::parent_path(localPath);
+
+  // Currently, type server PDBs are only created by MSVC cl, which only runs
+  // on Windows, so we can assume type server paths are Windows style.
+  sys::path::append(path,
+                    sys::path::filename(tSPath, sys::path::Style::windows));
+  return std::string(path.str());
+}
+
+// The casing of the PDB path stamped in the OBJ can differ from the actual path
+// on disk. With this, we ensure to always use lowercase as a key for the
+// PDBInputFile::instances map, at least on Windows.
+static std::string normalizePdbPath(StringRef path) {
+#if defined(_WIN32)
+  return path.lower();
+#else // LINUX
+  return std::string(path);
+#endif
+}
+
+// If existing, return the actual PDB path on disk.
+static Optional<std::string> findPdbPath(StringRef pdbPath,
+                                         ObjFile *dependentFile) {
+  // Ensure the file exists before anything else. In some cases, if the path
+  // points to a removable device, Driver::enqueuePath() would fail with an
+  // error (EAGAIN, "resource unavailable try again") which we want to skip
+  // silently.
+  if (llvm::sys::fs::exists(pdbPath))
+    return normalizePdbPath(pdbPath);
+  std::string ret = getPdbBaseName(dependentFile, pdbPath);
+  if (llvm::sys::fs::exists(ret))
+    return normalizePdbPath(ret);
+  return None;
+}
+
+PDBInputFile::PDBInputFile(MemoryBufferRef m) : InputFile(PDBKind, m) {}
+
+PDBInputFile::~PDBInputFile() = default;
+
+PDBInputFile *PDBInputFile::findFromRecordPath(StringRef path,
+                                               ObjFile *fromFile) {
+  auto p = findPdbPath(path.str(), fromFile);
+  if (!p)
+    return nullptr;
+  auto it = PDBInputFile::instances.find(*p);
+  if (it != PDBInputFile::instances.end())
+    return it->second;
+  return nullptr;
+}
+
+void PDBInputFile::enqueue(StringRef path, ObjFile *fromFile) {
+  auto p = findPdbPath(path.str(), fromFile);
+  if (!p)
+    return;
+  auto it = PDBInputFile::instances.emplace(*p, nullptr);
+  if (!it.second)
+    return; // already scheduled for load
+  driver->enqueuePDB(*p);
+}
+
+void PDBInputFile::parse() {
+  PDBInputFile::instances[mb.getBufferIdentifier().str()] = this;
+
+  std::unique_ptr<pdb::IPDBSession> thisSession;
+  loadErr.emplace(pdb::NativeSession::createFromPdb(
+      MemoryBuffer::getMemBuffer(mb, false), thisSession));
+  if (*loadErr)
+    return; // fail silently at this point - the error will be handled later,
+            // when merging the debug type stream
+
+  session.reset(static_cast<pdb::NativeSession *>(thisSession.release()));
+
+  pdb::PDBFile &pdbFile = session->getPDBFile();
+  auto expectedInfo = pdbFile.getPDBInfoStream();
+  // All PDB Files should have an Info stream.
+  if (!expectedInfo) {
+    loadErr.emplace(expectedInfo.takeError());
+    return;
+  }
+  debugTypesObj = makeTypeServerSource(this);
 }
 
 // Used only for DWARF debug info, which is not common (except in MinGW

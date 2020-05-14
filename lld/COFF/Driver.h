@@ -87,6 +87,8 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
+  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
+
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
   void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
