@@ -539,34 +539,6 @@ private:
     size_type __size;
 };
 
-//  tuple interface
-template <class _Tp, size_t _Size>
-struct _LIBCPP_TEMPLATE_VIS tuple_size<span<_Tp, _Size>>
-    : public integral_constant<size_t, _Size> {};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS tuple_size<span<_Tp, dynamic_extent>>; // declared but not defined
-
-
-template <size_t _Ip, class _Tp, size_t _Size>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, span<_Tp, _Size>>
-{
-    static_assert( dynamic_extent != _Size, "std::tuple_element<> not supported for std::span<T, dynamic_extent>");
-    static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::span)");
-    typedef _Tp type;
-};
-
-template <size_t _Ip, class _Tp, size_t _Size>
-_LIBCPP_INLINE_VISIBILITY constexpr
-_Tp&
-get(span<_Tp, _Size> __s) noexcept
-{
-    static_assert( dynamic_extent != _Size, "std::get<> not supported for std::span<T, dynamic_extent>");
-    static_assert(_Ip < _Size, "Index out of bounds in std::get<> (std::span)");
-    return __s[_Ip];
-}
-
-
 //  as_bytes & as_writable_bytes
 template <class _Tp, size_t _Extent>
 _LIBCPP_INLINE_VISIBILITY
