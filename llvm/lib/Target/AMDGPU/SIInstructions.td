@@ -565,12 +565,14 @@ def SI_INDIRECT_SRC_V2 : SI_INDIRECT_SRC<VReg_64>;
 def SI_INDIRECT_SRC_V4 : SI_INDIRECT_SRC<VReg_128>;
 def SI_INDIRECT_SRC_V8 : SI_INDIRECT_SRC<VReg_256>;
 def SI_INDIRECT_SRC_V16 : SI_INDIRECT_SRC<VReg_512>;
+def SI_INDIRECT_SRC_V32 : SI_INDIRECT_SRC<VReg_1024>;
 
 def SI_INDIRECT_DST_V1 : SI_INDIRECT_DST<VGPR_32>;
 def SI_INDIRECT_DST_V2 : SI_INDIRECT_DST<VReg_64>;
 def SI_INDIRECT_DST_V4 : SI_INDIRECT_DST<VReg_128>;
 def SI_INDIRECT_DST_V8 : SI_INDIRECT_DST<VReg_256>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
+def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
 
@@ -1192,8 +1194,8 @@ def : BitConvert <v8f32, v4f64, VReg_256>;
 // 512-bit bitcast
 def : BitConvert <v16i32, v16f32, VReg_512>;
 def : BitConvert <v16f32, v16i32, VReg_512>;
-def : BitConvert <v8i64,  v8f64, VReg_512>;
-def : BitConvert <v8f64,  v8i64, VReg_512>;
+def : BitConvert <v8i64,  v8f64,  VReg_512>;
+def : BitConvert <v8f64,  v8i64,  VReg_512>;
 def : BitConvert <v8i64,  v16i32, VReg_512>;
 def : BitConvert <v8f64,  v16i32, VReg_512>;
 def : BitConvert <v16i32, v8i64,  VReg_512>;
@@ -1206,6 +1208,17 @@ def : BitConvert <v16f32, v8f64,  VReg_512>;
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;
 def : BitConvert <v32f32, v32i32, VReg_1024>;
+def : BitConvert <v16i64, v16f64, VReg_1024>;
+def : BitConvert <v16f64, v16i64, VReg_1024>;
+def : BitConvert <v16i64, v32i32, VReg_1024>;
+def : BitConvert <v32i32, v16i64, VReg_1024>;
+def : BitConvert <v16f64, v32f32, VReg_1024>;
+def : BitConvert <v32f32, v16f64, VReg_1024>;
+def : BitConvert <v16i64, v32f32, VReg_1024>;
+def : BitConvert <v32i32, v16f64, VReg_1024>;
+def : BitConvert <v16f64, v32i32, VReg_1024>;
+def : BitConvert <v32f32, v16i64, VReg_1024>;
+
 
 /********** =================== **********/
 /********** Src & Dst modifiers **********/
@@ -1581,11 +1594,13 @@ defm : SI_INDIRECT_Pattern <v2f32, f32, "V2">;
 defm : SI_INDIRECT_Pattern <v4f32, f32, "V4">;
 defm : SI_INDIRECT_Pattern <v8f32, f32, "V8">;
 defm : SI_INDIRECT_Pattern <v16f32, f32, "V16">;
+defm : SI_INDIRECT_Pattern <v32f32, f32, "V32">;
 
 defm : SI_INDIRECT_Pattern <v2i32, i32, "V2">;
 defm : SI_INDIRECT_Pattern <v4i32, i32, "V4">;
 defm : SI_INDIRECT_Pattern <v8i32, i32, "V8">;
 defm : SI_INDIRECT_Pattern <v16i32, i32, "V16">;
+defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 
 //===----------------------------------------------------------------------===//
 // SAD Patterns
