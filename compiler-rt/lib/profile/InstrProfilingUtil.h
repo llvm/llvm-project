@@ -32,6 +32,7 @@ int lprofUnlockFileHandle(FILE *F);
 FILE *lprofOpenFileEx(const char *Filename);
 /* PS4 doesn't have setenv/getenv/fork. Define a shim. */
 #if __ORBIS__
+#include <sys/types.h>
 static inline char *getenv(const char *name) { return NULL; }
 static inline int setenv(const char *name, const char *value, int overwrite)
 { return 0; }
