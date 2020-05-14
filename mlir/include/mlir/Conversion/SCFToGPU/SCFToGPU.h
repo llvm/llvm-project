@@ -1,12 +1,12 @@
-//===- LoopsToGPU.h - Convert loop nests to GPU kernels ---------*- C++ -*-===//
+//===- SCFToGPU.h - Convert loop nests to GPU kernels -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_LOOPSTOGPU_LOOPSTOGPU_H_
-#define MLIR_CONVERSION_LOOPSTOGPU_LOOPSTOGPU_H_
+#ifndef MLIR_CONVERSION_SCFTOGPU_SCFTOGPU_H_
+#define MLIR_CONVERSION_SCFTOGPU_SCFTOGPU_H_
 
 #include "mlir/Support/LLVM.h"
 
@@ -81,4 +81,4 @@ void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_LOOPSTOGPU_LOOPSTOGPU_H_
+#endif // MLIR_CONVERSION_SCFTOGPU_SCFTOGPU_H_

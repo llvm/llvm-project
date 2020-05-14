@@ -1,4 +1,4 @@
-//===- LoopsToGPU.cpp - Convert an affine loop nest to a GPU kernel -------===//
+//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/LoopsToGPU/LoopsToGPU.h"
+#include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"

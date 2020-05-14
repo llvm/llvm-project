@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-convert-vector-to-loops -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-convert-vector-to-scf -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @materialize_read_1d() {
 func @materialize_read_1d() {

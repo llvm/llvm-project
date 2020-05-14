@@ -1,9 +1,9 @@
-add_mlir_conversion_library(MLIRLoopsToGPU
-  LoopsToGPU.cpp
-  LoopsToGPUPass.cpp
+add_mlir_conversion_library(MLIRSCFToGPU
+  SCFToGPU.cpp
+  SCFToGPUPass.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/LoopsToGPU
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToGPU
 
   DEPENDS
   MLIRConversionPassIncGen

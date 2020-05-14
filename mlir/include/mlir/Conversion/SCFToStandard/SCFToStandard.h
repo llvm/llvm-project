@@ -1,4 +1,4 @@
-//===- ConvertLoopToStandard.h - Pass entrypoint ----------------*- C++ -*-===//
+//===- ConvertSCFToStandard.h - Pass entrypoint -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_LOOPTOSTANDARD_CONVERTLOOPTOSTANDARD_H_
-#define MLIR_CONVERSION_LOOPTOSTANDARD_CONVERTLOOPTOSTANDARD_H_
+#ifndef MLIR_CONVERSION_SCFTOSTANDARD_SCFTOSTANDARD_H_
+#define MLIR_CONVERSION_SCFTOSTANDARD_SCFTOSTANDARD_H_
 
 #include <memory>
 #include <vector>
@@ -32,4 +32,4 @@ std::unique_ptr<Pass> createLowerToCFGPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_LOOPTOSTANDARD_CONVERTLOOPTOSTANDARD_H_
+#endif // MLIR_CONVERSION_SCFTOSTANDARD_SCFTOSTANDARD_H_

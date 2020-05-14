@@ -1,4 +1,4 @@
-//===- LoopToStandard.cpp - ControlFlow to CFG conversion -----------------===//
+//===- SCFToStandard.cpp - ControlFlow to CFG conversion ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "../PassDetail.h"
-#include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -29,8 +29,7 @@ using namespace mlir::scf;
 
 namespace {
 
-struct LoopToStandardPass
-    : public ConvertLoopToStandardBase<LoopToStandardPass> {
+struct SCFToStandardPass : public SCFToStandardBase<SCFToStandardPass> {
   void runOnOperation() override;
 };
 
@@ -405,7 +404,7 @@ void mlir::populateLoopToStdConversionPatterns(
   patterns.insert<ForLowering, IfLowering, ParallelLowering>(ctx);
 }
 
-void LoopToStandardPass::runOnOperation() {
+void SCFToStandardPass::runOnOperation() {
   OwningRewritePatternList patterns;
   populateLoopToStdConversionPatterns(patterns, &getContext());
   ConversionTarget target(getContext());
@@ -415,5 +414,5 @@ void LoopToStandardPass::runOnOperation() {
 }
 
 std::unique_ptr<Pass> mlir::createLowerToCFGPass() {
-  return std::make_unique<LoopToStandardPass>();
+  return std::make_unique<SCFToStandardPass>();
 }

@@ -61,7 +61,7 @@ void registerTestOpaqueLoc();
 void registerTestParallelismDetection();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestVectorConversions();
-void registerTestVectorToLoopsPass();
+void registerTestVectorToSCFPass();
 void registerVectorizerTestPass();
 } // namespace mlir
 
@@ -128,7 +128,7 @@ void registerTestPasses() {
   registerTestParallelismDetection();
   registerTestGpuParallelLoopMappingPass();
   registerTestVectorConversions();
-  registerTestVectorToLoopsPass();
+  registerTestVectorToSCFPass();
   registerVectorizerTestPass();
 }
 
