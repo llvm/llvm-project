@@ -25,15 +25,6 @@ enum PragmaMSStructKind {
   PMSST_ON   // #pragms ms_struct on
 };
 
-enum PragmaFloatControlKind {
-  PFC_Unknown,
-  PFC_Precise,   // #pragma float_control(precise, [,on])
-  PFC_NoPrecise, // #pragma float_control(precise, off)
-  PFC_Except,    // #pragma float_control(except [,on])
-  PFC_NoExcept,  // #pragma float_control(except, off)
-  PFC_Push,      // #pragma float_control(push)
-  PFC_Pop        // #pragma float_control(pop)
-};
 }
 
 #endif

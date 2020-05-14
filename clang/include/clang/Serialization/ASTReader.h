@@ -857,18 +857,6 @@ private:
   int PragmaMSPointersToMembersState = -1;
   SourceLocation PointersToMembersPragmaLocation;
 
-  /// The pragma float_control state.
-  Optional<unsigned> FpPragmaCurrentValue;
-  SourceLocation FpPragmaCurrentLocation;
-  struct FpPragmaStackEntry {
-    unsigned Value;
-    SourceLocation Location;
-    SourceLocation PushLocation;
-    StringRef SlotLabel;
-  };
-  llvm::SmallVector<FpPragmaStackEntry, 2> FpPragmaStack;
-  llvm::SmallVector<std::string, 2> FpPragmaStrings;
-
   /// The pragma pack state.
   Optional<unsigned> PragmaPackCurrentValue;
   SourceLocation PragmaPackCurrentLocation;

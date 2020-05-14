@@ -682,14 +682,10 @@ void ASTStmtReader::VisitParenListExpr(ParenListExpr *E) {
 
 void ASTStmtReader::VisitUnaryOperator(UnaryOperator *E) {
   VisitExpr(E);
-  bool hasFP_Features = Record.readInt();
-  assert(hasFP_Features == E->hasStoredFPFeatures());
   E->setSubExpr(Record.readSubExpr());
   E->setOpcode((UnaryOperator::Opcode)Record.readInt());
   E->setOperatorLoc(readSourceLocation());
   E->setCanOverflow(Record.readInt());
-  if (hasFP_Features)
-    E->setStoredFPFeatures(FPOptions(Record.readInt()));
 }
 
 void ASTStmtReader::VisitOffsetOfExpr(OffsetOfExpr *E) {
@@ -2904,8 +2900,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_UNARY_OPERATOR:
-      S = UnaryOperator::CreateEmpty(Context,
-                                     Record[ASTStmtReader::NumExprFields]);
+      S = new (Context) UnaryOperator(Empty);
       break;
 
     case EXPR_OFFSETOF:
