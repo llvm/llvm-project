@@ -50,6 +50,7 @@
 namespace clang {
 namespace clangd {
 namespace {
+constexpr llvm::StringLiteral PreamblePatchHeaderName = "__preamble_patch__.h";
 
 bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
                              const tooling::CompileCommand &RHS) {
@@ -120,6 +121,49 @@ struct TextualPPDirective {
   }
 };
 
+// Formats a PP directive consisting of Prefix (e.g. "#define ") and Body ("X
+// 10"). The formatting is copied so that the tokens in Body have PresumedLocs
+// with correct columns and lines.
+std::string spellDirective(llvm::StringRef Prefix,
+                           CharSourceRange DirectiveRange,
+                           const LangOptions &LangOpts, const SourceManager &SM,
+                           unsigned &DirectiveLine) {
+  std::string SpelledDirective;
+  llvm::raw_string_ostream OS(SpelledDirective);
+  OS << Prefix;
+
+  // Make sure DirectiveRange is a char range and doesn't contain macro ids.
+  DirectiveRange = SM.getExpansionRange(DirectiveRange);
+  if (DirectiveRange.isTokenRange()) {
+    DirectiveRange.setEnd(
+        Lexer::getLocForEndOfToken(DirectiveRange.getEnd(), 0, SM, LangOpts));
+  }
+
+  auto DecompLoc = SM.getDecomposedLoc(DirectiveRange.getBegin());
+  DirectiveLine = SM.getLineNumber(DecompLoc.first, DecompLoc.second);
+  auto TargetColumn = SM.getColumnNumber(DecompLoc.first, DecompLoc.second) - 1;
+
+  // Pad with spaces before DirectiveRange to make sure it will be on right
+  // column when patched.
+  if (Prefix.size() <= TargetColumn) {
+    // There is enough space for Prefix and space before directive, use it.
+    // We try to squeeze the Prefix into the same line whenever we can, as
+    // putting onto a separate line won't work at the beginning of the file.
+    OS << std::string(TargetColumn - Prefix.size(), ' ');
+  } else {
+    // Prefix was longer than the space we had. We produce e.g.:
+    // #line N-1
+    // #define \
+    //    X 10
+    OS << "\\\n" << std::string(TargetColumn, ' ');
+    // Decrement because we put an additional line break before
+    // DirectiveRange.begin().
+    --DirectiveLine;
+  }
+  OS << toSourceCode(SM, DirectiveRange.getAsRange());
+  return OS.str();
+}
+
 // Collects #define directives inside the main file.
 struct DirectiveCollector : public PPCallbacks {
   DirectiveCollector(const Preprocessor &PP,
@@ -140,15 +184,12 @@ struct DirectiveCollector : public PPCallbacks {
     TextualDirectives.emplace_back();
     TextualPPDirective &TD = TextualDirectives.back();
 
-    auto DecompLoc = SM.getDecomposedLoc(MacroNameTok.getLocation());
-    TD.DirectiveLine = SM.getLineNumber(DecompLoc.first, DecompLoc.second);
-
-    SourceRange DefRange(
-        MD->getMacroInfo()->getDefinitionLoc(),
-        Lexer::getLocForEndOfToken(MD->getMacroInfo()->getDefinitionEndLoc(), 0,
-                                   SM, LangOpts));
-    llvm::raw_string_ostream OS(TD.Text);
-    OS << "#define " << toSourceCode(SM, DefRange);
+    const auto *MI = MD->getMacroInfo();
+    TD.Text =
+        spellDirective("#define ",
+                       CharSourceRange::getTokenRange(
+                           MI->getDefinitionLoc(), MI->getDefinitionEndLoc()),
+                       LangOpts, SM, TD.DirectiveLine);
   }
 
 private:
@@ -231,6 +272,13 @@ const char *spellingForIncDirective(tok::PPKeywordKind IncludeDirective) {
   }
   llvm_unreachable("not an include directive");
 }
+
+// Checks whether \p FileName is a valid spelling of main file.
+bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
+  auto FE = SM.getFileManager().getFile(FileName);
+  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
+}
+
 } // namespace
 
 PreambleData::PreambleData(const ParseInputs &Inputs,
@@ -374,7 +422,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   // This shouldn't coincide with any real file name.
   llvm::SmallString<128> PatchName;
   llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
-                          "__preamble_patch__.h");
+                          PreamblePatchHeaderName);
   PP.PatchFileName = PatchName.str().str();
 
   llvm::raw_string_ostream Patch(PP.PatchContents);
@@ -428,8 +476,10 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     // Note that we deliberately ignore conditional directives and undefs to
     // reduce complexity. The former might cause problems because scanning is
     // imprecise and might pick directives from disabled regions.
-    for (const auto &TD : ModifiedScan->TextualDirectives)
+    for (const auto &TD : ModifiedScan->TextualDirectives) {
+      Patch << "#line " << TD.DirectiveLine << '\n';
       Patch << TD.Text << '\n';
+    }
   }
   dlog("Created preamble patch: {0}", Patch.str());
   Patch.flush();
@@ -462,5 +512,24 @@ PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   return PP;
 }
 
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM) {
+  auto DefFile = SM.getFileID(Loc);
+  if (auto *FE = SM.getFileEntryForID(DefFile)) {
+    auto IncludeLoc = SM.getIncludeLoc(DefFile);
+    // Preamble patch is included inside the builtin file.
+    if (IncludeLoc.isValid() && SM.isWrittenInBuiltinFile(IncludeLoc) &&
+        FE->getName().endswith(PreamblePatchHeaderName)) {
+      auto Presumed = SM.getPresumedLoc(Loc);
+      // Check that line directive is pointing at main file.
+      if (Presumed.isValid() && Presumed.getFileID().isInvalid() &&
+          isMainFile(Presumed.getFilename(), SM)) {
+        Loc = SM.translateLineCol(SM.getMainFileID(), Presumed.getLine(),
+                                  Presumed.getColumn());
+      }
+    }
+  }
+  return Loc;
+}
 } // namespace clangd
 } // namespace clang

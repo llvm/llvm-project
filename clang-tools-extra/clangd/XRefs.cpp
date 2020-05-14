@@ -211,8 +211,8 @@ llvm::Optional<LocatedSymbol>
 locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
                     llvm::StringRef MainFilePath) {
   if (auto M = locateMacroAt(TouchedIdentifier, AST.getPreprocessor())) {
-    if (auto Loc = makeLocation(AST.getASTContext(),
-                                M->Info->getDefinitionLoc(), MainFilePath)) {
+    if (auto Loc =
+            makeLocation(AST.getASTContext(), M->NameLoc, MainFilePath)) {
       LocatedSymbol Macro;
       Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;

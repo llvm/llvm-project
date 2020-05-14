@@ -376,8 +376,7 @@ llvm::Optional<StringRef> fieldName(const Expr *E) {
   const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
   if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
     return llvm::None;
-  const auto *Field =
-      llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
+  const auto *Field = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl());
   if (!Field || !Field->getDeclName().isIdentifier())
     return llvm::None;
   return Field->getDeclName().getAsIdentifierInfo()->getName();
@@ -556,7 +555,14 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   // Try to get the full definition, not just the name
   SourceLocation StartLoc = Macro.Info->getDefinitionLoc();
   SourceLocation EndLoc = Macro.Info->getDefinitionEndLoc();
-  if (EndLoc.isValid()) {
+  // Ensure that EndLoc is a valid offset. For example it might come from
+  // preamble, and source file might've changed, in such a scenario EndLoc still
+  // stays valid, but getLocForEndOfToken will fail as it is no longer a valid
+  // offset.
+  // Note that this check is just to ensure there's text data inside the range.
+  // It will still succeed even when the data inside the range is irrelevant to
+  // macro definition.
+  if (SM.getPresumedLoc(EndLoc, /*UseLineDirectives=*/false).isValid()) {
     EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, SM, AST.getLangOpts());
     bool Invalid;
     StringRef Buffer = SM.getBufferData(SM.getFileID(StartLoc), &Invalid);
@@ -873,20 +879,20 @@ llvm::Optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
   if (!Suffix.empty() && !AfterEndChars.contains(Suffix.front()))
     return llvm::None;
 
-  return Line.slice(Offset, Next+1);
+  return Line.slice(Offset, Next + 1);
 }
 
 void parseDocumentationLine(llvm::StringRef Line, markup::Paragraph &Out) {
   // Probably this is appendText(Line), but scan for something interesting.
   for (unsigned I = 0; I < Line.size(); ++I) {
     switch (Line[I]) {
-      case '`':
-        if (auto Range = getBacktickQuoteRange(Line, I)) {
-          Out.appendText(Line.substr(0, I));
-          Out.appendCode(Range->trim("`"), /*Preserve=*/true);
-          return parseDocumentationLine(Line.substr(I+Range->size()), Out);
-        }
-        break;
+    case '`':
+      if (auto Range = getBacktickQuoteRange(Line, I)) {
+        Out.appendText(Line.substr(0, I));
+        Out.appendCode(Range->trim("`"), /*Preserve=*/true);
+        return parseDocumentationLine(Line.substr(I + Range->size()), Out);
+      }
+      break;
     }
   }
   Out.appendText(Line).appendSpace();
