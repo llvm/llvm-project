@@ -163,7 +163,7 @@ class DebugSHandler {
   /// need to be added to the global PDB string table, and all references to
   /// these strings need to have their indices re-written to refer to the
   /// global PDB string table.
-  DebugStringTableSubsectionRef cVStrTab;
+  DebugStringTableSubsectionRef cvStrTab;
 
   /// The DEBUG_S_FILECHKSMS subsection.  As above, these are referred to
   /// by other records in the .debug$S section and need to be merged into the
@@ -693,9 +693,9 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &debugS) {
 
     switch (ss.kind()) {
     case DebugSubsectionKind::StringTable: {
-      assert(!cVStrTab.valid() &&
+      assert(!cvStrTab.valid() &&
              "Encountered multiple string table subsections!");
-      exitOnErr(cVStrTab.initialize(ss.getRecordData()));
+      exitOnErr(cvStrTab.initialize(ss.getRecordData()));
       break;
     }
     case DebugSubsectionKind::FileChecksums:
@@ -782,13 +782,13 @@ DebugSHandler::mergeInlineeLines(DebugChecksumsSubsection *newChecksums) {
     }
 
     SmallString<128> filename =
-        exitOnErr(getFileName(cVStrTab, checksums, fileID));
+        exitOnErr(getFileName(cvStrTab, checksums, fileID));
     pdbMakeAbsolute(filename);
     newInlineeLines->addInlineSite(inlinee, filename, sourceLine);
 
     if (inlineeLines.hasExtraFiles()) {
       for (uint32_t extraFileId : line.ExtraFiles) {
-        filename = exitOnErr(getFileName(cVStrTab, checksums, extraFileId));
+        filename = exitOnErr(getFileName(cvStrTab, checksums, extraFileId));
         pdbMakeAbsolute(filename);
         newInlineeLines->addExtraFile(filename);
       }
@@ -804,7 +804,7 @@ void DebugSHandler::finish() {
   // We should have seen all debug subsections across the entire object file now
   // which means that if a StringTable subsection and Checksums subsection were
   // present, now is the time to handle them.
-  if (!cVStrTab.valid()) {
+  if (!cvStrTab.valid()) {
     if (checksums.valid())
       fatal(".debug$S sections with a checksums subsection must also contain a "
             "string table subsection");
@@ -822,13 +822,13 @@ void DebugSHandler::finish() {
     for (codeview::FrameData fd : fds) {
       fd.RvaStart += *reloc;
       fd.FrameFunc =
-          translateStringTableIndex(fd.FrameFunc, cVStrTab, linker.pdbStrTab);
+          translateStringTableIndex(fd.FrameFunc, cvStrTab, linker.pdbStrTab);
       dbiBuilder.addNewFpoData(fd);
     }
   }
 
   for (ulittle32_t *ref : stringTableReferences)
-    *ref = translateStringTableIndex(*ref, cVStrTab, linker.pdbStrTab);
+    *ref = translateStringTableIndex(*ref, cvStrTab, linker.pdbStrTab);
 
   // Make a new file checksum table that refers to offsets in the PDB-wide
   // string table. Generally the string table subsection appears after the
@@ -837,7 +837,7 @@ void DebugSHandler::finish() {
   auto newChecksums = std::make_unique<DebugChecksumsSubsection>(linker.pdbStrTab);
   for (FileChecksumEntry &fc : checksums) {
     SmallString<128> filename =
-        exitOnErr(cVStrTab.getString(fc.FileNameOffset));
+        exitOnErr(cvStrTab.getString(fc.FileNameOffset));
     pdbMakeAbsolute(filename);
     exitOnErr(dbiBuilder.addModuleSourceFile(*file.moduleDBI, filename));
     newChecksums->addChecksum(filename, fc.Kind, fc.Checksum);
@@ -1496,7 +1496,7 @@ static uint32_t getSecrelReloc() {
 // table are stored in the output arguments. Returns whether a line table was
 // found.
 static bool findLineTable(const SectionChunk *c, uint32_t addr,
-                          DebugStringTableSubsectionRef &cVStrTab,
+                          DebugStringTableSubsectionRef &cvStrTab,
                           DebugChecksumsSubsectionRef &checksums,
                           DebugLinesSubsectionRef &lines,
                           uint32_t &offsetInLinetable) {
@@ -1528,9 +1528,9 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
     for (const DebugSubsectionRecord &ss : subsections) {
       switch (ss.kind()) {
       case DebugSubsectionKind::StringTable: {
-        assert(!cVStrTab.valid() &&
+        assert(!cvStrTab.valid() &&
                "Encountered multiple string table subsections!");
-        exitOnErr(cVStrTab.initialize(ss.getRecordData()));
+        exitOnErr(cvStrTab.initialize(ss.getRecordData()));
         break;
       }
       case DebugSubsectionKind::FileChecksums:
@@ -1566,7 +1566,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
         break;
       }
 
-      if (cVStrTab.valid() && checksums.valid() && lines.header())
+      if (cvStrTab.valid() && checksums.valid() && lines.header())
         return true;
     }
   }
@@ -1581,12 +1581,12 @@ Optional<std::pair<StringRef, uint32_t>>
 lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   ExitOnError exitOnErr;
 
-  DebugStringTableSubsectionRef cVStrTab;
+  DebugStringTableSubsectionRef cvStrTab;
   DebugChecksumsSubsectionRef checksums;
   DebugLinesSubsectionRef lines;
   uint32_t offsetInLinetable;
 
-  if (!findLineTable(c, addr, cVStrTab, checksums, lines, offsetInLinetable))
+  if (!findLineTable(c, addr, cvStrTab, checksums, lines, offsetInLinetable))
     return None;
 
   Optional<uint32_t> nameIndex;
@@ -1600,7 +1600,7 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
           lineNumber = li.getStartLine();
         }
         StringRef filename =
-            exitOnErr(getFileName(cVStrTab, checksums, *nameIndex));
+            exitOnErr(getFileName(cvStrTab, checksums, *nameIndex));
         return std::make_pair(filename, *lineNumber);
       }
       nameIndex = entry.NameIndex;
@@ -1609,6 +1609,6 @@ lld::coff::getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   }
   if (!nameIndex)
     return None;
-  StringRef filename = exitOnErr(getFileName(cVStrTab, checksums, *nameIndex));
+  StringRef filename = exitOnErr(getFileName(cvStrTab, checksums, *nameIndex));
   return std::make_pair(filename, *lineNumber);
 }
