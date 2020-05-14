@@ -210,3 +210,12 @@ define i64 @strict_align_feature(i64* %p) #0 {
 }
 
 attributes #0 = { "target-features"="+strict-align" }
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for direct_mem
+; FALLBACK-WITH-REPORT-OUT-LABEL: direct_mem
+define void @direct_mem(i32 %x, i32 %y) {
+entry:
+  tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 %x, i32 %y)
+  ret void
+}

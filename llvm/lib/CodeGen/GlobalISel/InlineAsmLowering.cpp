@@ -306,6 +306,12 @@ bool InlineAsmLowering::lowerInlineAsm(
     // Compute the constraint code and ConstraintType to use.
     computeConstraintToUse(TLI, OpInfo);
 
+    if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
+        !OpInfo.isIndirect) {
+      LLVM_DEBUG(dbgs() << "Cannot indirectify memory input operands yet\n");
+      return false;
+    }
+
     // The selected constraint type might expose new sideeffects
     ExtraInfo.update(OpInfo);
   }
