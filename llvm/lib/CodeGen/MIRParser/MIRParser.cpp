@@ -93,7 +93,8 @@ public:
   /// file.
   ///
   /// Return null if an error occurred.
-  std::unique_ptr<Module> parseIRModule();
+  std::unique_ptr<Module>
+  parseIRModule(DataLayoutCallbackTy DataLayoutCallback);
 
   /// Create an empty function with the given name.
   Function *createDummyFunction(StringRef Name, Module &M);
@@ -216,13 +217,17 @@ void MIRParserImpl::reportDiagnostic(const SMDiagnostic &Diag) {
   Context.diagnose(DiagnosticInfoMIRParser(Kind, Diag));
 }
 
-std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
+std::unique_ptr<Module>
+MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   if (!In.setCurrentDocument()) {
     if (In.error())
       return nullptr;
     // Create an empty module when the MIR file is empty.
     NoMIRDocuments = true;
-    return std::make_unique<Module>(Filename, Context);
+    auto M = std::make_unique<Module>(Filename, Context);
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
+      M->setDataLayout(*LayoutOverride);
+    return M;
   }
 
   std::unique_ptr<Module> M;
@@ -232,7 +237,7 @@ std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
           dyn_cast_or_null<yaml::BlockScalarNode>(In.getCurrentNode())) {
     SMDiagnostic Error;
     M = parseAssembly(MemoryBufferRef(BSN->getValue(), Filename), Error,
-                      Context, &IRSlots, /*UpgradeDebugInfo=*/false);
+                      Context, &IRSlots, DataLayoutCallback);
     if (!M) {
       reportDiagnostic(diagFromBlockStringDiag(Error, BSN->getSourceRange()));
       return nullptr;
@@ -243,6 +248,8 @@ std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
   } else {
     // Create an new, empty module.
     M = std::make_unique<Module>(Filename, Context);
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
+      M->setDataLayout(*LayoutOverride);
     NoLLVMIR = true;
   }
   return M;
@@ -933,8 +940,9 @@ MIRParser::MIRParser(std::unique_ptr<MIRParserImpl> Impl)
 
 MIRParser::~MIRParser() {}
 
-std::unique_ptr<Module> MIRParser::parseIRModule() {
-  return Impl->parseIRModule();
+std::unique_ptr<Module>
+MIRParser::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
+  return Impl->parseIRModule(DataLayoutCallback);
 }
 
 bool MIRParser::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {

@@ -12,13 +12,13 @@ declare void @unknown()
 define void @test(float * %a, float * %b, float * %c, float * %d) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[A:%.*]]
+; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds float, float* [[A]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[A1]]
+; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[A1]], align 4
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds float, float* [[A]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[A2]]
+; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[A2]], align 4
 ; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds float, float* [[A]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[A3]]
+; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[A3]], align 4
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()

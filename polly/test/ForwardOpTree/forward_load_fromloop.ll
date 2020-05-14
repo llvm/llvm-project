@@ -61,7 +61,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0, i1] -> MemRef_val[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx
+; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
 ; CHECK-NEXT:                   %i.cmp = icmp slt i32 %i, %n
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyB
@@ -71,7 +71,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx
+; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
 ; CHECK-NEXT:                   store double %val, double* %A_idx
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

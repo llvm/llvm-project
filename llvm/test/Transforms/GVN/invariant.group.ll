@@ -161,7 +161,7 @@ enter:
   %ptr = alloca i8
   store i8 42, i8* %ptr
   call void @foo(i8* %ptr)
-; CHECK: %[[A:.*]] = load i8, i8* %ptr, !invariant.group
+; CHECK: %[[A:.*]] = load i8, i8* %ptr, align 1, !invariant.group
   %a = load i8, i8* %ptr, !invariant.group !0
 ; CHECK-NOT: load
   %b = load i8, i8* %ptr, !invariant.group !0
@@ -178,7 +178,7 @@ enter:
   %ptr = alloca i8
   store i8 42, i8* %ptr
   call void @foo(i8* %ptr)
-; CHECK: %[[D:.*]] = load i8, i8* %ptr, !invariant.group
+; CHECK: %[[D:.*]] = load i8, i8* %ptr, align 1, !invariant.group
   %c = load i8, i8* %ptr
 ; CHECK-NOT: load
   %d = load i8, i8* %ptr, !invariant.group !0
@@ -195,7 +195,7 @@ enter:
   %ptr = alloca i8
   store i8 42, i8* %ptr
   call void @foo(i8* %ptr)
-; CHECK: %[[E:.*]] = load i8, i8* %ptr, !invariant.group
+; CHECK: %[[E:.*]] = load i8, i8* %ptr, align 1, !invariant.group
   %e = load i8, i8* %ptr, !invariant.group !0
 ; CHECK-NOT: load
   %f = load i8, i8* %ptr
@@ -212,7 +212,7 @@ enter:
   %ptr = alloca i8
   store i8 42, i8* %ptr
   call void @foo(i8* %ptr)
-; CHECK: %[[E:.*]] = load i8, i8* %ptr, !invariant.group
+; CHECK: %[[E:.*]] = load i8, i8* %ptr, align 1, !invariant.group
   %e = load i8, i8* %ptr, !invariant.group !0
 ; CHECK-NOT: load
   %f = load i8, i8* %ptr, !invariant.group !0
@@ -358,10 +358,10 @@ _Z1gR1A.exit:                                     ; preds = %0, %5
 ; from the same function.
 ; CHECK-LABEL: define void @testGlobal() {
 define void @testGlobal() {
-; CHECK:  %a = load i8, i8* @unknownPtr, !invariant.group !0
+; CHECK:  %a = load i8, i8* @unknownPtr, align 1, !invariant.group !0
    %a = load i8, i8* @unknownPtr, !invariant.group !0
    call void @foo2(i8* @unknownPtr, i8 %a)
-; CHECK:  %1 = load i8, i8* @unknownPtr, !invariant.group !0
+; CHECK:  %1 = load i8, i8* @unknownPtr, align 1, !invariant.group !0
    %1 = load i8, i8* @unknownPtr, !invariant.group !0
    call void @bar(i8 %1)
 
@@ -381,7 +381,7 @@ define void @testGlobal() {
 define void @testNotGlobal() {
    %a = alloca i8
    call void @foo(i8* %a)
-; CHECK:  %b = load i8, i8* %a, !invariant.group !0
+; CHECK:  %b = load i8, i8* %a, align 1, !invariant.group !0
    %b = load i8, i8* %a, !invariant.group !0
    call void @foo2(i8* %a, i8 %b)
 

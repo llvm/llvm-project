@@ -67,10 +67,10 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP5]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], !alias.scope !3
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], !alias.scope !3
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP1]], !alias.scope !3
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP1]], !alias.scope !3
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4, !alias.scope !3
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP1]], align 4, !alias.scope !3
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP1]], align 4, !alias.scope !3
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP1]], align 4, !alias.scope !3
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i32 2
@@ -101,11 +101,11 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK:       .inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[J_NEXT:%.*]], [[DOTINNER]] ]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 0, i64 [[J]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP1]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw i32 [[TMP23]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[J]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP25]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = add nsw i32 [[TMP24]], [[TMP26]]
 ; CHECK-NEXT:    store i32 [[TMP27]], i32* [[TMP25]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1

@@ -4,8 +4,8 @@
 define void @matchingExtensions(i32* %ap, i32* %bp, i64* %result) {
 ; CHECK-LABEL: @matchingExtensions(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[AP:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[AP:%.*]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[BP:%.*]], align 4
 ; CHECK-NEXT:    [[EB:%.*]] = sext i32 [[B]] to i64
 ; CHECK-NEXT:    [[SUBAB:%.*]] = sub nsw i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[EA:%.*]] = sext i32 [[A]] to i64

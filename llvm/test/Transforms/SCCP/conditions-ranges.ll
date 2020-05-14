@@ -227,7 +227,7 @@ false:
 define void @f7_nested_conds(i32* %a, i32 %b) {
 ; CHECK-LABEL: @f7_nested_conds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_V:%.*]] = load i32, i32* [[A:%.*]]
+; CHECK-NEXT:    [[A_V:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i32 [[A_V]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       false:

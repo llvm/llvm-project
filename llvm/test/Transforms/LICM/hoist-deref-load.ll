@@ -443,7 +443,7 @@ entry:
   br i1 %cmp11, label %for.body, label %for.end
 
 ; CHECK: for.body.preheader:
-; CHECK:  %c = load i32*, i32** %cptr, !dereferenceable !0
+; CHECK:  %c = load i32*, i32** %cptr, align 8, !dereferenceable !0
 ; CHECK:  %d = load i32, i32* %c, align 4
 
 
