@@ -30,10 +30,26 @@ using namespace ento;
 using namespace taint;
 
 namespace {
-class VLASizeChecker : public Checker< check::PreStmt<DeclStmt> > {
+class VLASizeChecker
+    : public Checker<check::PreStmt<DeclStmt>,
+                     check::PreStmt<UnaryExprOrTypeTraitExpr>> {
   mutable std::unique_ptr<BugType> BT;
   enum VLASize_Kind { VLA_Garbage, VLA_Zero, VLA_Tainted, VLA_Negative };
 
+  /// Check a VLA for validity.
+  /// Every dimension of the array is checked for validity, and
+  /// dimension sizes are collected into 'VLASizes'. 'VLALast' is set to the
+  /// innermost VLA that was encountered.
+  /// In "int vla[x][2][y][3]" this will be the array for index "y" (with type
+  /// int[3]). 'VLASizes' contains 'x', '2', and 'y'. Returns null or a new
+  /// state where the size is validated for every dimension.
+  ProgramStateRef checkVLA(CheckerContext &C, ProgramStateRef State,
+                           const VariableArrayType *VLA,
+                           const VariableArrayType *&VLALast,
+                           llvm::SmallVector<const Expr *, 2> &VLASizes) const;
+
+  /// Check one VLA dimension for validity.
+  /// Returns null or a new state where the size is validated.
   ProgramStateRef checkVLASize(CheckerContext &C, ProgramStateRef State,
                                const Expr *SizeE) const;
 
@@ -43,8 +59,36 @@ class VLASizeChecker : public Checker< check::PreStmt<DeclStmt> > {
 
 public:
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
+  void checkPreStmt(const UnaryExprOrTypeTraitExpr *UETTE,
+                    CheckerContext &C) const;
 };
 } // end anonymous namespace
+
+ProgramStateRef
+VLASizeChecker::checkVLA(CheckerContext &C, ProgramStateRef State,
+                         const VariableArrayType *VLA,
+                         const VariableArrayType *&VLALast,
+                         llvm::SmallVector<const Expr *, 2> &VLASizes) const {
+  assert(VLA && "Function should be called with non-null VLA argument.");
+
+  VLALast = nullptr;
+  // Walk over the VLAs for every dimension until a non-VLA is found.
+  // There is a VariableArrayType for every dimension (fixed or variable) until
+  // the most inner array that is variably modified.
+  while (VLA) {
+    const Expr *SizeE = VLA->getSizeExpr();
+    State = checkVLASize(C, State, SizeE);
+    if (!State)
+      return nullptr;
+    VLASizes.push_back(SizeE);
+    VLALast = VLA;
+    VLA = C.getASTContext().getAsVariableArrayType(VLA->getElementType());
+  };
+  assert(VLALast &&
+         "Array should have at least one variably-modified dimension.");
+
+  return State;
+}
 
 ProgramStateRef VLASizeChecker::checkVLASize(CheckerContext &C,
                                              ProgramStateRef State,
@@ -146,36 +190,34 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   if (!DS->isSingleDecl())
     return;
 
-  const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
-  if (!VD)
-    return;
-
   ASTContext &Ctx = C.getASTContext();
   SValBuilder &SVB = C.getSValBuilder();
   ProgramStateRef State = C.getState();
+  QualType TypeToCheck;
 
-  const VariableArrayType *VLA = Ctx.getAsVariableArrayType(VD->getType());
+  const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
+
+  if (VD)
+    TypeToCheck = VD->getType().getCanonicalType();
+  else if (const auto *TND = dyn_cast<TypedefNameDecl>(DS->getSingleDecl()))
+    TypeToCheck = TND->getUnderlyingType().getCanonicalType();
+  else
+    return;
+
+  const VariableArrayType *VLA = Ctx.getAsVariableArrayType(TypeToCheck);
   if (!VLA)
     return;
 
+  // Check the VLA sizes for validity.
   llvm::SmallVector<const Expr *, 2> VLASizes;
   const VariableArrayType *VLALast = nullptr;
-  // Walk over the VLAs for every dimension until a non-VLA is found.
-  // Collect the sizes in VLASizes, put the most inner VLA to `VLALast`.
-  // In "vla[x][2][y][3]" this will be the array for index "y".
-  // There is a VariableArrayType for every dimension (here "x", "2", "y")
-  // until a non-vla is found.
-  while (VLA) {
-    const Expr *SizeE = VLA->getSizeExpr();
-    State = checkVLASize(C, State, SizeE);
-    if (!State)
-      return;
-    VLASizes.push_back(SizeE);
-    VLALast = VLA;
-    VLA = Ctx.getAsVariableArrayType(VLA->getElementType());
-  };
-  assert(VLALast &&
-         "Array should have at least one variably-modified dimension.");
+
+  State = checkVLA(C, State, VLA, VLALast, VLASizes);
+  if (!State)
+    return;
+
+  if (!VD)
+    return;
 
   // VLASizeChecker is responsible for defining the extent of the array being
   // declared. We do this by multiplying the array length by the element size,
@@ -216,6 +258,33 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   assert(State);
 
   // Remember our assumptions!
+  C.addTransition(State);
+}
+
+void VLASizeChecker::checkPreStmt(const UnaryExprOrTypeTraitExpr *UETTE,
+                                  CheckerContext &C) const {
+  // Want to check for sizeof.
+  if (UETTE->getKind() != UETT_SizeOf)
+    return;
+
+  // Ensure a type argument.
+  if (!UETTE->isArgumentType())
+    return;
+
+  const VariableArrayType *VLA =
+      C.getASTContext().getAsVariableArrayType(UETTE->getTypeOfArgument());
+  // Ensure that the type is a VLA.
+  if (!VLA)
+    return;
+
+  ProgramStateRef State = C.getState();
+
+  llvm::SmallVector<const Expr *, 2> VLASizes;
+  const VariableArrayType *VLALast = nullptr;
+  State = checkVLA(C, State, VLA, VLALast, VLASizes);
+  if (!State)
+    return;
+
   C.addTransition(State);
 }
 
