@@ -1284,6 +1284,21 @@ static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
   return success();
 }
 
+/// Builder that sets permutation map and padding to 'getMinorIdentityMap' and
+/// zero, respectively, by default.
+void TransferReadOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType vector, Value memref,
+                           ValueRange indices) {
+  auto permMap = AffineMap::getMinorIdentityMap(
+      memref.getType().cast<MemRefType>().getRank(), vector.getRank(),
+      builder.getContext());
+  Type elemType = vector.cast<VectorType>().getElementType();
+  Value padding = builder.create<ConstantOp>(result.location, elemType,
+                                             builder.getZeroAttr(elemType));
+
+  build(builder, result, vector, memref, indices, permMap, padding);
+}
+
 static void print(OpAsmPrinter &p, TransferReadOp op) {
   p << op.getOperationName() << " " << op.memref() << "[" << op.indices()
     << "], " << op.padding() << " ";
@@ -1360,6 +1375,17 @@ static LogicalResult verify(TransferReadOp op) {
 //===----------------------------------------------------------------------===//
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
+
+/// Builder that sets permutation map and padding to 'getMinorIdentityMap' by
+/// default.
+void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
+                            Value vector, Value memref, ValueRange indices) {
+  auto vectorType = vector.getType().cast<VectorType>();
+  auto permMap = AffineMap::getMinorIdentityMap(
+      memref.getType().cast<MemRefType>().getRank(), vectorType.getRank(),
+      builder.getContext());
+  build(builder, result, vector, memref, indices, permMap);
+}
 
 static LogicalResult verify(TransferWriteOp op) {
   // Consistency of elemental types in memref and vector.
