@@ -78,7 +78,7 @@ static void lowerOpToLoops(Operation *op, ArrayRef<Value> operands,
     // Terminate the loop body and update the rewriter insertion point to the
     // beginning of the loop.
     rewriter.setInsertionPointToStart(loop.getBody());
-    rewriter.create<AffineTerminatorOp>(loc);
+    rewriter.create<AffineYieldOp>(loc);
     rewriter.setInsertionPointToStart(loop.getBody());
   }
 

@@ -1407,7 +1407,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
 
   LogicalResult matchAndRewrite(AffineForOp forOp,
                                 PatternRewriter &rewriter) const override {
-    // Check that the body only contains a terminator.
+    // Check that the body only contains a yield.
     if (!llvm::hasSingleElement(*forOp.getBody()))
       return failure();
     rewriter.eraseOp(forOp);
@@ -1571,14 +1571,16 @@ void mlir::extractForInductionVars(ArrayRef<AffineForOp> forInsts,
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Remove else blocks that have nothing other than the terminator.
+/// Remove else blocks that have nothing other than a zero value yield.
 struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
   using OpRewritePattern<AffineIfOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(AffineIfOp ifOp,
                                 PatternRewriter &rewriter) const override {
     if (ifOp.elseRegion().empty() ||
-        !llvm::hasSingleElement(*ifOp.getElseBlock()))
+        !llvm::hasSingleElement(*ifOp.getElseBlock()) ||
+	ifOp.getNumResults()
+	)
       return failure();
 
     rewriter.startRootUpdate(ifOp);
@@ -1675,7 +1677,7 @@ static void print(OpAsmPrinter &p, AffineIfOp op) {
                         conditionAttr.getValue().getNumDims(), p);
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/op.getNumResults());
 
   // Print the 'else' regions if it has any blocks.
   auto &elseRegion = op.elseRegion();
@@ -1683,7 +1685,7 @@ static void print(OpAsmPrinter &p, AffineIfOp op) {
     p << " else";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/false);
+                  /*printBlockTerminators=*/op.getNumResults());
   }
 
   // Print the attribute list.
@@ -1703,15 +1705,31 @@ void AffineIfOp::setConditional(IntegerSet set, ValueRange operands) {
   getOperation()->setOperands(operands);
 }
 
-void AffineIfOp::build(Builder *builder, OperationState &result, IntegerSet set,
-                       ValueRange args, bool withElseRegion) {
+void AffineIfOp::build(Builder *builder, OperationState &result, TypeRange resultsTypes,
+		IntegerSet set, ValueRange args, bool withElseRegion) {
+  assert(resultsTypes.empty() || withElseRegion);
+  for (Type type : resultsTypes) {
+    result.addTypes(type);
+  }
   result.addOperands(args);
   result.addAttribute(getConditionAttrName(), IntegerSetAttr::get(set));
+
   Region *thenRegion = result.addRegion();
-  Region *elseRegion = result.addRegion();
-  AffineIfOp::ensureTerminator(*thenRegion, *builder, result.location);
-  if (withElseRegion)
-    AffineIfOp::ensureTerminator(*elseRegion, *builder, result.location);
+  thenRegion->push_back(new Block());
+  if (resultsTypes.empty())
+    AffineIfOp::ensureTerminator(*thenRegion, *builder, result.location);
+
+  if (withElseRegion) {
+    Region *elseRegion = result.addRegion();
+    elseRegion->push_back(new Block());
+    if (resultsTypes.empty())
+      AffineIfOp::ensureTerminator(*elseRegion, *builder, result.location);
+  }
+}
+
+void AffineIfOp::build(Builder *builder, OperationState &result, IntegerSet set,
+                       ValueRange args, bool withElseRegion) {
+  AffineIfOp::build(builder, result, {}, set, args, withElseRegion);
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
@@ -2162,7 +2180,7 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineParallelOp
 //===----------------------------------------------------------------------===//
 
-void AffineParallelOp::build(Builder *builder, OperationState &result,
+void AffineParallelOp::build(Builder *builder, OperationState &result, ArrayRef<Type> resultTypes,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
                                      builder->getAffineConstantExpr(0));
@@ -2171,10 +2189,10 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
   for (int64_t range : ranges)
     ubExprs.push_back(builder->getAffineConstantExpr(range));
   auto ubMap = AffineMap::get(0, 0, ubExprs, builder->getContext());
-  build(builder, result, lbMap, {}, ubMap, {});
+  build(builder, result, resultTypes, lbMap, {}, ubMap, {});
 }
 
-void AffineParallelOp::build(Builder *builder, OperationState &result,
+void AffineParallelOp::build(Builder *builder, OperationState &result, ArrayRef<Type> resultTypes,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs) {
   auto numDims = lbMap.getNumResults();
@@ -2183,10 +2201,10 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
          "num dims and num results mismatch");
   // Make default step sizes of 1.
   SmallVector<int64_t, 8> steps(numDims, 1);
-  build(builder, result, lbMap, lbArgs, ubMap, ubArgs, steps);
+  build(builder, result, resultTypes, lbMap, lbArgs, ubMap, ubArgs, steps);
 }
 
-void AffineParallelOp::build(Builder *builder, OperationState &result,
+void AffineParallelOp::build(Builder *builder, OperationState &result, ArrayRef<Type> resultTypes,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs,
                              ArrayRef<int64_t> steps) {
@@ -2195,6 +2213,11 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
   assert(numDims == ubMap.getNumResults() &&
          "num dims and num results mismatch");
   assert(numDims == steps.size() && "num dims and num steps mismatch");
+  // Add the types
+  for (Type type : resultTypes) {
+    result.addTypes(type);
+  }
+  // Add the attributes
   result.addAttribute(getLowerBoundsMapAttrName(), AffineMapAttr::get(lbMap));
   result.addAttribute(getUpperBoundsMapAttrName(), AffineMapAttr::get(ubMap));
   result.addAttribute(getStepsAttrName(), builder->getI64ArrayAttr(steps));
@@ -2207,7 +2230,8 @@ void AffineParallelOp::build(Builder *builder, OperationState &result,
   for (unsigned i = 0; i < numDims; ++i)
     body->addArgument(IndexType::get(builder->getContext()));
   bodyRegion->push_back(body);
-  ensureTerminator(*bodyRegion, *builder, result.location);
+  if (resultTypes.empty())
+    ensureTerminator(*bodyRegion, *builder, result.location);
 }
 
 unsigned AffineParallelOp::getNumDims() { return steps().size(); }
@@ -2302,8 +2326,9 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
     llvm::interleaveComma(steps, p);
     p << ')';
   }
+
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/op.getNumResults());
   p.printOptionalAttrDict(
       op.getAttrs(),
       /*elidedAttrs=*/{AffineParallelOp::getLowerBoundsMapAttrName(),
@@ -2370,6 +2395,9 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
                         builder.getI64ArrayAttr(steps));
   }
 
+  if (parser.parseOptionalColonTypeList(result.types))
+    return failure();
+
   // Now parse the body.
   Region *body = result.addRegion();
   SmallVector<Type, 4> types(ivs.size(), indexType);
@@ -2380,6 +2408,48 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
   // Add a terminator if none was parsed.
   AffineParallelOp::ensureTerminator(*body, builder, result.location);
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AffineYieldOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(AffineYieldOp op) {
+  auto parentOp = op.getParentOp();
+  auto results = parentOp->getResults();
+  auto operands = op.getOperands();
+
+  if (!isa<AffineParallelOp>(parentOp) && !isa<AffineIfOp>(parentOp) && !isa<AffineForOp>(parentOp)) {
+    return op.emitOpError()
+           << "affine.terminate only terminates If, For or Parallel regions";
+  }
+  if (parentOp->getNumResults() != op.getNumOperands())
+    return op.emitOpError() << "parent of yield must have same number of "
+                               "results as the yield operands";
+  for (auto e : llvm::zip(results, operands)) {
+    if (std::get<0>(e).getType() != std::get<1>(e).getType())
+      return op.emitOpError()
+             << "types mismatch between yield op and its parent";
+  }
+
+  return success();
+}
+
+static ParseResult parseAffineYieldOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 4> operands;
+  SmallVector<Type, 4> types;
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  // Parse variadic operands list, their types, and resolve operands to SSA
+  // values.
+  return failure(parser.parseOperandList(operands) ||
+      parser.parseOptionalColonTypeList(types) ||
+      parser.resolveOperands(operands, types, loc, result.operands));
+}
+
+static void print(OpAsmPrinter &p, AffineYieldOp op) {
+  p << op.getOperationName();
+  if (op.getNumOperands() != 0)
+    p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
 }
 
 //===----------------------------------------------------------------------===//

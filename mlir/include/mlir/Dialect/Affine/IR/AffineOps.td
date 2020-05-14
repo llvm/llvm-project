@@ -37,9 +37,9 @@ class Affine_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-// Require regions to have affine terminator.
+// Require regions to have affine.yield.
 def ImplicitAffineTerminator
-    : SingleBlockImplicitTerminator<"AffineTerminatorOp">;
+    : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
 def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
   let summary = "affine apply operation";
@@ -114,7 +114,7 @@ def AffineForOp : Affine_Op<"for",
 
     The `affine.for` operation represents an affine loop nest. It has one region
     containing its body. This region must contain one block that terminates with
-    [`affine.terminator`](#affineterminator-operation). *Note:* when
+    [`affine.yield`](#affinyield-operation). *Note:* when
     `affine.for` is printed in custom format, the terminator is omitted. The
     block has one argument of [`index`](../LangRef.md#index-type) type that
     represents the induction variable of the loop.
@@ -292,7 +292,7 @@ def AffineIfOp : Affine_Op<"if",
     clauses. The latter may be empty (i.e. contain no blocks), meaning the
     absence of the else clause. When non-empty, both regions must contain
     exactly one block terminating with
-    [`affine.terminator`](#affineterminator-operation). *Note:* when `affine.if`
+    [`affine.yield`](#affineyield-operation). *Note:* when `affine.if`
     is printed in custom format, the terminator is omitted. These blocks must
     not have any arguments.
 
@@ -316,6 +316,7 @@ def AffineIfOp : Affine_Op<"if",
     }
     ```
   }];
+  let results = (outs Variadic<AnyMemRef>:$results);
   let arguments = (ins Variadic<AnyType>);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
@@ -323,7 +324,9 @@ def AffineIfOp : Affine_Op<"if",
 
   let builders = [
     OpBuilder<"Builder *builder, OperationState &result, "
-              "IntegerSet set, ValueRange args, bool withElseRegion">
+              "IntegerSet set, ValueRange args, bool withElseRegion">,
+    OpBuilder<"Builder *builder, OperationState &result, TypeRange resultTypes, "
+              "IntegerSet set, ValueRange args, bool withElseRegion">,
   ];
 
   let extraClassDeclaration = [{
@@ -440,7 +443,7 @@ def AffineParallelOp : Affine_Op<"parallel", [ImplicitAffineTerminator]> {
     steps, are positive constant integers which defaults to "1" if not present.
     The lower and upper bounds specify a half-open range: the range includes the
     lower bound but does not include the upper bound. The body region must
-    contain exactly one block that terminates with "affine.terminator".
+    contain exactly one block that terminates with "affine.yield".
 
     The lower and upper bounds of a parallel operation are represented as an
     application of an affine mapping to a list of SSA values passed to the map.
@@ -466,14 +469,15 @@ def AffineParallelOp : Affine_Op<"parallel", [ImplicitAffineTerminator]> {
      AffineMapAttr:$upperBoundsMap,
      I64ArrayAttr:$steps,
      Variadic<Index>:$mapOperands);
+  let results = (outs Variadic<AnyMemRef>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let builders = [
-    OpBuilder<"Builder* builder, OperationState& result,"
+    OpBuilder<"Builder* builder, OperationState& result, ArrayRef<Type> resultTypes,"
               "ArrayRef<int64_t> ranges">,
-    OpBuilder<"Builder* builder, OperationState& result, AffineMap lbMap,"
+    OpBuilder<"Builder* builder, OperationState& result, ArrayRef<Type> resultTypes, AffineMap lbMap,"
               "ValueRange lbArgs, AffineMap ubMap, ValueRange ubArgs">,
-    OpBuilder<"Builder* builder, OperationState& result, AffineMap lbMap,"
+    OpBuilder<"Builder* builder, OperationState& result, ArrayRef<Type> resultTypes, AffineMap lbMap,"
               "ValueRange lbArgs, AffineMap ubMap, ValueRange ubArgs,"
               "ArrayRef<int64_t> steps">
   ];
@@ -581,35 +585,26 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
   let hasFolder = 1;
 }
 
-def AffineTerminatorOp :
-    Affine_Op<"terminator", [NoSideEffect, Terminator]> {
-  let summary = "affine terminator operation";
+def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator]>,
+    Arguments<(ins Variadic<AnyMemRef>:$values)> {
+  let summary = "Yield values to parent operation";
   let description = [{
-    Syntax:
-
+    "affine.yield" yields zero or more SSA values from an affine op region and
+    terminates the region. The semantics of how the values yielded are used
+    is defined by the parent operation.
+    If "affine.yield" has any operands, the operands must match the parent
+    operation's results.
+    If the parent operation defines no values, then the "affine.yield" may be
+    left out in the custom syntax and the builders will insert one implicitly.
+    Otherwise, it has to be present in the syntax to indicate which values are
+    yielded.
     ```
-    operation ::= `"affine.terminator"() : () -> ()`
-    ```
-
-    Affine terminator is a special terminator operation for blocks inside affine
-    loops ([`affine.for`](#affinefor-operation)) and branches
-    ([`affine.if`](#affineif-operation)). It unconditionally transmits the
-    control flow to the successor of the operation enclosing the region.
-
-    *Rationale*: bodies of affine operations are [blocks](../LangRef.md#blocks)
-    that must have terminators. Loops and branches represent structured control
-    flow and should not accept arbitrary branches as terminators.
-
-    This operation does _not_ have a custom syntax. However, affine control
-    operations omit the terminator in their custom syntax for brevity.
   }];
+  let arguments = (ins Variadic<AnyMemRef>:$results);
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result",
+              [{ /* nothing to do */ }]>
+  ];
 
-  // No custom parsing/printing form.
-  let parser = ?;
-  let printer = ?;
-
-  // Fully specified by traits.
-  let verifier = ?;
 }
-
 #endif // AFFINE_OPS

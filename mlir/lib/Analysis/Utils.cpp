@@ -1010,7 +1010,7 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
   auto walkResult = forOp.walk([&](Operation *opInst) -> WalkResult {
     if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
-    else if (!isa<AffineForOp>(opInst) && !isa<AffineTerminatorOp>(opInst) &&
+    else if (!isa<AffineForOp>(opInst) && !isa<AffineYieldOp>(opInst) &&
              !isa<AffineIfOp>(opInst) &&
              !MemoryEffectOpInterface::hasNoEffect(opInst))
       return WalkResult::interrupt();

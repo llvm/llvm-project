@@ -27,7 +27,7 @@ class AffineApplyOp;
 class AffineBound;
 class AffineDimExpr;
 class AffineValueMap;
-class AffineTerminatorOp;
+class AffineYieldOp;
 class FlatAffineConstraints;
 class OpBuilder;
 

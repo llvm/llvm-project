@@ -2,7 +2,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-op-generic | FileCheck -check-prefix=GENERIC %s
 
 // Check that the attributes for the affine operations are round-tripped.
-// Check that `affine.terminator` is visible in the generic form.
+// Check that `affine.yield` is visible in the generic form.
 // CHECK-LABEL: @empty
 func @empty() {
   // CHECK: affine.for
@@ -10,7 +10,7 @@ func @empty() {
   //
   // GENERIC:      "affine.for"()
   // GENERIC-NEXT: ^bb0(%{{.*}}: index):
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: })
   affine.for %i = 0 to 10 {
   } {some_attr = true}
@@ -19,7 +19,7 @@ func @empty() {
   // CHECK-NEXT: } {some_attr = true}
   //
   // GENERIC:      "affine.if"()
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: },  {
   // GENERIC-NEXT: })
   affine.if affine_set<() : ()> () {
@@ -29,10 +29,10 @@ func @empty() {
   // CHECK: } {some_attr = true}
   //
   // GENERIC:      "affine.if"()
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: },  {
   // GENERIC-NEXT:   "foo"() : () -> ()
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: })
   affine.if affine_set<() : ()> () {
   } else {
@@ -42,19 +42,19 @@ func @empty() {
   return
 }
 
-// Check that an explicit affine terminator is not printed in custom format.
+// Check that an explicit affine.yield is not printed in custom format.
 // Check that no extra terminator is introduced.
-// CHECK-LABEL: @affine_terminator
-func @affine_terminator() {
+// CHECK-LABEL: @affine.yield
+func @affine.yield() {
   // CHECK: affine.for
   // CHECK-NEXT: }
   //
   // GENERIC:      "affine.for"() ( {
   // GENERIC-NEXT: ^bb0(%{{.*}}: index):	// no predecessors
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: }) {lower_bound = #map0, step = 1 : index, upper_bound = #map1} : () -> ()
   affine.for %i = 0 to 10 {
-    "affine.terminator"() : () -> ()
+    "affine.yield"() : () -> ()
   }
   return
 }

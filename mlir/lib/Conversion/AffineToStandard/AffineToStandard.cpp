@@ -326,11 +326,11 @@ public:
 };
 
 /// Affine terminators are removed.
-class AffineTerminatorLowering : public OpRewritePattern<AffineTerminatorOp> {
+class AffineTerminatorLowering : public OpRewritePattern<AffineYieldOp> {
 public:
-  using OpRewritePattern<AffineTerminatorOp>::OpRewritePattern;
+  using OpRewritePattern<AffineYieldOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AffineTerminatorOp op,
+  LogicalResult matchAndRewrite(AffineYieldOp op,
                                 PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<loop::YieldOp>(op);
     return success();
