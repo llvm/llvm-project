@@ -212,8 +212,16 @@ public:
         { (void)__l;     _LIBCPP_ASSERT(_Extent == distance(__f, __l), "size mismatch in span's constructor (ptr, ptr)"); }
 
     _LIBCPP_INLINE_VISIBILITY constexpr span(element_type (&__arr)[_Extent])          noexcept : __data{__arr} {}
-    _LIBCPP_INLINE_VISIBILITY constexpr span(      array<value_type, _Extent>& __arr) noexcept : __data{__arr.data()} {}
-    _LIBCPP_INLINE_VISIBILITY constexpr span(const array<value_type, _Extent>& __arr) noexcept : __data{__arr.data()} {}
+
+    template <class _OtherElementType,
+              enable_if_t<is_convertible_v<_OtherElementType(*)[], element_type (*)[]>, nullptr_t> = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr span(array<_OtherElementType, _Extent>& __arr) noexcept : __data{__arr.data()} {}
+
+    template <class _OtherElementType,
+              enable_if_t<is_convertible_v<const _OtherElementType(*)[], element_type (*)[]>, nullptr_t> = nullptr>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr span(const array<_OtherElementType, _Extent>& __arr) noexcept : __data{__arr.data()} {}
 
     template <class _Container>
     _LIBCPP_INLINE_VISIBILITY
@@ -386,13 +394,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr span(element_type (&__arr)[_Sz])          noexcept : __data{__arr}, __size{_Sz} {}
 
-    template <size_t _Sz>
+    template <class _OtherElementType, size_t _Sz,
+              enable_if_t<is_convertible_v<_OtherElementType(*)[], element_type (*)[]>, nullptr_t> = nullptr>
     _LIBCPP_INLINE_VISIBILITY
-    constexpr span(array<value_type, _Sz>& __arr)       noexcept : __data{__arr.data()}, __size{_Sz} {}
+    constexpr span(array<_OtherElementType, _Sz>& __arr) noexcept : __data{__arr.data()}, __size{_Sz} {}
 
-    template <size_t _Sz>
+    template <class _OtherElementType, size_t _Sz,
+              enable_if_t<is_convertible_v<const _OtherElementType(*)[], element_type (*)[]>, nullptr_t> = nullptr>
     _LIBCPP_INLINE_VISIBILITY
-    constexpr span(const array<value_type, _Sz>& __arr) noexcept : __data{__arr.data()}, __size{_Sz} {}
+    constexpr span(const array<_OtherElementType, _Sz>& __arr) noexcept : __data{__arr.data()}, __size{_Sz} {}
 
     template <class _Container>
     _LIBCPP_INLINE_VISIBILITY

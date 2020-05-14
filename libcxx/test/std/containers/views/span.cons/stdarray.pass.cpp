@@ -68,49 +68,58 @@ void checkCV()
     }
 }
 
-
-template <typename T>
-constexpr bool testConstexprSpan()
+template <typename T, typename U = T>
+constexpr bool testConstructorArray()
 {
-    constexpr std::array<T,2> val = { T(), T() };
-    ASSERT_NOEXCEPT(std::span<const T>   {val});
-    ASSERT_NOEXCEPT(std::span<const T, 2>{val});
-    std::span<const T>    s1{val};
-    std::span<const T, 2> s2{val};
-    return
-        s1.data() == &val[0] && s1.size() == 2
-    &&  s2.data() == &val[0] && s2.size() == 2;
-}
-
-
-template <typename T>
-void testRuntimeSpan()
-{
-    std::array<T,2> val;
+    std::array<U,2> val = { U(), U() };
     ASSERT_NOEXCEPT(std::span<T>   {val});
     ASSERT_NOEXCEPT(std::span<T, 2>{val});
     std::span<T>    s1{val};
     std::span<T, 2> s2{val};
-    assert(s1.data() == &val[0] && s1.size() == 2);
-    assert(s2.data() == &val[0] && s2.size() == 2);
+    return s1.data() == &val[0] && s1.size() == 2
+        && s2.data() == &val[0] && s2.size() == 2;
+}
+
+template <typename T, typename U = T>
+constexpr bool testConstructorConstArray()
+{
+    const std::array<U,2> val = { U(), U() };
+    ASSERT_NOEXCEPT(std::span<const T>   {val});
+    ASSERT_NOEXCEPT(std::span<const T, 2>{val});
+    std::span<const T>    s1{val};
+    std::span<const T, 2> s2{val};
+    return s1.data() == &val[0] && s1.size() == 2
+        && s2.data() == &val[0] && s2.size() == 2;
+}
+
+template <typename T>
+constexpr bool testConstructors() {
+    static_assert(testConstructorArray<T>(), "");
+    static_assert(testConstructorArray<const T, T>(), "");
+    static_assert(testConstructorConstArray<T>(), "");
+    static_assert(testConstructorConstArray<const T, T>(), "");
+
+    return testConstructorArray<T>()
+        && testConstructorArray<const T, T>()
+        && testConstructorConstArray<T>()
+        && testConstructorConstArray<const T, T>();
 }
 
 struct A{};
 
 int main(int, char**)
 {
-    static_assert(testConstexprSpan<int>(),    "");
-    static_assert(testConstexprSpan<long>(),   "");
-    static_assert(testConstexprSpan<double>(), "");
-    static_assert(testConstexprSpan<A>(),      "");
+    assert(testConstructors<int>());
+    assert(testConstructors<long>());
+    assert(testConstructors<double>());
+    assert(testConstructors<A>());
 
-    testRuntimeSpan<int>();
-    testRuntimeSpan<long>();
-    testRuntimeSpan<double>();
-    testRuntimeSpan<std::string>();
-    testRuntimeSpan<A>();
+    assert(testConstructors<int*>());
+    assert(testConstructors<int* const>());
+    assert(testConstructors<const int*>());
+    assert(testConstructors<const int* const>());
 
     checkCV();
 
-  return 0;
+    return 0;
 }
