@@ -152,6 +152,10 @@ Expected<ExpressionValue> operator+(const ExpressionValue &Lhs,
                                     const ExpressionValue &Rhs);
 Expected<ExpressionValue> operator-(const ExpressionValue &Lhs,
                                     const ExpressionValue &Rhs);
+Expected<ExpressionValue> max(const ExpressionValue &Lhs,
+                              const ExpressionValue &Rhs);
+Expected<ExpressionValue> min(const ExpressionValue &Lhs,
+                              const ExpressionValue &Rhs);
 
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
@@ -722,10 +726,10 @@ private:
       FileCheckPatternContext *Context, const SourceMgr &SM);
   enum class AllowedOperand { LineVar, LegacyLiteral, Any };
   /// Parses \p Expr for use of a numeric operand at line \p LineNumber, or
-  /// before input is parsed if \p LineNumber is None. Accepts both literal
-  /// values and numeric variables, depending on the value of \p AO. Parameter
-  /// \p Context points to the class instance holding the live string and
-  /// numeric variables. \returns the class representing that operand in the
+  /// before input is parsed if \p LineNumber is None. Accepts literal values,
+  /// numeric variables and function calls, depending on the value of \p AO.
+  /// Parameter \p Context points to the class instance holding the live string
+  /// and numeric variables. \returns the class representing that operand in the
   /// AST of the expression or an error holding a diagnostic against \p SM
   /// otherwise. If \p Expr starts with a "(" this function will attempt to
   /// parse a parenthesized expression.
@@ -757,6 +761,18 @@ private:
   static Expected<std::unique_ptr<ExpressionAST>>
   parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
                  FileCheckPatternContext *Context, const SourceMgr &SM);
+
+  /// Parses \p Expr for an argument list belonging to a call to function \p
+  /// FuncName at line \p LineNumber, or before input is parsed if \p LineNumber
+  /// is None. Parameter \p FuncLoc is the source location used for diagnostics.
+  /// Parameter \p Context points to the class instance holding the live string
+  /// and numeric variables. \returns the class representing that call in the
+  /// AST of the expression or an error holding a diagnostic against \p SM
+  /// otherwise.
+  static Expected<std::unique_ptr<ExpressionAST>>
+  parseCallExpr(StringRef &Expr, StringRef FuncName,
+                Optional<size_t> LineNumber, FileCheckPatternContext *Context,
+                const SourceMgr &SM);
 };
 
 //===----------------------------------------------------------------------===//
