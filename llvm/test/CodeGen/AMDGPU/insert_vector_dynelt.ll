@@ -106,6 +106,15 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}float32_inselt:
+; GCN: v_movreld_b32
+define amdgpu_kernel void @float32_inselt(<32 x float> addrspace(1)* %out, <32 x float> %vec, i32 %sel) {
+entry:
+  %v = insertelement <32 x float> %vec, float 1.000000e+00, i32 %sel
+  store <32 x float> %v, <32 x float> addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}half4_inselt:
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_movrel
@@ -295,6 +304,36 @@ define amdgpu_kernel void @double7_inselt(<7 x double> addrspace(1)* %out, <7 x 
 entry:
   %v = insertelement <7 x double> %vec, double 1.000000e+00, i32 %sel
   store <7 x double> %v, <7 x double> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double16_inselt:
+; GCN-NOT: v_cndmask
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movreld_b32_e32 v[[#BASE:]], 0
+; GCN-NOT: s_mov_b32 m0
+; GCN:     v_movreld_b32_e32 v[[#BASE+1]],
+define amdgpu_kernel void @double16_inselt(<16 x double> addrspace(1)* %out, <16 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <16 x double> %vec, double 1.000000e+00, i32 %sel
+  store <16 x double> %v, <16 x double> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}double15_inselt:
+; GCN-NOT: v_cndmask
+; GCN-NOT: buffer_
+; GCN-NOT: s_or_b32
+; GCN-DAG: s_mov_b32 m0, [[IND:s[0-9]+]]
+; GCN-DAG: v_movreld_b32_e32 v[[#BASE:]], 0
+; GCN-NOT: s_mov_b32 m0
+; GCN:     v_movreld_b32_e32 v[[#BASE+1]],
+define amdgpu_kernel void @double15_inselt(<15 x double> addrspace(1)* %out, <15 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <15 x double> %vec, double 1.000000e+00, i32 %sel
+  store <15 x double> %v, <15 x double> addrspace(1)* %out
   ret void
 }
 
