@@ -606,6 +606,10 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   QualType T = E->getType();
   assert(!T.isNull() && "r-value conversion on typeless expression?");
 
+  // lvalue-to-rvalue conversion cannot be applied to function or array types.
+  if (T->isFunctionType() || T->isArrayType())
+    return E;
+
   // We don't want to throw lvalue-to-rvalue casts on top of
   // expressions of certain types in C++.
   if (getLangOpts().CPlusPlus &&
