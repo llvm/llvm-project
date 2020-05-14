@@ -63,21 +63,28 @@ public:
   ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener,
                   bool enablePerfNotificationListener);
 
-  /// Creates an execution engine for the given module.  If `transformer` is
-  /// provided, it will be called on the LLVM module during JIT-compilation and
-  /// can be used, e.g., for reporting or optimization. `jitCodeGenOptLevel`,
-  /// when provided, is used as the optimization level for target code
-  /// generation. If `sharedLibPaths` are provided, the underlying
-  /// JIT-compilation will open and link the shared libraries for symbol
-  /// resolution. If `enableObjectCache` is set, the JIT compiler will create
-  /// one to store the object generated for the given module. If enable
-  /// `enableGDBNotificationListener` is set, the JIT compiler will notify
-  /// the llvm's global GDB notification listener. If
-  /// `enablePerfNotificationListener` is set, the JIT compiler will notify
+  /// Creates an execution engine for the given module.
+  ///
+  /// If `transformer` is provided, it will be called on the LLVM module during
+  /// JIT-compilation and can be used, e.g., for reporting or optimization.
+  ///
+  /// `jitCodeGenOptLevel`, when provided, is used as the optimization level for
+  /// target code generation.
+  ///
+  /// If `sharedLibPaths` are provided, the underlying JIT-compilation will
+  /// open and link the shared libraries for symbol resolution.
+  ///
+  /// If `enableObjectCache` is set, the JIT compiler will create one to store
+  /// the object generated for the given module.
+  ///
+  /// If enable `enableGDBNotificationListener` is set, the JIT compiler will
+  /// notify the llvm's global GDB notification listener.
+  ///
+  /// If `enablePerfNotificationListener` is set, the JIT compiler will notify
   /// the llvm's global Perf notification listener.
   static llvm::Expected<std::unique_ptr<ExecutionEngine>>
   create(ModuleOp m,
-         std::function<llvm::Error(llvm::Module *)> transformer = {},
+         llvm::function_ref<llvm::Error(llvm::Module *)> transformer = {},
          Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel = llvm::None,
          ArrayRef<StringRef> sharedLibPaths = {}, bool enableObjectCache = true,
          bool enableGDBNotificationListener = true,
@@ -104,6 +111,11 @@ public:
 
   /// Dump object code to output file `filename`.
   void dumpToObjectFile(StringRef filename);
+
+  /// Register symbols with this ExecutionEngine.
+  void registerSymbols(
+      llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
+          symbolMap);
 
 private:
   /// Ordering of llvmContext and jit is important for destruction purposes: the
