@@ -1,16 +1,12 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s > %T/command-disassemble-process.exe
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=4000 %s > %T/command-disassemble-process.big.exe
+# RUN: yaml2obj --docnum=1 %s > %T/command-disassemble-process.exe
 # RUN: yaml2obj --docnum=2 %s > %t
 
 # RUN: %lldb -c %t %T/command-disassemble-process.exe \
 # RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:   -s %S/Inputs/command-disassemble-process.lldbinit -o exit 2>&1 \
 # RUN:   | FileCheck %s
-
-# RUN: %lldb -c %t %T/command-disassemble-process.big.exe \
-# RUN:   -o disassemble -o exit 2>&1 | FileCheck %s --check-prefix=BIG
 
 # CHECK:       (lldb) disassemble
 # CHECK-NEXT: command-disassemble-process.exe`main:
@@ -63,8 +59,6 @@
 # CHECK-NEXT:     0x400e:      addb   %cl, (%rcx)
 # CHECK-NEXT:     0x4010:      addb   %cl, (%rdx)
 
-# BIG: error: Not disassembling the current function because it is very large [0x0000000000004002-0x0000000000004fa2). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
-
 --- !ELF
 FileHeader:      
   Class:           ELFCLASS64
@@ -78,7 +72,6 @@ Sections:
     Address:         0x0000000000004000
     AddressAlign:    0x0000000000001000
     Content:         00000001000200030006000700080009000A000B000E000F00100011001200130016001700180019001A001B001E001F00200021002200230026002700280029002A002B002E002F
-    Size:            0x10000
   - Name:            .note.gnu.build-id
     Type:            SHT_NOTE
     Flags:           [ SHF_ALLOC ]
@@ -90,7 +83,7 @@ Symbols:
     Type:            STT_FUNC
     Section:         .text
     Value:           0x0000000000004002
-    Size:            [[MAIN_SIZE]]
+    Size:            0x0000000000000008
 ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_X, PF_R ]

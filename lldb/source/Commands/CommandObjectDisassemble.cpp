@@ -21,9 +21,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
-static constexpr unsigned default_disasm_byte_size = 32;
-static constexpr unsigned default_disasm_num_ins = 4;
-static constexpr unsigned large_function_threshold = 4000;
+#define DEFAULT_DISASM_BYTE_SIZE 32
+#define DEFAULT_DISASM_NUM_INS 4
 
 using namespace lldb;
 using namespace lldb_private;
@@ -144,10 +143,6 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     }
   } break;
 
-  case '\x01':
-    force = true;
-    break;
-
   default:
     llvm_unreachable("Unimplemented option");
   }
@@ -191,7 +186,6 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
 
   arch.Clear();
   some_location_specified = false;
-  force = false;
 }
 
 Status CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
@@ -219,21 +213,6 @@ CommandObjectDisassemble::CommandObjectDisassemble(
       m_options() {}
 
 CommandObjectDisassemble::~CommandObjectDisassemble() = default;
-
-llvm::Error CommandObjectDisassemble::CheckRangeSize(const AddressRange &range,
-                                                     llvm::StringRef what) {
-  if (m_options.num_instructions > 0 || m_options.force ||
-      range.GetByteSize() < large_function_threshold)
-    return llvm::Error::success();
-  StreamString msg;
-  msg << "Not disassembling " << what << " because it is very large ";
-  range.Dump(&msg, &GetSelectedTarget(), Address::DumpStyleLoadAddress,
-             Address::DumpStyleFileAddress);
-  msg << ". To disassemble specify an instruction count limit, start/stop "
-         "addresses or use the --force option.";
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 msg.GetString());
-}
 
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetContainingAddressRanges() {
@@ -275,9 +254,6 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
         "Could not find function bounds for address 0x%" PRIx64,
         m_options.symbol_containing_addr);
   }
-
-  if (llvm::Error err = CheckRangeSize(ranges[0], "the function"))
-    return std::move(err);
   return ranges;
 }
 
@@ -297,10 +273,8 @@ CommandObjectDisassemble::GetCurrentFunctionRanges() {
   else if (sc.symbol && sc.symbol->ValueIsAddress()) {
     range = {sc.symbol->GetAddress(), sc.symbol->GetByteSize()};
   } else
-    range = {frame->GetFrameCodeAddress(), default_disasm_byte_size};
+    range = {frame->GetFrameCodeAddress(), DEFAULT_DISASM_BYTE_SIZE};
 
-  if (llvm::Error err = CheckRangeSize(range, "the current function"))
-    return std::move(err);
   return std::vector<AddressRange>{range};
 }
 
@@ -324,7 +298,7 @@ CommandObjectDisassemble::GetCurrentLineRanges() {
 }
 
 llvm::Expected<std::vector<AddressRange>>
-CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
+CommandObjectDisassemble::GetNameRanges() {
   ConstString name(m_options.func_name.c_str());
   const bool include_symbols = true;
   const bool include_inlines = true;
@@ -335,7 +309,6 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
       name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);
 
   std::vector<AddressRange> ranges;
-  llvm::Error range_errs = llvm::Error::success();
   AddressRange range;
   const uint32_t scope =
       eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
@@ -344,21 +317,14 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
     for (uint32_t range_idx = 0;
          sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
          ++range_idx) {
-      if (llvm::Error err = CheckRangeSize(range, "a range"))
-        range_errs = joinErrors(std::move(range_errs), std::move(err));
-      else
-        ranges.push_back(range);
+      ranges.push_back(range);
     }
   }
   if (ranges.empty()) {
-    if (range_errs)
-      return std::move(range_errs);
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Unable to find symbol with name '%s'.\n",
                                    name.GetCString());
   }
-  if (range_errs)
-    result.AppendWarning(toString(std::move(range_errs)));
   return ranges;
 }
 
@@ -374,7 +340,7 @@ CommandObjectDisassemble::GetPCRanges() {
   if (m_options.num_instructions == 0) {
     // Disassembling at the PC always disassembles some number of
     // instructions (not the whole function).
-    m_options.num_instructions = default_disasm_num_ins;
+    m_options.num_instructions = DEFAULT_DISASM_NUM_INS;
   }
   return std::vector<AddressRange>{{frame->GetFrameCodeAddress(), 0}};
 }
@@ -393,8 +359,7 @@ CommandObjectDisassemble::GetStartEndAddressRanges() {
 }
 
 llvm::Expected<std::vector<AddressRange>>
-CommandObjectDisassemble::GetRangesForSelectedMode(
-    CommandReturnObject &result) {
+CommandObjectDisassemble::GetRangesForSelectedMode() {
   if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS)
     return CommandObjectDisassemble::GetContainingAddressRanges();
   if (m_options.current_function)
@@ -402,7 +367,7 @@ CommandObjectDisassemble::GetRangesForSelectedMode(
   if (m_options.frame_line)
     return CommandObjectDisassemble::GetCurrentLineRanges();
   if (!m_options.func_name.empty())
-    return CommandObjectDisassemble::GetNameRanges(result);
+    return CommandObjectDisassemble::GetNameRanges();
   if (m_options.start_addr != LLDB_INVALID_ADDRESS)
     return CommandObjectDisassemble::GetStartEndAddressRanges();
   return CommandObjectDisassemble::GetPCRanges();
@@ -475,8 +440,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
 
-  llvm::Expected<std::vector<AddressRange>> ranges =
-      GetRangesForSelectedMode(result);
+  llvm::Expected<std::vector<AddressRange>> ranges = GetRangesForSelectedMode();
   if (!ranges) {
     result.AppendError(toString(ranges.takeError()));
     result.SetStatus(eReturnStatusFailed);
@@ -489,7 +453,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
     if (m_options.num_instructions == 0) {
       limit = {Disassembler::Limit::Bytes, cur_range.GetByteSize()};
       if (limit.value == 0)
-        limit.value = default_disasm_byte_size;
+        limit.value = DEFAULT_DISASM_BYTE_SIZE;
     } else {
       limit = {Disassembler::Limit::Instructions, m_options.num_instructions};
     }
@@ -512,7 +476,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       result.SetStatus(eReturnStatusFailed);
     }
     if (print_sc_header)
-      result.GetOutputStream() << "\n";
+      result.AppendMessage("\n");
   }
 
   return result.Succeeded();
