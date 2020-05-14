@@ -262,3 +262,49 @@ func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
   }
   return
 }
+
+// -----
+
+func @vector_load_invalid_vector_type() {
+  %0 = alloc() : memref<100xf32>
+  affine.for %i0 = 0 to 16 step 8 {
+    // expected-error@+1 {{requires memref and vector types of the same elemental type}}
+    %1 = affine.vector_load %0[%i0] : memref<100xf32>, vector<8xf64>
+  }
+  return
+}
+
+// -----
+
+func @vector_store_invalid_vector_type() {
+  %0 = alloc() : memref<100xf32>
+  %1 = constant dense<7.0> : vector<8xf64>
+  affine.for %i0 = 0 to 16 step 8 {
+    // expected-error@+1 {{requires memref and vector types of the same elemental type}}
+    affine.vector_store %1, %0[%i0] : memref<100xf32>, vector<8xf64>
+  }
+  return
+}
+
+// -----
+
+func @vector_load_vector_memref() {
+  %0 = alloc() : memref<100xvector<8xf32>>
+  affine.for %i0 = 0 to 4 {
+    // expected-error@+1 {{requires memref and vector types of the same elemental type}}
+    %1 = affine.vector_load %0[%i0] : memref<100xvector<8xf32>>, vector<8xf32>
+  }
+  return
+}
+
+// -----
+
+func @vector_store_vector_memref() {
+  %0 = alloc() : memref<100xvector<8xf32>>
+  %1 = constant dense<7.0> : vector<8xf32>
+  affine.for %i0 = 0 to 4 {
+    // expected-error@+1 {{requires memref and vector types of the same elemental type}}
+    affine.vector_store %1, %0[%i0] : memref<100xvector<8xf32>>, vector<8xf32>
+  }
+  return
+}

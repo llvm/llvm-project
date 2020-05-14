@@ -1912,32 +1912,47 @@ void print(OpAsmPrinter &p, AffineLoadOp op) {
   p << " : " << op.getMemRefType();
 }
 
-LogicalResult verify(AffineLoadOp op) {
-  if (op.getType() != op.getMemRefType().getElementType())
-    return op.emitOpError("result type must match element type of memref");
-
-  auto mapAttr = op.getAttrOfType<AffineMapAttr>(op.getMapAttrName());
+/// Verify common indexing invariants of affine.load, affine.store,
+/// affine.vector_load and affine.vector_store.
+static LogicalResult
+verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
+                       Operation::operand_range mapOperands,
+                       MemRefType memrefType, unsigned numIndexOperands) {
   if (mapAttr) {
-    AffineMap map =
-        op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()).getValue();
-    if (map.getNumResults() != op.getMemRefType().getRank())
-      return op.emitOpError("affine.load affine map num results must equal"
-                            " memref rank");
-    if (map.getNumInputs() != op.getNumOperands() - 1)
-      return op.emitOpError("expects as many subscripts as affine map inputs");
+    AffineMap map = mapAttr.getValue();
+    if (map.getNumResults() != memrefType.getRank())
+      return op->emitOpError("affine map num results must equal memref rank");
+    if (map.getNumInputs() != numIndexOperands)
+      return op->emitOpError("expects as many subscripts as affine map inputs");
   } else {
-    if (op.getMemRefType().getRank() != op.getNumOperands() - 1)
-      return op.emitOpError(
+    if (memrefType.getRank() != numIndexOperands)
+      return op->emitOpError(
           "expects the number of subscripts to be equal to memref rank");
   }
 
   Region *scope = getAffineScope(op);
-  for (auto idx : op.getMapOperands()) {
+  for (auto idx : mapOperands) {
     if (!idx.getType().isIndex())
-      return op.emitOpError("index to load must have 'index' type");
+      return op->emitOpError("index to load must have 'index' type");
     if (!isValidAffineIndexOperand(idx, scope))
-      return op.emitOpError("index must be a dimension or symbol identifier");
+      return op->emitOpError("index must be a dimension or symbol identifier");
   }
+
+  return success();
+}
+
+LogicalResult verify(AffineLoadOp op) {
+  auto memrefType = op.getMemRefType();
+  if (op.getType() != memrefType.getElementType())
+    return op.emitOpError("result type must match element type of memref");
+
+  if (failed(verifyMemoryOpIndexing(
+          op.getOperation(),
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()),
+          op.getMapOperands(), memrefType,
+          /*numIndexOperands=*/op.getNumOperands() - 1)))
+    return failure();
+
   return success();
 }
 
@@ -2014,31 +2029,18 @@ void print(OpAsmPrinter &p, AffineStoreOp op) {
 
 LogicalResult verify(AffineStoreOp op) {
   // First operand must have same type as memref element type.
-  if (op.getValueToStore().getType() != op.getMemRefType().getElementType())
+  auto memrefType = op.getMemRefType();
+  if (op.getValueToStore().getType() != memrefType.getElementType())
     return op.emitOpError(
         "first operand must have same type memref element type");
 
-  auto mapAttr = op.getAttrOfType<AffineMapAttr>(op.getMapAttrName());
-  if (mapAttr) {
-    AffineMap map = mapAttr.getValue();
-    if (map.getNumResults() != op.getMemRefType().getRank())
-      return op.emitOpError("affine.store affine map num results must equal"
-                            " memref rank");
-    if (map.getNumInputs() != op.getNumOperands() - 2)
-      return op.emitOpError("expects as many subscripts as affine map inputs");
-  } else {
-    if (op.getMemRefType().getRank() != op.getNumOperands() - 2)
-      return op.emitOpError(
-          "expects the number of subscripts to be equal to memref rank");
-  }
+  if (failed(verifyMemoryOpIndexing(
+          op.getOperation(),
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()),
+          op.getMapOperands(), memrefType,
+          /*numIndexOperands=*/op.getNumOperands() - 2)))
+    return failure();
 
-  Region *scope = getAffineScope(op);
-  for (auto idx : op.getMapOperands()) {
-    if (!idx.getType().isIndex())
-      return op.emitOpError("index to store must have 'index' type");
-    if (!isValidAffineIndexOperand(idx, scope))
-      return op.emitOpError("index must be a dimension or symbol identifier");
-  }
   return success();
 }
 
@@ -2490,6 +2492,125 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
 
   // Add a terminator if none was parsed.
   AffineParallelOp::ensureTerminator(*body, builder, result.location);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AffineVectorLoadOp
+//===----------------------------------------------------------------------===//
+
+ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
+                                    OperationState &result) {
+  auto &builder = parser.getBuilder();
+  auto indexTy = builder.getIndexType();
+
+  MemRefType memrefType;
+  VectorType resultType;
+  OpAsmParser::OperandType memrefInfo;
+  AffineMapAttr mapAttr;
+  SmallVector<OpAsmParser::OperandType, 1> mapOperands;
+  return failure(
+      parser.parseOperand(memrefInfo) ||
+      parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
+                                    AffineVectorLoadOp::getMapAttrName(),
+                                    result.attributes) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(memrefType) || parser.parseComma() ||
+      parser.parseType(resultType) ||
+      parser.resolveOperand(memrefInfo, memrefType, result.operands) ||
+      parser.resolveOperands(mapOperands, indexTy, result.operands) ||
+      parser.addTypeToList(resultType, result.types));
+}
+
+void print(OpAsmPrinter &p, AffineVectorLoadOp op) {
+  p << "affine.vector_load " << op.getMemRef() << '[';
+  if (AffineMapAttr mapAttr =
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
+    p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
+  p << ']';
+  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p << " : " << op.getMemRefType() << ", " << op.getType();
+}
+
+/// Verify common invariants of affine.vector_load and affine.vector_store.
+static LogicalResult verifyVectorMemoryOp(Operation *op, MemRefType memrefType,
+                                          VectorType vectorType) {
+  // Check that memref and vector element types match.
+  if (memrefType.getElementType() != vectorType.getElementType())
+    return op->emitOpError(
+        "requires memref and vector types of the same elemental type");
+
+  return success();
+}
+
+static LogicalResult verify(AffineVectorLoadOp op) {
+  MemRefType memrefType = op.getMemRefType();
+  if (failed(verifyMemoryOpIndexing(
+          op.getOperation(),
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()),
+          op.getMapOperands(), memrefType,
+          /*numIndexOperands=*/op.getNumOperands() - 1)))
+    return failure();
+
+  if (failed(verifyVectorMemoryOp(op.getOperation(), memrefType,
+                                  op.getVectorType())))
+    return failure();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AffineVectorStoreOp
+//===----------------------------------------------------------------------===//
+
+ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
+                                     OperationState &result) {
+  auto indexTy = parser.getBuilder().getIndexType();
+
+  MemRefType memrefType;
+  VectorType resultType;
+  OpAsmParser::OperandType storeValueInfo;
+  OpAsmParser::OperandType memrefInfo;
+  AffineMapAttr mapAttr;
+  SmallVector<OpAsmParser::OperandType, 1> mapOperands;
+  return failure(
+      parser.parseOperand(storeValueInfo) || parser.parseComma() ||
+      parser.parseOperand(memrefInfo) ||
+      parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
+                                    AffineVectorStoreOp::getMapAttrName(),
+                                    result.attributes) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(memrefType) || parser.parseComma() ||
+      parser.parseType(resultType) ||
+      parser.resolveOperand(storeValueInfo, resultType, result.operands) ||
+      parser.resolveOperand(memrefInfo, memrefType, result.operands) ||
+      parser.resolveOperands(mapOperands, indexTy, result.operands));
+}
+
+void print(OpAsmPrinter &p, AffineVectorStoreOp op) {
+  p << "affine.vector_store " << op.getValueToStore();
+  p << ", " << op.getMemRef() << '[';
+  if (AffineMapAttr mapAttr =
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
+    p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
+  p << ']';
+  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p << " : " << op.getMemRefType() << ", " << op.getValueToStore().getType();
+}
+
+static LogicalResult verify(AffineVectorStoreOp op) {
+  MemRefType memrefType = op.getMemRefType();
+  if (failed(verifyMemoryOpIndexing(
+          op.getOperation(),
+          op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()),
+          op.getMapOperands(), memrefType,
+          /*numIndexOperands=*/op.getNumOperands() - 2)))
+    return failure();
+
+  if (failed(verifyVectorMemoryOp(op.getOperation(), memrefType,
+                                  op.getVectorType())))
+    return failure();
+
   return success();
 }
 

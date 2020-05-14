@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -27,6 +28,7 @@
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
+using namespace mlir::vector;
 
 namespace {
 /// Visit affine expressions recursively and build the sequence of operations
@@ -556,6 +558,51 @@ public:
   }
 };
 
+/// Apply the affine map from an 'affine.vector_load' operation to its operands,
+/// and feed the results to a newly created 'vector.transfer_read' operation
+/// (which replaces the original 'affine.vector_load').
+class AffineVectorLoadLowering : public OpRewritePattern<AffineVectorLoadOp> {
+public:
+  using OpRewritePattern<AffineVectorLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineVectorLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    // Expand affine map from 'affineVectorLoadOp'.
+    SmallVector<Value, 8> indices(op.getMapOperands());
+    auto resultOperands =
+        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    if (!resultOperands)
+      return failure();
+
+    // Build vector.transfer_read memref[expandedMap.results].
+    rewriter.replaceOpWithNewOp<TransferReadOp>(
+        op, op.getVectorType(), op.getMemRef(), *resultOperands);
+    return success();
+  }
+};
+
+/// Apply the affine map from an 'affine.vector_store' operation to its
+/// operands, and feed the results to a newly created 'vector.transfer_write'
+/// operation (which replaces the original 'affine.vector_store').
+class AffineVectorStoreLowering : public OpRewritePattern<AffineVectorStoreOp> {
+public:
+  using OpRewritePattern<AffineVectorStoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineVectorStoreOp op,
+                                PatternRewriter &rewriter) const override {
+    // Expand affine map from 'affineVectorStoreOp'.
+    SmallVector<Value, 8> indices(op.getMapOperands());
+    auto maybeExpandedMap =
+        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    if (!maybeExpandedMap)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TransferWriteOp>(
+        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
+    return success();
+  }
+};
+
 } // end namespace
 
 void mlir::populateAffineToStdConversionPatterns(
@@ -576,13 +623,24 @@ void mlir::populateAffineToStdConversionPatterns(
   // clang-format on
 }
 
+void mlir::populateAffineToVectorConversionPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+  // clang-format off
+  patterns.insert<
+      AffineVectorLoadLowering,
+      AffineVectorStoreLowering>(ctx);
+  // clang-format on
+}
+
 namespace {
 class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateAffineToStdConversionPatterns(patterns, &getContext());
+    populateAffineToVectorConversionPatterns(patterns, &getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<scf::SCFDialect, StandardOpsDialect>();
+    target
+        .addLegalDialect<scf::SCFDialect, StandardOpsDialect, VectorDialect>();
     if (failed(applyPartialConversion(getFunction(), target, patterns)))
       signalPassFailure();
   }
