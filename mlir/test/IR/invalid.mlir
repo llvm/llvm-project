@@ -1527,3 +1527,22 @@ func @forward_reference_type_check() -> (i8) {
   %1 = "bar"() : () -> (f32)
   br ^bb1
 }
+
+// -----
+
+func @dominance_error_in_unreachable_op() -> i1 {
+  %c = constant 0 : i1
+  return %c : i1
+^bb0:
+  "dummy" () ({  // unreachable
+    ^bb1:
+// expected-error @+1 {{operand #0 does not dominate this use}}
+      %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+      br ^bb4
+    ^bb2:
+      br ^bb2
+    ^bb4:
+      %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
+  }) : () -> ()
+  return %c : i1
+}
