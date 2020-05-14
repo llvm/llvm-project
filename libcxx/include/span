@@ -46,9 +46,7 @@ public:
     using reference = element_type&;
     using const_reference = const element_type&;
     using iterator = implementation-defined;
-    using const_iterator = implementation-defined;
     using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     static constexpr size_type extent = Extent;
 
     // [span.cons], span constructors, copy, assignment, and destructor
@@ -97,12 +95,8 @@ public:
     // [span.iterators], span iterator support
     constexpr iterator begin() const noexcept;
     constexpr iterator end() const noexcept;
-    constexpr const_iterator cbegin() const noexcept;
-    constexpr const_iterator cend() const noexcept;
     constexpr reverse_iterator rbegin() const noexcept;
     constexpr reverse_iterator rend() const noexcept;
-    constexpr const_reverse_iterator crbegin() const noexcept;
-    constexpr const_reverse_iterator crend() const noexcept;
 
 private:
     pointer data_;    // exposition only
@@ -201,9 +195,7 @@ public:
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
     using iterator               =  __wrap_iter<pointer>;
-    using const_iterator         =  __wrap_iter<const_pointer>;
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
-    using const_reverse_iterator = _VSTD::reverse_iterator<const_iterator>;
 
     static constexpr size_type extent = _Extent;
 
@@ -340,12 +332,8 @@ public:
 // [span.iter], span iterator support
     _LIBCPP_INLINE_VISIBILITY constexpr iterator                 begin() const noexcept { return iterator(data()); }
     _LIBCPP_INLINE_VISIBILITY constexpr iterator                   end() const noexcept { return iterator(data() + size()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_iterator          cbegin() const noexcept { return const_iterator(data()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_iterator            cend() const noexcept { return const_iterator(data() + size()); }
     _LIBCPP_INLINE_VISIBILITY constexpr reverse_iterator        rbegin() const noexcept { return reverse_iterator(end()); }
     _LIBCPP_INLINE_VISIBILITY constexpr reverse_iterator          rend() const noexcept { return reverse_iterator(begin()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_reverse_iterator   crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
     _LIBCPP_INLINE_VISIBILITY constexpr void swap(span &__other) noexcept
     {
@@ -381,9 +369,7 @@ public:
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
     using iterator               =  __wrap_iter<pointer>;
-    using const_iterator         =  __wrap_iter<const_pointer>;
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
-    using const_reverse_iterator = _VSTD::reverse_iterator<const_iterator>;
 
     static constexpr size_type extent = dynamic_extent;
 
@@ -510,12 +496,8 @@ public:
 // [span.iter], span iterator support
     _LIBCPP_INLINE_VISIBILITY constexpr iterator                 begin() const noexcept { return iterator(data()); }
     _LIBCPP_INLINE_VISIBILITY constexpr iterator                   end() const noexcept { return iterator(data() + size()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_iterator          cbegin() const noexcept { return const_iterator(data()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_iterator            cend() const noexcept { return const_iterator(data() + size()); }
     _LIBCPP_INLINE_VISIBILITY constexpr reverse_iterator        rbegin() const noexcept { return reverse_iterator(end()); }
     _LIBCPP_INLINE_VISIBILITY constexpr reverse_iterator          rend() const noexcept { return reverse_iterator(begin()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
-    _LIBCPP_INLINE_VISIBILITY constexpr const_reverse_iterator   crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
     _LIBCPP_INLINE_VISIBILITY constexpr void swap(span &__other) noexcept
     {
