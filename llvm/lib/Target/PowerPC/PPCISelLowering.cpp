@@ -7702,25 +7702,6 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
-  const PPCRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const MCPhysReg *I =
-    TRI->getCalleeSavedRegsViaCopy(&DAG.getMachineFunction());
-  if (I) {
-    for (; *I; ++I) {
-
-      if (PPC::G8RCRegClass.contains(*I))
-        RetOps.push_back(DAG.getRegister(*I, MVT::i64));
-      else if (PPC::F8RCRegClass.contains(*I))
-        RetOps.push_back(DAG.getRegister(*I, MVT::getFloatingPointVT(64)));
-      else if (PPC::CRRCRegClass.contains(*I))
-        RetOps.push_back(DAG.getRegister(*I, MVT::i1));
-      else if (PPC::VRRCRegClass.contains(*I))
-        RetOps.push_back(DAG.getRegister(*I, MVT::Other));
-      else
-        llvm_unreachable("Unexpected register class in CSRsViaCopy!");
-    }
-  }
-
   RetOps[0] = Chain;  // Update chain.
 
   // Add the flag if we have it.
@@ -15776,59 +15757,6 @@ FastISel *
 PPCTargetLowering::createFastISel(FunctionLoweringInfo &FuncInfo,
                                   const TargetLibraryInfo *LibInfo) const {
   return PPC::createFastISel(FuncInfo, LibInfo);
-}
-
-void PPCTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {
-  if (!Subtarget.isPPC64()) return;
-
-  // Update IsSplitCSR in PPCFunctionInfo
-  PPCFunctionInfo *PFI = Entry->getParent()->getInfo<PPCFunctionInfo>();
-  PFI->setIsSplitCSR(true);
-}
-
-void PPCTargetLowering::insertCopiesSplitCSR(
-  MachineBasicBlock *Entry,
-  const SmallVectorImpl<MachineBasicBlock *> &Exits) const {
-  const PPCRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const MCPhysReg *IStart = TRI->getCalleeSavedRegsViaCopy(Entry->getParent());
-  if (!IStart)
-    return;
-
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  MachineRegisterInfo *MRI = &Entry->getParent()->getRegInfo();
-  MachineBasicBlock::iterator MBBI = Entry->begin();
-  for (const MCPhysReg *I = IStart; *I; ++I) {
-    const TargetRegisterClass *RC = nullptr;
-    if (PPC::G8RCRegClass.contains(*I))
-      RC = &PPC::G8RCRegClass;
-    else if (PPC::F8RCRegClass.contains(*I))
-      RC = &PPC::F8RCRegClass;
-    else if (PPC::CRRCRegClass.contains(*I))
-      RC = &PPC::CRRCRegClass;
-    else if (PPC::VRRCRegClass.contains(*I))
-      RC = &PPC::VRRCRegClass;
-    else
-      llvm_unreachable("Unexpected register class in CSRsViaCopy!");
-
-    Register NewVR = MRI->createVirtualRegister(RC);
-    // Create copy from CSR to a virtual register.
-    // FIXME: this currently does not emit CFI pseudo-instructions, it works
-    // fine for CXX_FAST_TLS since the C++-style TLS access functions should be
-    // nounwind. If we want to generalize this later, we may need to emit
-    // CFI pseudo-instructions.
-    assert(Entry->getParent()->getFunction().hasFnAttribute(
-             Attribute::NoUnwind) &&
-           "Function should be nounwind in insertCopiesSplitCSR!");
-    Entry->addLiveIn(*I);
-    BuildMI(*Entry, MBBI, DebugLoc(), TII->get(TargetOpcode::COPY), NewVR)
-      .addReg(*I);
-
-    // Insert the copy-back instructions right before the terminator.
-    for (auto *Exit : Exits)
-      BuildMI(*Exit, Exit->getFirstTerminator(), DebugLoc(),
-              TII->get(TargetOpcode::COPY), *I)
-        .addReg(NewVR);
-  }
 }
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
