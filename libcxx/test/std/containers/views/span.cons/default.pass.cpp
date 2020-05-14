@@ -15,6 +15,7 @@
 #include <span>
 #include <cassert>
 #include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -79,5 +80,9 @@ int main(int, char**)
 
     checkCV();
 
-  return 0;
+    static_assert( std::is_default_constructible_v<std::span<int, std::dynamic_extent>>, "");
+    static_assert( std::is_default_constructible_v<std::span<int, 0>>, "");
+    static_assert(!std::is_default_constructible_v<std::span<int, 2>>, "");
+
+    return 0;
 }
