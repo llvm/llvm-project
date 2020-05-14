@@ -1777,7 +1777,7 @@ SignatureHelp signatureHelp(PathRef FileName,
                             const SymbolIndex *Index) {
   auto Offset = positionToOffset(Contents, Pos);
   if (!Offset) {
-    elog("Code completion position was invalid {0}", Offset.takeError());
+    elog("Signature help position was invalid {0}", Offset.takeError());
     return SignatureHelp();
   }
   SignatureHelp Result;
