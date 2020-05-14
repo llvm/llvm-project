@@ -2614,6 +2614,33 @@ static LogicalResult verify(AffineVectorStoreOp op) {
   return success();
 }
 
+namespace {
+/// This pattern removes affine.parallel ops with no induction variables
+struct AffineParallelRank0LoopRemover
+    : public OpRewritePattern<AffineParallelOp> {
+  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    // Check that there are no induction variables
+    if (op.lowerBoundsMap().getNumResults() != 0)
+      return failure();
+    // Remove the affine.parallel wrapper, retain the body in the same location
+    auto &parentOps = rewriter.getInsertionBlock()->getOperations();
+    auto &parallelBodyOps = op.region().front().getOperations();
+    parentOps.splice(mlir::Block::iterator(op), parallelBodyOps,
+                     parallelBodyOps.begin(), std::prev(parallelBodyOps.end()));
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+} // end anonymous namespace
+
+void AffineParallelOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<AffineParallelRank0LoopRemover>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
