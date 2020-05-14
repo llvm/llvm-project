@@ -1236,6 +1236,45 @@ public:
   }
 };
 
+class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
+public:
+  using OpRewritePattern<vector::CreateMaskOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::CreateMaskOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto dstType = op.getResult().getType().cast<VectorType>();
+    auto eltType = dstType.getElementType();
+    int64_t rank = dstType.getRank();
+    Value idx = op.getOperand(0);
+
+    Value trueVal;
+    Value falseVal;
+    if (rank > 1) {
+      VectorType lowType =
+          VectorType::get(dstType.getShape().drop_front(), eltType);
+      trueVal = rewriter.create<vector::CreateMaskOp>(
+          loc, lowType, op.getOperands().drop_front());
+      falseVal = rewriter.create<ConstantOp>(loc, lowType,
+                                             rewriter.getZeroAttr(lowType));
+    }
+
+    Value result = rewriter.create<ConstantOp>(loc, dstType,
+                                               rewriter.getZeroAttr(dstType));
+    for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; d++) {
+      Value bnd = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(d));
+      Value val = rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, bnd, idx);
+      if (rank > 1)
+        val = rewriter.create<SelectOp>(loc, val, trueVal, falseVal);
+      auto pos = rewriter.getI64ArrayAttr(d);
+      result =
+          rewriter.create<vector::InsertOp>(loc, dstType, val, result, pos);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// Progressive lowering of ContractionOp.
 /// One:
 ///   %x = vector.contract with at least one free/batch dimension
@@ -1659,6 +1698,6 @@ void mlir::vector::populateVectorContractLoweringPatterns(
   patterns.insert<ShapeCastOp2DDownCastRewritePattern,
                   ShapeCastOp2DUpCastRewritePattern, BroadcastOpLowering,
                   TransposeOpLowering, OuterProductOpLowering,
-                  ConstantMaskOpLowering>(context);
+                  ConstantMaskOpLowering, CreateMaskOpLowering>(context);
   patterns.insert<ContractionOpLowering>(parameters, context);
 }
