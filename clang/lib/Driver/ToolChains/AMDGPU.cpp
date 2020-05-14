@@ -361,6 +361,12 @@ void ROCMToolChain::addClangTargetOptions(
   AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args,
                                          DeviceOffloadingKind);
 
+  // For the OpenCL case where there is no offload target, accept -nostdlib to
+  // disable bitcode linking.
+  if (DeviceOffloadingKind == Action::OFK_None &&
+      DriverArgs.hasArg(options::OPT_nostdlib))
+    return;
+
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
