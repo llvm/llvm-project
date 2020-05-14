@@ -389,6 +389,14 @@ void SourceManager::clearIDTables() {
   createExpansionLoc(SourceLocation(), SourceLocation(), SourceLocation(), 1);
 }
 
+bool SourceManager::isMainFile(FileEntryRef SourceFile) {
+  assert(MainFileID.isValid() && "expected initialized SourceManager");
+  auto FE = getFileEntryRefForID(MainFileID);
+  if (!FE)
+    return false;
+  return FE->getUID() == SourceFile.getUID();
+}
+
 void SourceManager::initializeForReplay(const SourceManager &Old) {
   assert(MainFileID.isInvalid() && "expected uninitialized SourceManager");
 
