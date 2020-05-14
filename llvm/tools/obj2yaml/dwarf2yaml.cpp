@@ -109,7 +109,7 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       return E;
     for (const auto &RLE : DwarfRanges.getEntries())
       YamlRanges.Entries.push_back({RLE.StartAddress, RLE.EndAddress});
-    Y.Ranges.push_back(std::move(YamlRanges));
+    Y.DebugRanges.push_back(std::move(YamlRanges));
   }
   return ErrorSuccess();
 }
