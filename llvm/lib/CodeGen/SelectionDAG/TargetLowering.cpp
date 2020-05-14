@@ -6046,8 +6046,8 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
                         !isOperationLegalOrCustomOrPromote(ISD::OR, VT)))
     return false;
 
-  // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
-  // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+  // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
+  // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
   SDValue X = Node->getOperand(0);
   SDValue Y = Node->getOperand(1);
   SDValue Z = Node->getOperand(2);
@@ -6057,30 +6057,29 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
   SDLoc DL(SDValue(Node, 0));
 
   EVT ShVT = Z.getValueType();
-  SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
-  SDValue Zero = DAG.getConstant(0, DL, ShVT);
-
+  SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
   SDValue ShAmt;
   if (isPowerOf2_32(EltSizeInBits)) {
-    SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
+    // Z % BW -> Z & (BW - 1)
     ShAmt = DAG.getNode(ISD::AND, DL, ShVT, Z, Mask);
   } else {
+    SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
     ShAmt = DAG.getNode(ISD::UREM, DL, ShVT, Z, BitWidthC);
   }
+  SDValue InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, Mask, ShAmt);
 
-  SDValue InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, ShAmt);
-  SDValue ShX = DAG.getNode(ISD::SHL, DL, VT, X, IsFSHL ? ShAmt : InvShAmt);
-  SDValue ShY = DAG.getNode(ISD::SRL, DL, VT, Y, IsFSHL ? InvShAmt : ShAmt);
-  SDValue Or = DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
-
-  // If (Z % BW == 0), then the opposite direction shift is shift-by-bitwidth,
-  // and that is undefined. We must compare and select to avoid UB.
-  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ShVT);
-
-  // For fshl, 0-shift returns the 1st arg (X).
-  // For fshr, 0-shift returns the 2nd arg (Y).
-  SDValue IsZeroShift = DAG.getSetCC(DL, CCVT, ShAmt, Zero, ISD::SETEQ);
-  Result = DAG.getSelect(DL, VT, IsZeroShift, IsFSHL ? X : Y, Or);
+  SDValue One = DAG.getConstant(1, DL, ShVT);
+  SDValue ShX, ShY;
+  if (IsFSHL) {
+    ShX = DAG.getNode(ISD::SHL, DL, VT, X, ShAmt);
+    SDValue ShY1 = DAG.getNode(ISD::SRL, DL, VT, Y, One);
+    ShY = DAG.getNode(ISD::SRL, DL, VT, ShY1, InvShAmt);
+  } else {
+    SDValue ShX1 = DAG.getNode(ISD::SHL, DL, VT, X, One);
+    ShX = DAG.getNode(ISD::SHL, DL, VT, ShX1, InvShAmt);
+    ShY = DAG.getNode(ISD::SRL, DL, VT, Y, ShAmt);
+  }
+  Result = DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
   return true;
 }
 
