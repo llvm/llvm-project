@@ -73,8 +73,8 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "MLIR modular optimizer driver\n");
 
-  mlir::MLIRContext context;
   if (showDialects) {
+    mlir::MLIRContext context;
     llvm::outs() << "Registered Dialects:\n";
     for (mlir::Dialect *dialect : context.getRegisteredDialects()) {
       llvm::outs() << dialect->getNamespace() << "\n";
