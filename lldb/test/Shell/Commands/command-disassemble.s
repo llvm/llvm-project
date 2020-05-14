@@ -51,8 +51,19 @@
 # CHECK-NEXT: command-disassemble.s.tmp[0x8] <+8>:  int    $0x14
 # CHECK-NEXT: command-disassemble.s.tmp[0xa] <+10>: int    $0x15
 # CHECK-NEXT: command-disassemble.s.tmp[0xc] <+12>: int    $0x16
-# CHECK-NEXT: (lldb) disassemble --address 0xdead
-# CHECK-NEXT: error: Could not find function bounds for address 0xdead
+# CHECK-NEXT: (lldb) disassemble --address 0xdeadb
+# CHECK-NEXT: error: Could not find function bounds for address 0xdeadb
+# CHECK-NEXT: (lldb) disassemble --address 0x100
+# CHECK-NEXT: error: Not disassembling the function because it is very large [0x0000000000000040-0x0000000000002040). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: (lldb) disassemble --address 0x100 --count 3
+# CHECK-NEXT: command-disassemble.s.tmp`very_long:
+# CHECK-NEXT: command-disassemble.s.tmp[0x40] <+0>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x42] <+2>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x44] <+4>: int    $0x2a
+# CHECK-NEXT: (lldb) disassemble --address 0x100 --force
+# CHECK-NEXT: command-disassemble.s.tmp`very_long:
+# CHECK-NEXT: command-disassemble.s.tmp[0x40]   <+0>:    int    $0x2a
+# CHECK:      command-disassemble.s.tmp[0x203e] <+8190>: int    $0x2a
 # CHECK-NEXT: (lldb) disassemble --start-address 0x0 --count 7
 # CHECK-NEXT: command-disassemble.s.tmp`foo:
 # CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:  int    $0x10
@@ -64,8 +75,32 @@
 # CHECK-NEXT: command-disassemble.s.tmp[0xc] <+12>: int    $0x16
 # CHECK-NEXT: (lldb) disassemble --start-address 0x0 --end-address 0x20 --count 7
 # CHECK-NEXT: error: invalid combination of options for the given command
-# CHECK-NEXT: (lldb) disassemble --address 0x0 --count 7
-# CHECK-NEXT: error: invalid combination of options for the given command
+# CHECK-NEXT: (lldb) disassemble --name case1
+# CHECK-NEXT: command-disassemble.s.tmp`n1::case1:
+# CHECK-NEXT: command-disassemble.s.tmp[0x2040] <+0>: int    $0x30
+# CHECK-EMPTY:
+# CHECK-NEXT: command-disassemble.s.tmp`n2::case1:
+# CHECK-NEXT: command-disassemble.s.tmp[0x2042] <+0>: int    $0x31
+# CHECK-EMPTY:
+# CHECK-NEXT: (lldb) disassemble --name case2
+# CHECK-NEXT: command-disassemble.s.tmp`n1::case2:
+# CHECK-NEXT: command-disassemble.s.tmp[0x2044] <+0>: int    $0x32
+# CHECK-NEXT: warning: Not disassembling a range because it is very large [0x0000000000002046-0x0000000000004046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: (lldb) disassemble --name case3
+# CHECK-NEXT: error: Not disassembling a range because it is very large [0x0000000000004046-0x0000000000006046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: Not disassembling a range because it is very large [0x0000000000006046-0x0000000000008046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: (lldb) disassemble --name case3 --count 3
+# CHECK-NEXT: command-disassemble.s.tmp`n1::case3:
+# CHECK-NEXT: command-disassemble.s.tmp[0x4046] <+0>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x4048] <+2>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x404a] <+4>: int    $0x2a
+# CHECK-EMPTY:
+# CHECK-NEXT: command-disassemble.s.tmp`n2::case3:
+# CHECK-NEXT: command-disassemble.s.tmp[0x6046] <+0>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x6048] <+2>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x604a] <+4>: int    $0x2a
+# CHECK-EMPTY:
+
 
         .text
 foo:
@@ -102,3 +137,32 @@ bar:
         int $0x2d
         int $0x2e
         int $0x2f
+
+very_long:
+        .rept 0x1000
+        int $42
+        .endr
+
+_ZN2n15case1Ev:
+        int $0x30
+
+_ZN2n25case1Ev:
+        int $0x31
+
+_ZN2n15case2Ev:
+        int $0x32
+
+_ZN2n25case2Ev:
+        .rept 0x1000
+        int $42
+        .endr
+
+_ZN2n15case3Ev:
+        .rept 0x1000
+        int $42
+        .endr
+
+_ZN2n25case3Ev:
+        .rept 0x1000
+        int $42
+        .endr
