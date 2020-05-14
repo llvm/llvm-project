@@ -1,41 +1,18 @@
-; REQUIRES: zlib
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
-; RUN: llvm-profdata merge -sample -extbinary -compress-all-sections %S/Inputs/inline.prof -o %t.compress.extbinary.afdo
-; RUN: opt < %s -sample-profile -sample-profile-file=%t.compress.extbinary.afdo -S | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.compress.extbinary.afdo -S | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/use-sample-profile-attr.prof -S | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/use-sample-profile-attr.prof -S | FileCheck %s
 
-; Original C++ test case
-;
-; #include <stdio.h>
-;
-; int sum(int x, int y) {
-;   return x + y;
-; }
-;
-; int main() {
-;   int s, i = 0;
-;   while (i++ < 20000 * 20000)
-;     if (i != 100) s = sum(i, s); else s = 30;
-;   printf("sum is %d\n", s);
-;   return 0;
-; }
-;
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-; Check sample-profile phase using compressed extbinary format profile
-; will annotate the IR with exactly the same result as using text format.
-; CHECK: br i1 %cmp, label %while.body, label %while.end{{.*}} !prof ![[IDX1:[0-9]*]]
-; CHECK: br i1 %cmp1, label %if.then, label %if.else{{.*}} !prof ![[IDX2:[0-9]*]]
-; CHECK: call i32 (i8*, ...) @printf{{.*}} !prof ![[IDX3:[0-9]*]]
-; CHECK: = !{!"TotalCount", i64 26781}
-; CHECK: = !{!"MaxCount", i64 5553}
-; CHECK: ![[IDX1]] = !{!"branch_weights", i32 5392, i32 163}
-; CHECK: ![[IDX2]] = !{!"branch_weights", i32 5280, i32 113}
-; CHECK: ![[IDX3]] = !{!"branch_weights", i32 1}
+;; @goo doesn't have use-sample-profile attribute so it won't have
+;; profile annotated.
+; CHECK-NOT: @goo{{.*}} !prof
+define void @goo() !dbg !26 {
+  ret void
+}
 
-; Function Attrs: nounwind uwtable
-define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !4 {
+;; @foo has use-sample-profile attribute so it will have profile annotated.
+; CHECK: @foo{{.*}} !prof ![[HDRCNT1:[0-9]+]]
+define i32 @foo(i32 %x, i32 %y) #0 !dbg !4 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -47,8 +24,9 @@ entry:
   ret i32 %add, !dbg !11
 }
 
-; Function Attrs: uwtable
-define i32 @main() #0 !dbg !7 {
+;; @main has use-sample-profile attribute so it will have profile annotated.
+; CHECK: @main{{.*}} !prof ![[HDRCNT2:[0-9]+]]
+define i32 @main() #1 !dbg !7 {
 entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
@@ -73,11 +51,19 @@ while.body:                                       ; preds = %while.cond
 if.then:                                          ; preds = %while.body
   %2 = load i32, i32* %i, align 4, !dbg !18
   %3 = load i32, i32* %s, align 4, !dbg !18
-  %call = call i32 @_Z3sumii(i32 %2, i32 %3), !dbg !18
+;; @foo is inlined because the callsite is hot and @foo has use-sample-profile
+;; attribute.
+; CHECK: if.then:
+; CHECK-NOT: call i32 @foo
+  %call = call i32 @foo(i32 %2, i32 %3), !dbg !18
   store i32 %call, i32* %s, align 4, !dbg !18
   br label %if.end, !dbg !18
 
 if.else:                                          ; preds = %while.body
+;; @goo is not inlined because @goo doesn't have use-sample-profile attribute.
+; CHECK: if.else:
+; CHECK: call void @goo
+  call void @goo(), !dbg !27
   store i32 30, i32* %s, align 4, !dbg !20
   br label %if.end
 
@@ -90,9 +76,13 @@ while.end:                                        ; preds = %while.cond
   ret i32 0, !dbg !25
 }
 
-declare i32 @printf(i8*, ...) #2
+; CHECK: ![[HDRCNT1]] = !{!"function_entry_count", i64 11}
+; CHECK: ![[HDRCNT2]] = !{!"function_entry_count", i64 2}
 
-attributes #0 = { "use-sample-profile" }
+attributes #0 = {"use-sample-profile"}
+attributes #1 = {"use-sample-profile"}
+
+declare i32 @printf(i8*, ...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
@@ -101,7 +91,7 @@ attributes #0 = { "use-sample-profile" }
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "sum", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, retainedNodes: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "calls.cc", directory: ".")
 !6 = !DISubroutineType(types: !2)
 !7 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !5, type: !6, retainedNodes: !2)
@@ -123,3 +113,5 @@ attributes #0 = { "use-sample-profile" }
 !23 = !DILexicalBlockFile(discriminator: 6, file: !1, scope: !17)
 !24 = !DILocation(line: 11, scope: !7)
 !25 = !DILocation(line: 12, scope: !7)
+!26 = distinct !DISubprogram(name: "goo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, retainedNodes: !2)
+!27 = !DILocation(line: 11, column: 20, scope: !7)

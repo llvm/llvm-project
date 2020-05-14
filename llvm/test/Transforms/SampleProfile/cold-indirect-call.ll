@@ -1,21 +1,22 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/cold-indirect-call.prof -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/cold-indirect-call.prof -S | FileCheck %s
 
-define i32 @foo(i32 ()* %func) !dbg !3 {
+define i32 @foo(i32 ()* %func) #0 !dbg !3 {
 ; CHECK: icmp {{.*}} @bar
 ; CHECK-NOT: icmp {{.*}} @baz
   %call = call i32 %func(), !dbg !4
   ret i32 %call
 }
 
-define i32 @bar() !dbg !5 {
+define i32 @bar() #0 !dbg !5 {
   ret i32 41, !dbg !6
 }
 
-define i32 @baz() !dbg !7 {
+define i32 @baz() #0 !dbg !7 {
   ret i32 42, !dbg !8
 }
 
+attributes #0 = {"use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}

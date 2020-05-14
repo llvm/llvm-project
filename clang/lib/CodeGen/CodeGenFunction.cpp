@@ -791,6 +791,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (CGM.getCodeGenOpts().ProfileSampleAccurate)
     Fn->addFnAttr("profile-sample-accurate");
 
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("use-sample-profile");
+
   if (D && D->hasAttr<CFICanonicalJumpTableAttr>())
     Fn->addFnAttr("cfi-canonical-jump-table");
 
