@@ -87,7 +87,7 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query);
 } // namespace clang
 
 namespace llvm {
-template <> struct llvm::DenseMapInfo<clang::clangd::dex::Trigram> {
+template <> struct DenseMapInfo<clang::clangd::dex::Trigram> {
   using Trigram = clang::clangd::dex::Trigram;
   static inline Trigram getEmptyKey() {
     return Trigram(Trigram::Sentinel::Empty);
