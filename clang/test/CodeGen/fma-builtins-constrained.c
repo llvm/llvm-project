@@ -1,8 +1,8 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -ffp-exception-behavior=strict -O -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM --check-prefix=CHECK-ASM-UNCONSTRAINED %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O -ffp-exception-behavior=strict -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM --check-prefix=CHECK-ASM-CONSTRAINED %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -ffp-exception-behavior=strict -O2 -emit-llvm -o - | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM --check-prefix=CHECK-ASM-UNCONSTRAINED %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -ffp-exception-behavior=strict -S -o - | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM --check-prefix=CHECK-ASM-CONSTRAINED %s
 
 #include <immintrin.h>
 
