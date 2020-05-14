@@ -58,7 +58,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0] -> MemRef_add[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx
+; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
 ; CHECK-NEXT:                   %add = fadd double %val, 4.200000e+01
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyB
@@ -68,7 +68,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx
+; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
 ; CHECK-NEXT:                   %add = fadd double %val, 4.200000e+01
 ; CHECK-NEXT:                   store double %add, double* %A_idx
 ; CHECK-NEXT:             }

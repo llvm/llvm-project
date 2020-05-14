@@ -64,7 +64,7 @@ exit:
 define i8 @test2(i1 %cmp, i8 *%p) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES1:%.*]] = load i8, i8* [[P:%.*]]
+; CHECK-NEXT:    [[RES1:%.*]] = load i8, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    call void @foo(i8* [[P]])
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[B2:%.*]], label [[B1:%.*]]
 ; CHECK:       b1:
@@ -102,7 +102,7 @@ alive:
 define i8 @test3(i1 %cmp, i8 *%p) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES1:%.*]] = load i8, i8* [[P:%.*]]
+; CHECK-NEXT:    [[RES1:%.*]] = load i8, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    call void @foo(i8* [[P]])
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[B1:%.*]], label [[B2:%.*]]
 ; CHECK:       b1:

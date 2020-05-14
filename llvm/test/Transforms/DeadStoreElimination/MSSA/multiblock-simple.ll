@@ -54,7 +54,7 @@ define void @test7(i32* noalias %P, i32* noalias %Q) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
@@ -80,7 +80,7 @@ define i32 @test22(i32* %P, i32* noalias %Q, i32* %R) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    store i32 2, i32* [[P:%.*]]
 ; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
   store i32 1, i32* %Q
@@ -122,7 +122,7 @@ define void @overlapping_read(i32* %P) {
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr i32, i32* [[P]], i32 1
 ; CHECK-NEXT:    store i32 1, i32* [[P_1]]
 ; CHECK-NEXT:    [[P_64:%.*]] = bitcast i32* [[P]] to i64*
-; CHECK-NEXT:    [[LV:%.*]] = load i64, i64* [[P_64]]
+; CHECK-NEXT:    [[LV:%.*]] = load i64, i64* [[P_64]], align 8
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
