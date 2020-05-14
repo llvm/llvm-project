@@ -28,6 +28,7 @@ public:
   enum Kind {
     ObjKind,
     DylibKind,
+    ArchiveKind,
   };
 
   virtual ~InputFile() = default;
@@ -79,6 +80,20 @@ public:
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   bool reexport = false;
   std::vector<DylibFile *> reexported;
+};
+
+// .a file
+class ArchiveFile : public InputFile {
+public:
+  explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file);
+  static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
+  void fetch(const llvm::object::Archive::Symbol &sym);
+
+private:
+  std::unique_ptr<llvm::object::Archive> file;
+  // Keep track of children fetched from the archive by tracking
+  // which address offsets have been fetched already.
+  llvm::DenseSet<uint64_t> seen;
 };
 
 extern std::vector<InputFile *> inputFiles;

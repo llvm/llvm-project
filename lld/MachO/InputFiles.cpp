@@ -302,6 +302,30 @@ DylibFile *DylibFile::createLibSystemMock() {
   return file;
 }
 
+ArchiveFile::ArchiveFile(std::unique_ptr<llvm::object::Archive> &&f)
+    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {
+  for (const object::Archive::Symbol &sym : file->symbols())
+    symtab->addLazy(sym.getName(), this, sym);
+}
+
+void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
+  object::Archive::Child c =
+      CHECK(sym.getMember(), toString(this) +
+                                 ": could not get the member for symbol " +
+                                 sym.getName());
+
+  if (!seen.insert(c.getChildOffset()).second)
+    return;
+
+  MemoryBufferRef mb =
+      CHECK(c.getMemoryBufferRef(),
+            toString(this) +
+                ": could not get the buffer for the member defining symbol " +
+                sym.getName());
+  auto file = make<ObjFile>(mb);
+  sections.insert(sections.end(), file->sections.begin(), file->sections.end());
+}
+
 // Returns "<internal>" or "baz.o".
 std::string lld::toString(const InputFile *file) {
   return file ? std::string(file->getName()) : "<internal>";
