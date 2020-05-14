@@ -4068,8 +4068,11 @@ Qualifiers AbstractManglingParser<Alloc, Derived>::parseCVQualifiers() {
 //                  ::= fp <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L == 0, second and later parameters
 //                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> _         # L > 0, first parameter
 //                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L > 0, second and later parameters
+//                  ::= fpT      # 'this' expression (not part of standard?)
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseFunctionParam() {
+  if (consumeIf("fpT"))
+    return make<NameType>("this");
   if (consumeIf("fp")) {
     parseCVQualifiers();
     StringView Num = parseNumber();
