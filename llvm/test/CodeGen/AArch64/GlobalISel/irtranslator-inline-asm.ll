@@ -132,3 +132,66 @@ define float @test_vector_output() nounwind {
   %2 = extractelement <2 x float> %1, i32 0
   ret float %2
 }
+
+define void @test_input_register_imm() {
+  ; CHECK-LABEL: name: test_input_register_imm
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY [[C]](s64)
+  ; CHECK:   INLINEASM &"mov x0, $0", 1 /* sideeffect attdialect */, 9 /* reguse */, [[COPY]]
+  ; CHECK:   RET_ReallyLR
+  call void asm sideeffect "mov x0, $0", "r"(i64 42)
+  ret void
+}
+
+; Make sure that boolean immediates are properly (zero) extended.
+define i32 @test_boolean_imm_ext() {
+  ; CHECK-LABEL: name: test_boolean_imm_ext
+  ; CHECK: bb.1.entry:
+  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK:   INLINEASM &"#TEST 42 + ${0:c} - .\0A\09", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 1
+  ; CHECK:   $w0 = COPY [[C]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+entry:
+  tail call void asm sideeffect "#TEST 42 + ${0:c} - .\0A\09", "i"(i1 true)
+  ret i32 1
+}
+
+define void @test_input_imm() {
+  ; CHECK-LABEL: name: test_input_imm
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   INLINEASM &"mov x0, $0", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42
+  ; CHECK:   RET_ReallyLR
+  call void asm sideeffect "mov x0, $0", "i"(i64 42)
+  ret void
+}
+
+define zeroext i8 @test_input_register(i8* %src) nounwind {
+  ; CHECK-LABEL: name: test_input_register
+  ; CHECK: bb.1.entry:
+  ; CHECK:   liveins: $x0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]](p0)
+  ; CHECK:   INLINEASM &"ldtrb ${0:w}, [$1]", 0 /* attdialect */, 655370 /* regdef:GPR32common */, def %1, 9 /* reguse */, [[COPY1]]
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY %1
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
+  ; CHECK:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+entry:
+  %0 = tail call i8 asm "ldtrb ${0:w}, [$1]", "=r,r"(i8* %src) nounwind
+  ret i8 %0
+}
+
+define i32 @test_memory_constraint(i32* %a) nounwind {
+  ; CHECK-LABEL: name: test_memory_constraint
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $x0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK:   INLINEASM &"ldr $0, $1", 8 /* mayload attdialect */, 655370 /* regdef:GPR32common */, def %1, 196622 /* mem:m */, [[COPY]](p0)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
+  ; CHECK:   $w0 = COPY [[COPY1]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+  %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(i32* %a)
+  ret i32 %1
+}
