@@ -38,8 +38,8 @@ class TestObjCBreakpoints(TestBase):
             lldb.eFunctionNameTypeSelector,
             lldb.SBFileSpecList(),
             lldb.SBFileSpecList())
-        self.assertTrue(
-            name_bp.GetNumLocations() == selector_bp.GetNumLocations(),
+        self.assertEqual(
+            name_bp.GetNumLocations(), selector_bp.GetNumLocations(),
             'Make sure setting a breakpoint by name "myCategoryFunction" sets a breakpoint even though it is in a category')
         for bp_loc in selector_bp:
             function_name = bp_loc.GetAddress().GetSymbol().GetName()
@@ -53,14 +53,14 @@ class TestObjCBreakpoints(TestBase):
             "-[MyClass myCategoryFunction]")
         stripped2_bp = self.target.BreakpointCreateByName(
             "[MyClass myCategoryFunction]")
-        self.assertTrue(
-            category_bp.GetNumLocations() == 1,
+        self.assertEqual(
+            category_bp.GetNumLocations(), 1,
             "Make sure we can set a breakpoint using a full objective C function name with the category included (-[MyClass(MyCategory) myCategoryFunction])")
-        self.assertTrue(
-            stripped_bp.GetNumLocations() == 1,
+        self.assertEqual(
+            stripped_bp.GetNumLocations(), 1,
             "Make sure we can set a breakpoint using a full objective C function name without the category included (-[MyClass myCategoryFunction])")
-        self.assertTrue(
-            stripped2_bp.GetNumLocations() == 1,
+        self.assertEqual(
+            stripped2_bp.GetNumLocations(), 1,
             "Make sure we can set a breakpoint using a full objective C function name without the category included ([MyClass myCategoryFunction])")
 
     def check_objc_breakpoints(self, have_dsym):
@@ -86,11 +86,11 @@ class TestObjCBreakpoints(TestBase):
             lldb.eFunctionNameTypeSelector,
             lldb.SBFileSpecList(),
             lldb.SBFileSpecList())
-        self.assertTrue(
-            name_bp.GetNumLocations() >= selector_bp.GetNumLocations(),
+        self.assertGreaterEqual(
+            name_bp.GetNumLocations(), selector_bp.GetNumLocations(),
             'Make sure we get at least the same amount of breakpoints if not more when setting by name "count"')
-        self.assertTrue(
-            selector_bp.GetNumLocations() > 50,
+        self.assertGreater(
+            selector_bp.GetNumLocations(), 50,
             'Make sure we find a lot of "count" selectors')  # There are 93 on the latest MacOSX
         for bp_loc in selector_bp:
             function_name = bp_loc.GetAddress().GetSymbol().GetName()
@@ -109,8 +109,8 @@ class TestObjCBreakpoints(TestBase):
             lldb.eFunctionNameTypeSelector,
             lldb.SBFileSpecList(),
             lldb.SBFileSpecList())
-        self.assertTrue(
-            name_bp.GetNumLocations() == selector_bp.GetNumLocations(),
+        self.assertEqual(
+            name_bp.GetNumLocations(), selector_bp.GetNumLocations(),
             'Make sure setting a breakpoint by name "isEqual:" only sets selector breakpoints')
         for bp_loc in selector_bp:
             function_name = bp_loc.GetAddress().GetSymbol().GetName()
@@ -122,8 +122,8 @@ class TestObjCBreakpoints(TestBase):
 
         if have_dsym:
             shutil.rmtree(exe + ".dSYM")
-        self.assertTrue(subprocess.call(
-            ['/usr/bin/strip', '-Sx', exe]) == 0, 'stripping dylib succeeded')
+        self.assertEqual(subprocess.call(
+            ['/usr/bin/strip', '-Sx', exe]), 0, 'stripping dylib succeeded')
 
         # Check breakpoints again, this time using the symbol table only
         self.check_category_breakpoints()
