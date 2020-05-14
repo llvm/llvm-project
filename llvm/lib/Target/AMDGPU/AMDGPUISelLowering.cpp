@@ -119,6 +119,12 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v8f64, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v8f64, MVT::v16i32);
 
+  setOperationAction(ISD::LOAD, MVT::v16i64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v16i64, MVT::v32i32);
+
+  setOperationAction(ISD::LOAD, MVT::v16f64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v16f64, MVT::v32i32);
+
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -177,11 +183,13 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f32, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f16, Expand);
 
   setOperationAction(ISD::STORE, MVT::f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::f32, MVT::i32);
@@ -231,6 +239,12 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::v8f64, Promote);
   AddPromotedToType(ISD::STORE, MVT::v8f64, MVT::v16i32);
 
+  setOperationAction(ISD::STORE, MVT::v16i64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v16i64, MVT::v32i32);
+
+  setOperationAction(ISD::STORE, MVT::v16f64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v16f64, MVT::v32i32);
+
   setTruncStoreAction(MVT::i64, MVT::i1, Expand);
   setTruncStoreAction(MVT::i64, MVT::i8, Expand);
   setTruncStoreAction(MVT::i64, MVT::i16, Expand);
@@ -263,6 +277,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v8f64, MVT::v8f32, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8f16, Expand);
 
+  setTruncStoreAction(MVT::v16f64, MVT::v16f32, Expand);
+  setTruncStoreAction(MVT::v16f64, MVT::v16f16, Expand);
 
   setOperationAction(ISD::Constant, MVT::i32, Legal);
   setOperationAction(ISD::Constant, MVT::i64, Legal);
