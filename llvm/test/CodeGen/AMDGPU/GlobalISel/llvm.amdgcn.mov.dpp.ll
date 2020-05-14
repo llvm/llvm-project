@@ -20,6 +20,7 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
 ;
 ; GFX10-LABEL: dpp_test:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
 ; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x2c ; encoding: [0x80,0x00,0x00,0xf4,0x2c,0x00,0x00,0xfa]
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24 ; encoding: [0x00,0x00,0x04,0xf4,0x24,0x00,0x00,0xfa]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi

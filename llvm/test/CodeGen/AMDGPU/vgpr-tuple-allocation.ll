@@ -67,10 +67,10 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT: s_swappc_b64 s[30:31], s[4:5]
 
-; GFX10: buffer_load_dword v43, off, s[0:3], s33 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
+; GFX10: buffer_load_dword v43, off, s[0:3], s33
+; GFX10-NEXT: buffer_load_dword v42, off, s[0:3], s33 offset:4
+; GFX10-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:8
+; GFX10-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:12
 
 ; GFX10: buffer_load_dword v44, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; GFX10: s_setpc_b64 s[4:5]
@@ -149,12 +149,12 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT: s_swappc_b64 s[30:31], s[4:5]
 ; GFX10-NEXT: image_gather4_c_b_cl v[0:3], [v44, v43, v42, v41, v40], s[36:43], s[44:47] dmask:0x1
 
-; GFX10: buffer_load_dword v44, off, s[0:3], s33 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v43, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
-; GFX10-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
-; GFX10: buffer_load_dword v45, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; GFX10: buffer_load_dword v44, off, s[0:3], s33
+; GFX10-NEXT: buffer_load_dword v43, off, s[0:3], s33 offset:4
+; GFX10-NEXT: buffer_load_dword v42, off, s[0:3], s33 offset:8
+; GFX10-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:12
+; GFX10-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:16
+; GFX10: buffer_load_dword v45, off, s[0:3], s32 offset:20
 ; GFX10: s_setpc_b64 s[4:5]
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
