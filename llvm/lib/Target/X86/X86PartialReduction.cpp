@@ -405,7 +405,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   Add->setHasNoSignedWrap(false);
   Add->setHasNoUnsignedWrap(false);
 
-  return false;
+  return true;
 }
 
 bool X86PartialReduction::trySADPattern(BinaryOperator *BO) {
