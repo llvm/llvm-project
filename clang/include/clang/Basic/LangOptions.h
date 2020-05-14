@@ -174,15 +174,22 @@ public:
     Swift4_1,
   };
 
-  enum FPModeKind {
-    // Disable the floating point pragma
-    FPM_Off,
+  enum FPContractModeKind {
+    // Form fused FP ops only where result will not be affected.
+    FPC_Off,
 
-    // Enable the floating point pragma
-    FPM_On,
+    // Form fused FP ops according to FP_CONTRACT rules.
+    FPC_On,
 
     // Aggressively fuse FP ops (E.g. FMA).
-    FPM_Fast
+    FPC_Fast
+  };
+
+  // TODO: merge FEnvAccessModeKind and FPContractModeKind
+  enum FEnvAccessModeKind {
+    FEA_Off,
+
+    FEA_On
   };
 
   /// Alias for RoundingMode::NearestTiesToEven.
@@ -371,7 +378,7 @@ class FPOptions {
 
 public:
   FPOptions()
-      : fp_contract(LangOptions::FPM_Off), fenv_access(LangOptions::FPM_Off),
+      : fp_contract(LangOptions::FPC_Off), fenv_access(LangOptions::FEA_Off),
         rounding(LangOptions::FPR_ToNearest),
         exceptions(LangOptions::FPE_Ignore), allow_reassoc(0), no_nans(0),
         no_infs(0), no_signed_zeros(0), allow_reciprocal(0), approx_func(0) {}
@@ -381,7 +388,7 @@ public:
 
   explicit FPOptions(const LangOptions &LangOpts)
       : fp_contract(LangOpts.getDefaultFPContractMode()),
-        fenv_access(LangOptions::FPM_Off),
+        fenv_access(LangOptions::FEA_Off),
         rounding(static_cast<unsigned>(LangOpts.getFPRoundingMode())),
         exceptions(LangOpts.getFPExceptionMode()),
         allow_reassoc(LangOpts.FastMath || LangOpts.AllowFPReassoc),
@@ -406,26 +413,30 @@ public:
   bool requiresTrailingStorage(const LangOptions &LO);
 
   bool allowFPContractWithinStatement() const {
-    return fp_contract == LangOptions::FPM_On;
+    return fp_contract == LangOptions::FPC_On;
   }
 
   bool allowFPContractAcrossStatement() const {
-    return fp_contract == LangOptions::FPM_Fast;
+    return fp_contract == LangOptions::FPC_Fast;
   }
 
   void setAllowFPContractWithinStatement() {
-    fp_contract = LangOptions::FPM_On;
+    fp_contract = LangOptions::FPC_On;
   }
 
   void setAllowFPContractAcrossStatement() {
-    fp_contract = LangOptions::FPM_Fast;
+    fp_contract = LangOptions::FPC_Fast;
   }
 
-  void setDisallowFPContract() { fp_contract = LangOptions::FPM_Off; }
+  void setDisallowFPContract() { fp_contract = LangOptions::FPC_Off; }
 
-  bool allowFEnvAccess() const { return fenv_access == LangOptions::FPM_On; }
+  bool allowFEnvAccess() const {
+    return fenv_access == LangOptions::FEA_On;
+  }
 
-  void setAllowFEnvAccess() { fenv_access = LangOptions::FPM_On; }
+  void setAllowFEnvAccess() {
+    fenv_access = LangOptions::FEA_On;
+  }
 
   void setFPPreciseEnabled(bool Value) {
     if (Value) {
@@ -439,7 +450,7 @@ public:
     }
   }
 
-  void setDisallowFEnvAccess() { fenv_access = LangOptions::FPM_Off; }
+  void setDisallowFEnvAccess() { fenv_access = LangOptions::FEA_Off; }
 
   RoundingMode getRoundingMode() const {
     return static_cast<RoundingMode>(rounding);
@@ -489,8 +500,8 @@ public:
 
   /// Used with getAsOpaqueInt() to manage the float_control pragma stack.
   void getFromOpaqueInt(unsigned I) {
-    fp_contract = (static_cast<LangOptions::FPModeKind>(I & 3));
-    fenv_access = ((I >> 2) & 1);
+    fp_contract = (static_cast<LangOptions::FPContractModeKind>(I & 3));
+    fenv_access = (static_cast<LangOptions::FEnvAccessModeKind>((I >> 2) & 1));
     rounding = static_cast<unsigned>(static_cast<RoundingMode>((I >> 3) & 7));
     exceptions = (static_cast<LangOptions::FPExceptionModeKind>((I >> 6) & 3));
     allow_reassoc = ((I >> 8) & 1);
@@ -509,8 +520,7 @@ private:
   unsigned fenv_access : 1;
   unsigned rounding : 3;
   unsigned exceptions : 2;
-  /// Allow reassociation transformations for floating-point instructions
-  /// across multiple statements.
+  /// Allow reassociation transformations for floating-point instructions.
   unsigned allow_reassoc : 1;
   /// No NaNs - Allow optimizations to assume the arguments and result
   /// are not NaN. If an argument is a nan, or the result would be a nan,

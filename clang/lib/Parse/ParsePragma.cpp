@@ -640,13 +640,13 @@ void Parser::HandlePragmaFPContract() {
     static_cast<tok::OnOffSwitch>(
     reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
 
-  LangOptions::FPModeKind FPC;
+  LangOptions::FPContractModeKind FPC;
   switch (OOS) {
   case tok::OOS_ON:
-    FPC = LangOptions::FPM_On;
+    FPC = LangOptions::FPC_On;
     break;
   case tok::OOS_OFF:
-    FPC = LangOptions::FPM_Off;
+    FPC = LangOptions::FPC_Off;
     break;
   case tok::OOS_DEFAULT:
     FPC = getLangOpts().getDefaultFPContractMode();
@@ -679,21 +679,21 @@ void Parser::HandlePragmaFEnvAccess() {
     static_cast<tok::OnOffSwitch>(
     reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
 
-  bool IsEnabled;
+  LangOptions::FEnvAccessModeKind FPC;
   switch (OOS) {
   case tok::OOS_ON:
-    IsEnabled = true;
+    FPC = LangOptions::FEA_On;
     break;
   case tok::OOS_OFF:
-    IsEnabled = false;
+    FPC = LangOptions::FEA_Off;
     break;
   case tok::OOS_DEFAULT: // FIXME: Add this cli option when it makes sense.
-    IsEnabled = false;
+    FPC = LangOptions::FEA_Off;
     break;
   }
 
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
-  Actions.ActOnPragmaFEnvAccess(PragmaLoc, IsEnabled);
+  Actions.ActOnPragmaFEnvAccess(PragmaLoc, FPC);
 }
 
 
@@ -2825,7 +2825,7 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
 namespace {
 /// Used as the annotation value for tok::annot_pragma_fp.
 struct TokFPAnnotValue {
-  enum FlagKinds { Contract, Reassociate };
+  enum FlagKinds { Contract };
   enum FlagValues { On, Off, Fast };
 
   FlagKinds FlagKind;
@@ -2853,7 +2853,6 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
         llvm::StringSwitch<llvm::Optional<TokFPAnnotValue::FlagKinds>>(
             OptionInfo->getName())
             .Case("contract", TokFPAnnotValue::Contract)
-            .Case("reassociate", TokFPAnnotValue::Reassociate)
             .Default(None);
     if (!FlagKind) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_option)
@@ -2871,8 +2870,7 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
 
     if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
-          << PP.getSpelling(Tok) << OptionInfo->getName()
-          << (FlagKind == TokFPAnnotValue::Reassociate);
+          << PP.getSpelling(Tok) << OptionInfo->getName();
       return;
     }
     const IdentifierInfo *II = Tok.getIdentifierInfo();
@@ -2885,11 +2883,9 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
             .Case("fast", TokFPAnnotValue::Fast)
             .Default(llvm::None);
 
-    if (!FlagValue || (FlagKind == TokFPAnnotValue::Reassociate &&
-                       FlagValue == TokFPAnnotValue::Fast)) {
+    if (!FlagValue) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
-          << PP.getSpelling(Tok) << OptionInfo->getName()
-          << (FlagKind == TokFPAnnotValue::Reassociate);
+          << PP.getSpelling(Tok) << OptionInfo->getName();
       return;
     }
     PP.Lex(Tok);
@@ -2931,24 +2927,20 @@ void Parser::HandlePragmaFP() {
   auto *AnnotValue =
       reinterpret_cast<TokFPAnnotValue *>(Tok.getAnnotationValue());
 
-  if (AnnotValue->FlagKind == TokFPAnnotValue::Reassociate)
-    Actions.ActOnPragmaFPReassociate(AnnotValue->FlagValue ==
-                                     TokFPAnnotValue::On);
-  else {
-    LangOptions::FPModeKind FPC;
-    switch (AnnotValue->FlagValue) {
-    case TokFPAnnotValue::Off:
-      FPC = LangOptions::FPM_Off;
-      break;
-    case TokFPAnnotValue::On:
-      FPC = LangOptions::FPM_On;
-      break;
-    case TokFPAnnotValue::Fast:
-      FPC = LangOptions::FPM_Fast;
-      break;
-    }
-    Actions.ActOnPragmaFPContract(FPC);
+  LangOptions::FPContractModeKind FPC;
+  switch (AnnotValue->FlagValue) {
+  case TokFPAnnotValue::On:
+    FPC = LangOptions::FPC_On;
+    break;
+  case TokFPAnnotValue::Fast:
+    FPC = LangOptions::FPC_Fast;
+    break;
+  case TokFPAnnotValue::Off:
+    FPC = LangOptions::FPC_Off;
+    break;
   }
+
+  Actions.ActOnPragmaFPContract(FPC);
   ConsumeAnnotationToken();
 }
 

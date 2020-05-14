@@ -2319,7 +2319,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.AltiVec = 0;
     Opts.ZVector = 0;
     Opts.setLaxVectorConversions(LangOptions::LaxVectorConversionKind::None);
-    Opts.setDefaultFPContractMode(LangOptions::FPM_On);
+    Opts.setDefaultFPContractMode(LangOptions::FPC_On);
     Opts.NativeHalfType = 1;
     Opts.NativeHalfArgsAndReturns = 1;
     Opts.OpenCLCPlusPlus = Opts.CPlusPlus;
@@ -2333,7 +2333,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.CUDA = IK.getLanguage() == Language::CUDA || Opts.HIP;
   if (Opts.CUDA)
     // Set default FP_CONTRACT to FAST.
-    Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
+    Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
 
   Opts.RenderScript = IK.getLanguage() == Language::RenderScript;
   if (Opts.RenderScript) {
@@ -3195,11 +3195,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
     if (Val == "fast")
-      Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
+      Opts.setDefaultFPContractMode(LangOptions::FPC_Fast);
     else if (Val == "on")
-      Opts.setDefaultFPContractMode(LangOptions::FPM_On);
+      Opts.setDefaultFPContractMode(LangOptions::FPC_On);
     else if (Val == "off")
-      Opts.setDefaultFPContractMode(LangOptions::FPM_Off);
+      Opts.setDefaultFPContractMode(LangOptions::FPC_Off);
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }

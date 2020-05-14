@@ -9617,15 +9617,12 @@ public:
   /// ActOnPragmaFPContract - Called on well formed
   /// \#pragma {STDC,OPENCL} FP_CONTRACT and
   /// \#pragma clang fp contract
-  void ActOnPragmaFPContract(LangOptions::FPModeKind FPC);
-
-  /// Called on well formed
-  /// \#pragma clang fp reassociate
-  void ActOnPragmaFPReassociate(bool IsEnabled);
+  void ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC);
 
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
-  void ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled);
+  void ActOnPragmaFEnvAccess(SourceLocation Loc,
+                             LangOptions::FEnvAccessModeKind FPC);
 
   /// Called to set rounding mode for floating point operations.
   void setRoundingMode(llvm::RoundingMode);
