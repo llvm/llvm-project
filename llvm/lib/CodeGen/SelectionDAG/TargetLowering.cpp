@@ -751,12 +751,10 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     // If we don't demand the inserted subvector, return the base vector.
     SDValue Vec = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
-    unsigned NumVecElts = Vec.getValueType().getVectorNumElements();
+    uint64_t Idx = Op.getConstantOperandVal(2);
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-    if (CIdx && CIdx->getAPIntValue().ule(NumVecElts - NumSubElts))
-      if (DemandedElts.extractBits(NumSubElts, CIdx->getZExtValue()) == 0)
-        return Vec;
+    if (DemandedElts.extractBits(NumSubElts, Idx) == 0)
+      return Vec;
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
@@ -942,54 +940,46 @@ bool TargetLowering::SimplifyDemandedBits(
     return false;
   }
   case ISD::INSERT_SUBVECTOR: {
-    SDValue Base = Op.getOperand(0);
+    // Demand any elements from the subvector and the remainder from the src its
+    // inserted into.
+    SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    EVT SubVT = Sub.getValueType();
-    unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t Idx = Op.getConstantOperandVal(2);
+    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+    APInt DemandedSrcElts = DemandedElts;
+    DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
 
-    // If index isn't constant, assume we need the original demanded base
-    // elements and ALL the inserted subvector elements.
-    APInt BaseElts = DemandedElts;
-    APInt SubElts = APInt::getAllOnesValue(NumSubElts);
-    if (isa<ConstantSDNode>(Op.getOperand(2))) {
-      const APInt &Idx = Op.getConstantOperandAPInt(2);
-      if (Idx.ule(NumElts - NumSubElts)) {
-        unsigned SubIdx = Idx.getZExtValue();
-        SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
-        BaseElts.insertBits(APInt::getNullValue(NumSubElts), SubIdx);
-      }
-    }
-
-    KnownBits KnownSub, KnownBase;
-    if (SimplifyDemandedBits(Sub, DemandedBits, SubElts, KnownSub, TLO,
+    KnownBits KnownSub, KnownSrc;
+    if (SimplifyDemandedBits(Sub, DemandedBits, DemandedSubElts, KnownSub, TLO,
                              Depth + 1))
       return true;
-    if (SimplifyDemandedBits(Base, DemandedBits, BaseElts, KnownBase, TLO,
+    if (SimplifyDemandedBits(Src, DemandedBits, DemandedSrcElts, KnownSrc, TLO,
                              Depth + 1))
       return true;
 
     Known.Zero.setAllBits();
     Known.One.setAllBits();
-    if (!!SubElts) {
-        Known.One &= KnownSub.One;
-        Known.Zero &= KnownSub.Zero;
+    if (!!DemandedSubElts) {
+      Known.One &= KnownSub.One;
+      Known.Zero &= KnownSub.Zero;
     }
-    if (!!BaseElts) {
-        Known.One &= KnownBase.One;
-        Known.Zero &= KnownBase.Zero;
+    if (!!DemandedSrcElts) {
+      Known.One &= KnownSrc.One;
+      Known.Zero &= KnownSrc.Zero;
     }
 
     // Attempt to avoid multi-use src if we don't need anything from it.
-    if (!DemandedBits.isAllOnesValue() || !SubElts.isAllOnesValue() ||
-        !BaseElts.isAllOnesValue()) {
+    if (!DemandedBits.isAllOnesValue() || !DemandedSubElts.isAllOnesValue() ||
+        !DemandedSrcElts.isAllOnesValue()) {
       SDValue NewSub = SimplifyMultipleUseDemandedBits(
-          Sub, DemandedBits, SubElts, TLO.DAG, Depth + 1);
-      SDValue NewBase = SimplifyMultipleUseDemandedBits(
-          Base, DemandedBits, BaseElts, TLO.DAG, Depth + 1);
-      if (NewSub || NewBase) {
+          Sub, DemandedBits, DemandedSubElts, TLO.DAG, Depth + 1);
+      SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+          Src, DemandedBits, DemandedSrcElts, TLO.DAG, Depth + 1);
+      if (NewSub || NewSrc) {
         NewSub = NewSub ? NewSub : Sub;
-        NewBase = NewBase ? NewBase : Base;
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, NewBase, NewSub,
+        NewSrc = NewSrc ? NewSrc : Src;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, NewSrc, NewSub,
                                         Op.getOperand(2));
         return TLO.CombineTo(Op, NewOp);
       }
@@ -997,23 +987,20 @@ bool TargetLowering::SimplifyDemandedBits(
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
-    // If index isn't constant, assume we need all the source vector elements.
+    // Offset the demanded elts by the subvector index.
     SDValue Src = Op.getOperand(0);
-    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    APInt SrcElts = APInt::getAllOnesValue(NumSrcElts);
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
-      // Offset the demanded elts by the subvector index.
-      uint64_t Idx = SubIdx->getZExtValue();
-      SrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
-    }
-    if (SimplifyDemandedBits(Src, DemandedBits, SrcElts, Known, TLO, Depth + 1))
+    APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
+
+    if (SimplifyDemandedBits(Src, DemandedBits, DemandedSrcElts, Known, TLO,
+                             Depth + 1))
       return true;
 
     // Attempt to avoid multi-use src if we don't need anything from it.
-    if (!DemandedBits.isAllOnesValue() || !SrcElts.isAllOnesValue()) {
+    if (!DemandedBits.isAllOnesValue() || !DemandedSrcElts.isAllOnesValue()) {
       SDValue DemandedSrc = SimplifyMultipleUseDemandedBits(
-          Src, DemandedBits, SrcElts, TLO.DAG, Depth + 1);
+          Src, DemandedBits, DemandedSrcElts, TLO.DAG, Depth + 1);
       if (DemandedSrc) {
         SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, DemandedSrc,
                                         Op.getOperand(1));
@@ -2407,51 +2394,45 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    if (!isa<ConstantSDNode>(Op.getOperand(2)))
-      break;
-    SDValue Base = Op.getOperand(0);
+    // Demand any elements from the subvector and the remainder from the src its
+    // inserted into.
+    SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    EVT SubVT = Sub.getValueType();
-    unsigned NumSubElts = SubVT.getVectorNumElements();
-    const APInt &Idx = Op.getConstantOperandAPInt(2);
-    if (Idx.ugt(NumElts - NumSubElts))
-      break;
-    unsigned SubIdx = Idx.getZExtValue();
-    APInt SubElts = DemandedElts.extractBits(NumSubElts, SubIdx);
-    if (!SubElts)
-      return TLO.CombineTo(Op, Base);
+    uint64_t Idx = Op.getConstantOperandVal(2);
+    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+    APInt DemandedSrcElts = DemandedElts;
+    DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
+
     APInt SubUndef, SubZero;
-    if (SimplifyDemandedVectorElts(Sub, SubElts, SubUndef, SubZero, TLO,
+    if (SimplifyDemandedVectorElts(Sub, DemandedSubElts, SubUndef, SubZero, TLO,
                                    Depth + 1))
       return true;
-    APInt BaseElts = DemandedElts;
-    BaseElts.insertBits(APInt::getNullValue(NumSubElts), SubIdx);
 
-    // If none of the base operand elements are demanded, replace it with undef.
-    if (!BaseElts && !Base.isUndef())
-      return TLO.CombineTo(Op,
-                           TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                                           TLO.DAG.getUNDEF(VT),
-                                           Op.getOperand(1),
-                                           Op.getOperand(2)));
+    // If none of the src operand elements are demanded, replace it with undef.
+    if (!DemandedSrcElts && !Src.isUndef())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                                               TLO.DAG.getUNDEF(VT), Sub,
+                                               Op.getOperand(2)));
 
-    if (SimplifyDemandedVectorElts(Base, BaseElts, KnownUndef, KnownZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
       return true;
-    KnownUndef.insertBits(SubUndef, SubIdx);
-    KnownZero.insertBits(SubZero, SubIdx);
+    KnownUndef.insertBits(SubUndef, Idx);
+    KnownZero.insertBits(SubZero, Idx);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!BaseElts.isAllOnesValue() || !SubElts.isAllOnesValue()) {
+    if (!DemandedSrcElts.isAllOnesValue() ||
+        !DemandedSubElts.isAllOnesValue()) {
       APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-      SDValue NewBase = SimplifyMultipleUseDemandedBits(
-          Base, DemandedBits, BaseElts, TLO.DAG, Depth + 1);
+      SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+          Src, DemandedBits, DemandedSrcElts, TLO.DAG, Depth + 1);
       SDValue NewSub = SimplifyMultipleUseDemandedBits(
-          Sub, DemandedBits, SubElts, TLO.DAG, Depth + 1);
-      if (NewBase || NewSub) {
-        NewBase = NewBase ? NewBase : Base;
+          Sub, DemandedBits, DemandedSubElts, TLO.DAG, Depth + 1);
+      if (NewSrc || NewSub) {
+        NewSrc = NewSrc ? NewSrc : Src;
         NewSub = NewSub ? NewSub : Sub;
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewBase,
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
                                         NewSub, Op.getOperand(2));
         return TLO.CombineTo(Op, NewOp);
       }
@@ -2459,30 +2440,28 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
+    // Offset the demanded elts by the subvector index.
     SDValue Src = Op.getOperand(0);
-    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
-      // Offset the demanded elts by the subvector index.
-      uint64_t Idx = SubIdx->getZExtValue();
-      APInt SrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
-      APInt SrcUndef, SrcZero;
-      if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
-                                     Depth + 1))
-        return true;
-      KnownUndef = SrcUndef.extractBits(NumElts, Idx);
-      KnownZero = SrcZero.extractBits(NumElts, Idx);
+    APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
 
-      // Attempt to avoid multi-use ops if we don't need anything from them.
-      if (!DemandedElts.isAllOnesValue()) {
-        APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-        SDValue NewSrc = SimplifyMultipleUseDemandedBits(
-            Src, DemandedBits, SrcElts, TLO.DAG, Depth + 1);
-        if (NewSrc) {
-          SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
-                                          Op.getOperand(1));
-          return TLO.CombineTo(Op, NewOp);
-        }
+    APInt SrcUndef, SrcZero;
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
+      return true;
+    KnownUndef = SrcUndef.extractBits(NumElts, Idx);
+    KnownZero = SrcZero.extractBits(NumElts, Idx);
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedElts.isAllOnesValue()) {
+      APInt DemandedBits = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+      SDValue NewSrc = SimplifyMultipleUseDemandedBits(
+          Src, DemandedBits, DemandedSrcElts, TLO.DAG, Depth + 1);
+      if (NewSrc) {
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
+                                        Op.getOperand(1));
+        return TLO.CombineTo(Op, NewOp);
       }
     }
     break;
