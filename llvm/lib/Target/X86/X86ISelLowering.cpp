@@ -30680,18 +30680,23 @@ bool X86TargetLowering::shouldSinkOperands(Instruction *I,
   // A uniform shift amount in a vector shift or funnel shift may be much
   // cheaper than a generic variable vector shift, so make that pattern visible
   // to SDAG by sinking the shuffle instruction next to the shift.
-  // TODO: This should handle normal shift opcodes too.
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    Intrinsic::ID ID = II->getIntrinsicID();
-    if (ID == Intrinsic::fshl || ID == Intrinsic::fshr) {
-      // The shift amount operand for these intrinsics is operand 2.
-      auto *Shuf = dyn_cast<ShuffleVectorInst>(II->getOperand(2));
-      if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
-          isVectorShiftByScalarCheap(I->getType())) {
-        Ops.push_back(&I->getOperandUse(2));
-        return true;
-      }
-    }
+  int ShiftAmountOpNum = -1;
+  if (I->isShift())
+    ShiftAmountOpNum = 1;
+  else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::fshl ||
+        II->getIntrinsicID() == Intrinsic::fshr)
+      ShiftAmountOpNum = 2;
+  }
+
+  if (ShiftAmountOpNum == -1)
+    return false;
+
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(ShiftAmountOpNum));
+  if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
+      isVectorShiftByScalarCheap(I->getType())) {
+    Ops.push_back(&I->getOperandUse(ShiftAmountOpNum));
+    return true;
   }
 
   return false;
