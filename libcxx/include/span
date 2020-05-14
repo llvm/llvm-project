@@ -200,8 +200,8 @@ public:
     static constexpr size_type extent = _Extent;
 
 // [span.cons], span constructors, copy, assignment, and destructor
-    _LIBCPP_INLINE_VISIBILITY constexpr span() noexcept : __data{nullptr}
-    { static_assert(_Extent == 0, "Can't default construct a statically sized span with size > 0"); }
+    template <size_t _Sz = _Extent, enable_if_t<_Sz == 0, nullptr_t> = nullptr>
+    _LIBCPP_INLINE_VISIBILITY constexpr span() noexcept : __data{nullptr} {}
 
     constexpr span           (const span&) noexcept = default;
     constexpr span& operator=(const span&) noexcept = default;
