@@ -89,6 +89,8 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   ImportFile::instances.clear();
   BitcodeFile::instances.clear();
   memset(MergeChunk::instances, 0, sizeof(MergeChunk::instances));
+  TpiSource::clear();
+
   return !errorCount();
 }
 
@@ -218,7 +220,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       symtab->addFile(make<ObjFile>(mbref));
     break;
   case file_magic::pdb:
-    loadTypeServerSource(mbref);
+    symtab->addFile(make<PDBInputFile>(mbref));
     break;
   case file_magic::coff_cl_gl_object:
     error(filename + ": is not a native COFF file. Recompile without /GL");
