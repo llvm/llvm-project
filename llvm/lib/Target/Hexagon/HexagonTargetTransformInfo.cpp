@@ -60,7 +60,7 @@ bool HexagonTTIImpl::isTypeForHVX(Type *VecTy) const {
 }
 
 unsigned HexagonTTIImpl::getTypeNumElements(Type *Ty) const {
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
     return VTy->getNumElements();
   assert((Ty->isIntegerTy() || Ty->isFloatingPointTy()) &&
          "Expecting scalar type");
