@@ -254,6 +254,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v2f64:   return VectorType::get(Type::getDoubleTy(Context), 2);
   case MVT::v4f64:   return VectorType::get(Type::getDoubleTy(Context), 4);
   case MVT::v8f64:   return VectorType::get(Type::getDoubleTy(Context), 8);
+  case MVT::v16f64:  return VectorType::get(Type::getDoubleTy(Context), 16);
   case MVT::nxv1i1:
     return VectorType::get(Type::getInt1Ty(Context), 1, /*Scalable=*/ true);
   case MVT::nxv2i1:
