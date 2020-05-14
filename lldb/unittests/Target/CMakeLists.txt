@@ -4,6 +4,7 @@ add_lldb_unittest(TargetTests
   MemoryRegionInfoTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
+  RemoteAwarePlatformTest.cpp
   StackFrameRecognizerTest.cpp
 
   LINK_LIBS
