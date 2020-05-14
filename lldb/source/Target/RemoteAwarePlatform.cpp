@@ -71,24 +71,24 @@ Status RemoteAwarePlatform::ResolveExecutable(
     }
   } else {
     if (m_remote_platform_sp) {
-      error =
-          GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                              module_search_paths_ptr, *m_remote_platform_sp);
-    } else {
-      // We may connect to a process and use the provided executable (Don't use
-      // local $PATH).
-
-      // Resolve any executable within a bundle on MacOSX
-      Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
-
-      if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
-        error.Clear();
-      else
-        error.SetErrorStringWithFormat("the platform is not currently "
-                                       "connected, and '%s' doesn't exist in "
-                                       "the system root.",
-                                       exe_path);
+      return GetCachedExecutable(resolved_module_spec, exe_module_sp,
+                                 module_search_paths_ptr,
+                                 *m_remote_platform_sp);
     }
+
+    // We may connect to a process and use the provided executable (Don't use
+    // local $PATH).
+
+    // Resolve any executable within a bundle on MacOSX
+    Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
+
+    if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
+      error.Clear();
+    else
+      error.SetErrorStringWithFormat("the platform is not currently "
+                                     "connected, and '%s' doesn't exist in "
+                                     "the system root.",
+                                     exe_path);
   }
 
   if (error.Success()) {
