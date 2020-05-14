@@ -36,10 +36,6 @@
 #define _LIBCPP_USE_COPYFILE
 #endif
 
-#if !defined(_WIN32)
-#include <unistd.h>
-#endif
-
 #if !defined(__APPLE__) && _POSIX_TIMERS > 0
 #define _LIBCPP_USE_CLOCK_GETTIME
 #endif
