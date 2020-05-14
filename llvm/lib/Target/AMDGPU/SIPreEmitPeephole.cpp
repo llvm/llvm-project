@@ -30,6 +30,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
 
   bool optimizeVccBranch(MachineInstr &MI) const;
+  bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
 
 public:
   static char ID;
@@ -143,6 +144,54 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   return true;
 }
 
+bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
+                                       MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+  Register IdxReg = Idx->isReg() ? Idx->getReg() : Register();
+  SmallVector<MachineInstr *, 4> ToRemove;
+  bool IdxOn = true;
+
+  if (!MI.isIdenticalTo(First))
+    return false;
+
+  // Scan back to find an identical S_SET_GPR_IDX_ON
+  for (MachineBasicBlock::iterator I = std::next(First.getIterator()),
+       E = MI.getIterator(); I != E; ++I) {
+    switch (I->getOpcode()) {
+    case AMDGPU::S_SET_GPR_IDX_MODE:
+      return false;
+    case AMDGPU::S_SET_GPR_IDX_OFF:
+      IdxOn = false;
+      ToRemove.push_back(&*I);
+      break;
+    default:
+      if (I->modifiesRegister(AMDGPU::M0, TRI))
+        return false;
+      if (IdxReg && I->modifiesRegister(IdxReg, TRI))
+        return false;
+      if (llvm::any_of(I->operands(),
+                       [&MRI, this](const MachineOperand &MO) {
+                         return MO.isReg() &&
+                                TRI->isVectorRegister(MRI, MO.getReg());
+                       })) {
+        // The only exception allowed here is another indirect V_MOV_B32_e32
+        // with the same mode.
+        if (!IdxOn || I->getOpcode() != AMDGPU::V_MOV_B32_e32 ||
+            !I->hasRegisterImplicitUseOperand(AMDGPU::M0))
+          return false;
+      }
+    }
+  }
+
+  MI.eraseFromParent();
+  for (MachineInstr *RI : ToRemove)
+    RI->eraseFromParent();
+  return true;
+}
+
 bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -150,18 +199,50 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-    if (MBBI == MBB.end())
+    MachineBasicBlock::iterator MBBE = MBB.getFirstTerminator();
+    if (MBBE != MBB.end()) {
+      MachineInstr &MI = *MBBE;
+      switch (MI.getOpcode()) {
+      case AMDGPU::S_CBRANCH_VCCZ:
+      case AMDGPU::S_CBRANCH_VCCNZ:
+        Changed |= optimizeVccBranch(MI);
+        continue;
+      default:
+        break;
+      }
+    }
+
+    if (!ST.hasVGPRIndexMode())
       continue;
 
-    MachineInstr &MI = *MBBI;
-    switch (MI.getOpcode()) {
-    case AMDGPU::S_CBRANCH_VCCZ:
-    case AMDGPU::S_CBRANCH_VCCNZ:
-      Changed |= optimizeVccBranch(MI);
-      break;
-    default:
-      break;
+    MachineInstr *SetGPRMI = nullptr;
+    const unsigned Threshold = 20;
+    unsigned Count = 0;
+    // Scan the block for two S_SET_GPR_IDX_ON instructions to see if a
+    // second is not needed. Do expensive checks in the optimizeSetGPR()
+    // and limit the distance to 20 instructions for compile time purposes.
+    for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBBE; ) {
+      MachineInstr &MI = *MBBI;
+      ++MBBI;
+
+      if (Count == Threshold)
+        SetGPRMI = nullptr;
+      else
+        ++Count;
+
+      if (MI.getOpcode() != AMDGPU::S_SET_GPR_IDX_ON)
+        continue;
+
+      Count = 0;
+      if (!SetGPRMI) {
+        SetGPRMI = &MI;
+        continue;
+      }
+
+      if (optimizeSetGPR(*SetGPRMI, MI))
+        Changed = true;
+      else
+        SetGPRMI = &MI;
     }
   }
 
