@@ -40814,6 +40814,64 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   return NewMul;
 }
 
+// Try to form a MULHU or MULHS node by looking for
+// (srl (mul ext, ext), 16)
+// TODO: This is X86 specific because we want to be able to handle wide types
+// before type legalization. But we can only do it if the vector will be
+// legalized via widening/splitting. Type legalization can't handle promotion
+// of a MULHU/MULHS. There isn't a way to convey this to the generic DAG
+// combiner.
+static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
+  assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
+           "SRL or SRA node is required here!");
+  SDLoc DL(N);
+
+  // Only do this with SSE4.1. On earlier targets reduceVMULWidth will expand
+  // the multiply.
+  if (!Subtarget.hasSSE41())
+    return SDValue();
+
+  // The operation feeding into the shift must be a multiply.
+  SDValue ShiftOperand = N->getOperand(0);
+  if (ShiftOperand.getOpcode() != ISD::MUL || !ShiftOperand.hasOneUse())
+    return SDValue();
+
+  // Input type should be at least vXi32.
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || VT.getVectorElementType().getSizeInBits() < 32)
+    return SDValue();
+
+  // Need a shift by 16.
+  APInt ShiftAmt;
+  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), ShiftAmt) ||
+      ShiftAmt != 16)
+    return SDValue();
+
+  SDValue LHS = ShiftOperand.getOperand(0);
+  SDValue RHS = ShiftOperand.getOperand(1);
+
+  unsigned ExtOpc = LHS.getOpcode();
+  if ((ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND) ||
+      RHS.getOpcode() != ExtOpc)
+    return SDValue();
+
+  // Peek through the extends.
+  LHS = LHS.getOperand(0);
+  RHS = RHS.getOperand(0);
+
+  // Ensure the input types match.
+  EVT MulVT = LHS.getValueType();
+  if (MulVT.getVectorElementType() != MVT::i16 || RHS.getValueType() != MulVT)
+    return SDValue();
+
+  unsigned Opc = ExtOpc == ISD::SIGN_EXTEND ? ISD::MULHS : ISD::MULHU;
+  SDValue Mulh = DAG.getNode(Opc, DL, MulVT, LHS, RHS);
+
+  ExtOpc = N->getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  return DAG.getNode(ExtOpc, DL, VT, Mulh);
+}
+
 static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -40873,11 +40931,15 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
+                                           const X86Subtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
   unsigned Size = VT.getSizeInBits();
+
+  if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
+    return V;
 
   // fold (ashr (shl, a, [56,48,32,24,16]), SarConst)
   // into (shl, (sext (a), [56,48,32,24,16] - SarConst)) or
@@ -40927,10 +40989,14 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
-                                        TargetLowering::DAGCombinerInfo &DCI) {
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+
+  if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
+    return V;
 
   // Only do this on the last DAG combine as it can interfere with other
   // combines.
@@ -47602,8 +47668,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
   case ISD::SHL:            return combineShiftLeft(N, DAG);
-  case ISD::SRA:            return combineShiftRightArithmetic(N, DAG);
-  case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI);
+  case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
+  case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
