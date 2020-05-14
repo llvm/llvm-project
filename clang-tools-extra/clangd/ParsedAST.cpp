@@ -262,9 +262,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
 
-  // Recovery expression currently only works for C++.
-  if (CI->getLangOpts()->CPlusPlus)
-    CI->getLangOpts()->RecoveryAST = Inputs.Opts.BuildRecoveryAST;
   // This is on-by-default in windows to allow parsing SDK headers, but it
   // breaks many features. Disable it for the main-file (not preamble).
   CI->getLangOpts()->DelayedTemplateParsing = false;

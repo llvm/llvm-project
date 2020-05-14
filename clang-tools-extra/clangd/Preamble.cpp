@@ -219,10 +219,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // to read back. We rely on dynamic index for the comments instead.
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
-  // Recovery expression currently only works for C++.
-  if (CI.getLangOpts()->CPlusPlus)
-    CI.getLangOpts()->RecoveryAST = Inputs.Opts.BuildRecoveryAST;
-
   CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
   if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
     log("Couldn't set working directory when building the preamble.");
