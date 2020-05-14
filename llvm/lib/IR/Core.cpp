@@ -2015,7 +2015,7 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   else if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
     AI->setAlignment(MaybeAlign(Bytes));
   else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    LI->setAlignment(MaybeAlign(Bytes));
+    LI->setAlignment(Align(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
     SI->setAlignment(MaybeAlign(Bytes));
   else
