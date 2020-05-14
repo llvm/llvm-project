@@ -92,19 +92,19 @@ private:
 
 std::unique_ptr<InlineAdvice>
 DefaultInlineAdvisor::getAdvice(CallBase &CB, FunctionAnalysisManager &FAM) {
-  Function &Callee = *CB.getCalledFunction();
-  Function &F = *CB.getCaller();
-  ProfileSummaryInfo *PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
-                                .getCachedResult<ProfileSummaryAnalysis>(
-                                    *CB.getParent()->getParent()->getParent());
+  Function &Caller = *CB.getCaller();
+  ProfileSummaryInfo *PSI =
+      FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)
+          .getCachedResult<ProfileSummaryAnalysis>(
+              *CB.getParent()->getParent()->getParent());
 
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
   // FIXME: make GetAssumptionCache's decl similar to the other 2 below. May
   // need changing the type of getInlineCost parameters? Also see similar case
   // in Inliner.cpp
   std::function<AssumptionCache &(Function &)> GetAssumptionCache =
       [&](Function &F) -> AssumptionCache & {
-    return FAM.getResult<AssumptionAnalysis>(Callee);
+    return FAM.getResult<AssumptionAnalysis>(F);
   };
   auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
     return FAM.getResult<BlockFrequencyAnalysis>(F);
