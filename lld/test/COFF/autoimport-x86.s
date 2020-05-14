@@ -49,7 +49,7 @@
 # the symbol table.
 # SYMBOLS-NOT: variable
 
-# DISABLED: error: automatic dllimport of variable in {{.*}}/autoimport-x86.s.tmp.noptrs.obj requires pseudo relocations
+# DISABLED: error: automatic dllimport of variable in {{.*}}autoimport-x86.s.tmp.noptrs.obj requires pseudo relocations
 
     .global main
     .text
