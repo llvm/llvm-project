@@ -994,6 +994,13 @@ def Vector_TransferReadOp :
     ```
   }];
 
+  let builders = [
+    // Builder that sets permutation map and padding to 'getMinorIdentityMap'
+    // and zero, respectively, by default.
+    OpBuilder<"OpBuilder &builder, OperationState &result, VectorType vector, "
+              "Value memref, ValueRange indices">
+  ];
+
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return memref().getType().cast<MemRefType>();
@@ -1057,6 +1064,13 @@ def Vector_TransferWriteOp :
         : vector<1x1x4x3xf32>, memref<?x?xvector<4x3xf32>>
     ```
   }];
+
+  let builders = [
+    // Builder that sets permutation map and padding to 'getMinorIdentityMap'
+    // by default.
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value vector, "
+              "Value memref, ValueRange indices">
+  ];
 
   let extraClassDeclaration = [{
     VectorType getVectorType() {
