@@ -114,26 +114,26 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    [[SPLATINSERT20:%.*]] = insertelement <4 x i32> undef, i32 [[AMT1:%.*]], i32 0
 ; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    [[SPLATINSERT22:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
+; AVX1-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
 ; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX1-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
-; AVX1-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to <4 x i8>*
-; AVX1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP4]], align 1
-; AVX1-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; AVX1-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
-; AVX1-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[TMP2]], [[TMP1]]
-; AVX1-NEXT:    [[TMP8:%.*]] = shl <4 x i32> [[TMP2]], [[TMP0]]
-; AVX1-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP7]], <4 x i32> [[TMP8]]
-; AVX1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
-; AVX1-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
-; AVX1-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP11]], align 4
+; AVX1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[TMP1:%.*]] = bitcast i8* [[TMP0]] to <4 x i8>*
+; AVX1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP1]], align 1
+; AVX1-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; AVX1-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
+; AVX1-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[SPLAT3]], [[TMP4]]
+; AVX1-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[SPLAT3]], [[TMP6]]
+; AVX1-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP5]], <4 x i32> [[TMP7]]
+; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP9]] to <4 x i32>*
+; AVX1-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP10]], align 4
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; AVX1-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX1-NEXT:    br i1 [[TMP12]], label [[EXIT]], label [[VECTOR_BODY]]
+; AVX1-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX1-NEXT:    br i1 [[TMP11]], label [[EXIT]], label [[VECTOR_BODY]]
 ; AVX1:       exit:
 ; AVX1-NEXT:    ret void
 ;

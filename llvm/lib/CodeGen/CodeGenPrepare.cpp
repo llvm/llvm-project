@@ -392,8 +392,6 @@ class TypePromotionTransaction;
     bool optimizeLoadExt(LoadInst *Load);
     bool optimizeShiftInst(BinaryOperator *BO);
     bool optimizeSelectInst(SelectInst *SI);
-    bool sinkShuffleVectorToShift(ShuffleVectorInst *SVI);
-    bool convertSplatType(ShuffleVectorInst *SVI);
     bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
     bool optimizeSwitchInst(SwitchInst *SI);
     bool optimizeExtractElementInst(Instruction *Inst);
@@ -6417,66 +6415,10 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   return true;
 }
 
-/// Some targets have expensive vector shifts if the lanes aren't all the same
-/// (e.g. x86 only introduced "vpsllvd" and friends with AVX2). In these cases
-/// it's often worth sinking a shufflevector splat down to its use so that
-/// codegen can spot all lanes are identical.
-bool CodeGenPrepare::sinkShuffleVectorToShift(ShuffleVectorInst *SVI) {
-  BasicBlock *DefBB = SVI->getParent();
-
-  // Only do this xform if variable vector shifts are particularly expensive.
-  if (!TLI->isVectorShiftByScalarCheap(SVI->getType()))
-    return false;
-
-  // We only expect better codegen by sinking a shuffle if we can recognise a
-  // constant splat.
-  if (getSplatIndex(SVI->getShuffleMask()) < 0)
-    return false;
-
-  // InsertedShuffles - Only insert a shuffle in each block once.
-  DenseMap<BasicBlock*, Instruction*> InsertedShuffles;
-
-  bool MadeChange = false;
-  for (User *U : SVI->users()) {
-    Instruction *UI = cast<Instruction>(U);
-
-    // Figure out which BB this ext is used in.
-    BasicBlock *UserBB = UI->getParent();
-    if (UserBB == DefBB) continue;
-
-    // For now only apply this when the splat is used by a shift instruction.
-    if (!UI->isShift()) continue;
-
-    // Everything checks out, sink the shuffle if the user's block doesn't
-    // already have a copy.
-    Instruction *&InsertedShuffle = InsertedShuffles[UserBB];
-
-    if (!InsertedShuffle) {
-      BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
-      assert(InsertPt != UserBB->end());
-      InsertedShuffle =
-          new ShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
-                                SVI->getShuffleMask(), "", &*InsertPt);
-      InsertedShuffle->setDebugLoc(SVI->getDebugLoc());
-    }
-
-    UI->replaceUsesOfWith(SVI, InsertedShuffle);
-    MadeChange = true;
-  }
-
-  // If we removed all uses, nuke the shuffle.
-  if (SVI->use_empty()) {
-    SVI->eraseFromParent();
-    MadeChange = true;
-  }
-
-  return MadeChange;
-}
-
 /// Some targets only accept certain types for splat inputs. For example a VDUP
 /// in MVE takes a GPR (integer) register, and the instruction that incorporate
 /// a VDUP (such as a VADD qd, qm, rm) also require a gpr register.
-bool CodeGenPrepare::convertSplatType(ShuffleVectorInst *SVI) {
+bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   if (!match(SVI,
              m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
                              m_Undef(), m_ZeroMask())))
@@ -6514,14 +6456,6 @@ bool CodeGenPrepare::convertSplatType(ShuffleVectorInst *SVI) {
         BCI->moveAfter(Op);
 
   return true;
-}
-
-bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
-  if (sinkShuffleVectorToShift(SVI))
-    return true;
-  if (convertSplatType(SVI))
-    return true;
-  return false;
 }
 
 bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
