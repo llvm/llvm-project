@@ -318,11 +318,11 @@ bool HexagonSubtarget::useAA() const {
 void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
                                              SUnit *Dst, int DstOpIdx,
                                              SDep &Dep) const {
-  MachineInstr *SrcInst = Src->getInstr();
-  MachineInstr *DstInst = Dst->getInstr();
   if (!Src->isInstr() || !Dst->isInstr())
     return;
 
+  MachineInstr *SrcInst = Src->getInstr();
+  MachineInstr *DstInst = Dst->getInstr();
   const HexagonInstrInfo *QII = getInstrInfo();
 
   // Instructions with .new operands have zero latency.
