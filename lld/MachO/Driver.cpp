@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -105,6 +106,16 @@ static void addFile(StringRef path) {
   MemoryBufferRef mbref = *buffer;
 
   switch (identify_magic(mbref.getBuffer())) {
+  case file_magic::archive: {
+    std::unique_ptr<object::Archive> file = CHECK(
+        object::Archive::create(mbref), path + ": failed to parse archive");
+
+    if (!file->isEmpty() && !file->hasSymbolTable())
+      error(path + ": archive has no index; run ranlib to add one");
+
+    inputFiles.push_back(make<ArchiveFile>(std::move(file)));
+    break;
+  }
   case file_magic::macho_object:
     inputFiles.push_back(make<ObjFile>(mbref));
     break;
