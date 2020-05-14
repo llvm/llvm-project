@@ -199,9 +199,13 @@ let Predicates = [HasSVE] in {
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
   defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", null_frag>;
 
-  defm ADD_ZPmZ   : sve_int_bin_pred_arit_0<0b000, "add", int_aarch64_sve_add>;
-  defm SUB_ZPmZ   : sve_int_bin_pred_arit_0<0b001, "sub", int_aarch64_sve_sub>;
-  defm SUBR_ZPmZ  : sve_int_bin_pred_arit_0<0b011, "subr", int_aarch64_sve_subr>;
+  defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add",  "ADD_ZPZZ", int_aarch64_sve_add, DestructiveBinaryComm>;
+  defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  "SUB_ZPZZ", int_aarch64_sve_sub, DestructiveBinaryCommWithRev, "SUBR_ZPmZ", 1>;
+  defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", "SUBR_ZPZZ", int_aarch64_sve_subr, DestructiveBinaryCommWithRev, "SUB_ZPmZ", 0>;
+
+  defm ADD_ZPZZ  : sve_int_bin_pred_zx<int_aarch64_sve_add>;
+  defm SUB_ZPZZ  : sve_int_bin_pred_zx<int_aarch64_sve_sub>;
+  defm SUBR_ZPZZ : sve_int_bin_pred_zx<int_aarch64_sve_subr>;
 
   defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", int_aarch64_sve_orr>;
   defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", int_aarch64_sve_eor>;
