@@ -142,7 +142,7 @@ public:
   MachineTypes getMachineType() override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
-  ArrayRef<SectionChunk *> getSXDataChunks() { return sXDataChunks; }
+  ArrayRef<SectionChunk *> getSXDataChunks() { return sxDataChunks; }
   ArrayRef<SectionChunk *> getGuardFidChunks() { return guardFidChunks; }
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return guardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
@@ -278,7 +278,7 @@ private:
 
   // Chunks containing symbol table indices of exception handlers. Only used for
   // 32-bit x86.
-  std::vector<SectionChunk *> sXDataChunks;
+  std::vector<SectionChunk *> sxDataChunks;
 
   // Chunks containing symbol table indices of address taken symbols and longjmp
   // targets.  These are not linked into the final binary when /guard:cf is set.
