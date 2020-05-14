@@ -568,7 +568,7 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
   // No need to sort if we have zero or one items...
   if (indexes.size() <= 1)
     return;

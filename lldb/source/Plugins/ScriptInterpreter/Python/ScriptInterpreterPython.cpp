@@ -1067,7 +1067,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
 
 void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   Debugger &debugger = m_debugger;
 
@@ -2238,7 +2238,7 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
     const TypeSummaryOptions &options, std::string &retval) {
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   if (!valobj.get()) {
     retval.assign("<no object>");
@@ -3237,7 +3237,7 @@ void ScriptInterpreterPythonImpl::InitializePrivate() {
   g_initialized = true;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   // RAII-based initialization which correctly handles multiple-initialization,
   // version- specific differences among Python 2 and Python 3, and saving and

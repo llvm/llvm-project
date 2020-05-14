@@ -207,7 +207,7 @@ bool CommandInterpreter::GetSpaceReplPrompts() const {
 
 void CommandInterpreter::Initialize() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   CommandReturnObject result;
 
@@ -452,7 +452,7 @@ const char *CommandInterpreter::ProcessEmbeddedScriptCommands(const char *arg) {
 
 void CommandInterpreter::LoadCommandDictionary() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   lldb::ScriptLanguage script_language = m_debugger.GetScriptLanguage();
 

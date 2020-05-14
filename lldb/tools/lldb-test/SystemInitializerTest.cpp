@@ -55,7 +55,7 @@ llvm::Error SystemInitializerTest::Initialize() {
 
 void SystemInitializerTest::Terminate() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   Debugger::SettingsTerminate();
 

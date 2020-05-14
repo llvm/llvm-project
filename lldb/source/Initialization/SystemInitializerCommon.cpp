@@ -106,7 +106,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
     return error;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
@@ -122,7 +122,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
 void SystemInitializerCommon::Terminate() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
 
 #if defined(_WIN32)
   ProcessWindowsLog::Terminate();
