@@ -2077,6 +2077,7 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
 bool ARMFastISel::SelectRet(const Instruction *I) {
   const ReturnInst *Ret = cast<ReturnInst>(I);
   const Function &F = *I->getParent()->getParent();
+  const bool IsCmseNSEntry = F.hasFnAttribute("cmse_nonsecure_entry");
 
   if (!FuncInfo.CanLowerReturn)
     return false;
@@ -2153,8 +2154,17 @@ bool ARMFastISel::SelectRet(const Instruction *I) {
     RetRegs.push_back(VA.getLocReg());
   }
 
+  unsigned RetOpc;
+  if (IsCmseNSEntry)
+    if (isThumb2)
+      RetOpc = ARM::tBXNS_RET;
+    else
+      llvm_unreachable("CMSE not valid for non-Thumb targets");
+  else
+    RetOpc = Subtarget->getReturnOpcode();
+
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-                                    TII.get(Subtarget->getReturnOpcode()));
+                                    TII.get(RetOpc));
   AddOptionalDefs(MIB);
   for (unsigned R : RetRegs)
     MIB.addReg(R, RegState::Implicit);

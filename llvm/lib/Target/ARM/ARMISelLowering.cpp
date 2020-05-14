@@ -1562,10 +1562,12 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::CALL:          return "ARMISD::CALL";
   case ARMISD::CALL_PRED:     return "ARMISD::CALL_PRED";
   case ARMISD::CALL_NOLINK:   return "ARMISD::CALL_NOLINK";
+  case ARMISD::tSECALL:       return "ARMISD::tSECALL";
   case ARMISD::BRCOND:        return "ARMISD::BRCOND";
   case ARMISD::BR_JT:         return "ARMISD::BR_JT";
   case ARMISD::BR2_JT:        return "ARMISD::BR2_JT";
   case ARMISD::RET_FLAG:      return "ARMISD::RET_FLAG";
+  case ARMISD::SERET_FLAG:    return "ARMISD::SERET_FLAG";
   case ARMISD::INTRET_FLAG:   return "ARMISD::INTRET_FLAG";
   case ARMISD::PIC_ADD:       return "ARMISD::PIC_ADD";
   case ARMISD::CMP:           return "ARMISD::CMP";
@@ -2129,13 +2131,25 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isVarArg                         = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
+  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   MachineFunction::CallSiteInfo CSInfo;
   bool isStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   bool isThisReturn = false;
+  bool isCmseNSCall   = false;
   bool PreferIndirect = false;
+
+  // Determine whether this is a non-secure function call.
+  if (CLI.CB && CLI.CB->getAttributes().hasFnAttribute("cmse_nonsecure_call"))
+    isCmseNSCall = true;
 
   // Disable tail calls if they're not supported.
   if (!Subtarget->supportsTailCall())
+    isTailCall = false;
+
+  // For both the non-secure calls and the returns from a CMSE entry function,
+  // the function needs to do some extra work afte r the call, or before the
+  // return, respectively, thus it cannot end with atail call
+  if (isCmseNSCall || AFI->isCmseNSEntryFunction())
     isTailCall = false;
 
   if (isa<GlobalAddressSDNode>(Callee)) {
@@ -2343,7 +2357,6 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
-  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
@@ -2437,10 +2450,31 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
+  if (isCmseNSCall) {
+    assert(!isARMFunc && !isDirect &&
+           "Cannot handle call to ARM function or direct call");
+    if (NumBytes > 0) {
+      DiagnosticInfoUnsupported Diag(DAG.getMachineFunction().getFunction(),
+                                     "call to non-secure function would "
+                                     "require passing arguments on stack",
+                                     dl.getDebugLoc());
+      DAG.getContext()->diagnose(Diag);
+    }
+    if (isStructRet) {
+      DiagnosticInfoUnsupported Diag(
+          DAG.getMachineFunction().getFunction(),
+          "call to non-secure function would return value through pointer",
+          dl.getDebugLoc());
+      DAG.getContext()->diagnose(Diag);
+    }
+  }
+
   // FIXME: handle tail calls differently.
   unsigned CallOpc;
   if (Subtarget->isThumb()) {
-    if ((!isDirect || isARMFunc) && !Subtarget->hasV5TOps())
+    if (isCmseNSCall)
+      CallOpc = ARMISD::tSECALL;
+    else if ((!isDirect || isARMFunc) && !Subtarget->hasV5TOps())
       CallOpc = ARMISD::CALL_NOLINK;
     else
       CallOpc = ARMISD::CALL;
@@ -2811,6 +2845,17 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   AFI->setReturnRegsCount(RVLocs.size());
 
+ // Report error if cmse entry function returns structure through first ptr arg.
+  if (AFI->isCmseNSEntryFunction() && MF.getFunction().hasStructRetAttr()) {
+    // Note: using an empty SDLoc(), as the first line of the function is a
+    // better place to report than the last line.
+    DiagnosticInfoUnsupported Diag(
+        DAG.getMachineFunction().getFunction(),
+        "secure entry function would return value through pointer",
+        SDLoc().getDebugLoc());
+    DAG.getContext()->diagnose(Diag);
+  }
+
   // Copy the result values into the output registers.
   for (unsigned i = 0, realRVLocIdx = 0;
        i != RVLocs.size();
@@ -2932,7 +2977,9 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     return LowerInterruptReturn(RetOps, dl, DAG);
   }
 
-  return DAG.getNode(ARMISD::RET_FLAG, dl, MVT::Other, RetOps);
+  ARMISD::NodeType RetNode = AFI->isCmseNSEntryFunction() ? ARMISD::SERET_FLAG :
+                                                            ARMISD::RET_FLAG;
+  return DAG.getNode(RetNode, dl, MVT::Other, RetOps);
 }
 
 bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
