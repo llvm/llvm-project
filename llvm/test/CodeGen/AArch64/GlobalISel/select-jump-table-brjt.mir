@@ -71,12 +71,12 @@ body:             |
   ; CHECK:   BR %18
   ; CHECK: bb.2.sw.bb:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[COPY]], 42, 0
+  ; CHECK:   [[ADDWri:%[0-9]+]]:gpr32sp = nsw ADDWri [[COPY]], 42, 0
   ; CHECK:   B %bb.4
   ; CHECK: bb.3.sw.bb1:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 3
-  ; CHECK:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[MOVi32imm]], $wzr
+  ; CHECK:   [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY]], [[MOVi32imm]], $wzr
   ; CHECK: bb.4.return:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[MADDWrrr]], %bb.3, [[ADDWri]], %bb.2, [[COPY1]], %bb.0, [[COPY2]], %bb.1
   ; CHECK:   $w0 = COPY [[PHI]]
