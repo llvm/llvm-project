@@ -1033,6 +1033,20 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
                   WithNote(Diag(Header.range(), "error occurred here")))));
 }
 
+TEST(DiagsInHeaders, OnlyDefaultErrorOrFatal) {
+  Annotations Main(R"cpp(
+    #include [["a.h"]] // get unused "foo" warning when building preamble.
+    )cpp");
+  Annotations Header(R"cpp(
+    namespace { void foo() {} }
+    void func() {foo();} ;)cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
+  // promote warnings to errors.
+  TU.ExtraArgs = {"-Werror", "-Wunused"};
+  EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
 TEST(DiagsInHeaders, FromNonWrittenSources) {
   Annotations Main(R"cpp(
     #include [["a.h"]]
