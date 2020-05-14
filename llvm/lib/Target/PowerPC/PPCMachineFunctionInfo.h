@@ -124,10 +124,6 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// Whether this uses the PIC Base register or not.
   bool UsesPICBase = false;
 
-  /// True if this function has a subset of CSRs that is handled explicitly via
-  /// copies
-  bool IsSplitCSR = false;
-
   /// We keep track attributes for each live-in virtual registers
   /// to use SExt/ZExt flags in later optimization.
   std::vector<std::pair<unsigned, ISD::ArgFlagsTy>> LiveInAttrs;
@@ -228,9 +224,6 @@ public:
 
   void setUsesPICBase(bool uses) { UsesPICBase = uses; }
   bool usesPICBase() const { return UsesPICBase; }
-
-  bool isSplitCSR() const { return IsSplitCSR; }
-  void setIsSplitCSR(bool s) { IsSplitCSR = s; }
 
   MCSymbol *getPICOffsetSymbol() const;
 
