@@ -1255,3 +1255,275 @@ entry:
   store i8 addrspace(1)* %ext, i8 addrspace(1)* addrspace(1)* undef
   ret void
 }
+
+define amdgpu_ps float @dyn_extract_v16f32_v_s(<16 x float> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v16f32_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v16f32_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <16 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v32f32_v_s(<32 x float> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v32f32_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v32f32_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <32 x float> %vec, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps double @dyn_extract_v16f64_v_s(<16 x double> %vec, i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v16f64_v_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, v0
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
+; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v32
+; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v16f64_v_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_lshl_b32 m0, s2, 1
+; MOVREL-NEXT:    v_movrels_b32_e32 v32, v0
+; MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
+; MOVREL-NEXT:    v_readfirstlane_b32 s0, v32
+; MOVREL-NEXT:    v_readfirstlane_b32 s1, v0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <16 x double> %vec, i32 %sel
+  ret double %ext
+}
+
+define amdgpu_ps float @dyn_extract_v16f32_s_s(i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v16f32_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s4, 1.0
+; GPRIDX-NEXT:    s_mov_b32 m0, s2
+; GPRIDX-NEXT:    s_mov_b32 s19, 0x41800000
+; GPRIDX-NEXT:    s_mov_b32 s18, 0x41700000
+; GPRIDX-NEXT:    s_mov_b32 s17, 0x41600000
+; GPRIDX-NEXT:    s_mov_b32 s16, 0x41500000
+; GPRIDX-NEXT:    s_mov_b32 s15, 0x41400000
+; GPRIDX-NEXT:    s_mov_b32 s14, 0x41300000
+; GPRIDX-NEXT:    s_mov_b32 s13, 0x41200000
+; GPRIDX-NEXT:    s_mov_b32 s12, 0x41100000
+; GPRIDX-NEXT:    s_mov_b32 s11, 0x41000000
+; GPRIDX-NEXT:    s_mov_b32 s10, 0x40e00000
+; GPRIDX-NEXT:    s_mov_b32 s9, 0x40c00000
+; GPRIDX-NEXT:    s_mov_b32 s8, 0x40a00000
+; GPRIDX-NEXT:    s_mov_b32 s7, 4.0
+; GPRIDX-NEXT:    s_mov_b32 s6, 0x40400000
+; GPRIDX-NEXT:    s_mov_b32 s5, 2.0
+; GPRIDX-NEXT:    s_movrels_b32 s0, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v16f32_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s4, 1.0
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    s_mov_b32 s19, 0x41800000
+; MOVREL-NEXT:    s_mov_b32 s18, 0x41700000
+; MOVREL-NEXT:    s_mov_b32 s17, 0x41600000
+; MOVREL-NEXT:    s_mov_b32 s16, 0x41500000
+; MOVREL-NEXT:    s_mov_b32 s15, 0x41400000
+; MOVREL-NEXT:    s_mov_b32 s14, 0x41300000
+; MOVREL-NEXT:    s_mov_b32 s13, 0x41200000
+; MOVREL-NEXT:    s_mov_b32 s12, 0x41100000
+; MOVREL-NEXT:    s_mov_b32 s11, 0x41000000
+; MOVREL-NEXT:    s_mov_b32 s10, 0x40e00000
+; MOVREL-NEXT:    s_mov_b32 s9, 0x40c00000
+; MOVREL-NEXT:    s_mov_b32 s8, 0x40a00000
+; MOVREL-NEXT:    s_mov_b32 s7, 4.0
+; MOVREL-NEXT:    s_mov_b32 s6, 0x40400000
+; MOVREL-NEXT:    s_mov_b32 s5, 2.0
+; MOVREL-NEXT:    s_movrels_b32 s0, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps float @dyn_extract_v32f32_s_s(i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v32f32_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s36, 1.0
+; GPRIDX-NEXT:    s_mov_b32 m0, s2
+; GPRIDX-NEXT:    s_mov_b32 s67, 0x42000000
+; GPRIDX-NEXT:    s_mov_b32 s66, 0x41f80000
+; GPRIDX-NEXT:    s_mov_b32 s65, 0x41f00000
+; GPRIDX-NEXT:    s_mov_b32 s64, 0x41e80000
+; GPRIDX-NEXT:    s_mov_b32 s63, 0x41e00000
+; GPRIDX-NEXT:    s_mov_b32 s62, 0x41d80000
+; GPRIDX-NEXT:    s_mov_b32 s61, 0x41d00000
+; GPRIDX-NEXT:    s_mov_b32 s60, 0x41c80000
+; GPRIDX-NEXT:    s_mov_b32 s59, 0x41c00000
+; GPRIDX-NEXT:    s_mov_b32 s58, 0x41b80000
+; GPRIDX-NEXT:    s_mov_b32 s57, 0x41b00000
+; GPRIDX-NEXT:    s_mov_b32 s56, 0x41a80000
+; GPRIDX-NEXT:    s_mov_b32 s55, 0x41a00000
+; GPRIDX-NEXT:    s_mov_b32 s54, 0x41980000
+; GPRIDX-NEXT:    s_mov_b32 s53, 0x41900000
+; GPRIDX-NEXT:    s_mov_b32 s52, 0x41880000
+; GPRIDX-NEXT:    s_mov_b32 s51, 0x41800000
+; GPRIDX-NEXT:    s_mov_b32 s50, 0x41700000
+; GPRIDX-NEXT:    s_mov_b32 s49, 0x41600000
+; GPRIDX-NEXT:    s_mov_b32 s48, 0x41500000
+; GPRIDX-NEXT:    s_mov_b32 s47, 0x41400000
+; GPRIDX-NEXT:    s_mov_b32 s46, 0x41300000
+; GPRIDX-NEXT:    s_mov_b32 s45, 0x41200000
+; GPRIDX-NEXT:    s_mov_b32 s44, 0x41100000
+; GPRIDX-NEXT:    s_mov_b32 s43, 0x41000000
+; GPRIDX-NEXT:    s_mov_b32 s42, 0x40e00000
+; GPRIDX-NEXT:    s_mov_b32 s41, 0x40c00000
+; GPRIDX-NEXT:    s_mov_b32 s40, 0x40a00000
+; GPRIDX-NEXT:    s_mov_b32 s39, 4.0
+; GPRIDX-NEXT:    s_mov_b32 s38, 0x40400000
+; GPRIDX-NEXT:    s_mov_b32 s37, 2.0
+; GPRIDX-NEXT:    s_movrels_b32 s0, s36
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v32f32_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s36, 1.0
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    s_mov_b32 s67, 0x42000000
+; MOVREL-NEXT:    s_mov_b32 s66, 0x41f80000
+; MOVREL-NEXT:    s_mov_b32 s65, 0x41f00000
+; MOVREL-NEXT:    s_mov_b32 s64, 0x41e80000
+; MOVREL-NEXT:    s_mov_b32 s63, 0x41e00000
+; MOVREL-NEXT:    s_mov_b32 s62, 0x41d80000
+; MOVREL-NEXT:    s_mov_b32 s61, 0x41d00000
+; MOVREL-NEXT:    s_mov_b32 s60, 0x41c80000
+; MOVREL-NEXT:    s_mov_b32 s59, 0x41c00000
+; MOVREL-NEXT:    s_mov_b32 s58, 0x41b80000
+; MOVREL-NEXT:    s_mov_b32 s57, 0x41b00000
+; MOVREL-NEXT:    s_mov_b32 s56, 0x41a80000
+; MOVREL-NEXT:    s_mov_b32 s55, 0x41a00000
+; MOVREL-NEXT:    s_mov_b32 s54, 0x41980000
+; MOVREL-NEXT:    s_mov_b32 s53, 0x41900000
+; MOVREL-NEXT:    s_mov_b32 s52, 0x41880000
+; MOVREL-NEXT:    s_mov_b32 s51, 0x41800000
+; MOVREL-NEXT:    s_mov_b32 s50, 0x41700000
+; MOVREL-NEXT:    s_mov_b32 s49, 0x41600000
+; MOVREL-NEXT:    s_mov_b32 s48, 0x41500000
+; MOVREL-NEXT:    s_mov_b32 s47, 0x41400000
+; MOVREL-NEXT:    s_mov_b32 s46, 0x41300000
+; MOVREL-NEXT:    s_mov_b32 s45, 0x41200000
+; MOVREL-NEXT:    s_mov_b32 s44, 0x41100000
+; MOVREL-NEXT:    s_mov_b32 s43, 0x41000000
+; MOVREL-NEXT:    s_mov_b32 s42, 0x40e00000
+; MOVREL-NEXT:    s_mov_b32 s41, 0x40c00000
+; MOVREL-NEXT:    s_mov_b32 s40, 0x40a00000
+; MOVREL-NEXT:    s_mov_b32 s39, 4.0
+; MOVREL-NEXT:    s_mov_b32 s38, 0x40400000
+; MOVREL-NEXT:    s_mov_b32 s37, 2.0
+; MOVREL-NEXT:    s_movrels_b32 s0, s36
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <32 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0, float 17.0, float 18.0, float 19.0, float 20.0, float 21.0, float 22.0, float 23.0, float 24.0, float 25.0, float 26.0, float 27.0, float 28.0, float 29.0, float 30.0, float 31.0, float 32.0>, i32 %sel
+  ret float %ext
+}
+
+define amdgpu_ps double @dyn_extract_v16f64_s_s(i32 inreg %sel) {
+; GPRIDX-LABEL: dyn_extract_v16f64_s_s:
+; GPRIDX:       ; %bb.0: ; %entry
+; GPRIDX-NEXT:    s_mov_b32 s66, 0
+; GPRIDX-NEXT:    s_mov_b64 s[36:37], 1.0
+; GPRIDX-NEXT:    s_mov_b32 m0, s2
+; GPRIDX-NEXT:    s_mov_b32 s67, 0x40300000
+; GPRIDX-NEXT:    s_mov_b32 s65, 0x402e0000
+; GPRIDX-NEXT:    s_mov_b32 s64, s66
+; GPRIDX-NEXT:    s_mov_b32 s63, 0x402c0000
+; GPRIDX-NEXT:    s_mov_b32 s62, s66
+; GPRIDX-NEXT:    s_mov_b32 s61, 0x402a0000
+; GPRIDX-NEXT:    s_mov_b32 s60, s66
+; GPRIDX-NEXT:    s_mov_b32 s59, 0x40280000
+; GPRIDX-NEXT:    s_mov_b32 s58, s66
+; GPRIDX-NEXT:    s_mov_b32 s57, 0x40260000
+; GPRIDX-NEXT:    s_mov_b32 s56, s66
+; GPRIDX-NEXT:    s_mov_b32 s55, 0x40240000
+; GPRIDX-NEXT:    s_mov_b32 s54, s66
+; GPRIDX-NEXT:    s_mov_b32 s53, 0x40220000
+; GPRIDX-NEXT:    s_mov_b32 s52, s66
+; GPRIDX-NEXT:    s_mov_b32 s51, 0x40200000
+; GPRIDX-NEXT:    s_mov_b32 s50, s66
+; GPRIDX-NEXT:    s_mov_b32 s49, 0x401c0000
+; GPRIDX-NEXT:    s_mov_b32 s48, s66
+; GPRIDX-NEXT:    s_mov_b32 s47, 0x40180000
+; GPRIDX-NEXT:    s_mov_b32 s46, s66
+; GPRIDX-NEXT:    s_mov_b32 s45, 0x40140000
+; GPRIDX-NEXT:    s_mov_b32 s44, s66
+; GPRIDX-NEXT:    s_mov_b64 s[42:43], 4.0
+; GPRIDX-NEXT:    s_mov_b32 s41, 0x40080000
+; GPRIDX-NEXT:    s_mov_b32 s40, s66
+; GPRIDX-NEXT:    s_mov_b64 s[38:39], 2.0
+; GPRIDX-NEXT:    s_movrels_b64 s[0:1], s[36:37]
+; GPRIDX-NEXT:    ; return to shader part epilog
+;
+; MOVREL-LABEL: dyn_extract_v16f64_s_s:
+; MOVREL:       ; %bb.0: ; %entry
+; MOVREL-NEXT:    s_mov_b32 s66, 0
+; MOVREL-NEXT:    s_mov_b64 s[36:37], 1.0
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    s_mov_b32 s67, 0x40300000
+; MOVREL-NEXT:    s_mov_b32 s65, 0x402e0000
+; MOVREL-NEXT:    s_mov_b32 s64, s66
+; MOVREL-NEXT:    s_mov_b32 s63, 0x402c0000
+; MOVREL-NEXT:    s_mov_b32 s62, s66
+; MOVREL-NEXT:    s_mov_b32 s61, 0x402a0000
+; MOVREL-NEXT:    s_mov_b32 s60, s66
+; MOVREL-NEXT:    s_mov_b32 s59, 0x40280000
+; MOVREL-NEXT:    s_mov_b32 s58, s66
+; MOVREL-NEXT:    s_mov_b32 s57, 0x40260000
+; MOVREL-NEXT:    s_mov_b32 s56, s66
+; MOVREL-NEXT:    s_mov_b32 s55, 0x40240000
+; MOVREL-NEXT:    s_mov_b32 s54, s66
+; MOVREL-NEXT:    s_mov_b32 s53, 0x40220000
+; MOVREL-NEXT:    s_mov_b32 s52, s66
+; MOVREL-NEXT:    s_mov_b32 s51, 0x40200000
+; MOVREL-NEXT:    s_mov_b32 s50, s66
+; MOVREL-NEXT:    s_mov_b32 s49, 0x401c0000
+; MOVREL-NEXT:    s_mov_b32 s48, s66
+; MOVREL-NEXT:    s_mov_b32 s47, 0x40180000
+; MOVREL-NEXT:    s_mov_b32 s46, s66
+; MOVREL-NEXT:    s_mov_b32 s45, 0x40140000
+; MOVREL-NEXT:    s_mov_b32 s44, s66
+; MOVREL-NEXT:    s_mov_b64 s[42:43], 4.0
+; MOVREL-NEXT:    s_mov_b32 s41, 0x40080000
+; MOVREL-NEXT:    s_mov_b32 s40, s66
+; MOVREL-NEXT:    s_mov_b64 s[38:39], 2.0
+; MOVREL-NEXT:    s_movrels_b64 s[0:1], s[36:37]
+; MOVREL-NEXT:    ; return to shader part epilog
+entry:
+  %ext = extractelement <16 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0, double 16.0>, i32 %sel
+  ret double %ext
+}

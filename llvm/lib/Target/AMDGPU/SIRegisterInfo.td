@@ -773,12 +773,12 @@ def VRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 3
   let isAllocatable = 0;
 }
 
-def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
+def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
                               (add SGPR_1024Regs)> {
   let AllocationPriority = 20;
 }
 
-def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
+def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
                               (add SGPR_1024)> {
   let CopyCost = 16;
   let isAllocatable = 0;
@@ -803,7 +803,7 @@ def VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
 def VReg_192 : VRegClass<6, [untyped], (add VGPR_192)>;
 def VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64], (add VGPR_256)>;
 def VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64], (add VGPR_512)>;
-def VReg_1024 : VRegClass<32, [v32i32, v32f32], (add VGPR_1024)>;
+def VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
 
 class ARegClass<int numRegs, list<ValueType> regTypes, dag regList> :
     VRegClass<numRegs, regTypes, regList> {
@@ -819,7 +819,7 @@ def AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
 def AReg_192 : ARegClass<6, [untyped], (add AGPR_192)>;
 def AReg_256 : ARegClass<8, [v8i32, v8f32, v4i64, v4f64], (add AGPR_256)>;
 def AReg_512 : ARegClass<16, [v16i32, v16f32, v8i64, v8f64], (add AGPR_512)>;
-def AReg_1024 : ARegClass<32, [v32i32, v32f32], (add AGPR_1024)>;
+def AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)>;
 
 } // End GeneratePressureSet = 0
 
