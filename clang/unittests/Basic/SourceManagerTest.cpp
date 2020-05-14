@@ -491,6 +491,30 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(Macros[10].Loc, Macros[11].Loc));
 }
 
+TEST_F(SourceManagerTest, isMainFile) {
+  const char *Source = "int x;";
+
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *SourceFile =
+      FileMgr.getVirtualFile("mainFile.cpp", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(SourceFile, std::move(Buf));
+
+  std::unique_ptr<llvm::MemoryBuffer> Buf2 =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+  const FileEntry *SecondFile =
+      FileMgr.getVirtualFile("file2.cpp", Buf2->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(SecondFile, std::move(Buf2));
+
+  FileID MainFileID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(MainFileID);
+
+  EXPECT_TRUE(SourceMgr.isMainFile(FileEntryRef("mainFile.cpp", *SourceFile)));
+  EXPECT_TRUE(
+      SourceMgr.isMainFile(FileEntryRef("anotherName.cpp", *SourceFile)));
+  EXPECT_FALSE(SourceMgr.isMainFile(FileEntryRef("mainFile.cpp", *SecondFile)));
+}
+
 #endif
 
 } // anonymous namespace
