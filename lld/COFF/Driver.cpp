@@ -1580,6 +1580,10 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   config->debugDwarf = debug == DebugKind::Dwarf;
   config->debugGHashes = debug == DebugKind::GHash;
   config->debugSymtab = debug == DebugKind::Symtab;
+  config->autoImport =
+      args.hasFlag(OPT_auto_import, OPT_auto_import_no, config->mingw);
+  config->pseudoRelocs = args.hasFlag(
+      OPT_runtime_pseudo_reloc, OPT_runtime_pseudo_reloc_no, config->mingw);
 
   // Don't warn about long section names, such as .debug_info, for mingw or when
   // -debug:dwarf is requested.
@@ -1841,9 +1845,11 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // Needed for MSVC 2017 15.5 CRT.
   symtab->addAbsolute(mangle("__enclave_config"), 0);
 
-  if (config->mingw) {
+  if (config->pseudoRelocs) {
     symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
     symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
+  }
+  if (config->mingw) {
     symtab->addAbsolute(mangle("__CTOR_LIST__"), 0);
     symtab->addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
@@ -1901,7 +1907,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     while (run());
   }
 
-  if (config->mingw) {
+  if (config->autoImport) {
+    // MinGW specific.
     // Load any further object files that might be needed for doing automatic
     // imports.
     //

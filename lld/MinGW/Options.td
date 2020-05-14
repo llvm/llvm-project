@@ -20,7 +20,15 @@ def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+def disable_auto_import: F<"disable-auto-import">,
+    HelpText<"Don't automatically import data symbols from other DLLs without dllimport">;
+def disable_runtime_pseudo_reloc: F<"disable-runtime-pseudo-reloc">,
+    HelpText<"Don't do automatic imports that require runtime fixups">;
 def dynamicbase: F<"dynamicbase">, HelpText<"Enable ASLR">;
+def enable_auto_import: F<"enable-auto-import">,
+    HelpText<"Automatically import data symbols from other DLLs where needed">;
+def enable_runtime_pseudo_reloc: F<"enable-runtime-pseudo-reloc">,
+    HelpText<"Allow automatic imports that require runtime fixups">;
 defm entry: Eq<"entry", "Name of entry point symbol">, MetaVarName<"<entry>">;
 def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
@@ -94,7 +102,6 @@ def: Joined<["-"], "O">;
 def: F<"build-id">;
 def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
-def: F<"enable-auto-import">, HelpText<"Ignored; listed for libtool compatibility">;
 def: F<"end-group">;
 def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
