@@ -35,13 +35,13 @@ define i8 @test_bypass1(i8 *%P) {
 define i8 @test_bypass2(i8 *%P) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass2
 ; NO_ASSUME-SAME: (i8* [[P:%.*]])
-; NO_ASSUME-NEXT:    store i8 42, i8* [[P]]
+; NO_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
 ; NO_ASSUME-NEXT:    ret i8 42
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass2
 ; USE_ASSUME-SAME: (i8* [[P:%.*]])
-; USE_ASSUME-NEXT:    store i8 42, i8* [[P]]
+; USE_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[P]], i64 1), "nonnull"(i8* [[P]]) ]
 ; USE_ASSUME-NEXT:    ret i8 42
@@ -60,14 +60,14 @@ define void @test_bypass3(i8* %P) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass3
 ; NO_ASSUME-SAME: (i8* [[P:%.*]])
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
-; NO_ASSUME-NEXT:    store i8 60, i8* [[P]]
+; NO_ASSUME-NEXT:    store i8 60, i8* [[P]], align 1
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass3
 ; USE_ASSUME-SAME: (i8* [[P:%.*]])
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[P]], i64 1), "nonnull"(i8* [[P]]) ]
-; USE_ASSUME-NEXT:    store i8 60, i8* [[P]]
+; USE_ASSUME-NEXT:    store i8 60, i8* [[P]], align 1
 ; USE_ASSUME-NEXT:    ret void
 ;
 
@@ -83,10 +83,10 @@ define void @test_bypass3(i8* %P) {
 define void @test_bypass4(i8* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_bypass4
 ; CHECK-SAME: (i8* [[P:%.*]])
-; CHECK-NEXT:    store i8 50, i8* [[P]]
+; CHECK-NEXT:    store i8 50, i8* [[P]], align 1
 ; CHECK-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0i8({}* [[I]], i64 1, i8* [[P]])
-; CHECK-NEXT:    store i8 60, i8* [[P]]
+; CHECK-NEXT:    store i8 60, i8* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
 
@@ -369,7 +369,7 @@ define void @test_dse_before_load(i32* %p, i1 %cnd) {
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret void
 ;
   call {}* @llvm.invariant.start.p0i32(i64 4, i32* %p)
@@ -392,7 +392,7 @@ define void @test_dse_after_load(i32* %p, i1 %cnd) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret void
 ;
   %v1 = load i32, i32* %p

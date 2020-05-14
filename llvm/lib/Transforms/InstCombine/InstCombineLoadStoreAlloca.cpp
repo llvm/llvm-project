@@ -1571,9 +1571,9 @@ bool InstCombiner::mergeStoreIntoSuccessor(StoreInst &SI) {
 
   // Advance to a place where it is safe to insert the new store and insert it.
   BBI = DestBB->getFirstInsertionPt();
-  StoreInst *NewSI = new StoreInst(MergedVal, SI.getOperand(1), SI.isVolatile(),
-                                   MaybeAlign(SI.getAlignment()),
-                                   SI.getOrdering(), SI.getSyncScopeID());
+  StoreInst *NewSI =
+      new StoreInst(MergedVal, SI.getOperand(1), SI.isVolatile(), SI.getAlign(),
+                    SI.getOrdering(), SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   NewSI->setDebugLoc(MergedLoc);
 

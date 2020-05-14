@@ -244,10 +244,8 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
 }
 
 Align IRTranslator::getMemOpAlign(const Instruction &I) {
-  if (const StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-    Type *ValTy = SI->getValueOperand()->getType();
-    return SI->getAlign().getValueOr(DL->getABITypeAlign(ValTy));
-  }
+  if (const StoreInst *SI = dyn_cast<StoreInst>(&I))
+    return SI->getAlign();
   if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     return DL->getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
   }

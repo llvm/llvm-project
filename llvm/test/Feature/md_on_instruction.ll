@@ -3,7 +3,7 @@
 define i32 @foo() nounwind ssp {
 entry:
   ; CHECK: %retval = alloca i32
-  ; CHECK: store i32 42, i32* %retval, !md !0
+  ; CHECK: store i32 42, i32* %retval, align 4, !md !0
   ; CHECK: br label %0, !md !1
   %retval = alloca i32
   store i32 42, i32* %retval, !md !0

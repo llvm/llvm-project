@@ -18,7 +18,7 @@ define void @fn2(i32* %P, i1 %C) {
 ; IS__TUNIT____-NEXT:    [[E_2:%.*]] = phi i32* [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[E_2]], align 4
 ; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
-; IS__TUNIT____-NEXT:    store i32 [[CALL]], i32* [[P]], align 1
+; IS__TUNIT____-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
 ; IS__TUNIT____-NEXT:    br label [[FOR_COND1]]
 ; IS__TUNIT____:       exit:
 ; IS__TUNIT____-NEXT:    ret void
@@ -80,7 +80,7 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__TUNIT____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4
 ; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
-; IS__TUNIT____-NEXT:    store i32 [[CALL]], i32* [[P]], align 1
+; IS__TUNIT____-NEXT:    store i32 [[CALL]], i32* [[P]], align 4
 ; IS__TUNIT____-NEXT:    br label [[FOR_COND1]]
 ; IS__TUNIT____:       exit:
 ; IS__TUNIT____-NEXT:    ret void

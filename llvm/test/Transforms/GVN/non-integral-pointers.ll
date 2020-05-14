@@ -7,12 +7,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @f0(i1 %alwaysFalse, i64 %val, i64* %loc) {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 [[VAL:%.*]], i64* [[LOC:%.*]]
+; CHECK-NEXT:    store i64 [[VAL:%.*]], i64* [[LOC:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[ALWAYSFALSE:%.*]], label [[NEVERTAKEN:%.*]], label [[ALWAYSTAKEN:%.*]]
 ; CHECK:       neverTaken:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i64* [[LOC]] to i8 addrspace(4)**
-; CHECK-NEXT:    [[PTR:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)** [[LOC_BC]]
-; CHECK-NEXT:    store i8 5, i8 addrspace(4)* [[PTR]]
+; CHECK-NEXT:    [[PTR:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)** [[LOC_BC]], align 8
+; CHECK-NEXT:    store i8 5, i8 addrspace(4)* [[PTR]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       alwaysTaken:
 ; CHECK-NEXT:    ret void
@@ -34,11 +34,11 @@ define void @f0(i1 %alwaysFalse, i64 %val, i64* %loc) {
 define i64 @f1(i1 %alwaysFalse, i8 addrspace(4)* %val, i8 addrspace(4)** %loc) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8 addrspace(4)* [[VAL:%.*]], i8 addrspace(4)** [[LOC:%.*]]
+; CHECK-NEXT:    store i8 addrspace(4)* [[VAL:%.*]], i8 addrspace(4)** [[LOC:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[ALWAYSFALSE:%.*]], label [[NEVERTAKEN:%.*]], label [[ALWAYSTAKEN:%.*]]
 ; CHECK:       neverTaken:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)** [[LOC]] to i64*
-; CHECK-NEXT:    [[INT:%.*]] = load i64, i64* [[LOC_BC]]
+; CHECK-NEXT:    [[INT:%.*]] = load i64, i64* [[LOC_BC]], align 8
 ; CHECK-NEXT:    ret i64 [[INT]]
 ; CHECK:       alwaysTaken:
 ; CHECK-NEXT:    ret i64 42
@@ -67,7 +67,7 @@ define i8 addrspace(4)* @neg_forward_memset(i8 addrspace(4)* addrspace(4)* %loc)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    call void @llvm.memset.p4i8.i64(i8 addrspace(4)* align 4 [[LOC_BC]], i8 7, i64 8, i1 false)
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]]
+; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
 ;
   entry:
@@ -82,7 +82,7 @@ define <1 x i8 addrspace(4)*> @neg_forward_memset_vload(<1 x i8 addrspace(4)*> a
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast <1 x i8 addrspace(4)*> addrspace(4)* [[LOC:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    call void @llvm.memset.p4i8.i64(i8 addrspace(4)* align 4 [[LOC_BC]], i8 7, i64 8, i1 false)
-; CHECK-NEXT:    [[REF:%.*]] = load <1 x i8 addrspace(4)*>, <1 x i8 addrspace(4)*> addrspace(4)* [[LOC]]
+; CHECK-NEXT:    [[REF:%.*]] = load <1 x i8 addrspace(4)*>, <1 x i8 addrspace(4)*> addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret <1 x i8 addrspace(4)*> [[REF]]
 ;
   entry:
@@ -113,8 +113,8 @@ define i8 addrspace(4)* @neg_forward_store(i8 addrspace(4)* addrspace(4)* %loc) 
 ; CHECK-LABEL: @neg_forward_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to i64 addrspace(4)*
-; CHECK-NEXT:    store i64 5, i64 addrspace(4)* [[LOC_BC]]
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]]
+; CHECK-NEXT:    store i64 5, i64 addrspace(4)* [[LOC_BC]], align 8
+; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
 ;
   entry:
@@ -128,8 +128,8 @@ define <1 x i8 addrspace(4)*> @neg_forward_store_vload(<1 x i8 addrspace(4)*> ad
 ; CHECK-LABEL: @neg_forward_store_vload(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast <1 x i8 addrspace(4)*> addrspace(4)* [[LOC:%.*]] to i64 addrspace(4)*
-; CHECK-NEXT:    store i64 5, i64 addrspace(4)* [[LOC_BC]]
-; CHECK-NEXT:    [[REF:%.*]] = load <1 x i8 addrspace(4)*>, <1 x i8 addrspace(4)*> addrspace(4)* [[LOC]]
+; CHECK-NEXT:    store i64 5, i64 addrspace(4)* [[LOC_BC]], align 8
+; CHECK-NEXT:    [[REF:%.*]] = load <1 x i8 addrspace(4)*>, <1 x i8 addrspace(4)*> addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret <1 x i8 addrspace(4)*> [[REF]]
 ;
   entry:
@@ -144,7 +144,7 @@ define i8 addrspace(4)* @forward_store_zero(i8 addrspace(4)* addrspace(4)* %loc)
 ; CHECK-LABEL: @forward_store_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to i64 addrspace(4)*
-; CHECK-NEXT:    store i64 0, i64 addrspace(4)* [[LOC_BC]]
+; CHECK-NEXT:    store i64 0, i64 addrspace(4)* [[LOC_BC]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* null
 ;
   entry:
@@ -159,7 +159,7 @@ define i8 addrspace(4)* @forward_store_zero2(i8 addrspace(4)* addrspace(4)* %loc
 ; CHECK-LABEL: @forward_store_zero2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to <2 x i32> addrspace(4)*
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, <2 x i32> addrspace(4)* [[LOC_BC]]
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, <2 x i32> addrspace(4)* [[LOC_BC]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* null
 ;
   entry:
@@ -179,7 +179,7 @@ define i8 addrspace(4)* @neg_forward_memcopy(i8 addrspace(4)* addrspace(4)* %loc
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    call void @llvm.memcpy.p4i8.p0i8.i64(i8 addrspace(4)* align 4 [[LOC_BC]], i8* bitcast (<4 x i64>* @NonZeroConstant to i8*), i64 8, i1 false)
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]]
+; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
 ;
 entry:
@@ -195,7 +195,7 @@ define <1 x i8 addrspace(4)*> @neg_forward_memcpy_vload(<1 x i8 addrspace(4)*> a
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast <1 x i8 addrspace(4)*> addrspace(4)* [[LOC:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    call void @llvm.memcpy.p4i8.p0i8.i64(i8 addrspace(4)* align 4 [[LOC_BC]], i8* bitcast (<4 x i64>* @NonZeroConstant to i8*), i64 8, i1 false)
-; CHECK-NEXT:    [[REF:%.*]] = load <1 x i8 addrspace(4)*>, <1 x i8 addrspace(4)*> addrspace(4)* [[LOC]]
+; CHECK-NEXT:    [[REF:%.*]] = load <1 x i8 addrspace(4)*>, <1 x i8 addrspace(4)*> addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret <1 x i8 addrspace(4)*> [[REF]]
 ;
 entry:
@@ -214,7 +214,7 @@ define i8 addrspace(4)* @forward_memcpy_zero(i8 addrspace(4)* addrspace(4)* %loc
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    call void @llvm.memcpy.p4i8.p0i8.i64(i8 addrspace(4)* align 4 [[LOC_BC]], i8* bitcast (<4 x i64>* @ZeroConstant to i8*), i64 8, i1 false)
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]]
+; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
 ;
 entry:
@@ -234,9 +234,9 @@ define i8 addrspace(4)* @neg_store_clobber(i8 addrspace(4)* addrspace(4)* %loc) 
 ; CHECK-LABEL: @neg_store_clobber(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to <2 x i64> addrspace(4)*
-; CHECK-NEXT:    store <2 x i64> <i64 4, i64 4>, <2 x i64> addrspace(4)* [[LOC_BC]]
+; CHECK-NEXT:    store <2 x i64> <i64 4, i64 4>, <2 x i64> addrspace(4)* [[LOC_BC]], align 16
 ; CHECK-NEXT:    [[LOC_OFF:%.*]] = getelementptr i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], i64 1
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC_OFF]]
+; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC_OFF]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
 ;
 entry:
@@ -255,10 +255,10 @@ define i8 addrspace(4)* @neg_load_clobber(i8 addrspace(4)* addrspace(4)* %loc) {
 ; CHECK-LABEL: @neg_load_clobber(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to <2 x i64> addrspace(4)*
-; CHECK-NEXT:    [[V:%.*]] = load <2 x i64>, <2 x i64> addrspace(4)* [[LOC_BC]]
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i64>, <2 x i64> addrspace(4)* [[LOC_BC]], align 16
 ; CHECK-NEXT:    call void @use(<2 x i64> [[V]])
 ; CHECK-NEXT:    [[LOC_OFF:%.*]] = getelementptr i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], i64 1
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC_OFF]]
+; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC_OFF]], align 8
 ; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
 ;
 entry:
@@ -274,7 +274,7 @@ define i8 addrspace(4)* @store_clobber_zero(i8 addrspace(4)* addrspace(4)* %loc)
 ; CHECK-LABEL: @store_clobber_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to <2 x i64> addrspace(4)*
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64> addrspace(4)* [[LOC_BC]]
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64> addrspace(4)* [[LOC_BC]], align 16
 ; CHECK-NEXT:    [[LOC_OFF:%.*]] = getelementptr i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], i64 1
 ; CHECK-NEXT:    ret i8 addrspace(4)* null
 ;
