@@ -1047,6 +1047,10 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       if (!STI.hasV5TOps())
         continue;
 
+      // CMSE entry functions must return via BXNS, see emitEpilogue.
+      if (AFI->isCmseNSEntryFunction())
+        continue;
+
       // Pop LR into PC.
       Reg = ARM::PC;
       (*MIB).setDesc(TII.get(ARM::tPOP_RET));
