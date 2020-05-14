@@ -216,13 +216,31 @@ bool X86PartialReduction::tryMAddReplacement(Value *Op, BinaryOperator *Add) {
     }
   }
 
-  auto canShrinkOp = [&](Value *Op) {
-    if (isa<Constant>(Op) && ComputeNumSignBits(Op, *DL, 0, nullptr, BO) > 16)
+  auto CanShrinkOp = [&](Value *Op) {
+    auto IsFreeTruncation = [&](Value *Op) {
+      if (auto *Cast = dyn_cast<CastInst>(Op)) {
+        if (Cast->getParent() == BB &&
+            (Cast->getOpcode() == Instruction::SExt ||
+             Cast->getOpcode() == Instruction::ZExt) &&
+            Cast->getOperand(0)->getType()->getScalarSizeInBits() <= 16)
+          return true;
+      }
+
+      return isa<Constant>(Op);
+    };
+
+    // If the operation can be freely truncated and has enough sign bits we
+    // can shrink.
+    if (IsFreeTruncation(Op) &&
+        ComputeNumSignBits(Op, *DL, 0, nullptr, BO) > 16)
       return true;
-    if (auto *Cast = dyn_cast<CastInst>(Op)) {
-      if (Cast->getParent() == BB &&
-          (Cast->getOpcode() == Instruction::SExt ||
-           Cast->getOpcode() == Instruction::ZExt) &&
+
+    // SelectionDAG has limited support for truncating through an add or sub if
+    // the inputs are freely truncatable.
+    if (auto *BO = dyn_cast<BinaryOperator>(Op)) {
+      if (BO->getParent() == BB &&
+          IsFreeTruncation(BO->getOperand(0)) &&
+          IsFreeTruncation(BO->getOperand(1)) &&
           ComputeNumSignBits(Op, *DL, 0, nullptr, BO) > 16)
         return true;
     }
@@ -231,7 +249,7 @@ bool X86PartialReduction::tryMAddReplacement(Value *Op, BinaryOperator *Add) {
   };
 
   // Both Ops need to be shrinkable.
-  if (!canShrinkOp(LHS) && !canShrinkOp(RHS))
+  if (!CanShrinkOp(LHS) && !CanShrinkOp(RHS))
     return false;
 
   IRBuilder<> Builder(Add);
