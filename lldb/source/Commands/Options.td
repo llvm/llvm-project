@@ -624,6 +624,8 @@ let Command = "platform process attach" in {
 }
 
 let Command = "platform shell" in {
+  def platform_shell_host : Option<"host", "h">,
+    Desc<"Run the commands on the host shell when enabled.">;
   def platform_shell_timeout : Option<"timeout", "t">, Arg<"Value">,
     Desc<"Seconds to wait for the remote host to finish running the command.">;
 }
@@ -703,6 +705,7 @@ let Command = "script add" in {
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
 }
+
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;
