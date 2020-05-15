@@ -146,6 +146,6 @@ static void mapParallelOp(ParallelOp parallelOp,
   }
 }
 
-void mlir::greedilyMapParallelLoopsToGPU(Region &region) {
+void mlir::greedilyMapParallelSCFToGPU(Region &region) {
   region.walk([](ParallelOp parallelOp) { mapParallelOp(parallelOp); });
 }

@@ -1,4 +1,4 @@
-//===- LoopsToGPUPass.h - Pass converting loops to GPU kernels --*- C++ -*-===//
+//===- SCFToGPUPass.h - Pass converting loops to GPU kernels ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,8 @@
 
 namespace mlir {
 class FuncOp;
-template <typename T> class OperationPass;
+template <typename T>
+class OperationPass;
 class Pass;
 
 /// Create a pass that converts loop nests into GPU kernels.  It considers
@@ -26,8 +27,8 @@ class Pass;
 /// to strip-mine the loops and to perform the dependence analysis before
 /// calling the conversion.
 std::unique_ptr<OperationPass<FuncOp>>
-createSimpleLoopsToGPUPass(unsigned numBlockDims, unsigned numThreadDims);
-std::unique_ptr<OperationPass<FuncOp>> createSimpleLoopsToGPUPass();
+createSimpleSCFToGPUPass(unsigned numBlockDims, unsigned numThreadDims);
+std::unique_ptr<OperationPass<FuncOp>> createSimpleSCFToGPUPass();
 
 /// Create a pass that converts every loop operation within the body of the
 /// FuncOp into a GPU launch. The number of workgroups and workgroup size for

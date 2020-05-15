@@ -1,4 +1,4 @@
-//===- VectorToLoops.cpp - Conversion from Vector to mix of Loops and Std -===//
+//===- VectorToSCF.cpp - Conversion from Vector to mix of SCF and Std -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 
 #include <type_traits>
 
-#include "mlir/Conversion/VectorToLoops/ConvertVectorToLoops.h"
+#include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
@@ -583,7 +583,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 
 } // namespace
 
-void mlir::populateVectorToLoopsConversionPatterns(
+void mlir::populateVectorToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
   patterns.insert<VectorTransferRewriter<vector::TransferReadOp>,
                   VectorTransferRewriter<vector::TransferWriteOp>>(context);

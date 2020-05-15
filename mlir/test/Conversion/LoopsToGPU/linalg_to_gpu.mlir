@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-loops-to-gpu %s | FileCheck %s
+// RUN: mlir-opt -convert-scf-to-gpu %s | FileCheck %s
 
 // CHECK-LABEL: @foo
 func @foo(%arg0: memref<?xf32>, %arg1 : index) {

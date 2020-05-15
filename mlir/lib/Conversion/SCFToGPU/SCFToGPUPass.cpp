@@ -1,4 +1,4 @@
-//===- LoopsToGPUPass.cpp - Convert a loop nest to a GPU kernel -----------===//
+//===- SCFToGPUPass.cpp - Convert a loop nest to a GPU kernel -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
+#include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #include "../PassDetail.h"
-#include "mlir/Conversion/LoopsToGPU/LoopsToGPU.h"
+#include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -18,7 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 
-#define PASS_NAME "convert-loops-to-gpu"
+#define PASS_NAME "convert-scf-to-gpu"
 #define LOOPOP_TO_GPU_PASS_NAME "convert-loop-op-to-gpu"
 
 using namespace mlir;
@@ -28,7 +28,7 @@ namespace {
 // A pass that traverses top-level loops in the function and converts them to
 // GPU launch operations.  Nested launches are not allowed, so this does not
 // walk the function recursively to avoid considering nested loops.
-struct ForLoopMapper : public ConvertSimpleLoopsToGPUBase<ForLoopMapper> {
+struct ForLoopMapper : public ConvertSimpleSCFToGPUBase<ForLoopMapper> {
   ForLoopMapper() = default;
   ForLoopMapper(unsigned numBlockDims, unsigned numThreadDims) {
     this->numBlockDims = numBlockDims;
@@ -56,7 +56,7 @@ struct ForLoopMapper : public ConvertSimpleLoopsToGPUBase<ForLoopMapper> {
 // nested loops as the size of `numWorkGroups`. Within these any loop nest has
 // to be perfectly nested upto depth equal to size of `workGroupSize`.
 struct ImperfectlyNestedForLoopMapper
-    : public ConvertLoopsToGPUBase<ImperfectlyNestedForLoopMapper> {
+    : public ConvertSCFToGPUBase<ImperfectlyNestedForLoopMapper> {
   ImperfectlyNestedForLoopMapper() = default;
   ImperfectlyNestedForLoopMapper(ArrayRef<int64_t> numWorkGroups,
                                  ArrayRef<int64_t> workGroupSize) {
@@ -108,11 +108,10 @@ struct ParallelLoopToGpuPass
 } // namespace
 
 std::unique_ptr<OperationPass<FuncOp>>
-mlir::createSimpleLoopsToGPUPass(unsigned numBlockDims,
-                                 unsigned numThreadDims) {
+mlir::createSimpleSCFToGPUPass(unsigned numBlockDims, unsigned numThreadDims) {
   return std::make_unique<ForLoopMapper>(numBlockDims, numThreadDims);
 }
-std::unique_ptr<OperationPass<FuncOp>> mlir::createSimpleLoopsToGPUPass() {
+std::unique_ptr<OperationPass<FuncOp>> mlir::createSimpleSCFToGPUPass() {
   return std::make_unique<ForLoopMapper>();
 }
 

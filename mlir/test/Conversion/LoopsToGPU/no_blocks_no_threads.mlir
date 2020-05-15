@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-loops-to-gpu="gpu-block-dims=0 gpu-thread-dims=1" %s | FileCheck --check-prefix=CHECK-THREADS %s --dump-input-on-failure
-// RUN: mlir-opt -convert-loops-to-gpu="gpu-block-dims=1 gpu-thread-dims=0" %s | FileCheck --check-prefix=CHECK-BLOCKS %s --dump-input-on-failure
+// RUN: mlir-opt -convert-scf-to-gpu="gpu-block-dims=0 gpu-thread-dims=1" %s | FileCheck --check-prefix=CHECK-THREADS %s --dump-input-on-failure
+// RUN: mlir-opt -convert-scf-to-gpu="gpu-block-dims=1 gpu-thread-dims=0" %s | FileCheck --check-prefix=CHECK-BLOCKS %s --dump-input-on-failure
 
 // CHECK-THREADS-LABEL: @one_d_loop
 // CHECK-BLOCKS-LABEL: @one_d_loop

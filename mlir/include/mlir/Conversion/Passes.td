@@ -161,22 +161,22 @@ def ConvertLinalgToSPIRV : Pass<"convert-linalg-to-spirv", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// LoopToStandard
+// SCFToStandard
 //===----------------------------------------------------------------------===//
 
-def ConvertLoopToStandard : Pass<"convert-loop-to-std"> {
+def SCFToStandard : Pass<"convert-scf-to-std"> {
   let summary = "Convert SCF dialect to Standard dialect, replacing structured"
                 " control flow with a CFG";
   let constructor = "mlir::createLowerToCFGPass()";
 }
 
 //===----------------------------------------------------------------------===//
-// LoopsToGPU
+// SCFToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertSimpleLoopsToGPU : FunctionPass<"convert-loops-to-gpu"> {
+def ConvertSimpleSCFToGPU : FunctionPass<"convert-scf-to-gpu"> {
   let summary = "Convert top-level loops to GPU kernels";
-  let constructor = "mlir::createSimpleLoopsToGPUPass()";
+  let constructor = "mlir::createSimpleSCFToGPUPass()";
   let options = [
     Option<"numBlockDims", "gpu-block-dims", "unsigned", /*default=*/"1u",
            "Number of GPU block dimensions for mapping">,
@@ -185,7 +185,7 @@ def ConvertSimpleLoopsToGPU : FunctionPass<"convert-loops-to-gpu"> {
   ];
 }
 
-def ConvertLoopsToGPU : FunctionPass<"convert-loop-op-to-gpu"> {
+def ConvertSCFToGPU : FunctionPass<"convert-loop-op-to-gpu"> {
   let summary = "Convert top-level scf::ForOp to GPU kernels";
   let constructor = "mlir::createLoopToGPUPass()";
   let options = [
