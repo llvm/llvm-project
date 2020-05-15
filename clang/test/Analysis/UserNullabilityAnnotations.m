@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify -Wno-objc-root-class %s \
+// RUN:   -Wno-tautological-pointer-compare \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=nullability \
 // RUN:   -analyzer-checker=debug.ExprInspection
@@ -33,4 +34,16 @@ void f1(NestedNonnullMember *Root) {
   clang_analyzer_eval(Root->Value != 0);         // expected-warning{{TRUE}}
   clang_analyzer_eval(Grandson->Value != 0);     // expected-warning{{TRUE}}
   clang_analyzer_eval(foo()->Child->Value != 0); // expected-warning{{TRUE}}
+}
+
+// Check that we correctly process situations when non-pointer parameters
+// get nonnul attributes.
+// Original problem: rdar://problem/63150074
+typedef struct {
+  long a;
+} B;
+__attribute__((nonnull)) void c(B x, int *y);
+
+void c(B x, int *y) {
+  clang_analyzer_eval(y != 0); // expected-warning{{TRUE}}
 }
