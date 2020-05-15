@@ -92,9 +92,9 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 namespace {
 template <class ELFT> class ICF {
 public:
@@ -525,15 +525,12 @@ template <class ELFT> void ICF<ELFT>::run() {
 }
 
 // ICF entry point function.
-template <class ELFT> void doIcf() {
+template <class ELFT> void elf::doIcf() {
   llvm::TimeTraceScope timeScope("ICF");
   ICF<ELFT>().run();
 }
 
-template void doIcf<ELF32LE>();
-template void doIcf<ELF32BE>();
-template void doIcf<ELF64LE>();
-template void doIcf<ELF64BE>();
-
-} // namespace elf
-} // namespace lld
+template void elf::doIcf<ELF32LE>();
+template void elf::doIcf<ELF32BE>();
+template void elf::doIcf<ELF64LE>();
+template void elf::doIcf<ELF64BE>();

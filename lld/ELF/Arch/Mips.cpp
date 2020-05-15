@@ -18,9 +18,9 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 namespace {
 template <class ELFT> class MIPS final : public TargetInfo {
 public:
@@ -734,7 +734,7 @@ template <class ELFT> bool MIPS<ELFT>::usesOnlyLowPageBits(RelType type) const {
 }
 
 // Return true if the symbol is a PIC function.
-template <class ELFT> bool isMipsPIC(const Defined *sym) {
+template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   if (!sym->isFunc())
     return false;
 
@@ -752,20 +752,17 @@ template <class ELFT> bool isMipsPIC(const Defined *sym) {
   return file->getObj().getHeader()->e_flags & EF_MIPS_PIC;
 }
 
-template <class ELFT> TargetInfo *getMipsTargetInfo() {
+template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {
   static MIPS<ELFT> target;
   return &target;
 }
 
-template TargetInfo *getMipsTargetInfo<ELF32LE>();
-template TargetInfo *getMipsTargetInfo<ELF32BE>();
-template TargetInfo *getMipsTargetInfo<ELF64LE>();
-template TargetInfo *getMipsTargetInfo<ELF64BE>();
+template TargetInfo *elf::getMipsTargetInfo<ELF32LE>();
+template TargetInfo *elf::getMipsTargetInfo<ELF32BE>();
+template TargetInfo *elf::getMipsTargetInfo<ELF64LE>();
+template TargetInfo *elf::getMipsTargetInfo<ELF64BE>();
 
-template bool isMipsPIC<ELF32LE>(const Defined *);
-template bool isMipsPIC<ELF32BE>(const Defined *);
-template bool isMipsPIC<ELF64LE>(const Defined *);
-template bool isMipsPIC<ELF64BE>(const Defined *);
-
-} // namespace elf
-} // namespace lld
+template bool elf::isMipsPIC<ELF32LE>(const Defined *);
+template bool elf::isMipsPIC<ELF32BE>(const Defined *);
+template bool elf::isMipsPIC<ELF64LE>(const Defined *);
+template bool elf::isMipsPIC<ELF64BE>(const Defined *);

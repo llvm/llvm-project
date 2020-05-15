@@ -27,9 +27,9 @@ using namespace llvm::dwarf;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 uint8_t *Out::bufferStart;
 uint8_t Out::first;
 PhdrEntry *Out::tlsPhdr;
@@ -39,7 +39,7 @@ OutputSection *Out::preinitArray;
 OutputSection *Out::initArray;
 OutputSection *Out::finiArray;
 
-std::vector<OutputSection *> outputSections;
+std::vector<OutputSection *> elf::outputSections;
 
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
@@ -225,7 +225,7 @@ static void sortByOrder(MutableArrayRef<InputSection *> in,
     in[i] = v[i].second;
 }
 
-uint64_t getHeaderSize() {
+uint64_t elf::getHeaderSize() {
   if (config->oFormatBinary)
     return 0;
   return Out::elfHeader->size + Out::programHeaders->size;
@@ -478,7 +478,7 @@ void OutputSection::sortCtorsDtors() {
 // If an input string is in the form of "foo.N" where N is a number,
 // return N. Otherwise, returns 65536, which is one greater than the
 // lowest priority.
-int getPriority(StringRef s) {
+int elf::getPriority(StringRef s) {
   size_t pos = s.rfind('.');
   if (pos == StringRef::npos)
     return 65536;
@@ -488,7 +488,7 @@ int getPriority(StringRef s) {
   return v;
 }
 
-InputSection *getFirstInputSection(const OutputSection *os) {
+InputSection *elf::getFirstInputSection(const OutputSection *os) {
   for (BaseCommand *base : os->sectionCommands)
     if (auto *isd = dyn_cast<InputSectionDescription>(base))
       if (!isd->sections.empty())
@@ -496,7 +496,7 @@ InputSection *getFirstInputSection(const OutputSection *os) {
   return nullptr;
 }
 
-std::vector<InputSection *> getInputSections(const OutputSection *os) {
+std::vector<InputSection *> elf::getInputSections(const OutputSection *os) {
   std::vector<InputSection *> ret;
   for (BaseCommand *base : os->sectionCommands)
     if (auto *isd = dyn_cast<InputSectionDescription>(base))
@@ -537,6 +537,3 @@ template void OutputSection::maybeCompress<ELF32LE>();
 template void OutputSection::maybeCompress<ELF32BE>();
 template void OutputSection::maybeCompress<ELF64LE>();
 template void OutputSection::maybeCompress<ELF64BE>();
-
-} // namespace elf
-} // namespace lld

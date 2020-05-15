@@ -46,13 +46,13 @@ using namespace llvm::dwarf;
 using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support;
+using namespace lld;
+using namespace lld::elf;
 
 using llvm::support::endian::read32le;
 using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
-namespace lld {
-namespace elf {
 constexpr size_t MergeNoTailSection::numShards;
 
 static uint64_t readUint(uint8_t *buf) {
@@ -83,7 +83,7 @@ static ArrayRef<uint8_t> getVersion() {
 // With this feature, you can identify LLD-generated binaries easily
 // by "readelf --string-dump .comment <file>".
 // The returned object is a mergeable string section.
-MergeInputSection *createCommentSection() {
+MergeInputSection *elf::createCommentSection() {
   return make<MergeInputSection>(SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
                                  getVersion(), ".comment");
 }
@@ -139,7 +139,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
     flags.ases |= s->ases;
     flags.flags1 |= s->flags1;
     flags.flags2 |= s->flags2;
-    flags.fp_abi = getMipsFpAbiFlag(flags.fp_abi, s->fp_abi, filename);
+    flags.fp_abi = elf::getMipsFpAbiFlag(flags.fp_abi, s->fp_abi, filename);
   };
 
   if (create)
@@ -253,7 +253,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   return make<MipsReginfoSection<ELFT>>(reginfo);
 }
 
-InputSection *createInterpSection() {
+InputSection *elf::createInterpSection() {
   // StringSaver guarantees that the returned string ends with '\0'.
   StringRef s = saver.save(config->dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
@@ -262,8 +262,8 @@ InputSection *createInterpSection() {
                             ".interp");
 }
 
-Defined *addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
-                           uint64_t size, InputSectionBase &section) {
+Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
+                                uint64_t size, InputSectionBase &section) {
   auto *s = make<Defined>(section.file, name, STB_LOCAL, STV_DEFAULT, type,
                           value, size, &section);
   if (in.symTab)
@@ -1275,7 +1275,7 @@ static uint64_t addPltRelSz() {
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
-  Partition &part = getPartition();
+  elf::Partition &part = getPartition();
   bool isMain = part.name.empty();
 
   for (StringRef s : config->filterList)
@@ -3049,7 +3049,7 @@ bool VersionTableSection::isNeeded() const {
          (getPartition().verDef || getPartition().verNeed->isNeeded());
 }
 
-void addVerneed(Symbol *ss) {
+void elf::addVerneed(Symbol *ss) {
   auto &file = cast<SharedFile>(*ss->file);
   if (ss->verdefIndex == VER_NDX_GLOBAL) {
     ss->versionId = VER_NDX_GLOBAL;
@@ -3232,16 +3232,16 @@ void MergeNoTailSection::finalizeContents() {
   });
 }
 
-MergeSyntheticSection *createMergeSynthetic(StringRef name, uint32_t type,
-                                            uint64_t flags,
-                                            uint32_t alignment) {
+MergeSyntheticSection *elf::createMergeSynthetic(StringRef name, uint32_t type,
+                                                 uint64_t flags,
+                                                 uint32_t alignment) {
   bool shouldTailMerge = (flags & SHF_STRINGS) && config->optimize >= 2;
   if (shouldTailMerge)
     return make<MergeTailSection>(name, type, flags, alignment);
   return make<MergeNoTailSection>(name, type, flags, alignment);
 }
 
-template <class ELFT> void splitSections() {
+template <class ELFT> void elf::splitSections() {
   llvm::TimeTraceScope timeScope("Split sections");
   // splitIntoPieces needs to be called on each MergeInputSection
   // before calling finalizeContents().
@@ -3627,7 +3627,7 @@ static uint8_t getAbiVersion() {
   return 0;
 }
 
-template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part) {
+template <typename ELFT> void elf::writeEhdr(uint8_t *buf, Partition &part) {
   // For executable segments, the trap instructions are written before writing
   // the header. Setting Elf header bytes to zero ensures that any unused bytes
   // in header are zero-cleared, instead of having trap instructions.
@@ -3653,7 +3653,7 @@ template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part) {
   }
 }
 
-template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part) {
+template <typename ELFT> void elf::writePhdrs(uint8_t *buf, Partition &part) {
   // Write the program header table.
   auto *hBuf = reinterpret_cast<typename ELFT::Phdr *>(buf);
   for (PhdrEntry *p : part.phdrs) {
@@ -3728,85 +3728,82 @@ void PartitionIndexSection::writeTo(uint8_t *buf) {
   }
 }
 
-InStruct in;
+InStruct elf::in;
 
-std::vector<Partition> partitions;
-Partition *mainPart;
+std::vector<Partition> elf::partitions;
+Partition *elf::mainPart;
 
 template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
 template GdbIndexSection *GdbIndexSection::create<ELF32BE>();
 template GdbIndexSection *GdbIndexSection::create<ELF64LE>();
 template GdbIndexSection *GdbIndexSection::create<ELF64BE>();
 
-template void splitSections<ELF32LE>();
-template void splitSections<ELF32BE>();
-template void splitSections<ELF64LE>();
-template void splitSections<ELF64BE>();
+template void elf::splitSections<ELF32LE>();
+template void elf::splitSections<ELF32BE>();
+template void elf::splitSections<ELF64LE>();
+template void elf::splitSections<ELF64BE>();
 
-template class MipsAbiFlagsSection<ELF32LE>;
-template class MipsAbiFlagsSection<ELF32BE>;
-template class MipsAbiFlagsSection<ELF64LE>;
-template class MipsAbiFlagsSection<ELF64BE>;
+template class elf::MipsAbiFlagsSection<ELF32LE>;
+template class elf::MipsAbiFlagsSection<ELF32BE>;
+template class elf::MipsAbiFlagsSection<ELF64LE>;
+template class elf::MipsAbiFlagsSection<ELF64BE>;
 
-template class MipsOptionsSection<ELF32LE>;
-template class MipsOptionsSection<ELF32BE>;
-template class MipsOptionsSection<ELF64LE>;
-template class MipsOptionsSection<ELF64BE>;
+template class elf::MipsOptionsSection<ELF32LE>;
+template class elf::MipsOptionsSection<ELF32BE>;
+template class elf::MipsOptionsSection<ELF64LE>;
+template class elf::MipsOptionsSection<ELF64BE>;
 
-template class MipsReginfoSection<ELF32LE>;
-template class MipsReginfoSection<ELF32BE>;
-template class MipsReginfoSection<ELF64LE>;
-template class MipsReginfoSection<ELF64BE>;
+template class elf::MipsReginfoSection<ELF32LE>;
+template class elf::MipsReginfoSection<ELF32BE>;
+template class elf::MipsReginfoSection<ELF64LE>;
+template class elf::MipsReginfoSection<ELF64BE>;
 
-template class DynamicSection<ELF32LE>;
-template class DynamicSection<ELF32BE>;
-template class DynamicSection<ELF64LE>;
-template class DynamicSection<ELF64BE>;
+template class elf::DynamicSection<ELF32LE>;
+template class elf::DynamicSection<ELF32BE>;
+template class elf::DynamicSection<ELF64LE>;
+template class elf::DynamicSection<ELF64BE>;
 
-template class RelocationSection<ELF32LE>;
-template class RelocationSection<ELF32BE>;
-template class RelocationSection<ELF64LE>;
-template class RelocationSection<ELF64BE>;
+template class elf::RelocationSection<ELF32LE>;
+template class elf::RelocationSection<ELF32BE>;
+template class elf::RelocationSection<ELF64LE>;
+template class elf::RelocationSection<ELF64BE>;
 
-template class AndroidPackedRelocationSection<ELF32LE>;
-template class AndroidPackedRelocationSection<ELF32BE>;
-template class AndroidPackedRelocationSection<ELF64LE>;
-template class AndroidPackedRelocationSection<ELF64BE>;
+template class elf::AndroidPackedRelocationSection<ELF32LE>;
+template class elf::AndroidPackedRelocationSection<ELF32BE>;
+template class elf::AndroidPackedRelocationSection<ELF64LE>;
+template class elf::AndroidPackedRelocationSection<ELF64BE>;
 
-template class RelrSection<ELF32LE>;
-template class RelrSection<ELF32BE>;
-template class RelrSection<ELF64LE>;
-template class RelrSection<ELF64BE>;
+template class elf::RelrSection<ELF32LE>;
+template class elf::RelrSection<ELF32BE>;
+template class elf::RelrSection<ELF64LE>;
+template class elf::RelrSection<ELF64BE>;
 
-template class SymbolTableSection<ELF32LE>;
-template class SymbolTableSection<ELF32BE>;
-template class SymbolTableSection<ELF64LE>;
-template class SymbolTableSection<ELF64BE>;
+template class elf::SymbolTableSection<ELF32LE>;
+template class elf::SymbolTableSection<ELF32BE>;
+template class elf::SymbolTableSection<ELF64LE>;
+template class elf::SymbolTableSection<ELF64BE>;
 
-template class VersionNeedSection<ELF32LE>;
-template class VersionNeedSection<ELF32BE>;
-template class VersionNeedSection<ELF64LE>;
-template class VersionNeedSection<ELF64BE>;
+template class elf::VersionNeedSection<ELF32LE>;
+template class elf::VersionNeedSection<ELF32BE>;
+template class elf::VersionNeedSection<ELF64LE>;
+template class elf::VersionNeedSection<ELF64BE>;
 
-template void writeEhdr<ELF32LE>(uint8_t *Buf, Partition &Part);
-template void writeEhdr<ELF32BE>(uint8_t *Buf, Partition &Part);
-template void writeEhdr<ELF64LE>(uint8_t *Buf, Partition &Part);
-template void writeEhdr<ELF64BE>(uint8_t *Buf, Partition &Part);
+template void elf::writeEhdr<ELF32LE>(uint8_t *Buf, Partition &Part);
+template void elf::writeEhdr<ELF32BE>(uint8_t *Buf, Partition &Part);
+template void elf::writeEhdr<ELF64LE>(uint8_t *Buf, Partition &Part);
+template void elf::writeEhdr<ELF64BE>(uint8_t *Buf, Partition &Part);
 
-template void writePhdrs<ELF32LE>(uint8_t *Buf, Partition &Part);
-template void writePhdrs<ELF32BE>(uint8_t *Buf, Partition &Part);
-template void writePhdrs<ELF64LE>(uint8_t *Buf, Partition &Part);
-template void writePhdrs<ELF64BE>(uint8_t *Buf, Partition &Part);
+template void elf::writePhdrs<ELF32LE>(uint8_t *Buf, Partition &Part);
+template void elf::writePhdrs<ELF32BE>(uint8_t *Buf, Partition &Part);
+template void elf::writePhdrs<ELF64LE>(uint8_t *Buf, Partition &Part);
+template void elf::writePhdrs<ELF64BE>(uint8_t *Buf, Partition &Part);
 
-template class PartitionElfHeaderSection<ELF32LE>;
-template class PartitionElfHeaderSection<ELF32BE>;
-template class PartitionElfHeaderSection<ELF64LE>;
-template class PartitionElfHeaderSection<ELF64BE>;
+template class elf::PartitionElfHeaderSection<ELF32LE>;
+template class elf::PartitionElfHeaderSection<ELF32BE>;
+template class elf::PartitionElfHeaderSection<ELF64LE>;
+template class elf::PartitionElfHeaderSection<ELF64BE>;
 
-template class PartitionProgramHeadersSection<ELF32LE>;
-template class PartitionProgramHeadersSection<ELF32BE>;
-template class PartitionProgramHeadersSection<ELF64LE>;
-template class PartitionProgramHeadersSection<ELF64BE>;
-
-} // namespace elf
-} // namespace lld
+template class elf::PartitionProgramHeadersSection<ELF32LE>;
+template class elf::PartitionProgramHeadersSection<ELF32BE>;
+template class elf::PartitionProgramHeadersSection<ELF64LE>;
+template class elf::PartitionProgramHeadersSection<ELF64BE>;

@@ -35,19 +35,19 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-std::string toString(elf::RelType type) {
+const TargetInfo *elf::target;
+
+std::string lld::toString(RelType type) {
   StringRef s = getELFRelocationTypeName(elf::config->emachine, type);
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
 }
 
-namespace elf {
-const TargetInfo *target;
-
-TargetInfo *getTarget() {
+TargetInfo *elf::getTarget() {
   switch (config->emachine) {
   case EM_386:
   case EM_IAMCU:
@@ -112,7 +112,7 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
   return {};
 }
 
-ErrorPlace getErrorPlace(const uint8_t *loc) {
+ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
   switch (config->ekind) {
   case ELF32LEKind:
     return getErrPlace<ELF32LE>(loc);
@@ -186,6 +186,3 @@ uint64_t TargetInfo::getImageBase() const {
     return *config->imageBase;
   return config->isPic ? 0 : defaultImageBase;
 }
-
-} // namespace elf
-} // namespace lld
