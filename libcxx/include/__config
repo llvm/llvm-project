@@ -758,13 +758,13 @@ typedef __char32_t char32_t;
 #  endif
 #endif
 
-#ifndef _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
+#ifndef _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION
 #  ifdef _LIBCPP_OBJECT_FORMAT_COFF // Windows binaries can't merge typeinfos.
-#    define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 0
+#    define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 2
 #  else
      // TODO: This isn't strictly correct on ELF platforms due to llvm.org/PR37398
      // And we should consider defaulting to OFF.
-#    define _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT 1
+#    define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 1
 #  endif
 #endif
 
