@@ -7603,7 +7603,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     createPackShuffleMask(VT, Mask, IsUnary);
     return true;
   }
-  case ISD::TRUNCATE:
   case X86ISD::VTRUNC: {
     SDValue Src = N.getOperand(0);
     EVT SrcVT = Src.getValueType();
