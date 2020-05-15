@@ -58,7 +58,7 @@ import shutil
 import sys
 import threading
 import time
-from xml.parsers.expat import ExpatError
+
 try:
     import queue
 except ImportError:
@@ -493,7 +493,7 @@ def CleanUpEmptyPlists(SBOutputDir):
             if not Data['files']:
                 os.remove(P)
                 continue
-        except ExpatError as e:
+        except plistlib.InvalidFileException as e:
             print('Error parsing plist file %s: %s' % (P, str(e)))
             continue
 
