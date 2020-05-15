@@ -6,7 +6,7 @@
 define void @foo() {
 entry:
 ; DIS: target datalayout = "A5"
-; DIS: %tmp = alloca i32, addrspace(5)
+; DIS: %tmp = alloca i32, align 4, addrspace(5)
   %tmp = alloca i32, addrspace(5)
   call void @llvm.dbg.value(
       metadata i8* undef,

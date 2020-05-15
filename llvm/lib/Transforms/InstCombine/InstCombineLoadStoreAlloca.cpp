@@ -181,7 +181,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
     if (C->getValue().getActiveBits() <= 64) {
       Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, nullptr, AI.getName());
-      New->setAlignment(MaybeAlign(AI.getAlignment()));
+      New->setAlignment(AI.getAlign());
 
       // Scan to the end of the allocation instructions, to skip over a block of
       // allocas if possible...also skip interleaved debug info
@@ -327,11 +327,6 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     return I;
 
   if (AI.getAllocatedType()->isSized()) {
-    // If the alignment is 0 (unspecified), assign it the preferred alignment.
-    if (AI.getAlignment() == 0)
-      AI.setAlignment(
-          MaybeAlign(DL.getPrefTypeAlignment(AI.getAllocatedType())));
-
     // Move all alloca's of zero byte objects to the entry block and merge them
     // together.  Note that we only do this for alloca's, because malloc should
     // allocate and return a unique pointer, even for a zero byte allocation.
@@ -358,16 +353,10 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
           return &AI;
         }
 
-        // If the alignment of the entry block alloca is 0 (unspecified),
-        // assign it the preferred alignment.
-        if (EntryAI->getAlignment() == 0)
-          EntryAI->setAlignment(
-              MaybeAlign(DL.getPrefTypeAlignment(EntryAI->getAllocatedType())));
         // Replace this zero-sized alloca with the one at the start of the entry
         // block after ensuring that the address will be aligned enough for both
         // types.
-        const MaybeAlign MaxAlign(
-            std::max(EntryAI->getAlignment(), AI.getAlignment()));
+        const Align MaxAlign = std::max(EntryAI->getAlign(), AI.getAlign());
         EntryAI->setAlignment(MaxAlign);
         if (AI.getType() != EntryAI->getType())
           return new BitCastInst(EntryAI, AI.getType());

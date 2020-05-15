@@ -636,7 +636,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
             LI, SI->getPointerOperand()->stripPointerCasts(),
             LI->getPointerOperand()->stripPointerCasts(),
             DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-            findCommonAlignment(DL, SI, LI).value(), C);
+            findCommonAlignment(DL, SI, LI), C);
         if (changed) {
           MD->removeInstruction(SI);
           SI->eraseFromParent();
@@ -707,7 +707,7 @@ bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
 /// the call write its result directly into the destination of the memcpy.
 bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
                                          Value *cpySrc, uint64_t cpyLen,
-                                         unsigned cpyAlign, CallInst *C) {
+                                         Align cpyAlign, CallInst *C) {
   // The general transformation to keep in mind is
   //
   //   call @func(..., src, ...)
@@ -785,9 +785,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   }
 
   // Check that dest points to memory that is at least as aligned as src.
-  unsigned srcAlign = srcAlloca->getAlignment();
-  if (!srcAlign)
-    srcAlign = DL.getABITypeAlignment(srcAlloca->getAllocatedType());
+  Align srcAlign = srcAlloca->getAlign();
   bool isDestSufficientlyAligned = srcAlign <= cpyAlign;
   // If dest is not aligned enough and we can't increase its alignment then
   // bail out.
@@ -882,7 +880,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
-    cast<AllocaInst>(cpyDest)->setAlignment(MaybeAlign(srcAlign));
+    cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
   }
 
   // Drop any cached information about the call, because we may have changed
@@ -1167,10 +1165,10 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
     if (CallInst *C = dyn_cast<CallInst>(DepInfo.getInst())) {
       // FIXME: Can we pass in either of dest/src alignment here instead
       // of conservatively taking the minimum?
-      unsigned Align = MinAlign(M->getDestAlignment(), M->getSourceAlignment());
+      Align Alignment = std::min(M->getDestAlign().valueOrOne(),
+                                 M->getSourceAlign().valueOrOne());
       if (performCallSlotOptzn(M, M->getDest(), M->getSource(),
-                               CopySize->getZExtValue(), Align,
-                               C)) {
+                               CopySize->getZExtValue(), Alignment, C)) {
         MD->removeInstruction(M);
         M->eraseFromParent();
         return true;

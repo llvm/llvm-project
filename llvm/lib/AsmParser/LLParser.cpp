@@ -7007,7 +7007,12 @@ int LLParser::ParseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   if (Size && !Size->getType()->isIntegerTy())
     return Error(SizeLoc, "element count must have integer type");
 
-  AllocaInst *AI = new AllocaInst(Ty, AddrSpace, Size, Alignment);
+  SmallPtrSet<Type *, 4> Visited;
+  if (!Alignment && !Ty->isSized(&Visited))
+    return Error(TyLoc, "Cannot allocate unsized type");
+  if (!Alignment)
+    Alignment = M->getDataLayout().getPrefTypeAlign(Ty);
+  AllocaInst *AI = new AllocaInst(Ty, AddrSpace, Size, *Alignment);
   AI->setUsedWithInAlloca(IsInAlloca);
   AI->setSwiftError(IsSwiftError);
   Inst = AI;

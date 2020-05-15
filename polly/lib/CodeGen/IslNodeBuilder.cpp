@@ -1395,8 +1395,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
 
   BasicBlock *EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   auto *Alloca = new AllocaInst(AccInstTy, DL.getAllocaAddrSpace(),
-                                AccInst->getName() + ".preload.s2a");
-  Alloca->insertBefore(&*EntryBB->getFirstInsertionPt());
+                                AccInst->getName() + ".preload.s2a",
+                                &*EntryBB->getFirstInsertionPt());
   Builder.CreateStore(PreloadVal, Alloca);
   ValueMapT PreloadedPointer;
   PreloadedPointer[PreloadVal] = AccInst;
@@ -1496,8 +1496,8 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
 
       auto *CreatedArray = new AllocaInst(NewArrayType, DL.getAllocaAddrSpace(),
                                           SAI->getName(), &*InstIt);
-      CreatedArray->setAlignment(
-          MaybeAlign(PollyTargetFirstLevelCacheLineSize));
+      if (PollyTargetFirstLevelCacheLineSize)
+        CreatedArray->setAlignment(Align(PollyTargetFirstLevelCacheLineSize));
       SAI->setBasePtr(CreatedArray);
     }
   }

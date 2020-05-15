@@ -1181,7 +1181,7 @@ static Align enforceKnownAlignment(Value *V, Align Alignment, Align PrefAlign,
     // stripPointerCasts recurses through infinite layers of bitcasts,
     // while computeKnownBits is not allowed to traverse more than 6
     // levels.
-    Alignment = max(AI->getAlign(), Alignment);
+    Alignment = std::max(AI->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
