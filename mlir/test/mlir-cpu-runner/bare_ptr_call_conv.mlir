@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-loop-to-std -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' | mlir-cpu-runner -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext -entry-point-result=void | FileCheck %s
+// RUN: mlir-opt %s -convert-scf-to-std -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' | mlir-cpu-runner -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext -entry-point-result=void | FileCheck %s
 
 // Verify bare pointer memref calling convention. `simple_add1_add2_test`
 // gets two 2xf32 memrefs, adds 1.0f to the first one and 2.0f to the second

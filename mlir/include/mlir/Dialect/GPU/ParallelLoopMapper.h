@@ -63,7 +63,7 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
 /// encountered to the local workgroup. Within each mapping, the first three
 /// dimensions are mapped to x/y/z hardware ids and all following dimensions are
 /// mapped to sequential loops.
-void greedilyMapParallelLoopsToGPU(Region &region);
+void greedilyMapParallelSCFToGPU(Region &region);
 
 } // end namespace mlir
 #endif // MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H

@@ -16,7 +16,7 @@ class MLIRContext;
 class OwningRewritePatternList;
 
 /// Collect a set of patterns to convert from the Vector dialect to itself.
-/// Should be merged with populateVectorToLoopsLoweringPattern.
+/// Should be merged with populateVectorToSCFLoweringPattern.
 void populateVectorToVectorConversionPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns,
     ArrayRef<int64_t> coarseVectorShape = {},
