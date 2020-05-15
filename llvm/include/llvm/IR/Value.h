@@ -837,7 +837,7 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
 
   // Fix the Prev pointers.
   for (Use *I = UseList, **Prev = &UseList; I; I = I->Next) {
-    I->setPrev(Prev);
+    I->Prev = Prev;
     Prev = &I->Next;
   }
 }
