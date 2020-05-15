@@ -1,5 +1,6 @@
 ;; This test checks whether DW_AT_data_location attribute
 ;; accepts DIExpression.
+; REQUIRES: x86_64-linux
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump  %t.o | FileCheck %s
