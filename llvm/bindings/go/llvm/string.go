@@ -42,8 +42,8 @@ func (t TypeKind) String() string {
 		return "PointerTypeKind"
 	case MetadataTypeKind:
 		return "MetadataTypeKind"
-	case FixedVectorTypeKind:
-		return "FixedVectorTypeKind"
+	case VectorTypeKind:
+		return "VectorTypeKind"
 	case ScalableVectorTypeKind:
 		return "ScalableVectorTypeKind"
 	}
