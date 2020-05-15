@@ -9147,8 +9147,8 @@ static bool isHorizontalBinOpPart(const BuildVectorSDNode *N, unsigned Opcode,
     if (!CanFold)
       break;
 
-    unsigned I0 = cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue();
-    unsigned I1 = cast<ConstantSDNode>(Op1.getOperand(1))->getZExtValue();
+    unsigned I0 = Op0.getConstantOperandVal(1);
+    unsigned I1 = Op1.getConstantOperandVal(1);
 
     if (i * 2 < NumElts) {
       if (V0.isUndef()) {
@@ -9296,11 +9296,10 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
     if (Op0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
         Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
         !isa<ConstantSDNode>(Op0.getOperand(1)) ||
-        !isa<ConstantSDNode>(Op1.getOperand(1)) ||
         Op0.getOperand(1) != Op1.getOperand(1))
       return false;
 
-    unsigned I0 = cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue();
+    unsigned I0 = Op0.getConstantOperandVal(1);
     if (I0 != i)
       return false;
 
