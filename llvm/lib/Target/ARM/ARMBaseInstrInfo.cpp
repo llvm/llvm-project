@@ -5649,7 +5649,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
           C.setCallInfo(CallID, NumBytesForCall);
       };
 
-  OutlinerCosts *Costs = new OutlinerCosts(Subtarget);
+  auto Costs = std::make_unique<OutlinerCosts>(Subtarget);
   unsigned FrameID = 0;
   unsigned NumBytesToCreateFrame = 0;
 
@@ -5668,7 +5668,6 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
   } else
     return outliner::OutlinedFunction();
 
-  delete Costs;
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
                                     NumBytesToCreateFrame, FrameID);
 }
