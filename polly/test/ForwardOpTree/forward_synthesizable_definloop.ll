@@ -75,6 +75,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val = sitofp i32 %i to double
-; CHECK-NEXT:                   store double %val, double* %A
+; CHECK-NEXT:                   store double %val, double* %A, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }
