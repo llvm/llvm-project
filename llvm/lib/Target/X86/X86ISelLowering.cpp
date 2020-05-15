@@ -8261,8 +8261,8 @@ static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
   case ISD::SCALAR_TO_VECTOR:
     return findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset);
   case ISD::SRL:
-    if (isa<ConstantSDNode>(Elt.getOperand(1))) {
-      uint64_t Idx = Elt.getConstantOperandVal(1);
+    if (auto *IdxC = dyn_cast<ConstantSDNode>(Elt.getOperand(1))) {
+      uint64_t Idx = IdxC->getZExtValue();
       if ((Idx % 8) == 0 && findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset)) {
         ByteOffset += Idx / 8;
         return true;
@@ -8270,13 +8270,13 @@ static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
     }
     break;
   case ISD::EXTRACT_VECTOR_ELT:
-    if (isa<ConstantSDNode>(Elt.getOperand(1))) {
+    if (auto *IdxC = dyn_cast<ConstantSDNode>(Elt.getOperand(1))) {
       SDValue Src = Elt.getOperand(0);
       unsigned SrcSizeInBits = Src.getScalarValueSizeInBits();
       unsigned DstSizeInBits = Elt.getScalarValueSizeInBits();
       if (DstSizeInBits == SrcSizeInBits && (SrcSizeInBits % 8) == 0 &&
           findEltLoadSrc(Src, Ld, ByteOffset)) {
-        uint64_t Idx = Elt.getConstantOperandVal(1);
+        uint64_t Idx = IdxC->getZExtValue();
         ByteOffset += Idx * (SrcSizeInBits / 8);
         return true;
       }
@@ -9007,11 +9007,11 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
     SDValue In = Op.getOperand(idx);
     if (In.isUndef())
       continue;
-    if (!isa<ConstantSDNode>(In))
-      NonConstIdx.push_back(idx);
-    else {
-      Immediate |= (cast<ConstantSDNode>(In)->getZExtValue() & 0x1) << idx;
+    if (auto *InC = dyn_cast<ConstantSDNode>(In)) {
+      Immediate |= (InC->getZExtValue() & 0x1) << idx;
       HasConstElts = true;
+    } else {
+      NonConstIdx.push_back(idx);
     }
     if (SplatIdx < 0)
       SplatIdx = idx;
@@ -18092,6 +18092,7 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Vec);
   MVT VecVT = Vec.getSimpleValueType();
   SDValue Idx = Op.getOperand(1);
+  auto* IdxC = dyn_cast<ConstantSDNode>(Idx);
   MVT EltVT = Op.getSimpleValueType();
 
   assert((VecVT.getVectorNumElements() <= 16 || Subtarget.hasBWI()) &&
@@ -18099,7 +18100,7 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
 
   // variable index can't be handled in mask registers,
   // extend vector to VR512/128
-  if (!isa<ConstantSDNode>(Idx)) {
+  if (!IdxC) {
     unsigned NumElts = VecVT.getVectorNumElements();
     // Extending v8i1/v16i1 to 512-bit get better performance on KNL
     // than extending to 128/256bit.
@@ -18110,7 +18111,7 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::TRUNCATE, dl, EltVT, Elt);
   }
 
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  unsigned IdxVal = IdxC->getZExtValue();
   if (IdxVal == 0) // the operation is legal
     return Op;
 
@@ -18139,11 +18140,12 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue Vec = Op.getOperand(0);
   MVT VecVT = Vec.getSimpleValueType();
   SDValue Idx = Op.getOperand(1);
+  auto* IdxC = dyn_cast<ConstantSDNode>(Idx);
 
   if (VecVT.getVectorElementType() == MVT::i1)
     return ExtractBitFromMaskVector(Op, DAG, Subtarget);
 
-  if (!isa<ConstantSDNode>(Idx)) {
+  if (!IdxC) {
     // Its more profitable to go through memory (1 cycles throughput)
     // than using VMOVD + VPERMV/PSHUFB sequence ( 2/3 cycles throughput)
     // IACA tool was used to get performance estimation
@@ -18177,7 +18179,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     return SDValue();
   }
 
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  unsigned IdxVal = IdxC->getZExtValue();
 
   // If this is a 256-bit vector result, first extract the 128-bit vector and
   // then extract the element from the 128-bit vector.
@@ -18299,9 +18301,7 @@ static SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG,
 
   // Copy into a k-register, extract to v1i1 and insert_subvector.
   SDValue EltInVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v1i1, Elt);
-
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VecVT, Vec, EltInVec,
-                     Op.getOperand(2));
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VecVT, Vec, EltInVec, Idx);
 }
 
 SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
@@ -21299,8 +21299,8 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
       return false;
 
     // Quit if without a constant index.
-    SDValue Idx = I->getOperand(1);
-    if (!isa<ConstantSDNode>(Idx))
+    auto *Idx = dyn_cast<ConstantSDNode>(I->getOperand(1));
+    if (!Idx)
       return false;
 
     SDValue Src = I->getOperand(0);
@@ -21316,8 +21316,9 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
       M = SrcOpMap.insert(std::make_pair(Src, EltCount)).first;
       SrcOps.push_back(Src);
     }
+
     // Quit if element already used.
-    unsigned CIdx = cast<ConstantSDNode>(Idx)->getZExtValue();
+    unsigned CIdx = Idx->getZExtValue();
     if (M->second[CIdx])
       return false;
     M->second.setBit(CIdx);
@@ -35909,8 +35910,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     assert(VT == MVT::v4f32 && "INSERTPS ValueType must be MVT::v4f32");
     SDValue Op0 = N.getOperand(0);
     SDValue Op1 = N.getOperand(1);
-    SDValue Op2 = N.getOperand(2);
-    unsigned InsertPSMask = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned InsertPSMask = N.getConstantOperandVal(2);
     unsigned SrcIdx = (InsertPSMask >> 6) & 0x3;
     unsigned DstIdx = (InsertPSMask >> 4) & 0x3;
     unsigned ZeroMask = InsertPSMask & 0xF;
