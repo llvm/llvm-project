@@ -135,9 +135,9 @@ if [[ ${PREVIOUS_DYLIBS_DIR} == "" ]]; then
   echo "@@@@@@"
 fi
 
-LIBCXX_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/${DEPLOYMENT_TARGET}/libc++.dylib"
-LIBCXXABI_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/${DEPLOYMENT_TARGET}/libc++abi.dylib"
-LIBCXX_IN_SDK="${PREVIOUS_DYLIBS_DIR}/macOS/${MACOS_SDK_VERSION}/libc++.dylib"
+LIBCXX_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++/${DEPLOYMENT_TARGET}"
+LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+LIBCXX_ROOT_IN_SDK="${PREVIOUS_DYLIBS_DIR}/macOS/libc++/${MACOS_SDK_VERSION}"
 
 # TODO: We need to also run the tests for libc++abi.
 echo "@@@ Running tests for libc++ @@@"
@@ -146,8 +146,8 @@ echo "@@@ Running tests for libc++ @@@"
                                  --param=cxx_headers="${LLVM_INSTALL_DIR}/include/c++/v1" \
                                  --param=std="${STD}" \
                                  --param=platform="macosx${DEPLOYMENT_TARGET}" \
-                                 --param=cxx_runtime_root="$(dirname "${LIBCXX_ON_DEPLOYMENT_TARGET}")" \
-                                 --param=abi_library_path="$(dirname "${LIBCXXABI_ON_DEPLOYMENT_TARGET}")" \
-                                 --param=use_system_cxx_lib="$(dirname "${LIBCXX_IN_SDK}")" \
+                                 --param=cxx_runtime_root="${LIBCXX_ROOT_ON_DEPLOYMENT_TARGET}" \
+                                 --param=abi_library_path="${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}" \
+                                 --param=use_system_cxx_lib="${LIBCXX_ROOT_IN_SDK}" \
                                  ${ADDITIONAL_LIT_ARGS}
 echo "@@@@@@"
