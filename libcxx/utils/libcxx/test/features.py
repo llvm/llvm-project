@@ -71,16 +71,16 @@ macros = {
 }
 for macro, feature in macros.items():
   features += [
-    Feature(name=lambda cfg, feature=feature: feature + (
-              '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
+    Feature(name=lambda cfg, m=macro, f=feature: f + (
+              '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
             ),
-            when=lambda cfg, macro=macro: macro in compilerMacros(cfg),
+            when=lambda cfg, m=macro: m in compilerMacros(cfg),
 
             # FIXME: This is a hack that should be fixed using module maps.
             # If modules are enabled then we have to lift all of the definitions
             # in <__config_site> onto the command line.
-            compileFlag=lambda cfg, macro=macro: '-Wno-macro-redefined -D{}'.format(macro) + (
-              '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
+            compileFlag=lambda cfg, m=macro: '-Wno-macro-redefined -D{}'.format(m) + (
+              '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
             )
     )
   ]
