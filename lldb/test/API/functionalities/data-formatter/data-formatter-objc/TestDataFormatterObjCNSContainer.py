@@ -32,7 +32,7 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
                 '(NSDictionary *) nscfDictionary = ',
                 ' 4 key/value pairs',
                 '(CFDictionaryRef) cfDictionaryRef = ',
-                ' 3 key/value pairs',
+                ' 2 key/value pairs',
                 '(NSDictionary *) newMutableDictionary = ',
                 ' 21 key/value pairs',
                 '(CFArrayRef) cfarray_ref = ',
@@ -57,9 +57,22 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
 
         self.expect(
-          'frame var nscfSet',
+            'frame variable -d run-target *cfDictionaryRef',
+            patterns=[
+                '\(const __CFDictionary\) \*cfDictionaryRef =',
+                'key = 0x.* @"foo"',
+                'value = 0x.* @"foo"',
+                'key = 0x.* @"bar"',
+                'value = 0x.* @"bar"',
+                ])
+
+
+        self.expect(
+          'frame var nscfSet cfSetRef',
           substrs=[
           '(NSSet *) nscfSet = ',
+          '2 elements',
+          '(CFSetRef) cfSetRef = ',
           '2 elements',
           ])
 
@@ -67,6 +80,14 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
           'frame variable -d run-target *nscfSet',
           patterns=[
               '\(__NSCFSet\) \*nscfSet =',
+              '\[0\] = 0x.* @".*"',
+              '\[1\] = 0x.* @".*"',
+                    ])
+
+        self.expect(
+          'frame variable -d run-target *cfSetRef',
+          patterns=[
+              '\(const __CFSet\) \*cfSetRef =',
               '\[0\] = 0x.* @".*"',
               '\[1\] = 0x.* @".*"',
                     ])
