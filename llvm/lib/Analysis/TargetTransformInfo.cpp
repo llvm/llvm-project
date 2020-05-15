@@ -290,9 +290,8 @@ bool TargetTransformInfo::collectFlatAddressOperands(
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);
 }
 
-bool TargetTransformInfo::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
-                                                           Value *OldV,
-                                                           Value *NewV) const {
+Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
+    IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
 }
 

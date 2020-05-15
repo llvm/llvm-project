@@ -851,8 +851,9 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   }
 }
 
-bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
-  IntrinsicInst *II, Value *OldV, Value *NewV) const {
+Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                                    Value *OldV,
+                                                    Value *NewV) const {
   auto IntrID = II->getIntrinsicID();
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
@@ -862,7 +863,7 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
   case Intrinsic::amdgcn_ds_fmax: {
     const ConstantInt *IsVolatile = cast<ConstantInt>(II->getArgOperand(4));
     if (!IsVolatile->isZero())
-      return false;
+      return nullptr;
     Module *M = II->getParent()->getParent()->getParent();
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
@@ -870,7 +871,7 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
         Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
-    return true;
+    return II;
   }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
@@ -880,12 +881,25 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
     LLVMContext &Ctx = NewV->getType()->getContext();
     ConstantInt *NewVal = (TrueAS == NewAS) ?
       ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
-    II->replaceAllUsesWith(NewVal);
-    II->eraseFromParent();
-    return true;
+    return NewVal;
+  }
+  case Intrinsic::ptrmask: {
+    unsigned OldAS = OldV->getType()->getPointerAddressSpace();
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!getTLI()->isNoopAddrSpaceCast(OldAS, NewAS))
+      return nullptr;
+
+    Module *M = II->getParent()->getParent()->getParent();
+    Value *MaskOp = II->getArgOperand(1);
+    Type *MaskTy = MaskOp->getType();
+    Function *NewDecl = Intrinsic::getDeclaration(M, Intrinsic::ptrmask,
+                                                  {NewV->getType(), MaskTy});
+    CallInst *NewCall = CallInst::Create(NewDecl->getFunctionType(), NewDecl,
+                                         {NewV, MaskOp}, "", II);
+    return NewCall;
   }
   default:
-    return false;
+    return nullptr;
   }
 }
 

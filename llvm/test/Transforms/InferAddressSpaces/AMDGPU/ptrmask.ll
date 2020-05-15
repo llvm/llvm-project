@@ -42,9 +42,8 @@ define i8 @ptrmask_cast_region_to_flat(i8 addrspace(2)* %src.ptr, i64 %mask) {
 
 define i8 @ptrmask_cast_global_to_flat(i8 addrspace(1)* %src.ptr, i64 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_global_to_flat(
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast i8 addrspace(1)* [[SRC_PTR:%.*]] to i8*
-; CHECK-NEXT:    [[MASKED:%.*]] = call i8* @llvm.ptrmask.p0i8.i64(i8* [[CAST]], i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[MASKED]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* [[SRC_PTR:%.*]], i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(1)* [[TMP1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %cast = addrspacecast i8 addrspace(1)* %src.ptr to i8*
@@ -55,9 +54,8 @@ define i8 @ptrmask_cast_global_to_flat(i8 addrspace(1)* %src.ptr, i64 %mask) {
 
 define i8 @ptrmask_cast_999_to_flat(i8 addrspace(999)* %src.ptr, i64 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_999_to_flat(
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast i8 addrspace(999)* [[SRC_PTR:%.*]] to i8*
-; CHECK-NEXT:    [[MASKED:%.*]] = call i8* @llvm.ptrmask.p0i8.i64(i8* [[CAST]], i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[MASKED]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 addrspace(999)* @llvm.ptrmask.p999i8.i64(i8 addrspace(999)* [[SRC_PTR:%.*]], i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(999)* [[TMP1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %cast = addrspacecast i8 addrspace(999)* %src.ptr to i8*
@@ -121,8 +119,8 @@ define i8 @ptrmask_cast_local_to_flat_global(i64 %mask) {
 
 define i8 @ptrmask_cast_global_to_flat_global(i64 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_global_to_flat_global(
-; CHECK-NEXT:    [[MASKED:%.*]] = call i8* @llvm.ptrmask.p0i8.i64(i8* addrspacecast (i8 addrspace(1)* @gv to i8*), i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[MASKED]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* @gv, i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(1)* [[TMP1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %masked = call i8* @llvm.ptrmask.p0i8.i64(i8* addrspacecast (i8 addrspace(1)* @gv to i8*), i64 %mask)
@@ -132,10 +130,9 @@ define i8 @ptrmask_cast_global_to_flat_global(i64 %mask) {
 
 define i8 @multi_ptrmask_cast_global_to_flat(i8 addrspace(1)* %src.ptr, i64 %mask) {
 ; CHECK-LABEL: @multi_ptrmask_cast_global_to_flat(
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast i8 addrspace(1)* [[SRC_PTR:%.*]] to i8*
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, i8 addrspace(1)* [[SRC_PTR]], align 1
-; CHECK-NEXT:    [[MASKED:%.*]] = call i8* @llvm.ptrmask.p0i8.i64(i8* [[CAST]], i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, i8* [[MASKED]], align 1
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, i8 addrspace(1)* [[SRC_PTR:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* [[SRC_PTR]], i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, i8 addrspace(1)* [[TMP1]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD0]], [[LOAD1]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
