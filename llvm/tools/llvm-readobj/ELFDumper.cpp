@@ -767,6 +767,11 @@ public:
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
 
 protected:
+  void printDependentLibsHelper(
+      const ELFFile<ELFT> *Obj,
+      function_ref<void(const Elf_Shdr &)> OnSectionStart,
+      function_ref<void(StringRef, uint64_t)> OnSectionEntry);
+
   void reportUniqueWarning(Error Err) const;
   StringRef FileName;
 
@@ -5311,8 +5316,87 @@ void GNUStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
 }
 
 template <class ELFT>
+void DumpStyle<ELFT>::printDependentLibsHelper(
+    const ELFFile<ELFT> *Obj,
+    function_ref<void(const Elf_Shdr &)> OnSectionStart,
+    function_ref<void(StringRef, uint64_t)> OnLibEntry) {
+  auto Warn = [this](unsigned SecNdx, StringRef Msg) {
+    this->reportUniqueWarning(
+        createError("SHT_LLVM_DEPENDENT_LIBRARIES section at index " +
+                    Twine(SecNdx) + " is broken: " + Msg));
+  };
+
+  unsigned I = -1;
+  for (const Elf_Shdr &Shdr : unwrapOrError(this->FileName, Obj->sections())) {
+    ++I;
+    if (Shdr.sh_type != ELF::SHT_LLVM_DEPENDENT_LIBRARIES)
+      continue;
+
+    OnSectionStart(Shdr);
+
+    Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(&Shdr);
+    if (!ContentsOrErr) {
+      Warn(I, toString(ContentsOrErr.takeError()));
+      continue;
+    }
+
+    ArrayRef<uint8_t> Contents = *ContentsOrErr;
+    if (!Contents.empty() && Contents.back() != 0) {
+      Warn(I, "the content is not null-terminated");
+      continue;
+    }
+
+    for (const uint8_t *I = Contents.begin(), *E = Contents.end(); I < E;) {
+      StringRef Lib((const char *)I);
+      OnLibEntry(Lib, I - Contents.begin());
+      I += Lib.size() + 1;
+    }
+  }
+}
+
+template <class ELFT>
 void GNUStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
-  OS << "printDependentLibs not implemented!\n";
+  bool SectionStarted = false;
+  struct NameOffset {
+    StringRef Name;
+    uint64_t Offset;
+  };
+  std::vector<NameOffset> SecEntries;
+  NameOffset Current;
+  auto PrintSection = [&]() {
+    OS << "Dependent libraries section " << Current.Name << " at offset "
+       << format_hex(Current.Offset, 1) << " contains " << SecEntries.size()
+       << " entries:\n";
+    for (NameOffset Entry : SecEntries)
+      OS << "  [" << format("%6tx", Entry.Offset) << "]  " << Entry.Name
+         << "\n";
+    OS << "\n";
+    SecEntries.clear();
+  };
+
+  auto OnSectionStart = [&](const Elf_Shdr &Shdr) {
+    if (SectionStarted)
+      PrintSection();
+    SectionStarted = true;
+    Current.Offset = Shdr.sh_offset;
+    Expected<StringRef> Name = Obj->getSectionName(&Shdr);
+    if (!Name) {
+      Current.Name = "<?>";
+      this->reportUniqueWarning(
+          createError("cannot get section name of "
+                      "SHT_LLVM_DEPENDENT_LIBRARIES section: " +
+                      toString(Name.takeError())));
+    } else {
+      Current.Name = *Name;
+    }
+  };
+  auto OnLibEntry = [&](StringRef Lib, uint64_t Offset) {
+    SecEntries.push_back(NameOffset{Lib, Offset});
+  };
+
+  printDependentLibsHelper(Obj, OnSectionStart, OnLibEntry);
+  if (SectionStarted)
+    PrintSection();
 }
 
 // Used for printing section names in places where possible errors can be
@@ -6582,37 +6666,9 @@ void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
   ListScope L(W, "DependentLibs");
-
-  auto Warn = [this](unsigned SecNdx, StringRef Msg) {
-    this->reportUniqueWarning(
-        createError("SHT_LLVM_DEPENDENT_LIBRARIES section at index " +
-                    Twine(SecNdx) + " is broken: " + Msg));
-  };
-
-  unsigned I = -1;
-  for (const Elf_Shdr &Shdr : unwrapOrError(this->FileName, Obj->sections())) {
-    ++I;
-    if (Shdr.sh_type != ELF::SHT_LLVM_DEPENDENT_LIBRARIES)
-      continue;
-
-    Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(&Shdr);
-    if (!ContentsOrErr) {
-      Warn(I, toString(ContentsOrErr.takeError()));
-      continue;
-    }
-
-    ArrayRef<uint8_t> Contents = *ContentsOrErr;
-    if (!Contents.empty() && Contents.back() != 0) {
-      Warn(I, "the content is not null-terminated");
-      continue;
-    }
-
-    for (const uint8_t *I = Contents.begin(), *E = Contents.end(); I < E;) {
-      StringRef Lib((const char *)I);
-      W.printString(Lib);
-      I += Lib.size() + 1;
-    }
-  }
+  printDependentLibsHelper(
+      Obj, [](const Elf_Shdr &) {},
+      [this](StringRef Lib, uint64_t) { W.printString(Lib); });
 }
 
 template <class ELFT>
