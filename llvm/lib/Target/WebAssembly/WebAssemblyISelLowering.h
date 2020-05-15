@@ -118,6 +118,11 @@ private:
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAccessVectorElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG) const;
+
+  // Custom DAG combine hooks
+  SDValue
+  PerformDAGCombine(SDNode *N,
+                    TargetLowering::DAGCombinerInfo &DCI) const override;
 };
 
 namespace WebAssembly {
