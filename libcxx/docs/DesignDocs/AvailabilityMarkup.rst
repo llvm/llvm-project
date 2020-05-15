@@ -66,14 +66,10 @@ availability.
 
 * The `platform` parameter controls the deployment target. For example lit can
   be invoked with `--param=platform=macosx10.12`. Default is the current host.
-* The `use_system_cxx_lib` parameter indicates to use another library than the
-  just built one. Invoking lit with `--param=use_system_cxx_lib=true` will run
-  the test-suite against the host system library. Alternatively a path to the
-  directory containing a specific prebuilt libc++ can be used, for example:
-  `--param=use_system_cxx_lib=/path/to/macOS/10.12/`.
+* The `use_system_cxx_lib` parameter indicates that the test suite is being run
+  against a system library.
 
 Tests can be marked as XFAIL based on multiple features made available by lit:
-
 
 * if `--param=platform=macosx10.12` is passed, the following features will be available:
 
