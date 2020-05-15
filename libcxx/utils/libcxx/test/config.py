@@ -740,15 +740,9 @@ class Configuration(object):
             self.cxx.useModules()
 
     def configure_substitutions(self):
-        tool_env = ''
-        if self.target_info.is_darwin():
-            # Do not pass DYLD_LIBRARY_PATH to the compiler, linker, etc. as
-            # these tools are not meant to exercise the just-built libraries.
-            tool_env += 'env DYLD_LIBRARY_PATH=""'
-
         sub = self.config.substitutions
         # Configure compiler substitutions
-        sub.append(('%{cxx}', '{} {}'.format(tool_env, pipes.quote(self.cxx.path))))
+        sub.append(('%{cxx}', pipes.quote(self.cxx.path)))
         sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
         # Configure flags substitutions
         flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
