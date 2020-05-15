@@ -146,8 +146,9 @@ echo "@@@ Running tests for libc++ @@@"
                                  --param=cxx_headers="${LLVM_INSTALL_DIR}/include/c++/v1" \
                                  --param=std="${STD}" \
                                  --param=platform="macosx${DEPLOYMENT_TARGET}" \
+                                 --param=cxx_library_root="${LIBCXX_ROOT_IN_SDK}" \
                                  --param=cxx_runtime_root="${LIBCXX_ROOT_ON_DEPLOYMENT_TARGET}" \
                                  --param=abi_library_path="${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}" \
-                                 --param=use_system_cxx_lib="${LIBCXX_ROOT_IN_SDK}" \
+                                 --param=use_system_cxx_lib="True" \
                                  ${ADDITIONAL_LIT_ARGS}
 echo "@@@@@@"
