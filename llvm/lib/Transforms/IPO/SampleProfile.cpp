@@ -906,14 +906,14 @@ bool SampleProfileLoader::inlineCallInstruction(CallBase &CB) {
   // when cost exceeds threshold without checking all IRs in the callee.
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
-  InlineCost Cost =
-      getInlineCost(CB, Params, GetTTI(*CalledFunction), GetAC, GetTLI);
+  InlineCost Cost = getInlineCost(CB, Params, GetTTI(*CalledFunction), GetAC,
+                                  None, GetTLI, nullptr, nullptr);
   if (Cost.isNever()) {
     ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineFail", DLoc, BB)
               << "incompatible inlining");
     return false;
   }
-  InlineFunctionInfo IFI(nullptr, GetAC);
+  InlineFunctionInfo IFI(nullptr, &GetAC);
   if (InlineFunction(CB, IFI).isSuccess()) {
     // The call to InlineFunction erases I, so we can't pass it here.
     ORE->emit(OptimizationRemark(CSINLINE_DEBUG, "InlineSuccess", DLoc, BB)
@@ -933,7 +933,7 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
     return false;
 
   InlineCost Cost = getInlineCost(CallInst, getInlineParams(), GetTTI(*Callee),
-                                  GetAC, GetTLI);
+                                  GetAC, None, GetTLI, nullptr, nullptr);
 
   return Cost.getCost() <= SampleColdCallSiteThreshold;
 }

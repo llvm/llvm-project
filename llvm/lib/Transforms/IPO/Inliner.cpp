@@ -395,7 +395,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         std::swap(CallSites[I--], CallSites[--FirstCallInSCC]);
 
   InlinedArrayAllocasTy InlinedArrayAllocas;
-  InlineFunctionInfo InlineInfo(&CG, GetAssumptionCache, PSI);
+  InlineFunctionInfo InlineInfo(&CG, &GetAssumptionCache, PSI);
 
   // Now that we have all of the call sites, loop over them and inline them if
   // it looks profitable to do so.
@@ -804,7 +804,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
 
-    auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+    std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+        [&](Function &F) -> AssumptionCache & {
       return FAM.getResult<AssumptionAnalysis>(F);
     };
 
@@ -848,7 +849,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // Setup the data structure used to plumb customization into the
       // `InlineFunction` routine.
       InlineFunctionInfo IFI(
-          /*cg=*/nullptr, GetAssumptionCache, PSI,
+          /*cg=*/nullptr, &GetAssumptionCache, PSI,
           &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
           &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
