@@ -1,0 +1,134 @@
+## Check we are able to set an offset field for sections using the 'Offset' key.
+
+## Show how the 'Offset' field key can be used.
+## Show that it can affect the layout of the rest of the file.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --sections %t1 | FileCheck %s --check-prefix=DEFAULT
+
+# DEFAULT:      [Nr] Name      Type     Address          Off
+# DEFAULT:      [ 1] .foo      PROGBITS 0000000000000000 000040
+# DEFAULT-NEXT: [ 2] .bar      PROGBITS 0000000000000000 000048
+# DEFAULT-NEXT: [ 3] .strtab   STRTAB   0000000000000000 000058
+# DEFAULT-NEXT: [ 4] .shstrtab STRTAB   0000000000000000 000059
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .foo
+    Type:  SHT_PROGBITS
+    Size:  0x8
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    Size:         0x10
+## It is a no-op. We set it to reduce amount
+## of differences with the second YAML below.
+    AddressAlign: 0x0
+
+## The same as previous, but an arbitrary 'Offset' is set for the .bar section.
+# RUN: yaml2obj --docnum=2 %s -o %t2 -DOFFSET=0x50 -DALIGN=0x0
+# RUN: llvm-readelf --sections %t2 | FileCheck %s --check-prefix=OFFSET
+
+# OFFSET:      [Nr] Name      Type     Address          Off
+# OFFSET:      [ 1] .foo      PROGBITS 0000000000000000 000040
+# OFFSET-NEXT: [ 2] .bar      PROGBITS 0000000000000000 000050
+# OFFSET-NEXT: [ 3] .strtab   STRTAB   0000000000000000 000060
+# OFFSET-NEXT: [ 4] .shstrtab STRTAB   0000000000000000 000061
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+    Size:   0x8
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    Size:         0x10
+    Offset:       [[OFFSET]]
+    AddressAlign: [[ALIGN]]
+
+## Set the 'Offset' to the same value as was set by default to show
+## that there is no difference in the output in this case.
+# RUN: yaml2obj --docnum=2 %s -o %t3 -DOFFSET=0x48 -DALIGN=0x0
+# RUN: cmp %t1 %t3
+
+## Show that we can set an offset and an address alignment independently for a section.
+# RUN: yaml2obj --docnum=2 %s -o %t4 -DOFFSET=0x48 -DALIGN=0x5
+# RUN: llvm-readelf --sections %t4 | FileCheck %s --check-prefix=OFFSET-AND-ALIGN
+
+# OFFSET-AND-ALIGN: [Nr] Name Type     Address          Off    Size   ES Flg Lk Inf Al
+# OFFSET-AND-ALIGN: [ 2] .bar PROGBITS 0000000000000000 000048 000010 00     0   0  5
+
+## Show we do not allow an 'Offset' to go backward.
+# RUN: not yaml2obj --docnum=2 %s -DOFFSET=0x47 -DALIGN=0x0 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR-BACKWARD
+
+# ERR-BACKWARD: error: the 'Offset' value (0x47) goes backward
+
+## Show that the 'Offset' key can be used together with the 'ShOffset' key.
+
+## Case 1: set the same value for 'Offset' and 'ShOffset' keys.
+# RUN: yaml2obj --docnum=3 %s -o %t5 -DSHOFFSET=0x100 -DOFFSET=0x100
+# RUN: llvm-readelf --headers --sections %t5 | FileCheck %s --check-prefix=BOTH-SAME
+
+## The same offset as in the Case 3.
+# BOTH-SAME: Start of section headers: 288 (bytes into file)
+
+# BOTH-SAME:      [Nr] Name     Type     Address          Off
+# BOTH-SAME:      [ 1] .foo     PROGBITS 0000000000000000 000100
+# BOTH-SAME-NEXT: [ 2] .bar     PROGBITS 0000000000000000 000101
+# BOTH-SAME-NEXT: [ 3] .strtab  STRTAB   0000000000000000 000102
+
+## Case 2: set the 'Offset' value to be less than the 'ShOffset'.
+
+# RUN: yaml2obj --docnum=3 %s -o %t6 -DSHOFFSET=0x100 -DOFFSET=0x90
+# RUN: llvm-readelf --headers --sections %t6 | FileCheck %s --check-prefix=BOTH-A
+
+## 176 < 288 (start of section headers in Case 1).
+# BOTH-A: Start of section headers: 176 (bytes into file)
+
+## Show that the 'Offset' field sets the physical offset in a file and the `ShOffset`
+## field only overrides the sh_offset value of the .foo section.
+# BOTH-A:      [Nr] Name     Type     Address          Off
+# BOTH-A:      [ 1] .foo     PROGBITS 0000000000000000 000100
+# BOTH-A-NEXT: [ 2] .bar     PROGBITS 0000000000000000 000091
+# BOTH-A-NEXT: [ 3] .strtab  STRTAB   0000000000000000 000092
+
+## Case 3: set the 'Offset' value to be greater than the 'ShOffset' value.
+
+# RUN: yaml2obj --docnum=3 %s -o %t7 -DSHOFFSET=0x90 -DOFFSET=0x100
+# RUN: llvm-readelf --sections --headers %t7 | FileCheck %s --check-prefix=BOTH-B
+
+## The same offset as in Case 1.
+# BOTH-B: Start of section headers: 288 (bytes into file)
+
+## Show that the 'Offset' field sets the physical offset in file and `ShOffset`
+## field only affects the sh_offset value of the .foo section (overrides it).
+# BOTH-B:      [Nr] Name    Type     Address          Off
+# BOTH-B:      [ 1] .foo    PROGBITS 0000000000000000 000090
+# BOTH-B-NEXT: [ 2] .bar    PROGBITS 0000000000000000 000101
+# BOTH-B-NEXT: [ 3] .strtab STRTAB   0000000000000000 000102
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:     .foo
+    Type:     SHT_PROGBITS
+    Size:     0x1
+    ShOffset: [[SHOFFSET]]
+    Offset:   [[OFFSET]]
+  - Name:     .bar
+    Type:     SHT_PROGBITS
+    Size:     0x1
