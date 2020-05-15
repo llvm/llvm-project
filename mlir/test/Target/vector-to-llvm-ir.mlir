@@ -21,3 +21,11 @@ func @genbool_3d() -> vector<2x3x4xi1> {
 // CHECK-LABEL: @genbool_3d()
 // CHECK-NEXT: ret [2 x [3 x <4 x i1>]] {{\[+}}3 x <4 x i1>] [<4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i1> zeroinitializer, <4 x i1> zeroinitializer], [3 x <4 x i1>] zeroinitializer]
 // note: awkward syntax to match [[
+
+func @genbool_1d_var_but_constant() -> vector<8xi1> {
+  %i = constant 0 : index
+  %v = vector.create_mask %i : vector<8xi1>
+  return %v : vector<8xi1>
+}
+// CHECK-LABEL: @genbool_1d_var_but_constant()
+// CHECK-NEXT: ret <8 x i1> zeroinitializer
