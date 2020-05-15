@@ -38,8 +38,6 @@ class DWARFCache;
 std::string toString(const elf::InputFile *f);
 
 namespace elf {
-class InputFile;
-class InputSectionBase;
 
 using llvm::object::Archive;
 
