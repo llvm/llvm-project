@@ -1428,11 +1428,11 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
 
 def warn_max_tokens : Warning<
   "the number of preprocessor source tokens (%0) exceeds this token limit (%1)">,
-  InGroup<MaxTokens>;
+  InGroup<MaxTokens>, DefaultIgnore;
 
 def warn_max_tokens_total : Warning<
   "the total number of preprocessor source tokens (%0) exceeds the token limit (%1)">,
-  InGroup<MaxTokens>;
+  InGroup<MaxTokens>, DefaultIgnore;
 
 def note_max_tokens_total_override : Note<"total token limit set here">;
 
