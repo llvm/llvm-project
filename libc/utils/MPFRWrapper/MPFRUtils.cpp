@@ -8,6 +8,8 @@
 
 #include "MPFRUtils.h"
 
+#include "utils/FPUtil/FloatOperations.h"
+
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -18,44 +20,6 @@
 namespace __llvm_libc {
 namespace testing {
 namespace mpfr {
-
-template <typename T> struct FloatProperties {};
-
-template <> struct FloatProperties<float> {
-  typedef uint32_t BitsType;
-  static_assert(sizeof(BitsType) == sizeof(float),
-                "Unexpected size of 'float' type.");
-
-  static constexpr uint32_t mantissaWidth = 23;
-  static constexpr BitsType signMask = 0x7FFFFFFFU;
-  static constexpr uint32_t exponentOffset = 127;
-};
-
-template <> struct FloatProperties<double> {
-  typedef uint64_t BitsType;
-  static_assert(sizeof(BitsType) == sizeof(double),
-                "Unexpected size of 'double' type.");
-
-  static constexpr uint32_t mantissaWidth = 52;
-  static constexpr BitsType signMask = 0x7FFFFFFFFFFFFFFFULL;
-  static constexpr uint32_t exponentOffset = 1023;
-};
-
-template <typename T> typename FloatProperties<T>::BitsType getBits(T x) {
-  using BitsType = typename FloatProperties<T>::BitsType;
-  return *reinterpret_cast<BitsType *>(&x);
-}
-
-// Returns the zero adjusted exponent value of abs(x).
-template <typename T> int getExponent(T x) {
-  using Properties = FloatProperties<T>;
-  using BitsType = typename Properties::BitsType;
-  BitsType bits = *reinterpret_cast<BitsType *>(&x);
-  bits &= Properties::signMask;                // Zero the sign bit.
-  int e = (bits >> Properties::mantissaWidth); // Shift out the mantissa.
-  e -= Properties::exponentOffset;             // Zero adjust.
-  return e;
-}
 
 class MPFRNumber {
   // A precision value which allows sufficiently large additional
@@ -94,7 +58,7 @@ public:
   template <typename XType> MPFRNumber(XType x, const Tolerance &t) {
     mpfr_init2(value, mpfrPrecision);
     mpfr_set_zero(value, 1); // Set to positive zero.
-    MPFRNumber xExponent(getExponent(x));
+    MPFRNumber xExponent(fputil::getExponent(x));
     // E = 2^E
     mpfr_exp2(xExponent.value, xExponent.value, MPFR_RNDN);
     uint32_t bitMask = 1 << (t.width - 1);
@@ -170,15 +134,18 @@ namespace internal {
 
 template <typename T>
 void MPFRMatcher<T>::explainError(testutils::StreamWrapper &OS) {
+  using fputil::valueAsBits;
+
   MPFRNumber mpfrResult(operation, input);
   MPFRNumber mpfrInput(input);
   MPFRNumber mpfrMatchValue(matchValue);
   MPFRNumber mpfrToleranceValue(matchValue, tolerance);
   OS << "Match value not within tolerance value of MPFR result:\n"
      << "  Input decimal: " << mpfrInput.str() << '\n'
-     << "     Input bits: 0x" << llvm::utohexstr(getBits(input)) << '\n'
+     << "     Input bits: 0x" << llvm::utohexstr(valueAsBits(input)) << '\n'
      << "  Match decimal: " << mpfrMatchValue.str() << '\n'
-     << "     Match bits: 0x" << llvm::utohexstr(getBits(matchValue)) << '\n'
+     << "     Match bits: 0x" << llvm::utohexstr(valueAsBits(matchValue))
+     << '\n'
      << "    MPFR result: " << mpfrResult.str() << '\n'
      << "Tolerance value: " << mpfrToleranceValue.str() << '\n';
 }
