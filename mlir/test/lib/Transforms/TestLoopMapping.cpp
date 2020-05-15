@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to parametrically map loop.for loops to virtual
+// This file implements a pass to parametrically map scf.for loops to virtual
 // processing element dimensions.
 //
 //===----------------------------------------------------------------------===//

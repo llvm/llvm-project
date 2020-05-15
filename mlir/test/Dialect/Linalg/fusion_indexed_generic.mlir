@@ -25,8 +25,8 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
   %1 = dim %C, 1 : memref<?x?xf32>
   %2 = dim %D, 0 : memref<?x?xf32>
   %3 = dim %D, 1 : memref<?x?xf32>
-  loop.for %arg2 = %c0 to %0 step %c10 {
-    loop.for %arg3 = %c0 to %1 step %c25 {
+  scf.for %arg2 = %c0 to %0 step %c10 {
+    scf.for %arg3 = %c0 to %1 step %c25 {
       %4 = std.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
           memref<?x?xf32> to memref<?x?xf32, #map>
       %5 = std.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
@@ -52,9 +52,9 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
   return
 }
 // CHECK-LABEL: func @fuse_indexed_generic_consumer
-// CHECK:  loop.for
-// CHECK:    loop.for
-// CHECK-NOT:  loop.for
+// CHECK:  scf.for
+// CHECK:    scf.for
+// CHECK-NOT:  scf.for
 // CHECK:      linalg.generic
 // CHECK-NOT:    addi
 // CHECK:        addf
@@ -91,7 +91,7 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
   %C_Y = dim %C, 1 : memref<?x?xf32>
   %D_X = dim %D, 0 : memref<?x?xf32>
   %D_Y = dim %D, 1 : memref<?x?xf32>
-  loop.parallel (%arg2, %arg3) = (%c0, %c0) to (%C_X, %C_Y) step (%c10, %c25) {
+  scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%C_X, %C_Y) step (%c10, %c25) {
     %C_view = std.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
         memref<?x?xf32> to memref<?x?xf32, #map>
     %D_view = std.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
@@ -110,8 +110,8 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
   return
 }
 // CHECK-LABEL: func @fuse_indexed_generic_producer
-// CHECK:  loop.parallel ([[I:%.*]], [[J:%.*]]) =
-// CHECK-NOT:  loop.parallel
+// CHECK:  scf.parallel ([[I:%.*]], [[J:%.*]]) =
+// CHECK-NOT:  scf.parallel
 // CHECK:      linalg.indexed_generic
 // CHECK:        ^bb0([[i:%.*]]: index, [[j:%.*]]: index
 // CHECK:          [[i_new:%.*]] = addi [[i]], [[I]] : index
@@ -150,7 +150,7 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
   %D_X = dim %D, 0 : memref<?x?xf32>
   %D_Y = dim %D, 1 : memref<?x?xf32>
   %3 = linalg.range %c0 : %C_Y : %c3 : !linalg.range
-  loop.parallel (%j) = (%c0) to (%C_Y) step (%c3) {
+  scf.parallel (%j) = (%c0) to (%C_Y) step (%c3) {
     %0 = affine.min affine_map<(d0, d1, d2) -> (d0, d1 - d2)>(%c3, %C_Y, %j)
     %C_view = subview %C[%c0, %j] [%C_X, %0] [%c1, %c1] :
       memref<?x?xf32> to memref<?x?xf32, #map>
@@ -169,14 +169,14 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
       %ab = addf %a, %b : f32
       linalg.yield %ab : f32
     }: memref<?x?xf32, #map>, memref<?x?xf32, #map>
-    loop.yield
+    scf.yield
   }
   return
 }
 // CHECK-LABEL: func @fuse_indexed_generic_producer_tile_second_dim_only
 // CHECK:  [[C0:%.*]] = constant 0 : index
-// CHECK:  loop.parallel ([[J:%.*]]) =
-// CHECK-NOT:  loop.parallel
+// CHECK:  scf.parallel ([[J:%.*]]) =
+// CHECK-NOT:  scf.parallel
 // CHECK:      linalg.indexed_generic
 // CHECK:        ^bb0([[i:%.*]]: index, [[j:%.*]]: index
 // CHECK:          [[i_new:%.*]] = addi [[i]], [[C0]] : index

@@ -104,9 +104,9 @@ define i32 @unions() nounwind {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions()
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP0]], i32 [[TMP1]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RESULT]]
 ;
@@ -192,9 +192,9 @@ define i32 @unions_v2() nounwind {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP0]], i32 [[TMP1]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RESULT]]
 ;
@@ -208,7 +208,7 @@ define i32 @unions_v2() nounwind {
 ; IS__CGSCC_NPM-NEXT:    [[MYSTR_CAST1:%.*]] = bitcast %struct.MYstr* @mystr to i8*
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 1
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP0]], i32 [[TMP1]])
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[RESULT]]
 ;

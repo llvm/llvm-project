@@ -377,9 +377,11 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     if (Changes[i].NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
       EndOfSequence = i;
-      // If there is a blank line, or if the last line didn't contain any
-      // matching token, the sequence ends here.
-      if (Changes[i].NewlinesBefore > 1 || !FoundMatchOnLine)
+      // If there is a blank line, there is a forced-align-break (eg,
+      // preprocessor), or if the last line didn't contain any matching token,
+      // the sequence ends here.
+      if (Changes[i].NewlinesBefore > 1 ||
+          Changes[i].Tok->MustBreakAlignBefore || !FoundMatchOnLine)
         AlignCurrentSequence();
 
       FoundMatchOnLine = false;
@@ -618,6 +620,8 @@ void WhitespaceManager::alignTrailingComments() {
     if (Changes[i].StartOfBlockComment)
       continue;
     Newlines += Changes[i].NewlinesBefore;
+    if (Changes[i].Tok->MustBreakAlignBefore)
+      BreakBeforeNext = true;
     if (!Changes[i].IsTrailingComment)
       continue;
 

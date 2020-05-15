@@ -17,6 +17,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,6 +29,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -664,16 +666,39 @@ InlinerPass::~InlinerPass() {
   }
 }
 
+InlineAdvisor &
+InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
+                        Module &M) {
+  auto *IAA = MAM.getCachedResult<InlineAdvisorAnalysis>(M);
+  if (!IAA) {
+    // It should still be possible to run the inliner as a stand-alone SCC pass,
+    // for test scenarios. In that case, we default to the
+    // DefaultInlineAdvisor, which doesn't need to keep state between SCC pass
+    // runs. It also uses just the default InlineParams.
+    OwnedDefaultAdvisor.emplace(getInlineParams());
+    return *OwnedDefaultAdvisor;
+  }
+  assert(IAA->getAdvisor() &&
+         "Expected a present InlineAdvisorAnalysis also have an "
+         "InlineAdvisor initialized");
+  return *IAA->getAdvisor();
+}
+
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
-  const ModuleAnalysisManager &MAM =
-      AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG).getManager();
+  const auto &MAMProxy =
+      AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG);
   bool Changed = false;
 
   assert(InitialC.size() > 0 && "Cannot handle an empty SCC!");
   Module &M = *InitialC.begin()->getFunction().getParent();
-  ProfileSummaryInfo *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(M);
+  ProfileSummaryInfo *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(M);
+
+  InlineAdvisor &Advisor = getAdvisor(MAMProxy, M);
+  Advisor.OnPassEntry();
+
+  auto AdvisorOnExit = make_scope_exit([&] { Advisor.OnPassExit(); });
 
   if (!ImportedFunctionsStats &&
       InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
@@ -779,38 +804,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
 
-    // Get a FunctionAnalysisManager via a proxy for this particular node. We
-    // do this each time we visit a node as the SCC may have changed and as
-    // we're going to mutate this particular function we want to make sure the
-    // proxy is in place to forward any invalidation events. We can use the
-    // manager we get here for looking up results for functions other than this
-    // node however because those functions aren't going to be mutated by this
-    // pass.
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG).getManager();
-
-    // Get the remarks emission analysis for the caller.
-    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-
     std::function<AssumptionCache &(Function &)> GetAssumptionCache =
         [&](Function &F) -> AssumptionCache & {
       return FAM.getResult<AssumptionAnalysis>(F);
-    };
-    auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
-      return FAM.getResult<BlockFrequencyAnalysis>(F);
-    };
-    auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-      return FAM.getResult<TargetLibraryAnalysis>(F);
-    };
-
-    auto GetInlineCost = [&](CallBase &CB) {
-      Function &Callee = *CB.getCalledFunction();
-      auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
-      bool RemarksEnabled =
-          Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
-              DEBUG_TYPE);
-      return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, {GetBFI},
-                           GetTLI, PSI, RemarksEnabled ? &ORE : nullptr);
     };
 
     // Now process as many calls as we have within this caller in the sequnece.
@@ -843,101 +839,88 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         continue;
       }
 
-      auto OIC = shouldInline(*CB, GetInlineCost, ORE);
+      auto Advice = Advisor.getAdvice(*CB, FAM);
       // Check whether we want to inline this callsite.
-      if (!OIC)
-        continue;
-      auto DoInline = [&]() -> InlineResult {
-        // Setup the data structure used to plumb customization into the
-        // `InlineFunction` routine.
-        InlineFunctionInfo IFI(
-            /*cg=*/nullptr, &GetAssumptionCache, PSI,
-            &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
-            &FAM.getResult<BlockFrequencyAnalysis>(Callee));
-
-        InlineResult IR = InlineFunction(*CB, IFI);
-        if (!IR.isSuccess())
-          return IR;
-
-        DidInline = true;
-        InlinedCallees.insert(&Callee);
-        ++NumInlined;
-
-        // Add any new callsites to defined functions to the worklist.
-        if (!IFI.InlinedCallSites.empty()) {
-          int NewHistoryID = InlineHistory.size();
-          InlineHistory.push_back({&Callee, InlineHistoryID});
-
-          for (CallBase *ICB : reverse(IFI.InlinedCallSites)) {
-            Function *NewCallee = ICB->getCalledFunction();
-            if (!NewCallee) {
-              // Try to promote an indirect (virtual) call without waiting for
-              // the post-inline cleanup and the next DevirtSCCRepeatedPass
-              // iteration because the next iteration may not happen and we may
-              // miss inlining it.
-              if (tryPromoteCall(*ICB))
-                NewCallee = ICB->getCalledFunction();
-            }
-            if (NewCallee)
-              if (!NewCallee->isDeclaration())
-                Calls.push_back({ICB, NewHistoryID});
-          }
-        }
-
-        if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
-          ImportedFunctionsStats->recordInline(F, Callee);
-
-        // Merge the attributes based on the inlining.
-        AttributeFuncs::mergeAttributesForInlining(F, Callee);
-
-        // For local functions, check whether this makes the callee trivially
-        // dead. In that case, we can drop the body of the function eagerly
-        // which may reduce the number of callers of other functions to one,
-        // changing inline cost thresholds.
-        if (Callee.hasLocalLinkage()) {
-          // To check this we also need to nuke any dead constant uses (perhaps
-          // made dead by this operation on other functions).
-          Callee.removeDeadConstantUsers();
-          if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
-            Calls.erase(
-                std::remove_if(Calls.begin() + I + 1, Calls.end(),
-                               [&](const std::pair<CallBase *, int> &Call) {
-                                 return Call.first->getCaller() == &Callee;
-                               }),
-                Calls.end());
-            // Clear the body and queue the function itself for deletion when we
-            // finish inlining and call graph updates.
-            // Note that after this point, it is an error to do anything other
-            // than use the callee's address or delete it.
-            Callee.dropAllReferences();
-            assert(find(DeadFunctions, &Callee) == DeadFunctions.end() &&
-                   "Cannot put cause a function to become dead twice!");
-            DeadFunctions.push_back(&Callee);
-          }
-        }
-        return IR;
-      };
-      // Capture the context of CB before inlining, as a successful inlining may
-      // change that context, and we want to report success or failure in the
-      // original context.
-      auto DLoc = CB->getDebugLoc();
-      auto *Block = CB->getParent();
-
-      auto Outcome = DoInline();
-      if (!Outcome.isSuccess()) {
-        using namespace ore;
-        setInlineRemark(*CB, std::string(Outcome.getFailureReason()) + "; " +
-                                 inlineCostStr(*OIC));
-        ORE.emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
-                 << NV("Callee", &Callee) << " will not be inlined into "
-                 << NV("Caller", &F) << ": "
-                 << NV("Reason", Outcome.getFailureReason());
-        });
+      if (!Advice->isInliningRecommended()) {
+        Advice->recordUnattemptedInlining();
         continue;
       }
 
-      emitInlinedInto(ORE, DLoc, Block, Callee, F, *OIC);
+      // Setup the data structure used to plumb customization into the
+      // `InlineFunction` routine.
+      InlineFunctionInfo IFI(
+          /*cg=*/nullptr, &GetAssumptionCache, PSI,
+          &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
+          &FAM.getResult<BlockFrequencyAnalysis>(Callee));
+
+      InlineResult IR = InlineFunction(*CB, IFI);
+      if (!IR.isSuccess()) {
+        Advice->recordUnsuccessfulInlining(IR);
+        continue;
+      }
+
+      DidInline = true;
+      InlinedCallees.insert(&Callee);
+      ++NumInlined;
+
+      // Add any new callsites to defined functions to the worklist.
+      if (!IFI.InlinedCallSites.empty()) {
+        int NewHistoryID = InlineHistory.size();
+        InlineHistory.push_back({&Callee, InlineHistoryID});
+
+        for (CallBase *ICB : reverse(IFI.InlinedCallSites)) {
+          Function *NewCallee = ICB->getCalledFunction();
+          if (!NewCallee) {
+            // Try to promote an indirect (virtual) call without waiting for
+            // the post-inline cleanup and the next DevirtSCCRepeatedPass
+            // iteration because the next iteration may not happen and we may
+            // miss inlining it.
+            if (tryPromoteCall(*ICB))
+              NewCallee = ICB->getCalledFunction();
+          }
+          if (NewCallee)
+            if (!NewCallee->isDeclaration())
+              Calls.push_back({ICB, NewHistoryID});
+        }
+      }
+
+      if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
+        ImportedFunctionsStats->recordInline(F, Callee);
+
+      // Merge the attributes based on the inlining.
+      AttributeFuncs::mergeAttributesForInlining(F, Callee);
+
+      // For local functions, check whether this makes the callee trivially
+      // dead. In that case, we can drop the body of the function eagerly
+      // which may reduce the number of callers of other functions to one,
+      // changing inline cost thresholds.
+      bool CalleeWasDeleted = false;
+      if (Callee.hasLocalLinkage()) {
+        // To check this we also need to nuke any dead constant uses (perhaps
+        // made dead by this operation on other functions).
+        Callee.removeDeadConstantUsers();
+        if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
+          Calls.erase(
+              std::remove_if(Calls.begin() + I + 1, Calls.end(),
+                             [&](const std::pair<CallBase *, int> &Call) {
+                               return Call.first->getCaller() == &Callee;
+                             }),
+              Calls.end());
+          // Clear the body and queue the function itself for deletion when we
+          // finish inlining and call graph updates.
+          // Note that after this point, it is an error to do anything other
+          // than use the callee's address or delete it.
+          Callee.dropAllReferences();
+          assert(find(DeadFunctions, &Callee) == DeadFunctions.end() &&
+                 "Cannot put cause a function to become dead twice!");
+          DeadFunctions.push_back(&Callee);
+          CalleeWasDeleted = true;
+        }
+      }
+      if (CalleeWasDeleted)
+        Advice->recordInliningWithCalleeDeleted();
+      else
+        Advice->recordInlining();
     }
 
     // Back the call index up by one to put us in a good position to go around
@@ -968,8 +951,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // essentially do all of the same things as a function pass and we can
     // re-use the exact same logic for updating the call graph to reflect the
     // change.
+
+    // Inside the update, we also update the FunctionAnalysisManager in the
+    // proxy for this particular SCC. We do this as the SCC may have changed and
+    // as we're going to mutate this particular function we want to make sure
+    // the proxy is in place to forward any invalidation events.
     LazyCallGraph::SCC *OldC = C;
-    C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR);
+    C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR, FAM);
     LLVM_DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
     RC = &C->getOuterRefSCC();
 
@@ -1013,10 +1001,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // sets.
   for (Function *DeadF : DeadFunctions) {
     // Get the necessary information out of the call graph and nuke the
-    // function there. Also, cclear out any cached analyses.
+    // function there. Also, clear out any cached analyses.
     auto &DeadC = *CG.lookupSCC(*CG.lookup(*DeadF));
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(DeadC, CG).getManager();
     FAM.clear(*DeadF, DeadF->getName());
     AM.clear(DeadC, DeadC.getName());
     auto &DeadRC = DeadC.getOuterRefSCC();
@@ -1028,7 +1014,15 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     UR.InvalidatedRefSCCs.insert(&DeadRC);
 
     // And delete the actual function from the module.
-    M.getFunctionList().erase(DeadF);
+    // The Advisor may use Function pointers to efficiently index various
+    // internal maps, e.g. for memoization. Function cleanup passes like
+    // argument promotion create new functions. It is possible for a new
+    // function to be allocated at the address of a deleted function. We could
+    // index using names, but that's inefficient. Alternatively, we let the
+    // Advisor free the functions when it sees fit.
+    DeadF->getBasicBlockList().clear();
+    M.getFunctionList().remove(DeadF);
+
     ++NumDeleted;
   }
 
@@ -1040,4 +1034,46 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
   return PA;
+}
+
+ModuleInlinerWrapperPass::ModuleInlinerWrapperPass(InlineParams Params,
+                                                   bool Debugging,
+                                                   InliningAdvisorMode Mode,
+                                                   unsigned MaxDevirtIterations)
+    : Params(Params), Mode(Mode), MaxDevirtIterations(MaxDevirtIterations),
+      PM(Debugging), MPM(Debugging) {
+  // Run the inliner first. The theory is that we are walking bottom-up and so
+  // the callees have already been fully optimized, and we want to inline them
+  // into the callers so that our optimizations can reflect that.
+  // For PreLinkThinLTO pass, we disable hot-caller heuristic for sample PGO
+  // because it makes profile annotation in the backend inaccurate.
+  PM.addPass(InlinerPass());
+}
+
+PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  auto &IAA = MAM.getResult<InlineAdvisorAnalysis>(M);
+  if (!IAA.tryCreate(Params, Mode)) {
+    M.getContext().emitError(
+        "Could not setup Inlining Advisor for the requested "
+        "mode and/or options");
+    return PreservedAnalyses::all();
+  }
+
+  // We wrap the CGSCC pipeline in a devirtualization repeater. This will try
+  // to detect when we devirtualize indirect calls and iterate the SCC passes
+  // in that case to try and catch knock-on inlining or function attrs
+  // opportunities. Then we add it to the module pipeline by walking the SCCs
+  // in postorder (or bottom-up).
+  // If MaxDevirtIterations is 0, we just don't use the devirtualization
+  // wrapper.
+  if (MaxDevirtIterations == 0)
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(PM)));
+  else
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+        createDevirtSCCRepeatedPass(std::move(PM), MaxDevirtIterations)));
+  auto Ret = MPM.run(M, MAM);
+
+  IAA.clear();
+  return Ret;
 }

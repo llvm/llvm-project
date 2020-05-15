@@ -1562,10 +1562,12 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::CALL:          return "ARMISD::CALL";
   case ARMISD::CALL_PRED:     return "ARMISD::CALL_PRED";
   case ARMISD::CALL_NOLINK:   return "ARMISD::CALL_NOLINK";
+  case ARMISD::tSECALL:       return "ARMISD::tSECALL";
   case ARMISD::BRCOND:        return "ARMISD::BRCOND";
   case ARMISD::BR_JT:         return "ARMISD::BR_JT";
   case ARMISD::BR2_JT:        return "ARMISD::BR2_JT";
   case ARMISD::RET_FLAG:      return "ARMISD::RET_FLAG";
+  case ARMISD::SERET_FLAG:    return "ARMISD::SERET_FLAG";
   case ARMISD::INTRET_FLAG:   return "ARMISD::INTRET_FLAG";
   case ARMISD::PIC_ADD:       return "ARMISD::PIC_ADD";
   case ARMISD::CMP:           return "ARMISD::CMP";
@@ -2129,13 +2131,25 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isVarArg                         = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
+  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   MachineFunction::CallSiteInfo CSInfo;
   bool isStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   bool isThisReturn = false;
+  bool isCmseNSCall   = false;
   bool PreferIndirect = false;
+
+  // Determine whether this is a non-secure function call.
+  if (CLI.CB && CLI.CB->getAttributes().hasFnAttribute("cmse_nonsecure_call"))
+    isCmseNSCall = true;
 
   // Disable tail calls if they're not supported.
   if (!Subtarget->supportsTailCall())
+    isTailCall = false;
+
+  // For both the non-secure calls and the returns from a CMSE entry function,
+  // the function needs to do some extra work afte r the call, or before the
+  // return, respectively, thus it cannot end with atail call
+  if (isCmseNSCall || AFI->isCmseNSEntryFunction())
     isTailCall = false;
 
   if (isa<GlobalAddressSDNode>(Callee)) {
@@ -2343,7 +2357,6 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
-  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
@@ -2437,10 +2450,31 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
+  if (isCmseNSCall) {
+    assert(!isARMFunc && !isDirect &&
+           "Cannot handle call to ARM function or direct call");
+    if (NumBytes > 0) {
+      DiagnosticInfoUnsupported Diag(DAG.getMachineFunction().getFunction(),
+                                     "call to non-secure function would "
+                                     "require passing arguments on stack",
+                                     dl.getDebugLoc());
+      DAG.getContext()->diagnose(Diag);
+    }
+    if (isStructRet) {
+      DiagnosticInfoUnsupported Diag(
+          DAG.getMachineFunction().getFunction(),
+          "call to non-secure function would return value through pointer",
+          dl.getDebugLoc());
+      DAG.getContext()->diagnose(Diag);
+    }
+  }
+
   // FIXME: handle tail calls differently.
   unsigned CallOpc;
   if (Subtarget->isThumb()) {
-    if ((!isDirect || isARMFunc) && !Subtarget->hasV5TOps())
+    if (isCmseNSCall)
+      CallOpc = ARMISD::tSECALL;
+    else if ((!isDirect || isARMFunc) && !Subtarget->hasV5TOps())
       CallOpc = ARMISD::CALL_NOLINK;
     else
       CallOpc = ARMISD::CALL;
@@ -2811,6 +2845,17 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   AFI->setReturnRegsCount(RVLocs.size());
 
+ // Report error if cmse entry function returns structure through first ptr arg.
+  if (AFI->isCmseNSEntryFunction() && MF.getFunction().hasStructRetAttr()) {
+    // Note: using an empty SDLoc(), as the first line of the function is a
+    // better place to report than the last line.
+    DiagnosticInfoUnsupported Diag(
+        DAG.getMachineFunction().getFunction(),
+        "secure entry function would return value through pointer",
+        SDLoc().getDebugLoc());
+    DAG.getContext()->diagnose(Diag);
+  }
+
   // Copy the result values into the output registers.
   for (unsigned i = 0, realRVLocIdx = 0;
        i != RVLocs.size();
@@ -2932,7 +2977,9 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     return LowerInterruptReturn(RetOps, dl, DAG);
   }
 
-  return DAG.getNode(ARMISD::RET_FLAG, dl, MVT::Other, RetOps);
+  ARMISD::NodeType RetNode = AFI->isCmseNSEntryFunction() ? ARMISD::SERET_FLAG :
+                                                            ARMISD::RET_FLAG;
+  return DAG.getNode(RetNode, dl, MVT::Other, RetOps);
 }
 
 bool ARMTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
@@ -15707,6 +15754,12 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
     auto *Sub = cast<Instruction>(*I->users().begin());
     return Sub->getOpcode() == Instruction::FSub && Sub->getOperand(1) == I;
   };
+  auto IsFMS = [&](Instruction *I) {
+    if (match(I->getOperand(0), m_FNeg(m_Value())) ||
+        match(I->getOperand(1), m_FNeg(m_Value())))
+      return true;
+    return false;
+  };
 
   auto IsSinker = [&](Instruction *I, int Operand) {
     switch (I->getOpcode()) {
@@ -15724,32 +15777,66 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
     case Instruction::LShr:
     case Instruction::AShr:
       return Operand == 1;
+    case Instruction::Call:
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::fma:
+          return !IsFMS(I);
+        default:
+          return false;
+        }
+      }
+      return false;
     default:
       return false;
     }
   };
 
-  int Op = 0;
-  if (!isa<ShuffleVectorInst>(I->getOperand(Op)))
-    Op = 1;
-  if (!IsSinker(I, Op))
-    return false;
-  if (!match(I->getOperand(Op),
-             m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
-                             m_Undef(), m_ZeroMask()))) {
-    return false;
+  for (auto OpIdx : enumerate(I->operands())) {
+    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
+    // Make sure we are not already sinking this operand
+    if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+      continue;
+
+    Instruction *Shuffle = Op;
+    if (Shuffle->getOpcode() == Instruction::BitCast)
+      Shuffle = dyn_cast<Instruction>(Shuffle->getOperand(0));
+    // We are looking for a splat that can be sunk.
+    if (!Shuffle ||
+        !match(Shuffle, m_ShuffleVector(
+                            m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
+                            m_Undef(), m_ZeroMask())))
+      continue;
+    if (!IsSinker(I, OpIdx.index()))
+      continue;
+
+    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
+    // and vector registers
+    for (Use &U : Op->uses()) {
+      Instruction *Insn = cast<Instruction>(U.getUser());
+      if (!IsSinker(Insn, U.getOperandNo()))
+        return false;
+    }
+
+    Ops.push_back(&Shuffle->getOperandUse(0));
+    if (Shuffle != Op)
+      Ops.push_back(&Op->getOperandUse(0));
+    Ops.push_back(&OpIdx.value());
   }
-  Instruction *Shuffle = cast<Instruction>(I->getOperand(Op));
-  // All uses of the shuffle should be sunk to avoid duplicating it across gpr
-  // and vector registers
-  for (Use &U : Shuffle->uses()) {
-    Instruction *Insn = cast<Instruction>(U.getUser());
-    if (!IsSinker(Insn, U.getOperandNo()))
-      return false;
-  }
-  Ops.push_back(&Shuffle->getOperandUse(0));
-  Ops.push_back(&I->getOperandUse(Op));
   return true;
+}
+
+Type *ARMTargetLowering::shouldConvertSplatType(ShuffleVectorInst *SVI) const {
+  if (!Subtarget->hasMVEIntegerOps())
+    return nullptr;
+  Type *SVIType = SVI->getType();
+  Type *ScalarType = SVIType->getScalarType();
+
+  if (ScalarType->isFloatTy())
+    return Type::getInt32Ty(SVIType->getContext());
+  if (ScalarType->isHalfTy())
+    return Type::getInt16Ty(SVIType->getContext());
+  return nullptr;
 }
 
 bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {

@@ -7415,8 +7415,7 @@ Value *LoopVectorizationPlanner::VPCallbackILV::getOrCreateScalarValue(
 
 void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
-  O << " +\n"
-    << Indent << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
+  O << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
   O << ", ";
   getAddr()->printAsOperand(O, SlotTracker);
@@ -7425,11 +7424,9 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
     O << ", ";
     Mask->printAsOperand(O, SlotTracker);
   }
-  O << "\\l\"";
   for (unsigned i = 0; i < IG->getFactor(); ++i)
     if (Instruction *I = IG->getMember(i))
-      O << " +\n"
-        << Indent << "\"  " << VPlanIngredient(I) << " " << i << "\\l\"";
+      O << "\\l\" +\n" << Indent << "\"  " << VPlanIngredient(I) << " " << i;
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
@@ -8072,10 +8069,9 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
       return LAM.getResult<LoopAccessAnalysis>(L, AR);
     };
-    const ModuleAnalysisManager &MAM =
-        AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+    auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
     ProfileSummaryInfo *PSI =
-        MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
     LoopVectorizeResult Result =
         runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, GetLAA, ORE, PSI);
     if (!Result.MadeAnyChange)

@@ -56,22 +56,22 @@ features = [
 # is defined after including <__config_site>, add a Lit feature called
 # `libcpp-xxx-yyy-zzz`. When a macro is defined to a specific value
 # (e.g. `_LIBCPP_ABI_VERSION=2`), the feature is `libcpp-xxx-yyy-zzz=<value>`.
-macros = [
-  '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE',
-  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK',
-  '_LIBCPP_HAS_NO_STDIN',
-  '_LIBCPP_HAS_NO_STDOUT',
-  '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS',
-  '_LIBCPP_HAS_NO_THREADS',
-  '_LIBCPP_HAS_THREAD_API_EXTERNAL',
-  '_LIBCPP_HAS_THREAD_API_PTHREAD',
-  '_LIBCPP_NO_VCRUNTIME',
-  '_LIBCPP_ABI_VERSION',
-  '_LIBCPP_ABI_UNSTABLE'
-]
-for macro in macros:
+macros = {
+  '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE': 'libcpp-has-no-global-filesystem-namespace',
+  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK': 'libcpp-has-no-monotonic-clock',
+  '_LIBCPP_HAS_NO_STDIN': 'libcpp-has-no-stdin',
+  '_LIBCPP_HAS_NO_STDOUT': 'libcpp-has-no-stdout',
+  '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS': 'libcpp-has-no-thread-unsafe-c-functions',
+  '_LIBCPP_HAS_NO_THREADS': 'libcpp-has-no-threads',
+  '_LIBCPP_HAS_THREAD_API_EXTERNAL': 'libcpp-has-thread-api-external',
+  '_LIBCPP_HAS_THREAD_API_PTHREAD': 'libcpp-has-thread-api-pthread',
+  '_LIBCPP_NO_VCRUNTIME': 'libcpp-no-vcruntime',
+  '_LIBCPP_ABI_VERSION': 'libcpp-abi-version',
+  '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable'
+}
+for macro, feature in macros.items():
   features += [
-    Feature(name=lambda cfg, macro=macro: macro.lower()[1:].replace('_', '-') + (
+    Feature(name=lambda cfg, feature=feature: feature + (
               '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
             ),
             when=lambda cfg, macro=macro: macro in compilerMacros(cfg),

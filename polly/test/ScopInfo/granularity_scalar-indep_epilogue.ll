@@ -53,7 +53,7 @@ return:
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:         Instructions {
-; CHECK-NEXT:             %valA = load double, double* %A
+; CHECK-NEXT:             %valA = load double, double* %A, align 8
 ; CHECK-NEXT:             store double %valA, double* %A
 ; CHECK-NEXT:         }
 ; CHECK-NEXT:     Stmt_bodyA_last

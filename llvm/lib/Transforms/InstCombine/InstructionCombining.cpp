@@ -3723,10 +3723,9 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
 
   auto *AA = &AM.getResult<AAManager>(F);
-  const ModuleAnalysisManager &MAM =
-      AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
-      MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-loops-to-gpu %s | FileCheck %s
+// RUN: mlir-opt -convert-scf-to-gpu %s | FileCheck %s
 
 // CHECK-LABEL: @foo
 func @foo(%arg0: memref<?xf32>, %arg1 : index) {
@@ -7,10 +7,10 @@ func @foo(%arg0: memref<?xf32>, %arg1 : index) {
   %c3 = constant 3 : index
   // CHECK:      subi %{{.*}}, %{{.*}} : index
   // CHECK-NEXT: %[[range_i:.*]] = divi_signed {{.*}}, %{{.*}} : index
-  loop.for %i0 = %c0 to %c42 step %c3 {
+  scf.for %i0 = %c0 to %c42 step %c3 {
     // CHECK:      subi %{{.*}}, %{{.*}} : index
     // CHECK-NEXT: %[[range_j:.*]] = divi_signed {{.*}}, %{{.*}} : index
-    loop.for %i1 = %c3 to %c42 step %arg1 {
+    scf.for %i1 = %c3 to %c42 step %arg1 {
       // CHECK:      gpu.launch
       // CHECK-SAME: blocks
       // CHECK-SAME: threads

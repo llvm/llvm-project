@@ -30,7 +30,8 @@ enum Kind {
   Shape,
   Size,
   ValueShape,
-  LAST_SHAPE_TYPE = ValueShape
+  Witness,
+  LAST_SHAPE_TYPE = Witness
 };
 } // namespace ShapeTypes
 
@@ -102,6 +103,22 @@ public:
   /// Support method to enable LLVM-style type casting.
   static bool kindof(unsigned kind) {
     return kind == ShapeTypes::Kind::ValueShape;
+  }
+};
+
+/// The Witness represents a runtime constraint, to be used as shape related
+/// preconditions on code execution.
+class WitnessType : public Type::TypeBase<WitnessType, Type> {
+public:
+  using Base::Base;
+
+  static WitnessType get(MLIRContext *context) {
+    return Base::get(context, ShapeTypes::Kind::Witness);
+  }
+
+  /// Support method to enable LLVM-style type casting.
+  static bool kindof(unsigned kind) {
+    return kind == ShapeTypes::Kind::Witness;
   }
 };
 

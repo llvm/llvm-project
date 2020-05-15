@@ -1914,7 +1914,7 @@ private:
                      << FormatTok->Tok.getLocation().printToString(
                             SourceManager)
                      << " token: " << FormatTok->TokenText << " token type: "
-                     << getTokenTypeName(FormatTok->Type) << "\n");
+                     << getTokenTypeName(FormatTok->getType()) << "\n");
           return true;
         }
         if (guessIsObjC(SourceManager, Line->Children, Keywords))

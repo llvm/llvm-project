@@ -121,11 +121,11 @@ void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
 template <typename LoopTy, typename ConcreteOp>
 Optional<LinalgLoops> linalgLowerOpToLoops(OpBuilder &builder, Operation *op);
 
-/// Emits a loop nest of `loop.for` with the proper body for `op`.
+/// Emits a loop nest of `scf.for` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op);
 
-/// Emits a loop nest of `loop.parallel` with the proper body for `op`.
+/// Emits a loop nest of `scf.parallel` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
 
@@ -362,8 +362,8 @@ struct LinalgLoweringPattern : public RewritePattern {
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
   LinalgMarker marker;
-  /// Controls whether the pattern lowers to library calls, loop.for, affine.for
-  /// or loop.parallel.
+  /// Controls whether the pattern lowers to library calls, scf.for, affine.for
+  /// or scf.parallel.
   LinalgLoweringType loweringType;
 };
 

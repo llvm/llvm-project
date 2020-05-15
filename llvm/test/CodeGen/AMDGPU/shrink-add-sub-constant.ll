@@ -154,6 +154,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(i32 addrspace(1)* %out,
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s2, s2, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s2, s3, 0, s2
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v3, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s0, s0, v2
@@ -986,6 +987,7 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(i16 addrspace(1)* %out,
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s2, s2, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s2, s3, 0, s2
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_ushort v3, v[0:1], off
 ; GFX10-NEXT:    global_load_ushort v4, v[0:1], off
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s0, s0, v2

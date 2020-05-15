@@ -2804,6 +2804,8 @@ def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">;
+def print_targets : Flag<["-", "--"], "print-targets">,
+  HelpText<"Print the registered targets">;
 def private__bundle : Flag<["-"], "private_bundle">;
 def pthreads : Flag<["-"], "pthreads">;
 def pthread : Flag<["-"], "pthread">, Flags<[CC1Option]>,

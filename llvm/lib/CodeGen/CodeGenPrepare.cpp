@@ -6415,60 +6415,47 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   return true;
 }
 
-/// Some targets have expensive vector shifts if the lanes aren't all the same
-/// (e.g. x86 only introduced "vpsllvd" and friends with AVX2). In these cases
-/// it's often worth sinking a shufflevector splat down to its use so that
-/// codegen can spot all lanes are identical.
+/// Some targets only accept certain types for splat inputs. For example a VDUP
+/// in MVE takes a GPR (integer) register, and the instruction that incorporate
+/// a VDUP (such as a VADD qd, qm, rm) also require a gpr register.
 bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
-  BasicBlock *DefBB = SVI->getParent();
-
-  // Only do this xform if variable vector shifts are particularly expensive.
-  if (!TLI->isVectorShiftByScalarCheap(SVI->getType()))
+  if (!match(SVI,
+             m_ShuffleVector(m_InsertElement(m_Undef(), m_Value(), m_ZeroInt()),
+                             m_Undef(), m_ZeroMask())))
+    return false;
+  Type *NewType = TLI->shouldConvertSplatType(SVI);
+  if (!NewType)
     return false;
 
-  // We only expect better codegen by sinking a shuffle if we can recognise a
-  // constant splat.
-  if (getSplatIndex(SVI->getShuffleMask()) < 0)
-    return false;
+  VectorType *SVIVecType = cast<VectorType>(SVI->getType());
+  assert(!NewType->isVectorTy() && "Expected a scalar type!");
+  assert(NewType->getScalarSizeInBits() == SVIVecType->getScalarSizeInBits() &&
+         "Expected a type of the same size!");
+  Type *NewVecType = VectorType::get(NewType, SVIVecType->getNumElements());
 
-  // InsertedShuffles - Only insert a shuffle in each block once.
-  DenseMap<BasicBlock*, Instruction*> InsertedShuffles;
+  // Create a bitcast (shuffle (insert (bitcast(..))))
+  IRBuilder<> Builder(SVI->getContext());
+  Builder.SetInsertPoint(SVI);
+  Value *BC1 = Builder.CreateBitCast(
+      cast<Instruction>(SVI->getOperand(0))->getOperand(1), NewType);
+  Value *Insert = Builder.CreateInsertElement(UndefValue::get(NewVecType), BC1,
+                                              (uint64_t)0);
+  Value *Shuffle = Builder.CreateShuffleVector(
+      Insert, UndefValue::get(NewVecType), SVI->getShuffleMask());
+  Value *BC2 = Builder.CreateBitCast(Shuffle, SVIVecType);
 
-  bool MadeChange = false;
-  for (User *U : SVI->users()) {
-    Instruction *UI = cast<Instruction>(U);
+  SVI->replaceAllUsesWith(BC2);
+  RecursivelyDeleteTriviallyDeadInstructions(SVI);
 
-    // Figure out which BB this ext is used in.
-    BasicBlock *UserBB = UI->getParent();
-    if (UserBB == DefBB) continue;
+  // Also hoist the bitcast up to its operand if it they are not in the same
+  // block.
+  if (auto *BCI = dyn_cast<Instruction>(BC1))
+    if (auto *Op = dyn_cast<Instruction>(BCI->getOperand(0)))
+      if (BCI->getParent() != Op->getParent() && !isa<PHINode>(Op) &&
+          !Op->isTerminator() && !Op->isEHPad())
+        BCI->moveAfter(Op);
 
-    // For now only apply this when the splat is used by a shift instruction.
-    if (!UI->isShift()) continue;
-
-    // Everything checks out, sink the shuffle if the user's block doesn't
-    // already have a copy.
-    Instruction *&InsertedShuffle = InsertedShuffles[UserBB];
-
-    if (!InsertedShuffle) {
-      BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
-      assert(InsertPt != UserBB->end());
-      InsertedShuffle =
-          new ShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
-                                SVI->getShuffleMask(), "", &*InsertPt);
-      InsertedShuffle->setDebugLoc(SVI->getDebugLoc());
-    }
-
-    UI->replaceUsesOfWith(SVI, InsertedShuffle);
-    MadeChange = true;
-  }
-
-  // If we removed all uses, nuke the shuffle.
-  if (SVI->use_empty()) {
-    SVI->eraseFromParent();
-    MadeChange = true;
-  }
-
-  return MadeChange;
+  return true;
 }
 
 bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {

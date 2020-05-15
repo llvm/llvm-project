@@ -1,3 +1,4 @@
+# For a better template to copy, see examples/standalone
 include_directories(include)
 add_subdirectory(include)
 

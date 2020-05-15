@@ -48,6 +48,11 @@ public:
 
   /// Item records that will go into the PDB IPI stream (for /DEBUG:GHASH)
   llvm::codeview::GlobalTypeTableBuilder globalIDTable;
+
+  // When showSummary is enabled, these are histograms of TPI and IPI records
+  // keyed by type index.
+  SmallVector<uint32_t, 0> tpiCounts;
+  SmallVector<uint32_t, 0> ipiCounts;
 };
 
 /// Map from type index and item index in a type server PDB to the

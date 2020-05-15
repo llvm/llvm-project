@@ -61,7 +61,8 @@ static std::string getTypeString(Type *T) {
 }
 
 /// Run: module ::= toplevelentity*
-bool LLParser::Run() {
+bool LLParser::Run(bool UpgradeDebugInfo,
+                   DataLayoutCallbackTy DataLayoutCallback) {
   // Prime the lexer.
   Lex.Lex();
 
@@ -73,9 +74,12 @@ bool LLParser::Run() {
   if (M) {
     if (ParseTargetDefinitions())
       return true;
+
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
+      M->setDataLayout(*LayoutOverride);
   }
 
-  return ParseTopLevelEntities() || ValidateEndOfModule() ||
+  return ParseTopLevelEntities() || ValidateEndOfModule(UpgradeDebugInfo) ||
          ValidateEndOfIndex();
 }
 
@@ -123,7 +127,7 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
 
 /// ValidateEndOfModule - Do final validity and sanity checks at the end of the
 /// module.
-bool LLParser::ValidateEndOfModule() {
+bool LLParser::ValidateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
   // Handle any function attribute group forward references.
@@ -400,8 +404,7 @@ bool LLParser::ParseTargetDefinition() {
     if (ParseToken(lltok::equal, "expected '=' after target datalayout") ||
         ParseStringConstant(Str))
       return true;
-    if (DataLayoutStr.empty())
-      M->setDataLayout(Str);
+    M->setDataLayout(Str);
     return false;
   }
 }
@@ -4614,7 +4617,8 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(vtableHolder, MDField, );                                           \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(identifier, MDStringField, );                                       \
-  OPTIONAL(discriminator, MDField, );
+  OPTIONAL(discriminator, MDField, );                                          \
+  OPTIONAL(dataLocation, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4623,8 +4627,8 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
-            elements.Val, runtimeLang.Val, vtableHolder.Val,
-            templateParams.Val, discriminator.Val)) {
+            elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
+            discriminator.Val, dataLocation.Val)) {
       Result = CT;
       return false;
     }
@@ -4636,7 +4640,7 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val));
+       discriminator.Val, dataLocation.Val));
   return false;
 }
 
@@ -7053,8 +7057,11 @@ int LLParser::ParseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ty != cast<PointerType>(Val->getType())->getElementType())
     return Error(ExplicitTypeLoc,
                  "explicit pointee type doesn't match operand's pointee type");
-
-  Inst = new LoadInst(Ty, Val, "", isVolatile, Alignment, Ordering, SSID);
+  if (!Alignment && !Ty->isSized())
+    return Error(ExplicitTypeLoc, "loading unsized types is not allowed");
+  if (!Alignment)
+    Alignment = M->getDataLayout().getABITypeAlign(Ty);
+  Inst = new LoadInst(Ty, Val, "", isVolatile, *Alignment, Ordering, SSID);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

@@ -44,6 +44,11 @@ Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
 void populateAffineToStdConversionPatterns(OwningRewritePatternList &patterns,
                                            MLIRContext *ctx);
 
+/// Collect a set of patterns to convert vector-related Affine ops to the Vector
+/// dialect.
+void populateAffineToVectorConversionPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx);
+
 /// Emit code that computes the lower bound of the given affine loop using
 /// standard arithmetic operations.
 Value lowerAffineLowerBound(AffineForOp op, OpBuilder &builder);

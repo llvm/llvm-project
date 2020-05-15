@@ -24,7 +24,7 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>,
 //   TILE-20000-DAG:   %[[C1:.*]] = constant 1 : index
 //   TILE-20000-DAG:   %[[C2:.*]] = constant 2 : index
 //       TILE-20000:   %[[B:.*]] = dim %[[ARG1]], 0
-//       TILE-20000:   loop.for %[[ivI:.*]] = %[[C0]] to %[[B]] step %[[C2]] {
+//       TILE-20000:   scf.for %[[ivI:.*]] = %[[C0]] to %[[B]] step %[[C2]] {
 //       TILE-20000:     %[[DIM10:.*]] = dim %[[ARG1]], 0
 //       TILE-20000:     %[[EXTENT:.*]] = affine.min #[[minmap]](%[[C2]], %[[DIM10]], %[[ivI]])
 //       TILE-20000:     %[[DIM11:.*]] = dim %[[ARG1]], 1

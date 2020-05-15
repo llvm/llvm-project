@@ -2003,15 +2003,14 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
     Type srcType = memRefCastOp.getOperand().getType();
     Type dstType = memRefCastOp.getType();
 
-    if (srcType.isa<MemRefType>() && dstType.isa<MemRefType>()) {
-      MemRefType sourceType =
-          memRefCastOp.getOperand().getType().cast<MemRefType>();
-      MemRefType targetType = memRefCastOp.getType().cast<MemRefType>();
-      return (isSupportedMemRefType(targetType) &&
-              isSupportedMemRefType(sourceType))
-                 ? success()
-                 : failure();
-    }
+    // MemRefCastOp reduce to bitcast in the ranked MemRef case and can be used
+    // for type erasure. For now they must preserve underlying element type and
+    // require source and result type to have the same rank. Therefore, perform
+    // a sanity check that the underlying structs are the same. Once op
+    // semantics are relaxed we can revisit.
+    if (srcType.isa<MemRefType>() && dstType.isa<MemRefType>())
+      return success(typeConverter.convertType(srcType) ==
+                     typeConverter.convertType(dstType));
 
     // At least one of the operands is unranked type
     assert(srcType.isa<UnrankedMemRefType>() ||
@@ -2034,10 +2033,8 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
     auto targetStructType = typeConverter.convertType(memRefCastOp.getType());
     auto loc = op->getLoc();
 
+    // MemRefCastOp reduce to bitcast in the ranked MemRef case.
     if (srcType.isa<MemRefType>() && dstType.isa<MemRefType>()) {
-      // memref_cast is defined for source and destination memref types with the
-      // same element type, same mappings, same address space and same rank.
-      // Therefore a simple bitcast suffices. If not it is undefined behavior.
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, targetStructType,
                                                    transformed.source());
     } else if (srcType.isa<MemRefType>() && dstType.isa<UnrankedMemRefType>()) {

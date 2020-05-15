@@ -1688,9 +1688,6 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
   if (!FuncInfo.CanLowerReturn)
     return false;
 
-  if (TLI.supportSplitCSR(FuncInfo.MF))
-    return false;
-
   const ReturnInst *Ret = cast<ReturnInst>(I);
   const Function &F = *I->getParent()->getParent();
 

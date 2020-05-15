@@ -70,11 +70,11 @@ define i32 @accumulate_square_a0(i16* %a, i16* %b, i32 %acc) {
 ; CHECK-NEXT:    [[LD_A_0:%.*]] = load i16, i16* [[A]]
 ; CHECK-NEXT:    [[SEXT_A_0:%.*]] = sext i16 [[LD_A_0]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[ADDR_A_1]] to i32*
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16* [[ADDR_B_1]] to i32*
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i32
 ; CHECK-NEXT:    [[MUL_0:%.*]] = mul i32 [[SEXT_A_0]], [[SEXT_A_0]]
@@ -115,12 +115,12 @@ define i32 @accumulate_square_a2(i16* %a, i16* %b, i32 %acc) {
 ; CHECK-LABEL: @accumulate_square_a2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[A:%.*]] to i32*
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[B:%.*]] to i32*
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP6]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i16
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i16 [[TMP8]] to i32

@@ -11,13 +11,13 @@ declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) nounwind
 define i8 @test_bypass1(i8 *%P) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass1
 ; NO_ASSUME-SAME: (i8* [[P:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i8, i8* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i8, i8* [[P]], align 1
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
 ; NO_ASSUME-NEXT:    ret i8 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass1
 ; USE_ASSUME-SAME: (i8* [[P:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i8, i8* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i8, i8* [[P]], align 1
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[P]], i64 1), "nonnull"(i8* [[P]]) ]
 ; USE_ASSUME-NEXT:    ret i8 0
@@ -107,16 +107,16 @@ define i32 @test_before_load(i32* %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_before_load
 ; NO_ASSUME-SAME: (i32* [[P:%.*]])
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_before_load
 ; USE_ASSUME-SAME: (i32* [[P:%.*]])
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   call {}* @llvm.invariant.start.p0i32(i64 4, i32* %p)
@@ -130,17 +130,17 @@ define i32 @test_before_load(i32* %p) {
 define i32 @test_before_clobber(i32* %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_before_clobber
 ; NO_ASSUME-SAME: (i32* [[P:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_before_clobber
 ; USE_ASSUME-SAME: (i32* [[P:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   %v1 = load i32, i32* %p
@@ -154,7 +154,7 @@ define i32 @test_before_clobber(i32* %p) {
 define i32 @test_duplicate_scope(i32* %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_duplicate_scope
 ; NO_ASSUME-SAME: (i32* [[P:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    [[TMP2:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
@@ -162,11 +162,11 @@ define i32 @test_duplicate_scope(i32* %p) {
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_duplicate_scope
 ; USE_ASSUME-SAME: (i32* [[P:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    [[TMP2:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   %v1 = load i32, i32* %p
@@ -183,7 +183,7 @@ define i32 @test_unanalzyable_load(i32* %p) {
 ; NO_ASSUME-SAME: (i32* [[P:%.*]])
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
@@ -191,9 +191,9 @@ define i32 @test_unanalzyable_load(i32* %p) {
 ; USE_ASSUME-SAME: (i32* [[P:%.*]])
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   call {}* @llvm.invariant.start.p0i32(i64 4, i32* %p)
@@ -208,10 +208,10 @@ define i32 @test_unanalzyable_load(i32* %p) {
 define i32 @test_negative_after_clobber(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_after_clobber
 ; CHECK-SAME: (i32* [[P:%.*]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -226,7 +226,7 @@ define i32 @test_negative_after_clobber(i32* %p) {
 define i32 @test_merge(i32* %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_merge
 ; NO_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; NO_ASSUME-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; NO_ASSUME:       taken:
@@ -237,14 +237,14 @@ define i32 @test_merge(i32* %p, i1 %cnd) {
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_merge
 ; USE_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; USE_ASSUME:       taken:
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    br label [[MERGE]]
 ; USE_ASSUME:       merge:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   %v1 = load i32, i32* %p
@@ -263,14 +263,14 @@ merge:
 define i32 @test_negative_after_mergeclobber(i32* %p, i1 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_after_mergeclobber
 ; CHECK-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -292,14 +292,14 @@ merge:
 define i32 @test_false_negative_merge(i32* %p, i1 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@test_false_negative_merge
 ; CHECK-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -321,7 +321,7 @@ define i32 @test_merge_unanalyzable_load(i32* %p, i1 %cnd) {
 ; NO_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; NO_ASSUME:       taken:
 ; NO_ASSUME-NEXT:    call void @clobber()
@@ -333,13 +333,13 @@ define i32 @test_merge_unanalyzable_load(i32* %p, i1 %cnd) {
 ; USE_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; USE_ASSUME:       taken:
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    br label [[MERGE]]
 ; USE_ASSUME:       merge:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   call {}* @llvm.invariant.start.p0i32(i64 4, i32* %p)
@@ -360,14 +360,14 @@ define void @test_dse_before_load(i32* %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_dse_before_load
 ; NO_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_dse_before_load
 ; USE_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
 ; USE_ASSUME-NEXT:    ret void
@@ -382,14 +382,14 @@ define void @test_dse_before_load(i32* %p, i1 %cnd) {
 define void @test_dse_after_load(i32* %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_dse_after_load
 ; NO_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_dse_after_load
 ; USE_ASSUME-SAME: (i32* [[P:%.*]], i1 [[CND:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
@@ -410,10 +410,10 @@ define i32 @test_false_negative_types(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_false_negative_types
 ; CHECK-SAME: (i32* [[P:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[PF:%.*]] = bitcast i32* [[P]] to float*
-; CHECK-NEXT:    [[V2F:%.*]] = load float, float* [[PF]]
+; CHECK-NEXT:    [[V2F:%.*]] = load float, float* [[PF]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = bitcast float [[V2F]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
@@ -432,9 +432,9 @@ define i32 @test_negative_size1(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_size1
 ; CHECK-SAME: (i32* [[P:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 3, i32* [[P]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -450,9 +450,9 @@ define i32 @test_negative_size2(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_size2
 ; CHECK-SAME: (i32* [[P:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 0, i32* [[P]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -469,9 +469,9 @@ define i32 @test_negative_scope(i32* %p) {
 ; CHECK-SAME: (i32* [[P:%.*]])
 ; CHECK-NEXT:    [[SCOPE:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0i32({}* [[SCOPE]], i64 4, i32* [[P]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
@@ -488,9 +488,9 @@ define i32 @test_false_negative_scope(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_false_negative_scope
 ; CHECK-SAME: (i32* [[P:%.*]])
 ; CHECK-NEXT:    [[SCOPE:%.*]] = call {}* @llvm.invariant.start.p0i32(i64 4, i32* [[P]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0i32({}* [[SCOPE]], i64 4, i32* [[P]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
@@ -508,15 +508,15 @@ define i32 @test_false_negative_scope(i32* %p) {
 define i32 @test_invariant_load_scope(i32* %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
 ; NO_ASSUME-SAME: (i32* [[P:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], !invariant.load !0
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4, !invariant.load !0
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
 ; USE_ASSUME-SAME: (i32* [[P:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], !invariant.load !0
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4, !invariant.load !0
 ; USE_ASSUME-NEXT:    call void @clobber()
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
   %v1 = load i32, i32* %p, !invariant.load !{}

@@ -375,7 +375,7 @@ func @dma_loop_straightline_interspersed() {
   return
 }
 // There are three regions here - the 'load' preceding the loop, the loop
-// itself, and the operations appearing after the loop.
+// itself, and the operations appearing after the scf.
 // CHECK:       alloc() : memref<256xf32>
 // CHECK-NEXT:  alloc() : memref<1xf32, 2>
 // CHECK-NEXT:  alloc() : memref<1xi32>
@@ -583,7 +583,7 @@ func @load_store_same_memref(%arg0: memref<256x1024xf32>) {
 // With fast mem capacity set to 16 KB, the DMAs if placed under %k will fit.
 // However, the region of arg2 accessed is invariant w.r.t the %k loop unlike
 // %arg0 and %arg1. So, its DMA can be hoisted one level up and placed under
-// %j, while the DMAs for arg0 and arg1 appear right under the %k loop.
+// %j, while the DMAs for arg0 and arg1 appear right under the %k scf.
 
 #map0 = affine_map<(d0) -> (d0)>
 #map1 = affine_map<(d0) -> (d0 + 4)>

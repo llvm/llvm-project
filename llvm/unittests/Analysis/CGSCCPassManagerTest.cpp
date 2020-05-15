@@ -304,15 +304,28 @@ TEST_F(CGSCCPassManagerTest, Basic) {
                         LazyCallGraph &CG, CGSCCUpdateResult &UR) {
         ++SCCPassRunCount1;
 
-        const ModuleAnalysisManager &MAM =
-            AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG).getManager();
-        FunctionAnalysisManager &FAM =
-            AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+        // Note: The proper way to get to a module pass from a CGSCC pass is
+        // through the ModuleAnalysisManagerCGSCCProxy:
+        // ```
+        // const auto &MAMProxy =
+        //    AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG);
+        // ```
+        // However getting a stateful analysis is incorrect usage, and the call
+        // to getCachedResult below asserts:
+        // ```
+        // if (TestModuleAnalysis::Result *TMA =
+        //        MAMProxy.getCachedResult<TestModuleAnalysis>(
+        //            *C.begin()->getFunction().getParent()))
+        //   AnalyzedModuleFunctionCount1 += TMA->FunctionCount;
+        // ```
+        // For the purposes of this unittest, use the above MAM directly.
         if (TestModuleAnalysis::Result *TMA =
                 MAM.getCachedResult<TestModuleAnalysis>(
                     *C.begin()->getFunction().getParent()))
           AnalyzedModuleFunctionCount1 += TMA->FunctionCount;
 
+        FunctionAnalysisManager &FAM =
+            AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
         TestSCCAnalysis::Result &AR = AM.getResult<TestSCCAnalysis>(C, CG);
         AnalyzedSCCFunctionCount1 += AR.FunctionCount;
         for (LazyCallGraph::Node &N : C) {
@@ -376,19 +389,16 @@ TEST_F(CGSCCPassManagerTest, TestSCCPassInvalidatesModuleAnalysis) {
   // required module pass above.
   CGSCCPassManager CGPM1(/*DebugLogging*/ true);
   int CountFoundModuleAnalysis1 = 0;
-  CGPM1.addPass(
-      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR) {
-        const auto &MAM =
-            AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG).getManager();
-        auto *TMA = MAM.getCachedResult<TestModuleAnalysis>(
-            *C.begin()->getFunction().getParent());
+  CGPM1.addPass(LambdaSCCPass([&](LazyCallGraph::SCC &C,
+                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                  CGSCCUpdateResult &UR) {
+    const auto &MAMProxy = AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG);
+    if (MAMProxy.cachedResultExists<TestModuleAnalysis>(
+            *C.begin()->getFunction().getParent()))
+      ++CountFoundModuleAnalysis1;
 
-        if (TMA)
-          ++CountFoundModuleAnalysis1;
-
-        return PreservedAnalyses::all();
-      }));
+    return PreservedAnalyses::all();
+  }));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
 
   // The second CGSCC run checks that the module analysis got preserved the
@@ -398,12 +408,10 @@ TEST_F(CGSCCPassManagerTest, TestSCCPassInvalidatesModuleAnalysis) {
   CGPM2.addPass(
       LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR) {
-        const auto &MAM =
-            AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG).getManager();
-        auto *TMA = MAM.getCachedResult<TestModuleAnalysis>(
-            *C.begin()->getFunction().getParent());
-
-        if (TMA)
+        const auto &MAMProxy =
+            AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG);
+        if (MAMProxy.cachedResultExists<TestModuleAnalysis>(
+                *C.begin()->getFunction().getParent()))
           ++CountFoundModuleAnalysis2;
 
         // Only fail to preserve analyses on one SCC and make sure that gets
@@ -417,19 +425,16 @@ TEST_F(CGSCCPassManagerTest, TestSCCPassInvalidatesModuleAnalysis) {
   // should have been invalidated by the above CGSCC run.
   CGSCCPassManager CGPM3(/*DebugLogging*/ true);
   int CountFoundModuleAnalysis3 = 0;
-  CGPM3.addPass(
-      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR) {
-        const auto &MAM =
-            AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG).getManager();
-        auto *TMA = MAM.getCachedResult<TestModuleAnalysis>(
-            *C.begin()->getFunction().getParent());
+  CGPM3.addPass(LambdaSCCPass([&](LazyCallGraph::SCC &C,
+                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                  CGSCCUpdateResult &UR) {
+    const auto &MAMProxy = AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG);
+    if (MAMProxy.cachedResultExists<TestModuleAnalysis>(
+            *C.begin()->getFunction().getParent()))
+      ++CountFoundModuleAnalysis3;
 
-        if (TMA)
-          ++CountFoundModuleAnalysis3;
-
-        return PreservedAnalyses::none();
-      }));
+    return PreservedAnalyses::none();
+  }));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM3)));
 
   MPM.run(*M, MAM);
@@ -456,17 +461,14 @@ TEST_F(CGSCCPassManagerTest, TestFunctionPassInsideCGSCCInvalidatesModuleAnalysi
   // Start true and mark false if we ever failed to find a module analysis
   // because we expect this to succeed for each SCC.
   bool FoundModuleAnalysis1 = true;
-  FPM1.addPass(
-      LambdaFunctionPass([&](Function &F, FunctionAnalysisManager &AM) {
-        const auto &MAM =
-            AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
-        auto *TMA = MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
+  FPM1.addPass(LambdaFunctionPass([&](Function &F,
+                                      FunctionAnalysisManager &AM) {
+    const auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    if (!MAMProxy.cachedResultExists<TestModuleAnalysis>(*F.getParent()))
+      FoundModuleAnalysis1 = false;
 
-        if (!TMA)
-          FoundModuleAnalysis1 = false;
-
-        return PreservedAnalyses::all();
-      }));
+    return PreservedAnalyses::all();
+  }));
   CGSCCPassManager CGPM1(/*DebugLogging*/ true);
   CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
@@ -477,20 +479,17 @@ TEST_F(CGSCCPassManagerTest, TestFunctionPassInsideCGSCCInvalidatesModuleAnalysi
   // Again, start true and mark false if we ever failed to find a module analysis
   // because we expect this to succeed for each SCC.
   bool FoundModuleAnalysis2 = true;
-  FPM2.addPass(
-      LambdaFunctionPass([&](Function &F, FunctionAnalysisManager &AM) {
-        const auto &MAM =
-            AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
-        auto *TMA = MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
+  FPM2.addPass(LambdaFunctionPass([&](Function &F,
+                                      FunctionAnalysisManager &AM) {
+    const auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    if (!MAMProxy.cachedResultExists<TestModuleAnalysis>(*F.getParent()))
+      FoundModuleAnalysis2 = false;
 
-        if (!TMA)
-          FoundModuleAnalysis2 = false;
-
-        // Only fail to preserve analyses on one SCC and make sure that gets
-        // propagated.
-        return F.getName() == "h2" ? PreservedAnalyses::none()
-                                   : PreservedAnalyses::all();
-      }));
+    // Only fail to preserve analyses on one SCC and make sure that gets
+    // propagated.
+    return F.getName() == "h2" ? PreservedAnalyses::none()
+                               : PreservedAnalyses::all();
+  }));
   CGSCCPassManager CGPM2(/*DebugLogging*/ true);
   CGPM2.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
@@ -501,17 +500,14 @@ TEST_F(CGSCCPassManagerTest, TestFunctionPassInsideCGSCCInvalidatesModuleAnalysi
   // Start false and mark true if we ever *succeeded* to find a module
   // analysis, as we expect this to fail for every function.
   bool FoundModuleAnalysis3 = false;
-  FPM3.addPass(
-      LambdaFunctionPass([&](Function &F, FunctionAnalysisManager &AM) {
-        const auto &MAM =
-            AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
-        auto *TMA = MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
+  FPM3.addPass(LambdaFunctionPass([&](Function &F,
+                                      FunctionAnalysisManager &AM) {
+    const auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    if (MAMProxy.cachedResultExists<TestModuleAnalysis>(*F.getParent()))
+      FoundModuleAnalysis3 = true;
 
-        if (TMA)
-          FoundModuleAnalysis3 = true;
-
-        return PreservedAnalyses::none();
-      }));
+    return PreservedAnalyses::none();
+  }));
   CGSCCPassManager CGPM3(/*DebugLogging*/ true);
   CGPM3.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM3)));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM3)));
@@ -880,7 +876,8 @@ struct TestIndirectSCCAnalysis
     }
   };
 
-  TestIndirectSCCAnalysis(int &Runs) : Runs(Runs) {}
+  TestIndirectSCCAnalysis(int &Runs, ModuleAnalysisManager &MAM)
+      : Runs(Runs), MAM(MAM) {}
 
   /// Run the analysis pass over the function and return a result.
   Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -889,9 +886,11 @@ struct TestIndirectSCCAnalysis
     auto &SCCDep = AM.getResult<TestSCCAnalysis>(C, CG);
 
     auto &ModuleProxy = AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG);
-    const ModuleAnalysisManager &MAM = ModuleProxy.getManager();
     // For the test, we insist that the module analysis starts off in the
-    // cache.
+    // cache. Getting a cached result that isn't stateless triggers an assert.
+    // auto &MDep = *ModuleProxy.getCachedResult<TestModuleAnalysis>(
+    //  *C.begin()->getFunction().getParent());
+    // Use MAM, for the purposes of this unittest.
     auto &MDep = *MAM.getCachedResult<TestModuleAnalysis>(
         *C.begin()->getFunction().getParent());
     // Register the dependency as module analysis dependencies have to be
@@ -907,6 +906,7 @@ private:
   static AnalysisKey Key;
 
   int &Runs;
+  ModuleAnalysisManager &MAM;
 };
 
 AnalysisKey TestIndirectSCCAnalysis::Key;
@@ -974,7 +974,9 @@ struct TestIndirectFunctionAnalysis
     }
   };
 
-  TestIndirectFunctionAnalysis(int &Runs) : Runs(Runs) {}
+  TestIndirectFunctionAnalysis(int &Runs, ModuleAnalysisManager &MAM,
+                               CGSCCAnalysisManager &CGAM)
+      : Runs(Runs), MAM(MAM), CGAM(CGAM) {}
 
   /// Run the analysis pass over the function and return a result.
   Result run(Function &F, FunctionAnalysisManager &AM) {
@@ -982,21 +984,23 @@ struct TestIndirectFunctionAnalysis
     auto &FDep = AM.getResult<TestFunctionAnalysis>(F);
 
     auto &ModuleProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    const ModuleAnalysisManager &MAM = ModuleProxy.getManager();
     // For the test, we insist that the module analysis starts off in the
-    // cache.
+    // cache. Getting a cached result that isn't stateless triggers an assert.
+    // Use MAM, for the purposes of this unittest.
     auto &MDep = *MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
     // Register the dependency as module analysis dependencies have to be
     // pre-registered on the proxy.
     ModuleProxy.registerOuterAnalysisInvalidation<
         TestModuleAnalysis, TestIndirectFunctionAnalysis>();
 
-    // For thet test we assume this is run inside a CGSCC pass manager.
+    // For the test we assume this is run inside a CGSCC pass manager.
+    // Use MAM, for the purposes of this unittest.
     const LazyCallGraph &CG =
         *MAM.getCachedResult<LazyCallGraphAnalysis>(*F.getParent());
     auto &CGSCCProxy = AM.getResult<CGSCCAnalysisManagerFunctionProxy>(F);
-    const CGSCCAnalysisManager &CGAM = CGSCCProxy.getManager();
     // For the test, we insist that the CGSCC analysis starts off in the cache.
+    // Getting a cached result that isn't stateless triggers an assert.
+    // Use CGAM, for the purposes of this unittest.
     auto &SCCDep =
         *CGAM.getCachedResult<TestSCCAnalysis>(*CG.lookupSCC(*CG.lookup(F)));
     // Register the dependency as CGSCC analysis dependencies have to be
@@ -1012,6 +1016,8 @@ private:
   static AnalysisKey Key;
 
   int &Runs;
+  ModuleAnalysisManager &MAM;
+  CGSCCAnalysisManager &CGAM;
 };
 
 AnalysisKey TestIndirectFunctionAnalysis::Key;
@@ -1024,7 +1030,7 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
       DoublyIndirectSCCAnalysisRuns = 0;
   CGAM.registerPass([&] { return TestSCCAnalysis(SCCAnalysisRuns); });
   CGAM.registerPass(
-      [&] { return TestIndirectSCCAnalysis(IndirectSCCAnalysisRuns); });
+      [&] { return TestIndirectSCCAnalysis(IndirectSCCAnalysisRuns, MAM); });
   CGAM.registerPass([&] {
     return TestDoublyIndirectSCCAnalysis(DoublyIndirectSCCAnalysisRuns);
   });
@@ -1032,7 +1038,8 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
   int FunctionAnalysisRuns = 0, IndirectFunctionAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
   FAM.registerPass([&] {
-    return TestIndirectFunctionAnalysis(IndirectFunctionAnalysisRuns);
+    return TestIndirectFunctionAnalysis(IndirectFunctionAnalysisRuns, MAM,
+                                        CGAM);
   });
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1142,7 +1149,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
       DoublyIndirectSCCAnalysisRuns = 0;
   CGAM.registerPass([&] { return TestSCCAnalysis(SCCAnalysisRuns); });
   CGAM.registerPass(
-      [&] { return TestIndirectSCCAnalysis(IndirectSCCAnalysisRuns); });
+      [&] { return TestIndirectSCCAnalysis(IndirectSCCAnalysisRuns, MAM); });
   CGAM.registerPass([&] {
     return TestDoublyIndirectSCCAnalysis(DoublyIndirectSCCAnalysisRuns);
   });
@@ -1150,7 +1157,8 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
   int FunctionAnalysisRuns = 0, IndirectFunctionAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
   FAM.registerPass([&] {
-    return TestIndirectFunctionAnalysis(IndirectFunctionAnalysisRuns);
+    return TestIndirectFunctionAnalysis(IndirectFunctionAnalysisRuns, MAM,
+                                        CGAM);
   });
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1199,7 +1207,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
 
         // Now update the call graph.
         auto &NewC =
-            updateCGAndAnalysisManagerForFunctionPass(CG, C, H2N, AM, UR);
+            updateCGAndAnalysisManagerForFunctionPass(CG, C, H2N, AM, UR, FAM);
         assert(&NewC != &C && "Should get a new SCC due to update!");
         (void)&NewC;
 
@@ -1245,7 +1253,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
 
         // Now update the call graph.
         auto &NewC =
-            updateCGAndAnalysisManagerForFunctionPass(CG, C, H2N, AM, UR);
+            updateCGAndAnalysisManagerForFunctionPass(CG, C, H2N, AM, UR, FAM);
         assert(&NewC != &C && "Should get a new SCC due to update!");
         (void)&NewC;
 
@@ -1337,6 +1345,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses0) {
         if (C.getName() != "(h3, h1, h2)")
           return;
 
+        auto &FAM =
+            AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
         Function *FnX = M->getFunction("x");
         Function *FnH1 = M->getFunction("h1");
         Function *FnH2 = M->getFunction("h2");
@@ -1355,7 +1365,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses0) {
         auto &H2N = *llvm::find_if(
             C, [](LazyCallGraph::Node &N) { return N.getName() == "h2"; });
         ASSERT_NO_FATAL_FAILURE(
-            updateCGAndAnalysisManagerForCGSCCPass(CG, C, H2N, AM, UR));
+            updateCGAndAnalysisManagerForCGSCCPass(CG, C, H2N, AM, UR, FAM));
       }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1372,6 +1382,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses1) {
     if (C.getName() != "(h3, h1, h2)")
       return;
 
+    auto &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
     Function *FnX = M->getFunction("x");
     Function *FnH1 = M->getFunction("h1");
     Function *FnH2 = M->getFunction("h2");
@@ -1389,8 +1401,9 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses1) {
 
     auto &H2N = *llvm::find_if(
         C, [](LazyCallGraph::Node &N) { return N.getName() == "h2"; });
-    ASSERT_DEATH(updateCGAndAnalysisManagerForFunctionPass(CG, C, H2N, AM, UR),
-                 "Any new calls should be modeled as");
+    ASSERT_DEATH(
+        updateCGAndAnalysisManagerForFunctionPass(CG, C, H2N, AM, UR, FAM),
+        "Any new calls should be modeled as");
   }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1406,6 +1419,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses2) {
         if (C.getName() != "(f)")
           return;
 
+        auto &FAM =
+            AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
         Function *FnF = M->getFunction("f");
         Function *FnH2 = M->getFunction("h2");
         ASSERT_NE(FnF, nullptr);
@@ -1418,7 +1433,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses2) {
         auto &FN = *llvm::find_if(
             C, [](LazyCallGraph::Node &N) { return N.getName() == "f"; });
         ASSERT_NO_FATAL_FAILURE(
-            updateCGAndAnalysisManagerForCGSCCPass(CG, C, FN, AM, UR));
+            updateCGAndAnalysisManagerForCGSCCPass(CG, C, FN, AM, UR, FAM));
       }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1435,6 +1450,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses3) {
     if (C.getName() != "(f)")
       return;
 
+    auto &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
     Function *FnF = M->getFunction("f");
     Function *FnH2 = M->getFunction("h2");
     ASSERT_NE(FnF, nullptr);
@@ -1446,8 +1463,9 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses3) {
 
     auto &FN = *llvm::find_if(
         C, [](LazyCallGraph::Node &N) { return N.getName() == "f"; });
-    ASSERT_DEATH(updateCGAndAnalysisManagerForFunctionPass(CG, C, FN, AM, UR),
-                 "Any new calls should be modeled as");
+    ASSERT_DEATH(
+        updateCGAndAnalysisManagerForFunctionPass(CG, C, FN, AM, UR, FAM),
+        "Any new calls should be modeled as");
   }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1463,6 +1481,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses4) {
         if (C.getName() != "(f)")
           return;
 
+        auto &FAM =
+            AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
         Function *FnF = M->getFunction("f");
         Function *FnewF = Function::Create(FnF->getFunctionType(),
                                            FnF->getLinkage(), "newF", *M);
@@ -1483,7 +1503,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses4) {
             C, [](LazyCallGraph::Node &N) { return N.getName() == "f"; });
 
         ASSERT_NO_FATAL_FAILURE(
-            updateCGAndAnalysisManagerForCGSCCPass(CG, C, FN, AM, UR));
+            updateCGAndAnalysisManagerForCGSCCPass(CG, C, FN, AM, UR, FAM));
       }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1500,6 +1520,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses5) {
     if (C.getName() != "(f)")
       return;
 
+    auto &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
     Function *FnF = M->getFunction("f");
     Function *FnewF =
         Function::Create(FnF->getFunctionType(), FnF->getLinkage(), "newF", *M);
@@ -1519,8 +1541,9 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses5) {
     auto &FN = *llvm::find_if(
         C, [](LazyCallGraph::Node &N) { return N.getName() == "f"; });
 
-    ASSERT_DEATH(updateCGAndAnalysisManagerForFunctionPass(CG, C, FN, AM, UR),
-                 "Any new calls should be modeled as");
+    ASSERT_DEATH(
+        updateCGAndAnalysisManagerForFunctionPass(CG, C, FN, AM, UR, FAM),
+        "Any new calls should be modeled as");
   }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1701,6 +1724,9 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewRefSCC) {
   CGPM.addPass(LambdaSCCPassNoPreserve(
       [&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &CG,
           CGSCCUpdateResult &UR) {
+        auto &FAM =
+            AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
         for (auto &N : C) {
           auto &F = N.getFunction();
           if (F.getName() != "f")
@@ -1728,7 +1754,7 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewRefSCC) {
                                             "f.ref", &*F.begin()->begin());
 
           ASSERT_NO_FATAL_FAILURE(
-              updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR))
+              updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM))
               << "Updating the call graph with a demoted, self-referential "
                  "call edge 'f -> f', and a newly inserted ref edge 'f -> g', "
                  "caused a fatal failure";

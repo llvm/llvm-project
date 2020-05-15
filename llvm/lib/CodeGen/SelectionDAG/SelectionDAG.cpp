@@ -1995,28 +1995,26 @@ SDValue SelectionDAG::expandVACopy(SDNode *Node) {
                   MachinePointerInfo(VD));
 }
 
-SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
-  MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
-  unsigned ByteSize = VT.getStoreSize();
-  Type *Ty = VT.getTypeForEVT(*getContext());
-  unsigned StackAlign =
-      std::max((unsigned)getDataLayout().getPrefTypeAlignment(Ty), minAlign);
-
-  int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
+SDValue SelectionDAG::CreateStackTemporary(TypeSize Bytes, Align Alignment) {
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  int FrameIdx = MFI.CreateStackObject(Bytes, Alignment, false);
   return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
 }
 
+SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
+  Type *Ty = VT.getTypeForEVT(*getContext());
+  Align StackAlign =
+      std::max(getDataLayout().getPrefTypeAlign(Ty), Align(minAlign));
+  return CreateStackTemporary(VT.getStoreSize(), StackAlign);
+}
+
 SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
-  unsigned Bytes = std::max(VT1.getStoreSize(), VT2.getStoreSize());
+  TypeSize Bytes = std::max(VT1.getStoreSize(), VT2.getStoreSize());
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
   Type *Ty2 = VT2.getTypeForEVT(*getContext());
   const DataLayout &DL = getDataLayout();
-  unsigned Align =
-      std::max(DL.getPrefTypeAlignment(Ty1), DL.getPrefTypeAlignment(Ty2));
-
-  MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
-  int FrameIdx = MFI.CreateStackObject(Bytes, Align, false);
-  return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
+  Align Align = std::max(DL.getPrefTypeAlign(Ty1), DL.getPrefTypeAlign(Ty2));
+  return CreateStackTemporary(Bytes, Align);
 }
 
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
@@ -2353,18 +2351,15 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     return true;
   }
   case ISD::EXTRACT_SUBVECTOR: {
+    // Offset the demanded elts by the subvector index.
     SDValue Src = V.getOperand(0);
-    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(V.getOperand(1));
+    uint64_t Idx = V.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
-      // Offset the demanded elts by the subvector index.
-      uint64_t Idx = SubIdx->getZExtValue();
-      APInt UndefSrcElts;
-      APInt DemandedSrc = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
-      if (isSplatValue(Src, DemandedSrc, UndefSrcElts)) {
-        UndefElts = UndefSrcElts.extractBits(NumElts, Idx);
-        return true;
-      }
+    APInt UndefSrcElts;
+    APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
+    if (isSplatValue(Src, DemandedSrcElts, UndefSrcElts)) {
+      UndefElts = UndefSrcElts.extractBits(NumElts, Idx);
+      return true;
     }
     break;
   }
@@ -2663,21 +2658,16 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // If we know the element index, demand any elements from the subvector and
-    // the remainder from the src its inserted into, otherwise assume we need
-    // the original demanded base elements and ALL the inserted subvector
-    // elements.
+    // Demand any elements from the subvector and the remainder from the src its
+    // inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    auto *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    uint64_t Idx = Op.getConstantOperandVal(2);
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-    APInt DemandedSubElts = APInt::getAllOnesValue(NumSubElts);
+    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
     APInt DemandedSrcElts = DemandedElts;
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumElts - NumSubElts)) {
-      uint64_t Idx = SubIdx->getZExtValue();
-      DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
-      DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
-    }
+    DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
+
     Known.One.setAllBits();
     Known.Zero.setAllBits();
     if (!!DemandedSubElts) {
@@ -2693,18 +2683,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
-    // If we know the element index, just demand that subvector elements,
-    // otherwise demand them all.
+    // Offset the demanded elts by the subvector index.
     SDValue Src = Op.getOperand(0);
-    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    APInt DemandedSrc = APInt::getAllOnesValue(NumSrcElts);
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
-      // Offset the demanded elts by the subvector index.
-      uint64_t Idx = SubIdx->getZExtValue();
-      DemandedSrc = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
-    }
-    Known = computeKnownBits(Src, DemandedSrc, Depth + 1);
+    APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
+    Known = computeKnownBits(Src, DemandedSrcElts, Depth + 1);
     break;
   }
   case ISD::SCALAR_TO_VECTOR: {
@@ -3945,18 +3929,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
   }
   case ISD::EXTRACT_SUBVECTOR: {
-    // If we know the element index, just demand that subvector elements,
-    // otherwise demand them all.
+    // Offset the demanded elts by the subvector index.
     SDValue Src = Op.getOperand(0);
-    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    APInt DemandedSrc = APInt::getAllOnesValue(NumSrcElts);
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
-      // Offset the demanded elts by the subvector index.
-      uint64_t Idx = SubIdx->getZExtValue();
-      DemandedSrc = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
-    }
-    return ComputeNumSignBits(Src, DemandedSrc, Depth + 1);
+    APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts).shl(Idx);
+    return ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
   }
   case ISD::CONCAT_VECTORS: {
     // Determine the minimum number of sign bits across all demanded
@@ -3977,21 +3955,16 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Tmp;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // If we know the element index, demand any elements from the subvector and
-    // the remainder from the src its inserted into, otherwise assume we need
-    // the original demanded base elements and ALL the inserted subvector
-    // elements.
+    // Demand any elements from the subvector and the remainder from the src its
+    // inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    auto *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    uint64_t Idx = Op.getConstantOperandVal(2);
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-    APInt DemandedSubElts = APInt::getAllOnesValue(NumSubElts);
+    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
     APInt DemandedSrcElts = DemandedElts;
-    if (SubIdx && SubIdx->getAPIntValue().ule(NumElts - NumSubElts)) {
-      uint64_t Idx = SubIdx->getZExtValue();
-      DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
-      DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
-    }
+    DemandedSrcElts.insertBits(APInt::getNullValue(NumSubElts), Idx);
+
     Tmp = std::numeric_limits<unsigned>::max();
     if (!!DemandedSubElts) {
       Tmp = ComputeNumSignBits(Sub, DemandedSubElts, Depth + 1);
@@ -4335,7 +4308,6 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
     if (Op.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
         Op.getOperand(0).getValueType() != VT ||
         (IdentitySrc && Op.getOperand(0) != IdentitySrc) ||
-        !isa<ConstantSDNode>(Op.getOperand(1)) ||
         Op.getConstantOperandVal(1) != IdentityIndex) {
       IsIdentity = false;
       break;
@@ -5461,44 +5433,40 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     break;
   case ISD::EXTRACT_SUBVECTOR:
-    if (VT.isSimple() && N1.getValueType().isSimple()) {
-      assert(VT.isVector() && N1.getValueType().isVector() &&
-             "Extract subvector VTs must be a vectors!");
-      assert(VT.getVectorElementType() ==
-             N1.getValueType().getVectorElementType() &&
-             "Extract subvector VTs must have the same element type!");
-      assert(VT.getSimpleVT() <= N1.getSimpleValueType() &&
-             "Extract subvector must be from larger vector to smaller vector!");
+    assert(VT.isVector() && N1.getValueType().isVector() &&
+           "Extract subvector VTs must be a vectors!");
+    assert(VT.getVectorElementType() ==
+               N1.getValueType().getVectorElementType() &&
+           "Extract subvector VTs must have the same element type!");
+    assert(VT.getVectorNumElements() <=
+               N1.getValueType().getVectorNumElements() &&
+           "Extract subvector must be from larger vector to smaller vector!");
+    assert(N2C && "Extract subvector index must be a constant");
+    assert(VT.getVectorNumElements() + N2C->getZExtValue() <=
+               N1.getValueType().getVectorNumElements() &&
+           "Extract subvector overflow!");
 
-      if (N2C) {
-        assert((VT.getVectorNumElements() + N2C->getZExtValue()
-                <= N1.getValueType().getVectorNumElements())
-               && "Extract subvector overflow!");
-      }
+    // Trivial extraction.
+    if (VT == N1.getValueType())
+      return N1;
 
-      // Trivial extraction.
-      if (VT.getSimpleVT() == N1.getSimpleValueType())
-        return N1;
+    // EXTRACT_SUBVECTOR of an UNDEF is an UNDEF.
+    if (N1.isUndef())
+      return getUNDEF(VT);
 
-      // EXTRACT_SUBVECTOR of an UNDEF is an UNDEF.
-      if (N1.isUndef())
-        return getUNDEF(VT);
-
-      // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
-      // the concat have the same type as the extract.
-      if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
-          N1.getNumOperands() > 0 &&
-          VT == N1.getOperand(0).getValueType()) {
-        unsigned Factor = VT.getVectorNumElements();
-        return N1.getOperand(N2C->getZExtValue() / Factor);
-      }
-
-      // EXTRACT_SUBVECTOR of INSERT_SUBVECTOR is often created
-      // during shuffle legalization.
-      if (N1.getOpcode() == ISD::INSERT_SUBVECTOR && N2 == N1.getOperand(2) &&
-          VT == N1.getOperand(1).getValueType())
-        return N1.getOperand(1);
+    // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
+    // the concat have the same type as the extract.
+    if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
+        N1.getNumOperands() > 0 && VT == N1.getOperand(0).getValueType()) {
+      unsigned Factor = VT.getVectorNumElements();
+      return N1.getOperand(N2C->getZExtValue() / Factor);
     }
+
+    // EXTRACT_SUBVECTOR of INSERT_SUBVECTOR is often created
+    // during shuffle legalization.
+    if (N1.getOpcode() == ISD::INSERT_SUBVECTOR && N2 == N1.getOperand(2) &&
+        VT == N1.getOperand(1).getValueType())
+      return N1.getOperand(1);
     break;
   }
 
@@ -5669,33 +5637,29 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Inserting undef into undef is still undef.
     if (N1.isUndef() && N2.isUndef())
       return getUNDEF(VT);
-    SDValue Index = N3;
-    if (VT.isSimple() && N1.getValueType().isSimple()
-        && N2.getValueType().isSimple()) {
-      assert(VT.isVector() && N1.getValueType().isVector() &&
-             N2.getValueType().isVector() &&
-             "Insert subvector VTs must be a vectors");
-      assert(VT == N1.getValueType() &&
-             "Dest and insert subvector source types must match!");
-      assert(N2.getSimpleValueType() <= N1.getSimpleValueType() &&
-             "Insert subvector must be from smaller vector to larger vector!");
-      if (isa<ConstantSDNode>(Index)) {
-        assert((N2.getValueType().getVectorNumElements() +
-                cast<ConstantSDNode>(Index)->getZExtValue()
-                <= VT.getVectorNumElements())
-               && "Insert subvector overflow!");
-      }
+    assert(VT.isVector() && N1.getValueType().isVector() &&
+           N2.getValueType().isVector() &&
+           "Insert subvector VTs must be a vectors");
+    assert(VT == N1.getValueType() &&
+           "Dest and insert subvector source types must match!");
+    assert(N2.getSimpleValueType() <= N1.getSimpleValueType() &&
+           "Insert subvector must be from smaller vector to larger vector!");
+    assert(isa<ConstantSDNode>(N3) &&
+           "Insert subvector index must be constant");
+    assert(N2.getValueType().getVectorNumElements() +
+                   cast<ConstantSDNode>(N3)->getZExtValue() <=
+               VT.getVectorNumElements() &&
+           "Insert subvector overflow!");
 
-      // Trivial insertion.
-      if (VT.getSimpleVT() == N2.getSimpleValueType())
-        return N2;
+    // Trivial insertion.
+    if (VT == N2.getValueType())
+      return N2;
 
-      // If this is an insert of an extracted vector into an undef vector, we
-      // can just use the input to the extract.
-      if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-          N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
-        return N2.getOperand(0);
-    }
+    // If this is an insert of an extracted vector into an undef vector, we
+    // can just use the input to the extract.
+    if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
+      return N2.getOperand(0);
     break;
   }
   case ISD::BITCAST:

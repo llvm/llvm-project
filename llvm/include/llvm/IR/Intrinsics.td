@@ -289,6 +289,7 @@ def llvm_v1f64_ty      : LLVMType<v1f64>;    //  1 x double
 def llvm_v2f64_ty      : LLVMType<v2f64>;    //  2 x double
 def llvm_v4f64_ty      : LLVMType<v4f64>;    //  4 x double
 def llvm_v8f64_ty      : LLVMType<v8f64>;    //  8 x double
+def llvm_v16f64_ty     : LLVMType<v16f64>;   // 16 x double
 
 def llvm_vararg_ty     : LLVMType<isVoid>;   // this means vararg here
 

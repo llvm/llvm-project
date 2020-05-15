@@ -130,6 +130,7 @@ Modified Compiler Flags
 - ``-fno-char8_t`` now disables the ``char8_t`` keyword, not just the use of
   ``char8_t`` as the character type of ``u8`` literals. This restores the
   Clang 8 behavior that regressed in Clang 9 and 10.
+- -print-targets has been added to print the registered targets.
 
 New Pragmas in Clang
 --------------------

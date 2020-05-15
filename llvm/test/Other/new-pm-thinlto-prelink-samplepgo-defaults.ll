@@ -75,7 +75,8 @@
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run
-; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
+; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
+; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O-NEXT: Running analysis: GlobalsAA

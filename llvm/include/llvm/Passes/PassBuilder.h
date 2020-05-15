@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
@@ -345,9 +346,9 @@ public:
 
   /// Construct the module pipeline that performs inlining as well as
   /// the inlining-driven cleanups.
-  ModulePassManager buildInlinerPipeline(OptimizationLevel Level,
-                                         ThinLTOPhase Phase,
-                                         bool DebugLogging = false);
+  ModuleInlinerWrapperPass buildInlinerPipeline(OptimizationLevel Level,
+                                                ThinLTOPhase Phase,
+                                                bool DebugLogging = false);
 
   /// Construct the core LLVM module optimization pipeline.
   ///

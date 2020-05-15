@@ -297,9 +297,9 @@ Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
   return CI;
 }
 
-static VectorType *arrayTypeToVecType(ArrayType *ArrayTy) {
-  return VectorType::get(ArrayTy->getElementType(),
-                         ArrayTy->getNumElements());
+static FixedVectorType *arrayTypeToVecType(ArrayType *ArrayTy) {
+  return FixedVectorType::get(ArrayTy->getElementType(),
+                              ArrayTy->getNumElements());
 }
 
 static Value *stripBitcasts(Value *V) {
@@ -390,7 +390,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
   }
 
   Type *AllocaTy = Alloca->getAllocatedType();
-  VectorType *VectorTy = dyn_cast<VectorType>(AllocaTy);
+  auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
   if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
     if (VectorType::isValidElementType(ArrayTy->getElementType()) &&
         ArrayTy->getNumElements() > 0)

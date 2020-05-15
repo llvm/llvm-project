@@ -102,6 +102,13 @@ OPTIONS
  Emit the profile using a binary encoding. For instrumentation-based profile
  the output format is the indexed binary format. 
 
+ .. option:: -extbinary
+
+ Emit the profile using an extensible binary encoding. This option can only
+ be used with sample-based profile. The extensible binary encoding can be
+ more compact with compression enabled and can be loaded faster than the
+ default binary encoding.
+
  .. option:: -text
 
  Emit the profile in text mode. This option can also be used with both
@@ -131,6 +138,28 @@ OPTIONS
  only if all profiles are invalid. If 'all' is set, information from any
  invalid profiles is excluded from the final merged product. The default
  failure mode is 'any'.
+
+.. option:: -prof-sym-list=path
+
+ Specify a file which contains a list of symbols to generate profile symbol
+ list in the profile. This option can only be used with sample-based profile
+ in extbinary format. The entries in this file are newline-separated.
+
+.. option:: -compress-all-sections=[true|false]
+
+ Compress all sections when writing the profile. This option can only be used
+ with sample-based profile in extbinary format.
+
+.. option:: -use-md5=[true|false]
+
+ Use MD5 to represent string in name table when writing the profile.
+ This option can only be used with sample-based profile in extbinary format.
+
+.. option:: -gen-partial-profile=[true|false]
+
+ Mark the profile to be a partial profile which only provides partial profile
+ coverage for the optimized target. This option can only be used with
+ sample-based profile in extbinary format.
 
 EXAMPLES
 ^^^^^^^^
@@ -241,6 +270,16 @@ OPTIONS
 
  Only show context sensitive profile counts. The default is to filter all
  context sensitive profile counts.
+
+.. option:: -show-prof-sym-list=[true|false]
+
+ Show profile symbol list if it exists in the profile. This option is only
+ meaningful for sample-based profile in extbinary format.
+
+.. option:: -show-sec-info-only=[true|false]
+
+ Show basic information about each section in the profile. This option is
+ only meaningful for sample-based profile in extbinary format.
 
 .. program:: llvm-profdata overlap
 

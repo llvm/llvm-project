@@ -799,6 +799,16 @@ public:
     return &static_cast<ResultModelT *>(ResultConcept)->Result;
   }
 
+  /// Verify that the given Result cannot be invalidated, assert otherwise.
+  template <typename PassT>
+  void verifyNotInvalidated(IRUnitT &IR, typename PassT::Result *Result) const {
+    PreservedAnalyses PA = PreservedAnalyses::none();
+    SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
+    Invalidator Inv(IsResultInvalidated, AnalysisResults);
+    assert(!Result->invalidate(IR, PA, Inv) &&
+           "Cached result cannot be invalidated");
+  }
+
   /// Register an analysis pass with the manager.
   ///
   /// The parameter is a callable whose result is an analysis pass. This allows
@@ -1064,7 +1074,24 @@ public:
   public:
     explicit Result(const AnalysisManagerT &OuterAM) : OuterAM(&OuterAM) {}
 
-    const AnalysisManagerT &getManager() const { return *OuterAM; }
+    /// Get a cached analysis. If the analysis can be invalidated, this will
+    /// assert.
+    template <typename PassT, typename IRUnitTParam>
+    typename PassT::Result *getCachedResult(IRUnitTParam &IR) const {
+      typename PassT::Result *Res =
+          OuterAM->template getCachedResult<PassT>(IR);
+      if (Res)
+        OuterAM->template verifyNotInvalidated<PassT>(IR, Res);
+      return Res;
+    }
+
+    /// Method provided for unit testing, not intended for general use.
+    template <typename PassT, typename IRUnitTParam>
+    bool cachedResultExists(IRUnitTParam &IR) const {
+      typename PassT::Result *Res =
+          OuterAM->template getCachedResult<PassT>(IR);
+      return Res != nullptr;
+    }
 
     /// When invalidation occurs, remove any registered invalidation events.
     bool invalidate(

@@ -363,7 +363,7 @@ func @vec_rejected_11(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
   return
 }
 
-// This should not vectorize due to the sequential dependence in the loop.
+// This should not vectorize due to the sequential dependence in the scf.
 // CHECK-LABEL: @vec_rejected_sequential
 func @vec_rejected_sequential(%A : memref<?xf32>) {
   %N = dim %A, 0 : memref<?xf32>

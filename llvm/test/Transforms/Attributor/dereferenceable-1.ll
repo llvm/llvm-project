@@ -298,6 +298,71 @@ define void @deref_or_null_and_nonnull(i32* dereferenceable_or_null(100) %0) {
 ;   fill_range(p, *range);
 ; }
 
+; FIXME: %ptr should be dereferenceable(31)
+define void @test8(i8* %ptr) #0 {
+; IS________OPM-LABEL: define {{[^@]+}}@test8
+; IS________OPM-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]])
+; IS________OPM-NEXT:    br label [[TMP1:%.*]]
+; IS________OPM:       1:
+; IS________OPM-NEXT:    [[I_0:%.*]] = phi i32 [ 20, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[TMP5:%.*]] ]
+; IS________OPM-NEXT:    [[TMP2:%.*]] = sext i32 [[I_0]] to i64
+; IS________OPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[TMP2]]
+; IS________OPM-NEXT:    store i8 32, i8* [[TMP3]], align 1
+; IS________OPM-NEXT:    [[TMP4]] = add nsw i32 [[I_0]], 1
+; IS________OPM-NEXT:    br label [[TMP5]]
+; IS________OPM:       5:
+; IS________OPM-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[TMP4]], 30
+; IS________OPM-NEXT:    br i1 [[TMP6]], label [[TMP1]], label [[TMP7:%.*]]
+; IS________OPM:       7:
+; IS________OPM-NEXT:    ret void
+;
+; IS________NPM-LABEL: define {{[^@]+}}@test8
+; IS________NPM-SAME: (i8* nocapture nofree nonnull writeonly dereferenceable(21) [[PTR:%.*]])
+; IS________NPM-NEXT:    br label [[TMP1:%.*]]
+; IS________NPM:       1:
+; IS________NPM-NEXT:    [[I_0:%.*]] = phi i32 [ 20, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[TMP5:%.*]] ]
+; IS________NPM-NEXT:    [[TMP2:%.*]] = sext i32 [[I_0]] to i64
+; IS________NPM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[TMP2]]
+; IS________NPM-NEXT:    store i8 32, i8* [[TMP3]], align 1
+; IS________NPM-NEXT:    [[TMP4]] = add nsw i32 [[I_0]], 1
+; IS________NPM-NEXT:    br label [[TMP5]]
+; IS________NPM:       5:
+; IS________NPM-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[TMP4]], 30
+; IS________NPM-NEXT:    br i1 [[TMP6]], label [[TMP1]], label [[TMP7:%.*]]
+; IS________NPM:       7:
+; IS________NPM-NEXT:    ret void
+;
+  br label %1
+1:                                                ; preds = %5, %0
+  %i.0 = phi i32 [ 20, %0 ], [ %4, %5 ]
+  %2 = sext i32 %i.0 to i64
+  %3 = getelementptr inbounds i8, i8* %ptr, i64 %2
+  store i8 32, i8* %3, align 1
+  %4 = add nsw i32 %i.0, 1
+  br label %5
+5:                                                ; preds = %1
+  %6 = icmp slt i32 %4, 30
+  br i1 %6, label %1, label %7
+
+7:                                                ; preds = %5
+  ret void
+}
+
+; 8.2 (negative case)
+define void @test8_neg(i32 %i, i8* %ptr) #0 {
+; CHECK-LABEL: define {{[^@]+}}@test8_neg
+; CHECK-SAME: (i32 [[I:%.*]], i8* nocapture nofree nonnull writeonly [[PTR:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    store i8 65, i8* [[TMP2]], align 1
+; CHECK-NEXT:    ret void
+;
+  %1 = sext i32 %i to i64
+  %2 = getelementptr inbounds i8, i8* %ptr, i64 %1
+  store i8 65, i8* %2, align 1
+  ret void
+}
+
 ; void fill_range(int* p, long long int start){
 ;   for(long long int i = start;i<start+10;i++){
 ;     // If p[i] is inbounds, p is dereferenceable(40) at least.

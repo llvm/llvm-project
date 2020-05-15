@@ -180,7 +180,10 @@ VFParamKind getVFParamKindFromString(const StringRef Token);
 static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
 
 /// Populates a set of strings representing the Vector Function ABI variants
-/// associated to the CallInst CI.
+/// associated to the CallInst CI. If the CI does not contain the
+/// vector-function-abi-variant attribute, we return without populating
+/// VariantMappings, i.e. callers of getVectorVariantNames need not check for
+/// the presence of the attribute (see InjectTLIMappings).
 void getVectorVariantNames(const CallInst &CI,
                            SmallVectorImpl<std::string> &VariantMappings);
 } // end namespace VFABI
@@ -203,14 +206,13 @@ class VFDatabase {
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {
     const StringRef ScalarName = CI.getCalledFunction()->getName();
-    const StringRef S =
-        CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
-            .getValueAsString();
-    if (S.empty())
-      return;
 
     SmallVector<std::string, 8> ListOfStrings;
+    // The check for the vector-function-abi-variant attribute is done when
+    // retrieving the vector variant names here.
     VFABI::getVectorVariantNames(CI, ListOfStrings);
+    if (ListOfStrings.empty())
+      return;
     for (const auto &MangledName : ListOfStrings) {
       const Optional<VFInfo> Shape =
           VFABI::tryDemangleForVFABI(MangledName, *(CI.getModule()));

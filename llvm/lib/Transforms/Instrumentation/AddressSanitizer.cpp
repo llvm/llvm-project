@@ -1170,9 +1170,8 @@ AddressSanitizerPass::AddressSanitizerPass(bool CompileKernel, bool Recover,
 PreservedAnalyses AddressSanitizerPass::run(Function &F,
                                             AnalysisManager<Function> &AM) {
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  auto &MAM = MAMProxy.getManager();
   Module &M = *F.getParent();
-  if (auto *R = MAM.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
+  if (auto *R = MAMProxy.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
     const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
     AddressSanitizer Sanitizer(M, R, CompileKernel, Recover, UseAfterScope);
     if (Sanitizer.instrumentFunction(F, TLI))

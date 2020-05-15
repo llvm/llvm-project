@@ -102,6 +102,7 @@ define amdgpu_kernel void @udot2(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: udot2:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -244,6 +245,7 @@ define amdgpu_kernel void @udot2_MulMul(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: udot2_MulMul:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -377,6 +379,7 @@ define amdgpu_kernel void @idot2(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: idot2:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -511,6 +514,7 @@ define amdgpu_kernel void @idot2_MixedTypedMul(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: idot2_MixedTypedMul:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -648,6 +652,7 @@ define amdgpu_kernel void @udot2_alt_AddOperands(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: udot2_alt_AddOperands:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -782,6 +787,7 @@ define amdgpu_kernel void @idot2_MixedExt(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: idot2_MixedExt:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -905,6 +911,7 @@ define amdgpu_kernel void @notudot2_SameVec(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: notudot2_SameVec:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1039,6 +1046,7 @@ define amdgpu_kernel void @udot2_v4i16(<4 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: udot2_v4i16:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1171,6 +1179,7 @@ define amdgpu_kernel void @udot2_v4i16_Hi(<4 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: udot2_v4i16_Hi:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1310,6 +1319,7 @@ define amdgpu_kernel void @notudot2_v4i16_Even(<4 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: notudot2_v4i16_Even:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1455,6 +1465,7 @@ define amdgpu_kernel void @notudot2_v4i16_Middle(<4 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: notudot2_v4i16_Middle:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1600,6 +1611,7 @@ define amdgpu_kernel void @notudot2_DiffIndex(<2 x i16> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: notudot2_DiffIndex:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1749,6 +1761,7 @@ define amdgpu_kernel void @udot2_MultipleUses_add1(<2 x i16> addrspace(1)* %src1
 ;
 ; GFX10-DL-LABEL: udot2_MultipleUses_add1:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -1896,6 +1909,7 @@ define amdgpu_kernel void @idot2_MultipleUses_add1(<2 x i16> addrspace(1)* %src1
 ;
 ; GFX10-DL-LABEL: idot2_MultipleUses_add1:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -2047,6 +2061,7 @@ define amdgpu_kernel void @udot2_MultipleUses_mul1(<2 x i16> addrspace(1)* %src1
 ;
 ; GFX10-DL-LABEL: udot2_MultipleUses_mul1:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -2195,6 +2210,7 @@ define amdgpu_kernel void @idot2_MultipleUses_mul1(<2 x i16> addrspace(1)* %src1
 ;
 ; GFX10-DL-LABEL: idot2_MultipleUses_mul1:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -2347,6 +2363,7 @@ define amdgpu_kernel void @udot2_MultipleUses_mul2(<2 x i16> addrspace(1)* %src1
 ;
 ; GFX10-DL-LABEL: udot2_MultipleUses_mul2:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -2495,6 +2512,7 @@ define amdgpu_kernel void @idot2_MultipleUses_mul2(<2 x i16> addrspace(1)* %src1
 ;
 ; GFX10-DL-LABEL: idot2_MultipleUses_mul2:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -2786,6 +2804,7 @@ define amdgpu_kernel void @notsdot2_sext8(<2 x i8> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: notsdot2_sext8:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi

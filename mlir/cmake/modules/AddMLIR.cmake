@@ -14,6 +14,16 @@ function(add_mlir_dialect dialect dialect_namespace)
   add_dependencies(mlir-headers MLIR${dialect}IncGen)
 endfunction()
 
+# Declare a dialect in the include directory
+function(add_mlir_interface interface)
+  set(LLVM_TARGET_DEFINITIONS ${interface}.td)
+  mlir_tablegen(${interface}.h.inc -gen-op-interface-decls)
+  mlir_tablegen(${interface}.cpp.inc -gen-op-interface-defs)
+  add_public_tablegen_target(MLIR${interface}IncGen)
+  add_dependencies(mlir-generic-headers MLIR${interface}IncGen)
+endfunction()
+
+
 # Generate Documentation
 function(add_mlir_doc doc_filename command output_file output_directory)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)

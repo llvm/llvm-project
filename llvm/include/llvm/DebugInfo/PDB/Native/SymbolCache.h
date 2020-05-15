@@ -10,6 +10,8 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLCACHE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
@@ -51,6 +53,16 @@ class SymbolCache {
   /// Map from global symbol offset to SymIndexId.
   DenseMap<uint32_t, SymIndexId> GlobalOffsetToSymbolId;
 
+  /// Map from segment and code offset to SymIndexId.
+  DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId> AddressToFunctionSymId;
+  DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId> AddressToPublicSymId;
+
+  /// Map from virtual address to module index.
+  using IMap =
+      IntervalMap<uint64_t, uint16_t, 8, IntervalMapHalfOpenInfo<uint64_t>>;
+  IMap::Allocator IMapAllocator;
+  IMap AddrToModuleIndex;
+
   SymIndexId createSymbolPlaceholder() {
     SymIndexId Id = Cache.size();
     Cache.push_back(nullptr);
@@ -76,6 +88,15 @@ class SymbolCache {
 
   SymIndexId createSimpleType(codeview::TypeIndex TI,
                               codeview::ModifierOptions Mods);
+
+  std::unique_ptr<PDBSymbol> findFunctionSymbolBySectOffset(uint32_t Sect,
+                                                            uint32_t Offset);
+  std::unique_ptr<PDBSymbol> findPublicSymbolBySectOffset(uint32_t Sect,
+                                                          uint32_t Offset);
+
+  void parseSectionContribs();
+  Optional<uint16_t> getModuleIndexForAddr(uint32_t Sect,
+                                           uint32_t Offset) const;
 
 public:
   SymbolCache(NativeSession &Session, DbiStream *Dbi);
@@ -126,6 +147,9 @@ public:
   }
 
   SymIndexId getOrCreateGlobalSymbolByOffset(uint32_t Offset);
+
+  std::unique_ptr<PDBSymbol>
+  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset, PDB_SymType Type);
 
   std::unique_ptr<PDBSymbolCompiland> getOrCreateCompiland(uint32_t Index);
   uint32_t getNumCompilands() const;

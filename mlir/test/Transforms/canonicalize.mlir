@@ -469,9 +469,9 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
   %M_ = dim %A, 0 : memref<?x?xf32>
   %K_ = dim %A, 1 : memref<?x?xf32>
   %N_ = dim %C, 1 : memref<?x?xf32>
-  loop.for %i = %c0 to %M_ step %c1 {
-    loop.for %j = %c0 to %N_ step %c1 {
-      loop.for %k = %c0 to %K_ step %c1 {
+  scf.for %i = %c0 to %M_ step %c1 {
+    scf.for %j = %c0 to %N_ step %c1 {
+      scf.for %k = %c0 to %K_ step %c1 {
       }
     }
   }
@@ -941,3 +941,19 @@ func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<
   return %1: memref<?x?xf32, offset:? , strides: [?, ?]>
 }
 
+// -----
+
+// CHECK-DAG: #[[map0:.*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// CHECK-DAG: #[[map1:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+
+// CHECK-LABEL: func @memref_cast_folding_subview_static(
+func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: index)
+  -> memref<3x4xf32, offset:?, strides:[?, 1]>
+{
+  %0 = memref_cast %V : memref<16x16xf32> to memref<?x?xf32>
+  %1 = subview %0[0, 0][3, 4][1, 1] : memref<?x?xf32> to memref<3x4xf32, offset:?, strides:[?, 1]>
+
+  // CHECK:  subview{{.*}}: memref<16x16xf32> to memref<3x4xf32, #[[map0]]>
+  // CHECK:  memref_cast{{.*}}: memref<3x4xf32, #[[map0]]> to memref<3x4xf32, #[[map1]]>
+  return %1: memref<3x4xf32, offset:?, strides:[?, 1]>
+}

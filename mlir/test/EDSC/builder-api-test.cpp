@@ -148,7 +148,7 @@ TEST_FUNC(builder_loop_for) {
   // CHECK-LABEL: func @builder_loop_for(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
   // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%{{.*}}, %{{.*}}]
   // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
-  // CHECK-NEXT:   loop.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} {
+  // CHECK-NEXT:   scf.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} {
   // clang-format on
   f.print(llvm::outs());
   f.erase();
@@ -1094,9 +1094,9 @@ TEST_FUNC(builder_loop_for_yield) {
   // CHECK:     [[init1:%.*]] = constant
   // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%{{.*}}, %{{.*}}]
   // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
-  // CHECK-NEXT: [[res:%[0-9]+]]:2 = loop.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} iter_args([[arg0:%.*]] = [[init0]], [[arg1:%.*]] = [[init1]]) -> (f32, f32) {
+  // CHECK-NEXT: [[res:%[0-9]+]]:2 = scf.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} iter_args([[arg0:%.*]] = [[init0]], [[arg1:%.*]] = [[init1]]) -> (f32, f32) {
   // CHECK:     [[sum:%[0-9]+]] = addf [[arg0]], [[arg1]] : f32
-  // CHECK:     loop.yield [[arg1]], [[sum]] : f32, f32
+  // CHECK:     scf.yield [[arg1]], [[sum]] : f32, f32
   // CHECK:     addf [[res]]#0, [[res]]#1 : f32
   // clang-format on
 

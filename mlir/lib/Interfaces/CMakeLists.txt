@@ -80,7 +80,7 @@ add_mlir_library(MLIRSideEffects
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
   DEPENDS
-  MLIRSideEffectOpInterfacesIncGen
+  MLIRSideEffectInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

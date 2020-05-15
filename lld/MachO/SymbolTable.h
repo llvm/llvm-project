@@ -30,6 +30,9 @@ public:
 
   Symbol *addDylib(StringRef name, DylibFile *file);
 
+  Symbol *addLazy(StringRef name, ArchiveFile *file,
+                  const llvm::object::Archive::Symbol &sym);
+
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
   Symbol *find(StringRef name);
 

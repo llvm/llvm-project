@@ -20,9 +20,9 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   %6 = dim %3, 0 : memref<?x?xf32>
   %7 = dim %3, 1 : memref<?x?xf32>
   %8 = dim %4, 1 : memref<?x?xf32>
-  loop.for %arg4 = %c0 to %6 step %c2 {
-    loop.for %arg5 = %c0 to %8 step %c3 {
-      loop.for %arg6 = %c0 to %7 step %c4 {
+  scf.for %arg4 = %c0 to %6 step %c2 {
+    scf.for %arg5 = %c0 to %8 step %c3 {
+      scf.for %arg6 = %c0 to %7 step %c4 {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
@@ -34,9 +34,9 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 }
 
 // CHECK-LABEL: func @matmul_f32(%{{.*}}: memref<?xi8>, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//       CHECK:   loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:     loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:       loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:         %[[vA:.*]] = subview {{.*}} : memref<?x?xf32>
 //       CHECK:         %[[vB:.*]] = subview {{.*}} : memref<?x?xf32>
 //       CHECK:         %[[vC:.*]] = subview {{.*}} : memref<?x?xf32>
@@ -85,9 +85,9 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   %6 = dim %3, 0 : memref<?x?xf64>
   %7 = dim %3, 1 : memref<?x?xf64>
   %8 = dim %4, 1 : memref<?x?xf64>
-  loop.for %arg4 = %c0 to %6 step %c2 {
-    loop.for %arg5 = %c0 to %8 step %c3 {
-      loop.for %arg6 = %c0 to %7 step %c4 {
+  scf.for %arg4 = %c0 to %6 step %c2 {
+    scf.for %arg5 = %c0 to %8 step %c3 {
+      scf.for %arg6 = %c0 to %7 step %c4 {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
@@ -99,9 +99,9 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 }
 
 // CHECK-LABEL: func @matmul_f64(%{{.*}}: memref<?xi8>, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//       CHECK:   loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:     loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:       loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:         %[[vA_f64:.*]] = subview {{.*}} : memref<?x?xf64>
 //       CHECK:         %[[vB_f64:.*]] = subview {{.*}} : memref<?x?xf64>
 //       CHECK:         %[[vC_f64:.*]] = subview {{.*}} : memref<?x?xf64>
@@ -150,9 +150,9 @@ func @matmul_i32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   %6 = dim %3, 0 : memref<?x?xi32>
   %7 = dim %3, 1 : memref<?x?xi32>
   %8 = dim %4, 1 : memref<?x?xi32>
-  loop.for %arg4 = %c0 to %6 step %c2 {
-    loop.for %arg5 = %c0 to %8 step %c3 {
-      loop.for %arg6 = %c0 to %7 step %c4 {
+  scf.for %arg4 = %c0 to %6 step %c2 {
+    scf.for %arg5 = %c0 to %8 step %c3 {
+      scf.for %arg6 = %c0 to %7 step %c4 {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xi32> to memref<?x?xi32, offset: ?, strides: [?, 1]>
@@ -164,9 +164,9 @@ func @matmul_i32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 }
 
 // CHECK-LABEL: func @matmul_i32(%{{.*}}: memref<?xi8>, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-//       CHECK:   loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:     loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:       loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+//       CHECK:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:         %[[vA_i32:.*]] = subview {{.*}} : memref<?x?xi32>
 //       CHECK:         %[[vB_i32:.*]] = subview {{.*}} : memref<?x?xi32>
 //       CHECK:         %[[vC_i32:.*]] = subview {{.*}} : memref<?x?xi32>

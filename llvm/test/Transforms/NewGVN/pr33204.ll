@@ -20,7 +20,7 @@ define void @hoge(i32 %arg) {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB1:%.*]] ], [ [[ARG:%.*]], [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* @global, !h !0
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* @global, align 4, !h !0
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb6:
 ; CHECK-NEXT:    store i32 [[TMP]], i32* @global.1, !h !0

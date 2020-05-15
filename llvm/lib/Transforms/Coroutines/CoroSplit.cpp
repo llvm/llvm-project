@@ -1470,7 +1470,8 @@ updateCallGraphAfterCoroutineSplit(Function &F, const coro::Shape &Shape,
 static void updateCallGraphAfterCoroutineSplit(
     LazyCallGraph::Node &N, const coro::Shape &Shape,
     const SmallVectorImpl<Function *> &Clones, LazyCallGraph::SCC &C,
-    LazyCallGraph &CG, CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR) {
+    LazyCallGraph &CG, CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
+    FunctionAnalysisManager &FAM) {
   if (!Shape.CoroBegin)
     return;
 
@@ -1501,7 +1502,7 @@ static void updateCallGraphAfterCoroutineSplit(
   // update of its own. Function passes run by the adaptor are not permitted to
   // add new edges of any kind to the graph, and the new edges inserted by this
   // pass would be misattributed to that unrelated function pass.
-  updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR);
+  updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM);
 }
 
 // When we see the coroutine the first time, we insert an indirect call to a
@@ -1647,6 +1648,9 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   //     non-zero number of nodes, so we assume that here and grab the first
   //     node's function's module.
   Module &M = *C.begin()->getFunction().getParent();
+  auto &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
   if (!declaresCoroSplitIntrinsics(M))
     return PreservedAnalyses::all();
 
@@ -1695,7 +1699,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     SmallVector<Function *, 4> Clones;
     const coro::Shape Shape = splitCoroutine(F, Clones);
-    updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR);
+    updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
   }
 
   if (PrepareFn)

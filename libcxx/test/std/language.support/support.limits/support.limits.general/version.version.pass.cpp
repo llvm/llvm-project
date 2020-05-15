@@ -85,6 +85,7 @@
     __cpp_lib_shared_ptr_arrays                    201611L [C++17]
     __cpp_lib_shared_ptr_weak_type                 201606L [C++17]
     __cpp_lib_shared_timed_mutex                   201402L [C++14]
+    __cpp_lib_span                                 202002L [C++2a]
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
     __cpp_lib_three_way_comparison                 201711L [C++2a]
@@ -389,6 +390,10 @@
 
 # ifdef __cpp_lib_shared_timed_mutex
 #   error "__cpp_lib_shared_timed_mutex should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_string_udls
@@ -782,6 +787,10 @@
 #   ifdef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -1379,6 +1388,10 @@
 #   ifdef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -2114,6 +2127,13 @@
 #   ifdef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_span
+#   error "__cpp_lib_span should be defined in c++2a"
+# endif
+# if __cpp_lib_span != 202002L
+#   error "__cpp_lib_span should have the value 202002L in c++2a"
 # endif
 
 # ifndef __cpp_lib_string_udls

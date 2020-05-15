@@ -201,3 +201,28 @@ Sections:
     Size:     0x2
     ShOffset: 0x7
     ShSize:   0x8
+
+## Check that we can set an offset for the SHT_NULL section explicitly using the "Offset" key.
+## Check it affects the section header table offset.
+# RUN: yaml2obj --docnum=10 %s -DOFFSET=0x100 -o %t10
+# RUN: llvm-readelf --headers --sections %t10 | FileCheck %s --check-prefix=EXPLICIT-OFFSET-A
+# RUN: yaml2obj --docnum=10 %s -DOFFSET=0x200 -o %t11
+# RUN: llvm-readelf --headers --sections %t11 | FileCheck %s --check-prefix=EXPLICIT-OFFSET-B
+
+# EXPLICIT-OFFSET-A:      Start of section headers: 280 (bytes into file)
+# EXPLICIT-OFFSET-A:      [Nr] Name  Type Address          Off
+# EXPLICIT-OFFSET-A-NEXT: [ 0]       NULL 0000000000000000 000100
+
+# EXPLICIT-OFFSET-B:      Start of section headers: 536 (bytes into file)
+# EXPLICIT-OFFSET-B:      [Nr] Name  Type Address          Off
+# EXPLICIT-OFFSET-B-NEXT: [ 0]       NULL 0000000000000000 000200
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Type:   SHT_NULL
+    Offset: [[OFFSET]]

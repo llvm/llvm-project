@@ -30,6 +30,7 @@
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -13105,17 +13106,226 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
   return HasInvalidParm;
 }
 
-/// A helper function to get the alignment of a Decl referred to by DeclRefExpr
-/// or MemberExpr.
-static CharUnits getDeclAlign(Expr *E, CharUnits TypeAlign,
-                              ASTContext &Context) {
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return Context.getDeclAlign(DRE->getDecl());
+Optional<std::pair<CharUnits, CharUnits>>
+static getBaseAlignmentAndOffsetFromPtr(const Expr *E, ASTContext &Ctx);
 
-  if (const auto *ME = dyn_cast<MemberExpr>(E))
-    return Context.getDeclAlign(ME->getMemberDecl());
+/// Compute the alignment and offset of the base class object given the
+/// derived-to-base cast expression and the alignment and offset of the derived
+/// class object.
+static std::pair<CharUnits, CharUnits>
+getDerivedToBaseAlignmentAndOffset(const CastExpr *CE, QualType DerivedType,
+                                   CharUnits BaseAlignment, CharUnits Offset,
+                                   ASTContext &Ctx) {
+  for (auto PathI = CE->path_begin(), PathE = CE->path_end(); PathI != PathE;
+       ++PathI) {
+    const CXXBaseSpecifier *Base = *PathI;
+    const CXXRecordDecl *BaseDecl = Base->getType()->getAsCXXRecordDecl();
+    if (Base->isVirtual()) {
+      // The complete object may have a lower alignment than the non-virtual
+      // alignment of the base, in which case the base may be misaligned. Choose
+      // the smaller of the non-virtual alignment and BaseAlignment, which is a
+      // conservative lower bound of the complete object alignment.
+      CharUnits NonVirtualAlignment =
+          Ctx.getASTRecordLayout(BaseDecl).getNonVirtualAlignment();
+      BaseAlignment = std::min(BaseAlignment, NonVirtualAlignment);
+      Offset = CharUnits::Zero();
+    } else {
+      const ASTRecordLayout &RL =
+          Ctx.getASTRecordLayout(DerivedType->getAsCXXRecordDecl());
+      Offset += RL.getBaseClassOffset(BaseDecl);
+    }
+    DerivedType = Base->getType();
+  }
 
-  return TypeAlign;
+  return std::make_pair(BaseAlignment, Offset);
+}
+
+/// Compute the alignment and offset of a binary additive operator.
+static Optional<std::pair<CharUnits, CharUnits>>
+getAlignmentAndOffsetFromBinAddOrSub(const Expr *PtrE, const Expr *IntE,
+                                     bool IsSub, ASTContext &Ctx) {
+  QualType PointeeType = PtrE->getType()->getPointeeType();
+
+  if (!PointeeType->isConstantSizeType())
+    return llvm::None;
+
+  auto P = getBaseAlignmentAndOffsetFromPtr(PtrE, Ctx);
+
+  if (!P)
+    return llvm::None;
+
+  llvm::APSInt IdxRes;
+  CharUnits EltSize = Ctx.getTypeSizeInChars(PointeeType);
+  if (IntE->isIntegerConstantExpr(IdxRes, Ctx)) {
+    CharUnits Offset = EltSize * IdxRes.getExtValue();
+    if (IsSub)
+      Offset = -Offset;
+    return std::make_pair(P->first, P->second + Offset);
+  }
+
+  // If the integer expression isn't a constant expression, compute the lower
+  // bound of the alignment using the alignment and offset of the pointer
+  // expression and the element size.
+  return std::make_pair(
+      P->first.alignmentAtOffset(P->second).alignmentAtOffset(EltSize),
+      CharUnits::Zero());
+}
+
+/// This helper function takes an lvalue expression and returns the alignment of
+/// a VarDecl and a constant offset from the VarDecl.
+Optional<std::pair<CharUnits, CharUnits>>
+static getBaseAlignmentAndOffsetFromLValue(const Expr *E, ASTContext &Ctx) {
+  E = E->IgnoreParens();
+  switch (E->getStmtClass()) {
+  default:
+    break;
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
+  case Stmt::ImplicitCastExprClass: {
+    auto *CE = cast<CastExpr>(E);
+    const Expr *From = CE->getSubExpr();
+    switch (CE->getCastKind()) {
+    default:
+      break;
+    case CK_NoOp:
+      return getBaseAlignmentAndOffsetFromLValue(From, Ctx);
+    case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase: {
+      auto P = getBaseAlignmentAndOffsetFromLValue(From, Ctx);
+      if (!P)
+        break;
+      return getDerivedToBaseAlignmentAndOffset(CE, From->getType(), P->first,
+                                                P->second, Ctx);
+    }
+    }
+    break;
+  }
+  case Stmt::ArraySubscriptExprClass: {
+    auto *ASE = cast<ArraySubscriptExpr>(E);
+    return getAlignmentAndOffsetFromBinAddOrSub(ASE->getBase(), ASE->getIdx(),
+                                                false, Ctx);
+  }
+  case Stmt::DeclRefExprClass: {
+    if (auto *VD = dyn_cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl())) {
+      // FIXME: If VD is captured by copy or is an escaping __block variable,
+      // use the alignment of VD's type.
+      if (!VD->getType()->isReferenceType())
+        return std::make_pair(Ctx.getDeclAlign(VD), CharUnits::Zero());
+      if (VD->hasInit())
+        return getBaseAlignmentAndOffsetFromLValue(VD->getInit(), Ctx);
+    }
+    break;
+  }
+  case Stmt::MemberExprClass: {
+    auto *ME = cast<MemberExpr>(E);
+    if (ME->isArrow())
+      break;
+    auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+    if (!FD || FD->getType()->isReferenceType())
+      break;
+    auto P = getBaseAlignmentAndOffsetFromLValue(ME->getBase(), Ctx);
+    if (!P)
+      break;
+    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(FD->getParent());
+    uint64_t Offset = Layout.getFieldOffset(FD->getFieldIndex());
+    return std::make_pair(P->first,
+                          P->second + CharUnits::fromQuantity(Offset));
+  }
+  case Stmt::UnaryOperatorClass: {
+    auto *UO = cast<UnaryOperator>(E);
+    switch (UO->getOpcode()) {
+    default:
+      break;
+    case UO_Deref:
+      return getBaseAlignmentAndOffsetFromPtr(UO->getSubExpr(), Ctx);
+    }
+    break;
+  }
+  case Stmt::BinaryOperatorClass: {
+    auto *BO = cast<BinaryOperator>(E);
+    auto Opcode = BO->getOpcode();
+    switch (Opcode) {
+    default:
+      break;
+    case BO_Comma:
+      return getBaseAlignmentAndOffsetFromLValue(BO->getRHS(), Ctx);
+    }
+    break;
+  }
+  }
+  return llvm::None;
+}
+
+/// This helper function takes a pointer expression and returns the alignment of
+/// a VarDecl and a constant offset from the VarDecl.
+Optional<std::pair<CharUnits, CharUnits>>
+static getBaseAlignmentAndOffsetFromPtr(const Expr *E, ASTContext &Ctx) {
+  E = E->IgnoreParens();
+  switch (E->getStmtClass()) {
+  default:
+    break;
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
+  case Stmt::ImplicitCastExprClass: {
+    auto *CE = cast<CastExpr>(E);
+    const Expr *From = CE->getSubExpr();
+    switch (CE->getCastKind()) {
+    default:
+      break;
+    case CK_NoOp:
+      return getBaseAlignmentAndOffsetFromPtr(From, Ctx);
+    case CK_ArrayToPointerDecay:
+      return getBaseAlignmentAndOffsetFromLValue(From, Ctx);
+    case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase: {
+      auto P = getBaseAlignmentAndOffsetFromPtr(From, Ctx);
+      if (!P)
+        break;
+      return getDerivedToBaseAlignmentAndOffset(
+          CE, From->getType()->getPointeeType(), P->first, P->second, Ctx);
+    }
+    }
+    break;
+  }
+  case Stmt::UnaryOperatorClass: {
+    auto *UO = cast<UnaryOperator>(E);
+    if (UO->getOpcode() == UO_AddrOf)
+      return getBaseAlignmentAndOffsetFromLValue(UO->getSubExpr(), Ctx);
+    break;
+  }
+  case Stmt::BinaryOperatorClass: {
+    auto *BO = cast<BinaryOperator>(E);
+    auto Opcode = BO->getOpcode();
+    switch (Opcode) {
+    default:
+      break;
+    case BO_Add:
+    case BO_Sub: {
+      const Expr *LHS = BO->getLHS(), *RHS = BO->getRHS();
+      if (Opcode == BO_Add && !RHS->getType()->isIntegralOrEnumerationType())
+        std::swap(LHS, RHS);
+      return getAlignmentAndOffsetFromBinAddOrSub(LHS, RHS, Opcode == BO_Sub,
+                                                  Ctx);
+    }
+    case BO_Comma:
+      return getBaseAlignmentAndOffsetFromPtr(BO->getRHS(), Ctx);
+    }
+    break;
+  }
+  }
+  return llvm::None;
+}
+
+static CharUnits getPresumedAlignmentOfPointer(const Expr *E, Sema &S) {
+  // See if we can compute the alignment of a VarDecl and an offset from it.
+  Optional<std::pair<CharUnits, CharUnits>> P =
+      getBaseAlignmentAndOffsetFromPtr(E, S.Context);
+
+  if (P)
+    return P->first.alignmentAtOffset(P->second);
+
+  // If that failed, return the type's alignment.
+  return S.Context.getTypeAlignInChars(E->getType()->getPointeeType());
 }
 
 /// CheckCastAlign - Implements -Wcast-align, which warns when a
@@ -13151,15 +13361,7 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
   // includes 'void'.
   if (SrcPointee->isIncompleteType()) return;
 
-  CharUnits SrcAlign = Context.getTypeAlignInChars(SrcPointee);
-
-  if (auto *CE = dyn_cast<CastExpr>(Op)) {
-    if (CE->getCastKind() == CK_ArrayToPointerDecay)
-      SrcAlign = getDeclAlign(CE->getSubExpr(), SrcAlign, Context);
-  } else if (auto *UO = dyn_cast<UnaryOperator>(Op)) {
-    if (UO->getOpcode() == UO_AddrOf)
-      SrcAlign = getDeclAlign(UO->getSubExpr(), SrcAlign, Context);
-  }
+  CharUnits SrcAlign = getPresumedAlignmentOfPointer(Op, *this);
 
   if (SrcAlign >= DestAlign) return;
 

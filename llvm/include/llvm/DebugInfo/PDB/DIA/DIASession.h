@@ -38,13 +38,13 @@ public:
   bool addressForRVA(uint32_t RVA, uint32_t &Section,
                      uint32_t &Offset) const override;
 
-  std::unique_ptr<PDBSymbol>
-  findSymbolByAddress(uint64_t Address, PDB_SymType Type) const override;
+  std::unique_ptr<PDBSymbol> findSymbolByAddress(uint64_t Address,
+                                                 PDB_SymType Type) override;
   std::unique_ptr<PDBSymbol> findSymbolByRVA(uint32_t RVA,
-                                             PDB_SymType Type) const override;
-  std::unique_ptr<PDBSymbol>
-  findSymbolBySectOffset(uint32_t Section, uint32_t Offset,
-                         PDB_SymType Type) const override;
+                                             PDB_SymType Type) override;
+  std::unique_ptr<PDBSymbol> findSymbolBySectOffset(uint32_t Section,
+                                                    uint32_t Offset,
+                                                    PDB_SymType Type) override;
 
   std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbers(const PDBSymbolCompiland &Compiland,

@@ -1,3 +1,4 @@
+# For a better template to copy, see examples/standalone
 add_subdirectory(include)
 
 set(LLVM_LINK_COMPONENTS

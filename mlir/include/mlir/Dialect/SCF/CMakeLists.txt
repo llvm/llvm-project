@@ -1,4 +1,4 @@
-add_mlir_dialect(SCFOps loop Ops)
+add_mlir_dialect(SCFOps scf Ops)
 add_mlir_doc(SCFOps -gen-dialect-doc SCFDialect Dialects/)
 
 set(LLVM_TARGET_DEFINITIONS Passes.td)

@@ -44,7 +44,7 @@
 ; Because of the dbg.value in the middle of the function, the pc range coverage
 ; must be below 100%.
 ; CHECK-NOT: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":0
-; CHECK-NOT "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":[[BYTES]]
+; CHECK-NOT: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":[[BYTES]]
 ; CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":
 ; CHECK: "#bytes witin functions":[[FUNCSIZE:[0-9]+]]
 ; CHECK: "#bytes witin inlined functions":[[INLINESIZE:[0-9]+]]

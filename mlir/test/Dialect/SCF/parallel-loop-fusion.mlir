@@ -4,11 +4,11 @@ func @fuse_empty_loops() {
   %c2 = constant 2 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
@@ -16,11 +16,11 @@ func @fuse_empty_loops() {
 // CHECK:        [[C2:%.*]] = constant 2 : index
 // CHECK:        [[C0:%.*]] = constant 0 : index
 // CHECK:        [[C1:%.*]] = constant 1 : index
-// CHECK:        loop.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
+// CHECK:        scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
 // CHECK-SAME:       to ([[C2]], [[C2]]) step ([[C1]], [[C1]]) {
-// CHECK:          loop.yield
+// CHECK:          scf.yield
 // CHECK:        }
-// CHECK-NOT:    loop.parallel
+// CHECK-NOT:    scf.parallel
 
 // -----
 
@@ -30,19 +30,19 @@ func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %sum = alloc()  : memref<2x2xf32>
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %B_elem = load %B[%i, %j] : memref<2x2xf32>
     %C_elem = load %C[%i, %j] : memref<2x2xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
     store %sum_elem, %sum[%i, %j] : memref<2x2xf32>
-    loop.yield
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %sum_elem = load %sum[%i, %j] : memref<2x2xf32>
     %A_elem = load %A[%i, %j] : memref<2x2xf32>
     %product_elem = mulf %sum_elem, %A_elem : f32
     store %product_elem, %result[%i, %j] : memref<2x2xf32>
-    loop.yield
+    scf.yield
   }
   dealloc %sum : memref<2x2xf32>
   return
@@ -54,7 +54,7 @@ func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
 // CHECK:      [[C0:%.*]] = constant 0 : index
 // CHECK:      [[C1:%.*]] = constant 1 : index
 // CHECK:      [[SUM:%.*]] = alloc()
-// CHECK:      loop.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
+// CHECK:      scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
 // CHECK-SAME:     to ([[C2]], [[C2]]) step ([[C1]], [[C1]]) {
 // CHECK:        [[B_ELEM:%.*]] = load [[B]]{{\[}}[[I]], [[J]]]
 // CHECK:        [[C_ELEM:%.*]] = load [[C]]{{\[}}[[I]], [[J]]]
@@ -64,7 +64,7 @@ func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
 // CHECK:        [[A_ELEM:%.*]] = load [[A]]{{\[}}[[I]], [[J]]]
 // CHECK:        [[PRODUCT_ELEM:%.*]] = mulf [[SUM_ELEM_]], [[A_ELEM]]
 // CHECK:        store [[PRODUCT_ELEM]], [[RESULT]]{{\[}}[[I]], [[J]]]
-// CHECK:        loop.yield
+// CHECK:        scf.yield
 // CHECK:      }
 // CHECK:      dealloc [[SUM]]
 
@@ -78,23 +78,23 @@ func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
   %c1 = constant 1 : index
   %broadcast_rhs = alloc() : memref<100x10xf32>
   %diff = alloc() : memref<100x10xf32>
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
     %rhs_elem = load %rhs[%i] : memref<100xf32>
     store %rhs_elem, %broadcast_rhs[%i, %j] : memref<100x10xf32>
-    loop.yield
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
     %lhs_elem = load %lhs[%i, %j] : memref<100x10xf32>
     %broadcast_rhs_elem = load %broadcast_rhs[%i, %j] : memref<100x10xf32>
     %diff_elem = subf %lhs_elem, %broadcast_rhs_elem : f32
     store %diff_elem, %diff[%i, %j] : memref<100x10xf32>
-    loop.yield
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c100, %c10) step (%c1, %c1) {
     %diff_elem = load %diff[%i, %j] : memref<100x10xf32>
     %exp_elem = exp %diff_elem : f32
     store %exp_elem, %result[%i, %j] : memref<100x10xf32>
-    loop.yield
+    scf.yield
   }
   dealloc %broadcast_rhs : memref<100x10xf32>
   dealloc %diff : memref<100x10xf32>
@@ -109,7 +109,7 @@ func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
 // CHECK:      [[C1:%.*]] = constant 1 : index
 // CHECK:      [[BROADCAST_RHS:%.*]] = alloc()
 // CHECK:      [[DIFF:%.*]] = alloc()
-// CHECK:      loop.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
+// CHECK:      scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
 // CHECK-SAME:     to ([[C100]], [[C10]]) step ([[C1]], [[C1]]) {
 // CHECK:        [[RHS_ELEM:%.*]] = load [[RHS]]{{\[}}[[I]]]
 // CHECK:        store [[RHS_ELEM]], [[BROADCAST_RHS]]{{\[}}[[I]], [[J]]]
@@ -120,7 +120,7 @@ func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
 // CHECK:        [[DIFF_ELEM_:%.*]] = load [[DIFF]]{{\[}}[[I]], [[J]]]
 // CHECK:        [[EXP_ELEM:%.*]] = exp [[DIFF_ELEM_]]
 // CHECK:        store [[EXP_ELEM]], [[RESULT]]{{\[}}[[I]], [[J]]]
-// CHECK:        loop.yield
+// CHECK:        scf.yield
 // CHECK:      }
 // CHECK:      dealloc [[BROADCAST_RHS]]
 // CHECK:      dealloc [[DIFF]]
@@ -131,21 +131,21 @@ func @do_not_fuse_nested_ploop1() {
   %c2 = constant 2 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.parallel (%k, %l) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-      loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.parallel (%k, %l) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+      scf.yield
     }
-    loop.yield
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
 // CHECK-LABEL: func @do_not_fuse_nested_ploop1
-// CHECK:        loop.parallel
-// CHECK:          loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:          scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -153,21 +153,21 @@ func @do_not_fuse_nested_ploop2() {
   %c2 = constant 2 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.parallel (%k, %l) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-      loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.parallel (%k, %l) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+      scf.yield
     }
-    loop.yield
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
 // CHECK-LABEL: func @do_not_fuse_nested_ploop2
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
-// CHECK:          loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
+// CHECK:          scf.parallel
 
 // -----
 
@@ -175,17 +175,17 @@ func @do_not_fuse_loops_unmatching_num_loops() {
   %c2 = constant 2 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
-  loop.parallel (%i) = (%c0) to (%c2) step (%c1) {
-    loop.yield
+  scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
 // CHECK-LABEL: func @do_not_fuse_loops_unmatching_num_loops
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -193,18 +193,18 @@ func @do_not_fuse_loops_with_side_effecting_ops_in_between() {
   %c2 = constant 2 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
   %buffer  = alloc() : memref<2x2xf32>
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
 // CHECK-LABEL: func @do_not_fuse_loops_with_side_effecting_ops_in_between
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -213,17 +213,17 @@ func @do_not_fuse_loops_unmatching_iteration_space() {
   %c1 = constant 1 : index
   %c2 = constant 2 : index
   %c4 = constant 4 : index
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c4, %c4) step (%c2, %c2) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c4, %c4) step (%c2, %c2) {
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
 // CHECK-LABEL: func @do_not_fuse_loops_unmatching_iteration_space
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -234,27 +234,27 @@ func @do_not_fuse_unmatching_write_read_patterns(
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %common_buf = alloc() : memref<2x2xf32>
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %B_elem = load %B[%i, %j] : memref<2x2xf32>
     %C_elem = load %C[%i, %j] : memref<2x2xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
     store %sum_elem, %common_buf[%i, %j] : memref<2x2xf32>
-    loop.yield
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %k = addi %i, %c1 : index
     %sum_elem = load %common_buf[%k, %j] : memref<2x2xf32>
     %A_elem = load %A[%i, %j] : memref<2x2xf32>
     %product_elem = mulf %sum_elem, %A_elem : f32
     store %product_elem, %result[%i, %j] : memref<2x2xf32>
-    loop.yield
+    scf.yield
   }
   dealloc %common_buf : memref<2x2xf32>
   return
 }
 // CHECK-LABEL: func @do_not_fuse_unmatching_write_read_patterns
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -264,27 +264,27 @@ func @do_not_fuse_unmatching_read_write_patterns(
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %sum = alloc() : memref<2x2xf32>
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %B_elem = load %B[%i, %j] : memref<2x2xf32>
     %C_elem = load %common_buf[%i, %j] : memref<2x2xf32>
     %sum_elem = addf %B_elem, %C_elem : f32
     store %sum_elem, %sum[%i, %j] : memref<2x2xf32>
-    loop.yield
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %k = addi %i, %c1 : index
     %sum_elem = load %sum[%k, %j] : memref<2x2xf32>
     %A_elem = load %A[%i, %j] : memref<2x2xf32>
     %product_elem = mulf %sum_elem, %A_elem : f32
     store %product_elem, %common_buf[%j, %i] : memref<2x2xf32>
-    loop.yield
+    scf.yield
   }
   dealloc %sum : memref<2x2xf32>
   return
 }
 // CHECK-LABEL: func @do_not_fuse_unmatching_read_write_patterns
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -293,20 +293,20 @@ func @do_not_fuse_loops_with_memref_defined_in_loop_bodies() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %buffer  = alloc() : memref<2x2xf32>
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
-    loop.yield
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.yield
   }
-  loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     %A = subview %buffer[%c0, %c0][%c2, %c2][%c1, %c1]
       : memref<2x2xf32> to memref<?x?xf32, offset: ?, strides:[?, ?]>
     %A_elem = load %A[%i, %j] : memref<?x?xf32, offset: ?, strides:[?, ?]>
-    loop.yield
+    scf.yield
   }
   "xla_lhlo.terminator"() : () -> ()
 }
 // CHECK-LABEL: func @do_not_fuse_loops_with_memref_defined_in_loop_bodies
-// CHECK:        loop.parallel
-// CHECK:        loop.parallel
+// CHECK:        scf.parallel
+// CHECK:        scf.parallel
 
 // -----
 
@@ -316,20 +316,20 @@ func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %sum = alloc()  : memref<2x2xf32>
-  loop.parallel (%k) = (%c0) to (%c2) step (%c1) {
-    loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+  scf.parallel (%k) = (%c0) to (%c2) step (%c1) {
+    scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
       %B_elem = load %B[%i, %j] : memref<2x2xf32>
       %C_elem = load %C[%i, %j] : memref<2x2xf32>
       %sum_elem = addf %B_elem, %C_elem : f32
       store %sum_elem, %sum[%i, %j] : memref<2x2xf32>
-      loop.yield
+      scf.yield
     }
-    loop.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
       %sum_elem = load %sum[%i, %j] : memref<2x2xf32>
       %A_elem = load %A[%i, %j] : memref<2x2xf32>
       %product_elem = mulf %sum_elem, %A_elem : f32
       store %product_elem, %result[%i, %j] : memref<2x2xf32>
-      loop.yield
+      scf.yield
     }
   }
   dealloc %sum : memref<2x2xf32>
@@ -342,8 +342,8 @@ func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
 // CHECK:      [[C0:%.*]] = constant 0 : index
 // CHECK:      [[C1:%.*]] = constant 1 : index
 // CHECK:      [[SUM:%.*]] = alloc()
-// CHECK:      loop.parallel
-// CHECK:        loop.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
+// CHECK:      scf.parallel
+// CHECK:        scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]])
 // CHECK-SAME:       to ([[C2]], [[C2]]) step ([[C1]], [[C1]]) {
 // CHECK:          [[B_ELEM:%.*]] = load [[B]]{{\[}}[[I]], [[J]]]
 // CHECK:          [[C_ELEM:%.*]] = load [[C]]{{\[}}[[I]], [[J]]]
@@ -353,7 +353,7 @@ func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
 // CHECK:          [[A_ELEM:%.*]] = load [[A]]{{\[}}[[I]], [[J]]]
 // CHECK:          [[PRODUCT_ELEM:%.*]] = mulf [[SUM_ELEM_]], [[A_ELEM]]
 // CHECK:          store [[PRODUCT_ELEM]], [[RESULT]]{{\[}}[[I]], [[J]]]
-// CHECK:          loop.yield
+// CHECK:          scf.yield
 // CHECK:        }
 // CHECK:      }
 // CHECK:      dealloc [[SUM]]

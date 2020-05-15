@@ -29,7 +29,7 @@ module attributes {
       // CHECK-NEXT:  }
       // CHECK-NEXT:  spv.Return
 
-      loop.if %arg3 {
+      scf.if %arg3 {
         store %value, %arg2[%i] : memref<10xf32>
       }
       gpu.return
@@ -70,8 +70,8 @@ module attributes {
       // CHECK-NEXT:  }
       // CHECK-NEXT:  spv.Return
 
-      loop.if %arg5 {
-        loop.if %arg6 {
+      scf.if %arg5 {
+        scf.if %arg6 {
           %value = load %arg3[%i] : memref<10xf32>
           store %value, %arg4[%i] : memref<10xf32>
         } else {
@@ -79,7 +79,7 @@ module attributes {
           store %value, %arg3[%i] : memref<10xf32>
         }
       } else {
-        loop.if %arg6 {
+        scf.if %arg6 {
           %value = load %arg3[%j] : memref<10xf32>
           store %value, %arg4[%j] : memref<10xf32>
         } else {

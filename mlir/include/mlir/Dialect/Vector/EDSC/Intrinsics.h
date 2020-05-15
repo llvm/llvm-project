@@ -21,6 +21,9 @@ using vector_print = OperationBuilder<vector::PrintOp>;
 using vector_transfer_read = ValueBuilder<vector::TransferReadOp>;
 using vector_transfer_write = OperationBuilder<vector::TransferWriteOp>;
 using vector_type_cast = ValueBuilder<vector::TypeCastOp>;
+using vector_insert = ValueBuilder<vector::InsertOp>;
+using vector_fma = ValueBuilder<vector::FMAOp>;
+using vector_extract = ValueBuilder<vector::ExtractOp>;
 
 } // namespace intrinsics
 } // namespace edsc

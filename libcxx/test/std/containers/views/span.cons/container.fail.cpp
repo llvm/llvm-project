@@ -24,7 +24,6 @@
 //   — remove_pointer_t<decltype(data(cont))>(*)[] is convertible to ElementType(*)[].
 //
 
-
 #include <span>
 #include <cassert>
 #include <deque>
@@ -63,6 +62,10 @@ private:
     const T *data() const {return nullptr;}
 };
 
+template<class T, size_t extent, class container>
+std::span<T, extent> createImplicitSpan(container c) {
+    return {c}; // expected-error {{chosen constructor is explicit in copy-initialization}}
+}
 
 int main(int, char**)
 {
@@ -106,12 +109,14 @@ int main(int, char**)
     std::span<      volatile int> s7{cv};   // expected-error {{no matching constructor for initialization of 'std::span<volatile int>'}}
     }
 
-//  statically sized
+// explicit constructor necessary
     {
-	IsAContainer<int> c;
-    std::span<int,1> s1{c}; // expected-error {{no matching constructor for initialization of 'std::span<int, 1>'}}
-    }
+    IsAContainer<int> c;
+    const IsAContainer<int> cc;
 
+    createImplicitSpan<int, 1>(c);
+    createImplicitSpan<int, 1>(cc);
+    }
 
   return 0;
 }

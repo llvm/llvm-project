@@ -7,7 +7,7 @@
 define float @minloop(float* nocapture readonly %arg) {
 ; CHECK-LABEL: @minloop(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
@@ -47,7 +47,7 @@ out:                                              ; preds = %loop
 define float @minloopattr(float* nocapture readonly %arg) #0 {
 ; CHECK-LABEL: @minloopattr(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[MINMAX_IDENT_SPLATINSERT:%.*]] = insertelement <4 x float> undef, float [[T]], i32 0
@@ -120,7 +120,7 @@ out:                                              ; preds = %loop
 define float @minloopnovec(float* nocapture readonly %arg) {
 ; CHECK-LABEL: @minloopnovec(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]

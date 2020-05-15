@@ -41,7 +41,7 @@ inline LoopBuilder makeLoopBuilder(Value *iv, Value lb, Value ub, Value step) {
   return makeLoopBuilder(iv, lb, ub, step, MutableArrayRef<Value>{}, {});
 }
 
-/// Helper class to sugar building loop.parallel loop nests from lower/upper
+/// Helper class to sugar building scf.parallel loop nests from lower/upper
 /// bounds and step sizes.
 class ParallelLoopNestBuilder {
 public:
@@ -54,9 +54,9 @@ private:
   SmallVector<LoopBuilder, 4> loops;
 };
 
-/// Helper class to sugar building loop.for loop nests from ranges.
+/// Helper class to sugar building scf.for loop nests from ranges.
 /// This is similar to edsc::AffineLoopNestBuilder except it operates on
-/// loop.for.
+/// scf.for.
 class LoopNestBuilder {
 public:
   LoopNestBuilder(Value *iv, Value lb, Value ub, Value step);

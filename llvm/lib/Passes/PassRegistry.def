@@ -27,6 +27,7 @@ MODULE_ANALYSIS("stack-safety", StackSafetyGlobalAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MODULE_ANALYSIS("asan-globals-md", ASanGlobalsMetadataAnalysis())
+MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 
 #ifndef MODULE_ALIAS_ANALYSIS
 #define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
@@ -57,6 +58,7 @@ MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
 MODULE_PASS("hwasan", HWAddressSanitizerPass(false, false))
 MODULE_PASS("khwasan", HWAddressSanitizerPass(true, true))
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
+MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfiling())

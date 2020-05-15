@@ -1745,12 +1745,16 @@ def MemRefCastOp : CastOp<"memref_cast"> {
     The `memref_cast` operation converts a memref from one type to an equivalent
     type with a compatible shape. The source and destination types are
     compatible if:
-    a. both are ranked memref types with the same element type, affine mappings,
-    address space, and rank but where the individual dimensions may add or
-    remove constant dimensions from the memref type.
+
+    a. Both are ranked memref types with the same element type, address space,
+    and rank and:
+      1. Both have the same layout or both have compatible strided layouts.
+      2. The individual sizes (resp. offset and strides in the case of strided
+         memrefs) may convert constant dimensions to dynamic dimensions and
+         vice-versa.
 
     If the cast converts any dimensions from an unknown to a known size, then it
-    acts as an assertion that fails at runtime of the dynamic dimensions
+    acts as an assertion that fails at runtime if the dynamic dimensions
     disagree with resultant destination size.
 
     Example:
@@ -1772,7 +1776,7 @@ def MemRefCastOp : CastOp<"memref_cast"> {
                           memref<12x4xf32, offset:?, strides: [?, ?]>
     ```
 
-    b. either or both memref types are unranked with the same element type, and
+    b. Either or both memref types are unranked with the same element type, and
     address space.
 
     Example:
@@ -1979,7 +1983,7 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
     Example:
 
     ```mlir
-    %1 = rank %0 : index
+    %1 = rank %0 : tensor<*xf32>
     ```
   }];
 
@@ -2676,8 +2680,18 @@ def SubViewOp : Std_Op<"subview", [
     struct Range {
       Value offset, size, stride;
     };
-    // TODO: retire `getRanges`.
-    SmallVector<Range, 8> getRanges();
+    /// Return the list of SubViewOp::Range (i.e. offset, size, stride). Each
+    /// Range entry contains either the dynamic value or a ConstantIndexOp
+    /// constructed with `b` at location `loc`.
+    SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc);
+
+    /// A subview result type can be fully inferred from the source type and the
+    /// static representation of offsets, sizes and strides. Special sentinels
+    /// encode the dynamic case.
+    static Type inferSubViewResultType(MemRefType sourceMemRefType,
+                                       ArrayRef<int64_t> staticOffsets,
+                                       ArrayRef<int64_t> staticSizes,
+                                       ArrayRef<int64_t> staticStrides);
 
     /// Return the rank of the result MemRefType.
     unsigned getRank() { return getType().getRank(); }
@@ -2750,7 +2764,6 @@ def SubViewOp : Std_Op<"subview", [
   }];
 
   let hasCanonicalizer = 1;
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -49,7 +49,7 @@ ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
                                                      AffineMap map,
                                                      AffineMap bound);
 
-/// Sets the mapping attribute of a loop.parallel operation. Verifies that the
+/// Sets the mapping attribute of a scf.parallel operation. Verifies that the
 /// mapping passed is valid.
 /// - the number of DimMapperAttr provided is same as the number of loops of
 ///   the `ploopOp`.
@@ -63,7 +63,7 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
 /// encountered to the local workgroup. Within each mapping, the first three
 /// dimensions are mapped to x/y/z hardware ids and all following dimensions are
 /// mapped to sequential loops.
-void greedilyMapParallelLoopsToGPU(Region &region);
+void greedilyMapParallelSCFToGPU(Region &region);
 
 } // end namespace mlir
 #endif // MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H

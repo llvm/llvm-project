@@ -231,6 +231,12 @@ const char *SBReproducer::GetPath() {
   return path.c_str();
 }
 
+void SBReproducer::SetWorkingDirectory(const char *path) {
+  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
+    g->GetOrCreate<WorkingDirectoryProvider>().Update(path);
+  }
+}
+
 char lldb_private::repro::SBProvider::ID = 0;
 const char *SBProvider::Info::name = "sbapi";
 const char *SBProvider::Info::file = "sbapi.bin";

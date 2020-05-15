@@ -2344,6 +2344,15 @@ public:
     return false;
   }
 
+  /// Given a shuffle vector SVI representing a vector splat, return a new
+  /// scalar type of size equal to SVI's scalar type if the new type is more
+  /// profitable. Returns nullptr otherwise. For example under MVE float splats
+  /// are converted to integer to prevent the need to move from SPR to GPR
+  /// registers.
+  virtual Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const {
+    return nullptr;
+  }
+
   /// Returns true if the opcode is a commutative binary operation.
   virtual bool isCommutativeBinOp(unsigned Opcode) const {
     // FIXME: This should get its info from the td file.

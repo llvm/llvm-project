@@ -3,7 +3,7 @@
 
 define void @test1(i8* %ptr) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[A:%.*]] = load i8, i8* [[PTR:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -17,7 +17,7 @@ bb:
 
 define void @test1_no_null_opt(i8* %ptr) #0 {
 ; CHECK-LABEL: @test1_no_null_opt(
-; CHECK-NEXT:    [[A:%.*]] = load i8, i8* [[PTR:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8* [[PTR]], null
@@ -309,7 +309,7 @@ define void @test12(i8* %arg1, i8** %arg2) {
 ; CHECK:       non_null:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       null:
-; CHECK-NEXT:    [[ANOTHER_ARG:%.*]] = load i8*, i8** [[ARG2:%.*]], !nonnull !0
+; CHECK-NEXT:    [[ANOTHER_ARG:%.*]] = load i8*, i8** [[ARG2:%.*]], align 8, !nonnull !0
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[MERGED_ARG:%.*]] = phi i8* [ [[ANOTHER_ARG]], [[NULL]] ], [ [[ARG1]], [[NON_NULL]] ]

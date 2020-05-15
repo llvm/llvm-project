@@ -81,6 +81,32 @@ static void buildCluster(ArrayRef<SUnit *> Exports, ScheduleDAGInstrs *DAG) {
   }
 }
 
+static void removeExportDependencies(ScheduleDAGInstrs *DAG, SUnit &SU) {
+  SmallVector<SDep, 2> ToAdd, ToRemove;
+
+  for (const SDep &Pred : SU.Preds) {
+    SUnit *PredSU = Pred.getSUnit();
+    if (Pred.isBarrier() && isExport(*PredSU)) {
+      ToRemove.push_back(Pred);
+      if (isExport(SU))
+        continue;
+
+      // If we remove a barrier we need to copy dependencies
+      // from the predecessor to maintain order.
+      for (const SDep &ExportPred : PredSU->Preds) {
+        SUnit *ExportPredSU = ExportPred.getSUnit();
+        if (ExportPred.isBarrier() && !isExport(*ExportPredSU))
+          ToAdd.push_back(SDep(ExportPredSU, SDep::Barrier));
+      }
+    }
+  }
+
+  for (SDep Pred : ToRemove)
+    SU.removePred(Pred);
+  for (SDep Pred : ToAdd)
+    DAG->addEdge(&SU, Pred);
+}
+
 void ExportClustering::apply(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
 
@@ -92,20 +118,18 @@ void ExportClustering::apply(ScheduleDAGInstrs *DAG) {
   // on exports.  Edges will be added later to order the exports.
   unsigned PosCount = 0;
   for (SUnit &SU : DAG->SUnits) {
-    if (isExport(SU)) {
-      Chain.push_back(&SU);
-      if (isPositionExport(TII, &SU))
-        PosCount++;
-    }
+    if (!isExport(SU))
+      continue;
 
-    SmallVector<SDep, 2> ToRemove;
-    for (const SDep &Pred : SU.Preds) {
-      SUnit *PredSU = Pred.getSUnit();
-      if (Pred.isBarrier() && isExport(*PredSU))
-        ToRemove.push_back(Pred);
-    }
-    for (SDep Pred : ToRemove)
-      SU.removePred(Pred);
+    Chain.push_back(&SU);
+    if (isPositionExport(TII, &SU))
+      PosCount++;
+
+    removeExportDependencies(DAG, SU);
+
+    SmallVector<SDep, 4> Succs(SU.Succs);
+    for (SDep Succ : Succs)
+      removeExportDependencies(DAG, *Succ.getSUnit());
   }
 
   // Apply clustering if there are multiple exports

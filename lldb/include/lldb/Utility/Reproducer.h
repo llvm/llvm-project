@@ -147,6 +147,9 @@ public:
       return;
     m_cwd = std::string(cwd.str());
   }
+
+  void Update(llvm::StringRef path) { m_cwd = std::string(path); }
+
   struct Info {
     static const char *name;
     static const char *file;

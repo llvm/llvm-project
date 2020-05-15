@@ -25,6 +25,7 @@ namespace llvm {
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {
   std::vector<StringRef> CheckPrefixes;
+  std::vector<StringRef> CommentPrefixes;
   bool NoCanonicalizeWhiteSpace = false;
   std::vector<StringRef> ImplicitCheckNot;
   std::vector<StringRef> GlobalDefines;
@@ -53,6 +54,7 @@ enum FileCheckKind {
   CheckDAG,
   CheckLabel,
   CheckEmpty,
+  CheckComment,
 
   /// Indicates the pattern only matches the end of file. This is used for
   /// trailing CHECK-NOTs.

@@ -18,7 +18,7 @@ include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def SCF_Dialect : Dialect {
-  let name = "loop";
+  let name = "scf";
   let cppNamespace = "";
 }
 
@@ -43,7 +43,7 @@ def ForOp : SCF_Op<"for",
        RecursiveSideEffects]> {
   let summary = "for operation";
   let description = [{
-    The "loop.for" operation represents a loop taking 3 SSA value as operands
+    The "scf.for" operation represents a loop taking 3 SSA value as operands
     that represent the lower bound, upper bound and step respectively.  The
     operation defines an SSA value for its induction variable. It has one
     region capturing the loop body. The induction variable is represented as an
@@ -54,30 +54,30 @@ def ForOp : SCF_Op<"for",
     the lower bound but does not include the upper bound.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield". Calling ForOp::build will create such a region and insert
+    "scf.yield". Calling ForOp::build will create such a region and insert
     the terminator implicitly if none is defined, so will the parsing even in
     cases when it is absent from the custom format. For example:
 
     ```mlir
-    loop.for %iv = %lb to %ub step %step {
+    scf.for %iv = %lb to %ub step %step {
       ... // body
     }
     ```
 
-    `loop.for` can also operate on loop-carried variables and returns the final
+    `scf.for` can also operate on loop-carried variables and returns the final
     values after loop termination. The initial values of the variables are
-    passed as additional SSA operands to the "loop.for" following the 3 loop
+    passed as additional SSA operands to the "scf.for" following the 3 loop
     control SSA values mentioned above (lower bound, upper bound and step). The
     operation region has equivalent arguments for each variable representing
     the value of the variable at the current iteration.
 
-    The region must terminate with a "loop.yield" that passes all the current
-    iteration variables to the next iteration, or to the "loop.for" result, if
+    The region must terminate with a "scf.yield" that passes all the current
+    iteration variables to the next iteration, or to the "scf.for" result, if
     at the last iteration. Note, that when the loop-carried variables are
     present, calling ForOp::build will not insert the terminator implicitly.
-    The caller must insert "loop.yield" in that case.
+    The caller must insert "scf.yield" in that case.
 
-    "loop.for" results hold the final values after the last iteration.
+    "scf.for" results hold the final values after the last iteration.
     For example, to sum-reduce a memref:
 
     ```mlir
@@ -86,23 +86,23 @@ def ForOp : SCF_Op<"for",
       // Initial sum set to 0.
       %sum_0 = constant 0.0 : f32
       // iter_args binds initial values to the loop's region arguments.
-      %sum = loop.for %iv = %lb to %ub step %step
+      %sum = scf.for %iv = %lb to %ub step %step
           iter_args(%sum_iter = %sum_0) -> (f32) {
         %t = load %buffer[%iv] : memref<1024xf32>
         %sum_next = addf %sum_iter, %t : f32
         // Yield current iteration sum to next iteration %sum_iter or to %sum
         // if final iteration.
-        loop.yield %sum_next : f32
+        scf.yield %sum_next : f32
       }
       return %sum : f32
     }
     ```
 
-    If the "loop.for" defines any values, a yield must be explicitly present.
-    The number and types of the "loop.for" results must match the initial
+    If the "scf.for" defines any values, a yield must be explicitly present.
+    The number and types of the "scf.for" results must match the initial
     values in the "iter_args" binding and the yield operands.
 
-    Another example with a nested "loop.if" (see "loop.if" for details) to
+    Another example with a nested "scf.if" (see "scf.if" for details) to
     perform conditional reduction:
 
     ```mlir
@@ -110,17 +110,17 @@ def ForOp : SCF_Op<"for",
                              %ub: index, %step: index) -> (f32) {
       %sum_0 = constant 0.0 : f32
       %c0 = constant 0.0 : f32
-      %sum = loop.for %iv = %lb to %ub step %step
+      %sum = scf.for %iv = %lb to %ub step %step
           iter_args(%sum_iter = %sum_0) -> (f32) {
         %t = load %buffer[%iv] : memref<1024xf32>
         %cond = cmpf "ugt", %t, %c0 : f32
-        %sum_next = loop.if %cond -> (f32) {
+        %sum_next = scf.if %cond -> (f32) {
           %new_sum = addf %sum_iter, %t : f32
-          loop.yield %new_sum : f32
+          scf.yield %new_sum : f32
         } else {
-          loop.yield %sum_iter : f32
+          scf.yield %sum_iter : f32
         }
-        loop.yield %sum_next : f32
+        scf.yield %sum_next : f32
       }
       return %sum : f32
     }
@@ -181,45 +181,45 @@ def IfOp : SCF_Op<"if",
        SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
   let summary = "if-then-else operation";
   let description = [{
-    The `loop.if` operation represents an if-then-else construct for
+    The `scf.if` operation represents an if-then-else construct for
     conditionally executing two regions of code. The operand to an if operation
     is a boolean value. For example:
 
     ```mlir
-    loop.if %b  {
+    scf.if %b  {
       ...
     } else {
       ...
     }
     ```
 
-    `loop.if` may also return results that are defined in its regions. The
+    `scf.if` may also return results that are defined in its regions. The
     values defined are determined by which execution path is taken.
 
     Example:
 
     ```mlir
-    %x, %y = loop.if %b -> (f32, f32) {
+    %x, %y = scf.if %b -> (f32, f32) {
       %x_true = ...
       %y_true = ...
-      loop.yield %x_true, %y_true : f32, f32
+      scf.yield %x_true, %y_true : f32, f32
     } else {
       %x_false = ...
       %y_false = ...
-      loop.yield %x_false, %y_false : f32, f32
+      scf.yield %x_false, %y_false : f32, f32
     }
     ```
 
-    `loop.if` regions are always terminated with "loop.yield". If "loop.if"
-    defines no values, the "loop.yield" can be left out, and will be inserted
+    `scf.if` regions are always terminated with "scf.yield". If "scf.if"
+    defines no values, the "scf.yield" can be left out, and will be inserted
     implicitly. Otherwise, it must be explicit.
-    Also, if "loop.if" defines one or more values, the 'else' block cannot be
+    Also, if "scf.if" defines one or more values, the 'else' block cannot be
     omitted.
 
     Example:
 
     ```mlir
-    loop.if %b  {
+    scf.if %b  {
       ...
     }
     ```
@@ -257,7 +257,7 @@ def ParallelOp : SCF_Op<"parallel",
      SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{
-    The "loop.parallel" operation represents a loop nest taking 4 groups of SSA
+    The "scf.parallel" operation represents a loop nest taking 4 groups of SSA
     values as operands that represent the lower bounds, upper bounds, steps and
     initial values, respectively. The operation defines a variadic number of
     SSA values for its induction variables. It has one region capturing the
@@ -266,7 +266,7 @@ def ParallelOp : SCF_Op<"parallel",
     machine word. The steps are values of type index, required to be positive.
     The lower and upper bounds specify a half-open range: the range includes
     the lower bound but does not include the upper bound. The initial values
-    have the same types as results of "loop.parallel". If there are no results,
+    have the same types as results of "scf.parallel". If there are no results,
     the keyword `init` can be omitted.
 
     Semantically we require that the iteration space can be iterated in any
@@ -275,27 +275,27 @@ def ParallelOp : SCF_Op<"parallel",
 
     The parallel loop operation supports reduction of values produced by
     individual iterations into a single result. This is modeled using the
-    loop.reduce operation (see loop.reduce for details). Each result of a
-    loop.parallel operation is associated with an initial value operand and
+    scf.reduce operation (see scf.reduce for details). Each result of a
+    scf.parallel operation is associated with an initial value operand and
     reduce operation that is an immediate child. Reductions are matched to
     result and initial values in order of their appearance in the body.
     Consequently, we require that the body region has the same number of
     results and initial values as it has reduce operations.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield" without operands. Parsing ParallelOp will create such a region
+    "scf.yield" without operands. Parsing ParallelOp will create such a region
     and insert the terminator when it is absent from the custom format.
 
     Example:
 
     ```mlir
     %init = constant 0.0 : f32
-    loop.parallel (%iv) = (%lb) to (%ub) step (%step) init (%init) -> f32 {
+    scf.parallel (%iv) = (%lb) to (%ub) step (%step) init (%init) -> f32 {
       %elem_to_reduce = load %buffer[%iv] : memref<100xf32>
-      loop.reduce(%elem_to_reduce) : f32 {
+      scf.reduce(%elem_to_reduce) : f32 {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
-          loop.reduce.return %res : f32
+          scf.reduce.return %res : f32
       }
     }
     ```
@@ -327,17 +327,17 @@ def ParallelOp : SCF_Op<"parallel",
 def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
   let summary = "reduce operation for parallel for";
   let description = [{
-    "loop.reduce" is an operation occurring inside "loop.parallel" operations.
+    "scf.reduce" is an operation occurring inside "scf.parallel" operations.
     It consists of one block with two arguments which have the same type as the
-    operand of "loop.reduce".
+    operand of "scf.reduce".
 
-    "loop.reduce" is used to model the value for reduction computations of a
-    "loop.parallel" operation. It has to appear as an immediate child of a
-    "loop.parallel" and is associated with a result value of its parent
+    "scf.reduce" is used to model the value for reduction computations of a
+    "scf.parallel" operation. It has to appear as an immediate child of a
+    "scf.parallel" and is associated with a result value of its parent
     operation.
 
     Association is in the order of appearance in the body where the first
-    result of a parallel loop operation corresponds to the first "loop.reduce"
+    result of a parallel loop operation corresponds to the first "scf.reduce"
     in the operation's body region. The reduce operation takes a single
     operand, which is the value to be used in the reduction.
 
@@ -353,10 +353,10 @@ def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
 
     ```mlir
     %operand = constant 1.0 : f32
-    loop.reduce(%operand) : f32 {
+    scf.reduce(%operand) : f32 {
       ^bb0(%lhs : f32, %rhs: f32):
         %res = addf %lhs, %rhs : f32
-        loop.reduce.return %res : f32
+        scf.reduce.return %res : f32
     }
     ```
   }];
@@ -376,12 +376,12 @@ def ReduceReturnOp :
                               Terminator]> {
   let summary = "terminator for reduce operation";
   let description = [{
-    "loop.reduce.return" is a special terminator operation for the block inside
-    "loop.reduce". It terminates the region. It should have the same type as
-    the operand of "loop.reduce". Example for the custom format:
+    "scf.reduce.return" is a special terminator operation for the block inside
+    "scf.reduce". It terminates the region. It should have the same type as
+    the operand of "scf.reduce". Example for the custom format:
 
     ```mlir
-    loop.reduce.return %res : f32
+    scf.reduce.return %res : f32
     ```
   }];
 
@@ -392,12 +392,12 @@ def ReduceReturnOp :
 def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator]> {
   let summary = "loop yield and termination operation";
   let description = [{
-    "loop.yield" yields an SSA value from a loop dialect op region and
+    "scf.yield" yields an SSA value from the SCF dialect op region and
     terminates the regions. The semantics of how the values are yielded is
     defined by the parent operation.
-    If "loop.yield" has any operands, the operands must match the parent
+    If "scf.yield" has any operands, the operands must match the parent
     operation's results.
-    If the parent operation defines no values, then the "loop.yield" may be
+    If the parent operation defines no values, then the "scf.yield" may be
     left out in the custom syntax and the builders will insert one implicitly.
     Otherwise, it has to be present in the syntax to indicate which values are
     yielded.

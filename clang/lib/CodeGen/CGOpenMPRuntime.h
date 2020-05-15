@@ -1832,6 +1832,14 @@ public:
   /// \param NewDepKind New dependency kind.
   void emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
                         OpenMPDependClauseKind NewDepKind, SourceLocation Loc);
+
+  /// Initializes user defined allocators specified in the uses_allocators
+  /// clauses.
+  void emitUsesAllocatorsInit(CodeGenFunction &CGF, const Expr *Allocator,
+                              const Expr *AllocatorTraits);
+
+  /// Destroys user defined allocators specified in the uses_allocators clause.
+  void emitUsesAllocatorsFini(CodeGenFunction &CGF, const Expr *Allocator);
 };
 
 /// Class supports emissionof SIMD-only code.
