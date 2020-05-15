@@ -30,6 +30,6 @@ target_link_libraries(toyc-ch3
     MLIRIR
     MLIRParser
     MLIRPass
-    MLIRSideEffects
+    MLIRSideEffectInterfaces
     MLIRTransforms)
 
