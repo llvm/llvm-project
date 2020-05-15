@@ -491,7 +491,7 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     // result anyway.
     return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index),
                     ST->getMVEVectorCostFactor()) *
-           cast<VectorType>(ValTy)->getNumElements() / 2;
+           cast<FixedVectorType>(ValTy)->getNumElements() / 2;
   }
 
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
@@ -572,7 +572,7 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment) {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
-  if (auto *VecTy = dyn_cast<VectorType>(DataTy)) {
+  if (auto *VecTy = dyn_cast<FixedVectorType>(DataTy)) {
     // Don't support v2i1 yet.
     if (VecTy->getNumElements() == 2)
       return false;
@@ -854,7 +854,7 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     return LT.first * BaseCost;
 
   // Else this is expand, assume that we need to scalarize this op.
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
     unsigned Num = VTy->getNumElements();
     unsigned Cost = getArithmeticInstrCost(Opcode, Ty->getScalarType(),
                                            CostKind);
@@ -898,8 +898,9 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
 
   if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits &&
       !UseMaskForCond && !UseMaskForGaps) {
-    unsigned NumElts = cast<VectorType>(VecTy)->getNumElements();
-    auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
+    unsigned NumElts = cast<FixedVectorType>(VecTy)->getNumElements();
+    auto *SubVecTy =
+        FixedVectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
@@ -935,7 +936,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          Alignment, CostKind, I);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
-  VectorType *VTy = cast<VectorType>(DataTy);
+  auto *VTy = cast<FixedVectorType>(DataTy);
 
   // TODO: Splitting, once we do that.
 
@@ -1476,7 +1477,8 @@ bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   case Instruction::ICmp:
   case Instruction::Add:
     return ScalarBits < 64 &&
-           (ScalarBits * cast<VectorType>(Ty)->getNumElements()) % 128 == 0;
+           (ScalarBits * cast<FixedVectorType>(Ty)->getNumElements()) % 128 ==
+               0;
   default:
     llvm_unreachable("Unhandled reduction opcode");
   }

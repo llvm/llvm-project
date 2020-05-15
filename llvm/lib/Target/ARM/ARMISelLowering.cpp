@@ -17878,7 +17878,7 @@ ARMTargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
 }
 
 bool ARMTargetLowering::isLegalInterleavedAccessType(
-    unsigned Factor, VectorType *VecTy, const DataLayout &DL) const {
+    unsigned Factor, FixedVectorType *VecTy, const DataLayout &DL) const {
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
@@ -17937,7 +17937,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   assert(Shuffles.size() == Indices.size() &&
          "Unmatched number of shufflevectors and indices");
 
-  VectorType *VecTy = Shuffles[0]->getType();
+  auto *VecTy = cast<FixedVectorType>(Shuffles[0]->getType());
   Type *EltTy = VecTy->getElementType();
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
@@ -17953,7 +17953,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   // A pointer vector can not be the return type of the ldN intrinsics. Need to
   // load integer vectors first and then convert to pointer vectors.
   if (EltTy->isPointerTy())
-    VecTy = VectorType::get(DL.getIntPtrType(EltTy), VecTy->getNumElements());
+    VecTy = FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy);
 
   IRBuilder<> Builder(LI);
 
@@ -17963,8 +17963,8 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   if (NumLoads > 1) {
     // If we're going to generate more than one load, reset the sub-vector type
     // to something legal.
-    VecTy = VectorType::get(VecTy->getElementType(),
-                            VecTy->getNumElements() / NumLoads);
+    VecTy = FixedVectorType::get(VecTy->getElementType(),
+                                 VecTy->getNumElements() / NumLoads);
 
     // We will compute the pointer operand of each load from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
@@ -18033,8 +18033,8 @@ bool ARMTargetLowering::lowerInterleavedLoad(
       // Convert the integer vector to pointer vector if the element is pointer.
       if (EltTy->isPointerTy())
         SubVec = Builder.CreateIntToPtr(
-            SubVec, VectorType::get(SV->getType()->getElementType(),
-                                    VecTy->getNumElements()));
+            SubVec,
+            FixedVectorType::get(SV->getType()->getElementType(), VecTy));
 
       SubVecs[SV].push_back(SubVec);
     }
@@ -18086,12 +18086,12 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
 
-  VectorType *VecTy = SVI->getType();
+  auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
 
   unsigned LaneLen = VecTy->getNumElements() / Factor;
   Type *EltTy = VecTy->getElementType();
-  VectorType *SubVecTy = VectorType::get(EltTy, LaneLen);
+  auto *SubVecTy = FixedVectorType::get(EltTy, LaneLen);
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
 
@@ -18113,12 +18113,12 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
     Type *IntTy = DL.getIntPtrType(EltTy);
 
     // Convert to the corresponding integer vector.
-    Type *IntVecTy = VectorType::get(
-        IntTy, cast<VectorType>(Op0->getType())->getNumElements());
+    auto *IntVecTy =
+        FixedVectorType::get(IntTy, cast<FixedVectorType>(Op0->getType()));
     Op0 = Builder.CreatePtrToInt(Op0, IntVecTy);
     Op1 = Builder.CreatePtrToInt(Op1, IntVecTy);
 
-    SubVecTy = VectorType::get(IntTy, LaneLen);
+    SubVecTy = FixedVectorType::get(IntTy, LaneLen);
   }
 
   // The base address of the store.
@@ -18128,7 +18128,7 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
     // If we're going to generate more than one store, reset the lane length
     // and sub-vector type to something legal.
     LaneLen /= NumStores;
-    SubVecTy = VectorType::get(SubVecTy->getElementType(), LaneLen);
+    SubVecTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
 
     // We will compute the pointer operand of each store from the original base
     // address using GEPs. Cast the base address to a pointer to the scalar
