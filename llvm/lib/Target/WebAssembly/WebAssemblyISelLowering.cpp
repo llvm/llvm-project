@@ -120,6 +120,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
+    // Hoist bitcasts out of shuffles
+    setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
+
     // Support saturating add for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
@@ -1703,5 +1706,39 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
 }
 
 //===----------------------------------------------------------------------===//
-//                          WebAssembly Optimization Hooks
+//   Custom DAG combine hooks
 //===----------------------------------------------------------------------===//
+static SDValue
+performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+  auto Shuffle = cast<ShuffleVectorSDNode>(N);
+
+  // Hoist vector bitcasts that don't change the number of lanes out of unary
+  // shuffles, where they are less likely to get in the way of other combines.
+  // (shuffle (vNxT1 (bitcast (vNxT0 x))),  undef, mask) ->
+  //  (vNxT1 (bitcast (vNxt0 (shuffle x, undef, mask))))
+  SDValue Bitcast = N->getOperand(0);
+  if (Bitcast.getOpcode() != ISD::BITCAST)
+    return SDValue();
+  if (!N->getOperand(1).isUndef())
+    return SDValue();
+  SDValue CastOp = Bitcast.getOperand(0);
+  MVT SrcType = CastOp.getSimpleValueType();
+  MVT DstType = Bitcast.getSimpleValueType();
+  if (SrcType.getVectorNumElements() != DstType.getVectorNumElements())
+    return SDValue();
+  SDValue NewShuffle = DAG.getVectorShuffle(
+      SrcType, SDLoc(N), CastOp, DAG.getUNDEF(SrcType), Shuffle->getMask());
+  return DAG.getBitcast(DstType, NewShuffle);
+}
+
+SDValue
+WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  switch (N->getOpcode()) {
+  default:
+    return SDValue();
+  case ISD::VECTOR_SHUFFLE:
+    return performVECTOR_SHUFFLECombine(N, DCI);
+  }
+}
