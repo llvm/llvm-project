@@ -151,7 +151,7 @@ Expected<std::string> StringSubstitution::getResult() const {
   return Regex::escape(*VarVal);
 }
 
-bool Pattern::isValidVarNameStart(char C) { return C == '_' || isalpha(C); }
+bool Pattern::isValidVarNameStart(char C) { return C == '_' || isAlpha(C); }
 
 Expected<Pattern::VariableProperties>
 Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
@@ -171,7 +171,7 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
       return ErrorDiagnostic::get(SM, Str, "invalid variable name");
 
     // Variable names are composed of alphanumeric characters and underscores.
-    if (Str[I] != '_' && !isalnum(Str[I]))
+    if (Str[I] != '_' && !isAlnum(Str[I]))
       break;
     ParsedOneChar = true;
   }
@@ -1079,7 +1079,7 @@ FileCheckDiag::FileCheckDiag(const SourceMgr &SM,
 }
 
 static bool IsPartOfWord(char c) {
-  return (isalnum(c) || c == '-' || c == '_');
+  return (isAlnum(c) || c == '-' || c == '_');
 }
 
 Check::FileCheckType &Check::FileCheckType::setCount(int C) {
