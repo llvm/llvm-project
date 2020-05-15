@@ -12,7 +12,7 @@ add_mlir_dialect_library(MLIRSCF
   MLIREDSC
   MLIRIR
   MLIRLoopLikeInterface
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRStandardOps
   )
 
