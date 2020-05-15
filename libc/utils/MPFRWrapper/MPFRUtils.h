@@ -40,6 +40,7 @@ struct Tolerance {
 };
 
 enum Operation {
+  OP_Abs,
   OP_Cos,
   OP_Sin,
 };
