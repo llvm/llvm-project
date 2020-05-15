@@ -581,6 +581,28 @@ void print(const StackSafetyGlobalInfo &SSI, raw_ostream &O, const Module &M) {
   assert(Count == SSI.size() && "Unexpected functions in the result");
 }
 
+bool setStackSafetyMetadata(Module &M, const StackSafetyGlobalInfo &SSGI) {
+  bool Changed = false;
+  unsigned Width = M.getDataLayout().getPointerSizeInBits();
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration() || F.hasOptNone())
+      continue;
+    auto Iter = SSGI.find(&F);
+    if (Iter == SSGI.end())
+      continue;
+    StackSafetyInfo::FunctionInfo *Summary = Iter->second.getInfo();
+    for (auto &AS : Summary->Allocas) {
+      ConstantRange AllocaRange{APInt(Width, 0), APInt(Width, AS.Size)};
+      if (AllocaRange.contains(AS.Use.Range)) {
+        AS.AI->setMetadata(M.getMDKindID("stack-safe"),
+                           MDNode::get(M.getContext(), None));
+        Changed = true;
+      }
+    }
+  }
+  return Changed;
+}
+
 } // end anonymous namespace
 
 StackSafetyInfo::StackSafetyInfo() = default;
@@ -652,39 +674,17 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
-static bool SetStackSafetyMetadata(Module &M,
-                                   const StackSafetyGlobalInfo &SSGI) {
-  bool Changed = false;
-  unsigned Width = M.getDataLayout().getPointerSizeInBits();
-  for (auto &F : M.functions()) {
-    if (F.isDeclaration() || F.hasOptNone())
-      continue;
-    auto Iter = SSGI.find(&F);
-    if (Iter == SSGI.end())
-      continue;
-    StackSafetyInfo::FunctionInfo *Summary = Iter->second.getInfo();
-    for (auto &AS : Summary->Allocas) {
-      ConstantRange AllocaRange{APInt(Width, 0), APInt(Width, AS.Size)};
-      if (AllocaRange.contains(AS.Use.Range)) {
-        AS.AI->setMetadata(M.getMDKindID("stack-safe"),
-                           MDNode::get(M.getContext(), None));
-        Changed = true;
-      }
-    }
-  }
-  return Changed;
-}
-
 PreservedAnalyses
 StackSafetyGlobalAnnotatorPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &SSGI = AM.getResult<StackSafetyGlobalAnalysis>(M);
-  (void)SetStackSafetyMetadata(M, SSGI);
+  (void)setStackSafetyMetadata(M, SSGI);
   return PreservedAnalyses::all();
 }
 
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
-StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass(bool SetMetadata)
+StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass(
+    bool SetMetadata)
     : ModulePass(ID), SetMetadata(SetMetadata) {
   initializeStackSafetyGlobalInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
@@ -706,7 +706,7 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
         return getAnalysis<StackSafetyInfoWrapperPass>(F).getResult();
       });
   SSGI = SSDFA.run();
-  return SetMetadata ? SetStackSafetyMetadata(M, SSGI) : false;
+  return SetMetadata ? setStackSafetyMetadata(M, SSGI) : false;
 }
 
 ModulePass *llvm::createStackSafetyGlobalInfoWrapperPass(bool SetMetadata) {
