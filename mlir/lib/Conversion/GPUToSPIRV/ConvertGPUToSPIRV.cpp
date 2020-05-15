@@ -343,6 +343,26 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
   return newFuncOp;
 }
 
+/// Populates `argABI` with spv.interface_var_abi attributes for lowering
+/// gpu.func to spv.func if no arguments have the attributes set
+/// already. Returns failure if any argument has the ABI attribute set already.
+static LogicalResult
+getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
+                   SmallVectorImpl<spirv::InterfaceVarABIAttr> &argABI) {
+  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+    if (funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
+            argIndex, spirv::getInterfaceVarABIAttrName()))
+      return failure();
+    // Vulkan's interface variable requirements needs scalars to be wrapped in a
+    // struct. The struct held in storage buffer.
+    Optional<spirv::StorageClass> sc;
+    if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
+      sc = spirv::StorageClass::StorageBuffer;
+    argABI.push_back(spirv::getInterfaceVarABIAttr(0, argIndex, sc, context));
+  }
+  return success();
+}
+
 LogicalResult GPUFuncOpConversion::matchAndRewrite(
     gpu::GPUFuncOp funcOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -350,22 +370,21 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
     return failure();
 
   SmallVector<spirv::InterfaceVarABIAttr, 4> argABI;
-  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
-    // If the ABI is already specified, use it.
-    auto abiAttr = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
-        argIndex, spirv::getInterfaceVarABIAttrName());
-    if (abiAttr) {
+  if (failed(getDefaultABIAttrs(rewriter.getContext(), funcOp, argABI))) {
+    argABI.clear();
+    for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+      // If the ABI is already specified, use it.
+      auto abiAttr = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
+          argIndex, spirv::getInterfaceVarABIAttrName());
+      if (!abiAttr) {
+        funcOp.emitRemark(
+            "match failure: missing 'spv.interface_var_abi' attribute at "
+            "argument ")
+            << argIndex;
+        return failure();
+      }
       argABI.push_back(abiAttr);
-      continue;
     }
-    // todo(ravishankarm): Use the "default ABI". Remove this in a follow up
-    // CL. Staging this to make this easy to revert in case of breakages out of
-    // tree.
-    Optional<spirv::StorageClass> sc;
-    if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
-      sc = spirv::StorageClass::StorageBuffer;
-    argABI.push_back(
-        spirv::getInterfaceVarABIAttr(0, argIndex, sc, rewriter.getContext()));
   }
 
   auto entryPointAttr = spirv::lookupEntryPointABI(funcOp);
