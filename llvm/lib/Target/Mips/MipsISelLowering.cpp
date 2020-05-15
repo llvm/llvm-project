@@ -3217,6 +3217,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
 
+  // Call site info for function parameters tracking.
+  MachineFunction::CallSiteInfo CSInfo;
+
   // Check if it's really possible to do a tail call. Restrict it to functions
   // that are part of this compilation unit.
   bool InternalLinkage = false;
@@ -3343,6 +3346,17 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // RegsToPass vector
     if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+
+      // If the parameter is passed through reg $D, which splits into
+      // two physical registers, avoid creating call site info.
+      if (Mips::AFGR64RegClass.contains(VA.getLocReg()))
+        continue;
+
+      // Collect CSInfo about which register passes which parameter.
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.SupportsDebugEntryValues)
+        CSInfo.emplace_back(VA.getLocReg(), i);
+
       continue;
     }
 
@@ -3447,11 +3461,15 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(MipsISD::TailCall, DL, MVT::Other, Ops);
+    SDValue Ret = DAG.getNode(MipsISD::TailCall, DL, MVT::Other, Ops);
+    DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    return Ret;
   }
 
   Chain = DAG.getNode(MipsISD::JmpLink, DL, NodeTys, Ops);
   SDValue InFlag = Chain.getValue(1);
+
+  DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
   // Create the CALLSEQ_END node in the case of where it is not a call to
   // memcpy.

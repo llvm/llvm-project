@@ -783,7 +783,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
       llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm, llvm::Triple::armeb};
+      llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
+      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
 
   llvm::Triple T(TargetOpts.Triple);
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
