@@ -121,7 +121,25 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
   // Named namespace comments must not mention anonymous namespace.
   if (!NamespaceName.empty() && !AnonymousInComment.empty())
     return false;
-  return NamespaceNameInComment == NamespaceName;
+  if (NamespaceNameInComment == NamespaceName)
+    return true;
+
+  // Has namespace comment flowed onto the next line.
+  // } // namespace
+  //   // verylongnamespacenamethatdidnotfitonthepreviouscommentline
+  if (!(Comment->Next && Comment->Next->is(TT_LineComment)))
+    return false;
+
+  static const llvm::Regex CommentPattern = llvm::Regex(
+      "^/[/*] *( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$", llvm::Regex::IgnoreCase);
+
+  // Pull out just the comment text.
+  if (!CommentPattern.match(Comment->Next->TokenText, &Groups)) {
+    return false;
+  }
+  NamespaceNameInComment = Groups.size() > 2 ? Groups[2] : "";
+
+  return (NamespaceNameInComment == NamespaceName);
 }
 
 void addEndComment(const FormatToken *RBraceTok, StringRef EndCommentText,
