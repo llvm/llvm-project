@@ -96,21 +96,18 @@ private:
   Use **Prev = nullptr;
   User *Parent = nullptr;
 
-  void setPrev(Use **NewPrev) { Prev = NewPrev; }
-
   void addToList(Use **List) {
     Next = *List;
     if (Next)
-      Next->setPrev(&Next);
-    setPrev(List);
-    *List = this;
+      Next->Prev = &Next;
+    Prev = List;
+    *Prev = this;
   }
 
   void removeFromList() {
-    Use **StrippedPrev = Prev;
-    *StrippedPrev = Next;
+    *Prev = Next;
     if (Next)
-      Next->setPrev(StrippedPrev);
+      Next->Prev = Prev;
   }
 };
 

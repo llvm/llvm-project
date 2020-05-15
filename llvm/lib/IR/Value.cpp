@@ -831,12 +831,12 @@ void Value::reverseUseList() {
   while (Current) {
     Use *Next = Current->Next;
     Current->Next = Head;
-    Head->setPrev(&Current->Next);
+    Head->Prev = &Current->Next;
     Head = Current;
     Current = Next;
   }
   UseList = Head;
-  Head->setPrev(&UseList);
+  Head->Prev = &UseList;
 }
 
 bool Value::isSwiftError() const {
