@@ -13,6 +13,7 @@ target_link_libraries(MLIRLinalgToStandard
   MLIREDSC
   MLIRIR
   MLIRLinalgOps
+  MLIRPass
   MLIRSCF
   LLVMCore
   LLVMSupport
