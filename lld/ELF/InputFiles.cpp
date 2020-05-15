@@ -1162,8 +1162,7 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
   if (tar && c.getParent()->isThin())
     tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());
 
-  InputFile *file = createObjectFile(
-      mb, getName(), c.getParent()->isThin() ? 0 : c.getChildOffset());
+  InputFile *file = createObjectFile(mb, getName(), c.getChildOffset());
   file->groupId = groupId;
   parseFile(file);
 }
