@@ -133,11 +133,6 @@ int main(int, char**)
         static_assert(!std::is_assignable<F1&, F2&&>::value, "");
         static_assert(!std::is_assignable<F2&, F1&&>::value, "");
     }
-    {
-        using F1 = std::function<void(int, int)>;
-        using F2 = std::function<void(int, int)&&>;
-        static_assert(!std::is_assignable<F1&, F2&&>::value, "");
-    }
 #endif
 
   return 0;
