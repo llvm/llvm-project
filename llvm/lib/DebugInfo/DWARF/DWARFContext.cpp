@@ -436,13 +436,23 @@ void DWARFContext::dump(
     }
   }
 
-  if (const auto *Off = shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
-                                   DObj->getFrameSection().Data))
-    getDebugFrame()->dump(OS, getRegisterInfo(), *Off);
+  if (const Optional<uint64_t> *Off =
+          shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
+                     DObj->getFrameSection().Data)) {
+    if (Expected<const DWARFDebugFrame *> DF = getDebugFrame())
+      (*DF)->dump(OS, getRegisterInfo(), *Off);
+    else
+      RecoverableErrorHandler(DF.takeError());
+  }
 
-  if (const auto *Off = shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
-                                   DObj->getEHFrameSection().Data))
-    getEHFrame()->dump(OS, getRegisterInfo(), *Off);
+  if (const Optional<uint64_t> *Off =
+          shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
+                     DObj->getEHFrameSection().Data)) {
+    if (Expected<const DWARFDebugFrame *> DF = getEHFrame())
+      (*DF)->dump(OS, getRegisterInfo(), *Off);
+    else
+      RecoverableErrorHandler(DF.takeError());
+  }
 
   if (shouldDump(Explicit, ".debug_macro", DIDT_ID_DebugMacro,
                  DObj->getMacroSection().Data)) {
@@ -791,7 +801,7 @@ const DWARFDebugAranges *DWARFContext::getDebugAranges() {
   return Aranges.get();
 }
 
-const DWARFDebugFrame *DWARFContext::getDebugFrame() {
+Expected<const DWARFDebugFrame *> DWARFContext::getDebugFrame() {
   if (DebugFrame)
     return DebugFrame.get();
 
@@ -806,19 +816,25 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
   DWARFDataExtractor debugFrameData(*DObj, DObj->getFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(getArch(), false /* IsEH */));
-  DebugFrame->parse(debugFrameData);
+  auto DF = std::make_unique<DWARFDebugFrame>(getArch(), /*IsEH=*/false);
+  if (Error E = DF->parse(debugFrameData))
+    return std::move(E);
+
+  DebugFrame.swap(DF);
   return DebugFrame.get();
 }
 
-const DWARFDebugFrame *DWARFContext::getEHFrame() {
+Expected<const DWARFDebugFrame *> DWARFContext::getEHFrame() {
   if (EHFrame)
     return EHFrame.get();
 
   DWARFDataExtractor debugFrameData(*DObj, DObj->getEHFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(getArch(), true /* IsEH */));
-  DebugFrame->parse(debugFrameData);
+
+  auto DF = std::make_unique<DWARFDebugFrame>(getArch(), /*IsEH=*/true);
+  if (Error E = DF->parse(debugFrameData))
+    return std::move(E);
+  DebugFrame.swap(DF);
   return DebugFrame.get();
 }
 
