@@ -70,6 +70,6 @@ return:
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
 ; CHECK-NEXT:                   %add = fadd double %val, 4.200000e+01
-; CHECK-NEXT:                   store double %add, double* %A_idx
+; CHECK-NEXT:                   store double %add, double* %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

@@ -60,6 +60,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val2 = fadd double %val1, 2.100000e+01
-; CHECK-NEXT:                   store double %val2, double* %A
+; CHECK-NEXT:                   store double %val2, double* %A, align 8
 ; CHECK-NEXT:                 }
 ; CHECK-NEXT: }
