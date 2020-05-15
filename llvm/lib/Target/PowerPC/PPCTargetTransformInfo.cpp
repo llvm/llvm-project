@@ -912,7 +912,8 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // stores, loads are expanded using the vector-load + permutation sequence,
   // which is much less expensive).
   if (Src->isVectorTy() && Opcode == Instruction::Store)
-    for (int i = 0, e = cast<VectorType>(Src)->getNumElements(); i < e; ++i)
+    for (int i = 0, e = cast<FixedVectorType>(Src)->getNumElements(); i < e;
+         ++i)
       Cost += getVectorInstrCost(Instruction::ExtractElement, Src, i);
 
   return Cost;
