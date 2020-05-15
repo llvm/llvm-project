@@ -58,7 +58,7 @@ public:
     patterns.insert<AffineLoopConv, AffineWhereConv>(context);
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
-                           mlir::loop::LoopOpsDialect,
+                           mlir::scf::SCFDialect,
                            mlir::StandardOpsDialect>();
     // target.addDynamicallyLegalOp<LoopOp, WhereOp>();
 

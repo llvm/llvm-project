@@ -148,7 +148,7 @@ public:
     patterns.insert<SelectTypeOpConversion>(&getContext());
     mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
     mlir::ConversionTarget target(getContext());
-    target.addLegalDialect<fir::FIROpsDialect, mlir::loop::LoopOpsDialect,
+    target.addLegalDialect<fir::FIROpsDialect, mlir::scf::SCFDialect,
                            mlir::StandardOpsDialect>();
     target.addIllegalOp<fir::SelectTypeOp>();
 
