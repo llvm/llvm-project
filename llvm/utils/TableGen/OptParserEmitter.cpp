@@ -102,7 +102,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << ", \"" << R.getValueAsString("Name") << '"';
 
     // The option identifier name.
-    OS  << ", "<< getOptionName(R);
+    OS << ", " << getOptionName(R);
 
     // The option kind.
     OS << ", Group";
@@ -149,7 +149,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     write_cstring(OS, R.getValueAsString("Name"));
 
     // The option identifier name.
-    OS  << ", "<< getOptionName(R);
+    OS << ", " << getOptionName(R);
 
     // The option kind.
     OS << ", " << R.getValueAsDef("Kind")->getValueAsString("Name");
