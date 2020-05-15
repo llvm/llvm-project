@@ -155,7 +155,7 @@ define void @test_dse1(i32* %p) {
 ; USE_ASSUME-LABEL: @test_dse1(
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P:%.*]], align 4, !invariant.load !0
 ; USE_ASSUME-NEXT:    call void @clobber_and_use(i32 [[V1]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret void
 ;
   %v1 = load i32, i32* %p, !invariant.load !{}
@@ -169,7 +169,7 @@ define void @test_false_negative_dse2(i32* %p, i32 %v2) {
 ; CHECK-LABEL: @test_false_negative_dse2(
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[P:%.*]], align 4, !invariant.load !0
 ; CHECK-NEXT:    call void @clobber_and_use(i32 [[V1]])
-; CHECK-NEXT:    store i32 [[V2:%.*]], i32* [[P]]
+; CHECK-NEXT:    store i32 [[V2:%.*]], i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load i32, i32* %p, !invariant.load !{}

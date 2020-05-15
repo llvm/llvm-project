@@ -73,9 +73,9 @@ define void @test1(i32 *%ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BPTR:%.*]] = bitcast i32* [[PTR:%.*]] to i8*
 ; CHECK-NEXT:    [[WPTR:%.*]] = bitcast i32* [[PTR]] to i16*
-; CHECK-NEXT:    store i16 -30062, i16* [[WPTR]]
+; CHECK-NEXT:    store i16 -30062, i16* [[WPTR]], align 2
 ; CHECK-NEXT:    [[BPTR3:%.*]] = getelementptr inbounds i8, i8* [[BPTR]], i64 3
-; CHECK-NEXT:    store i8 47, i8* [[BPTR3]]
+; CHECK-NEXT:    store i8 47, i8* [[BPTR3]], align 1
 ; CHECK-NEXT:    [[BPTR1:%.*]] = getelementptr inbounds i8, i8* [[BPTR]], i64 1
 ; CHECK-NEXT:    [[WPTRP:%.*]] = bitcast i8* [[BPTR1]] to i16*
 ; CHECK-NEXT:    store i16 2020, i16* [[WPTRP]], align 1
@@ -151,7 +151,7 @@ entry:
 define signext i8 @test3(i32 *%ptr) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 5, i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 5, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[BPTR:%.*]] = bitcast i32* [[PTR]] to i8*
 ; CHECK-NEXT:    [[BPTRM1:%.*]] = getelementptr inbounds i8, i8* [[BPTR]], i64 -1
 ; CHECK-NEXT:    [[BPTR1:%.*]] = getelementptr inbounds i8, i8* [[BPTR]], i64 1

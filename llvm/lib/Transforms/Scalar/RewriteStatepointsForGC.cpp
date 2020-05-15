@@ -1712,8 +1712,8 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
                             cast<AllocaInst>(Alloca)->getAllocatedType(),
                             suffixed_name_or(Relocate, ".casted", ""));
 
-    StoreInst *Store = new StoreInst(CastedRelocatedValue, Alloca);
-    Store->insertAfter(cast<Instruction>(CastedRelocatedValue));
+    new StoreInst(CastedRelocatedValue, Alloca,
+                  cast<Instruction>(CastedRelocatedValue)->getNextNode());
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -1735,8 +1735,8 @@ static void insertRematerializationStores(
            "Can not find alloca for rematerialized value");
     Value *Alloca = AllocaMap[OriginalValue];
 
-    StoreInst *Store = new StoreInst(RematerializedValue, Alloca);
-    Store->insertAfter(RematerializedValue);
+    new StoreInst(RematerializedValue, Alloca,
+                  RematerializedValue->getNextNode());
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -1841,8 +1841,7 @@ static void relocationViaAlloca(
         for (auto *AI : ToClobber) {
           auto PT = cast<PointerType>(AI->getAllocatedType());
           Constant *CPN = ConstantPointerNull::get(PT);
-          StoreInst *Store = new StoreInst(CPN, AI);
-          Store->insertBefore(IP);
+          new StoreInst(CPN, AI, IP);
         }
       };
 
@@ -1904,7 +1903,8 @@ static void relocationViaAlloca(
     // Emit store for the initial gc value.  Store must be inserted after load,
     // otherwise store will be in alloca's use list and an extra load will be
     // inserted before it.
-    StoreInst *Store = new StoreInst(Def, Alloca);
+    StoreInst *Store = new StoreInst(Def, Alloca, /*volatile*/ false,
+                                     DL.getABITypeAlign(Def->getType()));
     if (Instruction *Inst = dyn_cast<Instruction>(Def)) {
       if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Inst)) {
         // InvokeInst is a terminator so the store need to be inserted into its

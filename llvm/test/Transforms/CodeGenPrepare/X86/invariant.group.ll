@@ -11,7 +11,7 @@ enter:
   %val = load i8, i8* @tmp, !invariant.group !0
   %ptr = call i8* @llvm.launder.invariant.group.p0i8(i8* @tmp)
   
-  ; CHECK: store i8 42, i8* @tmp{{$}}
+  ; CHECK: store i8 42, i8* @tmp, align 1{{$}}
   store i8 42, i8* %ptr, !invariant.group !0
   
   ret void
@@ -27,7 +27,7 @@ enter:
   %val = load i8, i8* @tmp, !invariant.group !0
   %ptr = call i8* @llvm.strip.invariant.group.p0i8(i8* @tmp)
 
-  ; CHECK: store i8 42, i8* @tmp{{$}}
+  ; CHECK: store i8 42, i8* @tmp, align 1{{$}}
   store i8 42, i8* %ptr, !invariant.group !0
 
   ret void

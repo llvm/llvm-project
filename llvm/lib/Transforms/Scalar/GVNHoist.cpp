@@ -894,9 +894,8 @@ private:
           std::min(ReplacementLoad->getAlign(), cast<LoadInst>(I)->getAlign()));
       ++NumLoadsRemoved;
     } else if (auto *ReplacementStore = dyn_cast<StoreInst>(Repl)) {
-      ReplacementStore->setAlignment(
-          MaybeAlign(std::min(ReplacementStore->getAlignment(),
-                              cast<StoreInst>(I)->getAlignment())));
+      ReplacementStore->setAlignment(std::min(ReplacementStore->getAlign(),
+                                              cast<StoreInst>(I)->getAlign()));
       ++NumStoresRemoved;
     } else if (auto *ReplacementAlloca = dyn_cast<AllocaInst>(Repl)) {
       ReplacementAlloca->setAlignment(

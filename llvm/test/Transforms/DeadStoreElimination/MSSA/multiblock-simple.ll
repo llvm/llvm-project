@@ -12,7 +12,7 @@ define void @test2(i32* noalias %P) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %P
@@ -28,12 +28,12 @@ bb3:
 
 define void @test3(i32* noalias %P) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -59,8 +59,8 @@ define void @test7(i32* noalias %P, i32* noalias %Q) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[Q:%.*]]
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %Q
@@ -78,8 +78,8 @@ bb3:
 
 define i32 @test22(i32* %P, i32* noalias %Q, i32* %R) {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    store i32 2, i32* [[P:%.*]]
-; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]]
+; CHECK-NEXT:    store i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
@@ -92,14 +92,14 @@ define i32 @test22(i32* %P, i32* noalias %Q, i32* %R) {
 
 define void @test9(i32* noalias %P) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -118,9 +118,9 @@ bb3:
 ; alias %P. Note that uses point to the *first* def that may alias.
 define void @overlapping_read(i32* %P) {
 ; CHECK-LABEL: @overlapping_read(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr i32, i32* [[P]], i32 1
-; CHECK-NEXT:    store i32 1, i32* [[P_1]]
+; CHECK-NEXT:    store i32 1, i32* [[P_1]], align 4
 ; CHECK-NEXT:    [[P_64:%.*]] = bitcast i32* [[P]] to i64*
 ; CHECK-NEXT:    [[LV:%.*]] = load i64, i64* [[P_64]], align 8
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
@@ -129,7 +129,7 @@ define void @overlapping_read(i32* %P) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 2, i32* [[P]]
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -150,10 +150,10 @@ bb3:
 
 define void @test10(i32* %P) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
@@ -177,7 +177,7 @@ define void @test11() {
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
@@ -199,13 +199,13 @@ bb3:
 
 define void @test12(i32* %P) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, i32* [[P]]
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 1, i32* [[P]]
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -225,13 +225,13 @@ bb3:
 
 define void @test13(i32* %P) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, i32* [[P]]
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 1, i32* [[P]]
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void

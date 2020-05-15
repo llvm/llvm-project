@@ -670,7 +670,7 @@ define void @nocapture_is_not_subsumed_1(i32* nocapture %b) {
 ; CHECK-SAME: (i32* nocapture [[B:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32* @unknown_i32p(i32* [[B]])
-; CHECK-NEXT:    store i32 0, i32* [[CALL]], align 1
+; CHECK-NEXT:    store i32 0, i32* [[CALL]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -685,7 +685,7 @@ define void @nocapture_is_not_subsumed_2(i32* nocapture %b) {
 ; CHECK-SAME: (i32* nocapture [[B:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B]])
-; CHECK-NEXT:    store i32 0, i32* [[CALL]], align 1
+; CHECK-NEXT:    store i32 0, i32* [[CALL]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

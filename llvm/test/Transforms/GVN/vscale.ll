@@ -5,8 +5,8 @@
 
 define <vscale x 4 x i32> @load_store_clobber_load(<vscale x 4 x i32> *%p)  {
 ; CHECK-LABEL: @load_store_clobber_load(
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]]
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* undef
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* undef, align 16
 ; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[LOAD1]], [[LOAD1]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
@@ -19,9 +19,9 @@ define <vscale x 4 x i32> @load_store_clobber_load(<vscale x 4 x i32> *%p)  {
 
 define <vscale x 4 x i32> @load_store_clobber_load_mayalias(<vscale x 4 x i32>* %p, <vscale x 4 x i32>* %p2) {
 ; CHECK-LABEL: @load_store_clobber_load_mayalias(
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]]
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P2:%.*]]
-; CHECK-NEXT:    [[LOAD2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P2:%.*]], align 16
+; CHECK-NEXT:    [[LOAD2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], align 16
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <vscale x 4 x i32> [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SUB]]
 ;
@@ -34,8 +34,8 @@ define <vscale x 4 x i32> @load_store_clobber_load_mayalias(<vscale x 4 x i32>* 
 
 define <vscale x 4 x i32> @load_store_clobber_load_noalias(<vscale x 4 x i32>* noalias %p, <vscale x 4 x i32>* noalias %p2) {
 ; CHECK-LABEL: @load_store_clobber_load_noalias(
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]]
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P2:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P2:%.*]], align 16
 ; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[LOAD1]], [[LOAD1]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
@@ -50,10 +50,10 @@ define <vscale x 4 x i32> @load_store_clobber_load_noalias(<vscale x 4 x i32>* n
 define i32 @load_clobber_load_gep1(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @load_clobber_load_gep1(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP1]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP1]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast <vscale x 4 x i32>* [[P]] to i32*
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, i32* [[P2]], i64 1
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[GEP2]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[GEP2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -69,10 +69,10 @@ define i32 @load_clobber_load_gep1(<vscale x 4 x i32>* %p) {
 define i32 @load_clobber_load_gep2(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @load_clobber_load_gep2(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], i64 1, i64 0
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP1]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP1]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast <vscale x 4 x i32>* [[P]] to i32*
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, i32* [[P2]], i64 4
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[GEP2]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, i32* [[GEP2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -89,10 +89,10 @@ define i32 @load_clobber_load_gep2(<vscale x 4 x i32>* %p) {
 define i32 @load_clobber_load_gep3(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @load_clobber_load_gep3(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], i64 1, i64 0
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP1]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP1]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast <vscale x 4 x i32>* [[P]] to <vscale x 4 x float>*
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* [[P2]], i64 1, i64 0
-; CHECK-NEXT:    [[LOAD2:%.*]] = load float, float* [[GEP2]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load float, float* [[GEP2]], align 4
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[LOAD2]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[CAST]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -109,9 +109,9 @@ define i32 @load_clobber_load_gep3(<vscale x 4 x i32>* %p) {
 
 define <vscale x 4 x i32> @load_clobber_load_fence(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @load_clobber_load_fence(
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], align 16
 ; CHECK-NEXT:    call void asm "", "~{memory}"()
-; CHECK-NEXT:    [[LOAD2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], align 16
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <vscale x 4 x i32> [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SUB]]
 ;
@@ -124,9 +124,9 @@ define <vscale x 4 x i32> @load_clobber_load_fence(<vscale x 4 x i32>* %p) {
 
 define <vscale x 4 x i32> @load_clobber_load_sideeffect(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @load_clobber_load_sideeffect(
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], align 16
 ; CHECK-NEXT:    call void asm sideeffect "", ""()
-; CHECK-NEXT:    [[LOAD2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], align 16
 ; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
@@ -141,7 +141,7 @@ define <vscale x 4 x i32> @load_clobber_load_sideeffect(<vscale x 4 x i32>* %p) 
 
 define <vscale x 4 x i32> @store_forward_to_load(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @store_forward_to_load(
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]]
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
 ;
   store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* %p
@@ -151,9 +151,9 @@ define <vscale x 4 x i32> @store_forward_to_load(<vscale x 4 x i32>* %p) {
 
 define <vscale x 4 x i32> @store_forward_to_load_sideeffect(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @store_forward_to_load_sideeffect(
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]]
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]], align 16
 ; CHECK-NEXT:    call void asm sideeffect "", ""()
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[LOAD]]
 ;
   store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* %p
@@ -165,9 +165,9 @@ define <vscale x 4 x i32> @store_forward_to_load_sideeffect(<vscale x 4 x i32>* 
 define i32 @store_clobber_load() {
 ; CHECK-LABEL: @store_clobber_load(
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca <vscale x 4 x i32>
-; CHECK-NEXT:    store <vscale x 4 x i32> undef, <vscale x 4 x i32>* [[ALLOC]]
+; CHECK-NEXT:    store <vscale x 4 x i32> undef, <vscale x 4 x i32>* [[ALLOC]], align 16
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[ALLOC]], i32 0, i32 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[PTR]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   %alloc = alloca <vscale x 4 x i32>
@@ -199,7 +199,7 @@ define i32 @memset_clobber_load_vscaled_base(<vscale x 4 x i32> *%p) {
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <vscale x 4 x i32>* [[P:%.*]] to i8*
 ; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[CONV]], i8 1, i64 200, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], i64 1, i64 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[GEP]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   %conv = bitcast <vscale x 4 x i32>* %p to i8*
@@ -214,7 +214,7 @@ define i32 @memset_clobber_load_nonconst_index(<vscale x 4 x i32> *%p, i64 %idx1
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <vscale x 4 x i32>* [[P:%.*]] to i8*
 ; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[CONV]], i8 1, i64 200, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], i64 [[IDX1:%.*]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[GEP]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   %conv = bitcast <vscale x 4 x i32>* %p to i8*
@@ -233,7 +233,7 @@ define <vscale x 4 x i32>* @load_from_alloc_replaced_with_undef() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>
 ; CHECK-NEXT:    br i1 undef, label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[A]]
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[A]], align 16
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret <vscale x 4 x i32>* [[A]]
@@ -257,7 +257,7 @@ define i32 @redundant_load_elimination_1(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @redundant_load_elimination_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], i64 1, i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, i32* [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LOAD1]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
@@ -286,13 +286,13 @@ define void @redundant_load_elimination_2(i1 %c, <vscale x 4 x i32>* %p, i32* %q
 ; CHECK-LABEL: @redundant_load_elimination_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], i64 1, i64 1
-; CHECK-NEXT:    store i32 0, i32* [[GEP1]]
+; CHECK-NEXT:    store i32 0, i32* [[GEP1]], align 4
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], i64 1, i64 0
-; CHECK-NEXT:    store i32 1, i32* [[GEP2]]
+; CHECK-NEXT:    store i32 1, i32* [[GEP2]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T:%.*]] = load i32, i32* [[GEP1]]
-; CHECK-NEXT:    store i32 [[T]], i32* [[Q:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load i32, i32* [[GEP1]], align 4
+; CHECK-NEXT:    store i32 [[T]], i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret void
@@ -317,13 +317,13 @@ if.else:
 define void @missing_load_elimination(i1 %c, <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %q, <vscale x 4 x i32> %v) {
 ; CHECK-LABEL: @missing_load_elimination(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]]
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]], align 16
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], i64 1
-; CHECK-NEXT:    store <vscale x 4 x i32> [[V:%.*]], <vscale x 4 x i32>* [[P1]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[V:%.*]], <vscale x 4 x i32>* [[P1]], align 16
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]]
-; CHECK-NEXT:    store <vscale x 4 x i32> [[T]], <vscale x 4 x i32>* [[Q:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> [[T]], <vscale x 4 x i32>* [[Q:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret void

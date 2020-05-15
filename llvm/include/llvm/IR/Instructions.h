@@ -306,17 +306,16 @@ protected:
 public:
   StoreInst(Value *Val, Value *Ptr, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile = false,
-            Instruction *InsertBefore = nullptr);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             Instruction *InsertBefore = nullptr);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
@@ -339,17 +338,13 @@ public:
   /// Return the alignment of the access that is being performed
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getAlign() instead.
-  unsigned getAlignment() const {
-    if (const auto MA = getAlign())
-      return MA->value();
-    return 0;
+  unsigned getAlignment() const { return getAlign().value(); }
+
+  Align getAlign() const {
+    return *decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31);
   }
 
-  MaybeAlign getAlign() const {
-    return decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31);
-  }
-
-  void setAlignment(MaybeAlign Alignment);
+  void setAlignment(Align Alignment);
 
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {

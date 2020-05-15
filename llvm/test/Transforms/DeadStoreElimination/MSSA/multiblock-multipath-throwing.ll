@@ -12,14 +12,14 @@ declare void @use(i32 *)
 ; Cannot remove the store from the entry block, because the call in bb2 may throw.
 define void @accessible_after_return_1(i32* noalias %P, i1 %c1) {
 ; CHECK-LABEL: @accessible_after_return_1(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @readnone_may_throw()
-; CHECK-NEXT:    store i32 3, i32* [[P]]
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    call void @use(i32* [[P]])
@@ -46,19 +46,19 @@ bb5:
 define void @accessible_after_return6(i32* %P, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @accessible_after_return6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 1, i32* [[P]]
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @readnone_may_throw()
-; CHECK-NEXT:    store i32 2, i32* [[P]]
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
-; CHECK-NEXT:    store i32 3, i32* [[P]]
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -93,11 +93,11 @@ define void @alloca_1(i1 %c1) {
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @readnone_may_throw()
-; CHECK-NEXT:    store i32 3, i32* [[P]]
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    call void @use(i32* [[P]])
@@ -130,16 +130,16 @@ define void @alloca_2(i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @readnone_may_throw()
-; CHECK-NEXT:    store i32 3, i32* [[P]]
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    store i32 5, i32* [[P]]
+; CHECK-NEXT:    store i32 5, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    call void @use(i32* [[P]])

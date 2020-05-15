@@ -156,8 +156,8 @@ for.end:                                          ; preds = %for.body, %entry
 ;; memcpy.atomic formation rejection (normal store w/ no align, atomic load)
 define void @test3b(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test3b(
-; CHECK-NOT: call void @llvm.memcpy.element.unordered.atomic
-; CHECK: store
+; CHECK: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i32 1)
+; CHECK-NOT: store
 ; CHECK: ret void
 bb.nph:
   %Base = alloca i8, i32 10000
