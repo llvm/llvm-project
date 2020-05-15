@@ -482,8 +482,7 @@ int main(int argc, const char *argv[]) {
       CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 2, nil, nil));
   NSDictionary *nscfDictionary = CFBridgingRelease(
       CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 4, nil, nil));
-  CFDictionaryRef cfDictionaryRef =
-      CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 3, nil, nil);
+  CFDictionaryRef cfDictionaryRef = (__bridge CFDictionaryRef)nsDictionary;
 
   NSAttributedString *attrString =
       [[NSAttributedString alloc] initWithString:@"hello world from foo"
@@ -542,6 +541,7 @@ int main(int argc, const char *argv[]) {
   [nsmutableset addObject:str4];
   NSSet *nscfSet =
       CFBridgingRelease(CFSetCreate(nil, (void *)cfValues, 2, nil));
+  CFSetRef cfSetRef = (__bridge CFSetRef)nscfSet;
 
   CFDataRef data_ref =
       CFDataCreate(kCFAllocatorDefault, [immutableData bytes], 5);
