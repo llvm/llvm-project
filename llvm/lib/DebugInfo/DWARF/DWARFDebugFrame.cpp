@@ -365,20 +365,7 @@ static void LLVM_ATTRIBUTE_UNUSED dumpDataAux(DataExtractor Data,
   errs() << "\n";
 }
 
-// This is a workaround for old compilers which do not allow
-// noreturn attribute usage in lambdas. Once the support for those
-// compilers are phased out, we can remove this and return back to
-// a ReportError lambda: [StartOffset](const char *ErrorMsg).
-static void LLVM_ATTRIBUTE_NORETURN ReportError(uint64_t StartOffset,
-                                                const char *ErrorMsg) {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS << format(ErrorMsg, StartOffset);
-  OS.flush();
-  report_fatal_error(Str);
-}
-
-void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
+Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
   uint64_t Offset = 0;
   DenseMap<uint64_t, CIE *> CIEs;
 
@@ -427,51 +414,55 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
         // Walk the augmentation string to get all the augmentation data.
         for (unsigned i = 0, e = AugmentationString.size(); i != e; ++i) {
           switch (AugmentationString[i]) {
-            default:
-              ReportError(
-                  StartOffset,
-                  "Unknown augmentation character in entry at %" PRIx64);
-            case 'L':
-              LSDAPointerEncoding = Data.getU8(&Offset);
-              break;
-            case 'P': {
-              if (Personality)
-                ReportError(StartOffset,
-                            "Duplicate personality in entry at %" PRIx64);
-              PersonalityEncoding = Data.getU8(&Offset);
-              Personality = Data.getEncodedPointer(
-                  &Offset, *PersonalityEncoding,
-                  EHFrameAddress ? EHFrameAddress + Offset : 0);
-              break;
-            }
-            case 'R':
-              FDEPointerEncoding = Data.getU8(&Offset);
-              break;
-            case 'S':
-              // Current frame is a signal trampoline.
-              break;
-            case 'z':
-              if (i)
-                ReportError(StartOffset,
-                            "'z' must be the first character at %" PRIx64);
-              // Parse the augmentation length first.  We only parse it if
-              // the string contains a 'z'.
-              AugmentationLength = Data.getULEB128(&Offset);
-              StartAugmentationOffset = Offset;
-              EndAugmentationOffset = Offset + *AugmentationLength;
-              break;
-            case 'B':
-              // B-Key is used for signing functions associated with this
-              // augmentation string
-              break;
+          default:
+            return createStringError(
+                errc::invalid_argument,
+                "unknown augmentation character in entry at 0x%" PRIx64,
+                StartOffset);
+          case 'L':
+            LSDAPointerEncoding = Data.getU8(&Offset);
+            break;
+          case 'P': {
+            if (Personality)
+              return createStringError(
+                  errc::invalid_argument,
+                  "duplicate personality in entry at 0x%" PRIx64, StartOffset);
+            PersonalityEncoding = Data.getU8(&Offset);
+            Personality = Data.getEncodedPointer(
+                &Offset, *PersonalityEncoding,
+                EHFrameAddress ? EHFrameAddress + Offset : 0);
+            break;
+          }
+          case 'R':
+            FDEPointerEncoding = Data.getU8(&Offset);
+            break;
+          case 'S':
+            // Current frame is a signal trampoline.
+            break;
+          case 'z':
+            if (i)
+              return createStringError(
+                  errc::invalid_argument,
+                  "'z' must be the first character at 0x%" PRIx64, StartOffset);
+            // Parse the augmentation length first.  We only parse it if
+            // the string contains a 'z'.
+            AugmentationLength = Data.getULEB128(&Offset);
+            StartAugmentationOffset = Offset;
+            EndAugmentationOffset = Offset + *AugmentationLength;
+            break;
+          case 'B':
+            // B-Key is used for signing functions associated with this
+            // augmentation string
+            break;
           }
         }
 
         if (AugmentationLength.hasValue()) {
           if (Offset != EndAugmentationOffset)
-            ReportError(StartOffset,
-                        "Parsing augmentation data at %" PRIx64 " failed");
-
+            return createStringError(errc::invalid_argument,
+                                     "parsing augmentation data at 0x%" PRIx64
+                                     " failed",
+                                     StartOffset);
           AugmentationData = Data.getData().slice(StartAugmentationOffset,
                                                   EndAugmentationOffset);
         }
@@ -496,9 +487,10 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       if (IsEH) {
         // The address size is encoded in the CIE we reference.
         if (!Cie)
-          ReportError(StartOffset, "Parsing FDE data at %" PRIx64
-                                   " failed due to missing CIE");
-
+          return createStringError(errc::invalid_argument,
+                                   "parsing FDE data at 0x%" PRIx64
+                                   " failed due to missing CIE",
+                                   StartOffset);
         if (auto Val = Data.getEncodedPointer(
                 &Offset, Cie->getFDEPointerEncoding(),
                 EHFrameAddress ? EHFrameAddress + Offset : 0)) {
@@ -524,8 +516,10 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
           }
 
           if (Offset != EndAugmentationOffset)
-            ReportError(StartOffset,
-                        "Parsing augmentation data at %" PRIx64 " failed");
+            return createStringError(errc::invalid_argument,
+                                     "parsing augmentation data at 0x%" PRIx64
+                                     " failed",
+                                     StartOffset);
         }
       } else {
         InitialLocation = Data.getRelocatedAddress(&Offset);
@@ -538,14 +532,16 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     }
 
     if (Error E =
-            Entries.back()->cfis().parse(Data, &Offset, EndStructureOffset)) {
-      report_fatal_error(toString(std::move(E)));
-    }
+            Entries.back()->cfis().parse(Data, &Offset, EndStructureOffset))
+      return E;
 
     if (Offset != EndStructureOffset)
-      ReportError(StartOffset,
-                  "Parsing entry instructions at %" PRIx64 " failed");
+      return createStringError(
+          errc::invalid_argument,
+          "parsing entry instructions at 0x%" PRIx64 " failed", StartOffset);
   }
+
+  return Error::success();
 }
 
 FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
