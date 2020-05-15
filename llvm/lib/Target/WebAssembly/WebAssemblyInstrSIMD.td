@@ -58,8 +58,7 @@ def : LoadPatGlobalAddrOffOnly<vec_t, load, LOAD_V128>;
 
 // vNxM.load_splat
 multiclass SIMDLoadSplat<string vec, bits<32> simdop> {
-  let mayLoad = 1, UseNamedOperandTable = 1,
-      Predicates = [HasUnimplementedSIMD128] in
+  let mayLoad = 1, UseNamedOperandTable = 1 in
   defm LOAD_SPLAT_#vec :
     SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
@@ -77,7 +76,6 @@ def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
 
-let Predicates = [HasUnimplementedSIMD128] in
 foreach args = [["v16i8", "v8x16"], ["v8i16", "v16x8"], ["v4i32", "v32x4"],
                 ["v2i64", "v64x2"], ["v4f32", "v32x4"], ["v2f64", "v64x2"]] in {
 def : LoadPatNoOffset<!cast<ValueType>(args[0]),
@@ -101,8 +99,7 @@ def : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
 
 // Load and extend
 multiclass SIMDLoadExtend<ValueType vec_t, string name, bits<32> simdop> {
-  let mayLoad = 1, UseNamedOperandTable = 1,
-      Predicates = [HasUnimplementedSIMD128] in {
+  let mayLoad = 1, UseNamedOperandTable = 1 in {
   defm LOAD_EXTEND_S_#vec_t :
     SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
@@ -120,7 +117,6 @@ defm "" : SIMDLoadExtend<v8i16, "i16x8.load8x8", 1>;
 defm "" : SIMDLoadExtend<v4i32, "i32x4.load16x4", 3>;
 defm "" : SIMDLoadExtend<v2i64, "i64x2.load32x2", 5>;
 
-let Predicates = [HasUnimplementedSIMD128] in
 foreach types = [[v8i16, i8], [v4i32, i16], [v2i64, i32]] in
 foreach exts = [["sextloadv", "_S"],
                 ["zextloadv", "_U"],
@@ -273,7 +269,6 @@ def : Pat<(vec_t (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
 // Swizzle lanes: v8x16.swizzle
 def wasm_swizzle_t : SDTypeProfile<1, 2, []>;
 def wasm_swizzle : SDNode<"WebAssemblyISD::SWIZZLE", wasm_swizzle_t>;
-let Predicates = [HasUnimplementedSIMD128] in
 defm SWIZZLE :
   SIMD_I<(outs V128:$dst), (ins V128:$src, V128:$mask), (outs), (ins),
          [(set (v16i8 V128:$dst),
@@ -517,7 +512,7 @@ multiclass SIMDUnary<ValueType vec_t, string vec, SDNode node, string name,
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64] in
 defm NOT: SIMDUnary<vec_t, "v128", vnot, "not", 77>;
 
-// Bitwise logic: v128.and / v128.andnot / v128.or / v128.xor
+// Bitwise logic: v128.and / v128.or / v128.xor
 let isCommutable = 1 in {
 defm AND : SIMDBitwise<and, "and", 78>;
 defm OR : SIMDBitwise<or, "or", 80>;
@@ -526,7 +521,6 @@ defm XOR : SIMDBitwise<xor, "xor", 81>;
 
 // Bitwise logic: v128.andnot
 def andnot : PatFrag<(ops node:$left, node:$right), (and $left, (vnot $right))>;
-let Predicates = [HasUnimplementedSIMD128] in
 defm ANDNOT : SIMDBitwise<andnot, "andnot", 79>;
 
 // Bitwise select: v128.bitselect
