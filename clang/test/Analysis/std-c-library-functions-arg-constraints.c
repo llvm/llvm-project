@@ -64,7 +64,7 @@ void test_alnum_symbolic2(int x) {
 
 typedef struct FILE FILE;
 typedef typeof(sizeof(int)) size_t;
-size_t fread(void *restrict, size_t, size_t, FILE *);
+size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 void test_notnull_concrete(FILE *fp) {
   fread(0, sizeof(int), 10, fp); // \
   // report-warning{{Function argument constraint is not satisfied}} \
