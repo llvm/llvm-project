@@ -24,7 +24,6 @@
 //   — remove_pointer_t<decltype(data(cont))>(*)[] is convertible to ElementType(*)[].
 //
 
-
 #include <span>
 #include <cassert>
 #include <deque>
