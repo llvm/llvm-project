@@ -111,9 +111,6 @@ if (UNIX)
     -fno-rtti -Wall -Wno-attributes -fms-extensions -fvisibility=hidden)
   # TODO: Confirm this is actually needed due to LLVM/Clang code
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS -fno-strict-aliasing)
-  if (CMAKE_BUILD_TYPE MATCHES Debug)
-    list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS -g)
-  endif()
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
     _GNU_SOURCE __STDC_LIMIT_MACROS __STDC_CONSTANT_MACROS)
   list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
