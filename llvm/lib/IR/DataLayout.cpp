@@ -559,7 +559,10 @@ Align DataLayout::getAlignmentInfo(AlignTypeEnum AlignType, uint32_t BitWidth,
     // with what clang and llvm-gcc do.
     unsigned Alignment =
         getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
-    Alignment *= cast<VectorType>(Ty)->getNumElements();
+    // We're only calculating a natural alignment, so it doesn't have to be
+    // based on the full size for scalable vectors. Using the minimum element
+    // count should be enough here.
+    Alignment *= cast<VectorType>(Ty)->getElementCount().Min;
     Alignment = PowerOf2Ceil(Alignment);
     return Align(Alignment);
    }

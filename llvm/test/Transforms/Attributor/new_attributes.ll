@@ -1,5 +1,3 @@
-; RUN: opt < %s -attributor -attributor-annotate-decl-cs  -attributor-max-iterations=0 -S | FileCheck %s
-; RUN: opt < %s -attributor -attributor-annotate-decl-cs  -attributor-max-iterations=1 -S | FileCheck %s
 ; RUN: opt < %s -attributor -attributor-annotate-decl-cs  -attributor-max-iterations=2 -S | FileCheck %s
 ; RUN: opt < %s -attributor -attributor-annotate-decl-cs  -attributor-max-iterations=3 -S | FileCheck %s
 ; RUN: opt < %s -attributor -attributor-annotate-decl-cs  -attributor-max-iterations=4 -S | FileCheck %s

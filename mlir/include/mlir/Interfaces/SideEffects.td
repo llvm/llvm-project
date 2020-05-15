@@ -17,6 +17,24 @@
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
+// Resource Bindings
+//===----------------------------------------------------------------------===//
+
+// A generic resource that can be attachted to a general base side effect.
+class Resource<string resourceName> {
+  /// The resource that the associated effect is being applied to.
+  string name = resourceName;
+}
+
+// An intrinsic resource that lives in the ::mlir::SideEffects namespace.
+class IntrinsicResource<string resourceName> :
+  Resource<!strconcat("::mlir::SideEffects::", resourceName)> {
+}
+
+// A link to the DefaultResource class.
+def DefaultResource : IntrinsicResource<"DefaultResource">;
+
+//===----------------------------------------------------------------------===//
 // EffectOpInterface
 //===----------------------------------------------------------------------===//
 
@@ -114,7 +132,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
 // This class is the general base side effect class. This is used by derived
 // effect interfaces to define their effects.
 class SideEffect<EffectOpInterfaceBase interface, string effectName,
-                 string resourceName> : OpVariableDecorator {
+                 Resource resourceReference> : OpVariableDecorator {
   /// The name of the base effects class.
   string baseEffectName = interface.baseEffectName;
 
@@ -125,7 +143,7 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
   string effect = effectName;
 
   /// The resource that the effect is being applied to.
-  string resource = resourceName;
+  string resource = resourceReference.name;
 }
 
 // This class is the base used for specifying effects applied to an operation.
@@ -159,8 +177,8 @@ def MemoryEffectsOpInterface
 }
 
 // The base class for defining specific memory effects.
-class MemoryEffect<string effectName, string resourceName>
-  : SideEffect<MemoryEffectsOpInterface, effectName, resourceName>;
+class MemoryEffect<string effectName, Resource resource>
+  : SideEffect<MemoryEffectsOpInterface, effectName, resource>;
 
 // This class represents the trait for memory effects that may be placed on
 // operations.
@@ -173,30 +191,30 @@ class MemoryEffects<list<MemoryEffect> effects = []>
 // The following effect indicates that the operation allocates from some
 // resource. An 'allocate' effect implies only allocation of the resource, and
 // not any visible mutation or dereference.
-class MemAlloc<string resourceName>
-  : MemoryEffect<"MemoryEffects::Allocate", resourceName>;
-def MemAlloc : MemAlloc<"">;
+class MemAlloc<Resource resource>
+  : MemoryEffect<"MemoryEffects::Allocate", resource>;
+def MemAlloc : MemAlloc<DefaultResource>;
 
 // The following effect indicates that the operation frees some resource that
 // has been allocated. A 'free' effect implies only de-allocation of the
 // resource, and not any visible allocation, mutation or dereference.
-class MemFree<string resourceName>
-  : MemoryEffect<"MemoryEffects::Free", resourceName>;
-def MemFree : MemFree<"">;
+class MemFree<Resource resource>
+  : MemoryEffect<"MemoryEffects::Free", resource>;
+def MemFree : MemFree<DefaultResource>;
 
 // The following effect indicates that the operation reads from some
 // resource. A 'read' effect implies only dereferencing of the resource, and
 // not any visible mutation.
-class MemRead<string resourceName>
-  : MemoryEffect<"MemoryEffects::Read", resourceName>;
-def MemRead : MemRead<"">;
+class MemRead<Resource resource>
+  : MemoryEffect<"MemoryEffects::Read", resource>;
+def MemRead : MemRead<DefaultResource>;
 
 // The following effect indicates that the operation writes to some
 // resource. A 'write' effect implies only mutating a resource, and not any
 // visible dereference or read.
-class MemWrite<string resourceName>
-  : MemoryEffect<"MemoryEffects::Write", resourceName>;
-def MemWrite : MemWrite<"">;
+class MemWrite<Resource resource>
+  : MemoryEffect<"MemoryEffects::Write", resource>;
+def MemWrite : MemWrite<DefaultResource>;
 
 //===----------------------------------------------------------------------===//
 // Effect Traits

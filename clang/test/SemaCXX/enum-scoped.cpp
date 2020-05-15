@@ -102,6 +102,7 @@ enum : long {
 };
 
 enum : long x; // expected-error{{unnamed enumeration must be a definition}} \
+// expected-warning{{only permitted as a standalone declaration}} \
 // expected-warning{{declaration does not declare anything}}
 
 void PR9333() {

@@ -17,16 +17,16 @@
 #ifndef LLVM_UTILS_TABLEGEN_DFAEMITTER_H
 #define LLVM_UTILS_TABLEGEN_DFAEMITTER_H
 
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/UniqueVector.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Record.h"
+#include <map>
 #include <set>
-#include <unordered_map>
 
 namespace llvm {
 
 class raw_ostream;
+class StringRef;
+
 /// Construct a deterministic finite state automaton from possible
 /// nondeterministic state and transition data.
 ///

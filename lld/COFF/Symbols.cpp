@@ -56,8 +56,8 @@ void Symbol::computeName() {
   assert(nameData == nullptr &&
          "should only compute the name once for DefinedCOFF symbols");
   auto *d = cast<DefinedCOFF>(this);
-  StringRef nameStr;
-  cast<ObjFile>(d->file)->getCOFFObj()->getSymbolName(d->sym, nameStr);
+  StringRef nameStr =
+      check(cast<ObjFile>(d->file)->getCOFFObj()->getSymbolName(d->sym));
   nameData = nameStr.data();
   nameSize = nameStr.size();
   assert(nameSize == nameStr.size() && "name length truncated");

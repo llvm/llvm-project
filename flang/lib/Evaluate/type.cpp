@@ -31,13 +31,8 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
       }
     }
   }
-  if (details.IsAssumedShape() || details.IsDeferredShape() ||
-      details.IsAssumedRank()) {
-    return true;
-  }
-  // TODO: Explicit shape component array dependent on length parameter
   // TODO: Automatic (adjustable) arrays - are they descriptors?
-  return false;
+  return !details.shape().empty() && !details.shape().IsConstantShape();
 }
 
 static bool IsDescriptor(const ProcEntityDetails &details) {

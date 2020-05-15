@@ -66,6 +66,10 @@ static cl::opt<int> ProfileSummaryColdCount(
     cl::desc("A fixed cold count that overrides the count derived from"
              " profile-summary-cutoff-cold"));
 
+static cl::opt<bool> PartialProfile(
+    "partial-profile", cl::Hidden, cl::init(false),
+    cl::desc("Specify the current profile is used as a partial profile."));
+
 // Find the summary entry for a desired percentile of counts.
 static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
                                                         uint64_t Percentile) {
@@ -190,6 +194,11 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
     if (!isColdBlock(&BB, &BFI))
       return false;
   return true;
+}
+
+bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) {
+  assert(hasPartialSampleProfile() && "Expect partial sample profile");
+  return !F.getEntryCount().hasValue();
 }
 
 template<bool isHot>
@@ -397,6 +406,12 @@ bool ProfileSummaryInfo::isColdCallSite(const CallBase &CB,
   // In SamplePGO, if the caller has been sampled, and there is no profile
   // annotated on the callsite, we consider the callsite as cold.
   return hasSampleProfile() && CB.getCaller()->hasProfileData();
+}
+
+bool ProfileSummaryInfo::hasPartialSampleProfile() {
+  return hasProfileSummary() &&
+         Summary->getKind() == ProfileSummary::PSK_Sample &&
+         (PartialProfile || Summary->isPartialProfile());
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

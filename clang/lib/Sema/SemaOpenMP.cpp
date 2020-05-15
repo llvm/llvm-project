@@ -2908,15 +2908,14 @@ Sema::CheckOMPThreadPrivateDecl(SourceLocation Loc, ArrayRef<Expr *> VarList) {
 static OMPAllocateDeclAttr::AllocatorTypeTy
 getAllocatorKind(Sema &S, DSAStackTy *Stack, Expr *Allocator) {
   if (!Allocator)
-    return OMPAllocateDeclAttr::OMPDefaultMemAlloc;
+    return OMPAllocateDeclAttr::OMPNullMemAlloc;
   if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
       Allocator->isInstantiationDependent() ||
       Allocator->containsUnexpandedParameterPack())
     return OMPAllocateDeclAttr::OMPUserDefinedMemAlloc;
   auto AllocatorKindRes = OMPAllocateDeclAttr::OMPUserDefinedMemAlloc;
   const Expr *AE = Allocator->IgnoreParenImpCasts();
-  for (int I = OMPAllocateDeclAttr::OMPDefaultMemAlloc;
-       I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
+  for (int I = 0; I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
     auto AllocatorKind = static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(I);
     const Expr *DefAllocator = Stack->getAllocator(AllocatorKind);
     llvm::FoldingSetNodeID AEId, DAEId;
@@ -12505,8 +12504,7 @@ static bool findOMPAllocatorHandleT(Sema &S, SourceLocation Loc,
     return true;
   // Build the predefined allocator expressions.
   bool ErrorFound = false;
-  for (int I = OMPAllocateDeclAttr::OMPDefaultMemAlloc;
-       I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
+  for (int I = 0; I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
     auto AllocatorKind = static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(I);
     StringRef Allocator =
         OMPAllocateDeclAttr::ConvertAllocatorTypeTyToStr(AllocatorKind);

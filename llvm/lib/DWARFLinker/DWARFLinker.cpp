@@ -1008,7 +1008,8 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
     DWARFUnit &OrigUnit = Unit.getOrigUnit();
     DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
                        IsLittleEndian, OrigUnit.getAddressByteSize());
-    DWARFExpression Expr(Data, OrigUnit.getAddressByteSize());
+    DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
+                         OrigUnit.getFormParams().Format);
     cloneExpression(Data, Expr, File, Unit, Buffer);
     Bytes = Buffer;
   }
@@ -1344,6 +1345,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                                           std::numeric_limits<uint64_t>::max());
     AttrInfo.OrigCallReturnPc =
         dwarf::toAddress(InputDIE.find(dwarf::DW_AT_call_return_pc), 0);
+    AttrInfo.OrigCallPc =
+        dwarf::toAddress(InputDIE.find(dwarf::DW_AT_call_pc), 0);
   }
 
   // Reset the Offset to 0 as we will be working on the local copy of
@@ -2132,7 +2135,8 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
         DataExtractor Data(Bytes, IsLittleEndian,
                            OrigUnit.getAddressByteSize());
         cloneExpression(Data,
-                        DWARFExpression(Data, OrigUnit.getAddressByteSize()),
+                        DWARFExpression(Data, OrigUnit.getAddressByteSize(),
+                                        OrigUnit.getFormParams().Format),
                         File, *CurrentUnit, Buffer);
       };
       Emitter->emitLocationsForUnit(*CurrentUnit, DwarfContext, ProcessExpr);

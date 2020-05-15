@@ -98,7 +98,7 @@ std::unique_ptr<llvm::Module> mlir::translateModuleToROCDLIR(Operation *m) {
 }
 
 namespace mlir {
-void registerToROCLDIRTranslation() {
+void registerToROCDLIRTranslation() {
   TranslateFromMLIRRegistration registration(
       "mlir-to-rocdlir", [](ModuleOp module, raw_ostream &output) {
         auto llvmModule = mlir::translateModuleToROCDLIR(module);

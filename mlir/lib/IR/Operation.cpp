@@ -70,9 +70,9 @@ Operation *Operation::create(Location location, OperationName name,
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
-  return Operation::create(
-      state.location, state.name, state.types, state.operands,
-      MutableDictionaryAttr(state.attributes), state.successors, state.regions);
+  return Operation::create(state.location, state.name, state.types,
+                           state.operands, state.attributes, state.successors,
+                           state.regions);
 }
 
 /// Create a new Operation with the specific fields.
@@ -490,6 +490,20 @@ void Operation::moveBefore(Block *block,
                            llvm::iplist<Operation>::iterator iterator) {
   block->getOperations().splice(iterator, getBlock()->getOperations(),
                                 getIterator());
+}
+
+/// Unlink this operation from its current block and insert it right after
+/// `existingOp` which may be in the same or another block in the same function.
+void Operation::moveAfter(Operation *existingOp) {
+  moveAfter(existingOp->getBlock(), existingOp->getIterator());
+}
+
+/// Unlink this operation from its current block and insert it right after
+/// `iterator` in the specified block.
+void Operation::moveAfter(Block *block,
+                          llvm::iplist<Operation>::iterator iterator) {
+  assert(iterator != block->end() && "cannot move after end of block");
+  moveBefore(&*std::next(iterator));
 }
 
 /// This drops all operand uses from this operation, which is an essential

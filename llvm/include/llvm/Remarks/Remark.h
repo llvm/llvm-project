@@ -14,8 +14,8 @@
 #define LLVM_REMARKS_REMARK_H
 
 #include "llvm-c/Remarks.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include <string>

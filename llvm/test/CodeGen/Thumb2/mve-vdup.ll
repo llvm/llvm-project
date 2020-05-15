@@ -162,7 +162,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vduplane_i32(<4 x i32> %src) {
 ; CHECK-LABEL: vduplane_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 r0, q0[3]
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vdup.32 q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -206,7 +206,7 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @vduplane_f32(<4 x float> %src) {
 ; CHECK-LABEL: vduplane_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 r0, q0[3]
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vdup.32 q0, r0
 ; CHECK-NEXT:    bx lr
 entry:

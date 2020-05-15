@@ -328,6 +328,7 @@ public:
   BoolAttr falseAttr, trueAttr;
   UnitAttr unitAttr;
   UnknownLoc unknownLocAttr;
+  DictionaryAttr emptyDictionaryAttr;
 
 public:
   MLIRContextImpl() : identifiers(identifierAllocator) {}
@@ -388,6 +389,9 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   /// Unknown Location Attribute.
   impl->unknownLocAttr = AttributeUniquer::get<UnknownLoc>(
       this, StandardAttributes::UnknownLocation);
+  /// The empty dictionary attribute.
+  impl->emptyDictionaryAttr = AttributeUniquer::get<DictionaryAttr>(
+      this, StandardAttributes::Dictionary, ArrayRef<NamedAttribute>());
 }
 
 MLIRContext::~MLIRContext() {}
@@ -740,6 +744,11 @@ UnitAttr UnitAttr::get(MLIRContext *context) {
 
 Location UnknownLoc::get(MLIRContext *context) {
   return context->getImpl().unknownLocAttr;
+}
+
+/// Return empty dictionary.
+DictionaryAttr DictionaryAttr::getEmpty(MLIRContext *context) {
+  return context->getImpl().emptyDictionaryAttr;
 }
 
 //===----------------------------------------------------------------------===//

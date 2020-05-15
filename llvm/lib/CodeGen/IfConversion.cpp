@@ -2243,10 +2243,10 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
 }
 
 /// Move all instructions from FromBB to the end of ToBB.  This will leave
-/// FromBB as an empty block, so remove all of its successor edges except for
-/// the fall-through edge.  If AddEdges is true, i.e., when FromBBI's branch is
-/// being moved, add those successor edges to ToBBI and remove the old edge
-/// from ToBBI to FromBBI.
+/// FromBB as an empty block, so remove all of its successor edges and move it
+/// to the end of the function.  If AddEdges is true, i.e., when FromBBI's
+/// branch is being moved, add those successor edges to ToBBI and remove the old
+/// edge from ToBBI to FromBBI.
 void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   MachineBasicBlock &FromMBB = *FromBBI.BB;
   assert(!FromMBB.hasAddressTaken() &&
@@ -2286,8 +2286,10 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
 
   for (MachineBasicBlock *Succ : FromSuccs) {
     // Fallthrough edge can't be transferred.
-    if (Succ == FallThrough)
+    if (Succ == FallThrough) {
+      FromMBB.removeSuccessor(Succ);
       continue;
+    }
 
     auto NewProb = BranchProbability::getZero();
     if (AddEdges) {

@@ -185,6 +185,15 @@ public:
   /// `iterator` in the specified block.
   void moveBefore(Block *block, llvm::iplist<Operation>::iterator iterator);
 
+  /// Unlink this operation from its current block and insert it right after
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveAfter(Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `iterator` in the specified block.
+  void moveAfter(Block *block, llvm::iplist<Operation>::iterator iterator);
+
   /// Given an operation 'other' that is within the same parent block, return
   /// whether the current operation is before 'other' in the operation list
   /// of the parent block.
@@ -294,6 +303,11 @@ public:
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() { return attrs.getAttrs(); }
 
+  /// Return all of the attributes on this operation as a DictionaryAttr.
+  DictionaryAttr getAttrDictionary() {
+    return attrs.getDictionary(getContext());
+  }
+
   /// Return mutable container of all the attributes on this operation.
   MutableDictionaryAttr &getMutableAttrDict() { return attrs; }
 
@@ -325,6 +339,9 @@ public:
   /// value indicates whether the attribute was present or not.
   MutableDictionaryAttr::RemoveResult removeAttr(Identifier name) {
     return attrs.remove(name);
+  }
+  MutableDictionaryAttr::RemoveResult removeAttr(StringRef name) {
+    return attrs.remove(Identifier::get(name, getContext()));
   }
 
   /// A utility iterator that filters out non-dialect attributes.

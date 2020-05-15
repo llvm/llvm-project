@@ -4443,14 +4443,20 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
      TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
   SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
 
-  // Enum definitions should not be parsed in a trailing-return-type.
-  bool AllowDeclaration = DSC != DeclSpecContext::DSC_trailing;
+  // Determine whether this declaration is permitted to have an enum-base.
+  AllowDefiningTypeSpec AllowEnumSpecifier =
+      isDefiningTypeSpecifierContext(DSC);
+  bool CanBeOpaqueEnumDeclaration =
+      DS.isEmpty() && isOpaqueEnumDeclarationContext(DSC);
+  bool CanHaveEnumBase = (getLangOpts().CPlusPlus11 || getLangOpts().ObjC ||
+                          getLangOpts().MicrosoftExt) &&
+                         (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes ||
+                          CanBeOpaqueEnumDeclaration);
 
   CXXScopeSpec &SS = DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
-    // "enum foo : bar;" is not a potential typo for "enum foo::bar;"
-    // if a fixed underlying type is allowed.
-    ColonProtectionRAIIObject X(*this, AllowDeclaration);
+    // "enum foo : bar;" is not a potential typo for "enum foo::bar;".
+    ColonProtectionRAIIObject X(*this);
 
     CXXScopeSpec Spec;
     if (ParseOptionalCXXScopeSpecifier(Spec, /*ObjectType=*/nullptr,
@@ -4471,9 +4477,9 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     SS = Spec;
   }
 
-  // Must have either 'enum name' or 'enum {...}'.
+  // Must have either 'enum name' or 'enum {...}' or (rarely) 'enum : T { ... }'.
   if (Tok.isNot(tok::identifier) && Tok.isNot(tok::l_brace) &&
-      !(AllowDeclaration && Tok.is(tok::colon))) {
+      Tok.isNot(tok::colon)) {
     Diag(Tok, diag::err_expected_either) << tok::identifier << tok::l_brace;
 
     // Skip the rest of this declarator, up until the comma or semicolon.
@@ -4503,78 +4509,61 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     diagsFromTag.done();
 
   TypeResult BaseType;
+  SourceRange BaseRange;
+
+  bool CanBeBitfield = getCurScope()->getFlags() & Scope::ClassScope;
 
   // Parse the fixed underlying type.
-  bool CanBeBitfield = getCurScope()->getFlags() & Scope::ClassScope;
-  if (AllowDeclaration && Tok.is(tok::colon)) {
-    bool PossibleBitfield = false;
-    if (CanBeBitfield) {
-      // If we're in class scope, this can either be an enum declaration with
-      // an underlying type, or a declaration of a bitfield member. We try to
-      // use a simple disambiguation scheme first to catch the common cases
-      // (integer literal, sizeof); if it's still ambiguous, we then consider
-      // anything that's a simple-type-specifier followed by '(' as an
-      // expression. This suffices because function types are not valid
-      // underlying types anyway.
-      EnterExpressionEvaluationContext Unevaluated(
-          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      TPResult TPR = isExpressionOrTypeSpecifierSimple(NextToken().getKind());
-      // If the next token starts an expression, we know we're parsing a
-      // bit-field. This is the common case.
-      if (TPR == TPResult::True)
-        PossibleBitfield = true;
-      // If the next token starts a type-specifier-seq, it may be either a
-      // a fixed underlying type or the start of a function-style cast in C++;
-      // lookahead one more token to see if it's obvious that we have a
-      // fixed underlying type.
-      else if (TPR == TPResult::False &&
-               GetLookAheadToken(2).getKind() == tok::semi) {
-        // Consume the ':'.
-        ConsumeToken();
-      } else {
-        // We have the start of a type-specifier-seq, so we have to perform
-        // tentative parsing to determine whether we have an expression or a
-        // type.
-        TentativeParsingAction TPA(*this);
+  if (Tok.is(tok::colon)) {
+    // This might be an enum-base or part of some unrelated enclosing context.
+    //
+    // 'enum E : base' is permitted in two circumstances:
+    //
+    // 1) As a defining-type-specifier, when followed by '{'.
+    // 2) As the sole constituent of a complete declaration -- when DS is empty
+    //    and the next token is ';'.
+    //
+    // The restriction to defining-type-specifiers is important to allow parsing
+    //   a ? new enum E : int{}
+    //   _Generic(a, enum E : int{})
+    // properly.
+    //
+    // One additional consideration applies:
+    //
+    // C++ [dcl.enum]p1:
+    //   A ':' following "enum nested-name-specifier[opt] identifier" within
+    //   the decl-specifier-seq of a member-declaration is parsed as part of
+    //   an enum-base.
+    //
+    // Other lamguage modes supporting enumerations with fixed underlying types
+    // do not have clear rules on this, so we disambiguate to determine whether
+    // the tokens form a bit-field width or an enum-base.
 
-        // Consume the ':'.
-        ConsumeToken();
+    if (CanBeBitfield && !isEnumBase(CanBeOpaqueEnumDeclaration)) {
+      // Outside C++11, do not interpret the tokens as an enum-base if they do
+      // not make sense as one. In C++11, it's an error if this happens.
+      if (getLangOpts().CPlusPlus11 && !getLangOpts().ObjC &&
+          !getLangOpts().MicrosoftExt)
+        Diag(Tok.getLocation(), diag::err_anonymous_enum_bitfield);
+    } else if (CanHaveEnumBase || !ColonIsSacred) {
+      SourceLocation ColonLoc = ConsumeToken();
 
-        // If we see a type specifier followed by an open-brace, we have an
-        // ambiguity between an underlying type and a C++11 braced
-        // function-style cast. Resolve this by always treating it as an
-        // underlying type.
-        // FIXME: The standard is not entirely clear on how to disambiguate in
-        // this case.
-        if ((getLangOpts().CPlusPlus &&
-             isCXXDeclarationSpecifier(TPResult::True) != TPResult::True) ||
-            (!getLangOpts().CPlusPlus && !isDeclarationSpecifier(true))) {
-          // We'll parse this as a bitfield later.
-          PossibleBitfield = true;
-          TPA.Revert();
-        } else {
-          // We have a type-specifier-seq.
-          TPA.Commit();
-        }
-      }
-    } else {
-      // Consume the ':'.
-      ConsumeToken();
-    }
-
-    if (!PossibleBitfield) {
-      SourceRange Range;
-      BaseType = ParseTypeName(&Range);
+      BaseType = ParseTypeName(&BaseRange);
+      BaseRange.setBegin(ColonLoc);
 
       if (!getLangOpts().ObjC) {
         if (getLangOpts().CPlusPlus11)
-          Diag(StartLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type);
+          Diag(ColonLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type)
+              << BaseRange;
         else if (getLangOpts().CPlusPlus)
-          Diag(StartLoc, diag::ext_cxx11_enum_fixed_underlying_type);
+          Diag(ColonLoc, diag::ext_cxx11_enum_fixed_underlying_type)
+              << BaseRange;
         else if (getLangOpts().MicrosoftExt)
-          Diag(StartLoc, diag::ext_ms_c_enum_fixed_underlying_type);
+          Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
+              << BaseRange;
         else
-          Diag(StartLoc, diag::ext_clang_c_enum_fixed_underlying_type);
+          Diag(ColonLoc, diag::ext_clang_c_enum_fixed_underlying_type)
+              << BaseRange;
       }
     }
   }
@@ -4590,9 +4579,9 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   // enum foo {..};  void bar() { enum foo x; }  <- use of old foo.
   //
   Sema::TagUseKind TUK;
-  if (!AllowDeclaration) {
+  if (AllowEnumSpecifier == AllowDefiningTypeSpec::No)
     TUK = Sema::TUK_Reference;
-  } else if (Tok.is(tok::l_brace)) {
+  else if (Tok.is(tok::l_brace)) {
     if (DS.isFriendSpecified()) {
       Diag(Tok.getLocation(), diag::err_friend_decl_defines_type)
         << SourceRange(DS.getFriendSpecLoc());
@@ -4621,6 +4610,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   // diagnostics before, just merge them into the current pool.
   if (TUK == Sema::TUK_Reference && shouldDelayDiagsInTag) {
     diagsFromTag.redelay();
+  }
+
+  // A C++11 enum-base can only appear as part of an enum definition or an
+  // opaque-enum-declaration. MSVC and ObjC permit an enum-base anywhere.
+  if (BaseType.isUsable() && TUK != Sema::TUK_Definition &&
+      !getLangOpts().ObjC && !getLangOpts().MicrosoftExt &&
+      !(CanBeOpaqueEnumDeclaration && Tok.is(tok::semi))) {
+    Diag(BaseRange.getBegin(), diag::ext_enum_base_in_type_specifier)
+        << (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes) << BaseRange;
   }
 
   MultiTemplateParamsArg TParams;

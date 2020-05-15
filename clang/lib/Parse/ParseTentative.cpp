@@ -428,6 +428,35 @@ struct Parser::ConditionDeclarationOrInitStatementState {
   }
 };
 
+bool Parser::isEnumBase(bool AllowSemi) {
+  assert(Tok.is(tok::colon) && "should be looking at the ':'");
+
+  RevertingTentativeParsingAction PA(*this);
+  ConsumeToken();
+
+  bool InvalidAsDeclSpec = false;
+  TPResult R = isCXXDeclarationSpecifier(/*BracedCastResult*/ TPResult::True,
+                                         &InvalidAsDeclSpec);
+  if (R == TPResult::Ambiguous) {
+    // We either have a decl-specifier followed by '(' or an undeclared
+    // identifier.
+    if (TryConsumeDeclarationSpecifier() == TPResult::Error)
+      return true;
+
+    // If we get to the end of the enum-base, we hit either a '{' or a ';'.
+    // Don't bother checking the enumerator-list.
+    if (Tok.is(tok::colon) || (AllowSemi && Tok.is(tok::semi)))
+      return true;
+
+    // A second decl-specifier unambiguously indicatges an enum-base.
+    // The grammar permits an arbitrary type-name here, but we need an
+    // integral type, so no declarator pieces could ever work.
+    R = isCXXDeclarationSpecifier(TPResult::True, &InvalidAsDeclSpec);
+  }
+
+  return R != TPResult::False;
+}
+
 /// Disambiguates between a declaration in a condition, a
 /// simple-declaration in an init-statement, and an expression for
 /// a condition of a if/switch statement.
@@ -1062,132 +1091,6 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
 
     if (TPR != TPResult::Ambiguous)
       return TPR;
-  }
-
-  return TPResult::Ambiguous;
-}
-
-Parser::TPResult
-Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
-  switch (Kind) {
-  // Obviously starts an expression.
-  case tok::numeric_constant:
-  case tok::char_constant:
-  case tok::wide_char_constant:
-  case tok::utf8_char_constant:
-  case tok::utf16_char_constant:
-  case tok::utf32_char_constant:
-  case tok::string_literal:
-  case tok::wide_string_literal:
-  case tok::utf8_string_literal:
-  case tok::utf16_string_literal:
-  case tok::utf32_string_literal:
-  case tok::l_square:
-  case tok::l_paren:
-  case tok::amp:
-  case tok::ampamp:
-  case tok::star:
-  case tok::plus:
-  case tok::plusplus:
-  case tok::minus:
-  case tok::minusminus:
-  case tok::tilde:
-  case tok::exclaim:
-  case tok::kw_sizeof:
-  case tok::kw___func__:
-  case tok::kw_const_cast:
-  case tok::kw_delete:
-  case tok::kw_dynamic_cast:
-  case tok::kw_false:
-  case tok::kw_new:
-  case tok::kw_operator:
-  case tok::kw_reinterpret_cast:
-  case tok::kw_static_cast:
-  case tok::kw_this:
-  case tok::kw_throw:
-  case tok::kw_true:
-  case tok::kw_typeid:
-  case tok::kw_alignof:
-  case tok::kw_noexcept:
-  case tok::kw_nullptr:
-  case tok::kw__Alignof:
-  case tok::kw___null:
-  case tok::kw___alignof:
-  case tok::kw___builtin_choose_expr:
-  case tok::kw___builtin_offsetof:
-  case tok::kw___builtin_va_arg:
-  case tok::kw___imag:
-  case tok::kw___real:
-  case tok::kw___FUNCTION__:
-  case tok::kw___FUNCDNAME__:
-  case tok::kw___FUNCSIG__:
-  case tok::kw_L__FUNCTION__:
-  case tok::kw_L__FUNCSIG__:
-  case tok::kw___PRETTY_FUNCTION__:
-  case tok::kw___uuidof:
-  case tok::kw___builtin_unique_stable_name:
-#define TYPE_TRAIT(N,Spelling,K) \
-  case tok::kw_##Spelling:
-#include "clang/Basic/TokenKinds.def"
-    return TPResult::True;
-
-  // Obviously starts a type-specifier-seq:
-  case tok::kw_char:
-  case tok::kw_const:
-  case tok::kw_double:
-  case tok::kw__Float16:
-  case tok::kw___float128:
-  case tok::kw_enum:
-  case tok::kw_half:
-  case tok::kw_float:
-  case tok::kw_int:
-  case tok::kw__ExtInt:
-  case tok::kw_long:
-  case tok::kw___int64:
-  case tok::kw___int128:
-  case tok::kw_restrict:
-  case tok::kw_short:
-  case tok::kw_signed:
-  case tok::kw_struct:
-  case tok::kw_union:
-  case tok::kw_unsigned:
-  case tok::kw_void:
-  case tok::kw_volatile:
-  case tok::kw__Bool:
-  case tok::kw__Complex:
-  case tok::kw_class:
-  case tok::kw_typename:
-  case tok::kw_wchar_t:
-  case tok::kw_char8_t:
-  case tok::kw_char16_t:
-  case tok::kw_char32_t:
-  case tok::kw__Decimal32:
-  case tok::kw__Decimal64:
-  case tok::kw__Decimal128:
-  case tok::kw___interface:
-  case tok::kw___thread:
-  case tok::kw_thread_local:
-  case tok::kw__Thread_local:
-  case tok::kw_typeof:
-  case tok::kw___underlying_type:
-  case tok::kw___cdecl:
-  case tok::kw___stdcall:
-  case tok::kw___fastcall:
-  case tok::kw___thiscall:
-  case tok::kw___regcall:
-  case tok::kw___vectorcall:
-  case tok::kw___unaligned:
-  case tok::kw___vector:
-  case tok::kw___pixel:
-  case tok::kw___bool:
-  case tok::kw__Atomic:
-#define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
-#include "clang/Basic/OpenCLImageTypes.def"
-  case tok::kw___unknown_anytype:
-    return TPResult::False;
-
-  default:
-    break;
   }
 
   return TPResult::Ambiguous;

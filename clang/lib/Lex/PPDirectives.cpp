@@ -1716,11 +1716,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 }
 
 Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
-    const DirectoryLookup *&CurDir, StringRef Filename,
+    const DirectoryLookup *&CurDir, StringRef& Filename,
     SourceLocation FilenameLoc, CharSourceRange FilenameRange,
     const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
     bool &IsMapped, const DirectoryLookup *LookupFrom,
-    const FileEntry *LookupFromFile, StringRef LookupFilename,
+    const FileEntry *LookupFromFile, StringRef& LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
   Optional<FileEntryRef> File = LookupFile(
@@ -1789,21 +1789,10 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       return Filename;
     };
     StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
-
-#ifndef _WIN32
-    // Normalize slashes when compiling with -fms-extensions on non-Windows.
-    // This is unnecessary on Windows since the filesystem there handles
-    // backslashes.
-    SmallString<128> NormalizedTypoCorrectionPath;
-    if (LangOpts.MicrosoftExt) {
-      NormalizedTypoCorrectionPath = TypoCorrectionName;
-      llvm::sys::path::native(NormalizedTypoCorrectionPath);
-      TypoCorrectionName = NormalizedTypoCorrectionPath;
-    }
-#endif
+    StringRef TypoCorrectionLookupName = CorrectTypoFilename(LookupFilename);
 
     Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc, TypoCorrectionName, isAngled, LookupFrom, LookupFromFile,
+        FilenameLoc, TypoCorrectionLookupName, isAngled, LookupFrom, LookupFromFile,
         CurDir, Callbacks ? &SearchPath : nullptr,
         Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
@@ -1818,6 +1807,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       // We found the file, so set the Filename to the name after typo
       // correction.
       Filename = TypoCorrectionName;
+      LookupFilename = TypoCorrectionLookupName;
       return File;
     }
   }
@@ -2101,9 +2091,39 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   if (CheckIncludePathPortability) {
     StringRef Name = LookupFilename;
+    StringRef NameWithoriginalSlashes = Filename;
+#if defined(_WIN32)
+    // Skip UNC prefix if present. (tryGetRealPathName() always
+    // returns a path with the prefix skipped.)
+    bool NameWasUNC = Name.consume_front("\\\\?\\");
+    NameWithoriginalSlashes.consume_front("\\\\?\\");
+#endif
     StringRef RealPathName = File->getFileEntry().tryGetRealPathName();
     SmallVector<StringRef, 16> Components(llvm::sys::path::begin(Name),
                                           llvm::sys::path::end(Name));
+#if defined(_WIN32)
+    // -Wnonportable-include-path is designed to diagnose includes using
+    // case even on systems with a case-insensitive file system.
+    // On Windows, RealPathName always starts with an upper-case drive
+    // letter for absolute paths, but Name might start with either
+    // case depending on if `cd c:\foo` or `cd C:\foo` was used in the shell.
+    // ("foo" will always have on-disk case, no matter which case was
+    // used in the cd command). To not emit this warning solely for
+    // the drive letter, whose case is dependent on if `cd` is used
+    // with upper- or lower-case drive letters, always consider the
+    // given drive letter case as correct for the purpose of this warning.
+    SmallString<128> FixedDriveRealPath;
+    if (llvm::sys::path::is_absolute(Name) &&
+        llvm::sys::path::is_absolute(RealPathName) &&
+        toLowercase(Name[0]) == toLowercase(RealPathName[0]) &&
+        isLowercase(Name[0]) != isLowercase(RealPathName[0])) {
+      assert(Components.size() >= 3 && "should have drive, backslash, name");
+      assert(Components[0].size() == 2 && "should start with drive");
+      assert(Components[0][1] == ':' && "should have colon");
+      FixedDriveRealPath = (Name.substr(0, 1) + RealPathName.substr(1)).str();
+      RealPathName = FixedDriveRealPath;
+    }
+#endif
 
     if (trySimplifyPath(Components, RealPathName)) {
       SmallString<128> Path;
@@ -2132,15 +2152,23 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
           continue;
 
         // Append the separator(s) the user used, or the close quote
-        if (Path.size() > Filename.size()) {
+        if (Path.size() > NameWithoriginalSlashes.size()) {
           Path.push_back(isAngled ? '>' : '"');
           continue;
         }
-        assert(IsSep(Filename[Path.size()-1]));
+        assert(IsSep(NameWithoriginalSlashes[Path.size()-1]));
         do
-          Path.push_back(Filename[Path.size()-1]);
-        while (Path.size() <= Filename.size() && IsSep(Filename[Path.size()-1]));
+          Path.push_back(NameWithoriginalSlashes[Path.size()-1]);
+        while (Path.size() <= NameWithoriginalSlashes.size() &&
+               IsSep(NameWithoriginalSlashes[Path.size()-1]));
       }
+
+#if defined(_WIN32)
+      // Restore UNC prefix if it was there.
+      if (NameWasUNC)
+        Path = (Path.substr(0, 1) + "\\\\?\\" + Path.substr(1)).str();
+#endif
+
       // For user files and known standard headers, issue a diagnostic.
       // For other system headers, don't. They can be controlled separately.
       auto DiagId =

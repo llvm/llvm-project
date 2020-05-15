@@ -64,7 +64,7 @@ public:
       else {
         errs() << "invalid argument " << BranchType.str()
                << " to -x86-align-branch=; each element must be one of: fused, "
-                  "jcc, jmp, call, ret, indirect.(plus separated)";
+                  "jcc, jmp, call, ret, indirect.(plus separated)\n";
       }
     }
   }

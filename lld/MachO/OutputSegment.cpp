@@ -40,7 +40,7 @@ size_t OutputSegment::numNonHiddenSections() const {
   size_t count = 0;
   for (const OutputSegment::SectionMapEntry &i : sections) {
     OutputSection *os = i.second;
-    count += (os->isHidden() ? 0 : 1);
+    count += (!os->isHidden() ? 1 : 0);
   }
   return count;
 }
@@ -68,6 +68,12 @@ OutputSection *OutputSegment::getOrCreateOutputSection(StringRef name) {
 
 void OutputSegment::sortOutputSections(OutputSegmentComparator *comparator) {
   llvm::stable_sort(sections, *comparator->sectionComparator(this));
+}
+
+void OutputSegment::removeUnneededSections() {
+  sections.remove_if([](const std::pair<StringRef, OutputSection *> &p) {
+    return !p.second->isNeeded();
+  });
 }
 
 OutputSegmentComparator::OutputSegmentComparator() {
@@ -138,9 +144,8 @@ void macho::sortOutputSegmentsAndSections() {
     seg->sortOutputSections(&comparator);
     for (auto &p : seg->getSections()) {
       OutputSection *section = p.second;
-      if (!section->isHidden()) {
+      if (!section->isHidden())
         section->index = ++sectionIndex;
-      }
     }
   }
 }

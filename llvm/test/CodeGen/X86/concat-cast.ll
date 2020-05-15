@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse4.1    | FileCheck %s --check-prefixes=CHECK,SSE,SSE4
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx       | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2      | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f   | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f   | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,AVX512F
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl  | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,AVX512VL
 
 define <4 x float> @sitofp_v4i32_v4f32(<2 x i32> %x, <2 x i32> %y) {
 ; SSE-LABEL: sitofp_v4i32_v4f32:
@@ -70,13 +71,19 @@ define <4 x float> @uitofp_v4i32_v4f32(<2 x i32> %x, <2 x i32> %y) {
 ; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: uitofp_v4i32_v4f32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: uitofp_v4i32_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: uitofp_v4i32_v4f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
   %s0 = uitofp <2 x i32> %x to <2 x float>
   %s1 = uitofp <2 x i32> %y to <2 x float>
   %r = shufflevector <2 x float> %s0, <2 x float> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -189,13 +196,19 @@ define <4 x i32> @fptoui_v4f32_v4i32(<2 x float> %x, <2 x float> %y) {
 ; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: fptoui_v4f32_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: fptoui_v4f32_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512F-NEXT:    vcvttps2udq %zmm0, %zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fptoui_v4f32_v4i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
   %s0 = fptoui <2 x float> %x to <2 x i32>
   %s1 = fptoui <2 x float> %y to <2 x i32>
   %r = shufflevector <2 x i32> %s0, <2 x i32> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -263,12 +276,18 @@ define <4 x double> @uitofp_v4i32_v4f64(<2 x i32> %x, <2 x i32> %y) {
 ; AVX2-NEXT:    vsubpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: uitofp_v4i32_v4f64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: uitofp_v4i32_v4f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: uitofp_v4i32_v4f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %ymm0
+; AVX512VL-NEXT:    retq
   %s0 = uitofp <2 x i32> %x to <2 x double>
   %s1 = uitofp <2 x i32> %y to <2 x double>
   %r = shufflevector <2 x double> %s0, <2 x double> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -376,14 +395,22 @@ define <4 x i32> @fptoui_v4f64_v4i32(<2 x double> %x, <2 x double> %y) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: fptoui_v4f64_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vcvttpd2udq %zmm0, %ymm0
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: fptoui_v4f64_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fptoui_v4f64_v4i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vcvttpd2udq %ymm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %s0 = fptoui <2 x double> %x to <2 x i32>
   %s1 = fptoui <2 x double> %y to <2 x i32>
   %r = shufflevector <2 x i32> %s0, <2 x i32> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -438,14 +465,21 @@ define <4 x float> @mismatch_tofp_v4i32_v4f32(<2 x i32> %x, <2 x i32> %y) {
 ; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: mismatch_tofp_v4i32_v4f32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; AVX512-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: mismatch_tofp_v4i32_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: mismatch_tofp_v4i32_v4f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-NEXT:    retq
   %s0 = uitofp <2 x i32> %x to <2 x float>
   %s1 = sitofp <2 x i32> %y to <2 x float>
   %r = shufflevector <2 x float> %s0, <2 x float> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -502,16 +536,26 @@ define <4 x float> @PR45794(<2 x i64> %x, <2 x i64> %y) {
 ; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: PR45794:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vpsraq $48, %zmm0, %zmm0
-; AVX512-NEXT:    vpsraq $48, %zmm1, %zmm1
-; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: PR45794:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vpsraq $48, %zmm0, %zmm0
+; AVX512F-NEXT:    vpsraq $48, %zmm1, %zmm1
+; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR45794:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsraq $48, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmovqd %ymm0, %xmm0
+; AVX512VL-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %a0 = ashr <2 x i64> %x, <i64 48, i64 48>
   %s0 = sitofp <2 x i64> %a0 to <2 x float>
   %a1 = ashr <2 x i64> %y, <i64 48, i64 48>

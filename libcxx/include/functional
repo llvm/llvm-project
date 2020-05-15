@@ -3050,14 +3050,14 @@ __search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
          forward_iterator_tag, forward_iterator_tag)
 {
     if (__first2 == __last2)
-        return make_pair(__first1, __first1);  // Everything matches an empty sequence
+        return _VSTD::make_pair(__first1, __first1);  // Everything matches an empty sequence
     while (true)
     {
         // Find first element in sequence 1 that matchs *__first2, with a mininum of loop checks
         while (true)
         {
             if (__first1 == __last1)  // return __last1 if no element matches *__first2
-                return make_pair(__last1, __last1);
+                return _VSTD::make_pair(__last1, __last1);
             if (__pred(*__first1, *__first2))
                 break;
             ++__first1;
@@ -3068,9 +3068,9 @@ __search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
         while (true)
         {
             if (++__m2 == __last2)  // If pattern exhausted, __first1 is the answer (works for 1 element pattern)
-                return make_pair(__first1, __m1);
+                return _VSTD::make_pair(__first1, __m1);
             if (++__m1 == __last1)  // Otherwise if source exhaused, pattern not found
-                return make_pair(__last1, __last1);
+                return _VSTD::make_pair(__last1, __last1);
             if (!__pred(*__m1, *__m2))  // if there is a mismatch, restart with a new __first1
             {
                 ++__first1;
@@ -3092,10 +3092,10 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
     // Take advantage of knowing source and pattern lengths.  Stop short when source is smaller than pattern
     const _D2 __len2 = __last2 - __first2;
     if (__len2 == 0)
-        return make_pair(__first1, __first1);
+        return _VSTD::make_pair(__first1, __first1);
     const _D1 __len1 = __last1 - __first1;
     if (__len1 < __len2)
-        return make_pair(__last1, __last1);
+        return _VSTD::make_pair(__last1, __last1);
     const _RandomAccessIterator1 __s = __last1 - (__len2 - 1);  // Start of pattern match can't go beyond here
 
     while (true)
@@ -3103,7 +3103,7 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
         while (true)
         {
             if (__first1 == __s)
-                return make_pair(__last1, __last1);
+                return _VSTD::make_pair(__last1, __last1);
             if (__pred(*__first1, *__first2))
                 break;
             ++__first1;
@@ -3114,7 +3114,7 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
          while (true)
          {
              if (++__m2 == __last2)
-                 return make_pair(__first1, __first1 + __len2);
+                 return _VSTD::make_pair(__first1, __first1 + __len2);
              ++__m1;          // no need to check range on __m1 because __s guarantees we have enough source
              if (!__pred(*__m1, *__m2))
              {

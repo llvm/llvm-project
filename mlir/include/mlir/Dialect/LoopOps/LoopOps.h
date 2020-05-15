@@ -24,8 +24,6 @@
 namespace mlir {
 namespace loop {
 
-class TerminatorOp;
-
 #include "mlir/Dialect/LoopOps/LoopOpsDialect.h.inc"
 
 #define GET_OP_CLASSES

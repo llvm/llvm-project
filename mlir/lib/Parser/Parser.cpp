@@ -275,7 +275,7 @@ public:
   Attribute parseAttribute(Type type = {});
 
   /// Parse an attribute dictionary.
-  ParseResult parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes);
+  ParseResult parseAttributeDict(NamedAttrList &attributes);
 
   /// Parse an extended attribute.
   Attribute parseExtendedAttr(Type type);
@@ -1569,10 +1569,10 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse a dictionary attribute.
   case Token::l_brace: {
-    SmallVector<NamedAttribute, 4> elements;
+    NamedAttrList elements;
     if (parseAttributeDict(elements))
       return nullptr;
-    return builder.getDictionaryAttr(elements);
+    return elements.getDictionary(getContext());
   }
 
   // Parse an extended attribute, i.e. alias or dialect attribute.
@@ -1671,8 +1671,7 @@ Attribute Parser::parseAttribute(Type type) {
 ///                    | `{` attribute-entry (`,` attribute-entry)* `}`
 ///   attribute-entry ::= (bare-id | string-literal) `=` attribute-value
 ///
-ParseResult
-Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
+ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
   if (parseToken(Token::l_brace, "expected '{' in attribute dictionary"))
     return failure();
 
@@ -1701,7 +1700,6 @@ Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
     auto attr = parseAttribute();
     if (!attr)
       return failure();
-
     attributes.push_back({*nameId, attr});
     return success();
   };
@@ -4228,7 +4226,7 @@ public:
   /// also adds the attribute to the specified attribute list with the specified
   /// name.
   ParseResult parseAttribute(Attribute &result, Type type, StringRef attrName,
-                             SmallVectorImpl<NamedAttribute> &attrs) override {
+                             NamedAttrList &attrs) override {
     result = parser.parseAttribute(type);
     if (!result)
       return failure();
@@ -4238,8 +4236,7 @@ public:
   }
 
   /// Parse a named dictionary into 'result' if it is present.
-  ParseResult
-  parseOptionalAttrDict(SmallVectorImpl<NamedAttribute> &result) override {
+  ParseResult parseOptionalAttrDict(NamedAttrList &result) override {
     if (parser.getToken().isNot(Token::l_brace))
       return success();
     return parser.parseAttributeDict(result);
@@ -4247,8 +4244,7 @@ public:
 
   /// Parse a named dictionary into 'result' if the `attributes` keyword is
   /// present.
-  ParseResult parseOptionalAttrDictWithKeyword(
-      SmallVectorImpl<NamedAttribute> &result) override {
+  ParseResult parseOptionalAttrDictWithKeyword(NamedAttrList &result) override {
     if (failed(parseOptionalKeyword("attributes")))
       return success();
     return parser.parseAttributeDict(result);
@@ -4296,9 +4292,8 @@ public:
 
   /// Parse an optional @-identifier and store it (without the '@' symbol) in a
   /// string attribute named 'attrName'.
-  ParseResult
-  parseOptionalSymbolName(StringAttr &result, StringRef attrName,
-                          SmallVectorImpl<NamedAttribute> &attrs) override {
+  ParseResult parseOptionalSymbolName(StringAttr &result, StringRef attrName,
+                                      NamedAttrList &attrs) override {
     Token atToken = parser.getToken();
     if (atToken.isNot(Token::at_identifier))
       return failure();
@@ -4446,7 +4441,7 @@ public:
   /// Parse an AffineMap of SSA ids.
   ParseResult parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands,
                                      Attribute &mapAttr, StringRef attrName,
-                                     SmallVectorImpl<NamedAttribute> &attrs,
+                                     NamedAttrList &attrs,
                                      Delimiter delimiter) override {
     SmallVector<OperandType, 2> dimOperands;
     SmallVector<OperandType, 1> symOperands;

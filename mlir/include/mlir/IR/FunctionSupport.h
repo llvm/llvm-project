@@ -517,10 +517,14 @@ void FunctionLike<ConcreteType>::setArgAttrs(unsigned index,
                                              MutableDictionaryAttr attributes) {
   assert(index < getNumArguments() && "invalid argument number");
   SmallString<8> nameOut;
-  if (auto newAttr = attributes.getDictionary())
+  if (attributes.getAttrs().empty()) {
+    this->getOperation()->removeAttr(getArgAttrName(index, nameOut));
+  } else {
+    auto newAttr = attributes.getDictionary(
+        attributes.getAttrs().front().second.getContext());
     return this->getOperation()->setAttr(getArgAttrName(index, nameOut),
                                          newAttr);
-  static_cast<ConcreteType *>(this)->removeAttr(getArgAttrName(index, nameOut));
+  }
 }
 
 /// If the an attribute exists with the specified name, change it to the new
@@ -533,7 +537,7 @@ void FunctionLike<ConcreteType>::setArgAttr(unsigned index, Identifier name,
   attrDict.set(name, value);
 
   // If the attribute changed, then set the new arg attribute list.
-  if (curAttr != attrDict.getDictionary())
+  if (curAttr != attrDict.getDictionary(value.getContext()))
     setArgAttrs(index, attrDict);
 }
 
@@ -564,7 +568,7 @@ void FunctionLike<ConcreteType>::setResultAttrs(
   getResultAttrName(index, nameOut);
 
   if (attributes.empty())
-    return (void)static_cast<ConcreteType *>(this)->removeAttr(nameOut);
+    return (void)this->getOperation()->removeAttr(nameOut);
   Operation *op = this->getOperation();
   op->setAttr(nameOut, DictionaryAttr::get(attributes, op->getContext()));
 }
@@ -574,11 +578,13 @@ void FunctionLike<ConcreteType>::setResultAttrs(
     unsigned index, MutableDictionaryAttr attributes) {
   assert(index < getNumResults() && "invalid result number");
   SmallString<8> nameOut;
-  if (auto newAttr = attributes.getDictionary())
+  if (attributes.empty()) {
+    this->getOperation()->removeAttr(getResultAttrName(index, nameOut));
+  } else {
+    auto newAttr = attributes.getDictionary(this->getOperation()->getContext());
     return this->getOperation()->setAttr(getResultAttrName(index, nameOut),
                                          newAttr);
-  static_cast<ConcreteType *>(this)->removeAttr(
-      getResultAttrName(index, nameOut));
+  }
 }
 
 /// If the an attribute exists with the specified name, change it to the new
@@ -591,7 +597,7 @@ void FunctionLike<ConcreteType>::setResultAttr(unsigned index, Identifier name,
   attrDict.set(name, value);
 
   // If the attribute changed, then set the new arg attribute list.
-  if (curAttr != attrDict.getDictionary())
+  if (curAttr != attrDict.getDictionary(value.getContext()))
     setResultAttrs(index, attrDict);
 }
 

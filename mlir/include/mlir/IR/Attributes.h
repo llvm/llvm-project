@@ -269,6 +269,9 @@ public:
 /// be non-null.
 using NamedAttribute = std::pair<Identifier, Attribute>;
 
+bool operator<(const NamedAttribute &lhs, const NamedAttribute &rhs);
+bool operator<(const NamedAttribute &lhs, StringRef rhs);
+
 /// Dictionary attribute is an attribute that represents a sorted collection of
 /// named attribute values. The elements are sorted by name, and each name must
 /// be unique within the collection.
@@ -309,14 +312,25 @@ public:
   size_t size() const;
 
   /// Sorts the NamedAttributes in the array ordered by name as expected by
-  /// getWithSorted.
+  /// getWithSorted and returns whether the values were sorted.
   /// Requires: uniquely named attributes.
-  static void sort(SmallVectorImpl<NamedAttribute> &array);
+  static bool sort(ArrayRef<NamedAttribute> values,
+                   SmallVectorImpl<NamedAttribute> &storage);
+
+  /// Sorts the NamedAttributes in the array ordered by name as expected by
+  /// getWithSorted in place on an array and returns whether the values needed
+  /// to be sorted.
+  /// Requires: uniquely named attributes.
+  static bool sortInPlace(SmallVectorImpl<NamedAttribute> &array);
 
   /// Methods for supporting type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) {
     return kind == StandardAttributes::Dictionary;
   }
+
+private:
+  /// Return empty dictionary.
+  static DictionaryAttr getEmpty(MLIRContext *context);
 };
 
 //===----------------------------------------------------------------------===//
@@ -1652,9 +1666,8 @@ public:
     return attrs == other.attrs;
   }
 
-  /// Return the underlying dictionary attribute. This may be null, if this list
-  /// has no attributes.
-  DictionaryAttr getDictionary() const { return attrs; }
+  /// Return the underlying dictionary attribute.
+  DictionaryAttr getDictionary(MLIRContext *context) const;
 
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() const;
@@ -1680,9 +1693,19 @@ public:
   /// value indicates whether the attribute was present or not.
   RemoveResult remove(Identifier name);
 
+  bool empty() const { return attrs == nullptr; }
+
 private:
+  friend ::llvm::hash_code hash_value(const MutableDictionaryAttr &arg);
+
   DictionaryAttr attrs;
 };
+
+inline ::llvm::hash_code hash_value(const MutableDictionaryAttr &arg) {
+  if (!arg.attrs)
+    return ::llvm::hash_value((void *)nullptr);
+  return hash_value(arg.attrs);
+}
 
 } // end namespace mlir.
 

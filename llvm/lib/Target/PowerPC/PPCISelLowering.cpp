@@ -2817,14 +2817,12 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
     if (Subtarget.isUsingPCRelativeCalls()) {
       SDLoc DL(CP);
       EVT Ty = getPointerTy(DAG.getDataLayout());
-      SDValue ConstPool = DAG.getTargetConstantPool(C, Ty,
-                                                    CP->getAlignment(),
-                                                    CP->getOffset(),
-                                                    PPCII::MO_PCREL_FLAG);
+      SDValue ConstPool = DAG.getTargetConstantPool(
+          C, Ty, CP->getAlign(), CP->getOffset(), PPCII::MO_PCREL_FLAG);
       return DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, ConstPool);
     }
     setUsesTOCBasePtr(DAG);
-    SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0);
+    SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlign(), 0);
     return getTOCEntry(DAG, SDLoc(CP), GA);
   }
 
@@ -2833,15 +2831,15 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
   getLabelAccessInfo(IsPIC, Subtarget, MOHiFlag, MOLoFlag);
 
   if (IsPIC && Subtarget.isSVR4ABI()) {
-    SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(),
-                                           PPCII::MO_PIC_FLAG);
+    SDValue GA =
+        DAG.getTargetConstantPool(C, PtrVT, CP->getAlign(), PPCII::MO_PIC_FLAG);
     return getTOCEntry(DAG, SDLoc(CP), GA);
   }
 
   SDValue CPIHi =
-    DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0, MOHiFlag);
+      DAG.getTargetConstantPool(C, PtrVT, CP->getAlign(), 0, MOHiFlag);
   SDValue CPILo =
-    DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0, MOLoFlag);
+      DAG.getTargetConstantPool(C, PtrVT, CP->getAlign(), 0, MOLoFlag);
   return LowerLabelRef(CPIHi, CPILo, IsPIC, DAG);
 }
 
@@ -9052,8 +9050,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       }
 
       Constant *CP = ConstantVector::get(CV);
-      SDValue CPIdx = DAG.getConstantPool(CP, getPointerTy(DAG.getDataLayout()),
-                                          16 /* alignment */);
+      SDValue CPIdx =
+          DAG.getConstantPool(CP, getPointerTy(DAG.getDataLayout()), Align(16));
 
       SDValue Ops[] = {DAG.getEntryNode(), CPIdx};
       SDVTList VTs = DAG.getVTList({MVT::v4i1, /*chain*/ MVT::Other});

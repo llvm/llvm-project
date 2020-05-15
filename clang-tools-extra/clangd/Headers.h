@@ -60,6 +60,7 @@ struct Inclusion {
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
+bool operator==(const Inclusion &LHS, const Inclusion &RHS);
 
 // Contains information about one file in the build grpah and its direct
 // dependencies. Doesn't own the strings it references (IncludeGraph is

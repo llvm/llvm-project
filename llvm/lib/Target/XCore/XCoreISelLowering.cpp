@@ -329,10 +329,10 @@ LowerConstantPool(SDValue Op, SelectionDAG &DAG) const
   SDValue Res;
   if (CP->isMachineConstantPoolEntry()) {
     Res = DAG.getTargetConstantPool(CP->getMachineCPVal(), PtrVT,
-                                    CP->getAlignment(), CP->getOffset());
+                                    CP->getAlign(), CP->getOffset());
   } else {
-    Res = DAG.getTargetConstantPool(CP->getConstVal(), PtrVT,
-                                    CP->getAlignment(), CP->getOffset());
+    Res = DAG.getTargetConstantPool(CP->getConstVal(), PtrVT, CP->getAlign(),
+                                    CP->getOffset());
   }
   return DAG.getNode(XCoreISD::CPRelativeWrapper, dl, MVT::i32, Res);
 }

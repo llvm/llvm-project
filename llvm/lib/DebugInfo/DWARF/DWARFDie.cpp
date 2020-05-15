@@ -79,7 +79,8 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
     ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
     DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
                        Ctx.isLittleEndian(), 0);
-    DWARFExpression(Data, U->getAddressByteSize()).print(OS, MRI, U);
+    DWARFExpression(Data, U->getAddressByteSize(), U->getFormParams().Format)
+        .print(OS, MRI, U);
     return;
   }
 

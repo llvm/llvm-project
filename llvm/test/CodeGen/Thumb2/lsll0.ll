@@ -5,17 +5,16 @@ define void @_Z4loopPxS_iS_i(i64* %d) {
 ; CHECK-LABEL: _Z4loopPxS_iS_i:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    sxth r2, r2
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    rsbs r1, r1, #0
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sxth r1, r1
 ; CHECK-NEXT:    sxth r2, r2
-; CHECK-NEXT:    asrs r3, r1, #31
-; CHECK-NEXT:    asr.w r12, r2, #31
-; CHECK-NEXT:    strd r1, r3, [r0]
-; CHECK-NEXT:    strd r2, r12, [r0, #8]
+; CHECK-NEXT:    asr.w r12, r1, #31
+; CHECK-NEXT:    asrs r3, r2, #31
+; CHECK-NEXT:    strd r2, r3, [r0]
+; CHECK-NEXT:    strd r1, r12, [r0, #8]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <2 x i64>, <2 x i64>* undef, align 8

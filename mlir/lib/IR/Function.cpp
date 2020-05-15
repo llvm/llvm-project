@@ -57,7 +57,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
   assert(type.getNumInputs() == argAttrs.size());
   SmallString<8> argAttrName;
   for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
-    if (auto argDict = argAttrs[i].getDictionary())
+    if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
       result.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 

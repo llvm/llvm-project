@@ -83,11 +83,11 @@ namespace detail {
 LogicalResult inferReturnTensorTypes(
     function_ref<LogicalResult(
         MLIRContext *, Optional<Location> location, ValueRange operands,
-        ArrayRef<NamedAttribute> attributes, RegionRange regions,
+        DictionaryAttr attributes, RegionRange regions,
         SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
     MLIRContext *context, Optional<Location> location, ValueRange operands,
-    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes);
 
 /// Verifies that the inferred result types match the actual result types for
@@ -107,7 +107,7 @@ class InferTensorType : public TraitBase<ConcreteType, InferTensorType> {
 public:
   static LogicalResult
   inferReturnTypes(MLIRContext *context, Optional<Location> location,
-                   ValueRange operands, ArrayRef<NamedAttribute> attributes,
+                   ValueRange operands, DictionaryAttr attributes,
                    RegionRange regions,
                    SmallVectorImpl<Type> &inferredReturnTypes) {
     return ::mlir::detail::inferReturnTensorTypes(

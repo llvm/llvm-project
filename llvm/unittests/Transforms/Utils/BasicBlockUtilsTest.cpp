@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
@@ -135,4 +138,46 @@ TEST(BasicBlockUtils, SplitCriticalEdge) {
   EXPECT_EQ(1u, SplitAllCriticalEdges(*F, CESO));
   EXPECT_TRUE(DT.verify());
   EXPECT_TRUE(PDT.verify());
+}
+
+TEST(BasicBlockUtils, SplitIndirectBrCriticalEdge) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M =
+      parseIR(C, "define void @crit_edge(i8* %cond0, i1 %cond1) {\n"
+                 "entry:\n"
+                 "  indirectbr i8* %cond0, [label %bb0, label %bb1]\n"
+                 "bb0:\n"
+                 "  br label %bb1\n"
+                 "bb1:\n"
+                 "  %p = phi i32 [0, %bb0], [0, %entry]\n"
+                 "  br i1 %cond1, label %bb2, label %bb3\n"
+                 "bb2:\n"
+                 "  ret void\n"
+                 "bb3:\n"
+                 "  ret void\n"
+                 "}\n");
+
+  auto *F = M->getFunction("crit_edge");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI);
+  BlockFrequencyInfo BFI(*F, BPI, LI);
+
+  auto Block = [&F](StringRef BBName) -> const BasicBlock & {
+    for (auto &BB : *F)
+      if (BB.getName() == BBName)
+        return BB;
+    llvm_unreachable("Block not found");
+  };
+
+  bool Split = SplitIndirectBrCriticalEdges(*F, &BPI, &BFI);
+
+  EXPECT_TRUE(Split);
+
+  // Check that successors of the split block get their probability correct.
+  BasicBlock *SplitBB = Block("bb1").getTerminator()->getSuccessor(0);
+  EXPECT_EQ(2u, SplitBB->getTerminator()->getNumSuccessors());
+  EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 0u));
+  EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 1u));
 }

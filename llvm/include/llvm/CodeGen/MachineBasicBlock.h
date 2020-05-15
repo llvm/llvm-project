@@ -837,16 +837,6 @@ public:
   /// instead of basic block \p Old.
   void replacePhiUsesWith(MachineBasicBlock *Old, MachineBasicBlock *New);
 
-  /// Various pieces of code can cause excess edges in the CFG to be inserted.
-  /// If we have proven that MBB can only branch to DestA and DestB, remove any
-  /// other MBB successors from the CFG. DestA and DestB can be null. Besides
-  /// DestA and DestB, retain other edges leading to LandingPads (currently
-  /// there can be only one; we don't check or require that here). Note it is
-  /// possible that DestA and/or DestB are LandingPads.
-  bool CorrectExtraCFGEdges(MachineBasicBlock *DestA,
-                            MachineBasicBlock *DestB,
-                            bool IsCond);
-
   /// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
   /// and DBG_LABEL instructions.  Return UnknownLoc if there is none.
   DebugLoc findDebugLoc(instr_iterator MBBI);

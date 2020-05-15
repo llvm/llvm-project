@@ -731,10 +731,10 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     IntermediateVT.getVectorNumElements() : 1;
 
   // Convert the vector to the appropriate type if necessary.
-  unsigned DestVectorNoElts = NumIntermediates * IntermediateNumElts;
-
+  auto DestEltCnt = ElementCount(NumIntermediates * IntermediateNumElts,
+                                 ValueVT.isScalableVector());
   EVT BuiltVectorTy = EVT::getVectorVT(
-      *DAG.getContext(), IntermediateVT.getScalarType(), DestVectorNoElts);
+      *DAG.getContext(), IntermediateVT.getScalarType(), DestEltCnt);
   if (ValueVT != BuiltVectorTy) {
     if (SDValue Widened = widenVectorToPartType(DAG, Val, DL, BuiltVectorTy))
       Val = Widened;

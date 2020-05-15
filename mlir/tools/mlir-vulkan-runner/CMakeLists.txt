@@ -45,8 +45,6 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
 
   target_link_libraries(vulkan-runtime-wrappers
     PUBLIC
-    LLVMSupport
-    MLIRSPIRVSerialization
     LLVMCore
     LLVMSupport
     ${Vulkan_LIBRARY}
@@ -59,11 +57,11 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     ${conversion_libs}
     LLVMCore
     LLVMSupport
-    MLIRJitRunner
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
     MLIRIR
+    MLIRJitRunner
     MLIRLLVMIR
     MLIRParser
     MLIRSPIRVTransforms

@@ -34,6 +34,7 @@
 #include <chrono>
 #include <map>
 
+#include <TargetConditionals.h>
 #import <Foundation/Foundation.h>
 
 #include "DNBDataRef.h"

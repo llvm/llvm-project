@@ -128,7 +128,13 @@ public:
 
 private:
   static Result Scalar() { return Shape{}; }
-
+  Shape CreateShape(int rank, NamedEntity &base) const {
+    Shape shape;
+    for (int dimension{0}; dimension < rank; ++dimension) {
+      shape.emplace_back(GetExtent(context_, base, dimension));
+    }
+    return shape;
+  }
   template <typename T>
   MaybeExtentExpr GetArrayConstructorValueExtent(
       const ArrayConstructorValue<T> &value) const {

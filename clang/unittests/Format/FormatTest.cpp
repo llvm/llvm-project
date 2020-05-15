@@ -7647,6 +7647,10 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
   verifyFormat("void f() [[deprecated(\"so sorry\")]];");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    [[unused]] aaaaaaaaaaaaaaaaaaaaaaa(int i);");
+  verifyFormat("[[nodiscard]] bool f() { return false; }");
+  verifyFormat("class [[nodiscard]] f {\npublic:\n  f() {}\n}");
+  verifyFormat("class [[deprecated(\"so sorry\")]] f {\npublic:\n  f() {}\n}");
+  verifyFormat("class [[gnu::unused]] f {\npublic:\n  f() {}\n}");
 
   // Make sure we do not mistake attributes for array subscripts.
   verifyFormat("int a() {}\n"
@@ -7670,6 +7674,19 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
                "  return 42;\n"
                "}\n",
                MultiLineFunctions);
+}
+
+TEST_F(FormatTest, AttributePenaltyBreaking) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("void ABCDEFGH::ABCDEFGHIJKLMN(\n"
+               "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
+               Style);
+  verifyFormat("void ABCDEFGH::ABCDEFGHIJK(\n"
+               "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
+               Style);
+  verifyFormat("void ABCDEFGH::ABCDEFGH([[maybe_unused]] const "
+               "shared_ptr<ALongTypeName> &C d) {\n}",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsEllipsis) {
@@ -14585,6 +14602,30 @@ TEST_F(FormatTest, FormatsLambdas) {
                "          });\n"
                "    });",
                LLVMWithBeforeLambdaBody);
+}
+
+TEST_F(FormatTest, LambdaWithLineComments) {
+  FormatStyle LLVMWithBeforeLambdaBody = getLLVMStyle();
+  LLVMWithBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
+  LLVMWithBeforeLambdaBody.BraceWrapping.BeforeLambdaBody = true;
+  LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_All;
+
+  verifyFormat("auto k = []() { return; }", LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() // comment\n"
+               "{ return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() /* comment */ { return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() /* comment */ /* comment */ { return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("auto k = []() // X\n"
+               "{ return; }",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "auto k = []() // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n"
+      "{ return; }",
+      LLVMWithBeforeLambdaBody);
 }
 
 TEST_F(FormatTest, EmptyLinesInLambdas) {

@@ -1243,3 +1243,52 @@ loopexit:
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret
 }
+
+declare void @f()
+declare void @g()
+define void @test_unswitch_switch_with_nonempty_unreachable() {
+; CHECK-LABEL: @test_unswitch_switch_with_nonempty_unreachable()
+entry:
+  br label %loop
+
+loop:
+  %cleanup.dest.slot.0 = select i1 undef, i32 5, i32 undef
+  br label %for.cond
+
+for.cond:
+  switch i32 %cleanup.dest.slot.0, label %NonEmptyUnreachableBlock [
+    i32 0, label %for.cond
+    i32 1, label %NonEmptyUnreachableBlock
+    i32 2, label %loop.loopexit
+  ]
+
+loop.loopexit:
+  unreachable
+
+NonEmptyUnreachableBlock:
+  call void @f()
+  call void @g()
+  unreachable
+
+; CHECK:loop:
+; CHECK-NEXT:  %cleanup.dest.slot.0 = select i1 undef, i32 5, i32 undef
+; CHECK-NEXT:  switch i32 %cleanup.dest.slot.0, label %NonEmptyUnreachableBlock [
+; CHECK-NEXT:    i32 1, label %NonEmptyUnreachableBlock
+; CHECK-NEXT:    i32 2, label %loop.loopexit
+; CHECK-NEXT:    i32 0, label %loop.split
+; CHECK-NEXT:  ]
+
+; CHECK:loop.split:
+; CHECK-NEXT:  br label %for.cond
+
+; CHECK:for.cond:
+; CHECK-NEXT:  br label %for.cond
+
+; CHECK:loop.loopexit:
+; CHECK-NEXT:  unreachable
+
+; CHECK:NonEmptyUnreachableBlock:
+; CHECK-NEXT:  call void @f()
+; CHECK-NEXT:  call void @g()
+; CHECK-NEXT:  unreachable
+}

@@ -3688,8 +3688,9 @@ static bool isLoadCombineCandidateImpl(Value *Root, unsigned NumElts,
   // path through operand 0 of any 'or'. Also, peek through optional
   // shift-left-by-constant.
   Value *ZextLoad = Root;
-  while (match(ZextLoad, m_Or(m_Value(), m_Value())) ||
-         match(ZextLoad, m_Shl(m_Value(), m_Constant())))
+  while (!isa<ConstantExpr>(ZextLoad) &&
+         (match(ZextLoad, m_Or(m_Value(), m_Value())) ||
+          match(ZextLoad, m_Shl(m_Value(), m_Constant()))))
     ZextLoad = cast<BinaryOperator>(ZextLoad)->getOperand(0);
 
   // Check if the input is an extended load of the required or/shift expression.
@@ -6034,8 +6035,6 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       }
       if (R.isTreeTinyAndNotFullyVectorizable())
         continue;
-      if (R.isLoadCombineCandidate())
-        return false;
 
       R.computeMinimumValueSizes();
       int Cost = R.getTreeCost() - UserCost;

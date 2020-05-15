@@ -74,7 +74,7 @@ class X86AsmParser : public MCTargetAsmParser {
 
   enum VEXEncoding {
     VEXEncoding_Default,
-    VEXEncoding_VEX2,
+    VEXEncoding_VEX,
     VEXEncoding_VEX3,
     VEXEncoding_EVEX,
   };
@@ -2473,8 +2473,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
 
-      if (Prefix == "vex2")
-        ForcedVEXEncoding = VEXEncoding_VEX2;
+      if (Prefix == "vex" || Prefix == "vex2")
+        ForcedVEXEncoding = VEXEncoding_VEX;
       else if (Prefix == "vex3")
         ForcedVEXEncoding = VEXEncoding_VEX3;
       else if (Prefix == "evex")
@@ -3223,7 +3223,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)
     return Match_Unsupported;
 
-  if ((ForcedVEXEncoding == VEXEncoding_VEX2 ||
+  if ((ForcedVEXEncoding == VEXEncoding_VEX ||
        ForcedVEXEncoding == VEXEncoding_VEX3) &&
       (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
     return Match_Unsupported;

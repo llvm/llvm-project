@@ -56,7 +56,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
@@ -75,7 +74,7 @@ static Timer totalPdbLinkTimer("PDB Emission (Cumulative)", Timer::root());
 static Timer addObjectsTimer("Add Objects", totalPdbLinkTimer);
 static Timer typeMergingTimer("Type Merging", addObjectsTimer);
 static Timer symbolMergingTimer("Symbol Merging", addObjectsTimer);
-static Timer globalsLayoutTimer("Globals Stream Layout", totalPdbLinkTimer);
+static Timer publicsLayoutTimer("Publics Stream Layout", totalPdbLinkTimer);
 static Timer tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer);
 static Timer diskCommitTimer("Commit to Disk", totalPdbLinkTimer);
 
@@ -105,6 +104,9 @@ public:
 
   /// Link CodeView from each object file in the symbol table into the PDB.
   void addObjectsToPDB();
+
+  /// Add every live, defined public symbol to the PDB.
+  void addPublicsToPDB();
 
   /// Link info for each import file in the symbol table into the PDB.
   void addImportFilesToPDB(ArrayRef<OutputSection *> outputSections);
@@ -1295,20 +1297,24 @@ static void createModuleDBI(pdb::PDBFileBuilder &builder) {
   }
 }
 
-static PublicSym32 createPublic(Defined *def) {
-  PublicSym32 pub(SymbolKind::S_PUB32);
-  pub.Name = def->getName();
+static pdb::BulkPublic createPublic(Defined *def) {
+  pdb::BulkPublic pub;
+  pub.Name = def->getName().data();
+  pub.NameLen = def->getName().size();
+
+  PublicSymFlags flags = PublicSymFlags::None;
   if (auto *d = dyn_cast<DefinedCOFF>(def)) {
     if (d->getCOFFSymbol().isFunctionDefinition())
-      pub.Flags = PublicSymFlags::Function;
+      flags = PublicSymFlags::Function;
   } else if (isa<DefinedImportThunk>(def)) {
-    pub.Flags = PublicSymFlags::Function;
+    flags = PublicSymFlags::Function;
   }
+  pub.Flags = static_cast<uint16_t>(flags);
 
   OutputSection *os = def->getChunk()->getOutputSection();
   assert(os && "all publics should be in final image");
   pub.Offset = def->getRVA() - os->getRVA();
-  pub.Segment = os->sectionIndex;
+  pub.U.Segment = os->sectionIndex;
   return pub;
 }
 
@@ -1330,13 +1336,16 @@ void PDBLinker::addObjectsToPDB() {
   addTypeInfo(builder.getTpiBuilder(), tMerger.getTypeTable());
   addTypeInfo(builder.getIpiBuilder(), tMerger.getIDTable());
   t2.stop();
+}
 
-  ScopedTimer t3(globalsLayoutTimer);
-  // Compute the public and global symbols.
+void PDBLinker::addPublicsToPDB() {
+  ScopedTimer t3(publicsLayoutTimer);
+  // Compute the public symbols.
   auto &gsiBuilder = builder.getGsiBuilder();
-  std::vector<PublicSym32> publics;
+  std::vector<pdb::BulkPublic> publics;
   symtab->forEachSymbol([&publics](Symbol *s) {
-    // Only emit defined, live symbols that have a chunk.
+    // Only emit external, defined, live symbols that have a chunk. Static,
+    // non-external symbols do not appear in the symbol table.
     auto *def = dyn_cast<Defined>(s);
     if (def && def->isLive() && def->getChunk())
       publics.push_back(createPublic(def));
@@ -1344,12 +1353,7 @@ void PDBLinker::addObjectsToPDB() {
 
   if (!publics.empty()) {
     publicSymbols = publics.size();
-    // Sort the public symbols and add them to the stream.
-    parallelSort(publics, [](const PublicSym32 &l, const PublicSym32 &r) {
-      return l.Name < r.Name;
-    });
-    for (const PublicSym32 &pub : publics)
-      gsiBuilder.addPublicSymbol(pub);
+    gsiBuilder.addPublicSymbols(std::move(publics));
   }
 }
 
@@ -1708,6 +1712,7 @@ void lld::coff::createPDB(SymbolTable *symtab,
   pdb.addSections(outputSections, sectionTable);
   pdb.addNatvisFiles();
   pdb.addNamedStreams();
+  pdb.addPublicsToPDB();
 
   ScopedTimer t2(diskCommitTimer);
   codeview::GUID guid;

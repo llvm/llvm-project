@@ -1719,8 +1719,8 @@ vzeroupper
 # CHECK-NEXT:  2      7     0.50    *                   vxorps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.33                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  16     16    4.00    *      *      U     vzeroall
-# CHECK-NEXT:  4      0     0.67    *      *      U     vzeroupper
+# CHECK-NEXT:  16     16    4.00                  U     vzeroall
+# CHECK-NEXT:  4      0     0.67                  U     vzeroupper
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SKLDivider

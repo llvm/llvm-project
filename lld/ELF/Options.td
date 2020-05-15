@@ -1,5 +1,18 @@
 include "llvm/Option/OptParser.td"
 
+// Convenience classes for long options which only accept two dashes. For lld
+// specific or newer long options, we prefer two dashes to avoid collision with
+// short options. For many others, we have to accept both forms to be compatible
+// with GNU ld.
+class FF<string name> : Flag<["--"], name>;
+class JJ<string name>: Joined<["--"], name>;
+
+multiclass EEq<string name, string help> {
+  def NAME: Separate<["--"], name>;
+  def NAME # _eq: Joined<["--"], name # "=">, Alias<!cast<Separate>(NAME)>,
+    HelpText<help>;
+}
+
 // For options whose names are multiple letters, either one dash or
 // two can precede the option name except those that start with 'o'.
 class F<string name>: Flag<["--", "-"], name>;
@@ -265,7 +278,7 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
   HelpText<"Specify the binary format for the output object file">;
 
-def omagic: Flag<["--"], "omagic">, MetaVarName<"<magic>">,
+def omagic: FF<"omagic">, MetaVarName<"<magic>">,
   HelpText<"Set the text and data sections to be readable and writable, do not page align sections, link against static libraries">;
 
 defm orphan_handling:
@@ -484,28 +497,28 @@ def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undef
 def: Flag<["-"], "V">, Alias<version>, HelpText<"Alias for --version">;
 
 // LTO-related options.
-def lto_aa_pipeline: J<"lto-aa-pipeline=">,
+def lto_aa_pipeline: JJ<"lto-aa-pipeline=">,
   HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
-def lto_debug_pass_manager: F<"lto-debug-pass-manager">,
+def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
-def lto_emit_asm: F<"lto-emit-asm">,
+def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
-def lto_new_pass_manager: F<"lto-new-pass-manager">,
+def lto_new_pass_manager: FF<"lto-new-pass-manager">,
   HelpText<"Use new pass manager">;
-def lto_newpm_passes: J<"lto-newpm-passes=">,
+def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
-def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
+def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
-def lto_partitions: J<"lto-partitions=">,
+def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
-def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
+def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
-def lto_cs_profile_file: J<"lto-cs-profile-file=">,
+def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
-def lto_obj_path_eq: J<"lto-obj-path=">;
-def lto_sample_profile: J<"lto-sample-profile=">,
+def lto_obj_path_eq: JJ<"lto-obj-path=">;
+def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
-def lto_whole_program_visibility: F<"lto-whole-program-visibility">,
+def lto_whole_program_visibility: FF<"lto-whole-program-visibility">,
   HelpText<"Asserts that the LTO link has whole program visibility">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
@@ -513,28 +526,28 @@ def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
   HelpText<"YAML output file for optimization remarks">;
 def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
   HelpText<"Regex for the passes that need to be serialized to the output file">;
-def opt_remarks_with_hotness: Flag<["--"], "opt-remarks-with-hotness">,
+def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
   HelpText<"Include hotness information in the optimization remarks file">;
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
 def save_temps: F<"save-temps">;
-def lto_basicblock_sections: J<"lto-basicblock-sections=">,
+def lto_basicblock_sections: JJ<"lto-basicblock-sections=">,
   HelpText<"Enable basic block sections for LTO">;
 defm lto_unique_bb_section_names: B<"lto-unique-bb-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
-def shuffle_sections: J<"shuffle-sections=">, MetaVarName<"<seed>">,
+def shuffle_sections: JJ<"shuffle-sections=">, MetaVarName<"<seed>">,
   HelpText<"Shuffle input sections using the given seed. If 0, use a random seed">;
-def thinlto_cache_dir: J<"thinlto-cache-dir=">,
+def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
-defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
-def thinlto_emit_imports_files: F<"thinlto-emit-imports-files">;
-def thinlto_index_only: F<"thinlto-index-only">;
-def thinlto_index_only_eq: J<"thinlto-index-only=">;
-def thinlto_jobs: J<"thinlto-jobs=">,
+defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
+def thinlto_jobs: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
-def thinlto_object_suffix_replace_eq: J<"thinlto-object-suffix-replace=">;
-def thinlto_prefix_replace_eq: J<"thinlto-prefix-replace=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 
 def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for --lto-O">;
 def: F<"plugin-opt=debug-pass-manager">,

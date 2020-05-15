@@ -234,22 +234,51 @@ AffineExpr AffineMap::getResult(unsigned idx) const {
 LogicalResult
 AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
                         SmallVectorImpl<Attribute> &results) const {
+  // Attempt partial folding.
+  SmallVector<int64_t, 2> integers;
+  partialConstantFold(operandConstants, &integers);
+
+  // If all expressions folded to a constant, populate results with attributes
+  // containing those constants.
+  if (integers.empty())
+    return failure();
+
+  auto range = llvm::map_range(integers, [this](int64_t i) {
+    return IntegerAttr::get(IndexType::get(getContext()), i);
+  });
+  results.append(range.begin(), range.end());
+  return success();
+}
+
+AffineMap
+AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
+                               SmallVectorImpl<int64_t> *results) const {
   assert(getNumInputs() == operandConstants.size());
 
   // Fold each of the result expressions.
   AffineExprConstantFolder exprFolder(getNumDims(), operandConstants);
-  // Constant fold each AffineExpr in AffineMap and add to 'results'.
+  SmallVector<AffineExpr, 4> exprs;
+  exprs.reserve(getNumResults());
+
   for (auto expr : getResults()) {
     auto folded = exprFolder.constantFold(expr);
-    // If we didn't fold to a constant, then folding fails.
-    if (!folded)
-      return failure();
-
-    results.push_back(folded);
+    // If did not fold to a constant, keep the original expression, and clear
+    // the integer results vector.
+    if (folded) {
+      exprs.push_back(
+          getAffineConstantExpr(folded.getInt(), folded.getContext()));
+      if (results)
+        results->push_back(folded.getInt());
+    } else {
+      exprs.push_back(expr);
+      if (results) {
+        results->clear();
+        results = nullptr;
+      }
+    }
   }
-  assert(results.size() == getNumResults() &&
-         "constant folding produced the wrong number of results");
-  return success();
+
+  return get(getNumDims(), getNumSymbols(), exprs, getContext());
 }
 
 /// Walk all of the AffineExpr's in this mapping. Each node in an expression

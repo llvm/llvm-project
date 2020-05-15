@@ -141,14 +141,14 @@ static void doList(opt::InputArgList& Args) {
 
 static COFF::MachineTypes getCOFFFileMachine(MemoryBufferRef MB) {
   std::error_code EC;
-  object::COFFObjectFile Obj(MB, EC);
-  if (EC) {
+  auto Obj = object::COFFObjectFile::create(MB);
+  if (!Obj) {
     llvm::errs() << MB.getBufferIdentifier()
-                 << ": failed to open: " << EC.message() << '\n';
+                 << ": failed to open: " << Obj.takeError() << '\n';
     exit(1);
   }
 
-  uint16_t Machine = Obj.getMachine();
+  uint16_t Machine = (*Obj)->getMachine();
   if (Machine != COFF::IMAGE_FILE_MACHINE_I386 &&
       Machine != COFF::IMAGE_FILE_MACHINE_AMD64 &&
       Machine != COFF::IMAGE_FILE_MACHINE_ARMNT &&

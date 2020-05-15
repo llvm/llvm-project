@@ -59,6 +59,9 @@ enum NodeType : unsigned {
   UMIN_PRED,
   SMAX_PRED,
   UMAX_PRED,
+  SHL_PRED,
+  SRL_PRED,
+  SRA_PRED,
 
   // Arithmetic instructions which write flags.
   ADDS,

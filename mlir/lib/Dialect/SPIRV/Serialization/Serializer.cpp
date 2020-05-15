@@ -852,8 +852,8 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
     }
     operands.push_back(argID);
   }
-  encodeInstructionInto(functionHeader, spirv::getOpcode<spirv::VariableOp>(),
-                        operands);
+  emitDebugLine(functionHeader, op.getLoc());
+  encodeInstructionInto(functionHeader, spirv::Opcode::OpVariable, operands);
   for (auto attr : op.getAttrs()) {
     if (llvm::any_of(elidedAttrs,
                      [&](StringRef elided) { return attr.first == elided; })) {
@@ -915,6 +915,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
     elidedAttrs.push_back("initializer");
   }
 
+  emitDebugLine(typesGlobalValues, varOp.getLoc());
   if (failed(encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpVariable,
                                    operands))) {
     elidedAttrs.push_back("initializer");

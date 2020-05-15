@@ -216,7 +216,7 @@ entry:
 define arm_aapcs_vfpcc float @fmin_v2f32_nofast(<2 x float> %x) {
 ; CHECK-FP-LABEL: fmin_v2f32_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    @ kill: def $s0 killed $s0 killed $q0
@@ -224,11 +224,9 @@ define arm_aapcs_vfpcc float @fmin_v2f32_nofast(<2 x float> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v2f32_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r0, q0[1]
-; CHECK-NOFP-NEXT:    vdup.32 q1, r0
-; CHECK-NOFP-NEXT:    vcmp.f32 s4, s0
+; CHECK-NOFP-NEXT:    vcmp.f32 s1, s0
 ; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s4
+; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s1
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %z = call float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float> %x)
@@ -241,7 +239,7 @@ define arm_aapcs_vfpcc float @fmin_v4f32_nofast(<4 x float> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    @ kill: def $s0 killed $s0 killed $q0
@@ -273,7 +271,7 @@ define arm_aapcs_vfpcc float @fmin_v8f32_nofast(<8 x float> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    @ kill: def $s0 killed $s0 killed $q0
@@ -311,7 +309,7 @@ entry:
 define arm_aapcs_vfpcc half @fmin_v4f16_nofast(<4 x half> %x) {
 ; CHECK-FP-LABEL: fmin_v4f16_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -322,7 +320,7 @@ define arm_aapcs_vfpcc half @fmin_v4f16_nofast(<4 x half> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v4f16_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-NOFP-NEXT:    vmov r1, s1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s10, s0
 ; CHECK-NOFP-NEXT:    vdup.32 q1, r1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
@@ -348,7 +346,7 @@ define arm_aapcs_vfpcc half @fmin_v8f16_nofast(<8 x half> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -400,7 +398,7 @@ define arm_aapcs_vfpcc half @fmin_v16f16_nofast(<16 x half> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -759,7 +757,7 @@ entry:
 define arm_aapcs_vfpcc float @fmin_v2f32_acc_nofast(<2 x float> %x, float %y) {
 ; CHECK-FP-LABEL: fmin_v2f32_acc_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q2, r0
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q2
 ; CHECK-FP-NEXT:    vcmp.f32 s0, s4
@@ -769,11 +767,9 @@ define arm_aapcs_vfpcc float @fmin_v2f32_acc_nofast(<2 x float> %x, float %y) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v2f32_acc_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r0, q0[1]
-; CHECK-NOFP-NEXT:    vdup.32 q2, r0
-; CHECK-NOFP-NEXT:    vcmp.f32 s8, s0
+; CHECK-NOFP-NEXT:    vcmp.f32 s1, s0
 ; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s8
+; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s1
 ; CHECK-NOFP-NEXT:    vcmp.f32 s0, s4
 ; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NOFP-NEXT:    vselgt.f32 s0, s4, s0
@@ -791,7 +787,7 @@ define arm_aapcs_vfpcc float @fmin_v4f32_acc_nofast(<4 x float> %x, float %y) {
 ; CHECK-FP-NEXT:    vmov.f64 d4, d1
 ; CHECK-FP-NEXT:    vmov.f32 s9, s3
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q2
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q2, r0
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q2
 ; CHECK-FP-NEXT:    vcmp.f32 s0, s4
@@ -830,7 +826,7 @@ define arm_aapcs_vfpcc float @fmin_v8f32_acc_nofast(<8 x float> %x, float %y) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vminnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    vcmp.f32 s0, s8
@@ -875,7 +871,7 @@ entry:
 define arm_aapcs_vfpcc void @fmin_v4f16_acc_nofast(<4 x half> %x, half* %yy) {
 ; CHECK-FP-LABEL: fmin_v4f16_acc_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -890,7 +886,7 @@ define arm_aapcs_vfpcc void @fmin_v4f16_acc_nofast(<4 x half> %x, half* %yy) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v4f16_acc_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-NOFP-NEXT:    vmov r1, s1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s10, s0
 ; CHECK-NOFP-NEXT:    vdup.32 q1, r1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
@@ -924,7 +920,7 @@ define arm_aapcs_vfpcc void @fmin_v8f16_acc_nofast(<8 x half> %x, half* %yy) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -988,7 +984,7 @@ define arm_aapcs_vfpcc void @fmin_v16f16_acc_nofast(<16 x half> %x, half* %yy) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vminnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -1335,7 +1331,7 @@ entry:
 define arm_aapcs_vfpcc float @fmax_v2f32_nofast(<2 x float> %x) {
 ; CHECK-FP-LABEL: fmax_v2f32_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    @ kill: def $s0 killed $s0 killed $q0
@@ -1343,11 +1339,9 @@ define arm_aapcs_vfpcc float @fmax_v2f32_nofast(<2 x float> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v2f32_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r0, q0[1]
-; CHECK-NOFP-NEXT:    vdup.32 q1, r0
-; CHECK-NOFP-NEXT:    vcmp.f32 s0, s4
+; CHECK-NOFP-NEXT:    vcmp.f32 s0, s1
 ; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s4
+; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s1
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %z = call float @llvm.experimental.vector.reduce.fmax.v2f32(<2 x float> %x)
@@ -1360,7 +1354,7 @@ define arm_aapcs_vfpcc float @fmax_v4f32_nofast(<4 x float> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    @ kill: def $s0 killed $s0 killed $q0
@@ -1392,7 +1386,7 @@ define arm_aapcs_vfpcc float @fmax_v8f32_nofast(<8 x float> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    @ kill: def $s0 killed $s0 killed $q0
@@ -1430,7 +1424,7 @@ entry:
 define arm_aapcs_vfpcc half @fmax_v4f16_nofast(<4 x half> %x) {
 ; CHECK-FP-LABEL: fmax_v4f16_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -1441,7 +1435,7 @@ define arm_aapcs_vfpcc half @fmax_v4f16_nofast(<4 x half> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v4f16_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-NOFP-NEXT:    vmov r1, s1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s10, s0
 ; CHECK-NOFP-NEXT:    vdup.32 q1, r1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
@@ -1467,7 +1461,7 @@ define arm_aapcs_vfpcc half @fmax_v8f16_nofast(<8 x half> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -1519,7 +1513,7 @@ define arm_aapcs_vfpcc half @fmax_v16f16_nofast(<16 x half> %x) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -1878,7 +1872,7 @@ entry:
 define arm_aapcs_vfpcc float @fmax_v2f32_acc_nofast(<2 x float> %x, float %y) {
 ; CHECK-FP-LABEL: fmax_v2f32_acc_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q2, r0
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q2
 ; CHECK-FP-NEXT:    vcmp.f32 s4, s0
@@ -1888,11 +1882,9 @@ define arm_aapcs_vfpcc float @fmax_v2f32_acc_nofast(<2 x float> %x, float %y) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v2f32_acc_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r0, q0[1]
-; CHECK-NOFP-NEXT:    vdup.32 q2, r0
-; CHECK-NOFP-NEXT:    vcmp.f32 s0, s8
+; CHECK-NOFP-NEXT:    vcmp.f32 s0, s1
 ; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s8
+; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s1
 ; CHECK-NOFP-NEXT:    vcmp.f32 s4, s0
 ; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NOFP-NEXT:    vselgt.f32 s0, s4, s0
@@ -1910,7 +1902,7 @@ define arm_aapcs_vfpcc float @fmax_v4f32_acc_nofast(<4 x float> %x, float %y) {
 ; CHECK-FP-NEXT:    vmov.f64 d4, d1
 ; CHECK-FP-NEXT:    vmov.f32 s9, s3
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q2
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q2, r0
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q2
 ; CHECK-FP-NEXT:    vcmp.f32 s4, s0
@@ -1949,7 +1941,7 @@ define arm_aapcs_vfpcc float @fmax_v8f32_acc_nofast(<8 x float> %x, float %y) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r0, q0[1]
+; CHECK-FP-NEXT:    vmov r0, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r0
 ; CHECK-FP-NEXT:    vmaxnm.f32 q0, q0, q1
 ; CHECK-FP-NEXT:    vcmp.f32 s8, s0
@@ -1994,7 +1986,7 @@ entry:
 define arm_aapcs_vfpcc void @fmax_v4f16_acc_nofast(<4 x half> %x, half* %yy) {
 ; CHECK-FP-LABEL: fmax_v4f16_acc_nofast:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -2009,7 +2001,7 @@ define arm_aapcs_vfpcc void @fmax_v4f16_acc_nofast(<4 x half> %x, half* %yy) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v4f16_acc_nofast:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-NOFP-NEXT:    vmov r1, s1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s10, s0
 ; CHECK-NOFP-NEXT:    vdup.32 q1, r1
 ; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
@@ -2043,7 +2035,7 @@ define arm_aapcs_vfpcc void @fmax_v8f16_acc_nofast(<8 x half> %x, half* %yy) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]
@@ -2107,7 +2099,7 @@ define arm_aapcs_vfpcc void @fmax_v16f16_acc_nofast(<16 x half> %x, half* %yy) {
 ; CHECK-FP-NEXT:    vmov.f64 d2, d1
 ; CHECK-FP-NEXT:    vmov.f32 s5, s3
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmov.32 r1, q0[1]
+; CHECK-FP-NEXT:    vmov r1, s1
 ; CHECK-FP-NEXT:    vdup.32 q1, r1
 ; CHECK-FP-NEXT:    vmaxnm.f16 q0, q0, q1
 ; CHECK-FP-NEXT:    vmov.u16 r1, q0[1]

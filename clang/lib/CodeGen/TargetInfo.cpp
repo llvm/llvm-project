@@ -8353,7 +8353,7 @@ private:
             EltTys, (STy->getName() + ".coerce").str(), STy->isPacked());
       return llvm::StructType::get(getVMContext(), EltTys, STy->isPacked());
     }
-    // Arrary types.
+    // Array types.
     if (auto ATy = dyn_cast<llvm::ArrayType>(Ty)) {
       auto T = ATy->getElementType();
       auto NT = coerceKernelArgumentType(T, FromAS, ToAS);

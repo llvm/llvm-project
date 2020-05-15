@@ -26,6 +26,12 @@ ELF Improvements
 
 * ...
 
+Breaking changes
+----------------
+
+* One-dash form of some long option (``--thinlto-*``, ``--lto-*``, ``--shuffle-sections=``)
+  are no longer supported.
+
 COFF Improvements
 -----------------
 

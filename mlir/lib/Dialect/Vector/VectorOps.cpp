@@ -478,7 +478,7 @@ static void print(OpAsmPrinter &p, vector::ExtractOp op) {
 
 static ParseResult parseExtractOp(OpAsmParser &parser, OperationState &result) {
   llvm::SMLoc attributeLoc, typeLoc;
-  SmallVector<NamedAttribute, 4> attrs;
+  NamedAttrList attrs;
   OpAsmParser::OperandType vector;
   Type type;
   Attribute attr;

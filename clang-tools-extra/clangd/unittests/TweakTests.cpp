@@ -2444,6 +2444,7 @@ class cc {
 public:
   struct st {};
   static void mm() {}
+  cc operator|(const cc& x) const { return x; }
 };
 }
 })cpp";
@@ -2463,6 +2464,9 @@ public:
   // test that we don't crash.
   EXPECT_UNAVAILABLE(Header +
                      "template<typename TT> using foo = one::tt<T^T>;");
+  // Test that we don't crash or misbehave on unnamed DeclRefExpr.
+  EXPECT_UNAVAILABLE(Header +
+                     "void fun() { one::two::cc() ^| one::two::cc(); }");
 
   // Check that we do not trigger in header files.
   FileName = "test.h";
@@ -2663,6 +2667,23 @@ using one::two::ff;
 
 void fun() {
   CALL(ff);
+})cpp"},
+            // Parent namespace != lexical parent namespace
+            {R"cpp(
+#include "test.hpp"
+namespace foo { void fun(); }
+
+void foo::fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+using one::two::ff;
+
+namespace foo { void fun(); }
+
+void foo::fun() {
+  ff();
 })cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {

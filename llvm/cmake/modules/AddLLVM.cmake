@@ -90,6 +90,7 @@ function(add_llvm_symbol_exports target_name export_file)
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-exported_symbols_list,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
   elseif(LLVM_HAVE_LINK_VERSION_SCRIPT)
@@ -256,6 +257,11 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
     endif()
+  endif()
+
+  if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                 LINK_FLAGS " -Wl,-brtl")
   endif()
 endfunction(add_link_opts)
 
@@ -1499,7 +1505,6 @@ string(CONCAT LLVM_LIT_PATH_FUNCTION
   "def path(p):\n"
   "    if not p: return ''\n"
   "    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
-  "    if os.name == 'nt' and os.path.isabs(p): return p[0].upper() + p[1:]\n"
   "    return p\n"
   )
 

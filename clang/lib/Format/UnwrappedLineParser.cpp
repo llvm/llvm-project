@@ -2399,9 +2399,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
 
   // The actual identifier can be a nested name specifier, and in macros
   // it is often token-pasted.
+  // An [[attribute]] can be before the identifier.
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
                             tok::kw___attribute, tok::kw___declspec,
-                            tok::kw_alignas) ||
+                            tok::kw_alignas, TT_AttributeSquare) ||
          ((Style.Language == FormatStyle::LK_Java ||
            Style.Language == FormatStyle::LK_JavaScript) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
@@ -2421,8 +2422,16 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         FormatTok->TokenText != FormatTok->TokenText.upper();
     nextToken();
     // We can have macros or attributes in between 'class' and the class name.
-    if (!IsNonMacroIdentifier && FormatTok->Tok.is(tok::l_paren))
-      parseParens();
+    if (!IsNonMacroIdentifier) {
+      if (FormatTok->Tok.is(tok::l_paren)) {
+        parseParens();
+      } else if (FormatTok->is(TT_AttributeSquare)) {
+        parseSquare();
+        // Consume the closing TT_AttributeSquare.
+        if (FormatTok->Next && FormatTok->is(TT_AttributeSquare))
+          nextToken();
+      }
+    }
   }
 
   // Note that parsing away template declarations here leads to incorrectly

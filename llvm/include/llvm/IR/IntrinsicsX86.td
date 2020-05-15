@@ -1275,9 +1275,9 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Vector zero
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx_vzeroall : GCCBuiltin<"__builtin_ia32_vzeroall">,
-        Intrinsic<[], [], []>;
+        Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
   def int_x86_avx_vzeroupper : GCCBuiltin<"__builtin_ia32_vzeroupper">,
-        Intrinsic<[], [], []>;
+        Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
 // SIMD load ops

@@ -302,10 +302,19 @@ static VectorType *arrayTypeToVecType(ArrayType *ArrayTy) {
                          ArrayTy->getNumElements());
 }
 
+static Value *stripBitcasts(Value *V) {
+  while (Instruction *I = dyn_cast<Instruction>(V)) {
+    if (I->getOpcode() != Instruction::BitCast)
+      break;
+    V = I->getOperand(0);
+  }
+  return V;
+}
+
 static Value *
 calculateVectorIndex(Value *Ptr,
                      const std::map<GetElementPtrInst *, Value *> &GEPIdx) {
-  GetElementPtrInst *GEP = cast<GetElementPtrInst>(Ptr);
+  GetElementPtrInst *GEP = cast<GetElementPtrInst>(stripBitcasts(Ptr));
 
   auto I = GEPIdx.find(GEP);
   return I == GEPIdx.end() ? nullptr : I->second;
@@ -327,7 +336,8 @@ static Value* GEPToVectorIndex(GetElementPtrInst *GEP) {
 //
 // TODO: Check isTriviallyVectorizable for calls and handle other
 // instructions.
-static bool canVectorizeInst(Instruction *Inst, User *User) {
+static bool canVectorizeInst(Instruction *Inst, User *User,
+                             const DataLayout &DL) {
   switch (Inst->getOpcode()) {
   case Instruction::Load: {
     // Currently only handle the case where the Pointer Operand is a GEP.
@@ -337,7 +347,14 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
         LI->getPointerOperandType() == User->getType() &&
         isa<VectorType>(LI->getType()))
       return true;
-    return isa<GetElementPtrInst>(LI->getPointerOperand()) && LI->isSimple();
+
+    Instruction *PtrInst = dyn_cast<Instruction>(LI->getPointerOperand());
+    if (!PtrInst)
+      return false;
+
+    return (PtrInst->getOpcode() == Instruction::GetElementPtr ||
+            PtrInst->getOpcode() == Instruction::BitCast) &&
+           LI->isSimple();
   }
   case Instruction::BitCast:
     return true;
@@ -350,14 +367,22 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
         SI->getPointerOperandType() == User->getType() &&
         isa<VectorType>(SI->getValueOperand()->getType()))
       return true;
-    return (SI->getPointerOperand() == User) && isa<GetElementPtrInst>(User) && SI->isSimple();
+
+    Instruction *UserInst = dyn_cast<Instruction>(User);
+    if (!UserInst)
+      return false;
+
+    return (SI->getPointerOperand() == User) &&
+           (UserInst->getOpcode() == Instruction::GetElementPtr ||
+            UserInst->getOpcode() == Instruction::BitCast) &&
+           SI->isSimple();
   }
   default:
     return false;
   }
 }
 
-static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
+static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL) {
 
   if (DisablePromoteAllocaToVector) {
     LLVM_DEBUG(dbgs() << "  Promotion alloca to vector is disabled\n");
@@ -385,12 +410,36 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
   }
 
   std::map<GetElementPtrInst*, Value*> GEPVectorIdx;
-  std::vector<Value*> WorkList;
-  for (User *AllocaUser : Alloca->users()) {
+  std::vector<Value *> WorkList;
+  SmallVector<User *, 8> Users(Alloca->users());
+  SmallVector<User *, 8> UseUsers(Users.size(), Alloca);
+  Type *VecEltTy = VectorTy->getElementType();
+  while (!Users.empty()) {
+    User *AllocaUser = Users.pop_back_val();
+    User *UseUser = UseUsers.pop_back_val();
+    Instruction *Inst = dyn_cast<Instruction>(AllocaUser);
+
     GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(AllocaUser);
     if (!GEP) {
-      if (!canVectorizeInst(cast<Instruction>(AllocaUser), Alloca))
+      if (!canVectorizeInst(Inst, UseUser, DL))
         return false;
+
+      if (Inst->getOpcode() == Instruction::BitCast) {
+        Type *FromTy = Inst->getOperand(0)->getType()->getPointerElementType();
+        Type *ToTy = Inst->getType()->getPointerElementType();
+        if (FromTy->isAggregateType() || ToTy->isAggregateType() ||
+            DL.getTypeSizeInBits(FromTy) != DL.getTypeSizeInBits(ToTy))
+          continue;
+
+        for (User *CastUser : Inst->users()) {
+          if (isAssumeLikeIntrinsic(cast<Instruction>(CastUser)))
+            continue;
+          Users.push_back(CastUser);
+          UseUsers.push_back(Inst);
+        }
+
+        continue;
+      }
 
       WorkList.push_back(AllocaUser);
       continue;
@@ -407,12 +456,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
     }
 
     GEPVectorIdx[GEP] = Index;
-    for (User *GEPUser : AllocaUser->users()) {
-      if (!canVectorizeInst(cast<Instruction>(GEPUser), AllocaUser))
-        return false;
-
-      WorkList.push_back(GEPUser);
-    }
+    Users.append(GEP->user_begin(), GEP->user_end());
+    UseUsers.append(GEP->getNumUses(), GEP);
   }
 
   LLVM_DEBUG(dbgs() << "  Converting alloca to vector " << *AllocaTy << " -> "
@@ -433,6 +478,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
+      if (Inst->getType() != VecEltTy)
+        ExtractElement = Builder.CreateBitCast(ExtractElement, Inst->getType());
       Inst->replaceAllUsesWith(ExtractElement);
       Inst->eraseFromParent();
       break;
@@ -447,16 +494,14 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
-      Value *NewVecValue = Builder.CreateInsertElement(VecValue,
-                                                       SI->getValueOperand(),
-                                                       Index);
+      Value *Elt = SI->getValueOperand();
+      if (Elt->getType() != VecEltTy)
+        Elt = Builder.CreateBitCast(Elt, VecEltTy);
+      Value *NewVecValue = Builder.CreateInsertElement(VecValue, Elt, Index);
       Builder.CreateStore(NewVecValue, BitCast);
       Inst->eraseFromParent();
       break;
     }
-    case Instruction::BitCast:
-    case Instruction::AddrSpaceCast:
-      break;
 
     default:
       llvm_unreachable("Inconsistency in instructions promotable to vector");
@@ -721,6 +766,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   if (!I.isStaticAlloca() || I.isArrayAllocation())
     return false;
 
+  const DataLayout &DL = Mod->getDataLayout();
   IRBuilder<> Builder(&I);
 
   // First try to replace the alloca with a vector
@@ -728,7 +774,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
 
   LLVM_DEBUG(dbgs() << "Trying to promote " << I << '\n');
 
-  if (tryPromoteAllocaToVector(&I))
+  if (tryPromoteAllocaToVector(&I, DL))
     return true; // Promoted to vector.
 
   if (DisablePromoteAllocaToLDS)
@@ -757,8 +803,6 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
 
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
-
-  const DataLayout &DL = Mod->getDataLayout();
 
   unsigned Align = I.getAlignment();
   if (Align == 0)

@@ -654,7 +654,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       mlir::Attribute ivalue; // Integer or Unit
       mlir::Block *dest;
       llvm::SmallVector<mlir::Value, 8> destArg;
-      llvm::SmallVector<mlir::NamedAttribute, 1> temp;
+      mlir::NamedAttrList temp;
       if (parser.parseAttribute(ivalue, "i", temp) ||
           parser.parseComma() ||
           parser.parseSuccessorAndUseList(dest, destArg))
@@ -2215,7 +2215,7 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
   let parser = [{
     auto &builder = parser.getBuilder();
     mlir::Attribute val;
-    llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
+    mlir::NamedAttrList attrs;
     if (parser.parseAttribute(val, "fake", attrs))
       return mlir::failure();
     if (auto v = val.dyn_cast<mlir::StringAttr>())
@@ -2858,8 +2858,8 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
       return failure();
 
     // Convert the parsed name attr into a string attr.
-    result.attributes.back().second =
-        parser.getBuilder().getStringAttr(nameAttr.getRootReference());
+    result.attributes.set(mlir::SymbolTable::getSymbolAttrName(),
+      parser.getBuilder().getStringAttr(nameAttr.getRootReference()));
 
     // Parse the optional table body.
     mlir::Region *body = result.addRegion();

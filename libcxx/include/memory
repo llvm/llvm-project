@@ -450,6 +450,11 @@ public:
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
 };
 
+template<class T>
+shared_ptr(weak_ptr<T>) -> shared_ptr<T>;
+template<class T, class D>
+shared_ptr(unique_ptr<T, D>) -> shared_ptr<T>;
+
 // shared_ptr comparisons:
 template<class T, class U>
     bool operator==(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
@@ -547,6 +552,9 @@ public:
     template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
 };
+
+template<class T>
+weak_ptr(shared_ptr<T>) -> weak_ptr<T>;
 
 // weak_ptr specialized algorithms:
 template<class T> void swap(weak_ptr<T>& a, weak_ptr<T>& b) noexcept;
@@ -3965,6 +3973,12 @@ private:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _Tp>
+shared_ptr(weak_ptr<_Tp>) -> shared_ptr<_Tp>;
+template<class _Tp, class _Dp>
+shared_ptr(unique_ptr<_Tp, _Dp>) -> shared_ptr<_Tp>;
+#endif
 
 template<class _Tp>
 inline
@@ -4764,6 +4778,11 @@ public:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _Tp>
+weak_ptr(shared_ptr<_Tp>) -> weak_ptr<_Tp>;
+#endif
 
 template<class _Tp>
 inline

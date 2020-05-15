@@ -973,12 +973,10 @@ ChangeStatus Attributor::run() {
     // changed.
     for (AbstractAttribute *AA : Worklist) {
       const auto &AAState = AA->getState();
-      if (!AAState.isAtFixpoint() &&
-          !isAssumedDead(*AA, nullptr, /* CheckBBLivenessOnly */ true)) {
-        if (updateAA(*AA) == ChangeStatus::CHANGED) {
+      if (!AAState.isAtFixpoint())
+        if (updateAA(*AA) == ChangeStatus::CHANGED)
           ChangedAAs.push_back(AA);
-        }
-      }
+
       // Use the InvalidAAs vector to propagate invalid states fast transitively
       // without requiring updates.
       if (!AAState.isValidState())
@@ -1270,7 +1268,10 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
   DependenceStack.push_back(&DV);
 
   auto &AAState = AA.getState();
-  ChangeStatus CS = AA.update(*this);
+  ChangeStatus CS = ChangeStatus::UNCHANGED;
+  if (!isAssumedDead(AA, nullptr, /* CheckBBLivenessOnly */ true))
+    CS = AA.update(*this);
+
   if (DV.empty()) {
     // If the attribute did not query any non-fix information, the state
     // will not change and we can indicate that right away.

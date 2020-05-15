@@ -160,3 +160,9 @@ def get_filecheck_path():
     """
     if filecheck and os.path.lexists(filecheck):
         return filecheck
+
+def is_reproducer_replay():
+    """
+    Returns true when test is replayed from a reproducer.
+    """
+    return replay_path is not None

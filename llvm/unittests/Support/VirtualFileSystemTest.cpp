@@ -2197,8 +2197,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   ScopedFile _cd(TestDirectory + "/c/d", "");
   ScopedDir _e(TestDirectory + "/e");
   ScopedDir _ef(TestDirectory + "/e/f");
-  ScopedDir _g(TestDirectory + "/g");
-  ScopedFile _h(TestDirectory + "/h", "");
+  ScopedFile _g(TestDirectory + "/g", "");
+  ScopedDir _h(TestDirectory + "/h");
 
   vfs::YAMLVFSWriter VFSWriter;
   VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
@@ -2223,8 +2223,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   Lower->addRegularFile("//root/c/d");
   Lower->addDirectory("//root/e");
   Lower->addDirectory("//root/e/f");
-  Lower->addDirectory("//root/g");
-  Lower->addRegularFile("//root/h");
+  Lower->addRegularFile("//root/g");
+  Lower->addDirectory("//root/h");
 
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
   ASSERT_TRUE(FS.get() != nullptr);
@@ -2237,4 +2237,40 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   EXPECT_TRUE(FS->exists(_ef.Path));
   EXPECT_TRUE(FS->exists(_g.Path));
   EXPECT_TRUE(FS->exists(_h.Path));
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedDir _b(TestDirectory + "/b");
+  ScopedDir _c(TestDirectory + "/c");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addDirectoryMapping(_b.Path, "//root/b");
+  VFSWriter.addDirectoryMapping(_c.Path, "//root/c");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  // We didn't add a single file - only directories.
+  EXPECT_TRUE(Buffer.find("'type': 'file'") == std::string::npos);
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  Lower->addDirectory("//root/a");
+  Lower->addDirectory("//root/b");
+  Lower->addDirectory("//root/c");
+  // canaries
+  Lower->addRegularFile("//root/a/a");
+  Lower->addRegularFile("//root/b/b");
+  Lower->addRegularFile("//root/c/c");
+
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  EXPECT_FALSE(FS->exists(_a.Path + "/a"));
+  EXPECT_FALSE(FS->exists(_b.Path + "/b"));
+  EXPECT_FALSE(FS->exists(_c.Path + "/c"));
 }

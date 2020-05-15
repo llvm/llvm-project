@@ -183,19 +183,24 @@ static void packFunctionArguments(Module *module) {
 }
 
 ExecutionEngine::ExecutionEngine(bool enableObjectCache,
-                                 bool enableGDBNotificationListener)
+                                 bool enableGDBNotificationListener,
+                                 bool enablePerfNotificationListener)
     : cache(enableObjectCache ? new SimpleObjectCache() : nullptr),
       gdbListener(enableGDBNotificationListener
                       ? llvm::JITEventListener::createGDBRegistrationListener()
-                      : nullptr) {}
+                      : nullptr),
+      perfListener(enablePerfNotificationListener
+                       ? llvm::JITEventListener::createPerfJITEventListener()
+                       : nullptr) {}
 
 Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     ModuleOp m, std::function<Error(llvm::Module *)> transformer,
     Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel,
     ArrayRef<StringRef> sharedLibPaths, bool enableObjectCache,
-    bool enableGDBNotificationListener) {
+    bool enableGDBNotificationListener, bool enablePerfNotificationListener) {
   auto engine = std::make_unique<ExecutionEngine>(
-      enableObjectCache, enableGDBNotificationListener);
+      enableObjectCache, enableGDBNotificationListener,
+      enablePerfNotificationListener);
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
   auto llvmModule = translateModuleToLLVMIR(m);
@@ -220,16 +225,12 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
                                        const Triple &TT) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
         session, []() { return std::make_unique<SectionMemoryManager>(); });
-    objectLayer->setNotifyLoaded(
-        [engine = engine.get()](
-            llvm::orc::VModuleKey, const llvm::object::ObjectFile &object,
-            const llvm::RuntimeDyld::LoadedObjectInfo &objectInfo) {
-          if (engine->gdbListener) {
-            uint64_t key = static_cast<uint64_t>(
-                reinterpret_cast<uintptr_t>(object.getData().data()));
-            engine->gdbListener->notifyObjectLoaded(key, object, objectInfo);
-          }
-        });
+
+    // Register JIT event listeners if they are enabled.
+    if (engine->gdbListener)
+      objectLayer->registerJITEventListener(*engine->gdbListener);
+    if (engine->perfListener)
+      objectLayer->registerJITEventListener(*engine->perfListener);
 
     // Resolve symbols from shared libraries.
     for (auto libPath : sharedLibPaths) {

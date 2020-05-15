@@ -1024,8 +1024,9 @@ LogicalResult Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
                      "OpVariable instruction, only ")
            << wordIndex << " of " << operands.size() << " processed";
   }
+  auto loc = createFileLineColLoc(opBuilder);
   auto varOp = opBuilder.create<spirv::GlobalVariableOp>(
-      unknownLoc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
+      loc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
       initializer);
 
   // Decorations.

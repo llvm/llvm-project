@@ -32,8 +32,10 @@
 #include <windows.h>
 #include "WindowsMMap.h"
 #else
-#include <sys/mman.h>
 #include <sys/file.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #if defined(__FreeBSD__) && defined(__i386__)
@@ -118,6 +120,11 @@ struct fn_list writeout_fn_list;
  *  A list of flush functions that our __gcov_flush() function should call, shared between all dynamic objects.
  */
 struct fn_list flush_fn_list;
+
+/*
+ *  A list of reset functions, shared between all dynamic objects.
+ */
+struct fn_list reset_fn_list;
 
 static void fn_list_insert(struct fn_list* list, fn_ptr fn) {
   struct fn_node* new_node = malloc(sizeof(struct fn_node));
@@ -643,7 +650,46 @@ void llvm_delete_flush_function_list(void) {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn) {
+void llvm_register_reset_function(fn_ptr fn) {
+  fn_list_insert(&reset_fn_list, fn);
+}
+
+COMPILER_RT_VISIBILITY
+void llvm_delete_reset_function_list(void) { fn_list_remove(&reset_fn_list); }
+
+COMPILER_RT_VISIBILITY
+void llvm_reset_counters(void) {
+  struct fn_node *curr = reset_fn_list.head;
+
+  while (curr) {
+    if (curr->id == CURRENT_ID) {
+      curr->fn();
+    }
+    curr = curr->next;
+  }
+}
+
+#if !defined(_WIN32)
+COMPILER_RT_VISIBILITY
+pid_t __gcov_fork() {
+  pid_t parent_pid = getpid();
+  pid_t pid = fork();
+
+  if (pid == 0) {
+    pid_t child_pid = getpid();
+    if (child_pid != parent_pid) {
+      // The pid changed so we've a fork (one could have its own fork function)
+      // Just reset the counters for this child process
+      // threads.
+      llvm_reset_counters();
+    }
+  }
+  return pid;
+}
+#endif
+
+COMPILER_RT_VISIBILITY
+void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn, fn_ptr rfn) {
   static int atexit_ran = 0;
 
   if (wfn)
@@ -652,10 +698,14 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn) {
   if (ffn)
     llvm_register_flush_function(ffn);
 
+  if (rfn)
+    llvm_register_reset_function(rfn);
+
   if (atexit_ran == 0) {
     atexit_ran = 1;
 
     /* Make sure we write out the data and delete the data structures. */
+    atexit(llvm_delete_reset_function_list);
     atexit(llvm_delete_flush_function_list);
     atexit(llvm_delete_writeout_function_list);
     atexit(llvm_writeout_files);

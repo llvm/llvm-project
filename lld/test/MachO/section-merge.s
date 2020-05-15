@@ -23,9 +23,9 @@
 # DATA:        {{0*}}[[#%x,BASE:]] <_some_function>:
 # DATA-NEXT:             [[#BASE]]: 48 c7 c0 01 00 00 00          movq    $1, %rax
 # DATA-NEXT:       [[#BASE + 0x7]]: c3                            retq
-# DATA:      {{0*}}[[#BASE + 0x8]] <_main>:
-# DATA-NEXT:       [[#BASE + 0x8]]: 48 c7 c0 00 00 00 00          movq    $0, %rax
-# DATA-NEXT:       [[#BASE + 0xf]]: c3                            retq
+# DATA:        {{0*}}[[#%x,MAIN:]] <_main>:
+# DATA-NEXT:             [[#MAIN]]: 48 c7 c0 00 00 00 00          movq    $0, %rax
+# DATA-NEXT:       [[#MAIN + 0x7]]: c3                            retq
 
 .section __TEXT,__text
 .global _main

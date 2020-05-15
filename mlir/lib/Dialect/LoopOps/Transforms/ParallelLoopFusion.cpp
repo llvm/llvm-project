@@ -162,11 +162,12 @@ namespace {
 struct ParallelLoopFusion
     : public LoopParallelLoopFusionBase<ParallelLoopFusion> {
   void runOnOperation() override {
-    for (Region &region : getOperation()->getRegions())
-      naivelyFuseParallelOps(region);
+    getOperation()->walk([&](Operation *child) {
+      for (Region &region : child->getRegions())
+        naivelyFuseParallelOps(region);
+    });
   }
 };
-
 } // namespace
 
 std::unique_ptr<Pass> mlir::createParallelLoopFusionPass() {

@@ -20,24 +20,23 @@ define arm_aapcs_vfpcc void @push_out_mul_gather(i32* noalias nocapture readonly
 ; CHECK-LABEL: push_out_mul_gather:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI0_0
-; CHECK-NEXT:    vmov.i32 q0, #0x18
-; CHECK-NEXT:    vldrw.u32 q1, [r3]
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q1, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q1, [q0, #96]!
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
+; CHECK-NEXT:    vstrb.8 q1, [r1], #16
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 6 @ 0x6
-; CHECK-NEXT:    .long 12 @ 0xc
-; CHECK-NEXT:    .long 18 @ 0x12
+; CHECK-NEXT:    .long 4294967200 @ 0xffffffa0
+; CHECK-NEXT:    .long 4294967224 @ 0xffffffb8
+; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
+; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
 
 vector.ph:                                        ; preds = %for.body.preheader
   %ind.end = shl i32 %n.vec, 1
@@ -65,24 +64,23 @@ define arm_aapcs_vfpcc void @push_out_add_gather(i32* noalias nocapture readonly
 ; CHECK-LABEL: push_out_add_gather:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI1_0
-; CHECK-NEXT:    vmov.i32 q1, #0x8
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q0, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q1, [q0, #32]!
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
+; CHECK-NEXT:    vstrb.8 q1, [r1], #16
 ; CHECK-NEXT:    bne .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
+; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 8 @ 0x8
-; CHECK-NEXT:    .long 10 @ 0xa
-; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 16 @ 0x10
 
 vector.ph:                                        ; preds = %for.body.preheader
   %ind.end = shl i32 %n.vec, 1
@@ -110,24 +108,23 @@ define arm_aapcs_vfpcc void @push_out_mul_add_gather(i32* noalias nocapture read
 ; CHECK-LABEL: push_out_mul_add_gather:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI2_0
-; CHECK-NEXT:    vmov.i32 q0, #0x18
-; CHECK-NEXT:    vldrw.u32 q1, [r3]
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q1, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q1, [q0, #96]!
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
+; CHECK-NEXT:    vstrb.8 q1, [r1], #16
 ; CHECK-NEXT:    bne .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 6 @ 0x6
-; CHECK-NEXT:    .long 12 @ 0xc
-; CHECK-NEXT:    .long 18 @ 0x12
-; CHECK-NEXT:    .long 24 @ 0x18
+; CHECK-NEXT:    .long 4294967224 @ 0xffffffb8
+; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
+; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
+; CHECK-NEXT:    .long 0 @ 0x0
 
 vector.ph:                                        ; preds = %for.body.preheader
   %ind.end = shl i32 %n.vec, 1
@@ -287,24 +284,23 @@ define arm_aapcs_vfpcc void @push_out_add_sub_block(i32* noalias nocapture reado
 ; CHECK-LABEL: push_out_add_sub_block:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r3, .LCPI6_0
-; CHECK-NEXT:    vmov.i32 q1, #0x8
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r0, q0, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q1, [q0, #32]!
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
+; CHECK-NEXT:    vstrb.8 q1, [r1], #16
 ; CHECK-NEXT:    bne .LBB6_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI6_0:
-; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
+; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 8 @ 0x8
-; CHECK-NEXT:    .long 10 @ 0xa
-; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 16 @ 0x10
 
 vector.ph:                                        ; preds = %for.body.preheader
   %ind.end = shl i32 %n.vec, 1
@@ -337,24 +333,23 @@ end:
 define arm_aapcs_vfpcc void @non_gatscat_use1(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: non_gatscat_use1:
 ; CHECK:       @ %bb.0: @ %vector.ph
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr r3, .LCPI7_0
-; CHECK-NEXT:    vmov.i32 q1, #0x8
-; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    vmov.i32 q2, #0x6
-; CHECK-NEXT:    vmov.i32 q3, #0x3
+; CHECK-NEXT:    vmov.i32 q0, #0x8
+; CHECK-NEXT:    vldrw.u32 q2, [r3]
+; CHECK-NEXT:    vmov.i32 q1, #0xc
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmul.i32 q4, q0, q3
+; CHECK-NEXT:    vadd.i32 q3, q2, q0
+; CHECK-NEXT:    vmlas.u32 q2, q1, r0
+; CHECK-NEXT:    vldrw.u32 q4, [q2, #24]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q4, q4, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q5, [r0, q4, uxtw #2]
-; CHECK-NEXT:    vstrb.8 q5, [r1], #16
+; CHECK-NEXT:    vmov q2, q3
+; CHECK-NEXT:    vstrb.8 q4, [r1], #16
 ; CHECK-NEXT:    bne .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
@@ -391,24 +386,23 @@ end:
 define arm_aapcs_vfpcc void @non_gatscat_use2(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: non_gatscat_use2:
 ; CHECK:       @ %bb.0: @ %vector.ph
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr r3, .LCPI8_0
-; CHECK-NEXT:    vmov.i32 q1, #0x8
-; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    vmov.i32 q2, #0x6
-; CHECK-NEXT:    vmov.i32 q3, #0x3
+; CHECK-NEXT:    vmov.i32 q0, #0x8
+; CHECK-NEXT:    vldrw.u32 q2, [r3]
+; CHECK-NEXT:    vmov.i32 q1, #0xc
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmul.i32 q4, q0, q3
+; CHECK-NEXT:    vadd.i32 q3, q2, q0
+; CHECK-NEXT:    vmlas.u32 q2, q1, r0
+; CHECK-NEXT:    vldrw.u32 q4, [q2, #24]
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vadd.i32 q4, q4, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q5, [r0, q4, uxtw #2]
-; CHECK-NEXT:    vstrb.8 q5, [r1], #16
+; CHECK-NEXT:    vmov q2, q3
+; CHECK-NEXT:    vstrb.8 q4, [r1], #16
 ; CHECK-NEXT:    bne .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
@@ -451,22 +445,22 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #40
-; CHECK-NEXT:    sub sp, #40
-; CHECK-NEXT:    ldrd r9, r12, [sp, #144]
+; CHECK-NEXT:    .pad #24
+; CHECK-NEXT:    sub sp, #24
+; CHECK-NEXT:    ldrd r9, r12, [sp, #128]
 ; CHECK-NEXT:    sub.w r7, r12, #1
 ; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    adr r5, .LCPI9_0
 ; CHECK-NEXT:    add.w r7, r6, r7, lsr #1
-; CHECK-NEXT:    vmov.i32 q3, #0x8
+; CHECK-NEXT:    vdup.32 q1, r9
 ; CHECK-NEXT:    bic r7, r7, #3
+; CHECK-NEXT:    vldrw.u32 q2, [r5]
 ; CHECK-NEXT:    subs r7, #4
-; CHECK-NEXT:    add.w r11, r6, r7, lsr #2
-; CHECK-NEXT:    adr r7, .LCPI9_0
-; CHECK-NEXT:    vldrw.u32 q0, [r7]
-; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vdup.32 q0, r9
-; CHECK-NEXT:    vshl.i32 q2, q0, #3
+; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    vshl.i32 q3, q1, #3
+; CHECK-NEXT:    add.w r7, r6, r7, lsr #2
+; CHECK-NEXT:    adr r6, .LCPI9_1
+; CHECK-NEXT:    vldrw.u32 q0, [r6]
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:  .LBB9_1: @ %for.cond8.preheader.us.us.preheader
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
@@ -474,28 +468,29 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    @ Child Loop BB9_3 Depth 3
 ; CHECK-NEXT:    mul r10, r8, r9
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    mul r7, r8, r12
+; CHECK-NEXT:    mul r11, r8, r12
 ; CHECK-NEXT:  .LBB9_2: @ %vector.ph
 ; CHECK-NEXT:    @ Parent Loop BB9_1 Depth=1
 ; CHECK-NEXT:    @ => This Loop Header: Depth=2
 ; CHECK-NEXT:    @ Child Loop BB9_3 Depth 3
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vldrw.u32 q6, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vdup.32 q5, r11
+; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vshl.i32 q5, q5, #2
+; CHECK-NEXT:    vmov q6, q1
+; CHECK-NEXT:    vadd.i32 q5, q5, r0
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
-; CHECK-NEXT:    dls lr, r11
-; CHECK-NEXT:    vadd.i32 q5, q0, r7
-; CHECK-NEXT:    vmlas.u32 q6, q0, r5
+; CHECK-NEXT:    vadd.i32 q5, q5, q0
+; CHECK-NEXT:    vmlas.u32 q6, q2, r5
+; CHECK-NEXT:    dls lr, r7
 ; CHECK-NEXT:  .LBB9_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB9_1 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB9_2 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    vadd.i32 q1, q5, q3
-; CHECK-NEXT:    vldrw.u32 q0, [r0, q5, uxtw #2]
-; CHECK-NEXT:    vldrw.u32 q5, [r1, q6, uxtw #2]
-; CHECK-NEXT:    vadd.i32 q7, q6, q2
+; CHECK-NEXT:    vadd.i32 q7, q6, q3
+; CHECK-NEXT:    vldrw.u32 q0, [r1, q6, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q6, [q5, #32]!
+; CHECK-NEXT:    vmul.i32 q0, q0, q6
 ; CHECK-NEXT:    vmov q6, q7
-; CHECK-NEXT:    vmul.i32 q0, q5, q0
-; CHECK-NEXT:    vmov q5, q1
 ; CHECK-NEXT:    vadd.i32 q4, q0, q4
 ; CHECK-NEXT:    le lr, .LBB9_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
@@ -512,7 +507,7 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    cmp r8, r3
 ; CHECK-NEXT:    bne .LBB9_1
 ; CHECK-NEXT:  @ %bb.6: @ %for.end25
-; CHECK-NEXT:    add sp, #40
+; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
@@ -523,6 +518,11 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    .long 2 @ 0x2
 ; CHECK-NEXT:    .long 4 @ 0x4
 ; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:  .LCPI9_1:
+; CHECK-NEXT:    .long 4294967264 @ 0xffffffe0
+; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
+; CHECK-NEXT:    .long 4294967280 @ 0xfffffff0
+; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
 
 for.cond8.preheader.us.us.preheader.preheader:    ; preds = %entry
   %0 = add i32 %l, -1

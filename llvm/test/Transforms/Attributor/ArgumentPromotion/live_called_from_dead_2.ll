@@ -54,7 +54,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = alloca i32
 ; IS__TUNIT____-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__TUNIT____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[B]])
-; IS__TUNIT____-NEXT:    ret i32 undef
+; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC_OPM-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[B:%.*]])

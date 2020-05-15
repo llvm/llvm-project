@@ -103,6 +103,9 @@ public:
   uint64_t getEntryFreq() const;
   void releaseMemory();
   void print(raw_ostream &OS) const;
+
+  // Compare to the other BFI and verify they match.
+  void verifyMatch(BlockFrequencyInfo &Other) const;
 };
 
 /// Analysis pass which computes \c BlockFrequencyInfo.

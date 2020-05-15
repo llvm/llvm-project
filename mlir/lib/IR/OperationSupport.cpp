@@ -19,6 +19,146 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// NamedAttrList
+//===----------------------------------------------------------------------===//
+
+NamedAttrList::NamedAttrList(ArrayRef<NamedAttribute> attributes) {
+  assign(attributes.begin(), attributes.end());
+}
+
+NamedAttrList::NamedAttrList(const_iterator in_start, const_iterator in_end) {
+  assign(in_start, in_end);
+}
+
+ArrayRef<NamedAttribute> NamedAttrList::getAttrs() const { return attrs; }
+
+DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
+  if (!isSorted()) {
+    DictionaryAttr::sortInPlace(attrs);
+    dictionarySorted.setPointerAndInt(nullptr, true);
+  }
+  if (!dictionarySorted.getPointer())
+    dictionarySorted.setPointer(DictionaryAttr::getWithSorted(attrs, context));
+  return dictionarySorted.getPointer().cast<DictionaryAttr>();
+}
+
+NamedAttrList::operator MutableDictionaryAttr() const {
+  if (attrs.empty())
+    return MutableDictionaryAttr();
+  return getDictionary(attrs.front().second.getContext());
+}
+
+/// Add an attribute with the specified name.
+void NamedAttrList::append(StringRef name, Attribute attr) {
+  append(Identifier::get(name, attr.getContext()), attr);
+}
+
+/// Add an attribute with the specified name.
+void NamedAttrList::append(Identifier name, Attribute attr) {
+  push_back({name, attr});
+}
+
+/// Add an array of named attributes.
+void NamedAttrList::append(ArrayRef<NamedAttribute> newAttributes) {
+  append(newAttributes.begin(), newAttributes.end());
+}
+
+/// Add a range of named attributes.
+void NamedAttrList::append(const_iterator in_start, const_iterator in_end) {
+  // TODO: expand to handle case where values appended are in order & after
+  // end of current list.
+  dictionarySorted.setPointerAndInt(nullptr, false);
+  attrs.append(in_start, in_end);
+}
+
+/// Replaces the attributes with new list of attributes.
+void NamedAttrList::assign(const_iterator in_start, const_iterator in_end) {
+  DictionaryAttr::sort(ArrayRef<NamedAttribute>{in_start, in_end}, attrs);
+  dictionarySorted.setPointerAndInt(nullptr, true);
+}
+
+void NamedAttrList::push_back(NamedAttribute newAttribute) {
+  if (isSorted())
+    dictionarySorted.setInt(
+        attrs.empty() ||
+        strcmp(attrs.back().first.data(), newAttribute.first.data()) < 0);
+  dictionarySorted.setPointer(nullptr);
+  attrs.push_back(newAttribute);
+}
+
+/// Helper function to find attribute in possible sorted vector of
+/// NamedAttributes.
+template <typename T>
+static auto *findAttr(SmallVectorImpl<NamedAttribute> &attrs, T name,
+                      bool sorted) {
+  if (!sorted) {
+    return llvm::find_if(
+        attrs, [name](NamedAttribute attr) { return attr.first == name; });
+  }
+
+  auto *it = llvm::lower_bound(attrs, name);
+  if (it->first != name)
+    return attrs.end();
+  return it;
+}
+
+/// Return the specified attribute if present, null otherwise.
+Attribute NamedAttrList::get(StringRef name) const {
+  auto *it = findAttr(attrs, name, isSorted());
+  return it != attrs.end() ? it->second : nullptr;
+}
+
+/// Return the specified attribute if present, null otherwise.
+Attribute NamedAttrList::get(Identifier name) const {
+  auto *it = findAttr(attrs, name, isSorted());
+  return it != attrs.end() ? it->second : nullptr;
+}
+
+/// Return the specified named attribute if present, None otherwise.
+Optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
+  auto *it = findAttr(attrs, name, isSorted());
+  return it != attrs.end() ? *it : Optional<NamedAttribute>();
+}
+Optional<NamedAttribute> NamedAttrList::getNamed(Identifier name) const {
+  auto *it = findAttr(attrs, name, isSorted());
+  return it != attrs.end() ? *it : Optional<NamedAttribute>();
+}
+
+/// If the an attribute exists with the specified name, change it to the new
+/// value.  Otherwise, add a new attribute with the specified name/value.
+void NamedAttrList::set(Identifier name, Attribute value) {
+  assert(value && "attributes may never be null");
+
+  // Look for an existing value for the given name, and set it in-place.
+  auto *it = findAttr(attrs, name, isSorted());
+  if (it != attrs.end()) {
+    // Bail out early if the value is the same as what we already have.
+    if (it->second == value)
+      return;
+    dictionarySorted.setPointer(nullptr);
+    it->second = value;
+    return;
+  }
+
+  // Otherwise, insert the new attribute into its sorted position.
+  it = llvm::lower_bound(attrs, name);
+  dictionarySorted.setPointer(nullptr);
+  attrs.insert(it, {name, value});
+}
+void NamedAttrList::set(StringRef name, Attribute value) {
+  assert(value && "setting null attribute not supported");
+  return set(mlir::Identifier::get(name, value.getContext()), value);
+}
+
+NamedAttrList &
+NamedAttrList::operator=(const SmallVectorImpl<NamedAttribute> &rhs) {
+  assign(rhs.begin(), rhs.end());
+  return *this;
+}
+
+NamedAttrList::operator ArrayRef<NamedAttribute>() const { return attrs; }
+
+//===----------------------------------------------------------------------===//
 // OperationState
 //===----------------------------------------------------------------------===//
 
@@ -133,7 +273,7 @@ void detail::OperandStorage::eraseOperands(unsigned start, unsigned length) {
 
   // Shift all operands down if the operand to remove is not at the end.
   if (start != storage.numOperands) {
-    auto indexIt = std::next(operands.begin(), start);
+    auto *indexIt = std::next(operands.begin(), start);
     std::rotate(indexIt, std::next(indexIt, length), operands.end());
   }
   for (unsigned i = 0; i != length; ++i)
@@ -416,8 +556,8 @@ llvm::hash_code OperationEquivalence::computeHash(Operation *op, Flags flags) {
   // Hash operations based upon their:
   //   - Operation Name
   //   - Attributes
-  llvm::hash_code hash = llvm::hash_combine(
-      op->getName(), op->getMutableAttrDict().getDictionary());
+  llvm::hash_code hash =
+      llvm::hash_combine(op->getName(), op->getMutableAttrDict());
 
   //   - Result Types
   ArrayRef<Type> resultTypes = op->getResultTypes();

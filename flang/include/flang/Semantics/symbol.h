@@ -147,9 +147,12 @@ public:
   AssocEntityDetails &operator=(const AssocEntityDetails &) = default;
   AssocEntityDetails &operator=(AssocEntityDetails &&) = default;
   const MaybeExpr &expr() const { return expr_; }
+  void set_rank(int rank);
+  std::optional<int> rank() const { return rank_; }
 
 private:
   MaybeExpr expr_;
+  std::optional<int> rank_;
 };
 
 // An entity known to be an object.
@@ -320,8 +323,8 @@ class FinalProcDetails {}; // TODO
 class MiscDetails {
 public:
   ENUM_CLASS(Kind, None, ConstructName, ScopeName, PassName, ComplexPartRe,
-      ComplexPartIm, KindParamInquiry, LenParamInquiry, SelectTypeAssociateName,
-      TypeBoundDefinedOp);
+      ComplexPartIm, KindParamInquiry, LenParamInquiry, SelectRankAssociateName,
+      SelectTypeAssociateName, TypeBoundDefinedOp);
   MiscDetails(Kind kind) : kind_{kind} {}
   Kind kind() const { return kind_; }
 
@@ -587,7 +590,6 @@ public:
   }
 
   void SetType(const DeclTypeSpec &);
-
   bool IsDummy() const;
   bool IsFuncResult() const;
   bool IsObjectArray() const;
@@ -637,7 +639,11 @@ public:
             [](const ObjectEntityDetails &oed) { return oed.shape().Rank(); },
             [](const AssocEntityDetails &aed) {
               if (const auto &expr{aed.expr()}) {
-                return expr->Rank();
+                if (auto assocRank{aed.rank()}) {
+                  return *assocRank;
+                } else {
+                  return expr->Rank();
+                }
               } else {
                 return 0;
               }

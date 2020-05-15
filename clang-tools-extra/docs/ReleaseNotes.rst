@@ -176,6 +176,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:'readability-identifier-naming
+  <clang-tidy/checks/readability-identifier-naming>` check.
+
+  Now able to rename member references in class template definitions with 
+  explicit access.
+
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability-qualified-auto>` check now supports a
   `AddConstToQualified` to enable adding ``const`` qualifiers to variables

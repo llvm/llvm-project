@@ -51,6 +51,7 @@ public:
   OutputSection *getOrCreateOutputSection(StringRef name);
   void addOutputSection(OutputSection *os);
   void sortOutputSections(OutputSegmentComparator *comparator);
+  void removeUnneededSections();
 
   const SectionMap &getSections() const { return sections; }
   size_t numNonHiddenSections() const;

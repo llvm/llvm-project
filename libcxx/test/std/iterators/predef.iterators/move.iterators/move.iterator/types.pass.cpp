@@ -35,6 +35,8 @@ struct DummyIt {
   typedef std::ptrdiff_t difference_type;
   typedef ValueType* pointer;
   typedef Reference reference;
+
+  Reference operator*() const;
 };
 
 template <class It>
