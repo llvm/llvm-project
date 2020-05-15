@@ -76,7 +76,7 @@ HardClauseType getHardClauseType(const MachineInstr &MI) {
 
   // Don't form VALU clauses. It's not clear what benefit they give, if any.
 
-  // In practice s_nop is the only internal instructions we're likely to see.
+  // In practice s_nop is the only internal instruction we're likely to see.
   // It's safe to treat the rest as illegal.
   if (MI.getOpcode() == AMDGPU::S_NOP)
     return HARDCLAUSE_INTERNAL;
@@ -103,23 +103,25 @@ public:
     // The last non-internal instruction in the clause.
     MachineInstr *Last = nullptr;
     // The length of the clause including any internal instructions in the
-    // middle.
+    // middle or after the end of the clause.
     unsigned Length = 0;
     // The base operands of *Last.
     SmallVector<const MachineOperand *, 4> BaseOps;
   };
 
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
-    assert(CI.Length ==
-           std::distance(CI.First->getIterator(), CI.Last->getIterator()) + 1);
-    if (CI.Length < 2)
+    // Get the size of the clause excluding any internal instructions at the
+    // end.
+    unsigned Size =
+        std::distance(CI.First->getIterator(), CI.Last->getIterator()) + 1;
+    if (Size < 2)
       return false;
-    assert(CI.Length <= 64 && "Hard clause is too long!");
+    assert(Size <= 64 && "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
         BuildMI(MBB, *CI.First, DebugLoc(), SII->get(AMDGPU::S_CLAUSE))
-            .addImm(CI.Length - 1);
+            .addImm(Size - 1);
     finalizeBundle(MBB, ClauseMI->getIterator(),
                    std::next(CI.Last->getIterator()));
     return true;
