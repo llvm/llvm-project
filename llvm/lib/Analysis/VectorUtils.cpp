@@ -1273,6 +1273,18 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
 }
 }
 
+std::string VFABI::mangleTLIVectorName(StringRef VectorName,
+                                       StringRef ScalarName, unsigned numArgs,
+                                       unsigned VF) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Out << "_ZGV" << VFABI::_LLVM_ << "N" << VF;
+  for (unsigned I = 0; I < numArgs; ++I)
+    Out << "v";
+  Out << "_" << ScalarName << "(" << VectorName << ")";
+  return std::string(Out.str());
+}
+
 void VFABI::getVectorVariantNames(
     const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
   const StringRef S =
