@@ -764,6 +764,8 @@ static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
   auto *Array = dyn_cast<DICompositeType>(Var->getType());
   if (!Array || Array->getTag() != dwarf::DW_TAG_array_type)
     return Result;
+  if (auto *DLVar = Array->getDataLocation())
+    Result.push_back(DLVar);
   for (auto *El : Array->getElements()) {
     if (auto *Subrange = dyn_cast<DISubrange>(El)) {
       auto Count = Subrange->getCount();
