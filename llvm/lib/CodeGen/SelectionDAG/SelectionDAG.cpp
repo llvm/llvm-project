@@ -4915,8 +4915,14 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
       return FoldSymbolOffset(Opcode, VT, GA, N1);
 
-  // For vectors, extract each constant element and fold them individually.
-  // Either input may be an undef value.
+  // TODO: All the folds below are performed lane-by-lane and assume a fixed
+  // vector width, however we should be able to do constant folds involving
+  // splat vector nodes too.
+  if (VT.isScalableVector())
+    return SDValue();
+
+  // For fixed width vectors, extract each constant element and fold them
+  // individually. Either input may be an undef value.
   auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
   if (!BV1 && !N1->isUndef())
     return SDValue();
@@ -4992,6 +4998,13 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   if (!VT.isVector())
     return SDValue();
 
+  // TODO: All the folds below are performed lane-by-lane and assume a fixed
+  // vector width, however we should be able to do constant folds involving
+  // splat vector nodes too.
+  if (VT.isScalableVector())
+    return SDValue();
+
+  // From this point onwards all vectors are assumed to be fixed width.
   unsigned NumElts = VT.getVectorNumElements();
 
   auto IsScalarOrSameVectorSize = [&](const SDValue &Op) {
