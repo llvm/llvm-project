@@ -9,7 +9,7 @@
 #ifndef LLVM_SUPPORT_STRINGSAVER_H
 #define LLVM_SUPPORT_STRINGSAVER_H
 
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
@@ -36,8 +36,12 @@ public:
 ///
 /// Compared to StringSaver, it does more work but avoids saving the same string
 /// multiple times.
+///
+/// Compared to StringPool, it performs fewer allocations but doesn't support
+/// refcounting/deletion.
 class UniqueStringSaver final {
-  StringSet<BumpPtrAllocator &> Strings;
+  StringSaver Strings;
+  llvm::DenseSet<llvm::StringRef> Unique;
 
 public:
   UniqueStringSaver(BumpPtrAllocator &Alloc) : Strings(Alloc) {}
