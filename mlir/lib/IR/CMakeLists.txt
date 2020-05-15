@@ -18,6 +18,7 @@ add_mlir_library(MLIRIR
   OperationSupport.cpp
   PatternMatch.cpp
   Region.cpp
+  RegionKindInterface.cpp
   StandardTypes.cpp
   SymbolTable.cpp
   Types.cpp
@@ -33,6 +34,7 @@ add_mlir_library(MLIRIR
   MLIRCallInterfacesIncGen
   MLIROpAsmInterfaceIncGen
   MLIRSymbolInterfacesIncGen
+  MLIRRegionKindInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRSupport

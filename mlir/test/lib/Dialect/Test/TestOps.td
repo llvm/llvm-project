@@ -12,6 +12,7 @@
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -1184,6 +1185,30 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
 
   let arguments = (ins Index);
   let regions = (region SizedRegion<1>:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
+def SSACFGRegionOp : TEST_Op<"ssacfg_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>]> {
+  let summary =  "operation with an SSACFG region";
+  let description = [{
+    Test op that defines an SSACFG region.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>);
+}
+
+def GraphRegionOp : TEST_Op<"graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>]> {
+  let summary =  "operation with a graph region";
+  let description = [{
+    Test op that defines a graph region.
+  }];
+
+  let regions = (region AnyRegion:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
 }

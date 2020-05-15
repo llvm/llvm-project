@@ -29,6 +29,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -58,9 +59,12 @@ private:
   LogicalResult verifyBlock(Block &block);
   LogicalResult verifyOperation(Operation &op);
 
-  /// Verify the dominance within the given IR unit.
+  /// Verify the dominance property of operations within the given Region.
   LogicalResult verifyDominance(Region &region);
-  LogicalResult verifyDominance(Operation &op);
+
+  /// Verify the dominance property of regions contained within the given
+  /// Operation.
+  LogicalResult verifyDominanceOfContainedRegions(Operation &op);
 
   /// Emit an error for the given block.
   InFlightDiagnostic emitError(Block &bb, const Twine &message) {
@@ -96,9 +100,8 @@ LogicalResult OperationVerifier::verify(Operation &op) {
   // verifier to be resilient to malformed code.
   DominanceInfo theDomInfo(&op);
   domInfo = &theDomInfo;
-  for (auto &region : op.getRegions())
-    if (failed(verifyDominance(region)))
-      return failure();
+  if (failed(verifyDominanceOfContainedRegions(op)))
+    return failure();
 
   domInfo = nullptr;
   return success();
@@ -115,7 +118,7 @@ LogicalResult OperationVerifier::verifyRegion(Region &region) {
                            "entry block of region may not have predecessors");
 
   // Verify each of the blocks within the region.
-  for (auto &block : region)
+  for (Block &block : region)
     if (failed(verifyBlock(block)))
       return failure();
   return success();
@@ -178,10 +181,31 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   if (opInfo && failed(opInfo->verifyInvariants(&op)))
     return failure();
 
+  auto kindInterface = dyn_cast<mlir::RegionKindInterface>(op);
+
   // Verify that all child regions are ok.
-  for (auto &region : op.getRegions())
+  unsigned numRegions = op.getNumRegions();
+  for (unsigned i = 0; i < numRegions; i++) {
+    Region &region = op.getRegion(i);
+    // Check that Graph Regions only have a single basic block. This is
+    // similar to the code in SingleBlockImplicitTerminator, but doesn't
+    // require the trait to be specified. This arbitrary limitation is
+    // designed to limit the number of cases that have to be handled by
+    // transforms and conversions until the concept stabilizes.
+    if (op.isRegistered() && kindInterface &&
+        kindInterface.getRegionKind(i) == RegionKind::Graph) {
+      // Empty regions are fine.
+      if (region.empty())
+        continue;
+
+      // Non-empty regions must contain a single basic block.
+      if (std::next(region.begin()) != region.end())
+        return op.emitOpError("expects graph region #")
+               << i << " to have 0 or 1 blocks";
+    }
     if (failed(verifyRegion(region)))
       return failure();
+  }
 
   // If this is a registered operation, there is nothing left to do.
   if (opInfo)
@@ -223,43 +247,40 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
 
 LogicalResult OperationVerifier::verifyDominance(Region &region) {
   // Verify the dominance of each of the held operations.
-  for (auto &block : region)
-    // Dominance is only reachable inside reachable blocks.
+  for (Block &block : region) {
+    // Dominance is only meaningful inside reachable blocks.
     if (domInfo->isReachableFromEntry(&block))
-      for (auto &op : block) {
-        if (failed(verifyDominance(op)))
+      for (Operation &op : block)
+        // Check that operands properly dominate this use.
+        for (unsigned operandNo = 0, e = op.getNumOperands(); operandNo != e;
+             ++operandNo) {
+          auto operand = op.getOperand(operandNo);
+          if (domInfo->properlyDominates(operand, &op))
+            continue;
+
+          auto diag = op.emitError("operand #")
+                      << operandNo << " does not dominate this use";
+          if (auto *useOp = operand.getDefiningOp())
+            diag.attachNote(useOp->getLoc()) << "operand defined here";
           return failure();
-      }
-    else
-      // Verify the dominance of each of the nested blocks within this
-      // operation, even if the operation itself is not reachable.
-      for (auto &op : block)
-        for (auto &region : op.getRegions())
-          if (failed(verifyDominance(region)))
-            return failure();
+        }
+    // Recursively verify dominance within each operation in the
+    // block, even if the block itself is not reachable, or we are in
+    // a region which doesn't respect dominance.
+    for (Operation &op : block)
+      if (failed(verifyDominanceOfContainedRegions(op)))
+        return failure();
+  }
   return success();
 }
 
-LogicalResult OperationVerifier::verifyDominance(Operation &op) {
-  // Check that operands properly dominate this use.
-  for (unsigned operandNo = 0, e = op.getNumOperands(); operandNo != e;
-       ++operandNo) {
-    auto operand = op.getOperand(operandNo);
-    if (domInfo->properlyDominates(operand, &op))
-      continue;
-
-    auto diag = op.emitError("operand #")
-                << operandNo << " does not dominate this use";
-    if (auto *useOp = operand.getDefiningOp())
-      diag.attachNote(useOp->getLoc()) << "operand defined here";
-    return failure();
-  }
-
-  // Verify the dominance of each of the nested blocks within this operation.
-  for (auto &region : op.getRegions())
+/// Verify the dominance of each of the nested blocks within the given operation
+LogicalResult
+OperationVerifier::verifyDominanceOfContainedRegions(Operation &op) {
+  for (Region &region : op.getRegions()) {
     if (failed(verifyDominance(region)))
       return failure();
-
+  }
   return success();
 }
 
