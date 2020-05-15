@@ -343,18 +343,6 @@ static std::string formatNestedName(ArrayRef<StringRef> QualifiedNameComponents,
   return FullyQualifiedName;
 }
 
-std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Scope,
-                                                 StringRef Name) {
-  SmallVector<StringRef, 5> QualifiedNameComponents;
-  collectParentScopeNames(Scope, QualifiedNameComponents);
-  return formatNestedName(QualifiedNameComponents, Name);
-}
-
-std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Ty) {
-  const DIScope *Scope = Ty->getScope();
-  return getFullyQualifiedName(Scope, getPrettyScopeName(Ty));
-}
-
 struct CodeViewDebug::TypeLoweringScope {
   TypeLoweringScope(CodeViewDebug &CVD) : CVD(CVD) { ++CVD.TypeEmissionLevel; }
   ~TypeLoweringScope() {
@@ -366,6 +354,22 @@ struct CodeViewDebug::TypeLoweringScope {
   }
   CodeViewDebug &CVD;
 };
+
+std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Scope,
+                                                 StringRef Name) {
+  // Ensure types in the scope chain are emitted as soon as possible.
+  // This can create otherwise a situation where S_UDTs are emitted while
+  // looping in emitDebugInfoForUDTs.
+  TypeLoweringScope S(*this);
+  SmallVector<StringRef, 5> QualifiedNameComponents;
+  collectParentScopeNames(Scope, QualifiedNameComponents);
+  return formatNestedName(QualifiedNameComponents, Name);
+}
+
+std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Ty) {
+  const DIScope *Scope = Ty->getScope();
+  return getFullyQualifiedName(Scope, getPrettyScopeName(Ty));
+}
 
 TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   // No scope means global scope and that uses the zero index.
@@ -2981,10 +2985,16 @@ void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
 }
 
 void CodeViewDebug::emitDebugInfoForUDTs(
-    ArrayRef<std::pair<std::string, const DIType *>> UDTs) {
+    const std::vector<std::pair<std::string, const DIType *>> &UDTs) {
+#ifndef NDEBUG
+  size_t OriginalSize = UDTs.size();
+#endif
   for (const auto &UDT : UDTs) {
     const DIType *T = UDT.second;
     assert(shouldEmitUdt(T));
+    // Ensure no new types are discovered when executing the code below.
+    // See discussion in https://reviews.llvm.org/D79512
+    assert(OriginalSize == UDTs.size());
 
     MCSymbol *UDTRecordEnd = beginSymbolRecord(SymbolKind::S_UDT);
     OS.AddComment("Type");
@@ -3092,6 +3102,14 @@ void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
 
 void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   const DIGlobalVariable *DIGV = CVGV.DIGV;
+
+  const DIScope *Scope = DIGV->getScope();
+  // For static data members, get the scope from the declaration.
+  if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
+          DIGV->getRawStaticDataMemberDeclaration()))
+    Scope = MemberDecl->getScope();
+  std::string QualifiedName = getFullyQualifiedName(Scope, DIGV->getName());
+
   if (const GlobalVariable *GV =
           CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
     // DataSym record, see SymbolRecord.h for more info. Thread local data
@@ -3111,13 +3129,9 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.EmitCOFFSectionIndex(GVSym);
     OS.AddComment("Name");
     const unsigned LengthOfDataRecord = 12;
-    emitNullTerminatedSymbolName(
-        OS, getFullyQualifiedName(DIGV->getScope(), DIGV->getName()),
-        LengthOfDataRecord);
+    emitNullTerminatedSymbolName(OS, QualifiedName, LengthOfDataRecord);
     endSymbolRecord(DataEnd);
   } else {
-    // FIXME: Currently this only emits the global variables in the IR metadata.
-    // This should also emit enums and static data members.
     const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
     assert(DIE->isConstant() &&
            "Global constant variables must contain a constant expression.");
@@ -3137,13 +3151,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.emitBinaryData(SRef);
 
     OS.AddComment("Name");
-    const DIScope *Scope = DIGV->getScope();
-    // For static data members, get the scope from the declaration.
-    if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
-            DIGV->getRawStaticDataMemberDeclaration()))
-      Scope = MemberDecl->getScope();
-    emitNullTerminatedSymbolName(OS,
-                                 getFullyQualifiedName(Scope, DIGV->getName()));
+    emitNullTerminatedSymbolName(OS, QualifiedName);
     endSymbolRecord(SConstantEnd);
   }
 }
