@@ -17,8 +17,9 @@
 // CHECK: LLVM_IntrOp<"ptrmask
 // The result of this intrinsic result is overloadable.
 // CHECK: [0]
-// Both its operands are overloadable.
-// CHECK: [0, 1]
+// The second operand is overloadable, but the first operand needs to
+// match the result type.
+// CHECK: [1]
 // It has no additional traits.
 // CHECK: []
 // It has a result.
