@@ -23,12 +23,6 @@ function(add_math_unittest name)
   endif()
 endfunction(add_math_unittest)
 
-add_header_library(
-  float_utils
-  HDRS
-    float.h
-)
-
 add_math_unittest(
   cosf_test
   NEED_MPFR
@@ -39,9 +33,10 @@ add_math_unittest(
   HDRS
     sdcomp26094.h
   DEPENDS
-    .float_utils
+    libc.include.errno
     libc.src.math.cosf
     libc.utils.CPP.standalone_cpp
+    libc.utils.FPUtil.fputil
 )
 
 add_math_unittest(
@@ -54,9 +49,10 @@ add_math_unittest(
   HDRS
     sdcomp26094.h
   DEPENDS
-    .float_utils
+    libc.include.errno
     libc.src.math.sinf
     libc.utils.CPP.standalone_cpp
+    libc.utils.FPUtil.fputil
 )
 
 add_math_unittest(
@@ -69,7 +65,8 @@ add_math_unittest(
   HDRS
     sdcomp26094.h
   DEPENDS
-    .float_utils
+    libc.include.errno
     libc.src.math.sincosf
     libc.utils.CPP.standalone_cpp
+    libc.utils.FPUtil.fputil
 )

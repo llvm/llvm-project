@@ -6,22 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/errno.h"
 #include "include/math.h"
 #include "src/errno/llvmlibc_errno.h"
-#include "src/math/math_utils.h"
 #include "src/math/sinf.h"
-#include "test/src/math/float.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
+#include "utils/FPUtil/BitPatterns.h"
+#include "utils/FPUtil/FloatOperations.h"
+#include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
 #include <stdint.h>
 
-using __llvm_libc::as_float;
-using __llvm_libc::as_uint32_bits;
+using __llvm_libc::fputil::isNegativeQuietNaN;
+using __llvm_libc::fputil::isQuietNaN;
+using __llvm_libc::fputil::valueAsBits;
+using __llvm_libc::fputil::valueFromBits;
 
-using __llvm_libc::testing::FloatBits;
+using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
+
 using __llvm_libc::testing::sdcomp26094Values;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -34,38 +39,37 @@ static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::floatPrecision, 12,
 TEST(SinfTest, SpecialNumbers) {
   llvmlibc_errno = 0;
 
-  EXPECT_TRUE(FloatBits::isQNan(
-      as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::QNan)))));
+  EXPECT_TRUE(
+      isQuietNaN(__llvm_libc::sinf(valueFromBits(BitPatterns::aQuietNaN))));
   EXPECT_EQ(llvmlibc_errno, 0);
 
-  EXPECT_TRUE(FloatBits::isNegQNan(
-      as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::NegQNan)))));
+  EXPECT_TRUE(isNegativeQuietNaN(
+      __llvm_libc::sinf(valueFromBits(BitPatterns::aNegativeQuietNaN))));
   EXPECT_EQ(llvmlibc_errno, 0);
 
-  EXPECT_TRUE(FloatBits::isQNan(
-      as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::SNan)))));
+  EXPECT_TRUE(isQuietNaN(
+      __llvm_libc::sinf(valueFromBits(BitPatterns::aSignallingNaN))));
   EXPECT_EQ(llvmlibc_errno, 0);
 
-  EXPECT_TRUE(FloatBits::isNegQNan(
-      as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::NegSNan)))));
+  EXPECT_TRUE(isNegativeQuietNaN(
+      __llvm_libc::sinf(valueFromBits(BitPatterns::aNegativeSignallingNaN))));
   EXPECT_EQ(llvmlibc_errno, 0);
 
-  EXPECT_EQ(FloatBits::Zero,
-            as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::Zero))));
+  EXPECT_EQ(BitPatterns::zero,
+            valueAsBits(__llvm_libc::sinf(valueFromBits(BitPatterns::zero))));
   EXPECT_EQ(llvmlibc_errno, 0);
 
-  EXPECT_EQ(FloatBits::NegZero,
-            as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::NegZero))));
+  EXPECT_EQ(BitPatterns::negZero, valueAsBits(__llvm_libc::sinf(
+                                      valueFromBits(BitPatterns::negZero))));
   EXPECT_EQ(llvmlibc_errno, 0);
 
   llvmlibc_errno = 0;
-  EXPECT_TRUE(FloatBits::isQNan(
-      as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::Inf)))));
+  EXPECT_TRUE(isQuietNaN(__llvm_libc::sinf(valueFromBits(BitPatterns::inf))));
   EXPECT_EQ(llvmlibc_errno, EDOM);
 
   llvmlibc_errno = 0;
-  EXPECT_TRUE(FloatBits::isNegQNan(
-      as_uint32_bits(__llvm_libc::sinf(as_float(FloatBits::NegInf)))));
+  EXPECT_TRUE(isNegativeQuietNaN(
+      __llvm_libc::sinf(valueFromBits(BitPatterns::negInf))));
   EXPECT_EQ(llvmlibc_errno, EDOM);
 }
 
@@ -73,7 +77,7 @@ TEST(SinfTest, InFloatRange) {
   constexpr uint32_t count = 1000000;
   constexpr uint32_t step = UINT32_MAX / count;
   for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = as_float(v);
+    float x = valueFromBits(v);
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH(mpfr::OP_Sin, x, __llvm_libc::sinf(x), tolerance);
@@ -81,30 +85,30 @@ TEST(SinfTest, InFloatRange) {
 }
 
 TEST(SinfTest, SpecificBitPatterns) {
-  float x = as_float(0xc70d39a1);
+  float x = valueFromBits(0xc70d39a1);
   EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, __llvm_libc::sinf(x), tolerance);
 }
 
 // For small values, sin(x) is x.
 TEST(SinfTest, SmallValues) {
   uint32_t bits = 0x17800000;
-  float x = as_float(bits);
+  float x = valueFromBits(bits);
   float result = __llvm_libc::sinf(x);
   EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result, tolerance);
-  EXPECT_EQ(bits, as_uint32_bits(result));
+  EXPECT_EQ(bits, valueAsBits(result));
 
   bits = 0x00400000;
-  x = as_float(bits);
+  x = valueFromBits(bits);
   result = __llvm_libc::sinf(x);
   EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, result, tolerance);
-  EXPECT_EQ(bits, as_uint32_bits(result));
+  EXPECT_EQ(bits, valueAsBits(result));
 }
 
 // SDCOMP-26094: check sinf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST(SinfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
-    float x = as_float(v);
+    float x = valueFromBits(v);
     EXPECT_MPFR_MATCH(mpfr::OP_Sin, x, __llvm_libc::sinf(x), tolerance);
   }
 }
