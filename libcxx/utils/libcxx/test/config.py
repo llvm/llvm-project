@@ -438,10 +438,6 @@ class Configuration(object):
             self.cxx.compile_flags += ['-I' + os.path.join(pstl_src_root, 'test')]
             self.config.available_features.add('parallel-algorithms')
 
-        # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
-        # template depth with older Clang versions.
-        self.cxx.addCompileFlagIfSupported('-ftemplate-depth=270')
-
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
         self.configure_config_site_header()
