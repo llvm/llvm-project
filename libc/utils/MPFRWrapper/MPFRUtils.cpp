@@ -95,6 +95,12 @@ public:
     case OP_Sin:
       mpfr_sin(value, mpfrInput.value, MPFR_RNDN);
       break;
+    case OP_Exp:
+      mpfr_exp(value, mpfrInput.value, MPFR_RNDN);
+      break;
+    case OP_Exp2:
+      mpfr_exp2(value, mpfrInput.value, MPFR_RNDN);
+      break;
     }
   }
 

@@ -50,6 +50,8 @@ add_entrypoint_library(
     libc.src.math.cosf
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.expf
+    libc.src.math.exp2f
     libc.src.math.round
     libc.src.math.sincosf
     libc.src.math.sinf
