@@ -41,17 +41,14 @@ public:
   ContiguousBlobAccumulator(uint64_t InitialOffset_)
       : InitialOffset(InitialOffset_), Buf(), OS(Buf) {}
 
-  template <class Integer>
-  raw_ostream &getOSAndAlignedOffset(Integer &Offset, unsigned Align) {
-    Offset = padToAlignment(Align);
-    return OS;
-  }
+  uint64_t getOffset() const { return InitialOffset + OS.tell(); }
+  raw_ostream &getOS() { return OS; }
 
   /// \returns The new offset.
   uint64_t padToAlignment(unsigned Align) {
     if (Align == 0)
       Align = 1;
-    uint64_t CurrentOffset = InitialOffset + OS.tell();
+    uint64_t CurrentOffset = getOffset();
     uint64_t AlignedOffset = alignTo(CurrentOffset, Align);
     OS.write_zeros(AlignedOffset - CurrentOffset);
     return AlignedOffset; // == CurrentOffset;
@@ -221,6 +218,9 @@ template <class ELFT> class ELFState {
 
   void assignSectionAddress(Elf_Shdr &SHeader, ELFYAML::Section *YAMLSec);
 
+  uint64_t alignToOffset(ContiguousBlobAccumulator &CBA, uint64_t Align,
+                         llvm::Optional<llvm::yaml::Hex64> Offset);
+
 public:
   static bool writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
                        yaml::ErrorHandler EH);
@@ -300,10 +300,10 @@ void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream 
 
   Header.e_shentsize =
       Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
-  // Immediately following the ELF header and program headers.
-  // Align the start of the section header and write the ELF header.
-  uint64_t SHOff;
-  CBA.getOSAndAlignedOffset(SHOff, sizeof(typename ELFT::uint));
+  // Align the start of the section header table, which is written after all
+  // other sections to the end of the file.
+  uint64_t SHOff =
+      alignToOffset(CBA, sizeof(typename ELFT::uint), /*Offset=*/None);
   Header.e_shoff =
       Doc.Header.SHOff ? typename ELFT::uint(*Doc.Header.SHOff) : SHOff;
   Header.e_shnum =
@@ -418,6 +418,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
   size_t SecNdx = -1;
   for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks) {
     if (auto S = dyn_cast<ELFYAML::Fill>(D.get())) {
+      S->ShOffset = alignToOffset(CBA, /*Align=*/1, /*Offset=*/None);
       writeFill(*S, CBA);
       LocationCounter += S->Size;
       continue;
@@ -447,12 +448,18 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       SHeader.sh_flags = *Sec->Flags;
     SHeader.sh_addralign = Sec->AddressAlign;
 
+    // Set the offset for all sections, except the SHN_UNDEF section with index
+    // 0 when not explicitly requested.
+    bool IsFirstUndefSection = SecNdx == 0;
+    if (!IsFirstUndefSection || Sec->Offset)
+      SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, Sec->Offset);
+
     assignSectionAddress(SHeader, Sec);
 
     if (!Sec->Link.empty())
       SHeader.sh_link = toSectionIndex(Sec->Link, Sec->Name);
 
-    if (SecNdx == 0) {
+    if (IsFirstUndefSection) {
       if (auto RawSec = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
         // We do not write any content for special SHN_UNDEF section.
         if (RawSec->Size)
@@ -475,11 +482,9 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::MipsABIFlags>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::NoBitsSection>(Sec)) {
+      // SHT_NOBITS sections do not have any content to write.
       SHeader.sh_entsize = 0;
       SHeader.sh_size = S->Size;
-      // SHT_NOBITS section does not have content
-      // so just to setup the section offset.
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
     } else if (auto S = dyn_cast<ELFYAML::DynamicSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::SymverSection>(Sec)) {
@@ -663,7 +668,9 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
 
   assignSectionAddress(SHeader, YAMLSec);
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, /*Offset=*/None);
+  raw_ostream &OS = CBA.getOS();
+
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     assert(Symbols.empty());
     SHeader.sh_size = writeContent(OS, RawSec->Content, RawSec->Size);
@@ -689,7 +696,9 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
   ELFYAML::RawContentSection *RawSec =
       dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, /*Offset=*/None);
+  raw_ostream &OS = CBA.getOS();
+
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     SHeader.sh_size = writeContent(OS, RawSec->Content, RawSec->Size);
   } else {
@@ -809,9 +818,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::RawContentSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-  SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
+  SHeader.sh_size = writeContent(CBA.getOS(), Section.Content, Section.Size);
 
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
@@ -850,7 +857,7 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.RelocatableSec.empty())
     SHeader.sh_info = toSectionIndex(Section.RelocatableSec, Section.Name);
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS = CBA.getOS();
   for (const auto &Rel : Section.Relocations) {
     unsigned SymIdx = Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name,
                                                  Section.Link == ".dynsym")
@@ -876,11 +883,10 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::RelrSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   SHeader.sh_entsize =
       Section.EntSize ? uint64_t(*Section.EntSize) : sizeof(Elf_Relr);
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -903,11 +909,8 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::SymtabShndxSection &Shndx,
     ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
   for (uint32_t E : Shndx.Entries)
-    support::endian::write<uint32_t>(OS, E, ELFT::TargetEndianness);
+    support::endian::write<uint32_t>(CBA.getOS(), E, ELFT::TargetEndianness);
 
   SHeader.sh_entsize = Shndx.EntSize ? (uint64_t)*Shndx.EntSize : 4;
   SHeader.sh_size = Shndx.Entries.size() * SHeader.sh_entsize;
@@ -931,9 +934,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     SHeader.sh_info =
         toSymbolIndex(*Section.Signature, Section.Name, /*IsDynamic=*/false);
 
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
+  raw_ostream &OS = CBA.getOS();
   for (const ELFYAML::SectionOrType &Member : Section.Members) {
     unsigned int SectionIndex = 0;
     if (Member.sectionNameOrType == "GRP_COMDAT")
@@ -948,8 +949,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::SymverSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS = CBA.getOS();
   for (uint16_t Version : Section.Entries)
     support::endian::write<uint16_t>(OS, Version, ELFT::TargetEndianness);
 
@@ -961,9 +961,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::StackSizesSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content || Section.Size) {
     SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
@@ -979,9 +977,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::LinkerOptionsSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -1003,9 +999,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::DependentLibrariesSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -1022,12 +1016,33 @@ void ELFState<ELFT>::writeSectionContent(
 }
 
 template <class ELFT>
+uint64_t
+ELFState<ELFT>::alignToOffset(ContiguousBlobAccumulator &CBA, uint64_t Align,
+                              llvm::Optional<llvm::yaml::Hex64> Offset) {
+  uint64_t CurrentOffset = CBA.getOffset();
+  uint64_t AlignedOffset;
+
+  if (Offset) {
+    if ((uint64_t)*Offset < CurrentOffset) {
+      reportError("the 'Offset' value (0x" +
+                  Twine::utohexstr((uint64_t)*Offset) + ") goes backward");
+      return CurrentOffset;
+    }
+
+    // We ignore an alignment when an explicit offset has been requested.
+    AlignedOffset = *Offset;
+  } else {
+    AlignedOffset = alignTo(CurrentOffset, std::max(Align, (uint64_t)1));
+  }
+
+  CBA.getOS().write_zeros(AlignedOffset - CurrentOffset);
+  return AlignedOffset;
+}
+
+template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::CallGraphProfileSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
   else
@@ -1037,6 +1052,7 @@ void ELFState<ELFT>::writeSectionContent(
   if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -1060,13 +1076,11 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::HashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
   unsigned Link = 0;
   if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content || Section.Size) {
     SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
@@ -1093,11 +1107,10 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          ContiguousBlobAccumulator &CBA) {
   typedef typename ELFT::Verdef Elf_Verdef;
   typedef typename ELFT::Verdaux Elf_Verdaux;
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
 
   SHeader.sh_info = Section.Info;
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -1146,9 +1159,9 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   typedef typename ELFT::Verneed Elf_Verneed;
   typedef typename ELFT::Vernaux Elf_Vernaux;
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   SHeader.sh_info = Section.Info;
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -1205,7 +1218,6 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   SHeader.sh_entsize = sizeof(Flags);
   SHeader.sh_size = SHeader.sh_entsize;
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   Flags.version = Section.Version;
   Flags.isa_level = Section.ISALevel;
   Flags.isa_rev = Section.ISARevision;
@@ -1217,7 +1229,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   Flags.ases = Section.ASEs;
   Flags.flags1 = Section.Flags1;
   Flags.flags2 = Section.Flags2;
-  OS.write((const char *)&Flags, sizeof(Flags));
+  CBA.getOS().write((const char *)&Flags, sizeof(Flags));
 }
 
 template <class ELFT>
@@ -1241,8 +1253,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   else
     SHeader.sh_entsize = sizeof(Elf_Dyn);
 
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS = CBA.getOS();
   for (const ELFYAML::DynamicEntry &DE : Section.Entries) {
     support::endian::write<uintX_t>(OS, DE.Tag, ELFT::TargetEndianness);
     support::endian::write<uintX_t>(OS, DE.Val, ELFT::TargetEndianness);
@@ -1255,13 +1266,11 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::AddrsigSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
   unsigned Link = 0;
   if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content || Section.Size) {
     SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
@@ -1276,10 +1285,8 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::NoteSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS = CBA.getOS();
   uint64_t Offset = OS.tell();
-
   if (Section.Content || Section.Size) {
     SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
@@ -1325,13 +1332,11 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::GnuHashSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS =
-      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-
   unsigned Link = 0;
   if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
+  raw_ostream &OS = CBA.getOS();
   if (Section.Content) {
     SHeader.sh_size = writeContent(OS, Section.Content, None);
     return;
@@ -1388,8 +1393,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 template <class ELFT>
 void ELFState<ELFT>::writeFill(ELFYAML::Fill &Fill,
                                ContiguousBlobAccumulator &CBA) {
-  raw_ostream &OS = CBA.getOSAndAlignedOffset(Fill.ShOffset, /*Align=*/1);
-
+  raw_ostream &OS = CBA.getOS();
   size_t PatternSize = Fill.Pattern ? Fill.Pattern->binary_size() : 0;
   if (!PatternSize) {
     OS.write_zeros(Fill.Size);
