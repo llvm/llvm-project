@@ -188,8 +188,8 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty,
   }
   Offsets = GEP->getOperand(1);
   // Paranoid check whether the number of parallel lanes is the same
-  assert(cast<VectorType>(Ty)->getNumElements() ==
-         cast<VectorType>(Offsets->getType())->getNumElements());
+  assert(cast<FixedVectorType>(Ty)->getNumElements() ==
+         cast<FixedVectorType>(Offsets->getType())->getNumElements());
   // Only <N x i32> offsets can be integrated into an arm gather, any smaller
   // type would have to be sign extended by the gep - and arm gathers can only
   // zero extend. Additionally, the offsets do have to originate from a zext of
@@ -199,7 +199,7 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty,
     return nullptr;
   if (ZExtInst *ZextOffs = dyn_cast<ZExtInst>(Offsets))
     Offsets = ZextOffs->getOperand(0);
-  else if (!(cast<VectorType>(Offsets->getType())->getNumElements() == 4 &&
+  else if (!(cast<FixedVectorType>(Offsets->getType())->getNumElements() == 4 &&
              Offsets->getType()->getScalarSizeInBits() == 32))
     return nullptr;
 
@@ -222,8 +222,8 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty,
 void MVEGatherScatterLowering::lookThroughBitcast(Value *&Ptr) {
   // Look through bitcast instruction if #elements is the same
   if (auto *BitCast = dyn_cast<BitCastInst>(Ptr)) {
-    auto *BCTy = cast<VectorType>(BitCast->getType());
-    auto *BCSrcTy = cast<VectorType>(BitCast->getOperand(0)->getType());
+    auto *BCTy = cast<FixedVectorType>(BitCast->getType());
+    auto *BCSrcTy = cast<FixedVectorType>(BitCast->getOperand(0)->getType());
     if (BCTy->getNumElements() == BCSrcTy->getNumElements()) {
       LLVM_DEBUG(
           dbgs() << "masked gathers/scatters: looking through bitcast\n");
@@ -304,7 +304,7 @@ Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   // @llvm.masked.gather.*(Ptrs, alignment, Mask, Src0)
   // Attempt to turn the masked gather in I into a MVE intrinsic
   // Potentially optimising the addressing modes as we do so.
-  auto *Ty = cast<VectorType>(I->getType());
+  auto *Ty = cast<FixedVectorType>(I->getType());
   Value *Ptr = I->getArgOperand(0);
   unsigned Alignment = cast<ConstantInt>(I->getArgOperand(1))->getZExtValue();
   Value *Mask = I->getArgOperand(2);
@@ -349,7 +349,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(IntrinsicInst *I,
                                                            IRBuilder<> &Builder,
                                                            int64_t Increment) {
   using namespace PatternMatch;
-  auto *Ty = cast<VectorType>(I->getType());
+  auto *Ty = cast<FixedVectorType>(I->getType());
   LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
@@ -369,7 +369,7 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(IntrinsicInst *I,
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherBaseWB(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder, int64_t Increment) {
   using namespace PatternMatch;
-  auto *Ty = cast<VectorType>(I->getType());
+  auto *Ty = cast<FixedVectorType>(I->getType());
   LLVM_DEBUG(
       dbgs()
       << "masked gathers: loading from vector of pointers with writeback\n");
@@ -467,7 +467,7 @@ Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   Value *Input = I->getArgOperand(0);
   Value *Ptr = I->getArgOperand(1);
   unsigned Alignment = cast<ConstantInt>(I->getArgOperand(2))->getZExtValue();
-  auto *Ty = cast<VectorType>(Input->getType());
+  auto *Ty = cast<FixedVectorType>(Input->getType());
 
   if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
                                Alignment))
@@ -601,11 +601,11 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
 Value *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
     IntrinsicInst *I, Value *BasePtr, Value *Offsets, GetElementPtrInst *GEP,
     IRBuilder<> &Builder) {
-  VectorType *Ty;
+  FixedVectorType *Ty;
   if (I->getIntrinsicID() == Intrinsic::masked_gather)
-    Ty = cast<VectorType>(I->getType());
+    Ty = cast<FixedVectorType>(I->getType());
   else
-    Ty = cast<VectorType>(I->getArgOperand(0)->getType());
+    Ty = cast<FixedVectorType>(I->getArgOperand(0)->getType());
   // Incrementing gathers only exist for v4i32
   if (Ty->getNumElements() != 4 ||
       Ty->getScalarSizeInBits() != 32)
@@ -623,7 +623,7 @@ Value *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
   int TypeScale =
       computeScale(DT.getTypeSizeInBits(GEP->getOperand(0)->getType()),
                    DT.getTypeSizeInBits(GEP->getType()) /
-                       cast<VectorType>(GEP->getType())->getNumElements());
+                       cast<FixedVectorType>(GEP->getType())->getNumElements());
   if (TypeScale == -1)
     return nullptr;
 
@@ -702,7 +702,7 @@ Value *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
 
   Builder.SetInsertPoint(&Phi->getIncomingBlock(1 - IncrementIndex)->back());
   unsigned NumElems =
-      cast<VectorType>(OffsetsIncoming->getType())->getNumElements();
+      cast<FixedVectorType>(OffsetsIncoming->getType())->getNumElements();
 
   // Make sure the offsets are scaled correctly
   Instruction *ScaledOffsets = BinaryOperator::Create(

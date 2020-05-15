@@ -643,7 +643,7 @@ class VectorType;
     /// Returns true if \p VecTy is a legal interleaved access type. This
     /// function checks the vector element type and the overall width of the
     /// vector.
-    bool isLegalInterleavedAccessType(unsigned Factor, VectorType *VecTy,
+    bool isLegalInterleavedAccessType(unsigned Factor, FixedVectorType *VecTy,
                                       const DataLayout &DL) const;
 
     bool alignLoopsWithOptSize() const override;
