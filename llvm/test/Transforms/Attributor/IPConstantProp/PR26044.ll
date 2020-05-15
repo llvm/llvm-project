@@ -68,7 +68,7 @@ entry:
   ret i32 %cond
 }
 
-define void @fn_no_null_opt(i32* %P, i1 %C) "null-pointer-is-valid"="true" {
+define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ;
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@fn_no_null_opt
 ; IS__TUNIT____-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i1 [[C:%.*]])

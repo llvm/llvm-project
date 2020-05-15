@@ -330,4 +330,4 @@ define void @no_atomic_vector_store(<2 x float> %p, i8* %p2) {
   ret void
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

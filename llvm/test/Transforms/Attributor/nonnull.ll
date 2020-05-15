@@ -1231,5 +1231,5 @@ define void @nonnull_assume_neg(i8* %arg) {
 declare void @use_i8_ptr(i8* nofree nocapture readnone) nounwind
 declare void @use_i8_ptr_ret(i8* nofree nocapture readnone) nounwind willreturn
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
