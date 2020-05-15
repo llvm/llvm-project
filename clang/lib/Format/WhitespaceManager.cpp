@@ -40,7 +40,8 @@ WhitespaceManager::Change::Change(const FormatToken &Tok,
       ContinuesPPDirective(ContinuesPPDirective), Spaces(Spaces),
       IsInsideToken(IsInsideToken), IsTrailingComment(false), TokenLength(0),
       PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
-      StartOfBlockComment(nullptr), IndentationOffset(0) {}
+      StartOfBlockComment(nullptr), IndentationOffset(0), ConditionalsLevel(0) {
+}
 
 void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned Spaces,
@@ -95,6 +96,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveMacros();
   alignConsecutiveDeclarations();
   alignConsecutiveAssignments();
+  alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
   generateChanges();
@@ -227,6 +229,33 @@ void WhitespaceManager::calculateLineBreakInformation() {
       LastBlockComment = nullptr;
     }
   }
+
+  // Compute conditional nesting level
+  // Level is increased for each conditional, unless this conditional continues
+  // a chain of conditional, i.e. starts immediately after the colon of another
+  // conditional.
+  SmallVector<bool, 16> ScopeStack;
+  int ConditionalsLevel = 0;
+  for (auto &Change : Changes) {
+    for (unsigned i = 0, e = Change.Tok->FakeLParens.size(); i != e; ++i) {
+      bool isNestedConditional =
+          Change.Tok->FakeLParens[e - 1 - i] == prec::Conditional &&
+          !(i == 0 && Change.Tok->Previous &&
+            Change.Tok->Previous->is(TT_ConditionalExpr) &&
+            Change.Tok->Previous->is(tok::colon));
+      if (isNestedConditional)
+        ++ConditionalsLevel;
+      ScopeStack.push_back(isNestedConditional);
+    }
+
+    Change.ConditionalsLevel = ConditionalsLevel;
+
+    for (unsigned i = Change.Tok->FakeRParens; i > 0 && ScopeStack.size();
+         --i) {
+      if (ScopeStack.pop_back_val())
+        --ConditionalsLevel;
+    }
+  }
 }
 
 // Align a single sequence of tokens, see AlignTokens below.
@@ -248,6 +277,7 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
   //          double z);
   // In the above example, we need to take special care to ensure that
   // 'double z' is indented along with it's owning function 'b'.
+  // Special handling is required for 'nested' ternary operators.
   SmallVector<unsigned, 16> ScopeStack;
 
   for (unsigned i = Start; i != End; ++i) {
@@ -288,7 +318,10 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
       unsigned ScopeStart = ScopeStack.back();
       if (Changes[ScopeStart - 1].Tok->is(TT_FunctionDeclarationName) ||
           (ScopeStart > Start + 1 &&
-           Changes[ScopeStart - 2].Tok->is(TT_FunctionDeclarationName)))
+           Changes[ScopeStart - 2].Tok->is(TT_FunctionDeclarationName)) ||
+          Changes[i].Tok->is(TT_ConditionalExpr) ||
+          (Changes[i].Tok->Previous &&
+           Changes[i].Tok->Previous->is(TT_ConditionalExpr)))
         Changes[i].Spaces += Shift;
     }
 
@@ -341,7 +374,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   // abort when we hit any token in a higher scope than the starting one.
   auto IndentAndNestingLevel = StartAt < Changes.size()
                                    ? Changes[StartAt].indentAndNestingLevel()
-                                   : std::pair<unsigned, unsigned>(0, 0);
+                                   : std::tuple<unsigned, unsigned, unsigned>();
 
   // Keep track of the number of commas before the matching tokens, we will only
   // align a sequence of matching tokens if they are preceded by the same number
@@ -411,8 +444,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       StartOfSequence = i;
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-    int LineLengthAfter = -Changes[i].Spaces;
-    for (unsigned j = i; j != e && Changes[j].NewlinesBefore == 0; ++j)
+    int LineLengthAfter = Changes[i].TokenLength;
+    for (unsigned j = i + 1; j != e && Changes[j].NewlinesBefore == 0; ++j)
       LineLengthAfter += Changes[j].Spaces + Changes[j].TokenLength;
     unsigned ChangeMaxColumn = Style.ColumnLimit - LineLengthAfter;
 
@@ -608,6 +641,50 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
         return true;
       },
       Changes, /*StartAt=*/0);
+}
+
+void WhitespaceManager::alignChainedConditionals() {
+  if (Style.BreakBeforeTernaryOperators) {
+    AlignTokens(
+        Style,
+        [](Change const &C) {
+          // Align question operators and last colon
+          return C.Tok->is(TT_ConditionalExpr) &&
+                 ((C.Tok->is(tok::question) && !C.NewlinesBefore) ||
+                  (C.Tok->is(tok::colon) && C.Tok->Next &&
+                   (C.Tok->Next->FakeLParens.size() == 0 ||
+                    C.Tok->Next->FakeLParens.back() != prec::Conditional)));
+        },
+        Changes, /*StartAt=*/0);
+  } else {
+    static auto AlignWrappedOperand = [](Change const &C) {
+      auto Previous = C.Tok->getPreviousNonComment(); // Previous;
+      return C.NewlinesBefore && Previous && Previous->is(TT_ConditionalExpr) &&
+             (Previous->is(tok::question) ||
+              (Previous->is(tok::colon) &&
+               (C.Tok->FakeLParens.size() == 0 ||
+                C.Tok->FakeLParens.back() != prec::Conditional)));
+    };
+    // Ensure we keep alignment of wrapped operands with non-wrapped operands
+    // Since we actually align the operators, the wrapped operands need the
+    // extra offset to be properly aligned.
+    for (Change &C : Changes) {
+      if (AlignWrappedOperand(C))
+        C.StartOfTokenColumn -= 2;
+    }
+    AlignTokens(
+        Style,
+        [this](Change const &C) {
+          // Align question operators if next operand is not wrapped, as
+          // well as wrapped operands after question operator or last
+          // colon in conditional sequence
+          return (C.Tok->is(TT_ConditionalExpr) && C.Tok->is(tok::question) &&
+                  &C != &Changes.back() && (&C + 1)->NewlinesBefore == 0 &&
+                  !(&C + 1)->IsTrailingComment) ||
+                 AlignWrappedOperand(C);
+        },
+        Changes, /*StartAt=*/0);
+  }
 }
 
 void WhitespaceManager::alignTrailingComments() {
