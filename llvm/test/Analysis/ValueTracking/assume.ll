@@ -91,7 +91,7 @@ A:
   ret i32 %6
 }
 
-define dso_local i32 @test4b(i32* readonly %0, i1 %cond) "null-pointer-is-valid"="true" {
+define dso_local i32 @test4b(i32* readonly %0, i1 %cond) null_pointer_is_valid {
 ; CHECK-LABEL: @test4b(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP0:%.*]], i32 4) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]

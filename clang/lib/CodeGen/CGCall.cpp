@@ -1744,7 +1744,7 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
                            llvm::toStringRef(CodeGenOpts.LessPreciseFPMAD));
 
     if (CodeGenOpts.NullPointerIsValid)
-      FuncAttrs.addAttribute("null-pointer-is-valid", "true");
+      FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
 
     if (CodeGenOpts.FPDenormalMode != llvm::DenormalMode::getIEEE())
       FuncAttrs.addAttribute("denormal-fp-math",

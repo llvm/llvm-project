@@ -211,8 +211,8 @@ define i32 @eval_func1(i32 (i32)* , i32) local_unnamed_addr {
   ret i32 %3
 }
 
-; CHECK-NOT: Function Attrs
-define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr "null-pointer-is-valid"="true"{
+; CHECK: Function Attrs: null_pointer_is_valid
+define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr null_pointer_is_valid{
 ; CHECK-LABEL: define {{[^@]+}}@eval_func2
 ; CHECK-SAME: (i32 (i32)* nocapture nofree [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 [[TMP0]](i32 [[TMP1]])
