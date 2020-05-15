@@ -477,6 +477,11 @@ public:
     return Type::getHalfTy(Context);
   }
 
+  /// Fetch the type representing a 16-bit brain floating point value.
+  Type *getBFloatTy() {
+    return Type::getBFloatTy(Context);
+  }
+
   /// Fetch the type representing a 32-bit floating point value.
   Type *getFloatTy() {
     return Type::getFloatTy(Context);

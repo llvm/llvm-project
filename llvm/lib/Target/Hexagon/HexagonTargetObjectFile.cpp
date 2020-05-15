@@ -323,6 +323,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   }
   case Type::FunctionTyID:
   case Type::VoidTyID:
+  case Type::BFloatTyID:
   case Type::X86_FP80TyID:
   case Type::FP128TyID:
   case Type::PPC_FP128TyID:
