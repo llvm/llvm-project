@@ -32,7 +32,7 @@ float LLVM_LIBC_ENTRYPOINT(sinf)(float y) {
     if (unlikely(abstop12(y) < abstop12(as_float(0x39800000)))) {
       if (unlikely(abstop12(y) < abstop12(as_float(0x800000))))
         // Force underflow for tiny y.
-        force_eval_float(s);
+        force_eval<float>(s);
       return y;
     }
 
@@ -62,7 +62,7 @@ float LLVM_LIBC_ENTRYPOINT(sinf)(float y) {
     return sinf_poly(x * s, x * x, p, n);
   }
 
-  return invalidf(y);
+  return invalid(y);
 }
 
 } // namespace __llvm_libc
