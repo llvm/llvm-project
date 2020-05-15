@@ -1312,27 +1312,29 @@ Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
       if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
               static_type.GetTypeSystem()))
         static_type = ts->ReconstructType(static_type);
-      TypeSystemSwift *swift_ast_ctx =
-          llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
+      SwiftASTContext *swift_ast_ctx =
+          llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
       if (!swift_ast_ctx)
         return {};
-      if (swift_ast_ctx->IsErrorType(static_type)) {
+      if (swift_ast_ctx->IsErrorType(static_type.GetOpaqueQualType())) {
         // ErrorType values are always a pointer
         return Value::eValueTypeLoadAddress;
       }
 
-      switch (swift_ast_ctx->GetAllocationStrategy(dynamic_type)) {
-      case SwiftASTContext::TypeAllocationStrategy::eDynamic:
-      case SwiftASTContext::TypeAllocationStrategy::eUnknown:
-        break;
-      case SwiftASTContext::TypeAllocationStrategy::eInline: // inline data;
-                                                             // same as the
-                                                             // static data
-        return static_value_type;
-      case SwiftASTContext::TypeAllocationStrategy::ePointer: // pointed-to; in
-                                                              // the target
-        return Value::eValueTypeLoadAddress;
-      }
+      if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(
+              dynamic_type.GetTypeSystem()))
+        switch (ts->GetAllocationStrategy(dynamic_type.GetOpaqueQualType())) {
+        case SwiftASTContext::TypeAllocationStrategy::eDynamic:
+        case SwiftASTContext::TypeAllocationStrategy::eUnknown:
+          break;
+        case SwiftASTContext::TypeAllocationStrategy::eInline: // inline data;
+                                                               // same as the
+                                                               // static data
+          return static_value_type;
+        case SwiftASTContext::TypeAllocationStrategy::ePointer: // pointed-to;
+                                                                // in the target
+          return Value::eValueTypeLoadAddress;
+        }
     }
     if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsGenericTypeParam)) {
       // if I am handling a non-pointer Swift type obtained from an archetype,

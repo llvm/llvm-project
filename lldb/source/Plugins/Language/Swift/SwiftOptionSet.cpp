@@ -39,7 +39,8 @@ static clang::EnumDecl *GetAsEnumDecl(CompilerType swift_type) {
     return nullptr;
 
   CompilerType clang_type;
-  if (!swift_ast_ctx->IsImportedType(swift_type, &clang_type))
+  if (!swift_ast_ctx->IsImportedType(swift_type.GetOpaqueQualType(),
+                                     &clang_type))
     return nullptr;
 
   if (!clang_type.IsValid())
