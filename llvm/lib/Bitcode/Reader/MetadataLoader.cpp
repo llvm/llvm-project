@@ -1340,7 +1340,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 17)
+    if (Record.size() < 16 || Record.size() > 18)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1364,6 +1364,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *VTableHolder = nullptr;
     Metadata *TemplateParams = nullptr;
     Metadata *Discriminator = nullptr;
+    Metadata *DataLocation = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported
@@ -1386,13 +1387,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       TemplateParams = getMDOrNull(Record[14]);
       if (Record.size() > 16)
         Discriminator = getMDOrNull(Record[16]);
+      if (Record.size() > 17)
+        DataLocation = getMDOrNull(Record[17]);
     }
     DICompositeType *CT = nullptr;
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
           SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-          VTableHolder, TemplateParams, Discriminator);
+          VTableHolder, TemplateParams, Discriminator, DataLocation);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1400,7 +1403,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            (Context, Tag, Name, File, Line, Scope, BaseType,
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
-                            Identifier, Discriminator));
+                            Identifier, Discriminator, DataLocation));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

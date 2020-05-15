@@ -1623,6 +1623,69 @@ TEST_F(DICompositeTypeTest, variant_part) {
   EXPECT_EQ(N->getDiscriminator(), Discriminator);
 }
 
+TEST_F(DICompositeTypeTest, dynamicArray) {
+  unsigned Tag = dwarf::DW_TAG_array_type;
+  StringRef Name = "some name";
+  DIFile *File = getFile();
+  unsigned Line = 1;
+  DILocalScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
+  uint64_t SizeInBits = 32;
+  uint32_t AlignInBits = 32;
+  uint64_t OffsetInBits = 4;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(3);
+  unsigned RuntimeLang = 6;
+  StringRef Identifier = "some id";
+  DIType *Type = getDerivedType();
+  Metadata *DlVar1 = DILocalVariable::get(Context, Scope, "dl_var1", File, 8,
+                                       Type, 2, Flags, 8);
+  Metadata *DlVar2 = DILocalVariable::get(Context, Scope, "dl_var2", File, 8,
+                                       Type, 2, Flags, 8);
+  uint64_t Elements1[] = {dwarf::DW_OP_push_object_address, dwarf::DW_OP_deref};
+  Metadata *DataLocation1 = DIExpression::get(Context, Elements1);
+
+  uint64_t Elements2[] = {dwarf::DW_OP_constu, 0};
+  Metadata *DataLocation2 = DIExpression::get(Context, Elements2);
+
+  auto *N1 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DlVar1);
+
+  auto *Same1 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DlVar1);
+
+  auto *Other1 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DlVar2);
+
+  EXPECT_EQ(N1, Same1);
+  EXPECT_NE(Same1, Other1);
+  EXPECT_EQ(N1->getDataLocation(), DlVar1);
+
+  auto *N2 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1);
+
+  auto *Same2 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1);
+
+  auto *Other2 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation2);
+
+  EXPECT_EQ(N2, Same2);
+  EXPECT_NE(Same2, Other2);
+  EXPECT_EQ(N2->getDataLocationExp(), DataLocation1);
+}
+
 typedef MetadataTest DISubroutineTypeTest;
 
 TEST_F(DISubroutineTypeTest, get) {

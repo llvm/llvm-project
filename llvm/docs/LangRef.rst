@@ -4810,7 +4810,12 @@ The following ``tag:`` values are valid:
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>`, each representing the range of subscripts at that
 level of indexing. The ``DIFlagVector`` flag to ``flags:`` indicates that an
-array type is a native packed vector.
+array type is a native packed vector. The optional ``dataLocation`` is a
+DIExpression that describes how to get from an object's address to the actual
+raw data, if they aren't equivalent. This is only supported for array types,
+particularly to describe Fortran arrays, which have an array descriptor in
+addition to the array data. Alternatively it can also be DIVariable which
+has the address of the actual raw data.
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration
