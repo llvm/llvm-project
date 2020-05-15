@@ -67,3 +67,16 @@ func @test_shape_of(%arg0: tensor<?xf32>) -> !shape.shape {
   %0 = shape.shape_of %arg0 : tensor<?xf32>
   return %0 : !shape.shape
 }
+
+func @test_constraints() {
+  %0 = shape.const_shape []
+  %1 = shape.const_shape [1, 2, 3]
+  %w0 = "shape.cstr_broadcastable"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.witness
+  %w1 = "shape.cstr_eq"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.witness
+  %w3 = "shape.assuming_all"(%w0, %w1) : (!shape.witness, !shape.witness) -> !shape.witness
+  "shape.assuming"(%w3) ( {
+    %2 = "shape.any"(%0, %1)  : (!shape.shape, !shape.shape) -> !shape.shape
+    "shape.assuming_yield"(%2) : (!shape.shape) -> ()
+  }) : (!shape.witness) -> !shape.shape
+  return
+}
