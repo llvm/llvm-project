@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
@@ -5516,4 +5517,373 @@ bool llvm::HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
   // If they are equal, try with !ForCodesize
   return ConstantMaterializationCost(Val1, Subtarget, !ForCodesize) <
          ConstantMaterializationCost(Val2, Subtarget, !ForCodesize);
+}
+
+/// Constants defining how certain sequences should be outlined.
+/// This encompasses how an outlined function should be called, and what kind of
+/// frame should be emitted for that outlined function.
+///
+/// \p MachineOutlinerTailCall implies that the function is being created from
+/// a sequence of instructions ending in a return.
+///
+/// That is,
+///
+/// I1                                OUTLINED_FUNCTION:
+/// I2    --> B OUTLINED_FUNCTION     I1
+/// BX LR                             I2
+///                                   BX LR
+///
+/// +-------------------------+--------+-----+
+/// |                         | Thumb2 | ARM |
+/// +-------------------------+--------+-----+
+/// | Call overhead in Bytes  |      4 |   4 |
+/// | Frame overhead in Bytes |      0 |   0 |
+/// | Stack fixup required    |     No |  No |
+/// +-------------------------+--------+-----+
+///
+/// \p MachineOutlinerThunk implies that the function is being created from
+/// a sequence of instructions ending in a call. The outlined function is
+/// called with a BL instruction, and the outlined function tail-calls the
+/// original call destination.
+///
+/// That is,
+///
+/// I1                                OUTLINED_FUNCTION:
+/// I2   --> BL OUTLINED_FUNCTION     I1
+/// BL f                              I2
+///                                   B f
+///
+/// +-------------------------+--------+-----+
+/// |                         | Thumb2 | ARM |
+/// +-------------------------+--------+-----+
+/// | Call overhead in Bytes  |      4 |   4 |
+/// | Frame overhead in Bytes |      0 |   0 |
+/// | Stack fixup required    |     No |  No |
+/// +-------------------------+--------+-----+
+
+enum MachineOutlinerClass { MachineOutlinerTailCall, MachineOutlinerThunk };
+
+enum MachineOutlinerMBBFlags {
+  LRUnavailableSomewhere = 0x2,
+  HasCalls = 0x4,
+  UnsafeRegsDead = 0x8
+};
+
+struct OutlinerCosts {
+  const int CallTailCall;
+  const int FrameTailCall;
+  const int CallThunk;
+  const int FrameThunk;
+
+  OutlinerCosts(const ARMSubtarget &target)
+      : CallTailCall(target.isThumb() ? 4 : 4),
+        FrameTailCall(target.isThumb() ? 0 : 0),
+        CallThunk(target.isThumb() ? 4 : 4),
+        FrameThunk(target.isThumb() ? 0 : 0) {}
+};
+
+outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
+  unsigned SequenceSize =
+      std::accumulate(FirstCand.front(), std::next(FirstCand.back()), 0,
+                      [this](unsigned Sum, const MachineInstr &MI) {
+                        return Sum + getInstSizeInBytes(MI);
+                      });
+
+  // Properties about candidate MBBs that hold for all of them.
+  unsigned FlagsSetInAll = 0xF;
+
+  // Compute liveness information for each candidate, and set FlagsSetInAll.
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  std::for_each(
+      RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
+      [&FlagsSetInAll](outliner::Candidate &C) { FlagsSetInAll &= C.Flags; });
+
+  // According to the ARM Procedure Call Standard, the following are
+  // undefined on entry/exit from a function call:
+  //
+  // * Register R12(IP),
+  // * Condition codes (and thus the CPSR register)
+  //
+  // Since we control the instructions which are part of the outlined regions
+  // we don't need to be fully compliant with the AAPCS, but we have to
+  // guarantee that if a veneer is inserted at link time the code is still
+  // correct.  Because of this, we can't outline any sequence of instructions
+  // where one of these registers is live into/across it. Thus, we need to
+  // delete those candidates.
+  auto CantGuaranteeValueAcrossCall = [&TRI](outliner::Candidate &C) {
+    // If the unsafe registers in this block are all dead, then we don't need
+    // to compute liveness here.
+    if (C.Flags & UnsafeRegsDead)
+      return false;
+    C.initLRU(TRI);
+    LiveRegUnits LRU = C.LRU;
+    return (!LRU.available(ARM::R12) || !LRU.available(ARM::CPSR));
+  };
+
+  // Are there any candidates where those registers are live?
+  if (!(FlagsSetInAll & UnsafeRegsDead)) {
+    // Erase every candidate that violates the restrictions above. (It could be
+    // true that we have viable candidates, so it's not worth bailing out in
+    // the case that, say, 1 out of 20 candidates violate the restructions.)
+    RepeatedSequenceLocs.erase(std::remove_if(RepeatedSequenceLocs.begin(),
+                                              RepeatedSequenceLocs.end(),
+                                              CantGuaranteeValueAcrossCall),
+                               RepeatedSequenceLocs.end());
+
+    // If the sequence doesn't have enough candidates left, then we're done.
+    if (RepeatedSequenceLocs.size() < 2)
+      return outliner::OutlinedFunction();
+  }
+
+  // At this point, we have only "safe" candidates to outline. Figure out
+  // frame + call instruction information.
+
+  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
+
+  // Helper lambda which sets call information for every candidate.
+  auto SetCandidateCallInfo =
+      [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
+        for (outliner::Candidate &C : RepeatedSequenceLocs)
+          C.setCallInfo(CallID, NumBytesForCall);
+      };
+
+  OutlinerCosts *Costs = new OutlinerCosts(Subtarget);
+  unsigned FrameID = 0;
+  unsigned NumBytesToCreateFrame = 0;
+
+  // If the last instruction in any candidate is a terminator, then we should
+  // tail call all of the candidates.
+  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+    FrameID = MachineOutlinerTailCall;
+    NumBytesToCreateFrame = Costs->FrameTailCall;
+    SetCandidateCallInfo(MachineOutlinerTailCall, Costs->CallTailCall);
+  } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
+             LastInstrOpcode == ARM::tBL || LastInstrOpcode == ARM::tBLXr ||
+             LastInstrOpcode == ARM::tBLXi) {
+    FrameID = MachineOutlinerThunk;
+    NumBytesToCreateFrame = Costs->FrameThunk;
+    SetCandidateCallInfo(MachineOutlinerThunk, Costs->CallThunk);
+  } else
+    return outliner::OutlinedFunction();
+
+  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
+                                    NumBytesToCreateFrame, FrameID);
+}
+
+bool ARMBaseInstrInfo::isFunctionSafeToOutlineFrom(
+    MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
+  const Function &F = MF.getFunction();
+
+  // Can F be deduplicated by the linker? If it can, don't outline from it.
+  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
+    return false;
+
+  // Don't outline from functions with section markings; the program could
+  // expect that all the code is in the named section.
+  // FIXME: Allow outlining from multiple functions with the same section
+  // marking.
+  if (F.hasSection())
+    return false;
+
+  // FIXME: Thumb1 outlining is not handled
+  if (MF.getInfo<ARMFunctionInfo>()->isThumb1OnlyFunction())
+    return false;
+
+  // It's safe to outline from MF.
+  return true;
+}
+
+bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                                              unsigned &Flags) const {
+  // Check if LR is available through all of the MBB. If it's not, then set
+  // a flag.
+  assert(MBB.getParent()->getRegInfo().tracksLiveness() &&
+         "Suitable Machine Function for outlining must track liveness");
+
+  LiveRegUnits LRU(getRegisterInfo());
+
+  std::for_each(MBB.rbegin(), MBB.rend(),
+                [&LRU](MachineInstr &MI) { LRU.accumulate(MI); });
+
+  // Check if each of the unsafe registers are available...
+  bool R12AvailableInBlock = LRU.available(ARM::R12);
+  bool CPSRAvailableInBlock = LRU.available(ARM::CPSR);
+
+  // If all of these are dead (and not live out), we know we don't have to check
+  // them later.
+  if (R12AvailableInBlock && CPSRAvailableInBlock)
+    Flags |= MachineOutlinerMBBFlags::UnsafeRegsDead;
+
+  // Now, add the live outs to the set.
+  LRU.addLiveOuts(MBB);
+
+  // If any of these registers is available in the MBB, but also a live out of
+  // the block, then we know outlining is unsafe.
+  if (R12AvailableInBlock && !LRU.available(ARM::R12))
+    return false;
+  if (CPSRAvailableInBlock && !LRU.available(ARM::CPSR))
+    return false;
+
+  // Check if there's a call inside this MachineBasicBlock.  If there is, then
+  // set a flag.
+  if (any_of(MBB, [](MachineInstr &MI) { return MI.isCall(); }))
+    Flags |= MachineOutlinerMBBFlags::HasCalls;
+
+  if (!LRU.available(ARM::LR))
+    Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
+
+  return true;
+}
+
+outliner::InstrType
+ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
+                                   unsigned Flags) const {
+  MachineInstr &MI = *MIT;
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+
+  // Be conservative with inline ASM
+  if (MI.isInlineAsm())
+    return outliner::InstrType::Illegal;
+
+  // Don't allow debug values to impact outlining type.
+  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
+    return outliner::InstrType::Invisible;
+
+  // At this point, KILL or IMPLICIT_DEF instructions don't really tell us much
+  // so we can go ahead and skip over them.
+  if (MI.isKill() || MI.isImplicitDef())
+    return outliner::InstrType::Invisible;
+
+  // PIC instructions contain labels, outlining them would break offset
+  // computing.  unsigned Opc = MI.getOpcode();
+  unsigned Opc = MI.getOpcode();
+  if (Opc == ARM::tPICADD || Opc == ARM::PICADD || Opc == ARM::PICSTR ||
+      Opc == ARM::PICSTRB || Opc == ARM::PICSTRH || Opc == ARM::PICLDR ||
+      Opc == ARM::PICLDRB || Opc == ARM::PICLDRH || Opc == ARM::PICLDRSB ||
+      Opc == ARM::PICLDRSH || Opc == ARM::t2LDRpci_pic ||
+      Opc == ARM::t2MOVi16_ga_pcrel || Opc == ARM::t2MOVTi16_ga_pcrel ||
+      Opc == ARM::t2MOV_ga_pcrel)
+    return outliner::InstrType::Illegal;
+
+  // Be conservative with ARMv8.1 MVE instructions.
+  if (Opc == ARM::t2BF_LabelPseudo || Opc == ARM::t2DoLoopStart ||
+      Opc == ARM::t2WhileLoopStart || Opc == ARM::t2LoopDec ||
+      Opc == ARM::t2LoopEnd)
+    return outliner::InstrType::Illegal;
+
+  const MCInstrDesc &MCID = MI.getDesc();
+  uint64_t MIFlags = MCID.TSFlags;
+  if ((MIFlags & ARMII::DomainMask) == ARMII::DomainMVE)
+    return outliner::InstrType::Illegal;
+
+  // Is this a terminator for a basic block?
+  if (MI.isTerminator()) {
+    // Don't outline if the branch is not unconditional.
+    if (isPredicated(MI))
+      return outliner::InstrType::Illegal;
+
+    // Is this the end of a function?
+    if (MI.getParent()->succ_empty())
+      return outliner::InstrType::Legal;
+
+    // It's not, so don't outline it.
+    return outliner::InstrType::Illegal;
+  }
+
+  // Make sure none of the operands are un-outlinable.
+  for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
+        MOP.isTargetIndex())
+      return outliner::InstrType::Illegal;
+  }
+
+  // Don't outline if link register or program counter value are used.
+  if (MI.readsRegister(ARM::LR, TRI) || MI.readsRegister(ARM::PC, TRI))
+    return outliner::InstrType::Illegal;
+
+  if (MI.isCall()) {
+    // If we don't know anything about the callee, assume it depends on the
+    // stack layout of the caller. In that case, it's only legal to outline
+    // as a tail-call.  Whitelist the call instructions we know about so we
+    // don't get unexpected results with call pseudo-instructions.
+    auto UnknownCallOutlineType = outliner::InstrType::Illegal;
+    if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
+        Opc == ARM::tBLXr || Opc == ARM::tBLXi)
+      UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
+
+    return UnknownCallOutlineType;
+  }
+
+  // Since calls are handled, don't touch LR or PC
+  if (MI.modifiesRegister(ARM::LR, TRI) || MI.modifiesRegister(ARM::PC, TRI))
+    return outliner::InstrType::Illegal;
+
+  // Be conservative with IT blocks.
+  if (MI.readsRegister(ARM::ITSTATE, TRI) ||
+      MI.modifiesRegister(ARM::ITSTATE, TRI))
+    return outliner::InstrType::Illegal;
+
+  // Don't outline positions.
+  if (MI.isPosition())
+    return outliner::InstrType::Illegal;
+
+  return outliner::InstrType::Legal;
+}
+
+void ARMBaseInstrInfo::buildOutlinedFrame(
+    MachineBasicBlock &MBB, MachineFunction &MF,
+    const outliner::OutlinedFunction &OF) const {
+  // For thunk outlining, rewrite the last instruction from a call to a
+  // tail-call.
+  if (OF.FrameConstructionID == MachineOutlinerThunk) {
+    MachineInstr *Call = &*--MBB.instr_end();
+    bool isThumb = Subtarget.isThumb();
+    unsigned FuncOp = isThumb ? 2 : 0;
+    unsigned Opc = Call->getOperand(FuncOp).isReg()
+                       ? isThumb ? ARM::tTAILJMPr : ARM::TAILJMPr
+                       : isThumb ? Subtarget.isTargetMachO() ? ARM::tTAILJMPd
+                                                             : ARM::tTAILJMPdND
+                                 : ARM::TAILJMPd;
+    MachineInstrBuilder MIB = BuildMI(MBB, MBB.end(), DebugLoc(), get(Opc))
+                                  .add(Call->getOperand(FuncOp));
+    if (isThumb && !Call->getOperand(FuncOp).isReg())
+      MIB.add(predOps(ARMCC::AL));
+    Call->eraseFromParent();
+  }
+}
+
+MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
+    Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
+    MachineFunction &MF, const outliner::Candidate &C) const {
+  MachineInstrBuilder MIB;
+  MachineBasicBlock::iterator CallPt;
+  unsigned Opc;
+  bool isThumb = Subtarget.isThumb();
+
+  // Are we tail calling?
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
+    // If yes, then we can just branch to the label.
+    Opc = isThumb
+              ? Subtarget.isTargetMachO() ? ARM::tTAILJMPd : ARM::tTAILJMPdND
+              : ARM::TAILJMPd;
+    MIB = BuildMI(MF, DebugLoc(), get(Opc))
+              .addGlobalAddress(M.getNamedValue(MF.getName()));
+    if (isThumb)
+      MIB.add(predOps(ARMCC::AL));
+    It = MBB.insert(It, MIB);
+    return It;
+  }
+
+  // Create the call instruction.
+  Opc = isThumb ? ARM::tBL : ARM::BL;
+  MachineInstrBuilder CallMIB = BuildMI(MF, DebugLoc(), get(Opc));
+  if (isThumb)
+    CallMIB.add(predOps(ARMCC::AL));
+  CallMIB.addGlobalAddress(M.getNamedValue(MF.getName()));
+
+  // Insert the call.
+  It = MBB.insert(It, CallMIB);
+  return It;
 }
