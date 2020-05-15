@@ -386,7 +386,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
   ret i32 %28
 }
 
-define i32 @test3(%struct.S* %0, i32* %1, i8* %2) "null-pointer-is-valid"="true" {
+define i32 @test3(%struct.S* %0, i32* %1, i8* %2) null_pointer_is_valid {
 ; BASIC-LABEL: define {{[^@]+}}@test3
 ; BASIC-SAME: (%struct.S* [[TMP0:%.*]], i32* [[TMP1:%.*]], i8* [[TMP2:%.*]]) #4
 ; BASIC-NEXT:    [[TMP4:%.*]] = alloca %struct.S*, align 8

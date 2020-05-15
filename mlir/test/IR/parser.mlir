@@ -1243,3 +1243,17 @@ func @pretty_names() {
   // CHECK: return
   return
 }
+
+func @unreachable_dominance_violation_ok() -> i1 {
+  %c = constant 0 : i1       // CHECK: [[VAL:%.*]] = constant 0 : i1
+  return %c : i1    // CHECK:   return [[VAL]] : i1
+^bb1:         // CHECK: ^bb1:   // no predecessors
+  // %1 is not dominated by it's definition, but block is not reachable.
+  %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1) // CHECK: [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
+  br ^bb4     // CHECK:   br ^bb3
+^bb2:         // CHECK: ^bb2:   // pred: ^bb2
+  br ^bb2     // CHECK:   br ^bb2
+^bb4:         // CHECK: ^bb3:   // pred: ^bb1
+  %1 = "foo"() : ()->i64 // CHECK: [[VAL3]] = "foo"() : () -> i64
+  return %2#1 : i1 // CHECK: return [[VAL2]]#1 : i1
+}            // CHECK: }

@@ -1689,6 +1689,311 @@ define <32 x i8> @splatvar_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %
   ret <32 x i8> %res
 }
 
+; Harder PR37426 - https://bugs.llvm.org/show_bug.cgi?id=37426
+; CGP should sink splatted select operands through the funnel shift.
+
+define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
+; AVX1-LABEL: fancierRotate2:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovd %edx, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm9
+; AVX1-NEXT:    vmovd %ecx, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm10
+; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm11
+; AVX1-NEXT:    vextractf128 $1, %ymm10, %xmm4
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm12 = [31,31,31,31]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [1065353216,1065353216,1065353216,1065353216]
+; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:  .LBB8_1: # %loop
+; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX1-NEXT:    vmovq {{.*#+}} xmm7 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqb %xmm7, %xmm8, %xmm7
+; AVX1-NEXT:    vpmovsxbd %xmm7, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,2,3]
+; AVX1-NEXT:    vpmovsxbd %xmm7, %xmm7
+; AVX1-NEXT:    vblendvps %xmm7, %xmm11, %xmm4, %xmm7
+; AVX1-NEXT:    vmovdqu 4096(%rdi,%rax,4), %xmm0
+; AVX1-NEXT:    vmovdqu 4112(%rdi,%rax,4), %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; AVX1-NEXT:    vandps %xmm7, %xmm12, %xmm7
+; AVX1-NEXT:    vpslld $23, %xmm7, %xmm7
+; AVX1-NEXT:    vpaddd %xmm6, %xmm7, %xmm7
+; AVX1-NEXT:    vcvttps2dq %xmm7, %xmm7
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
+; AVX1-NEXT:    vpmuludq %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpmuludq %xmm7, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1],xmm3[2,3],xmm5[4,5],xmm3[6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,0,2,2]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
+; AVX1-NEXT:    vpor %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vblendvps %xmm2, %xmm9, %xmm10, %xmm2
+; AVX1-NEXT:    vandps %xmm2, %xmm12, %xmm2
+; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
+; AVX1-NEXT:    vpmuludq %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,0,2,2]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,3],xmm0[4,5],xmm3[6,7]
+; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu %xmm0, 4096(%rdi,%rax,4)
+; AVX1-NEXT:    vmovdqu %xmm1, 4112(%rdi,%rax,4)
+; AVX1-NEXT:    addq $8, %rax
+; AVX1-NEXT:    jne .LBB8_1
+; AVX1-NEXT:  # %bb.2: # %exit
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: fancierRotate2:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vmovd %edx, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-NEXT:    vmovd %ecx, %xmm1
+; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [31,31,31,31,31,31,31,31]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [32,32,32,32,32,32,32,32]
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB8_1: # %loop
+; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm5, %ymm5
+; AVX2-NEXT:    vblendvps %ymm5, %ymm0, %ymm1, %ymm5
+; AVX2-NEXT:    vandps %ymm3, %ymm5, %ymm5
+; AVX2-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm6
+; AVX2-NEXT:    vpsllvd %ymm5, %ymm6, %ymm7
+; AVX2-NEXT:    vpsubd %ymm5, %ymm4, %ymm5
+; AVX2-NEXT:    vpsrlvd %ymm5, %ymm6, %ymm5
+; AVX2-NEXT:    vpor %ymm5, %ymm7, %ymm5
+; AVX2-NEXT:    vmovdqu %ymm5, 4096(%rdi,%rax,4)
+; AVX2-NEXT:    addq $8, %rax
+; AVX2-NEXT:    jne .LBB8_1
+; AVX2-NEXT:  # %bb.2: # %exit
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: fancierRotate2:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vmovd %edx, %xmm0
+; AVX512F-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512F-NEXT:    vmovd %ecx, %xmm1
+; AVX512F-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX512F-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    .p2align 4, 0x90
+; AVX512F-NEXT:  .LBB8_1: # %loop
+; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm3, %ymm3
+; AVX512F-NEXT:    vblendvps %ymm3, %ymm0, %ymm1, %ymm3
+; AVX512F-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm4
+; AVX512F-NEXT:    vprolvd %zmm3, %zmm4, %zmm3
+; AVX512F-NEXT:    vmovdqu %ymm3, 4096(%rdi,%rax,4)
+; AVX512F-NEXT:    addq $8, %rax
+; AVX512F-NEXT:    jne .LBB8_1
+; AVX512F-NEXT:  # %bb.2: # %exit
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fancierRotate2:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    vpbroadcastd %edx, %ymm0
+; AVX512VL-NEXT:    vpbroadcastd %ecx, %ymm1
+; AVX512VL-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512VL-NEXT:    .p2align 4, 0x90
+; AVX512VL-NEXT:  .LBB8_1: # %loop
+; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} ymm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; AVX512VL-NEXT:    vptestnmd %ymm2, %ymm2, %k1
+; AVX512VL-NEXT:    vpblendmd %ymm0, %ymm1, %ymm2 {%k1}
+; AVX512VL-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm3
+; AVX512VL-NEXT:    vprolvd %ymm2, %ymm3, %ymm2
+; AVX512VL-NEXT:    vmovdqu %ymm2, 4096(%rdi,%rax,4)
+; AVX512VL-NEXT:    addq $8, %rax
+; AVX512VL-NEXT:    jne .LBB8_1
+; AVX512VL-NEXT:  # %bb.2: # %exit
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: fancierRotate2:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    vmovd %edx, %xmm0
+; AVX512BW-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512BW-NEXT:    vmovd %ecx, %xmm1
+; AVX512BW-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    .p2align 4, 0x90
+; AVX512BW-NEXT:  .LBB8_1: # %loop
+; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512BW-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; AVX512BW-NEXT:    vpcmpeqd %ymm2, %ymm3, %ymm3
+; AVX512BW-NEXT:    vblendvps %ymm3, %ymm0, %ymm1, %ymm3
+; AVX512BW-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm4
+; AVX512BW-NEXT:    vprolvd %zmm3, %zmm4, %zmm3
+; AVX512BW-NEXT:    vmovdqu %ymm3, 4096(%rdi,%rax,4)
+; AVX512BW-NEXT:    addq $8, %rax
+; AVX512BW-NEXT:    jne .LBB8_1
+; AVX512BW-NEXT:  # %bb.2: # %exit
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: fancierRotate2:
+; AVX512VBMI2:       # %bb.0: # %entry
+; AVX512VBMI2-NEXT:    vmovd %edx, %xmm0
+; AVX512VBMI2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512VBMI2-NEXT:    vmovd %ecx, %xmm1
+; AVX512VBMI2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX512VBMI2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512VBMI2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VBMI2-NEXT:    .p2align 4, 0x90
+; AVX512VBMI2-NEXT:  .LBB8_1: # %loop
+; AVX512VBMI2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512VBMI2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; AVX512VBMI2-NEXT:    vpcmpeqd %ymm2, %ymm3, %ymm3
+; AVX512VBMI2-NEXT:    vblendvps %ymm3, %ymm0, %ymm1, %ymm3
+; AVX512VBMI2-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm4
+; AVX512VBMI2-NEXT:    vprolvd %zmm3, %zmm4, %zmm3
+; AVX512VBMI2-NEXT:    vmovdqu %ymm3, 4096(%rdi,%rax,4)
+; AVX512VBMI2-NEXT:    addq $8, %rax
+; AVX512VBMI2-NEXT:    jne .LBB8_1
+; AVX512VBMI2-NEXT:  # %bb.2: # %exit
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: fancierRotate2:
+; AVX512VLBW:       # %bb.0: # %entry
+; AVX512VLBW-NEXT:    vpbroadcastd %edx, %ymm0
+; AVX512VLBW-NEXT:    vpbroadcastd %ecx, %ymm1
+; AVX512VLBW-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512VLBW-NEXT:    .p2align 4, 0x90
+; AVX512VLBW-NEXT:  .LBB8_1: # %loop
+; AVX512VLBW-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512VLBW-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512VLBW-NEXT:    vptestnmb %xmm2, %xmm2, %k1
+; AVX512VLBW-NEXT:    vpblendmd %ymm0, %ymm1, %ymm2 {%k1}
+; AVX512VLBW-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm3
+; AVX512VLBW-NEXT:    vprolvd %ymm2, %ymm3, %ymm2
+; AVX512VLBW-NEXT:    vmovdqu %ymm2, 4096(%rdi,%rax,4)
+; AVX512VLBW-NEXT:    addq $8, %rax
+; AVX512VLBW-NEXT:    jne .LBB8_1
+; AVX512VLBW-NEXT:  # %bb.2: # %exit
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: fancierRotate2:
+; AVX512VLVBMI2:       # %bb.0: # %entry
+; AVX512VLVBMI2-NEXT:    vpbroadcastd %edx, %ymm0
+; AVX512VLVBMI2-NEXT:    vpbroadcastd %ecx, %ymm1
+; AVX512VLVBMI2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX512VLVBMI2-NEXT:    .p2align 4, 0x90
+; AVX512VLVBMI2-NEXT:  .LBB8_1: # %loop
+; AVX512VLVBMI2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512VLVBMI2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512VLVBMI2-NEXT:    vptestnmb %xmm2, %xmm2, %k1
+; AVX512VLVBMI2-NEXT:    vpblendmd %ymm0, %ymm1, %ymm2 {%k1}
+; AVX512VLVBMI2-NEXT:    vmovdqu 4096(%rdi,%rax,4), %ymm3
+; AVX512VLVBMI2-NEXT:    vprolvd %ymm2, %ymm3, %ymm2
+; AVX512VLVBMI2-NEXT:    vmovdqu %ymm2, 4096(%rdi,%rax,4)
+; AVX512VLVBMI2-NEXT:    addq $8, %rax
+; AVX512VLVBMI2-NEXT:    jne .LBB8_1
+; AVX512VLVBMI2-NEXT:  # %bb.2: # %exit
+; AVX512VLVBMI2-NEXT:    vzeroupper
+; AVX512VLVBMI2-NEXT:    retq
+;
+; XOPAVX1-LABEL: fancierRotate2:
+; XOPAVX1:       # %bb.0: # %entry
+; XOPAVX1-NEXT:    vmovd %edx, %xmm0
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; XOPAVX1-NEXT:    vmovd %ecx, %xmm1
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; XOPAVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; XOPAVX1-NEXT:    .p2align 4, 0x90
+; XOPAVX1-NEXT:  .LBB8_1: # %loop
+; XOPAVX1-NEXT:    # =>This Inner Loop Header: Depth=1
+; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
+; XOPAVX1-NEXT:    vpcomeqb %xmm2, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpmovsxbd %xmm5, %xmm6
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
+; XOPAVX1-NEXT:    vpmovsxbd %xmm5, %xmm5
+; XOPAVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm5
+; XOPAVX1-NEXT:    vprotd %xmm5, 4112(%rdi,%rax,4), %xmm5
+; XOPAVX1-NEXT:    vblendvps %xmm6, %xmm0, %xmm1, %xmm6
+; XOPAVX1-NEXT:    vprotd %xmm6, 4096(%rdi,%rax,4), %xmm6
+; XOPAVX1-NEXT:    vmovdqu %xmm6, 4096(%rdi,%rax,4)
+; XOPAVX1-NEXT:    vmovdqu %xmm5, 4112(%rdi,%rax,4)
+; XOPAVX1-NEXT:    addq $8, %rax
+; XOPAVX1-NEXT:    jne .LBB8_1
+; XOPAVX1-NEXT:  # %bb.2: # %exit
+; XOPAVX1-NEXT:    vzeroupper
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: fancierRotate2:
+; XOPAVX2:       # %bb.0: # %entry
+; XOPAVX2-NEXT:    vmovd %edx, %xmm0
+; XOPAVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; XOPAVX2-NEXT:    vmovd %ecx, %xmm1
+; XOPAVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; XOPAVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX2-NEXT:    .p2align 4, 0x90
+; XOPAVX2-NEXT:  .LBB8_1: # %loop
+; XOPAVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; XOPAVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; XOPAVX2-NEXT:    vpcmpeqd %ymm2, %ymm3, %ymm3
+; XOPAVX2-NEXT:    vblendvps %ymm3, %ymm0, %ymm1, %ymm3
+; XOPAVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; XOPAVX2-NEXT:    vprotd %xmm4, 4112(%rdi,%rax,4), %xmm4
+; XOPAVX2-NEXT:    vprotd %xmm3, 4096(%rdi,%rax,4), %xmm3
+; XOPAVX2-NEXT:    vmovdqu %xmm3, 4096(%rdi,%rax,4)
+; XOPAVX2-NEXT:    vmovdqu %xmm4, 4112(%rdi,%rax,4)
+; XOPAVX2-NEXT:    addq $8, %rax
+; XOPAVX2-NEXT:    jne .LBB8_1
+; XOPAVX2-NEXT:  # %bb.2: # %exit
+; XOPAVX2-NEXT:    vzeroupper
+; XOPAVX2-NEXT:    retq
+entry:
+  %i0 = insertelement <8 x i32> undef, i32 %rot0, i32 0
+  %s0 = shufflevector <8 x i32> %i0, <8 x i32> undef, <8 x i32> zeroinitializer
+  %i1 = insertelement <8 x i32> undef, i32 %rot1, i32 0
+  %s1 = shufflevector <8 x i32> %i1, <8 x i32> undef, <8 x i32> zeroinitializer
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %t0 = getelementptr inbounds i8, i8* %control, i64 %index
+  %t1 = bitcast i8* %t0 to <8 x i8>*
+  %wide.load = load <8 x i8>, <8 x i8>* %t1, align 1
+  %t2 = icmp eq <8 x i8> %wide.load, zeroinitializer
+  %shamt = select <8 x i1> %t2, <8 x i32> %s0, <8 x i32> %s1
+  %t4 = getelementptr inbounds i32, i32* %arr, i64 %index
+  %t5 = bitcast i32* %t4 to <8 x i32>*
+  %wide.load21 = load <8 x i32>, <8 x i32>* %t5, align 4
+  %rot = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> %wide.load21, <8 x i32> %wide.load21, <8 x i32> %shamt)
+  store <8 x i32> %rot, <8 x i32>* %t5, align 4
+  %index.next = add i64 %index, 8
+  %t7 = icmp eq i64 %index.next, 1024
+  br i1 %t7, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;
 ; Constant Shifts
 ;

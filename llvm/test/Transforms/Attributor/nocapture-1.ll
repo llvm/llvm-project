@@ -528,7 +528,7 @@ define i1 @nocaptureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x
   ret i1 %2
 }
 
-define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) "null-pointer-is-valid"="true" {
+define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) null_pointer_is_valid {
 ; CHECK-LABEL: define {{[^@]+}}@captureDereferenceableOrNullICmp
 ; CHECK-SAME: (i32* nofree readnone dereferenceable_or_null(4) [[X:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X]] to i8*

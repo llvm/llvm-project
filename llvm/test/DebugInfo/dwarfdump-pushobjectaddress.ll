@@ -1,5 +1,6 @@
 ;; This test checks whether DWARF operator DW_OP_push_object_address
 ;; is accepted and processed.
+; REQUIRES: x86_64-linux
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 

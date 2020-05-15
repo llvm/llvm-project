@@ -779,4 +779,4 @@ exit:
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
-attributes #2 = { "null-pointer-is-valid"="true" }
+attributes #2 = { null_pointer_is_valid }

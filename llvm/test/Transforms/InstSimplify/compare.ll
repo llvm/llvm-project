@@ -1673,4 +1673,4 @@ define i1 @cmp_through_addrspacecast(i32 addrspace(1)* %p1) {
   ret i1 %cmp
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

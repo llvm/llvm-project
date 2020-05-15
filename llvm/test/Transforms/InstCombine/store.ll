@@ -45,7 +45,7 @@ define void @store_at_gep_off_no_null_opt(i64 %offset) #0 {
   ret void
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 ;; Simple sinking tests
 
