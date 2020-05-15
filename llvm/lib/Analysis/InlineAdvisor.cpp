@@ -99,7 +99,11 @@ DefaultInlineAdvisor::getAdvice(CallBase &CB, FunctionAnalysisManager &FAM) {
               *CB.getParent()->getParent()->getParent());
 
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
-  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+  // FIXME: make GetAssumptionCache's decl similar to the other 2 below. May
+  // need changing the type of getInlineCost parameters? Also see similar case
+  // in Inliner.cpp
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+      [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
   auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
@@ -115,8 +119,8 @@ DefaultInlineAdvisor::getAdvice(CallBase &CB, FunctionAnalysisManager &FAM) {
     bool RemarksEnabled =
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
-    return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
-                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
+    return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, {GetBFI},
+                         GetTLI, PSI, RemarksEnabled ? &ORE : nullptr);
   };
   auto OIC = llvm::shouldInline(CB, GetInlineCost, ORE);
   return std::make_unique<DefaultInlineAdvice>(this, CB, OIC, ORE);
