@@ -6,7 +6,7 @@
 # CHECK: .debug_gnu_pubnames
 # CHECK: .debug_gnu_pubtypes
 
-# RUN: ld.lld -gdb-index %t.o -o %t2.exe
+# RUN: ld.lld --gdb-index %t.o -o %t2.exe
 # RUN: llvm-readobj --sections %t2.exe | FileCheck %s --check-prefix=GDB
 # GDB-NOT: .debug_gnu_pubnames
 # GDB-NOT: .debug_gnu_pubtypes

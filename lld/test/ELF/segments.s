@@ -45,7 +45,7 @@
 # ROSEGMENT-NEXT:    Alignment: 4096
 # ROSEGMENT-NEXT:  }
 
-# RUN: ld.lld -no-rosegment %t -o %t2
+# RUN: ld.lld --no-rosegment %t -o %t2
 # RUN: llvm-readobj --program-headers %t2 | FileCheck --check-prefix=NOROSEGMENT %s
 
 # NOROSEGMENT:     ProgramHeader {
