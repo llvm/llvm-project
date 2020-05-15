@@ -16238,6 +16238,74 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("operator&&(int(&&)(), class Foo);", Style);
 }
 
+TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
+  // These tests are not in NamespaceFixer because that doesn't
+  // test its interaction with line wrapping
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 80;
+  verifyFormat("namespace {\n"
+               "int i;\n"
+               "int j;\n"
+               "} // namespace",
+               Style);
+
+  verifyFormat("namespace AAA {\n"
+               "int i;\n"
+               "int j;\n"
+               "} // namespace AAA",
+               Style);
+
+  EXPECT_EQ("namespace Averyveryveryverylongnamespace {\n"
+            "int i;\n"
+            "int j;\n"
+            "} // namespace Averyveryveryverylongnamespace",
+            format("namespace Averyveryveryverylongnamespace {\n"
+                   "int i;\n"
+                   "int j;\n"
+                   "}",
+                   Style));
+
+  EXPECT_EQ(
+      "namespace "
+      "would::it::save::you::a::lot::of::time::if_::i::just::gave::up::and_::\n"
+      "    went::mad::now {\n"
+      "int i;\n"
+      "int j;\n"
+      "} // namespace\n"
+      "  // "
+      "would::it::save::you::a::lot::of::time::if_::i::just::gave::up::and_::"
+      "went::mad::now",
+      format("namespace "
+             "would::it::save::you::a::lot::of::time::if_::i::"
+             "just::gave::up::and_::went::mad::now {\n"
+             "int i;\n"
+             "int j;\n"
+             "}",
+             Style));
+
+  // This used to duplicate the comment again and again on subsequent runs
+  EXPECT_EQ(
+      "namespace "
+      "would::it::save::you::a::lot::of::time::if_::i::just::gave::up::and_::\n"
+      "    went::mad::now {\n"
+      "int i;\n"
+      "int j;\n"
+      "} // namespace\n"
+      "  // "
+      "would::it::save::you::a::lot::of::time::if_::i::just::gave::up::and_::"
+      "went::mad::now",
+      format("namespace "
+             "would::it::save::you::a::lot::of::time::if_::i::"
+             "just::gave::up::and_::went::mad::now {\n"
+             "int i;\n"
+             "int j;\n"
+             "} // namespace\n"
+             "  // "
+             "would::it::save::you::a::lot::of::time::if_::i::just::gave::up::"
+             "and_::went::mad::now",
+             Style));
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
