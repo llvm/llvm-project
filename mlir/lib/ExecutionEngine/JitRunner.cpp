@@ -14,7 +14,7 @@
 // transformation.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/JitRunner.h"
+#include "mlir/ExecutionEngine/JitRunner.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"

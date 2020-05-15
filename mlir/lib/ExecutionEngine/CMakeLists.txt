@@ -6,6 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
   ExecutionEngine.cpp
   RunnerUtils.cpp
   OptUtils.cpp
+  JitRunner.cpp
   )
 
 add_mlir_library(MLIRExecutionEngine
@@ -41,6 +42,31 @@ add_mlir_library(MLIRExecutionEngine
   MLIRLLVMIR
   MLIRTargetLLVMIR
   )
+
+add_mlir_library(MLIRJitRunner
+  JitRunner.cpp
+
+  EXCLUDE_FROM_LIBMLIR
+
+  DEPENDS
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  Core
+  OrcJIT
+  JITLink
+  Support
+
+  LINK_LIBS PUBLIC
+  MLIRExecutionEngine
+  MLIRIR
+  MLIRParser
+  MLIRStandardOps
+  MLIRTargetLLVMIR
+  MLIRTransforms
+  MLIRStandardToLLVM
+  MLIRSupport
+)
 
 add_mlir_library(mlir_c_runner_utils
   SHARED
