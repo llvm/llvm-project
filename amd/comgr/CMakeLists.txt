@@ -270,15 +270,17 @@ else()
     Symbolize)
 endif()
 
-target_link_libraries(amd_comgr
+target_link_options(amd_comgr
   PUBLIC
     ${AMD_COMGR_PUBLIC_LINKER_OPTIONS}
   PRIVATE
-    ${AMD_COMGR_PRIVATE_LINKER_OPTIONS}
+    ${AMD_COMGR_PRIVATE_LINKER_OPTIONS})
+
+target_link_libraries(amd_comgr
+  PRIVATE
     ${LLD_LIBS}
     ${LLVM_LIBS}
-    ${CLANG_LIBS}
-)
+    ${CLANG_LIBS})
 
 if (NOT UNIX)
   target_link_libraries(amd_comgr
