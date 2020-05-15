@@ -424,6 +424,13 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
+
+        if (!OpInfo.isIndirect) {
+          LLVM_DEBUG(dbgs()
+                     << "Cannot indirectify memory input operands yet\n");
+          return false;
+        }
+
         assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
 
         unsigned ConstraintID =
