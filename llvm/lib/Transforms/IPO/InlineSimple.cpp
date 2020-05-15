@@ -68,8 +68,8 @@ public:
         [&](Function &F) -> AssumptionCache & {
       return ACT->getAssumptionCache(F);
     };
-    return llvm::getInlineCost(CB, Params, TTI, GetAssumptionCache, GetTLI,
-                               /*GetBFI=*/nullptr, PSI,
+    return llvm::getInlineCost(CB, Params, TTI, GetAssumptionCache,
+                               /*GetBFI=*/None, GetTLI, PSI,
                                RemarksEnabled ? &ORE : nullptr);
   }
 
