@@ -3,42 +3,29 @@ RUN: FileCheck --input-file %s %s
 ; We use CHECK-NEXT directives to force a match on all lines with digits.
 
 ; Numeric variable definition with default matching format without spaces.
-DEF DEFAULT FMT NO SPC
-10
-CHECK-LABEL: DEF DEFAULT FMT NO SPC
-CHECK-NEXT: [[#VAR1:]]
+DEF DEFAULT FMT NO SPC  // CHECK-LABEL: DEF DEFAULT FMT NO SPC
+10  // CHECK-NEXT: {{^}}[[#UNSI:]]
 
 ; Numeric variable definition with default matching format with different
 ; spacing.
-DEF DEFAULT FMT SPC
-11
-11
-11
-CHECK-LABEL: DEF DEFAULT FMT SPC
-CHECK-NEXT: [[# VAR1a:]]
-CHECK-NEXT: [[# VAR1b :]]
-CHECK-NEXT: [[# VAR1c : ]]
+DEF DEFAULT FMT SPC  // CHECK-LABEL: DEF DEFAULT FMT SPC
+11  // CHECK-NEXT: {{^}}[[# UNSIa:]]
+11  // CHECK-NEXT: {{^}}[[# UNSIb :]]
+11  // CHECK-NEXT: {{^}}[[# UNSIc : ]]
 
 ; Numeric variable redefinition.
-REDEF NO SPC
-11
-CHECK-LABEL: REDEF
-CHECK-NEXT: [[#VAR1:]]
+REDEF NO SPC  // CHECK-LABEL: REDEF
+11  // CHECK-NEXT: {{^}}[[#UNSI:]]
 
 ; Numeric variable definition with explicit matching format.
-DEF FMT
-c
-D
-CHECK-LABEL: DEF FMT
-CHECK-NEXT: [[#%x,VAR2:]]
-CHECK-NEXT: [[#%X,VAR3:]]
+DEF FMT  // CHECK-LABEL: DEF FMT
+c  // CHECK-NEXT: {{^}}[[#%x,LHEX:]]
+D  // CHECK-NEXT: {{^}}[[#%X,UHEX:]]
 
 ; Numeric variable definition with explicit matching format with different
 ; spacing.
-DEF FMT SPC
-c
-CHECK-LABEL: DEF FMT SPC
-CHECK-NEXT: [[# %x , VAR2a : ]]
+DEF FMT SPC  // CHECK-LABEL: DEF FMT SPC
+c  // CHECK-NEXT: {{^}}[[# %x , LHEXa : ]]
 
 ; Numeric variable definition with unsupported matching format.
 RUN: %ProtectFileCheckOutput \
@@ -63,104 +50,60 @@ INVALID-FMT-SPEC-MSG2-NEXT:    {{^}}                                    ^{{$}}
 
 ; Numeric expressions in explicit matching format and default matching rule using
 ; variables defined on other lines without spaces.
-USE DEF FMT IMPL MATCH
-11
-12
-10
-c
-d
-b
-1a
-D
-E
-C
-1B
-11
-11
-11
-c
-c
-c
-c
-c
-CHECK-LABEL: USE DEF FMT IMPL MATCH
-CHECK-NEXT: [[#%u,VAR1]]
-CHECK-NEXT: [[#%u,VAR1+1]]
-CHECK-NEXT: [[#%u,VAR1-1]]
-CHECK-NEXT: [[#%x,VAR2]]
-CHECK-NEXT: [[#%x,VAR2+1]]
-CHECK-NEXT: [[#%x,VAR2-1]]
-CHECK-NEXT: [[#%x,VAR2+14]]
-CHECK-NEXT: [[#%X,VAR3]]
-CHECK-NEXT: [[#%X,VAR3+1]]
-CHECK-NEXT: [[#%X,VAR3-1]]
-CHECK-NEXT: [[#%X,VAR3+14]]
-CHECK-NEXT: [[#%u,VAR1a]]
-CHECK-NEXT: [[#%u,VAR1b]]
-CHECK-NEXT: [[#%u,VAR1c]]
-CHECK-NEXT: [[#%x,VAR2a]]
+USE EXPL FMT IMPL MATCH  // CHECK-LABEL: USE EXPL FMT IMPL MATCH
+11  // CHECK-NEXT: {{^}}[[#%u,UNSI]]
+12  // CHECK-NEXT: {{^}}[[#%u,UNSI+1]]
+10  // CHECK-NEXT: {{^}}[[#%u,UNSI-1]]
+c   // CHECK-NEXT: {{^}}[[#%x,LHEX]]
+d   // CHECK-NEXT: {{^}}[[#%x,LHEX+1]]
+b   // CHECK-NEXT: {{^}}[[#%x,LHEX-1]]
+1a  // CHECK-NEXT: {{^}}[[#%x,LHEX+0xe]]
+1a  // CHECK-NEXT: {{^}}[[#%x,LHEX+0xE]]
+D   // CHECK-NEXT: {{^}}[[#%X,UHEX]]
+E   // CHECK-NEXT: {{^}}[[#%X,UHEX+1]]
+C   // CHECK-NEXT: {{^}}[[#%X,UHEX-1]]
+1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xe]]
+1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xE]]
+11  // CHECK-NEXT: {{^}}[[#%u,UNSIa]]
+11  // CHECK-NEXT: {{^}}[[#%u,UNSIb]]
+11  // CHECK-NEXT: {{^}}[[#%u,UNSIc]]
+c   // CHECK-NEXT: {{^}}[[#%x,LHEXa]]
 
 ; Numeric expressions in explicit matching format and default matching rule using
 ; variables defined on other lines with different spacing.
-USE EXPL FMT IMPL MATCH SPC
-11
-11
-11
-12
-12
-12
-12
-12
-12
-10
-10
-10
-10
-10
-10
-CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
-CHECK-NEXT: [[#%u, VAR1]]
-CHECK-NEXT: [[# %u, VAR1]]
-CHECK-NEXT: [[# %u, VAR1 ]]
-CHECK-NEXT: [[#%u, VAR1+1]]
-CHECK-NEXT: [[# %u, VAR1+1]]
-CHECK-NEXT: [[# %u , VAR1+1]]
-CHECK-NEXT: [[# %u , VAR1 +1]]
-CHECK-NEXT: [[# %u , VAR1 + 1]]
-CHECK-NEXT: [[# %u , VAR1 + 1 ]]
-CHECK-NEXT: [[#%u, VAR1-1]]
-CHECK-NEXT: [[# %u, VAR1-1]]
-CHECK-NEXT: [[# %u , VAR1-1]]
-CHECK-NEXT: [[# %u , VAR1 -1]]
-CHECK-NEXT: [[# %u , VAR1 - 1]]
-CHECK-NEXT: [[# %u , VAR1 - 1 ]]
+USE EXPL FMT IMPL MATCH SPC  // CHECK-LABEL: USE EXPL FMT IMPL MATCH SPC
+11  // CHECK-NEXT: {{^}}[[#%u, UNSI]]
+11  // CHECK-NEXT: {{^}}[[# %u, UNSI]]
+11  // CHECK-NEXT: {{^}}[[# %u, UNSI ]]
+12  // CHECK-NEXT: {{^}}[[#%u, UNSI+1]]
+12  // CHECK-NEXT: {{^}}[[# %u, UNSI+1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI+1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI +1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI + 1]]
+12  // CHECK-NEXT: {{^}}[[# %u , UNSI + 1 ]]
+10  // CHECK-NEXT: {{^}}[[#%u, UNSI-1]]
+10  // CHECK-NEXT: {{^}}[[# %u, UNSI-1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI-1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI -1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI - 1]]
+10  // CHECK-NEXT: {{^}}[[# %u , UNSI - 1 ]]
 
 ; Numeric expressions in implicit matching format and default matching rule using
 ; variables defined on other lines.
-USE IMPL FMT IMPL MATCH
-11
-12
-10
-c
-d
-b
-1a
-D
-E
-C
-1B
-CHECK-LABEL: USE IMPL FMT IMPL MATCH
-CHECK-NEXT: [[#VAR1]]
-CHECK-NEXT: [[#VAR1+1]]
-CHECK-NEXT: [[#VAR1-1]]
-CHECK-NEXT: [[#VAR2]]
-CHECK-NEXT: [[#VAR2+1]]
-CHECK-NEXT: [[#VAR2-1]]
-CHECK-NEXT: [[#VAR2+14]]
-CHECK-NEXT: [[#VAR3]]
-CHECK-NEXT: [[#VAR3+1]]
-CHECK-NEXT: [[#VAR3-1]]
-CHECK-NEXT: [[#VAR3+14]]
+USE IMPL FMT IMPL MATCH  // CHECK-LABEL: USE IMPL FMT IMPL MATCH
+11  // CHECK-NEXT: {{^}}[[#UNSI]]
+12  // CHECK-NEXT: {{^}}[[#UNSI+1]]
+10  // CHECK-NEXT: {{^}}[[#UNSI-1]]
+c   // CHECK-NEXT: {{^}}[[#LHEX]]
+d   // CHECK-NEXT: {{^}}[[#LHEX+1]]
+b   // CHECK-NEXT: {{^}}[[#LHEX-1]]
+1a  // CHECK-NEXT: {{^}}[[#LHEX+0xe]]
+1a  // CHECK-NEXT: {{^}}[[#LHEX+0xE]]
+D   // CHECK-NEXT: {{^}}[[#UHEX]]
+E   // CHECK-NEXT: {{^}}[[#UHEX+1]]
+C   // CHECK-NEXT: {{^}}[[#UHEX-1]]
+1B  // CHECK-NEXT: {{^}}[[#UHEX+0xe]]
+1B  // CHECK-NEXT: {{^}}[[#UHEX+0xE]]
 
 ; Numeric expressions using variables defined on other lines and an immediate
 ; interpreted as an unsigned value.
@@ -168,20 +111,17 @@ CHECK-NEXT: [[#VAR3+14]]
 USE IMPL FMT IMPL MATCH UNSIGNED IMM
 9223372036854775819
 CHECK-LABEL: USE IMPL FMT IMPL MATCH UNSIGNED IMM
-CHECK-NEXT: [[#VAR1+0x8000000000000000]]
+CHECK-NEXT: [[#UNSI+0x8000000000000000]]
 
 ; Numeric expressions with matching format overriding the implicit format of
 ; variables defined on other lines.
-USE CONV FMT IMPL MATCH
-b
-B
-12
-13
-CHECK-LABEL: USE CONV FMT IMPL MATCH
-CHECK-NEXT: [[# %x, VAR1]]
-CHECK-NEXT: [[# %X, VAR1]]
-CHECK-NEXT: [[# %u, VAR2]]
-CHECK-NEXT: [[# %u, VAR3]]
+USE CONV FMT IMPL MATCH  // CHECK-LABEL: USE CONV FMT IMPL MATCH
+b   // CHECK-NEXT: {{^}}[[# %x, UNSI]]
+B   // CHECK-NEXT: {{^}}[[# %X, UNSI]]
+12  // CHECK-NEXT: {{^}}[[# %u, LHEX]]
+C   // CHECK-NEXT: {{^}}[[# %X, LHEX]]
+13  // CHECK-NEXT: {{^}}[[# %u, UHEX]]
+d   // CHECK-NEXT: {{^}}[[# %x, UHEX]]
 
 ; Conflicting implicit format.
 RUN: %ProtectFileCheckOutput \
@@ -194,46 +134,35 @@ RUN:   | FileCheck --strict-whitespace --check-prefix FMT-CONFLICT2-MSG %s
 VAR USE IMPL FMT CONFLICT
 23
 FMT-CONFLICT1-LABEL: VAR USE IMPL FMT CONFLICT
-FMT-CONFLICT1-NEXT: [[#VAR1 + VAR2]]
-FMT-CONFLICT1-MSG: numeric-expression.txt:[[#@LINE-1]]:24: error: implicit format conflict between 'VAR1' (%u) and 'VAR2' (%x), need an explicit format specifier
-FMT-CONFLICT1-MSG-NEXT: {{F}}MT-CONFLICT1-NEXT: {{\[\[#VAR1 \+ VAR2\]\]}}
+FMT-CONFLICT1-NEXT: [[#UNSI + LHEX]]
+FMT-CONFLICT1-MSG: numeric-expression.txt:[[#@LINE-1]]:24: error: implicit format conflict between 'UNSI' (%u) and 'LHEX' (%x), need an explicit format specifier
+FMT-CONFLICT1-MSG-NEXT: {{F}}MT-CONFLICT1-NEXT: {{\[\[#UNSI \+ LHEX\]\]}}
 FMT-CONFLICT1-MSG-NEXT: {{^                       \^$}}
 
 VAR USE IMPL FMT CONFLICT COMPLEX
 34
 FMT-CONFLICT2-LABEL: VAR USE IMPL FMT CONFLICT
-FMT-CONFLICT2-NEXT: [[#VAR1 + VAR1a + VAR2]]
-FMT-CONFLICT2-MSG: numeric-expression.txt:[[#@LINE-1]]:24: error: implicit format conflict between 'VAR1 + VAR1a' (%u) and 'VAR2' (%x), need an explicit format specifier
-FMT-CONFLICT2-MSG-NEXT: {{F}}MT-CONFLICT2-NEXT: {{\[\[#VAR1 \+ VAR1a \+ VAR2\]\]}}
+FMT-CONFLICT2-NEXT: [[#UNSI + UNSIa + LHEX]]
+FMT-CONFLICT2-MSG: numeric-expression.txt:[[#@LINE-1]]:24: error: implicit format conflict between 'UNSI + UNSIa' (%u) and 'LHEX' (%x), need an explicit format specifier
+FMT-CONFLICT2-MSG-NEXT: {{F}}MT-CONFLICT2-NEXT: {{\[\[#UNSI \+ UNSIa \+ LHEX\]\]}}
 FMT-CONFLICT2-MSG-NEXT: {{^                       \^$}}
 
 ; Explicitly specified format can override conflicting implicit formats.
-VAR USE IMPL OVERRIDE FMT CONFLICT
-23
-CHECK-LABEL: VAR USE IMPL OVERRIDE FMT CONFLICT
-CHECK-NEXT: [[# %u, VAR1 + VAR2]]
+VAR USE IMPL OVERRIDE FMT CONFLICT  // CHECK-LABEL: VAR USE IMPL OVERRIDE FMT CONFLICT
+23  // CHECK-NEXT: {{^}}[[# %u, UNSI + LHEX]]
 
 ; Numeric expressions using more than one variable defined on other lines.
-USE MULTI VAR
-31
-42
-CHECK-LABEL: USE MULTI VAR
-CHECK-NEXT: [[#VAR4:]]
-CHECK-NEXT: [[#VAR1+VAR4]]
+USE MULTI VAR  // CHECK-LABEL: USE MULTI VAR
+22  // CHECK-NEXT: {{^}}[[#UNSI+UNSIa]]
 
 ; Numeric expression using a variable defined from a numeric expression.
-DEF EXPR GOOD MATCH
-42
-41
-; CHECK-LABEL: DEF EXPR GOOD MATCH
-; CHECK-NEXT: [[# VAR42:VAR1+31]]
-; CHECK-NEXT: [[# VAR42-1]]
+DEF EXPR GOOD MATCH  // CHECK-LABEL: DEF EXPR GOOD MATCH
+42  // CHECK-NEXT: {{^}}[[# VAR42:UNSI+31]]
+41  // CHECK-NEXT: {{^}}[[# VAR42-1]]
 
 ; Empty numeric expression.
-EMPTY NUM EXPR
-foo 104 bar
-CHECK-LABEL: EMPTY NUM EXPR
-CHECK-NEXT: foo [[#]] bar
+EMPTY NUM EXPR  // CHECK-LABEL: EMPTY NUM EXPR
+foo 104 bar  // CHECK-NEXT: {{^}}foo [[#]] bar
 
 ; Numeric expression using undefined variables.
 RUN: %ProtectFileCheckOutput \
@@ -360,17 +289,17 @@ SAME LINE USE
 4 5
 SAME-LINE-USE1-LABEL: SAME LINE USE
 SAME-LINE-USE1-NEXT: [[#]]
-SAME-LINE-USE1-NEXT: [[#VAR1:]] [[#VAR1+1]]
-SAME-LINE-USE-MSG1: numeric-expression.txt:[[#@LINE-1]]:36: error: numeric variable 'VAR1' defined earlier in the same CHECK directive
-SAME-LINE-USE-MSG1-NEXT: {{S}}AME-LINE-USE1-NEXT: {{\[\[#VAR1:\]\] \[\[#VAR1\+1\]\]}}
+SAME-LINE-USE1-NEXT: [[#UNSI:]] [[#UNSI+1]]
+SAME-LINE-USE-MSG1: numeric-expression.txt:[[#@LINE-1]]:36: error: numeric variable 'UNSI' defined earlier in the same CHECK directive
+SAME-LINE-USE-MSG1-NEXT: {{S}}AME-LINE-USE1-NEXT: {{\[\[#UNSI:\]\] \[\[#UNSI\+1\]\]}}
 SAME-LINE-USE-MSG1-NEXT:        {{^}}                                   ^{{$}}
 
 SAME-LINE-USE2-LABEL: SAME LINE USE
-SAME-LINE-USE2-NEXT: [[#VAR1:]]
-SAME-LINE-USE2-NEXT: [[#VAR2:VAR1+1]] [[#VAR2+1]]
-SAME-LINE-USE-MSG2: numeric-expression.txt:[[#@LINE-1]]:42: error: numeric variable 'VAR2' defined earlier in the same CHECK directive
-SAME-LINE-USE-MSG2-NEXT: {{S}}AME-LINE-USE2-NEXT: {{\[\[#VAR2:VAR1\+1\]\] \[\[#VAR2\+1\]\]}}
-SAME-LINE-USE-MSG2-NEXT:        {{^}}                                         ^{{$}}
+SAME-LINE-USE2-NEXT: [[#UNSI:]]
+SAME-LINE-USE2-NEXT: [[#UNSI2:UNSI+1]] [[#UNSI2+1]]
+SAME-LINE-USE-MSG2: numeric-expression.txt:[[#@LINE-1]]:43: error: numeric variable 'UNSI2' defined earlier in the same CHECK directive
+SAME-LINE-USE-MSG2-NEXT: {{S}}AME-LINE-USE2-NEXT: {{\[\[#UNSI2:UNSI\+1\]\] \[\[#UNSI2\+1\]\]}}
+SAME-LINE-USE-MSG2-NEXT:        {{^}}                                          ^{{$}}
 
 ; Invalid change of format in variable redefinition.
 RUN: %ProtectFileCheckOutput \
@@ -381,8 +310,8 @@ VAR REDEF FMT CHANGE
 22
 DC
 REDEF-NEW-FMT-LABEL: VAR REDEF FMT CHANGE
-REDEF-NEW-FMT-NEXT: [[#VAR1:]]
-REDEF-NEW-FMT-NEXT: [[#%X,VAR1:]]
+REDEF-NEW-FMT-NEXT: [[#UNSI:]]
+REDEF-NEW-FMT-NEXT: [[#%X,UNSI:]]
 REDEF-NEW-FMT-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: format different from previous variable definition
-REDEF-NEW-FMT-MSG-NEXT: {{R}}EDEF-NEW-FMT-NEXT: {{\[\[#%X,VAR1:\]\]}}
-REDEF-NEW-FMT-MSG-NEXT: {{^                              \^$}}
+REDEF-NEW-FMT-MSG-NEXT: {{R}}EDEF-NEW-FMT-NEXT: {{\[\[#%X,UNSI:\]\]}}
+REDEF-NEW-FMT-MSG-NEXT:    {{^}}                              ^{{$}}
