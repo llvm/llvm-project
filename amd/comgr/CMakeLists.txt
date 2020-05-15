@@ -23,7 +23,7 @@ if (ROCM_FOUND)
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  find_package(AMDDeviceLibs)
+  find_package(AMDDeviceLibs REQUIRED)
 
   find_package(Clang REQUIRED)
   add_definitions(${LLVM_DEFINITIONS})
