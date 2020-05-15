@@ -5394,7 +5394,7 @@ void GNUStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
     SecEntries.push_back(NameOffset{Lib, Offset});
   };
 
-  printDependentLibsHelper(Obj, OnSectionStart, OnLibEntry);
+  this->printDependentLibsHelper(Obj, OnSectionStart, OnLibEntry);
   if (SectionStarted)
     PrintSection();
 }
@@ -6666,7 +6666,7 @@ void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
   ListScope L(W, "DependentLibs");
-  printDependentLibsHelper(
+  this->printDependentLibsHelper(
       Obj, [](const Elf_Shdr &) {},
       [this](StringRef Lib, uint64_t) { W.printString(Lib); });
 }
