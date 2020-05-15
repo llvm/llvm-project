@@ -347,7 +347,8 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
   return true;
 }
 
-static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
+static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
+                            DiagnosticManager &diagnostic_manager) {
   ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
   if (!decl_vendor)
     return;
@@ -377,8 +378,23 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
 
   ClangModulesDeclVendor::ModuleVector modules_for_macros =
       persistent_state->GetHandLoadedClangModules();
-  decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
-                                        error_stream);
+  if (decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
+                                            error_stream))
+    return;
+
+  // Failed to load some modules, so emit the error stream as a diagnostic.
+  if (!error_stream.Empty()) {
+    // The error stream already contains several Clang diagnostics that might
+    // be either errors or warnings, so just print them all as one remark
+    // diagnostic to prevent that the message starts with "error: error:".
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                 error_stream.GetString());
+    return;
+  }
+
+  diagnostic_manager.PutString(eDiagnosticSeverityError,
+                               "Unknown error while loading modules needed for "
+                               "current compilation unit.");
 }
 
 void ClangUserExpression::UpdateLanguageForExpr() {
@@ -530,7 +546,7 @@ bool ClangUserExpression::PrepareForParsing(
 
   ApplyObjcCastHack(m_expr_text);
 
-  SetupDeclVendor(exe_ctx, m_target);
+  SetupDeclVendor(exe_ctx, m_target, diagnostic_manager);
 
   CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
   llvm::ArrayRef<std::string> imported_modules =
