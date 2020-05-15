@@ -2034,14 +2034,7 @@ public:
                             "Read and set the breakpoints previously saved to "
                             "a file with \"breakpoint write\".  ",
                             nullptr),
-        m_options() {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
-  }
+        m_options() {}
 
   ~CommandObjectBreakpointRead() override = default;
 
