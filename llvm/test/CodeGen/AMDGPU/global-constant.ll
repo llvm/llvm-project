@@ -11,21 +11,21 @@
 ; GCN-LABEL: {{^}}private_test:
 ; GCN: s_getpc_b64 s{{\[}}[[PC0_LO:[0-9]+]]:[[PC0_HI:[0-9]+]]{{\]}}
 
-; PAL OSes use fixup into .text section.
+; COM: PAL OSes use fixup into .text section.
 ; PAL: s_add_u32 s{{[0-9]+}}, s[[PC0_LO]], private1
 ; PAL: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], 0
 
-; Non-PAL OSes use relocations.
+; COM: Non-PAL OSes use relocations.
 ; NOPAL: s_add_u32 s{{[0-9]+}}, s[[PC0_LO]], private1@rel32@lo+4
 ; NOPAL: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], private1@rel32@hi+4
 
 ; GCN: s_getpc_b64 s{{\[}}[[PC1_LO:[0-9]+]]:[[PC1_HI:[0-9]+]]{{\]}}
 
-; PAL OSes use fixup into .text section.
+; COM: PAL OSes use fixup into .text section.
 ; PAL: s_add_u32 s{{[0-9]+}}, s[[PC1_LO]], private2
 ; PAL: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], 0
 
-; Non-PAL OSes use relocations.
+; COM: Non-PAL OSes use relocations.
 ; NOPAL: s_add_u32 s{{[0-9]+}}, s[[PC1_LO]], private2@rel32@lo+4
 ; NOPAL: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], private2@rel32@hi+4
 

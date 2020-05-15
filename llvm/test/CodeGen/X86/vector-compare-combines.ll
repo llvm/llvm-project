@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefix=SSE --check-prefix=SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 
-; If we have SSE/AVX intrinsics in the code, we miss obvious combines
-; unless we do them late on X86-specific nodes.
+; COM: If we have SSE/AVX intrinsics in the code, we miss obvious combines
+; COM: unless we do them late on X86-specific nodes.
 
 declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>)
 

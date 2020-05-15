@@ -6,8 +6,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512DQ
 
-; AVX1 has support for 256-bit bitwise logic because the FP variants were included.
-; If using those ops requires extra insert/extract though, it's probably not worth it.
+; COM: AVX1 has support for 256-bit bitwise logic because the FP variants were
+; COM: included. If using those ops requires extra insert/extract though, it's
+; COM: probably not worth it.
 
 define <8 x i32> @PR32790(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE-LABEL: PR32790:

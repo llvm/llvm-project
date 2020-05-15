@@ -1,8 +1,8 @@
-; Test that variables not starting with dollar sign get undefined after a
-; CHECK-LABEL directive iff --enable-var-scope is used.
+; COM: Test that variables not starting with dollar sign get undefined after a
+; COM: CHECK-LABEL directive iff --enable-var-scope is used.
 
-; Reference run: variables remain defined at all time when not using
-; --enable-var-scope option.
+; COM: Reference run: variables remain defined at all time when not using
+; COM: --enable-var-scope option.
 RUN: FileCheck --check-prefixes CHECK,LOCAL3,GLOBAL --input-file %s %s
 
 RUN: FileCheck --check-prefixes CHECK,GLOBAL --enable-var-scope --input-file %s %s
