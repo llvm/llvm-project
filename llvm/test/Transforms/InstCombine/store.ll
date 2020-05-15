@@ -58,7 +58,7 @@ define i32 @test3(i1 %C) {
 ; CHECK:       Cond2:
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       Cont:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -987654321, [[COND]] ], [ 47, [[COND2]] ]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 47, [[COND2]] ], [ -987654321, [[COND]] ]
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %A = alloca i32

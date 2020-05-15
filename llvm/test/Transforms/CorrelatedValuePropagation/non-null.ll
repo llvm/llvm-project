@@ -32,7 +32,7 @@ bb:
 
 define void @test2(i8* %ptr) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -46,7 +46,7 @@ bb:
 
 define void @test2_no_null_opt(i8* %ptr) #0 {
 ; CHECK-LABEL: @test2_no_null_opt(
-; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8* [[PTR]], null

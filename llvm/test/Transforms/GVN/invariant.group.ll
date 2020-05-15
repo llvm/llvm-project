@@ -318,7 +318,7 @@ entry:
     
     %unknownValue = load i8, i8* @unknownPtr
 ; FIXME: Can assume that %unknownValue == 42
-; CHECK: store i8 %unknownValue, i8* %ptr, !invariant.group !0
+; CHECK: store i8 %unknownValue, i8* %ptr, align 1, !invariant.group !0
     store i8 %unknownValue, i8* %ptr, !invariant.group !0 
 
     %newPtr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)

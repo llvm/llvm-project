@@ -148,8 +148,8 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; BASIC-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP4]], align 8
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; BASIC-NEXT:    store i32* [[TMP1]], i32** [[TMP5]], align 8
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
-; BASIC-NEXT:    store i8* [[TMP2]], i8** [[TMP6]]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8) ]
+; BASIC-NEXT:    store i8* [[TMP2]], i8** [[TMP6]], align 8
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; BASIC-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
@@ -196,8 +196,8 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; ALL-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP4]], align 8
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; ALL-NEXT:    store i32* [[TMP1]], i32** [[TMP5]], align 8
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
-; ALL-NEXT:    store i8* [[TMP2]], i8** [[TMP6]]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8) ]
+; ALL-NEXT:    store i8* [[TMP2]], i8** [[TMP6]], align 8
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; ALL-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
@@ -244,13 +244,12 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; WITH-AC-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP4]], align 8
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; WITH-AC-NEXT:    store i32* [[TMP1]], i32** [[TMP5]], align 8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
-; WITH-AC-NEXT:    store i8* [[TMP2]], i8** [[TMP6]]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8) ]
+; WITH-AC-NEXT:    store i8* [[TMP2]], i8** [[TMP6]], align 8
 ; WITH-AC-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
 ; WITH-AC-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; WITH-AC-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8) ]
 ; WITH-AC-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP6]], align 8
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP11]], i64 1), "nonnull"(i8* [[TMP11]]) ]
 ; WITH-AC-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
@@ -287,13 +286,12 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; CROSS-BLOCK-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP4]], align 8
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    store i32* [[TMP1]], i32** [[TMP5]], align 8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]) ]
-; CROSS-BLOCK-NEXT:    store i8* [[TMP2]], i8** [[TMP6]]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8) ]
+; CROSS-BLOCK-NEXT:    store i8* [[TMP2]], i8** [[TMP6]], align 8
 ; CROSS-BLOCK-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4) ]
 ; CROSS-BLOCK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; CROSS-BLOCK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8** [[TMP6]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[TMP6]], align 8
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[TMP11]], i64 1), "nonnull"(i8* [[TMP11]]) ]
 ; CROSS-BLOCK-NEXT:    store i8 [[TMP10]], i8* [[TMP11]], align 1
@@ -328,7 +326,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; FULL-SIMPLIFY-NEXT:    [[TMP7:%.*]] = alloca [[STRUCT_S:%.*]], align 8
 ; FULL-SIMPLIFY-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP4]], align 8
 ; FULL-SIMPLIFY-NEXT:    store i32* [[TMP1]], i32** [[TMP5]], align 8
-; FULL-SIMPLIFY-NEXT:    store i8* [[TMP2]], i8** [[TMP6]]
+; FULL-SIMPLIFY-NEXT:    store i8* [[TMP2]], i8** [[TMP6]], align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[TMP5]], align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 ; FULL-SIMPLIFY-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
@@ -349,7 +347,7 @@ define i32 @test2(%struct.S* %0, i32* %1, i8* %2) {
 ; FULL-SIMPLIFY-NEXT:    [[TMP24:%.*]] = load %struct.S*, %struct.S** [[TMP4]], align 8
 ; FULL-SIMPLIFY-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[TMP24]], i32 0, i32 2
 ; FULL-SIMPLIFY-NEXT:    [[TMP26:%.*]] = load i32*, i32** [[TMP25]], align 8
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4), "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i8* [[TMP11]], i64 1), "nonnull"(i8* [[TMP11]]), "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]), "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]), "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]), "align"(i32** [[TMP25]], i64 8), "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]), "align"(i32* [[TMP26]], i64 4) ]
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(%struct.S** [[TMP4]], i64 8), "nonnull"(%struct.S** [[TMP4]]), "align"(%struct.S** [[TMP4]], i64 8), "dereferenceable"(i32** [[TMP5]], i64 8), "nonnull"(i32** [[TMP5]]), "align"(i32** [[TMP5]], i64 8), "dereferenceable"(i8** [[TMP6]], i64 8), "nonnull"(i8** [[TMP6]]), "align"(i8** [[TMP6]], i64 8), "dereferenceable"(i32* [[TMP8]], i64 4), "nonnull"(i32* [[TMP8]]), "align"(i32* [[TMP8]], i64 4), "dereferenceable"(i8* [[TMP11]], i64 1), "nonnull"(i8* [[TMP11]]), "dereferenceable"(i32* [[TMP17]], i64 4), "nonnull"(i32* [[TMP17]]), "align"(i32* [[TMP17]], i64 8), "dereferenceable"(i8* [[TMP20]], i64 1), "nonnull"(i8* [[TMP20]]), "align"(i8* [[TMP20]], i64 4), "dereferenceable"(i32** [[TMP25]], i64 8), "nonnull"(i32** [[TMP25]]), "align"(i32** [[TMP25]], i64 8), "dereferenceable"(i32* [[TMP26]], i64 4), "nonnull"(i32* [[TMP26]]), "align"(i32* [[TMP26]], i64 4) ]
 ; FULL-SIMPLIFY-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP26]], align 4
 ; FULL-SIMPLIFY-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP23]], [[TMP27]]
 ; FULL-SIMPLIFY-NEXT:    ret i32 [[TMP28]]

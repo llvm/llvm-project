@@ -388,7 +388,7 @@ define void @fixpoint_changed(i32* %p) {
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[X_0:%.*]] = phi i32 [ 255, [[FOR_BODY]] ], [ 253, [[SW_BB]] ]
-; CHECK-NEXT:    store i32 [[X_0]], i32* [[P]], align 1
+; CHECK-NEXT:    store i32 [[X_0]], i32* [[P]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:

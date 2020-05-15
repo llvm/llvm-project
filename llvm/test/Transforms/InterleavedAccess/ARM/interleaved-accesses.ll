@@ -589,17 +589,17 @@ define void @store_address_space(<4 x i32> addrspace(1)* %ptr, <2 x i32> %v0, <2
 ; CHECK-NEON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEON-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> addrspace(1)* [[PTR:%.*]] to i8 addrspace(1)*
-; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p1i8.v2i32(i8 addrspace(1)* [[TMP3]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], i32 0)
+; CHECK-NEON-NEXT:    call void @llvm.arm.neon.vst2.p1i8.v2i32(i8 addrspace(1)* [[TMP3]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], i32 8)
 ; CHECK-NEON-NEXT:    ret void
 ;
 ; CHECK-MVE-LABEL: @store_address_space(
 ; CHECK-MVE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-MVE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> addrspace(1)* [[PTR:%.*]]
+; CHECK-MVE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> addrspace(1)* [[PTR:%.*]], align 8
 ; CHECK-MVE-NEXT:    ret void
 ;
 ; CHECK-NONE-LABEL: @store_address_space(
 ; CHECK-NONE-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <2 x i32> [[V0:%.*]], <2 x i32> [[V1:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NONE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> addrspace(1)* [[PTR:%.*]]
+; CHECK-NONE-NEXT:    store <4 x i32> [[INTERLEAVED_VEC]], <4 x i32> addrspace(1)* [[PTR:%.*]], align 8
 ; CHECK-NONE-NEXT:    ret void
 ;
   %interleaved.vec = shufflevector <2 x i32> %v0, <2 x i32> %v1, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

@@ -387,9 +387,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
       Value *id_gep_cast =
           new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", Brnch);
 
-      StoreInst *stbuff =
-          new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast);
-      stbuff->insertBefore(Brnch); // to Remove unused variable warning
+      new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, Brnch);
 
       SmallVector<Value *, 2> FourthIdxList;
       ConstantInt *fourInt =

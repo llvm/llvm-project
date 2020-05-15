@@ -157,7 +157,7 @@ entry:
 ; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
-; CHECK: store i32
+; CHECK: store i64
 ; CHECK: br label
 ; CHECK: {{^[0-9]+}}:
 ; CHECK: store i64
@@ -189,7 +189,7 @@ entry:
 ; CHECK: {{^[0-9]+}}:
 ; CHECK: @__msan_chain_origin
 ; Storing origin here:
-; CHECK: store i32
+; CHECK: store i64
 ; CHECK: br label
 ; CHECK: {{^[0-9]+}}:
 ; CHECK: store i128

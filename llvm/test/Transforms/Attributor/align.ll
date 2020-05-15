@@ -403,7 +403,7 @@ define i32* @test10a(i32* align 32 %p) {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[R:%.*]] = call i32* @test10a(i32* nofree nonnull align 32 dereferenceable(4) "no-capture-maybe-returned" [[P]])
-; CHECK-NEXT:    store i32 1, i32* [[R]], align 1
+; CHECK-NEXT:    store i32 1, i32* [[R]], align 4
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr i32, i32* [[P]], i32 8
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       f:
@@ -445,7 +445,7 @@ define i32* @test10b(i32* align 32 %p) {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[R:%.*]] = call i32* @test10b(i32* nofree nonnull align 32 dereferenceable(4) "no-capture-maybe-returned" [[P]])
-; CHECK-NEXT:    store i32 1, i32* [[R]], align 1
+; CHECK-NEXT:    store i32 1, i32* [[R]], align 4
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr i32, i32* [[P]], i32 8
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       f:

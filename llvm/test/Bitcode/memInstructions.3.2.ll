@@ -150,10 +150,10 @@ entry:
 ; CHECK-NEXT: store volatile i8 2, i8* %ptr1, align 1
   store volatile i8 2, i8* %ptr1, align 1
 
-; CHECK-NEXT: store i8 2, i8* %ptr1, !nontemporal !0
+; CHECK-NEXT: store i8 2, i8* %ptr1, align 1, !nontemporal !0
   store i8 2, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: store volatile i8 2, i8* %ptr1, !nontemporal !0
+; CHECK-NEXT: store volatile i8 2, i8* %ptr1, align 1, !nontemporal !0
   store volatile i8 2, i8* %ptr1, !nontemporal !0
 
 ; CHECK-NEXT: store i8 2, i8* %ptr1, align 1, !nontemporal !0

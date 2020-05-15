@@ -696,7 +696,7 @@ define void @test16b(i8 %v, i8** %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test16b
 ; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 1
+; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; CHECK-NEXT:    tail call void @no_sync_func(i8* nocapture nofree [[TMP1]])
 ; CHECK-NEXT:    tail call void @free(i8* nocapture [[TMP1]])
 ; CHECK-NEXT:    ret void
@@ -712,7 +712,7 @@ define void @test16c(i8 %v, i8** %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test16c
 ; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 1
+; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; CHECK-NEXT:    tail call void @no_sync_func(i8* nocapture nofree [[TMP1]])
 ; CHECK-NEXT:    tail call void @free(i8* nocapture [[TMP1]])
 ; CHECK-NEXT:    ret void
@@ -728,7 +728,7 @@ define void @test16d(i8 %v, i8** %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test16d
 ; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 1
+; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = tail call noalias i8* @malloc(i64 4)

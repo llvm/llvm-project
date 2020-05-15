@@ -1134,8 +1134,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
-      StoreInst *SI = new StoreInst(StructValues[i], GEP);
-      codeReplacer->getInstList().push_back(SI);
+      new StoreInst(StructValues[i], GEP, codeReplacer);
     }
   }
 

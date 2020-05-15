@@ -160,7 +160,7 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // into libcall in CodeGen. This is not evident performance gain so disable
   // it now.
   if (isa<AtomicMemTransferInst>(MI))
-    if (CopyDstAlign < Size || CopySrcAlign < Size)
+    if (*CopyDstAlign < Size || *CopySrcAlign < Size)
       return nullptr;
 
   // Use an integer load+store unless we can find something better.
@@ -207,8 +207,7 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   StoreInst *S = Builder.CreateStore(L, Dest);
   // Alignment from the mem intrinsic will be better, so use it.
-  S->setAlignment(
-      MaybeAlign(CopyDstAlign)); // FIXME: Check if we can use Align instead.
+  S->setAlignment(*CopyDstAlign);
   if (CopyMD)
     S->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   if (LoopMemParallelMD)
@@ -1144,8 +1143,7 @@ Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
   // If the mask is all ones, this is a plain vector store of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
     Value *StorePtr = II.getArgOperand(1);
-    MaybeAlign Alignment(
-        cast<ConstantInt>(II.getArgOperand(2))->getZExtValue());
+    Align Alignment(cast<ConstantInt>(II.getArgOperand(2))->getZExtValue());
     return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
   }
 
@@ -2482,7 +2480,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
-      return new StoreInst(II->getArgOperand(0), Ptr);
+      return new StoreInst(II->getArgOperand(0), Ptr, false, Align(16));
     }
     break;
   case Intrinsic::ppc_vsx_stxvw4x:
@@ -2524,7 +2522,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Value *TOp = Builder.CreateFPTrunc(II->getArgOperand(0), VTy);
       Type *OpPtrTy = PointerType::getUnqual(VTy);
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
-      return new StoreInst(TOp, Ptr);
+      return new StoreInst(TOp, Ptr, false, Align(16));
     }
     break;
   case Intrinsic::ppc_qpx_qvstfd:
@@ -2534,7 +2532,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
-      return new StoreInst(II->getArgOperand(0), Ptr);
+      return new StoreInst(II->getArgOperand(0), Ptr, false, Align(32));
     }
     break;
 
