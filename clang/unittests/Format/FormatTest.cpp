@@ -4265,6 +4265,9 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                "                  > ccccc) {\n"
                "}",
                Style);
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "       && bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+               Style);
   verifyFormat("return (a)\n"
                "       // comment\n"
                "       + b;",
@@ -4293,7 +4296,7 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
 
   Style.ColumnLimit = 60;
   verifyFormat("zzzzzzzzzz\n"
-               "    = bbbbbbbbbbbbbbbbb\n"
+               "    = bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
                "      >> aaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaa);",
                Style);
 
@@ -4302,7 +4305,7 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
   Style.TabWidth = 4;
   Style.UseTab = FormatStyle::UT_Always;
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.AlignOperands = false;
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
   EXPECT_EQ("return someVeryVeryLongConditionThatBarelyFitsOnALine\n"
             "\t&& (someOtherLongishConditionPart1\n"
             "\t\t|| someOtherEvenLongerNestedConditionPart2);",
@@ -4310,6 +4313,108 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                    "(someOtherLongishConditionPart1 || "
                    "someOtherEvenLongerNestedConditionPart2);",
                    Style));
+}
+
+TEST_F(FormatTest, ExpressionIndentationStrictAlign) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  Style.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+
+  verifyFormat("bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "                   + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "                   + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "              == aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "                         * bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               "                     + bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               "          && aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "                     * aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "                 > ccccccccccccccccccccccccccccccccccccccccc;",
+               Style);
+  verifyFormat("if (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "            * aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "        + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    == bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n}",
+               Style);
+  verifyFormat("if (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "        + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "              * aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    == bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n}",
+               Style);
+  verifyFormat("if (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    == aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "               * aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "           + bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n}",
+               Style);
+  verifyFormat("if () {\n"
+               "} else if (aaaaa\n"
+               "           && bbbbb // break\n"
+               "                  > ccccc) {\n"
+               "}",
+               Style);
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    && bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+               Style);
+  verifyFormat("return (a)\n"
+               "     // comment\n"
+               "     + b;",
+               Style);
+  verifyFormat(
+      "int aaaaaa = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "               * bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+      "           + cc;",
+      Style);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
+               "     : bbbbbbbbbbbbbbbb ? 2222222222222222\n"
+               "                        : 3333333333333333;",
+               Style);
+  verifyFormat(
+      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaa    ? bbbbbbbbbbbbbbbbbb\n"
+      "                           : ccccccccccccccc ? dddddddddddddddddd\n"
+      "                                             : eeeeeeeeeeeeeeeeee)\n"
+      "     : bbbbbbbbbbbbbbbb ? 2222222222222222\n"
+      "                        : 3333333333333333;",
+      Style);
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    = aaaaaaaaaaaaaaaaaaaa + aaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+               Style);
+
+  verifyFormat("return boost::fusion::at_c<0>(iiii).second\n"
+               "    == boost::fusion::at_c<1>(iiii).second;",
+               Style);
+
+  Style.ColumnLimit = 60;
+  verifyFormat("zzzzzzzzzzzzz\n"
+               "    = bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               "   >> aaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaa);",
+               Style);
+
+  // Forced by comments.
+  Style.ColumnLimit = 80;
+  verifyFormat(
+      "unsigned ContentSize\n"
+      "    = sizeof(int16_t) // DWARF ARange version number\n"
+      "    + sizeof(int32_t) // Offset of CU in the .debug_info section\n"
+      "    + sizeof(int8_t)  // Pointer Size (in bytes)\n"
+      "    + sizeof(int8_t); // Segment Size (in bytes)",
+      Style);
+
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  verifyFormat(
+      "unsigned ContentSize =\n"
+      "    sizeof(int16_t)   // DWARF ARange version number\n"
+      "    + sizeof(int32_t) // Offset of CU in the .debug_info section\n"
+      "    + sizeof(int8_t)  // Pointer Size (in bytes)\n"
+      "    + sizeof(int8_t); // Segment Size (in bytes)",
+      Style);
+
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
+  verifyFormat(
+      "unsigned ContentSize =\n"
+      "    sizeof(int16_t)   // DWARF ARange version number\n"
+      "    + sizeof(int32_t) // Offset of CU in the .debug_info section\n"
+      "    + sizeof(int8_t)  // Pointer Size (in bytes)\n"
+      "    + sizeof(int8_t); // Segment Size (in bytes)",
+      Style);
 }
 
 TEST_F(FormatTest, EnforcedOperatorWraps) {
@@ -4323,7 +4428,7 @@ TEST_F(FormatTest, EnforcedOperatorWraps) {
 
 TEST_F(FormatTest, NoOperandAlignment) {
   FormatStyle Style = getLLVMStyle();
-  Style.AlignOperands = false;
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("aaaaaaaaaaaaaa(aaaaaaaaaaaa,\n"
                "               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa +\n"
                "                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
@@ -5823,17 +5928,17 @@ TEST_F(FormatTest, ParenthesesAndOperandAlignment) {
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-  Style.AlignOperands = false;
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.AlignOperands = true;
+  Style.AlignOperands = FormatStyle::OAS_Align;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.AlignOperands = false;
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "    bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
@@ -5979,7 +6084,7 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
   // Chained conditionals
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 70;
-  Style.AlignOperands = true;
+  Style.AlignOperands = FormatStyle::OAS_Align;
   verifyFormat("return aaaaaaaaaaaaaaaa ? 1111111111111111\n"
                "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
                "                        : 3333333333333333;",
@@ -13262,7 +13367,6 @@ TEST_F(FormatTest, GetsCorrectBasedOnStyle) {
 TEST_F(FormatTest, ParsesConfigurationBools) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
-  CHECK_PARSE_BOOL(AlignOperands);
   CHECK_PARSE_BOOL(AlignTrailingComments);
   CHECK_PARSE_BOOL(AlignConsecutiveAssignments);
   CHECK_PARSE_BOOL(AlignConsecutiveDeclarations);
@@ -13446,6 +13550,17 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::ENAS_Left);
   CHECK_PARSE("AlignEscapedNewlinesLeft: false", AlignEscapedNewlines,
               FormatStyle::ENAS_Right);
+
+  Style.AlignOperands = FormatStyle::OAS_Align;
+  CHECK_PARSE("AlignOperands: DontAlign", AlignOperands,
+              FormatStyle::OAS_DontAlign);
+  CHECK_PARSE("AlignOperands: Align", AlignOperands, FormatStyle::OAS_Align);
+  CHECK_PARSE("AlignOperands: AlignAfterOperator", AlignOperands,
+              FormatStyle::OAS_AlignAfterOperator);
+  // For backward compatibility:
+  CHECK_PARSE("AlignOperands: false", AlignOperands,
+              FormatStyle::OAS_DontAlign);
+  CHECK_PARSE("AlignOperands: true", AlignOperands, FormatStyle::OAS_Align);
 
   Style.UseTab = FormatStyle::UT_ForIndentation;
   CHECK_PARSE("UseTab: Never", UseTab, FormatStyle::UT_Never);
