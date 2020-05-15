@@ -207,6 +207,8 @@ public:
 /// flag indicating the multiple resolutions.
 NameLookup findDeclInBases(const CXXRecordDecl &Parent, StringRef DeclName,
                            bool AggressiveTemplateLookup) {
+  if (!Parent.hasDefinition())
+    return NameLookup(nullptr);
   if (const NamedDecl *InClassRef = findDecl(Parent, DeclName))
     return NameLookup(InClassRef);
   const NamedDecl *Found = nullptr;
