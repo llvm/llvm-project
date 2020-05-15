@@ -45,7 +45,7 @@ public:
     assert(low && high && step);
     // ForOp has different bounds semantics. Adjust upper bound.
     auto adjustUp = rewriter.create<mlir::AddIOp>(loc, high, step);
-    auto f = rewriter.create<mlir::loop::ForOp>(loc, low, adjustUp, step);
+    auto f = rewriter.create<mlir::scf::ForOp>(loc, low, adjustUp, step);
     f.region().getBlocks().clear();
     rewriter.inlineRegionBefore(loop.region(), f.region(), f.region().end());
     rewriter.eraseOp(loop);
@@ -64,7 +64,7 @@ public:
     auto loc = where.getLoc();
     bool hasOtherRegion = !where.otherRegion().empty();
     auto cond = where.condition();
-    auto ifOp = rewriter.create<mlir::loop::IfOp>(loc, cond, hasOtherRegion);
+    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, cond, hasOtherRegion);
     rewriter.inlineRegionBefore(where.whereRegion(), &ifOp.thenRegion().back());
     ifOp.thenRegion().back().erase();
     if (hasOtherRegion) {
@@ -85,7 +85,7 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::ResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::loop::YieldOp>(op);
+    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(op);
     return success();
   }
 };
@@ -182,7 +182,7 @@ public:
     patterns2.insert<LoopLoopConv, LoopWhereConv, LoopResultConv>(context);
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
-                           mlir::loop::LoopOpsDialect,
+                           mlir::scf::SCFDialect,
                            mlir::StandardOpsDialect>();
 
     // apply the patterns
