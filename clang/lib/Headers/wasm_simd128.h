@@ -50,8 +50,6 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_load(const void *__mem) {
   return ((const struct __wasm_v128_load_struct *)__mem)->__v;
 }
 
-#ifdef __wasm_unimplemented_simd128__
-
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_v8x16_load_splat(const void *__mem) {
   struct __wasm_v8x16_load_splat_struct {
@@ -148,8 +146,6 @@ wasm_u64x2_load_32x2(const void *__mem) {
   __u32x2 __v = ((const struct __wasm_u64x2_load_32x2_struct *)__mem)->__v;
   return (v128_t) __builtin_convertvector(__v, __u64x2);
 }
-
-#endif // __wasm_unimplemented_simd128__
 
 static __inline__ void __DEFAULT_FN_ATTRS wasm_v128_store(void *__mem,
                                                           v128_t __a) {
@@ -564,14 +560,10 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_xor(v128_t __a,
   return __a ^ __b;
 }
 
-#ifdef __wasm_unimplemented_simd128__
-
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_andnot(v128_t __a,
                                                              v128_t __b) {
   return __a & ~__b;
 }
-
-#endif // __wasm_unimplemented_simd128__
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_bitselect(v128_t __a,
                                                                 v128_t __b,
@@ -1066,14 +1058,10 @@ wasm_f32x4_convert_u32x4(v128_t __a) {
       __c1 * 8, __c1 * 8 + 1, __c1 * 8 + 2, __c1 * 8 + 3, __c1 * 8 + 4,        \
       __c1 * 8 + 5, __c1 * 8 + 6, __c1 * 8 + 7))
 
-#ifdef __wasm_unimplemented_simd128__
-
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v8x16_swizzle(v128_t __a,
                                                                v128_t __b) {
   return (v128_t)__builtin_wasm_swizzle_v8x16((__i8x16)__a, (__i8x16)__b);
 }
-
-#endif // __wasm_unimplemented_simd128__
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i8x16_narrow_i16x8(v128_t __a, v128_t __b) {

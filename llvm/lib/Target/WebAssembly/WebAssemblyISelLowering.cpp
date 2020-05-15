@@ -239,12 +239,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       }
     }
     // But some vector extending loads are legal
-    if (Subtarget->hasUnimplementedSIMD128()) {
-      for (auto Ext : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
-        setLoadExtAction(Ext, MVT::v8i16, MVT::v8i8, Legal);
-        setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
-        setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
-      }
+    for (auto Ext : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
+      setLoadExtAction(Ext, MVT::v8i16, MVT::v8i8, Legal);
+      setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
+      setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
     }
   }
 
@@ -599,8 +597,6 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 }
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
-  if (!Subtarget->hasUnimplementedSIMD128())
-    return false;
   MVT ExtT = ExtVal.getSimpleValueType();
   MVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getSimpleValueType(0);
   return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
@@ -1423,7 +1419,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   const EVT VecT = Op.getValueType();
   const EVT LaneT = Op.getOperand(0).getValueType();
   const size_t Lanes = Op.getNumOperands();
-  bool CanSwizzle = Subtarget->hasUnimplementedSIMD128() && VecT == MVT::v16i8;
+  bool CanSwizzle = VecT == MVT::v16i8;
 
   // BUILD_VECTORs are lowered to the instruction that initializes the highest
   // possible number of lanes at once followed by a sequence of replace_lane
@@ -1522,38 +1518,37 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // original instruction
   std::function<bool(size_t, const SDValue &)> IsLaneConstructed;
   SDValue Result;
-  if (Subtarget->hasUnimplementedSIMD128()) {
-    // Prefer swizzles over vector consts over splats
-    if (NumSwizzleLanes >= NumSplatLanes &&
-        NumSwizzleLanes >= NumConstantLanes) {
-      Result = DAG.getNode(WebAssemblyISD::SWIZZLE, DL, VecT, SwizzleSrc,
-                           SwizzleIndices);
-      auto Swizzled = std::make_pair(SwizzleSrc, SwizzleIndices);
-      IsLaneConstructed = [&, Swizzled](size_t I, const SDValue &Lane) {
-        return Swizzled == GetSwizzleSrcs(I, Lane);
-      };
-    } else if (NumConstantLanes >= NumSplatLanes) {
-      SmallVector<SDValue, 16> ConstLanes;
-      for (const SDValue &Lane : Op->op_values()) {
-        if (IsConstant(Lane)) {
-          ConstLanes.push_back(Lane);
-        } else if (LaneT.isFloatingPoint()) {
-          ConstLanes.push_back(DAG.getConstantFP(0, DL, LaneT));
-        } else {
-          ConstLanes.push_back(DAG.getConstant(0, DL, LaneT));
-        }
+  // Prefer swizzles over vector consts over splats
+  if (NumSwizzleLanes >= NumSplatLanes &&
+      (!Subtarget->hasUnimplementedSIMD128() ||
+       NumSwizzleLanes >= NumConstantLanes)) {
+    Result = DAG.getNode(WebAssemblyISD::SWIZZLE, DL, VecT, SwizzleSrc,
+                         SwizzleIndices);
+    auto Swizzled = std::make_pair(SwizzleSrc, SwizzleIndices);
+    IsLaneConstructed = [&, Swizzled](size_t I, const SDValue &Lane) {
+      return Swizzled == GetSwizzleSrcs(I, Lane);
+    };
+  } else if (NumConstantLanes >= NumSplatLanes &&
+             Subtarget->hasUnimplementedSIMD128()) {
+    SmallVector<SDValue, 16> ConstLanes;
+    for (const SDValue &Lane : Op->op_values()) {
+      if (IsConstant(Lane)) {
+        ConstLanes.push_back(Lane);
+      } else if (LaneT.isFloatingPoint()) {
+        ConstLanes.push_back(DAG.getConstantFP(0, DL, LaneT));
+      } else {
+        ConstLanes.push_back(DAG.getConstant(0, DL, LaneT));
       }
-      Result = DAG.getBuildVector(VecT, DL, ConstLanes);
-      IsLaneConstructed = [&](size_t _, const SDValue &Lane) {
-        return IsConstant(Lane);
-      };
     }
+    Result = DAG.getBuildVector(VecT, DL, ConstLanes);
+    IsLaneConstructed = [&](size_t _, const SDValue &Lane) {
+      return IsConstant(Lane);
+    };
   }
   if (!Result) {
     // Use a splat, but possibly a load_splat
     LoadSDNode *SplattedLoad;
-    if (Subtarget->hasUnimplementedSIMD128() &&
-        (SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
+    if ((SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
         SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
       Result = DAG.getMemIntrinsicNode(
           WebAssemblyISD::LOAD_SPLAT, DL, DAG.getVTList(VecT),

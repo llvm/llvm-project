@@ -1,5 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=+unimplemented-simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128-VM
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
 ; Test SIMD loads and stores
@@ -21,7 +20,6 @@ define <16 x i8> @load_v16i8(<16 x i8>* %p) {
 }
 
 ; CHECK-LABEL: load_splat_v16i8:
-; SIMD128-VM-NOT: v8x16.load_splat
 ; NO-SIMD128-NOT: v128
 ; SIMD128-NEXT: .functype load_splat_v16i8 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v8x16.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
@@ -1594,7 +1592,6 @@ define <2 x i64> @load_zext_v2i64(<2 x i32>* %p) {
 
 ; CHECK-LABEL: load_ext_v2i64:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.load32x2_u $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1661,7 +1658,6 @@ define <2 x i64> @load_zext_v2i64_with_folded_offset(<2 x i32>* %p) {
 
 ; CHECK-LABEL: load_ext_v2i64_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.load32x2_u $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1723,7 +1719,6 @@ define <2 x i64> @load_zext_v2i64_with_folded_gep_offset(<2 x i32>* %p) {
 
 ; CHECK-LABEL: load_ext_v2i64_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i64x2.load32x2_u $push[[R:[0-9]+]]=, 8($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1791,7 +1786,6 @@ define <2 x i64> @load_zext_v2i64_with_unfolded_gep_negative_offset(<2 x i32>* %
 
 ; CHECK-LABEL: load_ext_v2i64_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -8{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
@@ -1869,7 +1863,6 @@ define <2 x i64> @load_zext_v2i64_with_unfolded_offset(<2 x i32>* %p) {
 
 ; CHECK-LABEL: load_ext_v2i64_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
@@ -1941,7 +1934,6 @@ define <2 x i64> @load_zext_v2i64_with_unfolded_gep_offset(<2 x i32>* %p) {
 
 ; CHECK-LABEL: load_ext_v2i64_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 8{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
@@ -2007,7 +1999,6 @@ define <2 x i64> @load_zext_v2i64_from_numeric_address() {
 
 ; CHECK-LABEL: load_ext_v2i64_from_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: i64x2.load32x2_u $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
@@ -2071,7 +2062,6 @@ define <2 x i64> @load_zext_v2i64_from_global_address() {
 
 ; CHECK-LABEL: load_ext_v2i64_from_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: load32x2
 ; SIMD128-NEXT: .functype load_ext_v2i64_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: i64x2.load32x2_u $push[[R:[0-9]+]]=, gv_v2i32($pop[[L0]]){{$}}
