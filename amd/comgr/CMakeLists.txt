@@ -22,31 +22,6 @@ if (ROCM_FOUND)
   rocm_setup_version(VERSION "${amd_comgr_VERSION}")
 endif()
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  find_package(AMDDeviceLibs REQUIRED)
-
-  find_package(Clang REQUIRED)
-  add_definitions(${LLVM_DEFINITIONS})
-  include_directories(${LLVM_INCLUDE_DIRS})
-  include_directories(${CLANG_INCLUDE_DIRS})
-
-  find_package(LLD REQUIRED CONFIG)
-  include_directories(${LLD_INCLUDE_DIRS})
-else()
-  # If building with LLVM_EXTERNAL_PROJECTS, we've already picked up
-  # the include directories for LLVM, but not clang.
-  #
-  if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
-    include_directories(${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include)
-    include_directories(${LLVM_BINARY_DIR}/tools/clang/include)
-  endif()
-
-  if (LLVM_EXTERNAL_LLD_SOURCE_DIR)
-    include_directories(${LLVM_EXTERNAL_LLD_SOURCE_DIR}/include)
-    include_directories(${LLVM_BINARY_DIR}/tools/lld/include)
-  endif()
-endif()
-
 # BUILD_SHARED_LIBS is a frustratingly global variable common to all
 # projects. LLVM also defines an option for the same varible with the
 # opposite default, which will overwrite our default preference
@@ -60,6 +35,53 @@ endif()
 
 option(COMGR_BUILD_SHARED_LIBS "Build the shared library"
        ${build_shared_libs_default})
+
+set(SOURCES
+  src/comgr-compiler.cpp
+  src/comgr.cpp
+  src/comgr-device-libs.cpp
+  src/comgr-disassembly.cpp
+  src/comgr-elfdump.cpp
+  src/comgr-env.cpp
+  src/comgr-metadata.cpp
+  src/comgr-objdump.cpp
+  src/comgr-signal.cpp
+  src/comgr-symbol.cpp)
+
+if(COMGR_BUILD_SHARED_LIBS)
+  add_library(amd_comgr SHARED ${SOURCES})
+else()
+  add_library(amd_comgr STATIC ${SOURCES})
+endif()
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  find_package(AMDDeviceLibs REQUIRED)
+  find_package(Clang REQUIRED)
+  find_package(LLD REQUIRED CONFIG)
+
+  target_include_directories(amd_comgr
+    PRIVATE
+      ${LLVM_INCLUDE_DIRS}
+      ${CLANG_INCLUDE_DIRS}
+      ${LLD_INCLUDE_DIRS})
+else()
+  # If building with LLVM_EXTERNAL_PROJECTS, we've already picked up
+  # the include directories for LLVM, but not clang.
+  #
+  if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
+    target_include_directories(amd_comgr
+      PRIVATE
+        ${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include
+        ${LLVM_BINARY_DIR}/tools/clang/include)
+  endif()
+
+  if (LLVM_EXTERNAL_LLD_SOURCE_DIR)
+    target_include_directories(amd_comgr
+      PRIVATE
+        ${LLVM_EXTERNAL_LLD_SOURCE_DIR}/include
+        ${LLVM_BINARY_DIR}/tools/lld/include)
+  endif()
+endif()
 
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
@@ -85,7 +107,7 @@ if (ENABLE_ASAN)
 endif()
 
 set(AMD_COMGR_PRIVATE_COMPILE_OPTIONS)
-set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS)
+set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS ${LLVM_DEFINITIONS})
 set(AMD_COMGR_PUBLIC_LINKER_OPTIONS)
 set(AMD_COMGR_PRIVATE_LINKER_OPTIONS)
 
@@ -122,24 +144,6 @@ list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_EXPORT)
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/amd_comgr.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
-
-set(SOURCES
-  src/comgr-compiler.cpp
-  src/comgr.cpp
-  src/comgr-device-libs.cpp
-  src/comgr-disassembly.cpp
-  src/comgr-elfdump.cpp
-  src/comgr-env.cpp
-  src/comgr-metadata.cpp
-  src/comgr-objdump.cpp
-  src/comgr-signal.cpp
-  src/comgr-symbol.cpp)
-
-if(COMGR_BUILD_SHARED_LIBS)
-  add_library(amd_comgr SHARED ${SOURCES})
-else()
-  add_library(amd_comgr STATIC ${SOURCES})
-endif()
 
 include(bc2h)
 include(opencl_pch)
