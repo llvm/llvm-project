@@ -68,41 +68,43 @@ void checkCV()
     }
 }
 
-template <typename T, typename U = T>
-constexpr bool testConstructorArray()
-{
-    std::array<U,2> val = { U(), U() };
-    ASSERT_NOEXCEPT(std::span<T>   {val});
-    ASSERT_NOEXCEPT(std::span<T, 2>{val});
-    std::span<T>    s1{val};
-    std::span<T, 2> s2{val};
-    return s1.data() == &val[0] && s1.size() == 2
-        && s2.data() == &val[0] && s2.size() == 2;
+template <typename T, typename U>
+constexpr bool testConstructorArray() {
+  std::array<U, 2> val = {U(), U()};
+  ASSERT_NOEXCEPT(std::span<T>{val});
+  ASSERT_NOEXCEPT(std::span<T, 2>{val});
+  std::span<T> s1{val};
+  std::span<T, 2> s2{val};
+  return s1.data() == &val[0] && s1.size() == 2 && s2.data() == &val[0] &&
+         s2.size() == 2;
 }
 
-template <typename T, typename U = T>
-constexpr bool testConstructorConstArray()
-{
-    const std::array<U,2> val = { U(), U() };
-    ASSERT_NOEXCEPT(std::span<const T>   {val});
-    ASSERT_NOEXCEPT(std::span<const T, 2>{val});
-    std::span<const T>    s1{val};
-    std::span<const T, 2> s2{val};
-    return s1.data() == &val[0] && s1.size() == 2
-        && s2.data() == &val[0] && s2.size() == 2;
+template <typename T, typename U>
+constexpr bool testConstructorConstArray() {
+  const std::array<U, 2> val = {U(), U()};
+  ASSERT_NOEXCEPT(std::span<const T>{val});
+  ASSERT_NOEXCEPT(std::span<const T, 2>{val});
+  std::span<const T> s1{val};
+  std::span<const T, 2> s2{val};
+  return s1.data() == &val[0] && s1.size() == 2 && s2.data() == &val[0] &&
+         s2.size() == 2;
 }
 
 template <typename T>
 constexpr bool testConstructors() {
-    static_assert(testConstructorArray<T>(), "");
-    static_assert(testConstructorArray<const T, T>(), "");
-    static_assert(testConstructorConstArray<T>(), "");
-    static_assert(testConstructorConstArray<const T, T>(), "");
+  static_assert(testConstructorArray<T, T>(), "");
+  static_assert(testConstructorArray<const T, const T>(), "");
+  static_assert(testConstructorArray<const T, T>(), "");
+  static_assert(testConstructorConstArray<T, T>(), "");
+  static_assert(testConstructorConstArray<const T, const T>(), "");
+  static_assert(testConstructorConstArray<const T, T>(), "");
 
-    return testConstructorArray<T>()
-        && testConstructorArray<const T, T>()
-        && testConstructorConstArray<T>()
-        && testConstructorConstArray<const T, T>();
+  return testConstructorArray<T, T>() &&
+         testConstructorArray<const T, const T>() &&
+         testConstructorArray<const T, T>() &&
+         testConstructorConstArray<T, T>() &&
+         testConstructorConstArray<const T, const T>() &&
+         testConstructorConstArray<const T, T>();
 }
 
 struct A{};
@@ -115,9 +117,7 @@ int main(int, char**)
     assert(testConstructors<A>());
 
     assert(testConstructors<int*>());
-    assert(testConstructors<int* const>());
     assert(testConstructors<const int*>());
-    assert(testConstructors<const int* const>());
 
     checkCV();
 
