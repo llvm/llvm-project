@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s > %T/command-disassemble-process.exe
-# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=4000 %s > %T/command-disassemble-process.big.exe
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8000 %s > %T/command-disassemble-process.big.exe
 # RUN: yaml2obj --docnum=2 %s > %t
 
 # RUN: %lldb -c %t %T/command-disassemble-process.exe \
@@ -63,7 +63,7 @@
 # CHECK-NEXT:     0x400e:      addb   %cl, (%rcx)
 # CHECK-NEXT:     0x4010:      addb   %cl, (%rdx)
 
-# BIG: error: Not disassembling the current function because it is very large [0x0000000000004002-0x0000000000004fa2). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# BIG: error: Not disassembling the current function because it is very large [0x0000000000004002-0x0000000000005f42). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
 
 --- !ELF
 FileHeader:      
