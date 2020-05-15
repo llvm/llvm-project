@@ -162,7 +162,7 @@ static const LayoutAlignElem DefaultAlignments[] = {
     {INTEGER_ALIGN, 16, Align(2), Align(2)},   // i16
     {INTEGER_ALIGN, 32, Align(4), Align(4)},   // i32
     {INTEGER_ALIGN, 64, Align(4), Align(8)},   // i64
-    {FLOAT_ALIGN, 16, Align(2), Align(2)},     // half
+    {FLOAT_ALIGN, 16, Align(2), Align(2)},     // half, bfloat
     {FLOAT_ALIGN, 32, Align(4), Align(4)},     // float
     {FLOAT_ALIGN, 64, Align(8), Align(8)},     // double
     {FLOAT_ALIGN, 128, Align(16), Align(16)},  // ppcf128, quad, ...
@@ -732,6 +732,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     AlignType = INTEGER_ALIGN;
     break;
   case Type::HalfTyID:
+  case Type::BFloatTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
   // PPC_FP128TyID and FP128TyID have different data contents, but the

@@ -151,6 +151,7 @@ struct APFloatBase {
   /// @{
   enum Semantics {
     S_IEEEhalf,
+    S_BFloat,
     S_IEEEsingle,
     S_IEEEdouble,
     S_x87DoubleExtended,
@@ -162,6 +163,7 @@ struct APFloatBase {
   static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
 
   static const fltSemantics &IEEEhalf() LLVM_READNONE;
+  static const fltSemantics &BFloat() LLVM_READNONE;
   static const fltSemantics &IEEEsingle() LLVM_READNONE;
   static const fltSemantics &IEEEdouble() LLVM_READNONE;
   static const fltSemantics &IEEEquad() LLVM_READNONE;
@@ -541,6 +543,7 @@ private:
   /// @}
 
   APInt convertHalfAPFloatToAPInt() const;
+  APInt convertBFloatAPFloatToAPInt() const;
   APInt convertFloatAPFloatToAPInt() const;
   APInt convertDoubleAPFloatToAPInt() const;
   APInt convertQuadrupleAPFloatToAPInt() const;
@@ -548,6 +551,7 @@ private:
   APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   void initFromHalfAPInt(const APInt &api);
+  void initFromBFloatAPInt(const APInt &api);
   void initFromFloatAPInt(const APInt &api);
   void initFromDoubleAPInt(const APInt &api);
   void initFromQuadrupleAPInt(const APInt &api);
@@ -954,9 +958,10 @@ public:
 
   /// Returns a float which is bitcasted from an all one value int.
   ///
+  /// \param Semantics - type float semantics
   /// \param BitWidth - Select float type
-  /// \param isIEEE   - If 128 bit number, select between PPC and IEEE
-  static APFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false);
+  static APFloat getAllOnesValue(const fltSemantics &Semantics,
+                                 unsigned BitWidth);
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
   /// into FoldingSets.
