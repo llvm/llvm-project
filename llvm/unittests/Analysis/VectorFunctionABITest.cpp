@@ -83,6 +83,7 @@ protected:
 
     return false;
   }
+
   // Checks that 1. the last Parameter in the Shape is of type
   // VFParamKind::GlobalPredicate and 2. it is the only one of such
   // type.
@@ -97,6 +98,14 @@ protected:
   }
 };
 } // unnamed namespace
+
+// This test makes sure correct mangling occurs for given string.
+TEST_F(VFABIParserTest, ManglingVectorTLINames) {
+  EXPECT_EQ(VFABI::mangleTLIVectorName("vec", "scalar", 3, 4),
+            "_ZGV_LLVM_N4vvv_scalar(vec)");
+  EXPECT_EQ(VFABI::mangleTLIVectorName("custom.call.v5", "custom.call", 1, 5),
+            "_ZGV_LLVM_N5v_custom.call(custom.call.v5)");
+}
 
 // This test makes sure that the demangling method succeeds only on
 // valid values of the string.
