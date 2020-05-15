@@ -96,6 +96,13 @@ static inline bool isNegativeQuietNaN(T x) {
          ((bits & Properties::quietNaNMask) != 0);
 }
 
+// Return the absolute value of x.
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T abs(T x) {
+  return valueFromBits(absBits(x));
+}
+
 } // namespace fputil
 } // namespace __llvm_libc
 
