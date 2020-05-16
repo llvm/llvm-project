@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -40,7 +41,7 @@ protected:
     M = parseModule(Assembly);
     ASSERT_TRUE(M);
 
-    Function *F = M->getFunction("test");
+    F = M->getFunction("test");
     ASSERT_TRUE(F) << "Test must have a function @test";
     if (!F)
       return;
@@ -57,6 +58,7 @@ protected:
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
+  Function *F = nullptr;
   Instruction *A = nullptr;
 };
 
@@ -952,6 +954,44 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
       "}\n"
       "declare i8 @llvm.usub.sat.i8(i8, i8)\n");
   expectKnownBits(/*zero*/ 2u, /*one*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
+  // ptrtoint truncates the pointer type.
+  parseAssembly(
+      "define void @test(i8** %p) {\n"
+      "  %A = load i8*, i8** %p\n"
+      "  %i = ptrtoint i8* %A to i32\n"
+      "  %m = and i32 %i, 31\n"
+      "  %c = icmp eq i32 %m, 0\n"
+      "  call void @llvm.assume(i1 %c)\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @llvm.assume(i1)\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(
+      A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
+  // ptrtoint zero extends the pointer type.
+  parseAssembly(
+      "define void @test(i8** %p) {\n"
+      "  %A = load i8*, i8** %p\n"
+      "  %i = ptrtoint i8* %A to i128\n"
+      "  %m = and i128 %i, 31\n"
+      "  %c = icmp eq i128 %m, 0\n"
+      "  call void @llvm.assume(i1 %c)\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @llvm.assume(i1)\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(
+      A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
 }
 
 class IsBytewiseValueTest : public ValueTrackingTest,
