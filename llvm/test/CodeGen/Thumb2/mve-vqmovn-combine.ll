@@ -4,9 +4,7 @@
 define arm_aapcs_vfpcc <8 x i16> @vqmovni32_sminmax_t1(<4 x i32> %s0, <8 x i16> %src1) {
 ; CHECK-LABEL: vqmovni32_sminmax_t1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
-; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vmovnt.i32 q1, q0
+; CHECK-NEXT:    vqmovnt.s32 q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -23,7 +21,6 @@ define arm_aapcs_vfpcc <8 x i16> @vqmovni32_sminmax_t2(<4 x i32> %s0, <8 x i16> 
 ; CHECK-LABEL: vqmovni32_sminmax_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vqmovnb.s32 q0, q0
-; CHECK-NEXT:    vmovlb.s16 q0, q0
 ; CHECK-NEXT:    vmovnt.i32 q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -39,9 +36,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vqmovni32_sminmax_b1(<4 x i32> %s0, <8 x i16> %src1) {
 ; CHECK-LABEL: vqmovni32_sminmax_b1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
-; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vmovnb.i32 q1, q0
+; CHECK-NEXT:    vqmovnb.s32 q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -137,9 +132,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqmovni16_sminmax_t1(<8 x i16> %s0, <16 x i8> %src1) {
 ; CHECK-LABEL: vqmovni16_sminmax_t1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
-; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vmovnt.i16 q1, q0
+; CHECK-NEXT:    vqmovnt.s16 q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -156,7 +149,6 @@ define arm_aapcs_vfpcc <16 x i8> @vqmovni16_sminmax_t2(<8 x i16> %s0, <16 x i8> 
 ; CHECK-LABEL: vqmovni16_sminmax_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vqmovnb.s16 q0, q0
-; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    vmovnt.i16 q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -172,9 +164,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqmovni16_sminmax_b1(<8 x i16> %s0, <16 x i8> %src1) {
 ; CHECK-LABEL: vqmovni16_sminmax_b1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
-; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vmovnb.i16 q1, q0
+; CHECK-NEXT:    vqmovnb.s16 q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
