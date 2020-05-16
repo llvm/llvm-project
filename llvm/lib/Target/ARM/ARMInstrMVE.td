@@ -4737,6 +4737,24 @@ let Predicates = [HasMVEInt] in {
             (v16i8 (MVE_VQMOVNu16bh (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm)))>;
   def : Pat<(v16i8 (MVEvqmovnu (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm), (i32 1))),
             (v16i8 (MVE_VQMOVNu16th (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm)))>;
+
+  def : Pat<(v8i16 (MVEvqmovns (v8i16 MQPR:$Qd_src), (v4i32 (ARMvshrsImm (v4i32 MQPR:$Qm), imm0_31:$imm)), (i32 0))),
+            (v8i16 (MVE_VQSHRNbhs32 (v8i16 MQPR:$Qd_src), (v4i32 MQPR:$Qm), imm0_31:$imm))>;
+  def : Pat<(v16i8 (MVEvqmovns (v16i8 MQPR:$Qd_src), (v8i16 (ARMvshrsImm (v8i16 MQPR:$Qm), imm0_15:$imm)), (i32 0))),
+            (v16i8 (MVE_VQSHRNbhs16 (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm), imm0_15:$imm))>;
+  def : Pat<(v8i16 (MVEvqmovns (v8i16 MQPR:$Qd_src), (v4i32 (ARMvshrsImm (v4i32 MQPR:$Qm), imm0_31:$imm)), (i32 1))),
+            (v8i16 (MVE_VQSHRNths32 (v8i16 MQPR:$Qd_src), (v4i32 MQPR:$Qm), imm0_31:$imm))>;
+  def : Pat<(v16i8 (MVEvqmovns (v16i8 MQPR:$Qd_src), (v8i16 (ARMvshrsImm (v8i16 MQPR:$Qm), imm0_15:$imm)), (i32 1))),
+            (v16i8 (MVE_VQSHRNths16 (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm), imm0_15:$imm))>;
+
+  def : Pat<(v8i16 (MVEvqmovnu (v8i16 MQPR:$Qd_src), (v4i32 (ARMvshruImm (v4i32 MQPR:$Qm), imm0_31:$imm)), (i32 0))),
+            (v8i16 (MVE_VQSHRNbhu32 (v8i16 MQPR:$Qd_src), (v4i32 MQPR:$Qm), imm0_31:$imm))>;
+  def : Pat<(v16i8 (MVEvqmovnu (v16i8 MQPR:$Qd_src), (v8i16 (ARMvshruImm (v8i16 MQPR:$Qm), imm0_15:$imm)), (i32 0))),
+            (v16i8 (MVE_VQSHRNbhu16 (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm), imm0_15:$imm))>;
+  def : Pat<(v8i16 (MVEvqmovnu (v8i16 MQPR:$Qd_src), (v4i32 (ARMvshruImm (v4i32 MQPR:$Qm), imm0_31:$imm)), (i32 1))),
+            (v8i16 (MVE_VQSHRNthu32 (v8i16 MQPR:$Qd_src), (v4i32 MQPR:$Qm), imm0_31:$imm))>;
+  def : Pat<(v16i8 (MVEvqmovnu (v16i8 MQPR:$Qd_src), (v8i16 (ARMvshruImm (v8i16 MQPR:$Qm), imm0_15:$imm)), (i32 1))),
+            (v16i8 (MVE_VQSHRNthu16 (v16i8 MQPR:$Qd_src), (v8i16 MQPR:$Qm), imm0_15:$imm))>;
 }
 
 class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
