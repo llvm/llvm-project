@@ -14421,6 +14421,41 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue PerformVMOVNCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  unsigned IsTop = N->getConstantOperandVal(2);
+
+  // VMOVNt(c, VQMOVNb(a, b)) => VQMOVNt(c, b)
+  // VMOVNb(c, VQMOVNb(a, b)) => VQMOVNb(c, b)
+  if ((Op1->getOpcode() == ARMISD::VQMOVNs ||
+       Op1->getOpcode() == ARMISD::VQMOVNu) &&
+      Op1->getConstantOperandVal(2) == 0)
+    return DCI.DAG.getNode(Op1->getOpcode(), SDLoc(Op1), N->getValueType(0),
+                           Op0, Op1->getOperand(1), N->getOperand(2));
+
+  // Only the bottom lanes from Qm (Op1) and either the top or bottom lanes from
+  // Qd (Op0) are demanded from a VMOVN, depending on whether we are inserting
+  // into the top or bottom lanes.
+  unsigned NumElts = N->getValueType(0).getVectorNumElements();
+  APInt Op1DemandedElts = APInt::getSplat(NumElts, APInt::getLowBitsSet(2, 1));
+  APInt Op0DemandedElts =
+      IsTop ? Op1DemandedElts
+            : APInt::getSplat(NumElts, APInt::getHighBitsSet(2, 1));
+
+  APInt KnownUndef, KnownZero;
+  const TargetLowering &TLI = DCI.DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedVectorElts(Op0, Op0DemandedElts, KnownUndef,
+                                     KnownZero, DCI))
+    return SDValue(N, 0);
+  if (TLI.SimplifyDemandedVectorElts(Op1, Op1DemandedElts, KnownUndef,
+                                     KnownZero, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 static SDValue PerformLongShiftCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue Op0 = N->getOperand(0);
@@ -15555,6 +15590,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCMPCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
     return PerformVECREDUCE_ADDCombine(N, DCI.DAG, Subtarget);
+  case ARMISD::VMOVN:
+    return PerformVMOVNCombine(N, DCI);
   case ARMISD::ASRL:
   case ARMISD::LSRL:
   case ARMISD::LSLL:
