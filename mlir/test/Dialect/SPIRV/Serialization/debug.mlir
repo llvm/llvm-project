@@ -66,4 +66,81 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     // CHECK: loc({{".*debug.mlir"}}:67:5)
     spv.Return
   }
+
+  spv.func @loop(%count : i32) -> () "None" {
+    %zero = spv.constant 0: i32
+    %one = spv.constant 1: i32
+    %ivar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
+    %jvar = spv.Variable init(%zero) : !spv.ptr<i32, Function>
+    spv.loop {
+      // CHECK: loc({{".*debug.mlir"}}:75:5)
+      spv.Branch ^header
+    ^header:
+      %ival0 = spv.Load "Function" %ivar : i32
+      %icmp = spv.SLessThan %ival0, %count : i32
+      // CHECK: loc({{".*debug.mlir"}}:75:5)
+      spv.BranchConditional %icmp, ^body, ^merge
+    ^body:
+      spv.Store "Function" %jvar, %zero : i32
+      spv.loop {
+        // CHECK: loc({{".*debug.mlir"}}:85:7)
+        spv.Branch ^header
+      ^header:
+        %jval0 = spv.Load "Function" %jvar : i32
+        %jcmp = spv.SLessThan %jval0, %count : i32
+        // CHECK: loc({{".*debug.mlir"}}:85:7)
+        spv.BranchConditional %jcmp, ^body, ^merge
+      ^body:
+        // CHECK: loc({{".*debug.mlir"}}:95:9)
+        spv.Branch ^continue
+      ^continue:
+        %jval1 = spv.Load "Function" %jvar : i32
+        %add = spv.IAdd %jval1, %one : i32
+        spv.Store "Function" %jvar, %add : i32
+        // CHECK: loc({{".*debug.mlir"}}:101:9)
+        spv.Branch ^header
+      ^merge:
+        // CHECK: loc({{".*debug.mlir"}}:85:7)
+        spv._merge
+        // CHECK: loc({{".*debug.mlir"}}:85:7)
+      }
+      // CHECK: loc({{".*debug.mlir"}}:108:7)
+      spv.Branch ^continue
+    ^continue:
+      %ival1 = spv.Load "Function" %ivar : i32
+      %add = spv.IAdd %ival1, %one : i32
+      spv.Store "Function" %ivar, %add : i32
+      // CHECK: loc({{".*debug.mlir"}}:114:7)
+      spv.Branch ^header
+    ^merge:
+      // CHECK: loc({{".*debug.mlir"}}:75:5)
+      spv._merge
+    // CHECK: loc({{".*debug.mlir"}}:75:5)
+    }
+    spv.Return
+  }
+
+  spv.func @selection(%cond: i1) -> () "None" {
+    %zero = spv.constant 0: i32
+    %one = spv.constant 1: i32
+    %two = spv.constant 2: i32
+    %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
+    spv.selection {
+      // CHECK: loc({{".*debug.mlir"}}:128:5)
+      spv.BranchConditional %cond [5, 10], ^then, ^else
+    ^then:
+      spv.Store "Function" %var, %one : i32
+      // CHECK: loc({{".*debug.mlir"}}:134:7)
+      spv.Branch ^merge
+    ^else:
+      spv.Store "Function" %var, %two : i32
+      // CHECK: loc({{".*debug.mlir"}}:138:7)
+      spv.Branch ^merge
+    ^merge:
+      // CHECK: loc({{".*debug.mlir"}}:128:5)
+      spv._merge
+    // CHECK: loc({{".*debug.mlir"}}:128:5)
+    }
+    spv.Return
+  }
 }
