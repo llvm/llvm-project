@@ -204,6 +204,10 @@ class VectorType;
       VTBL2,        // 2-register shuffle with mask
       VMOVN,        // MVE vmovn
 
+      // MVE Saturating truncates
+      VQMOVNs,      // Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
+      VQMOVNu,      // Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
+
       // Vector multiply long:
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned

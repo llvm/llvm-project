@@ -946,6 +946,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::ADD);
     setTargetDAGCombine(ISD::BITCAST);
   }
+  if (Subtarget->hasMVEIntegerOps()) {
+    setTargetDAGCombine(ISD::SMIN);
+    setTargetDAGCombine(ISD::UMIN);
+    setTargetDAGCombine(ISD::SMAX);
+    setTargetDAGCombine(ISD::UMAX);
+  }
 
   if (!Subtarget->hasFP64()) {
     // When targeting a floating-point unit with only single-precision
@@ -1668,6 +1674,8 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VTBL1:         return "ARMISD::VTBL1";
   case ARMISD::VTBL2:         return "ARMISD::VTBL2";
   case ARMISD::VMOVN:         return "ARMISD::VMOVN";
+  case ARMISD::VQMOVNs:       return "ARMISD::VQMOVNs";
+  case ARMISD::VQMOVNu:       return "ARMISD::VQMOVNu";
   case ARMISD::VMULLs:        return "ARMISD::VMULLs";
   case ARMISD::VMULLu:        return "ARMISD::VMULLu";
   case ARMISD::VADDVs:        return "ARMISD::VADDVs";
@@ -14864,6 +14872,107 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// PerformMinMaxCombine - Target-specific DAG combining for creating truncating
+/// saturates.
+static SDValue PerformMinMaxCombine(SDNode *N, SelectionDAG &DAG,
+                                    const ARMSubtarget *ST) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  if (!ST->hasMVEIntegerOps())
+    return SDValue();
+
+  if (VT != MVT::v4i32 && VT != MVT::v8i16)
+    return SDValue();
+
+  auto IsSignedSaturate = [&](SDNode *Min, SDNode *Max) {
+    // Check one is a smin and the other is a smax
+    if (Min->getOpcode() != ISD::SMIN)
+      std::swap(Min, Max);
+    if (Min->getOpcode() != ISD::SMIN || Max->getOpcode() != ISD::SMAX)
+      return false;
+
+    APInt SaturateC;
+    if (VT == MVT::v4i32)
+      SaturateC = APInt(32, (1 << 15) - 1, true);
+    else //if (VT == MVT::v8i16)
+      SaturateC = APInt(16, (1 << 7) - 1, true);
+
+    APInt MinC, MaxC;
+    if (!ISD::isConstantSplatVector(Min->getOperand(1).getNode(), MinC) ||
+        MinC != SaturateC)
+      return false;
+    if (!ISD::isConstantSplatVector(Max->getOperand(1).getNode(), MaxC) ||
+        MaxC != ~SaturateC)
+      return false;
+    return true;
+  };
+
+  if (IsSignedSaturate(N, N0.getNode())) {
+    SDLoc DL(N);
+    MVT ExtVT, HalfVT;
+    if (VT == MVT::v4i32) {
+      HalfVT = MVT::v8i16;
+      ExtVT = MVT::v4i16;
+    } else { // if (VT == MVT::v8i16)
+      HalfVT = MVT::v16i8;
+      ExtVT = MVT::v8i8;
+    }
+
+    // Create a VQMOVNB with undef top lanes, then signed extended into the top
+    // half. That extend will hopefully be removed if only the bottom bits are
+    // demanded (though a truncating store, for example).
+    SDValue VQMOVN =
+        DAG.getNode(ARMISD::VQMOVNs, DL, HalfVT, DAG.getUNDEF(HalfVT),
+                    N0->getOperand(0), DAG.getConstant(0, DL, MVT::i32));
+    SDValue Bitcast = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, VQMOVN);
+    return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Bitcast,
+                       DAG.getValueType(ExtVT));
+  }
+
+  auto IsUnsignedSaturate = [&](SDNode *Min) {
+    // For unsigned, we just need to check for <= 0xffff
+    if (Min->getOpcode() != ISD::UMIN)
+      return false;
+
+    APInt SaturateC;
+    if (VT == MVT::v4i32)
+      SaturateC = APInt(32, (1 << 16) - 1, true);
+    else //if (VT == MVT::v8i16)
+      SaturateC = APInt(16, (1 << 8) - 1, true);
+
+    APInt MinC;
+    if (!ISD::isConstantSplatVector(Min->getOperand(1).getNode(), MinC) ||
+        MinC != SaturateC)
+      return false;
+    return true;
+  };
+
+  if (IsUnsignedSaturate(N)) {
+    SDLoc DL(N);
+    MVT HalfVT;
+    unsigned ExtConst;
+    if (VT == MVT::v4i32) {
+      HalfVT = MVT::v8i16;
+      ExtConst = 0x0000FFFF;
+    } else { //if (VT == MVT::v8i16)
+      HalfVT = MVT::v16i8;
+      ExtConst = 0x00FF;
+    }
+
+    // Create a VQMOVNB with undef top lanes, then ZExt into the top half with
+    // an AND. That extend will hopefully be removed if only the bottom bits are
+    // demanded (though a truncating store, for example).
+    SDValue VQMOVN =
+        DAG.getNode(ARMISD::VQMOVNu, DL, HalfVT, DAG.getUNDEF(HalfVT), N0,
+                    DAG.getConstant(0, DL, MVT::i32));
+    SDValue Bitcast = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, VQMOVN);
+    return DAG.getNode(ISD::AND, DL, VT, Bitcast,
+                       DAG.getConstant(ExtConst, DL, VT));
+  }
+
+  return SDValue();
+}
+
 static const APInt *isPowerOf2Constant(SDValue V) {
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(V);
   if (!C)
@@ -15419,7 +15528,13 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformShiftCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-  case ISD::ANY_EXTEND: return PerformExtendCombine(N, DCI.DAG, Subtarget);
+  case ISD::ANY_EXTEND:
+    return PerformExtendCombine(N, DCI.DAG, Subtarget);
+  case ISD::SMIN:
+  case ISD::UMIN:
+  case ISD::SMAX:
+  case ISD::UMAX:
+    return PerformMinMaxCombine(N, DCI.DAG, Subtarget);
   case ARMISD::CMOV: return PerformCMOVCombine(N, DCI.DAG);
   case ARMISD::BRCOND: return PerformBRCONDCombine(N, DCI.DAG);
   case ISD::LOAD:       return PerformLOADCombine(N, DCI);
