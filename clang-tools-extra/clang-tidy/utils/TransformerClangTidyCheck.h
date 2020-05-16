@@ -67,6 +67,10 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
 
+  /// Derived classes that override this function should call this method from
+  /// the overridden method.
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
 private:
   Optional<transformer::RewriteRule> Rule;
   const IncludeSorter::IncludeStyle IncludeStyle;
