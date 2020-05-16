@@ -391,6 +391,7 @@ class TypePromotionTransaction;
     bool optimizeExtUses(Instruction *I);
     bool optimizeLoadExt(LoadInst *Load);
     bool optimizeShiftInst(BinaryOperator *BO);
+    bool optimizeFunnelShift(IntrinsicInst *Fsh);
     bool optimizeSelectInst(SelectInst *SI);
     bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
     bool optimizeSwitchInst(SwitchInst *SI);
@@ -2061,6 +2062,9 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
     case Intrinsic::ctlz:
       // If counting zeros is expensive, try to avoid it.
       return despeculateCountZeros(II, TLI, DL, ModifiedDT);
+    case Intrinsic::fshl:
+    case Intrinsic::fshr:
+      return optimizeFunnelShift(II);
     case Intrinsic::dbg_value:
       return fixupDbgValue(II);
     case Intrinsic::vscale: {
@@ -6237,6 +6241,41 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
   Shift->replaceAllUsesWith(NewSel);
   Shift->eraseFromParent();
+  return true;
+}
+
+bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
+  Intrinsic::ID Opcode = Fsh->getIntrinsicID();
+  assert((Opcode == Intrinsic::fshl || Opcode == Intrinsic::fshr) &&
+         "Expected a funnel shift");
+
+  // If this is (1) a vector funnel shift, (2) shifts by scalars are cheaper
+  // than general vector shifts, and (3) the shift amount is select-of-splatted
+  // values, hoist the funnel shifts before the select:
+  //   fsh Op0, Op1, (select Cond, TVal, FVal) -->
+  //   select Cond, (fsh Op0, Op1, TVal), (fsh Op0, Op1, FVal)
+  //
+  // This is inverting a generic IR transform when we know that the cost of a
+  // general vector shift is more than the cost of 2 shift-by-scalars.
+  // We can't do this effectively in SDAG because we may not be able to
+  // determine if the select operands are splats from within a basic block.
+  Type *Ty = Fsh->getType();
+  if (!Ty->isVectorTy() || !TLI->isVectorShiftByScalarCheap(Ty))
+    return false;
+  Value *Cond, *TVal, *FVal;
+  if (!match(Fsh->getOperand(2),
+             m_OneUse(m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))))
+    return false;
+  if (!isSplatValue(TVal) || !isSplatValue(FVal))
+    return false;
+
+  IRBuilder<> Builder(Fsh);
+  Value *X = Fsh->getOperand(0), *Y = Fsh->getOperand(1);
+  Value *NewTVal = Builder.CreateIntrinsic(Opcode, Ty, { X, Y, TVal });
+  Value *NewFVal = Builder.CreateIntrinsic(Opcode, Ty, { X, Y, FVal });
+  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Fsh->replaceAllUsesWith(NewSel);
+  Fsh->eraseFromParent();
   return true;
 }
 

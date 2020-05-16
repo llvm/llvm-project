@@ -265,32 +265,113 @@ exit:
 }
 
 ; PR37426 - https://bugs.llvm.org/show_bug.cgi?id=37426
+; If we don't have real vector shift instructions (AVX1), convert the funnel
+; shift into 2 funnel shifts and sink the splat shuffles into the loop.
 
 define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
-; ALL-LABEL: @fancierRotate2(
-; ALL-NEXT:  entry:
-; ALL-NEXT:    [[I0:%.*]] = insertelement <8 x i32> undef, i32 [[ROT0:%.*]], i32 0
-; ALL-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
-; ALL-NEXT:    [[I1:%.*]] = insertelement <8 x i32> undef, i32 [[ROT1:%.*]], i32 0
-; ALL-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
-; ALL-NEXT:    br label [[LOOP:%.*]]
-; ALL:       loop:
-; ALL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; ALL-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
-; ALL-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to <8 x i8>*
-; ALL-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, <8 x i8>* [[T1]], align 1
-; ALL-NEXT:    [[T2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; ALL-NEXT:    [[SHAMT:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[S0]], <8 x i32> [[S1]]
-; ALL-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
-; ALL-NEXT:    [[T5:%.*]] = bitcast i32* [[T4]] to <8 x i32>*
-; ALL-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i32>, <8 x i32>* [[T5]], align 4
-; ALL-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[SHAMT]])
-; ALL-NEXT:    store <8 x i32> [[ROT]], <8 x i32>* [[T5]], align 4
-; ALL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
-; ALL-NEXT:    [[T7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; ALL-NEXT:    br i1 [[T7]], label [[EXIT:%.*]], label [[LOOP]]
-; ALL:       exit:
-; ALL-NEXT:    ret void
+; AVX1-LABEL: @fancierRotate2(
+; AVX1-NEXT:  entry:
+; AVX1-NEXT:    [[I0:%.*]] = insertelement <8 x i32> undef, i32 [[ROT0:%.*]], i32 0
+; AVX1-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[I1:%.*]] = insertelement <8 x i32> undef, i32 [[ROT1:%.*]], i32 0
+; AVX1-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    br label [[LOOP:%.*]]
+; AVX1:       loop:
+; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; AVX1-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to <8 x i8>*
+; AVX1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, <8 x i8>* [[T1]], align 1
+; AVX1-NEXT:    [[T2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
+; AVX1-NEXT:    [[SHAMT:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[S0]], <8 x i32> [[S1]]
+; AVX1-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[T5:%.*]] = bitcast i32* [[T4]] to <8 x i32>*
+; AVX1-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i32>, <8 x i32>* [[T5]], align 4
+; AVX1-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[TMP0]])
+; AVX1-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[TMP2]])
+; AVX1-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[TMP1]], <8 x i32> [[TMP3]]
+; AVX1-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* [[T5]], align 4
+; AVX1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; AVX1-NEXT:    [[T7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; AVX1-NEXT:    br i1 [[T7]], label [[EXIT:%.*]], label [[LOOP]]
+; AVX1:       exit:
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @fancierRotate2(
+; AVX2-NEXT:  entry:
+; AVX2-NEXT:    [[I0:%.*]] = insertelement <8 x i32> undef, i32 [[ROT0:%.*]], i32 0
+; AVX2-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[I1:%.*]] = insertelement <8 x i32> undef, i32 [[ROT1:%.*]], i32 0
+; AVX2-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:    br label [[LOOP:%.*]]
+; AVX2:       loop:
+; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; AVX2-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
+; AVX2-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to <8 x i8>*
+; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, <8 x i8>* [[T1]], align 1
+; AVX2-NEXT:    [[T2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
+; AVX2-NEXT:    [[SHAMT:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[S0]], <8 x i32> [[S1]]
+; AVX2-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; AVX2-NEXT:    [[T5:%.*]] = bitcast i32* [[T4]] to <8 x i32>*
+; AVX2-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i32>, <8 x i32>* [[T5]], align 4
+; AVX2-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[SHAMT]])
+; AVX2-NEXT:    store <8 x i32> [[ROT]], <8 x i32>* [[T5]], align 4
+; AVX2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; AVX2-NEXT:    [[T7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; AVX2-NEXT:    br i1 [[T7]], label [[EXIT:%.*]], label [[LOOP]]
+; AVX2:       exit:
+; AVX2-NEXT:    ret void
+;
+; AVX512BW-LABEL: @fancierRotate2(
+; AVX512BW-NEXT:  entry:
+; AVX512BW-NEXT:    [[I0:%.*]] = insertelement <8 x i32> undef, i32 [[ROT0:%.*]], i32 0
+; AVX512BW-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[I1:%.*]] = insertelement <8 x i32> undef, i32 [[ROT1:%.*]], i32 0
+; AVX512BW-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:    br label [[LOOP:%.*]]
+; AVX512BW:       loop:
+; AVX512BW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; AVX512BW-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
+; AVX512BW-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to <8 x i8>*
+; AVX512BW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, <8 x i8>* [[T1]], align 1
+; AVX512BW-NEXT:    [[T2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
+; AVX512BW-NEXT:    [[SHAMT:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[S0]], <8 x i32> [[S1]]
+; AVX512BW-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; AVX512BW-NEXT:    [[T5:%.*]] = bitcast i32* [[T4]] to <8 x i32>*
+; AVX512BW-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i32>, <8 x i32>* [[T5]], align 4
+; AVX512BW-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[SHAMT]])
+; AVX512BW-NEXT:    store <8 x i32> [[ROT]], <8 x i32>* [[T5]], align 4
+; AVX512BW-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; AVX512BW-NEXT:    [[T7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; AVX512BW-NEXT:    br i1 [[T7]], label [[EXIT:%.*]], label [[LOOP]]
+; AVX512BW:       exit:
+; AVX512BW-NEXT:    ret void
+;
+; XOP-LABEL: @fancierRotate2(
+; XOP-NEXT:  entry:
+; XOP-NEXT:    [[I0:%.*]] = insertelement <8 x i32> undef, i32 [[ROT0:%.*]], i32 0
+; XOP-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:    [[I1:%.*]] = insertelement <8 x i32> undef, i32 [[ROT1:%.*]], i32 0
+; XOP-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:    br label [[LOOP:%.*]]
+; XOP:       loop:
+; XOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; XOP-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* [[CONTROL:%.*]], i64 [[INDEX]]
+; XOP-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to <8 x i8>*
+; XOP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, <8 x i8>* [[T1]], align 1
+; XOP-NEXT:    [[T2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
+; XOP-NEXT:    [[SHAMT:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[S0]], <8 x i32> [[S1]]
+; XOP-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
+; XOP-NEXT:    [[T5:%.*]] = bitcast i32* [[T4]] to <8 x i32>*
+; XOP-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i32>, <8 x i32>* [[T5]], align 4
+; XOP-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[SHAMT]])
+; XOP-NEXT:    store <8 x i32> [[ROT]], <8 x i32>* [[T5]], align 4
+; XOP-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; XOP-NEXT:    [[T7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; XOP-NEXT:    br i1 [[T7]], label [[EXIT:%.*]], label [[LOOP]]
+; XOP:       exit:
+; XOP-NEXT:    ret void
 ;
 entry:
   %i0 = insertelement <8 x i32> undef, i32 %rot0, i32 0
