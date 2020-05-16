@@ -486,3 +486,64 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
   %v3 = insertelement <4 x float> %v2, float %b23, i32 3
   ret <4 x float> %v3
 }
+
+define i32 @ext_ext_or_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @ext_ext_or_reduction_v4i32(
+; CHECK-NEXT:    [[Z:%.*]] = and <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[Z]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[Z2:%.*]] = extractelement <4 x i32> [[Z]], i32 2
+; CHECK-NEXT:    [[Z012:%.*]] = or i32 [[TMP3]], [[Z2]]
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[Z]], i32 3
+; CHECK-NEXT:    [[Z0123:%.*]] = or i32 [[Z3]], [[Z012]]
+; CHECK-NEXT:    ret i32 [[Z0123]]
+;
+  %z = and <4 x i32> %x, %y
+  %z0 = extractelement <4 x i32> %z, i32 0
+  %z1 = extractelement <4 x i32> %z, i32 1
+  %z01 = or i32 %z0, %z1
+  %z2 = extractelement <4 x i32> %z, i32 2
+  %z012 = or i32 %z01, %z2
+  %z3 = extractelement <4 x i32> %z, i32 3
+  %z0123 = or i32 %z3, %z012
+  ret i32 %z0123
+}
+
+define i32 @ext_ext_partial_add_reduction_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: @ext_ext_partial_add_reduction_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
+; CHECK-NEXT:    [[X210:%.*]] = add i32 [[X2]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[X210]]
+;
+  %x0 = extractelement <4 x i32> %x, i32 0
+  %x1 = extractelement <4 x i32> %x, i32 1
+  %x10 = add i32 %x1, %x0
+  %x2 = extractelement <4 x i32> %x, i32 2
+  %x210 = add i32 %x2, %x10
+  ret i32 %x210
+}
+
+define i32 @ext_ext_partial_add_reduction_and_extra_add_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @ext_ext_partial_add_reduction_and_extra_add_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[Y]], i32 2
+; CHECK-NEXT:    [[Y210:%.*]] = add i32 [[Y2]], [[TMP3]]
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[X2Y210:%.*]] = add i32 [[X2]], [[Y210]]
+; CHECK-NEXT:    ret i32 [[X2Y210]]
+;
+  %y0 = extractelement <4 x i32> %y, i32 0
+  %y1 = extractelement <4 x i32> %y, i32 1
+  %y10 = add i32 %y1, %y0
+  %y2 = extractelement <4 x i32> %y, i32 2
+  %y210 = add i32 %y2, %y10
+  %x2 = extractelement <4 x i32> %x, i32 2
+  %x2y210 = add i32 %x2, %y210
+  ret i32 %x2y210
+}
