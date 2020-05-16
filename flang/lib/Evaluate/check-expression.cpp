@@ -191,10 +191,9 @@ class CheckSpecificationExprHelper
 public:
   using Result = std::optional<std::string>;
   using Base = AnyTraverse<CheckSpecificationExprHelper, Result>;
-  explicit CheckSpecificationExprHelper(const semantics::Scope &s,
-      const IntrinsicProcTable &table, SpecificationExprContext specExprContext)
-      : Base{*this}, scope_{s}, table_{table}, specExprContext_{
-                                                   specExprContext} {}
+  explicit CheckSpecificationExprHelper(
+      const semantics::Scope &s, const IntrinsicProcTable &table)
+      : Base{*this}, scope_{s}, table_{table} {}
   using Base::operator();
 
   Result operator()(const ProcedureDesignator &) const {
@@ -205,9 +204,9 @@ public:
   Result operator()(const semantics::Symbol &symbol) const {
     if (semantics::IsNamedConstant(symbol)) {
       return std::nullopt;
-    } else if (scope_.IsDerivedType() && IsVariableName(symbol) &&
-        specExprContext_ == SpecificationExprContext::BOUND) { // C750
-      return "derived type component not allowed to reference variable '"s +
+    } else if (scope_.IsDerivedType() && IsVariableName(symbol)) { // C750, C754
+      return "derived type component or type parameter value not allowed to "
+             "reference variable '"s +
           symbol.name().ToString() + "'";
     } else if (symbol.IsDummy()) {
       if (symbol.attrs().test(semantics::Attr::OPTIONAL)) {
@@ -256,10 +255,9 @@ public:
   template <int KIND>
   Result operator()(const TypeParamInquiry<KIND> &inq) const {
     if (scope_.IsDerivedType() && !IsConstantExpr(inq) &&
-        inq.parameter().owner() != scope_ &&
-        specExprContext_ == SpecificationExprContext::BOUND) { // C750
-      return "non-constant reference to a type parameter inquiry "
-             "not allowed for derived type components";
+        inq.parameter().owner() != scope_) { // C750, C754
+      return "non-constant reference to a type parameter inquiry not "
+             "allowed for derived type components or type parameter values";
     }
     return std::nullopt;
   }
@@ -274,28 +272,30 @@ public:
         return "reference to statement function '"s +
             symbol->name().ToString() + "'";
       }
-      if (scope_.IsDerivedType() &&
-          specExprContext_ == SpecificationExprContext::BOUND) { // C750
+      if (scope_.IsDerivedType()) { // C750, C754
         return "reference to function '"s + symbol->name().ToString() +
-            "' not allowed for derived type components";
+            "' not allowed for derived type components or type parameter"
+            " values";
       }
       // TODO: other checks for standard module procedures
     } else {
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
-      if (scope_.IsDerivedType() &&
-          specExprContext_ == SpecificationExprContext::BOUND) { // C750
+      if (scope_.IsDerivedType()) { // C750, C754
         if ((table_.IsIntrinsic(intrin.name) &&
                 badIntrinsicsForComponents_.find(intrin.name) !=
                     badIntrinsicsForComponents_.end()) ||
             IsProhibitedFunction(intrin.name)) {
           return "reference to intrinsic '"s + intrin.name +
-              "' not allowed for derived type components";
+              "' not allowed for derived type components or type parameter"
+              " values";
         }
         if (table_.GetIntrinsicClass(intrin.name) ==
                 IntrinsicClass::inquiryFunction &&
             !IsConstantExpr(x)) {
           return "non-constant reference to inquiry intrinsic '"s +
-              intrin.name + "' not allowed for derived type components";
+              intrin.name +
+              "' not allowed for derived type components or type"
+              " parameter values";
         }
       } else if (intrin.name == "present") {
         return std::nullopt; // no need to check argument(s)
@@ -311,7 +311,6 @@ public:
 private:
   const semantics::Scope &scope_;
   const IntrinsicProcTable &table_;
-  const SpecificationExprContext specExprContext_;
   const std::set<std::string> badIntrinsicsForComponents_{
       "allocated", "associated", "extends_type_of", "present", "same_type_as"};
   static bool IsProhibitedFunction(std::string name) { return false; }
@@ -319,33 +318,30 @@ private:
 
 template <typename A>
 void CheckSpecificationExpr(const A &x, parser::ContextualMessages &messages,
-    const semantics::Scope &scope, const IntrinsicProcTable &table,
-    SpecificationExprContext specExprContext) {
-  if (auto why{
-          CheckSpecificationExprHelper{scope, table, specExprContext}(x)}) {
+    const semantics::Scope &scope, const IntrinsicProcTable &table) {
+  if (auto why{CheckSpecificationExprHelper{scope, table}(x)}) {
     messages.Say("Invalid specification expression: %s"_err_en_US, *why);
   }
 }
 
 template void CheckSpecificationExpr(const Expr<SomeType> &,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 template void CheckSpecificationExpr(const Expr<SomeInteger> &,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &,
-    SpecificationExprContext);
+    const semantics::Scope &, const IntrinsicProcTable &);
 
 // IsSimplyContiguous() -- 9.5.4
 class IsSimplyContiguousHelper

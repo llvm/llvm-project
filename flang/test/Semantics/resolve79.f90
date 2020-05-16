@@ -24,6 +24,8 @@ module m
     procedure(passNopassProc), pass, pointer, nopass :: passNopassField
     !WARNING: Attribute 'POINTER' cannot be used more than once
     procedure(pointerProc), pointer, public, pointer :: pointerField
+    !ERROR: Procedure component 'nonpointerfield' must have POINTER attribute
+    procedure(publicProc), public :: nonpointerField
   contains
     procedure :: noPassProc
     procedure :: passProc
