@@ -370,6 +370,11 @@ public:
 
   // Used for --as-needed
   bool isNeeded;
+
+private:
+  template <typename ELFT>
+  std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
+                                     const typename ELFT::Shdr *sec);
 };
 
 class BinaryFile : public InputFile {

@@ -1211,6 +1211,42 @@ static std::vector<const void *> parseVerdefs(const uint8_t *base,
   return verdefs;
 }
 
+// Parse SHT_GNU_verneed to properly set the name of a versioned undefined
+// symbol. We detect fatal issues which would cause vulnerabilities, but do not
+// implement sophisticated error checking like in llvm-readobj because the value
+// of such diagnostics is low.
+template <typename ELFT>
+std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
+                                               const typename ELFT::Shdr *sec) {
+  if (!sec)
+    return {};
+  std::vector<uint32_t> verneeds;
+  ArrayRef<uint8_t> data = CHECK(obj.getSectionContents(sec), this);
+  const uint8_t *verneedBuf = data.begin();
+  for (unsigned i = 0; i != sec->sh_info; ++i) {
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end() ||
+        uintptr_t(verneedBuf) % sizeof(uint32_t) != 0)
+      fatal(toString(this) + " has an invalid Verneed");
+    auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
+    const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
+    for (unsigned j = 0; j != vn->vn_cnt; ++j) {
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end() ||
+          uintptr_t(vernauxBuf) % sizeof(uint32_t) != 0)
+        fatal(toString(this) + " has an invalid Vernaux");
+      auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
+      if (aux->vna_name >= this->stringTable.size())
+        fatal(toString(this) + " has a Vernaux with an invalid vna_name");
+      uint16_t version = aux->vna_other & VERSYM_VERSION;
+      if (version >= verneeds.size())
+        verneeds.resize(version + 1);
+      verneeds[version] = aux->vna_name;
+      vernauxBuf += aux->vna_next;
+    }
+    verneedBuf += vn->vn_next;
+  }
+  return verneeds;
+}
+
 // We do not usually care about alignments of data in shared object
 // files because the loader takes care of it. However, if we promote a
 // DSO symbol to point to .bss due to copy relocation, we need to keep
@@ -1254,6 +1290,7 @@ template <class ELFT> void SharedFile::parse() {
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
+  const Elf_Shdr *verneedSec = nullptr;
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &sec : sections) {
@@ -1269,6 +1306,9 @@ template <class ELFT> void SharedFile::parse() {
       break;
     case SHT_GNU_verdef:
       verdefSec = &sec;
+      break;
+    case SHT_GNU_verneed:
+      verneedSec = &sec;
       break;
     }
   }
@@ -1309,12 +1349,13 @@ template <class ELFT> void SharedFile::parse() {
   sharedFiles.push_back(this);
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
+  std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
   // VER_NDX_GLOBAL.
   size_t size = numELFSyms - firstGlobal;
-  std::vector<uint32_t> versyms(size, VER_NDX_GLOBAL);
+  std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
   if (versymSec) {
     ArrayRef<Elf_Versym> versym =
         CHECK(obj.template getSectionContentsAsArray<Elf_Versym>(versymSec),
@@ -1345,7 +1386,22 @@ template <class ELFT> void SharedFile::parse() {
       continue;
     }
 
+    uint16_t idx = versyms[i] & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
+      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
+      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
+      if (idx != VER_NDX_LOCAL && idx != VER_NDX_GLOBAL) {
+        if (idx >= verneeds.size()) {
+          error("corrupt input file: version need index " + Twine(idx) +
+                " for symbol " + name + " is out of bounds\n>>> defined in " +
+                toString(this));
+          continue;
+        }
+        StringRef verName = this->stringTable.data() + verneeds[idx];
+        versionedNameBuffer.clear();
+        name =
+            saver.save((name + "@" + verName).toStringRef(versionedNameBuffer));
+      }
       Symbol *s = symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
       s->exportDynamic = true;
@@ -1355,7 +1411,6 @@ template <class ELFT> void SharedFile::parse() {
     // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
     // assigns VER_NDX_LOCAL to this section global symbol. Here is a
     // workaround for this bug.
-    uint32_t idx = versyms[i] & ~VERSYM_HIDDEN;
     if (config->emachine == EM_MIPS && idx == VER_NDX_LOCAL &&
         name == "_gp_disp")
       continue;
