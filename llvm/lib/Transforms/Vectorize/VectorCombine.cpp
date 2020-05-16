@@ -381,11 +381,10 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
     if (!DT.isReachableFromEntry(&BB))
       continue;
     // Do not delete instructions under here and invalidate the iterator.
-    // Walk the block backwards for efficiency. We're matching a chain of
-    // use->defs, so we're more likely to succeed by starting from the bottom.
+    // Walk the block forwards to enable simple iterative chains of transforms.
     // TODO: It could be more efficient to remove dead instructions
     //       iteratively in this loop rather than waiting until the end.
-    for (Instruction &I : make_range(BB.rbegin(), BB.rend())) {
+    for (Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       MadeChange |= foldExtractExtract(I, TTI);
