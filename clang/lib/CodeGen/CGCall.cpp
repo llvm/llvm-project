@@ -1700,8 +1700,9 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
 }
 
-void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
-                                               bool AttrOnCallSite,
+void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
+                                                 bool HasOptnone,
+                                                 bool AttrOnCallSite,
                                                llvm::AttrBuilder &FuncAttrs) {
   // OptimizeNoneAttr takes precedence over -Os or -Oz. No warning needed.
   if (!HasOptnone) {
@@ -1796,6 +1797,8 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
       FuncAttrs.addAttribute("stackrealign");
     if (CodeGenOpts.Backchain)
       FuncAttrs.addAttribute("backchain");
+    if (CodeGenOpts.EnableSegmentedStacks)
+      FuncAttrs.addAttribute("split-stack");
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
@@ -1822,11 +1825,19 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
   }
 }
 
-void CodeGenModule::AddDefaultFnAttrs(llvm::Function &F) {
+void CodeGenModule::addDefaultFunctionDefinitionAttributes(llvm::Function &F) {
   llvm::AttrBuilder FuncAttrs;
-  ConstructDefaultFnAttrList(F.getName(), F.hasOptNone(),
-                             /* AttrOnCallSite = */ false, FuncAttrs);
+  getDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
+                               /* AttrOnCallSite = */ false, FuncAttrs);
+  // TODO: call GetCPUAndFeaturesAttributes?
   F.addAttributes(llvm::AttributeList::FunctionIndex, FuncAttrs);
+}
+
+void CodeGenModule::addDefaultFunctionDefinitionAttributes(
+                                                   llvm::AttrBuilder &attrs) {
+  getDefaultFunctionAttributes(/*function name*/ "", /*optnone*/ false,
+                               /*for call*/ false, attrs);
+  GetCPUAndFeaturesAttributes(GlobalDecl(), attrs);
 }
 
 static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
@@ -1865,29 +1876,49 @@ static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
   llvm::for_each(NBA->builtinNames(), AddNoBuiltinAttr);
 }
 
+/// Construct the IR attribute list of a function or call.
+///
+/// When adding an attribute, please consider where it should be handled:
+///
+///   - getDefaultFunctionAttributes is for attributes that are essentially
+///     part of the global target configuration (but perhaps can be
+///     overridden on a per-function basis).  Adding attributes there
+///     will cause them to also be set in frontends that build on Clang's
+///     target-configuration logic, as well as for code defined in library
+///     modules such as CUDA's libdevice.
+///
+///   - ConstructAttributeList builds on top of getDefaultFunctionAttributes
+///     and adds declaration-specific, convention-specific, and
+///     frontend-specific logic.  The last is of particular importance:
+///     attributes that restrict how the frontend generates code must be
+///     added here rather than getDefaultFunctionAttributes.
+///
 void CodeGenModule::ConstructAttributeList(
     StringRef Name, const CGFunctionInfo &FI, CGCalleeInfo CalleeInfo,
     llvm::AttributeList &AttrList, unsigned &CallingConv, bool AttrOnCallSite) {
   llvm::AttrBuilder FuncAttrs;
   llvm::AttrBuilder RetAttrs;
 
+  // Collect function IR attributes from the CC lowering.
+  // We'll collect the paramete and result attributes later.
   CallingConv = FI.getEffectiveCallingConvention();
   if (FI.isNoReturn())
     FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
-
   if (FI.isCmseNSCall())
     FuncAttrs.addAttribute("cmse_nonsecure_call");
 
-  // If we have information about the function prototype, we can learn
-  // attributes from there.
+  // Collect function IR attributes from the callee prototype if we have one.
   AddAttributesFromFunctionProtoType(getContext(), FuncAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
 
   bool HasOptnone = false;
-  // The NoBuiltinAttr attached to a TargetDecl (only allowed on FunctionDecls).
+  // The NoBuiltinAttr attached to the target FunctionDecl.
   const NoBuiltinAttr *NBA = nullptr;
+
+  // Collect function IR attributes based on declaration-specific
+  // information.
   // FIXME: handle sseregparm someday...
   if (TargetDecl) {
     if (TargetDecl->hasAttr<ReturnsTwiceAttr>())
@@ -1953,6 +1984,21 @@ void CodeGenModule::ConstructAttributeList(
       FuncAttrs.addAllocSizeAttr(AllocSize->getElemSizeParam().getLLVMIndex(),
                                  NumElemsParam);
     }
+
+    if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
+      if (getLangOpts().OpenCLVersion <= 120) {
+        // OpenCL v1.2 Work groups are always uniform
+        FuncAttrs.addAttribute("uniform-work-group-size", "true");
+      } else {
+        // OpenCL v2.0 Work groups may be whether uniform or not.
+        // '-cl-uniform-work-group-size' compile option gets a hint
+        // to the compiler that the global work-size be a multiple of
+        // the work-group size specified to clEnqueueNDRangeKernel
+        // (i.e. work groups are uniform).
+        FuncAttrs.addAttribute("uniform-work-group-size",
+                               llvm::toStringRef(CodeGenOpts.UniformWGSize));
+      }
+    }
   }
 
   // Attach "no-builtins" attributes to:
@@ -1963,71 +2009,68 @@ void CodeGenModule::ConstructAttributeList(
   // * FunctionDecl attributes: __attribute__((no_builtin(...)))
   addNoBuiltinAttributes(FuncAttrs, getLangOpts(), NBA);
 
-  ConstructDefaultFnAttrList(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
+  // Collect function IR attributes based on global settiings.
+  getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
 
-  // This must run after constructing the default function attribute list
-  // to ensure that the speculative load hardening attribute is removed
-  // in the case where the -mspeculative-load-hardening flag was passed.
+  // Override some default IR attributes based on declaration-specific
+  // information.
   if (TargetDecl) {
     if (TargetDecl->hasAttr<NoSpeculativeLoadHardeningAttr>())
       FuncAttrs.removeAttribute(llvm::Attribute::SpeculativeLoadHardening);
     if (TargetDecl->hasAttr<SpeculativeLoadHardeningAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
-  }
+    if (TargetDecl->hasAttr<NoSplitStackAttr>())
+      FuncAttrs.removeAttribute("split-stack");
 
-  if (CodeGenOpts.EnableSegmentedStacks &&
-      !(TargetDecl && TargetDecl->hasAttr<NoSplitStackAttr>()))
-    FuncAttrs.addAttribute("split-stack");
-
-  // Add NonLazyBind attribute to function declarations when -fno-plt
-  // is used.
-  if (TargetDecl && CodeGenOpts.NoPLT) {
-    if (auto *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
-      if (!Fn->isDefined() && !AttrOnCallSite) {
-        FuncAttrs.addAttribute(llvm::Attribute::NonLazyBind);
+    // Add NonLazyBind attribute to function declarations when -fno-plt
+    // is used.
+    // FIXME: what if we just haven't processed the function definition
+    // yet, or if it's an external definition like C99 inline?
+    if (CodeGenOpts.NoPLT) {
+      if (auto *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
+        if (!Fn->isDefined() && !AttrOnCallSite) {
+          FuncAttrs.addAttribute(llvm::Attribute::NonLazyBind);
+        }
       }
     }
   }
 
-  if (TargetDecl && TargetDecl->hasAttr<OpenCLKernelAttr>()) {
-    if (getLangOpts().OpenCLVersion <= 120) {
-      // OpenCL v1.2 Work groups are always uniform
-      FuncAttrs.addAttribute("uniform-work-group-size", "true");
-    } else {
-      // OpenCL v2.0 Work groups may be whether uniform or not.
-      // '-cl-uniform-work-group-size' compile option gets a hint
-      // to the compiler that the global work-size be a multiple of
-      // the work-group size specified to clEnqueueNDRangeKernel
-      // (i.e. work groups are uniform).
-      FuncAttrs.addAttribute("uniform-work-group-size",
-                             llvm::toStringRef(CodeGenOpts.UniformWGSize));
-    }
-  }
-
+  // Collect non-call-site function IR attributes from declaration-specific
+  // information.
   if (!AttrOnCallSite) {
     if (TargetDecl && TargetDecl->hasAttr<CmseNSEntryAttr>())
       FuncAttrs.addAttribute("cmse_nonsecure_entry");
 
-    bool DisableTailCalls = false;
+    // Whether tail calls are enabled.
+    auto shouldDisableTailCalls = [&] {
+      // Should this be honored in getDefaultFunctionAttributes?
+      if (CodeGenOpts.DisableTailCalls)
+        return true;
 
-    if (CodeGenOpts.DisableTailCalls)
-      DisableTailCalls = true;
-    else if (TargetDecl) {
+      if (!TargetDecl)
+        return false;
+
       if (TargetDecl->hasAttr<DisableTailCallsAttr>() ||
           TargetDecl->hasAttr<AnyX86InterruptAttr>())
-        DisableTailCalls = true;
-      else if (CodeGenOpts.NoEscapingBlockTailCalls) {
+        return true;
+
+      if (CodeGenOpts.NoEscapingBlockTailCalls) {
         if (const auto *BD = dyn_cast<BlockDecl>(TargetDecl))
           if (!BD->doesNotEscape())
-            DisableTailCalls = true;
+            return true;
       }
-    }
 
+      return false;
+    };
     FuncAttrs.addAttribute("disable-tail-calls",
-                           llvm::toStringRef(DisableTailCalls));
+                           llvm::toStringRef(shouldDisableTailCalls()));
+
+    // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
+    // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
   }
 
+  // Collect attributes from arguments and return values.
   ClangToLLVMArgMapping IRFunctionArgs(getContext(), FI);
 
   QualType RetTy = FI.getReturnType();
