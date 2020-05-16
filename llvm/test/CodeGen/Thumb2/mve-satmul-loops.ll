@@ -1135,8 +1135,7 @@ define arm_aapcs_vfpcc void @ssatmul_4_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK-NEXT:    vldrh.s32 q0, [r0], #8
 ; CHECK-NEXT:    vldrh.s32 q1, [r1], #8
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
+; CHECK-NEXT:    vqshrnb.s32 q0, q0, #15
 ; CHECK-NEXT:    vstrh.32 q0, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB5_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -1274,13 +1273,11 @@ define arm_aapcs_vfpcc void @ssatmul_8_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
 ; CHECK-NEXT:    vldrh.s32 q1, [r1], #16
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
+; CHECK-NEXT:    vqshrnb.s32 q0, q0, #15
 ; CHECK-NEXT:    vstrh.32 q0, [r2, #8]
 ; CHECK-NEXT:    vldrh.s32 q0, [r0], #16
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
+; CHECK-NEXT:    vqshrnb.s32 q0, q0, #15
 ; CHECK-NEXT:    vstrh.32 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB6_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -1418,11 +1415,9 @@ define arm_aapcs_vfpcc void @ssatmul_8i_q15(i16* nocapture readonly %pSrcA, i16*
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
 ; CHECK-NEXT:    vmullt.s16 q2, q1, q0
 ; CHECK-NEXT:    vmullb.s16 q0, q1, q0
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vshr.s32 q2, q2, #15
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
+; CHECK-NEXT:    vqshrnb.s32 q0, q0, #15
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vqmovnt.s32 q0, q2
+; CHECK-NEXT:    vqshrnt.s32 q0, q2, #15
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB7_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -1570,8 +1565,7 @@ define arm_aapcs_vfpcc void @ssatmul_s4t_q15(i16* nocapture readonly %pSrcA, i16
 ; CHECK-NEXT:    vldrht.s32 q2, [r0], #8
 ; CHECK-NEXT:    vldrht.s32 q3, [r1], #8
 ; CHECK-NEXT:    vmul.i32 q2, q3, q2
-; CHECK-NEXT:    vshr.s32 q2, q2, #15
-; CHECK-NEXT:    vqmovnb.s32 q2, q2
+; CHECK-NEXT:    vqshrnb.s32 q2, q2, #15
 ; CHECK-NEXT:    vmovlb.s16 q2, q2
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.32 q2, [r2], #8
@@ -1705,8 +1699,7 @@ define arm_aapcs_vfpcc void @ssatmul_8t_q15(i16* nocapture readonly %pSrcA, i16*
 ; CHECK-NEXT:    vmov.u16 r4, q7[3]
 ; CHECK-NEXT:    vmov.32 q0[3], r4
 ; CHECK-NEXT:    vmullb.s16 q0, q0, q5
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
+; CHECK-NEXT:    vqshrnb.s32 q0, q0, #15
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    vmov.16 q5[0], r4
@@ -1733,8 +1726,7 @@ define arm_aapcs_vfpcc void @ssatmul_8t_q15(i16* nocapture readonly %pSrcA, i16*
 ; CHECK-NEXT:    vmov.u16 r4, q7[7]
 ; CHECK-NEXT:    vmov.32 q6[3], r4
 ; CHECK-NEXT:    vmullb.s16 q0, q6, q0
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.s32 q0, q0
+; CHECK-NEXT:    vqshrnb.s32 q0, q0, #15
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    vmov.16 q5[4], r4
@@ -1863,11 +1855,9 @@ define arm_aapcs_vfpcc void @ssatmul_8ti_q15(i16* nocapture readonly %pSrcA, i16
 ; CHECK-NEXT:    vldrht.u16 q6, [r1], #16
 ; CHECK-NEXT:    vmullt.s16 q7, q6, q5
 ; CHECK-NEXT:    vmullb.s16 q5, q6, q5
-; CHECK-NEXT:    vshr.s32 q7, q7, #15
-; CHECK-NEXT:    vshr.s32 q5, q5, #15
-; CHECK-NEXT:    vqmovnb.s32 q5, q5
+; CHECK-NEXT:    vqshrnb.s32 q5, q5, #15
 ; CHECK-NEXT:    vmovlb.s16 q5, q5
-; CHECK-NEXT:    vqmovnt.s32 q5, q7
+; CHECK-NEXT:    vqshrnt.s32 q5, q7, #15
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.16 q5, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB10_2
@@ -1973,8 +1963,7 @@ define arm_aapcs_vfpcc void @usatmul_4_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK-NEXT:    vldrh.u32 q0, [r0], #8
 ; CHECK-NEXT:    vldrh.u32 q1, [r1], #8
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
-; CHECK-NEXT:    vshr.u32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.u32 q0, q0
+; CHECK-NEXT:    vqshrnb.u32 q0, q0, #15
 ; CHECK-NEXT:    vstrh.32 q0, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB11_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -2104,13 +2093,11 @@ define arm_aapcs_vfpcc void @usatmul_8_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK-NEXT:    vldrh.u32 q1, [r1, #8]
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
 ; CHECK-NEXT:    vldrh.u32 q1, [r1], #16
-; CHECK-NEXT:    vshr.u32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.u32 q0, q0
+; CHECK-NEXT:    vqshrnb.u32 q0, q0, #15
 ; CHECK-NEXT:    vstrh.32 q0, [r2, #8]
 ; CHECK-NEXT:    vldrh.u32 q0, [r0], #16
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
-; CHECK-NEXT:    vshr.u32 q0, q0, #15
-; CHECK-NEXT:    vqmovnb.u32 q0, q0
+; CHECK-NEXT:    vqshrnb.u32 q0, q0, #15
 ; CHECK-NEXT:    vstrh.32 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB12_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -2381,8 +2368,7 @@ define arm_aapcs_vfpcc void @ssatmul_8_q7(i8* nocapture readonly %pSrcA, i8* noc
 ; CHECK-NEXT:    vldrb.s16 q0, [r0], #8
 ; CHECK-NEXT:    vldrb.s16 q1, [r1], #8
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vshr.s16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
+; CHECK-NEXT:    vqshrnb.s16 q0, q0, #7
 ; CHECK-NEXT:    vstrb.16 q0, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB14_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -2518,13 +2504,11 @@ define arm_aapcs_vfpcc void @ssatmul_16_q7(i8* nocapture readonly %pSrcA, i8* no
 ; CHECK-NEXT:    vldrb.s16 q1, [r1, #8]
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
 ; CHECK-NEXT:    vldrb.s16 q1, [r1], #16
-; CHECK-NEXT:    vshr.s16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
+; CHECK-NEXT:    vqshrnb.s16 q0, q0, #7
 ; CHECK-NEXT:    vstrb.16 q0, [r2, #8]
 ; CHECK-NEXT:    vldrb.s16 q0, [r0], #16
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vshr.s16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
+; CHECK-NEXT:    vqshrnb.s16 q0, q0, #7
 ; CHECK-NEXT:    vstrb.16 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB15_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -2660,11 +2644,9 @@ define arm_aapcs_vfpcc void @ssatmul_16i_q7(i8* nocapture readonly %pSrcA, i8* n
 ; CHECK-NEXT:    vldrb.u8 q1, [r1], #16
 ; CHECK-NEXT:    vmullt.s8 q2, q1, q0
 ; CHECK-NEXT:    vmullb.s8 q0, q1, q0
-; CHECK-NEXT:    vshr.s16 q0, q0, #7
-; CHECK-NEXT:    vshr.s16 q2, q2, #7
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
+; CHECK-NEXT:    vqshrnb.s16 q0, q0, #7
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vqmovnt.s16 q0, q2
+; CHECK-NEXT:    vqshrnt.s16 q0, q2, #7
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB16_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -2837,8 +2819,7 @@ define arm_aapcs_vfpcc void @ssatmul_8t_q7(i8* nocapture readonly %pSrcA, i8* no
 ; CHECK-NEXT:    vldrbt.s16 q5, [r0], #8
 ; CHECK-NEXT:    vldrbt.s16 q6, [r1], #8
 ; CHECK-NEXT:    vmul.i16 q5, q6, q5
-; CHECK-NEXT:    vshr.s16 q5, q5, #7
-; CHECK-NEXT:    vqmovnb.s16 q5, q5
+; CHECK-NEXT:    vqshrnb.s16 q5, q5, #7
 ; CHECK-NEXT:    vmovlb.s8 q5, q5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrbt.16 q5, [r2], #8
@@ -3060,8 +3041,7 @@ define arm_aapcs_vfpcc void @ssatmul_16t_q7(i8* nocapture readonly %pSrcA, i8* n
 ; CHECK-NEXT:    vmov.u8 r4, q4[7]
 ; CHECK-NEXT:    vmov.16 q5[7], r4
 ; CHECK-NEXT:    vmullb.s8 q5, q5, q7
-; CHECK-NEXT:    vshr.s16 q5, q5, #7
-; CHECK-NEXT:    vqmovnb.s16 q5, q5
+; CHECK-NEXT:    vqshrnb.s16 q5, q5, #7
 ; CHECK-NEXT:    vmovlb.s8 q5, q5
 ; CHECK-NEXT:    vmov.u16 r4, q5[0]
 ; CHECK-NEXT:    vmov.8 q7[0], r4
@@ -3112,8 +3092,7 @@ define arm_aapcs_vfpcc void @ssatmul_16t_q7(i8* nocapture readonly %pSrcA, i8* n
 ; CHECK-NEXT:    vmov.u8 r4, q4[15]
 ; CHECK-NEXT:    vmov.16 q0[7], r4
 ; CHECK-NEXT:    vmullb.s8 q0, q0, q5
-; CHECK-NEXT:    vshr.s16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
+; CHECK-NEXT:    vqshrnb.s16 q0, q0, #7
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    vmov.u16 r4, q0[0]
 ; CHECK-NEXT:    vmov.8 q7[8], r4
@@ -3330,11 +3309,9 @@ define arm_aapcs_vfpcc void @ssatmul_16ti_q7(i8* nocapture readonly %pSrcA, i8* 
 ; CHECK-NEXT:    vldrbt.u8 q4, [r1], #16
 ; CHECK-NEXT:    vmullt.s8 q5, q4, q0
 ; CHECK-NEXT:    vmullb.s8 q0, q4, q0
-; CHECK-NEXT:    vshr.s16 q0, q0, #7
-; CHECK-NEXT:    vshr.s16 q5, q5, #7
-; CHECK-NEXT:    vqmovnb.s16 q0, q0
+; CHECK-NEXT:    vqshrnb.s16 q0, q0, #7
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vqmovnt.s16 q0, q5
+; CHECK-NEXT:    vqshrnt.s16 q0, q5, #7
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrbt.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB19_2
@@ -3451,8 +3428,7 @@ define arm_aapcs_vfpcc void @usatmul_8_q7(i8* nocapture readonly %pSrcA, i8* noc
 ; CHECK-NEXT:    vldrb.u16 q0, [r0], #8
 ; CHECK-NEXT:    vldrb.u16 q1, [r1], #8
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vshr.u16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.u16 q0, q0
+; CHECK-NEXT:    vqshrnb.u16 q0, q0, #7
 ; CHECK-NEXT:    vstrb.16 q0, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB20_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
@@ -3581,14 +3557,12 @@ define arm_aapcs_vfpcc void @usatmul_16_q7(i8* nocapture readonly %pSrcA, i8* no
 ; CHECK-NEXT:    vldrb.u16 q1, [r1, #8]
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
 ; CHECK-NEXT:    vldrb.u16 q1, [r1], #16
-; CHECK-NEXT:    vshr.u16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.u16 q0, q0
+; CHECK-NEXT:    vqshrnb.u16 q0, q0, #7
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
 ; CHECK-NEXT:    vstrb.16 q0, [r2, #8]
 ; CHECK-NEXT:    vldrb.u16 q0, [r0], #16
 ; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vshr.u16 q0, q0, #7
-; CHECK-NEXT:    vqmovnb.u16 q0, q0
+; CHECK-NEXT:    vqshrnb.u16 q0, q0, #7
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
 ; CHECK-NEXT:    vstrb.16 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB21_4
