@@ -35,6 +35,7 @@ intermediate LLVM representation.
    HowToBuildWithPGO
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
+   HowToUpdateDebugInfo
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
