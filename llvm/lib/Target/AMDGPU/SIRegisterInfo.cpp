@@ -687,6 +687,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   MachineFunction *MF = MI->getParent()->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   const MCInstrDesc &Desc = TII->get(LoadStoreOp);
   const DebugLoc &DL = MI->getDebugLoc();
@@ -725,21 +726,23 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
 
     if (!SOffset) {
-      if (!ScratchOffsetReg) {
-        report_fatal_error("could not scavenge SGPR to spill in entry function");
-      }
       // There are no free SGPRs, and since we are in the process of spilling
       // VGPRs too.  Since we need a VGPR in order to spill SGPRs (this is true
       // on SI/CI and on VI it is true until we implement spilling using scalar
       // stores), we have no way to free up an SGPR.  Our solution here is to
-      // add the offset directly to the ScratchOffset register, and then
-      // subtract the offset after the spill to return ScratchOffset to it's
-      // original value.
+      // add the offset directly to the ScratchOffset or StackPtrOffset
+      // register, and then subtract the offset after the spill to return the
+      // register to it's original value.
+      if (!ScratchOffsetReg)
+        ScratchOffsetReg = FuncInfo->getStackPtrOffsetReg();
       SOffset = ScratchOffsetReg;
       ScratchOffsetRegDelta = Offset;
     } else {
       Scavenged = true;
     }
+
+    if (!SOffset)
+      report_fatal_error("could not scavenge SGPR to spill in entry function");
 
     if (ScratchOffsetReg == AMDGPU::NoRegister) {
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset)
@@ -811,8 +814,8 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
 
   if (ScratchOffsetRegDelta != 0) {
     // Subtract the offset we added to the ScratchOffset register.
-    BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), ScratchOffsetReg)
-        .addReg(ScratchOffsetReg)
+    BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), SOffset)
+        .addReg(SOffset)
         .addImm(ScratchOffsetRegDelta);
   }
 }
