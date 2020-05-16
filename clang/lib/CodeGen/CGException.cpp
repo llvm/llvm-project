@@ -20,7 +20,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -469,18 +468,6 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
       return;
-    // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
-    // case of throw with types, we ignore it and print a warning for now.
-    // TODO Correctly handle exception specification in wasm
-    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly) {
-      if (EST == EST_DynamicNone)
-        EHStack.pushTerminate();
-      else
-        CGM.getDiags().Report(D->getLocation(),
-                              diag::warn_wasm_dynamic_exception_spec_ignored)
-            << FD->getExceptionSpecSourceRange();
-      return;
-    }
     unsigned NumExceptions = Proto->getNumExceptions();
     EHFilterScope *Filter = EHStack.pushFilter(NumExceptions);
 
@@ -557,14 +544,6 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
       return;
-    // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
-    // case of throw with types, we ignore it and print a warning for now.
-    // TODO Correctly handle exception specification in wasm
-    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly) {
-      if (EST == EST_DynamicNone)
-        EHStack.popTerminate();
-      return;
-    }
     EHFilterScope &filterScope = cast<EHFilterScope>(*EHStack.begin());
     emitFilterDispatchBlock(*this, filterScope);
     EHStack.popFilter();
