@@ -968,7 +968,7 @@ private:
 
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::CompilerDirective &) {
-    TODO();
+    mlir::emitWarning(toLocation(), "ignoring all compiler directives");
   }
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               const Fortran::parser::OpenMPConstruct &) {
