@@ -1242,10 +1242,9 @@ void TypeSystemClang::SetOwningModule(clang::Decl *decl,
   decl->setModuleOwnershipKind(clang::Decl::ModuleOwnershipKind::Visible);
 }
 
-OptionalClangModuleID
-TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
-                                        OptionalClangModuleID parent,
-                                        bool is_framework, bool is_explicit) {
+OptionalClangModuleID TypeSystemClang::GetOrCreateClangModule(
+    llvm::StringRef name, OptionalClangModuleID parent,
+    llvm::StringRef apinotes, bool is_framework, bool is_explicit) {
   // Get the external AST source which holds the modules.
   auto *ast_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
       getASTContext().getExternalSource());
@@ -1274,6 +1273,7 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
   if (!created)
     return ast_source->GetIDForModule(module);
 
+  module->APINotesFile = apinotes;
   return ast_source->RegisterModule(module);
 }
 
