@@ -121,7 +121,6 @@ std::unique_ptr<Module> parseAssembly(
 /// \param Err Error result info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
-/// \param DataLayoutCallback Override datalayout in the llvm assembly.
 ///
 /// parseAssemblyFileWithIndex is a wrapper around this function.
 ParsedModuleAndIndex parseAssemblyWithIndex(MemoryBufferRef F,
