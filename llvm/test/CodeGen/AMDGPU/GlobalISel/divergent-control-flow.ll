@@ -37,7 +37,7 @@ define i32 @divergent_if_swap_brtarget_order1(i32 %value) {
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    s_cbranch_execnz BB1_2
+; CHECK-NEXT:    s_cbranch_execz BB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
 ; CHECK-NEXT:  BB1_2: ; %endif
