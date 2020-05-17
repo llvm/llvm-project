@@ -36,5 +36,4 @@ add_mlir_library(MLIRIR
 
   LINK_LIBS PUBLIC
   MLIRSupport
-  LLVMSupport
   )
