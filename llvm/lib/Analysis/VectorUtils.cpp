@@ -946,13 +946,8 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       PointerType *PtrTy = cast<PointerType>(Ptr->getType());
       uint64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
-
-      // An alignment of 0 means target ABI alignment.
-      MaybeAlign Alignment = MaybeAlign(getLoadStoreAlignment(&I));
-      if (!Alignment)
-        Alignment = Align(DL.getABITypeAlignment(PtrTy->getElementType()));
-
-      AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size, *Alignment);
+      AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
+                                              getLoadStoreAlignment(&I));
     }
 }
 
