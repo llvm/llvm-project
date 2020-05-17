@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/ADT/BitVector.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

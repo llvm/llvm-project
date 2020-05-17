@@ -14,16 +14,16 @@
 #ifndef LLVM_SUPPORT_GLOB_PATTERN_H
 #define LLVM_SUPPORT_GLOB_PATTERN_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 
 // This class represents a glob pattern. Supported metacharacters
 // are "*", "?", "\", "[<chars>]", "[^<chars>]", and "[!<chars>]".
 namespace llvm {
+
 class BitVector;
+class StringRef;
 template <typename T> class ArrayRef;
 
 class GlobPattern {
