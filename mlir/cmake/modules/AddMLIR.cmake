@@ -179,7 +179,7 @@ function(mlir_check_link_libraries name)
           # same symbol might be loaded from 2 separate libraries.  This
           # often comes from referring to an LLVM library target
           # explicitly in target_link_libraries()
-          message("WARNING: ${l} links LLVM and ${lib}!")
+          message("WARNING: ${name} links LLVM and ${lib}!")
         endif()
       endif()
     endforeach()
