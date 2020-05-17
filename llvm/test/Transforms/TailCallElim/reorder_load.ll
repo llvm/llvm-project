@@ -126,7 +126,7 @@ recurse:		; preds = %else
 
 ; This load can be moved above the call because the function won't write to it
 ; and the a_arg is dereferenceable.
-define fastcc i32 @raise_load_5(i32* dereferenceable(4) %a_arg, i32 %a_len_arg, i32 %start_arg) readonly {
+define fastcc i32 @raise_load_5(i32* dereferenceable(4) align 4 %a_arg, i32 %a_len_arg, i32 %start_arg) readonly {
 ; CHECK-LABEL: @raise_load_5(
 ; CHECK-NOT: call
 ; CHECK: load i32, i32*

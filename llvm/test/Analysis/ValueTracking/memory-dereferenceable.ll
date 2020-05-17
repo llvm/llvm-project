@@ -51,10 +51,10 @@ entry:
     %sret_gep_outside = getelementptr %struct.A, %struct.A* %result, i64 0, i32 1, i64 7
     load i8, i8* %sret_gep_outside
 
-; CHECK: %dparam{{.*}}(aligned)
+; CHECK: %dparam{{.*}}(unaligned)
     %load3 = load i32, i32 addrspace(1)* %dparam
 
-; CHECK: %relocate{{.*}}(aligned)
+; CHECK: %relocate{{.*}}(unaligned)
     %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
     %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 7, i32 7)
     %load4 = load i32, i32 addrspace(1)* %relocate
@@ -70,7 +70,7 @@ entry:
     %load6 = load i32, i32* %nd_load
 
     ; Load from a dereferenceable load
-; CHECK: %d4_load{{.*}}(aligned)
+; CHECK: %d4_load{{.*}}(unaligned)
     %d4_load = load i32*, i32** @globali32ptr, !dereferenceable !0
     %load7 = load i32, i32* %d4_load
 
@@ -85,7 +85,7 @@ entry:
     %load9 = load i32, i32* %d_or_null_load
 
     ; Load from a non-null pointer with dereferenceable_or_null
-; CHECK: %d_or_null_non_null_load{{.*}}(aligned)
+; CHECK: %d_or_null_non_null_load{{.*}}(unaligned)
     %d_or_null_non_null_load = load i32*, i32** @globali32ptr, !nonnull !2, !dereferenceable_or_null !0
     %load10 = load i32, i32* %d_or_null_non_null_load
 

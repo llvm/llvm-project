@@ -119,7 +119,7 @@ end:
   ret i8* %x10
 }
 
-define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1, i32* dereferenceable(10) %ptr2, i32** dereferenceable(10) %ptr3) {
+define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1, i32* dereferenceable(10) %ptr2, i32** dereferenceable(10) align 8 %ptr3) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[B:%.*]], 0

@@ -27,24 +27,12 @@
 
 using namespace llvm;
 
-static MaybeAlign getBaseAlign(const Value *Base, const DataLayout &DL) {
-  if (const MaybeAlign PA = Base->getPointerAlignment(DL))
-    return *PA;
-  Type *const Ty = Base->getType()->getPointerElementType();
-  if (!Ty->isSized())
-    return None;
-  return Align(DL.getABITypeAlignment(Ty));
-}
-
 static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
                       const DataLayout &DL) {
-  if (MaybeAlign BA = getBaseAlign(Base, DL)) {
-    const APInt APBaseAlign(Offset.getBitWidth(), BA->value());
-    const APInt APAlign(Offset.getBitWidth(), Alignment.value());
-    assert(APAlign.isPowerOf2() && "must be a power of 2!");
-    return APBaseAlign.uge(APAlign) && !(Offset & (APAlign - 1));
-  }
-  return false;
+  Align BA = Base->getPointerAlignment(DL);
+  const APInt APAlign(Offset.getBitWidth(), Alignment.value());
+  assert(APAlign.isPowerOf2() && "must be a power of 2!");
+  return BA >= Alignment && !(Offset & (APAlign - 1));
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
