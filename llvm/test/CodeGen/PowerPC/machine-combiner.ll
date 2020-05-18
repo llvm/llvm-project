@@ -1,5 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 < %s | FileCheck  %s -check-prefix=CHECK -check-prefix=CHECK-PWR
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=a2q < %s | FileCheck  %s -check-prefix=CHECK -check-prefix=CHECK-QPX
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr9 < %s | FileCheck  %s -check-prefix=FIXPOINT
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -185,4 +186,31 @@ define double @reassociate_muls_double(double %x0, double %x1, double %x2, doubl
   ret double %t2
 }
 
+define i32 @reassociate_mullw(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; FIXPOINT-LABEL: reassociate_mullw:
+; FIXPOINT:       # %bb.0:
+; FIXPOINT:       mullw 3, 3, 4
+; FIXPOINT:       mullw 3, 3, 5
+; FIXPOINT:       mullw 3, 3, 6
+; FIXPOINT-NEXT:  blr
+
+  %t0 = mul i32 %x0, %x1
+  %t1 = mul i32 %t0, %x2
+  %t2 = mul i32 %t1, %x3
+  ret i32 %t2
+}
+
+define i64 @reassociate_mulld(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
+; FIXPOINT-LABEL: reassociate_mulld:
+; FIXPOINT:       # %bb.0:
+; FIXPOINT:       mulld 3, 3, 4
+; FIXPOINT:       mulld 3, 3, 5
+; FIXPOINT:       mulld 3, 3, 6
+; FIXPOINT-NEXT:  blr
+
+  %t0 = mul i64 %x0, %x1
+  %t1 = mul i64 %t0, %x2
+  %t2 = mul i64 %t1, %x3
+  ret i64 %t2
+}
 
