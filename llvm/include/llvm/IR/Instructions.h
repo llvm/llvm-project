@@ -346,6 +346,10 @@ public:
 
   void setAlignment(Align Alignment);
 
+  void setAlignment(MaybeAlign Alignment) {
+    setAlignment(Alignment.getValue());
+  }
+
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {
     return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
