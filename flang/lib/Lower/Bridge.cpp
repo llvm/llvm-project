@@ -9,6 +9,7 @@
 #include "flang/Lower/Bridge.h"
 #include "../../runtime/iostat.h"
 #include "SymbolMap.h"
+#include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -205,13 +206,8 @@ class FirConverter : public Fortran::lower::AbstractConverter {
 public:
   explicit FirConverter(Fortran::lower::LoweringBridge &bridge,
                         fir::NameUniquer &uniquer)
-      : mlirContext{bridge.getMLIRContext()}, cooked{bridge.getCookedSource()},
-        module{bridge.getModule()}, defaults{bridge.getDefaultKinds()},
-        kindMap{bridge.getKindMap()}, uniquer{uniquer},
-        getShape{[&](const Fortran::lower::SomeExpr &expr) {
-          auto foldCtx = bridge.createFoldingContext();
-          return Fortran::evaluate::GetShape(foldCtx, expr);
-        }} {}
+      : bridge{bridge}, uniquer{uniquer}, foldingContext{
+                                              bridge.createFoldingContext()} {}
   virtual ~FirConverter() = default;
 
   /// Convert the PFT to FIR
@@ -245,29 +241,34 @@ public:
                            mlir::Location *loc = nullptr) override final {
     return createFIRExpr(loc ? *loc : toLocation(), &expr);
   }
+  Fortran::evaluate::FoldingContext &getFoldingContext() override final {
+    return foldingContext;
+  }
 
   mlir::Type genType(const Fortran::evaluate::DataRef &data) override final {
-    return Fortran::lower::translateDataRefToFIRType(&mlirContext, defaults,
-                                                     data);
+    return Fortran::lower::translateDataRefToFIRType(
+        &getMLIRContext(), bridge.getDefaultKinds(), data);
   }
   mlir::Type genType(const Fortran::lower::SomeExpr &expr) override final {
-    return Fortran::lower::translateSomeExprToFIRType(&mlirContext, defaults,
-                                                      &expr);
+    return Fortran::lower::translateSomeExprToFIRType(
+        &getMLIRContext(), bridge.getDefaultKinds(), &expr);
   }
   mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
-    return Fortran::lower::translateVariableToFIRType(&mlirContext, defaults,
-                                                      var);
+    return Fortran::lower::translateVariableToFIRType(
+        &getMLIRContext(), bridge.getDefaultKinds(), var);
   }
   mlir::Type genType(Fortran::lower::SymbolRef sym) override final {
-    return Fortran::lower::translateSymbolToFIRType(&mlirContext, defaults,
-                                                    sym);
+    return Fortran::lower::translateSymbolToFIRType(
+        &getMLIRContext(), bridge.getDefaultKinds(), sym);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc,
                      int kind) override final {
-    return Fortran::lower::getFIRType(&mlirContext, defaults, tc, kind);
+    return Fortran::lower::getFIRType(&getMLIRContext(),
+                                      bridge.getDefaultKinds(), tc, kind);
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
-    return Fortran::lower::getFIRType(&mlirContext, defaults, tc);
+    return Fortran::lower::getFIRType(&getMLIRContext(),
+                                      bridge.getDefaultKinds(), tc);
   }
 
   mlir::Location getCurrentLocation() override final { return toLocation(); }
@@ -275,19 +276,19 @@ public:
   /// Generate a dummy location.
   mlir::Location genLocation() override final {
     // Note: builder may not be instantiated yet
-    return mlir::UnknownLoc::get(&mlirContext);
+    return mlir::UnknownLoc::get(&getMLIRContext());
   }
 
   /// Generate a `Location` from the `CharBlock`.
   mlir::Location
   genLocation(const Fortran::parser::CharBlock &block) override final {
-    if (cooked) {
+    if (const auto *cooked = bridge.getCookedSource()) {
       auto loc = cooked->GetSourcePositionRange(block);
       if (loc.has_value()) {
         // loc is a pair (begin, end); use the beginning position
         auto &filePos = loc->first;
         return mlir::FileLineColLoc::get(filePos.file.path(), filePos.line,
-                                         filePos.column, &mlirContext);
+                                         filePos.column, &getMLIRContext());
       }
     }
     return genLocation();
@@ -297,8 +298,11 @@ public:
     return *builder;
   }
 
-  mlir::ModuleOp &getModuleOp() override final { return module; }
+  mlir::ModuleOp &getModuleOp() override final { return bridge.getModule(); }
 
+  mlir::MLIRContext &getMLIRContext() override final {
+    return bridge.getMLIRContext();
+  }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
     return Fortran::lower::mangle::mangleName(uniquer, symbol);
@@ -443,7 +447,11 @@ private:
     const auto &details =
         functionSymbol.get<Fortran::semantics::SubprogramDetails>();
     auto resultRef = lookupSymbol(details.result());
-    mlir::Value retval = builder->create<fir::LoadOp>(toLocation(), resultRef);
+    // TODO: This should probably look at the callee interface result instead
+    // to know what must be returned.
+    mlir::Value retval = resultRef;
+    if (!resultRef.getType().isa<fir::BoxCharType>())
+      retval = builder->create<fir::LoadOp>(toLocation(), resultRef);
     builder->create<mlir::ReturnOp>(toLocation(), retval);
   }
 
@@ -1489,14 +1497,6 @@ private:
     }
   }
 
-  mlir::FuncOp createNewFunction(mlir::Location loc, llvm::StringRef name,
-                                 const Fortran::semantics::Symbol *symbol) {
-    mlir::FunctionType ty =
-        symbol ? genFunctionType(*symbol)
-               : mlir::FunctionType::get(llvm::None, llvm::None, &mlirContext);
-    return Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
-  }
-
   /// Instantiate a global variable. If it hasn't already been processed, add
   /// the global to the ModuleOp as a new uniqued symbol and initialize it with
   /// the correct value. It will be referenced on demand using `fir.addr_of`.
@@ -1602,6 +1602,7 @@ private:
     builder->setLocation(loc);
     auto idxTy = builder->getIndexType();
     const auto isDummy = Fortran::semantics::IsDummy(sym);
+    const auto isResult = Fortran::semantics::IsFunctionResult(sym);
     SymbolBoxAnalyzer sia(sym);
     sia.analyze();
 
@@ -1633,7 +1634,7 @@ private:
 
     if (sia.isChar) {
       // if element type is a CHARACTER, determine the LEN value
-      if (isDummy) {
+      if (isDummy || isResult) {
         auto unboxchar = builder->createUnboxChar(addr);
         auto boxAddr = unboxchar.first;
         if (auto c = sia.getCharLenConst()) {
@@ -1683,7 +1684,7 @@ private:
           for (auto i : sia.staticShape)
             shape.push_back(builder->createIntegerConstant(idxTy, i));
           if (sia.isChar) {
-            if (isDummy) {
+            if (isDummy || isResult) {
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
               return;
             }
@@ -1692,7 +1693,7 @@ private:
             localSymbols.addCharSymbolWithShape(sym, local, len, shape);
             return;
           }
-          if (isDummy) {
+          if (isDummy || isResult) {
             localSymbols.addSymbolWithShape(sym, addr, shape, true);
             return;
           }
@@ -1748,7 +1749,7 @@ private:
       }
 
       if (sia.isChar) {
-        if (isDummy) {
+        if (isDummy || isResult) {
           localSymbols.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
                                                true);
           return;
@@ -1762,7 +1763,7 @@ private:
         localSymbols.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
         return;
       }
-      if (isDummy) {
+      if (isDummy || isResult) {
         localSymbols.addSymbolWithBounds(sym, addr, extents, lbounds, true);
         return;
       }
@@ -1775,7 +1776,7 @@ private:
 
     // not an array, so process as scalar argument
     if (sia.isChar) {
-      if (isDummy) {
+      if (isDummy || isResult) {
         addCharSymbol(sym, addr, len, true);
         return;
       }
@@ -1802,38 +1803,36 @@ private:
       instantiateLocal(var);
   }
 
+  void mapDummyAndResults(const Fortran::lower::CalleeInterface &callee) {
+    assert(builder && "need a builder at this point");
+    using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
+    auto mapPassedEntity = [&](const auto arg) -> void {
+      if (arg.passBy == PassBy::AddressAndLength) {
+        auto box = builder->createEmboxChar(arg.firArgument, arg.firLength);
+        addSymbol(arg.entity.get(), box);
+      } else {
+        addSymbol(arg.entity.get(), arg.firArgument);
+      }
+    };
+    for (const auto &arg : callee.getPassedArguments()) {
+      mapPassedEntity(arg);
+    }
+    if (auto passedResult = callee.getPassedResult()) {
+      mapPassedEntity(*passedResult);
+    }
+  }
+
   /// Prepare to translate a new function
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
-    // get mangled name
-    std::string name = funit.isMainProgram()
-                           ? uniquer.doProgramEntry().str()
-                           : mangleName(funit.getSubprogramSymbol());
-    // FIXME: do NOT use unknown for the anonymous PROGRAM case. We probably
-    // should just stash the location in the funit regardless.
-    mlir::Location loc = toLocation(funit.getStartingSourceLoc());
-    mlir::FuncOp func =
-        Fortran::lower::FirOpBuilder::getNamedFunction(module, name);
-    if (!func)
-      func = createNewFunction(loc, name, funit.symbol);
-    builder = new Fortran::lower::FirOpBuilder(func, kindMap);
+    Fortran::lower::CalleeInterface callee(funit, *this);
+    mlir::FuncOp func = callee.getFuncOp();
+    builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
-    func.addEntryBlock();
     builder->setInsertionPointToStart(&func.front());
-    bool hasAlternateReturns = false;
 
-    auto *entryBlock = &func.front();
-    if (funit.symbol && !funit.isMainProgram()) {
-      const auto &details =
-          funit.symbol->get<Fortran::semantics::SubprogramDetails>();
-      auto blockIter = entryBlock->getArguments().begin();
-      for (const auto &dummy : details.dummyArgs()) {
-        if (dummy)
-          addSymbol(*dummy, *blockIter++);
-        else
-          hasAlternateReturns = true;
-      }
-    }
+    mapDummyAndResults(callee);
+
     for (const auto &var : funit.getOrderedSymbolTable())
       instantiateVar(var);
 
@@ -1843,7 +1842,7 @@ private:
     // Reinstate entry block as the current insertion point.
     builder->setInsertionPointToEnd(&func.front());
 
-    if (hasAlternateReturns) {
+    if (callee.hasAlternateReturns()) {
       // Create a local temp to hold the alternate return index.
       // Give it an integer index type and the subroutine name (for dumps).
       // Attach it to the subroutine symbol in the localSymbols map.
@@ -1960,15 +1959,14 @@ private:
     return *evalPtr;
   }
 
-  mlir::MLIRContext &mlirContext;
-  const Fortran::parser::CookedSource *cooked;
-  mlir::ModuleOp &module;
-  const Fortran::common::IntrinsicTypeDefaultKinds &defaults;
-  const fir::KindMapping &kindMap;
+  std::optional<Fortran::evaluate::Shape>
+  getShape(const Fortran::lower::SomeExpr &expr) {
+    return Fortran::evaluate::GetShape(foldingContext, expr);
+  }
+
+  Fortran::lower::LoweringBridge &bridge;
   fir::NameUniquer &uniquer;
-  std::function<std::optional<Fortran::evaluate::Shape>(
-      const Fortran::lower::SomeExpr &)>
-      getShape;
+  Fortran::evaluate::FoldingContext foldingContext;
   Fortran::lower::FirOpBuilder *builder = nullptr;
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
