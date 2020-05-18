@@ -916,8 +916,9 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     taskdata->td_flags.complete = 1; // mark the task as completed
 
     // Only need to keep track of count if team parallel and tasking not
-    // serialized
-    if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
+    // serialized, or task is detachable and event has already been fulfilled 
+    if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser) ||
+        taskdata->td_flags.detachable == TASK_DETACHABLE) {
       // Predecrement simulated by "- 1" calculation
       children =
           KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
