@@ -97,7 +97,7 @@ static auto *findAttr(SmallVectorImpl<NamedAttribute> &attrs, T name,
   }
 
   auto *it = llvm::lower_bound(attrs, name);
-  if (it->first != name)
+  if (it == attrs.end() || it->first != name)
     return attrs.end();
   return it;
 }

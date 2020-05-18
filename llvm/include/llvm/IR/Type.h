@@ -53,29 +53,28 @@ public:
   /// Also update LLVMTypeKind and LLVMGetTypeKind () in the C binding.
   ///
   enum TypeID {
-    // PrimitiveTypes - make sure LastPrimitiveTyID stays up to date.
-    VoidTyID = 0,    ///<  0: type with no size
-    HalfTyID,        ///<  1: 16-bit floating point type
-    BFloatTyID,      ///<  2: 16-bit floating point type (7-bit significand)
-    FloatTyID,       ///<  3: 32-bit floating point type
-    DoubleTyID,      ///<  4: 64-bit floating point type
-    X86_FP80TyID,    ///<  5: 80-bit floating point type (X87)
-    FP128TyID,       ///<  6: 128-bit floating point type (112-bit significand)
-    PPC_FP128TyID,   ///<  7: 128-bit floating point type (two 64-bits, PowerPC)
-    LabelTyID,       ///<  8: Labels
-    MetadataTyID,    ///<  9: Metadata
-    X86_MMXTyID,     ///< 10: MMX vectors (64 bits, X86 specific)
-    TokenTyID,       ///< 11: Tokens
+    // PrimitiveTypes
+    HalfTyID = 0,  ///< 16-bit floating point type
+    BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
+    FloatTyID,     ///< 32-bit floating point type
+    DoubleTyID,    ///< 64-bit floating point type
+    X86_FP80TyID,  ///< 80-bit floating point type (X87)
+    FP128TyID,     ///< 128-bit floating point type (112-bit significand)
+    PPC_FP128TyID, ///< 128-bit floating point type (two 64-bits, PowerPC)
+    VoidTyID,      ///< type with no size
+    LabelTyID,     ///< Labels
+    MetadataTyID,  ///< Metadata
+    X86_MMXTyID,   ///< MMX vectors (64 bits, X86 specific)
+    TokenTyID,     ///< Tokens
 
     // Derived types... see DerivedTypes.h file.
-    // Make sure FirstDerivedTyID stays up to date!
-    IntegerTyID,       ///< 12: Arbitrary bit width integers
-    FunctionTyID,      ///< 13: Functions
-    StructTyID,        ///< 14: Structures
-    ArrayTyID,         ///< 15: Arrays
-    PointerTyID,       ///< 16: Pointers
-    FixedVectorTyID,   ///< 17: Fixed width SIMD vector type
-    ScalableVectorTyID ///< 18: Scalable SIMD vector type
+    IntegerTyID,       ///< Arbitrary bit width integers
+    FunctionTyID,      ///< Functions
+    PointerTyID,       ///< Pointers
+    StructTyID,        ///< Structures
+    ArrayTyID,         ///< Arrays
+    FixedVectorTyID,   ///< Fixed width SIMD vector type
+    ScalableVectorTyID ///< Scalable SIMD vector type
   };
 
 private:
