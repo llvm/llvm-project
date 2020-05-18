@@ -1799,7 +1799,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           sdk.Merge(
               sym_file->ParseXcodeSDK(*sym_file->GetCompileUnitAtIndex(i)));
 
-      std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+      std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path is %s.", sdk_path.c_str());
       if (FileSystem::Instance().Exists(sdk_path)) {
         swift_ast_sp->SetPlatformSDKPath(sdk_path);
@@ -2560,7 +2560,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
   ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
                         triple);
 
-  std::string sdk_path = GetPlatformSDKPath();
+  std::string sdk_path = GetPlatformSDKPath().str();
   if (TargetSP target_sp = m_target_wp.lock())
     if (FileSpec &manual_override_sdk = target_sp->GetSDKPath()) {
       set_sdk = false;
@@ -2582,7 +2582,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
       info.type = XcodeSDK::GetSDKTypeForTriple(
           HostInfo::GetArchitecture().GetTriple());
       XcodeSDK sdk(info);
-      sdk_path = HostInfo::GetXcodeSDKPath(sdk);
+      sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
     }
     if (!sdk_path.empty()) {
       // Note that calling setSDKPath() also recomputes all paths that
@@ -8232,8 +8232,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
         s.PutCString("Library");
       case swift::SourceFileKind::Main:
         s.PutCString("Main");
-      case swift::SourceFileKind::REPL:
-        s.PutCString("REPL");
       case swift::SourceFileKind::SIL:
         s.PutCString("SIL");
       }
