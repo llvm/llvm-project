@@ -55,7 +55,7 @@
 # YAML-NEXT:  - Type:  PT_LOAD
 # YAML-NEXT:    Flags: [ PF_R ]
 # YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: '.foo [1]'
+# YAML-NEXT:      - Section: '.foo (1)'
 # YAML-NEXT:      - Section: .baz
 # YAML-NEXT:    VAddr: 0x0000000000002000
 # YAML-NEXT:    Align: 0x0000000000001000
@@ -123,7 +123,7 @@ ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R ]
     Sections:
-      - Section: '.foo [1]'
+      - Section: '.foo (1)'
       - Section: .baz
     VAddr: 0x2000
     Align: 0x1000
@@ -209,7 +209,7 @@ Sections:
     Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
     Address: 0x1008
     Size:    0x8
-  - Name:    '.foo [1]'
+  - Name:    '.foo (1)'
     Type:    SHT_PROGBITS
     Flags:   [ SHF_ALLOC ]
     Address: 0x2000

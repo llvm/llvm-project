@@ -15,13 +15,13 @@ FileHeader:
   Machine: EM_X86_64
 Symbols:
   - Name: localfoo
-  - Name: 'localfoo [1]'
+  - Name: 'localfoo (1)'
 
 ## Check that yaml2obj reports an error when we have
 ## symbols with equal names and suffixes.
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1| FileCheck %s --check-prefix=CASE2
-# CASE2-COUNT-2: error: repeated symbol name: 'localfoo [1]'
+# CASE2-COUNT-2: error: repeated symbol name: 'localfoo (1)'
 
 --- !ELF
 FileHeader:
@@ -30,9 +30,9 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Symbols:
-  - Name: 'localfoo [1]'
-  - Name: 'localfoo [1]'
-  - Name: 'localfoo [1]'
+  - Name: 'localfoo (1)'
+  - Name: 'localfoo (1)'
+  - Name: 'localfoo (1)'
 
 ## Check that yaml2obj reports an error when we have
 ## symbols without suffixes in the names and their
@@ -94,7 +94,7 @@ Sections:
         Symbol: foo
       - Offset: 0x1
         Type:   R_X86_64_NONE
-        Symbol: 'foo [1]'
+        Symbol: 'foo (1)'
 Symbols:
   - Name: foo
-  - Name: 'foo [1]'
+  - Name: 'foo (1)'
