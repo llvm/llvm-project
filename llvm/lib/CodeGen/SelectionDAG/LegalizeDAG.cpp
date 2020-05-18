@@ -387,7 +387,9 @@ SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
   SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, Tmp3);
 
   // Store the scalar value.
-  Ch = DAG.getTruncStore(Ch, dl, Tmp2, StackPtr2, MachinePointerInfo(), EltVT);
+  Ch = DAG.getTruncStore(
+      Ch, dl, Tmp2, StackPtr2,
+      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), EltVT);
   // Load the updated vector.
   return DAG.getLoad(VT, dl, Ch, StackPtr, MachinePointerInfo::getFixedStack(
                                                DAG.getMachineFunction(), SPFI));
@@ -1379,7 +1381,9 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   SDValue SubStackPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
 
   // Store the subvector.
-  Ch = DAG.getStore(Ch, dl, Part, SubStackPtr, MachinePointerInfo());
+  Ch = DAG.getStore(
+      Ch, dl, Part, SubStackPtr,
+      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
 
   // Finally, load the updated vector.
   return DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr, PtrInfo);
