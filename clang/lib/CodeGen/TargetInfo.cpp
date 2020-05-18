@@ -9613,7 +9613,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   uint64_t Size = getContext().getTypeSize(Ty);
 
   // Pass floating point values via FPRs if possible.
-  if (IsFixed && Ty->isFloatingType() && FLen >= Size && ArgFPRsLeft) {
+  if (IsFixed && Ty->isFloatingType() && !Ty->isComplexType() &&
+      FLen >= Size && ArgFPRsLeft) {
     ArgFPRsLeft--;
     return ABIArgInfo::getDirect();
   }
