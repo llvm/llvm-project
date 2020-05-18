@@ -9,7 +9,7 @@ declare i64 @llvm.x86.bmi.bextr.64(i64, i64) #3
 define %MNR_struct @f000316011717_2(%DS_struct* %pDS, [64 x i64]* %pCG) #2 {
 ; CHECK-LABEL: @f000316011717_2(
 ; CHECK-NEXT:  Entry:
-; CHECK-NEXT:    [[RESTART:%.*]] = alloca [[MNR_STRUCT:%.*]]
+; CHECK-NEXT:    [[RESTART:%.*]] = alloca [[MNR_STRUCT:%.*]], align 8
 ; CHECK-NEXT:    [[PCARRY:%.*]] = getelementptr [[DS_STRUCT:%.*]], %DS_struct* [[PDS:%.*]], i32 0, i32 1
 ; CHECK-NEXT:    [[PBRBASE:%.*]] = getelementptr [[DS_STRUCT]], %DS_struct* [[PDS]], i32 0, i32 0
 ; CHECK-NEXT:    [[PBASE:%.*]] = getelementptr [32 x i64*], [32 x i64*]* [[PBRBASE]], i64 0, i64 0

@@ -141,7 +141,7 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
   }
 
   AllocaInst *New = Builder.CreateAlloca(CastElTy, Amt);
-  New->setAlignment(MaybeAlign(AI.getAlignment()));
+  New->setAlignment(AI.getAlign());
   New->takeName(&AI);
   New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
 

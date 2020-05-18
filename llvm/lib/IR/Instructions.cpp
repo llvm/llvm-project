@@ -1246,6 +1246,15 @@ static Value *getAISize(LLVMContext &Context, Value *Amt) {
   return Amt;
 }
 
+Align computeAllocaDefaultAlign(Type *Ty, BasicBlock *BB) {
+  const DataLayout &DL = BB->getModule()->getDataLayout();
+  return DL.getPrefTypeAlign(Ty);
+}
+
+Align computeAllocaDefaultAlign(Type *Ty, Instruction *I) {
+  return computeAllocaDefaultAlign(Ty, I->getParent());
+}
+
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
                        Instruction *InsertBefore)
   : AllocaInst(Ty, AddrSpace, /*ArraySize=*/nullptr, Name, InsertBefore) {}
@@ -1256,27 +1265,29 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        const Twine &Name, Instruction *InsertBefore)
-    : AllocaInst(Ty, AddrSpace, ArraySize, /*Align=*/None, Name, InsertBefore) {
-}
+    : AllocaInst(Ty, AddrSpace, ArraySize,
+                 computeAllocaDefaultAlign(Ty, InsertBefore), Name,
+                 InsertBefore) {}
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        const Twine &Name, BasicBlock *InsertAtEnd)
-    : AllocaInst(Ty, AddrSpace, ArraySize, /*Align=*/None, Name, InsertAtEnd) {}
+    : AllocaInst(Ty, AddrSpace, ArraySize,
+                 computeAllocaDefaultAlign(Ty, InsertAtEnd), Name,
+                 InsertAtEnd) {}
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                       MaybeAlign Align, const Twine &Name,
+                       Align Align, const Twine &Name,
                        Instruction *InsertBefore)
     : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertBefore),
       AllocatedType(Ty) {
-  setAlignment(MaybeAlign(Align));
+  setAlignment(Align);
   assert(!Ty->isVoidTy() && "Cannot allocate void!");
   setName(Name);
 }
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                       MaybeAlign Align, const Twine &Name,
-                       BasicBlock *InsertAtEnd)
+                       Align Align, const Twine &Name, BasicBlock *InsertAtEnd)
     : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertAtEnd),
       AllocatedType(Ty) {
@@ -1285,16 +1296,12 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
   setName(Name);
 }
 
-void AllocaInst::setAlignment(MaybeAlign Align) {
-  assert((!Align || *Align <= MaximumAlignment) &&
+void AllocaInst::setAlignment(Align Align) {
+  assert(Align <= MaximumAlignment &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~31) |
                              encode(Align));
-  if (Align)
-    assert(getAlignment() == Align->value() &&
-           "Alignment representation error!");
-  else
-    assert(getAlignment() == 0 && "Alignment representation error!");
+  assert(getAlignment() == Align.value() && "Alignment representation error!");
 }
 
 bool AllocaInst::isArrayAllocation() const {
@@ -4240,7 +4247,7 @@ InsertValueInst *InsertValueInst::cloneImpl() const {
 AllocaInst *AllocaInst::cloneImpl() const {
   AllocaInst *Result =
       new AllocaInst(getAllocatedType(), getType()->getAddressSpace(),
-                     (Value *)getOperand(0), MaybeAlign(getAlignment()));
+                     getOperand(0), getAlign());
   Result->setUsedWithInAlloca(isUsedWithInAlloca());
   Result->setSwiftError(isSwiftError());
   return Result;

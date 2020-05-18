@@ -18,33 +18,19 @@ define internal i32 @f(%struct.ss* byval  %b) nounwind  {
 ; IS________OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
 ; IS________OPM-NEXT:    ret i32 [[TMP1]]
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]]
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]]
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]]
-; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP1]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]]
-; IS__CGSCC_NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP1]]
+; IS________NPM-LABEL: define {{[^@]+}}@f
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
+; IS________NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
+; IS________NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 4
+; IS________NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
+; IS________NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
+; IS________NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
+; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
+; IS________NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
+; IS________NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
+; IS________NPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %tmp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
@@ -65,33 +51,19 @@ define internal i32 @g(%struct.ss* byval align 32 %b) nounwind {
 ; IS________OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 32
 ; IS________OPM-NEXT:    ret i32 [[TMP2]]
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@g
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]]
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]]
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
-; IS__TUNIT_NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]]
-; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 32
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 32
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP2]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]]
-; IS__CGSCC_NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 4
-; IS__CGSCC_NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 32
-; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 32
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP2]]
+; IS________NPM-LABEL: define {{[^@]+}}@g
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]])
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
+; IS________NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
+; IS________NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 4
+; IS________NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
+; IS________NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
+; IS________NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
+; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 32
+; IS________NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
+; IS________NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 32
+; IS________NPM-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %tmp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
@@ -105,7 +77,7 @@ entry:
 define i32 @main() nounwind  {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@main()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
+; IS__TUNIT_OPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -117,7 +89,7 @@ define i32 @main() nounwind  {
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@main()
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
+; IS__TUNIT_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -137,7 +109,7 @@ define i32 @main() nounwind  {
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@main()
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
+; IS__CGSCC_OPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -149,7 +121,7 @@ define i32 @main() nounwind  {
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@main()
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]]
+; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[TMP1]], align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1

@@ -225,7 +225,7 @@ def LLVM_AllocaOp :
     if ($alignment.hasValue()) {
       auto align = $alignment.getValue().getZExtValue();
       if (align != 0)
-        alloca->setAlignment(llvm::MaybeAlign(align));
+        alloca->setAlignment(llvm::Align(align));
     }
     $res = alloca;
   }];
