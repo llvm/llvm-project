@@ -2,10 +2,6 @@ set(LLVM_OPTIONAL_SOURCES
   ConvertKernelFuncToCubin.cpp
 )
 
-set(SOURCES
-  ConvertLaunchFuncToCudaCalls.cpp
-)
-
 if (MLIR_CUDA_CONVERSIONS_ENABLED)
  list(APPEND SOURCES "ConvertKernelFuncToCubin.cpp")
   set(NVPTX_LIBS
