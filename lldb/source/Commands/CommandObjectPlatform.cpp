@@ -1567,6 +1567,9 @@ public:
       const char short_option = (char)GetDefinitions()[option_idx].short_option;
 
       switch (short_option) {
+      case 'h':
+        m_use_host_platform = true;
+        break;
       case 't':
         uint32_t timeout_sec;
         if (option_arg.getAsInteger(10, timeout_sec))
@@ -1574,7 +1577,7 @@ public:
               "could not convert \"%s\" to a numeric value.",
               option_arg.str().c_str());
         else
-          timeout = std::chrono::seconds(timeout_sec);
+          m_timeout = std::chrono::seconds(timeout_sec);
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1583,9 +1586,13 @@ public:
       return error;
     }
 
-    void OptionParsingStarting(ExecutionContext *execution_context) override {}
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_timeout.reset();
+      m_use_host_platform = false;
+    }
 
-    Timeout<std::micro> timeout = std::chrono::seconds(10);
+    Timeout<std::micro> m_timeout = std::chrono::seconds(10);
+    bool m_use_host_platform;
   };
 
   CommandObjectPlatformShell(CommandInterpreter &interpreter)
@@ -1609,6 +1616,7 @@ public:
       return true;
     }
 
+    const bool is_alias = !raw_command_line.contains("platform");
     OptionsWithRaw args(raw_command_line);
     const char *expr = args.GetRawPart().c_str();
 
@@ -1616,8 +1624,16 @@ public:
       if (!ParseOptions(args.GetArgs(), result))
         return false;
 
+    if (args.GetRawPart().empty()) {
+      result.GetOutputStream().Printf("%s <shell-command>\n",
+                                      is_alias ? "shell" : "platform shell");
+      return false;
+    }
+
     PlatformSP platform_sp(
-        GetDebugger().GetPlatformList().GetSelectedPlatform());
+        m_options.m_use_host_platform
+            ? Platform::GetHostPlatform()
+            : GetDebugger().GetPlatformList().GetSelectedPlatform());
     Status error;
     if (platform_sp) {
       FileSpec working_dir{};
@@ -1625,7 +1641,7 @@ public:
       int status = -1;
       int signo = -1;
       error = (platform_sp->RunShellCommand(expr, working_dir, &status, &signo,
-                                            &output, m_options.timeout));
+                                            &output, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
       if (status > 0) {
