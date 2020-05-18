@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
@@ -115,7 +116,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
   kernelPm.addPass(createConvertGPUKernelToCubinPass(&compilePtxToCubin));
   pm.addPass(createLowerToLLVMPass());
-  pm.addPass(createConvertGpuLaunchFuncToCudaCallsPass());
+  pm.addPass(createConvertGpuLaunchFuncToGpuRuntimeCallsPass());
 
   return pm.run(m);
 }
