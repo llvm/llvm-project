@@ -2109,9 +2109,14 @@ void CodeGenModule::ConstructAttributeList(
     if (!PTy->isIncompleteType() && PTy->isConstantSizeType())
       RetAttrs.addDereferenceableAttr(
           getMinimumObjectSize(PTy).getQuantity());
-    else if (getContext().getTargetAddressSpace(PTy) == 0 &&
-             !CodeGenOpts.NullPointerIsValid)
+    if (getContext().getTargetAddressSpace(PTy) == 0 &&
+        !CodeGenOpts.NullPointerIsValid)
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
+    if (PTy->isObjectType()) {
+      llvm::Align Alignment =
+          getNaturalPointeeTypeAlignment(RetTy).getAsAlign();
+      RetAttrs.addAlignmentAttr(Alignment);
+    }
   }
 
   bool hasUsedSRet = false;
@@ -2220,9 +2225,14 @@ void CodeGenModule::ConstructAttributeList(
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType())
         Attrs.addDereferenceableAttr(
             getMinimumObjectSize(PTy).getQuantity());
-      else if (getContext().getTargetAddressSpace(PTy) == 0 &&
-               !CodeGenOpts.NullPointerIsValid)
+      if (getContext().getTargetAddressSpace(PTy) == 0 &&
+          !CodeGenOpts.NullPointerIsValid)
         Attrs.addAttribute(llvm::Attribute::NonNull);
+      if (PTy->isObjectType()) {
+        llvm::Align Alignment =
+            getNaturalPointeeTypeAlignment(ParamType).getAsAlign();
+        Attrs.addAlignmentAttr(Alignment);
+      }
     }
 
     switch (FI.getExtParameterInfo(ArgNo).getABI()) {
@@ -2245,8 +2255,7 @@ void CodeGenModule::ConstructAttributeList(
       if (!PTy->isIncompleteType() && PTy->isConstantSizeType()) {
         auto info = getContext().getTypeInfoInChars(PTy);
         Attrs.addDereferenceableAttr(info.first.getQuantity());
-        Attrs.addAttribute(llvm::Attribute::getWithAlignment(
-            getLLVMContext(), info.second.getAsAlign()));
+        Attrs.addAlignmentAttr(info.second.getAsAlign());
       }
       break;
     }
@@ -2522,12 +2531,15 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // If alignment-assumption sanitizer is enabled, we do *not* add
             // alignment attribute here, but emit normal alignment assumption,
             // so the UBSAN check could function.
-            llvm::Value *AlignmentValue =
-              EmitScalarExpr(AVAttr->getAlignment());
             llvm::ConstantInt *AlignmentCI =
-              cast<llvm::ConstantInt>(AlignmentValue);
-            AI->addAttrs(llvm::AttrBuilder().addAlignmentAttr(llvm::MaybeAlign(
-                AlignmentCI->getLimitedValue(llvm::Value::MaximumAlignment))));
+                cast<llvm::ConstantInt>(EmitScalarExpr(AVAttr->getAlignment()));
+            unsigned AlignmentInt =
+                AlignmentCI->getLimitedValue(llvm::Value::MaximumAlignment);
+            if (AI->getParamAlign().valueOrOne() < AlignmentInt) {
+              AI->removeAttr(llvm::Attribute::AttrKind::Alignment);
+              AI->addAttrs(llvm::AttrBuilder().addAlignmentAttr(
+                  llvm::Align(AlignmentInt)));
+            }
           }
         }
 

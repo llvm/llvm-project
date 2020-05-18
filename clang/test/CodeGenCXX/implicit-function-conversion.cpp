@@ -3,5 +3,5 @@
 double a(double) noexcept;
 int b(double (&)(double));
 
-// CHECK: call i32 @_Z1bRFddE(double (double)* @_Z1ad)
+// CHECK: call i32 @_Z1bRFddE(double (double)* nonnull @_Z1ad)
 int c = b(a);

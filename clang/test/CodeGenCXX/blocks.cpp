@@ -167,7 +167,7 @@ namespace test5 {
 
   // CHECK-NOT:  br
   // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* [[CAPTURE]], [[A]]* dereferenceable({{[0-9]+}}) [[X]])
+  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* [[CAPTURE]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
   // CHECK-NEXT: store i1 true, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*
   // CHECK-NEXT: br label

@@ -103,7 +103,7 @@ void test7(bool cond) {
   cond ? throw test7 : val;
 }
 
-// CHECK-LABEL: define dereferenceable(4) i32* @_Z5test8b(
+// CHECK-LABEL: define nonnull align 4 dereferenceable(4) i32* @_Z5test8b(
 int &test8(bool cond) {
   // CHECK: br i1
   //

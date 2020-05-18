@@ -305,11 +305,11 @@ namespace Test11 {
   // CHECK: call void @_ZN6Test111SIiE7DerivedclEv(
   // CHECK: call zeroext i1 @_ZN6Test111SIiE7DerivedeqERKNS_4BaseE(
   // CHECK: call zeroext i1 @_ZN6Test111SIiE7DerivedntEv(
-  // CHECK: call dereferenceable(4) %"class.Test11::Base"* @_ZN6Test111SIiE7DerivedixEi(
+  // CHECK: call nonnull align 4 dereferenceable(4) %"class.Test11::Base"* @_ZN6Test111SIiE7DerivedixEi(
   // CHECK: define linkonce_odr void @_ZN6Test111SIiE7DerivedclEv(
   // CHECK: define linkonce_odr zeroext i1 @_ZN6Test111SIiE7DerivedeqERKNS_4BaseE(
   // CHECK: define linkonce_odr zeroext i1 @_ZN6Test111SIiE7DerivedntEv(
-  // CHECK: define linkonce_odr dereferenceable(4) %"class.Test11::Base"* @_ZN6Test111SIiE7DerivedixEi(
+  // CHECK: define linkonce_odr nonnull align 4 dereferenceable(4) %"class.Test11::Base"* @_ZN6Test111SIiE7DerivedixEi(
   class Base {
   public:
     virtual void operator()() {}

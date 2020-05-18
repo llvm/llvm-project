@@ -39,7 +39,7 @@ const char * f(S s)
 // CHECK: call void @llvm.lifetime.start.p0i8(i64 16, i8* [[T3i8]])
 // CHECK: [[T5:%.*]] = call %class.T* @_ZN1TC1E1S(%class.T* [[T3]], [2 x i32] %{{.*}})
 //
-// CHECK: call void @_ZNK1T6concatERKS_(%class.T* sret align 4 [[T1]], %class.T* [[T2]], %class.T* dereferenceable(16) [[T3]])
+// CHECK: call void @_ZNK1T6concatERKS_(%class.T* sret align 4 [[T1]], %class.T* [[T2]], %class.T* nonnull align 4 dereferenceable(16) [[T3]])
 // CHECK: [[T6:%.*]] = call i8* @_ZNK1T3strEv(%class.T* [[T1]])
 //
 // CHECK: call void @llvm.lifetime.end.p0i8(

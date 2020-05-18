@@ -81,7 +81,7 @@ void testParamStrongWeak(StrongWeak a) {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONGWEAK]], align 8
 // CHECK: store %[[STRUCT_STRONGWEAK]]* %[[A]], %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGWEAK]]*, %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakC1ERKS_(%[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]], %[[STRUCT_STRONGWEAK]]* dereferenceable(16) %[[V0]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakC1ERKS_(%[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]], %[[STRUCT_STRONGWEAK]]* nonnull align 8 dereferenceable(16) %[[V0]])
 // CHECK: call void @_Z19testParamStrongWeak10StrongWeak(%[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]])
 // CHECK-NOT: call
 // CHECK: ret void
@@ -94,7 +94,7 @@ void testCallStrongWeak(StrongWeak *a) {
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONGWEAK]]*, align 8
 // CHECK: store %[[STRUCT_STRONGWEAK]]* %[[A]], %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGWEAK]]*, %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakC1ERKS_(%[[STRUCT_STRONGWEAK]]* %[[AGG_RESULT]], %[[STRUCT_STRONGWEAK]]* dereferenceable(16) %[[V0]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakC1ERKS_(%[[STRUCT_STRONGWEAK]]* %[[AGG_RESULT]], %[[STRUCT_STRONGWEAK]]* nonnull align 8 dereferenceable(16) %[[V0]])
 // CHECK: ret void
 
 StrongWeak testReturnStrongWeak(StrongWeak *a) {
@@ -131,7 +131,7 @@ void testParamStrong(Strong a) {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: store %[[STRUCT_STRONG]]* %[[A]], %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONG]]*, %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONG]]* @_ZN6StrongC1ERKS_(%[[STRUCT_STRONG]]* %[[AGG_TMP]], %[[STRUCT_STRONG]]* dereferenceable(8) %[[V0]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONG]]* @_ZN6StrongC1ERKS_(%[[STRUCT_STRONG]]* %[[AGG_TMP]], %[[STRUCT_STRONG]]* nonnull align 8 dereferenceable(8) %[[V0]])
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load i8*, i8** %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i8* %[[V1]] to i64
@@ -147,7 +147,7 @@ void testCallStrong(Strong *a) {
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONG]]*, align 8
 // CHECK: store %[[STRUCT_STRONG]]* %[[A]], %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONG]]*, %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONG]]* @_ZN6StrongC1ERKS_(%[[STRUCT_STRONG]]* %[[RETVAL]], %[[STRUCT_STRONG]]* dereferenceable(8) %[[V0]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_STRONG]]* @_ZN6StrongC1ERKS_(%[[STRUCT_STRONG]]* %[[RETVAL]], %[[STRUCT_STRONG]]* nonnull align 8 dereferenceable(8) %[[V0]])
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load i8*, i8** %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i8* %[[V1]] to i64
