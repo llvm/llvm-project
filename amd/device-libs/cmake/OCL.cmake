@@ -33,6 +33,7 @@ set (BC_EXT .bc)
 set (LIB_SUFFIX ".lib${BC_EXT}")
 set (STRIP_SUFFIX ".strip${BC_EXT}")
 set (FINAL_SUFFIX "${BC_EXT}")
+set (INSTALL_ROOT_SUFFIX "amdgcn/bitcode")
 
 # Set `inc_options` to contain Clang command-line for include directories for
 # current source directory.
@@ -63,7 +64,13 @@ macro(opencl_bc_lib)
 
   get_target_property(irif_lib_output irif OUTPUT_NAME)
 
-  set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
+  # Mirror the install layout structure.
+  set(OUTPUT_DIR ${PROJECT_BINARY_DIR}/${INSTALL_ROOT_SUFFIX})
+  file(MAKE_DIRECTORY ${OUTPUT_DIR})
+
+  set(OUT_NAME ${name})
+  set(OUTPUT_BC_LIB ${OUTPUT_DIR}/${name}${FINAL_SUFFIX})
+
   set(clean_files)
 
   list(APPEND AMDGCN_LIB_LIST ${name})
@@ -107,26 +114,26 @@ macro(opencl_bc_lib)
   endforeach()
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/response.in" "@RESPONSE_COMMAND_LINE@")
   configure_file("${CMAKE_CURRENT_BINARY_DIR}/response.in"
-    "${OUT_NAME}_response" @ONLY)
+    "${CMAKE_CURRENT_BINARY_DIR}/${OUT_NAME}_response" @ONLY)
 
-  add_custom_command(OUTPUT "${OUT_NAME}${FINAL_SUFFIX}"
+  add_custom_command(OUTPUT ${OUTPUT_BC_LIB}
     # Link regular library dependencies
     COMMAND $<TARGET_FILE:llvm-link>
       -o "${OUT_NAME}.link0${LIB_SUFFIX}" "@${OUT_NAME}_response"
     # Extra link step with internalize
-    COMMAND $<TARGET_FILE:llvm-link> -internalize -only-needed "${OUT_NAME}.link0${LIB_SUFFIX}"
+    COMMAND $<TARGET_FILE:llvm-link> -internalize -only-needed "${name}.link0${LIB_SUFFIX}"
       -o "${OUT_NAME}${LIB_SUFFIX}" ${internal_link_libs}
     COMMAND $<TARGET_FILE:opt> -strip
       -o "${OUT_NAME}${STRIP_SUFFIX}" "${OUT_NAME}${LIB_SUFFIX}"
     COMMAND "${PREPARE_BUILTINS}"
-      -o "${OUT_NAME}${FINAL_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}"
-      DEPENDS "${deps}" "${OUT_NAME}_response" "${PREPARE_BUILTINS}" ${internal_link_libs})
+      -o ${OUTPUT_BC_LIB} "${OUT_NAME}${STRIP_SUFFIX}"
+      DEPENDS "${deps}" "${CMAKE_CURRENT_BINARY_DIR}/${OUT_NAME}_response" "${PREPARE_BUILTINS}" ${internal_link_libs})
 
   add_custom_target("${name}" ALL
-    DEPENDS "${OUT_NAME}${FINAL_SUFFIX}"
+    DEPENDS "${OUTPUT_DIR}/${OUT_NAME}${FINAL_SUFFIX}"
     SOURCES ${OPENCL_BC_LIB_SOURCES})
   set_target_properties(${name} PROPERTIES
-    OUTPUT_NAME "${OUT_NAME}${FINAL_SUFFIX}"
+    OUTPUT_NAME "${OUTPUT_DIR}/${OUT_NAME}${FINAL_SUFFIX}"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     ARCHIVE_OUTPUT_NAME "${name}"
     PREFIX "" SUFFIX ${FINAL_SUFFIX})
@@ -148,8 +155,8 @@ macro(opencl_bc_lib)
   set_directory_properties(PROPERTIES
     ADDITIONAL_MAKE_CLEAN_FILES "${clean_files}")
 
-  install(FILES "${OUT_NAME}${FINAL_SUFFIX}"
-    DESTINATION amdgcn/bitcode
+  install(FILES ${OUTPUT_BC_LIB}
+    DESTINATION ${INSTALL_ROOT_SUFFIX}
     COMPONENT device-libs)
 endmacro()
 
