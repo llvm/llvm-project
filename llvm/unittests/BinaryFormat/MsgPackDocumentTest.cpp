@@ -174,7 +174,7 @@ TEST(MsgPackDocument, TestReadMergeMap) {
 
 TEST(MsgPackDocument, TestWriteInt) {
   Document Doc;
-  Doc.getRoot() = Doc.getNode(int64_t(1));
+  Doc.getRoot() = 1;
   std::string Buffer;
   Doc.writeToBlob(Buffer);
   ASSERT_EQ(Buffer, "\x01");
@@ -193,8 +193,8 @@ TEST(MsgPackDocument, TestWriteArray) {
 TEST(MsgPackDocument, TestWriteMap) {
   Document Doc;
   auto M = Doc.getRoot().getMap(/*Convert=*/true);
-  M["foo"] = Doc.getNode(int64_t(1));
-  M["bar"] = Doc.getNode(int64_t(2));
+  M["foo"] = 1;
+  M["bar"] = 2;
   std::string Buffer;
   Doc.writeToBlob(Buffer);
   ASSERT_EQ(Buffer, "\x82\xa3"
@@ -233,11 +233,11 @@ TEST(MsgPackDocument, TestInputYAMLArray) {
 TEST(MsgPackDocument, TestOutputYAMLMap) {
   Document Doc;
   auto M = Doc.getRoot().getMap(/*Convert=*/true);
-  M["foo"] = Doc.getNode(int64_t(1));
-  M["bar"] = Doc.getNode(uint64_t(2));
+  M["foo"] = 1;
+  M["bar"] = 2U;
   auto N = Doc.getMapNode();
   M["qux"] = N;
-  N["baz"] = Doc.getNode(true);
+  N["baz"] = true;
   std::string Buffer;
   raw_string_ostream OStream(Buffer);
   Doc.toYAML(OStream);
@@ -249,15 +249,34 @@ TEST(MsgPackDocument, TestOutputYAMLMap) {
                            "...\n");
 }
 
+TEST(MsgPackDocument, TestOutputYAMLMapWithErase) {
+  Document Doc;
+  auto M = Doc.getRoot().getMap(/*Convert=*/true);
+  M["foo"] = 1;
+  M["bar"] = 2U;
+  auto N = Doc.getMapNode();
+  M["qux"] = N;
+  N["baz"] = true;
+  M.erase(Doc.getNode("bar"));
+  std::string Buffer;
+  raw_string_ostream OStream(Buffer);
+  Doc.toYAML(OStream);
+  ASSERT_EQ(OStream.str(), "---\n"
+                           "foo:             1\n"
+                           "qux:\n"
+                           "  baz:             true\n"
+                           "...\n");
+}
+
 TEST(MsgPackDocument, TestOutputYAMLMapHex) {
   Document Doc;
   Doc.setHexMode();
   auto M = Doc.getRoot().getMap(/*Convert=*/true);
-  M["foo"] = Doc.getNode(int64_t(1));
-  M["bar"] = Doc.getNode(uint64_t(2));
+  M["foo"] = 1;
+  M["bar"] = 2U;
   auto N = Doc.getMapNode();
   M["qux"] = N;
-  N["baz"] = Doc.getNode(true);
+  N["baz"] = true;
   std::string Buffer;
   raw_string_ostream OStream(Buffer);
   Doc.toYAML(OStream);
