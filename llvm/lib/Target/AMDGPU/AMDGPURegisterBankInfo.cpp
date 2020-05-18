@@ -1135,15 +1135,20 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
 
   MachineIRBuilder B(MI);
 
-  unsigned SplitElts =
-      MaxNonSmrdLoadSize / LoadTy.getScalarType().getSizeInBits();
-  const LLT LoadSplitTy =  LLT::vector(SplitElts, LoadTy.getScalarType());
+  unsigned NumSplitParts = LoadTy.getSizeInBits() / MaxNonSmrdLoadSize;
+  const LLT LoadSplitTy = LoadTy.divide(NumSplitParts);
   ApplyRegBankMapping O(*this, MRI, &AMDGPU::VGPRRegBank);
   GISelObserverWrapper Observer(&O);
   B.setChangeObserver(Observer);
   LegalizerHelper Helper(B.getMF(), Observer, B);
-  if (Helper.fewerElementsVector(MI, 0, LoadSplitTy) != LegalizerHelper::Legalized)
-    return false;
+
+  if (LoadTy.isVector()) {
+    if (Helper.fewerElementsVector(MI, 0, LoadSplitTy) != LegalizerHelper::Legalized)
+      return false;
+  } else {
+    if (Helper.narrowScalar(MI, 0, LoadSplitTy) != LegalizerHelper::Legalized)
+      return false;
+  }
 
   MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
   return true;

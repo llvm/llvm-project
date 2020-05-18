@@ -4474,7 +4474,8 @@ static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
     else
       IndexNodes[I] = DAG.getUNDEF(MVT::i32);
   SDValue Op2 = DAG.getBuildVector(MVT::v16i8, DL, IndexNodes);
-  return DAG.getNode(SystemZISD::PERMUTE, DL, MVT::v16i8, Ops[0], Ops[1], Op2);
+  return DAG.getNode(SystemZISD::PERMUTE, DL, MVT::v16i8, Ops[0],
+                     (!Ops[1].isUndef() ? Ops[1] : Ops[0]), Op2);
 }
 
 namespace {

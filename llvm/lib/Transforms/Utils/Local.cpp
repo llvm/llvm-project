@@ -1698,13 +1698,14 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
-    // No-op casts and zexts are irrelevant for debug info.
-    if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
+    // No-op casts are irrelevant for debug info.
+    if (CI->isNoopCast(DL))
       return SrcDIExpr;
 
     Type *Type = CI->getType();
-    // Casts other than Trunc or SExt to scalar types cannot be salvaged.
-    if (Type->isVectorTy() || (!isa<TruncInst>(&I) && !isa<SExtInst>(&I)))
+    // Casts other than Trunc, SExt, or ZExt to scalar types cannot be salvaged.
+    if (Type->isVectorTy() ||
+        !(isa<TruncInst>(&I) || isa<SExtInst>(&I) || isa<ZExtInst>(&I)))
       return nullptr;
 
     Value *FromValue = CI->getOperand(0);
