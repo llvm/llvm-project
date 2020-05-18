@@ -2355,6 +2355,10 @@ DEF_TRAVERSE_STMT(CXXFunctionalCastExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeInfoAsWritten()->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(CXXAddrspaceCastExpr, {
+  TRY_TO(TraverseTypeLoc(S->getTypeInfoAsWritten()->getTypeLoc()));
+})
+
 DEF_TRAVERSE_STMT(CXXConstCastExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeInfoAsWritten()->getTypeLoc()));
 })

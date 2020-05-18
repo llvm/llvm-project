@@ -5710,7 +5710,8 @@ public:
   void CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
                                       bool IsDereference, SourceRange Range);
 
-  /// ActOnCXXNamedCast - Parse {dynamic,static,reinterpret,const}_cast's.
+  /// ActOnCXXNamedCast - Parse
+  /// {dynamic,static,reinterpret,const,addrspace}_cast's.
   ExprResult ActOnCXXNamedCast(SourceLocation OpLoc,
                                tok::TokenKind Kind,
                                SourceLocation LAngleBracketLoc,

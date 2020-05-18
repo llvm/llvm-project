@@ -1630,6 +1630,11 @@ void ASTStmtWriter::VisitCXXConstCastExpr(CXXConstCastExpr *E) {
   Code = serialization::EXPR_CXX_CONST_CAST;
 }
 
+void ASTStmtWriter::VisitCXXAddrspaceCastExpr(CXXAddrspaceCastExpr *E) {
+  VisitCXXNamedCastExpr(E);
+  Code = serialization::EXPR_CXX_ADDRSPACE_CAST;
+}
+
 void ASTStmtWriter::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *E) {
   VisitExplicitCastExpr(E);
   Record.AddSourceLocation(E->getLParenLoc());
