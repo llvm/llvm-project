@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
 namespace linalg {
@@ -95,6 +96,28 @@ struct LinalgPromotionOptions {
   LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
     operandsToPromote = DenseSet<unsigned>();
     operandsToPromote->insert(operands.begin(), operands.end());
+    return *this;
+  }
+  /// If ith element of `useFullTiles` is true the full view should be used for
+  /// the promoted buffer of the ith operand in `operandsToPromote`. Otherwise
+  /// the partial view will be used.
+  /// The decision is defaulted to `useFullTileBuffersDefault` when
+  /// `useFullTileBuffers` is None and for operands missing from
+  /// `useFullTileBuffers`.
+  Optional<llvm::SmallBitVector> useFullTileBuffers = None;
+  LinalgPromotionOptions &setUseFullTileBuffers(ArrayRef<bool> useFullTiles) {
+    unsigned size = useFullTiles.size();
+    llvm::SmallBitVector tmp(size, false);
+    for (unsigned i = 0; i < size; ++i)
+      tmp[i] = useFullTiles[i];
+    useFullTileBuffers = tmp;
+    return *this;
+  }
+  /// If true all operands unspecified by `useFullTileBuffers` will use the full
+  /// view, otherwise the partial view.
+  bool useFullTileBuffersDefault = false;
+  LinalgPromotionOptions &useFullTileBuffersByDefault() {
+    useFullTileBuffersDefault = true;
     return *this;
   }
   /// Allow the use of dynamicaly-sized buffers.
