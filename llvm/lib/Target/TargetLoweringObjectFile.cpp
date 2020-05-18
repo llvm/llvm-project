@@ -19,10 +19,12 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -269,6 +271,15 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
 
   // Use default section depending on the 'type' of global
   return SelectSectionForGlobal(GO, Kind, TM);
+}
+
+/// This method computes the appropriate section to emit the specified global
+/// variable or function definition. This should not be passed external (or
+/// available externally) globals.
+MCSection *
+TargetLoweringObjectFile::SectionForGlobal(const GlobalObject *GO,
+                                           const TargetMachine &TM) const {
+  return SectionForGlobal(GO, getKindForGlobal(GO, TM), TM);
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
