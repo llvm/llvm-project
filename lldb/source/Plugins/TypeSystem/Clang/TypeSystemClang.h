@@ -307,6 +307,7 @@ public:
   /// Synthesize a clang::Module and return its ID or a default-constructed ID.
   OptionalClangModuleID GetOrCreateClangModule(llvm::StringRef name,
                                                OptionalClangModuleID parent,
+                                               llvm::StringRef apinotes = {},
                                                bool is_framework = false,
                                                bool is_explicit = false);
 
