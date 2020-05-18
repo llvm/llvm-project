@@ -62,6 +62,7 @@ enum NodeType : unsigned {
   SHL_PRED,
   SRL_PRED,
   SRA_PRED,
+  SETCC_PRED,
 
   // Arithmetic instructions which write flags.
   ADDS,

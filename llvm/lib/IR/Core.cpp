@@ -503,12 +503,12 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMArrayTypeKind;
   case Type::PointerTyID:
     return LLVMPointerTypeKind;
+  case Type::FixedVectorTyID:
+    return LLVMVectorTypeKind;
   case Type::X86_MMXTyID:
     return LLVMX86_MMXTypeKind;
   case Type::TokenTyID:
     return LLVMTokenTypeKind;
-  case Type::FixedVectorTyID:
-    return LLVMFixedVectorTypeKind;
   case Type::ScalableVectorTyID:
     return LLVMScalableVectorTypeKind;
   }
@@ -2025,7 +2025,7 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   else if (LoadInst *LI = dyn_cast<LoadInst>(P))
     LI->setAlignment(Align(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    SI->setAlignment(MaybeAlign(Bytes));
+    SI->setAlignment(Align(Bytes));
   else
     llvm_unreachable(
         "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");

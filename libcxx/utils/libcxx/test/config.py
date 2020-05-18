@@ -438,10 +438,6 @@ class Configuration(object):
             self.cxx.compile_flags += ['-I' + os.path.join(pstl_src_root, 'test')]
             self.config.available_features.add('parallel-algorithms')
 
-        # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
-        # template depth with older Clang versions.
-        self.cxx.addCompileFlagIfSupported('-ftemplate-depth=270')
-
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
         self.configure_config_site_header()
@@ -740,15 +736,9 @@ class Configuration(object):
             self.cxx.useModules()
 
     def configure_substitutions(self):
-        tool_env = ''
-        if self.target_info.is_darwin():
-            # Do not pass DYLD_LIBRARY_PATH to the compiler, linker, etc. as
-            # these tools are not meant to exercise the just-built libraries.
-            tool_env += 'env DYLD_LIBRARY_PATH=""'
-
         sub = self.config.substitutions
         # Configure compiler substitutions
-        sub.append(('%{cxx}', '{} {}'.format(tool_env, pipes.quote(self.cxx.path))))
+        sub.append(('%{cxx}', pipes.quote(self.cxx.path)))
         sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
         # Configure flags substitutions
         flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
@@ -889,7 +879,6 @@ class Configuration(object):
             self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
     def configure_env(self):
-        self.target_info.configure_env(self.exec_env)
         self.config.environment = dict(os.environ)
 
     def add_path(self, dest_env, new_path):

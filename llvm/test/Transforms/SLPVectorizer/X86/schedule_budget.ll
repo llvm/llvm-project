@@ -47,13 +47,13 @@ define void @test(float * %a, float * %b, float * %c, float * %d) {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    store float [[L0]], float* [[B:%.*]]
+; CHECK-NEXT:    store float [[L0]], float* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[B1:%.*]] = getelementptr inbounds float, float* [[B]], i64 1
-; CHECK-NEXT:    store float [[L1]], float* [[B1]]
+; CHECK-NEXT:    store float [[L1]], float* [[B1]], align 4
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; CHECK-NEXT:    store float [[L2]], float* [[B2]]
+; CHECK-NEXT:    store float [[L2]], float* [[B2]], align 4
 ; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; CHECK-NEXT:    store float [[L3]], float* [[B3]]
+; CHECK-NEXT:    store float [[L3]], float* [[B3]], align 4
 ; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds float, float* [[C]], i64 2
 ; CHECK-NEXT:    [[C3:%.*]] = getelementptr inbounds float, float* [[C]], i64 3

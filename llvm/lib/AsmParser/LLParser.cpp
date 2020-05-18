@@ -7112,8 +7112,12 @@ int LLParser::ParseStore(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ordering == AtomicOrdering::Acquire ||
       Ordering == AtomicOrdering::AcquireRelease)
     return Error(Loc, "atomic store cannot use Acquire ordering");
+  if (!Alignment && !Val->getType()->isSized())
+    return Error(Loc, "storing unsized types is not allowed");
+  if (!Alignment)
+    Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
 
-  Inst = new StoreInst(Val, Ptr, isVolatile, Alignment, Ordering, SSID);
+  Inst = new StoreInst(Val, Ptr, isVolatile, *Alignment, Ordering, SSID);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

@@ -114,7 +114,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
                               /* SrcAddr */ SrcAddr, /* DstAddr */ DstAddr,
                               /* CopyLen */ CopyLen,
                               /* SrcAlign */ LI->getAlign(),
-                              /* DestAlign */ SI->getAlign().valueOrOne(),
+                              /* DestAlign */ SI->getAlign(),
                               /* SrcIsVolatile */ LI->isVolatile(),
                               /* DstIsVolatile */ SI->isVolatile(), TTI);
 

@@ -11,7 +11,7 @@ declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
 define void @test1(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %DEAD = load i32, i32* %Q
@@ -42,7 +42,7 @@ define i32 @test3(i32* %g_addr) nounwind {
 define void @test4(i32* %Q) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]]
+; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = load i32, i32* %Q
@@ -124,7 +124,7 @@ define void @test7_atomic(i32* align 4 %p, i8* align 4 %q, i8* noalias align 4 %
 define double @test10(i8* %X) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*
-; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]]
+; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP_0:%.*]] = va_arg i8** [[X_ADDR]], double
 ; CHECK-NEXT:    ret double [[TMP_0]]
 ;
@@ -141,7 +141,7 @@ define i32* @test13() {
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i32 4)
 ; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[PTR]] to i32*
 ; CHECK-NEXT:    call void @test13f()
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32* [[P]]
 ;
   %ptr = tail call i8* @malloc(i32 4)
@@ -160,7 +160,7 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 ; CHECK-NEXT:    [[P_BC:%.*]] = bitcast i8* [[P]] to i32*
 ; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
 ; CHECK-NEXT:    call void @test13f()
-; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]]
+; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]], align 4
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[P]]
 ;
   %p = tail call i8* @malloc(i32 4)
@@ -185,7 +185,7 @@ define void @test19({i32} * nocapture byval align 4 %arg5) nounwind ssp {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[ARG5:%.*]], i32 0, i32 0
-; CHECK-NEXT:    store i32 912, i32* [[TMP7]]
+; CHECK-NEXT:    store i32 912, i32* [[TMP7]], align 4
 ; CHECK-NEXT:    call void @test19f({ i32 }* byval align 4 [[ARG5]])
 ; CHECK-NEXT:    ret void
 ;
@@ -377,9 +377,9 @@ bb2:
 ; it could unwind
 define void @test34(i32* noalias %p) {
 ; CHECK-LABEL: @test34(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %p
@@ -392,7 +392,7 @@ define void @test34(i32* noalias %p) {
 define void @test35(i32* noalias %p) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown_func()
@@ -536,9 +536,9 @@ declare void @free(i8* nocapture)
 define void @test41(i32* noalias %P) {
 ; CHECK-LABEL: @test41(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    store i32 1, i32* [[P]]
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 2, i32* [[P]]
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @free(i8* [[P2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -552,10 +552,10 @@ define void @test41(i32* noalias %P) {
 
 define void @test42(i32* %P, i32* %Q) {
 ; CHECK-LABEL: @test42(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]]
-; CHECK-NEXT:    store i8 3, i8* [[P2]]
+; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i8 3, i8* [[P2]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %P

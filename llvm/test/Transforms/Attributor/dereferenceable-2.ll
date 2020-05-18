@@ -527,10 +527,10 @@ define i32 @require_cfg_analysis(i32 %c, i32* %p) {
 ; IS________OPM-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[C]], 4
 ; IS________OPM-NEXT:    br i1 [[TOBOOL4]], label [[L6:%.*]], label [[L7:%.*]]
 ; IS________OPM:       l6:
-; IS________OPM-NEXT:    store i32 0, i32* [[P]], align 1
+; IS________OPM-NEXT:    store i32 0, i32* [[P]], align 4
 ; IS________OPM-NEXT:    br label [[END:%.*]]
 ; IS________OPM:       l7:
-; IS________OPM-NEXT:    store i32 1, i32* [[P]], align 1
+; IS________OPM-NEXT:    store i32 1, i32* [[P]], align 4
 ; IS________OPM-NEXT:    br label [[END]]
 ; IS________OPM:       end:
 ; IS________OPM-NEXT:    ret i32 1

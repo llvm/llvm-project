@@ -144,24 +144,24 @@ typedef enum {
 } LLVMOpcode;
 
 typedef enum {
-  LLVMVoidTypeKind,        /**< type with no size */
-  LLVMHalfTypeKind,        /**< 16 bit floating point type */
-  LLVMBFloatTypeKind,      /**< 16 bit brain floating point type */
-  LLVMFloatTypeKind,       /**< 32 bit floating point type */
-  LLVMDoubleTypeKind,      /**< 64 bit floating point type */
-  LLVMX86_FP80TypeKind,    /**< 80 bit floating point type (X87) */
-  LLVMFP128TypeKind,       /**< 128 bit floating point type (112-bit mantissa)*/
-  LLVMPPC_FP128TypeKind,   /**< 128 bit floating point type (two 64-bits) */
-  LLVMLabelTypeKind,       /**< Labels */
-  LLVMIntegerTypeKind,     /**< Arbitrary bit width integers */
-  LLVMFunctionTypeKind,    /**< Functions */
-  LLVMStructTypeKind,      /**< Structures */
-  LLVMArrayTypeKind,       /**< Arrays */
-  LLVMPointerTypeKind,     /**< Pointers */
-  LLVMMetadataTypeKind,    /**< Metadata */
-  LLVMX86_MMXTypeKind,     /**< X86 MMX */
-  LLVMTokenTypeKind,       /**< Tokens */
-  LLVMFixedVectorTypeKind, /**< Fixed width SIMD vector type */
+  LLVMVoidTypeKind,      /**< type with no size */
+  LLVMHalfTypeKind,      /**< 16 bit floating point type */
+  LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
+  LLVMFloatTypeKind,     /**< 32 bit floating point type */
+  LLVMDoubleTypeKind,    /**< 64 bit floating point type */
+  LLVMX86_FP80TypeKind,  /**< 80 bit floating point type (X87) */
+  LLVMFP128TypeKind,     /**< 128 bit floating point type (112-bit mantissa)*/
+  LLVMPPC_FP128TypeKind, /**< 128 bit floating point type (two 64-bits) */
+  LLVMLabelTypeKind,     /**< Labels */
+  LLVMIntegerTypeKind,   /**< Arbitrary bit width integers */
+  LLVMFunctionTypeKind,  /**< Functions */
+  LLVMStructTypeKind,    /**< Structures */
+  LLVMArrayTypeKind,     /**< Arrays */
+  LLVMPointerTypeKind,   /**< Pointers */
+  LLVMVectorTypeKind,    /**< Fixed width SIMD vector type */
+  LLVMMetadataTypeKind,  /**< Metadata */
+  LLVMX86_MMXTypeKind,   /**< X86 MMX */
+  LLVMTokenTypeKind,     /**< Tokens */
   LLVMScalableVectorTypeKind /**< Scalable SIMD vector type */
 } LLVMTypeKind;
 

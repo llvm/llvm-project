@@ -68,3 +68,23 @@ add_entrypoint_object(
     libc.include.math
     libc.src.errno.__errno_location
 )
+
+add_entrypoint_object(
+  fabs
+  SRCS
+    fabs.cpp
+  HDRS
+    fabs.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  fabsf
+  SRCS
+    fabsf.cpp
+  HDRS
+    fabsf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)

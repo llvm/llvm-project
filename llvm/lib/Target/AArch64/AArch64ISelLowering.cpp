@@ -886,6 +886,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SHL, VT, Custom);
         setOperationAction(ISD::SRL, VT, Custom);
         setOperationAction(ISD::SRA, VT, Custom);
+        if (VT.getScalarType() == MVT::i1)
+          setOperationAction(ISD::SETCC, VT, Custom);
       }
     }
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
@@ -1294,6 +1296,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::SHL_PRED:          return "AArch64ISD::SHL_PRED";
   case AArch64ISD::SRL_PRED:          return "AArch64ISD::SRL_PRED";
   case AArch64ISD::SRA_PRED:          return "AArch64ISD::SRA_PRED";
+  case AArch64ISD::SETCC_PRED:        return "AArch64ISD::SETCC_PRED";
   case AArch64ISD::ADC:               return "AArch64ISD::ADC";
   case AArch64ISD::SBC:               return "AArch64ISD::SBC";
   case AArch64ISD::ADDS:              return "AArch64ISD::ADDS";
@@ -7719,7 +7722,9 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
                                VT.getVectorNumElements(), true);
   SDValue Mask = getPTrue(DAG, DL, PredTy, AArch64SVEPredPattern::all);
 
-  return DAG.getNode(NewOp, DL, VT, Mask, Op.getOperand(0), Op.getOperand(1));
+  SmallVector<SDValue, 4> Operands = {Mask};
+  Operands.append(Op->op_begin(), Op->op_end());
+  return DAG.getNode(NewOp, DL, VT, Operands);
 }
 
 static bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
@@ -8788,6 +8793,12 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
 
 SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
                                            SelectionDAG &DAG) const {
+  if (Op.getValueType().isScalableVector()) {
+    if (Op.getOperand(0).getValueType().isFloatingPoint())
+      return Op;
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SETCC_PRED);
+  }
+
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -11291,8 +11302,7 @@ static SDValue LowerSVEIntrinsicEXT(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::BITCAST, dl, VT, EXT);
 }
 
-static SDValue tryConvertSVEWideCompare(SDNode *N, unsigned ReplacementIID,
-                                        bool Invert,
+static SDValue tryConvertSVEWideCompare(SDNode *N, ISD::CondCode CC,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         SelectionDAG &DAG) {
   if (DCI.isBeforeLegalize())
@@ -11346,17 +11356,8 @@ static SDValue tryConvertSVEWideCompare(SDNode *N, unsigned ReplacementIID,
     }
 
     SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, CmpVT, Imm);
-    SDValue ID = DAG.getTargetConstant(ReplacementIID, DL, MVT::i64);
-    SDValue Op0, Op1;
-    if (Invert) {
-      Op0 = Splat;
-      Op1 = N->getOperand(2);
-    } else {
-      Op0 = N->getOperand(2);
-      Op1 = Splat;
-    }
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
-                       ID, Pred, Op0, Op1);
+    return DAG.getNode(AArch64ISD::SETCC_PRED, DL, VT, Pred, N->getOperand(2),
+                       Splat, DAG.getCondCode(CC));
   }
 
   return SDValue();
@@ -11530,6 +11531,42 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_asr:
     return DAG.getNode(AArch64ISD::SRA_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
+  case Intrinsic::aarch64_sve_cmphs:
+    if (!N->getOperand(2).getValueType().isFloatingPoint())
+      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                         DAG.getCondCode(ISD::SETUGE));
+    break;
+  case Intrinsic::aarch64_sve_cmphi:
+    if (!N->getOperand(2).getValueType().isFloatingPoint())
+      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                         DAG.getCondCode(ISD::SETUGT));
+    break;
+  case Intrinsic::aarch64_sve_cmpge:
+    if (!N->getOperand(2).getValueType().isFloatingPoint())
+      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                         DAG.getCondCode(ISD::SETGE));
+    break;
+  case Intrinsic::aarch64_sve_cmpgt:
+    if (!N->getOperand(2).getValueType().isFloatingPoint())
+      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                         DAG.getCondCode(ISD::SETGT));
+    break;
+  case Intrinsic::aarch64_sve_cmpeq:
+    if (!N->getOperand(2).getValueType().isFloatingPoint())
+      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                         DAG.getCondCode(ISD::SETEQ));
+    break;
+  case Intrinsic::aarch64_sve_cmpne:
+    if (!N->getOperand(2).getValueType().isFloatingPoint())
+      return DAG.getNode(AArch64ISD::SETCC_PRED, SDLoc(N), N->getValueType(0),
+                         N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                         DAG.getCondCode(ISD::SETNE));
+    break;
   case Intrinsic::aarch64_sve_fadda:
     return combineSVEReductionOrderedFP(N, AArch64ISD::FADDA_PRED, DAG);
   case Intrinsic::aarch64_sve_faddv:
@@ -11546,35 +11583,25 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return DAG.getNode(ISD::VSELECT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_cmpeq_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpeq,
-                                    false, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETEQ, DCI, DAG);
   case Intrinsic::aarch64_sve_cmpne_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpne,
-                                    false, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETNE, DCI, DAG);
   case Intrinsic::aarch64_sve_cmpge_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpge,
-                                    false, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETGE, DCI, DAG);
   case Intrinsic::aarch64_sve_cmpgt_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpgt,
-                                    false, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETGT, DCI, DAG);
   case Intrinsic::aarch64_sve_cmplt_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpgt,
-                                    true, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETLT, DCI, DAG);
   case Intrinsic::aarch64_sve_cmple_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpge,
-                                    true, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETLE, DCI, DAG);
   case Intrinsic::aarch64_sve_cmphs_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphs,
-                                    false, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETUGE, DCI, DAG);
   case Intrinsic::aarch64_sve_cmphi_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphi,
-                                    false, DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETUGT, DCI, DAG);
   case Intrinsic::aarch64_sve_cmplo_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphi, true,
-                                    DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETULT, DCI, DAG);
   case Intrinsic::aarch64_sve_cmpls_wide:
-    return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphs, true,
-                                    DCI, DAG);
+    return tryConvertSVEWideCompare(N, ISD::SETULE, DCI, DAG);
   case Intrinsic::aarch64_sve_ptest_any:
     return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
                     AArch64CC::ANY_ACTIVE);
