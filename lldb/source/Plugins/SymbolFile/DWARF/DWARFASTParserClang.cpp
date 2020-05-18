@@ -3389,8 +3389,9 @@ DWARFASTParserClang::GetOwningClangModule(const DWARFDIE &die) {
       if (!name)
         return {};
 
-      OptionalClangModuleID id =
-          m_ast.GetOrCreateClangModule(name, GetOwningClangModule(module_die));
+      OptionalClangModuleID id = m_ast.GetOrCreateClangModule(
+          name, GetOwningClangModule(module_die),
+          module_die.GetAttributeValueAsString(DW_AT_LLVM_apinotes, ""));
       m_die_to_module.insert({module_die.GetDIE(), id});
       return id;
     }
