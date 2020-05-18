@@ -224,11 +224,6 @@ public:
     }
   }
 
-  mlir::FunctionType genFunctionType(Fortran::lower::SymbolRef sym) {
-    return Fortran::lower::translateSymbolToFIRFunctionType(&mlirContext,
-                                                            defaults, sym);
-  }
-
   //===--------------------------------------------------------------------===//
   // AbstractConverter overrides
   //===--------------------------------------------------------------------===//
