@@ -58,7 +58,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     return;
   }
 
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
     .legalFor({p0, s1, s8, s16, s32, s64, v2s32, v4s32, v2s64})
     .clampScalar(0, s1, s64)
     .widenScalarToNextPow2(0, 8)

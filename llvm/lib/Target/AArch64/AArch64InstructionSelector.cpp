@@ -2596,6 +2596,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
 
+  case TargetOpcode::G_FREEZE:
+    return selectCopy(I, TII, MRI, TRI, RBI);
 
   case TargetOpcode::G_INTTOPTR:
     // The importer is currently unable to import pointer types since they
