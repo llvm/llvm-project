@@ -8,7 +8,8 @@ func @main() {
   %sx = dim %dst, 2 : memref<?x?x?xf32>
   %sy = dim %dst, 1 : memref<?x?x?xf32>
   %sz = dim %dst, 0 : memref<?x?x?xf32>
-  call @mcuMemHostRegisterMemRef3dFloat(%dst) : (memref<?x?x?xf32>) -> ()
+  %cast_dst = memref_cast %dst : memref<?x?x?xf32> to memref<*xf32>
+  call @mcuMemHostRegisterFloat(%cast_dst) : (memref<*xf32>) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
              threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %sy, %block_z = %sz) {
     %t0 = muli %tz, %block_y : index
@@ -21,10 +22,9 @@ func @main() {
     store %sum, %dst[%tz, %ty, %tx] : memref<?x?x?xf32>
     gpu.terminator
   }
-  %U = memref_cast %dst : memref<?x?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%U) : (memref<*xf32>) -> ()
+  call @print_memref_f32(%cast_dst) : (memref<*xf32>) -> ()
   return
 }
 
-func @mcuMemHostRegisterMemRef3dFloat(%ptr : memref<?x?x?xf32>)
+func @mcuMemHostRegisterFloat(%ptr : memref<*xf32>)
 func @print_memref_f32(%ptr : memref<*xf32>)
