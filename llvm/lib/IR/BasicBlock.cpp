@@ -334,25 +334,9 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
   if (!APN) return;   // Quick exit.
 
   // If there are exactly two predecessors, then we want to nuke the PHI nodes
-  // altogether.  However, we cannot do this, if this in this case:
-  //
-  //  Loop:
-  //    %x = phi [X, Loop]
-  //    %x2 = add %x, 1         ;; This would become %x2 = add %x2, 1
-  //    br Loop                 ;; %x2 does not dominate all uses
-  //
-  // This is because the PHI node input is actually taken from the predecessor
-  // basic block.  The only case this can happen is with a self loop, so we
-  // check for this case explicitly now.
-  //
+  // altogether.
   unsigned max_idx = APN->getNumIncomingValues();
   assert(max_idx != 0 && "PHI Node in block with 0 predecessors!?!?!");
-  if (max_idx == 2) {
-    BasicBlock *Other = APN->getIncomingBlock(APN->getIncomingBlock(0) == Pred);
-
-    // Disable PHI elimination!
-    if (this == Other) max_idx = 3;
-  }
 
   // <= Two predecessors BEFORE I remove one?
   if (max_idx <= 2 && !KeepOneInputPHIs) {
