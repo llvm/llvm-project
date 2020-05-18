@@ -4724,7 +4724,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
       LLVM_DEBUG(dbgs() << "H2S: Removing malloc call: " << *MallocCall
                         << "\n");
 
-      MaybeAlign Alignment;
+      Align Alignment;
       Constant *Size;
       if (isCallocLikeFn(MallocCall, TLI)) {
         auto *Num = cast<ConstantInt>(MallocCall->getOperand(0));
@@ -4736,7 +4736,8 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         Size = cast<ConstantInt>(MallocCall->getOperand(1));
         Alignment = MaybeAlign(cast<ConstantInt>(MallocCall->getOperand(0))
                                    ->getValue()
-                                   .getZExtValue());
+                                   .getZExtValue())
+                        .valueOrOne();
       } else {
         Size = cast<ConstantInt>(MallocCall->getOperand(0));
       }

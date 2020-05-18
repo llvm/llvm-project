@@ -511,8 +511,9 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
 
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
-  Addr = new AllocaInst(Ty, DL.getAllocaAddrSpace(),
-                        ScalarBase->getName() + NameExt);
+  Addr =
+      new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
+                     DL.getPrefTypeAlign(Ty), ScalarBase->getName() + NameExt);
   EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   Addr->insertBefore(&*EntryBB->getFirstInsertionPt());
 

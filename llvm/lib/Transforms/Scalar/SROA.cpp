@@ -4198,7 +4198,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     const bool IsUnconstrained = Alignment <= DL.getABITypeAlignment(SliceTy);
     NewAI = new AllocaInst(
         SliceTy, AI.getType()->getAddressSpace(), nullptr,
-        IsUnconstrained ? MaybeAlign() : Alignment,
+        IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
         AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()), &AI);
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
