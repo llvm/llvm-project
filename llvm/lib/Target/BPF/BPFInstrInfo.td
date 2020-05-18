@@ -526,7 +526,7 @@ class NOP_I<string OpcodeStr>
   let BPFClass = BPF_ALU64;
 }
 
-let hasSideEffects = 0 in
+let hasSideEffects = 0, isCodeGenOnly = 1 in
   def NOP : NOP_I<"nop">;
 
 class RET<string OpcodeStr>
