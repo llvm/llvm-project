@@ -108,10 +108,10 @@ struct StreamState {
     return StreamState{L, Opened, ES};
   }
   static StreamState getClosed(const FnDescription *L) {
-    return StreamState{L, Closed};
+    return StreamState{L, Closed, {}};
   }
   static StreamState getOpenFailed(const FnDescription *L) {
-    return StreamState{L, OpenFailed};
+    return StreamState{L, OpenFailed, {}};
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
