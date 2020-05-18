@@ -48,6 +48,20 @@ DocNode &MapDocNode::operator[](DocNode Key) {
   return N;
 }
 
+/// Member access for MapDocNode for integer key.
+DocNode &MapDocNode::operator[](int Key) {
+  return (*this)[getDocument()->getNode(Key)];
+}
+DocNode &MapDocNode::operator[](unsigned Key) {
+  return (*this)[getDocument()->getNode(Key)];
+}
+DocNode &MapDocNode::operator[](int64_t Key) {
+  return (*this)[getDocument()->getNode(Key)];
+}
+DocNode &MapDocNode::operator[](uint64_t Key) {
+  return (*this)[getDocument()->getNode(Key)];
+}
+
 /// Array element access. This extends the array if necessary.
 DocNode &ArrayDocNode::operator[](size_t Index) {
   if (size() <= Index) {
@@ -55,6 +69,36 @@ DocNode &ArrayDocNode::operator[](size_t Index) {
     Array->resize(Index + 1, getDocument()->getEmptyNode());
   }
   return (*Array)[Index];
+}
+
+// Convenience assignment operators. This only works if the destination
+// DocNode has an associated Document, i.e. it was not constructed using the
+// default constructor. The string one does not copy, so the string must
+// remain valid for the lifetime of the Document. Use fromString to avoid
+// that restriction.
+DocNode &DocNode::operator=(StringRef Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
+DocNode &DocNode::operator=(bool Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
+DocNode &DocNode::operator=(int Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
+DocNode &DocNode::operator=(unsigned Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
+DocNode &DocNode::operator=(int64_t Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
+}
+DocNode &DocNode::operator=(uint64_t Val) {
+  *this = getDocument()->getNode(Val);
+  return *this;
 }
 
 // A level in the document reading stack.
