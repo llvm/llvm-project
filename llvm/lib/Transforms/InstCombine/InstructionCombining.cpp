@@ -3433,19 +3433,9 @@ bool InstCombiner::run() {
           UserParent = UserInst->getParent();
 
         if (UserParent != BB) {
-          bool UserIsSuccessor = false;
-          // See if the user is one of our successors.
-          for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E;
-               ++SI)
-            if (*SI == UserParent) {
-              UserIsSuccessor = true;
-              break;
-            }
-
-          // If the user is one of our immediate successors, and if that
-          // successor only has us as a predecessors (we'd have to split the
-          // critical edge otherwise), we can keep going.
-          if (UserIsSuccessor && UserParent->getUniquePredecessor()) {
+          // See if the user is one of our successors that has only one
+          // predecessor, so that we don't have to split the critical edge.
+          if (UserParent->getUniquePredecessor() == BB) {
             // Okay, the CFG is simple enough, try to sink this instruction.
             if (TryToSinkInstruction(I, UserParent)) {
               LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
