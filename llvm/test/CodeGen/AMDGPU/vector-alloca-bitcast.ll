@@ -158,14 +158,17 @@ bb15:                                             ; preds = %.preheader
 ; OPT:  %bc = bitcast <6 x double> %0 to <6 x i64>
 ; OPT:  %1 = extractelement <6 x i64> %bc, i32 %tmp20
 
-; TODO: Fix selection to eliminate scratch
-
 ; GCN-LABEL: {{^}}vector_write_read_bitcast_to_double:
-; GCN-COUNT-2: buffer_store_dword
+
+; GCN-ALLOCA-COUNT-2: buffer_store_dword
+; GCN-PROMOTE-COUNT-2: v_movreld_b32_e32
 
 ; GCN: s_cbranch
 
-; GCN-COUNT-2: buffer_load_dword
+; GCN-ALLOCA-COUNT-2: buffer_load_dword
+; GCN-PROMOTE-COUNT-2: v_movrels_b32_e32
+
+; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_double(double addrspace(1)* %arg) {
 bb:
@@ -220,14 +223,17 @@ bb15:                                             ; preds = %.preheader
 ; OPT: .preheader:
 ; OPT:  %1 = extractelement <6 x i64> %0, i32 %tmp18
 
-; TODO: Fix selection to eliminate scratch
-
 ; GCN-LABEL: {{^}}vector_write_read_bitcast_to_i64:
-; GCN-COUNT-2: buffer_store_dword
+
+; GCN-ALLOCA-COUNT-2: buffer_store_dword
+; GCN-PROMOTE-COUNT-2: v_movreld_b32_e32
 
 ; GCN: s_cbranch
 
-; GCN-COUNT-2: buffer_load_dword
+; GCN-ALLOCA-COUNT-2: buffer_load_dword
+; GCN-PROMOTE-COUNT-2: v_movrels_b32_e32
+
+; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_read_bitcast_to_i64(i64 addrspace(1)* %arg) {
 bb:
@@ -342,6 +348,110 @@ entry:
   %add1 = add i32 %tmp2, %tmp3
   %add2 = add i32 %add1, %tmp4
   store i32 %add2, i32 addrspace(1)* %out
+  ret void
+}
+
+; OPT-LABEL: @bitcast_vector_to_vector(
+; OPT-NOT:   alloca
+; OPT:       store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(1)* %out, align 16
+
+; GCN-LABEL: {{^}}bitcast_vector_to_vector:
+; GCN: v_mov_b32_e32 v0, 1
+; GCN: v_mov_b32_e32 v1, 2
+; GCN: v_mov_b32_e32 v2, 3
+; GCN: v_mov_b32_e32 v3, 4
+
+; GCN: ScratchSize: 0
+
+define amdgpu_kernel void @bitcast_vector_to_vector(<4 x i32> addrspace(1)* %out)  {
+.entry:
+  %alloca = alloca <4 x float>, align 16, addrspace(5)
+  %cast = bitcast <4 x float> addrspace(5)* %alloca to <4 x i32> addrspace(5)*
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(5)* %cast
+  %load = load <4 x i32>, <4 x i32> addrspace(5)* %cast, align 16
+  store <4 x i32> %load, <4 x i32> addrspace(1)* %out
+  ret void
+}
+
+; OPT-LABEL: @vector_bitcast_from_alloca_array(
+; OPT-NOT:   alloca
+; OPT:       store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(1)* %out, align 16
+
+; GCN-LABEL: {{^}}vector_bitcast_from_alloca_array:
+; GCN: v_mov_b32_e32 v0, 1
+; GCN: v_mov_b32_e32 v1, 2
+; GCN: v_mov_b32_e32 v2, 3
+; GCN: v_mov_b32_e32 v3, 4
+
+; GCN: ScratchSize: 0
+
+define amdgpu_kernel void @vector_bitcast_from_alloca_array(<4 x i32> addrspace(1)* %out)  {
+.entry:
+  %alloca = alloca [4 x float], align 16, addrspace(5)
+  %cast = bitcast [4 x float] addrspace(5)* %alloca to <4 x i32> addrspace(5)*
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(5)* %cast
+  %load = load <4 x i32>, <4 x i32> addrspace(5)* %cast, align 16
+  store <4 x i32> %load, <4 x i32> addrspace(1)* %out
+  ret void
+}
+
+; OPT-LABEL: @vector_bitcast_to_array_from_alloca_array(
+; OPT-NOT:   alloca
+; OPT:      %out.repack = getelementptr inbounds [4 x i32], [4 x i32] addrspace(1)* %out, i64 0, i64 0
+; OPT-NEXT: store i32 1, i32 addrspace(1)* %out.repack, align 4
+; OPT-NEXT: %out.repack1 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(1)* %out, i64 0, i64 1
+; OPT-NEXT: store i32 2, i32 addrspace(1)* %out.repack1, align 4
+; OPT-NEXT: %out.repack2 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(1)* %out, i64 0, i64 2
+; OPT-NEXT: store i32 3, i32 addrspace(1)* %out.repack2, align 4
+; OPT-NEXT: %out.repack3 = getelementptr inbounds [4 x i32], [4 x i32] addrspace(1)* %out, i64 0, i64 3
+; OPT-NEXT: store i32 4, i32 addrspace(1)* %out.repack3, align 4
+
+; GCN-LABEL: {{^}}vector_bitcast_to_array_from_alloca_array:
+; GCN: v_mov_b32_e32 v0, 1
+; GCN: v_mov_b32_e32 v1, 2
+; GCN: v_mov_b32_e32 v2, 3
+; GCN: v_mov_b32_e32 v3, 4
+
+; GCN: ScratchSize: 0
+
+define amdgpu_kernel void @vector_bitcast_to_array_from_alloca_array([4 x i32] addrspace(1)* %out)  {
+.entry:
+  %alloca = alloca [4 x float], align 16, addrspace(5)
+  %cast = bitcast [4 x float] addrspace(5)* %alloca to [4 x i32] addrspace(5)*
+  store [4 x i32] [i32 1, i32 2, i32 3, i32 4], [4 x i32] addrspace(5)* %cast
+  %load = load [4 x i32], [4 x i32] addrspace(5)* %cast, align 16
+  store [4 x i32] %load, [4 x i32] addrspace(1)* %out
+  ret void
+}
+
+; OPT-LABEL: @vector_bitcast_to_struct_from_alloca_array(
+; OPT-NOT:   alloca
+; OPT:      %out.repack = getelementptr inbounds %struct.v4, %struct.v4 addrspace(1)* %out, i64 0, i32 0
+; OPT-NEXT: store i32 1, i32 addrspace(1)* %out.repack, align 4
+; OPT-NEXT: %out.repack1 = getelementptr inbounds %struct.v4, %struct.v4 addrspace(1)* %out, i64 0, i32 1
+; OPT-NEXT: store i32 2, i32 addrspace(1)* %out.repack1, align 4
+; OPT-NEXT: %out.repack2 = getelementptr inbounds %struct.v4, %struct.v4 addrspace(1)* %out, i64 0, i32 2
+; OPT-NEXT: store i32 3, i32 addrspace(1)* %out.repack2, align 4
+; OPT-NEXT: %out.repack3 = getelementptr inbounds %struct.v4, %struct.v4 addrspace(1)* %out, i64 0, i32 3
+; OPT-NEXT: store i32 4, i32 addrspace(1)* %out.repack3, align 4
+
+; GCN-LABEL: {{^}}vector_bitcast_to_struct_from_alloca_array:
+; GCN: v_mov_b32_e32 v0, 1
+; GCN: v_mov_b32_e32 v1, 2
+; GCN: v_mov_b32_e32 v2, 3
+; GCN: v_mov_b32_e32 v3, 4
+
+; GCN: ScratchSize: 0
+
+%struct.v4 = type { i32, i32, i32, i32 }
+
+define amdgpu_kernel void @vector_bitcast_to_struct_from_alloca_array(%struct.v4 addrspace(1)* %out)  {
+.entry:
+  %alloca = alloca [4 x float], align 16, addrspace(5)
+  %cast = bitcast [4 x float] addrspace(5)* %alloca to %struct.v4 addrspace(5)*
+  store %struct.v4 { i32 1, i32 2, i32 3, i32 4 }, %struct.v4 addrspace(5)* %cast
+  %load = load %struct.v4, %struct.v4 addrspace(5)* %cast, align 16
+  store %struct.v4 %load, %struct.v4 addrspace(1)* %out
   ret void
 }
 

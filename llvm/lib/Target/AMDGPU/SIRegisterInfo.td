@@ -736,32 +736,32 @@ def SReg_192 : RegisterClass<"AMDGPU", [untyped], 32, (add SGPR_192)> {
   let isAllocatable = 0;
 }
 
-def SGPR_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64], 32, (add SGPR_256Regs)> {
+def SGPR_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64, v4f64], 32, (add SGPR_256Regs)> {
   let AllocationPriority = 18;
 }
 
-def TTMP_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add TTMP_256Regs)> {
+def TTMP_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64, v4f64], 32, (add TTMP_256Regs)> {
   let isAllocatable = 0;
 }
 
-def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64], 32,
+def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64, v4f64], 32,
                              (add SGPR_256, TTMP_256)> {
   // Requires 4 s_mov_b64 to copy
   let CopyCost = 4;
   let isAllocatable = 0;
 }
 
-def SGPR_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
+def SGPR_512 : RegisterClass<"AMDGPU", [v16i32, v16f32, v8i64, v8f64], 32,
                              (add SGPR_512Regs)> {
   let AllocationPriority = 19;
 }
 
-def TTMP_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
+def TTMP_512 : RegisterClass<"AMDGPU", [v16i32, v16f32, v8i64, v8f64], 32,
                              (add TTMP_512Regs)> {
   let isAllocatable = 0;
 }
 
-def SReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
+def SReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32, v8i64, v8f64], 32,
                              (add SGPR_512, TTMP_512)> {
   // Requires 8 s_mov_b64 to copy
   let CopyCost = 8;
@@ -773,12 +773,12 @@ def VRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 3
   let isAllocatable = 0;
 }
 
-def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
+def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
                               (add SGPR_1024Regs)> {
   let AllocationPriority = 20;
 }
 
-def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
+def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
                               (add SGPR_1024)> {
   let CopyCost = 16;
   let isAllocatable = 0;
@@ -801,9 +801,9 @@ def VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
 def VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64, i128], (add VGPR_128)>;
 def VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
 def VReg_192 : VRegClass<6, [untyped], (add VGPR_192)>;
-def VReg_256 : VRegClass<8, [v8i32, v8f32], (add VGPR_256)>;
-def VReg_512 : VRegClass<16, [v16i32, v16f32], (add VGPR_512)>;
-def VReg_1024 : VRegClass<32, [v32i32, v32f32], (add VGPR_1024)>;
+def VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64], (add VGPR_256)>;
+def VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64], (add VGPR_512)>;
+def VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
 
 class ARegClass<int numRegs, list<ValueType> regTypes, dag regList> :
     VRegClass<numRegs, regTypes, regList> {
@@ -817,9 +817,9 @@ def AReg_96 : ARegClass<3, [v3i32, v3f32], (add AGPR_96)>;
 def AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64], (add AGPR_128)>;
 def AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
 def AReg_192 : ARegClass<6, [untyped], (add AGPR_192)>;
-def AReg_256 : ARegClass<8, [v8i32, v8f32], (add AGPR_256)>;
-def AReg_512 : ARegClass<16, [v16i32, v16f32], (add AGPR_512)>;
-def AReg_1024 : ARegClass<32, [v32i32, v32f32], (add AGPR_1024)>;
+def AReg_256 : ARegClass<8, [v8i32, v8f32, v4i64, v4f64], (add AGPR_256)>;
+def AReg_512 : ARegClass<16, [v16i32, v16f32, v8i64, v8f64], (add AGPR_512)>;
+def AReg_1024 : ARegClass<32, [v32i32, v32f32, v16i64, v16f64], (add AGPR_1024)>;
 
 } // End GeneratePressureSet = 0
 
