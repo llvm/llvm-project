@@ -1017,8 +1017,7 @@ static Operation *vectorizeOneOperation(Operation *opInst,
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
     LLVM_DEBUG(permutationMap.print(dbgs()));
     auto transfer = b.create<vector::TransferWriteOp>(
-        opInst->getLoc(), vectorValue, memRef, indices,
-        AffineMapAttr::get(permutationMap));
+        opInst->getLoc(), vectorValue, memRef, indices, permutationMap);
     auto *res = transfer.getOperation();
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *res);
     // "Terminals" (i.e. AffineStoreOps) are erased on the spot.

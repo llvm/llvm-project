@@ -746,12 +746,6 @@ public:
   }
 };
 
-template <typename ConcreteOp>
-LogicalResult replaceTransferOp(ConversionPatternRewriter &rewriter,
-                                LLVMTypeConverter &typeConverter, Location loc,
-                                Operation *op, ArrayRef<Value> operands,
-                                Value dataPtr, Value mask);
-
 LogicalResult getLLVMTypeAndAlignment(LLVMTypeConverter &typeConverter,
                                       Type type, LLVM::LLVMType &llvmType,
                                       unsigned &align) {
@@ -765,12 +759,25 @@ LogicalResult getLLVMTypeAndAlignment(LLVMTypeConverter &typeConverter,
   return success();
 }
 
-template <>
-LogicalResult replaceTransferOp<TransferReadOp>(
-    ConversionPatternRewriter &rewriter, LLVMTypeConverter &typeConverter,
-    Location loc, Operation *op, ArrayRef<Value> operands, Value dataPtr,
-    Value mask) {
-  auto xferOp = cast<TransferReadOp>(op);
+LogicalResult
+replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
+                                 LLVMTypeConverter &typeConverter, Location loc,
+                                 TransferReadOp xferOp,
+                                 ArrayRef<Value> operands, Value dataPtr) {
+  LLVM::LLVMType vecTy;
+  unsigned align;
+  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
+                                     vecTy, align)))
+    return failure();
+  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(xferOp, dataPtr);
+  return success();
+}
+
+LogicalResult replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
+                                          LLVMTypeConverter &typeConverter,
+                                          Location loc, TransferReadOp xferOp,
+                                          ArrayRef<Value> operands,
+                                          Value dataPtr, Value mask) {
   auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
   VectorType fillType = xferOp.getVectorType();
   Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
@@ -783,19 +790,32 @@ LogicalResult replaceTransferOp<TransferReadOp>(
     return failure();
 
   rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
-      op, vecTy, dataPtr, mask, ValueRange{fill},
+      xferOp, vecTy, dataPtr, mask, ValueRange{fill},
       rewriter.getI32IntegerAttr(align));
   return success();
 }
 
-template <>
-LogicalResult replaceTransferOp<TransferWriteOp>(
-    ConversionPatternRewriter &rewriter, LLVMTypeConverter &typeConverter,
-    Location loc, Operation *op, ArrayRef<Value> operands, Value dataPtr,
-    Value mask) {
+LogicalResult
+replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
+                                 LLVMTypeConverter &typeConverter, Location loc,
+                                 TransferWriteOp xferOp,
+                                 ArrayRef<Value> operands, Value dataPtr) {
   auto adaptor = TransferWriteOpOperandAdaptor(operands);
+  LLVM::LLVMType vecTy;
+  unsigned align;
+  if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
+                                     vecTy, align)))
+    return failure();
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(xferOp, adaptor.vector(), dataPtr);
+  return success();
+}
 
-  auto xferOp = cast<TransferWriteOp>(op);
+LogicalResult replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
+                                          LLVMTypeConverter &typeConverter,
+                                          Location loc, TransferWriteOp xferOp,
+                                          ArrayRef<Value> operands,
+                                          Value dataPtr, Value mask) {
+  auto adaptor = TransferWriteOpOperandAdaptor(operands);
   LLVM::LLVMType vecTy;
   unsigned align;
   if (failed(getLLVMTypeAndAlignment(typeConverter, xferOp.getVectorType(),
@@ -803,7 +823,8 @@ LogicalResult replaceTransferOp<TransferWriteOp>(
     return failure();
 
   rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
-      op, adaptor.vector(), dataPtr, mask, rewriter.getI32IntegerAttr(align));
+      xferOp, adaptor.vector(), dataPtr, mask,
+      rewriter.getI32IntegerAttr(align));
   return success();
 }
 
@@ -877,6 +898,10 @@ public:
       vectorDataPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
           loc, vecTy.getPointerTo(), dataPtr);
 
+    if (!xferOp.isMaskedDim(0))
+      return replaceTransferOpWithLoadOrStore(rewriter, typeConverter, loc,
+                                              xferOp, operands, vectorDataPtr);
+
     // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
     unsigned vecWidth = vecTy.getVectorNumElements();
     VectorType vectorCmpType = VectorType::get(vecWidth, i64Type);
@@ -910,8 +935,8 @@ public:
                                                 mask);
 
     // 5. Rewrite as a masked read / write.
-    return replaceTransferOp<ConcreteOp>(rewriter, typeConverter, loc, op,
-                                         operands, vectorDataPtr, mask);
+    return replaceTransferOpWithMasked(rewriter, typeConverter, loc, xferOp,
+                                       operands, vectorDataPtr, mask);
   }
 };
 
