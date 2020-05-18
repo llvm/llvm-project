@@ -76,6 +76,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyC[i0] -> MemRef_A[o0] : 8i0 <= o0 <= 7 + 8i0 };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
-; CHECK-NEXT:                   store double %val, double* %A_idx
+; CHECK-NEXT:                   store double %val, double* %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

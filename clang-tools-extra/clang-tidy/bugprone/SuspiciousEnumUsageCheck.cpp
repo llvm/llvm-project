@@ -139,10 +139,10 @@ void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      binaryOperator(hasAnyOperatorName("+", "|"),
-                     hasEitherOperand(
-                         expr(hasType(isInteger()), unless(enumExpr("", "")))),
-                     hasEitherOperand(enumExpr("enumExpr", "enumDecl"))),
+      binaryOperator(
+          hasAnyOperatorName("+", "|"),
+          hasOperands(expr(hasType(isInteger()), unless(enumExpr("", ""))),
+                      enumExpr("enumExpr", "enumDecl"))),
       this);
 
   Finder->addMatcher(binaryOperator(hasAnyOperatorName("|=", "+="),

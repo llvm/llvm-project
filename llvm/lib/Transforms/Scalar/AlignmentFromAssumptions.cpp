@@ -320,24 +320,19 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
         WorkList.push_back(K);
   }
 
-  const DataLayout &DL = SE->getDataLayout();
   while (!WorkList.empty()) {
     Instruction *J = WorkList.pop_back_val();
     if (LoadInst *LI = dyn_cast<LoadInst>(J)) {
       Align NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
                                            LI->getPointerOperand(), SE);
-      Align OldAlignment =
-          DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
-      if (NewAlignment > OldAlignment) {
+      if (NewAlignment > LI->getAlign()) {
         LI->setAlignment(NewAlignment);
         ++NumLoadAlignChanged;
       }
     } else if (StoreInst *SI = dyn_cast<StoreInst>(J)) {
       Align NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
                                            SI->getPointerOperand(), SE);
-      Align OldAlignment = DL.getValueOrABITypeAlignment(
-          SI->getAlign(), SI->getOperand(0)->getType());
-      if (NewAlignment > OldAlignment) {
+      if (NewAlignment > SI->getAlign()) {
         SI->setAlignment(NewAlignment);
         ++NumStoreAlignChanged;
       }

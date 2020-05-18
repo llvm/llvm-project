@@ -39,8 +39,8 @@ void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
   // Third and fourth case: str.compare(str) == 0 and str.compare(str) != 0.
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("==", "!="),
-                     hasEitherOperand(StrCompare.bind("compare")),
-                     hasEitherOperand(integerLiteral(equals(0)).bind("zero")))
+                     hasOperands(StrCompare.bind("compare"),
+                                 integerLiteral(equals(0)).bind("zero")))
           .bind("match2"),
       this);
 }

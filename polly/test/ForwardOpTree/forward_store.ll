@@ -59,7 +59,7 @@ attributes #0 = { nounwind readnone }
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0] -> MemRef_val[] };
 ; CHECK-NEXT:             Instructions {
 ; CHECK-NEXT:                   %val = call double @f()
-; CHECK-NEXT:                   store double %val, double* %A_idx
+; CHECK-NEXT:                   store double %val, double* %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyB
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
@@ -68,6 +68,6 @@ attributes #0 = { nounwind readnone }
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_val[] };
 ; CHECK-NEXT:            new: [n] -> { Stmt_bodyB[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   store double %val, double* %B_idx
+; CHECK-NEXT:                   store double %val, double* %B_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

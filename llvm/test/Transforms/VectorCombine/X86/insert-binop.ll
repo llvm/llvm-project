@@ -51,11 +51,9 @@ define <2 x i64> @ins1_ins1_xor(i64 %x, i64 %y) {
 define <2 x i64> @ins1_ins1_iterate(i64 %w, i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @ins1_ins1_iterate(
 ; CHECK-NEXT:    [[S0_SCALAR:%.*]] = sub i64 [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[S0:%.*]] = insertelement <2 x i64> undef, i64 [[S0_SCALAR]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <2 x i64> undef, i64 [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[S1:%.*]] = or <2 x i64> [[S0]], [[I2]]
-; CHECK-NEXT:    [[I3:%.*]] = insertelement <2 x i64> undef, i64 [[Z:%.*]], i32 1
-; CHECK-NEXT:    [[S2:%.*]] = shl <2 x i64> [[I3]], [[S1]]
+; CHECK-NEXT:    [[S1_SCALAR:%.*]] = or i64 [[S0_SCALAR]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2_SCALAR:%.*]] = shl i64 [[Z:%.*]], [[S1_SCALAR]]
+; CHECK-NEXT:    [[S2:%.*]] = insertelement <2 x i64> undef, i64 [[S2_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[S2]]
 ;
   %i0 = insertelement <2 x i64> undef, i64 %w, i64 1

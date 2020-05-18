@@ -1791,6 +1791,9 @@ namespace serialization {
       /// A CXXConstCastExpr record.
       EXPR_CXX_CONST_CAST,
 
+      /// A CXXAddrspaceCastExpr record.
+      EXPR_CXX_ADDRSPACE_CAST,
+
       /// A CXXFunctionalCastExpr record.
       EXPR_CXX_FUNCTIONAL_CAST,
 

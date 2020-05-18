@@ -247,7 +247,7 @@ Align IRTranslator::getMemOpAlign(const Instruction &I) {
   if (const StoreInst *SI = dyn_cast<StoreInst>(&I))
     return SI->getAlign();
   if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    return DL->getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
+    return LI->getAlign();
   }
   if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
     // TODO(PR27168): This instruction has no alignment attribute, but unlike
@@ -1875,7 +1875,7 @@ bool IRTranslator::translateAlloca(const User &U,
       MIRBuilder.buildConstant(IntPtrTy, ~(uint64_t)(StackAlign.value() - 1));
   auto AlignedAlloc = MIRBuilder.buildAnd(IntPtrTy, AllocAdd, AlignCst);
 
-  Align Alignment = max(AI.getAlign(), DL->getPrefTypeAlign(Ty));
+  Align Alignment = std::max(AI.getAlign(), DL->getPrefTypeAlign(Ty));
   if (Alignment <= StackAlign)
     Alignment = Align(1);
   MIRBuilder.buildDynStackAlloc(getOrCreateVReg(AI), AlignedAlloc, Alignment);

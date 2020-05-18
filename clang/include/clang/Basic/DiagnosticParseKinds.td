@@ -833,7 +833,7 @@ def err_friend_decl_defines_type : Error<
   "cannot define a type in a friend declaration">;
 def err_missing_whitespace_digraph : Error<
   "found '<::' after a "
-  "%select{template name|const_cast|dynamic_cast|reinterpret_cast|static_cast}0"
+  "%select{template name|addrspace_cast|const_cast|dynamic_cast|reinterpret_cast|static_cast}0"
   " which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?">;
 
 def ext_defaulted_deleted_function : ExtWarn<
@@ -1428,11 +1428,11 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
 
 def warn_max_tokens : Warning<
   "the number of preprocessor source tokens (%0) exceeds this token limit (%1)">,
-  InGroup<MaxTokens>;
+  InGroup<MaxTokens>, DefaultIgnore;
 
 def warn_max_tokens_total : Warning<
   "the total number of preprocessor source tokens (%0) exceeds the token limit (%1)">,
-  InGroup<MaxTokens>;
+  InGroup<MaxTokens>, DefaultIgnore;
 
 def note_max_tokens_total_override : Note<"total token limit set here">;
 

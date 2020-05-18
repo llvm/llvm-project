@@ -36,6 +36,8 @@ struct LegacyInlinerBase : public CallGraphSCCPass {
   /// call the implementation here.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
 
+  using llvm::Pass::doInitialization;
+
   bool doInitialization(CallGraph &CG) override;
 
   /// Main run interface method, this implements the interface required by the

@@ -34,8 +34,8 @@ struct Lowerer : coro::LowererBase {
 
   Lowerer(Module &M) : LowererBase(M) {}
 
-  void elideHeapAllocations(Function *F, uint64_t FrameSize,
-                            MaybeAlign FrameAlign, AAResults &AA);
+  void elideHeapAllocations(Function *F, uint64_t FrameSize, Align FrameAlign,
+                            AAResults &AA);
   bool shouldElide(Function *F, DominatorTree &DT) const;
   void collectPostSplitCoroIds(Function *F);
   bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT);
@@ -95,7 +95,7 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
 
 // Given a resume function @f.resume(%f.frame* %frame), returns the size
 // and expected alignment of %f.frame type.
-static std::pair<uint64_t, MaybeAlign> getFrameLayout(Function *Resume) {
+static std::pair<uint64_t, Align> getFrameLayout(Function *Resume) {
   // Prefer to pull information from the function attributes.
   auto Size = Resume->getParamDereferenceableBytes(0);
   auto Align = Resume->getParamAlign(0);
@@ -109,7 +109,7 @@ static std::pair<uint64_t, MaybeAlign> getFrameLayout(Function *Resume) {
     if (!Align) Align = DL.getABITypeAlign(FrameTy);
   }
 
-  return std::make_pair(Size, Align);
+  return std::make_pair(Size, *Align);
 }
 
 // Finds first non alloca instruction in the entry block of a function.
@@ -123,7 +123,7 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
 // To elide heap allocations we need to suppress code blocks guarded by
 // llvm.coro.alloc and llvm.coro.free instructions.
 void Lowerer::elideHeapAllocations(Function *F, uint64_t FrameSize,
-                                   MaybeAlign FrameAlign, AAResults &AA) {
+                                   Align FrameAlign, AAResults &AA) {
   LLVMContext &C = F->getContext();
   auto *InsertPt =
       getFirstNonAllocaInTheEntryBlock(CoroIds.front()->getFunction());

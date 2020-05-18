@@ -3671,6 +3671,13 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     if (!symbol) {
       Say(paramName,
           "No definition found for type parameter '%s'"_err_en_US); // C742
+      // No symbol for a type param.  Create one and mark it as containing an
+      // error to improve subsequent semantic processing
+      BeginAttrs();
+      Symbol *typeParam{MakeTypeSymbol(
+          paramName, TypeParamDetails{common::TypeParamAttr::Len})};
+      typeParam->set(Symbol::Flag::Error);
+      EndAttrs();
     } else if (!symbol->has<TypeParamDetails>()) {
       Say2(paramName, "'%s' is not defined as a type parameter"_err_en_US,
           *symbol, "Definition of '%s'"_en_US); // C741
@@ -3906,7 +3913,7 @@ bool DeclarationVisitor::Pre(const parser::ProcComponentDefStmt &) {
   CHECK(!interfaceName_);
   return true;
 }
-void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &) {
+void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &stmt) {
   interfaceName_ = nullptr;
 }
 bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
@@ -4682,7 +4689,7 @@ void DeclarationVisitor::SetType(
       SetType(name,
           currScope().MakeCharacterType(std::move(length), std::move(kind)));
       return;
-    } else {
+    } else { // C753
       Say(name,
           "A length specifier cannot be used to declare the non-character entity '%s'"_err_en_US);
     }
@@ -4810,21 +4817,23 @@ bool DeclarationVisitor::OkToAddComponent(
   for (const Scope *scope{&currScope()}; scope;) {
     CHECK(scope->IsDerivedType());
     if (auto *prev{FindInScope(*scope, name)}) {
-      auto msg{""_en_US};
-      if (extends) {
-        msg = "Type cannot be extended as it has a component named"
-              " '%s'"_err_en_US;
-      } else if (prev->test(Symbol::Flag::ParentComp)) {
-        msg = "'%s' is a parent type of this type and so cannot be"
-              " a component"_err_en_US;
-      } else if (scope != &currScope()) {
-        msg = "Component '%s' is already declared in a parent of this"
-              " derived type"_err_en_US;
-      } else {
-        msg = "Component '%s' is already declared in this"
-              " derived type"_err_en_US;
+      if (!prev->test(Symbol::Flag::Error)) {
+        auto msg{""_en_US};
+        if (extends) {
+          msg = "Type cannot be extended as it has a component named"
+                " '%s'"_err_en_US;
+        } else if (prev->test(Symbol::Flag::ParentComp)) {
+          msg = "'%s' is a parent type of this type and so cannot be"
+                " a component"_err_en_US;
+        } else if (scope != &currScope()) {
+          msg = "Component '%s' is already declared in a parent of this"
+                " derived type"_err_en_US;
+        } else {
+          msg = "Component '%s' is already declared in this"
+                " derived type"_err_en_US;
+        }
+        Say2(name, std::move(msg), *prev, "Previous declaration of '%s'"_en_US);
       }
-      Say2(name, std::move(msg), *prev, "Previous declaration of '%s'"_en_US);
       return false;
     }
     if (scope == &currScope() && extends) {

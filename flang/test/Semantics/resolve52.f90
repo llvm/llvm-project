@@ -5,6 +5,13 @@
 ! all of its length type parameters shall be assumed; it shall be polymorphic
 ! (7.3.2.3) if and only if the type being defined is extensible (7.5.7).
 ! It shall not have the VALUE attribute.
+!
+! C757 If the procedure pointer component has an implicit interface or has no
+! arguments, NOPASS shall be specified.
+!
+! C758 If PASS (arg-name) appears, the interface of the procedure pointer
+! component shall have a dummy argument named arg-name.
+
 
 module m1
   type :: t

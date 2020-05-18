@@ -72,7 +72,7 @@ return:
 ; CHECK:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; CHECK:             Instructions {
 ; CHECK:                   %val = fadd double 2.100000e+01, 2.100000e+01
-; CHECK:                   store double %val, double* %A
+; CHECK:                   store double %val, double* %A, align 8
 ; CHECK:             }
 ; CHECK: }
 

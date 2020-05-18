@@ -4,11 +4,11 @@ target datalayout = "A0"
 ; CHECK: target datalayout = "A0"
 
 
-; CHECK: %alloca_scalar_no_align = alloca i32
+; CHECK: %alloca_scalar_no_align = alloca i32, align 4
 ; CHECK-NEXT: %alloca_scalar_align4 = alloca i32, align 4
-; CHECK-NEXT: %alloca_scalar_no_align_metadata = alloca i32, !foo !0
+; CHECK-NEXT: %alloca_scalar_no_align_metadata = alloca i32, align 4, !foo !0
 ; CHECK-NEXT: %alloca_scalar_align4_metadata = alloca i32, align 4, !foo !0
-; CHECK-NEXT: %alloca_inalloca_scalar_no_align = alloca inalloca i32
+; CHECK-NEXT: %alloca_inalloca_scalar_no_align = alloca inalloca i32, align 4
 ; CHECK-NEXT: %alloca_inalloca_scalar_align4_metadata = alloca inalloca i32, align 4, !foo !0
 define void @use_alloca() {
   %alloca_scalar_no_align = alloca i32, addrspace(0)

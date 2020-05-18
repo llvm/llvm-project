@@ -687,6 +687,11 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
         language_flags);
   }
 
+  if (!valobj && synthetic_array_member)
+    valobj = GetSyntheticValue()
+                 ->GetChildAtIndex(synthetic_index, synthetic_array_member)
+                 .get();
+
   return valobj;
 }
 
@@ -2824,6 +2829,27 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
           child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
           language_flags);
     }
+
+    // In case of incomplete child compiler type, use the pointee type and try
+    // to recreate a new ValueObjectChild using it.
+    if (!m_deref_valobj) {
+      if (HasSyntheticValue()) {
+        child_compiler_type = compiler_type.GetPointeeType();
+
+        if (child_compiler_type) {
+          ConstString child_name;
+          if (!child_name_str.empty())
+            child_name.SetCString(child_name_str.c_str());
+
+          m_deref_valobj = new ValueObjectChild(
+              *this, child_compiler_type, child_name, child_byte_size,
+              child_byte_offset, child_bitfield_bit_size,
+              child_bitfield_bit_offset, child_is_base_class,
+              child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
+        }
+      }
+    }
+
   } else if (HasSyntheticValue()) {
     m_deref_valobj =
         GetSyntheticValue()

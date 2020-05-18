@@ -65,6 +65,9 @@ public:
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  bool hasBasePointer(const MachineFunction &MF) const;
+  Register getBaseRegister() const;
+
   bool canRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 

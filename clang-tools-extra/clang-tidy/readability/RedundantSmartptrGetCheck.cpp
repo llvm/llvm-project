@@ -82,10 +82,10 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
   // Matches against nullptr.
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("==", "!="),
-                     hasEitherOperand(ignoringImpCasts(
-                         anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
-                               integerLiteral(equals(0))))),
-                     hasEitherOperand(callToGet(knownSmartptr()))),
+                     hasOperands(ignoringImpCasts(anyOf(
+                                     cxxNullPtrLiteralExpr(), gnuNullExpr(),
+                                     integerLiteral(equals(0)))),
+                                 callToGet(knownSmartptr()))),
       Callback);
 
   // FIXME: Match and fix if (l.get() == r.get()).

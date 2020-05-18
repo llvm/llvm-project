@@ -19,6 +19,12 @@ class PlatformCommandTestCase(TestBase):
         self.runCmd("help platform")
 
     @no_debug_info_test
+    def test_help_platform(self):
+        self.expect("help shell", substrs=["Run a shell command on the host.",
+                                           "shell <shell-command>"])
+
+
+    @no_debug_info_test
     def test_list(self):
         self.expect("platform list",
                     patterns=['^Available platforms:'])
@@ -55,6 +61,7 @@ class PlatformCommandTestCase(TestBase):
             self.expect(
                 "platform shell dir c:\\", substrs=[
                     "Windows", "Program Files"])
+            self.expect("shell dir c:\\", substrs=["Windows", "Program Files"])
         elif re.match(".*-.*-.*-android", triple):
             self.expect(
                 "platform shell ls /",
@@ -62,19 +69,26 @@ class PlatformCommandTestCase(TestBase):
                     "cache",
                     "dev",
                     "system"])
+            self.expect("shell ls /",
+                substrs=["cache", "dev", "system"])
         else:
             self.expect("platform shell ls /", substrs=["dev", "tmp", "usr"])
+            self.expect("shell ls /", substrs=["dev", "tmp", "usr"])
 
     @no_debug_info_test
     def test_shell_builtin(self):
         """ Test a shell built-in command (echo) """
         self.expect("platform shell echo hello lldb",
                     substrs=["hello lldb"])
+        self.expect("shell echo hello lldb",
+                    substrs=["hello lldb"])
 
-    # FIXME: re-enable once platform shell -t can specify the desired timeout
+
     @no_debug_info_test
     def test_shell_timeout(self):
         """ Test a shell built-in command (sleep) that times out """
-        self.skipTest("due to taking too long to complete.")
-        self.expect("platform shell sleep 15", error=True, substrs=[
+        self.skipTest("Alias with option not supported by the command interpreter.")
+        self.expect("platform shell -t 1 -- sleep 15", error=True, substrs=[
+                    "error: timed out waiting for shell command to complete"])
+        self.expect("shell -t 1 --  sleep 3", error=True, substrs=[
                     "error: timed out waiting for shell command to complete"])

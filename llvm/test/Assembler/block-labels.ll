@@ -21,7 +21,7 @@ $N:
 }
 
 ; CHECK-LABEL: define i32 @test1(i32 %X) {
-; CHECK-NEXT:   %1 = alloca i32
+; CHECK-NEXT:   %1 = alloca i32, align 4
 ; CHECK-NEXT:   br label %2
 ; CHECK:      2:       ; preds = %0
 ; CHECK-NEXT:   br label %3

@@ -152,6 +152,8 @@ def MathAPI : PublicAPI<"math.h"> {
    "cosf",
    "fabs",
    "fabsf",
+   "expf",
+   "exp2f",
    "round",
    "sincosf",
    "sinf",

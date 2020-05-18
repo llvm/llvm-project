@@ -25,6 +25,11 @@
 using namespace clang;
 using namespace CodeGen;
 
+void CodeGen::addDefaultFunctionDefinitionAttributes(CodeGenModule &CGM,
+                                                     llvm::AttrBuilder &attrs) {
+  CGM.addDefaultFunctionDefinitionAttributes(attrs);
+}
+
 const CGFunctionInfo &
 CodeGen::arrangeObjCMessageSendSignature(CodeGenModule &CGM,
                                          const ObjCMethodDecl *MD,

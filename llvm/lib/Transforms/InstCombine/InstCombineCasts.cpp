@@ -141,7 +141,7 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
   }
 
   AllocaInst *New = Builder.CreateAlloca(CastElTy, Amt);
-  New->setAlignment(MaybeAlign(AI.getAlignment()));
+  New->setAlignment(AI.getAlign());
   New->takeName(&AI);
   New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
 
@@ -1749,8 +1749,27 @@ static bool isKnownExactCastIntToFP(CastInst &I) {
 
   // Easy case - if the source integer type has less bits than the FP mantissa,
   // then the cast must be exact.
-  if (SrcSize <= FPTy->getFPMantissaWidth())
+  int DestNumSigBits = FPTy->getFPMantissaWidth();
+  if (SrcSize <= DestNumSigBits)
     return true;
+
+  // Cast from FP to integer and back to FP is independent of the intermediate
+  // integer width because of poison on overflow.
+  Value *F;
+  if (match(Src, m_FPToSI(m_Value(F))) || match(Src, m_FPToUI(m_Value(F)))) {
+    // If this is uitofp (fptosi F), the source needs an extra bit to avoid
+    // potential rounding of negative FP input values.
+    int SrcNumSigBits = F->getType()->getFPMantissaWidth();
+    if (!IsSigned && match(Src, m_FPToSI(m_Value())))
+      SrcNumSigBits++;
+
+    // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
+    // significant bits than the destination (and make sure neither type is
+    // weird -- ppc_fp128).
+    if (SrcNumSigBits > 0 && DestNumSigBits > 0 &&
+        SrcNumSigBits <= DestNumSigBits)
+      return true;
+  }
 
   // TODO:
   // Try harder to find if the source integer type has less significant bits.

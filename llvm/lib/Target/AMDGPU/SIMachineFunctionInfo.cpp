@@ -426,9 +426,9 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 }
 
 void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
-  // The FP spill hasn't been inserted yet, so keep it around.
+  // The FP & BP spills haven't been inserted yet, so keep them around.
   for (auto &R : SGPRToVGPRSpills) {
-    if (R.first != FramePointerSaveIndex)
+    if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex)
       MFI.RemoveStackObject(R.first);
   }
 
@@ -436,7 +436,7 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
   // ID.
   for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
        ++i)
-    if (i != FramePointerSaveIndex)
+    if (i != FramePointerSaveIndex && i != BasePointerSaveIndex)
       MFI.setStackID(i, TargetStackID::Default);
 
   for (auto &R : VGPRToAGPRSpills) {

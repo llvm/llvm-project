@@ -4,97 +4,31 @@ set(LLVM_OPTIONAL_SOURCES
   DerivedAttributeOpInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
-  SideEffects.cpp
+  SideEffectInterfaces.cpp
   ViewLikeInterface.cpp
   )
 
-add_mlir_library(MLIRCallInterfaces
-  CallInterfaces.cpp
+function(add_mlir_interface_library name)
+  add_mlir_library(MLIR${name}
+    ${name}.cpp
 
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+    ADDITIONAL_HEADER_DIRS
+    ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
-  DEPENDS
-  MLIRCallInterfacesIncGen
+    DEPENDS
+    MLIR${name}IncGen
 
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )
+    LINK_LIBS PUBLIC
+    MLIRIR
+    )
+endfunction(add_mlir_interface_library)
 
-add_mlir_library(MLIRControlFlowInterfaces
-  ControlFlowInterfaces.cpp
 
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+add_mlir_interface_library(CallInterfaces)
+add_mlir_interface_library(ControlFlowInterfaces)
+add_mlir_interface_library(DerivedAttributeOpInterface)
+add_mlir_interface_library(InferTypeOpInterface)
+add_mlir_interface_library(LoopLikeInterface)
+add_mlir_interface_library(SideEffectInterfaces)
+add_mlir_interface_library(ViewLikeInterface)
 
-  DEPENDS
-  MLIRControlFlowInterfacesIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )
-
-add_mlir_library(MLIRDerivedAttributeOpInterface
-  DerivedAttributeOpInterface.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRDerivedAttributeOpInterfaceIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )
-
-add_mlir_library(MLIRInferTypeOpInterface
-  InferTypeOpInterface.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRInferTypeOpInterfaceIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )
-
-add_mlir_library(MLIRLoopLikeInterface
-  LoopLikeInterface.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRLoopLikeInterfaceIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )
-
-add_mlir_library(MLIRSideEffects
-  SideEffects.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRSideEffectInterfacesIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )
-
-add_mlir_library(MLIRViewLikeInterface
-  ViewLikeInterface.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRViewLikeInterfaceIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  )

@@ -1,4 +1,10 @@
 // REQUIRES: webassembly-registered-target
+// https://reviews.llvm.org/D79655 temporarily added a RUN line that was missing
+// a -o flag and wrote to the source dir. The file it wrote was then interpreted
+// as a test without RUN line, breaking bots. FIXME: Remove this rm line once
+// it's been in the tree long enough to clean up everyone's build dirs.
+// Removing this June 2020 should be fine.
+// RUN: rm -f %S/wasm-eh.ll
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY

@@ -84,7 +84,7 @@ module m4
     !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
     type(plainType) :: testField1
     type(sequenceType) :: testField2
-    procedure(real), nopass :: procField
+    procedure(real), pointer, nopass :: procField
   end type testType
   !ERROR: A sequence type may not have type parameters
   type :: paramType(param)

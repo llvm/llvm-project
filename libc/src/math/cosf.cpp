@@ -58,7 +58,7 @@ float LLVM_LIBC_ENTRYPOINT(cosf)(float y) {
     return sinf_poly(x * s, x * x, p, n ^ 1);
   }
 
-  return invalidf(y);
+  return invalid(y);
 }
 
 } // namespace __llvm_libc

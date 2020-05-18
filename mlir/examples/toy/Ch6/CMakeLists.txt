@@ -44,7 +44,7 @@ target_link_libraries(toyc-ch6
     MLIRLLVMIR
     MLIRParser
     MLIRPass
-    MLIRSideEffects
+    MLIRSideEffectInterfaces
     MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms

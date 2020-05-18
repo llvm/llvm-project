@@ -39,7 +39,6 @@ module m
   !ERROR: No definition found for type parameter 'k'
   !ERROR: No definition found for type parameter 'l'
   type :: t6(k, l)
-    !ERROR: Must be a constant value
     character(kind=k, len=l) :: d3
   end type
   type(t6(2, 10)) :: x3

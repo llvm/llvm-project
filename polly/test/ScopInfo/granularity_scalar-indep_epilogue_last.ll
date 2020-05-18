@@ -60,7 +60,7 @@ return:
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_phi__phi[] };
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valA = load double, double* %A, align 8
-; CHECK-NEXT:               store double %valA, double* %A
+; CHECK-NEXT:               store double %valA, double* %A, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT:     Stmt_bodyA_b
 ; CHECK-NEXT:         Domain :=
@@ -73,6 +73,6 @@ return:
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA_b[i0] -> MemRef_B[0] };
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valB = load double, double* %B, align 8
-; CHECK-NEXT:               store double %valB, double* %B
+; CHECK-NEXT:               store double %valB, double* %B, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

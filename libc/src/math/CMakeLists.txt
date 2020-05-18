@@ -1,5 +1,7 @@
-add_header_library(
+add_object_library(
   math_utils
+  SRCS
+    math_utils.cpp
   HDRS
     math_utils.h
   DEPENDS
@@ -87,4 +89,38 @@ add_entrypoint_object(
     fabsf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+)
+
+add_object_library(
+  exp_utils
+  HDRS
+    exp_utils.h
+  SRCS
+    exp_utils.cpp
+  DEPENDS
+    .math_utils
+)
+
+add_entrypoint_object(
+  expf
+  SRCS
+    expf.cpp
+  HDRS
+    expf.h
+  DEPENDS
+    .exp_utils
+    .math_utils
+    libc.include.math
+)
+
+add_entrypoint_object(
+  exp2f
+  SRCS
+    exp2f.cpp
+  HDRS
+    exp2f.h
+  DEPENDS
+    .exp_utils
+    .math_utils
+    libc.include.math
 )

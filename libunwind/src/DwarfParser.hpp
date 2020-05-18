@@ -401,6 +401,7 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
                         fdeInfo.fdeStart + fdeInfo.fdeLength, cieInfo,
                         upToPC - fdeInfo.pcStart, rememberStack, arch, results);
 
+#if !defined(_LIBUNWIND_NO_HEAP)
   // Clean up rememberStack. Even in the case where every DW_CFA_remember_state
   // is paired with a DW_CFA_restore_state, parseInstructions can skip restore
   // opcodes if it reaches the target PC and stops interpreting, so we have to
@@ -410,6 +411,7 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
     free(rememberStack);
     rememberStack = next;
   }
+#endif
 
   return returnValue;
 }

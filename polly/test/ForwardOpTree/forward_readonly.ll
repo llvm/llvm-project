@@ -63,7 +63,7 @@ return:
 ; MODEL-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_arg[] };
 ; MODEL-NEXT:             Instructions {
 ; MODEL-NEXT:                   %val = fadd double %arg, 2.100000e+01
-; MODEL-NEXT:                   store double %val, double* %A
+; MODEL-NEXT:                   store double %val, double* %A, align 8
 ; MODEL-NEXT:                 }
 ; MODEL-NEXT: }
 
@@ -79,6 +79,6 @@ return:
 ; NOMODEL-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[0] };
 ; NOMODEL-NEXT:             Instructions {
 ; NOMODEL-NEXT:                   %val = fadd double %arg, 2.100000e+01
-; NOMODEL-NEXT:                   store double %val, double* %A
+; NOMODEL-NEXT:                   store double %val, double* %A, align 8
 ; NOMODEL-NEXT:                 }
 ; NOMODEL-NEXT: }

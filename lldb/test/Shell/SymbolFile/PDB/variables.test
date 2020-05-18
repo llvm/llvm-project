@@ -13,11 +13,11 @@ GLOBALS: SymbolFile pdb ([[MOD]])
 GLOBALS:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
 GLOBALS-DAG:   Variable{{.*}}, name = "g_IntVar"
 GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "m_StaticClassMember"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
 GLOBALS-DAG:   Variable{{.*}}, name = "g_pConst"
 GLOBALS-SAME:  scope = global, location = {{.*}}, external
 GLOBALS-DAG:   Variable{{.*}}, name = "same_name_var"
-GLOBALS-SAME:  scope = global, location = {{.*}}, external
-GLOBALS-DAG:   Variable{{.*}}, name = "Class::m_StaticClassMember"
 GLOBALS-SAME:  scope = global, location = {{.*}}, external
 GLOBALS-DAG:   Variable{{.*}}, name = "g_EnumVar"
 GLOBALS-SAME:  scope = global, location = {{.*}}, external

@@ -77,6 +77,6 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyC[i0] -> MemRef_phi[] };
 ; CHECK-NEXT:            new: [n] -> { Stmt_bodyC[i0] -> MemRef_B[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   store double %phi, double* %A_idx
+; CHECK-NEXT:                   store double %phi, double* %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

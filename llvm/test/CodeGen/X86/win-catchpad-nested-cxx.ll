@@ -62,17 +62,29 @@ handler2:
 ; EHFlags
 ; CHECK-NEXT: .long   1
 
-; CHECK: $tryMap$try_in_catch:
-; CHECK-NEXT: .long   2
-; CHECK-NEXT: .long   2
-; CHECK-NEXT: .long   3
-; CHECK-NEXT: .long   1
-; CHECK-NEXT: .long   ($handlerMap$0$try_in_catch)
-; CHECK-NEXT: .long   0
-; CHECK-NEXT: .long   0
-; CHECK-NEXT: .long   3
-; CHECK-NEXT: .long   1
-; CHECK-NEXT: .long   ($handlerMap$1$try_in_catch)
+; X86-LABEL: $tryMap$try_in_catch:
+; X86-NEXT: .long   2
+; X86-NEXT: .long   2
+; X86-NEXT: .long   3
+; X86-NEXT: .long   1
+; X86-NEXT: .long   ($handlerMap$0$try_in_catch)
+; X86-NEXT: .long   0
+; X86-NEXT: .long   0
+; X86-NEXT: .long   3
+; X86-NEXT: .long   1
+; X86-NEXT: .long   ($handlerMap$1$try_in_catch)
+
+; X64-LABEL: $tryMap$try_in_catch:
+; X64-NEXT: .long   0
+; X64-NEXT: .long   0
+; X64-NEXT: .long   3
+; X64-NEXT: .long   1
+; X64-NEXT: .long   ($handlerMap$0$try_in_catch)
+; X64-NEXT: .long   2
+; X64-NEXT: .long   2
+; X64-NEXT: .long   3
+; X64-NEXT: .long   1
+; X64-NEXT: .long   ($handlerMap$1$try_in_catch)
 
 ; CHECK: $handlerMap$0$try_in_catch:
 ; CHECK-NEXT:   .long   64

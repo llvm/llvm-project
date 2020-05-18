@@ -83,8 +83,8 @@ return:
 ; CHECK-NEXT:                   %val1 = load double, double* %A_idx, align 8
 ; CHECK-NEXT:                   %val2 = fadd double %val1, %val1
 ; CHECK-NEXT:                   %val1 = load double, double* %A_idx, align 8
-; CHECK-NEXT:                   store double %val1, double* %B_idx
-; CHECK-NEXT:                   store double %val2, double* %C_idx
+; CHECK-NEXT:                   store double %val1, double* %B_idx, align 8
+; CHECK-NEXT:                   store double %val2, double* %C_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }
 
@@ -155,7 +155,7 @@ return:
 ; CHECK-NEXT:                   %val1 = load double, double* %A_idx, align 8
 ; CHECK-NEXT:                   %val1 = load double, double* %A_idx, align 8
 ; CHECK-NEXT:                   %val2 = fadd double %val1, %val1
-; CHECK-NEXT:                   store double %val2, double* %B_idx
-; CHECK-NEXT:                   store double %val1, double* %C_idx
+; CHECK-NEXT:                   store double %val2, double* %B_idx, align 8
+; CHECK-NEXT:                   store double %val1, double* %C_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

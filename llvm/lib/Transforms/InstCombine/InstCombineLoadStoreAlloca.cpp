@@ -181,7 +181,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
     if (C->getValue().getActiveBits() <= 64) {
       Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, nullptr, AI.getName());
-      New->setAlignment(MaybeAlign(AI.getAlignment()));
+      New->setAlignment(AI.getAlign());
 
       // Scan to the end of the allocation instructions, to skip over a block of
       // allocas if possible...also skip interleaved debug info
@@ -327,11 +327,6 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     return I;
 
   if (AI.getAllocatedType()->isSized()) {
-    // If the alignment is 0 (unspecified), assign it the preferred alignment.
-    if (AI.getAlignment() == 0)
-      AI.setAlignment(
-          MaybeAlign(DL.getPrefTypeAlignment(AI.getAllocatedType())));
-
     // Move all alloca's of zero byte objects to the entry block and merge them
     // together.  Note that we only do this for alloca's, because malloc should
     // allocate and return a unique pointer, even for a zero byte allocation.
@@ -358,16 +353,10 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
           return &AI;
         }
 
-        // If the alignment of the entry block alloca is 0 (unspecified),
-        // assign it the preferred alignment.
-        if (EntryAI->getAlignment() == 0)
-          EntryAI->setAlignment(
-              MaybeAlign(DL.getPrefTypeAlignment(EntryAI->getAllocatedType())));
         // Replace this zero-sized alloca with the one at the start of the entry
         // block after ensuring that the address will be aligned enough for both
         // types.
-        const MaybeAlign MaxAlign(
-            std::max(EntryAI->getAlignment(), AI.getAlignment()));
+        const Align MaxAlign = std::max(EntryAI->getAlign(), AI.getAlign());
         EntryAI->setAlignment(MaxAlign);
         if (AI.getType() != EntryAI->getType())
           return new BitCastInst(EntryAI, AI.getType());
@@ -447,14 +436,8 @@ LoadInst *InstCombiner::combineLoadToNewType(LoadInst &LI, Type *NewTy,
         NewPtr->getType()->getPointerAddressSpace() == AS))
     NewPtr = Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS));
 
-    // If old load did not have an explicit alignment specified,
-    // manually preserve the implied (ABI) alignment of the load.
-    // Else we may inadvertently incorrectly over-promise alignment.
-  const auto Align =
-      getDataLayout().getValueOrABITypeAlignment(LI.getAlign(), LI.getType());
-
   LoadInst *NewLoad = Builder.CreateAlignedLoad(
-      NewTy, NewPtr, Align, LI.isVolatile(), LI.getName() + Suffix);
+      NewTy, NewPtr, LI.getAlign(), LI.isVolatile(), LI.getName() + Suffix);
   NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
   copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
@@ -656,8 +639,7 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
     if (SL->hasPadding())
       return nullptr;
 
-    const auto Align = DL.getValueOrABITypeAlignment(LI.getAlign(), ST);
-
+    const auto Align = LI.getAlign();
     auto *Addr = LI.getPointerOperand();
     auto *IdxType = Type::getInt32Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
@@ -705,7 +687,7 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
 
     const DataLayout &DL = IC.getDataLayout();
     auto EltSize = DL.getTypeAllocSize(ET);
-    const auto Align = DL.getValueOrABITypeAlignment(LI.getAlign(), T);
+    const auto Align = LI.getAlign();
 
     auto *Addr = LI.getPointerOperand();
     auto *IdxType = Type::getInt64Ty(T->getContext());
@@ -945,14 +927,8 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   // Attempt to improve the alignment.
   Align KnownAlign = getOrEnforceKnownAlignment(
       Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
-  MaybeAlign LoadAlign = LI.getAlign();
-  Align EffectiveLoadAlign =
-      LoadAlign ? *LoadAlign : DL.getABITypeAlign(LI.getType());
-
-  if (KnownAlign > EffectiveLoadAlign)
+  if (KnownAlign > LI.getAlign())
     LI.setAlignment(KnownAlign);
-  else if (LoadAlign == 0)
-    LI.setAlignment(EffectiveLoadAlign);
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI)) {
@@ -1179,7 +1155,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
     if (SL->hasPadding())
       return false;
 
-    const auto Align = DL.getValueOrABITypeAlignment(SI.getAlign(), ST);
+    const auto Align = SI.getAlign();
 
     SmallString<16> EltName = V->getName();
     EltName += ".elt";
@@ -1225,7 +1201,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
 
     const DataLayout &DL = IC.getDataLayout();
     auto EltSize = DL.getTypeAllocSize(AT->getElementType());
-    const auto Align = DL.getValueOrABITypeAlignment(SI.getAlign(), T);
+    const auto Align = SI.getAlign();
 
     SmallString<16> EltName = V->getName();
     EltName += ".elt";
@@ -1350,14 +1326,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   // Attempt to improve the alignment.
   const Align KnownAlign = getOrEnforceKnownAlignment(
       Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
-  const MaybeAlign StoreAlign = SI.getAlign();
-  const Align EffectiveStoreAlign =
-      StoreAlign ? *StoreAlign : DL.getABITypeAlign(Val->getType());
-
-  if (KnownAlign > EffectiveStoreAlign)
+  if (KnownAlign > SI.getAlign())
     SI.setAlignment(KnownAlign);
-  else if (!StoreAlign)
-    SI.setAlignment(EffectiveStoreAlign);
 
   // Try to canonicalize the stored type.
   if (unpackStoreToAggregate(*this, SI))
