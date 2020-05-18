@@ -4,7 +4,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
-class TestSwiftMacroConflict(TestBase):
+class TestSwiftMissingVFSOverlay(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
