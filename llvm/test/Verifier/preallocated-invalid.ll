@@ -116,3 +116,10 @@ define void @preallocated_arg_token() {
     %x = call i8* @llvm.call.preallocated.arg(token %t, i32 1) preallocated(i32)
     ret void
 }
+
+; CHECK: musttail and preallocated not yet supported
+define void @musttail() {
+    %cs = call token @llvm.call.preallocated.setup(i32 0)
+    musttail call void @foo0() ["preallocated"(token %cs)]
+    ret void
+}
