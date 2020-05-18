@@ -2901,7 +2901,7 @@ void FunctionStackPoisoner::copyArgsPassedByValToAllocas() {
   const DataLayout &DL = F.getParent()->getDataLayout();
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr()) {
-      Type *Ty = Arg.getType()->getPointerElementType();
+      Type *Ty = Arg.getParamByValType();
       const Align Alignment =
           DL.getValueOrABITypeAlignment(Arg.getParamAlign(), Ty);
 
