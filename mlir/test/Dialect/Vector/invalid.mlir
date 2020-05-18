@@ -238,8 +238,28 @@ func @outerproduct_operand_3_result_type_generic(%arg0: vector<4xf32>, %arg1: ve
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
   %c3 = constant 3 : index
   %cst = constant 3.0 : f32
-  // expected-error@+1 {{two types required}}
+  // expected-error@+1 {{requires two types}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>
+}
+
+// -----
+
+func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<4x3xf32>
+  // expected-error@+1 {{ requires memref type}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : vector<4x3xf32>, vector<1x1x2x3xf32>
+}
+
+// -----
+
+func @test_vector.transfer_read(%arg0: memref<4x3xf32>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<4x3xf32>
+  // expected-error@+1 {{ requires vector type}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<4x3xf32>, f32
 }
 
 // -----
@@ -249,15 +269,6 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
   %cst = constant 3.0 : f32
   // expected-error@+1 {{requires 2 indices}}
   %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>, vector<128xf32>
-}
-
-// -----
-
-func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant 3.0 : f32
-  // expected-error@+1 {{requires attribute 'permutation_map'}}
-  %0 = vector.transfer_read %arg0[%c3, %c3], %cst {perm = affine_map<(d0)->(d0)>} : memref<?x?xf32>, vector<128xf32>
 }
 
 // -----
@@ -339,6 +350,35 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
 
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = constant 3 : index
+  %cst = constant 3.0 : f32
+  // expected-error@+1 {{requires two types}}
+  vector.transfer_write %arg0, %arg0[%c3, %c3] : memref<?x?xf32>
+}
+
+// -----
+
+func @test_vector.transfer_write(%arg0: memref<vector<4x3xf32>>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<4x3xf32>
+  // expected-error@+1 {{ requires vector type}}
+  vector.transfer_write %arg0, %arg0[%c3, %c3] : memref<vector<4x3xf32>>, vector<4x3xf32>
+}
+
+// -----
+
+func @test_vector.transfer_write(%arg0: vector<4x3xf32>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<4x3xf32>
+  // expected-error@+1 {{ requires memref type}}
+  vector.transfer_write %arg0, %arg0[%c3, %c3] : vector<4x3xf32>, f32
+}
+
+// -----
+
+func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
+  %c3 = constant 3 : index
   %cst = constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{expected 5 operand types but had 4}}
   %0 = "vector.transfer_write"(%cst, %arg0, %c3, %c3, %c3) {permutation_map = affine_map<()->(0)>} : (vector<128xf32>, memref<?x?xf32>, index, index) -> ()
@@ -351,15 +391,6 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %cst = constant dense<3.0> : vector<128 x f32>
   // expected-error@+1 {{requires 2 indices}}
   vector.transfer_write %cst, %arg0[%c3, %c3, %c3] {permutation_map = affine_map<()->(0)>} : vector<128xf32>, memref<?x?xf32>
-}
-
-// -----
-
-func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
-  %c3 = constant 3 : index
-  %cst = constant dense<3.0> : vector<128 x f32>
-  // expected-error@+1 {{requires attribute 'permutation_map'}}
-  vector.transfer_write %cst, %arg0[%c3, %c3] {perm = affine_map<(d0)->(d0)>} : vector<128xf32>, memref<?x?xf32>
 }
 
 // -----

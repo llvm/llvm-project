@@ -1,6 +1,5 @@
 // RUN: mlir-opt -lower-affine --split-input-file %s | FileCheck %s
 
-// CHECK: #[[perm_map:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @affine_vector_load
 func @affine_vector_load(%arg0 : index) {
   %0 = alloc() : memref<100xf32>
@@ -12,13 +11,12 @@ func @affine_vector_load(%arg0 : index) {
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[b:.*]] = addi %[[a]], %[[c7]] : index
 // CHECK-NEXT:  %[[pad:.*]] = constant 0.0
-// CHECK-NEXT:  vector.transfer_read %[[buf]][%[[b]]], %[[pad]] {permutation_map = #[[perm_map]]} : memref<100xf32>, vector<8xf32>
+// CHECK-NEXT:  vector.transfer_read %[[buf]][%[[b]]], %[[pad]] : memref<100xf32>, vector<8xf32>
   return
 }
 
 // -----
 
-// CHECK: #[[perm_map:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @affine_vector_store
 func @affine_vector_store(%arg0 : index) {
   %0 = alloc() : memref<100xf32>
@@ -33,13 +31,12 @@ func @affine_vector_store(%arg0 : index) {
 // CHECK-NEXT:  %[[b:.*]] = addi %{{.*}}, %[[a]] : index
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[c:.*]] = addi %[[b]], %[[c7]] : index
-// CHECK-NEXT:  vector.transfer_write  %[[val]], %[[buf]][%[[c]]] {permutation_map = #[[perm_map]]} : vector<4xf32>, memref<100xf32>
+// CHECK-NEXT:  vector.transfer_write  %[[val]], %[[buf]][%[[c]]] : vector<4xf32>, memref<100xf32>
   return
 }
 
 // -----
 
-// CHECK: #[[perm_map:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @affine_vector_load
 func @affine_vector_load(%arg0 : index) {
   %0 = alloc() : memref<100xf32>
@@ -51,13 +48,12 @@ func @affine_vector_load(%arg0 : index) {
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[b:.*]] = addi %[[a]], %[[c7]] : index
 // CHECK-NEXT:  %[[pad:.*]] = constant 0.0
-// CHECK-NEXT:  vector.transfer_read %[[buf]][%[[b]]], %[[pad]] {permutation_map = #[[perm_map]]} : memref<100xf32>, vector<8xf32>
+// CHECK-NEXT:  vector.transfer_read %[[buf]][%[[b]]], %[[pad]] : memref<100xf32>, vector<8xf32>
   return
 }
 
 // -----
 
-// CHECK: #[[perm_map:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @affine_vector_store
 func @affine_vector_store(%arg0 : index) {
   %0 = alloc() : memref<100xf32>
@@ -72,13 +68,12 @@ func @affine_vector_store(%arg0 : index) {
 // CHECK-NEXT:  %[[b:.*]] = addi %{{.*}}, %[[a]] : index
 // CHECK-NEXT:  %[[c7:.*]] = constant 7 : index
 // CHECK-NEXT:  %[[c:.*]] = addi %[[b]], %[[c7]] : index
-// CHECK-NEXT:  vector.transfer_write  %[[val]], %[[buf]][%[[c]]] {permutation_map = #[[perm_map]]} : vector<4xf32>, memref<100xf32>
+// CHECK-NEXT:  vector.transfer_write  %[[val]], %[[buf]][%[[c]]] : vector<4xf32>, memref<100xf32>
   return
 }
 
 // -----
 
-// CHECK: #[[perm_map:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @vector_load_2d
 func @vector_load_2d() {
   %0 = alloc() : memref<100x100xf32>
@@ -89,7 +84,7 @@ func @vector_load_2d() {
 // CHECK:      scf.for %[[i0:.*]] =
 // CHECK:        scf.for %[[i1:.*]] =
 // CHECK-NEXT:     %[[pad:.*]] = constant 0.0
-// CHECK-NEXT:     vector.transfer_read %[[buf]][%[[i0]], %[[i1]]], %[[pad]] {permutation_map = #[[perm_map]]} : memref<100x100xf32>, vector<2x8xf32>
+// CHECK-NEXT:     vector.transfer_read %[[buf]][%[[i0]], %[[i1]]], %[[pad]] : memref<100x100xf32>, vector<2x8xf32>
     }
   }
   return
@@ -97,7 +92,6 @@ func @vector_load_2d() {
 
 // -----
 
-// CHECK: #[[perm_map:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @vector_store_2d
 func @vector_store_2d() {
   %0 = alloc() : memref<100x100xf32>
@@ -109,7 +103,7 @@ func @vector_store_2d() {
 // CHECK:      %[[val:.*]] = constant dense
 // CHECK:      scf.for %[[i0:.*]] =
 // CHECK:        scf.for %[[i1:.*]] =
-// CHECK-NEXT:     vector.transfer_write  %[[val]], %[[buf]][%[[i0]], %[[i1]]] {permutation_map = #[[perm_map]]} : vector<2x8xf32>, memref<100x100xf32>
+// CHECK-NEXT:     vector.transfer_write  %[[val]], %[[buf]][%[[i0]], %[[i1]]] : vector<2x8xf32>, memref<100x100xf32>
     }
   }
   return
