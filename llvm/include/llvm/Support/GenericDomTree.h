@@ -283,11 +283,27 @@ protected:
   DominatorTreeBase(const DominatorTreeBase &) = delete;
   DominatorTreeBase &operator=(const DominatorTreeBase &) = delete;
 
-  /// getRoots - Return the root blocks of the current CFG.  This may include
-  /// multiple blocks if we are computing post dominators.  For forward
-  /// dominators, this will always be a single block (the entry node).
+  /// Iteration over roots.
   ///
-  const SmallVectorImpl<NodeT *> &getRoots() const { return Roots; }
+  /// This may include multiple blocks if we are computing post dominators.
+  /// For forward dominators, this will always be a single block (the entry
+  /// block).
+  using root_iterator = typename SmallVectorImpl<NodeT *>::iterator;
+  using const_root_iterator = typename SmallVectorImpl<NodeT *>::const_iterator;
+
+  root_iterator root_begin() { return Roots.begin(); }
+  const_root_iterator root_begin() const { return Roots.begin(); }
+  root_iterator root_end() { return Roots.end(); }
+  const_root_iterator root_end() const { return Roots.end(); }
+
+  size_t root_size() const { return Roots.size(); }
+
+  iterator_range<root_iterator> roots() {
+    return make_range(root_begin(), root_end());
+  }
+  iterator_range<const_root_iterator> roots() const {
+    return make_range(root_begin(), root_end());
+  }
 
   /// isPostDominator - Returns true if analysis based of postdoms
   ///

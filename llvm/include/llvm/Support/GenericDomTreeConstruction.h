@@ -1372,7 +1372,7 @@ struct SemiNCAInfo {
     if (!DT.DFSInfoValid || !DT.Parent)
       return true;
 
-    const NodePtr RootBB = IsPostDom ? nullptr : DT.getRoots()[0];
+    const NodePtr RootBB = IsPostDom ? nullptr : *DT.root_begin();
     const TreeNodePtr Root = DT.getNode(RootBB);
 
     auto PrintNodeAndDFSNums = [](const TreeNodePtr TN) {

@@ -41,10 +41,6 @@ public:
 
   FunctionPass *createMachinePostDominatorTreePass();
 
-  const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
-    return PDT->getRoots();
-  }
-
   MachineDomTreeNode *getRootNode() const { return PDT->getRootNode(); }
 
   MachineDomTreeNode *operator[](MachineBasicBlock *BB) const {
