@@ -430,20 +430,78 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
 
   // Now we need to prove that adding IdxDiff to ValA won't overflow.
   bool Safe = false;
+  auto CheckFlags = [](Instruction *I, bool Signed) {
+    BinaryOperator *BinOpI = cast<BinaryOperator>(I);
+    return (Signed && BinOpI->hasNoSignedWrap()) ||
+           (!Signed && BinOpI->hasNoUnsignedWrap());
+  };
+
   // First attempt: if OpB is an add with NSW/NUW, and OpB is IdxDiff added to
   // ValA, we're okay.
   if (OpB->getOpcode() == Instruction::Add &&
       isa<ConstantInt>(OpB->getOperand(1)) &&
-      IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue())) {
-    if (Signed)
-      Safe = cast<BinaryOperator>(OpB)->hasNoSignedWrap();
-    else
-      Safe = cast<BinaryOperator>(OpB)->hasNoUnsignedWrap();
+      IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue()) &&
+      CheckFlags(OpB, Signed))
+    Safe = true;
+
+  // Second attempt: If both OpA and OpB is an add with NSW/NUW and with
+  // the same LHS operand, we can guarantee that the transformation is safe
+  // if we can prove that OpA won't overflow when IdxDiff added to the RHS
+  // of OpA.
+  // For example:
+  //  %tmp7 = add nsw i32 %tmp2, %v0
+  //  %tmp8 = sext i32 %tmp7 to i64
+  //  ...
+  //  %tmp11 = add nsw i32 %v0, 1
+  //  %tmp12 = add nsw i32 %tmp2, %tmp11
+  //  %tmp13 = sext i32 %tmp12 to i64
+  //
+  //  Both %tmp7 and %tmp2 has the nsw flag and the first operand
+  //  is %tmp2. It's guaranteed that adding 1 to %tmp7 won't overflow
+  //  because %tmp11 adds 1 to %v0 and both %tmp11 and %tmp12 has the
+  //  nsw flag.
+  OpA = dyn_cast<Instruction>(ValA);
+  if (!Safe && OpA && OpA->getOpcode() == Instruction::Add &&
+      OpB->getOpcode() == Instruction::Add &&
+      OpA->getOperand(0) == OpB->getOperand(0) && CheckFlags(OpA, Signed) &&
+      CheckFlags(OpB, Signed)) {
+    Value *RHSA = OpA->getOperand(1);
+    Value *RHSB = OpB->getOperand(1);
+    Instruction *OpRHSA = dyn_cast<Instruction>(RHSA);
+    Instruction *OpRHSB = dyn_cast<Instruction>(RHSB);
+    // Match `x +nsw/nuw y` and `x +nsw/nuw (y +nsw/nuw IdxDiff)`.
+    if (OpRHSB && OpRHSB->getOpcode() == Instruction::Add &&
+        CheckFlags(OpRHSB, Signed) && isa<ConstantInt>(OpRHSB->getOperand(1))) {
+      int64_t CstVal = cast<ConstantInt>(OpRHSB->getOperand(1))->getSExtValue();
+      if (OpRHSB->getOperand(0) == RHSA && IdxDiff.getSExtValue() == CstVal)
+        Safe = true;
+    }
+    // Match `x +nsw/nuw (y +nsw/nuw -Idx)` and `x +nsw/nuw (y +nsw/nuw x)`.
+    if (OpRHSA && OpRHSA->getOpcode() == Instruction::Add &&
+        CheckFlags(OpRHSA, Signed) && isa<ConstantInt>(OpRHSA->getOperand(1))) {
+      int64_t CstVal = cast<ConstantInt>(OpRHSA->getOperand(1))->getSExtValue();
+      if (OpRHSA->getOperand(0) == RHSB && IdxDiff.getSExtValue() == -CstVal)
+        Safe = true;
+    }
+    // Match `x +nsw/nuw (y +nsw/nuw c)` and
+    // `x +nsw/nuw (y +nsw/nuw (c + IdxDiff))`.
+    if (OpRHSA && OpRHSB && OpRHSA->getOpcode() == Instruction::Add &&
+        OpRHSB->getOpcode() == Instruction::Add && CheckFlags(OpRHSA, Signed) &&
+        CheckFlags(OpRHSB, Signed) && isa<ConstantInt>(OpRHSA->getOperand(1)) &&
+        isa<ConstantInt>(OpRHSB->getOperand(1))) {
+      int64_t CstValA =
+          cast<ConstantInt>(OpRHSA->getOperand(1))->getSExtValue();
+      int64_t CstValB =
+          cast<ConstantInt>(OpRHSB->getOperand(1))->getSExtValue();
+      if (OpRHSA->getOperand(0) == OpRHSB->getOperand(0) &&
+          IdxDiff.getSExtValue() == (CstValB - CstValA))
+        Safe = true;
+    }
   }
 
   unsigned BitWidth = ValA->getType()->getScalarSizeInBits();
 
-  // Second attempt:
+  // Third attempt:
   // If all set bits of IdxDiff or any higher order bit other than the sign bit
   // are known to be zero in ValA, we can add Diff to it while guaranteeing no
   // overflow of any sort.
