@@ -21,7 +21,9 @@ using namespace object;
 using SectionPred = std::function<bool(const std::unique_ptr<Section> &Sec)>;
 
 static Error removeSections(const CopyConfig &Config, Object &Obj) {
-  SectionPred RemovePred = [](const std::unique_ptr<Section> &) { return false; };
+  SectionPred RemovePred = [](const std::unique_ptr<Section> &) {
+    return false;
+  };
 
   if (!Config.ToRemove.empty()) {
     RemovePred = [&Config, RemovePred](const std::unique_ptr<Section> &Sec) {
