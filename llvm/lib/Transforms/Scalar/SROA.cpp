@@ -1202,7 +1202,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   // TODO: Allow recursive phi users.
   // TODO: Allow stores.
   BasicBlock *BB = PN.getParent();
-  MaybeAlign MaxAlign;
+  Align MaxAlign;
   uint64_t APWidth = DL.getIndexTypeSizeInBits(PN.getType());
   APInt MaxSize(APWidth, 0);
   bool HaveLoad = false;
@@ -1224,7 +1224,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
         return false;
 
     uint64_t Size = DL.getTypeStoreSize(LI->getType()).getFixedSize();
-    MaxAlign = std::max(MaxAlign, MaybeAlign(LI->getAlignment()));
+    MaxAlign = std::max(MaxAlign, LI->getAlign());
     MaxSize = MaxSize.ult(Size) ? APInt(APWidth, Size) : MaxSize;
     HaveLoad = true;
   }
@@ -1343,10 +1343,10 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
     // absolutely (e.g. allocas) or at this point because we can see other
     // accesses to it.
     if (!isSafeToLoadUnconditionally(TValue, LI->getType(),
-                                     MaybeAlign(LI->getAlignment()), DL, LI))
+                                     LI->getAlign(), DL, LI))
       return false;
     if (!isSafeToLoadUnconditionally(FValue, LI->getType(),
-                                     MaybeAlign(LI->getAlignment()), DL, LI))
+                                     LI->getAlign(), DL, LI))
       return false;
   }
 
