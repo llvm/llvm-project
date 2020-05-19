@@ -225,6 +225,7 @@ private:
     case Metric::Distribution:
       return "d";
     }
+    llvm_unreachable("Unknown Metric::MetricType enum");
   }
 
   static bool needsQuote(llvm::StringRef Text) {
