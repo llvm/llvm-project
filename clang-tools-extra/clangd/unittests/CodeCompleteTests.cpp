@@ -753,6 +753,19 @@ TEST(CompletionTest, CompletionInPreamble) {
   EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
 }
 
+// FIXME: enable it.
+TEST(CompletionTest, DISABLED_CompletionRecoveryASTType) {
+  auto Results = completions(R"cpp(
+    struct S { int member; };
+    S overloaded(int);
+    void foo() {
+      // No overload matches, but we have recovery-expr with the correct type.
+      overloaded().^
+    })cpp")
+                     .Completions;
+  EXPECT_THAT(Results, ElementsAre(Named("member")));
+}
+
 TEST(CompletionTest, DynamicIndexIncludeInsertion) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;

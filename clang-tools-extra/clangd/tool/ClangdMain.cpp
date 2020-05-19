@@ -289,6 +289,14 @@ opt<bool> RecoveryAST{
     init(false),
     Hidden,
 };
+opt<bool> RecoveryASTType{
+    "recovery-ast-type",
+    cat(Features),
+    desc("Preserve the type for recovery AST. Note that "
+         "this feature is experimental and may lead to crashes"),
+    init(false),
+    Hidden,
+};
 
 opt<unsigned> WorkerThreadsCount{
     "j",
@@ -641,6 +649,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.BuildRecoveryAST = RecoveryAST;
+  Opts.PreserveRecoveryASTType = RecoveryASTType;
 
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
