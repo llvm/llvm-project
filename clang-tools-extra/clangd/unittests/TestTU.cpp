@@ -57,6 +57,7 @@ ParseInputs TestTU::inputs() const {
   Inputs.FS = buildTestFS(Files);
   Inputs.Opts = ParseOptions();
   Inputs.Opts.BuildRecoveryAST = true;
+  Inputs.Opts.PreserveRecoveryASTType = true;
   Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
   Inputs.Opts.ClangTidyOpts.WarningsAsErrors = ClangTidyWarningsAsErrors;
   Inputs.Index = ExternalIndex;

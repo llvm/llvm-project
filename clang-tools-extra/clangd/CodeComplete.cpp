@@ -1069,6 +1069,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   ParseInput.CompileCommand = Input.Command;
   ParseInput.FS = VFS;
   ParseInput.Contents = std::string(Input.Contents);
+  // FIXME: setup the recoveryAST and recoveryASTType in ParseInput properly.
 
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(ParseInput, IgnoreDiags);
