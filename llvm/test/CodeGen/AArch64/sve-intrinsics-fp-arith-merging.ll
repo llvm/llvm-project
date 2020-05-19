@@ -4,8 +4,8 @@
 ; FADD
 ;
 
-define <vscale x 8 x half> @fadd_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fadd_h:
+define <vscale x 8 x half> @fadd_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fadd_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -16,8 +16,8 @@ define <vscale x 8 x half> @fadd_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fadd_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fadd_s:
+define <vscale x 4 x float> @fadd_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fadd_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -28,8 +28,8 @@ define <vscale x 4 x float> @fadd_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fadd_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fadd_d:
+define <vscale x 2 x double> @fadd_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fadd_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -44,8 +44,8 @@ define <vscale x 2 x double> @fadd_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 ; FMAX
 ;
 
-define <vscale x 8 x half> @fmax_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fmax_h:
+define <vscale x 8 x half> @fmax_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fmax_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fmax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -56,8 +56,8 @@ define <vscale x 8 x half> @fmax_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fmax_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fmax_s:
+define <vscale x 4 x float> @fmax_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fmax_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fmax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -68,8 +68,8 @@ define <vscale x 4 x float> @fmax_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fmax_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fmax_d:
+define <vscale x 2 x double> @fmax_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fmax_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fmax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -84,8 +84,8 @@ define <vscale x 2 x double> @fmax_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 ; FMAXNM
 ;
 
-define <vscale x 8 x half> @fmaxnm_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fmaxnm_h:
+define <vscale x 8 x half> @fmaxnm_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fmaxnm_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fmaxnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -96,8 +96,8 @@ define <vscale x 8 x half> @fmaxnm_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> 
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fmaxnm_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fmaxnm_s:
+define <vscale x 4 x float> @fmaxnm_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fmaxnm_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fmaxnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -108,8 +108,8 @@ define <vscale x 4 x float> @fmaxnm_s(<vscale x 4 x i1> %pg, <vscale x 4 x float
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fmaxnm_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fmaxnm_d:
+define <vscale x 2 x double> @fmaxnm_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fmaxnm_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fmaxnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -124,8 +124,8 @@ define <vscale x 2 x double> @fmaxnm_d(<vscale x 2 x i1> %pg, <vscale x 2 x doub
 ; FMIN
 ;
 
-define <vscale x 8 x half> @fmin_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fmin_h:
+define <vscale x 8 x half> @fmin_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fmin_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fmin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -136,8 +136,8 @@ define <vscale x 8 x half> @fmin_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fmin_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fmin_s:
+define <vscale x 4 x float> @fmin_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fmin_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fmin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -148,8 +148,8 @@ define <vscale x 4 x float> @fmin_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fmin_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fmin_d:
+define <vscale x 2 x double> @fmin_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fmin_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fmin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -164,8 +164,8 @@ define <vscale x 2 x double> @fmin_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 ; FMINNM
 ;
 
-define <vscale x 8 x half> @fminnm_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fminnm_h:
+define <vscale x 8 x half> @fminnm_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fminnm_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -176,8 +176,8 @@ define <vscale x 8 x half> @fminnm_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> 
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fminnm_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fminnm_s:
+define <vscale x 4 x float> @fminnm_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fminnm_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fminnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -188,8 +188,8 @@ define <vscale x 4 x float> @fminnm_s(<vscale x 4 x i1> %pg, <vscale x 4 x float
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fminnm_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fminnm_d:
+define <vscale x 2 x double> @fminnm_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fminnm_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fminnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -204,8 +204,8 @@ define <vscale x 2 x double> @fminnm_d(<vscale x 2 x i1> %pg, <vscale x 2 x doub
 ; FMUL
 ;
 
-define <vscale x 8 x half> @fmul_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fmul_h:
+define <vscale x 8 x half> @fmul_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fmul_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fmul z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -216,8 +216,8 @@ define <vscale x 8 x half> @fmul_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fmul_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fmul_s:
+define <vscale x 4 x float> @fmul_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fmul_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fmul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -228,8 +228,8 @@ define <vscale x 4 x float> @fmul_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fmul_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fmul_d:
+define <vscale x 2 x double> @fmul_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fmul_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fmul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -244,8 +244,8 @@ define <vscale x 2 x double> @fmul_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 ; FSUB
 ;
 
-define <vscale x 8 x half> @fsub_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fsub_h:
+define <vscale x 8 x half> @fsub_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fsub_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fsub z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -256,8 +256,8 @@ define <vscale x 8 x half> @fsub_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fsub_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fsub_s:
+define <vscale x 4 x float> @fsub_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fsub_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fsub z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -268,8 +268,8 @@ define <vscale x 4 x float> @fsub_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fsub_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fsub_d:
+define <vscale x 2 x double> @fsub_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fsub_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fsub z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
@@ -284,8 +284,8 @@ define <vscale x 2 x double> @fsub_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 ; FSUBR
 ;
 
-define <vscale x 8 x half> @fsubr_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
-; CHECK-LABEL: fsubr_h:
+define <vscale x 8 x half> @fsubr_h_zero(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
+; CHECK-LABEL: fsubr_h_zero:
 ; CHECK:      movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT: fsubr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT: ret
@@ -296,8 +296,8 @@ define <vscale x 8 x half> @fsubr_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x float> @fsubr_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
-; CHECK-LABEL: fsubr_s:
+define <vscale x 4 x float> @fsubr_s_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fsubr_s_zero:
 ; CHECK:      movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT: fsubr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT: ret
@@ -308,8 +308,8 @@ define <vscale x 4 x float> @fsubr_s(<vscale x 4 x i1> %pg, <vscale x 4 x float>
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x double> @fsubr_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
-; CHECK-LABEL: fsubr_d:
+define <vscale x 2 x double> @fsubr_d_zero(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
+; CHECK-LABEL: fsubr_d_zero:
 ; CHECK:      movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT: fsubr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT: ret
