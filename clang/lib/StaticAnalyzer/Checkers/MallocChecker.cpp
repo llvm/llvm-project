@@ -2371,13 +2371,7 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallExpr *CE,
   if (PrtIsNull && SizeIsZero)
     return State;
 
-  // Get the from and to pointer symbols as in toPtr = realloc(fromPtr, size).
   assert(!PrtIsNull);
-  SymbolRef FromPtr = arg0Val.getAsSymbol();
-  SVal RetVal = C.getSVal(CE);
-  SymbolRef ToPtr = RetVal.getAsSymbol();
-  if (!FromPtr || !ToPtr)
-    return nullptr;
 
   bool IsKnownToBeAllocated = false;
 
@@ -2405,6 +2399,14 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallExpr *CE,
       Kind = OAR_FreeOnFailure;
     else if (!IsKnownToBeAllocated)
       Kind = OAR_DoNotTrackAfterFailure;
+
+    // Get the from and to pointer symbols as in toPtr = realloc(fromPtr, size).
+    SymbolRef FromPtr = arg0Val.getAsSymbol();
+    SVal RetVal = C.getSVal(CE);
+    SymbolRef ToPtr = RetVal.getAsSymbol();
+    assert(FromPtr && ToPtr &&
+           "By this point, FreeMemAux and MallocMemAux should have checked "
+           "whether the argument or the return value is symbolic!");
 
     // Record the info about the reallocated symbol so that we could properly
     // process failed reallocation.
