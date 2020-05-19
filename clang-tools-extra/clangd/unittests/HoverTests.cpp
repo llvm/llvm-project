@@ -1737,6 +1737,19 @@ TEST(Hover, All) {
             HI.Definition = "template <> void foo<int>(const int &)";
             HI.NamespaceScope = "";
           }},
+      {
+          R"cpp(// should not crash
+           @interface ObjC {
+             char [[da^ta]];
+           }@end
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "data";
+            HI.Type = "char";
+            HI.Kind = index::SymbolKind::Field;
+            HI.NamespaceScope = "ObjC::"; // FIXME: fix it
+            HI.Definition = "char data";
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
@@ -1753,6 +1766,8 @@ TEST(Hover, All) {
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
+    TU.ExtraArgs.push_back("-xobjective-c++");
+
     TU.ExtraArgs.push_back("-Wno-gnu-designator");
     // Types might be different depending on the target triplet, we chose a
     // fixed one to make sure tests passes on different platform.
