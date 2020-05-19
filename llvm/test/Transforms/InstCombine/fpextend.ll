@@ -309,11 +309,12 @@ define double @ItoFtoF_u25_f32_f64(i25 %i) {
   ret double %r
 }
 
+; UB on overflow guarantees that the input is small enough to fit in i32.
+
 define double @FtoItoFtoF_f32_s32_f32_f64(float %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f32_s32_f32_f64(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i32
-; CHECK-NEXT:    [[X:%.*]] = sitofp i32 [[I]] to float
-; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = fptosi float %f to i32
@@ -333,7 +334,7 @@ define double @FtoItoFtoF_f32_u32_f32_f64_extra_uses(float %f) {
 ; CHECK-NEXT:    call void @use_i32(i32 [[I]])
 ; CHECK-NEXT:    [[X:%.*]] = uitofp i32 [[I]] to float
 ; CHECK-NEXT:    call void @use_f32(float [[X]])
-; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp i32 [[I]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = fptoui float %f to i32
@@ -349,8 +350,7 @@ define double @FtoItoFtoF_f32_u32_f32_f64_extra_uses(float %f) {
 define <3 x double> @FtoItoFtoF_v3f16_v3s32_v3f32_v3f64(<3 x half> %f) {
 ; CHECK-LABEL: @FtoItoFtoF_v3f16_v3s32_v3f32_v3f64(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi <3 x half> [[F:%.*]] to <3 x i32>
-; CHECK-NEXT:    [[X:%.*]] = sitofp <3 x i32> [[I]] to <3 x float>
-; CHECK-NEXT:    [[R:%.*]] = fpext <3 x float> [[X]] to <3 x double>
+; CHECK-NEXT:    [[R:%.*]] = sitofp <3 x i32> [[I]] to <3 x double>
 ; CHECK-NEXT:    ret <3 x double> [[R]]
 ;
   %i = fptosi <3 x half> %f to <3 x i32>
@@ -359,11 +359,12 @@ define <3 x double> @FtoItoFtoF_v3f16_v3s32_v3f32_v3f64(<3 x half> %f) {
   ret <3 x double> %r
 }
 
+; Wider than double is ok.
+
 define fp128 @FtoItoFtoF_f32_s64_f64_f128(float %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f32_s64_f64_f128(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i64
-; CHECK-NEXT:    [[X:%.*]] = sitofp i64 [[I]] to double
-; CHECK-NEXT:    [[R:%.*]] = fpext double [[X]] to fp128
+; CHECK-NEXT:    [[R:%.*]] = sitofp i64 [[I]] to fp128
 ; CHECK-NEXT:    ret fp128 [[R]]
 ;
   %i = fptosi float %f to i64
@@ -372,11 +373,12 @@ define fp128 @FtoItoFtoF_f32_s64_f64_f128(float %f) {
   ret fp128 %r
 }
 
+; Target-specific type is ok.
+
 define x86_fp80 @FtoItoFtoF_f64_u54_f64_f80(double %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f64_u54_f64_f80(
 ; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i54
-; CHECK-NEXT:    [[X:%.*]] = uitofp i54 [[I]] to double
-; CHECK-NEXT:    [[R:%.*]] = fpext double [[X]] to x86_fp80
+; CHECK-NEXT:    [[R:%.*]] = uitofp i54 [[I]] to x86_fp80
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %i = fptoui double %f to i54
@@ -385,11 +387,12 @@ define x86_fp80 @FtoItoFtoF_f64_u54_f64_f80(double %f) {
   ret x86_fp80 %r
 }
 
+; Weird target-specific type is ok (not possible to extend *from* that type).
+
 define ppc_fp128 @FtoItoFtoF_f64_u54_f64_p128(double %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f64_u54_f64_p128(
 ; CHECK-NEXT:    [[I:%.*]] = fptoui double [[F:%.*]] to i54
-; CHECK-NEXT:    [[X:%.*]] = uitofp i54 [[I]] to double
-; CHECK-NEXT:    [[R:%.*]] = fpext double [[X]] to ppc_fp128
+; CHECK-NEXT:    [[R:%.*]] = uitofp i54 [[I]] to ppc_fp128
 ; CHECK-NEXT:    ret ppc_fp128 [[R]]
 ;
   %i = fptoui double %f to i54
@@ -398,11 +401,12 @@ define ppc_fp128 @FtoItoFtoF_f64_u54_f64_p128(double %f) {
   ret ppc_fp128 %r
 }
 
+; Unsigned to signed is ok because signed int has smaller magnitude.
+
 define double @FtoItoFtoF_f32_us32_f32_f64(float %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f32_us32_f32_f64(
 ; CHECK-NEXT:    [[I:%.*]] = fptoui float [[F:%.*]] to i32
-; CHECK-NEXT:    [[X:%.*]] = sitofp i32 [[I]] to float
-; CHECK-NEXT:    [[R:%.*]] = fpext float [[X]] to double
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %i = fptoui float %f to i32
@@ -410,6 +414,8 @@ define double @FtoItoFtoF_f32_us32_f32_f64(float %f) {
   %r = fpext float %x to double
   ret double %r
 }
+
+; Negative test: consider -1.0
 
 define double @FtoItoFtoF_f32_su32_f32_f64(float %f) {
 ; CHECK-LABEL: @FtoItoFtoF_f32_su32_f32_f64(
