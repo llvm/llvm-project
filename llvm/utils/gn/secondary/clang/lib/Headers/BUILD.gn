@@ -105,7 +105,6 @@ copy("Headers") {
     "avxintrin.h",
     "bmi2intrin.h",
     "bmiintrin.h",
-    "cet.h",
     "cetintrin.h",
     "cldemoteintrin.h",
     "clflushoptintrin.h",
