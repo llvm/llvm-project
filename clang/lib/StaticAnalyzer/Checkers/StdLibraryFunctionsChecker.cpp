@@ -568,21 +568,6 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
   return findFunctionSummary(FD, C);
 }
 
-llvm::Optional<const FunctionDecl *>
-lookupGlobalCFunction(StringRef Name, const ASTContext &ACtx) {
-  IdentifierInfo &II = ACtx.Idents.get(Name);
-  auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
-  if (LookupRes.size() == 0)
-    return None;
-
-  assert(LookupRes.size() == 1 && "In C, identifiers should be unique");
-  Decl *D = LookupRes.front()->getCanonicalDecl();
-  auto *FD = dyn_cast<FunctionDecl>(D);
-  if (!FD)
-    return None;
-  return FD->getCanonicalDecl();
-}
-
 void StdLibraryFunctionsChecker::initFunctionSummaries(
     CheckerContext &C) const {
   if (!FunctionSummaryMap.empty())

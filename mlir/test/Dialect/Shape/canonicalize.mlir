@@ -86,3 +86,23 @@ func @f() -> tensor<2xindex> {
   %0 = "shape.to_extent_tensor"(%cs) : (!shape.shape) -> tensor<2xindex>
   return %0 : tensor<2xindex>
 }
+
+// -----
+// Basic case.
+// CHECK-LABEL: func @f()
+func @f() -> !shape.shape {
+  // CHECK: shape.const_shape [3, 5, 11]
+  %e0 = constant 3 : index
+  %e1 = constant 5 : index
+  %e2 = constant 11 : index
+  %ret = shape.from_extents %e0, %e1, %e2
+  return %ret : !shape.shape
+}
+
+// CHECK-LABEL: func @no_fold
+func @no_fold(%arg0: index) -> !shape.shape {
+  // CHECK-NOT: shape.const_shape
+  %e0 = constant 3 : index
+  %ret = shape.from_extents %e0, %arg0
+  return %ret : !shape.shape
+}

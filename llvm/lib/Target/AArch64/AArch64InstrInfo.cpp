@@ -6106,6 +6106,10 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   if (!AFI || AFI->hasRedZone().getValueOr(true))
     return false;
 
+  // FIXME: Teach the outliner to generate/handle Windows unwind info.
+  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+    return false;
+
   // It's safe to outline from MF.
   return true;
 }

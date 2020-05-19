@@ -35,6 +35,7 @@ using namespace mlir::edsc::intrinsics;
 using vector::TransferReadOp;
 using vector::TransferWriteOp;
 
+namespace {
 /// Helper class captures the common information needed to lower N>1-D vector
 /// transfer operations (read and write).
 /// On construction, this class opens an edsc::ScopedContext for simpler IR
@@ -132,6 +133,7 @@ private:
   VectorType minorVectorType; // vector<(minor_dims) x type>
   MemRefType memRefMinorVectorType; // memref<vector<(minor_dims) x type>>
 };
+} // namespace
 
 template <typename ConcreteOp>
 template <typename Lambda>

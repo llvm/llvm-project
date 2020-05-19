@@ -447,6 +447,7 @@ PreservedAnalyses AssumeSimplifyPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
+namespace {
 class AssumeSimplifyPassLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -469,6 +470,7 @@ public:
     AU.setPreservesAll();
   }
 };
+} // namespace
 
 char AssumeSimplifyPassLegacyPass::ID = 0;
 

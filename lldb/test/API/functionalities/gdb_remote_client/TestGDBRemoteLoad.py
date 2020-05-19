@@ -17,6 +17,7 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
         self.assertTrue(address.IsValid())
         self.assertEqual(".data", address.GetSection().GetName())
 
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_ram_load(self):
         """Test loading an object file to a target's ram"""
         target = self.createTarget("a.yaml")
@@ -28,6 +29,7 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
                 ])
 
     @skipIfXmlSupportMissing
+    @skipIfReproducer # Packet log is not populated during replay.
     def test_flash_load(self):
         """Test loading an object file to a target's flash memory"""
 
