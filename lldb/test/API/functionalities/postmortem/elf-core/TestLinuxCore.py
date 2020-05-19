@@ -38,29 +38,34 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_aarch64(self):
         """Test that lldb can read the process information from an aarch64 linux core file."""
         self.do_test("linux-aarch64", self._aarch64_pid, self._aarch64_regions, "a.out")
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid, self._i386_regions, "a.out")
 
     @skipIfLLVMTargetMissing("Mips")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_mips_o32(self):
         """Test that lldb can read the process information from an MIPS O32 linux core file."""
         self.do_test("linux-mipsel-gnuabio32", self._mips_o32_pid,
                 self._mips_regions, "linux-mipsel-gn")
 
     @skipIfLLVMTargetMissing("Mips")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_mips_n32(self):
         """Test that lldb can read the process information from an MIPS N32 linux core file """
         self.do_test("linux-mips64el-gnuabin32", self._mips64_n32_pid,
                 self._mips_regions, "linux-mips64el-")
 
     @skipIfLLVMTargetMissing("Mips")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_mips_n64(self):
         """Test that lldb can read the process information from an MIPS N64 linux core file """
         self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid,
@@ -68,6 +73,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("PowerPC")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_ppc64le(self):
         """Test that lldb can read the process information from an ppc64le linux core file."""
         self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions,
@@ -75,6 +81,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
@@ -82,6 +89,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("SystemZ")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
         self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions,
@@ -89,6 +97,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
@@ -117,6 +126,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID
         around"""
@@ -197,6 +207,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_i386_sysroot(self):
         """Test that lldb can find the exe for an i386 linux core file using the sysroot."""
 
@@ -221,6 +232,7 @@ class LinuxCoreTestCase(TestBase):
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_x86_64_sysroot(self):
         """Test that sysroot has more priority then local filesystem."""
 
