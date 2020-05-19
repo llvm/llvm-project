@@ -43,7 +43,8 @@
 // The current implementation does not support loops and the resulting code will
 // be invalid with respect to program semantics. The only thing that is
 // currently missing is a high-level loop analysis that allows us to move allocs
-// and deallocs outside of the loop blocks.
+// and deallocs outside of the loop blocks. Furthermore, it doesn't also accept
+// functions which return buffers already.
 //
 //===----------------------------------------------------------------------===//
 
@@ -429,19 +430,39 @@ LogicalResult FunctionAndBlockSignatureConverter::matchAndRewrite(
                      "FunctionAndBlockSignatureConverter");
     return failure();
   }
-  // Converting shaped type arguments to memref type.
   auto funcType = funcOp.getType();
+  TypeRange resultTypes = funcType.getResults();
+  if (llvm::any_of(resultTypes,
+                   [](Type type) { return type.isa<MemRefType>(); }))
+    return funcOp.emitError("BufferAssignmentPlacer doesn't currently support "
+                            "functions which return memref typed values");
+
+  // Convert function arguments using the provided TypeConverter.
   TypeConverter::SignatureConversion conversion(funcType.getNumInputs());
   for (auto argType : llvm::enumerate(funcType.getInputs()))
     conversion.addInputs(argType.index(),
                          converter->convertType(argType.value()));
-  // Adding function results to the arguments of the converted function as
-  // memref type. The converted function will be a void function.
-  for (Type resType : funcType.getResults())
-    conversion.addInputs(converter->convertType((resType)));
+
+  // Adding a function argument for each function result which is going to be a
+  // memref type after type conversion.
+  SmallVector<Type, 2> newResultTypes;
+  newResultTypes.reserve(funcOp.getNumResults());
+  for (Type resType : resultTypes) {
+    Type convertedType = converter->convertType(resType);
+
+    // If the result type is memref after the type conversion, a new argument
+    // should be appended to the function arguments list for this result.
+    // Otherwise, it remains unchanged as a function result.
+    if (convertedType.isa<MemRefType>())
+      conversion.addInputs(convertedType);
+    else
+      newResultTypes.push_back(convertedType);
+  }
+
+  // Update the signature of the function.
   rewriter.updateRootInPlace(funcOp, [&] {
-    funcOp.setType(
-        rewriter.getFunctionType(conversion.getConvertedTypes(), llvm::None));
+    funcOp.setType(rewriter.getFunctionType(conversion.getConvertedTypes(),
+                                            newResultTypes));
     rewriter.applySignatureConversion(&funcOp.getBody(), conversion);
   });
   return success();
