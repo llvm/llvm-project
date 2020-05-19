@@ -12,6 +12,7 @@ ifneq "$(CODESIGN)" ""
 endif
 
 lib%.dylib: %.swift
+	mkdir -p $(BUILDDIR)/$(shell basename $< .swift)
 	$(MAKE) MAKE_DSYM=YES X=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_NAME=$(shell basename $< .swift) \
