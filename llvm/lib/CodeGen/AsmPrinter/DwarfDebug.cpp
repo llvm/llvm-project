@@ -1271,8 +1271,7 @@ void DwarfDebug::finalizeModuleInfo() {
 
     // We don't keep track of which addresses are used in which CU so this
     // is a bit pessimistic under LTO.
-    if ((!AddrPool.isEmpty() || TheCU.hasRangeLists()) &&
-        (getDwarfVersion() >= 5 || HasSplitUnit))
+    if ((HasSplitUnit || getDwarfVersion() >= 5) && !AddrPool.isEmpty())
       U.addAddrTableBase();
 
     if (getDwarfVersion() >= 5) {
@@ -3271,5 +3270,7 @@ const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
   return SectionLabels.find(S)->second;
 }
 void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
-  SectionLabels.insert(std::make_pair(&S->getSection(), S));
+  if (SectionLabels.insert(std::make_pair(&S->getSection(), S)).second)
+    if (useSplitDwarf() || getDwarfVersion() >= 5)
+      AddrPool.getIndex(S);
 }
