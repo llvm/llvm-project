@@ -595,7 +595,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 }
 
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
-void CodeGenPrepare::verifyBFIUpdates(Function &F) {
+void LLVM_ATTRIBUTE_UNUSED CodeGenPrepare::verifyBFIUpdates(Function &F) {
   DominatorTree NewDT(F);
   LoopInfo NewLI(NewDT);
   BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
