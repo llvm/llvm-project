@@ -188,15 +188,15 @@ Range1_end:
 # CHECK:      Compile Unit: 
 # CHECK-NOT:  Compile Unit:
 # CHECK:      DW_TAG_compile_unit
-# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000014)
-# CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000024
+# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000000000014)
+# CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x0000000000000024
 # CHECK-NEXT: [0x00000014, 0x0000001e) ".text"
 # CHECK-NEXT: [0x0000002a, 0x00000034) ".text")
 
 # CHECK:      Compile Unit:
 # CHECK-NOT:  Compile Unit:
 # CHECK:      DW_TAG_compile_unit
-# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000014)
+# CHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000000000014)
 # CHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000034
 # CHECK-NEXT: [0x0000002a, 0x00000034) ".text")
 
