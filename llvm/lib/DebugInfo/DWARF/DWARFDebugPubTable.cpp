@@ -28,9 +28,9 @@ DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
     Sets.push_back({});
     Set &SetData = Sets.back();
 
-    dwarf::DwarfFormat Format;
-    std::tie(SetData.Length, Format) = PubNames.getInitialLength(&Offset);
-    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(Format);
+    std::tie(SetData.Length, SetData.Format) =
+        PubNames.getInitialLength(&Offset);
+    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(SetData.Format);
 
     SetData.Version = PubNames.getU16(&Offset);
     SetData.Offset = PubNames.getRelocatedValue(OffsetSize, &Offset);
@@ -50,15 +50,18 @@ DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
 
 void DWARFDebugPubTable::dump(raw_ostream &OS) const {
   for (const Set &S : Sets) {
-    OS << "length = " << format("0x%08" PRIx64, S.Length);
+    int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(S.Format);
+    OS << "length = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Length);
     OS << " version = " << format("0x%04x", S.Version);
-    OS << " unit_offset = " << format("0x%08" PRIx64, S.Offset);
-    OS << " unit_size = " << format("0x%08" PRIx64, S.Size) << '\n';
+    OS << " unit_offset = "
+       << format("0x%0*" PRIx64, OffsetDumpWidth, S.Offset);
+    OS << " unit_size = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Size)
+       << '\n';
     OS << (GnuStyle ? "Offset     Linkage  Kind     Name\n"
                     : "Offset     Name\n");
 
     for (const Entry &E : S.Entries) {
-      OS << format("0x%8.8" PRIx64 " ", E.SecOffset);
+      OS << format("0x%0*" PRIx64 " ", OffsetDumpWidth, E.SecOffset);
       if (GnuStyle) {
         StringRef EntryLinkage =
             GDBIndexEntryLinkageString(E.Descriptor.Linkage);
