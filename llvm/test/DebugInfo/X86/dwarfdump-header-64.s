@@ -153,11 +153,11 @@ LH_5_end:
 
 # CHECK-LABEL: .debug_line contents:
 # CHECK: Line table prologue:
-# CHECK: total_length: 0x00000050
+# CHECK: total_length: 0x0000000000000050
 # CHECK: version: 5
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
-# CHECK: prologue_length: 0x00000044
+# CHECK: prologue_length: 0x0000000000000044
 # CHECK: max_ops_per_inst: 1
 # CHECK: include_directories[  0] = .debug_str[0x0000000000000028] = "Directory5a"
 # CHECK: include_directories[  1] = .debug_str[0x0000000000000034] = "Directory5b"
