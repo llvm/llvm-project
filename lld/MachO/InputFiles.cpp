@@ -323,6 +323,7 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
                 ": could not get the buffer for the member defining symbol " +
                 sym.getName());
   auto file = make<ObjFile>(mb);
+  symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
   sections.insert(sections.end(), file->sections.begin(), file->sections.end());
 }
 
