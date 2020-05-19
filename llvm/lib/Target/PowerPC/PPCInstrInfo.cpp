@@ -245,6 +245,14 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
   NewMI2.clearFlag(MachineInstr::MIFlag::IsExact);
 }
 
+void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
+                                         uint16_t Flags) const {
+  MI.setFlags(Flags);
+  MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MI.clearFlag(MachineInstr::MIFlag::IsExact);
+}
+
 // This function does not list all associative and commutative operations, but
 // only those worth feeding through the machine combiner in an attempt to
 // reduce the critical path. Mostly, this means floating-point operations,
