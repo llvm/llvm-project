@@ -168,7 +168,7 @@ class LCMain : public LoadCommand {
     auto *c = reinterpret_cast<entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
-    c->entryoff = config->entry->getVA() - ImageBase;
+    c->entryoff = config->entry->getFileOffset();
     c->stacksize = 0;
   }
 };
