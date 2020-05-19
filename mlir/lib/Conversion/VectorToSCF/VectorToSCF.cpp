@@ -187,15 +187,15 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
                 MemRefBoundsCapture &memrefBounds) {
     // If in-bounds, index into memref and lower to 1-D transfer read.
     auto thenBlockBuilder = [&](ValueRange majorIvsPlusOffsets) {
-      auto map = AffineMap::getMinorIdentityMap(
-          xferOp.getMemRefType().getRank(), minorRank, xferOp.getContext());
-      // Lower to 1-D vector_transfer_read and let recursion handle it.
-      Value memref = xferOp.memref();
       SmallVector<Value, 8> indexing;
       indexing.reserve(leadingRank + majorRank + minorRank);
       indexing.append(leadingOffsets.begin(), leadingOffsets.end());
       indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
       indexing.append(minorOffsets.begin(), minorOffsets.end());
+      // Lower to 1-D vector_transfer_read and let recursion handle it.
+      Value memref = xferOp.memref();
+      auto map = TransferReadOp::getTransferMinorIdentityMap(
+          xferOp.getMemRefType(), minorVectorType);
       auto loaded1D =
           vector_transfer_read(minorVectorType, memref, indexing,
                                AffineMapAttr::get(map), xferOp.padding());
@@ -230,14 +230,15 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
                 MemRefBoundsCapture &memrefBounds) {
     auto thenBlockBuilder = [&](ValueRange majorIvsPlusOffsets) {
       // Lower to 1-D vector_transfer_write and let recursion handle it.
-      Value loaded1D = std_load(alloc, majorIvs);
-      auto map = AffineMap::getMinorIdentityMap(
-          xferOp.getMemRefType().getRank(), minorRank, xferOp.getContext());
       SmallVector<Value, 8> indexing;
       indexing.reserve(leadingRank + majorRank + minorRank);
       indexing.append(leadingOffsets.begin(), leadingOffsets.end());
       indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
       indexing.append(minorOffsets.begin(), minorOffsets.end());
+      // Lower to 1-D vector_transfer_write and let recursion handle it.
+      Value loaded1D = std_load(alloc, majorIvs);
+      auto map = TransferWriteOp::getTransferMinorIdentityMap(
+          xferOp.getMemRefType(), minorVectorType);
       vector_transfer_write(loaded1D, xferOp.memref(), indexing,
                             AffineMapAttr::get(map));
     };

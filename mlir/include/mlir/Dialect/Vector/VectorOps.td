@@ -863,6 +863,18 @@ def Vector_ExtractStridedSliceOp :
   let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
 }
 
+def Vector_TransferOpUtils {
+  code extraTransferDeclaration = [{
+    static StringRef getPermutationMapAttrName() { return "permutation_map"; }
+    MemRefType getMemRefType() {
+      return memref().getType().cast<MemRefType>();
+    }
+    VectorType getVectorType() {
+      return vector().getType().cast<VectorType>();
+    }
+  }];
+}
+
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read">,
     Arguments<(ins AnyMemRef:$memref, Variadic<Index>:$indices,
@@ -884,15 +896,21 @@ def Vector_TransferReadOp :
     supplied as the operands `2 .. 1 + rank(memref)`. The permutation_map
     [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
-    slice to match the vector shape. The size of the slice is specified by the
-    size of the vector, given as the return type. An `ssa-value` of the same
-    elemental type as the MemRef is provided as the last operand to specify
-    padding in the case of out-of-bounds accesses. This operation is called
-    'read' by opposition to 'load' because the super-vector granularity is
-    generally not representable with a single hardware register.
-    A `vector.transfer_read` is thus a mid-level
-    abstraction that supports super-vectorization with non-effecting padding for
-    full-tile-only code.
+    slice to match the vector shape. The permutation map may be implicit and
+    ommitted from parsing and printing if it is the canonical minor identity map
+    (i.e. if it does not permute or broadcast any dimension).
+
+    The size of the slice is specified by the size of the vector, given as the
+    return type.
+
+    An `ssa-value` of the same elemental type as the MemRef is provided as the
+    last operand to specify padding in the case of out-of-bounds accesses.
+
+    This operation is called 'read' by opposition to 'load' because the
+    super-vector granularity is generally not representable with a single
+    hardware register. A `vector.transfer_read` is thus a mid-level abstraction
+    that supports super-vectorization with non-effecting padding for full-tile
+    only operations.
 
     More precisely, let's dive deeper into the permutation_map for the following
     MLIR:
@@ -995,19 +1013,25 @@ def Vector_TransferReadOp :
   }];
 
   let builders = [
-    // Builder that sets permutation map and padding to 'getMinorIdentityMap'
-    // and zero, respectively, by default.
+    // Builder that sets padding to zero.
+    OpBuilder<"OpBuilder &builder, OperationState &result, VectorType vector, "
+              "Value memref, ValueRange indices, AffineMap permutationMap">,
+    // Builder that sets permutation map (resp. padding) to
+    // 'getMinorIdentityMap' (resp. zero).
     OpBuilder<"OpBuilder &builder, OperationState &result, VectorType vector, "
               "Value memref, ValueRange indices">
   ];
 
-  let extraClassDeclaration = [{
-    MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
-    }
-    VectorType getVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
+  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
+  [{
+    /// Build the default minor identity map suitable for a vector transfer.
+    /// This also handles the case memref<... x vector<...>> -> vector<...> in
+    /// which the rank of the identity map must take the vector element type
+    /// into account.
+    static AffineMap getTransferMinorIdentityMap(
+      MemRefType memRefType, VectorType vectorType) {
+        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
+      }
   }];
 }
 
@@ -1033,10 +1057,15 @@ def Vector_TransferWriteOp :
     supplied as the operands `3 .. 2 + rank(memref)`.
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
-    slice to match the vector shape. The size of the slice is specified by the
-    size of the vector. This operation is called 'write' by opposition to
-    'store' because the super-vector granularity is generally not representable
-    with a single hardware register. A `vector.transfer_write` is thus a
+    slice to match the vector shape. The permutation map may be implicit and
+    ommitted from parsing and printing if it is the canonical minor identity map
+    (i.e. if it does not permute or broadcast any dimension).
+
+    The size of the slice is specified by the size of the vector.
+
+    This operation is called 'write' by opposition to 'store' because the
+    super-vector granularity is generally not representable with a single
+    hardware register. A `vector.transfer_write` is thus a
     mid-level abstraction that supports super-vectorization with non-effecting
     padding for full-tile-only code. It is the responsibility of
     `vector.transfer_write`'s implementation to ensure the memory writes are
@@ -1066,23 +1095,21 @@ def Vector_TransferWriteOp :
   }];
 
   let builders = [
-    // Builder that sets permutation map and padding to 'getMinorIdentityMap'
-    // by default.
+    // Builder that sets permutation map to 'getMinorIdentityMap'.
     OpBuilder<"OpBuilder &builder, OperationState &result, Value vector, "
               "Value memref, ValueRange indices">
   ];
 
-  let extraClassDeclaration = [{
-    VectorType getVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
-    MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
-    }
-  }];
-  let assemblyFormat = [{
-    $vector `,` $memref `[` $indices `]` attr-dict `:` type($vector) `,`
-    type($memref)
+  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
+  [{
+    /// Build the default minor identity map suitable for a vector transfer.
+    /// This also handles the case memref<... x vector<...>> -> vector<...> in
+    /// which the rank of the identity map must take the vector element type
+    /// into account.
+    static AffineMap getTransferMinorIdentityMap(
+      MemRefType memRefType, VectorType vectorType) {
+        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
+      }
   }];
 }
 
