@@ -129,7 +129,7 @@ ELFDumper<ELFT>::getUniquedSectionName(const Elf_Shdr *Sec) {
 
   auto It = UsedSectionNames.insert({Name, 0});
   if (!It.second)
-    Ret = (Name + " [" + Twine(++It.first->second) + "]").str();
+    Ret = ELFYAML::appendUniqueSuffix(Name, Twine(++It.first->second));
   else
     Ret = std::string(Name);
   return Ret;
@@ -161,7 +161,7 @@ ELFDumper<ELFT>::getUniquedSymbolName(const Elf_Sym *Sym, StringRef StrTable,
     auto It = UsedSymbolNames.insert({Name, 0});
     if (!It.second)
       SymbolNames[Index] =
-          (Name + " [" + Twine(++It.first->second) + "]").str();
+          ELFYAML::appendUniqueSuffix(Name, Twine(++It.first->second));
     else
       SymbolNames[Index] = std::string(Name);
     return SymbolNames[Index];

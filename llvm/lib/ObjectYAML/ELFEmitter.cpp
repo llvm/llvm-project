@@ -401,8 +401,19 @@ bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
   return true;
 }
 
+constexpr StringRef SuffixStart = " (";
+constexpr char SuffixEnd = ')';
+
+std::string llvm::ELFYAML::appendUniqueSuffix(StringRef Name,
+                                              const Twine &Msg) {
+  return (Name + SuffixStart + Msg + Twine(SuffixEnd)).str();
+}
+
 StringRef llvm::ELFYAML::dropUniqueSuffix(StringRef S) {
-  size_t SuffixPos = S.rfind(" [");
+  if (S.empty() || S.back() != SuffixEnd)
+    return S;
+
+  size_t SuffixPos = S.rfind(SuffixStart);
   if (SuffixPos == StringRef::npos)
     return S;
   return S.substr(0, SuffixPos);
