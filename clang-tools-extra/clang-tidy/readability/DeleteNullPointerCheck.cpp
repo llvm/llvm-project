@@ -35,9 +35,8 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto PointerCondition = castExpr(hasCastKind(CK_PointerToBoolean),
                                          hasSourceExpression(PointerExpr));
-  const auto BinaryPointerCheckCondition =
-      binaryOperator(hasEitherOperand(castExpr(hasCastKind(CK_NullToPointer))),
-                     hasEitherOperand(PointerExpr));
+  const auto BinaryPointerCheckCondition = binaryOperator(
+      hasOperands(castExpr(hasCastKind(CK_NullToPointer)), PointerExpr));
 
   Finder->addMatcher(
       ifStmt(hasCondition(anyOf(PointerCondition, BinaryPointerCheckCondition)),
