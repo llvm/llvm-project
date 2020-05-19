@@ -230,6 +230,27 @@ R"(
     "Obj::property"));
 }
 
+TEST(NamedDeclPrinter, TestInstanceObjCClassExtension) {
+  const char *Code =
+R"(
+@interface ObjC
+@end
+@interface ObjC () {
+  char data; // legal with non-fragile ABI.
+}
+@end
+)";
+
+  std::vector<std::string> Args{
+      "-std=c++11", "-xobjective-c++",
+      "-fobjc-runtime=macosx" /*force to use non-fragile ABI*/};
+  ASSERT_TRUE(PrintedNamedDeclMatches(Code, Args,
+                                      /*SuppressUnwrittenScope*/ true,
+                                      namedDecl(hasName("data")).bind("id"),
+                                      // not "::data"
+                                      "ObjC::data", "input.mm"));
+}
+
 TEST(NamedDeclPrinter, TestObjCClassExtensionWithGetter) {
   const char *Code =
 R"(
