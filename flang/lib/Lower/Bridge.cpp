@@ -1360,6 +1360,7 @@ private:
       inner = loop;
     }
     builder->restoreInsertionPoint(insPt);
+    std::reverse(lcvs.begin(), lcvs.end());
     return inner;
   }
 
@@ -1376,7 +1377,6 @@ private:
     }
     // create the loop nest
     auto innerLoop = createLoopNest(lcvs, shape);
-    std::reverse(lcvs.begin(), lcvs.end());
     assert(innerLoop);
     auto insPt = builder->saveInsertionPoint();
     // move insertion point inside loop nest
