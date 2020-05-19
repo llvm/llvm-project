@@ -326,7 +326,7 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   if (PassParams)
     appendParameterTypes(*this, argTypes, paramInfos, FTP);
 
-  CGCXXABI::AddedStructorArgs AddedArgs =
+  CGCXXABI::AddedStructorArgCounts AddedArgs =
       TheCXXABI.buildStructorSignature(GD, argTypes);
   if (!paramInfos.empty()) {
     // Note: prefix implies after the first param.
