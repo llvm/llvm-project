@@ -326,14 +326,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   createSyntheticSections();
 
   // Initialize InputSections.
-  for (InputFile *file : inputFiles) {
-    for (SubsectionMap &map : file->subsections) {
-      for (auto &p : map) {
-        InputSection *isec = p.second;
-        inputSections.push_back(isec);
-      }
-    }
-  }
+  for (InputFile *file : inputFiles)
+    for (InputSection *sec : file->sections)
+      inputSections.push_back(sec);
 
   // Write to an output file.
   writeResult();
