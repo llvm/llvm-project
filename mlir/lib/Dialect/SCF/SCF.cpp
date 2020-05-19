@@ -40,18 +40,30 @@ SCFDialect::SCFDialect(MLIRContext *context)
 //===----------------------------------------------------------------------===//
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
-                  Value ub, Value step, ValueRange iterArgs) {
+                  Value ub, Value step, ValueRange iterArgs,
+                  BodyBuilderFn bodyBuilder) {
   result.addOperands({lb, ub, step});
   result.addOperands(iterArgs);
   for (Value v : iterArgs)
     result.addTypes(v.getType());
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block());
-  if (iterArgs.empty())
-    ForOp::ensureTerminator(*bodyRegion, builder, result.location);
-  bodyRegion->front().addArgument(builder.getIndexType());
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArgument(builder.getIndexType());
   for (Value v : iterArgs)
-    bodyRegion->front().addArgument(v.getType());
+    bodyBlock.addArgument(v.getType());
+
+  // Create the default terminator if the builder is not provided and if the
+  // iteration arguments are not provided. Otherwise, leave this to the caller
+  // because we don't know which values to return from the loop.
+  if (iterArgs.empty() && !bodyBuilder) {
+    ForOp::ensureTerminator(*bodyRegion, builder, result.location);
+  } else if (bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock.getArgument(0),
+                bodyBlock.getArguments().drop_front());
+  }
 }
 
 static LogicalResult verify(ForOp op) {
@@ -227,6 +239,92 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   assert(index.getValue() == 0 && "expected loop region");
   regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
+}
+
+ValueVector mlir::scf::buildLoopNest(
+    OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
+    ValueRange steps, ValueRange iterArgs,
+    function_ref<ValueVector(OpBuilder &, Location, ValueRange, ValueRange)>
+        bodyBuilder) {
+  assert(lbs.size() == ubs.size() &&
+         "expected the same number of lower and upper bounds");
+  assert(lbs.size() == steps.size() &&
+         "expected the same number of lower bounds and steps");
+
+  // If there are no bounds, call the body-building function and return early.
+  if (lbs.empty()) {
+    ValueVector results =
+        bodyBuilder ? bodyBuilder(builder, loc, ValueRange(), iterArgs)
+                    : ValueVector();
+    assert(results.size() == iterArgs.size() &&
+           "loop nest body must return as many values as loop has iteration "
+           "arguments");
+    return results;
+  }
+
+  // First, create the loop structure iteratively using the body-builder
+  // callback of `ForOp::build`. Do not create `YieldOp`s yet.
+  OpBuilder::InsertionGuard guard(builder);
+  SmallVector<scf::ForOp, 4> loops;
+  SmallVector<Value, 4> ivs;
+  loops.reserve(lbs.size());
+  ivs.reserve(lbs.size());
+  ValueRange currentIterArgs = iterArgs;
+  Location currentLoc = loc;
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    auto loop = builder.create<scf::ForOp>(
+        currentLoc, lbs[i], ubs[i], steps[i], currentIterArgs,
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv,
+            ValueRange args) {
+          ivs.push_back(iv);
+          // It is safe to store ValueRange args because it points to block
+          // arguments of a loop operation that we also own.
+          currentIterArgs = args;
+          currentLoc = nestedLoc;
+        });
+    // Set the builder to point to the body of the newly created loop. We don't
+    // do this in the callback beacause the builder is reset when the callback
+    // returns.
+    builder.setInsertionPointToStart(loop.getBody());
+    loops.push_back(loop);
+  }
+
+  // For all loops but the innermost, yield the results of the nested loop.
+  for (unsigned i = 0, e = loops.size() - 1; i < e; ++i) {
+    builder.setInsertionPointToEnd(loops[i].getBody());
+    builder.create<scf::YieldOp>(loc, loops[i + 1].getResults());
+  }
+
+  // In the body of the innermost loop, call the body building function if any
+  // and yield its results.
+  builder.setInsertionPointToStart(loops.back().getBody());
+  ValueVector results = bodyBuilder
+                            ? bodyBuilder(builder, currentLoc, ivs,
+                                          loops.back().getRegionIterArgs())
+                            : ValueVector();
+  assert(results.size() == iterArgs.size() &&
+         "loop nest body must return as many values as loop has iteration "
+         "arguments");
+  builder.setInsertionPointToEnd(loops.back().getBody());
+  builder.create<scf::YieldOp>(loc, results);
+
+  // Return the results of the outermost loop.
+  return ValueVector(loops.front().result_begin(), loops.front().result_end());
+}
+
+ValueVector mlir::scf::buildLoopNest(
+    OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
+    ValueRange steps,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  // Delegate to the main function by wrapping the body builder.
+  return buildLoopNest(builder, loc, lbs, ubs, steps, llvm::None,
+                       [&bodyBuilder](OpBuilder &nestedBuilder,
+                                      Location nestedLoc, ValueRange ivs,
+                                      ValueRange) -> ValueVector {
+                         if (bodyBuilder)
+                           bodyBuilder(nestedBuilder, nestedLoc, ivs);
+                         return {};
+                       });
 }
 
 //===----------------------------------------------------------------------===//

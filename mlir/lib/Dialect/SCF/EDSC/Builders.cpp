@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 
@@ -109,4 +110,51 @@ mlir::edsc::makeLoopBuilder(Value *iv, Value lb, Value ub, Value step,
   result.setOp(forOp);
   result.enter(body);
   return result;
+}
+
+mlir::scf::ValueVector
+mlir::edsc::loopNestBuilder(ValueRange lbs, ValueRange ubs, ValueRange steps,
+                            function_ref<void(ValueRange)> fun) {
+  // Delegates actual construction to scf::buildLoopNest by wrapping `fun` into
+  // the expected function interface.
+  assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
+  return mlir::scf::buildLoopNest(
+      ScopedContext::getBuilderRef(), ScopedContext::getLocation(), lbs, ubs,
+      steps, [&](OpBuilder &builder, Location loc, ValueRange ivs) {
+        ScopedContext context(builder, loc);
+        if (fun)
+          fun(ivs);
+      });
+}
+
+mlir::scf::ValueVector
+mlir::edsc::loopNestBuilder(Value lb, Value ub, Value step,
+                            function_ref<void(Value)> fun) {
+  // Delegates to the ValueRange-based version by wrapping the lambda.
+  auto wrapper = [&](ValueRange ivs) {
+    assert(ivs.size() == 1);
+    if (fun)
+      fun(ivs[0]);
+  };
+  return loopNestBuilder(ValueRange(lb), ValueRange(ub), ValueRange(step),
+                         wrapper);
+}
+
+mlir::scf::ValueVector mlir::edsc::loopNestBuilder(
+    Value lb, Value ub, Value step, ValueRange iterArgInitValues,
+    function_ref<scf::ValueVector(Value, ValueRange)> fun) {
+  // Delegates actual construction to scf::buildLoopNest by wrapping `fun` into
+  // the expected function interface.
+  assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
+  return mlir::scf::buildLoopNest(
+      ScopedContext::getBuilderRef(), ScopedContext::getLocation(), lb, ub,
+      step, iterArgInitValues,
+      [&](OpBuilder &builder, Location loc, ValueRange ivs, ValueRange args) {
+        assert(ivs.size() == 1 && "expected one induction variable");
+        ScopedContext context(builder, loc);
+        if (fun)
+          return fun(ivs[0], args);
+        return scf::ValueVector(iterArgInitValues.begin(),
+                                iterArgInitValues.end());
+      });
 }

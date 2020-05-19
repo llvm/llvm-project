@@ -71,6 +71,17 @@ private:
   SmallVector<LoopBuilder, 4> loops;
 };
 
+/// Adapters for building loop nests using the builder and the location stored
+/// in ScopedContext. Actual builders are in scf::buildLoopNest.
+scf::ValueVector loopNestBuilder(ValueRange lbs, ValueRange ubs,
+                                 ValueRange steps,
+                                 function_ref<void(ValueRange)> fun = nullptr);
+scf::ValueVector loopNestBuilder(Value lb, Value ub, Value step,
+                                 function_ref<void(Value)> fun = nullptr);
+scf::ValueVector loopNestBuilder(
+    Value lb, Value ub, Value step, ValueRange iterArgInitValues,
+    function_ref<scf::ValueVector(Value, ValueRange)> fun = nullptr);
+
 } // namespace edsc
 } // namespace mlir
 

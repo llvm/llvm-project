@@ -79,11 +79,13 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
 
   // Produce the loop nest with copies.
   SmallVector<Value, 8> ivs(lbs.size());
-  LoopNestBuilder(ivs, lbs, ubs, steps)([&]() {
+  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
+    ivs.assign(loopIvs.begin(), loopIvs.end());
     auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
     StdIndexedValue fromHandle(from), toHandle(to);
     toHandle(activeIvs) = fromHandle(activeIvs);
   });
+  ivs[0].getParentBlock()->dump();
 
   // Map the innermost loops to threads in reverse order.
   for (auto en :
