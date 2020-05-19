@@ -1292,7 +1292,8 @@ bool HexagonCommonGEP::runOnFunction(Function &F) {
 
 #ifdef EXPENSIVE_CHECKS
   // Run this only when expensive checks are enabled.
-  verifyFunction(F);
+  if (verifyFunction(F, &dbgs()))
+    report_fatal_error("Broken function");
 #endif
   return true;
 }
