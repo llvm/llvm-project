@@ -47,8 +47,6 @@ uint64_t X86_64::getImplicitAddend(const uint8_t *loc, uint8_t type) const {
   case X86_64_RELOC_SIGNED_4:
   case X86_64_RELOC_GOT_LOAD:
     return read32le(loc);
-  case X86_64_RELOC_UNSIGNED:
-    return read64le(loc);
   default:
     error("TODO: Unhandled relocation type " + std::to_string(type));
     return 0;
@@ -66,9 +64,6 @@ void X86_64::relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const {
     // These types are only used for pc-relative relocations, so offset by 4
     // since the RIP has advanced by 4 at this point.
     write32le(loc, val - 4);
-    break;
-  case X86_64_RELOC_UNSIGNED:
-    write64le(loc, val);
     break;
   default:
     llvm_unreachable(
