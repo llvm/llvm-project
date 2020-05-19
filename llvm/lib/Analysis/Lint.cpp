@@ -691,8 +691,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
     }
   } else if (PHINode *PN = dyn_cast<PHINode>(V)) {
     if (Value *W = PN->hasConstantValue())
-      if (W != V)
-        return findValueImpl(W, OffsetOk, Visited);
+      return findValueImpl(W, OffsetOk, Visited);
   } else if (CastInst *CI = dyn_cast<CastInst>(V)) {
     if (CI->isNoopCast(*DL))
       return findValueImpl(CI->getOperand(0), OffsetOk, Visited);

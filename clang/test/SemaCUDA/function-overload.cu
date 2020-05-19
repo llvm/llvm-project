@@ -1,8 +1,8 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -13,13 +13,6 @@ struct DeviceReturnTy {};
 struct DeviceReturnTy2 {};
 struct HostDeviceReturnTy {};
 struct TemplateReturnTy {};
-
-struct CorrectOverloadRetTy{};
-#if __CUDA_ARCH__
-// expected-note@-2 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'IncorrectOverloadRetTy' to 'const CorrectOverloadRetTy &' for 1st argument}}
-// expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'IncorrectOverloadRetTy' to 'CorrectOverloadRetTy &&' for 1st argument}}
-#endif
-struct IncorrectOverloadRetTy{};
 
 typedef HostReturnTy (*HostFnPtr)();
 typedef DeviceReturnTy (*DeviceFnPtr)();
@@ -338,6 +331,9 @@ __device__ void test_device_calls_template_fn() {
 // If we have a mix of HD and H-only or D-only candidates in the overload set,
 // normal C++ overload resolution rules apply first.
 template <typename T> TemplateReturnTy template_vs_hd_function(T arg)
+#ifdef __CUDA_ARCH__
+//expected-note@-2 {{declared here}}
+#endif
 {
   return TemplateReturnTy();
 }
@@ -346,13 +342,11 @@ __host__ __device__ HostDeviceReturnTy template_vs_hd_function(float arg) {
 }
 
 __host__ __device__ void test_host_device_calls_hd_template() {
-#ifdef __CUDA_ARCH__
-  typedef HostDeviceReturnTy ExpectedReturnTy;
-#else
-  typedef TemplateReturnTy ExpectedReturnTy;
-#endif
   HostDeviceReturnTy ret1 = template_vs_hd_function(1.0f);
-  ExpectedReturnTy ret2 = template_vs_hd_function(1);
+  TemplateReturnTy ret2 = template_vs_hd_function(1);
+#ifdef __CUDA_ARCH__
+  // expected-error@-2 {{reference to __host__ function 'template_vs_hd_function<int>' in __host__ __device__ function}}
+#endif
 }
 
 __host__ void test_host_calls_hd_template() {
@@ -373,14 +367,14 @@ __device__ void test_device_calls_hd_template() {
 __device__ DeviceReturnTy device_only_function(int arg) { return DeviceReturnTy(); }
 __device__ DeviceReturnTy2 device_only_function(float arg) { return DeviceReturnTy2(); }
 #ifndef __CUDA_ARCH__
-  // expected-note@-3 2{{'device_only_function' declared here}}
-  // expected-note@-3 2{{'device_only_function' declared here}}
+  // expected-note@-3 {{'device_only_function' declared here}}
+  // expected-note@-3 {{'device_only_function' declared here}}
 #endif
 __host__ HostReturnTy host_only_function(int arg) { return HostReturnTy(); }
 __host__ HostReturnTy2 host_only_function(float arg) { return HostReturnTy2(); }
 #ifdef __CUDA_ARCH__
-  // expected-note@-3 2{{'host_only_function' declared here}}
-  // expected-note@-3 2{{'host_only_function' declared here}}
+  // expected-note@-3 {{'host_only_function' declared here}}
+  // expected-note@-3 {{'host_only_function' declared here}}
 #endif
 
 __host__ __device__ void test_host_device_single_side_overloading() {
@@ -396,37 +390,6 @@ __host__ __device__ void test_host_device_single_side_overloading() {
   // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
   // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
 #endif
-}
-
-// wrong-sided overloading should not cause diagnostic unless it is emitted.
-// This inline function is not emitted.
-inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_no_diag() {
-  DeviceReturnTy ret1 = device_only_function(1);
-  DeviceReturnTy2 ret2 = device_only_function(1.0f);
-  HostReturnTy ret3 = host_only_function(1);
-  HostReturnTy2 ret4 = host_only_function(1.0f);
-}
-
-// wrong-sided overloading should cause diagnostic if it is emitted.
-// This inline function is emitted since it is called by an emitted function.
-inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_diag() {
-  DeviceReturnTy ret1 = device_only_function(1);
-  DeviceReturnTy2 ret2 = device_only_function(1.0f);
-#ifndef __CUDA_ARCH__
-  // expected-error@-3 {{reference to __device__ function 'device_only_function' in __host__ __device__ function}}
-  // expected-error@-3 {{reference to __device__ function 'device_only_function' in __host__ __device__ function}}
-#endif
-  HostReturnTy ret3 = host_only_function(1);
-  HostReturnTy2 ret4 = host_only_function(1.0f);
-#ifdef __CUDA_ARCH__
-  // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
-  // expected-error@-3 {{reference to __host__ function 'host_only_function' in __host__ __device__ function}}
-#endif
-}
-
-__host__ __device__ void test_host_device_wrong_side_overloading_inline_diag_caller() {
-  test_host_device_wrong_side_overloading_inline_diag();
-  // expected-note@-1 {{called by 'test_host_device_wrong_side_overloading_inline_diag_caller'}}
 }
 
 // Verify that we allow overloading function templates.
@@ -455,89 +418,4 @@ __host__ __device__ int constexpr_overload(const T &x, const T &y) {
 // Verify that function overloading doesn't prune candidate wrongly.
 int test_constexpr_overload(C2 &x, C2 &y) {
   return constexpr_overload(x, y);
-}
-
-// Verify no ambiguity for new operator.
-void *a = new int;
-__device__ void *b = new int;
-// expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, and __shared__ variables.}}
-
-// Verify no ambiguity for new operator.
-template<typename _Tp> _Tp&& f();
-template<typename _Tp, typename = decltype(new _Tp(f<_Tp>()))>
-void __test();
-
-void foo() {
-  __test<int>();
-}
-
-// Test resolving implicit host device candidate vs wrong-sided candidate.
-// In device compilation, implicit host device caller choose implicit host
-// device candidate and wrong-sided candidate with equal preference.
-// Resolution result should not change with/without pragma.
-namespace ImplicitHostDeviceVsWrongSided {
-CorrectOverloadRetTy callee(double x);
-#pragma clang force_cuda_host_device begin
-IncorrectOverloadRetTy callee(int x);
-inline CorrectOverloadRetTy implicit_hd_caller() {
-  return callee(1.0);
-}
-#pragma clang force_cuda_host_device end
-}
-
-// Test resolving implicit host device candidate vs same-sided candidate.
-// In host compilation, implicit host device caller choose implicit host
-// device candidate and same-sided candidate with equal preference.
-// Resolution result should not change with/without pragma.
-namespace ImplicitHostDeviceVsSameSide {
-IncorrectOverloadRetTy callee(int x);
-#pragma clang force_cuda_host_device begin
-CorrectOverloadRetTy callee(double x);
-inline CorrectOverloadRetTy implicit_hd_caller() {
-  return callee(1.0);
-}
-#pragma clang force_cuda_host_device end
-}
-
-// Test resolving explicit host device candidate vs. wrong-sided candidate.
-// Explicit host device caller favors host device candidate against wrong-sided
-// candidate.
-namespace ExplicitHostDeviceVsWrongSided {
-CorrectOverloadRetTy callee(double x);
-__host__ __device__ IncorrectOverloadRetTy callee(int x);
-inline __host__ __device__ CorrectOverloadRetTy explicit_hd_caller() {
-  return callee(1.0);
-#if __CUDA_ARCH__
-  // expected-error@-2 {{no viable conversion from returned value of type 'IncorrectOverloadRetTy' to function return type 'CorrectOverloadRetTy'}}
-#endif
-}
-}
-
-// In the implicit host device function 'caller', the second 'callee' should be
-// chosen since it has better match, even though it is an implicit host device
-// function whereas the first 'callee' is a host function. A diagnostic will be
-// emitted if the first 'callee' is chosen since deduced return type cannot be
-// used before it is defined.
-namespace ImplicitHostDeviceByConstExpr {
-template <class a> a b;
-auto callee(...);
-template <class d> constexpr auto callee(d) -> decltype(0);
-struct e {
-  template <class ad, class... f> static auto g(ad, f...) {
-    return h<e, decltype(b<f>)...>;
-  }
-  struct i {
-    template <class, class... f> static constexpr auto caller(f... k) {
-      return callee(k...);
-    }
-  };
-  template <class, class... f> static auto h() {
-    return i::caller<int, f...>;
-  }
-};
-class l {
-  l() {
-    e::g([] {}, this);
-  }
-};
 }

@@ -6704,6 +6704,15 @@ void OMPClauseWriter::VisitOMPUsesAllocatorsClause(OMPUsesAllocatorsClause *C) {
   }
 }
 
+void OMPClauseWriter::VisitOMPAffinityClause(OMPAffinityClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddStmt(C->getModifier());
+  Record.AddSourceLocation(C->getColonLoc());
+  for (Expr *E : C->varlists())
+    Record.AddStmt(E);
+}
+
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());
   for (const auto &Set : TI->Sets) {

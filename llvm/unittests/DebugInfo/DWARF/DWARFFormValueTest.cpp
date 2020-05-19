@@ -384,15 +384,15 @@ INSTANTIATE_TEST_CASE_P(
     testing::Values(DumpValueParams{DW_FORM_strp, DumpTestSample32, DWARF32,
                                     " .debug_str[0x00112233] = "},
                     DumpValueParams{DW_FORM_strp, DumpTestSample64, DWARF64,
-                                    " .debug_str[0x11223344556677] = "},
+                                    " .debug_str[0x0011223344556677] = "},
                     DumpValueParams{DW_FORM_line_strp, DumpTestSample32,
                                     DWARF32, " .debug_line_str[0x00112233] = "},
                     DumpValueParams{DW_FORM_line_strp, DumpTestSample64,
                                     DWARF64,
-                                    " .debug_line_str[0x11223344556677] = "},
+                                    " .debug_line_str[0x0011223344556677] = "},
                     DumpValueParams{DW_FORM_sec_offset, DumpTestSample32,
                                     DWARF32, "0x00112233"},
                     DumpValueParams{DW_FORM_sec_offset, DumpTestSample64,
-                                    DWARF64, "0x11223344556677"}), );
+                                    DWARF64, "0x0011223344556677"}), );
 
 } // end anonymous namespace

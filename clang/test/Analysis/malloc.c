@@ -1828,6 +1828,21 @@ void testCStyleListItems(struct ListInfo *list) {
   list_add(list, &x->li); // will free 'x'.
 }
 
+// MEM34-C. Only free memory allocated dynamically
+// Second non-compliant example.
+// https://wiki.sei.cmu.edu/confluence/display/c/MEM34-C.+Only+free+memory+allocated+dynamically
+enum { BUFSIZE = 256 };
+
+void MEM34_C(void) {
+  char buf[BUFSIZE];
+  char *p = (char *)realloc(buf, 2 * BUFSIZE);
+  // expected-warning@-1{{Argument to realloc() is the address of the local \
+variable 'buf', which is not memory allocated by malloc() [unix.Malloc]}}
+  if (p == NULL) {
+    /* Handle error */
+  }
+}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 

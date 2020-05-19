@@ -177,3 +177,11 @@ void InitializerForAuto() {
   // CHECK: `-VarDecl {{.*}} invalid unresolved_typo 'auto'
   auto unresolved_typo = gned.*[] {};
 }
+
+// CHECK:      `-TypeAliasDecl {{.*}} Escape 'decltype([] {
+// CHECK-NEXT:   return <recovery-expr>(undef);
+// CHECK-NEXT: }())'
+// CHECK-NEXT:   `-DecltypeType {{.*}} 'decltype([] {
+// CHECK-NEXT:     return <recovery-expr>(undef);
+// CHECK-NEXT:   }())' dependent
+using Escape = decltype([] { return undef(); }());

@@ -965,3 +965,33 @@ body:             |
     S_ENDPGM 0, implicit %3
 
 ...
+
+# This used to incorrectly interpret V_MOV_B32_sdwa as being a move
+# immediate, and interpreting the src0_modifiers field as a
+# materialized immediate.
+
+---
+# GCN-LABEL: name: no_fold_sdwa_mov_imm
+# GCN: %2:vgpr_32 = V_MOV_B32_sdwa 0, %0, 0, 5, 2, 4, implicit $exec, implicit %0(tied-def 0)
+# GCN-NEXT: [[SHIFT:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, %2, implicit $exec
+# GCN-NEXT: S_ENDPGM 0, implicit [[SHIFT]]
+
+name:            no_fold_sdwa_mov_imm
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_sdwa 0, %0:vgpr_32, 0, 5, 2, 4, implicit $exec, implicit %0:vgpr_32(tied-def 0)
+    %3:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+    %4:vgpr_32 = V_LSHRREV_B32_e64 %3:vgpr_32, %2:vgpr_32, implicit $exec
+    S_ENDPGM 0, implicit %4
+
+...

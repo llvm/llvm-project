@@ -10799,6 +10799,12 @@ public:
                                             SourceLocation LParenLoc,
                                             SourceLocation EndLoc,
                                             ArrayRef<UsesAllocatorsData> Data);
+  /// Called on well-formed 'affinity' clause.
+  OMPClause *ActOnOpenMPAffinityClause(SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation ColonLoc,
+                                       SourceLocation EndLoc, Expr *Modifier,
+                                       ArrayRef<Expr *> Locators);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {
@@ -11665,8 +11671,6 @@ public:
   CUDAFunctionTarget CurrentCUDATarget() {
     return IdentifyCUDATarget(dyn_cast<FunctionDecl>(CurContext));
   }
-
-  static bool IsCUDAImplicitHostDeviceFunction(const FunctionDecl *D);
 
   // CUDA function call preference. Must be ordered numerically from
   // worst to best.

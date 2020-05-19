@@ -189,6 +189,67 @@ private:
   const llvm::sys::TimePoint<> Start;
 };
 
+// We emit CSV as specified in RFC 4180: https://www.ietf.org/rfc/rfc4180.txt.
+// \r\n line endings are used, cells with \r\n," are quoted, quotes are doubled.
+class CSVMetricTracer : public EventTracer {
+public:
+  CSVMetricTracer(llvm::raw_ostream &Out) : Out(Out) {
+    Start = std::chrono::steady_clock::now();
+
+    Out.SetUnbuffered(); // We write each line atomically.
+    Out << "Kind,Metric,Label,Value,Timestamp\r\n";
+  }
+
+  void record(const Metric &Metric, double Value,
+              llvm::StringRef Label) override {
+    assert(!needsQuote(Metric.Name));
+    std::string QuotedLabel;
+    if (needsQuote(Label))
+      Label = QuotedLabel = quote(Label);
+    uint64_t Micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                          std::chrono::steady_clock::now() - Start)
+                          .count();
+    std::lock_guard<std::mutex> Lock(Mu);
+    Out << llvm::formatv("{0},{1},{2},{3:e},{4}.{5:6}\r\n",
+                         typeName(Metric.Type), Metric.Name, Label, Value,
+                         Micros / 1000000, Micros % 1000000);
+  }
+
+private:
+  llvm::StringRef typeName(Metric::MetricType T) {
+    switch (T) {
+    case Metric::Value:
+      return "v";
+    case Metric::Counter:
+      return "c";
+    case Metric::Distribution:
+      return "d";
+    }
+    llvm_unreachable("Unknown Metric::MetricType enum");
+  }
+
+  static bool needsQuote(llvm::StringRef Text) {
+    // https://www.ietf.org/rfc/rfc4180.txt section 2.6
+    return Text.find_first_of(",\"\r\n") != llvm::StringRef::npos;
+  }
+
+  std::string quote(llvm::StringRef Text) {
+    std::string Result = "\"";
+    for (char C : Text) {
+      Result.push_back(C);
+      if (C == '"')
+        Result.push_back('"');
+    }
+    Result.push_back('"');
+    return Result;
+  }
+
+private:
+  std::mutex Mu;
+  llvm::raw_ostream &Out /*GUARDED_BY(Mu)*/;
+  std::chrono::steady_clock::time_point Start;
+};
+
 Key<std::unique_ptr<JSONTracer::JSONSpan>> JSONTracer::SpanKey;
 
 EventTracer *T = nullptr;
@@ -204,6 +265,10 @@ Session::~Session() { T = nullptr; }
 std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
                                               bool Pretty) {
   return std::make_unique<JSONTracer>(OS, Pretty);
+}
+
+std::unique_ptr<EventTracer> createCSVMetricTracer(llvm::raw_ostream &OS) {
+  return std::make_unique<CSVMetricTracer>(OS);
 }
 
 void log(const llvm::Twine &Message) {

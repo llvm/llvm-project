@@ -67,8 +67,9 @@ enum CallEventKind {
   CE_BEG_CXX_CONSTRUCTOR_CALLS = CE_CXXConstructor,
   CE_END_CXX_CONSTRUCTOR_CALLS = CE_CXXInheritedConstructor,
   CE_CXXAllocator,
+  CE_CXXDeallocator,
   CE_BEG_FUNCTION_CALLS = CE_Function,
-  CE_END_FUNCTION_CALLS = CE_CXXAllocator,
+  CE_END_FUNCTION_CALLS = CE_CXXDeallocator,
   CE_Block,
   CE_ObjCMessage
 };
@@ -1045,6 +1046,55 @@ public:
   }
 };
 
+/// Represents the memory deallocation call in a C++ delete-expression.
+///
+/// This is a call to "operator delete".
+// FIXME: CXXDeleteExpr isn't present for custom delete operators, or even for
+// some those that are in the standard library, like the no-throw or align_val
+// versions.
+// Some pointers:
+// http://lists.llvm.org/pipermail/cfe-dev/2020-April/065080.html
+// clang/test/Analysis/cxx-dynamic-memory-analysis-order.cpp
+// clang/unittests/StaticAnalyzer/CallEventTest.cpp
+class CXXDeallocatorCall : public AnyFunctionCall {
+  friend class CallEventManager;
+
+protected:
+  CXXDeallocatorCall(const CXXDeleteExpr *E, ProgramStateRef St,
+                     const LocationContext *LCtx)
+      : AnyFunctionCall(E, St, LCtx) {}
+  CXXDeallocatorCall(const CXXDeallocatorCall &Other) = default;
+
+  void cloneTo(void *Dest) const override {
+    new (Dest) CXXDeallocatorCall(*this);
+  }
+
+public:
+  virtual const CXXDeleteExpr *getOriginExpr() const {
+    return cast<CXXDeleteExpr>(AnyFunctionCall::getOriginExpr());
+  }
+
+  const FunctionDecl *getDecl() const override {
+    return getOriginExpr()->getOperatorDelete();
+  }
+
+  unsigned getNumArgs() const override { return getDecl()->getNumParams(); }
+
+  const Expr *getArgExpr(unsigned Index) const override {
+    // CXXDeleteExpr's only have a single argument.
+    return getOriginExpr()->getArgument();
+  }
+
+  Kind getKind() const override { return CE_CXXDeallocator; }
+  virtual StringRef getKindAsString() const override {
+    return "CXXDeallocatorCall";
+  }
+
+  static bool classof(const CallEvent *CE) {
+    return CE->getKind() == CE_CXXDeallocator;
+  }
+};
+
 /// Represents the ways an Objective-C message send can occur.
 //
 // Note to maintainers: OCM_Message should always be last, since it does not
@@ -1366,6 +1416,12 @@ public:
   getCXXAllocatorCall(const CXXNewExpr *E, ProgramStateRef State,
                       const LocationContext *LCtx) {
     return create<CXXAllocatorCall>(E, State, LCtx);
+  }
+
+  CallEventRef<CXXDeallocatorCall>
+  getCXXDeallocatorCall(const CXXDeleteExpr *E, ProgramStateRef State,
+                        const LocationContext *LCtx) {
+    return create<CXXDeallocatorCall>(E, State, LCtx);
   }
 };
 

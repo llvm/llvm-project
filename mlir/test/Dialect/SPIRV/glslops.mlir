@@ -139,3 +139,19 @@ func @sinvec(%arg0 : vector<3xf16>) -> () {
   %2 = spv.GLSL.Sin %arg0 : vector<3xf16>
   return
 }
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Tan
+//===----------------------------------------------------------------------===//
+
+func @tan(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Tan {{%.*}} : f32
+  %2 = spv.GLSL.Tan %arg0 : f32
+  return
+}
+
+func @tanvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Tan {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Tan %arg0 : vector<3xf16>
+  return
+}

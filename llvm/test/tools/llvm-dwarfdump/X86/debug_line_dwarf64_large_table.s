@@ -8,9 +8,9 @@
 # CHECK: debug_line[0x00000000]
 # CHECK-NEXT: warning: line table program with offset 0x00000000 has length 0xfffffffc but only 0x0000003a bytes are available
 # CHECK-NEXT: Line table prologue:
-# CHECK-NEXT:     total_length: 0xfffffff0
+# CHECK-NEXT:     total_length: 0x00000000fffffff0
 # CHECK-NEXT:          version: 4
-# CHECK-NEXT:  prologue_length: 0x00000016
+# CHECK-NEXT:  prologue_length: 0x0000000000000016
 
 # CHECK:      0x000000000badbeef      1      0      1   0             0  is_stmt end_sequence
 

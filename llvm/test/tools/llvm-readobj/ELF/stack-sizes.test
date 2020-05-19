@@ -48,7 +48,7 @@ Sections:
       - Size: 0x10
       - Size: 0x20
     Link:    .text
-  - Name:    '.stack_sizes [1]'
+  - Name:    '.stack_sizes (1)'
     Type:    SHT_PROGBITS
     Entries:
       - Address: 0x20
@@ -67,9 +67,9 @@ Sections:
         Addend: 16
         Symbol: .text
         Type:   R_X86_64_64
-  - Name:   '.rela.stack_sizes [1]'
+  - Name:   '.rela.stack_sizes (1)'
     Type:   SHT_RELA
-    Info:   '.stack_sizes [1]'
+    Info:   '.stack_sizes (1)'
     Relocations:
       - Offset: 0
         Symbol: separate_text_section_baz

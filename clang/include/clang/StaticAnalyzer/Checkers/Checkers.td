@@ -1118,13 +1118,15 @@ def MissingInvalidationMethod : Checker<"MissingInvalidationMethod">,
 
 def DirectIvarAssignment : Checker<"DirectIvarAssignment">,
   HelpText<"Check for direct assignments to instance variables">,
-  Documentation<HasAlphaDocumentation>;
-
-def DirectIvarAssignmentForAnnotatedFunctions :
-  Checker<"DirectIvarAssignmentForAnnotatedFunctions">,
-  HelpText<"Check for direct assignments to instance variables in the methods "
-           "annotated with objc_no_direct_instance_variable_assignment">,
-  Dependencies<[DirectIvarAssignment]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "AnnotatedFunctions",
+                  "Check for direct assignments to instance variables in the "
+                  "methods annotated with "
+                  "objc_no_direct_instance_variable_assignment",
+                  "false",
+                  InAlpha>
+  ]>,
   Documentation<HasAlphaDocumentation>;
 
 } // end "alpha.osx.cocoa"

@@ -377,7 +377,7 @@ TU_split_5_end:
 # COMMON:      DW_TAG_compile_unit
 # COMMON-NEXT: DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade DWARF producer")
 # COMMON-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "Compile_Unit_2")
-# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000038)
+# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000000000000038)
 # COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] (indexed (00000002) string = "/home/test/CU2")
 # 
 # The split CU
@@ -414,9 +414,9 @@ TU_split_5_end:
 # COMMON-NEXT: 0x00000020: 0000007c "MyVar3"
 # COMMON-NEXT: Gap, length = 4
 # COMMON-NEXT: 0x00000028: Contribution size = 28, Format = DWARF64, Version = 5
-# COMMON-NEXT: 0x00000038: 00000000 "Handmade DWARF producer"
-# COMMON-NEXT: 0x00000040: 00000036 "Compile_Unit_2"
-# COMMON-NEXT: 0x00000048: 00000045 "/home/test/CU2"
+# COMMON-NEXT: 0x00000038: 0000000000000000 "Handmade DWARF producer"
+# COMMON-NEXT: 0x00000040: 0000000000000036 "Compile_Unit_2"
+# COMMON-NEXT: 0x00000048: 0000000000000045 "/home/test/CU2"
 # COMMON-NEXT: 0x00000050: Contribution size = 12, Format = DWARF32, Version = 5
 # COMMON-NEXT: 0x00000058: 00000054 "Type_Unit"
 # COMMON-NEXT: 0x0000005c: 0000005e "MyStruct"

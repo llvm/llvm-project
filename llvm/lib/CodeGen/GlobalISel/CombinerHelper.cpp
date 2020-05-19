@@ -919,9 +919,6 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
     APInt SplatVal = APInt::getSplat(NumBits, Scalar);
     return MIB.buildConstant(Ty, SplatVal).getReg(0);
   }
-  // FIXME: for vector types create a G_BUILD_VECTOR.
-  if (Ty.isVector())
-    return Register();
 
   // Extend the byte value to the larger type, and then multiply by a magic
   // value 0x010101... in order to replicate it across every byte.
@@ -933,7 +930,10 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
     Val = MIB.buildMul(ExtType, ZExt, MagicMI).getReg(0);
   }
 
-  assert(ExtType == Ty && "Vector memset value type not supported yet");
+  // For vector types create a G_BUILD_VECTOR.
+  if (Ty.isVector())
+    Val = MIB.buildSplatVector(Ty, Val).getReg(0);
+
   return Val;
 }
 
@@ -1584,6 +1584,12 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
 bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) {
   return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
          canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
+                       MRI);
+}
+
+bool CombinerHelper::matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) {
+  return matchConstantOp(MI.getOperand(OpIdx), 0) &&
+         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(OpIdx).getReg(),
                        MRI);
 }
 

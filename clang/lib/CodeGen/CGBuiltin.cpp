@@ -8040,6 +8040,9 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     if (TypeFlags.isReverseCompare())
       std::swap(Ops[1], Ops[2]);
 
+    if (TypeFlags.isReverseUSDOT())
+      std::swap(Ops[1], Ops[2]);
+
     // Predicated intrinsics with _z suffix need a select w/ zeroinitializer.
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZero) {
       llvm::Type *OpndTy = Ops[1]->getType();

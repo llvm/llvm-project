@@ -1571,13 +1571,16 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
 
   // For ObjC methods and properties, look through categories and use the
   // interface as context.
-  if (auto *MD = dyn_cast<ObjCMethodDecl>(this))
+  if (auto *MD = dyn_cast<ObjCMethodDecl>(this)) {
     if (auto *ID = MD->getClassInterface())
       Ctx = ID;
-  if (auto *PD = dyn_cast<ObjCPropertyDecl>(this)) {
+  } else if (auto *PD = dyn_cast<ObjCPropertyDecl>(this)) {
     if (auto *MD = PD->getGetterMethodDecl())
       if (auto *ID = MD->getClassInterface())
         Ctx = ID;
+  } else if (auto *ID = dyn_cast<ObjCIvarDecl>(this)) {
+    if (auto *CI = ID->getContainingInterface())
+      Ctx = CI;
   }
 
   if (Ctx->isFunctionOrMethod())

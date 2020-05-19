@@ -14,14 +14,15 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/SectionKind.h"
 #include <cstdint>
 
 namespace llvm {
 
+class Constant;
+class DataLayout;
+class Function;
+class GlobalObject;
 class GlobalValue;
 class MachineBasicBlock;
 class MachineModuleInfo;
@@ -33,6 +34,9 @@ class MCSymbol;
 class MCSymbolRefExpr;
 class MCStreamer;
 class MCValue;
+class Module;
+class SectionKind;
+class StringRef;
 class TargetMachine;
 
 class TargetLoweringObjectFile : public MCObjectFileInfo {
@@ -107,9 +111,7 @@ public:
   /// variable or function definition. This should not be passed external (or
   /// available externally) globals.
   MCSection *SectionForGlobal(const GlobalObject *GO,
-                              const TargetMachine &TM) const {
-    return SectionForGlobal(GO, getKindForGlobal(GO, TM), TM);
-  }
+                              const TargetMachine &TM) const;
 
   virtual void getNameWithPrefix(SmallVectorImpl<char> &OutName,
                                  const GlobalValue *GV,

@@ -60,12 +60,12 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
   // the segment selectors are omitted from all tuples, including
   // the terminating tuple.
 
-  dwarf::DwarfFormat format;
   Error Err = Error::success();
-  std::tie(HeaderData.Length, format) = data.getInitialLength(offset_ptr, &Err);
+  std::tie(HeaderData.Length, HeaderData.Format) =
+      data.getInitialLength(offset_ptr, &Err);
   HeaderData.Version = data.getU16(offset_ptr, &Err);
-  HeaderData.CuOffset =
-      data.getUnsigned(offset_ptr, dwarf::getDwarfOffsetByteSize(format), &Err);
+  HeaderData.CuOffset = data.getUnsigned(
+      offset_ptr, dwarf::getDwarfOffsetByteSize(HeaderData.Format), &Err);
   HeaderData.AddrSize = data.getU8(offset_ptr, &Err);
   HeaderData.SegSize = data.getU8(offset_ptr, &Err);
   if (Err) {
@@ -77,7 +77,7 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
 
   // Perform basic validation of the header fields.
   uint64_t full_length =
-      dwarf::getUnitLengthFieldByteSize(format) + HeaderData.Length;
+      dwarf::getUnitLengthFieldByteSize(HeaderData.Format) + HeaderData.Length;
   if (!data.isValidOffsetForDataOfSize(Offset, full_length))
     return createStringError(errc::invalid_argument,
                              "the length of address range table at offset "
@@ -157,10 +157,12 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
 }
 
 void DWARFDebugArangeSet::dump(raw_ostream &OS) const {
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(HeaderData.Format);
   OS << "Address Range Header: "
-     << format("length = 0x%8.8" PRIx64 ", ", HeaderData.Length)
+     << format("length = 0x%0*" PRIx64 ", ", OffsetDumpWidth, HeaderData.Length)
      << format("version = 0x%4.4x, ", HeaderData.Version)
-     << format("cu_offset = 0x%8.8" PRIx64 ", ", HeaderData.CuOffset)
+     << format("cu_offset = 0x%0*" PRIx64 ", ", OffsetDumpWidth,
+               HeaderData.CuOffset)
      << format("addr_size = 0x%2.2x, ", HeaderData.AddrSize)
      << format("seg_size = 0x%2.2x\n", HeaderData.SegSize);
 

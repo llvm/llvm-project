@@ -25,9 +25,9 @@
 
 # CHECK:      .debug_str_offsets.dwo contents:
 # CHECK-NEXT: 0x00000000: Contribution size = 24, Format = DWARF64, Version = 4
-# CHECK-NEXT: 0x00000000: 00000000 "Compilation Unit"
-# CHECK-NEXT: 0x00000008: 00000011 "Type Unit"
-# CHECK-NEXT: 0x00000010: 0000001b "Structure"
+# CHECK-NEXT: 0x00000000: 0000000000000000 "Compilation Unit"
+# CHECK-NEXT: 0x00000008: 0000000000000011 "Type Unit"
+# CHECK-NEXT: 0x00000010: 000000000000001b "Structure"
 
     .section .debug_str.dwo, "MSe", @progbits, 1
 .LStr0:

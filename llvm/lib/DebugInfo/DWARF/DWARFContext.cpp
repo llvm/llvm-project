@@ -162,6 +162,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     }
 
     dwarf::DwarfFormat Format = Contribution->getFormat();
+    int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
     uint16_t Version = Contribution->getVersion();
     uint64_t ContributionHeader = Contribution->Base;
     // In DWARF v5 there is a contribution header that immediately precedes
@@ -198,7 +199,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
       OS << format("0x%8.8" PRIx64 ": ", Offset);
       uint64_t StringOffset =
           StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
-      OS << format("%8.8" PRIx64 " ", StringOffset);
+      OS << format("%0*" PRIx64 " ", OffsetDumpWidth, StringOffset);
       const char *S = StrData.getCStr(&StringOffset);
       if (S)
         OS << format("\"%s\"", S);

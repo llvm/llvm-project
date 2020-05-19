@@ -106,15 +106,18 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
                                     DIDumpOptions DumpOptions) const {
   if (!totalLengthIsValid())
     return;
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(FormParams.Format);
   OS << "Line table prologue:\n"
-     << format("    total_length: 0x%8.8" PRIx64 "\n", TotalLength)
+     << format("    total_length: 0x%0*" PRIx64 "\n", OffsetDumpWidth,
+               TotalLength)
      << format("         version: %u\n", getVersion());
   if (!versionIsSupported(getVersion()))
     return;
   if (getVersion() >= 5)
     OS << format("    address_size: %u\n", getAddressSize())
        << format(" seg_select_size: %u\n", SegSelectorSize);
-  OS << format(" prologue_length: 0x%8.8" PRIx64 "\n", PrologueLength)
+  OS << format(" prologue_length: 0x%0*" PRIx64 "\n", OffsetDumpWidth,
+               PrologueLength)
      << format(" min_inst_length: %u\n", MinInstLength)
      << format(getVersion() >= 4 ? "max_ops_per_inst: %u\n" : "", MaxOpsPerInst)
      << format(" default_is_stmt: %u\n", DefaultIsStmt)

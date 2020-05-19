@@ -92,6 +92,8 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
                          "Logic error"));
 
   ExplodedNode *N = C.generateNonFatalErrorNode();
+  if (!N)
+    return;
   auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.

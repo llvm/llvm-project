@@ -3150,6 +3150,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
 
 void Verifier::verifyMustTailCall(CallInst &CI) {
   Assert(!CI.isInlineAsm(), "cannot use musttail call with inline asm", &CI);
+  // FIXME: support musttail + preallocated
+  Assert(!CI.countOperandBundlesOfType(LLVMContext::OB_preallocated),
+         "musttail and preallocated not yet supported", &CI);
 
   // - The caller and callee prototypes must match.  Pointer types of
   //   parameters or return types may differ in pointee type, but not

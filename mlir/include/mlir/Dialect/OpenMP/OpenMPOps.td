@@ -33,6 +33,23 @@ def BarrierOp : OpenMP_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+//===----------------------------------------------------------------------===//
+// 2.13.7 flush Construct
+//===----------------------------------------------------------------------===//
+def FlushOp : OpenMP_Op<"flush"> {
+  let summary = "flush construct";
+  let description = [{
+    The flush construct executes the OpenMP flush operation. This operation
+    makes a thread’s temporary view of memory consistent with memory and
+    enforces an order on the memory operations of the variables explicitly
+    specified or implied.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$varList);
+
+  let assemblyFormat = "attr-dict ($varList^ `:` type($varList))?";
+}
+
 def TaskwaitOp : OpenMP_Op<"taskwait"> {
   let summary = "taskwait construct";
   let description = [{

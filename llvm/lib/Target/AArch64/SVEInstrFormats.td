@@ -7547,6 +7547,12 @@ class sve_int_matmul<bits<2> uns, string asm>
   let ElementSize = ZPR32.ElementSize;
 }
 
+multiclass sve_int_matmul<bits<2> uns, string asm, SDPatternOperator op> {
+  def NAME : sve_int_matmul<uns, asm>;
+
+  def : SVE_3_Op_Pat<nxv4i32, op , nxv4i32, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Integer Dot Product Mixed Sign Group
 //===----------------------------------------------------------------------===//
@@ -7568,12 +7574,18 @@ class sve_int_dot_mixed<string asm>
   let ElementSize = ZPR32.ElementSize;
 }
 
+multiclass sve_int_dot_mixed<string asm, SDPatternOperator op> {
+  def NAME : sve_int_dot_mixed<asm>;
+
+  def : SVE_3_Op_Pat<nxv4i32, op , nxv4i32, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Integer Dot Product Mixed Sign - Indexed Group
 //===----------------------------------------------------------------------===//
 
 class sve_int_dot_mixed_indexed<bit U, string asm>
-: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexS:$idx),
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexS32b:$idx),
     asm, "\t$Zda, $Zn, $Zm$idx", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
@@ -7590,6 +7602,12 @@ class sve_int_dot_mixed_indexed<bit U, string asm>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
   let ElementSize = ZPR32.ElementSize;
+}
+
+multiclass sve_int_dot_mixed_indexed<bit U, string asm, SDPatternOperator op> {
+  def NAME : sve_int_dot_mixed_indexed<U, asm>;
+
+  def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv16i8, nxv16i8, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7613,6 +7631,12 @@ class sve_fp_matrix_mla<bit sz, string asm, ZPRRegOp zprty>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
+}
+
+multiclass sve_fp_matrix_mla<bit sz, string asm, ZPRRegOp zprty, SDPatternOperator op, ValueType vt> {
+  def NAME : sve_fp_matrix_mla<sz, asm, zprty>;
+
+  def : SVE_3_Op_Pat<vt, op , vt, vt, vt, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//

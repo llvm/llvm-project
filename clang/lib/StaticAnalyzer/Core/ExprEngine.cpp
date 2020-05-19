@@ -1649,8 +1649,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet PreVisit;
       const auto *CDE = cast<CXXDeleteExpr>(S);
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+      ExplodedNodeSet PostVisit;
+      getCheckerManager().runCheckersForPostStmt(PostVisit, PreVisit, S, *this);
 
-      for (const auto i : PreVisit)
+      for (const auto i : PostVisit)
         VisitCXXDeleteExpr(CDE, i, Dst);
 
       Bldr.addNodes(Dst);

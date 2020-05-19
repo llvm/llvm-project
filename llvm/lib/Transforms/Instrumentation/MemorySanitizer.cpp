@@ -1637,7 +1637,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         }
         unsigned Size =
             FArg.hasByValAttr()
-                ? DL.getTypeAllocSize(FArg.getType()->getPointerElementType())
+                ? DL.getTypeAllocSize(FArg.getParamByValType())
                 : DL.getTypeAllocSize(FArg.getType());
         if (A == &FArg) {
           bool Overflow = ArgOffset + Size > kParamTLSSize;
@@ -1647,8 +1647,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             // argument shadow to the underlying memory.
             // Figure out maximal valid memcpy alignment.
             const Align ArgAlign = DL.getValueOrABITypeAlignment(
-                MaybeAlign(FArg.getParamAlignment()),
-                A->getType()->getPointerElementType());
+                MaybeAlign(FArg.getParamAlignment()), FArg.getParamByValType());
             Value *CpShadowPtr =
                 getShadowOriginPtr(V, EntryIRB, EntryIRB.getInt8Ty(), ArgAlign,
                                    /*isStore*/ true)
@@ -3378,7 +3377,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (CB.paramHasAttr(i, Attribute::ByVal)) {
         assert(A->getType()->isPointerTy() &&
                "ByVal argument is not a pointer!");
-        Size = DL.getTypeAllocSize(A->getType()->getPointerElementType());
+        Size = DL.getTypeAllocSize(CB.getParamByValType(i));
         if (ArgOffset + Size > kParamTLSSize) break;
         const MaybeAlign ParamAlignment(CB.getParamAlign(i));
         MaybeAlign Alignment = llvm::None;
@@ -3874,7 +3873,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
         if (IsFixed)
           continue;
         assert(A->getType()->isPointerTy());
-        Type *RealTy = A->getType()->getPointerElementType();
+        Type *RealTy = CB.getParamByValType(ArgNo);
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
         Value *ShadowBase = getShadowPtrForVAArgument(
             RealTy, IRB, OverflowOffset, alignTo(ArgSize, 8));
@@ -4491,7 +4490,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
-        Type *RealTy = A->getType()->getPointerElementType();
+        Type *RealTy = CB.getParamByValType(ArgNo);
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
         MaybeAlign ArgAlign = CB.getParamAlign(ArgNo);
         if (!ArgAlign || *ArgAlign < Align(8))

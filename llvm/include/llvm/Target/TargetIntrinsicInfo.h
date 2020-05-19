@@ -14,7 +14,6 @@
 #define LLVM_TARGET_TARGETINTRINSICINFO_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

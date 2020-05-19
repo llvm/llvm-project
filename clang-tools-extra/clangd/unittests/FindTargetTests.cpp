@@ -158,6 +158,19 @@ TEST_F(TargetDeclTest, Recovery) {
   EXPECT_DECLS("UnresolvedLookupExpr", "int f()", "int f(int, int)");
 }
 
+TEST_F(TargetDeclTest, RecoveryType) {
+  Code = R"cpp(
+    // error-ok: testing behavior on broken code
+    struct S { int member; };
+    S overloaded(int);
+    void foo() {
+      // No overload matches, but we have recovery-expr with the correct type.
+      overloaded().[[member]];
+    }
+  )cpp";
+  EXPECT_DECLS("MemberExpr", "int member");
+}
+
 TEST_F(TargetDeclTest, UsingDecl) {
   Code = R"cpp(
     namespace foo {
