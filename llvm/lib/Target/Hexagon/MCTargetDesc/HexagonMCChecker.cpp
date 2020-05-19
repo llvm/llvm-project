@@ -391,7 +391,7 @@ bool HexagonMCChecker::checkPredicates() {
   for (const auto &I : NewPreds) {
     unsigned P = I;
 
-    if (!Defs.count(P) || LatePreds.count(P)) {
+    if (!Defs.count(P) || LatePreds.count(P) || Defs.count(Hexagon::P3_0)) {
       // Error out if the new predicate register is not defined,
       // or defined "late"
       // (e.g., "{ if (p3.new)... ; p3 = sp1loop0(#r7:2, Rs) }").
