@@ -1956,6 +1956,9 @@ void UnwrappedLineParser::parseIfThenElse() {
     nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
+  // handle [[likely]] / [[unlikely]]
+  if (FormatTok->is(tok::l_square))
+    parseSquare();
   bool NeedsUnwrappedLine = false;
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -1972,6 +1975,9 @@ void UnwrappedLineParser::parseIfThenElse() {
   }
   if (FormatTok->Tok.is(tok::kw_else)) {
     nextToken();
+    // handle [[likely]] / [[unlikely]]
+    if (FormatTok->is(tok::l_square))
+      parseSquare();
     if (FormatTok->Tok.is(tok::l_brace)) {
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
       parseBlock(/*MustBeDeclaration=*/false);
