@@ -2666,6 +2666,28 @@ static bool checkHashTable(const ELFFile<ELFT> *Obj,
   return true;
 }
 
+template <class ELFT>
+static Error checkGNUHashTable(const ELFFile<ELFT> *Obj,
+                               const typename ELFT::GnuHash *GnuHashTable,
+                               bool *IsHeaderValid = nullptr) {
+  const uint8_t *TableData = reinterpret_cast<const uint8_t *>(GnuHashTable);
+  assert(TableData >= Obj->base() &&
+         TableData < Obj->base() + Obj->getBufSize() &&
+         "GnuHashTable must always point to a location inside the file");
+
+  uint64_t TableOffset = TableData - Obj->base();
+  if (IsHeaderValid)
+    *IsHeaderValid = TableOffset + /*Header size:*/ 16 < Obj->getBufSize();
+  if (TableOffset + 16 + GnuHashTable->nbuckets * 4 +
+          GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
+      Obj->getBufSize())
+    return createError("unable to dump the SHT_GNU_HASH "
+                       "section at 0x" +
+                       Twine::utohexstr(TableOffset) +
+                       ": it goes past the end of the file");
+  return Error::success();
+}
+
 template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
   DictScope D(W, "HashTable");
   if (!HashTable ||
@@ -2682,27 +2704,19 @@ void ELFDumper<ELFT>::printGnuHashTable(const object::ObjectFile *Obj) {
   DictScope D(W, "GnuHashTable");
   if (!GnuHashTable)
     return;
-  W.printNumber("Num Buckets", GnuHashTable->nbuckets);
-  W.printNumber("First Hashed Symbol Index", GnuHashTable->symndx);
-  W.printNumber("Num Mask Words", GnuHashTable->maskwords);
-  W.printNumber("Shift Count", GnuHashTable->shift2);
 
-  MemoryBufferRef File = Obj->getMemoryBufferRef();
-  const char *TableData = reinterpret_cast<const char *>(GnuHashTable);
-  assert(TableData >= File.getBufferStart() &&
-         TableData < File.getBufferEnd() &&
-         "GnuHashTable must always point to a location inside the file");
+  bool IsHeaderValid;
+  Error Err =
+      checkGNUHashTable<ELFT>(ObjF->getELFFile(), GnuHashTable, &IsHeaderValid);
+  if (IsHeaderValid) {
+    W.printNumber("Num Buckets", GnuHashTable->nbuckets);
+    W.printNumber("First Hashed Symbol Index", GnuHashTable->symndx);
+    W.printNumber("Num Mask Words", GnuHashTable->maskwords);
+    W.printNumber("Shift Count", GnuHashTable->shift2);
+  }
 
-  uint64_t TableOffset = TableData - File.getBufferStart();
-  if (TableOffset +
-          /*Header size:*/ 16 + GnuHashTable->nbuckets * 4 +
-          GnuHashTable->maskwords * sizeof(typename ELFT::Off) >=
-      File.getBufferSize()) {
-    reportWarning(createError("unable to dump the SHT_GNU_HASH "
-                              "section at 0x" +
-                              Twine::utohexstr(TableOffset) +
-                              ": it goes past the end of the file"),
-                  ObjF->getFileName());
+  if (Err) {
+    reportUniqueWarning(std::move(Err));
     return;
   }
 
@@ -4680,7 +4694,10 @@ void GNUStyle<ELFT>::printHashHistograms(const ELFFile<ELFT> *Obj) {
 
   // Print histogram for the .gnu.hash section.
   if (const Elf_GnuHash *GnuHashTable = this->dumper()->getGnuHashTable())
-    printGnuHashHistogram(*GnuHashTable);
+    if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printGnuHashHistogram(*GnuHashTable);
 }
 
 template <class ELFT>
