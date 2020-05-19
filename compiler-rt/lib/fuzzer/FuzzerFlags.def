@@ -153,6 +153,14 @@ FUZZER_FLAG_STRING(focus_function, "Experimental. "
      "Fuzzing will focus on inputs that trigger calls to this function. "
      "If -focus_function=auto and -data_flow_trace is used, libFuzzer "
      "will choose the focus functions automatically.")
+FUZZER_FLAG_INT(entropic, 0, "Experimental. Enables entropic power schedule.")
+FUZZER_FLAG_INT(entropic_feature_frequency_threshold, 0xFF, "Experimental. If "
+     "entropic is enabled, all features which are observed less often than "
+     "the specified value are considered as rare.")
+FUZZER_FLAG_INT(entropic_number_of_rarest_features, 100, "Experimental. If "
+     "entropic is enabled, we keep track of the frequencies only for the "
+     "Top-X least abundant features (union features that are considered as "
+     "rare).")
 
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
