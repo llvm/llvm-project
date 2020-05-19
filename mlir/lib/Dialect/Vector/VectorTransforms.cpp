@@ -564,9 +564,12 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
       // Get VectorType for slice 'i'.
       auto sliceVectorType = resultTupleType.getType(index);
       // Create split TransferReadOp for 'sliceUser'.
+      // `masked` attribute propagates conservatively: if the coarse op didn't
+      // need masking, the fine op doesn't either.
       vectorTupleValues[index] = rewriter.create<vector::TransferReadOp>(
           loc, sliceVectorType, xferReadOp.memref(), sliceIndices,
-          xferReadOp.permutation_map(), xferReadOp.padding());
+          xferReadOp.permutation_map(), xferReadOp.padding(),
+          xferReadOp.masked() ? *xferReadOp.masked() : ArrayAttr());
     };
     generateTransferOpSlices(memrefElementType, sourceVectorType,
                              resultTupleType, sizes, strides, indices, rewriter,
@@ -620,9 +623,12 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
                                   xferWriteOp.indices().end());
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
       // Create split TransferWriteOp for source vector 'tupleOp.operand[i]'.
+      // `masked` attribute propagates conservatively: if the coarse op didn't
+      // need masking, the fine op doesn't either.
       rewriter.create<vector::TransferWriteOp>(
           loc, tupleOp.getOperand(index), xferWriteOp.memref(), sliceIndices,
-          xferWriteOp.permutation_map());
+          xferWriteOp.permutation_map(),
+          xferWriteOp.masked() ? *xferWriteOp.masked() : ArrayAttr());
     };
     generateTransferOpSlices(memrefElementType, resultVectorType,
                              sourceTupleType, sizes, strides, indices, rewriter,

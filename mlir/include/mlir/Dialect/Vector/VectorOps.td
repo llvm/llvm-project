@@ -865,7 +865,12 @@ def Vector_ExtractStridedSliceOp :
 
 def Vector_TransferOpUtils {
   code extraTransferDeclaration = [{
+    static StringRef getMaskedAttrName() { return "masked"; }
     static StringRef getPermutationMapAttrName() { return "permutation_map"; }
+    bool isMaskedDim(unsigned dim) {
+      return !masked() ||
+        masked()->cast<ArrayAttr>()[dim].cast<BoolAttr>().getValue();
+    }
     MemRefType getMemRefType() {
       return memref().getType().cast<MemRefType>();
     }
@@ -878,14 +883,15 @@ def Vector_TransferOpUtils {
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read">,
     Arguments<(ins AnyMemRef:$memref, Variadic<Index>:$indices,
-               AffineMapAttr:$permutation_map, AnyType:$padding)>,
+               AffineMapAttr:$permutation_map, AnyType:$padding,
+               OptionalAttr<BoolArrayAttr>:$masked)>,
     Results<(outs AnyVector:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
 
   let description = [{
-    The `vector.transfer_read` op performs a blocking read from a slice within
-    a [MemRef](../LangRef.md#memref-type) supplied as its first operand
+    The `vector.transfer_read` op performs a read from a slice within a
+    [MemRef](../LangRef.md#memref-type) supplied as its first operand
     into a [vector](../LangRef.md#vector-type) of the same base elemental type.
 
     A memref operand with vector element type, must have its vector element
@@ -893,8 +899,9 @@ def Vector_TransferReadOp :
     memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
 
     The slice is further defined by a full-rank index within the MemRef,
-    supplied as the operands `2 .. 1 + rank(memref)`. The permutation_map
-    [attribute](../LangRef.md#attributes) is an
+    supplied as the operands `2 .. 1 + rank(memref)`.
+
+    The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
     slice to match the vector shape. The permutation map may be implicit and
     ommitted from parsing and printing if it is the canonical minor identity map
@@ -905,6 +912,12 @@ def Vector_TransferReadOp :
 
     An `ssa-value` of the same elemental type as the MemRef is provided as the
     last operand to specify padding in the case of out-of-bounds accesses.
+
+    An optional boolean array attribute is provided to specify which dimensions
+    of the transfer need masking. When a dimension is specified as not requiring
+    masking, the `vector.transfer_read` may be lowered to simple loads. The
+    absence of this `masked` attribute signifies that all dimensions of the
+    transfer need to be masked.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1015,11 +1028,13 @@ def Vector_TransferReadOp :
   let builders = [
     // Builder that sets padding to zero.
     OpBuilder<"OpBuilder &builder, OperationState &result, VectorType vector, "
-              "Value memref, ValueRange indices, AffineMap permutationMap">,
+              "Value memref, ValueRange indices, AffineMap permutationMap, "
+              "ArrayRef<bool> maybeMasked = {}">,
     // Builder that sets permutation map (resp. padding) to
     // 'getMinorIdentityMap' (resp. zero).
     OpBuilder<"OpBuilder &builder, OperationState &result, VectorType vector, "
-              "Value memref, ValueRange indices">
+              "Value memref, ValueRange indices, "
+              "ArrayRef<bool> maybeMasked = {}">
   ];
 
   let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
@@ -1039,12 +1054,13 @@ def Vector_TransferWriteOp :
   Vector_Op<"transfer_write">,
     Arguments<(ins AnyVector:$vector, AnyMemRef:$memref,
                Variadic<Index>:$indices,
-               AffineMapAttr:$permutation_map)> {
+               AffineMapAttr:$permutation_map,
+               OptionalAttr<BoolArrayAttr>:$masked)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
 
   let description = [{
-    The `vector.transfer_write` performs a blocking write from a
+    The `vector.transfer_write` op performs a write from a
     [vector](../LangRef.md#vector-type), supplied as its first operand, into a
     slice within a [MemRef](../LangRef.md#memref-type) of the same base
     elemental type, supplied as its second operand.
@@ -1055,6 +1071,7 @@ def Vector_TransferWriteOp :
 
     The slice is further defined by a full-rank index within the MemRef,
     supplied as the operands `3 .. 2 + rank(memref)`.
+
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
     slice to match the vector shape. The permutation map may be implicit and
@@ -1062,6 +1079,12 @@ def Vector_TransferWriteOp :
     (i.e. if it does not permute or broadcast any dimension).
 
     The size of the slice is specified by the size of the vector.
+
+    An optional boolean array attribute is provided to specify which dimensions
+    of the transfer need masking. When a dimension is specified as not requiring
+    masking, the `vector.transfer_write` may be lowered to simple stores. The
+    absence of this `mask` attribute signifies that all dimensions of the
+    transfer need to be masked.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -1097,7 +1120,10 @@ def Vector_TransferWriteOp :
   let builders = [
     // Builder that sets permutation map to 'getMinorIdentityMap'.
     OpBuilder<"OpBuilder &builder, OperationState &result, Value vector, "
-              "Value memref, ValueRange indices">
+              "Value memref, ValueRange indices, "
+              "ArrayRef<bool> maybeMasked = {}">,
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value vector, "
+              "Value memref, ValueRange indices, AffineMap permutationMap">,
   ];
 
   let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #

@@ -1202,6 +1202,23 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // TransferReadOp
 //===----------------------------------------------------------------------===//
+
+/// Build the default minor identity map suitable for a vector transfer. This
+/// also handles the case memref<... x vector<...>> -> vector<...> in which the
+/// rank of the identity map must take the vector element type into account.
+AffineMap
+mlir::vector::impl::getTransferMinorIdentityMap(MemRefType memRefType,
+                                                VectorType vectorType) {
+  int64_t elementVectorRank = 0;
+  VectorType elementVectorType =
+      memRefType.getElementType().dyn_cast<VectorType>();
+  if (elementVectorType)
+    elementVectorRank += elementVectorType.getRank();
+  return AffineMap::getMinorIdentityMap(
+      memRefType.getRank(), vectorType.getRank() - elementVectorRank,
+      memRefType.getContext());
+}
+
 template <typename EmitFun>
 static LogicalResult verifyPermutationMap(AffineMap permutationMap,
                                           EmitFun emitOpError) {
@@ -1233,7 +1250,8 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
 
 static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
                                       VectorType vectorType,
-                                      AffineMap permutationMap) {
+                                      AffineMap permutationMap,
+                                      ArrayAttr optionalMasked) {
   auto memrefElementType = memrefType.getElementType();
   if (auto memrefVectorElementType = memrefElementType.dyn_cast<VectorType>()) {
     // Memref has vector element type.
@@ -1282,52 +1300,60 @@ static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
     return op->emitOpError("requires a permutation_map with input dims of the "
                            "same rank as the memref type");
 
+  if (optionalMasked) {
+    if (permutationMap.getNumResults() !=
+        static_cast<int64_t>(optionalMasked.size()))
+      return op->emitOpError("expects the optional masked attr of same rank as "
+                             "permutation_map results: ")
+             << AffineMapAttr::get(permutationMap);
+  }
+
   return success();
 }
 
-/// Build the default minor identity map suitable for a vector transfer. This
-/// also handles the case memref<... x vector<...>> -> vector<...> in which the
-/// rank of the identity map must take the vector element type into account.
-AffineMap
-mlir::vector::impl::getTransferMinorIdentityMap(MemRefType memRefType,
-                                                VectorType vectorType) {
-  int64_t elementVectorRank = 0;
-  VectorType elementVectorType =
-      memRefType.getElementType().dyn_cast<VectorType>();
-  if (elementVectorType)
-    elementVectorRank += elementVectorType.getRank();
-  return AffineMap::getMinorIdentityMap(
-      memRefType.getRank(), vectorType.getRank() - elementVectorRank,
-      memRefType.getContext());
-}
-
-/// Builder that sets permutation map and padding to 'getMinorIdentityMap' and
-/// zero, respectively, by default.
+/// Builder that sets padding to zero.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vector, Value memref, ValueRange indices,
-                           AffineMap permutationMap) {
+                           AffineMap permutationMap,
+                           ArrayRef<bool> maybeMasked) {
   Type elemType = vector.cast<VectorType>().getElementType();
   Value padding = builder.create<ConstantOp>(result.location, elemType,
                                              builder.getZeroAttr(elemType));
-  build(builder, result, vector, memref, indices, permutationMap, padding);
+  if (maybeMasked.empty())
+    return build(builder, result, vector, memref, indices, permutationMap,
+                 padding, ArrayAttr());
+  ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
+  build(builder, result, vector, memref, indices, permutationMap, padding,
+        maskedArrayAttr);
 }
 
 /// Builder that sets permutation map (resp. padding) to 'getMinorIdentityMap'
 /// (resp. zero).
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value memref,
-                           ValueRange indices) {
-  build(builder, result, vectorType, memref, indices,
-        getTransferMinorIdentityMap(memref.getType().cast<MemRefType>(),
-                                    vectorType));
+                           ValueRange indices, ArrayRef<bool> maybeMasked) {
+  auto permMap = getTransferMinorIdentityMap(
+      memref.getType().cast<MemRefType>(), vectorType);
+  build(builder, result, vectorType, memref, indices, permMap, maybeMasked);
 }
 
 template <typename TransferOp>
 void printTransferAttrs(OpAsmPrinter &p, TransferOp op) {
-  SmallVector<StringRef, 1> elidedAttrs;
+  SmallVector<StringRef, 2> elidedAttrs;
   if (op.permutation_map() == TransferOp::getTransferMinorIdentityMap(
                                   op.getMemRefType(), op.getVectorType()))
     elidedAttrs.push_back(op.getPermutationMapAttrName());
+  bool elideMasked = true;
+  if (auto maybeMasked = op.masked()) {
+    for (auto attr : *maybeMasked) {
+      if (!attr.template cast<BoolAttr>().getValue()) {
+        elideMasked = false;
+        break;
+      }
+    }
+  }
+  if (elideMasked)
+    elidedAttrs.push_back(op.getMaskedAttrName());
   p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
 }
 
@@ -1388,7 +1414,8 @@ static LogicalResult verify(TransferReadOp op) {
     return op.emitOpError("requires ") << memrefType.getRank() << " indices";
 
   if (failed(verifyTransferOp(op.getOperation(), memrefType, vectorType,
-                              permutationMap)))
+                              permutationMap,
+                              op.masked() ? *op.masked() : ArrayAttr())))
     return failure();
 
   if (auto memrefVectorElementType = memrefElementType.dyn_cast<VectorType>()) {
@@ -1419,11 +1446,24 @@ static LogicalResult verify(TransferReadOp op) {
 
 /// Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
-                            Value vector, Value memref, ValueRange indices) {
+                            Value vector, Value memref, ValueRange indices,
+                            ArrayRef<bool> maybeMasked) {
   auto vectorType = vector.getType().cast<VectorType>();
   auto permMap = getTransferMinorIdentityMap(
       memref.getType().cast<MemRefType>(), vectorType);
-  build(builder, result, vector, memref, indices, permMap);
+  if (maybeMasked.empty())
+    return build(builder, result, vector, memref, indices, permMap,
+                 ArrayAttr());
+  ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
+  build(builder, result, vector, memref, indices, permMap, maskedArrayAttr);
+}
+
+/// Builder that sets permutation map to 'getMinorIdentityMap'.
+void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
+                            Value vector, Value memref, ValueRange indices,
+                            AffineMap permutationMap) {
+  build(builder, result, vector, memref, indices,
+        /*maybeMasked=*/ArrayRef<bool>{});
 }
 
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
@@ -1477,7 +1517,8 @@ static LogicalResult verify(TransferWriteOp op) {
     return op.emitOpError("requires ") << memrefType.getRank() << " indices";
 
   if (failed(verifyTransferOp(op.getOperation(), memrefType, vectorType,
-                              permutationMap)))
+                              permutationMap,
+                              op.masked() ? *op.masked() : ArrayAttr())))
     return failure();
 
   return verifyPermutationMap(permutationMap,

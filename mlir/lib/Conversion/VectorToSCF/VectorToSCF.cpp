@@ -157,25 +157,34 @@ void NDTransferOpHelper<ConcreteOp>::emitInBounds(
     ValueRange majorIvs, ValueRange majorOffsets,
     MemRefBoundsCapture &memrefBounds, LambdaThen thenBlockBuilder,
     LambdaElse elseBlockBuilder) {
-  Value inBounds = std_constant_int(/*value=*/1, /*width=*/1);
+  Value inBounds;
   SmallVector<Value, 4> majorIvsPlusOffsets;
   majorIvsPlusOffsets.reserve(majorIvs.size());
+  unsigned idx = 0;
   for (auto it : llvm::zip(majorIvs, majorOffsets, memrefBounds.getUbs())) {
     Value iv = std::get<0>(it), off = std::get<1>(it), ub = std::get<2>(it);
     using namespace mlir::edsc::op;
     majorIvsPlusOffsets.push_back(iv + off);
-    Value inBounds2 = majorIvsPlusOffsets.back() < ub;
-    inBounds = inBounds && inBounds2;
+    if (xferOp.isMaskedDim(leadingRank + idx)) {
+      Value inBounds2 = majorIvsPlusOffsets.back() < ub;
+      inBounds = (inBounds) ? (inBounds && inBounds2) : inBounds2;
+    }
+    ++idx;
   }
 
-  auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
-      ScopedContext::getLocation(), TypeRange{}, inBounds,
-      /*withElseRegion=*/std::is_same<ConcreteOp, TransferReadOp>());
-  BlockBuilder(&ifOp.thenRegion().front(),
-               Append())([&] { thenBlockBuilder(majorIvsPlusOffsets); });
-  if (std::is_same<ConcreteOp, TransferReadOp>())
-    BlockBuilder(&ifOp.elseRegion().front(),
-                 Append())([&] { elseBlockBuilder(majorIvsPlusOffsets); });
+  if (inBounds) {
+    auto ifOp = ScopedContext::getBuilderRef().create<scf::IfOp>(
+        ScopedContext::getLocation(), TypeRange{}, inBounds,
+        /*withElseRegion=*/std::is_same<ConcreteOp, TransferReadOp>());
+    BlockBuilder(&ifOp.thenRegion().front(),
+                 Append())([&] { thenBlockBuilder(majorIvsPlusOffsets); });
+    if (std::is_same<ConcreteOp, TransferReadOp>())
+      BlockBuilder(&ifOp.elseRegion().front(),
+                   Append())([&] { elseBlockBuilder(majorIvsPlusOffsets); });
+  } else {
+    // Just build the body of the then block right here.
+    thenBlockBuilder(majorIvsPlusOffsets);
+  }
 }
 
 template <>
@@ -192,13 +201,18 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
       indexing.append(leadingOffsets.begin(), leadingOffsets.end());
       indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
       indexing.append(minorOffsets.begin(), minorOffsets.end());
-      // Lower to 1-D vector_transfer_read and let recursion handle it.
+
       Value memref = xferOp.memref();
       auto map = TransferReadOp::getTransferMinorIdentityMap(
           xferOp.getMemRefType(), minorVectorType);
-      auto loaded1D =
-          vector_transfer_read(minorVectorType, memref, indexing,
-                               AffineMapAttr::get(map), xferOp.padding());
+      ArrayAttr masked;
+      if (xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
+        OpBuilder &b = ScopedContext::getBuilderRef();
+        masked = b.getBoolArrayAttr({true});
+      }
+      auto loaded1D = vector_transfer_read(minorVectorType, memref, indexing,
+                                           AffineMapAttr::get(map),
+                                           xferOp.padding(), masked);
       // Store the 1-D vector.
       std_store(loaded1D, alloc, majorIvs);
     };
@@ -229,7 +243,6 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
                 ValueRange majorOffsets, ValueRange minorOffsets,
                 MemRefBoundsCapture &memrefBounds) {
     auto thenBlockBuilder = [&](ValueRange majorIvsPlusOffsets) {
-      // Lower to 1-D vector_transfer_write and let recursion handle it.
       SmallVector<Value, 8> indexing;
       indexing.reserve(leadingRank + majorRank + minorRank);
       indexing.append(leadingOffsets.begin(), leadingOffsets.end());
@@ -239,8 +252,13 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
       Value loaded1D = std_load(alloc, majorIvs);
       auto map = TransferWriteOp::getTransferMinorIdentityMap(
           xferOp.getMemRefType(), minorVectorType);
+      ArrayAttr masked;
+      if (xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
+        OpBuilder &b = ScopedContext::getBuilderRef();
+        masked = b.getBoolArrayAttr({true});
+      }
       vector_transfer_write(loaded1D, xferOp.memref(), indexing,
-                            AffineMapAttr::get(map));
+                            AffineMapAttr::get(map), masked);
     };
     // Don't write anything when out of bounds.
     auto elseBlockBuilder = [&](ValueRange majorIvsPlusOffsets) {};
