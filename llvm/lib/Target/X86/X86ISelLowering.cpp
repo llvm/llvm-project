@@ -6445,23 +6445,6 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   }
 
   // Extract constant bits from a broadcasted constant pool scalar.
-  if (Op.getOpcode() == X86ISD::VBROADCAST &&
-      EltSizeInBits <= VT.getScalarSizeInBits()) {
-    if (auto *Broadcast = getTargetConstantFromNode(Op.getOperand(0))) {
-      unsigned SrcEltSizeInBits = Broadcast->getType()->getScalarSizeInBits();
-      unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
-
-      APInt UndefSrcElts(NumSrcElts, 0);
-      SmallVector<APInt, 64> SrcEltBits(1, APInt(SrcEltSizeInBits, 0));
-      if (CollectConstantBits(Broadcast, SrcEltBits[0], UndefSrcElts, 0)) {
-        if (UndefSrcElts[0])
-          UndefSrcElts.setBits(0, NumSrcElts);
-        SrcEltBits.append(NumSrcElts - 1, SrcEltBits[0]);
-        return CastBitData(UndefSrcElts, SrcEltBits);
-      }
-    }
-  }
-
   if (Op.getOpcode() == X86ISD::VBROADCAST_LOAD &&
       EltSizeInBits <= VT.getScalarSizeInBits()) {
     auto *MemIntr = cast<MemIntrinsicSDNode>(Op);
