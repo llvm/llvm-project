@@ -31,6 +31,56 @@ using namespace mlir;
 using namespace ROCDL;
 
 //===----------------------------------------------------------------------===//
+// Parsing for ROCDL ops
+//===----------------------------------------------------------------------===//
+
+static LLVM::LLVMDialect *getLlvmDialect(OpAsmParser &parser) {
+  return parser.getBuilder()
+      .getContext()
+      ->getRegisteredDialect<LLVM::LLVMDialect>();
+}
+
+// <operation> ::=
+//     `llvm.amdgcn.buffer.load.* %rsrc, %vindex, %offset, %glc, %slc :
+//     result_type`
+static ParseResult parseROCDLMubufLoadOp(OpAsmParser &parser,
+                                         OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 8> ops;
+  Type type;
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
+      parser.addTypeToList(type, result.types))
+    return failure();
+
+  auto int32Ty = LLVM::LLVMType::getInt32Ty(getLlvmDialect(parser));
+  auto int1Ty = LLVM::LLVMType::getInt1Ty(getLlvmDialect(parser));
+  auto i32x4Ty = LLVM::LLVMType::getVectorTy(int32Ty, 4);
+  return parser.resolveOperands(ops,
+                                {i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
+                                parser.getNameLoc(), result.operands);
+}
+
+// <operation> ::=
+//     `llvm.amdgcn.buffer.store.* %vdata, %rsrc, %vindex, %offset, %glc, %slc :
+//     result_type`
+static ParseResult parseROCDLMubufStoreOp(OpAsmParser &parser,
+                                          OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 8> ops;
+  Type type;
+  if (parser.parseOperandList(ops, 6) || parser.parseColonType(type))
+    return failure();
+
+  auto int32Ty = LLVM::LLVMType::getInt32Ty(getLlvmDialect(parser));
+  auto int1Ty = LLVM::LLVMType::getInt1Ty(getLlvmDialect(parser));
+  auto i32x4Ty = LLVM::LLVMType::getVectorTy(int32Ty, 4);
+
+  if (parser.resolveOperands(ops,
+                             {type, i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
+                             parser.getNameLoc(), result.operands))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ROCDLDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
