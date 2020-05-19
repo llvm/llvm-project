@@ -340,7 +340,8 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
     int FrIdx = Info[i].getFrameIdx();
     unsigned Reg = Info[i].getReg();
 
-    unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(Reg);
+    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
+    unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(RC);
     if (!MFI.isFixedObjectIndex(FrIdx)) {
       // This is not a fixed object. If it requires alignment then we may still
       // need to use the XForm.
