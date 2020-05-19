@@ -6,7 +6,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #include "oclc.h"
 #include "ockl_hsa.h"
 

@@ -25,7 +25,7 @@ struct mg_info {
     ulong all_sum;
 };
 
-static inline size_t 
+static inline size_t
 get_mg_info_arg(void)
 {
     return ((__constant size_t *)__builtin_amdgcn_implicitarg_ptr())[6];

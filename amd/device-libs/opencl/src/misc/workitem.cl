@@ -5,7 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #include "ockl.h"
 
 #define ATTR __attribute__((overloadable, const))

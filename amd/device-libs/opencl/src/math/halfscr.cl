@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
-
 float2
 __half_scr(float x)
 {

@@ -1,5 +1,4 @@
 
-#include "irif.h"
 #include "device_amd_hsa.h"
 
 #pragma OPENCL EXTENSION cl_amd_media_ops2 : enable

@@ -5,7 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #include "mathF.h"
 
 CONSTATTR float2

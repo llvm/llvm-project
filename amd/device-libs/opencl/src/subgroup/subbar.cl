@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
-
 __attribute__((overloadable)) void
 sub_group_barrier(cl_mem_fence_flags flags)
 {

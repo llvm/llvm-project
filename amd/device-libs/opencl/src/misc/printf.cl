@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
-
 #ifndef NULL
 #define NULL 0
 #endif

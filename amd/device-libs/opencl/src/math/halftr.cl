@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
-
 __attribute__((const)) float
 __half_tr(float x, int regn)
 {
