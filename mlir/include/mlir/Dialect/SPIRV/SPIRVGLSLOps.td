@@ -233,6 +233,38 @@ def SPV_GLSLSinOp : SPV_GLSLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
 
 // -----
 
+def SPV_GLSLTanOp : SPV_GLSLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
+  let summary = "Tangent of operand in radians";
+
+  let description = [{
+    The standard trigonometric tangent of x radians.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or 
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed 
+    per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    tan-op ::= ssa-id `=` `spv.GLSL.Tan` ssa-use `:`
+               restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Tan %0 : f32
+    %3 = spv.GLSL.Tan %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_GLSLExpOp : SPV_GLSLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
   let summary = "Exponentiation of Operand 1";
 
