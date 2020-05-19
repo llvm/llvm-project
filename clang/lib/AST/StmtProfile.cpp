@@ -809,6 +809,12 @@ void OMPClauseProfiler::VisitOMPUsesAllocatorsClause(
       Profiler->VisitStmt(D.AllocatorTraits);
   }
 }
+void OMPClauseProfiler::VisitOMPAffinityClause(const OMPAffinityClause *C) {
+  if (const Expr *Modifier = C->getModifier())
+    Profiler->VisitStmt(Modifier);
+  for (const Expr *E : C->varlists())
+    Profiler->VisitStmt(E);
+}
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 } // namespace
 
