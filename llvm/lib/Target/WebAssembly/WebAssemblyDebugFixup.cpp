@@ -86,9 +86,9 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
           // Search for register rather than assume it is on top (which it
           // typically is if it appears right after the def), since
           // DBG_VALUE's may shift under some circumstances.
-          size_t Depth = 0;
-          for (auto &Elem : Stack) {
+          for (auto &Elem : reverse(Stack)) {
             if (MO.getReg() == Elem.Reg) {
+              auto Depth = static_cast<unsigned>(&Elem - &Stack[0]);
               LLVM_DEBUG(dbgs() << "Debug Value VReg " << MO.getReg()
                                 << " -> Stack Relative " << Depth << "\n");
               MO.ChangeToTargetIndex(WebAssembly::TI_OPERAND_STACK, Depth);
@@ -98,7 +98,6 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
               Elem.DebugValue = &MI;
               break;
             }
-            Depth++;
           }
           // If the Reg was not found, we have a DBG_VALUE outside of its
           // def-use range, and we leave it unmodified as reg, which means
