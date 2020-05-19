@@ -231,6 +231,9 @@ public:
   /// Optimize (x op x) -> x
   bool matchBinOpSameVal(MachineInstr &MI);
 
+  /// Check if operand \p OpIdx is zero.
+  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
