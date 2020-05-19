@@ -28,14 +28,14 @@ TEST(DataFormatterMockTest, NSDate) {
   EXPECT_EQ(*formatDateValue(-63114076800), "0001-12-30 00:00:00 +0000");
 
   // Can't convert the date_value to a time_t.
-  EXPECT_EQ(formatDateValue(std::numeric_limits<time_t>::max() + 1),
+  EXPECT_EQ(formatDateValue((double)(std::numeric_limits<time_t>::max()) + 1),
             llvm::None);
-  EXPECT_EQ(formatDateValue(std::numeric_limits<time_t>::min() - 1),
+  EXPECT_EQ(formatDateValue((double)(std::numeric_limits<time_t>::min()) - 1),
             llvm::None);
 
   // Can't add the macOS epoch to the converted date_value (the add overflows).
-  EXPECT_EQ(formatDateValue(std::numeric_limits<time_t>::max()), llvm::None);
-  EXPECT_EQ(formatDateValue(std::numeric_limits<time_t>::min()), llvm::None);
+  EXPECT_EQ(formatDateValue((double)std::numeric_limits<time_t>::max()), llvm::None);
+  EXPECT_EQ(formatDateValue((double)std::numeric_limits<time_t>::min()), llvm::None);
 
   // FIXME: The formatting result is wrong on Windows because we adjust the
   // epoch when _WIN32 is defined (see GetOSXEpoch).
