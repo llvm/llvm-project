@@ -52,4 +52,4 @@ add_llvm_tool(mlir-opt
 target_link_libraries(mlir-opt PRIVATE ${LIBS})
 llvm_update_compile_flags(mlir-opt)
 
-mlir_check_link_libraries(mlir-opt)
+mlir_check_all_link_libraries(mlir-opt)
