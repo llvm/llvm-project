@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=WINDOWS
 --- |
   define void @baz() #0 {
     ret void
@@ -65,3 +66,4 @@ body:             |
 # CHECK-NEXT: $w17 = ORRWri $wzr, 1
 # CHECK-NEXT: early-clobber $sp, $lr = LDRXpost $sp, 16
 # CHECK-NEXT: RET $lr
+# WINDOWS-NOT: OUTLINED
