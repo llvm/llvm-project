@@ -252,6 +252,8 @@ public:
                              MachineInstr &NewMI1,
                              MachineInstr &NewMI2) const override;
 
+  void setSpecialOperandAttr(MachineInstr &MI, uint16_t Flags) const override;
+
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              Register &SrcReg, Register &DstReg,
                              unsigned &SubIdx) const override;
