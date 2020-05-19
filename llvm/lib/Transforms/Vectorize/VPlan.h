@@ -1021,6 +1021,9 @@ class VPReplicateRecipe : public VPRecipeBase {
   /// The instruction being replicated.
   Instruction *Ingredient;
 
+  /// Hold VPValues for the operands of the ingredient.
+  VPUser User;
+
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -1031,9 +1034,11 @@ class VPReplicateRecipe : public VPRecipeBase {
   bool AlsoPack;
 
 public:
-  VPReplicateRecipe(Instruction *I, bool IsUniform, bool IsPredicated = false)
-      : VPRecipeBase(VPReplicateSC), Ingredient(I), IsUniform(IsUniform),
-        IsPredicated(IsPredicated) {
+  template <typename IterT>
+  VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
+                    bool IsUniform, bool IsPredicated = false)
+      : VPRecipeBase(VPReplicateSC), Ingredient(I), User(Operands),
+        IsUniform(IsUniform), IsPredicated(IsPredicated) {
     // Retain the previous behavior of predicateInstructions(), where an
     // insert-element of a predicated instruction got hoisted into the
     // predicated basic block iff it was its only user. This is achieved by
