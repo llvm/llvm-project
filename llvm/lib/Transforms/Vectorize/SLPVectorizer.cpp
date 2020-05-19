@@ -3540,7 +3540,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Load: {
       // Cost of wide load - cost of scalar loads.
-      MaybeAlign alignment(cast<LoadInst>(VL0)->getAlignment());
+      Align alignment = cast<LoadInst>(VL0)->getAlign();
       int ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Load, ScalarTy, alignment, 0,
                                CostKind, VL0);
@@ -3563,7 +3563,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       bool IsReorder = !E->ReorderIndices.empty();
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
-      MaybeAlign Alignment(SI->getAlignment());
+      Align Alignment = SI->getAlign();
       int ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Store, ScalarTy, Alignment, 0,
                                CostKind, VL0);
