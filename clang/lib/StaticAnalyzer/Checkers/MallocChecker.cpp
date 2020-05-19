@@ -315,8 +315,8 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostStmt(const CXXNewExpr *NE, CheckerContext &C) const;
-  void checkNewAllocator(const CXXNewExpr *NE, SVal Target,
-                         CheckerContext &C) const;
+  void checkPreStmt(const CXXDeleteExpr *DE, CheckerContext &C) const;
+  void checkNewAllocator(const CXXAllocatorCall &Call, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &Call, CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
@@ -1357,11 +1357,12 @@ void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
   }
 }
 
-void MallocChecker::checkNewAllocator(const CXXNewExpr *NE, SVal Target,
+void MallocChecker::checkNewAllocator(const CXXAllocatorCall &Call,
                                       CheckerContext &C) const {
   if (!C.wasInlined) {
-    processNewAllocation(NE, C, Target,
-                         (NE->isArray() ? AF_CXXNewArray : AF_CXXNew));
+    processNewAllocation(
+        Call.getOriginExpr(), C, Call.getObjectUnderConstruction(),
+        (Call.getOriginExpr()->isArray() ? AF_CXXNewArray : AF_CXXNew));
   }
 }
 

@@ -39,6 +39,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1008,6 +1009,12 @@ public:
 
   const FunctionDecl *getDecl() const override {
     return getOriginExpr()->getOperatorNew();
+  }
+
+  SVal getObjectUnderConstruction() const {
+    return ExprEngine::getObjectUnderConstruction(getState(), getOriginExpr(),
+                                                  getLocationContext())
+        .getValue();
   }
 
   /// Number of non-placement arguments to the call. It is equal to 2 for
