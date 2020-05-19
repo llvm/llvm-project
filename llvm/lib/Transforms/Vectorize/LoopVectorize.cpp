@@ -7124,7 +7124,6 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
     if ((Recipe = tryToOptimizeInductionPHI(Phi)))
       return Recipe;
     return new VPWidenPHIRecipe(Phi);
-    return new VPWidenPHIRecipe(Phi);
   }
 
   if (isa<TruncInst>(Instr) &&
