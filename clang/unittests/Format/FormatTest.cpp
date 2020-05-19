@@ -16363,6 +16363,36 @@ TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
              Style));
 }
 
+TEST_F(FormatTest, LikelyUnlikely) {
+  FormatStyle Style = getLLVMStyle();
+
+  verifyFormat("if (argc > 5) [[unlikely]] {\n"
+               "  return 29;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (argc > 5) [[likely]] {\n"
+               "  return 29;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (argc > 5) [[unlikely]] {\n"
+               "  return 29;\n"
+               "} else [[likely]] {\n"
+               "  return 42;\n"
+               "}\n",
+               Style);
+
+  verifyFormat("if (argc > 5) [[unlikely]] {\n"
+               "  return 29;\n"
+               "} else if (argc > 10) [[likely]] {\n"
+               "  return 99;\n"
+               "} else {\n"
+               "  return 42;\n"
+               "}\n",
+               Style);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
