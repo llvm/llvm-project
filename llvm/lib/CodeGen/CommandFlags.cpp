@@ -13,6 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/IR/Module.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Host.h"
 
 using namespace llvm;
 
