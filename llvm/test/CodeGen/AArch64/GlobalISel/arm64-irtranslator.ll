@@ -962,6 +962,31 @@ define i32 @test_select(i1 %tst, i32 %lhs, i32 %rhs) {
   ret i32 %res
 }
 
+; CHECK-LABEL: name: test_select_flags
+; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $s1
+; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = nnan G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
+define float @test_select_flags(i1 %tst, float %lhs, float %rhs) {
+  %res = select nnan i1 %tst, float %lhs, float %rhs
+  ret float %res
+}
+
+; Don't take the flags from the compare condition
+; CHECK-LABEL: name: test_select_cmp_flags
+; CHECK:   [[COPY0:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
+; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $s2
+; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $s3
+; CHECK:   [[CMP:%[0-9]+]]:_(s1) = nsz G_FCMP floatpred(oeq), [[COPY0]](s32), [[COPY1]]
+; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[CMP]](s1), [[COPY2]], [[COPY3]]
+define float @test_select_cmp_flags(float %cmp0, float %cmp1, float %lhs, float %rhs) {
+  %tst = fcmp nsz oeq float %cmp0, %cmp1
+  %res = select i1 %tst, float %lhs, float %rhs
+  ret float %res
+}
+
 ; CHECK-LABEL: name: test_select_ptr
 ; CHECK: [[TST_C:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TST_C]]
