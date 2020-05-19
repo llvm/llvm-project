@@ -1723,6 +1723,10 @@ void StmtProfiler::VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *S) {
   VisitType(S->getTypeInfoAsWritten()->getType());
 }
 
+void StmtProfiler::VisitCXXAddrspaceCastExpr(const CXXAddrspaceCastExpr *S) {
+  VisitCXXNamedCastExpr(S);
+}
+
 void StmtProfiler::VisitUserDefinedLiteral(const UserDefinedLiteral *S) {
   VisitCallExpr(S);
 }
