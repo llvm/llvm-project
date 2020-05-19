@@ -726,5 +726,6 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     uint8_t bind = binding;
     replace(other);
     binding = bind;
-  }
+  } else if (traced)
+    printTraceSymbol(&other);
 }
