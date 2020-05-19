@@ -5151,12 +5151,12 @@ inline Value *getPointerOperand(Value *V) {
 }
 
 /// A helper function that returns the alignment of load or store instruction.
-inline MaybeAlign getLoadStoreAlignment(Value *I) {
+inline Align getLoadStoreAlignment(Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
-    return MaybeAlign(LI->getAlignment());
-  return MaybeAlign(cast<StoreInst>(I)->getAlignment());
+    return LI->getAlign();
+  return cast<StoreInst>(I)->getAlign();
 }
 
 /// A helper function that returns the address space of the pointer operand of
