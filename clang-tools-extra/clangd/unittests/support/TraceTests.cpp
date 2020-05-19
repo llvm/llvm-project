@@ -25,7 +25,6 @@ namespace {
 
 using testing::_;
 using testing::ElementsAre;
-using testing::MatchesRegex;
 using testing::SizeIs;
 using testing::StartsWith;
 
@@ -170,16 +169,11 @@ TEST_F(CSVMetricsTracerTest, RecordsValues) {
   Counter.record(1, "");
   Dist.record(2, "y");
 
-  auto Lines = outputLines();
-  ASSERT_THAT(
-      Lines,
-      ElementsAre("Kind,Metric,Label,Value,Timestamp",
-                  StartsWith("d,dist,x,1.000000e+00,"),
-                  StartsWith("c,cnt,,1.000000e+00,"),
-                  StartsWith("d,dist,y,2.000000e+00,"), ""));
-  // Also check timestamp format.
-  EXPECT_THAT(Lines[1].str(),
-              MatchesRegex(R"(d,dist,x,1\.000000e\+00,[0-9]+\.[0-9]{6})"));
+  ASSERT_THAT(outputLines(),
+              ElementsAre("Kind,Metric,Label,Value,Timestamp",
+                          StartsWith("d,dist,x,1.000000e+00,"),
+                          StartsWith("c,cnt,,1.000000e+00,"),
+                          StartsWith("d,dist,y,2.000000e+00,"), ""));
 }
 
 TEST_F(CSVMetricsTracerTest, Escaping) {
