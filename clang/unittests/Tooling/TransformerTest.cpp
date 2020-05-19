@@ -817,4 +817,46 @@ TEST(TransformerDeathTest, OrderedRuleTypes) {
                "Matcher must be.*node matcher");
 }
 #endif
+
+// Edits are able to span multiple files; in this case, a header and an
+// implementation file.
+TEST_F(TransformerTest, MultipleFiles) {
+  std::string Header = R"cc(void RemoveThisFunction();)cc";
+  std::string Source = R"cc(#include "input.h"
+                            void RemoveThisFunction();)cc";
+  Transformer T(
+      makeRule(functionDecl(hasName("RemoveThisFunction")), changeTo(cat(""))),
+      consumer());
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Source, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      {{"input.h", Header}}));
+
+  std::sort(Changes.begin(), Changes.end(),
+            [](const AtomicChange &L, const AtomicChange &R) {
+              return L.getFilePath() < R.getFilePath();
+            });
+
+  ASSERT_EQ(Changes[0].getFilePath(), "./input.h");
+  EXPECT_THAT(Changes[0].getInsertedHeaders(), IsEmpty());
+  EXPECT_THAT(Changes[0].getRemovedHeaders(), IsEmpty());
+  llvm::Expected<std::string> UpdatedCode =
+      clang::tooling::applyAllReplacements(Header,
+                                           Changes[0].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(R"cc(;)cc"));
+
+  ASSERT_EQ(Changes[1].getFilePath(), "input.cc");
+  EXPECT_THAT(Changes[1].getInsertedHeaders(), IsEmpty());
+  EXPECT_THAT(Changes[1].getRemovedHeaders(), IsEmpty());
+  UpdatedCode = clang::tooling::applyAllReplacements(
+      Source, Changes[1].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(R"cc(#include "input.h"
+                        ;)cc"));
+}
 } // namespace
