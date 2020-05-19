@@ -673,6 +673,12 @@ def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), I32:$x)),
 // Integer binary arithmetic
 //===----------------------------------------------------------------------===//
 
+multiclass SIMDBinaryIntNoI8x16<SDNode node, string name, bits<32> baseInst> {
+  defm "" : SIMDBinary<v8i16, "i16x8", node, name, !add(baseInst, 32)>;
+  defm "" : SIMDBinary<v4i32, "i32x4", node, name, !add(baseInst, 64)>;
+  defm "" : SIMDBinary<v2i64, "i64x2", node, name, !add(baseInst, 96)>;
+}
+
 multiclass SIMDBinaryIntSmall<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<v16i8, "i8x16", node, name, baseInst>;
   defm "" : SIMDBinary<v8i16, "i16x8", node, name, !add(baseInst, 32)>;
@@ -704,7 +710,7 @@ defm SUB_SAT_U :
 
 // Integer multiplication: mul
 let isCommutable = 1 in
-defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 117>;
+defm MUL : SIMDBinaryIntNoI8x16<mul, "mul", 117>;
 
 // Integer min_s / min_u / max_s / max_u
 let isCommutable = 1 in {

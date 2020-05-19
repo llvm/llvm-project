@@ -153,9 +153,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                      MVT::v2f64})
         setOperationAction(Op, T, Custom);
 
-    // There is no i64x2.mul instruction
-    // TODO: Actually, there is now. Implement it.
-    setOperationAction(ISD::MUL, MVT::v2i64, Expand);
+    // There is no i8x16.mul instruction
+    setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
     // There are no vector select instructions
     for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT})
