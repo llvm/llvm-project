@@ -150,8 +150,8 @@ enqueue_marker(queue_t q, uint nwl, const clk_event_t *wl, clk_event_t *ce)
     aw->enqueue_flags = CLK_ENQUEUE_FLAGS_NO_WAIT;
     aw->command_id = atomic_fetch_add_explicit((__global atomic_uint *)&vq->command_counter, (uint)1, memory_order_relaxed, memory_scope_device);
     aw->child_counter = 0;
-    aw->completion = (ulong)ev;
-    aw->parent_wrap = (ulong)me;
+    aw->completion = ev;
+    aw->parent_wrap = me;
 
     if (nwl > 0)
         copy_retain_waitlist((__global size_t *)aw->wait_list, (const size_t *)wl, nwl);
@@ -204,7 +204,7 @@ __enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, v
     aw->enqueue_flags = f;
     aw->command_id = atomic_fetch_add_explicit((__global atomic_uint *)&vq->command_counter, (uint)1, memory_order_relaxed, memory_scope_device);
     aw->completion = 0UL;
-    aw->parent_wrap = (ulong)me;
+    aw->parent_wrap = me;
     aw->wait_num = 0;
     aw->aql.header = (0x1 << 11) | (0x1 << 9) |(0x0 << 8) | (0x2 << 0);
     aw->aql.setup = r.workDimension;
@@ -277,10 +277,10 @@ __enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange
 
     aw->enqueue_flags = f;
     aw->command_id = atomic_fetch_add_explicit((__global atomic_uint *)&vq->command_counter, (uint)1, memory_order_relaxed, memory_scope_device);
-    aw->completion = (ulong)ev;
-    aw->parent_wrap = (ulong)me;
+    aw->completion = ev;
+    aw->parent_wrap = me;
     if (nwl > 0)
-        copy_retain_waitlist((__global size_t *)aw->wait_list, (const size_t *)wl, nwl);
+        copy_retain_waitlist(aw->wait_list, (const size_t *)wl, nwl);
     aw->wait_num = nwl;
     aw->aql.header = (ushort)((0x1 << 11) | (0x1 << 9) |(0x0 << 8) | (0x2 << 0));
     aw->aql.setup = (ushort)r.workDimension;
@@ -348,7 +348,7 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     aw->enqueue_flags = f;
     aw->command_id = atomic_fetch_add_explicit((__global atomic_uint *)&vq->command_counter, (uint)1, memory_order_relaxed, memory_scope_device);
     aw->completion = 0UL;
-    aw->parent_wrap = (ulong)me;
+    aw->parent_wrap = me;
     aw->wait_num = 0;
     aw->aql.header = (0x1 << 11) | (0x1 << 9) |(0x0 << 8) | (0x2 << 0);
     aw->aql.setup = r.workDimension;
@@ -435,8 +435,8 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
 
     aw->enqueue_flags = f;
     aw->command_id = atomic_fetch_add_explicit((__global atomic_uint *)&vq->command_counter, (uint)1, memory_order_relaxed, memory_scope_device);
-    aw->completion = (ulong)ev;
-    aw->parent_wrap = (ulong)me;
+    aw->completion = ev;
+    aw->parent_wrap = me;
     if (nwl > 0)
         copy_retain_waitlist((__global size_t *)aw->wait_list, (const size_t *)wl, nwl);
     aw->wait_num = nwl;

@@ -11,7 +11,10 @@ typedef struct _SchedulerParam {
     ulong   scratch;        //!< GPU address to the scratch buffer
     uint    numMaxWaves;    //!< Num max waves on the asic
     uint    releaseHostCP;  //!< Releases CP on the host queue
-    ulong   parentAQL;      //!< Host parent AmdAqlWrap packet
+    union {
+        __global AmdAqlWrap* parentAQL;  //!< Host parent AmdAqlWrap packet
+        ulong pad_parentAQL;
+    };
     uint    dedicatedQueue; //!< Scheduler uses a dedicated queue
     uint    scratchOffset;  //!< Scratch buffer offset
     uint    reserved[2];    //!< Processed mask groups by one thread
@@ -81,7 +84,7 @@ __amd_scheduler_pal(
 {
     __global  SchedulerParam* param = &params[paramIdx];
     ulong hwDisp = param->hw_queue + GetCmdTemplateHeaderSize();
-    __global AmdAqlWrap* hostParent = (__global AmdAqlWrap*)(param->parentAQL);
+    __global AmdAqlWrap* hostParent = param->parentAQL;
     __global uint* counter = (__global uint*)(&hostParent->child_counter);
     __global uint* signal = (__global uint*)(&param->signal);
     __global AmdAqlWrap* wraps = (__global AmdAqlWrap*)&queue[1];

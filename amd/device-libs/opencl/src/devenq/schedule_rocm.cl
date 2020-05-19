@@ -14,7 +14,7 @@ typedef struct _SchedulerParam {
     AmdVQueueHeader* vqueue_header;  //!< The vqueue
     uint   signal;                   //!< Signal to stop the child queue
     uint   eng_clk;                  //!< Engine clock in Mhz
-    ulong  parentAQL;                //!< Host parent AmdAqlWrap packet
+    __global AmdAqlWrap* parentAQL; //!< Host parent AmdAqlWrap packet
     ulong  write_index;              //!< Write Index to the child queue
 } SchedulerParam;
 
@@ -217,7 +217,7 @@ __amd_scheduler_rocm(__global SchedulerParam* param)
     ulong threads_done = atomic_fetch_add_explicit((__global atomic_ulong*)&param->thread_counter, (ulong)1, memory_order_relaxed, memory_scope_device);
     if (threads_done >= (get_global_size(0) - 1)) {
         // The last thread finishes the processing
-        __global AmdAqlWrap* hostParent = (__global AmdAqlWrap*)(param->parentAQL);
+        __global AmdAqlWrap* hostParent = param->parentAQL;
         bool complete = atomic_load_explicit((__global atomic_uint*)&hostParent->child_counter, memory_order_relaxed, memory_scope_device) == 0;
         if (complete) {
             __ockl_hsa_signal_store(param->complete_signal, 0, __ockl_memory_order_relaxed);

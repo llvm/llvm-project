@@ -37,6 +37,8 @@ typedef struct _AmdVQueueHeader {
     uint    reserved[2];        //!< For the future usage
 } AmdVQueueHeader;
 
+struct _AmdEvent;
+
 typedef struct _AmdAqlWrap {
     uint state;             //!< [LRW/SRW] The current state of the AQL wrapper:  FREE, RESERVED, READY,
                             // MARKER, BUSY and DONE. The block could be returned back to a free state.
@@ -50,10 +52,25 @@ typedef struct _AmdAqlWrap {
                             // It's incremented on the
                             // start and decremented on the finish. The parent kernel can be considered as
                             // done when the value is 0 and the state is DONE
-    ulong completion;       //!< [LWO/SRO] CL event for the current execution (clk_event_t)
-    ulong parent_wrap;      //!< [LWO/SRO] Pointer to the parent AQL wrapper (AmdAqlWrap*)
-    ulong wait_list;        //!< [LRO/SRO] Pointer to an array of clk_event_t objects (64 bytes default)
-    uint wait_num;          //!<  [LWO/SRO] The number of cl_event_wait objects 
+
+    //!< [LWO/SRO] CL event for the current execution (clk_event_t)
+    union {
+        __global struct _AmdEvent *completion;
+        ulong completion_padding;
+    };
+
+    //!< [LWO/SRO] Pointer to the parent AQL wrapper (AmdAqlWrap*)
+    union {
+        __global struct _AmdAqlWrap *parent_wrap;
+        ulong parent_padding;
+    };
+
+    union {
+        __global size_t *wait_list;  //!< [LRO/SRO] Pointer to an array of clk_event_t objects (64 bytes default)
+        ulong wait_list_padding;
+    };
+
+    uint wait_num;          //!<  [LWO/SRO] The number of cl_event_wait objects
     uint reserved[5];       //!< For the future usage
     hsa_kernel_dispatch_packet_t aql;  //!< [LWO/SRO] AQL packet - 64 bytes AQL packet
 } AmdAqlWrap;
@@ -128,6 +145,7 @@ static inline void
 release_slot(__global uint * restrict mask, uint i)
 {
     /* uint b = ~(1UL << (i & 0x1f)); */
+    // FIXME: Use llvm.ptrmask
     uint b = ~amd_bfm(1U, i);
     __global atomic_uint *p = (__global atomic_uint *)(mask + (i >> 5));
     uint v, vv;
