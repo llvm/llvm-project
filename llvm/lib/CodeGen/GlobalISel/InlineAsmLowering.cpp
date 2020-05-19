@@ -264,7 +264,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo++));
 
-      if (const auto *BB = dyn_cast<BasicBlock>(OpInfo.CallOperandVal)) {
+      if (isa<BasicBlock>(OpInfo.CallOperandVal)) {
         LLVM_DEBUG(dbgs() << "Basic block input operands not supported yet\n");
         return false;
       }
