@@ -7,7 +7,6 @@
 // RUN: rm -f %S/wasm-eh.ll
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 void may_throw();
 void dont_throw() noexcept;
@@ -391,8 +390,33 @@ void test8() {
 
 // CHECK:   unreachable
 
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
+
+// Wasm ignores dynamic exception specifications with types at the moment. This
+// is controlled by -Wwasm-exception-spec, which is on by default. This warning
+// can be suppressed with -Wno-wasm-exception-spec.
+// Checks if a warning message is correctly printed or not printed depending on
+// the options.
+void test9() throw(int) {
+}
+// WARNING-DEFAULT: warning: dynamic exception specifications with types are currently ignored in wasm
+// WARNING-ON: warning: dynamic exception specifications with types are currently ignored in wasm
+// WARNING-OFF-NOT: warning: dynamic exception specifications with types are currently ignored in wasm
+
+// Wasm curremtly treats 'throw()' in the same way as 'noexept'. Check if the
+// same warning message is printed as if when a 'noexcept' function throws.
+void test10() throw() {
+  throw 3;
+}
+// WARNING-DEFAULT: warning: 'test10' has a non-throwing exception specification but can still throw
+// WARNING-DEFAULT: function declared non-throwing here
+
 // Here we only check if the command enables wasm exception handling in the
 // backend so that exception handling instructions can be generated in .s file.
+
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -fwasm-exceptions -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 // ASSEMBLY: try
 // ASSEMBLY: catch
