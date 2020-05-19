@@ -3,7 +3,8 @@ import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 config("zlib_config") {
   visibility = [ ":zlib" ]
   if (host_os == "win") {
-    assert(zlib_path != "", "Please provide the path to zlib")
+    assert(!llvm_enable_zlib || zlib_path != "",
+           "Please provide the path to zlib.")
     include_dirs = [ zlib_path ]
     libs = [ "$zlib_path/zlib.lib" ]
   } else {
