@@ -11,6 +11,7 @@
 
 // Other libraries and framework includes
 #include "GDBRemoteCommunication.h"
+#include "GDBRemoteCommunicationClient.h"
 #include "GDBRemoteCommunicationHistory.h"
 
 // Project includes
@@ -50,6 +51,8 @@ public:
 
   bool StartAsyncThread();
   void StopAsyncThread();
+
+  Status Connect(process_gdb_remote::GDBRemoteCommunicationClient &client);
 
 protected:
   enum {

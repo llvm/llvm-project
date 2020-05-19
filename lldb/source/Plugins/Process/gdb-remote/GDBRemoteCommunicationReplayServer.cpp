@@ -287,3 +287,28 @@ thread_result_t GDBRemoteCommunicationReplayServer::AsyncThread(void *arg) {
 
   return {};
 }
+
+Status GDBRemoteCommunicationReplayServer::Connect(
+    process_gdb_remote::GDBRemoteCommunicationClient &client) {
+  repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
+  if (!loader)
+    return Status("No loader provided.");
+
+  static std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
+      multi_loader = repro::MultiLoader<repro::GDBRemoteProvider>::Create(
+          repro::Reproducer::Instance().GetLoader());
+  if (!multi_loader)
+    return Status("No gdb remote provider found.");
+
+  llvm::Optional<std::string> history_file = multi_loader->GetNextFile();
+  if (!history_file)
+    return Status("No gdb remote packet log found.");
+
+  if (auto error = LoadReplayHistory(FileSpec(*history_file)))
+    return Status("Unable to load replay history");
+
+  if (auto error = GDBRemoteCommunication::ConnectLocally(client, *this))
+    return Status("Unable to connect to replay server");
+
+  return {};
+}
