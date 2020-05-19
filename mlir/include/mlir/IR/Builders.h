@@ -69,6 +69,8 @@ public:
   IndexType getIndexType();
 
   IntegerType getI1Type();
+  IntegerType getI32Type();
+  IntegerType getI64Type();
   IntegerType getIntegerType(unsigned width);
   IntegerType getIntegerType(unsigned width, bool isSigned);
   FunctionType getFunctionType(ArrayRef<Type> inputs, ArrayRef<Type> results);
