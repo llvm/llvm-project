@@ -22,7 +22,7 @@ body:             |
     liveins: $vgpr1
 
     ; CHECK-LABEL: name: scavenge_sgpr_pei
-    ; CHECK: liveins: $vgpr1
+    ; CHECK: liveins: $sgpr27, $vgpr1
     ; CHECK: $sgpr27 = frame-setup COPY $sgpr33
     ; CHECK: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 262080, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294705152, implicit-def $scc

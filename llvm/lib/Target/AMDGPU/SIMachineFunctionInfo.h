@@ -485,6 +485,11 @@ public: // FIXME
   Register SGPRForFPSaveRestoreCopy;
   Optional<int> FramePointerSaveIndex;
 
+  /// If this is set, an SGPR used for save/restore of the register used for the
+  /// base pointer.
+  Register SGPRForBPSaveRestoreCopy;
+  Optional<int> BasePointerSaveIndex;
+
   Register VGPRReservedForSGPRSpill;
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
 

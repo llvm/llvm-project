@@ -148,7 +148,114 @@ define void @disable_realign_align128(i32 %idx) #3 {
   ret void
 }
 
+declare void @extern_func(<32 x i32>, i32) #0
+define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
+; The test forces the stack to be realigned to a new boundary
+; since there is a local object with an alignment of 1024.
+; Should use BP to access the incoming stack arguments.
+; The BP value is saved/restored with a VGPR spill.
+
+; GCN-LABEL: func_call_align1024_bp_gets_vgpr_spill:
+; GCN: buffer_store_dword [[VGPR_REG:v[0-9]+]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Spill
+; GCN-NEXT: s_mov_b64 exec, s[4:5]
+; GCN-NEXT: v_writelane_b32 [[VGPR_REG]], s33, 2
+; GCN-NEXT: v_writelane_b32 [[VGPR_REG]], s34, 3
+; GCN: s_add_u32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
+; GCN: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
+
+; GCN: s_mov_b32 s34, s32
+; GCN-NEXT: v_mov_b32_e32 v32, 0
+
+; GCN: buffer_store_dword v32, off, s[0:3], s33 offset:1024
+; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
+; GCN-NEXT: s_add_u32 s32, s32, 0x30000
+
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
+; GCN-NEXT: s_swappc_b64 s[30:31], s[4:5]
+
+; GCN: v_readlane_b32 s33, [[VGPR_REG]], 2
+; GCN-NEXT: s_sub_u32 s32, s32, 0x30000
+; GCN-NEXT: v_readlane_b32 s34, [[VGPR_REG]], 3
+; GCN-NEXT: s_or_saveexec_b64 s[6:7], -1
+; GCN-NEXT: buffer_load_dword [[VGPR_REG]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Reload
+; GCN-NEXT: s_mov_b64 exec, s[6:7]
+  %temp = alloca i32, align 1024, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %temp, align 1024
+  call void @extern_func(<32 x i32> %a, i32 %b)
+  ret void
+}
+
+%struct.Data = type { [9 x i32] }
+define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5)* nocapture readonly byval(%struct.Data) align 8 %arg) local_unnamed_addr #4 {
+; The local object allocation needed an alignment of 1024.
+; Since the function argument is accessed in a loop with an
+; index variable, the base pointer first get loaded into a VGPR
+; and that value should be further referenced to load the incoming values.
+; The BP value will get saved/restored in an SGPR at the prolgoue/epilogue.
+
+; GCN-LABEL: needs_align1024_stack_args_used_inside_loop:
+; GCN: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
+; GCN-NEXT: s_mov_b32 s34, s32
+; GCN-NEXT: s_add_u32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
+; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
+; GCN-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
+; GCN-NEXT: v_lshrrev_b32_e64 [[VGPR_REG:v[0-9]+]], 6, s34
+; GCN: s_add_u32 s32, s32, 0x30000
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:1024
+; GCN: buffer_load_dword v{{[0-9]+}}, [[VGPR_REG]], s[0:3], 0 offen
+; GCN: v_add_u32_e32 [[VGPR_REG]], vcc, 4, [[VGPR_REG]]
+; GCN: s_sub_u32 s32, s32, 0x30000
+; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
+; GCN-NEXT: s_mov_b32 s34, [[BP_COPY]]
+; GCN-NEXT: s_setpc_b64 s[30:31]
+begin:
+  %local_var = alloca i32, align 1024, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %local_var, align 1024
+  br label %loop_body
+
+loop_end:                                                ; preds = %loop_body
+  %idx_next = add nuw nsw i32 %lp_idx, 1
+  %lp_exit_cond = icmp eq i32 %idx_next, 9
+  br i1 %lp_exit_cond, label %exit, label %loop_body
+
+loop_body:                                                ; preds = %loop_end, %begin
+  %lp_idx = phi i32 [ 0, %begin ], [ %idx_next, %loop_end ]
+  %ptr = getelementptr inbounds %struct.Data, %struct.Data addrspace(5)* %arg, i32 0, i32 0, i32 %lp_idx
+  %val = load i32, i32 addrspace(5)* %ptr, align 8
+  %lp_cond = icmp eq i32 %val, %lp_idx
+  br i1 %lp_cond, label %loop_end, label %exit
+
+exit:                                               ; preds = %loop_end, %loop_body
+  %out = phi i32 [ 0, %loop_body ], [ 1, %loop_end ]
+  ret i32 %out
+}
+
+define void @no_free_scratch_sgpr_for_bp_copy(<32 x i32> %a, i32 %b) #0 {
+; GCN-LABEL: no_free_scratch_sgpr_for_bp_copy:
+; GCN: ; %bb.0:
+; GCN: v_writelane_b32 [[VGPR_REG:v[0-9]+]], s34, 0
+; GCN-NEXT: s_mov_b32 s34, s32
+; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:128
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ;;#ASMEND
+; GCN: v_readlane_b32 s34, [[VGPR_REG:v[0-9]+]], 0
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64 s[30:31]
+  %local_val = alloca i32, align 128, addrspace(5)
+  store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
+  ; Use all clobberable registers, so BP has to spill to a VGPR.
+  call void asm sideeffect "",
+    "~{s0},~{s1},~{s2},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
+    ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
+    ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
+    ,~{vcc_hi}"() #0
+  ret void
+}
+
 attributes #0 = { noinline nounwind }
 attributes #1 = { noinline nounwind "stackrealign" }
 attributes #2 = { noinline nounwind alignstack=4 }
 attributes #3 = { noinline nounwind "no-realign-stack" }
+attributes #4 = { noinline nounwind "frame-pointer"="all"}
