@@ -44,18 +44,12 @@ define void @vector_f64_copy(<2 x double>* %from, <2 x double>* %to) {
 define arm_aapcs_vfpcc <16 x i8> @stack_slot_handling(<16 x i8> %a) #0 {
 ; CHECK-LABEL: stack_slot_handling:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    add r7, sp, #8
 ; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    mov r4, sp
-; CHECK-NEXT:    bfc r4, #0, #4
-; CHECK-NEXT:    mov sp, r4
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    sub.w r4, r7, #8
-; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    bx lr
 entry:
   %a.addr = alloca <16 x i8>, align 8
   store <16 x i8> %a, <16 x i8>* %a.addr, align 8

@@ -16,6 +16,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/Support/TargetRegistry.h"
 
@@ -59,6 +60,11 @@ void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   Symbol->setExternal(cast<MCSymbolXCOFF>(Symbol)->getStorageClass() !=
                       XCOFF::C_HIDEXT);
   Symbol->setCommon(Size, ByteAlignment);
+
+  // Default csect align is 4, but common symbols have explicit alignment values
+  // and we should honor it.
+  cast<MCSymbolXCOFF>(Symbol)->getRepresentedCsect()->setAlignment(
+      Align(ByteAlignment));
 
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);

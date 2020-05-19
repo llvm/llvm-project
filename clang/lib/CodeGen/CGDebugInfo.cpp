@@ -231,9 +231,12 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   // If we're emitting codeview, it's important to try to match MSVC's naming so
   // that visualizers written for MSVC will trigger for our class names. In
   // particular, we can't have spaces between arguments of standard templates
-  // like basic_string and vector.
-  if (CGM.getCodeGenOpts().EmitCodeView)
+  // like basic_string and vector, but we must have spaces between consecutive
+  // angle brackets that close nested template argument lists.
+  if (CGM.getCodeGenOpts().EmitCodeView) {
     PP.MSVCFormatting = true;
+    PP.SplitTemplateClosers = true;
+  }
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
@@ -470,10 +473,14 @@ CGDebugInfo::createFile(StringRef FileName,
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
+  if (DebugPrefixMap.empty())
+    return Path.str();
+
+  SmallString<256> P = Path;
   for (const auto &Entry : DebugPrefixMap)
-    if (Path.startswith(Entry.first))
-      return (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
-  return Path.str();
+    if (llvm::sys::path::replace_path_prefix(P, Entry.first, Entry.second))
+      break;
+  return P.str().str();
 }
 
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
@@ -2736,6 +2743,23 @@ llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
   return DBuilder.createVectorType(Size, Align, ElementTy, SubscriptArray);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const ConstantMatrixType *Ty,
+                                      llvm::DIFile *Unit) {
+  // FIXME: Create another debug type for matrices
+  // For the time being, it treats it like a nested ArrayType.
+
+  llvm::DIType *ElementTy = getOrCreateType(Ty->getElementType(), Unit);
+  uint64_t Size = CGM.getContext().getTypeSize(Ty);
+  uint32_t Align = getTypeAlignIfRequired(Ty, CGM.getContext());
+
+  // Create ranges for both dimensions.
+  llvm::SmallVector<llvm::Metadata *, 2> Subscripts;
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Ty->getNumColumns()));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Ty->getNumRows()));
+  llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscripts);
+  return DBuilder.createArrayType(Size, Align, ElementTy, SubscriptArray);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
   uint64_t Size;
   uint32_t Align;
@@ -3129,6 +3153,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::ExtVector:
   case Type::Vector:
     return CreateType(cast<VectorType>(Ty), Unit);
+  case Type::ConstantMatrix:
+    return CreateType(cast<ConstantMatrixType>(Ty), Unit);
   case Type::ObjCObjectPointer:
     return CreateType(cast<ObjCObjectPointerType>(Ty), Unit);
   case Type::ObjCObject:

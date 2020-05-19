@@ -210,8 +210,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
                 DL.getTypeStoreSize(LI->getType()));
-  const Align Alignment = DL.getValueOrABITypeAlignment(
-      MaybeAlign(LI->getAlignment()), LI->getType());
+  const Align Alignment = LI->getAlign();
 
   Instruction *HeaderFirstNonPHI = L->getHeader()->getFirstNonPHI();
 

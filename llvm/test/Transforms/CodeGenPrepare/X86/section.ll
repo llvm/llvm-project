@@ -1,10 +1,14 @@
 ; RUN: opt < %s -codegenprepare -S | FileCheck %s
+; RUN: llc < %s | FileCheck --check-prefix=ASM1 %s
+; RUN: llc < %s -function-sections | FileCheck --check-prefix=ASM2 %s
 
 target triple = "x86_64-pc-linux-gnu"
 
 ; This tests that hot/cold functions get correct section prefix assigned
 
 ; CHECK: hot_func1{{.*}}!section_prefix ![[HOT_ID:[0-9]+]]
+; ASM1: .section .text.hot.,"ax",@progbits
+; ASM2: .section .text.hot.hot_func1,"ax",@progbits
 ; The entry is hot
 define void @hot_func1() !prof !15 {
   ret void
@@ -40,6 +44,8 @@ for.end:
 ; not call site VP metadata (which can exist on value profiled memcpy,
 ; or possibly left behind after static analysis based devirtualization).
 ; CHECK: cold_func1{{.*}}!section_prefix ![[COLD_ID:[0-9]+]]
+; ASM1: .section .text.unlikely.,"ax",@progbits
+; ASM2: .section .text.unlikely.cold_func1,"ax",@progbits
 define void @cold_func1() !prof !16 {
   call void @hot_func1(), !prof !17
   call void @hot_func1(), !prof !17

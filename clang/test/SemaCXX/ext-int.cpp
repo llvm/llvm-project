@@ -275,4 +275,3 @@ void ImplicitCasts(_ExtInt(31) s31, _ExtInt(33) s33, int i) {
   // expected-warning@+1{{implicit conversion loses integer precision}}
   i = s33;
 }
-

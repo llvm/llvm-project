@@ -89,6 +89,17 @@ void check_negative_sized_VLA_11(int x) {
     check_negative_sized_VLA_11_sub(x);
 }
 
+void check_VLA_typedef() {
+  int x = -1;
+  typedef int VLA[x]; // expected-warning{{Declared variable-length array (VLA) has negative size}}
+}
+
+size_t check_VLA_sizeof() {
+  int x = -1;
+  size_t s = sizeof(int[x]); // expected-warning{{Declared variable-length array (VLA) has negative size}}
+  return s;
+}
+
 // Multi-dimensional arrays.
 
 void check_zero_sized_VLA_multi1(int x) {

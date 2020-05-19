@@ -492,11 +492,6 @@ Attributor::~Attributor() {
   // thus we cannot delete them. We can, and want to, destruct them though.
   for (AbstractAttribute *AA : AllAbstractAttributes)
     AA->~AbstractAttribute();
-
-  // The QueryMapValueTy objects are allocated via a BumpPtrAllocator, we call
-  // the destructor manually.
-  for (auto &It : QueryMap)
-    It.getSecond()->~QueryMapValueTy();
 }
 
 bool Attributor::isAssumedDead(const AbstractAttribute &AA,
@@ -926,40 +921,33 @@ ChangeStatus Attributor::run() {
       AbstractAttribute *InvalidAA = InvalidAAs[u];
 
       // Check the dependences to fast track invalidation.
-      auto *QuerriedAAs = QueryMap.lookup(InvalidAA);
-      if (!QuerriedAAs)
-        continue;
-
       LLVM_DEBUG(dbgs() << "[Attributor] InvalidAA: " << *InvalidAA << " has "
-                        << QuerriedAAs->RequiredAAs.size() << "/"
-                        << QuerriedAAs->OptionalAAs.size()
-                        << " required/optional dependences\n");
-      for (AbstractAttribute *DepOnInvalidAA : QuerriedAAs->RequiredAAs) {
-        AbstractState &DOIAAState = DepOnInvalidAA->getState();
-        DOIAAState.indicatePessimisticFixpoint();
-        ++NumAttributesFixedDueToRequiredDependences;
-        assert(DOIAAState.isAtFixpoint() && "Expected fixpoint state!");
-        if (!DOIAAState.isValidState())
-          InvalidAAs.insert(DepOnInvalidAA);
+                        << InvalidAA->Deps.size()
+                        << " required & optional dependences\n");
+      while (!InvalidAA->Deps.empty()) {
+        const auto &Dep = InvalidAA->Deps.back();
+        InvalidAA->Deps.pop_back();
+        AbstractAttribute *DepAA = Dep.getPointer();
+        if (Dep.getInt() == unsigned(DepClassTy::OPTIONAL)) {
+          Worklist.insert(DepAA);
+          continue;
+        }
+        DepAA->getState().indicatePessimisticFixpoint();
+        assert(DepAA->getState().isAtFixpoint() && "Expected fixpoint state!");
+        if (!DepAA->getState().isValidState())
+          InvalidAAs.insert(DepAA);
         else
-          ChangedAAs.push_back(DepOnInvalidAA);
+          ChangedAAs.push_back(DepAA);
       }
-      Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
-                      QuerriedAAs->OptionalAAs.end());
-      QuerriedAAs->clear();
     }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
-    for (AbstractAttribute *ChangedAA : ChangedAAs) {
-      if (auto *QuerriedAAs = QueryMap.lookup(ChangedAA)) {
-        Worklist.insert(QuerriedAAs->OptionalAAs.begin(),
-                        QuerriedAAs->OptionalAAs.end());
-        Worklist.insert(QuerriedAAs->RequiredAAs.begin(),
-                        QuerriedAAs->RequiredAAs.end());
-        QuerriedAAs->clear();
+    for (AbstractAttribute *ChangedAA : ChangedAAs)
+      while (!ChangedAA->Deps.empty()) {
+        Worklist.insert(ChangedAA->Deps.back().getPointer());
+        ChangedAA->Deps.pop_back();
       }
-    }
 
     LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist+Dependent size: " << Worklist.size()
@@ -1020,13 +1008,9 @@ ChangeStatus Attributor::run() {
       NumAttributesTimedOut++;
     }
 
-    if (auto *QuerriedAAs = QueryMap.lookup(ChangedAA)) {
-      ChangedAAs.append(QuerriedAAs->OptionalAAs.begin(),
-                        QuerriedAAs->OptionalAAs.end());
-      ChangedAAs.append(QuerriedAAs->RequiredAAs.begin(),
-                        QuerriedAAs->RequiredAAs.end());
-      // Release the memory early.
-      QuerriedAAs->clear();
+    while (!ChangedAA->Deps.empty()) {
+      ChangedAAs.push_back(ChangedAA->Deps.back().getPointer());
+      ChangedAA->Deps.pop_back();
     }
   }
 
@@ -1357,6 +1341,13 @@ bool Attributor::isValidFunctionSignatureRewrite(
     Argument &Arg, ArrayRef<Type *> ReplacementTypes) {
 
   auto CallSiteCanBeChanged = [](AbstractCallSite ACS) {
+    // Forbid the call site to cast the function return type. If we need to
+    // rewrite these functions we need to re-create a cast for the new call site
+    // (if the old had uses).
+    if (!ACS.getCalledFunction() ||
+        ACS.getInstruction()->getType() !=
+            ACS.getCalledFunction()->getReturnType())
+      return false;
     // Forbid must-tail calls for now.
     return !ACS.isCallbackCall() && !ACS.getInstruction()->isMustTailCall();
   };
@@ -1455,7 +1446,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     if (ToBeDeletedFunctions.count(OldFn))
       continue;
 
-    const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs = It.getSecond();
+    const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs =
+        It.getSecond();
     assert(ARIs.size() == OldFn->arg_size() && "Inconsistent state!");
 
     SmallVector<Type *, 16> NewArgumentTypes;
@@ -1464,7 +1456,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // Collect replacement argument types and copy over existing attributes.
     AttributeList OldFnAttributeList = OldFn->getAttributes();
     for (Argument &Arg : OldFn->args()) {
-      if (const std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[Arg.getArgNo()]) {
+      if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =
+              ARIs[Arg.getArgNo()]) {
         NewArgumentTypes.append(ARI->ReplacementTypes.begin(),
                                 ARI->ReplacementTypes.end());
         NewArgumentAttributes.append(ARI->getNumReplacementArgs(),
@@ -1511,6 +1504,14 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     NewFn->getBasicBlockList().splice(NewFn->begin(),
                                       OldFn->getBasicBlockList());
 
+    // Fixup block addresses to reference new function.
+    SmallVector<BlockAddress *, 8u> BlockAddresses;
+    for (User *U : OldFn->users())
+      if (auto *BA = dyn_cast<BlockAddress>(U))
+        BlockAddresses.push_back(BA);
+    for (auto *BA : BlockAddresses)
+      BA->replaceAllUsesWith(BlockAddress::get(NewFn, BA->getBasicBlock()));
+
     // Set of all "call-like" instructions that invoke the old function mapped
     // to their new replacements.
     SmallVector<std::pair<CallBase *, CallBase *>, 8> CallSitePairs;
@@ -1526,7 +1527,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       for (unsigned OldArgNum = 0; OldArgNum < ARIs.size(); ++OldArgNum) {
         unsigned NewFirstArgNum = NewArgOperands.size();
         (void)NewFirstArgNum; // only used inside assert.
-        if (const std::unique_ptr<ArgumentReplacementInfo> &ARI = ARIs[OldArgNum]) {
+        if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =
+                ARIs[OldArgNum]) {
           if (ARI->ACSRepairCB)
             ARI->ACSRepairCB(*ARI, ACS, NewArgOperands);
           assert(ARI->getNumReplacementArgs() + NewFirstArgNum ==
@@ -1607,6 +1609,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     for (auto &CallSitePair : CallSitePairs) {
       CallBase &OldCB = *CallSitePair.first;
       CallBase &NewCB = *CallSitePair.second;
+      assert(OldCB.getType() == NewCB.getType() &&
+             "Cannot handle call sites with different types!");
       ModifiedFns.insert(OldCB.getFunction());
       CGUpdater.replaceCallSite(OldCB, NewCB);
       OldCB.replaceAllUsesWith(&NewCB);
@@ -1719,14 +1723,9 @@ void Attributor::rememberDependences() {
   assert(!DependenceStack.empty() && "No dependences to remember!");
 
   for (DepInfo &DI : *DependenceStack.back()) {
-    QueryMapValueTy *&DepAAs = QueryMap[DI.FromAA];
-    if (!DepAAs)
-      DepAAs = new (Allocator) QueryMapValueTy();
-
-    if (DI.DepClass == DepClassTy::REQUIRED)
-      DepAAs->RequiredAAs.insert(const_cast<AbstractAttribute *>(DI.ToAA));
-    else
-      DepAAs->OptionalAAs.insert(const_cast<AbstractAttribute *>(DI.ToAA));
+    auto &DepAAs = const_cast<AbstractAttribute &>(*DI.FromAA).Deps;
+    DepAAs.push_back(AbstractAttribute::DepTy(
+        const_cast<AbstractAttribute *>(DI.ToAA), unsigned(DI.DepClass)));
   }
 }
 

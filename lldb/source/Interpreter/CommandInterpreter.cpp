@@ -381,6 +381,16 @@ void CommandInterpreter::Initialize() {
     }
   }
 
+  cmd_obj_sp = GetCommandSPExact("platform shell", false);
+  if (cmd_obj_sp) {
+    CommandAlias *shell_alias = AddAlias("shell", cmd_obj_sp, " --host --");
+    if (shell_alias) {
+      shell_alias->SetHelp("Run a shell command on the host.");
+      shell_alias->SetHelpLong("");
+      shell_alias->SetSyntax("shell <shell-command>");
+    }
+  }
+
   cmd_obj_sp = GetCommandSPExact("process kill", false);
   if (cmd_obj_sp) {
     AddAlias("kill", cmd_obj_sp);

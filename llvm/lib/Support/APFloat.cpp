@@ -69,6 +69,7 @@ namespace llvm {
   };
 
   static const fltSemantics semIEEEhalf = {15, -14, 11, 16};
+  static const fltSemantics semBFloat = {127, -126, 8, 16};
   static const fltSemantics semIEEEsingle = {127, -126, 24, 32};
   static const fltSemantics semIEEEdouble = {1023, -1022, 53, 64};
   static const fltSemantics semIEEEquad = {16383, -16382, 113, 128};
@@ -117,6 +118,8 @@ namespace llvm {
     switch (S) {
     case S_IEEEhalf:
       return IEEEhalf();
+    case S_BFloat:
+      return BFloat();
     case S_IEEEsingle:
       return IEEEsingle();
     case S_IEEEdouble:
@@ -135,6 +138,8 @@ namespace llvm {
   APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     if (&Sem == &llvm::APFloat::IEEEhalf())
       return S_IEEEhalf;
+    else if (&Sem == &llvm::APFloat::BFloat())
+      return S_BFloat;
     else if (&Sem == &llvm::APFloat::IEEEsingle())
       return S_IEEEsingle;
     else if (&Sem == &llvm::APFloat::IEEEdouble())
@@ -151,6 +156,9 @@ namespace llvm {
 
   const fltSemantics &APFloatBase::IEEEhalf() {
     return semIEEEhalf;
+  }
+  const fltSemantics &APFloatBase::BFloat() {
+    return semBFloat;
   }
   const fltSemantics &APFloatBase::IEEEsingle() {
     return semIEEEsingle;
@@ -3255,6 +3263,33 @@ APInt IEEEFloat::convertFloatAPFloatToAPInt() const {
                     (mysignificand & 0x7fffff)));
 }
 
+APInt IEEEFloat::convertBFloatAPFloatToAPInt() const {
+  assert(semantics == (const llvm::fltSemantics *)&semBFloat);
+  assert(partCount() == 1);
+
+  uint32_t myexponent, mysignificand;
+
+  if (isFiniteNonZero()) {
+    myexponent = exponent + 127; // bias
+    mysignificand = (uint32_t)*significandParts();
+    if (myexponent == 1 && !(mysignificand & 0x80))
+      myexponent = 0; // denormal
+  } else if (category == fcZero) {
+    myexponent = 0;
+    mysignificand = 0;
+  } else if (category == fcInfinity) {
+    myexponent = 0x1f;
+    mysignificand = 0;
+  } else {
+    assert(category == fcNaN && "Unknown category!");
+    myexponent = 0x1f;
+    mysignificand = (uint32_t)*significandParts();
+  }
+
+  return APInt(16, (((sign & 1) << 15) | ((myexponent & 0xff) << 7) |
+                    (mysignificand & 0x7f)));
+}
+
 APInt IEEEFloat::convertHalfAPFloatToAPInt() const {
   assert(semantics == (const llvm::fltSemantics*)&semIEEEhalf);
   assert(partCount()==1);
@@ -3289,6 +3324,9 @@ APInt IEEEFloat::convertHalfAPFloatToAPInt() const {
 APInt IEEEFloat::bitcastToAPInt() const {
   if (semantics == (const llvm::fltSemantics*)&semIEEEhalf)
     return convertHalfAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&semBFloat)
+    return convertBFloatAPFloatToAPInt();
 
   if (semantics == (const llvm::fltSemantics*)&semIEEEsingle)
     return convertFloatAPFloatToAPInt();
@@ -3486,6 +3524,37 @@ void IEEEFloat::initFromFloatAPInt(const APInt &api) {
   }
 }
 
+void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
+  assert(api.getBitWidth() == 16);
+  uint32_t i = (uint32_t)*api.getRawData();
+  uint32_t myexponent = (i >> 7) & 0xff;
+  uint32_t mysignificand = i & 0x7f;
+
+  initialize(&semBFloat);
+  assert(partCount() == 1);
+
+  sign = i >> 15;
+  if (myexponent == 0 && mysignificand == 0) {
+    // exponent, significand meaningless
+    category = fcZero;
+  } else if (myexponent == 0xff && mysignificand == 0) {
+    // exponent, significand meaningless
+    category = fcInfinity;
+  } else if (myexponent == 0xff && mysignificand != 0) {
+    // sign, exponent, significand meaningless
+    category = fcNaN;
+    *significandParts() = mysignificand;
+  } else {
+    category = fcNormal;
+    exponent = myexponent - 127; // bias
+    *significandParts() = mysignificand;
+    if (myexponent == 0) // denormal
+      exponent = -126;
+    else
+      *significandParts() |= 0x80; // integer bit
+  }
+}
+
 void IEEEFloat::initFromHalfAPInt(const APInt &api) {
   assert(api.getBitWidth()==16);
   uint32_t i = (uint32_t)*api.getRawData();
@@ -3524,6 +3593,8 @@ void IEEEFloat::initFromHalfAPInt(const APInt &api) {
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
   if (Sem == &semIEEEhalf)
     return initFromHalfAPInt(api);
+  if (Sem == &semBFloat)
+    return initFromBFloatAPInt(api);
   if (Sem == &semIEEEsingle)
     return initFromFloatAPInt(api);
   if (Sem == &semIEEEdouble)
@@ -4763,26 +4834,9 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
   llvm_unreachable("Unexpected semantics");
 }
 
-APFloat APFloat::getAllOnesValue(unsigned BitWidth, bool isIEEE) {
-  if (isIEEE) {
-    switch (BitWidth) {
-    case 16:
-      return APFloat(semIEEEhalf, APInt::getAllOnesValue(BitWidth));
-    case 32:
-      return APFloat(semIEEEsingle, APInt::getAllOnesValue(BitWidth));
-    case 64:
-      return APFloat(semIEEEdouble, APInt::getAllOnesValue(BitWidth));
-    case 80:
-      return APFloat(semX87DoubleExtended, APInt::getAllOnesValue(BitWidth));
-    case 128:
-      return APFloat(semIEEEquad, APInt::getAllOnesValue(BitWidth));
-    default:
-      llvm_unreachable("Unknown floating bit width");
-    }
-  } else {
-    assert(BitWidth == 128);
-    return APFloat(semPPCDoubleDouble, APInt::getAllOnesValue(BitWidth));
-  }
+APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics,
+                                 unsigned BitWidth) {
+  return APFloat(Semantics, APInt::getAllOnesValue(BitWidth));
 }
 
 void APFloat::print(raw_ostream &OS) const {

@@ -31,14 +31,14 @@ def updateReferenceResults(ProjName, ProjBuildMode):
         SATestBuild.getSBOutputDirName(IsReferenceBuild=False))
 
     if not os.path.exists(CreatedResultsPath):
-        print("New results not found, was SATestBuild.py "\
-                             "previously run?", file=sys.stderr)
+        print("New results not found, was SATestBuild.py "
+              "previously run?", file=sys.stderr)
         sys.exit(1)
 
     BuildLogPath = SATestBuild.getBuildLogPath(RefResultsPath)
     Dirname = os.path.dirname(os.path.abspath(BuildLogPath))
     runCmd("mkdir -p '%s'" % Dirname)
-    with open(BuildLogPath, "wb+") as PBuildLogFile:
+    with open(BuildLogPath, "w+") as PBuildLogFile:
         # Remove reference results: in git, and then again for a good measure
         # with rm, as git might not remove things fully if there are empty
         # directories involved.
@@ -63,9 +63,10 @@ def updateReferenceResults(ProjName, ProjBuildMode):
 
 def main(argv):
     if len(argv) == 2 and argv[1] in ('-h', '--help'):
-        print("Update static analyzer reference results based "\
-                             "\non the previous run of SATestBuild.py.\n"\
-                             "\nN.B.: Assumes that SATestBuild.py was just run", file=sys.stderr)
+        print("Update static analyzer reference results based "
+              "\non the previous run of SATestBuild.py.\n"
+              "\nN.B.: Assumes that SATestBuild.py was just run",
+              file=sys.stderr)
         sys.exit(1)
 
     with SATestBuild.projectFileHandler() as f:

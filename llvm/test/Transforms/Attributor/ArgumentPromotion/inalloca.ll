@@ -42,7 +42,7 @@ entry:
 define i32 @main() {
 ; CHECK-LABEL: define {{[^@]+}}@main()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]], align 4
 ; CHECK-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 1, i32* [[F0]], align 4
@@ -63,7 +63,7 @@ entry:
 ; Argpromote can't promote %a because of the icmp use.
 define internal i1 @g(%struct.ss* %a, %struct.ss* inalloca %b) nounwind  {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g
-; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree readnone [[A:%.*]], %struct.ss* inalloca nocapture nofree writeonly [[B:%.*]])
+; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* inalloca nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[B:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;

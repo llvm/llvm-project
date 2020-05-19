@@ -90,12 +90,14 @@ void GSIHashStreamBuilder::addSymbol(const codeview::CVSymbol &Symbol) {
 }
 
 namespace {
-LLVM_PACKED(struct PublicSym32Layout {
+LLVM_PACKED_START
+struct PublicSym32Layout {
   RecordPrefix Prefix;
   PublicSym32Header Pub;
   // char Name[];
-});
-}
+};
+LLVM_PACKED_END
+} // namespace
 
 // Calculate how much memory this public needs when serialized.
 static uint32_t sizeOfPublic(const BulkPublic &Pub) {

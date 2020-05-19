@@ -502,7 +502,6 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(uint64_t Type) const {
 template <class ELFT>
 Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
   ArrayRef<Elf_Dyn> Dyn;
-  size_t DynSecSize = 0;
 
   auto ProgramHeadersOrError = program_headers();
   if (!ProgramHeadersOrError)
@@ -513,7 +512,6 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
       Dyn = makeArrayRef(
           reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
           Phdr.p_filesz / sizeof(Elf_Dyn));
-      DynSecSize = Phdr.p_filesz;
       break;
     }
   }
@@ -532,7 +530,6 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
         if (!DynOrError)
           return DynOrError.takeError();
         Dyn = *DynOrError;
-        DynSecSize = Sec.sh_size;
         break;
       }
     }

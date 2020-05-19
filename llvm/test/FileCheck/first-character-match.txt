@@ -1,2 +1,2 @@
-RUN: FileCheck -check-prefix=RUN -input-file %s %s
+RUN: FileCheck -check-prefix=RUN --comment-prefixes=COM -input-file %s %s
 // Prefix is at the first character in the file. The run line then matches itself.

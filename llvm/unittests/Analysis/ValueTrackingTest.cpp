@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -40,7 +41,7 @@ protected:
     M = parseModule(Assembly);
     ASSERT_TRUE(M);
 
-    Function *F = M->getFunction("test");
+    F = M->getFunction("test");
     ASSERT_TRUE(F) << "Test must have a function @test";
     if (!F)
       return;
@@ -57,6 +58,7 @@ protected:
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
+  Function *F = nullptr;
   Instruction *A = nullptr;
 };
 
@@ -668,6 +670,55 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle2) {
   EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
+TEST(ValueTracking, propagatesPoison) {
+  std::string AsmHead = "declare i32 @g(i32)\n"
+                        "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
+                        "i1 %cond, i8* %p) {\n";
+  std::string AsmTail = "  ret void\n}";
+  // (propagates poison?, IR instruction)
+  SmallVector<std::pair<bool, std::string>, 32> Data = {
+      {true, "add i32 %x, %y"},
+      {true, "add nsw nuw i32 %x, %y"},
+      {true, "ashr i32 %x, %y"},
+      {true, "lshr exact i32 %x, 31"},
+      {true, "fcmp oeq float %fx, %fy"},
+      {true, "icmp eq i32 %x, %y"},
+      {true, "getelementptr i8, i8* %p, i32 %x"},
+      {true, "getelementptr inbounds i8, i8* %p, i32 %x"},
+      {true, "bitcast float %fx to i32"},
+      {false, "select i1 %cond, i32 %x, i32 %y"},
+      {false, "freeze i32 %x"},
+      {true, "udiv i32 %x, %y"},
+      {true, "urem i32 %x, %y"},
+      {true, "sdiv exact i32 %x, %y"},
+      {true, "srem i32 %x, %y"},
+      {false, "call i32 @g(i32 %x)"}};
+
+  std::string AssemblyStr = AsmHead;
+  for (auto &Itm : Data)
+    AssemblyStr += Itm.second + "\n";
+  AssemblyStr += AsmTail;
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(AssemblyStr, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto &BB = F->getEntryBlock();
+
+  int Index = 0;
+  for (auto &I : BB) {
+    if (isa<ReturnInst>(&I))
+      break;
+    EXPECT_EQ(propagatesPoison(&I), Data[Index].first)
+        << "Incorrect answer at instruction " << Index << " = " << I;
+    Index++;
+  }
+}
+
 TEST(ValueTracking, canCreatePoison) {
   std::string AsmHead =
       "declare i32 @g(i32)\n"
@@ -903,6 +954,44 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
       "}\n"
       "declare i8 @llvm.usub.sat.i8(i8, i8)\n");
   expectKnownBits(/*zero*/ 2u, /*one*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
+  // ptrtoint truncates the pointer type.
+  parseAssembly(
+      "define void @test(i8** %p) {\n"
+      "  %A = load i8*, i8** %p\n"
+      "  %i = ptrtoint i8* %A to i32\n"
+      "  %m = and i32 %i, 31\n"
+      "  %c = icmp eq i32 %m, 0\n"
+      "  call void @llvm.assume(i1 %c)\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @llvm.assume(i1)\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(
+      A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
+  // ptrtoint zero extends the pointer type.
+  parseAssembly(
+      "define void @test(i8** %p) {\n"
+      "  %A = load i8*, i8** %p\n"
+      "  %i = ptrtoint i8* %A to i128\n"
+      "  %m = and i128 %i, 31\n"
+      "  %c = icmp eq i128 %m, 0\n"
+      "  call void @llvm.assume(i1 %c)\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @llvm.assume(i1)\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(
+      A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
 }
 
 class IsBytewiseValueTest : public ValueTrackingTest,

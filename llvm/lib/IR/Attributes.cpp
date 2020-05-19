@@ -375,6 +375,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "noinline";
   if (hasAttribute(Attribute::NonLazyBind))
     return "nonlazybind";
+  if (hasAttribute(Attribute::NoMerge))
+    return "nomerge";
   if (hasAttribute(Attribute::NonNull))
     return "nonnull";
   if (hasAttribute(Attribute::NoRedZone))
@@ -383,6 +385,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "noreturn";
   if (hasAttribute(Attribute::NoSync))
     return "nosync";
+  if (hasAttribute(Attribute::NullPointerIsValid))
+    return "null_pointer_is_valid";
   if (hasAttribute(Attribute::WillReturn))
     return "willreturn";
   if (hasAttribute(Attribute::NoCfCheck))
@@ -1928,12 +1932,12 @@ adjustMinLegalVectorWidth(Function &Caller, const Function &Callee) {
   }
 }
 
-/// If the inlined function has "null-pointer-is-valid=true" attribute,
+/// If the inlined function has null_pointer_is_valid attribute,
 /// set this attribute in the caller post inlining.
 static void
 adjustNullPointerValidAttr(Function &Caller, const Function &Callee) {
   if (Callee.nullPointerIsDefined() && !Caller.nullPointerIsDefined()) {
-    Caller.addFnAttr(Callee.getFnAttribute("null-pointer-is-valid"));
+    Caller.addFnAttr(Attribute::NullPointerIsValid);
   }
 }
 

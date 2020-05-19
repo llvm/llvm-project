@@ -29,8 +29,8 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-2-DAG: [[C1:%.*]] = constant 1 : index
 // TILE-2-DAG: [[C2:%.*]] = constant 2 : index
 // TILE-2: [[LHS_ROWS:%.*]] = dim [[LHS]], 0
-// TILE-2: loop.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_ROWS]]) step ([[C2]]) {
-// TILE-2-NO: loop.parallel
+// TILE-2: scf.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_ROWS]]) step ([[C2]]) {
+// TILE-2-NO: scf.parallel
 // TILE-2:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
 // TILE-2:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
 // TILE-2:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
@@ -42,8 +42,8 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-02-DAG: [[C1:%.*]] = constant 1 : index
 // TILE-02-DAG: [[C2:%.*]] = constant 2 : index
 // TILE-02: [[LHS_COLS:%.*]] = dim [[LHS]], 1
-// TILE-02: loop.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_COLS]]) step ([[C2]]) {
-// TILE-02-NO: loop.parallel
+// TILE-02: scf.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_COLS]]) step ([[C2]]) {
+// TILE-02-NO: scf.parallel
 // TILE-02:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
 // TILE-02:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
 // TILE-02:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
@@ -51,7 +51,7 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 
 // TILE-002-LABEL: func @sum(
 // TILE-002-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
-// TILE-002-NO: loop.parallel
+// TILE-002-NO: scf.parallel
 // TILE-002:   linalg.generic {{.*}} [[LHS]], [[RHS]], [[SUM]] {
 
 // TILE-234-LABEL: func @sum(
@@ -62,8 +62,8 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-234-DAG: [[C3:%.*]] = constant 3 : index
 // TILE-234: [[LHS_ROWS:%.*]] = dim [[LHS]], 0
 // TILE-234: [[LHS_COLS:%.*]] = dim [[LHS]], 1
-// TILE-234: loop.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]]) to ([[LHS_ROWS]], [[LHS_COLS]]) step ([[C2]], [[C3]]) {
-// TILE-234-NO: loop.parallel
+// TILE-234: scf.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]]) to ([[LHS_ROWS]], [[LHS_COLS]]) step ([[C2]], [[C3]]) {
+// TILE-234-NO: scf.parallel
 // TILE-234:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
 // TILE-234:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
 // TILE-234:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]

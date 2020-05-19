@@ -24,6 +24,11 @@
 
 #include "test_macros.h"
 
+template<class T, size_t extent, size_t otherExtent>
+std::span<T, extent> createImplicitSpan(std::span<T, otherExtent> s) {
+    return {s}; // expected-error {{chosen constructor is explicit in copy-initialization}}
+}
+
 void checkCV ()
 {
 //  std::span<               int>   sp;
@@ -100,6 +105,11 @@ int main(int, char**)
     std::span<float, 0> s4{sp0};    // expected-error {{no matching constructor for initialization of 'std::span<float, 0>'}}
 
     checkCV();
+
+    // explicit constructor necessary
+    {
+    createImplicitSpan<int, 1>(sp);
+    }
 
   return 0;
 }

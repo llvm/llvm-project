@@ -133,8 +133,8 @@ define void @test6() {
 ; We should set the alignment on all load and store operations; make sure
 ; we choose an appropriate alignment.
 ; CHECK-LABEL: @test6(
-; CHECK: alloca double{{$}}
-; CHECK: alloca double{{$}}
+; CHECK: alloca double, align 8{{$}}
+; CHECK: alloca double, align 8{{$}}
 ; CHECK: store{{.*}}, align 8
 ; CHECK: load{{.*}}, align 8
 ; CHECK: store{{.*}}, align 8

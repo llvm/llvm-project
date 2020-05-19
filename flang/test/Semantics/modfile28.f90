@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %f18 %t
+! RUN: %S/test_modfile.sh %s %t %f18
 
 ! Test UTF-8 support in character literals
 ! Note: Module files are encoded in UTF-8.

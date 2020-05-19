@@ -639,10 +639,10 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     auto CPIndex =
         // For SB relative entries we need a target-specific constant pool.
         // Otherwise, just use a regular constant pool entry.
-        IsSBREL ? ConstPool->getConstantPoolIndex(
-                      ARMConstantPoolConstant::Create(GV, ARMCP::SBREL),
-                      Alignment.value())
-                : ConstPool->getConstantPoolIndex(GV, Alignment.value());
+        IsSBREL
+            ? ConstPool->getConstantPoolIndex(
+                  ARMConstantPoolConstant::Create(GV, ARMCP::SBREL), Alignment)
+            : ConstPool->getConstantPoolIndex(GV, Alignment);
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
         .addMemOperand(MF.getMachineMemOperand(
             MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
@@ -996,8 +996,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     auto LoadOpcode = Size == 4 ? ARM::VLDRS : ARM::VLDRD;
 
     auto ConstPool = MF.getConstantPool();
-    auto CPIndex = ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(),
-                                                   Alignment.value());
+    auto CPIndex =
+        ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(), Alignment);
     MIB->setDesc(TII.get(LoadOpcode));
     MIB->RemoveOperand(1);
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)

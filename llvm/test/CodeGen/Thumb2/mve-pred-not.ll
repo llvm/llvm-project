@@ -405,21 +405,11 @@ declare <4 x i32> @llvm.arm.mve.orr.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, 
 define arm_aapcs_vfpcc <4 x i32> @vpttet_v4i1(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: vpttet_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    vcmp.s32 ge, q0, q2
-; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vpttet.s32 ge, q0, q2
 ; CHECK-NEXT:    vmovt q0, q2
 ; CHECK-NEXT:    vmovt q0, q2
-; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmove q0, q2
 ; CHECK-NEXT:    vmovt q0, q2
-; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmovt q0, q2
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %x, %z

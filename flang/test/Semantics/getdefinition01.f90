@@ -1,4 +1,4 @@
-!RUN: %S/test_any.sh %s %flang %t
+!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-definition returning source position of symbol definition.
 module m1
  private :: f

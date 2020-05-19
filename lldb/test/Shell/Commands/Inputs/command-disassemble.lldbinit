@@ -6,7 +6,13 @@ disassemble --start-address 0x0
 disassemble --start-address 0x4 --end-address 0x8
 disassemble --start-address 0x8 --end-address 0x4
 disassemble --address 0x0
-disassemble --address 0xdead
+disassemble --address 0xdeadb
+disassemble --address 0x100
+disassemble --address 0x100 --count 3
+disassemble --address 0x100 --force
 disassemble --start-address 0x0 --count 7
 disassemble --start-address 0x0 --end-address 0x20 --count 7
-disassemble --address 0x0 --count 7
+disassemble --name case1
+disassemble --name case2
+disassemble --name case3
+disassemble --name case3 --count 3

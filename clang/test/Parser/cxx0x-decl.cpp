@@ -44,18 +44,18 @@ namespace OpaqueEnumDecl {
   int x[sizeof(enum E : int)]; // expected-error {{non-defining declaration of enumeration with a fixed underlying type is only permitted as a standalone declaration}}
 
   namespace PR24297 {
-    enum struct E a; // expected-error {{must use 'enum' not 'enum class'}} FIXME: we used 'enum struct'
-    enum class F b; // FIXME: invalid, no prior declaration of 'enum F' and in any case we cannot use 'class' here
+    enum struct E a; // expected-error {{must use 'enum' not 'enum struct'}}
+    enum class F b; // expected-error {{must use 'enum' not 'enum class'}}
     enum G : int c; // expected-error {{only permitted as a standalone declaration}}
     enum struct H : int d; // expected-error {{only permitted as a standalone declaration}}
     enum class I : int e; // expected-error {{only permitted as a standalone declaration}}
     enum X x; // expected-error {{ISO C++ forbids forward reference}} expected-error {{incomplete}} expected-note {{forward declaration}}
 
-    enum struct E *pa; // expected-error {{must use 'enum' not 'enum class'}} FIXME: we used 'enum struct'
+    enum struct E *pa; // expected-error {{must use 'enum' not 'enum struct'}}
     enum class F *pb; // expected-error {{must use 'enum' not 'enum class'}}
-    enum G : int *pc; // expected-error {{only permitted as a standalone declaration}} expected-error {{'int *' is an invalid underlying type}}
-    enum struct H : int *pd; // expected-error {{only permitted as a standalone declaration}} expected-error {{'int *' is an invalid underlying type}} FIXME: expected-error {{must use 'enum' not 'enum class'}}
-    enum class I : int *pe; // expected-error {{only permitted as a standalone declaration}} expected-error {{'int *' is an invalid underlying type}} FIXME: expected-error {{must use 'enum' not 'enum class'}}
+    enum G : int *pc; // expected-error {{only permitted as a standalone declaration}}
+    enum struct H : int *pd; // expected-error {{only permitted as a standalone declaration}}
+    enum class I : int *pe; // expected-error {{only permitted as a standalone declaration}}
     enum Y *py; // expected-error {{ISO C++ forbids forward reference}}
   }
 }

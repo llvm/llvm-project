@@ -11,7 +11,7 @@ set(LIBS
   MLIRTransforms
   MLIRAffineToStandard
   MLIRAnalysis
-  MLIRLoopToStandard
+  MLIRSCFToStandard
   MLIREDSC
   MLIRParser
   MLIRStandardToLLVM

@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s -o %t.exe
-# RUN: llvm-readobj --unwind %t.exe | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t1.exe
+# RUN: llvm-readobj --unwind %t1.exe | FileCheck %s
 
 # CHECK:      EHFrameHeader {
 # CHECK-NEXT:  Address: 0x4013c0
@@ -215,3 +215,31 @@ ProgramHeaders:
     Sections:
       - Section: .eh_frame_hdr
 ...
+
+## Check we report an error when the tool is unable to parse .eh_frame section.
+# RUN: yaml2obj --docnum=2 %s -o %t2.exe
+# RUN: not llvm-readobj --unwind %t2.exe 2>&1 | FileCheck %s -DFILE=%t2.exe --check-prefix=NO-CIE-ERR
+
+# NO-CIE-ERR:      .eh_frame section at offset 0x40 address 0x0:
+# NO-CIE-ERR-NEXT: error: '[[FILE]]': parsing FDE data at 0x0 failed due to missing CIE
+# NO-CIE-ERR-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .eh_frame
+    Type: SHT_X86_64_UNWIND
+## The content is generated from the following code. It has no CIE.
+## See the DebugInfoX86/eh-frame-cie-id.s test case for more history.
+## .section .eh_frame,"a",@unwind
+## .long .Lend - .LCIEptr  # Length
+## .LCIEptr:
+##   .long 0xffffffff # CIE pointer
+##   .quad 0x1111abcd # Initial location
+##   .quad 0x00010000 # Address range
+## .Lend:
+    Content: 14000000FFFFFFFFCDAB1111000000000000010000000000

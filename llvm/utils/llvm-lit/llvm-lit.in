@@ -15,14 +15,14 @@ def map_config(source_dir, site_config):
 
 # Set up some builtin parameters, so that by default the LLVM test suite
 # configuration file knows how to find the object tree.
-builtin_parameters = { 'build_mode' : "@BUILD_MODE@" }
+builtin_parameters = { 'build_mode' : '@BUILD_MODE@' }
 
 @LLVM_LIT_CONFIG_MAP@
 
 builtin_parameters['config_map'] = config_map
 
 # Make sure we can find the lit package.
-llvm_source_root = path("@LLVM_SOURCE_DIR@")
+llvm_source_root = path(r'@LLVM_SOURCE_DIR@')
 sys.path.insert(0, os.path.join(llvm_source_root, 'utils', 'lit'))
 
 if __name__=='__main__':

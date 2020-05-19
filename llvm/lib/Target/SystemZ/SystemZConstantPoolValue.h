@@ -43,7 +43,7 @@ public:
 
   // Override MachineConstantPoolValue.
   int getExistingMachineCPValue(MachineConstantPool *CP,
-                                unsigned Alignment) override;
+                                Align Alignment) override;
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
   void print(raw_ostream &O) const override;
 

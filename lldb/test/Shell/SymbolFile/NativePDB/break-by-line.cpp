@@ -1,8 +1,9 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, x86
 
 // Test that we can set simple breakpoints using PDB on any platform.
-// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
+// RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
+// RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/break-by-line.lldbinit | FileCheck %s
 
@@ -22,5 +23,5 @@ int main(int argc, char **argv) {
 
 // CHECK:      (lldb) target create "{{.*}}break-by-line.cpp.tmp.exe"
 // CHECK:      Current executable set to '{{.*}}break-by-line.cpp.tmp.exe'
-// CHECK:      (lldb) break set -f break-by-line.cpp -l 14
-// CHECK:      Breakpoint 1: where = break-by-line.cpp.tmp.exe`NS::NamespaceFn + {{[0-9]+}} at break-by-line.cpp:14
+// CHECK:      (lldb) break set -f break-by-line.cpp -l 15
+// CHECK:      Breakpoint 1: where = break-by-line.cpp.tmp.exe`NS::NamespaceFn + {{[0-9]+}} at break-by-line.cpp:15

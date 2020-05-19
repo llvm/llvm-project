@@ -38,11 +38,10 @@ class GIComplexOperandMatcher<LLT type, string matcherfn> {
 
   // The function that determines whether the operand matches. It should be of
   // the form:
-  //   bool select(const MatchOperand &Root, MatchOperand &Result1)
-  // and should have the same number of ResultX arguments as the number of
-  // result operands. It must return true on successful match and false
-  // otherwise. If it returns true, then all the ResultX arguments must be
-  // overwritten.
+  //   ComplexRendererFn select(MachineOperand &Root) const;
+  // where Root is the root of the match.  The function should return nullptr
+  // on match failure, or a ComplexRendererFn that renders the operand in case
+  // of a successful match.
   string MatcherFn = matcherfn;
 }
 

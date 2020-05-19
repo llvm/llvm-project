@@ -43,15 +43,15 @@ define void @fn1() {
 ; USE_ASSUME-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; USE_ASSUME:       while.cond:
 ; USE_ASSUME-NEXT:    [[TMP:%.*]] = load %struct.PyFrameObject*, %struct.PyFrameObject** @a, align 8
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* inttoptr (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665) to i64*), i64 8), "dereferenceable"(i64* inttoptr (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665) to i64*), i64 8), "nonnull"(i64* inttoptr (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665) to i64*)) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* inttoptr (i64 add (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665), i64 35184372088832) to i32*), i64 8), "dereferenceable"(i32* inttoptr (i64 add (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665), i64 35184372088832) to i32*), i64 4), "nonnull"(i32* inttoptr (i64 add (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665), i64 35184372088832) to i32*)) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i64* inttoptr (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665) to i64*), i64 8), "nonnull"(i64* inttoptr (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665) to i64*)), "align"(i64* inttoptr (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665) to i64*), i64 8) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* inttoptr (i64 add (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665), i64 35184372088832) to i32*), i64 4), "nonnull"(i32* inttoptr (i64 add (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665), i64 35184372088832) to i32*)), "align"(i32* inttoptr (i64 add (i64 and (i64 ptrtoint (%struct.PyFrameObject** @a to i64), i64 -70368744177665), i64 35184372088832) to i32*), i64 8) ]
 ; USE_ASSUME-NEXT:    [[F_IBLOCK:%.*]] = getelementptr inbounds [[STRUCT_PYFRAMEOBJECT:%.*]], %struct.PyFrameObject* [[TMP]], i64 0, i32 0
 ; USE_ASSUME-NEXT:    br label [[BB2:%.*]]
 ; USE_ASSUME:       bb:
 ; USE_ASSUME-NEXT:    call void @__msan_warning_noreturn()
 ; USE_ASSUME-NEXT:    unreachable
 ; USE_ASSUME:       bb2:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[F_IBLOCK]], i64 4), "dereferenceable"(i32* [[F_IBLOCK]], i64 4), "nonnull"(i32* [[F_IBLOCK]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[F_IBLOCK]], i64 4), "nonnull"(i32* [[F_IBLOCK]]), "align"(i32* [[F_IBLOCK]], i64 4) ]
 ; USE_ASSUME-NEXT:    [[TMP4:%.*]] = ptrtoint i32* [[F_IBLOCK]] to i64
 ; USE_ASSUME-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP4]], 0
 ; USE_ASSUME-NEXT:    br i1 [[TOBOOL]], label [[BB13:%.*]], label [[BB15:%.*]]

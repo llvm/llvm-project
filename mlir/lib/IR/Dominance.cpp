@@ -176,6 +176,17 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
   return baseInfoIt->second->properlyDominates(a, b);
 }
 
+/// Return true if the specified block is reachable from the entry block of its
+/// region.
+template <bool IsPostDom>
+bool DominanceInfoBase<IsPostDom>::isReachableFromEntry(Block *a) const {
+  auto *regionA = a->getParent();
+  auto baseInfoIt = dominanceInfos.find(regionA);
+  if (baseInfoIt == dominanceInfos.end())
+    return true;
+  return baseInfoIt->second->isReachableFromEntry(a);
+}
+
 template class mlir::detail::DominanceInfoBase</*IsPostDom=*/true>;
 template class mlir::detail::DominanceInfoBase</*IsPostDom=*/false>;
 

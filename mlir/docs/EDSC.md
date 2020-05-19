@@ -103,7 +103,7 @@ or the following, for a 0-D `memref<f32>`:
 //       CHECK: store {{.*}}, %arg2[] : memref<f32>
 ```
 
-Similar APIs are provided to emit the lower-level `loop.for` op with
+Similar APIs are provided to emit the lower-level `scf.for` op with
 `LoopNestBuilder`. See the `builder-api-test.cpp` test for more usage examples.
 
 Since the implementation of declarative builders is in C++, it is also available

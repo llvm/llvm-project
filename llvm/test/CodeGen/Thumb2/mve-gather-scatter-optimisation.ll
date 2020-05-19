@@ -153,23 +153,22 @@ define arm_aapcs_vfpcc void @push_out_mul_scatter(i32* noalias nocapture readonl
 ; CHECK-LABEL: push_out_mul_scatter:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r1, .LCPI3_0
-; CHECK-NEXT:    vmov.i32 q1, #0x18
-; CHECK-NEXT:    vldrw.u32 q2, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vstrw.32 q0, [r0, q2, uxtw #2]
-; CHECK-NEXT:    vadd.i32 q2, q2, q1
+; CHECK-NEXT:    vstrw.32 q0, [q1, #96]!
 ; CHECK-NEXT:    bne .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 6 @ 0x6
-; CHECK-NEXT:    .long 12 @ 0xc
-; CHECK-NEXT:    .long 18 @ 0x12
+; CHECK-NEXT:    .long 4294967200 @ 0xffffffa0
+; CHECK-NEXT:    .long 4294967224 @ 0xffffffb8
+; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
+; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
                                                   i32* noalias nocapture %dst, i32 %n.vec,
                                                   <4 x i32> %to.store) {
 
@@ -196,23 +195,22 @@ define arm_aapcs_vfpcc void @push_out_add_scatter(i32* noalias nocapture readonl
 ; CHECK-LABEL: push_out_add_scatter:
 ; CHECK:       @ %bb.0: @ %vector.ph
 ; CHECK-NEXT:    adr r1, .LCPI4_0
-; CHECK-NEXT:    vmov.i32 q2, #0x8
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vstrw.32 q0, [r0, q1, uxtw #2]
-; CHECK-NEXT:    vadd.i32 q1, q1, q2
+; CHECK-NEXT:    vstrw.32 q0, [q1, #32]!
 ; CHECK-NEXT:    bne .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %end
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
+; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 8 @ 0x8
-; CHECK-NEXT:    .long 10 @ 0xa
-; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 16 @ 0x10
                                                   i32* noalias nocapture %dst, i32 %n.vec,
                                                   <4 x i32> %to.store) {
 

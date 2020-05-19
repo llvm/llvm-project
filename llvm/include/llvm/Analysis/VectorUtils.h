@@ -173,6 +173,25 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 /// respective IR declarations.
 Optional<VFInfo> tryDemangleForVFABI(StringRef MangledName, const Module &M);
 
+/// This routine mangles the given VectorName according to the LangRef
+/// specification for vector-function-abi-variant attribute and is specific to
+/// the TLI mappings. It is the responsibility of the caller to make sure that
+/// this is only used if all parameters in the vector function are vector type.
+/// This returned string holds scalar-to-vector mapping:
+///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
+///
+/// where:
+///
+/// <isa> = "_LLVM_"
+/// <mask> = "N". Note: TLI does not support masked interfaces.
+/// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
+///          field of the `VecDesc` struct.
+/// <vparams> = "v", as many as are the numArgs.
+/// <scalarname> = the name of the scalar function.
+/// <vectorname> = the name of the vector function.
+std::string mangleTLIVectorName(StringRef VectorName, StringRef ScalarName,
+                                unsigned numArgs, unsigned VF);
+
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
 
@@ -180,7 +199,10 @@ VFParamKind getVFParamKindFromString(const StringRef Token);
 static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
 
 /// Populates a set of strings representing the Vector Function ABI variants
-/// associated to the CallInst CI.
+/// associated to the CallInst CI. If the CI does not contain the
+/// vector-function-abi-variant attribute, we return without populating
+/// VariantMappings, i.e. callers of getVectorVariantNames need not check for
+/// the presence of the attribute (see InjectTLIMappings).
 void getVectorVariantNames(const CallInst &CI,
                            SmallVectorImpl<std::string> &VariantMappings);
 } // end namespace VFABI
@@ -203,14 +225,13 @@ class VFDatabase {
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {
     const StringRef ScalarName = CI.getCalledFunction()->getName();
-    const StringRef S =
-        CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
-            .getValueAsString();
-    if (S.empty())
-      return;
 
     SmallVector<std::string, 8> ListOfStrings;
+    // The check for the vector-function-abi-variant attribute is done when
+    // retrieving the vector variant names here.
     VFABI::getVectorVariantNames(CI, ListOfStrings);
+    if (ListOfStrings.empty())
+      return;
     for (const auto &MangledName : ListOfStrings) {
       const Optional<VFInfo> Shape =
           VFABI::tryDemangleForVFABI(MangledName, *(CI.getModule()));

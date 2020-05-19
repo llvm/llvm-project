@@ -9,7 +9,6 @@
 #ifndef LLVM_SUPPORT_RISCVATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_RISCVATTRIBUTEPARSER_H
 
-#include "ScopedPrinter.h"
 #include "llvm/Support/ELFAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 

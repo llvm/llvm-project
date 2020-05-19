@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   Analysis
+  AsmParser
   AsmPrinter
   CodeGen
   Core

@@ -186,7 +186,7 @@ std::string MetadataStreamerV2::getTypeName(Type *Ty, bool Signed) const {
   case Type::DoubleTyID:
     return "double";
   case Type::FixedVectorTyID: {
-    auto VecTy = cast<VectorType>(Ty);
+    auto VecTy = cast<FixedVectorType>(Ty);
     auto ElTy = VecTy->getElementType();
     auto NumElements = VecTy->getNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();
@@ -633,7 +633,7 @@ std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
   case Type::DoubleTyID:
     return "double";
   case Type::FixedVectorTyID: {
-    auto VecTy = cast<VectorType>(Ty);
+    auto VecTy = cast<FixedVectorType>(Ty);
     auto ElTy = VecTy->getElementType();
     auto NumElements = VecTy->getNumElements();
     return (Twine(getTypeName(ElTy, Signed)) + Twine(NumElements)).str();

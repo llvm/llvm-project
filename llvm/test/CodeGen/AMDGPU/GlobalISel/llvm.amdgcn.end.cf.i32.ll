@@ -4,6 +4,7 @@
 define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GCN-LABEL: test_wave32:
 ; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    s_load_dword s1, s[4:5], 0x0
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GCN-NEXT:    ; implicit-def: $vcc_hi

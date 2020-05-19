@@ -311,7 +311,7 @@ let Command = "disassemble" in {
     Desc<"Address at which to start disassembling.">;
   def disassemble_options_end_address : Option<"end-address", "e">, Group<1>,
     Arg<"AddressOrExpression">, Desc<"Address at which to end disassembling.">;
-  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5]>,
+  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5,7]>,
     Arg<"NumLines">, Desc<"Number of instructions to display.">;
   def disassemble_options_name : Option<"name", "n">, Group<3>,
     Arg<"FunctionName">, Completion<"Symbol">,
@@ -326,6 +326,8 @@ let Command = "disassemble" in {
   def disassemble_options_address : Option<"address", "a">, Group<7>,
     Arg<"AddressOrExpression">,
     Desc<"Disassemble function containing this address.">;
+  def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
+    Desc<"Force dissasembly of large functions.">;
 }
 
 let Command = "expression" in {
@@ -622,6 +624,8 @@ let Command = "platform process attach" in {
 }
 
 let Command = "platform shell" in {
+  def platform_shell_host : Option<"host", "h">,
+    Desc<"Run the commands on the host shell when enabled.">;
   def platform_shell_timeout : Option<"timeout", "t">, Arg<"Value">,
     Desc<"Seconds to wait for the remote host to finish running the command.">;
 }
@@ -701,6 +705,7 @@ let Command = "script add" in {
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
 }
+
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;

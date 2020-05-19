@@ -32,7 +32,7 @@ void LLVM_LIBC_ENTRYPOINT(sincosf)(float y, float *sinp, float *cosp) {
     if (unlikely(abstop12(y) < abstop12(as_float(0x39800000)))) {
       if (unlikely(abstop12(y) < abstop12(as_float(0x800000))))
         // Force underflow for tiny y.
-        force_eval_float(x2);
+        force_eval<float>(x2);
       *sinp = y;
       *cosp = 1.0f;
       return;
@@ -69,7 +69,7 @@ void LLVM_LIBC_ENTRYPOINT(sincosf)(float y, float *sinp, float *cosp) {
     // Needed to set errno for +-Inf, the add is a hack to work
     // around a gcc register allocation issue: just passing y
     // affects code generation in the fast path.
-    invalidf(y + y);
+    invalid(y + y);
   }
 }
 

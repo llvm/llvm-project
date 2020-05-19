@@ -347,38 +347,54 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
   return true;
 }
 
-static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
-  if (ClangModulesDeclVendor *decl_vendor =
-          target->GetClangModulesDeclVendor()) {
-    auto *persistent_state = llvm::cast<ClangPersistentVariables>(
-        target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
-    if (!persistent_state)
-      return;
-    const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
-        persistent_state->GetHandLoadedClangModules();
-    ClangModulesDeclVendor::ModuleVector modules_for_macros;
+static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
+                            DiagnosticManager &diagnostic_manager) {
+  ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
+  if (!decl_vendor)
+    return;
 
-    for (ClangModulesDeclVendor::ModuleID module : hand_imported_modules) {
-      modules_for_macros.push_back(module);
-    }
+  if (!target->GetEnableAutoImportClangModules())
+    return;
 
-    if (target->GetEnableAutoImportClangModules()) {
-      if (StackFrame *frame = exe_ctx.GetFramePtr()) {
-        if (Block *block = frame->GetFrameBlock()) {
-          SymbolContext sc;
+  auto *persistent_state = llvm::cast<ClangPersistentVariables>(
+      target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+  if (!persistent_state)
+    return;
 
-          block->CalculateSymbolContext(&sc);
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (!frame)
+    return;
 
-          if (sc.comp_unit) {
-            StreamString error_stream;
+  Block *block = frame->GetFrameBlock();
+  if (!block)
+    return;
+  SymbolContext sc;
 
-            decl_vendor->AddModulesForCompileUnit(
-                *sc.comp_unit, modules_for_macros, error_stream);
-          }
-        }
-      }
-    }
+  block->CalculateSymbolContext(&sc);
+
+  if (!sc.comp_unit)
+    return;
+  StreamString error_stream;
+
+  ClangModulesDeclVendor::ModuleVector modules_for_macros =
+      persistent_state->GetHandLoadedClangModules();
+  if (decl_vendor->AddModulesForCompileUnit(*sc.comp_unit, modules_for_macros,
+                                            error_stream))
+    return;
+
+  // Failed to load some modules, so emit the error stream as a diagnostic.
+  if (!error_stream.Empty()) {
+    // The error stream already contains several Clang diagnostics that might
+    // be either errors or warnings, so just print them all as one remark
+    // diagnostic to prevent that the message starts with "error: error:".
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                 error_stream.GetString());
+    return;
   }
+
+  diagnostic_manager.PutString(eDiagnosticSeverityError,
+                               "Unknown error while loading modules needed for "
+                               "current compilation unit.");
 }
 
 void ClangUserExpression::UpdateLanguageForExpr() {
@@ -530,7 +546,7 @@ bool ClangUserExpression::PrepareForParsing(
 
   ApplyObjcCastHack(m_expr_text);
 
-  SetupDeclVendor(exe_ctx, m_target);
+  SetupDeclVendor(exe_ctx, m_target, diagnostic_manager);
 
   CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
   llvm::ArrayRef<std::string> imported_modules =

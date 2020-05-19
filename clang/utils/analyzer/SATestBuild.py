@@ -58,6 +58,7 @@ import shutil
 import sys
 import threading
 import time
+
 try:
     import queue
 except ImportError:
@@ -74,7 +75,8 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
-class StreamToLogger(object):
+
+class StreamToLogger:
     def __init__(self, logger, log_level=logging.INFO):
         self.logger = logger
         self.log_level = log_level
@@ -311,6 +313,9 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
                 ExtraEnv['ANALYZER_CONFIG'] = generateAnalyzerConfig(Args)
                 continue
 
+            if Command.startswith("#"):
+                continue
+
             # If using 'make', auto imply a -jX argument
             # to speed up analysis.  xcodebuild will
             # automatically use the maximum number of cores.
@@ -373,7 +378,7 @@ def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
         # Build and call the analyzer command.
         OutputOption = "-o '%s.plist' " % os.path.join(PlistPath, FileName)
         Command = CmdPrefix + OutputOption + ("'%s'" % FileName)
-        LogFile = open(os.path.join(FailPath, FileName + ".stderr.txt"), "w+b")
+        LogFile = open(os.path.join(FailPath, FileName + ".stderr.txt"), "w+")
         try:
             if Verbose == 1:
                 Local.stdout.write("  Executing: %s\n" % (Command,))
@@ -428,7 +433,7 @@ def buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     os.makedirs(os.path.join(SBOutputDir, LogFolderName))
 
     # Build and analyze the project.
-    with open(BuildLogPath, "wb+") as PBuildLogFile:
+    with open(BuildLogPath, "w+") as PBuildLogFile:
         if (ProjectBuildMode == 1):
             downloadAndPatch(Dir, PBuildLogFile)
             runCleanupScript(Dir, PBuildLogFile)
@@ -482,10 +487,14 @@ def CleanUpEmptyPlists(SBOutputDir):
     for F in glob.glob(SBOutputDir + "/*/*.plist"):
         P = os.path.join(SBOutputDir, F)
 
-        Data = plistlib.readPlist(P)
-        # Delete empty reports.
-        if not Data['files']:
-            os.remove(P)
+        try:
+            Data = plistlib.readPlist(P)
+            # Delete empty reports.
+            if not Data['files']:
+                os.remove(P)
+                continue
+        except plistlib.InvalidFileException as e:
+            print('Error parsing plist file %s: %s' % (P, str(e)))
             continue
 
 
@@ -638,7 +647,7 @@ class TestProjectThread(threading.Thread):
         self.TasksQueue = TasksQueue
         self.ResultsDiffer = ResultsDiffer
         self.FailureFlag = FailureFlag
-        super(TestProjectThread, self).__init__()
+        super().__init__()
 
         # Needed to gracefully handle interrupts with Ctrl-C
         self.daemon = True
@@ -692,7 +701,7 @@ def testProject(Args, ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0
 
 
 def projectFileHandler():
-    return open(getProjectMapPath(), "rb")
+    return open(getProjectMapPath(), "r")
 
 
 def iterateOverProjects(PMapFile):
@@ -701,24 +710,25 @@ def iterateOverProjects(PMapFile):
     from the start.
     """
     PMapFile.seek(0)
-    for I in csv.reader(PMapFile):
-        if (SATestUtils.isCommentCSVLine(I)):
+    for ProjectInfo in csv.reader(PMapFile):
+        if (SATestUtils.isCommentCSVLine(ProjectInfo)):
             continue
-        yield I
+        yield ProjectInfo
 
 
 def validateProjectFile(PMapFile):
     """
     Validate project file.
     """
-    for I in iterateOverProjects(PMapFile):
-        if len(I) != 2:
+    for ProjectInfo in iterateOverProjects(PMapFile):
+        if len(ProjectInfo) != 2:
             print("Error: Rows in the ProjectMapFile should have 2 entries.")
             raise Exception()
-        if I[1] not in ('0', '1', '2'):
-            print("Error: Second entry in the ProjectMapFile should be 0" \
+        if ProjectInfo[1] not in ('0', '1', '2'):
+            print("Error: Second entry in the ProjectMapFile should be 0"
                   " (single file), 1 (project), or 2(single file c++11).")
             raise Exception()
+
 
 def singleThreadedTestAll(Args, ProjectsToTest):
     """
@@ -729,6 +739,7 @@ def singleThreadedTestAll(Args, ProjectsToTest):
     for ProjArgs in ProjectsToTest:
         Success &= testProject(Args, *ProjArgs)
     return Success
+
 
 def multiThreadedTestAll(Args, ProjectsToTest, Jobs):
     """

@@ -4869,6 +4869,23 @@ inline internal::Matcher<BinaryOperator> hasEitherOperand(
   return anyOf(hasLHS(InnerMatcher), hasRHS(InnerMatcher));
 }
 
+/// Matches if both matchers match with opposite sides of the binary operator.
+///
+/// Example matcher = binaryOperator(hasOperands(integerLiteral(equals(1),
+///                                              integerLiteral(equals(2)))
+/// \code
+///   1 + 2 // Match
+///   2 + 1 // Match
+///   1 + 1 // No match
+///   2 + 2 // No match
+/// \endcode
+inline internal::Matcher<BinaryOperator>
+hasOperands(const internal::Matcher<Expr> &Matcher1,
+            const internal::Matcher<Expr> &Matcher2) {
+  return anyOf(allOf(hasLHS(Matcher1), hasRHS(Matcher2)),
+               allOf(hasLHS(Matcher2), hasRHS(Matcher1)));
+}
+
 /// Matches if the operand of a unary operator matches.
 ///
 /// Example matches true (matcher = hasUnaryOperand(

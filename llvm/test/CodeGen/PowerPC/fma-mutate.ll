@@ -14,7 +14,7 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-NOT: fmr
 ; CHECK: xsmaddmdp
 ; CHECK: xsmaddadp
-  %r = call fast double @llvm.sqrt.f64(double %a)
+  %r = call reassoc afn ninf double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 

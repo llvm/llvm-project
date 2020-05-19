@@ -410,3 +410,50 @@ func @moving_invalid_dealloc_op(%arg0 : memref<2xf32>, %arg1: memref<2xf32>){
 
 //      CHECK: linalg.copy
 // CHECK-NEXT: dealloc
+
+// -----
+
+// Test Case: Nested regions - This test defines a GenericOp inside the region of
+// another GenericOp.
+// BufferPlacement Expected Behaviour: The AllocOp of inner GenericOp should remain
+// inside the region of outer GenericOp and it should insert the missing DeallocOp
+// in the same region. The AllocOp of the outer GenericOp should be moved to the
+// entry block and its missing DeallocOp should be inserted after Linalg.Copy.
+
+#map0 = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL: func @nested_regions_and_cond_branch
+func @nested_regions_and_cond_branch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+  cond_br %arg0, ^bb1, ^bb2
+^bb1:
+  br ^bb3(%arg1 : memref<2xf32>)
+^bb2:
+  %0 = alloc() : memref<2xf32>
+  linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
+  ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
+    %1 = alloc() : memref<2xf32>
+    linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %1 {
+    ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
+      %tmp2 = exp %gen2_arg0 : f32
+      linalg.yield %tmp2 : f32
+    }: memref<2xf32>, memref<2xf32>
+    %tmp1 = exp %gen1_arg0 : f32
+    linalg.yield %tmp1 : f32
+  }: memref<2xf32>, memref<2xf32>
+  br ^bb3(%0 : memref<2xf32>)
+^bb3(%1: memref<2xf32>):
+  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  return
+}
+//      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
+// CHECK-NEXT:   %[[GENERIC1_ALLOC:.*]] = alloc()
+// CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
+//      CHECK: ^[[BB2]]:
+// CHECK-NEXT:   linalg.generic {{{.*}}} %[[ARG1]], %[[GENERIC1_ALLOC]]
+//      CHECK:     %[[GENERIC2_ALLOC:.*]] = alloc()
+// CHECK-NEXT:     linalg.generic {{{.*}}} %[[ARG1]], %[[GENERIC2_ALLOC]]
+//      CHECK:     dealloc %[[GENERIC2_ALLOC]]
+// CHECK-NEXT:     %{{.*}} = exp
+//      CHECK:  ^[[BB3:.*]]({{.*}}):
+//      CHECK:  linalg.copy
+// CHECK-NEXT:  dealloc %[[GENERIC1_ALLOC]]

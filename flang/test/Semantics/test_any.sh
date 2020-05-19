@@ -48,7 +48,7 @@ function internal_check() {
 }
 
 gr=0
-for input in $1; do
+for input in $src; do
   [[ ! -f $input ]] && die "File not found: $input"
   CMD=$(cat ${input} | egrep '^[[:space:]]*![[:space:]]*EXEC:[[:space:]]*' | sed -e 's/^[[:space:]]*![[:space:]]*EXEC:[[:space:]]*//')
   CMD=$(echo ${CMD} | sed -e "s:%s:${input}:g")

@@ -44,7 +44,7 @@ define i32 @f(i32 %x) {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32
 ; IS__TUNIT_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32 [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP1]]
 ;

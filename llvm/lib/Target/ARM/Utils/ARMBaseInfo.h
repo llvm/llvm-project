@@ -121,6 +121,12 @@ namespace ARM {
   };
 } // namespace ARM
 
+// Expands a PredBlockMask by adding an E or a T at the end, depending on Kind.
+// e.g ExpandPredBlockMask(T, Then) = TT, ExpandPredBlockMask(TT, Else) = TTE,
+// and so on.
+ARM::PredBlockMask expandPredBlockMask(ARM::PredBlockMask BlockMask,
+                                       ARMVCC::VPTCodes Kind);
+
 inline static const char *ARMVPTPredToString(ARMVCC::VPTCodes CC) {
   switch (CC) {
   case ARMVCC::None:  return "none";

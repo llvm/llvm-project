@@ -16,34 +16,31 @@ func @range(%arg0: index, %arg1: index, %arg2: index) {
 // -----
 
 // CHECK-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 
 func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
   %c0 = constant 0 : index
   %0 = muli %arg0, %arg0 : index
   %1 = alloc (%0) : memref<?xi8>
   %2 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
-  %3 = view %1[%c0][%arg0, %arg0] :
-    memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %3 = view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xf32>
   %4 = linalg.slice %3[%2, %2] :
-    memref<?x?xf32, offset: ?, strides: [?, 1]>,
+    memref<?x?xf32>,
     !linalg.range,
     !linalg.range,
-    memref<?x?xf32, offset: ?, strides: [?, 1]>
-  %5 = linalg.slice %3[%2, %arg2] : memref<?x?xf32, offset: ?, strides: [?, 1]>,
+    memref<?x?xf32>
+  %5 = linalg.slice %3[%2, %arg2] : memref<?x?xf32>,
                                     !linalg.range,
                                     index,
                                     memref<?xf32, offset: ?, strides: [1]>
-  %6 = linalg.slice %3[%arg2, %2] : memref<?x?xf32, offset: ?, strides: [?, 1]>,
+  %6 = linalg.slice %3[%arg2, %2] : memref<?x?xf32>,
                                     index,
                                     !linalg.range,
                                     memref<?xf32, offset: ?, strides: [1]>
-  %7 = linalg.slice %3[%arg2, %arg3] : memref<?x?xf32, offset: ?, strides: [?, 1]>,
+  %7 = linalg.slice %3[%arg2, %arg3] : memref<?x?xf32>,
                                        index,
                                        index,
                                        memref<f32>
-  %8 = view %1[%c0][%arg0, %arg0] :
-    memref<?xi8> to memref<?x?xvector<4x4xf32>, offset: ?, strides: [?, 1]>
+  %8 = view %1[%c0][%arg0, %arg0] : memref<?xi8> to memref<?x?xvector<4x4xf32>>
   dealloc %1 : memref<?xi8>
   return
 }
@@ -52,29 +49,29 @@ func @views(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index
 //  CHECK-NEXT:  alloc(%{{.*}}) : memref<?xi8>
 //  CHECK-NEXT:  range
 //  CHECK-NEXT:  std.view %{{.*}}[%{{.*}}][%{{.*}}] :
-//  CHECK-SAME:     memref<?xi8> to memref<?x?xf32, #[[strided2D]]>
+//  CHECK-SAME:     memref<?xi8> to memref<?x?xf32>
 //  CHECK-NEXT:  linalg.slice %{{.*}}[%{{.*}}, %{{.*}}] :
-//  CHECK-SAME:     memref<?x?xf32, #[[strided2D]]>,
+//  CHECK-SAME:     memref<?x?xf32>,
 //  CHECK-SAME:     !linalg.range,
 //  CHECK-SAME:     !linalg.range,
-//  CHECK-SAME:     memref<?x?xf32, #[[strided2D]]>
+//  CHECK-SAME:     memref<?x?xf32>
 //  CHECK-NEXT:  linalg.slice %{{.*}}[%{{.*}}, %{{.*}}] :
-//  CHECK-SAME:     memref<?x?xf32, #[[strided2D]]>,
+//  CHECK-SAME:     memref<?x?xf32>,
 //  CHECK-SAME:     !linalg.range,
 //  CHECK-SAME:     index,
 //  CHECK-SAME:     memref<?xf32, #[[strided1D]]>
 //  CHECK-NEXT:  linalg.slice %{{.*}}[%{{.*}}, %{{.*}}] :
-//  CHECK-SAME:     memref<?x?xf32, #[[strided2D]]>,
+//  CHECK-SAME:     memref<?x?xf32>,
 //  CHECK-SAME:     index,
 //  CHECK-SAME:     !linalg.range,
 //  CHECK-SAME:     memref<?xf32, #[[strided1D]]>
 //  CHECK-NEXT:  linalg.slice %{{.*}}[%{{.*}}, %{{.*}}] :
-//  CHECK-SAME:     memref<?x?xf32, #[[strided2D]]>,
+//  CHECK-SAME:     memref<?x?xf32>,
 //  CHECK-SAME:     index,
 //  CHECK-SAME:     index,
 //  CHECK-SAME:     memref<f32>
 //  CHECK-NEXT:  view %{{.*}}[%{{.*}}][%{{.*}}] :
-//  CHECK-SAME:     memref<?xi8> to memref<?x?xvector<4x4xf32>, #[[strided2D]]>
+//  CHECK-SAME:     memref<?xi8> to memref<?x?xvector<4x4xf32>>
 //  CHECK-NEXT:  dealloc %{{.*}} : memref<?xi8>
 
 // -----
@@ -633,3 +630,26 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 //       CHECK:   linalg.batch_matmul
 //       CHECK:   linalg.batch_matmul
 
+// -----
+
+func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>) -> (tensor<f32>, tensor<1x1xf32>)
+{
+  %0 = linalg.tensor_reshape %arg0 [] : tensor<1x1xf32> into tensor<f32>
+  %1 = linalg.tensor_reshape %0 [] : tensor<f32> into tensor<1x1xf32>
+  return %0, %1 : tensor<f32>, tensor<1x1xf32>
+}
+// CHECK-LABEL: func @tensor_reshape_zero_dim
+//       CHECK:   linalg.tensor_reshape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
+//       CHECK:   linalg.tensor_reshape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
+
+// -----
+
+func @memref_reshape_zero_dim(%arg0 : memref<1x1xf32>, %arg1 : memref<f32>) -> (memref<f32>, memref<1x1xf32>)
+{
+  %0 = linalg.reshape %arg0 [] : memref<1x1xf32> into memref<f32>
+  %1 = linalg.reshape %0 [] : memref<f32> into memref<1x1xf32>
+  return %0, %1 : memref<f32>, memref<1x1xf32>
+}
+// CHECK-LABEL: func @memref_reshape_zero_dim
+//       CHECK:   linalg.reshape %{{.*}} [] : memref<1x1xf32> into memref<f32>
+//       CHECK:   linalg.reshape %{{.*}} [] : memref<f32> into memref<1x1xf32>

@@ -924,9 +924,7 @@ OwningModuleRef translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
   llvm::SMDiagnostic err;
   std::unique_ptr<llvm::Module> llvmModule =
       llvm::parseIR(*sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), err,
-                    dialect->getLLVMContext(),
-                    /*UpgradeDebugInfo=*/true,
-                    /*DataLayoutString=*/"");
+                    dialect->getLLVMContext());
   if (!llvmModule) {
     std::string errStr;
     llvm::raw_string_ostream errStream(errStr);

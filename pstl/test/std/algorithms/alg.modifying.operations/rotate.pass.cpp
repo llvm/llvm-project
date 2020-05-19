@@ -167,6 +167,9 @@ main()
 {
     test<int32_t>();
     test<wrapper<float64_t>>();
+    test<MemoryChecker>();
+    EXPECT_FALSE(MemoryChecker::alive_objects() < 0, "wrong effect from rotate: number of ctors calls < num of dtors calls");
+    EXPECT_FALSE(MemoryChecker::alive_objects() > 0, "wrong effect from rotate: number of ctors calls > num of dtors calls");
 
     std::cout << done() << std::endl;
     return 0;

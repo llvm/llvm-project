@@ -166,6 +166,8 @@ public:
                     C2.ScaleCost, C2.ImmCost, C2.SetupCost);
   }
 
+  bool isProfitableLSRChainElement(Instruction *I) { return false; }
+
   bool canMacroFuseCmp() { return false; }
 
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
@@ -871,12 +873,9 @@ public:
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
     case Instruction::Trunc:
-      if (getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free ||
-          TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
     case Instruction::BitCast:
-      if (getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
+      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) ==
+          TTI::TCC_Free)
         return TTI::TCC_Free;
       break;
     case Instruction::FPExt:

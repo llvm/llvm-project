@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
   character(kind=1,len=100) msg1
   character(kind=2,len=200) msg2
   integer(1) stat1

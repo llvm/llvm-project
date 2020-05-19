@@ -151,12 +151,6 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_AllRegs_SaveList;
   }
 
-  if (TM.isPPC64() && MF->getInfo<PPCFunctionInfo>()->isSplitCSR()) {
-    if (Subtarget.isAIXABI())
-      report_fatal_error("SplitCSR unimplemented on AIX.");
-    return CSR_SRV464_TLS_PE_SaveList;
-  }
-
   // On PPC64, we might need to save r2 (but only if it is not reserved).
   // We do not need to treat R2 as callee-saved when using PC-Relative calls
   // because any direct uses of R2 will cause it to be reserved. If the function
@@ -200,29 +194,6 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   else if (Subtarget.hasSPE())
     return CSR_SVR432_SPE_SaveList;
   return CSR_SVR432_SaveList;
-}
-
-const MCPhysReg *
-PPCRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
-  assert(MF && "Invalid MachineFunction pointer.");
-  const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
-  if (!TM.isPPC64())
-    return nullptr;
-  if (MF->getFunction().getCallingConv() != CallingConv::CXX_FAST_TLS)
-    return nullptr;
-  if (!MF->getInfo<PPCFunctionInfo>()->isSplitCSR())
-    return nullptr;
-
-  // On PPC64, we might need to save r2 (but only if it is not reserved).
-  bool SaveR2 = !getReservedRegs(*MF).test(PPC::X2);
-  if (Subtarget.hasAltivec())
-    return SaveR2
-      ? CSR_SVR464_R2_Altivec_ViaCopy_SaveList
-      : CSR_SVR464_Altivec_ViaCopy_SaveList;
-  else
-    return SaveR2
-      ? CSR_SVR464_R2_ViaCopy_SaveList
-      : CSR_SVR464_ViaCopy_SaveList;
 }
 
 const uint32_t *

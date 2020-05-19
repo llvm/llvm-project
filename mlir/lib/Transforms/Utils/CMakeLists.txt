@@ -17,7 +17,7 @@ add_mlir_library(MLIRTransformUtils
   MLIRAffineOps
   MLIRAnalysis
   MLIRLoopAnalysis
-  MLIRLoopOps
+  MLIRSCF
   MLIRPass
   MLIRStandardOps
   )

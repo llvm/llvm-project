@@ -315,22 +315,12 @@ def CSR_PPC64   : CalleeSavedRegs<(add X14, X15, X16, X17, X18, X19, X20,
                                         F27, F28, F29, F30, F31, CR2, CR3, CR4
                                    )>;
 
-// CSRs that are handled by prologue, epilogue.
-def CSR_SRV464_TLS_PE : CalleeSavedRegs<(add)>;
-
-def CSR_SVR464_ViaCopy : CalleeSavedRegs<(add CSR_PPC64)>;
 
 def CSR_PPC64_Altivec : CalleeSavedRegs<(add CSR_PPC64, CSR_Altivec)>;
 
-def CSR_SVR464_Altivec_ViaCopy : CalleeSavedRegs<(add CSR_PPC64_Altivec)>;
-
 def CSR_PPC64_R2 : CalleeSavedRegs<(add CSR_PPC64, X2)>;
 
-def CSR_SVR464_R2_ViaCopy : CalleeSavedRegs<(add CSR_PPC64_R2)>;
-
 def CSR_PPC64_R2_Altivec : CalleeSavedRegs<(add CSR_PPC64_Altivec, X2)>;
-
-def CSR_SVR464_R2_Altivec_ViaCopy : CalleeSavedRegs<(add CSR_PPC64_R2_Altivec)>;
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 

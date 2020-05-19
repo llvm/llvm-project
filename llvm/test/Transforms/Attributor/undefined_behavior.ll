@@ -49,7 +49,7 @@ e:
 
 ; Note that while the load is removed (because it's unused), the block
 ; is not changed to unreachable
-define void @load_null_pointer_is_defined() "null-pointer-is-valid"="true" {
+define void @load_null_pointer_is_defined() null_pointer_is_valid {
 ; CHECK-LABEL: define {{[^@]+}}@load_null_pointer_is_defined()
 ; CHECK-NEXT:    ret void
 ;
@@ -100,7 +100,7 @@ e:
   ret void
 }
 
-define void @store_null_pointer_is_defined() "null-pointer-is-valid"="true" {
+define void @store_null_pointer_is_defined() null_pointer_is_valid {
 ; CHECK-LABEL: define {{[^@]+}}@store_null_pointer_is_defined()
 ; CHECK-NEXT:    store i32 5, i32* null, align 536870912
 ; CHECK-NEXT:    ret void
@@ -148,7 +148,7 @@ e:
   ret void
 }
 
-define void @atomicrmw_null_pointer_is_defined() "null-pointer-is-valid"="true" {
+define void @atomicrmw_null_pointer_is_defined() null_pointer_is_valid {
 ; CHECK-LABEL: define {{[^@]+}}@atomicrmw_null_pointer_is_defined()
 ; CHECK-NEXT:    [[A:%.*]] = atomicrmw add i32* null, i32 1 acquire
 ; CHECK-NEXT:    ret void
@@ -196,7 +196,7 @@ e:
   ret void
 }
 
-define void @atomiccmpxchg_null_pointer_is_defined() "null-pointer-is-valid"="true" {
+define void @atomiccmpxchg_null_pointer_is_defined() null_pointer_is_valid {
 ; CHECK-LABEL: define {{[^@]+}}@atomiccmpxchg_null_pointer_is_defined()
 ; CHECK-NEXT:    [[A:%.*]] = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic
 ; CHECK-NEXT:    ret void

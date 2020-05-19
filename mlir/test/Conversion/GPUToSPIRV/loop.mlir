@@ -39,7 +39,7 @@ module attributes {
       // CHECK:      [[MERGE]]
       // CHECK:        spv._merge
       // CHECK:      }
-      loop.for %arg4 = %lb to %ub step %step {
+      scf.for %arg4 = %lb to %ub step %step {
         %1 = load %arg2[%arg4] : memref<10xf32>
         store %1, %arg3[%arg4] : memref<10xf32>
       }

@@ -10,6 +10,7 @@
 #define LLD_MACHO_EXPORT_TRIE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <vector>
 
@@ -34,6 +35,11 @@ private:
   std::vector<const Symbol *> exported;
   std::vector<TrieNode *> nodes;
 };
+
+using TrieEntryCallback =
+    llvm::function_ref<void(const llvm::Twine & /*name*/, uint64_t /*flags*/)>;
+
+void parseTrie(const uint8_t *buf, size_t size, const TrieEntryCallback &);
 
 } // namespace macho
 } // namespace lld

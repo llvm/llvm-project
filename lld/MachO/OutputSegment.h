@@ -18,8 +18,9 @@ namespace macho {
 
 namespace segment_names {
 
-constexpr const char *text = "__TEXT";
 constexpr const char *pageZero = "__PAGEZERO";
+constexpr const char *text = "__TEXT";
+constexpr const char *data = "__DATA";
 constexpr const char *linkEdit = "__LINKEDIT";
 constexpr const char *dataConst = "__DATA_CONST";
 

@@ -786,8 +786,9 @@ def POPCNTW : XForm_11<31, 378, (outs gprc:$rA), (ins gprc:$rS),
                        "popcntw $rA, $rS", IIC_IntGeneral,
                        [(set i32:$rA, (ctpop i32:$rS))]>;
 
-def POPCNTB : XForm_11<31, 122, (outs gprc:$rA), (ins gprc:$rS),
-                       "popcntb $rA, $rS", IIC_IntGeneral, []>;
+def POPCNTB : XForm_11<31, 122, (outs g8rc:$rA), (ins g8rc:$rS),
+                       "popcntb $rA, $rS", IIC_IntGeneral,
+                       [(set i64:$rA, (int_ppc_popcntb i64:$rS))]>;
 
 defm DIVD  : XOForm_1rcr<31, 489, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                           "divd", "$rT, $rA, $rB", IIC_IntDivD,

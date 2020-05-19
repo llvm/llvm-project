@@ -10,12 +10,12 @@ entry:
   %v5 = bitcast i32 %v4 to float
   %v6 = trunc i64 %v2 to i32
   %v7 = bitcast i32 %v6 to float
-  %mul_ad.i.i = fmul fast float %v5, %v1
-  %mul_bc.i.i = fmul fast float %v7, %v0
-  %mul_i.i.i = fadd fast float %mul_ad.i.i, %mul_bc.i.i
-  %mul_ac.i.i = fmul fast float %v5, %v0
-  %mul_bd.i.i = fmul fast float %v7, %v1
-  %mul_r.i.i = fsub fast float %mul_ac.i.i, %mul_bd.i.i
+  %mul_ad.i.i = fmul float %v5, %v1
+  %mul_bc.i.i = fmul float %v7, %v0
+  %mul_i.i.i = fadd float %mul_ad.i.i, %mul_bc.i.i
+  %mul_ac.i.i = fmul float %v5, %v0
+  %mul_bd.i.i = fmul float %v7, %v1
+  %mul_r.i.i = fsub float %mul_ac.i.i, %mul_bd.i.i
   store float %mul_r.i.i, float* %_M_value.realp.i.i, align 4
   store float %mul_i.i.i, float* %_M_value.imagp.i.i, align 4
   ret void
@@ -38,12 +38,12 @@ entry:
   %v5 = bitcast i32 %v4 to float
   %v6 = trunc i64 %v2 to i32
   %v7 = bitcast i32 %v6 to float
-  %mul_ad.i.i = fmul fast float %v5, %v1
-  %mul_bc.i.i = fmul fast float %v7, %v0
-  %mul_i.i.i = fadd fast float %mul_ad.i.i, %mul_bc.i.i
-  %mul_ac.i.i = fmul fast float %v5, %v0
-  %mul_bd.i.i = fmul fast float %v7, %v1
-  %mul_r.i.i = fsub fast float %mul_ac.i.i, %mul_bd.i.i
+  %mul_ad.i.i = fmul float %v5, %v1
+  %mul_bc.i.i = fmul float %v7, %v0
+  %mul_i.i.i = fadd float %mul_ad.i.i, %mul_bc.i.i
+  %mul_ac.i.i = fmul float %v5, %v0
+  %mul_bd.i.i = fmul float %v7, %v1
+  %mul_r.i.i = fsub float %mul_ac.i.i, %mul_bd.i.i
   store float %mul_r.i.i, float* %_M_value.realp.i.i, align 4
   store float %mul_i.i.i, float* %_M_value.imagp.i.i, align 4
   ret i64* %r

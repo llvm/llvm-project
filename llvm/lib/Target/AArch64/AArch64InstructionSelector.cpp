@@ -3522,12 +3522,10 @@ unsigned
 AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
                                                   MachineFunction &MF) const {
   Type *CPTy = CPVal->getType();
-  unsigned Align = MF.getDataLayout().getPrefTypeAlignment(CPTy);
-  if (Align == 0)
-    Align = MF.getDataLayout().getTypeAllocSize(CPTy);
+  Align Alignment = MF.getDataLayout().getPrefTypeAlign(CPTy);
 
   MachineConstantPool *MCP = MF.getConstantPool();
-  return MCP->getConstantPoolIndex(CPVal, Align);
+  return MCP->getConstantPoolIndex(CPVal, Alignment);
 }
 
 MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
@@ -4666,11 +4664,13 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
       }
       MFI.setReturnAddressIsTaken(true);
       MF.addLiveIn(AArch64::LR, &AArch64::GPR64spRegClass);
-      I.getParent()->addLiveIn(AArch64::LR);
       // Insert the copy from LR/X30 into the entry block, before it can be
       // clobbered by anything.
+      MachineBasicBlock &EntryBlock = *MF.begin();
+      if (!EntryBlock.isLiveIn(AArch64::LR))
+        EntryBlock.addLiveIn(AArch64::LR);
       MachineIRBuilder EntryBuilder(MF);
-      EntryBuilder.setInstr(*MF.begin()->begin());
+      EntryBuilder.setInstr(*EntryBlock.begin());
       EntryBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
       MFReturnAddr = DstReg;
       I.eraseFromParent();

@@ -309,10 +309,9 @@ static void createStoreInstBefore(llvm::Value *value, Address addr,
 
 static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
                                             llvm::Instruction *beforeInst) {
-  auto load = new llvm::LoadInst(addr.getElementType(), addr.getPointer(), name,
-                                 beforeInst);
-  load->setAlignment(addr.getAlignment().getAsAlign());
-  return load;
+  return new llvm::LoadInst(addr.getElementType(), addr.getPointer(), name,
+                            false, addr.getAlignment().getAsAlign(),
+                            beforeInst);
 }
 
 /// All the branch fixups on the EH stack have propagated out past the

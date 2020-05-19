@@ -238,7 +238,8 @@ namespace PR18653 {
   template void f2<int>();
 
   template<typename T> void f3() {
-    void g3(enum class x3);
+    enum class x3;
+    void g3(enum x3);
     enum class x3 { nothing };
   }
   template void f3<int>();
@@ -273,7 +274,8 @@ namespace PR18653 {
 
   template <class T> struct S3 {
     void m() {
-      f<enum class new_enum>();
+      enum class new_enum;
+      f<enum new_enum>();
     }
   };
   template struct S3<int>;

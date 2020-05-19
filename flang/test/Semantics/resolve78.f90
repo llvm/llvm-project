@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 module m
 ! C743 No component-attr-spec shall appear more than once in a 
 ! given component-def-stmt.

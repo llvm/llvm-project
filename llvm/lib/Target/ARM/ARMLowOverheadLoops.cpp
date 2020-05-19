@@ -191,6 +191,7 @@ namespace {
     SetVector<MachineInstr*> CurrentPredicate;
     SmallVector<VPTBlock, 4> VPTBlocks;
     SmallPtrSet<MachineInstr*, 4> ToRemove;
+    SmallPtrSet<MachineInstr*, 4> BlockMasksToRecompute;
     bool Revert = false;
     bool CannotTailPredicate = false;
 
@@ -1183,11 +1184,9 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
     if (Block.HasNonUniformPredicate()) {
       PredicatedMI *Divergent = Block.getDivergent();
       if (isVCTP(Divergent->MI)) {
-        // The vctp will be removed, so the size of the vpt block needs to be
-        // modified.
-        uint64_t Size = (uint64_t)getARMVPTBlockMask(Block.size() - 1);
-        Block.getVPST()->getOperand(0).setImm(Size);
-        LLVM_DEBUG(dbgs() << "ARM Loops: Modified VPT block mask.\n");
+        // The vctp will be removed, so the block mask of the VPST/VPT will need
+        // to be recomputed.
+        LoLoop.BlockMasksToRecompute.insert(Block.getVPST());
       } else if (Block.IsOnlyPredicatedOn(LoLoop.VCTP)) {
         // The VPT block has a non-uniform predicate but it's entry is guarded
         // only by a vctp, which means we:
@@ -1211,13 +1210,15 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           ++Size;
           ++I;
         }
+        // Create a VPST with a null mask, we'll recompute it later.
         MachineInstrBuilder MIB = BuildMI(*InsertAt->getParent(), InsertAt,
                                           InsertAt->getDebugLoc(),
                                           TII->get(ARM::MVE_VPST));
-        MIB.addImm((uint64_t)getARMVPTBlockMask(Size));
+        MIB.addImm(0);
         LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getVPST());
         LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
         LoLoop.ToRemove.insert(Block.getVPST());
+        LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
       }
     } else if (Block.IsOnlyPredicatedOn(LoLoop.VCTP)) {
       // A vpt block which is only predicated upon vctp and has no internal vpr
@@ -1287,6 +1288,11 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     for (auto *I : LoLoop.ToRemove) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Erasing " << *I);
       I->eraseFromParent();
+    }
+    for (auto *I : LoLoop.BlockMasksToRecompute) {
+      LLVM_DEBUG(dbgs() << "ARM Loops: Recomputing VPT/VPST Block Mask: " << *I);
+      recomputeVPTBlockMask(*I);
+      LLVM_DEBUG(dbgs() << "           ... done: " << *I);
     }
   }
 

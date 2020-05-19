@@ -254,12 +254,18 @@ void NonNullParamChecker::checkBeginFunction(CheckerContext &Context) const {
     if (!ParameterNonNullMarks.test(Parameter->getFunctionScopeIndex()))
       continue;
 
+    // 2. Check that parameter is a pointer.
+    //    Nonnull attribute can be applied to non-pointers (by default
+    //    __attribute__(nonnull) implies "all parameters").
+    if (!Parameter->getType()->isPointerType())
+      continue;
+
     Loc ParameterLoc = State->getLValue(Parameter, LocContext);
     // We never consider top-level function parameters undefined.
     auto StoredVal =
         State->getSVal(ParameterLoc).castAs<DefinedOrUnknownSVal>();
 
-    // 2. Assume that it is indeed non-null
+    // 3. Assume that it is indeed non-null
     if (ProgramStateRef NewState = State->assume(StoredVal, true)) {
       State = NewState;
     }

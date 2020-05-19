@@ -31,6 +31,9 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_dcbz  : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbzl : Intrinsic<[], [llvm_ptr_ty], []>;
 
+  // Population Count in each Byte.
+  def int_ppc_popcntb : Intrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
+
   // sync instruction (i.e. sync 0, a.k.a hwsync)
   def int_ppc_sync : Intrinsic<[], [], []>;
   // lwsync is sync 1

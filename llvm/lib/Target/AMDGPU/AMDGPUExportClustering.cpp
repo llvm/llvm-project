@@ -32,53 +32,111 @@ static bool isExport(const SUnit &SU) {
          MI->getOpcode() == AMDGPU::EXP_DONE;
 }
 
-static void buildCluster(ArrayRef<SUnit *> Exports, ScheduleDAGInstrs *DAG) {
-  // Cluster a series of exports. Also copy all dependencies to the first
-  // export to avoid computation being inserted into the chain.
-  SUnit *ChainHead = Exports[0];
-  for (unsigned Idx = 0, End = Exports.size() - 1; Idx < End; ++Idx) {
-    SUnit *SUa = Exports[Idx];
-    SUnit *SUb = Exports[Idx + 1];
-    if (DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
-      for (const SDep &Pred : SUb->Preds) {
-        SUnit *PredSU = Pred.getSUnit();
-        if (Pred.isWeak() || isExport(*PredSU))
-          continue;
-        DAG->addEdge(ChainHead, SDep(PredSU, SDep::Artificial));
-      }
-    }
+static bool isPositionExport(const SIInstrInfo *TII, SUnit *SU) {
+  const MachineInstr *MI = SU->getInstr();
+  int Imm = TII->getNamedOperand(*MI, AMDGPU::OpName::tgt)->getImm();
+  return Imm >= 12 && Imm <= 15;
+}
+
+static void sortChain(const SIInstrInfo *TII, SmallVector<SUnit *, 8> &Chain,
+                      unsigned PosCount) {
+  if (!PosCount || PosCount == Chain.size())
+    return;
+
+  // Position exports should occur as soon as possible in the shader
+  // for optimal performance.  This moves position exports before
+  // other exports while preserving the order within different export
+  // types (pos or other).
+  SmallVector<SUnit *, 8> Copy(Chain);
+  unsigned PosIdx = 0;
+  unsigned OtherIdx = PosCount;
+  for (SUnit *SU : Copy) {
+    if (isPositionExport(TII, SU))
+      Chain[PosIdx++] = SU;
+    else
+      Chain[OtherIdx++] = SU;
   }
 }
 
-void ExportClustering::apply(ScheduleDAGInstrs *DAG) {
-  SmallVector<SmallVector<SUnit *, 8>, 4> ExportChains;
-  DenseMap<unsigned, unsigned> ChainMap;
+static void buildCluster(ArrayRef<SUnit *> Exports, ScheduleDAGInstrs *DAG) {
+  SUnit *ChainHead = Exports.front();
 
-  // Build chains of exports
+  // Now construct cluster from chain by adding new edges.
+  for (unsigned Idx = 0, End = Exports.size() - 1; Idx < End; ++Idx) {
+    SUnit *SUa = Exports[Idx];
+    SUnit *SUb = Exports[Idx + 1];
+
+    // Copy all dependencies to the head of the chain to avoid any
+    // computation being inserted into the chain.
+    for (const SDep &Pred : SUb->Preds) {
+      SUnit *PredSU = Pred.getSUnit();
+      if (!isExport(*PredSU) && !Pred.isWeak())
+        DAG->addEdge(ChainHead, SDep(PredSU, SDep::Artificial));
+    }
+
+    // New barrier edge ordering exports
+    DAG->addEdge(SUb, SDep(SUa, SDep::Barrier));
+    // Also add cluster edge
+    DAG->addEdge(SUb, SDep(SUa, SDep::Cluster));
+  }
+}
+
+static void removeExportDependencies(ScheduleDAGInstrs *DAG, SUnit &SU) {
+  SmallVector<SDep, 2> ToAdd, ToRemove;
+
+  for (const SDep &Pred : SU.Preds) {
+    SUnit *PredSU = Pred.getSUnit();
+    if (Pred.isBarrier() && isExport(*PredSU)) {
+      ToRemove.push_back(Pred);
+      if (isExport(SU))
+        continue;
+
+      // If we remove a barrier we need to copy dependencies
+      // from the predecessor to maintain order.
+      for (const SDep &ExportPred : PredSU->Preds) {
+        SUnit *ExportPredSU = ExportPred.getSUnit();
+        if (ExportPred.isBarrier() && !isExport(*ExportPredSU))
+          ToAdd.push_back(SDep(ExportPredSU, SDep::Barrier));
+      }
+    }
+  }
+
+  for (SDep Pred : ToRemove)
+    SU.removePred(Pred);
+  for (SDep Pred : ToAdd)
+    DAG->addEdge(&SU, Pred);
+}
+
+void ExportClustering::apply(ScheduleDAGInstrs *DAG) {
+  const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
+
+  SmallVector<SUnit *, 8> Chain;
+
+  // Pass through DAG gathering a list of exports and removing barrier edges
+  // creating dependencies on exports. Freeing exports of successor edges
+  // allows more scheduling freedom, and nothing should be order dependent
+  // on exports.  Edges will be added later to order the exports.
+  unsigned PosCount = 0;
   for (SUnit &SU : DAG->SUnits) {
     if (!isExport(SU))
       continue;
 
-    unsigned ChainID = ExportChains.size();
-    for (const SDep &Pred : SU.Preds) {
-      const SUnit &PredSU = *Pred.getSUnit();
-      if (isExport(PredSU) && !Pred.isArtificial()) {
-        ChainID = ChainMap.lookup(PredSU.NodeNum);
-        break;
-      }
-    }
-    ChainMap[SU.NodeNum] = ChainID;
-
-    if (ChainID == ExportChains.size())
-      ExportChains.push_back(SmallVector<SUnit *, 8>());
-
-    auto &Chain = ExportChains[ChainID];
     Chain.push_back(&SU);
+    if (isPositionExport(TII, &SU))
+      PosCount++;
+
+    removeExportDependencies(DAG, SU);
+
+    SmallVector<SDep, 4> Succs(SU.Succs);
+    for (SDep Succ : Succs)
+      removeExportDependencies(DAG, *Succ.getSUnit());
   }
 
-  // Apply clustering
-  for (auto &Chain : ExportChains)
+  // Apply clustering if there are multiple exports
+  if (Chain.size() > 1) {
+    sortChain(TII, Chain, PosCount);
     buildCluster(Chain, DAG);
+  }
 }
 
 } // end namespace

@@ -1,5 +1,7 @@
 # This setup requires gRPC to be built from sources using CMake and installed to
 # ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
+# FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
+# configure time.
 if (GRPC_INSTALL_PATH)
   set(protobuf_MODULE_COMPATIBLE TRUE)
   find_package(Protobuf CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
@@ -21,6 +23,36 @@ if (GRPC_INSTALL_PATH)
 else()
   find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
   find_program(PROTOC protoc)
+  if (GRPC_CPP_PLUGIN-NOTFOUND OR PROTOC-NOTFOUND)
+    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build")
+  endif()
+  # On macOS the libraries are typically installed via Homebrew and are not on
+  # the system path.
+  if (${APPLE})
+    find_program(HOMEBREW brew)
+    # If Homebrew is not found, the user might have installed libraries
+    # manually. Fall back to the system path.
+    if (NOT HOMEBREW-NOTFOUND)
+      execute_process(COMMAND ${HOMEBREW} --prefix grpc
+        OUTPUT_VARIABLE GRPC_HOMEBREW_PATH
+        RESULT_VARIABLE GRPC_HOMEBREW_RETURN_CODE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      execute_process(COMMAND ${HOMEBREW} --prefix protobuf
+        OUTPUT_VARIABLE PROTOBUF_HOMEBREW_PATH
+        RESULT_VARIABLE PROTOBUF_HOMEBREW_RETURN_CODE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      # If either library is not installed via Homebrew, fall back to the
+      # system path.
+      if (GRPC_HOMEBREW_RETURN_CODE EQUAL "0")
+        include_directories(${GRPC_HOMEBREW_PATH}/include)
+        link_directories(${GRPC_HOMEBREW_PATH}/lib)
+      endif()
+      if (PROTOBUF_HOMEBREW_RETURN_CODE EQUAL "0")
+        include_directories(${PROTOBUF_HOMEBREW_PATH}/include)
+        link_directories(${PROTOBUF_HOMEBREW_PATH}/lib)
+      endif()
+    endif()
+  endif()
 endif()
 
 # Proto headers are generated in ${CMAKE_CURRENT_BINARY_DIR}.

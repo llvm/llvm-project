@@ -63,20 +63,8 @@ struct GCOVOptions {
   // gcc's gcov-io.h
   char Version[4];
 
-  // Emit a "cfg checksum" that follows the "line number checksum" of a
-  // function. This affects both .gcno and .gcda files.
-  bool UseCfgChecksum;
-
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone;
-
-  // Emit the name of the function in the .gcda files. This is redundant, as
-  // the function identifier can be used to find the name from the .gcno file.
-  bool FunctionNamesInData;
-
-  // Emit the exit block immediately after the start block, rather than after
-  // all of the function body's blocks.
-  bool ExitBlockBeforeBody;
 
   // Regexes separated by a semi-colon to filter the files to instrument.
   std::string Filter;

@@ -42,6 +42,8 @@ public:
   InputFile *file = nullptr;
   StringRef name;
   StringRef segname;
+  // This provides access to the address of the section in the input file.
+  const llvm::MachO::section_64 *header;
 
   OutputSection *parent = nullptr;
   uint64_t outSecOff = 0;

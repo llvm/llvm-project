@@ -56,31 +56,31 @@ features = [
 # is defined after including <__config_site>, add a Lit feature called
 # `libcpp-xxx-yyy-zzz`. When a macro is defined to a specific value
 # (e.g. `_LIBCPP_ABI_VERSION=2`), the feature is `libcpp-xxx-yyy-zzz=<value>`.
-macros = [
-  '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE',
-  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK',
-  '_LIBCPP_HAS_NO_STDIN',
-  '_LIBCPP_HAS_NO_STDOUT',
-  '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS',
-  '_LIBCPP_HAS_NO_THREADS',
-  '_LIBCPP_HAS_THREAD_API_EXTERNAL',
-  '_LIBCPP_HAS_THREAD_API_PTHREAD',
-  '_LIBCPP_NO_VCRUNTIME',
-  '_LIBCPP_ABI_VERSION',
-  '_LIBCPP_ABI_UNSTABLE'
-]
-for macro in macros:
+macros = {
+  '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE': 'libcpp-has-no-global-filesystem-namespace',
+  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK': 'libcpp-has-no-monotonic-clock',
+  '_LIBCPP_HAS_NO_STDIN': 'libcpp-has-no-stdin',
+  '_LIBCPP_HAS_NO_STDOUT': 'libcpp-has-no-stdout',
+  '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS': 'libcpp-has-no-thread-unsafe-c-functions',
+  '_LIBCPP_HAS_NO_THREADS': 'libcpp-has-no-threads',
+  '_LIBCPP_HAS_THREAD_API_EXTERNAL': 'libcpp-has-thread-api-external',
+  '_LIBCPP_HAS_THREAD_API_PTHREAD': 'libcpp-has-thread-api-pthread',
+  '_LIBCPP_NO_VCRUNTIME': 'libcpp-no-vcruntime',
+  '_LIBCPP_ABI_VERSION': 'libcpp-abi-version',
+  '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable'
+}
+for macro, feature in macros.items():
   features += [
-    Feature(name=lambda cfg, macro=macro: macro.lower()[1:].replace('_', '-') + (
-              '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
+    Feature(name=lambda cfg, m=macro, f=feature: f + (
+              '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
             ),
-            when=lambda cfg, macro=macro: macro in compilerMacros(cfg),
+            when=lambda cfg, m=macro: m in compilerMacros(cfg),
 
             # FIXME: This is a hack that should be fixed using module maps.
             # If modules are enabled then we have to lift all of the definitions
             # in <__config_site> onto the command line.
-            compileFlag=lambda cfg, macro=macro: '-Wno-macro-redefined -D{}'.format(macro) + (
-              '={}'.format(compilerMacros(cfg)[macro]) if compilerMacros(cfg)[macro] else ''
+            compileFlag=lambda cfg, m=macro: '-Wno-macro-redefined -D{}'.format(m) + (
+              '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
             )
     )
   ]

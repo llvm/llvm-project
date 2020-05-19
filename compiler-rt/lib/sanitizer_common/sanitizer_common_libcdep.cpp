@@ -129,6 +129,16 @@ void SetSandboxingCallback(void (*f)()) {
   sandboxing_callback = f;
 }
 
+uptr ReservedAddressRange::InitAligned(uptr size, uptr align,
+                                       const char *name) {
+  CHECK(IsPowerOfTwo(align));
+  if (align <= GetPageSizeCached())
+    return Init(size, name);
+  uptr start = Init(size + align, name);
+  start += align - (start & (align - 1));
+  return start;
+}
+
 }  // namespace __sanitizer
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,

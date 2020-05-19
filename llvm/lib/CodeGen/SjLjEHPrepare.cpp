@@ -466,8 +466,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
       }
       Instruction *StackAddr = CallInst::Create(StackAddrFn, "sp");
       StackAddr->insertAfter(&I);
-      Instruction *StoreStackAddr = new StoreInst(StackAddr, StackPtr, true);
-      StoreStackAddr->insertAfter(StackAddr);
+      new StoreInst(StackAddr, StackPtr, true, StackAddr->getNextNode());
     }
   }
 

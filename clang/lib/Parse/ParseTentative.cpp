@@ -432,9 +432,14 @@ bool Parser::isEnumBase(bool AllowSemi) {
   assert(Tok.is(tok::colon) && "should be looking at the ':'");
 
   RevertingTentativeParsingAction PA(*this);
+  // ':'
   ConsumeToken();
 
+  // type-specifier-seq
   bool InvalidAsDeclSpec = false;
+  // FIXME: We could disallow non-type decl-specifiers here, but it makes no
+  // difference: those specifiers are ill-formed regardless of the
+  // interpretation.
   TPResult R = isCXXDeclarationSpecifier(/*BracedCastResult*/ TPResult::True,
                                          &InvalidAsDeclSpec);
   if (R == TPResult::Ambiguous) {
@@ -445,12 +450,10 @@ bool Parser::isEnumBase(bool AllowSemi) {
 
     // If we get to the end of the enum-base, we hit either a '{' or a ';'.
     // Don't bother checking the enumerator-list.
-    if (Tok.is(tok::colon) || (AllowSemi && Tok.is(tok::semi)))
+    if (Tok.is(tok::l_brace) || (AllowSemi && Tok.is(tok::semi)))
       return true;
 
     // A second decl-specifier unambiguously indicatges an enum-base.
-    // The grammar permits an arbitrary type-name here, but we need an
-    // integral type, so no declarator pieces could ever work.
     R = isCXXDeclarationSpecifier(TPResult::True, &InvalidAsDeclSpec);
   }
 

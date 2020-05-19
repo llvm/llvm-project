@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -31,7 +31,7 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
-using namespace mlir::loop;
+using namespace mlir::scf;
 
 using folded_affine_min = FoldedValueBuilder<AffineMinOp>;
 
@@ -144,8 +144,8 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 // %c10 = constant 10 : index
 // operand_dim_0 = dim %operand, 0 : memref<50x100xf32>
 // operand_dim_1 = dim %operand, 1 : memref<50x100xf32>
-// loop.for %k = %c0 to operand_dim_0 step %c10 {
-//   loop.for %l = %c0 to operand_dim_1 step %c25 {
+// scf.for %k = %c0 to operand_dim_0 step %c10 {
+//   scf.for %l = %c0 to operand_dim_1 step %c25 {
 //     %4 = std.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
 //       : memref<50x100xf32> to memref<?x?xf32, #strided>
 //     %5 = std.subview %result[%k, %l][%c10, %c25][%c1, %c1]
@@ -287,7 +287,7 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
       // accesses, unless we statically know the subview size divides the view
       // size evenly.
       int64_t viewSize = viewType.getDimSize(r);
-      auto sizeCst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp());
+      auto sizeCst = size.getDefiningOp<ConstantIndexOp>();
       if (ShapedType::isDynamic(viewSize) || !sizeCst ||
           (viewSize % sizeCst.getValue()) != 0) {
         // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
@@ -468,29 +468,29 @@ Optional<TiledLinalgOp>
 mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
                            ArrayRef<unsigned> interchangeVector,
                            OperationFolder *folder) {
-  return tileLinalgOpImpl<loop::ForOp>(b, op, tileSizes, interchangeVector,
-                                       folder);
+  return tileLinalgOpImpl<scf::ForOp>(b, op, tileSizes, interchangeVector,
+                                      folder);
 }
 
 Optional<TiledLinalgOp> mlir::linalg::tileLinalgOpToParallelLoops(
     OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
     ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
-  return tileLinalgOpImpl<loop::ParallelOp>(b, op, tileSizes, interchangeVector,
-                                            folder);
+  return tileLinalgOpImpl<scf::ParallelOp>(b, op, tileSizes, interchangeVector,
+                                           folder);
 }
 
 Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
     OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
     ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
-  return tileLinalgOpImpl<loop::ForOp>(b, op, tileSizes, interchangeVector,
-                                       folder);
+  return tileLinalgOpImpl<scf::ForOp>(b, op, tileSizes, interchangeVector,
+                                      folder);
 }
 
 Optional<TiledLinalgOp> mlir::linalg::tileLinalgOpToParallelLoops(
     OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
     ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
-  return tileLinalgOpImpl<loop::ParallelOp>(b, op, tileSizes, interchangeVector,
-                                            folder);
+  return tileLinalgOpImpl<scf::ParallelOp>(b, op, tileSizes, interchangeVector,
+                                           folder);
 }
 
 template <typename LoopTy>
@@ -518,7 +518,7 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   LinalgTilingPass(ArrayRef<int64_t> sizes) { tileSizes = sizes; }
 
   void runOnFunction() override {
-    tileLinalgOps<loop::ForOp>(getFunction(), tileSizes);
+    tileLinalgOps<scf::ForOp>(getFunction(), tileSizes);
   }
 };
 
@@ -530,7 +530,7 @@ struct LinalgTilingToParallelLoopsPass
   }
 
   void runOnFunction() override {
-    tileLinalgOps<loop::ParallelOp>(getFunction(), tileSizes);
+    tileLinalgOps<scf::ParallelOp>(getFunction(), tileSizes);
   }
 };
 

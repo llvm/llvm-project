@@ -51,8 +51,8 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:  BB0_2: ; %shader_eval_surface.exit
 ; GCN-NEXT:    s_endpgm
 entry:
-  %sd = alloca < 1339 x i32>, align 16, addrspace(5)
-  %state = alloca <4 x i32>, align 4, addrspace(5)
+  %sd = alloca < 1339 x i32>, align 8192, addrspace(5)
+  %state = alloca <4 x i32>, align 16, addrspace(5)
   %rslt = call i32 @svm_eval_nodes(float addrspace(5)* %kg, <1339 x i32> addrspace(5)* %sd, <4 x i32> addrspace(5)* %state, i32 0, i32 4194304)
   %cmp = icmp eq i32 %rslt, 0
   br i1 %cmp, label %shader_eval_surface.exit, label %if.then4.i

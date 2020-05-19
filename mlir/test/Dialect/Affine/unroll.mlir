@@ -550,7 +550,7 @@ func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index)
 // CHECK-NEXT:  return
 
 // The trip count here is a multiple of four, but this can be inferred only
-// through composition. Check for no cleanup loop.
+// through composition. Check for no cleanup scf.
 // UNROLL-BY-4-LABEL: func @loop_nest_non_trivial_multiple_upper_bound
 func @loop_nest_non_trivial_multiple_upper_bound(%M : index, %N : index) {
   %T = affine.apply affine_map<(d0) -> (4*d0 + 1)>(%M)

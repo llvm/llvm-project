@@ -54,6 +54,10 @@ protected:
   /// Return true if the specified block A properly dominates block B.
   bool properlyDominates(Block *a, Block *b) const;
 
+  /// Return true if the specified block is reachable from the entry
+  /// block of its region.
+  bool isReachableFromEntry(Block *a) const;
+
   /// A mapping of regions to their base dominator tree.
   DenseMap<Region *, std::unique_ptr<base>> dominanceInfos;
 };
@@ -63,6 +67,12 @@ protected:
 class DominanceInfo : public detail::DominanceInfoBase</*IsPostDom=*/false> {
 public:
   using super::super;
+
+  /// Return true if the specified block is reachable from the entry
+  /// block of its region.
+  bool isReachableFromEntry(Block *a) const {
+    return super::isReachableFromEntry(a);
+  }
 
   /// Return true if operation A properly dominates operation B.
   bool properlyDominates(Operation *a, Operation *b) const;
@@ -98,6 +108,12 @@ public:
 class PostDominanceInfo : public detail::DominanceInfoBase</*IsPostDom=*/true> {
 public:
   using super::super;
+
+  /// Return true if the specified block is reachable from the entry
+  /// block of its region.
+  bool isReachableFromEntry(Block *a) const {
+    return super::isReachableFromEntry(a);
+  }
 
   /// Return true if operation A properly postdominates operation B.
   bool properlyPostDominates(Operation *a, Operation *b);

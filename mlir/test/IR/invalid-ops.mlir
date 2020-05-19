@@ -927,29 +927,9 @@ func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect number of operands for type}}
+  // expected-error@+1 {{expects 1 offset operand}}
   %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
-  return
-}
-
-// -----
-
-func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{is not strided}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0, d1, s0)>>
-  return
-}
-
-// -----
-
-func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xf32>
-  // expected-error@+1 {{must be 1D memref of 8-bit signless integer values}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
+    : memref<2048xi8> to memref<?x?xf32>
   return
 }
 
@@ -957,8 +937,8 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8, affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>>
-  // expected-error@+1 {{unsupported map for base memref}}
-  %1 = view %0[][%arg0, %arg1]
+  // expected-error@+1 {{unsupported map for base memref type}}
+  %1 = view %0[%arg2][%arg0, %arg1]
     : memref<2048xi8, affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>> to
       memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
   return
@@ -967,11 +947,19 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<2048xi8>
+  // expected-error@+1 {{unsupported map for result memref type}}
+  %1 = view %0[%arg2][%arg0, %arg1]
+    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0, d1, s0)>>
+  return
+}
+
+// -----
+
+func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8, 2>
   // expected-error@+1 {{different memory spaces}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8, 2> to
-      memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>, 1>
+  %1 = view %0[%arg2][%arg0, %arg1] :  memref<2048xi8, 2> to memref<?x?xf32, 1>
   return
 }
 
@@ -979,54 +967,20 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect dynamic strides}}
-  %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to
-      memref<?x?x4xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
-  return
-}
-
-// -----
-
-func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect dynamic strides}}
-  %1 = view %0[%arg0][]
-    : memref<2048xi8> to
-      memref<16x4x?xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
-  return
-}
-
-// -----
-
-func @multiple_offsets(%arg0: index) {
-  %0 = alloc() : memref<2048xi8>
-  // expected-error@+1 {{expects 0 or 1 offset operand}}
-  %1 = view %0[%arg0, %arg0][%arg0]
-    : memref<2048xi8> to
-      memref<?x?x4xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
+  // expected-error@+1 {{incorrect number of size operands for type}}
+  %1 = view %0[%arg2][%arg0]
+    : memref<2048xi8> to memref<?x?xf32>
   return
 }
 
 // -----
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>, 2>
+  %0 = alloc() : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2>
   // expected-error@+1 {{different memory spaces}}
-  %1 = subview %0[][%arg2][]
-    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>, 2> to
+  %1 = subview %0[0, 0, 0][%arg2][1, 1, 1]
+    : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2> to
       memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>>
-  return
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
-  // expected-error@+1 {{is not strided}}
-  %1 = subview %0[][%arg2][]
-    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
-      memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 + s0, d1, d2)>>
   return
 }
 
@@ -1035,9 +989,9 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>>
   // expected-error@+1 {{is not strided}}
-  %1 = subview %0[][%arg2][]
+  %1 = subview %0[0, 0, 0][%arg2][1, 1, 1]
     : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>> to
-      memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>>
+      memref<8x?x4xf32, offset: 0, strides: [?, 4, 1]>
   return
 }
 
@@ -1045,8 +999,8 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected number of dynamic offsets specified to match the rank of the result type}}
-  %1 = subview %0[%arg0, %arg1][%arg2][]
+  // expected-error@+1 {{expected 3 offset values}}
+  %1 = subview %0[%arg0, %arg1][%arg2][1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x?x4xf32, offset: 0, strides:[?, ?, 4]>
   return
@@ -1056,110 +1010,10 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to have dynamic strides}}
+  // expected-error@+1 {{expected result type to be 'memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>>'}}
   %1 = subview %0[%arg0, %arg1, %arg2][%arg0, %arg1, %arg2][%arg0, %arg1, %arg2]
     : memref<8x16x4xf32> to
       memref<?x?x?xf32, offset: ?, strides: [64, 4, 1]>
-  return
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<8x16x4xf32>
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  // expected-error@+1 {{expected result memref layout map to have dynamic offset}}
-  %1 = subview %0[%c0, %c0, %c0][%arg0, %arg1, %arg2][%c1, %c1, %c1]
-    : memref<8x16x4xf32> to
-      memref<?x?x?xf32, offset: 0, strides: [?, ?, ?]>
-  return
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x?xf32>) {
-  // expected-error@+1 {{expected rank of result type to match rank of base type}}
-  %0 = subview %arg1[%arg0, %arg0][][%arg0, %arg0] : memref<?x?xf32> to memref<?xf32>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x?xf32>) {
-  // expected-error@+1 {{expected number of dynamic offsets specified to match the rank of the result type}}
-  %0 = subview %arg1[%arg0][][] : memref<?x?xf32> to memref<4x4xf32, offset: ?, strides: [4, 1]>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x?xf32>) {
-  // expected-error@+1 {{expected number of dynamic sizes specified to match the rank of the result type}}
-  %0 = subview %arg1[][%arg0][] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x?xf32>) {
-  // expected-error@+1 {{expected number of dynamic strides specified to match the rank of the result type}}
-  %0 = subview %arg1[][][%arg0] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x?xf32>) {
-  // expected-error@+1 {{invalid to specify dynamic sizes when subview result type is statically shaped and viceversa}}
-  %0 = subview %arg1[][%arg0, %arg0][] : memref<?x?xf32> to memref<4x8xf32, offset: ?, strides: [?, ?]>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x?xf32>) {
-  // expected-error@+1 {{invalid to specify dynamic sizes when subview result type is statically shaped and viceversa}}
-  %0 = subview %arg1[][][] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<16x4xf32>) {
-  // expected-error@+1 {{expected result memref layout map to have dynamic offset}}
-  %0 = subview %arg1[%arg0, %arg0][][] : memref<16x4xf32> to memref<4x2xf32>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<16x4xf32, offset: ?, strides: [4, 1]>) {
-  // expected-error@+1 {{expected result memref layout map to have dynamic offset}}
-  %0 = subview %arg1[][][] : memref<16x4xf32, offset: ?, strides: [4, 1]> to memref<4x2xf32>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<16x4xf32, offset: 8, strides:[?, 1]>) {
-  // expected-error@+1 {{expected result memref layout map to have dynamic offset}}
-  %0 = subview %arg1[][][] : memref<16x4xf32, offset: 8, strides:[?, 1]> to memref<4x2xf32>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<16x4xf32>) {
-  // expected-error@+1 {{expected result type to have dynamic strides}}
-  %0 = subview %arg1[][][%arg0, %arg0] : memref<16x4xf32> to memref<4x2xf32>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<16x4xf32, offset: 0, strides:[?, ?]>) {
-  // expected-error@+1 {{expected result type to have dynamic stride along a dimension if the base memref type has dynamic stride along that dimension}}
-  %0 = subview %arg1[][][] : memref<16x4xf32, offset: 0, strides:[?, ?]> to memref<4x2xf32, offset:?, strides:[2, 1]>
-}
-
-// -----
-
-func @invalid_subview(%arg0 : index, %arg1 : memref<?x8x?xf32>) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  // expected-error@+1 {{expected shape of result type to be fully dynamic when sizes are specified}}
-  %0 = subview %arg1[%c0, %c0, %c0][%c1, %arg0, %c1][%c1, %c1, %c1] : memref<?x8x?xf32> to memref<?x8x?xf32, offset:?, strides:[?, ?, ?]>
   return
 }
 

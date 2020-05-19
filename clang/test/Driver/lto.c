@@ -48,6 +48,27 @@
 // RUN:   -fuse-ld=gold -flto -fno-lto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 // NO-LLVMGOLD-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -O -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -O1 -### 2>&1 | FileCheck --check-prefix=O1 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -Og -### 2>&1 | FileCheck --check-prefix=O1 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -O2 -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -Os -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -Oz -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -O3 -### 2>&1 | FileCheck --check-prefix=O3 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -Ofast -### 2>&1 | FileCheck --check-prefix=O3 %s
+
+// O1: -plugin-opt=O1
+// O2: -plugin-opt=O2
+// O3: -plugin-opt=O3
+
 // -flto passes along an explicit debugger tuning argument.
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto -glldb 2> %t
 // RUN: FileCheck -check-prefix=CHECK-TUNING-LLDB < %t %s

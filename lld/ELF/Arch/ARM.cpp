@@ -18,9 +18,8 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class ARM final : public TargetInfo {
@@ -845,10 +844,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-TargetInfo *getARMTargetInfo() {
+TargetInfo *elf::getARMTargetInfo() {
   static ARM target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

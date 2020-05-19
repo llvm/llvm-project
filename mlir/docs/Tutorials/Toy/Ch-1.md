@@ -29,7 +29,7 @@ This tutorial is divided in the following chapters:
     with Interfaces. Here we will show how to plug dialect specific information
     into generic transformations like shape inference and inlining.
 -   [Chapter #5](Ch-5.md): Partially lowering to lower-level dialects. We'll
-    convert some our high level language specific semantics towards a generic
+    convert some of our high level language specific semantics towards a generic
     affine oriented dialect for optimization.
 -   [Chapter #6](Ch-6.md): Lowering to LLVM and code generation. Here we'll
     target LLVM IR for code generation, and detail more of the lowering

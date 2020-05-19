@@ -676,6 +676,7 @@ const char *CXXNamedCastExpr::getCastName() const {
   case CXXDynamicCastExprClass:     return "dynamic_cast";
   case CXXReinterpretCastExprClass: return "reinterpret_cast";
   case CXXConstCastExprClass:       return "const_cast";
+  case CXXAddrspaceCastExprClass:   return "addrspace_cast";
   default:                          return "<invalid cast>";
   }
 }
@@ -798,6 +799,19 @@ CXXConstCastExpr *CXXConstCastExpr::Create(const ASTContext &C, QualType T,
 
 CXXConstCastExpr *CXXConstCastExpr::CreateEmpty(const ASTContext &C) {
   return new (C) CXXConstCastExpr(EmptyShell());
+}
+
+CXXAddrspaceCastExpr *
+CXXAddrspaceCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
+                             CastKind K, Expr *Op, TypeSourceInfo *WrittenTy,
+                             SourceLocation L, SourceLocation RParenLoc,
+                             SourceRange AngleBrackets) {
+  return new (C) CXXAddrspaceCastExpr(T, VK, K, Op, WrittenTy, L, RParenLoc,
+                                      AngleBrackets);
+}
+
+CXXAddrspaceCastExpr *CXXAddrspaceCastExpr::CreateEmpty(const ASTContext &C) {
+  return new (C) CXXAddrspaceCastExpr(EmptyShell());
 }
 
 CXXFunctionalCastExpr *

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C941_C942b_C950(xsrc, x1, a2, b2, cx1, ca2, cb1, cb2, c1)

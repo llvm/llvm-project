@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: yaml2obj %s -o %t.o
-# RUN: not ld.lld -gdb-index %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --gdb-index %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: {{.*}}invalid-debug-relocations.test.tmp.o:(.debug_info+0x0): unknown relocation (255) against symbol _start
 

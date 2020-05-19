@@ -245,7 +245,7 @@ have their own type:
 
 Void pointers, which can be built by casting any of the aforementioned
 pointers, are implemented as a union of all pointer types. The ``BitCast``
-opcode is reponsible for performing all legal conversions between these
+opcode is responsible for performing all legal conversions between these
 types and primitive integers.
 
 BlockPointer
@@ -339,7 +339,7 @@ base offset, along with a descriptor specifying the type the pointer is
 supposed to refer to. Array indexing adjusts the array offset, while the
 field offset is adjusted when a pointer to a member is created. Casting
 an integer to a pointer sets the value of the base offset. As a special
-case, null pointers are target pointers with all offets set to 0.
+case, null pointers are target pointers with all offsets set to 0.
 
 TypeInfoPointer
 ~~~~~~~~~~~~~~~

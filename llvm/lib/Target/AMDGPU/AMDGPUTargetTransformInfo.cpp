@@ -909,7 +909,7 @@ bool GCNTTIImpl::rewriteIntrinsicWithAddressSpace(
 unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *VT,
                                     int Index, VectorType *SubTp) {
   if (ST->hasVOP3PInsts()) {
-    if (VT->getNumElements() == 2 &&
+    if (cast<FixedVectorType>(VT)->getNumElements() == 2 &&
         DL.getTypeSizeInBits(VT->getElementType()) == 16) {
       // With op_sel VOP3P instructions freely can access the low half or high
       // half of a register, so any swizzle is free.

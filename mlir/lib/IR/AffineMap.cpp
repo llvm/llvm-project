@@ -109,7 +109,7 @@ bool AffineMap::isMinorIdentity(AffineMap map) {
     return false;
   return map == getMinorIdentityMap(map.getNumDims(), map.getNumResults(),
                                     map.getContext());
-};
+}
 
 /// Returns an AffineMap representing a permutation.
 AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,

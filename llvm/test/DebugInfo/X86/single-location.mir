@@ -1,0 +1,82 @@
+# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN:     | llvm-dwarfdump -v - | FileCheck %s
+#
+# Generated at -O2, stopped after livedebugvalues, with some metadata removed
+# by hand:
+# int global;
+# void ext();
+# void fun(int p) {
+#   {
+#     int local = p;
+#     global = local;
+#   }
+#   ext();
+# }
+#
+# The variable 'local' is available for the entirety of its enclosing scope so
+# we expect to see a single location entry.
+#
+# Except for 'local', all DILocalVariable metadata has been removed.
+#
+# CHECK:     DW_TAG_lexical_block [
+# CHECK:       DW_TAG_variable
+# CHECK-NEXT:    DW_AT_location [DW_FORM_exprloc] (DW_OP_reg5 RDI)
+# CHECK-NEXT:    DW_AT_name {{.*}} = "local"
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+  @global = dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
+  define dso_local void @fun(i32 %p) local_unnamed_addr !dbg !15 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %p, metadata !20, metadata !DIExpression()), !dbg !23
+    store i32 %p, i32* @global, align 4, !dbg !24
+    tail call void (...) @ext(), !dbg !29
+    ret void, !dbg !30
+  }
+
+  declare !dbg !6 dso_local void @ext(...) local_unnamed_addr
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!11, !12, !13}
+  !llvm.ident = !{!14}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "global", scope: !2, file: !3, line: 1, type: !10, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !9, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "test.c", directory: "/")
+  !4 = !{}
+  !5 = !{!6}
+  !6 = !DISubprogram(name: "ext", scope: !3, file: !3, line: 2, type: !7, spFlags: DISPFlagOptimized, retainedNodes: !4)
+  !7 = !DISubroutineType(types: !8)
+  !8 = !{null, null}
+  !9 = !{!0}
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !{i32 7, !"Dwarf Version", i32 4}
+  !12 = !{i32 2, !"Debug Info Version", i32 3}
+  !13 = !{i32 1, !"wchar_size", i32 4}
+  !14 = !{!"clang version 11.0.0"}
+  !15 = distinct !DISubprogram(name: "fun", scope: !3, file: !3, line: 3, type: !16, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !18)
+  !16 = !DISubroutineType(types: !17)
+  !17 = !{null, !10}
+  !18 = !{!20}
+  !20 = !DILocalVariable(name: "local", scope: !21, file: !3, line: 5, type: !10)
+  !21 = distinct !DILexicalBlock(scope: !15, file: !3, line: 4, column: 3)
+  !22 = !DILocation(line: 0, scope: !15)
+  !23 = !DILocation(line: 0, scope: !21)
+  !24 = !DILocation(line: 6, column: 12, scope: !21)
+  !29 = !DILocation(line: 8, column: 3, scope: !15)
+  !30 = !DILocation(line: 9, column: 1, scope: !15)
+
+...
+---
+name:            fun
+body:             |
+  bb.0.entry:
+    liveins: $edi
+
+    DBG_VALUE $edi, $noreg, !20, !DIExpression(), debug-location !23
+    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !24 :: (store 4 into @global)
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !29
+    TAILJMPd64 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $al, debug-location !29
+...

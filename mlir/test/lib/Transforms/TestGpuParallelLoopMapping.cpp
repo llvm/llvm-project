@@ -25,7 +25,7 @@ class TestGpuGreedyParallelLoopMappingPass
   void runOnOperation() override {
     Operation *op = getOperation();
     for (Region &region : op->getRegions())
-      greedilyMapParallelLoopsToGPU(region);
+      greedilyMapParallelSCFToGPU(region);
   }
 };
 } // end namespace

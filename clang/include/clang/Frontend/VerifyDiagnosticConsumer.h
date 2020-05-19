@@ -190,11 +190,10 @@ public:
   ///
   class Directive {
   public:
-    static std::unique_ptr<Directive> create(bool RegexKind,
-                                             SourceLocation DirectiveLoc,
-                                             SourceLocation DiagnosticLoc,
-                                             bool MatchAnyLine, StringRef Text,
-                                             unsigned Min, unsigned Max);
+    static std::unique_ptr<Directive>
+    create(bool RegexKind, SourceLocation DirectiveLoc,
+           SourceLocation DiagnosticLoc, bool MatchAnyFileAndLine,
+           bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max);
 
   public:
     /// Constant representing n or more matches.
@@ -205,6 +204,7 @@ public:
     const std::string Text;
     unsigned Min, Max;
     bool MatchAnyLine;
+    bool MatchAnyFileAndLine; // `MatchAnyFileAndLine` implies `MatchAnyLine`.
 
     Directive(const Directive &) = delete;
     Directive &operator=(const Directive &) = delete;
@@ -219,9 +219,11 @@ public:
 
   protected:
     Directive(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-              bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max)
-        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc),
-          Text(Text), Min(Min), Max(Max), MatchAnyLine(MatchAnyLine) {
+              bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
+              unsigned Min, unsigned Max)
+        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc), Text(Text),
+          Min(Min), Max(Max), MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
+          MatchAnyFileAndLine(MatchAnyFileAndLine) {
       assert(!DirectiveLoc.isInvalid() && "DirectiveLoc is invalid!");
       assert((!DiagnosticLoc.isInvalid() || MatchAnyLine) &&
              "DiagnosticLoc is invalid!");
