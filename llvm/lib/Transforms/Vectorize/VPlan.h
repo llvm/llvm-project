@@ -826,7 +826,7 @@ private:
   /// Is the condition of the select loop invariant?
   bool InvariantCond;
 
-  /// Hold VPValues for the arguments of the call.
+  /// Hold VPValues for the operands of the select.
   VPUser User;
 
 public:
