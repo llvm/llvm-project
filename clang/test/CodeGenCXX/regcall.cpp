@@ -31,7 +31,7 @@ class test_class {
   int a;
 public:
 #ifndef WIN_TEST
-  __regcall 
+  __regcall
 #endif
     test_class(){++x;}
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_classC1Ev
@@ -41,7 +41,7 @@ public:
   // CHECK-WIN32-DAG: define linkonce_odr dso_local x86_thiscallcc %class.test_class* @"??0test_class@@QAE@XZ"
 
 #ifndef WIN_TEST
-  __regcall 
+  __regcall
 #endif
   ~test_class(){--x;}
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_classD2Ev
@@ -49,7 +49,7 @@ public:
   // Windows ignores calling convention on constructor/destructors.
   // CHECK-WIN64-DAG: define linkonce_odr dso_local void @"??1test_class@@QEAA@XZ"
   // CHECK-WIN32-DAG: define linkonce_odr dso_local x86_thiscallcc void @"??1test_class@@QAE@XZ"
-  
+
   test_class& __regcall operator+=(const test_class&){
     return *this;
   }
@@ -60,7 +60,7 @@ public:
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_class20__regcall3__do_thingEv
   // CHECK-WIN64-DAG: define linkonce_odr dso_local x86_regcallcc void @"?do_thing@test_class@@QEAwXXZ"
   // CHECK-WIN32-DAG: define linkonce_odr dso_local x86_regcallcc void @"?do_thing@test_class@@QAwXXZ"
-  
+
   template<typename T>
   void __regcall tempFunc(T i){}
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_class20__regcall3__tempFuncIiEEvT_
@@ -103,3 +103,18 @@ long double _Complex __regcall foo(long double _Complex f) {
 // CHECK-LIN32-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* inreg noalias sret align 4 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 4 %f)
 // CHECK-WIN64-DAG: define dso_local x86_regcallcc { double, double } @"?foo@@YwU?$_Complex@O@__clang@@U12@@Z"(double %f.0, double %f.1)
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc { double, double } @"?foo@@YwU?$_Complex@O@__clang@@U12@@Z"(double %f.0, double %f.1)
+
+// The following caused us to dereference uninitialized memory. The long name
+// seems necessary, as does the return types.
+float _Complex __regcall callee(float _Complex f);
+// CHECK-LIN64-DAG: declare x86_regcallcc <2 x float> @_Z18__regcall3__calleeCf(<2 x float>)
+// CHECK-LIN32-DAG: declare x86_regcallcc { float, float } @_Z18__regcall3__calleeCf(float, float)
+// CHECK-WIN64-DAG: declare dso_local x86_regcallcc { float, float } @"?callee@@YwU?$_Complex@M@__clang@@U12@@Z"(float, float)
+// CHECK-WIN32-DAG: declare dso_local x86_regcallcc { float, float } @"?callee@@YwU?$_Complex@M@__clang@@U12@@Z"(float, float)
+
+__regcall int
+some_really_long_name_that_manages_to_hit_the_right_spot_of_mem(int a) {
+  float _Complex x[2];
+  x[0] = callee(x[0]);
+  return a;
+}
