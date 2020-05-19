@@ -330,6 +330,18 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
         ompBuilder->CreateTaskyield(builder.saveIP());
         return success();
       })
+      .Case([&](omp::FlushOp) {
+        // No support in Openmp runtime funciton (__kmpc_flush) to accept
+        // the argument list.
+        // OpenMP standard states the following:
+        //  "An implementation may implement a flush with a list by ignoring
+        //   the list, and treating it the same as a flush without a list."
+        //
+        // The argument list is discarded so that, flush with a list is treated
+        // same as a flush without a list.
+        ompBuilder->CreateFlush(builder.saveIP());
+        return success();
+      })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();
