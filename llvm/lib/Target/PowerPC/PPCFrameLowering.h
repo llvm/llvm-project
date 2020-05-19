@@ -61,8 +61,8 @@ class PPCFrameLowering: public TargetFrameLowering {
   bool findScratchRegister(MachineBasicBlock *MBB,
                            bool UseAtEnd,
                            bool TwoUniqueRegsRequired = false,
-                           unsigned *SR1 = nullptr,
-                           unsigned *SR2 = nullptr) const;
+                           Register *SR1 = nullptr,
+                           Register *SR2 = nullptr) const;
   bool twoUniqueScratchRegsRequired(MachineBasicBlock *MBB) const;
 
   /**

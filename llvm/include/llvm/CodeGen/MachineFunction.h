@@ -397,9 +397,9 @@ public:
   /// For now we support only cases when argument is transferred through one
   /// register.
   struct ArgRegPair {
-    unsigned Reg;
+    Register Reg;
     uint16_t ArgNo;
-    ArgRegPair(unsigned R, unsigned Arg) : Reg(R), ArgNo(Arg) {
+    ArgRegPair(Register R, unsigned Arg) : Reg(R), ArgNo(Arg) {
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
@@ -690,7 +690,7 @@ public:
 
   /// addLiveIn - Add the specified physical register as a live-in value and
   /// create a corresponding virtual register for it.
-  unsigned addLiveIn(unsigned PReg, const TargetRegisterClass *RC);
+  Register addLiveIn(MCRegister PReg, const TargetRegisterClass *RC);
 
   //===--------------------------------------------------------------------===//
   // BasicBlock accessor functions.
