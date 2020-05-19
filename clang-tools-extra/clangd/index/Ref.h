@@ -186,6 +186,6 @@ template <> struct DenseMapInfo<clang::clangd::RefSlab::Builder::Entry> {
            LHS.Reference.Location.End == RHS.Reference.Location.End;
   }
 };
-}; // namespace llvm
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_REF_H
