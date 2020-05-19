@@ -251,11 +251,16 @@ EXAMPLES
 
 The debugger can be started in several modes.
 
-Passing an executable as a positional argument prepares :program:`lldb` to
-debug the given executable. Arguments passed after -- are considered arguments
-to the debugged executable.
+Passing an executable as a positional argument prepares lldb to debug the given
+executable. To disambiguate between arguments passed to lldb and arguments
+passed to the debugged executable, arguments starting with a - must be passed
+after --.
 
-  lldb --arch x86_64 /path/to/program -- --arch arvm7
+  lldb --arch x86_64 /path/to/program program argument -- --arch arvm7
+
+For convenience, passing the executable after -- is also supported.
+
+  lldb --arch x86_64 -- /path/to/program program argument --arch arvm7
 
 Passing one of the attach options causes :program:`lldb` to immediately attach
 to the given process.
