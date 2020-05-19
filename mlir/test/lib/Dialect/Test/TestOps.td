@@ -1214,9 +1214,15 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+// Test that we elide optional attributes that are within the syntax.
+def FormatOptAttrOp : TEST_Op<"format_opt_attr_op"> {
+  let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
+  let assemblyFormat = "(`(`$opt_attr^`)`)? attr-dict";
+}
+
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
-  let arguments = (ins I64Attr:$attr);
+  let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
   let assemblyFormat = "attr-dict-with-keyword";
 }
 
