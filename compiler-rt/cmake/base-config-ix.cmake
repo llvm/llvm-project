@@ -5,6 +5,7 @@
 
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
+include(TestBigEndian)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
 
@@ -191,7 +192,7 @@ macro(test_targets)
       # Strip out -nodefaultlibs when calling TEST_BIG_ENDIAN. Configuration
       # will fail with this option when building with a sanitizer.
       cmake_push_check_state()
-      string(REPLACE "-nodefaultlibs" "" CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+      string(REPLACE "-nodefaultlibs" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
       TEST_BIG_ENDIAN(HOST_IS_BIG_ENDIAN)
       cmake_pop_check_state()
 
