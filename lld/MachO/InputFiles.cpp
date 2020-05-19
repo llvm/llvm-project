@@ -127,17 +127,13 @@ static const load_command *findCommand(const mach_header_64 *hdr,
   return nullptr;
 }
 
-std::vector<InputSection *>
-InputFile::parseSections(ArrayRef<section_64> sections) {
-  std::vector<InputSection *> ret;
-  ret.reserve(sections.size());
-
+void InputFile::parseSections(ArrayRef<section_64> sections) {
+  subsections.reserve(sections.size());
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
 
   for (const section_64 &sec : sections) {
     InputSection *isec = make<InputSection>();
     isec->file = this;
-    isec->header = &sec;
     isec->name = StringRef(sec.sectname, strnlen(sec.sectname, 16));
     isec->segname = StringRef(sec.segname, strnlen(sec.segname, 16));
     isec->data = {buf + sec.offset, static_cast<size_t>(sec.size)};
@@ -147,96 +143,185 @@ InputFile::parseSections(ArrayRef<section_64> sections) {
     else
       isec->align = 1 << sec.align;
     isec->flags = sec.flags;
-    ret.push_back(isec);
+    subsections.push_back({{0, isec}});
   }
+}
 
-  return ret;
+// Find the subsection corresponding to the greatest section offset that is <=
+// that of the given offset.
+//
+// offset: an offset relative to the start of the original InputSection (before
+// any subsection splitting has occurred). It will be updated to represent the
+// same location as an offset relative to the start of the containing
+// subsection.
+static InputSection *findContainingSubsection(SubsectionMap &map,
+                                              uint32_t *offset) {
+  auto it = std::prev(map.upper_bound(*offset));
+  *offset -= it->first;
+  return it->second;
 }
 
 void InputFile::parseRelocations(const section_64 &sec,
-                                 std::vector<Reloc> &relocs) {
+                                 SubsectionMap &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<any_relocation_info> relInfos(
       reinterpret_cast<const any_relocation_info *>(buf + sec.reloff),
       sec.nreloc);
 
   for (const any_relocation_info &anyRel : relInfos) {
+    if (anyRel.r_word0 & R_SCATTERED)
+      fatal("TODO: Scattered relocations not supported");
+
+    auto rel = reinterpret_cast<const relocation_info &>(anyRel);
+    if (!rel.r_pcrel)
+      fatal("TODO: Only pcrel relocations are supported");
+
     Reloc r;
-    if (anyRel.r_word0 & R_SCATTERED) {
-      error("TODO: Scattered relocations not supported");
+    r.type = rel.r_type;
+    uint32_t secRelOffset = rel.r_address;
+    uint64_t rawAddend =
+        target->getImplicitAddend(buf + sec.offset + secRelOffset, r.type);
+
+    if (rel.r_extern) {
+      r.target = symbols[rel.r_symbolnum];
+      r.addend = rawAddend;
     } else {
-      auto rel = reinterpret_cast<const relocation_info &>(anyRel);
-      r.type = rel.r_type;
-      r.offset = rel.r_address;
-      r.addend = target->getImplicitAddend(buf + sec.offset + r.offset, r.type);
-      if (rel.r_extern) {
-        r.target = symbols[rel.r_symbolnum];
-      } else {
-        if (rel.r_symbolnum == 0 || rel.r_symbolnum > sections.size())
-          fatal("invalid section index in relocation for offset " +
-                std::to_string(r.offset) + " in section " + sec.sectname +
-                " of " + getName());
-        r.target = sections[rel.r_symbolnum - 1];
-      }
+      if (rel.r_symbolnum == 0 || rel.r_symbolnum > subsections.size())
+        fatal("invalid section index in relocation for offset " +
+              std::to_string(r.offset) + " in section " + sec.sectname +
+              " of " + getName());
+
+      SubsectionMap &targetSubsecMap = subsections[rel.r_symbolnum - 1];
+      const section_64 &targetSec = sectionHeaders[rel.r_symbolnum - 1];
+      // The implicit addend for pcrel section relocations is the pcrel offset
+      // in terms of the addresses in the input file. Here we adjust it so that
+      // it describes the offset from the start of the target section.
+      // TODO: Figure out what to do for non-pcrel section relocations.
+      // TODO: The offset of 4 is probably not right for ARM64, nor for
+      //       relocations with r_length != 2.
+      uint32_t targetOffset =
+          sec.addr + secRelOffset + 4 + rawAddend - targetSec.addr;
+      r.target = findContainingSubsection(targetSubsecMap, &targetOffset);
+      r.addend = targetOffset;
     }
-    relocs.push_back(r);
+
+    InputSection *subsec = findContainingSubsection(subsecMap, &secRelOffset);
+    r.offset = secRelOffset;
+    subsec->relocs.push_back(r);
+  }
+}
+
+void InputFile::parseSymbols(ArrayRef<nlist_64> nList, const char *strtab,
+                             bool subsectionsViaSymbols) {
+  // resize(), not reserve(), because we are going to create N_ALT_ENTRY symbols
+  // out-of-sequence.
+  symbols.resize(nList.size());
+  std::vector<size_t> altEntrySymIdxs;
+
+  auto createDefined = [&](const nlist_64 &sym, InputSection *isec,
+                           uint32_t value) -> Symbol * {
+    StringRef name = strtab + sym.n_strx;
+    if (sym.n_type & N_EXT)
+      // Global defined symbol
+      return symtab->addDefined(name, isec, value);
+    else
+      // Local defined symbol
+      return make<Defined>(name, isec, value);
+  };
+
+  for (size_t i = 0, n = nList.size(); i < n; ++i) {
+    const nlist_64 &sym = nList[i];
+
+    // Undefined symbol
+    if (!sym.n_sect) {
+      StringRef name = strtab + sym.n_strx;
+      symbols[i] = symtab->addUndefined(name);
+      continue;
+    }
+
+    const section_64 &sec = sectionHeaders[sym.n_sect - 1];
+    SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
+    uint64_t offset = sym.n_value - sec.addr;
+
+    // If the input file does not use subsections-via-symbols, all symbols can
+    // use the same subsection. Otherwise, we must split the sections along
+    // symbol boundaries.
+    if (!subsectionsViaSymbols) {
+      symbols[i] = createDefined(sym, subsecMap[0], offset);
+      continue;
+    }
+
+    // nList entries aren't necessarily arranged in address order. Therefore,
+    // we can't create alt-entry symbols at this point because a later symbol
+    // may split its section, which may affect which subsection the alt-entry
+    // symbol is assigned to. So we need to handle them in a second pass below.
+    if (sym.n_desc & N_ALT_ENTRY) {
+      altEntrySymIdxs.push_back(i);
+      continue;
+    }
+
+    // Find the subsection corresponding to the greatest section offset that is
+    // <= that of the current symbol. The subsection that we find either needs
+    // to be used directly or split in two.
+    uint32_t firstSize = offset;
+    InputSection *firstIsec = findContainingSubsection(subsecMap, &firstSize);
+
+    if (firstSize == 0) {
+      // Alias of an existing symbol, or the first symbol in the section. These
+      // are handled by reusing the existing section.
+      symbols[i] = createDefined(sym, firstIsec, 0);
+      continue;
+    }
+
+    // We saw a symbol definition at a new offset. Split the section into two
+    // subsections. The new symbol uses the second subsection.
+    auto *secondIsec = make<InputSection>(*firstIsec);
+    secondIsec->data = firstIsec->data.slice(firstSize);
+    firstIsec->data = firstIsec->data.slice(0, firstSize);
+    // TODO: ld64 appears to preserve the original alignment as well as each
+    // subsection's offset from the last aligned address. We should consider
+    // emulating that behavior.
+    secondIsec->align = MinAlign(firstIsec->align, offset);
+
+    subsecMap[offset] = secondIsec;
+    // By construction, the symbol will be at offset zero in the new section.
+    symbols[i] = createDefined(sym, secondIsec, 0);
+  }
+
+  for (size_t idx : altEntrySymIdxs) {
+    const nlist_64 &sym = nList[idx];
+    SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
+    uint32_t off = sym.n_value - sectionHeaders[sym.n_sect - 1].addr;
+    InputSection *subsec = findContainingSubsection(subsecMap, &off);
+    symbols[idx] = createDefined(sym, subsec, off);
   }
 }
 
 ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
-  ArrayRef<section_64> objSections;
 
   if (const load_command *cmd = findCommand(hdr, LC_SEGMENT_64)) {
     auto *c = reinterpret_cast<const segment_command_64 *>(cmd);
-    objSections = ArrayRef<section_64>{
+    sectionHeaders = ArrayRef<section_64>{
         reinterpret_cast<const section_64 *>(c + 1), c->nsects};
-    sections = parseSections(objSections);
+    parseSections(sectionHeaders);
   }
 
   // TODO: Error on missing LC_SYMTAB?
   if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
     auto *c = reinterpret_cast<const symtab_command *>(cmd);
-    const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
-    ArrayRef<const nlist_64> nList(
+    ArrayRef<nlist_64> nList(
         reinterpret_cast<const nlist_64 *>(buf + c->symoff), c->nsyms);
-
-    symbols.reserve(c->nsyms);
-
-    for (const nlist_64 &sym : nList) {
-      StringRef name = strtab + sym.n_strx;
-
-      // Undefined symbol
-      if (!sym.n_sect) {
-        symbols.push_back(symtab->addUndefined(name));
-        continue;
-      }
-
-      InputSection *isec = sections[sym.n_sect - 1];
-      const section_64 &objSec = objSections[sym.n_sect - 1];
-      uint64_t value = sym.n_value - objSec.addr;
-
-      // Global defined symbol
-      if (sym.n_type & N_EXT) {
-        symbols.push_back(symtab->addDefined(name, isec, value));
-        continue;
-      }
-
-      // Local defined symbol
-      symbols.push_back(make<Defined>(name, isec, value));
-    }
+    const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
+    bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
+    parseSymbols(nList, strtab, subsectionsViaSymbols);
   }
 
   // The relocations may refer to the symbols, so we parse them after we have
-  // the symbols loaded.
-  if (!sections.empty()) {
-    auto it = sections.begin();
-    for (const section_64 &sec : objSections) {
-      parseRelocations(sec, (*it)->relocs);
-      ++it;
-    }
-  }
+  // parsed all the symbols.
+  for (size_t i = 0, n = subsections.size(); i < n; ++i)
+    parseRelocations(sectionHeaders[i], subsections[i]);
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
@@ -324,7 +409,8 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
                 sym.getName());
   auto file = make<ObjFile>(mb);
   symbols.insert(symbols.end(), file->symbols.begin(), file->symbols.end());
-  sections.insert(sections.end(), file->sections.begin(), file->sections.end());
+  subsections.insert(subsections.end(), file->subsections.begin(),
+                     file->subsections.end());
 }
 
 // Returns "<internal>" or "baz.o".
