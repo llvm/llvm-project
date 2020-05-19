@@ -39,7 +39,7 @@ Sections:
   - Name: .debug_type
     Type: SHT_PROGBITS
     Size: 13
-  - Name: .debug_type [1]
+  - Name: .debug_type (1)
     Type: SHT_PROGBITS
     Size: 13
   - Name: .debug_foo

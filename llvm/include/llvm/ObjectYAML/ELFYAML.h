@@ -26,6 +26,7 @@ namespace llvm {
 namespace ELFYAML {
 
 StringRef dropUniqueSuffix(StringRef S);
+std::string appendUniqueSuffix(StringRef Name, const Twine& Msg);
 
 // These types are invariant across 32/64-bit ELF, so for simplicity just
 // directly give them their exact sizes. We don't need to worry about
