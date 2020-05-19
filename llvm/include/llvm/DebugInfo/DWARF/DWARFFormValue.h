@@ -55,6 +55,8 @@ private:
   };
 
   dwarf::Form Form;             /// Form for this value.
+  dwarf::DwarfFormat Format =
+      dwarf::DWARF32;           /// Remember the DWARF format at extract time.
   ValueType Value;              /// Contains all data for the form.
   const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
   const DWARFContext *C = nullptr; /// Context for extract time.

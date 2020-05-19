@@ -241,6 +241,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     Ctx = &CU->getContext();
   C = Ctx;
   U = CU;
+  Format = FP.Format;
   bool Indirect = false;
   bool IsBlock = false;
   Value.data = nullptr;
@@ -386,6 +387,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   raw_ostream &AddrOS = DumpOpts.ShowAddresses
                             ? WithColor(OS, HighlightColor::Address).get()
                             : nulls();
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
   switch (Form) {
   case DW_FORM_addr:
     dumpSectionedAddress(AddrOS, DumpOpts, {Value.uval, Value.SectionIndex});
@@ -481,12 +483,13 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DW_FORM_strp:
     if (DumpOpts.Verbose)
-      OS << format(" .debug_str[0x%8.8" PRIx64 "] = ", UValue);
+      OS << format(" .debug_str[0x%0*" PRIx64 "] = ", OffsetDumpWidth, UValue);
     dumpString(OS);
     break;
   case DW_FORM_line_strp:
     if (DumpOpts.Verbose)
-      OS << format(" .debug_line_str[0x%8.8" PRIx64 "] = ", UValue);
+      OS << format(" .debug_line_str[0x%0*" PRIx64 "] = ", OffsetDumpWidth,
+                   UValue);
     dumpString(OS);
     break;
   case DW_FORM_strx:
@@ -551,7 +554,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
 
   case DW_FORM_sec_offset:
-    AddrOS << format("0x%08" PRIx64, UValue);
+    AddrOS << format("0x%0*" PRIx64, OffsetDumpWidth, UValue);
     break;
 
   default:

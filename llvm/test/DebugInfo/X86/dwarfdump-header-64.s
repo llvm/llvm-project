@@ -159,8 +159,8 @@ LH_5_end:
 # CHECK: seg_select_size: 0
 # CHECK: prologue_length: 0x00000044
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  0] = .debug_str[0x00000028] = "Directory5a"
-# CHECK: include_directories[  1] = .debug_str[0x00000034] = "Directory5b"
+# CHECK: include_directories[  0] = .debug_str[0x0000000000000028] = "Directory5a"
+# CHECK: include_directories[  1] = .debug_str[0x0000000000000034] = "Directory5b"
 # CHECK-NOT: include_directories
 # CHECK: file_names[  0]:
 # CHECK-NEXT: name: "File5a"
