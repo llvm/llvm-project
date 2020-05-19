@@ -178,10 +178,6 @@ void InitializerForAuto() {
   auto unresolved_typo = gned.*[] {};
 }
 
-// CHECK:      `-TypeAliasDecl {{.*}} Escape 'decltype([] {
-// CHECK-NEXT:   return <recovery-expr>(undef);
-// CHECK-NEXT: }())'
-// CHECK-NEXT:   `-DecltypeType {{.*}} 'decltype([] {
-// CHECK-NEXT:     return <recovery-expr>(undef);
-// CHECK-NEXT:   }())' dependent
+// Verified that the generated call operator is invalid.
+// CHECK: |-CXXMethodDecl {{.*}} invalid operator() 'auto () const -> auto'
 using Escape = decltype([] { return undef(); }());
