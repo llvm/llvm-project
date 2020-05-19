@@ -264,9 +264,13 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
   Sym.Flags |= unsigned(GV->getVisibility()) << storage::Symbol::FB_visibility;
 
   if (Flags & object::BasicSymbolRef::SF_Common) {
+    auto *GVar = dyn_cast<GlobalVariable>(GV);
+    if (!GVar)
+      return make_error<StringError>("Only variables can have common linkage!",
+                                     inconvertibleErrorCode());
     Uncommon().CommonSize = GV->getParent()->getDataLayout().getTypeAllocSize(
         GV->getType()->getElementType());
-    Uncommon().CommonAlign = GV->getAlignment();
+    Uncommon().CommonAlign = GVar->getAlignment();
   }
 
   const GlobalObject *Base = GV->getBaseObject();

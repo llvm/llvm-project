@@ -904,16 +904,9 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
     if (!GAN)
       return true;
 
-    if (GAN->getOffset() % Size == 0) {
-      const GlobalValue *GV = GAN->getGlobal();
-      unsigned Alignment = GV->getAlignment();
-      Type *Ty = GV->getValueType();
-      if (Alignment == 0 && Ty->isSized())
-        Alignment = DL.getABITypeAlignment(Ty);
-
-      if (Alignment >= Size)
-        return true;
-    }
+    if (GAN->getOffset() % Size == 0 &&
+        GAN->getGlobal()->getPointerAlignment(DL) >= Size)
+      return true;
   }
 
   if (CurDAG->isBaseWithConstantOffset(N)) {

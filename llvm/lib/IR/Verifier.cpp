@@ -570,8 +570,9 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   Assert(!GV.isDeclaration() || GV.hasValidDeclarationLinkage(),
          "Global is external, but doesn't have external or weak linkage!", &GV);
 
-  Assert(GV.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &GV);
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV))
+    Assert(GO->getAlignment() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", GO);
   Assert(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
          "Only global variables can have appending linkage!", &GV);
 

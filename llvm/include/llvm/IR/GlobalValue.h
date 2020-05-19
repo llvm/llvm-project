@@ -185,7 +185,6 @@ public:
 
   GlobalValue(const GlobalValue &) = delete;
 
-  unsigned getAlignment() const;
   unsigned getAddressSpace() const;
 
   enum class UnnamedAddr {
@@ -548,10 +547,6 @@ public:
   bool isStrongDefinitionForLinker() const {
     return !(isDeclarationForLinker() || isWeakForLinker());
   }
-
-  // Returns true if the alignment of the value can be unilaterally
-  // increased.
-  bool canIncreaseAlignment() const;
 
   const GlobalObject *getBaseObject() const;
   GlobalObject *getBaseObject() {

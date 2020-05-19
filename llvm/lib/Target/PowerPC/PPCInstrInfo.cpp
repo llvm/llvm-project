@@ -3591,9 +3591,11 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
     // not just an immediate but also a multiple of 4, or 16 depending on the
     // load. A DForm load cannot be represented if it is a multiple of say 2.
     // XForm loads do not have this restriction.
-    if (ImmMO.isGlobal() &&
-        ImmMO.getGlobal()->getAlignment() < III.ImmMustBeMultipleOf)
-      return false;
+    if (ImmMO.isGlobal()) {
+      const DataLayout &DL = ImmMO.getGlobal()->getParent()->getDataLayout();
+      if (ImmMO.getGlobal()->getPointerAlignment(DL) < III.ImmMustBeMultipleOf)
+        return false;
+    }
 
     return true;
   }

@@ -2099,7 +2099,9 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
         return true; // Leave in place;
       }
 
-      B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(), *GV));
+      B.buildConstant(
+          DstReg,
+          MFI->allocateLDSGlobal(B.getDataLayout(), *cast<GlobalVariable>(GV)));
       MI.eraseFromParent();
       return true;
     }
