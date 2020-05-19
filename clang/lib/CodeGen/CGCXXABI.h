@@ -16,6 +16,7 @@
 
 #include "CodeGenFunction.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/CodeGen/CodeGenABITypes.h"
 
 namespace llvm {
 class Constant;
@@ -287,24 +288,44 @@ public:
   /// Emit constructor variants required by this ABI.
   virtual void EmitCXXConstructors(const CXXConstructorDecl *D) = 0;
 
-  /// Notes how many arguments were added to the beginning (Prefix) and ending
-  /// (Suffix) of an arg list.
+  /// Additional implicit arguments to add to the beginning (Prefix) and end
+  /// (Suffix) of a constructor / destructor arg list.
   ///
-  /// Note that Prefix actually refers to the number of args *after* the first
-  /// one: `this` arguments always come first.
+  /// Note that Prefix should actually be inserted *after* the first existing
+  /// arg; `this` arguments always come first.
   struct AddedStructorArgs {
+    struct Arg {
+      llvm::Value *Value;
+      QualType Type;
+    };
+    SmallVector<Arg, 1> Prefix;
+    SmallVector<Arg, 1> Suffix;
+    AddedStructorArgs() = default;
+    AddedStructorArgs(SmallVector<Arg, 1> P, SmallVector<Arg, 1> S)
+        : Prefix(std::move(P)), Suffix(std::move(S)) {}
+    static AddedStructorArgs prefix(SmallVector<Arg, 1> Args) {
+      return {std::move(Args), {}};
+    }
+    static AddedStructorArgs suffix(SmallVector<Arg, 1> Args) {
+      return {{}, std::move(Args)};
+    }
+  };
+
+  /// Similar to AddedStructorArgs, but only notes the number of additional
+  /// arguments.
+  struct AddedStructorArgCounts {
     unsigned Prefix = 0;
     unsigned Suffix = 0;
-    AddedStructorArgs() = default;
-    AddedStructorArgs(unsigned P, unsigned S) : Prefix(P), Suffix(S) {}
-    static AddedStructorArgs prefix(unsigned N) { return {N, 0}; }
-    static AddedStructorArgs suffix(unsigned N) { return {0, N}; }
+    AddedStructorArgCounts() = default;
+    AddedStructorArgCounts(unsigned P, unsigned S) : Prefix(P), Suffix(S) {}
+    static AddedStructorArgCounts prefix(unsigned N) { return {N, 0}; }
+    static AddedStructorArgCounts suffix(unsigned N) { return {0, N}; }
   };
 
   /// Build the signature of the given constructor or destructor variant by
   /// adding any required parameters.  For convenience, ArgTys has been
   /// initialized with the type of 'this'.
-  virtual AddedStructorArgs
+  virtual AddedStructorArgCounts
   buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) = 0;
 
@@ -365,14 +386,19 @@ public:
   /// Emit the ABI-specific prolog for the function.
   virtual void EmitInstanceFunctionProlog(CodeGenFunction &CGF) = 0;
 
+  virtual AddedStructorArgs
+  getImplicitConstructorArgs(CodeGenFunction &CGF, const CXXConstructorDecl *D,
+                             CXXCtorType Type, bool ForVirtualBase,
+                             bool Delegating) = 0;
+
   /// Add any ABI-specific implicit arguments needed to call a constructor.
   ///
   /// \return The number of arguments added at the beginning and end of the
   /// call, which is typically zero or one.
-  virtual AddedStructorArgs
+  AddedStructorArgCounts
   addImplicitConstructorArgs(CodeGenFunction &CGF, const CXXConstructorDecl *D,
                              CXXCtorType Type, bool ForVirtualBase,
-                             bool Delegating, CallArgList &Args) = 0;
+                             bool Delegating, CallArgList &Args);
 
   /// Emit the destructor call.
   virtual void EmitDestructorCall(CodeGenFunction &CGF,
