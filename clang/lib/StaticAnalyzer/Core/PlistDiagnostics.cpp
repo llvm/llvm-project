@@ -16,6 +16,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
@@ -571,10 +572,10 @@ static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
 //===----------------------------------------------------------------------===//
 
 PlistDiagnostics::PlistDiagnostics(
-    AnalyzerOptions &AnalyzerOpts, const std::string &output,
+    AnalyzerOptions &AnalyzerOpts, const std::string &OutputFile,
     const Preprocessor &PP, const cross_tu::CrossTranslationUnitContext &CTU,
     bool supportsMultipleFiles)
-    : OutputFile(output), PP(PP), CTU(CTU), AnOpts(AnalyzerOpts),
+    : OutputFile(OutputFile), PP(PP), CTU(CTU), AnOpts(AnalyzerOpts),
       SupportsCrossFileDiagnostics(supportsMultipleFiles) {
   // FIXME: Will be used by a later planned change.
   (void)this->CTU;
@@ -585,9 +586,11 @@ void ento::createPlistDiagnosticConsumer(
     const std::string &OutputFile, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
-  // TODO: Emit an error here.
-  if (OutputFile.empty())
+  if (OutputFile.empty()) {
+    PP.getDiagnostics().Report(diag::err_analyzer_missing_output_loc)
+      << "plist" << "file";
     return;
+  }
 
   C.push_back(new PlistDiagnostics(AnalyzerOpts, OutputFile, PP, CTU,
                                    /*supportsMultipleFiles*/ false));
@@ -599,9 +602,11 @@ void ento::createPlistMultiFileDiagnosticConsumer(
     const std::string &OutputFile, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
-  // TODO: Emit an error here.
-  if (OutputFile.empty())
+  if (OutputFile.empty()) {
+    PP.getDiagnostics().Report(diag::err_analyzer_missing_output_loc)
+      << "plist-multi-file" << "file";
     return;
+  }
 
   C.push_back(new PlistDiagnostics(AnalyzerOpts, OutputFile, PP, CTU,
                                    /*supportsMultipleFiles*/ true));

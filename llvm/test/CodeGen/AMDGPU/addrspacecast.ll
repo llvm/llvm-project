@@ -40,6 +40,31 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %pt
   ret void
 }
 
+; Test handling inside a non-kernel
+; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast_func:
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
+; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
+; CI-DAG: v_cmp_ne_u32_e32 vcc, -1, v0
+; CI-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
+; CI-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, v0
+
+; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
+; GFX9-DAG: s_getreg_b32 [[SSRC_SHARED:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 16, 16)
+; GFX9-DAG: s_lshl_b32 [[SSRC_SHARED_BASE:s[0-9]+]], [[SSRC_SHARED]], 16
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[SSRC_SHARED_BASE]]
+
+; GFX9-XXX: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
+; GFX9-DAG: v_cmp_ne_u32_e32 vcc, -1, v0
+; GFX9-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, v0, vcc
+; GFX9-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]], vcc
+
+; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
+define void @use_group_to_flat_addrspacecast_func(i32 addrspace(3)* %ptr) #0 {
+  %stof = addrspacecast i32 addrspace(3)* %ptr to i32*
+  store volatile i32 7, i32* %stof
+  ret void
+}
+
 ; HSA-LABEL: {{^}}use_private_to_flat_addrspacecast:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 0

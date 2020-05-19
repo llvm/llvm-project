@@ -15,14 +15,9 @@ using namespace llvm;
 
 AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MachineFunctionInfo(),
-  LocalMemoryObjects(),
-  ExplicitKernArgSize(0),
-  LDSSize(0),
   Mode(MF.getFunction()),
   IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
-  NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath),
-  MemoryBound(false),
-  WaveLimiter(false) {
+  NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
 
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
