@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
