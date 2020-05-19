@@ -68,14 +68,13 @@ void MipsFunctionInfo::initGlobalBaseReg() {
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   DebugLoc DL;
-  unsigned V0, V1;
   const TargetRegisterClass *RC;
   const MipsABIInfo &ABI =
       static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI();
   RC = (ABI.IsN64()) ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
 
-  V0 = RegInfo.createVirtualRegister(RC);
-  V1 = RegInfo.createVirtualRegister(RC);
+  Register V0 = RegInfo.createVirtualRegister(RC);
+  Register V1 = RegInfo.createVirtualRegister(RC);
 
   if (ABI.IsN64()) {
     MF.getRegInfo().addLiveIn(Mips::T9_64);
