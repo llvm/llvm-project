@@ -170,12 +170,16 @@ TEST_F(CSVMetricsTracerTest, RecordsValues) {
   Counter.record(1, "");
   Dist.record(2, "y");
 
-  EXPECT_THAT(
-      outputLines(),
+  auto Lines = outputLines();
+  ASSERT_THAT(
+      Lines,
       ElementsAre("Kind,Metric,Label,Value,Timestamp",
-                  MatchesRegex(R"(d,dist,x,1\.000000e\+00,[0-9]+\.[0-9]{6})"),
+                  StartsWith("d,dist,x,1.000000e+00,"),
                   StartsWith("c,cnt,,1.000000e+00,"),
                   StartsWith("d,dist,y,2.000000e+00,"), ""));
+  // Also check timestamp format.
+  EXPECT_THAT(Lines[1].str(),
+              MatchesRegex(R"(d,dist,x,1\.000000e\+00,[0-9]+\.[0-9]{6})"));
 }
 
 TEST_F(CSVMetricsTracerTest, Escaping) {
