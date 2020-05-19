@@ -93,6 +93,7 @@ static cl::opt<bool> allowUnregisteredDialects(
     "allow-unregistered-dialect",
     cl::desc("Allow operation with no registered dialects"), cl::init(false));
 
+#ifdef MLIR_INCLUDE_TESTS
 void registerTestPasses() {
   registerConvertToTargetEnvPass();
   registerInliner();
@@ -131,6 +132,7 @@ void registerTestPasses() {
   registerTestVectorToSCFPass();
   registerVectorizerTestPass();
 }
+#endif
 
 static cl::opt<bool>
     showDialects("show-dialects",
@@ -140,7 +142,9 @@ static cl::opt<bool>
 int main(int argc, char **argv) {
   registerAllDialects();
   registerAllPasses();
+#ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
+#endif
   InitLLVM y(argc, argv);
 
   // Register any command line options.
