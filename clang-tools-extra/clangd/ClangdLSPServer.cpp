@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
+#include "CodeComplete.h"
 #include "Diagnostics.h"
 #include "DraftStore.h"
 #include "GlobalCompilationDatabase.h"
@@ -593,9 +594,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              llvm::json::Object{
                  {"allCommitCharacters", " \t()[]{}<>:;,+-/*%^&#?.=\"'|"},
                  {"resolveProvider", false},
-                 // We do extra checks for '>' and ':' in completion to only
-                 // trigger on '->' and '::'.
-                 {"triggerCharacters", {".", ">", ":"}},
+                 // We do extra checks, e.g. that > is part of ->.
+                 {"triggerCharacters", {".", "<", ">", ":", "\"", "/"}},
              }},
             {"semanticTokensProvider",
              llvm::json::Object{
@@ -1425,23 +1425,19 @@ std::vector<Fix> ClangdLSPServer::getFixes(llvm::StringRef File,
   return FixItsIter->second;
 }
 
+// A completion request is sent when the user types '>' or ':', but we only
+// want to trigger on '->' and '::'. We check the preceeding text to make
+// sure it matches what we expected.
+// Running the lexer here would be more robust (e.g. we can detect comments
+// and avoid triggering completion there), but we choose to err on the side
+// of simplicity here.
 bool ClangdLSPServer::shouldRunCompletion(
     const CompletionParams &Params) const {
-  llvm::StringRef Trigger = Params.context.triggerCharacter;
-  if (Params.context.triggerKind != CompletionTriggerKind::TriggerCharacter ||
-      (Trigger != ">" && Trigger != ":"))
+  if (Params.context.triggerKind != CompletionTriggerKind::TriggerCharacter)
     return true;
-
   auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
   if (!Code)
     return true; // completion code will log the error for untracked doc.
-
-  // A completion request is sent when the user types '>' or ':', but we only
-  // want to trigger on '->' and '::'. We check the preceeding character to make
-  // sure it matches what we expected.
-  // Running the lexer here would be more robust (e.g. we can detect comments
-  // and avoid triggering completion there), but we choose to err on the side
-  // of simplicity here.
   auto Offset = positionToOffset(Code->Contents, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
@@ -1449,15 +1445,7 @@ bool ClangdLSPServer::shouldRunCompletion(
          Params.position, Params.textDocument.uri.file());
     return true;
   }
-  if (*Offset < 2)
-    return false;
-
-  if (Trigger == ">")
-    return Code->Contents[*Offset - 2] == '-'; // trigger only on '->'.
-  if (Trigger == ":")
-    return Code->Contents[*Offset - 2] == ':'; // trigger only on '::'.
-  assert(false && "unhandled trigger character");
-  return true;
+  return allowImplicitCompletion(Code->Contents, *Offset);
 }
 
 void ClangdLSPServer::onHighlightingsReady(
