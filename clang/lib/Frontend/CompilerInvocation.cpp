@@ -3680,7 +3680,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     }
   }
 
-  if (Diags.isIgnored(diag::warn_profile_data_misexpect, SourceLocation()))
+  if (!Diags.isIgnored(diag::warn_profile_data_misexpect, SourceLocation()))
     Res.FrontendOpts.LLVMArgs.push_back("-pgo-warn-misexpect");
 
   LangOpts.FunctionAlignment =
