@@ -8014,6 +8014,30 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
                MultiLineFunctions);
 }
 
+TEST_F(FormatTest, AttributeClass) {
+  FormatStyle Style = getChromiumStyle(FormatStyle::LK_Cpp);
+  verifyFormat("class S {\n"
+               "  S(S&&) = default;\n"
+               "};",
+               Style);
+  verifyFormat("class [[nodiscard]] S {\n"
+               "  S(S&&) = default;\n"
+               "};",
+               Style);
+  verifyFormat("class __attribute((maybeunused)) S {\n"
+               "  S(S&&) = default;\n"
+               "};",
+               Style);
+  verifyFormat("struct S {\n"
+               "  S(S&&) = default;\n"
+               "};",
+               Style);
+  verifyFormat("struct [[nodiscard]] S {\n"
+               "  S(S&&) = default;\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, AttributePenaltyBreaking) {
   FormatStyle Style = getLLVMStyle();
   verifyFormat("void ABCDEFGH::ABCDEFGHIJKLMN(\n"
