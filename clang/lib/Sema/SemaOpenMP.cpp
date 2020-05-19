@@ -6896,8 +6896,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInc(Expr *S) {
 static ExprResult
 tryBuildCapture(Sema &SemaRef, Expr *Capture,
                 llvm::MapVector<const Expr *, DeclRefExpr *> &Captures) {
-  if (SemaRef.CurContext->isDependentContext())
-    return ExprResult(Capture);
+  if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
+    return Capture;
   if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
     return SemaRef.PerformImplicitConversion(
         Capture->IgnoreImpCasts(), Capture->getType(), Sema::AA_Converting,
