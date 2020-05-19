@@ -1160,6 +1160,17 @@ TEST(MatchBinaryOperator, HasEitherOperand) {
   EXPECT_TRUE(notMatches("void x() { true || true; }", HasOperand));
 }
 
+TEST(MatchBinaryOperator, HasOperands) {
+  StatementMatcher HasOperands = binaryOperator(
+      hasOperands(integerLiteral(equals(1)), integerLiteral(equals(2))));
+  EXPECT_TRUE(matches("void x() { 1 + 2; }", HasOperands));
+  EXPECT_TRUE(matches("void x() { 2 + 1; }", HasOperands));
+  EXPECT_TRUE(notMatches("void x() { 1 + 1; }", HasOperands));
+  EXPECT_TRUE(notMatches("void x() { 2 + 2; }", HasOperands));
+  EXPECT_TRUE(notMatches("void x() { 0 + 0; }", HasOperands));
+  EXPECT_TRUE(notMatches("void x() { 0 + 1; }", HasOperands));
+}
+
 TEST(Matcher, BinaryOperatorTypes) {
   // Integration test that verifies the AST provides all binary operators in
   // a way we expect.
