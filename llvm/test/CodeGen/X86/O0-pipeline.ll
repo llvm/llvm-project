@@ -10,18 +10,14 @@
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
-; CHECK-NEXT: Type-Based Alias Analysis
-; CHECK-NEXT: Scoped NoAlias Alias Analysis
-; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
+; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand Atomic instructions
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
