@@ -1857,9 +1857,9 @@ let Predicates = [HasSVE, HasMatMulInt8] in {
   defm  SMMLA_ZZZ : sve_int_matmul<0b00, "smmla", int_aarch64_sve_smmla>;
   defm  UMMLA_ZZZ : sve_int_matmul<0b11, "ummla", int_aarch64_sve_ummla>;
   defm USMMLA_ZZZ : sve_int_matmul<0b10, "usmmla", int_aarch64_sve_usmmla>;
-  def USDOT_ZZZ  : sve_int_dot_mixed<"usdot">;
-  def USDOT_ZZZI : sve_int_dot_mixed_indexed<0, "usdot">;
-  def SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot">;
+  defm USDOT_ZZZ  : sve_int_dot_mixed<"usdot", int_aarch64_sve_usdot>;
+  defm USDOT_ZZZI : sve_int_dot_mixed_indexed<0, "usdot", int_aarch64_sve_usdot_lane>;
+  defm SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot", int_aarch64_sve_sudot_lane>;
 }
 
 let Predicates = [HasSVE, HasMatMulFP32] in {
