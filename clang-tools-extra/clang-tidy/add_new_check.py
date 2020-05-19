@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-#===- add_new_check.py - clang-tidy check generator ----------*- python -*--===#
+#===- add_new_check.py - clang-tidy check generator ---------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+#===-----------------------------------------------------------------------===#
 
 from __future__ import print_function
 
@@ -15,8 +15,9 @@ import os
 import re
 import sys
 
-# Adapts the module's CMakelist file. Returns 'True' if it could add a new entry
-# and 'False' if the entry already existed.
+
+# Adapts the module's CMakelist file. Returns 'True' if it could add a new
+# entry and 'False' if the entry already existed.
 def adapt_cmake(module_path, check_name_camel):
   filename = os.path.join(module_path, 'CMakeLists.txt')
   with open(filename, 'r') as f:
@@ -227,7 +228,6 @@ def add_release_notes(module_path, module, check_name):
   with open(filename, 'w') as f:
     note_added = False
     header_found = False
-    next_header_found = False
     add_note_here = False
 
     for line in lines:
@@ -241,7 +241,6 @@ def add_release_notes(module_path, module, check_name):
             add_note_here = True
 
         if match_next:
-          next_header_found = True
           add_note_here = True
 
         if match:
