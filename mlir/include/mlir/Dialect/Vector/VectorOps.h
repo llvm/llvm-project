@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_VECTOR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_VECTOROPS_H
 
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -70,6 +71,14 @@ IntegerType getVectorSubscriptType(Builder &builder);
 /// Returns an integer array attribute containing the given values using
 /// the integer type required for subscripts in the vector dialect.
 ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
+
+namespace impl {
+/// Build the default minor identity map suitable for a vector transfer. This
+/// also handles the case memref<... x vector<...>> -> vector<...> in which the
+/// rank of the identity map must take the vector element type into account.
+AffineMap getTransferMinorIdentityMap(MemRefType memRefType,
+                                      VectorType vectorType);
+} // namespace impl
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/VectorOps.h.inc"

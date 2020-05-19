@@ -229,7 +229,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<17
   // CHECK:   %[[cmp:.*]] = cmpi "slt", %[[add]], %[[dim]] : index
   // CHECK:   %[[cond1:.*]] = and %[[cmp]], %[[cond0]] : i1
   // CHECK:   scf.if %[[cond1]] {
-  // CHECK:     %[[vec_1d:.*]] = vector.transfer_read %[[A]][%[[add]], %[[base]]], %[[cst]]  {permutation_map = #[[MAP1]]} : memref<?x?xf32>, vector<15xf32>
+  // CHECK:     %[[vec_1d:.*]] = vector.transfer_read %[[A]][%[[add]], %[[base]]], %[[cst]] : memref<?x?xf32>, vector<15xf32>
   // CHECK:     store %[[vec_1d]], %[[alloc]][%[[I]]] : memref<17xvector<15xf32>>
   // CHECK:   } else {
   // CHECK:     store %[[splat]], %[[alloc]][%[[I]]] : memref<17xvector<15xf32>>
@@ -264,7 +264,7 @@ func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vecto
   // CHECK:   %[[cond1:.*]] = and %[[cmp]], %[[cond0]] : i1
   // CHECK:   scf.if %[[cond1]] {
   // CHECK:     %[[vec_1d:.*]] = load %0[%[[I]]] : memref<17xvector<15xf32>>
-  // CHECK:     vector.transfer_write %[[vec_1d]], %[[A]][%[[add]], %[[base]]] {permutation_map = #[[MAP1]]} : vector<15xf32>, memref<?x?xf32>
+  // CHECK:     vector.transfer_write %[[vec_1d]], %[[A]][%[[add]], %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // CHECK:   }
   vector.transfer_write %vec, %A[%base, %base]
       {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
