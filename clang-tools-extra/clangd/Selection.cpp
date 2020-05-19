@@ -25,6 +25,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -708,6 +709,24 @@ private:
 
 } // namespace
 
+llvm::SmallString<256> abbreviatedString(DynTypedNode N,
+                                         const PrintingPolicy &PP) {
+  llvm::SmallString<256> Result;
+  {
+    llvm::raw_svector_ostream OS(Result);
+    N.print(OS, PP);
+  }
+  auto Pos = Result.find('\n');
+  if (Pos != llvm::StringRef::npos) {
+    bool MoreText =
+        !llvm::all_of(llvm::StringRef(Result).drop_front(Pos), llvm::isSpace);
+    Result.resize(Pos);
+    if (MoreText)
+      Result.append(" …");
+  }
+  return Result;
+}
+
 void SelectionTree::print(llvm::raw_ostream &OS, const SelectionTree::Node &N,
                           int Indent) const {
   if (N.Selected)
@@ -716,9 +735,7 @@ void SelectionTree::print(llvm::raw_ostream &OS, const SelectionTree::Node &N,
   else
     OS.indent(Indent);
   printNodeKind(OS, N.ASTNode);
-  OS << ' ';
-  N.ASTNode.print(OS, PrintPolicy);
-  OS << "\n";
+  OS << ' ' << abbreviatedString(N.ASTNode, PrintPolicy) << "\n";
   for (const Node *Child : N.Children)
     print(OS, *Child, Indent + 2);
 }

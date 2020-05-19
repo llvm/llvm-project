@@ -173,6 +173,15 @@ TEST_F(ShowSelectionTreeTest, Test) {
         *IntegerLiteral 2
 )";
   EXPECT_EQ(apply("int fcall(int); int x = fca[[ll(2 +]]2);"), Output);
+
+  Output = R"(message:
+ TranslationUnitDecl 
+   FunctionDecl void x()
+     CompoundStmt { …
+       ForStmt for (;;) …
+        *BreakStmt break;
+)";
+  EXPECT_EQ(apply("void x() { for (;;) br^eak; }"), Output);
 }
 
 TWEAK_TEST(DumpRecordLayout);
