@@ -202,12 +202,17 @@ Builder::getSymbolRefAttr(StringRef value,
   return SymbolRefAttr::get(value, nestedReferences, getContext());
 }
 
+ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](bool v) -> Attribute { return getBoolAttr(v); }));
+  return getArrayAttr(attrs);
+}
+
 ArrayAttr Builder::getI32ArrayAttr(ArrayRef<int32_t> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }));
   return getArrayAttr(attrs);
 }
-
 ArrayAttr Builder::getI64ArrayAttr(ArrayRef<int64_t> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }));
