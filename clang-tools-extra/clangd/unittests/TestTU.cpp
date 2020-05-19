@@ -114,6 +114,11 @@ SymbolSlab TestTU::headerSymbols() const {
                                         AST.getCanonicalIncludes()));
 }
 
+RefSlab TestTU::headerRefs() const {
+  auto AST = build();
+  return std::get<1>(indexMainDecls(AST));
+}
+
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
   auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true);
