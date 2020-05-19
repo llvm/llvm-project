@@ -1,0 +1,30 @@
+RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t.foo
+
+RUN: %lldb -x -b %t.foo bar baz quux | FileCheck %s
+RUN: %lldb -x -b -- %t.foo bar baz quux | FileCheck %s
+RUN: %lldb -x -b %t.foo -- bar baz quux | FileCheck %s
+RUN: %lldb -x -b %t.foo bar -- baz quux | FileCheck %s
+RUN: %lldb -x -b %t.foo bar baz -- quux | FileCheck %s
+RUN: %lldb %t.foo -x bar -b baz -- quux | FileCheck %s
+RUN: %lldb -x -b -f %t.foo bar baz quux | FileCheck %s
+RUN: %lldb -x -b -f %t.foo -- bar baz quux | FileCheck %s
+RUN: %lldb -x -b -f %t.foo bar -- baz quux | FileCheck %s
+RUN: %lldb -x -b -f %t.foo bar baz -- quux | FileCheck %s
+
+CHECK: Current executable set to {{.*}}foo
+CHECK: target.run-args "bar" "baz" "quux"
+
+RUN: %lldb -x -b %t.foo -- bar -baz --quux | FileCheck %s --check-prefix DASH
+RUN: %lldb -x -b -- %t.foo bar -baz --quux | FileCheck %s --check-prefix DASH
+RUN: %lldb -x -b -f %t.foo -- bar -baz --quux | FileCheck %s --check-prefix DASH
+
+DASH: Current executable set to {{.*}}foo
+DASH: target.run-args "bar" "-baz" "--quux"
+
+RUN: %lldb -x -b %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefix UNKNOWN
+RUN: %lldb -x -b -f %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefix UNKNOWN
+
+UNKNOWN: warning: ignoring unknown option: -baz
+UNKNOWN: warning: ignoring unknown option: --quux
+UNKNOWN: Current executable set to {{.*}}foo
+UNKNOWN: target.run-args "bar"
