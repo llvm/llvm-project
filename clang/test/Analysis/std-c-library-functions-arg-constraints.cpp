@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-checker=alpha.apiModeling.StdCLibraryFunctionArgs \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
