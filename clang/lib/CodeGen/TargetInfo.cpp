@@ -3745,14 +3745,15 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
       } else {
         FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
       }
-    } else if (IsRegCall && FI.getReturnType()->getAs<ComplexType>()) {
+    } else if (IsRegCall && FI.getReturnType()->getAs<ComplexType>() &&
+               getContext().getCanonicalType(FI.getReturnType()
+                                                 ->getAs<ComplexType>()
+                                                 ->getElementType()) ==
+                   getContext().LongDoubleTy)
       // Complex Long Double Type is passed in Memory when Regcall
       // calling convention is used.
-      const ComplexType *CT = FI.getReturnType()->getAs<ComplexType>();
-      if (getContext().getCanonicalType(CT->getElementType()) ==
-          getContext().LongDoubleTy)
-        FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
-    } else
+      FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
+    else
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   }
 
