@@ -1048,6 +1048,31 @@ static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
 
   Value *CurrentValue = nullptr;
 
+  // Collect the spills for arguments and other not-materializable values.
+
+
+  // It is safe not to sink swift_getFunctionReplacement() users of argument
+  // values.
+  auto isSwiftFunctionReplacementCall = [&F](Instruction *inst) -> bool {
+    auto *callInst = dyn_cast<CallInst>(inst);
+    if (!callInst)
+      return false;
+    auto *bitcast = dyn_cast<BitCastInst>(callInst->getCalledOperand());
+    if (!bitcast)
+      return false;
+    auto callInst2 = dyn_cast<CallInst>(bitcast->getOperand(0));
+    if (!callInst2)
+      return false;
+    auto calledFunc = callInst2->getCalledFunction();
+    if (!calledFunc || callInst2->getParent() != &F.getEntryBlock() ||
+        callInst->getParent()->getSinglePredecessor() != &F.getEntryBlock())
+      return false;
+    if (calledFunc->getName().equals("swift_getFunctionReplacement")) {
+      return true;
+    }
+    return false;
+  };
+
   for (auto const &E : Spills) {
     if (CurrentValue == E.def())
       continue;
@@ -1056,7 +1081,7 @@ static void moveSpillUsesAfterCoroBegin(Function &F, SpillInfo const &Spills,
 
     for (User *U : CurrentValue->users()) {
       Instruction *I = cast<Instruction>(U);
-      if (!DT.dominates(CoroBegin, I)) {
+      if (!DT.dominates(CoroBegin, I) && !isSwiftFunctionReplacementCall(I)) {
         LLVM_DEBUG(dbgs() << "will move: " << *I << "\n");
 
         // TODO: Make this more robust. Currently if we run into a situation
