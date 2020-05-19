@@ -206,7 +206,7 @@ public:
   // lacks a definition for the destructor, non-base destructors must always
   // delegate to or alias the base destructor.
 
-  AddedStructorArgs
+  AddedStructorArgCounts
   buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) override;
 
@@ -253,10 +253,11 @@ public:
 
   void EmitInstanceFunctionProlog(CodeGenFunction &CGF) override;
 
-  AddedStructorArgs
-  addImplicitConstructorArgs(CodeGenFunction &CGF, const CXXConstructorDecl *D,
-                             CXXCtorType Type, bool ForVirtualBase,
-                             bool Delegating, CallArgList &Args) override;
+  AddedStructorArgs getImplicitConstructorArgs(CodeGenFunction &CGF,
+                                               const CXXConstructorDecl *D,
+                                               CXXCtorType Type,
+                                               bool ForVirtualBase,
+                                               bool Delegating) override;
 
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
@@ -1261,10 +1262,10 @@ void MicrosoftCXXABI::EmitVBPtrStores(CodeGenFunction &CGF,
   }
 }
 
-CGCXXABI::AddedStructorArgs
+CGCXXABI::AddedStructorArgCounts
 MicrosoftCXXABI::buildStructorSignature(GlobalDecl GD,
                                         SmallVectorImpl<CanQualType> &ArgTys) {
-  AddedStructorArgs Added;
+  AddedStructorArgCounts Added;
   // TODO: 'for base' flag
   if (isa<CXXDestructorDecl>(GD.getDecl()) &&
       GD.getDtorType() == Dtor_Deleting) {
@@ -1553,9 +1554,9 @@ void MicrosoftCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
   }
 }
 
-CGCXXABI::AddedStructorArgs MicrosoftCXXABI::addImplicitConstructorArgs(
+CGCXXABI::AddedStructorArgs MicrosoftCXXABI::getImplicitConstructorArgs(
     CodeGenFunction &CGF, const CXXConstructorDecl *D, CXXCtorType Type,
-    bool ForVirtualBase, bool Delegating, CallArgList &Args) {
+    bool ForVirtualBase, bool Delegating) {
   assert(Type == Ctor_Complete || Type == Ctor_Base);
 
   // Check if we need a 'most_derived' parameter.
@@ -1570,13 +1571,10 @@ CGCXXABI::AddedStructorArgs MicrosoftCXXABI::addImplicitConstructorArgs(
   } else {
     MostDerivedArg = llvm::ConstantInt::get(CGM.Int32Ty, Type == Ctor_Complete);
   }
-  RValue RV = RValue::get(MostDerivedArg);
   if (FPT->isVariadic()) {
-    Args.insert(Args.begin() + 1, CallArg(RV, getContext().IntTy));
-    return AddedStructorArgs::prefix(1);
+    return AddedStructorArgs::prefix({{MostDerivedArg, getContext().IntTy}});
   }
-  Args.add(RV, getContext().IntTy);
-  return AddedStructorArgs::suffix(1);
+  return AddedStructorArgs::suffix({{MostDerivedArg, getContext().IntTy}});
 }
 
 void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
@@ -4009,7 +4007,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   CGF.EmitCallArgs(Args, FPT, llvm::makeArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
 
   // Insert any ABI-specific implicit constructor arguments.
-  AddedStructorArgs ExtraArgs =
+  AddedStructorArgCounts ExtraArgs =
       addImplicitConstructorArgs(CGF, CD, Ctor_Complete,
                                  /*ForVirtualBase=*/false,
                                  /*Delegating=*/false, Args);

@@ -203,7 +203,7 @@ public:
 
   void EmitCXXConstructors(const CXXConstructorDecl *D) override;
 
-  AddedStructorArgs
+  AddedStructorArgCounts
   buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) override;
 
@@ -222,10 +222,11 @@ public:
 
   void EmitInstanceFunctionProlog(CodeGenFunction &CGF) override;
 
-  AddedStructorArgs
-  addImplicitConstructorArgs(CodeGenFunction &CGF, const CXXConstructorDecl *D,
-                             CXXCtorType Type, bool ForVirtualBase,
-                             bool Delegating, CallArgList &Args) override;
+  AddedStructorArgs getImplicitConstructorArgs(CodeGenFunction &CGF,
+                                               const CXXConstructorDecl *D,
+                                               CXXCtorType Type,
+                                               bool ForVirtualBase,
+                                               bool Delegating) override;
 
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
@@ -1550,7 +1551,7 @@ void ItaniumCXXABI::EmitCXXConstructors(const CXXConstructorDecl *D) {
   }
 }
 
-CGCXXABI::AddedStructorArgs
+CGCXXABI::AddedStructorArgCounts
 ItaniumCXXABI::buildStructorSignature(GlobalDecl GD,
                                       SmallVectorImpl<CanQualType> &ArgTys) {
   ASTContext &Context = getContext();
@@ -1564,9 +1565,9 @@ ItaniumCXXABI::buildStructorSignature(GlobalDecl GD,
       cast<CXXMethodDecl>(GD.getDecl())->getParent()->getNumVBases() != 0) {
     ArgTys.insert(ArgTys.begin() + 1,
                   Context.getPointerType(Context.VoidPtrTy));
-    return AddedStructorArgs::prefix(1);
+    return AddedStructorArgCounts::prefix(1);
   }
-  return AddedStructorArgs{};
+  return AddedStructorArgCounts{};
 }
 
 void ItaniumCXXABI::EmitCXXDestructors(const CXXDestructorDecl *D) {
@@ -1632,9 +1633,9 @@ void ItaniumCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
     CGF.Builder.CreateStore(getThisValue(CGF), CGF.ReturnValue);
 }
 
-CGCXXABI::AddedStructorArgs ItaniumCXXABI::addImplicitConstructorArgs(
+CGCXXABI::AddedStructorArgs ItaniumCXXABI::getImplicitConstructorArgs(
     CodeGenFunction &CGF, const CXXConstructorDecl *D, CXXCtorType Type,
-    bool ForVirtualBase, bool Delegating, CallArgList &Args) {
+    bool ForVirtualBase, bool Delegating) {
   if (!NeedsVTTParameter(GlobalDecl(D, Type)))
     return AddedStructorArgs{};
 
@@ -1642,8 +1643,7 @@ CGCXXABI::AddedStructorArgs ItaniumCXXABI::addImplicitConstructorArgs(
   llvm::Value *VTT =
       CGF.GetVTTParameter(GlobalDecl(D, Type), ForVirtualBase, Delegating);
   QualType VTTTy = getContext().getPointerType(getContext().VoidPtrTy);
-  Args.insert(Args.begin() + 1, CallArg(RValue::get(VTT), VTTTy));
-  return AddedStructorArgs::prefix(1);  // Added one arg.
+  return AddedStructorArgs::prefix({{VTT, VTTTy}});
 }
 
 void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
