@@ -54,9 +54,8 @@ define <16 x i8> @test4(<16 x i8> %V, <2 x i64>* %P) {
 define <16 x i8> @test5(<16 x i8> %V) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, (%rax)
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1,0]
+; CHECK-NEXT:    movaps %xmm1, (%rax)
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1,1]
 ; CHECK-NEXT:    movaps %xmm1, (%rax)
 ; CHECK-NEXT:    pshufb (%rax), %xmm0
