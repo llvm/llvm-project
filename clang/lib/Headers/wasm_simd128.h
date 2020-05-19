@@ -637,11 +637,6 @@ wasm_u8x16_sub_saturate(v128_t __a, v128_t __b) {
                                                      (__i8x16)__b);
 }
 
-static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_mul(v128_t __a,
-                                                           v128_t __b) {
-  return (v128_t)((__u8x16)__a * (__u8x16)__b);
-}
-
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_min(v128_t __a,
                                                            v128_t __b) {
   return (v128_t)__builtin_wasm_min_s_i8x16((__i8x16)__a, (__i8x16)__b);

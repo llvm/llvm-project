@@ -37,11 +37,12 @@ define <16 x i8> @sub_v16i8(<16 x i8> %x, <16 x i8> %y) {
   ret <16 x i8> %a
 }
 
+; i8x16.mul is not in spec
 ; CHECK-LABEL: mul_v16i8:
 ; NO-SIMD128-NOT: i8x16
-; SIMD128-NEXT: .functype mul_v16i8 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: i8x16.mul $push[[R:[0-9]+]]=, $0, $1{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
+; SIMD128-NOT: i8x16.mul
+; SIMD128: i8x16.extract_lane_u
+; SIMD128: i32.mul
 define <16 x i8> @mul_v16i8(<16 x i8> %x, <16 x i8> %y) {
   %a = mul <16 x i8> %x, %y
   ret <16 x i8> %a
@@ -956,12 +957,11 @@ define <2 x i64> @sub_v2i64(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %a
 }
 
-; v2i64.mul is not in spec
 ; CHECK-LABEL: mul_v2i64:
 ; NO-SIMD128-NOT: i64x2
-; SIMD128-NOT: i64x2.mul
-; SIMD128: i64x2.extract_lane
-; SIMD128: i64.mul
+; SIMD128-NEXT: .functype mul_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128: i64x2.mul $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @mul_v2i64(<2 x i64> %x, <2 x i64> %y) {
   %a = mul <2 x i64> %x, %y
   ret <2 x i64> %a
