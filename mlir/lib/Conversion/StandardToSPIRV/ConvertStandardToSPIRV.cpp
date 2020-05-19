@@ -147,13 +147,43 @@ static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
 }
 
 /// Returns the shifted `targetBits`-bit value with the given offset.
-Value shiftValue(Location loc, Value value, Value offset, Value mask,
-                 int targetBits, OpBuilder &builder) {
+static Value shiftValue(Location loc, Value value, Value offset, Value mask,
+                        int targetBits, OpBuilder &builder) {
   Type targetType = builder.getIntegerType(targetBits);
   Value result = builder.create<spirv::BitwiseAndOp>(loc, value, mask);
   return builder.create<spirv::ShiftLeftLogicalOp>(loc, targetType, result,
                                                    offset);
 }
+
+/// Returns true if the operator is operating on unsigned integers.
+/// TODO: Have a TreatOperandsAsUnsignedInteger trait and bake the information
+/// to the ops themselves.
+template <typename SPIRVOp>
+bool isUnsignedOp() {
+  return false;
+}
+
+#define CHECK_UNSIGNED_OP(SPIRVOp)                                             \
+  template <>                                                                  \
+  bool isUnsignedOp<SPIRVOp>() {                                               \
+    return true;                                                               \
+  }
+
+CHECK_UNSIGNED_OP(spirv::AtomicUMaxOp);
+CHECK_UNSIGNED_OP(spirv::AtomicUMinOp);
+CHECK_UNSIGNED_OP(spirv::BitFieldUExtractOp);
+CHECK_UNSIGNED_OP(spirv::ConvertUToFOp);
+CHECK_UNSIGNED_OP(spirv::GroupNonUniformUMaxOp);
+CHECK_UNSIGNED_OP(spirv::GroupNonUniformUMinOp);
+CHECK_UNSIGNED_OP(spirv::UConvertOp);
+CHECK_UNSIGNED_OP(spirv::UDivOp);
+CHECK_UNSIGNED_OP(spirv::UGreaterThanEqualOp);
+CHECK_UNSIGNED_OP(spirv::UGreaterThanOp);
+CHECK_UNSIGNED_OP(spirv::ULessThanEqualOp);
+CHECK_UNSIGNED_OP(spirv::ULessThanOp);
+CHECK_UNSIGNED_OP(spirv::UModOp);
+
+#undef CHECK_UNSIGNED_OP
 
 //===----------------------------------------------------------------------===//
 // Operation conversion
@@ -178,6 +208,10 @@ public:
     auto dstType = this->typeConverter.convertType(operation.getType());
     if (!dstType)
       return failure();
+    if (isUnsignedOp<SPIRVOp>() && dstType != operation.getType()) {
+      return operation.emitError(
+          "bitwidth emulation is not implemented yet on unsigned op");
+    }
     rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType, operands,
                                                   ArrayRef<NamedAttribute>());
     return success();
@@ -581,6 +615,11 @@ CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
   switch (cmpIOp.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
   case cmpPredicate:                                                           \
+    if (isUnsignedOp<spirvOp>() &&                                             \
+        operandType != this->typeConverter.convertType(operandType)) {         \
+      return cmpIOp.emitError(                                                 \
+          "bitwidth emulation is not implemented yet on unsigned op");         \
+    }                                                                          \
     rewriter.replaceOpWithNewOp<spirvOp>(cmpIOp, cmpIOp.getResult().getType(), \
                                          cmpIOpOperands.lhs(),                 \
                                          cmpIOpOperands.rhs());                \
@@ -661,6 +700,18 @@ IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
   Value mask = rewriter.create<spirv::ConstantOp>(
       loc, dstType, rewriter.getIntegerAttr(dstType, (1 << srcBits) - 1));
   result = rewriter.create<spirv::BitwiseAndOp>(loc, dstType, result, mask);
+
+  // Apply sign extension on the loading value unconditionally. The signedness
+  // semantic is carried in the operator itself, we relies other pattern to
+  // handle the casting.
+  IntegerAttr shiftValueAttr =
+      rewriter.getIntegerAttr(dstType, dstBits - srcBits);
+  Value shiftValue =
+      rewriter.create<spirv::ConstantOp>(loc, dstType, shiftValueAttr);
+  result = rewriter.create<spirv::ShiftLeftLogicalOp>(loc, dstType, result,
+                                                      shiftValue);
+  result = rewriter.create<spirv::ShiftRightArithmeticOp>(loc, dstType, result,
+                                                          shiftValue);
   rewriter.replaceOp(loadOp, result);
 
   assert(accessChainOp.use_empty());
