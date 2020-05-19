@@ -40,9 +40,9 @@
       llvm_unreachable("not yet implemented");                                 \
   }
 
-static llvm::cl::opt<bool>
-    dumpBeforeFir("fdebug-dump-pre-fir", llvm::cl::init(false),
-                  llvm::cl::desc("dump the IR tree prior to FIR"));
+static llvm::cl::opt<bool> dumpBeforeFir(
+    "fdebug-dump-pre-fir", llvm::cl::init(false),
+    llvm::cl::desc("dump the Pre-FIR tree prior to FIR generation"));
 
 static llvm::cl::opt<bool>
     disableToDoAssertions("disable-burnside-todo",

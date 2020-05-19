@@ -16,6 +16,13 @@ function foo()
 ! CHECK: }
 end function
 
+! CHECK-LABEL: func @_QPfunctn() -> f32 {
+function functn
+! CHECK-LABEL: fir.global @_QECpi
+  real, parameter :: pi = 3.14
+! CHECK: }
+end function
+
 module testMod
 contains
   ! CHECK-LABEL: func @_QMtestmodPsub() {
