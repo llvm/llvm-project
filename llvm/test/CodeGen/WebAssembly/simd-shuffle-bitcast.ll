@@ -17,3 +17,14 @@ define <4 x i32> @f32x4_splat(float %x) {
   %b = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %b
 }
+
+; CHECK-LABEL: not_a_vec:
+; CHECK-NEXT: .functype not_a_vec (i64, i64) -> (v128){{$}}
+; CHECK-NEXT: i64x2.splat $push[[L1:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $pop[[L1]], $2, 0, 1, 2, 3
+; CHECK-NEXT: return $pop[[R]]
+define <4 x i32> @not_a_vec(i128 %x) {
+  %a = bitcast i128 %x to <4 x i32>
+  %b = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %b
+}
