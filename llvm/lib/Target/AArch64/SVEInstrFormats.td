@@ -7547,6 +7547,12 @@ class sve_int_matmul<bits<2> uns, string asm>
   let ElementSize = ZPR32.ElementSize;
 }
 
+multiclass sve_int_matmul<bits<2> uns, string asm, SDPatternOperator op> {
+  def NAME : sve_int_matmul<uns, asm>;
+
+  def : SVE_3_Op_Pat<nxv4i32, op , nxv4i32, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Integer Dot Product Mixed Sign Group
 //===----------------------------------------------------------------------===//
@@ -7613,6 +7619,12 @@ class sve_fp_matrix_mla<bit sz, string asm, ZPRRegOp zprty>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
   let ElementSize = zprty.ElementSize;
+}
+
+multiclass sve_fp_matrix_mla<bit sz, string asm, ZPRRegOp zprty, SDPatternOperator op, ValueType vt> {
+  def NAME : sve_fp_matrix_mla<sz, asm, zprty>;
+
+  def : SVE_3_Op_Pat<vt, op , vt, vt, vt, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1294,6 +1294,11 @@ class SVE_gather_prf_VS
                 ],
                 [IntrInaccessibleMemOrArgMemOnly, ImmArg<3>]>;
 
+class SVE_MatMul_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>, LLVMSubdivide4VectorType<0>, LLVMSubdivide4VectorType<0>],
+                [IntrNoMem]>;
+
 //
 // Loads
 //
@@ -2253,6 +2258,19 @@ def int_aarch64_sve_tbx  : AdvSIMD_SVE2_TBX_Intrinsic;
 def int_aarch64_sve_bdep_x : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_bext_x : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_bgrp_x : AdvSIMD_2VectorArg_Intrinsic;
+
+
+//
+// SVE ACLE: 7.3. INT8 matrix multiply extensions
+//
+def int_aarch64_sve_ummla : SVE_MatMul_Intrinsic;
+def int_aarch64_sve_smmla : SVE_MatMul_Intrinsic;
+def int_aarch64_sve_usmmla : SVE_MatMul_Intrinsic;
+
+//
+// SVE ACLE: 7.4/5. FP64/FP32 matrix multiply extensions
+//
+def int_aarch64_sve_fmmla : AdvSIMD_3VectorArg_Intrinsic;
 
 }
 
