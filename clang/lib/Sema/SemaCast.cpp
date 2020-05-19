@@ -48,7 +48,8 @@ enum CastType {
   CT_Reinterpret, ///< reinterpret_cast
   CT_Dynamic,     ///< dynamic_cast
   CT_CStyle,      ///< (Type)expr
-  CT_Functional   ///< Type(expr)
+  CT_Functional,  ///< Type(expr)
+  CT_Addrspace    ///< addrspace_cast
 };
 
 namespace {
@@ -88,6 +89,7 @@ namespace {
     void CheckCXXCStyleCast(bool FunctionalCast, bool ListInitialization);
     void CheckCStyleCast();
     void CheckBuiltinBitCast();
+    void CheckAddrspaceCast();
 
     void updatePartOfExplicitCastFlags(CastExpr *CE) {
       // Walk down from the CE to the OrigSrcExpr, and mark all immediate
@@ -233,12 +235,14 @@ static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
                                   unsigned &msg);
 static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
                                         QualType DestType, bool CStyle,
-                                        SourceRange OpRange,
-                                        unsigned &msg,
+                                        SourceRange OpRange, unsigned &msg,
                                         CastKind &Kind);
+static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
+                                         QualType DestType, bool CStyle,
+                                         unsigned &msg, CastKind &Kind);
 
-
-/// ActOnCXXNamedCast - Parse {dynamic,static,reinterpret,const}_cast's.
+/// ActOnCXXNamedCast - Parse
+/// {dynamic,static,reinterpret,const,addrspace}_cast's.
 ExprResult
 Sema::ActOnCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceLocation LAngleBracketLoc, Declarator &D,
@@ -281,6 +285,16 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
 
   switch (Kind) {
   default: llvm_unreachable("Unknown C++ cast!");
+
+  case tok::kw_addrspace_cast:
+    if (!TypeDependent) {
+      Op.CheckAddrspaceCast();
+      if (Op.SrcExpr.isInvalid())
+        return ExprError();
+    }
+    return Op.complete(CXXAddrspaceCastExpr::Create(
+        Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
+        DestTInfo, OpLoc, Parens.getEnd(), AngleBrackets));
 
   case tok::kw_const_cast:
     if (!TypeDependent) {
@@ -385,6 +399,7 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
   case CT_Const:
   case CT_Reinterpret:
   case CT_Dynamic:
+  case CT_Addrspace:
     return false;
 
   // These do.
@@ -883,6 +898,18 @@ void CastOperation::CheckConstCast() {
   if (TCR != TC_Success && msg != 0) {
     Self.Diag(OpRange.getBegin(), msg) << CT_Const
       << SrcExpr.get()->getType() << DestType << OpRange;
+  }
+  if (!isValidCast(TCR))
+    SrcExpr = ExprError();
+}
+
+void CastOperation::CheckAddrspaceCast() {
+  unsigned msg = diag::err_bad_cxx_cast_generic;
+  auto TCR =
+      TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ false, msg, Kind);
+  if (TCR != TC_Success && msg != 0) {
+    Self.Diag(OpRange.getBegin(), msg)
+        << CT_Addrspace << SrcExpr.get()->getType() << DestType << OpRange;
   }
   if (!isValidCast(TCR))
     SrcExpr = ExprError();
@@ -2354,7 +2381,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
 
 static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
                                          QualType DestType, bool CStyle,
-                                         unsigned &msg) {
+                                         unsigned &msg, CastKind &Kind) {
   if (!Self.getLangOpts().OpenCL)
     // FIXME: As compiler doesn't have any information about overlapping addr
     // spaces at the moment we have to be permissive here.
@@ -2363,6 +2390,9 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
   // non-OpenCL mode too, we fast-path above because no other languages
   // define overlapping address spaces currently.
   auto SrcType = SrcExpr.get()->getType();
+  // FIXME: Should this be generalized to references? The reference parameter
+  // however becomes a reference pointee type here and therefore rejected.
+  // Perhaps this is the right behavior though according to C++.
   auto SrcPtrType = SrcType->getAs<PointerType>();
   if (!SrcPtrType)
     return TC_NotApplicable;
@@ -2371,8 +2401,6 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
     return TC_NotApplicable;
   auto SrcPointeeType = SrcPtrType->getPointeeType();
   auto DestPointeeType = DestPtrType->getPointeeType();
-  if (SrcPointeeType.getAddressSpace() == DestPointeeType.getAddressSpace())
-    return TC_NotApplicable;
   if (!DestPtrType->isAddressSpaceOverlapping(*SrcPtrType)) {
     msg = diag::err_bad_cxx_cast_addr_space_mismatch;
     return TC_Failed;
@@ -2381,10 +2409,15 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
       Self.Context.removeAddrSpaceQualType(SrcPointeeType.getCanonicalType());
   auto DestPointeeTypeWithoutAS =
       Self.Context.removeAddrSpaceQualType(DestPointeeType.getCanonicalType());
-  return Self.Context.hasSameType(SrcPointeeTypeWithoutAS,
-                                  DestPointeeTypeWithoutAS)
-             ? TC_Success
-             : TC_NotApplicable;
+  if (Self.Context.hasSameType(SrcPointeeTypeWithoutAS,
+                               DestPointeeTypeWithoutAS)) {
+    Kind = SrcPointeeType.getAddressSpace() == DestPointeeType.getAddressSpace()
+               ? CK_NoOp
+               : CK_AddressSpaceConversion;
+    return TC_Success;
+  } else {
+    return TC_NotApplicable;
+  }
 }
 
 void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
@@ -2515,22 +2548,21 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   Sema::CheckedConversionKind CCK =
       FunctionalStyle ? Sema::CCK_FunctionalCast : Sema::CCK_CStyleCast;
   if (tcr == TC_NotApplicable) {
-    tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg);
+    tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
+                              Kind);
     if (SrcExpr.isInvalid())
       return;
 
-    if (isValidCast(tcr))
-      Kind = CK_AddressSpaceConversion;
-
     if (tcr == TC_NotApplicable) {
-      // ... or if that is not possible, a static_cast, ignoring const, ...
+      // ... or if that is not possible, a static_cast, ignoring const and
+      // addr space, ...
       tcr = TryStaticCast(Self, SrcExpr, DestType, CCK, OpRange, msg, Kind,
                           BasePath, ListInitialization);
       if (SrcExpr.isInvalid())
         return;
 
       if (tcr == TC_NotApplicable) {
-        // ... and finally a reinterpret_cast, ignoring const.
+        // ... and finally a reinterpret_cast, ignoring const and addr space.
         tcr = TryReinterpretCast(Self, SrcExpr, DestType, /*CStyle*/ true,
                                  OpRange, msg, Kind);
         if (SrcExpr.isInvalid())
