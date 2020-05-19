@@ -2107,6 +2107,19 @@ public:
                                                     Data);
   }
 
+  /// Build a new OpenMP 'affinity' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPAffinityClause(SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation ColonLoc,
+                                      SourceLocation EndLoc, Expr *Modifier,
+                                      ArrayRef<Expr *> Locators) {
+    return getSema().ActOnOpenMPAffinityClause(StartLoc, LParenLoc, ColonLoc,
+                                               EndLoc, Modifier, Locators);
+  }
+
   /// Build a new OpenMP 'order' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -9811,6 +9824,28 @@ OMPClause *TreeTransform<Derived>::TransformOMPUsesAllocatorsClause(
   }
   return getDerived().RebuildOMPUsesAllocatorsClause(
       Data, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPAffinityClause(OMPAffinityClause *C) {
+  SmallVector<Expr *, 4> Locators;
+  Locators.reserve(C->varlist_size());
+  ExprResult ModifierRes;
+  if (Expr *Modifier = C->getModifier()) {
+    ModifierRes = getDerived().TransformExpr(Modifier);
+    if (ModifierRes.isInvalid())
+      return nullptr;
+  }
+  for (Expr *E : C->varlists()) {
+    ExprResult Locator = getDerived().TransformExpr(E);
+    if (Locator.isInvalid())
+      continue;
+    Locators.push_back(Locator.get());
+  }
+  return getDerived().RebuildOMPAffinityClause(
+      C->getBeginLoc(), C->getLParenLoc(), C->getColonLoc(), C->getEndLoc(),
+      ModifierRes.get(), Locators);
 }
 
 template <typename Derived>
