@@ -22,21 +22,22 @@ OCKL_MANGLE_T(is_private,addr)(const void *a)
 __attribute__((const)) __global void *
 OCKL_MANGLE_T(to,global)(void *a)
 {
-    __global void *ga = (__global void *)((ulong)a);
-    return (OCKL_MANGLE_T(is_local,addr)(a) | OCKL_MANGLE_T(is_private,addr)(a)) ? (__global void *)0UL : ga;
+    return (OCKL_MANGLE_T(is_local,addr)(a) |
+            OCKL_MANGLE_T(is_private,addr)(a)) ?
+        (__global void *)0 : (__global void*)a;
 }
 
 __attribute__((const)) __local void *
 OCKL_MANGLE_T(to,local)(void *a)
 {
-    uint u = (uint)((ulong)a);
-    return OCKL_MANGLE_T(is_local,addr)(a) ? (__local void *)u : (__local void *)0;
+    return OCKL_MANGLE_T(is_local,addr)(a) ?
+        (__local void *)a : (__local void *)0;
 }
 
 __attribute__((const)) __private void *
 OCKL_MANGLE_T(to,private)(void *a)
 {
-    uint u = (uint)((ulong)a);
-    return OCKL_MANGLE_T(is_private,addr)(a) ? (__private void *)u : (__private void *)0;
+    return OCKL_MANGLE_T(is_private,addr)(a) ?
+        (__private void *)a : (__private void *)0;
 }
 
