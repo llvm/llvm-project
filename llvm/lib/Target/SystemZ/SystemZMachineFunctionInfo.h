@@ -29,8 +29,8 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
 
   SystemZ::GPRRegs SpillGPRRegs;
   SystemZ::GPRRegs RestoreGPRRegs;
-  unsigned VarArgsFirstGPR;
-  unsigned VarArgsFirstFPR;
+  Register VarArgsFirstGPR;
+  Register VarArgsFirstFPR;
   unsigned VarArgsFrameIndex;
   unsigned RegSaveFrameIndex;
   int FramePointerSaveIndex;
@@ -47,7 +47,7 @@ public:
   // this function and the SP offset for the STMG.  These are 0 if no GPRs
   // need to be saved or restored.
   SystemZ::GPRRegs getSpillGPRRegs() const { return SpillGPRRegs; }
-  void setSpillGPRRegs(unsigned Low, unsigned High, unsigned Offs) {
+  void setSpillGPRRegs(Register Low, Register High, unsigned Offs) {
     SpillGPRRegs.LowGPR = Low;
     SpillGPRRegs.HighGPR = High;
     SpillGPRRegs.GPROffset = Offs;
@@ -57,7 +57,7 @@ public:
   // this function and the SP offset for the LMG.  These are 0 if no GPRs
   // need to be saved or restored.
   SystemZ::GPRRegs getRestoreGPRRegs() const { return RestoreGPRRegs; }
-  void setRestoreGPRRegs(unsigned Low, unsigned High, unsigned Offs) {
+  void setRestoreGPRRegs(Register Low, Register High, unsigned Offs) {
     RestoreGPRRegs.LowGPR = Low;
     RestoreGPRRegs.HighGPR = High;
     RestoreGPRRegs.GPROffset = Offs;
@@ -65,12 +65,12 @@ public:
 
   // Get and set the number of fixed (as opposed to variable) arguments
   // that are passed in GPRs to this function.
-  unsigned getVarArgsFirstGPR() const { return VarArgsFirstGPR; }
-  void setVarArgsFirstGPR(unsigned GPR) { VarArgsFirstGPR = GPR; }
+  Register getVarArgsFirstGPR() const { return VarArgsFirstGPR; }
+  void setVarArgsFirstGPR(Register GPR) { VarArgsFirstGPR = GPR; }
 
   // Likewise FPRs.
-  unsigned getVarArgsFirstFPR() const { return VarArgsFirstFPR; }
-  void setVarArgsFirstFPR(unsigned FPR) { VarArgsFirstFPR = FPR; }
+  Register getVarArgsFirstFPR() const { return VarArgsFirstFPR; }
+  void setVarArgsFirstFPR(Register FPR) { VarArgsFirstFPR = FPR; }
 
   // Get and set the frame index of the first stack vararg.
   unsigned getVarArgsFrameIndex() const { return VarArgsFrameIndex; }

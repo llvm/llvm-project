@@ -61,12 +61,12 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// SRetReturnReg - Some subtargets require that sret lowering includes
   /// returning the value of the returned struct in a register. This field
   /// holds the virtual register into which the sret argument is passed.
-  unsigned SRetReturnReg = 0;
+  Register SRetReturnReg;
 
   /// GlobalBaseReg - keeps track of the virtual register initialized for
   /// use as the global base register. This is used for PIC in some PIC
   /// relocation models.
-  unsigned GlobalBaseReg = 0;
+  Register GlobalBaseReg;
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex = 0;
@@ -142,11 +142,11 @@ public:
   int getTCReturnAddrDelta() const { return TailCallReturnAddrDelta; }
   void setTCReturnAddrDelta(int delta) {TailCallReturnAddrDelta = delta;}
 
-  unsigned getSRetReturnReg() const { return SRetReturnReg; }
-  void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
+  Register getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
-  unsigned getGlobalBaseReg() const { return GlobalBaseReg; }
-  void setGlobalBaseReg(unsigned Reg) { GlobalBaseReg = Reg; }
+  Register getGlobalBaseReg() const { return GlobalBaseReg; }
+  void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Idx) { VarArgsFrameIndex = Idx; }
