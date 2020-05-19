@@ -66,10 +66,10 @@ for.end:
   ret void
 }
 ; PGOSUMMARY-LABEL: @bar
-; PGOSUMMARY: %odd.sink = select i1 %tobool, i32* @even, i32* @odd
+; PGOSUMMARY: %odd.sink{{[0-9]*}} = select i1 %tobool{{[0-9]*}}, i32* @even, i32* @odd
 ; PGOSUMMARY-SAME: !prof ![[BW_PGO_BAR:[0-9]+]]
 ; CSPGOSUMMARY-LABEL: @bar
-; CSPGOSUMMARY: %odd.sink = select i1 %tobool, i32* @even, i32* @odd
+; CSPGOSUMMARY: %odd.sink{{[0-9]*}} = select i1 %tobool{{[0-9]*}}, i32* @even, i32* @odd
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR:[0-9]+]]
 
 define internal fastcc i32 @cond(i32 %i) {
