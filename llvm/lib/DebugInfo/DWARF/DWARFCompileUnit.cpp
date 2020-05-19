@@ -15,8 +15,9 @@
 using namespace llvm;
 
 void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(getFormat());
   OS << format("0x%08" PRIx64, getOffset()) << ": Compile Unit:"
-     << " length = " << format("0x%08" PRIx64, getLength())
+     << " length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())
      << " version = " << format("0x%04x", getVersion());
   if (getVersion() >= 5)
     OS << " unit_type = " << dwarf::UnitTypeString(getUnitType());
