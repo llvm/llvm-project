@@ -244,6 +244,7 @@ namespace clang {
     bool isAppendSVALL() const { return Flags & IsAppendSVALL; }
     bool isInsertOp1SVALL() const { return Flags & IsInsertOp1SVALL; }
     bool isGatherPrefetch() const { return Flags & IsGatherPrefetch; }
+    bool isReverseUSDOT() const { return Flags & ReverseUSDOT; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

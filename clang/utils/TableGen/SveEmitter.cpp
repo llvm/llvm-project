@@ -213,13 +213,13 @@ public:
   /// Return true if the intrinsic takes a splat operand.
   bool hasSplat() const {
     // These prototype modifiers are described in arm_sve.td.
-    return Proto.find_first_of("ajfrKLR") != std::string::npos;
+    return Proto.find_first_of("ajfrKLR@") != std::string::npos;
   }
 
   /// Return the parameter index of the splat operand.
   unsigned getSplatIdx() const {
     // These prototype modifiers are described in arm_sve.td.
-    auto Idx = Proto.find_first_of("ajfrKLR");
+    auto Idx = Proto.find_first_of("ajfrKLR@");
     assert(Idx != std::string::npos && Idx > 0 &&
            "Prototype has no splat operand");
     return Idx - 1;
@@ -538,6 +538,12 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     break;
   case 'r':
+    ElementBitwidth /= 4;
+    NumVectors = 0;
+    break;
+  case '@':
+    Signed = false;
+    Float = false;
     ElementBitwidth /= 4;
     NumVectors = 0;
     break;

@@ -68,6 +68,7 @@
 // a: scalar of element type (splat to vector type)
 // R: scalar of 1/2 width element type (splat to vector type)
 // r: scalar of 1/4 width element type (splat to vector type)
+// @: unsigned scalar of 1/4 width element type (splat to vector type)
 // e: 1/2 width unsigned elements, 2x element count
 // b: 1/4 width unsigned elements, 4x element count
 // h: 1/2 width elements, 2x element count
@@ -196,6 +197,7 @@ def IsInsertOp1SVALL          : FlagType<0x04000000>; // Inserts SV_ALL as the s
 def IsPrefetch                : FlagType<0x08000000>; // Contiguous prefetches.
 def IsGatherPrefetch          : FlagType<0x10000000>;
 def ReverseCompare            : FlagType<0x20000000>; // Compare operands must be swapped.
+def ReverseUSDOT              : FlagType<0x40000000>; // Unsigned/signed operands must be swapped.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -1240,6 +1242,14 @@ let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_INT8)" in {
 def SVMLLA_S32   : SInst<"svmmla[_s32]",   "ddqq","i",  MergeNone, "aarch64_sve_smmla">;
 def SVMLLA_U32   : SInst<"svmmla[_u32]",   "ddqq","Ui", MergeNone, "aarch64_sve_ummla">;
 def SVUSMLLA_S32 : SInst<"svusmmla[_s32]", "ddbq","i",  MergeNone, "aarch64_sve_usmmla">;
+
+def SVUSDOT_S    : SInst<"svusdot[_s32]",    "ddbq", "i",       MergeNone, "aarch64_sve_usdot">;
+def SVUSDOT_N_S  : SInst<"svusdot[_n_s32]",  "ddbr", "i",       MergeNone, "aarch64_sve_usdot">;
+def SVSUDOT_S    : SInst<"svsudot[_s32]",    "ddqb", "i",       MergeNone, "aarch64_sve_usdot", [ReverseUSDOT]>;
+def SVSUDOT_N_S  : SInst<"svsudot[_n_s32]",  "ddq@", "i",       MergeNone, "aarch64_sve_usdot", [ReverseUSDOT]>;
+
+def SVUSDOT_LANE_S : SInst<"svusdot_lane[_s32]",  "ddbqi",  "i",   MergeNone, "aarch64_sve_usdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVSUDOT_LANE_S : SInst<"svsudot_lane[_s32]",  "ddqbi",  "i",   MergeNone, "aarch64_sve_sudot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP32)" in {
