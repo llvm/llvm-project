@@ -24,6 +24,9 @@
 # CFLAGS_EXTRAS :=
 # LD_EXTRAS :=
 # SWIFTFLAGS_EXTRAS :=
+# SWIFT_BRIDGING_HEADER :=
+# SWIFT_PRECOMPILE_BRIDGING_HEADER := NO
+# SWIFT_OBJC_HEADER := Foo-Swift.h
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 # USE_PRIVATE_MODULE_CACHE := YES
@@ -315,6 +318,23 @@ endif
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
+
+# Swift bridging headers.
+ifneq "$(SWIFT_BRIDGING_HEADER)" ""
+ifneq "$(SWIFT_PRECOMPILE_BRIDGING_HEADER)" "NO"
+# With PCH.
+SWIFT_BRIDGING_PCH=$(patsubst %.h,%.pch,$(SWIFT_BRIDGING_HEADER))
+SWIFT_HFLAGS = -import-objc-header $(BUILDDIR)/$(SWIFT_BRIDGING_PCH)
+else
+# From source.
+SWIFT_BRIDGING_PCH :=
+SWIFT_HFLAGS = -import-objc-header $(SRCDIR)/$(SWIFT_BRIDGING_HEADER)
+endif
+else
+# No bridging header.
+SWIFT_BRIDGING_PCH :=
+SWIFT_HFLAGS :=
+endif
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
@@ -677,15 +697,21 @@ MODULENAME?=$(shell basename $(EXE) .out)
 else
 EXE = $(DYLIB_FILENAME)
 MODULENAME?=$(DYLIB_NAME)
-SWIFT_FEFLAGS += -parse-as-library
+PARSE_AS_LIBRARY = -parse-as-library
+endif
+
+ifneq "$(SWIFT_OBJC_HEADER)" ""
+SWIFT_OBJC_HEADER_FLAGS=-emit-objc-header-path $(SWIFT_OBJC_HEADER)
 endif
 
 VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
-%.o: %.swift
+%.o: %.swift $(SWIFT_BRIDGING_PCH)
 	@echo "### Compiling" $<
-	$(SWIFT_FE) -c -primary-file $^ \
-	  $(filter-out $(VPATH)/$^,$(filter-out $^,$(VPATHSOURCES))) \
-	  $(SWIFT_FEFLAGS) -module-name $(MODULENAME) -emit-module-path \
+	$(SWIFT_FE) -c -primary-file $< \
+	  $(filter-out $(VPATH)/$<,$(filter-out $<,$(VPATHSOURCES))) \
+	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
+	  $(SWIFT_OBJC_HEADER_FLAGS) \
+	  -module-name $(MODULENAME) -emit-module-path \
 	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@) \
 	  -o $(BUILDDIR)/$@
 
@@ -714,13 +740,20 @@ endif
 
 $(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
 	@echo "### Merging swift modules for $(MODULENAME)"
-	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -merge-modules \
 	  -emit-module $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
 	  -emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface \
 	  -sil-merge-partial-modules \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
 	  -module-name $(MODULENAME) \
 	  -o $(BUILDDIR)/$@
+
+# Swift precompiled bridging headers. Don't override the Clang .pch build rule.
+ifneq "$(SWIFT_BRIDGING_PCH)" ""
+$(SWIFT_BRIDGING_PCH): $(SWIFT_BRIDGING_HEADER)
+	@echo "### Precompiling" $<
+	$(SWIFT_FE) -emit-pch $(SWIFT_FEFLAGS) $< -o $(BUILDDIR)/$@
+endif
 
 else # USESWIFTDRIVER = 0
 #----------------------------------------------------------------------
