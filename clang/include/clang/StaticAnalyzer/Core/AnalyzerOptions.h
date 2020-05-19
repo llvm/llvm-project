@@ -206,7 +206,7 @@ public:
   ConfigTable Config;
   AnalysisStores AnalysisStoreOpt = RegionStoreModel;
   AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
-  AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
+  AnalysisDiagClients AnalysisDiagOpt = PD_TEXT_MINIMAL;
   AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
 
   std::string AnalyzeSpecificFunction;
