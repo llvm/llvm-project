@@ -108,6 +108,18 @@ function(add_mlir_library name)
 
   # MLIR libraries uniformly depend on LLVMSupport.  Just specify it once here.
   list(APPEND ARG_LINK_COMPONENTS Support)
+
+  # LINK_COMPONENTS is necessary to allow libLLVM.so to be properly
+  # substituted for individual library dependencies if LLVM_LINK_LLVM_DYLIB
+  # Perhaps this should be in llvm_add_library instead?  However, it fails
+  # on libclang-cpp.so
+  get_property(llvm_component_libs GLOBAL PROPERTY LLVM_COMPONENT_LIBS)
+  foreach(lib ${ARG_LINK_LIBS})
+    if(${lib} IN_LIST llvm_component_libs)
+      message(SEND_ERROR "${name} specifies LINK_LIBS ${lib}, but LINK_LIBS cannot be used for LLVM libraries.  Please use LINK_COMPONENTS instead.")
+    endif()
+  endforeach()
+
   list(APPEND ARG_DEPENDS mlir-generic-headers)
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
 
