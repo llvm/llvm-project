@@ -55,7 +55,6 @@ add_mlir_library(MLIRJitRunner
   Core
   OrcJIT
   JITLink
-  Support
 
   LINK_LIBS PUBLIC
   MLIRExecutionEngine

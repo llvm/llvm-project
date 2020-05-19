@@ -12,7 +12,5 @@ add_mlir_dialect_library(MLIRStandardOpsTransforms
   MLIRIR
   MLIRPass
   MLIRStandardOps
-  MLIRSupport
   MLIRTransforms
-  LLVMSupport
   )
