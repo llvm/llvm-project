@@ -107,5 +107,3 @@
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
-// CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 104
