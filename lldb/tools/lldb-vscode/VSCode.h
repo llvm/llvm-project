@@ -86,6 +86,7 @@ struct VSCode {
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
+  std::vector<std::string> terminate_commands;
   lldb::tid_t focus_tid;
   bool sent_terminated_event;
   bool stop_at_entry;
@@ -132,6 +133,7 @@ struct VSCode {
   void RunPreRunCommands();
   void RunStopCommands();
   void RunExitCommands();
+  void RunTerminateCommands();
 
   /// Create a new SBTarget object from the given request arguments.
   /// \param[in] arguments
