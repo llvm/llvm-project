@@ -120,7 +120,29 @@ public:
 enum {
 #define LLDB_PROPERTIES_process
 #include "TargetPropertiesEnum.inc"
+  ePropertyExperimental,
 };
+
+#define LLDB_PROPERTIES_process_experimental
+#include "TargetProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_process_experimental
+#include "TargetPropertiesEnum.inc"
+};
+
+class ProcessExperimentalOptionValueProperties : public OptionValueProperties {
+public:
+  ProcessExperimentalOptionValueProperties()
+      : OptionValueProperties(
+            ConstString(Properties::GetExperimentalSettingsName())) {}
+};
+
+ProcessExperimentalProperties::ProcessExperimentalProperties()
+    : Properties(OptionValuePropertiesSP(
+          new ProcessExperimentalOptionValueProperties())) {
+  m_collection_sp->Initialize(g_process_experimental_properties);
+}
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)
     : Properties(),
@@ -141,6 +163,13 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
   }
+
+  m_experimental_properties_up.reset(new ProcessExperimentalProperties());
+  m_collection_sp->AppendProperty(
+      ConstString(Properties::GetExperimentalSettingsName()),
+      ConstString("Experimental settings - setting these won't produce "
+                  "errors if the setting is not present."),
+      true, m_experimental_properties_up->GetValueProperties());
 }
 
 ProcessProperties::~ProcessProperties() = default;
@@ -240,6 +269,29 @@ std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
       nullptr, idx, g_process_properties[idx].default_uint_value);
   return std::chrono::seconds(value);
+}
+
+bool ProcessProperties::GetOSPluginReportsAllThreads() const {
+  const bool fail_value = true;
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (!exp_values)
+    return fail_value;
+
+  return exp_values->GetPropertyAtIndexAsBoolean(
+      nullptr, ePropertyOSPluginReportsAllThreads, fail_value);
+}
+
+void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndexAsBoolean(
+        nullptr, ePropertyOSPluginReportsAllThreads, does_report);
 }
 
 Status ProcessLaunchCommandOptions::SetOptionValue(
@@ -1213,7 +1265,7 @@ void Process::UpdateThreadListIfNeeded() {
           // See if the OS plugin reports all threads.  If it does, then
           // it is safe to clear unseen thread's plans here.  Otherwise we 
           // should preserve them in case they show up again:
-          clear_unused_threads = GetTarget().GetOSPluginReportsAllThreads();
+          clear_unused_threads = GetOSPluginReportsAllThreads();
 
           // Turn off dynamic types to ensure we don't run any expressions.
           // Objective-C can run an expression to determine if a SBValue is a
