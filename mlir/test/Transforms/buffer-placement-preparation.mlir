@@ -1,10 +1,48 @@
-// RUN: mlir-opt -test-buffer-placement-preparation -split-input-file %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -test-buffer-placement-preparation -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
 
 // CHECK-LABEL: func @func_signature_conversion
 func @func_signature_conversion(%arg0: tensor<4x8xf32>) {
     return
 }
 // CHECK: ({{.*}}: memref<4x8xf32>) {
+
+// -----
+
+// expected-error @below {{BufferAssignmentPlacer doesn't currently support functions which return memref typed values}}
+// expected-error @below {{failed to legalize operation 'func'}}
+func @memref_in_function_results(%arg0: tensor<4x8xf32>) -> (tensor<4x8xf32>, memref<5xf32>) {
+  %0 = alloc() : memref<5xf32>
+  return %arg0, %0 : tensor<4x8xf32>, memref<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @no_signature_conversion_is_needed
+func @no_signature_conversion_is_needed(%arg0: memref<4x8xf32>) {
+  return
+}
+// CHECK: ({{.*}}: memref<4x8xf32>) {
+
+// -----
+
+// CHECK-LABEL: func @no_signature_conversion_is_needed
+func @no_signature_conversion_is_needed(%arg0: i1, %arg1: f16) -> (i1, f16){
+  return %arg0, %arg1 : i1, f16
+}
+// CHECK: (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: f16) -> (i1, f16)
+// CHECK: return %[[ARG0]], %[[ARG1]]
+
+// -----
+
+// CHECK-LABEL: func @complex_signature_conversion
+func @complex_signature_conversion(%arg0: tensor<4x8xf32>, %arg1: i1, %arg2: tensor<5x5xf64>,%arg3: f16) -> (i1, tensor<5x5xf64>, f16, tensor<4x8xf32>) {
+    return %arg1, %arg2, %arg3, %arg0 : i1, tensor<5x5xf64>, f16, tensor<4x8xf32>
+}
+//      CHECK: (%[[ARG0:.*]]: memref<4x8xf32>, %[[ARG1:.*]]: i1, %[[ARG2:.*]]: memref<5x5xf64>, %[[ARG3:.*]]: f16,
+// CHECK-SAME: %[[RESULT1:.*]]: memref<5x5xf64>, %[[RESULT2:.*]]: memref<4x8xf32>) -> (i1, f16) {
+// CHECK-NEXT: linalg.copy(%[[ARG2]], %[[RESULT1]])
+// CHECK-NEXT: linalg.copy(%[[ARG0]], %[[RESULT2]])
+// CHECK-NEXT: return %[[ARG1]], %[[ARG3]]
 
 // -----
 

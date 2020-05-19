@@ -23,7 +23,7 @@ using namespace mlir;
 namespace {
 /// This pass tests the computeAllocPosition helper method and two provided
 /// operation converters, FunctionAndBlockSignatureConverter and
-/// NonVoidToVoidReturnOpConverter. Furthermore, this pass converts linalg
+/// NoBufferOperandsReturnOpConverter. Furthermore, this pass converts linalg
 /// operations on tensors to linalg operations on buffers to prepare them for
 /// the BufferPlacement pass that can be applied afterwards.
 struct TestBufferPlacementPreparationPass
@@ -82,7 +82,6 @@ struct TestBufferPlacementPreparationPass
         auto type = result.getType().cast<ShapedType>();
         entryBlock.addArgument(type.getElementType());
       }
-
       rewriter.eraseOp(op);
       return success();
     }
@@ -95,7 +94,7 @@ struct TestBufferPlacementPreparationPass
     patterns->insert<
                    FunctionAndBlockSignatureConverter,
                    GenericOpConverter,
-                   NonVoidToVoidReturnOpConverter<
+                   NoBufferOperandsReturnOpConverter<
                       ReturnOp, ReturnOp, linalg::CopyOp>
     >(context, placer, converter);
     // clang-format on
@@ -105,8 +104,9 @@ struct TestBufferPlacementPreparationPass
     auto &context = getContext();
     ConversionTarget target(context);
     BufferAssignmentTypeConverter converter;
-    // Make all linalg operations illegal as long as they work on tensors.
     target.addLegalDialect<StandardOpsDialect>();
+
+    // Make all linalg operations illegal as long as they work on tensors.
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
         Optional<ConversionTarget::DynamicLegalityCallbackFn>(
             [&](Operation *op) {
@@ -117,9 +117,12 @@ struct TestBufferPlacementPreparationPass
                      llvm::none_of(op->getResultTypes(), isIllegalType);
             }));
 
-    // Mark return operations illegal as long as they return values.
-    target.addDynamicallyLegalOp<mlir::ReturnOp>(
-        [](mlir::ReturnOp returnOp) { return returnOp.getNumOperands() == 0; });
+    // Mark std.ReturnOp illegal as long as an operand is tensor or buffer.
+    target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
+      return llvm::none_of(returnOp.getOperandTypes(), [&](Type type) {
+        return type.isa<MemRefType>() || !converter.isLegal(type);
+      });
+    });
 
     // Mark the function whose arguments are in tensor-type illegal.
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp funcOp) {
