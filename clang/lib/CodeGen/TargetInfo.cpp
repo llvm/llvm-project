@@ -1544,11 +1544,11 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
                                                : ABIArgInfo::getDirect());
 }
 
-static bool isSSEVectorType(ASTContext &Context, QualType Ty) {
+static bool isSIMDVectorType(ASTContext &Context, QualType Ty) {
   return Ty->getAs<VectorType>() && Context.getTypeSize(Ty) == 128;
 }
 
-static bool isRecordWithSSEVectorType(ASTContext &Context, QualType Ty) {
+static bool isRecordWithSIMDVectorType(ASTContext &Context, QualType Ty) {
   const RecordType *RT = Ty->getAs<RecordType>();
   if (!RT)
     return 0;
@@ -1557,16 +1557,16 @@ static bool isRecordWithSSEVectorType(ASTContext &Context, QualType Ty) {
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     for (const auto &I : CXXRD->bases())
-      if (!isRecordWithSSEVectorType(Context, I.getType()))
+      if (!isRecordWithSIMDVectorType(Context, I.getType()))
         return false;
 
   for (const auto *i : RD->fields()) {
     QualType FT = i->getType();
 
-    if (isSSEVectorType(Context, FT))
+    if (isSIMDVectorType(Context, FT))
       return true;
 
-    if (isRecordWithSSEVectorType(Context, FT))
+    if (isRecordWithSIMDVectorType(Context, FT))
       return true;
   }
 
@@ -1587,8 +1587,8 @@ unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
   }
 
   // Otherwise, if the type contains an SSE vector type, the alignment is 16.
-  if (Align >= 16 && (isSSEVectorType(getContext(), Ty) ||
-                      isRecordWithSSEVectorType(getContext(), Ty)))
+  if (Align >= 16 && (isSIMDVectorType(getContext(), Ty) ||
+                      isRecordWithSIMDVectorType(getContext(), Ty)))
     return 16;
 
   return MinABIStackAlignInBytes;
@@ -4247,6 +4247,224 @@ Address WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*allowHigherAlign*/ false);
 }
 
+static bool PPC_initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
+                                        llvm::Value *Address, bool Is64Bit,
+                                        bool IsAIX) {
+  // This is calculated from the LLVM and GCC tables and verified
+  // against gcc output.  AFAIK all PPC ABIs use the same encoding.
+
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+
+  llvm::IntegerType *i8 = CGF.Int8Ty;
+  llvm::Value *Four8 = llvm::ConstantInt::get(i8, 4);
+  llvm::Value *Eight8 = llvm::ConstantInt::get(i8, 8);
+  llvm::Value *Sixteen8 = llvm::ConstantInt::get(i8, 16);
+
+  // 0-31: r0-31, the 4-byte or 8-byte general-purpose registers
+  AssignToArrayRange(Builder, Address, Is64Bit ? Eight8 : Four8, 0, 31);
+
+  // 32-63: fp0-31, the 8-byte floating-point registers
+  AssignToArrayRange(Builder, Address, Eight8, 32, 63);
+
+  // 64-67 are various 4-byte or 8-byte special-purpose registers:
+  // 64: mq
+  // 65: lr
+  // 66: ctr
+  // 67: ap
+  AssignToArrayRange(Builder, Address, Is64Bit ? Eight8 : Four8, 64, 67);
+
+  // 68-76 are various 4-byte special-purpose registers:
+  // 68-75 cr0-7
+  // 76: xer
+  AssignToArrayRange(Builder, Address, Four8, 68, 76);
+
+  // 77-108: v0-31, the 16-byte vector registers
+  AssignToArrayRange(Builder, Address, Sixteen8, 77, 108);
+
+  // 109: vrsave
+  // 110: vscr
+  AssignToArrayRange(Builder, Address, Is64Bit ? Eight8 : Four8, 109, 110);
+
+  // AIX does not utilize the rest of the registers.
+  if (IsAIX)
+    return false;
+
+  // 111: spe_acc
+  // 112: spefscr
+  // 113: sfp
+  AssignToArrayRange(Builder, Address, Is64Bit ? Eight8 : Four8, 111, 113);
+
+  if (!Is64Bit)
+    return false;
+
+  // TODO: Need to verify if these registers are used on 64 bit AIX with Power8
+  // or above CPU.
+  // 64-bit only registers:
+  // 114: tfhar
+  // 115: tfiar
+  // 116: texasr
+  AssignToArrayRange(Builder, Address, Eight8, 114, 116);
+
+  return false;
+}
+
+// AIX
+namespace {
+/// AIXABIInfo - The AIX XCOFF ABI information.
+class AIXABIInfo : public ABIInfo {
+  const bool Is64Bit;
+  const unsigned PtrByteSize;
+  CharUnits getParamTypeAlignment(QualType Ty) const;
+
+public:
+  AIXABIInfo(CodeGen::CodeGenTypes &CGT, bool Is64Bit)
+      : ABIInfo(CGT), Is64Bit(Is64Bit), PtrByteSize(Is64Bit ? 8 : 4) {}
+
+  bool isPromotableTypeForABI(QualType Ty) const;
+
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
+
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
+
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
+};
+
+class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
+  const bool Is64Bit;
+
+public:
+  AIXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, bool Is64Bit)
+      : TargetCodeGenInfo(std::make_unique<AIXABIInfo>(CGT, Is64Bit)),
+        Is64Bit(Is64Bit) {}
+  int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
+    return 1; // r1 is the dedicated stack pointer
+  }
+
+  bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
+                               llvm::Value *Address) const override;
+};
+} // namespace
+
+// Return true if the ABI requires Ty to be passed sign- or zero-
+// extended to 32/64 bits.
+bool AIXABIInfo::isPromotableTypeForABI(QualType Ty) const {
+  // Treat an enum type as its underlying type.
+  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+    Ty = EnumTy->getDecl()->getIntegerType();
+
+  // Promotable integer types are required to be promoted by the ABI.
+  if (Ty->isPromotableIntegerType())
+    return true;
+
+  if (!Is64Bit)
+    return false;
+
+  // For 64 bit mode, in addition to the usual promotable integer types, we also
+  // need to extend all 32-bit types, since the ABI requires promotion to 64
+  // bits.
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
+    switch (BT->getKind()) {
+    case BuiltinType::Int:
+    case BuiltinType::UInt:
+      return true;
+    default:
+      break;
+    }
+
+  return false;
+}
+
+ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
+  if (RetTy->isAnyComplexType())
+    llvm::report_fatal_error("complex type is not supported on AIX yet");
+
+  if (RetTy->isVectorType())
+    llvm::report_fatal_error("vector type is not supported on AIX yet");
+
+  if (RetTy->isVoidType())
+    return ABIArgInfo::getIgnore();
+
+  // TODO:  Evaluate if AIX power alignment rule would have an impact on the
+  // alignment here.
+  if (isAggregateTypeForABI(RetTy))
+    return getNaturalAlignIndirect(RetTy);
+
+  return (isPromotableTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                        : ABIArgInfo::getDirect());
+}
+
+ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  if (Ty->isAnyComplexType())
+    llvm::report_fatal_error("complex type is not supported on AIX yet");
+
+  if (Ty->isVectorType())
+    llvm::report_fatal_error("vector type is not supported on AIX yet");
+
+  // TODO:  Evaluate if AIX power alignment rule would have an impact on the
+  // alignment here.
+  if (isAggregateTypeForABI(Ty)) {
+    // Records with non-trivial destructors/copy-constructors should not be
+    // passed by value.
+    if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+
+    CharUnits CCAlign = getParamTypeAlignment(Ty);
+    CharUnits TyAlign = getContext().getTypeAlignInChars(Ty);
+
+    return ABIArgInfo::getIndirect(CCAlign, /*ByVal*/ true,
+                                   /*Realign*/ TyAlign > CCAlign);
+  }
+
+  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                     : ABIArgInfo::getDirect());
+}
+
+CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
+  if (Ty->isAnyComplexType())
+    llvm::report_fatal_error("complex type is not supported on AIX yet");
+
+  if (Ty->isVectorType())
+    llvm::report_fatal_error("vector type is not supported on AIX yet");
+
+  // If the structure contains a vector type, the alignment is 16.
+  if (isRecordWithSIMDVectorType(getContext(), Ty))
+    return CharUnits::fromQuantity(16);
+
+  return CharUnits::fromQuantity(PtrByteSize);
+}
+
+Address AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                              QualType Ty) const {
+  if (Ty->isAnyComplexType())
+    llvm::report_fatal_error("complex type is not supported on AIX yet");
+
+  if (Ty->isVectorType())
+    llvm::report_fatal_error("vector type is not supported on AIX yet");
+
+  auto TypeInfo = getContext().getTypeInfoInChars(Ty);
+  TypeInfo.second = getParamTypeAlignment(Ty);
+
+  CharUnits SlotSize = CharUnits::fromQuantity(PtrByteSize);
+
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
+                          SlotSize, /*AllowHigher*/ true);
+}
+
+bool AIXTargetCodeGenInfo::initDwarfEHRegSizeTable(
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
+  return PPC_initDwarfEHRegSizeTable(CGF, Address, Is64Bit, /*IsAIX*/ true);
+}
+
 // PowerPC-32
 namespace {
 /// PPC32_SVR4_ABIInfo - The 32-bit PowerPC ELF (SVR4) ABI information.
@@ -4524,42 +4742,8 @@ bool PPC32TargetCodeGenInfo::isStructReturnInRegABI(
 bool
 PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                                 llvm::Value *Address) const {
-  // This is calculated from the LLVM and GCC tables and verified
-  // against gcc output.  AFAIK all ABIs use the same encoding.
-
-  CodeGen::CGBuilderTy &Builder = CGF.Builder;
-
-  llvm::IntegerType *i8 = CGF.Int8Ty;
-  llvm::Value *Four8 = llvm::ConstantInt::get(i8, 4);
-  llvm::Value *Eight8 = llvm::ConstantInt::get(i8, 8);
-  llvm::Value *Sixteen8 = llvm::ConstantInt::get(i8, 16);
-
-  // 0-31: r0-31, the 4-byte general-purpose registers
-  AssignToArrayRange(Builder, Address, Four8, 0, 31);
-
-  // 32-63: fp0-31, the 8-byte floating-point registers
-  AssignToArrayRange(Builder, Address, Eight8, 32, 63);
-
-  // 64-76 are various 4-byte special-purpose registers:
-  // 64: mq
-  // 65: lr
-  // 66: ctr
-  // 67: ap
-  // 68-75 cr0-7
-  // 76: xer
-  AssignToArrayRange(Builder, Address, Four8, 64, 76);
-
-  // 77-108: v0-31, the 16-byte vector registers
-  AssignToArrayRange(Builder, Address, Sixteen8, 77, 108);
-
-  // 109: vrsave
-  // 110: vscr
-  // 111: spe_acc
-  // 112: spefscr
-  // 113: sfp
-  AssignToArrayRange(Builder, Address, Four8, 109, 113);
-
-  return false;
+  return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ false,
+                                     /*IsAIX*/ false);
 }
 
 // PowerPC-64
@@ -5106,66 +5290,19 @@ Address PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           TypeInfo, SlotSize, /*AllowHigher*/ true);
 }
 
-static bool
-PPC64_initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
-                              llvm::Value *Address) {
-  // This is calculated from the LLVM and GCC tables and verified
-  // against gcc output.  AFAIK all ABIs use the same encoding.
-
-  CodeGen::CGBuilderTy &Builder = CGF.Builder;
-
-  llvm::IntegerType *i8 = CGF.Int8Ty;
-  llvm::Value *Four8 = llvm::ConstantInt::get(i8, 4);
-  llvm::Value *Eight8 = llvm::ConstantInt::get(i8, 8);
-  llvm::Value *Sixteen8 = llvm::ConstantInt::get(i8, 16);
-
-  // 0-31: r0-31, the 8-byte general-purpose registers
-  AssignToArrayRange(Builder, Address, Eight8, 0, 31);
-
-  // 32-63: fp0-31, the 8-byte floating-point registers
-  AssignToArrayRange(Builder, Address, Eight8, 32, 63);
-
-  // 64-67 are various 8-byte special-purpose registers:
-  // 64: mq
-  // 65: lr
-  // 66: ctr
-  // 67: ap
-  AssignToArrayRange(Builder, Address, Eight8, 64, 67);
-
-  // 68-76 are various 4-byte special-purpose registers:
-  // 68-75 cr0-7
-  // 76: xer
-  AssignToArrayRange(Builder, Address, Four8, 68, 76);
-
-  // 77-108: v0-31, the 16-byte vector registers
-  AssignToArrayRange(Builder, Address, Sixteen8, 77, 108);
-
-  // 109: vrsave
-  // 110: vscr
-  // 111: spe_acc
-  // 112: spefscr
-  // 113: sfp
-  // 114: tfhar
-  // 115: tfiar
-  // 116: texasr
-  AssignToArrayRange(Builder, Address, Eight8, 109, 116);
-
-  return false;
-}
-
 bool
 PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
   CodeGen::CodeGenFunction &CGF,
   llvm::Value *Address) const {
-
-  return PPC64_initDwarfEHRegSizeTable(CGF, Address);
+  return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
+                                     /*IsAIX*/ false);
 }
 
 bool
 PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                                 llvm::Value *Address) const {
-
-  return PPC64_initDwarfEHRegSizeTable(CGF, Address);
+  return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
+                                     /*IsAIX*/ false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -10492,6 +10629,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   }
 
   case llvm::Triple::ppc: {
+    if (Triple.isOSAIX())
+      return SetCGInfo(new AIXTargetCodeGenInfo(Types, /*Is64Bit*/ false));
+
     bool IsSoftFloat =
         CodeGenOpts.FloatABI == "soft" || getTarget().hasFeature("spe");
     bool RetSmallStructInRegABI =
@@ -10500,6 +10640,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
         new PPC32TargetCodeGenInfo(Types, IsSoftFloat, RetSmallStructInRegABI));
   }
   case llvm::Triple::ppc64:
+    if (Triple.isOSAIX())
+      return SetCGInfo(new AIXTargetCodeGenInfo(Types, /*Is64Bit*/ true));
+
     if (Triple.isOSBinFormatELF()) {
       PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv1;
       if (getTarget().getABI() == "elfv2")
@@ -10509,8 +10652,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
       return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX,
                                                         IsSoftFloat));
-    } else
-      return SetCGInfo(new PPC64TargetCodeGenInfo(Types));
+    }
+    return SetCGInfo(new PPC64TargetCodeGenInfo(Types));
   case llvm::Triple::ppc64le: {
     assert(Triple.isOSBinFormatELF() && "PPC64 LE non-ELF not supported!");
     PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv2;
