@@ -15,17 +15,13 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/simple_ilist.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/Printable.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -40,6 +36,7 @@ class MachineFunction;
 class MCSymbol;
 class ModuleSlotTracker;
 class Pass;
+class Printable;
 class SlotIndexes;
 class StringRef;
 class raw_ostream;
