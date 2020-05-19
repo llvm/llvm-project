@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CopyConfig.h"
-#include "llvm/ADT/BitVector.h"
+
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
