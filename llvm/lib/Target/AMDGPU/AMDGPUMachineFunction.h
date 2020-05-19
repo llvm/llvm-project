@@ -23,26 +23,26 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
 protected:
-  uint64_t ExplicitKernArgSize; // Cache for this.
+  uint64_t ExplicitKernArgSize = 0; // Cache for this.
   Align MaxKernArgAlign;        // Cache for this.
 
   /// Number of bytes in the LDS that are being used.
-  unsigned LDSSize;
+  unsigned LDSSize = 0;
 
   // State of MODE register, assumed FP mode.
   AMDGPU::SIModeRegisterDefaults Mode;
 
   // Kernels + shaders. i.e. functions called by the driver and not called
   // by other functions.
-  bool IsEntryFunction;
+  bool IsEntryFunction = false;
 
-  bool NoSignedZerosFPMath;
+  bool NoSignedZerosFPMath = false;
 
   // Function may be memory bound.
-  bool MemoryBound;
+  bool MemoryBound = false;
 
   // Kernel may need limited waves per EU for better performance.
-  bool WaveLimiter;
+  bool WaveLimiter = false;
 
 public:
   AMDGPUMachineFunction(const MachineFunction &MF);
