@@ -214,3 +214,113 @@ define i64 @reassociate_mulld(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
   ret i64 %t2
 }
 
+define double @reassociate_mamaa_double(double %0, double %1, double %2, double %3, double %4, double %5) {
+; CHECK-LABEL: reassociate_mamaa_double:
+; CHECK:       # %bb.0:
+; CHECK-QPX:   fadd 0, 2, 1
+; CHECK-QPX:   fmadd 0, 4, 3, 0
+; CHECK-QPX:   fmadd 1, 6, 5, 0
+; CHECK-PWR:   xsadddp 1, 2, 1
+; CHECK-PWR:   xsmaddadp 1, 4, 3
+; CHECK-PWR:   xsmaddadp 1, 6, 5
+; CHECK-NEXT:  blr
+  %7 = fmul reassoc nsz double %3, %2
+  %8 = fmul reassoc nsz double %5, %4
+  %9 = fadd reassoc nsz double %1, %0
+  %10 = fadd reassoc nsz double %9, %7
+  %11 = fadd reassoc nsz double %10, %8
+  ret double %11
+}
+
+; FIXME: should use xsmaddasp instead of fmadds for pwr7 arch.
+define float @reassociate_mamaa_float(float %0, float %1, float %2, float %3, float %4, float %5) {
+; CHECK-LABEL: reassociate_mamaa_float:
+; CHECK:   # %bb.0:
+; CHECK:   fadds 0, 2, 1
+; CHECK:   fmadds 0, 4, 3, 0
+; CHECK:   fmadds 1, 6, 5, 0
+; CHECK-NEXT:  blr
+  %7 = fmul reassoc nsz float %3, %2
+  %8 = fmul reassoc nsz float %5, %4
+  %9 = fadd reassoc nsz float %1, %0
+  %10 = fadd reassoc nsz float %9, %7
+  %11 = fadd reassoc nsz float %10, %8
+  ret float %11
+}
+
+define <4 x float> @reassociate_mamaa_vec(<4 x float> %0, <4 x float> %1, <4 x float> %2, <4 x float> %3, <4 x float> %4, <4 x float> %5) {
+; CHECK-LABEL: reassociate_mamaa_vec:
+; CHECK:       # %bb.0:
+; CHECK-QPX:   qvfadds 0, 2, 1
+; CHECK-QPX:   qvfmadds 0, 4, 3, 0
+; CHECK-QPX:   qvfmadds 1, 6, 5, 0
+; CHECK-PWR:   xvaddsp 34, 35, 34
+; CHECK-PWR:   xvmaddasp 34, 37, 36
+; CHECK-PWR:   xvmaddasp 34, 39, 38
+; CHECK-NEXT:  blr
+  %7 = fmul reassoc nsz <4 x float> %3, %2
+  %8 = fmul reassoc nsz <4 x float> %5, %4
+  %9 = fadd reassoc nsz <4 x float> %1, %0
+  %10 = fadd reassoc nsz <4 x float> %9, %7
+  %11 = fadd reassoc nsz <4 x float> %10, %8
+  ret <4 x float> %11
+}
+
+define double @reassociate_mamama_double(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, double %8) {
+; CHECK-LABEL: reassociate_mamama_double:
+; CHECK:       # %bb.0:
+; CHECK-QPX:       fmadd 0, 2, 1, 7
+; CHECK-QPX-DAG:   fmadd 0, 4, 3, 0
+; CHECK-QPX-DAG:   fmadd 0, 6, 5, 0
+; CHECK-QPX:       fmadd 1, 9, 8, 0
+; CHECK-PWR:       xsmaddadp 7, 2, 1
+; CHECK-PWR-DAG:   xsmaddadp 7, 4, 3
+; CHECK-PWR-DAG:   xsmaddadp 7, 6, 5
+; CHECK-PWR-DAG:   xsmaddadp 7, 9, 8
+; CHECK-PWR:       fmr 1, 7
+; CHECK-NEXT:  blr
+  %10 = fmul reassoc nsz double %1, %0
+  %11 = fmul reassoc nsz double %3, %2
+  %12 = fmul reassoc nsz double %5, %4
+  %13 = fmul reassoc nsz double %8, %7
+  %14 = fadd reassoc nsz double %11, %10
+  %15 = fadd reassoc nsz double %14, %6
+  %16 = fadd reassoc nsz double %15, %12
+  %17 = fadd reassoc nsz double %16, %13
+  ret double %17
+}
+
+; FIXME: should use xsmaddasp instead of fmadds for pwr7 arch.
+define dso_local float @reassociate_mamama_8(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8,
+                                             float %9, float %10, float %11, float %12, float %13, float %14, float %15, float %16) {
+; CHECK-LABEL: reassociate_mamama_8:
+; CHECK:       # %bb.0:
+; CHECK:       fmadds [[REG0:[0-9]+]], 3, 2, 1
+; CHECK-DAG:   fmadds [[REG0]], 5, 4, [[REG0]]
+; CHECK-DAG:   fmadds [[REG0]], 7, 6, [[REG0]]
+; CHECK-DAG:   fmadds [[REG0]], 9, 8, [[REG0]]
+; CHECK-DAG:   fmadds [[REG0]], 13, 12, [[REG0]]
+; CHECK-DAG:   fmadds [[REG0]], 11, 10, [[REG0]]
+;
+; CHECK:       fmadds [[REG0]],
+; CHECK:       fmadds 1,
+; CHECK-NEXT:  blr
+  %18 = fmul reassoc nsz float %2, %1
+  %19 = fadd reassoc nsz float %18, %0
+  %20 = fmul reassoc nsz float %4, %3
+  %21 = fadd reassoc nsz float %19, %20
+  %22 = fmul reassoc nsz float %6, %5
+  %23 = fadd reassoc nsz float %21, %22
+  %24 = fmul reassoc nsz float %8, %7
+  %25 = fadd reassoc nsz float %23, %24
+  %26 = fmul reassoc nsz float %10, %9
+  %27 = fadd reassoc nsz float %25, %26
+  %28 = fmul reassoc nsz float %12, %11
+  %29 = fadd reassoc nsz float %27, %28
+  %30 = fmul reassoc nsz float %14, %13
+  %31 = fadd reassoc nsz float %29, %30
+  %32 = fmul reassoc nsz float %16, %15
+  %33 = fadd reassoc nsz float %31, %32
+  ret float %33
+}
+
