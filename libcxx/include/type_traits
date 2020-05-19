@@ -2348,9 +2348,33 @@ struct _LIBCPP_TEMPLATE_VIS make_unsigned
 template <class _Tp> using make_unsigned_t = typename make_unsigned<_Tp>::type;
 #endif
 
+#if _LIBCPP_STD_VER > 14
+template <class...> using void_t = void;
+#endif
+
+#if _LIBCPP_STD_VER > 17
+// Let COND_RES(X, Y) be:
+template <class _Tp, class _Up>
+using __cond_type = decltype(false ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>());
+
+template <class _Tp, class _Up, class = void>
+struct __common_type3 {};
+
+// sub-bullet 4 - "if COND_RES(CREF(D1), CREF(D2)) denotes a type..."
+template <class _Tp, class _Up>
+struct __common_type3<_Tp, _Up, void_t<__cond_type<const _Tp&, const _Up&>>>
+{
+    using type = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
+};
+
+template <class _Tp, class _Up, class = void>
+struct __common_type2_imp : __common_type3<_Tp, _Up> {};
+#else
 template <class _Tp, class _Up, class = void>
 struct __common_type2_imp {};
+#endif
 
+// sub-bullet 3 - "if decay_t<decltype(false ? declval<D1>() : declval<D2>())> ..."
 template <class _Tp, class _Up>
 struct __common_type2_imp<_Tp, _Up,
                           typename __void_t<decltype(
@@ -2414,6 +2438,7 @@ struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
 
 // bullet 3 - sizeof...(Tp) == 2
 
+// sub-bullet 1 - "If is_same_v<T1, D1> is false or ..."
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
     : conditional<
@@ -4295,8 +4320,6 @@ struct __has_operator_addressof
 #endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
-
-template <class...> using void_t = void;
 
 template <class... _Args>
 struct conjunction : _And<_Args...> {};
