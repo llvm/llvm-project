@@ -2896,6 +2896,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // No whitespace in x(/*foo=*/1), except for JavaScript.
     return Style.Language == FormatStyle::LK_JavaScript ||
            !Left.TokenText.endswith("=*/");
+
+  // Space between template and attribute.
+  // e.g. template <typename T> [[nodiscard]] ...
+  if (Left.is(TT_TemplateCloser) && Right.is(TT_AttributeSquare))
+    return true;
   if (Right.is(tok::l_paren)) {
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
