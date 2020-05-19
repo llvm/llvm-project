@@ -345,7 +345,7 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp) {
       reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.src();
   return nullptr;
-};
+}
 
 /// Return true if the reassociation specification is valid, false otherwise.
 /// When false, the `invalidIndex` integer pointer is optionally filled with the
