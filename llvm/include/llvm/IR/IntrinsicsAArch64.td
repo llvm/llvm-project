@@ -2267,6 +2267,10 @@ def int_aarch64_sve_ummla : SVE_MatMul_Intrinsic;
 def int_aarch64_sve_smmla : SVE_MatMul_Intrinsic;
 def int_aarch64_sve_usmmla : SVE_MatMul_Intrinsic;
 
+def int_aarch64_sve_usdot : AdvSIMD_SVE_DOT_Intrinsic;
+def int_aarch64_sve_usdot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
+def int_aarch64_sve_sudot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
+
 //
 // SVE ACLE: 7.4/5. FP64/FP32 matrix multiply extensions
 //
