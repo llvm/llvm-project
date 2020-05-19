@@ -202,6 +202,28 @@ ConstSizeOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
 }
 
 //===----------------------------------------------------------------------===//
+// FromExtentsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult FromExtentsOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  inferredReturnTypes.push_back(ShapeType::get(context));
+  return success();
+}
+
+OpFoldResult FromExtentsOp::fold(ArrayRef<Attribute> operands) {
+  if (llvm::any_of(operands, [](Attribute a) { return !a; }))
+    return nullptr;
+  SmallVector<int64_t, 6> extents;
+  for (auto attr : operands)
+    extents.push_back(attr.cast<IntegerAttr>().getInt());
+  Builder builder(getContext());
+  return builder.getI64TensorAttr(extents);
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeOfOp
 //===----------------------------------------------------------------------===//
 
