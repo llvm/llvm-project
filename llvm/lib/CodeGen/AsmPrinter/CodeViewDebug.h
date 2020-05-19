@@ -310,8 +310,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitDebugInfoForRetainedTypes();
 
-  void emitDebugInfoForUDTs(
-      const std::vector<std::pair<std::string, const DIType *>> &UDTs);
+  void
+  emitDebugInfoForUDTs(ArrayRef<std::pair<std::string, const DIType *>> UDTs);
 
   void emitDebugInfoForGlobals();
   void emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals);
