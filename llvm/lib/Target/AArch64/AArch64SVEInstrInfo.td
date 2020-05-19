@@ -1854,20 +1854,20 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
 }
 
 let Predicates = [HasSVE, HasMatMulInt8] in {
-  def  SMMLA_ZZZ : sve_int_matmul<0b00, "smmla">;
-  def  UMMLA_ZZZ : sve_int_matmul<0b11, "ummla">;
-  def USMMLA_ZZZ : sve_int_matmul<0b10, "usmmla">;
+  defm  SMMLA_ZZZ : sve_int_matmul<0b00, "smmla", int_aarch64_sve_smmla>;
+  defm  UMMLA_ZZZ : sve_int_matmul<0b11, "ummla", int_aarch64_sve_ummla>;
+  defm USMMLA_ZZZ : sve_int_matmul<0b10, "usmmla", int_aarch64_sve_usmmla>;
   def USDOT_ZZZ  : sve_int_dot_mixed<"usdot">;
   def USDOT_ZZZI : sve_int_dot_mixed_indexed<0, "usdot">;
   def SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot">;
 }
 
 let Predicates = [HasSVE, HasMatMulFP32] in {
-  def FMMLA_ZZZ_S : sve_fp_matrix_mla<0, "fmmla", ZPR32>;
+  defm FMMLA_ZZZ_S : sve_fp_matrix_mla<0, "fmmla", ZPR32, int_aarch64_sve_fmmla, nxv4f32>;
 }
 
 let Predicates = [HasSVE, HasMatMulFP64] in {
-  def FMMLA_ZZZ_D : sve_fp_matrix_mla<1, "fmmla", ZPR64>;
+  defm FMMLA_ZZZ_D : sve_fp_matrix_mla<1, "fmmla", ZPR64, int_aarch64_sve_fmmla, nxv2f64>;
   defm LD1RO_B_IMM  : sve_mem_ldor_si<0b00, "ld1rob", Z_b, ZPR8>;
   defm LD1RO_H_IMM  : sve_mem_ldor_si<0b01, "ld1roh", Z_h, ZPR16>;
   defm LD1RO_W_IMM  : sve_mem_ldor_si<0b10, "ld1row", Z_s, ZPR32>;

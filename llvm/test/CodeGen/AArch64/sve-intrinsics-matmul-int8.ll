@@ -1,0 +1,33 @@
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve,+i8mm -asm-verbose=0 < %s -o - | FileCheck %s
+
+define <vscale x 4 x i32> @smmla(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) nounwind {
+entry:
+; CHECK-LABEL: smmla:
+; CHECK-NEXT:  smmla   z0.s, z1.b, z2.b
+; CHECK-NEXT:  ret
+  %val = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smmla.nxv4i32(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  ret <vscale x 4 x i32> %val
+}
+
+define <vscale x 4 x i32> @ummla(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) nounwind {
+entry:
+; CHECK-LABEL: ummla:
+; CHECK-NEXT:  ummla   z0.s, z1.b, z2.b
+; CHECK-NEXT:  ret
+  %val = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ummla.nxv4i32(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  ret <vscale x 4 x i32> %val
+}
+
+define <vscale x 4 x i32> @usmmla(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) nounwind {
+entry:
+; CHECK-LABEL: usmmla:
+; CHECK-NEXT:  usmmla   z0.s, z1.b, z2.b
+; CHECK-NEXT : ret
+  %val = tail call <vscale x 4 x i32> @llvm.aarch64.sve.usmmla.nxv4i32(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  ret <vscale x 4 x i32> %val
+}
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.smmla.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ummla.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.usmmla.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+
