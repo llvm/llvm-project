@@ -786,6 +786,14 @@ TEST_F(FindExplicitReferencesTest, All) {
         "6: targets = {a::b::S}\n"
         "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
         "8: targets = {y}, decl\n"},
+       {R"cpp(
+         void foo() {
+           $0^ten: // PRINT "HELLO WORLD!"
+           goto $1^ten;
+         }
+       )cpp",
+       "0: targets = {ten}, decl\n"
+       "1: targets = {ten}\n"},
        // Simple templates.
        {R"cpp(
           template <class T> struct vector { using value_type = T; };

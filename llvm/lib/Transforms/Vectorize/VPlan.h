@@ -826,7 +826,7 @@ private:
   /// Is the condition of the select loop invariant?
   bool InvariantCond;
 
-  /// Hold VPValues for the arguments of the call.
+  /// Hold VPValues for the operands of the select.
   VPUser User;
 
 public:
@@ -1021,6 +1021,9 @@ class VPReplicateRecipe : public VPRecipeBase {
   /// The instruction being replicated.
   Instruction *Ingredient;
 
+  /// Hold VPValues for the operands of the ingredient.
+  VPUser User;
+
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -1031,9 +1034,11 @@ class VPReplicateRecipe : public VPRecipeBase {
   bool AlsoPack;
 
 public:
-  VPReplicateRecipe(Instruction *I, bool IsUniform, bool IsPredicated = false)
-      : VPRecipeBase(VPReplicateSC), Ingredient(I), IsUniform(IsUniform),
-        IsPredicated(IsPredicated) {
+  template <typename IterT>
+  VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
+                    bool IsUniform, bool IsPredicated = false)
+      : VPRecipeBase(VPReplicateSC), Ingredient(I), User(Operands),
+        IsUniform(IsUniform), IsPredicated(IsPredicated) {
     // Retain the previous behavior of predicateInstructions(), where an
     // insert-element of a predicated instruction got hoisted into the
     // predicated basic block iff it was its only user. This is achieved by
@@ -1063,12 +1068,12 @@ public:
 
 /// A recipe for generating conditional branches on the bits of a mask.
 class VPBranchOnMaskRecipe : public VPRecipeBase {
-  std::unique_ptr<VPUser> User;
+  VPUser User;
 
 public:
   VPBranchOnMaskRecipe(VPValue *BlockInMask) : VPRecipeBase(VPBranchOnMaskSC) {
     if (BlockInMask) // nullptr means all-one mask.
-      User.reset(new VPUser({BlockInMask}));
+      User.addOperand(BlockInMask);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -1084,11 +1089,19 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override {
     O << " +\n" << Indent << "\"BRANCH-ON-MASK ";
-    if (User)
-      User->getOperand(0)->print(O, SlotTracker);
+    if (VPValue *Mask = getMask())
+      Mask->print(O, SlotTracker);
     else
       O << " All-One";
     O << "\\l\"";
+  }
+
+  /// Return the mask used by this recipe. Note that a full mask is represented
+  /// by a nullptr.
+  VPValue *getMask() const {
+    assert(User.getNumOperands() <= 1 && "should have either 0 or 1 operands");
+    // Mask is optional.
+    return User.getNumOperands() == 1 ? User.getOperand(0) : nullptr;
   }
 };
 

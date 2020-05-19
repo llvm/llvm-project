@@ -40,6 +40,10 @@ class SyntheticSection : public OutputSection {
 public:
   SyntheticSection(const char *segname, const char *name);
   virtual ~SyntheticSection() = default;
+
+  static bool classof(const OutputSection *sec) {
+    return sec->kind() == SyntheticKind;
+  }
 };
 
 // The header of the Mach-O file, which must have a file offset of zero.

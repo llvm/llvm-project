@@ -22,3 +22,40 @@ define i32 @test() {
   ; CHECK:   S_SETPC_B64_return [[COPY5]], implicit $vgpr0
   ret i32 bitcast (<1 x i32> <i32 extractelement (<1 x i32> bitcast (i32 zext (i1 icmp eq (i32* @var, i32* inttoptr (i32 -1 to i32*)) to i32) to <1 x i32>), i64 0)> to i32)
 }
+
+@gint = external addrspace(1) global i8, align 4
+
+; Technically we should be able to fold away the compare to true, but
+; currently constexpr doesn't understand null in non-0 address spaces.
+define amdgpu_kernel void @constantexpr_select_0() {
+  ; CHECK-LABEL: name: constantexpr_select_0
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[GV:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @gint
+  ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[GV]](p1), [[C]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   S_ENDPGM 0
+  store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* null), i32 1, i32 0), i32 addrspace(1)* undef, align 4
+  ret void
+}
+
+define amdgpu_kernel void @constantexpr_select_1() {
+  ; CHECK-LABEL: name: constantexpr_select_1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1024
+  ; CHECK:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[C]](s64)
+  ; CHECK:   [[GV:%[0-9]+]]:_(p1) = G_GLOBAL_VALUE @gint
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[INTTOPTR]](p1), [[GV]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   S_ENDPGM 0
+  store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* inttoptr (i64 1024 to i8 addrspace(1)*)), i32 1, i32 0), i32 addrspace(1)* undef, align 4
+  ret void
+}

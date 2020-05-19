@@ -76,12 +76,11 @@ protected:
   TypeConverter *converter;
 };
 
-/// This conversion adds an extra argument for each function result which makes
-/// the converted function a void function. A type converter must be provided
-/// for this conversion to convert a non-shaped type to memref.
-/// BufferAssignmentTypeConverter is an helper TypeConverter for this
-/// purpose. All the non-shaped type of the input function will be converted to
-/// memref.
+/// Converts the signature of the function using the type converter.
+/// It adds an extra argument for each illegally-typed function
+/// result to the function arguments. `BufferAssignmentTypeConverter`
+/// is a helper `TypeConverter` for this purpose. All the non-shaped types
+/// of the input function will be converted to memref.
 class FunctionAndBlockSignatureConverter
     : public BufferAssignmentOpConversionPattern<FuncOp> {
 public:
@@ -94,12 +93,12 @@ public:
                   ConversionPatternRewriter &rewriter) const final;
 };
 
-/// This pattern converter transforms a non-void ReturnOpSourceTy into a void
-/// return of type ReturnOpTargetTy. It uses a copy operation of type CopyOpTy
-/// to copy the results to the output buffer.
+/// Converts the source `ReturnOp` to target `ReturnOp`, removes all
+/// the buffer operands from the operands list, and inserts `CopyOp`s
+/// for all buffer operands instead.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
-class NonVoidToVoidReturnOpConverter
+class NoBufferOperandsReturnOpConverter
     : public BufferAssignmentOpConversionPattern<ReturnOpSourceTy> {
 public:
   using BufferAssignmentOpConversionPattern<
@@ -109,29 +108,38 @@ public:
   LogicalResult
   matchAndRewrite(ReturnOpSourceTy returnOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    unsigned numReturnValues = returnOp.getNumOperands();
     Block &entryBlock = returnOp.getParentRegion()->front();
     unsigned numFuncArgs = entryBlock.getNumArguments();
     Location loc = returnOp.getLoc();
 
-    // Find the corresponding output buffer for each operand.
-    assert(numReturnValues <= numFuncArgs &&
-           "The number of operands of return operation is more than the "
-           "number of function argument.");
-    unsigned firstReturnParameter = numFuncArgs - numReturnValues;
-    for (auto operand : llvm::enumerate(operands)) {
-      unsigned returnArgNumber = firstReturnParameter + operand.index();
-      BlockArgument dstBuffer = entryBlock.getArgument(returnArgNumber);
-      if (dstBuffer == operand.value())
-        continue;
+    // The target `ReturnOp` should not contain any memref operands.
+    SmallVector<Value, 2> newOperands(operands.begin(), operands.end());
+    llvm::erase_if(newOperands, [](Value operand) {
+      return operand.getType().isa<MemRefType>();
+    });
 
-      // Insert the copy operation to copy before the return.
-      rewriter.setInsertionPoint(returnOp);
-      rewriter.create<CopyOpTy>(loc, operand.value(),
-                                entryBlock.getArgument(returnArgNumber));
-    }
-    // Insert the new target return operation.
-    rewriter.replaceOpWithNewOp<ReturnOpTargetTy>(returnOp);
+    // Find the index of the first destination buffer.
+    unsigned numBufferOperands = operands.size() - newOperands.size();
+    unsigned destArgNum = numFuncArgs - numBufferOperands;
+
+    rewriter.setInsertionPoint(returnOp);
+    // Find the corresponding destination buffer for each memref operand.
+    for (Value operand : operands)
+      if (operand.getType().isa<MemRefType>()) {
+        assert(destArgNum < numFuncArgs &&
+               "The number of operands of return operation is more than the "
+               "number of function argument.");
+
+        // For each memref type operand of the source `ReturnOp`, a new `CopyOp`
+        // is inserted that copies the buffer content from the operand to the
+        // target.
+        rewriter.create<CopyOpTy>(loc, operand,
+                                  entryBlock.getArgument(destArgNum));
+        ++destArgNum;
+      }
+
+    // Insert the new target Return operation.
+    rewriter.replaceOpWithNewOp<ReturnOpTargetTy>(returnOp, newOperands);
     return success();
   }
 };

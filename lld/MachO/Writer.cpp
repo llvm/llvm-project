@@ -10,6 +10,8 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "MergedOutputSection.h"
+#include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -21,6 +23,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -293,6 +296,72 @@ void Writer::createLoadCommands() {
   }
 }
 
+static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
+                                const InputFile &file) {
+  return std::max(entry.objectFiles.lookup(sys::path::filename(file.getName())),
+                  entry.anyObjectFile);
+}
+
+// Each section gets assigned the priority of the highest-priority symbol it
+// contains.
+static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
+  DenseMap<const InputSection *, size_t> sectionPriorities;
+
+  if (config->priorities.empty())
+    return sectionPriorities;
+
+  auto addSym = [&](Defined &sym) {
+    auto it = config->priorities.find(sym.getName());
+    if (it == config->priorities.end())
+      return;
+
+    SymbolPriorityEntry &entry = it->second;
+    size_t &priority = sectionPriorities[sym.isec];
+    priority = std::max(priority, getSymbolPriority(entry, *sym.isec->file));
+  };
+
+  // TODO: Make sure this handles weak symbols correctly.
+  for (InputFile *file : inputFiles)
+    if (isa<ObjFile>(file) || isa<ArchiveFile>(file))
+      for (Symbol *sym : file->symbols)
+        if (auto *d = dyn_cast<Defined>(sym))
+          addSym(*d);
+
+  return sectionPriorities;
+}
+
+// Sorting only can happen once all outputs have been collected. Here we sort
+// segments, output sections within each segment, and input sections within each
+// output segment.
+static void sortSegmentsAndSections() {
+  auto comparator = OutputSegmentComparator();
+  llvm::stable_sort(outputSegments, comparator);
+
+  DenseMap<const InputSection *, size_t> isecPriorities =
+      buildInputSectionPriorities();
+
+  uint32_t sectionIndex = 0;
+  for (OutputSegment *seg : outputSegments) {
+    seg->sortOutputSections(&comparator);
+    for (auto &p : seg->getSections()) {
+      OutputSection *section = p.second;
+      // Now that the output sections are sorted, assign the final
+      // output section indices.
+      if (!section->isHidden())
+        section->index = ++sectionIndex;
+
+      if (!isecPriorities.empty()) {
+        if (auto *merged = dyn_cast<MergedOutputSection>(section)) {
+          llvm::stable_sort(merged->inputs,
+                            [&](InputSection *a, InputSection *b) {
+                              return isecPriorities[a] > isecPriorities[b];
+                            });
+        }
+      }
+    }
+  }
+}
+
 void Writer::createOutputSections() {
   // First, create hidden sections
   headerSection = make<MachHeaderSection>();
@@ -383,9 +452,9 @@ void Writer::run() {
     in.stubHelper->setup();
 
   // Sort and assign sections to their respective segments. No more sections nor
-  // segments may be created after this method runs.
+  // segments may be created after these methods run.
   createOutputSections();
-  sortOutputSegmentsAndSections();
+  sortSegmentsAndSections();
 
   createLoadCommands();
 

@@ -48,16 +48,16 @@ void testBasicRules() {
   // Make every dereference a different path to avoid sinks after errors.
   switch (getRandom()) {
   case 0: {
-    Dummy &r = *p; // expected-warning {{Nullable pointer is dereferenced [nullability.NullabilityBase]}}
+    Dummy &r = *p; // expected-warning {{Nullable pointer is dereferenced [nullability.NullableDereferenced]}}
   } break;
   case 1: {
-    int b = p->val; // expected-warning {{Nullable pointer is dereferenced [nullability.NullabilityBase]}}
+    int b = p->val; // expected-warning {{Nullable pointer is dereferenced [nullability.NullableDereferenced]}}
   } break;
   case 2: {
-    int stuff = *ptr; // expected-warning {{Nullable pointer is dereferenced [nullability.NullabilityBase]}}
+    int stuff = *ptr; // expected-warning {{Nullable pointer is dereferenced [nullability.NullableDereferenced]}}
   } break;
   case 3:
-    takesNonnull(p); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter [nullability.NullabilityBase]}}
+    takesNonnull(p); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter [nullability.NullablePassedToNonnull]}}
     break;
   case 4: {
     Dummy d;
@@ -65,8 +65,10 @@ void testBasicRules() {
     Dummy dd(d);
     break;
   }
-  case 5: takesAttrNonnull(p); break; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null [nullability.NullabilityBase]}}
-  default: { Dummy d = *p; } break; // expected-warning {{Nullable pointer is dereferenced [nullability.NullabilityBase]}}
+  case 5:
+    takesAttrNonnull(p); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null [nullability.NullableDereferenced]}}
+    break;
+  default: { Dummy d = *p; } break; // expected-warning {{Nullable pointer is dereferenced [nullability.NullableDereferenced]}}
   }
   if (p) {
     takesNonnull(p);
@@ -80,12 +82,12 @@ void testBasicRules() {
   if (getRandom()) {
     takesNullable(q);
   // FIXME: This shouldn't be tied to a modeling checker.
-    takesNonnull(q); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter [nullability.NullabilityBase]}}
+    takesNonnull(q); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter [nullability.NullPassedToNonnull]}}
   }
   Dummy a;
   Dummy *_Nonnull nonnull = &a;
   // FIXME: This shouldn't be tied to a modeling checker.
-  nonnull = q; // expected-warning {{Null assigned to a pointer which is expected to have non-null value [nullability.NullabilityBase]}}
+  nonnull = q; // expected-warning {{Null assigned to a pointer which is expected to have non-null value [nullability.NullPassedToNonnull]}}
   q = &a;
   takesNullable(q);
   takesNonnull(q);

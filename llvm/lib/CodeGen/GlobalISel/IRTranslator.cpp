@@ -1008,10 +1008,11 @@ bool IRTranslator::translateSelect(const User &U,
   ArrayRef<Register> Op0Regs = getOrCreateVRegs(*U.getOperand(1));
   ArrayRef<Register> Op1Regs = getOrCreateVRegs(*U.getOperand(2));
 
-  const SelectInst &SI = cast<SelectInst>(U);
   uint16_t Flags = 0;
-  if (const CmpInst *Cmp = dyn_cast<CmpInst>(SI.getCondition()))
-    Flags = MachineInstr::copyFlagsFromInstruction(*Cmp);
+  if (const SelectInst *SI = dyn_cast<SelectInst>(&U)) {
+    if (const CmpInst *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
+      Flags = MachineInstr::copyFlagsFromInstruction(*Cmp);
+  }
 
   for (unsigned i = 0; i < ResRegs.size(); ++i) {
     MIRBuilder.buildSelect(ResRegs[i], Tst, Op0Regs[i], Op1Regs[i], Flags);

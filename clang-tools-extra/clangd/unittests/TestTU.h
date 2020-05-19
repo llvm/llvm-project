@@ -70,6 +70,7 @@ struct TestTU {
   ParsedAST build() const;
   ParseInputs inputs() const;
   SymbolSlab headerSymbols() const;
+  RefSlab headerRefs() const;
   std::unique_ptr<SymbolIndex> index() const;
 };
 

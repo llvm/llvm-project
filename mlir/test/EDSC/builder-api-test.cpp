@@ -139,10 +139,10 @@ TEST_FUNC(builder_loop_for) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  Value i, a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
+  Value a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
       d(f.getArgument(3));
   using namespace edsc::op;
-  LoopNestBuilder(&i, a - b, c + d, a)();
+  loopNestBuilder(a - b, c + d, a);
 
   // clang-format off
   // CHECK-LABEL: func @builder_loop_for(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
@@ -1076,16 +1076,14 @@ TEST_FUNC(builder_loop_for_yield) {
   ScopedContext scope(builder, f.getLoc());
   Value init0 = std_constant_float(llvm::APFloat(1.0f), f32Type);
   Value init1 = std_constant_float(llvm::APFloat(2.0f), f32Type);
-  Value i, a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
+  Value a(f.getArgument(0)), b(f.getArgument(1)), c(f.getArgument(2)),
       d(f.getArgument(3));
-  Value args01[2];
-  Value &arg0 = args01[0], &arg1 = args01[1];
   using namespace edsc::op;
-  auto results =
-      LoopNestBuilder(&i, a - b, c + d, a, args01, {init0, init1})([&] {
-        auto sum = arg0 + arg1;
-        loop_yield(ArrayRef<Value>{arg1, sum});
-      });
+  auto results = loopNestBuilder(a - b, c + d, a, {init0, init1},
+                                 [&](Value iv, ValueRange args) {
+                                   Value sum = args[0] + args[1];
+                                   return scf::ValueVector{args[1], sum};
+                                 });
   results[0] + results[1];
 
   // clang-format off

@@ -28,7 +28,7 @@ namespace lld {
 namespace macho {
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
-    : OutputSection(name) {
+    : OutputSection(SyntheticKind, name) {
   // Synthetic sections always know which segment they belong to so hook
   // them up when they're made
   getOrCreateOutputSegment(segname)->addOutputSection(this);

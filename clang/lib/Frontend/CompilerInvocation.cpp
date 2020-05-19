@@ -1298,6 +1298,12 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (Arg *A =
           Args.getLastArg(OPT_fpcc_struct_return, OPT_freg_struct_return,
                           OPT_maix_struct_return, OPT_msvr4_struct_return)) {
+    // TODO: We might want to consider enabling these options on AIX in the
+    // future.
+    if (T.isOSAIX())
+      Diags.Report(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << T.str();
+
     const Option &O = A->getOption();
     if (O.matches(OPT_fpcc_struct_return) ||
         O.matches(OPT_maix_struct_return)) {

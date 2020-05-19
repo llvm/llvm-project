@@ -512,8 +512,8 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   Value tmp = std_alloc(tmpMemRefType(transfer));
   StdIndexedValue local(tmp);
   Value vec = vector_type_cast(tmp);
-  SmallVector<Value, 8> ivs(lbs.size());
-  LoopNestBuilder(ivs, lbs, ubs, steps)([&] {
+  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
+    auto ivs = llvm::to_vector<8>(loopIvs);
     // Swap the ivs which will reorder memory accesses.
     if (coalescedIdx >= 0)
       std::swap(ivs.back(), ivs[coalescedIdx]);
@@ -586,8 +586,8 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   StdIndexedValue local(tmp);
   Value vec = vector_type_cast(tmp);
   std_store(vectorValue, vec);
-  SmallVector<Value, 8> ivs(lbs.size());
-  LoopNestBuilder(ivs, lbs, ubs, steps)([&] {
+  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
+    auto ivs = llvm::to_vector<8>(loopIvs);
     // Swap the ivs which will reorder memory accesses.
     if (coalescedIdx >= 0)
       std::swap(ivs.back(), ivs[coalescedIdx]);

@@ -643,7 +643,7 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
   return V.Refs;
 }
 
-llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
+llvm::SmallVector<ReferenceLoc, 2> refInStmt(const Stmt *S) {
   struct Visitor : ConstStmtVisitor<Visitor> {
     // FIXME: handle more complicated cases: more ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc, 2> Refs;
@@ -722,10 +722,25 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                     /*IsDecl=*/false, std::move(Targets)});
       }
     }
+
+    void VisitGotoStmt(const GotoStmt *GS) {
+      llvm::SmallVector<const NamedDecl *, 1> Targets;
+      if (const auto *L = GS->getLabel())
+        Targets.push_back(L);
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(), GS->getLabelLoc(),
+                                  /*IsDecl=*/false, std::move(Targets)});
+    }
+
+    void VisitLabelStmt(const LabelStmt *LS) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  LS->getIdentLoc(),
+                                  /*IsDecl=*/true,
+                                  {LS->getDecl()}});
+    }
   };
 
   Visitor V;
-  V.Visit(E);
+  V.Visit(S);
   return V.Refs;
 }
 
@@ -837,8 +852,8 @@ public:
     return RecursiveASTVisitor::TraverseElaboratedTypeLoc(L);
   }
 
-  bool VisitExpr(Expr *E) {
-    visitNode(DynTypedNode::create(*E));
+  bool VisitStmt(Stmt *S) {
+    visitNode(DynTypedNode::create(*S));
     return true;
   }
 
@@ -926,8 +941,8 @@ private:
   llvm::SmallVector<ReferenceLoc, 2> explicitReference(DynTypedNode N) {
     if (auto *D = N.get<Decl>())
       return refInDecl(D);
-    if (auto *E = N.get<Expr>())
-      return refInExpr(E);
+    if (auto *S = N.get<Stmt>())
+      return refInStmt(S);
     if (auto *NNSL = N.get<NestedNameSpecifierLoc>()) {
       // (!) 'DeclRelation::Alias' ensures we do not loose namespace aliases.
       return {ReferenceLoc{

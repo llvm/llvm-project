@@ -291,9 +291,9 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
     SBOptions += "--keep-empty "
     SBOptions += "-analyzer-config '%s' " % generateAnalyzerConfig(Args)
 
-    # Always use ccc-analyze to ensure that we can locate the failures
-    # directory.
-    SBOptions += "--override-compiler "
+    if Args.override_compiler:
+        SBOptions += "--override-compiler "
+
     ExtraEnv = {}
     try:
         SBCommandFile = open(BuildScriptPath, "r")
@@ -800,11 +800,14 @@ if __name__ == '__main__':
                              reference. Default is 0.')
     Parser.add_argument('-r', dest='regenerate', action='store_true',
                         default=False, help='Regenerate reference output.')
+    Parser.add_argument('--override-compiler', action='store_true',
+                        default=False, help='Call scan-build with \
+                        --override-compiler option.')
     Parser.add_argument('-j', '--jobs', dest='jobs', type=int,
                         default=0,
                         help='Number of projects to test concurrently')
-    Parser.add_argument('--extra-analyzer-config', dest='extra_analyzer_config',
-                        type=str,
+    Parser.add_argument('--extra-analyzer-config',
+                        dest='extra_analyzer_config', type=str,
                         default="",
                         help="Arguments passed to to -analyzer-config")
     Args = Parser.parse_args()
