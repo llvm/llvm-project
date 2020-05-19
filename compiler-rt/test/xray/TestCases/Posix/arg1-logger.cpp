@@ -3,7 +3,7 @@
 //
 // RUN: %clangxx_xray -std=c++11 %s -o %t
 // RUN: rm -f arg1-logger-*
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_naive_log=true \
+// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_mode=xray-basic \
 // RUN:    xray_logfile_base=arg1-logger-" %run %t 2>&1 | FileCheck %s
 //
 // After all that, clean up the XRay log file.

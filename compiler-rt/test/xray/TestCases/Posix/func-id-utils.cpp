@@ -2,7 +2,7 @@
 // maximum function id for the current binary.
 //
 // RUN: %clangxx_xray -std=c++11 %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false" %run %t
+// RUN: XRAY_OPTIONS="patch_premain=false" %run %t
 
 // UNSUPPORTED: target-is-mips64,target-is-mips64el
 
