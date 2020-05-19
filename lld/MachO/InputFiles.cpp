@@ -173,10 +173,11 @@ void InputFile::parseRelocations(const section_64 &sec,
       fatal("TODO: Scattered relocations not supported");
 
     auto rel = reinterpret_cast<const relocation_info &>(anyRel);
+    if (!rel.r_pcrel)
+      fatal("TODO: Only pcrel relocations are supported");
 
     Reloc r;
     r.type = rel.r_type;
-    r.pcrel = rel.r_pcrel;
     uint32_t secRelOffset = rel.r_address;
     uint64_t rawAddend =
         target->getImplicitAddend(buf + sec.offset + secRelOffset, r.type);
@@ -185,9 +186,6 @@ void InputFile::parseRelocations(const section_64 &sec,
       r.target = symbols[rel.r_symbolnum];
       r.addend = rawAddend;
     } else {
-      if (!rel.r_pcrel)
-        fatal("TODO: Only pcrel section relocations are supported");
-
       if (rel.r_symbolnum == 0 || rel.r_symbolnum > subsections.size())
         fatal("invalid section index in relocation for offset " +
               std::to_string(r.offset) + " in section " + sec.sectname +
