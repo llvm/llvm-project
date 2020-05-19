@@ -1912,5 +1912,43 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
+// Heuristically detect whether the `Line` is an unterminated include filename.
+bool isIncludeFile(llvm::StringRef Line) {
+  Line = Line.ltrim();
+  if (!Line.consume_front("#"))
+    return false;
+  Line = Line.ltrim();
+  if (!(Line.consume_front("include_next") || Line.consume_front("include") ||
+        Line.consume_front("import")))
+    return false;
+  Line = Line.ltrim();
+  if (Line.consume_front("<"))
+    return Line.count('>') == 0;
+  if (Line.consume_front("\""))
+    return Line.count('"') == 0;
+  return false;
+}
+
+bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
+  // Look at last line before completion point only.
+  Content = Content.take_front(Offset);
+  auto Pos = Content.rfind('\n');
+  if (Pos != llvm::StringRef::npos)
+    Content = Content.substr(Pos + 1);
+
+  // Complete after scope operators.
+  if (Content.endswith(".") || Content.endswith("->") || Content.endswith("::"))
+    return true;
+  // Complete after `#include <` and #include `<foo/`.
+  if ((Content.endswith("<") || Content.endswith("\"") ||
+       Content.endswith("/")) &&
+      isIncludeFile(Content))
+    return true;
+
+  // Complete words. Give non-ascii characters the benefit of the doubt.
+  return !Content.empty() &&
+         (isIdentifierBody(Content.back()) || !llvm::isASCII(Content.back()));
+}
+
 } // namespace clangd
 } // namespace clang

@@ -25,6 +25,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -2826,6 +2827,34 @@ TEST(NoCompileCompletionTest, WithIndex) {
       Syms, Opts);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(Qualifier(""), Scope("a::"))));
+}
+
+TEST(AllowImplicitCompletion, All) {
+  const char *Yes[] = {
+      "foo.^bar",
+      "foo->^bar",
+      "foo::^bar",
+      "  #  include <^foo.h>",
+      "#import <foo/^bar.h>",
+      "#include_next \"^",
+  };
+  const char *No[] = {
+      "foo>^bar",
+      "foo:^bar",
+      "foo\n^bar",
+      "#include <foo.h> //^",
+      "#include \"foo.h\"^",
+      "#error <^",
+      "#<^",
+  };
+  for (const char *Test : Yes) {
+    llvm::Annotations A(Test);
+    EXPECT_TRUE(allowImplicitCompletion(A.code(), A.point())) << Test;
+  }
+  for (const char *Test : No) {
+    llvm::Annotations A(Test);
+    EXPECT_FALSE(allowImplicitCompletion(A.code(), A.point())) << Test;
+  }
 }
 
 } // namespace
