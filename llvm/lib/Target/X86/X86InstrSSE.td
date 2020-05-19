@@ -7735,39 +7735,43 @@ let Predicates = [HasAVX2, NoVLX] in {
 //
 multiclass avx2_pmovmask<string OpcodeStr,
                          Intrinsic IntLd128, Intrinsic IntLd256,
-                         Intrinsic IntSt128, Intrinsic IntSt256> {
+                         Intrinsic IntSt128, Intrinsic IntSt256,
+                         X86SchedWriteMaskMove schedX,
+                         X86SchedWriteMaskMove schedY> {
   def rm  : AVX28I<0x8c, MRMSrcMem, (outs VR128:$dst),
              (ins VR128:$src1, i128mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR128:$dst, (IntLd128 addr:$src2, VR128:$src1))]>,
-             VEX_4V, Sched<[WriteVecMaskedLoad]>;
+             VEX_4V, Sched<[schedX.RM]>;
   def Yrm : AVX28I<0x8c, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, i256mem:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set VR256:$dst, (IntLd256 addr:$src2, VR256:$src1))]>,
-             VEX_4V, VEX_L, Sched<[WriteVecMaskedLoadY]>;
+             VEX_4V, VEX_L, Sched<[schedY.RM]>;
   def mr  : AVX28I<0x8e, MRMDestMem, (outs),
              (ins i128mem:$dst, VR128:$src1, VR128:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt128 addr:$dst, VR128:$src1, VR128:$src2)]>,
-             VEX_4V, Sched<[WriteVecMaskedStore]>;
+             VEX_4V, Sched<[schedX.MR]>;
   def Ymr : AVX28I<0x8e, MRMDestMem, (outs),
              (ins i256mem:$dst, VR256:$src1, VR256:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(IntSt256 addr:$dst, VR256:$src1, VR256:$src2)]>,
-             VEX_4V, VEX_L, Sched<[WriteVecMaskedStoreY]>;
+             VEX_4V, VEX_L, Sched<[schedY.MR]>;
 }
 
 defm VPMASKMOVD : avx2_pmovmask<"vpmaskmovd",
                                 int_x86_avx2_maskload_d,
                                 int_x86_avx2_maskload_d_256,
                                 int_x86_avx2_maskstore_d,
-                                int_x86_avx2_maskstore_d_256>;
+                                int_x86_avx2_maskstore_d_256,
+                                WriteVecMaskMove32, WriteVecMaskMove32Y>;
 defm VPMASKMOVQ : avx2_pmovmask<"vpmaskmovq",
                                 int_x86_avx2_maskload_q,
                                 int_x86_avx2_maskload_q_256,
                                 int_x86_avx2_maskstore_q,
-                                int_x86_avx2_maskstore_q_256>, VEX_W;
+                                int_x86_avx2_maskstore_q_256,
+                                WriteVecMaskMove64, WriteVecMaskMove64Y>, VEX_W;
 
 multiclass maskmov_lowering<string InstrStr, RegisterClass RC, ValueType VT,
                           ValueType MaskVT> {
