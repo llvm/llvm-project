@@ -13,6 +13,7 @@ unittest("StaticAnalysisTests") {
   sources = [
     "AnalyzerOptionsTest.cpp",
     "CallDescriptionTest.cpp",
+    "CallEventTest.cpp",
     "RegisterCustomCheckersTest.cpp",
     "StoreTest.cpp",
     "SymbolReaperTest.cpp",
