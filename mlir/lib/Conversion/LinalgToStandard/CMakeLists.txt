@@ -7,6 +7,9 @@ add_mlir_conversion_library(MLIRLinalgToStandard
   DEPENDS
   MLIRConversionPassIncGen
 
+  LINK_COMPONENTS
+  Core
+
   LINK_LIBS PUBLIC
   MLIREDSC
   MLIRIR
@@ -14,6 +17,4 @@ add_mlir_conversion_library(MLIRLinalgToStandard
   MLIRPass
   MLIRSCF
   MLIRTransforms
-  LLVMCore
-  LLVMSupport
   )
