@@ -137,7 +137,7 @@ static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
     assert(A->getOption().matches(options::OPT_O));
 
     StringRef S(A->getValue());
-    if (S == "s" || S == "z" || S.empty())
+    if (S == "s" || S == "z")
       return llvm::CodeGenOpt::Default;
 
     if (S == "g")
