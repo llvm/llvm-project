@@ -102,6 +102,8 @@ def LLVMAlpha : Package<"llvm">, ParentPackage<Alpha>;
 // any diagnostics. These checkers are always turned on; this package is
 // intended for API modeling that is not controlled by the target triple.
 def APIModeling : Package<"apiModeling">, Hidden;
+def APIModelingAlpha : Package<"apiModeling">, ParentPackage<Alpha>, Hidden;
+
 def GoogleAPIModeling : Package<"google">, ParentPackage<APIModeling>, Hidden;
 def LLVMAPIModeling : Package<"llvm">, ParentPackage<APIModeling>, Hidden;
 
@@ -304,6 +306,15 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   ]>,
   Documentation<NotDocumented>;
 
+def TrustNonnullChecker : Checker<"TrustNonnull">,
+  HelpText<"Trust that returns from framework methods annotated with _Nonnull "
+           "are not null">,
+  Documentation<NotDocumented>;
+
+} // end "apiModeling"
+
+let ParentPackage = APIModelingAlpha in {
+
 def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
   HelpText<"Check constraints of arguments of C standard library functions, "
            "such as whether the parameter of isalpha is in the range [0, 255] "
@@ -311,12 +322,7 @@ def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
   Dependencies<[StdCLibraryFunctionsChecker]>,
   Documentation<NotDocumented>;
 
-def TrustNonnullChecker : Checker<"TrustNonnull">,
-  HelpText<"Trust that returns from framework methods annotated with _Nonnull "
-           "are not null">,
-  Documentation<NotDocumented>;
-
-} // end "apiModeling"
+} // end "alpha.apiModeling"
 
 //===----------------------------------------------------------------------===//
 // Evaluate "builtin" functions.
