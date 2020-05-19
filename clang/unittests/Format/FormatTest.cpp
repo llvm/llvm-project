@@ -8040,6 +8040,37 @@ TEST_F(FormatTest, AttributeClass) {
                Style);
 }
 
+TEST_F(FormatTest, AttributesAfterMacro) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("MACRO;\n"
+               "__attribute__((maybe_unused)) int foo() {\n"
+               "  //...\n"
+               "}");
+
+  verifyFormat("MACRO;\n"
+               "[[nodiscard]] int foo() {\n"
+               "  //...\n"
+               "}");
+
+  EXPECT_EQ("MACRO\n\n"
+            "__attribute__((maybe_unused)) int foo() {\n"
+            "  //...\n"
+            "}",
+            format("MACRO\n\n"
+                   "__attribute__((maybe_unused)) int foo() {\n"
+                   "  //...\n"
+                   "}"));
+
+  EXPECT_EQ("MACRO\n\n"
+            "[[nodiscard]] int foo() {\n"
+            "  //...\n"
+            "}",
+            format("MACRO\n\n"
+                   "[[nodiscard]] int foo() {\n"
+                   "  //...\n"
+                   "}"));
+}
+
 TEST_F(FormatTest, AttributePenaltyBreaking) {
   FormatStyle Style = getLLVMStyle();
   verifyFormat("void ABCDEFGH::ABCDEFGHIJKLMN(\n"
