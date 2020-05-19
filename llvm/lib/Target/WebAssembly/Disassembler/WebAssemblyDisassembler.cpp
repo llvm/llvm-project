@@ -199,6 +199,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     case WebAssembly::OPERAND_GLOBAL:
     case WebAssembly::OPERAND_FUNCTION32:
     case WebAssembly::OPERAND_OFFSET32:
+    case WebAssembly::OPERAND_OFFSET64:
     case WebAssembly::OPERAND_P2ALIGN:
     case WebAssembly::OPERAND_TYPEINDEX:
     case WebAssembly::OPERAND_EVENT:
