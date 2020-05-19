@@ -1202,7 +1202,7 @@ template <> struct DenseMapInfo<PrivateMethodKey> {
 };
 } // end namespace llvm
 
-const ObjCMethodDecl *
+static const ObjCMethodDecl *
 lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
                         Selector LookupSelector, bool InstanceMethod) {
   // Repeatedly calling lookupPrivateMethod() is expensive, especially

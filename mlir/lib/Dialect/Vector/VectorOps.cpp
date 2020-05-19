@@ -1338,7 +1338,7 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
 }
 
 template <typename TransferOp>
-void printTransferAttrs(OpAsmPrinter &p, TransferOp op) {
+static void printTransferAttrs(OpAsmPrinter &p, TransferOp op) {
   SmallVector<StringRef, 2> elidedAttrs;
   if (op.permutation_map() == TransferOp::getTransferMinorIdentityMap(
                                   op.getMemRefType(), op.getVectorType()))
