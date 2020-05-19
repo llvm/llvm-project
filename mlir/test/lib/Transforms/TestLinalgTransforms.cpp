@@ -156,7 +156,7 @@ static void applyPatterns(FuncOp funcOp) {
   });
 }
 
-OwningRewritePatternList
+static OwningRewritePatternList
 getMatmulToVectorCanonicalizationPatterns(MLIRContext *context) {
   OwningRewritePatternList patterns;
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
@@ -169,7 +169,7 @@ getMatmulToVectorCanonicalizationPatterns(MLIRContext *context) {
   return patterns;
 }
 
-void fillL1TilingAndMatmulToVectorPatterns(
+static void fillL1TilingAndMatmulToVectorPatterns(
     MLIRContext *context, StringRef startMarker,
     SmallVectorImpl<OwningRewritePatternList> &patternsVector) {
   patternsVector.emplace_back(LinalgTilingPattern<MatmulOp>(

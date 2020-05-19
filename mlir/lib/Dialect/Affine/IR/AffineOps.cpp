@@ -181,8 +181,8 @@ bool mlir::isValidDim(Value value, Region *region) {
 /// `memrefDefOp` is a statically  shaped one or defined using a valid symbol
 /// for `region`.
 template <typename AnyMemRefDefOp>
-bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
-                             Region *region) {
+static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
+                                    Region *region) {
   auto memRefType = memrefDefOp.getType();
   // Statically shaped.
   if (!memRefType.isDynamicDim(index))
@@ -1882,7 +1882,8 @@ void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, memref, map, indices);
 }
 
-ParseResult parseAffineLoadOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseAffineLoadOp(OpAsmParser &parser,
+                                     OperationState &result) {
   auto &builder = parser.getBuilder();
   auto indexTy = builder.getIndexType();
 
@@ -1902,7 +1903,7 @@ ParseResult parseAffineLoadOp(OpAsmParser &parser, OperationState &result) {
       parser.addTypeToList(type.getElementType(), result.types));
 }
 
-void print(OpAsmPrinter &p, AffineLoadOp op) {
+static void print(OpAsmPrinter &p, AffineLoadOp op) {
   p << "affine.load " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
           op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
@@ -1995,7 +1996,8 @@ void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, valueToStore, memref, map, indices);
 }
 
-ParseResult parseAffineStoreOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseAffineStoreOp(OpAsmParser &parser,
+                                      OperationState &result) {
   auto indexTy = parser.getBuilder().getIndexType();
 
   MemRefType type;
@@ -2016,7 +2018,7 @@ ParseResult parseAffineStoreOp(OpAsmParser &parser, OperationState &result) {
                  parser.resolveOperands(mapOperands, indexTy, result.operands));
 }
 
-void print(OpAsmPrinter &p, AffineStoreOp op) {
+static void print(OpAsmPrinter &p, AffineStoreOp op) {
   p << "affine.store " << op.getValueToStore();
   p << ", " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
@@ -2104,7 +2106,7 @@ static ParseResult parseAffineMinMaxOp(OpAsmParser &parser,
 /// list may contain nulls, which are interpreted as the operand not being a
 /// constant.
 template <typename T>
-OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
+static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
   static_assert(llvm::is_one_of<T, AffineMinOp, AffineMaxOp>::value,
                 "expected affine min or max op");
 
@@ -2499,8 +2501,8 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
 // AffineVectorLoadOp
 //===----------------------------------------------------------------------===//
 
-ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
-                                    OperationState &result) {
+static ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
+                                           OperationState &result) {
   auto &builder = parser.getBuilder();
   auto indexTy = builder.getIndexType();
 
@@ -2522,7 +2524,7 @@ ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
       parser.addTypeToList(resultType, result.types));
 }
 
-void print(OpAsmPrinter &p, AffineVectorLoadOp op) {
+static void print(OpAsmPrinter &p, AffineVectorLoadOp op) {
   p << "affine.vector_load " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =
           op.getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
@@ -2563,8 +2565,8 @@ static LogicalResult verify(AffineVectorLoadOp op) {
 // AffineVectorStoreOp
 //===----------------------------------------------------------------------===//
 
-ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
-                                     OperationState &result) {
+static ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
+                                            OperationState &result) {
   auto indexTy = parser.getBuilder().getIndexType();
 
   MemRefType memrefType;
@@ -2587,7 +2589,7 @@ ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
       parser.resolveOperands(mapOperands, indexTy, result.operands));
 }
 
-void print(OpAsmPrinter &p, AffineVectorStoreOp op) {
+static void print(OpAsmPrinter &p, AffineVectorStoreOp op) {
   p << "affine.vector_store " << op.getValueToStore();
   p << ", " << op.getMemRef() << '[';
   if (AffineMapAttr mapAttr =

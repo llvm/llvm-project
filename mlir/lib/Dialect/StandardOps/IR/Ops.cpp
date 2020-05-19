@@ -2727,6 +2727,7 @@ bool mlir::canFoldIntoConsumerOp(MemRefCastOp castOp) {
   return true;
 }
 
+namespace {
 /// Pattern to rewrite a subview op with MemRefCast arguments.
 /// This essentially pushes memref_cast past its consuming subview when
 /// `canFoldIntoConsumerOp` is true.
@@ -2779,6 +2780,7 @@ public:
     return success();
   }
 };
+} // namespace
 
 void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
