@@ -29,7 +29,6 @@ enum {
 class TargetInfo {
 public:
   virtual ~TargetInfo() = default;
-
   virtual uint64_t getImplicitAddend(const uint8_t *loc,
                                      uint8_t type) const = 0;
   virtual void relocateOne(uint8_t *loc, uint8_t type, uint64_t val) const = 0;

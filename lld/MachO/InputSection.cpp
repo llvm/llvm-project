@@ -43,7 +43,7 @@ void InputSection::writeTo(uint8_t *buf) {
     }
 
     uint64_t val = va + r.addend;
-    if (r.pcrel)
+    if (1) // TODO: handle non-pcrel relocations
       val -= getVA() + r.offset;
     target->relocateOne(buf + r.offset, r.type, val);
   }
