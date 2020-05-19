@@ -7,9 +7,8 @@ add_mlir_dialect_library(MLIRStandardOpsTransforms
 
   DEPENDS
   MLIRStandardTransformsIncGen
-  )
-target_link_libraries(MLIRStandardOpsTransforms
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRPass
   MLIRStandardOps
