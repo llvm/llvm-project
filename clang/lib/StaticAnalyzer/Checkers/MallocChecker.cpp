@@ -284,8 +284,8 @@ class MallocChecker
                      check::ConstPointerEscape, check::PreStmt<ReturnStmt>,
                      check::EndFunction, check::PreCall, check::PostCall,
                      check::PostStmt<CXXNewExpr>, check::NewAllocator,
-                     check::PreStmt<CXXDeleteExpr>, check::PostStmt<BlockExpr>,
-                     check::PostObjCMessage, check::Location, eval::Assume> {
+                     check::PostStmt<BlockExpr>, check::PostObjCMessage,
+                     check::Location, eval::Assume> {
 public:
   /// In pessimistic mode, the checker assumes that it does not know which
   /// functions might free the memory.
@@ -317,7 +317,6 @@ public:
   void checkPostStmt(const CXXNewExpr *NE, CheckerContext &C) const;
   void checkNewAllocator(const CXXNewExpr *NE, SVal Target,
                          CheckerContext &C) const;
-  void checkPreStmt(const CXXDeleteExpr *DE, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &Call, CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
@@ -1410,25 +1409,6 @@ ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
     State = State->assume(DynSizeMatchesSize, true);
   }
   return State;
-}
-
-void MallocChecker::checkPreStmt(const CXXDeleteExpr *DE,
-                                 CheckerContext &C) const {
-
-  if (!ChecksEnabled[CK_NewDeleteChecker])
-    if (SymbolRef Sym = C.getSVal(DE->getArgument()).getAsSymbol())
-      checkUseAfterFree(Sym, C, DE->getArgument());
-
-  if (!isStandardNewDelete(DE->getOperatorDelete()))
-    return;
-
-  ProgramStateRef State = C.getState();
-  bool IsKnownToBeAllocated;
-  State = FreeMemAux(C, DE->getArgument(), DE, State,
-                     /*Hold*/ false, IsKnownToBeAllocated,
-                     (DE->isArrayForm() ? AF_CXXNewArray : AF_CXXNew));
-
-  C.addTransition(State);
 }
 
 static bool isKnownDeallocObjCMethodName(const ObjCMethodCall &Call) {
@@ -2620,7 +2600,27 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 void MallocChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
 
-  if (const CXXDestructorCall *DC = dyn_cast<CXXDestructorCall>(&Call)) {
+  if (const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call)) {
+    const CXXDeleteExpr *DE = DC->getOriginExpr();
+
+    if (!ChecksEnabled[CK_NewDeleteChecker])
+      if (SymbolRef Sym = C.getSVal(DE->getArgument()).getAsSymbol())
+        checkUseAfterFree(Sym, C, DE->getArgument());
+
+    if (!isStandardNewDelete(DC->getDecl()))
+      return;
+
+    ProgramStateRef State = C.getState();
+    bool IsKnownToBeAllocated;
+    State = FreeMemAux(C, DE->getArgument(), DE, State,
+                       /*Hold*/ false, IsKnownToBeAllocated,
+                       (DE->isArrayForm() ? AF_CXXNewArray : AF_CXXNew));
+
+    C.addTransition(State);
+    return;
+  }
+
+  if (const auto *DC = dyn_cast<CXXDestructorCall>(&Call)) {
     SymbolRef Sym = DC->getCXXThisVal().getAsSymbol();
     if (!Sym || checkDoubleDelete(Sym, C))
       return;

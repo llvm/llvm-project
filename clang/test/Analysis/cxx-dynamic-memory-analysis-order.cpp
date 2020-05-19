@@ -28,8 +28,8 @@ void f() {
   // Default behavior: Calls operator delete(ptr), or operator delete(ptr,
   // alignment), respectively.
 
-  // FIXME: All calls to operator new should be CXXAllocatorCall.
-  // FIXME: PostStmt<CXXDeleteExpr> should be present.
+  // FIXME: All calls to operator new should be CXXAllocatorCall, and calls to
+  // operator delete should be CXXDeallocatorCall.
   {
     int *p = new int;
     delete p;
@@ -38,6 +38,9 @@ void f() {
     // CHECK-NEXT: PreStmt<CXXNewExpr>
     // CHECK-NEXT: PostStmt<CXXNewExpr>
     // CHECK-NEXT: PreStmt<CXXDeleteExpr>
+    // CHECK-NEXT: PostStmt<CXXDeleteExpr>
+    // CHECK-NEXT: PreCall (operator delete) [CXXDeallocatorCall]
+    // CHECK-NEXT: PostCall (operator delete) [CXXDeallocatorCall]
 
     p = new int;
     operator delete(p, 23542368);
@@ -87,6 +90,9 @@ void f() {
     // CHECK-NEXT: PreStmt<CXXNewExpr>
     // CHECK-NEXT: PostStmt<CXXNewExpr>
     // CHECK-NEXT: PreStmt<CXXDeleteExpr>
+    // CHECK-NEXT: PostStmt<CXXDeleteExpr>
+    // CHECK-NEXT: PreCall (operator delete[]) [CXXDeallocatorCall]
+    // CHECK-NEXT: PostCall (operator delete[]) [CXXDeallocatorCall]
 
     p = new int[2];
     operator delete[](p, 23542368);
