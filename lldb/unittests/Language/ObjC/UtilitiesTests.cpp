@@ -1,4 +1,4 @@
-//===-- MockTests.cpp -----------------------------------------------------===//
+//===-- UtilitiesTests.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/DataFormatters/Mock.h"
+#include "Plugins/Language/ObjC/Utilities.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,7 +25,8 @@ static llvm::Optional<std::string> formatDateValue(double date_value) {
 }
 
 TEST(DataFormatterMockTest, NSDate) {
-  EXPECT_EQ(*formatDateValue(-63114076800), "0001-12-30 00:00:00 +0000");
+  EXPECT_EQ(formatDateValue(-63114076800),
+            std::string("0001-12-30 00:00:00 +0000"));
 
   // Can't convert the date_value to a time_t.
   EXPECT_EQ(formatDateValue((double)(std::numeric_limits<time_t>::max()) + 1),
@@ -34,8 +35,10 @@ TEST(DataFormatterMockTest, NSDate) {
             llvm::None);
 
   // Can't add the macOS epoch to the converted date_value (the add overflows).
-  EXPECT_EQ(formatDateValue((double)std::numeric_limits<time_t>::max()), llvm::None);
-  EXPECT_EQ(formatDateValue((double)std::numeric_limits<time_t>::min()), llvm::None);
+  EXPECT_EQ(formatDateValue((double)std::numeric_limits<time_t>::max()),
+            llvm::None);
+  EXPECT_EQ(formatDateValue((double)std::numeric_limits<time_t>::min()),
+            llvm::None);
 
   // FIXME: The formatting result is wrong on Windows because we adjust the
   // epoch when _WIN32 is defined (see GetOSXEpoch).
