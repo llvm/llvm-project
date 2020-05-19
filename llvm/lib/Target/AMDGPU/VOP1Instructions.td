@@ -100,8 +100,13 @@ class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
 
 multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag> {
-  def _e32 : VOP1_Pseudo <opName, P>;
-  def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
+  // We only want to set this on the basic, non-SDWA or DPP forms.
+  defvar should_mov_imm = !eq(opName, "v_mov_b32");
+
+  let isMoveImm = should_mov_imm in {
+    def _e32 : VOP1_Pseudo <opName, P>;
+    def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
+  }
 
   foreach _ = BoolToList<P.HasExtSDWA>.ret in
     def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
@@ -144,7 +149,7 @@ let VOPAsmPrefer32Bit = 1 in {
 defm V_NOP : VOP1Inst <"v_nop", VOP_NONE>;
 }
 
-let isMoveImm = 1, isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOP_I32_I32>;
 } // End isMoveImm = 1
 
