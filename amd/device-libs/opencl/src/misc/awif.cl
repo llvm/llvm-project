@@ -6,7 +6,7 @@
  *===------------------------------------------------------------------------*/
 
 #include "irif.h"
-#pragma OPENCL EXTENSIOM cl_khr_subgroups : enable
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
 
 __attribute__((overloadable)) void
 mem_fence(cl_mem_fence_flags flags)
