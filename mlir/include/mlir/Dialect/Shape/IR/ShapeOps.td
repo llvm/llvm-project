@@ -14,6 +14,7 @@
 #define SHAPE_OPS
 
 include "mlir/Dialect/Shape/IR/ShapeBase.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -426,12 +427,16 @@ def Shape_AssumingOp : Shape_Op<"assuming",
     nothing else. They should not exist after a program is fully lowered and
     ready to execute.
   }];
-  let arguments = (ins Shape_WitnessType);
-  let regions = (region SizedRegion<1>:$thenRegion);
+  let arguments = (ins Shape_WitnessType:$witness);
+  let regions = (region SizedRegion<1>:$doRegion);
   let results = (outs Variadic<AnyType>:$results);
+
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def Shape_AssumingYieldOp : Shape_Op<"assuming_yield", [Terminator]> {
+def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
+                                     [NoSideEffect, ReturnLike, Terminator]> {
   let summary = "Yield operation";
   let description = [{
     This yield operation represents a return operation within the assert_and_exec
@@ -441,6 +446,11 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield", [Terminator]> {
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result",
+    [{ /* nothing to do */ }]>
+  ];
 }
 
 def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
