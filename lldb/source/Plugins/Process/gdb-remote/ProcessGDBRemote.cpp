@@ -649,8 +649,8 @@ Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
   if (error.Fail())
     return error;
 
-  if (repro::Loader *loader = repro::Reproducer::Instance().GetLoader())
-    error = ConnectToReplayServer(loader);
+  if (repro::Reproducer::Instance().IsReplaying())
+    error = ConnectToReplayServer();
   else
     error = ConnectToDebugserver(remote_url);
 
@@ -3355,30 +3355,10 @@ Status ProcessGDBRemote::DoSignal(int signo) {
   return error;
 }
 
-Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
-  if (!loader)
-    return Status("No loader provided.");
-
-  static std::unique_ptr<repro::MultiLoader<repro::GDBRemoteProvider>>
-      multi_loader = repro::MultiLoader<repro::GDBRemoteProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-
-  if (!multi_loader)
-    return Status("No gdb remote provider found.");
-
-  llvm::Optional<std::string> history_file = multi_loader->GetNextFile();
-  if (!history_file)
-    return Status("No gdb remote packet log found.");
-
-  // Load replay history.
-  if (auto error =
-          m_gdb_replay_server.LoadReplayHistory(FileSpec(*history_file)))
-    return Status("Unable to load replay history");
-
-  // Make a local connection.
-  if (auto error = GDBRemoteCommunication::ConnectLocally(m_gdb_comm,
-                                                          m_gdb_replay_server))
-    return Status("Unable to connect to replay server");
+Status ProcessGDBRemote::ConnectToReplayServer() {
+  Status status = m_gdb_replay_server.Connect(m_gdb_comm);
+  if (status.Fail())
+    return status;
 
   // Enable replay mode.
   m_replay_mode = true;
@@ -3403,8 +3383,8 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   if (platform_sp && !platform_sp->IsHost())
     return Status("Lost debug server connection");
 
-  if (repro::Loader *loader = repro::Reproducer::Instance().GetLoader())
-    return ConnectToReplayServer(loader);
+  if (repro::Reproducer::Instance().IsReplaying())
+    return ConnectToReplayServer();
 
   auto error = LaunchAndConnectToDebugserver(process_info);
   if (error.Fail()) {

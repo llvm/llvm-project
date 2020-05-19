@@ -496,9 +496,27 @@ required access rights. See `committing a change
 `obtaining commit access <DeveloperPolicy.html#obtaining-commit-access>`_
 for commit access.
 
+Here is an example workflow using git. This workflow assumes you have an
+accepted commit on the branch named `branch-with-change`.
+
+.. code-block:: console
+
+  # Go to the branch with your accepted commit.
+  % git checkout branch-with-change
+  # Rebase your change onto the latest commits on Github.
+  % git pull --rebase origin master
+  # Rerun the appropriate tests if needed.
+  % ninja check-$whatever
+  # Check that the list of commits about to be pushed is correct.
+  % git log origin/master...HEAD --oneline
+  # Push to Github.
+  % git push origin HEAD:master
+
 LLVM currently has a linear-history policy, which means that merge commits are
 not allowed. The `llvm-project` repo on github is configured to reject pushes
 that include merges, so the `git rebase` step above is required.
+
+Please ask for help if you're having trouble with your particular git workflow.
 
 Bisecting commits
 ^^^^^^^^^^^^^^^^^

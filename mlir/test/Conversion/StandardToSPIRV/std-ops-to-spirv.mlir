@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -convert-std-to-spirv %s -o - | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -convert-std-to-spirv -verify-diagnostics %s -o - | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // std arithmetic ops
@@ -128,14 +128,12 @@ module attributes {
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
 
-// CHECK-LABEL: @int_vector234
-func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<3xi16>, %arg2: vector<4xi64>) {
+// CHECK-LABEL: @int_vector23
+func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
   %0 = divi_signed %arg0, %arg0: vector<2xi8>
   // CHECK: spv.SRem %{{.*}}, %{{.*}}: vector<3xi32>
   %1 = remi_signed %arg1, %arg1: vector<3xi16>
-  // CHECK: spv.UDiv %{{.*}}, %{{.*}}: vector<4xi32>
-  %2 = divi_unsigned %arg2, %arg2: vector<4xi64>
   return
 }
 
@@ -145,6 +143,27 @@ func @float_scalar(%arg0: f16, %arg1: f64) {
   %0 = addf %arg0, %arg0: f16
   // CHECK: spv.FMul %{{.*}}, %{{.*}}: f32
   %1 = mulf %arg1, %arg1: f64
+  return
+}
+
+} // end module
+
+// -----
+
+// Check that types are converted to 32-bit when no special capabilities that
+// are not supported.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LEBEL: @int_vector4_invalid
+func @int_vector4_invalid(%arg0: vector<4xi64>) {
+  // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
+  // expected-error @+1 {{op requires the same type for all operands and results}}
+  %0 = divi_unsigned %arg0, %arg0: vector<4xi64>
   return
 }
 
@@ -717,7 +736,10 @@ func @load_i8(%arg0: memref<i8>) {
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
-  //     CHECK: spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  //     CHECK: %[[T1:.+]] = spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  //     CHECK: %[[T2:.+]] = spv.constant 24 : i32
+  //     CHECK: %[[T3:.+]] = spv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
+  //     CHECK: spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   %0 = load %arg0[] : memref<i8>
   return
 }
@@ -738,7 +760,10 @@ func @load_i16(%arg0: memref<10xi16>, %index : index) {
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[SIXTEEN]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.constant 65535 : i32
-  //     CHECK: spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  //     CHECK: %[[T1:.+]] = spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  //     CHECK: %[[T2:.+]] = spv.constant 16 : i32
+  //     CHECK: %[[T3:.+]] = spv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
+  //     CHECK: spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   %0 = load %arg0[%index] : memref<10xi16>
   return
 }
@@ -852,7 +877,10 @@ func @load_i8(%arg0: memref<i8>) {
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
-  //     CHECK: spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  //     CHECK: %[[T1:.+]] = spv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
+  //     CHECK: %[[T2:.+]] = spv.constant 24 : i32
+  //     CHECK: %[[T3:.+]] = spv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
+  //     CHECK: spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   %0 = load %arg0[] : memref<i8>
   return
 }

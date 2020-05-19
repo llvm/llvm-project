@@ -14,6 +14,8 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
+
+#include <map>
 #include <vector>
 
 namespace lld {
@@ -22,6 +24,11 @@ namespace macho {
 class InputSection;
 class Symbol;
 struct Reloc;
+
+// If .subsections_via_symbols is set, each InputSection will be split along
+// symbol boundaries. The keys of a SubsectionMap represent the offsets of
+// each subsection from the start of the original pre-split InputSection.
+using SubsectionMap = std::map<uint32_t, InputSection *>;
 
 class InputFile {
 public:
@@ -37,15 +44,18 @@ public:
 
   MemoryBufferRef mb;
   std::vector<Symbol *> symbols;
-  std::vector<InputSection *> sections;
+  ArrayRef<llvm::MachO::section_64> sectionHeaders;
+  std::vector<SubsectionMap> subsections;
 
 protected:
   InputFile(Kind kind, MemoryBufferRef mb) : mb(mb), fileKind(kind) {}
 
-  std::vector<InputSection *> parseSections(ArrayRef<llvm::MachO::section_64>);
+  void parseSections(ArrayRef<llvm::MachO::section_64>);
 
-  void parseRelocations(const llvm::MachO::section_64 &,
-                        std::vector<Reloc> &relocs);
+  void parseSymbols(ArrayRef<llvm::MachO::nlist_64> nList, const char *strtab,
+                    bool subsectionsViaSymbols);
+
+  void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
 
 private:
   const Kind fileKind;
