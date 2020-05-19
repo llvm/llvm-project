@@ -13,15 +13,19 @@ end subroutine
 ! CHECK-LABEL: func @_QPfoo() -> f32 {
 function foo()
   real(4) :: foo
+  real :: pi = 3.14159
 ! CHECK: }
 end function
 
+! CHECK-LABEL: fir.global @_QFfooEpi : f32 {
+
 ! CHECK-LABEL: func @_QPfunctn() -> f32 {
 function functn
-! CHECK-LABEL: fir.global @_QECpi
   real, parameter :: pi = 3.14
 ! CHECK: }
 end function
+
+! CHECK-LABEL: fir.global @_QFfunctnECpi constant : f32 {
 
 module testMod
 contains
