@@ -150,7 +150,7 @@ protected:
   trace::Metric Dist = {"dist", trace::Metric::Distribution, "lbl"};
   trace::Metric Counter = {"cnt", trace::Metric::Counter};
 
-  std::vector<llvm::StringRef> outputLines() {
+  std::vector<std::string> outputLines() {
     // Deliberately don't flush output stream, the tracer should do that.
     // This is important when clangd crashes.
     llvm::SmallVector<llvm::StringRef, 4> Lines;
