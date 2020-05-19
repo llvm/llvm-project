@@ -7528,15 +7528,14 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   unsigned Lane = State.Instance->Lane;
 
   Value *ConditionBit = nullptr;
-  if (!User) // Block in mask is all-one.
-    ConditionBit = State.Builder.getTrue();
-  else {
-    VPValue *BlockInMask = User->getOperand(0);
+  VPValue *BlockInMask = getMask();
+  if (BlockInMask) {
     ConditionBit = State.get(BlockInMask, Part);
     if (ConditionBit->getType()->isVectorTy())
       ConditionBit = State.Builder.CreateExtractElement(
           ConditionBit, State.Builder.getInt32(Lane));
-  }
+  } else // Block in mask is all-one.
+    ConditionBit = State.Builder.getTrue();
 
   // Replace the temporary unreachable terminator with a new conditional branch,
   // whose two destinations will be set later when they are created.
