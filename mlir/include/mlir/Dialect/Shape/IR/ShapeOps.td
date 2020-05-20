@@ -381,13 +381,15 @@ def Shape_AnyOp : Shape_Op<"any",
 
     Example:
     ```mlir
-      %s0 = shape.any([2,?], [?,3]) // [2,3]
-      %s1 = shape.any([?,?], [1,2]) // [1,2]
+      %s0 = shape.any [2,?], [?,3] // [2,3]
+      %s1 = shape.any [?,?], [1,2] // [1,2]
     ```
   }];
 
   let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
   let results = (outs Shape_ShapeType:$result);
+
+  let assemblyFormat = "$inputs attr-dict";
 }
 
 def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
@@ -403,16 +405,18 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable([2,2], [3,1,2]) // Success
-      %w1 = shape.cstr_broadcastable([2,2], [3,2])    // Failure
-      %w2 = shape.cstr_eq([1,2], [1,2], [1,2]) // Success
-      %wf = shape.assume_all(%w0, %w1) // Failure
-      %wt = shape.assume_all(%w0, %w2) // Success
+      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Success
+      %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
+      %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Success
+      %wf = shape.assuming_all %w0, %w1 // Failure
+      %wt = shape.assuming_all %w0, %w2 // Success
     ```
   }];
 
   let arguments = (ins Variadic<Shape_WitnessType>:$inputs);
   let results = (outs Shape_WitnessType:$result);
+
+  let assemblyFormat = "$inputs attr-dict";
 }
 
 def Shape_AssumingOp : Shape_Op<"assuming",
@@ -451,6 +455,8 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
     OpBuilder<"OpBuilder &builder, OperationState &result",
     [{ /* nothing to do */ }]>
   ];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
@@ -463,13 +469,15 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable([2,2], [3,1,2])  // Success
-      %w1 = shape.cstr_broadcastable([2,2], [3,2])    // Failure
+      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Success
+      %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
     ```
   }];
 
   let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
   let results = (outs Shape_WitnessType:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
 def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
@@ -481,12 +489,14 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_eq([1,2], [1,2], [1,2]) // Success
-      %w1 = shape.cstr_eq([2,2], [1,2])        // Failure
+      %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Success
+      %w1 = shape.cstr_eq [2,2], [1,2] // Failure
     ```
   }];
   let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
   let results = (outs Shape_WitnessType:$result);
+
+  let assemblyFormat = "$inputs attr-dict";
 }
 
 
