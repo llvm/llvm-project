@@ -12,8 +12,9 @@
 
 #include <string>
 
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationReplayServer.h"
 #include "lldb/Target/Platform.h"
 
 namespace lldb_private {
@@ -164,6 +165,7 @@ public:
 
 protected:
   process_gdb_remote::GDBRemoteCommunicationClient m_gdb_client;
+  process_gdb_remote::GDBRemoteCommunicationReplayServer m_gdb_replay_server;
   std::string m_platform_description; // After we connect we can get a more
                                       // complete description of what we are
                                       // connected to
