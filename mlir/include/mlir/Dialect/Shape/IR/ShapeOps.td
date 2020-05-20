@@ -473,11 +473,11 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [NoSideEffect]> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Success
+      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
       %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
-      %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Success
+      %w2 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
       %wf = shape.assuming_all %w0, %w1 // Failure
-      %wt = shape.assuming_all %w0, %w2 // Success
+      %wt = shape.assuming_all %w0, %w2 // Passing
     ```
   }];
 
@@ -537,7 +537,7 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Success
+      %w0 = shape.cstr_broadcastable [2,2], [3,1,2] // Passing
       %w1 = shape.cstr_broadcastable [2,2], [3,2] // Failure
     ```
   }];
@@ -557,7 +557,7 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
 
     Example:
     ```mlir
-      %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Success
+      %w0 = shape.cstr_eq [1,2], [1,2], [1,2] // Passing
       %w1 = shape.cstr_eq [2,2], [1,2] // Failure
     ```
   }];
@@ -567,6 +567,28 @@ def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
   let assemblyFormat = "$inputs attr-dict";
 }
 
-// Canonicalization patterns.
+def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect]> {
+  let summary = "An operation that returns a statically known witness value";
+  let description = [{
+  This operation represents a statically known witness result. This can be
+  often used to canonicalize/fold constraint and assuming code that will always
+  pass.
+
+  ```mlir
+  %0 = shape.const_shape [1,2,3]
+  %1 = shape.const_shape [1, 2, 3]
+  %w0 = shape.cstr_eq(%0, %1) // Can be folded to "const_witness true"
+  %w1 = shape.const_witness true
+  %w2 = shape.assuming_all(%w0, %w2) // Can be folded to "const_witness true"
+  ```
+  }];
+  let arguments = (ins BoolAttr:$passing);
+  let results = (outs Shape_WitnessType:$result);
+
+  let assemblyFormat = "$passing attr-dict";
+
+  let hasFolder = 1;
+}
+
 
 #endif // SHAPE_OPS
