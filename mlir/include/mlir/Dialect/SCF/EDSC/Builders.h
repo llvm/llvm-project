@@ -65,7 +65,7 @@ public:
                   ValueRange iterArgsInitValues);
   LoopNestBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> lbs,
                   ArrayRef<Value> ubs, ArrayRef<Value> steps);
-  Operation::result_range operator()(std::function<void(void)> fun = nullptr);
+  ValueRange operator()(std::function<void(void)> fun = nullptr);
 
 private:
   SmallVector<LoopBuilder, 4> loops;
