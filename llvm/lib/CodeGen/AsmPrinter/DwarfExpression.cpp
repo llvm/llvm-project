@@ -259,7 +259,8 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     if (isEntryValue())
       finalizeEntryValue();
 
-    if (isEntryValue() && !isParameterValue() && DwarfVersion >= 4)
+    if (isEntryValue() && !isIndirect() && !isParameterValue() &&
+        DwarfVersion >= 4)
       emitOp(dwarf::DW_OP_stack_value);
 
     DwarfRegs.clear();
@@ -316,6 +317,25 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     addBReg(Reg.DwarfRegNo, SignedOffset);
   DwarfRegs.clear();
   return true;
+}
+
+void DwarfExpression::setEntryValueFlags(const MachineLocation &Loc) {
+  LocationFlags |= EntryValue;
+  if (Loc.isIndirect())
+    LocationFlags |= Indirect;
+}
+
+void DwarfExpression::setLocation(const MachineLocation &Loc,
+                                  const DIExpression *DIExpr) {
+  if (Loc.isIndirect())
+    // Do not treat entry value descriptions of indirect parameters as memory
+    // locations. This allows DwarfExpression::addReg() to add DW_OP_regN to an
+    // entry value description.
+    if (!DIExpr->isEntryValue())
+      setMemoryLocationKind();
+
+  if (DIExpr->isEntryValue())
+    setEntryValueFlags(Loc);
 }
 
 void DwarfExpression::beginEntryValueExpression(
