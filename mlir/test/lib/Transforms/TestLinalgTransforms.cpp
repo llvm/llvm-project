@@ -170,8 +170,9 @@ getMatmulToVectorCanonicalizationPatterns(MLIRContext *context) {
 }
 
 static void fillL1TilingAndMatmulToVectorPatterns(
-    MLIRContext *context, StringRef startMarker,
+    FuncOp funcOp, StringRef startMarker,
     SmallVectorImpl<OwningRewritePatternList> &patternsVector) {
+  MLIRContext *context = funcOp.getContext();
   patternsVector.emplace_back(LinalgTilingPattern<MatmulOp>(
       context,
       LinalgTilingOptions().setTileSizes({8, 12, 16}).setInterchange({1, 0, 2}),
@@ -195,7 +196,7 @@ void TestLinalgTransforms::runOnFunction() {
   } else {
     SmallVector<OwningRewritePatternList, 4> stage1Patterns;
     if (testMatmulToVectorPatterns1dTiling) {
-      fillL1TilingAndMatmulToVectorPatterns(&getContext(), "START",
+      fillL1TilingAndMatmulToVectorPatterns(getFunction(), "START",
                                             stage1Patterns);
     } else if (testMatmulToVectorPatterns2dTiling) {
       stage1Patterns.emplace_back(
@@ -204,7 +205,7 @@ void TestLinalgTransforms::runOnFunction() {
                                             .setTileSizes({768, 264, 768})
                                             .setInterchange({1, 2, 0}),
                                         LinalgMarker({"START"}, "L2")));
-      fillL1TilingAndMatmulToVectorPatterns(&getContext(), "L2",
+      fillL1TilingAndMatmulToVectorPatterns(getFunction(), "L2",
                                             stage1Patterns);
     }
     OwningRewritePatternList stage2Patterns =

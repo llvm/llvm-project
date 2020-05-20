@@ -290,6 +290,34 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
   return true;
 }
 
+static bool isSameSubView(Value a, Value b) {
+  if (a == b)
+    return true;
+  auto sva = a.getDefiningOp<SubViewOp>();
+  auto svb = b.getDefiningOp<SubViewOp>();
+  if (!sva || !svb)
+    return false;
+  if (!isSameSubView(sva.getViewSource(), svb.getViewSource()))
+    return false;
+  if (sva.getType() != svb.getType())
+    return false;
+  if (sva.getRank() != svb.getRank())
+    return false;
+  if (sva.getNumOperands() != svb.getNumOperands())
+    return false;
+  if (sva.static_offsets() != svb.static_offsets())
+    return false;
+  if (sva.static_sizes() != svb.static_sizes())
+    return false;
+  if (sva.static_strides() != svb.static_strides())
+    return false;
+  /// Skip the "viewSource" operand.
+  for (unsigned idx = 1, e = sva.getNumOperands(); idx != e; ++idx)
+    if (sva.getOperand(idx) != svb.getOperand(idx))
+      return false;
+  return true;
+}
+
 static Optional<FusionInfo>
 fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
                   const LinalgDependenceGraph &graph, OperationFolder *folder,
@@ -305,7 +333,7 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
 
     // Check that the dependence is indeed on the input `consumerIdx` view.
     auto consumedView = dependence.indexingView;
-    if (consumer.getBuffer(consumerIdx) != consumedView)
+    if (!isSameSubView(consumer.getBuffer(consumerIdx), consumedView))
       continue;
 
     // Consumer consumes this view, `isStructurallyFusableProducer` also checks

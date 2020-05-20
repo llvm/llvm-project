@@ -98,6 +98,21 @@ void mlir::linalg::LinalgMarker::replaceLinalgMarker(PatternRewriter &rewriter,
                                    rewriter.getContext()));
 }
 
+LinalgTilingOptions &
+mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+  SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
+  tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPointToStart(
+        &op->getParentOfType<FuncOp>().getBody().front());
+    return llvm::to_vector<4>(llvm::map_range(tileSizes, [&](int64_t s) {
+      Value v = b.create<ConstantIndexOp>(op->getLoc(), s);
+      return v;
+    }));
+  };
+  return *this;
+};
+
 /// Linalg base tiling pattern.
 mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     StringRef opName, MLIRContext *context, LinalgTilingOptions options,
@@ -112,14 +127,7 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewrite(
     return failure();
   if (failed(marker.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  Optional<TiledLinalgOp> res;
-  if (options.loopType == LinalgTilingLoopType::Loops)
-    res = tileLinalgOp(rewriter, linalgOp, options.tileSizes,
-                       options.interchangeVector);
-  else if (options.loopType == LinalgTilingLoopType::ParallelLoops)
-    res = tileLinalgOpToParallelLoops(rewriter, linalgOp, options.tileSizes,
-                                      options.interchangeVector);
-  // TODO: Impl tiling to affine loops when it makes sense.
+  Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
 
   if (!res)
     return failure();

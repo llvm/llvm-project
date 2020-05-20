@@ -78,6 +78,8 @@ template <typename LoopTy> class GenericLoopNestRangeBuilder {
 public:
   GenericLoopNestRangeBuilder(MutableArrayRef<Value> ivs,
                               ArrayRef<Value> ranges);
+  GenericLoopNestRangeBuilder(MutableArrayRef<Value> ivs,
+                              ArrayRef<SubViewOp::Range> ranges);
   void operator()(std::function<void(void)> fun = nullptr) { (*builder)(fun); }
 
 private:
