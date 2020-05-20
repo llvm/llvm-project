@@ -1025,6 +1025,21 @@ the configuration (without a prefix: ``Auto``).
         bar();
       });
 
+  * ``bool BeforeWhile`` Wrap before ``while``.
+
+    .. code-block:: c++
+
+      true:
+      do {
+        foo();
+      }
+      while (1);
+
+      false:
+      do {
+        foo();
+      } while (1);
+
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
   * ``bool SplitEmptyFunction`` If ``false``, empty function body can be put on a single line.
