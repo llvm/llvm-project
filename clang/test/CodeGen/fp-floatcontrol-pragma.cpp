@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 float fff(float x, float y) {
 // CHECK-LABEL: define float @_Z3fffff{{.*}}
@@ -38,10 +39,23 @@ float check_precise(float x, float y) {
   }
   return z;
 }
+
 float fma_test1(float a, float b, float c) {
 // CHECK-LABEL define float @_Z9fma_test1fff{{.*}}
 #pragma float_control(precise, on)
   float x = a * b + c;
   //CHECK: fmuladd
   return x;
+}
+
+#if FENV_ON
+// expected-warning@+1{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
+#pragma STDC FENV_ACCESS ON
+#endif
+// CHECK-LABEL: define {{.*}}callt{{.*}}
+
+void callt() {
+  volatile float z;
+  z = z * z;
+//CHECK: = fmul float
 }
