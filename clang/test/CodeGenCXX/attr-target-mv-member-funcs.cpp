@@ -77,18 +77,18 @@ int templ_use() {
 // LINUX: %s = alloca %struct.S, align 1
 // LINUX: %s2 = alloca %struct.S, align 1
 // LINUX: %C = alloca %struct.ConvertTo, align 1
-// LINUX: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
+// LINUX: call nonnull align 1 dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
 // LINUX: call void @_ZNK9ConvertTocv1SEv.ifunc(%struct.ConvertTo* %C)
-// LINUX: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
+// LINUX: call nonnull align 1 dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
 // LINUX: call i32 @_ZN1S3fooEi.ifunc(%struct.S* %s, i32 0)
 
 // WINDOWS: define dso_local i32 @"?bar@@YAHXZ"()
 // WINDOWS: %s = alloca %struct.S, align 1
 // WINDOWS: %s2 = alloca %struct.S, align 1
 // WINDOWS: %C = alloca %struct.ConvertTo, align 1
-// WINDOWS: call dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
+// WINDOWS: call nonnull align 1 dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
 // WINDOWS: call void @"??BConvertTo@@QEBA?AUS@@XZ.resolver"(%struct.ConvertTo* %C
-// WINDOWS: call dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
+// WINDOWS: call nonnull align 1 dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %s, i32 0)
 
 // LINUX: define weak_odr %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver() comdat
