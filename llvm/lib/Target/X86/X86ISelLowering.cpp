@@ -38821,11 +38821,21 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to extract a i1 element by using MOVMSK to extract the signbits
   // and then testing the relevant element.
+  //
+  // Note that we only combine extracts on the *same* result number, i.e.
+  //   t0 = merge_values a0, a1, a2, a3
+  //   i1 = extract_vector_elt t0, Constant:i64<2>
+  //   i1 = extract_vector_elt t0, Constant:i64<3>
+  // but not
+  //   i1 = extract_vector_elt t0:1, Constant:i64<2>
+  // since the latter would need its own MOVMSK.
   if (CIdx && SrcVT.getScalarType() == MVT::i1) {
     SmallVector<SDNode *, 16> BoolExtracts;
-    auto IsBoolExtract = [&BoolExtracts](SDNode *Use) {
+    unsigned ResNo = InputVector.getResNo();
+    auto IsBoolExtract = [&BoolExtracts, &ResNo](SDNode *Use) {
       if (Use->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
           isa<ConstantSDNode>(Use->getOperand(1)) &&
+          Use->getOperand(0).getResNo() == ResNo &&
           Use->getValueType(0) == MVT::i1) {
         BoolExtracts.push_back(Use);
         return true;
@@ -39666,7 +39676,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() == ISD::SELECT && VT.isVector() &&
       VT.getVectorElementType() == MVT::i1 &&
       (DCI.isBeforeLegalize() || (VT != MVT::v64i1 || Subtarget.is64Bit()))) {
-    MVT IntVT = MVT::getIntegerVT(VT.getVectorNumElements());
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getVectorNumElements());
     bool LHSIsConst = ISD::isBuildVectorOfConstantSDNodes(LHS.getNode());
     bool RHSIsConst = ISD::isBuildVectorOfConstantSDNodes(RHS.getNode());
 
