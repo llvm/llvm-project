@@ -434,6 +434,15 @@ public:
     return CallArgumentIndex;
   }
 
+  /// Returns the construction context of the call, if it is a C++ constructor
+  /// call or a call of a function returning a C++ class instance. Otherwise
+  /// return nullptr.
+  const ConstructionContext *getConstructionContext() const;
+
+  /// If the call returns a C++ record type then the region of its return value
+  /// can be retrieved from its construction context.
+  Optional<SVal> getReturnValueUnderConstruction() const;
+
   // Iterator access to formal parameters and their types.
 private:
   struct GetTypeFn {
