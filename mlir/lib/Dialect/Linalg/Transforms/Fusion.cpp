@@ -766,6 +766,66 @@ template <typename LinalgOpTy> struct FuseTensorReshapeOpAsConsumer {
     return fusedOp;
   }
 };
+
+/// Implementation of fusion on tensor ops when producer is a splat constant.
+template <typename LinalgOpTy> struct FuseConstantOpAsProducer {
+  static bool isFusible(ConstantOp producer, LinalgOpTy consumer,
+                        unsigned consumerIdx) {
+    return producer.getResult().getType().isa<RankedTensorType>() &&
+           producer.value().template cast<DenseElementsAttr>().isSplat();
+  }
+
+  static Operation *fuse(ConstantOp producer, LinalgOpTy consumer,
+                         unsigned consumerIdx, PatternRewriter &rewriter,
+                         OperationFolder *folder = nullptr) {
+    if (!isFusible(producer, consumer, consumerIdx))
+      return nullptr;
+
+    // The indexing_maps for the operands of the fused operation are same as
+    // those for the operands of the consumer without the indexing map at
+    // consumerIdx
+    SmallVector<AffineMap, 4> fusedIndexMaps =
+        llvm::to_vector<4>(llvm::map_range(
+            consumer.indexing_maps(), [](Attribute attr) -> AffineMap {
+              return attr.cast<AffineMapAttr>().getValue();
+            }));
+    fusedIndexMaps.erase(std::next(fusedIndexMaps.begin(), consumerIdx));
+
+    // The operands list is same as the consumer with the argument for constant
+    // index dropped.
+    SmallVector<Value, 4> fusedOperands(consumer.operand_begin(),
+                                        consumer.operand_end());
+    fusedOperands.erase(std::next(fusedOperands.begin(), consumerIdx));
+
+    // Create a constant scalar value from the splat constant.
+    Value scalarConstant = rewriter.create<ConstantOp>(
+        producer.getLoc(),
+        producer.value().template cast<DenseElementsAttr>().getSplatValue());
+
+    auto fusedOp = rewriter.create<LinalgOpTy>(
+        rewriter.getUnknownLoc(), consumer.getResultTypes(), fusedOperands,
+        rewriter.getI64IntegerAttr(consumer.getNumOperands() - 1),
+        rewriter.getI64IntegerAttr(consumer.getNumResults()),
+        rewriter.getAffineMapArrayAttr(fusedIndexMaps),
+        consumer.iterator_types(),
+        /*doc=*/nullptr,
+        /*library_call=*/nullptr);
+
+    // Map the block argument corresponding to the replaced argument with the
+    // scalar constant.
+    Region &consumerRegion = consumer.region();
+    Block &entryBlock = *consumerRegion.begin();
+    unsigned argIndex =
+        entryBlock.getNumArguments() - consumer.getNumOperands() + consumerIdx;
+    BlockAndValueMapping mapping;
+    mapping.map(entryBlock.getArgument(argIndex), scalarConstant);
+    Region &fusedRegion = fusedOp.region();
+    rewriter.cloneRegionBefore(consumerRegion, fusedRegion, fusedRegion.begin(),
+                               mapping);
+    return fusedOp;
+  }
+};
+
 } // namespace
 
 Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
@@ -789,6 +849,9 @@ Operation *mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
     } else if (auto reshapeOpProducer = dyn_cast<TensorReshapeOp>(producer)) {
       return FuseTensorReshapeOpAsProducer<GenericOp>::fuse(
           reshapeOpProducer, genericOp, consumerIdx, rewriter, folder);
+    } else if (auto constantOpProducer = dyn_cast<ConstantOp>(producer)) {
+      return FuseConstantOpAsProducer<GenericOp>::fuse(
+          constantOpProducer, genericOp, consumerIdx, rewriter, folder);
     }
     return nullptr;
   }
