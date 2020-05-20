@@ -48,7 +48,7 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
                                 value="42")
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("obj"),
-                                typename="Swift.Optional<__ObjC.ObjCClass>",
+                                typename="Swift.Optional<ObjCModule.ObjCClass>",
                                 num_children=0)
         self.expect("target var obj", substrs=["ObjCClass",
                                                "private_ivar", "42"])
@@ -74,7 +74,7 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
                                 value="42")
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("obj"),
-                                typename="Swift.Optional<__ObjC.ObjCClass>",
+                                typename="Swift.Optional<ObjCModule.ObjCClass>",
                                 num_children=0)
         self.expect("expr obj", substrs=["ObjCClass",
                                          "private_ivar", "42"])

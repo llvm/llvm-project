@@ -53,7 +53,7 @@ class TestSwiftDWARFImporterBridgingHeader(lldbtest.TestBase):
                                 value="42")
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("point"),
-                                typename='__ObjC.Point', num_children=2)
+                                typename='bridging-header.h.Point', num_children=2)
         self.expect("ta v -d no-dyn point", substrs=["x = 1", "y = 2"])
         self.expect("ta v -d no-dyn swiftStructCMember",
                     substrs=[
