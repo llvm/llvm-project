@@ -971,6 +971,7 @@ sub Finalize {
         my $ScanView = Cwd::realpath("$RealBin/scan-view");
         if (! -x $ScanView) { $ScanView = "scan-view"; }
         if (! -x $ScanView) { $ScanView = Cwd::realpath("$RealBin/../../scan-view/bin/scan-view"); }
+        if (! -x $ScanView) { $ScanView = `which scan-view`; chomp $ScanView; }
         exec $ScanView, "$Options{OutputDir}";
       }
 
