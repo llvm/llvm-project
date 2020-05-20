@@ -12010,6 +12010,16 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "  x = 1;\n"
                "y = 1;\n",
                Alignment);
+
+  Alignment.ReflowComments = true;
+  Alignment.ColumnLimit = 50;
+  EXPECT_EQ("int x   = 0;\n"
+            "int yy  = 1; /// specificlennospace\n"
+            "int zzz = 2;\n",
+            format("int x   = 0;\n"
+                   "int yy  = 1; ///specificlennospace\n"
+                   "int zzz = 2;\n",
+                   Alignment));
 }
 
 TEST_F(FormatTest, AlignConsecutiveDeclarations) {
