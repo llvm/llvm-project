@@ -3954,7 +3954,7 @@ public:
 
     template<class _Yp, class _CntrlBlk>
     static shared_ptr<_Tp>
-    __create_with_control_block(_Yp* __p, _CntrlBlk* __cntrl)
+    __create_with_control_block(_Yp* __p, _CntrlBlk* __cntrl) _NOEXCEPT
     {
         shared_ptr<_Tp> __r;
         __r.__ptr_ = __p;
