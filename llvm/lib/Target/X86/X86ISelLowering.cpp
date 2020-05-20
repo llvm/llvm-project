@@ -3945,21 +3945,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (ArgLocs.back().getLocMemOffset() != 0)
       report_fatal_error("any parameter with the inalloca attribute must be "
                          "the only memory argument");
-  } else if (CLI.IsPreallocated) {
-    assert(ArgLocs.back().isMemLoc() &&
-           "cannot use preallocated attribute on a register "
-           "parameter");
-    SmallVector<size_t, 4> PreallocatedOffsets;
-    for (size_t i = 0; i < CLI.OutVals.size(); ++i) {
-      if (CLI.CB->paramHasAttr(i, Attribute::Preallocated)) {
-        PreallocatedOffsets.push_back(ArgLocs[i].getLocMemOffset());
-      }
-    }
-    auto *MFI = DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
-    size_t PreallocatedId = MFI->getPreallocatedIdForCallSite(CLI.CB);
-    MFI->setPreallocatedStackSize(PreallocatedId, NumBytes);
-    MFI->setPreallocatedArgOffsets(PreallocatedId, PreallocatedOffsets);
-    NumBytesToPush = 0;
   }
 
   if (!IsSibcall && !IsMustTail)
@@ -3987,9 +3972,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   for (unsigned I = 0, OutIndex = 0, E = ArgLocs.size(); I != E;
        ++I, ++OutIndex) {
     assert(OutIndex < Outs.size() && "Invalid Out index");
-    // Skip inalloca/preallocated arguments, they have already been written.
+    // Skip inalloca arguments, they have already been written.
     ISD::ArgFlagsTy Flags = Outs[OutIndex].Flags;
-    if (Flags.isInAlloca() || Flags.isPreallocated())
+    if (Flags.isInAlloca())
       continue;
 
     CCValAssign &VA = ArgLocs[I];
@@ -4176,8 +4161,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       assert(VA.isMemLoc());
       SDValue Arg = OutVals[OutsIndex];
       ISD::ArgFlagsTy Flags = Outs[OutsIndex].Flags;
-      // Skip inalloca/preallocated arguments.  They don't require any work.
-      if (Flags.isInAlloca() || Flags.isPreallocated())
+      // Skip inalloca arguments.  They don't require any work.
+      if (Flags.isInAlloca())
         continue;
       // Create frame index.
       int32_t Offset = VA.getLocMemOffset()+FPDiff;
@@ -33089,36 +33074,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         MI.getOpcode() == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;
     if (!BB->isLiveIn(BasePtr))
       BB->addLiveIn(BasePtr);
-    return BB;
-  }
-  case TargetOpcode::PREALLOCATED_SETUP: {
-    assert(Subtarget.is32Bit() && "preallocated only used in 32-bit");
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
-    MFI->setHasPreallocatedCall(true);
-    int64_t PreallocatedId = MI.getOperand(0).getImm();
-    size_t StackAdjustment = MFI->getPreallocatedStackSize(PreallocatedId);
-    assert(StackAdjustment != 0 && "0 stack adjustment");
-    LLVM_DEBUG(dbgs() << "PREALLOCATED_SETUP stack adjustment "
-                      << StackAdjustment << "\n");
-    BuildMI(*BB, MI, DL, TII->get(X86::SUB32ri), X86::ESP)
-        .addReg(X86::ESP)
-        .addImm(StackAdjustment);
-    MI.eraseFromParent();
-    return BB;
-  }
-  case TargetOpcode::PREALLOCATED_ARG: {
-    assert(Subtarget.is32Bit() && "preallocated calls only used in 32-bit");
-    int64_t PreallocatedId = MI.getOperand(1).getImm();
-    int64_t ArgIdx = MI.getOperand(2).getImm();
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
-    size_t ArgOffset = MFI->getPreallocatedArgOffsets(PreallocatedId)[ArgIdx];
-    LLVM_DEBUG(dbgs() << "PREALLOCATED_ARG arg index " << ArgIdx
-                      << ", arg offset " << ArgOffset << "\n");
-    // stack pointer + offset
-    addRegOffset(
-        BuildMI(*BB, MI, DL, TII->get(X86::LEA32r), MI.getOperand(0).getReg()),
-        X86::ESP, false, ArgOffset);
-    MI.eraseFromParent();
     return BB;
   }
   }

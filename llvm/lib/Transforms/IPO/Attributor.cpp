@@ -1363,8 +1363,7 @@ bool Attributor::isValidFunctionSignatureRewrite(
   AttributeList FnAttributeList = Fn->getAttributes();
   if (FnAttributeList.hasAttrSomewhere(Attribute::Nest) ||
       FnAttributeList.hasAttrSomewhere(Attribute::StructRet) ||
-      FnAttributeList.hasAttrSomewhere(Attribute::InAlloca) ||
-      FnAttributeList.hasAttrSomewhere(Attribute::Preallocated)) {
+      FnAttributeList.hasAttrSomewhere(Attribute::InAlloca)) {
     LLVM_DEBUG(
         dbgs() << "[Attributor] Cannot rewrite due to complex attribute\n");
     return false;

@@ -1214,16 +1214,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       // the various CC lowering callbacks.
       Flags.setByVal();
     }
-    if (Arg.IsPreallocated) {
-      Flags.setPreallocated();
-      // Set the byval flag for CCAssignFn callbacks that don't know about
-      // preallocated. This way we can know how many bytes we should've
-      // allocated and how many bytes a callee cleanup function will pop.  If we
-      // port preallocated to more targets, we'll have to add custom
-      // preallocated handling in the various CC lowering callbacks.
-      Flags.setByVal();
-    }
-    if (Arg.IsByVal || Arg.IsInAlloca || Arg.IsPreallocated) {
+    if (Arg.IsByVal || Arg.IsInAlloca) {
       PointerType *Ty = cast<PointerType>(Arg.Ty);
       Type *ElementTy = Ty->getElementType();
       unsigned FrameSize =
