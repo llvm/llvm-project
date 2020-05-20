@@ -4817,6 +4817,7 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   //
   //  Similarly, avoid folding away bitcasts of byval calls.
   if (Callee->getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
+      Callee->getAttributes().hasAttrSomewhere(Attribute::Preallocated) ||
       Callee->getAttributes().hasAttrSomewhere(Attribute::ByVal))
     return false;
 
