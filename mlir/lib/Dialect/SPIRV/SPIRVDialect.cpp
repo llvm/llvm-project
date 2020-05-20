@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/ParserUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/TargetAndABI.h"
@@ -115,7 +116,8 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
 
 SPIRVDialect::SPIRVDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
-  addTypes<ArrayType, ImageType, PointerType, RuntimeArrayType, StructType>();
+  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, PointerType,
+           RuntimeArrayType, StructType>();
 
   addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
 
@@ -262,6 +264,36 @@ static Type parseArrayType(SPIRVDialect const &dialect,
   if (parser.parseGreater())
     return Type();
   return ArrayType::get(elementType, count, stride);
+}
+
+// cooperative-matrix-type ::= `!spv.coopmatrix` `<` element-type ',' scope ','
+//                                                   rows ',' coloumns>`
+static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
+                                       DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  SmallVector<int64_t, 2> dims;
+  llvm::SMLoc countLoc = parser.getCurrentLocation();
+  if (parser.parseDimensionList(dims, /*allowDynamic=*/false))
+    return Type();
+
+  if (dims.size() != 2) {
+    parser.emitError(countLoc, "expected rows and columns size.");
+    return Type();
+  }
+
+  auto elementTy = parseAndVerifyType(dialect, parser);
+  if (!elementTy)
+    return Type();
+
+  Scope scope;
+  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+    return Type();
+
+  if (parser.parseGreater())
+    return Type();
+  return CooperativeMatrixNVType::get(elementTy, scope, dims[0], dims[1]);
 }
 
 // TODO(ravishankarm) : Reorder methods to be utilities first and parse*Type
@@ -525,6 +557,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
 
   if (keyword == "array")
     return parseArrayType(*this, parser);
+  if (keyword == "coopmatrix")
+    return parseCooperativeMatrixType(*this, parser);
   if (keyword == "image")
     return parseImageType(*this, parser);
   if (keyword == "ptr")
@@ -595,10 +629,19 @@ static void print(StructType type, DialectAsmPrinter &os) {
   os << ">";
 }
 
+static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
+  os << "coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
+  os << type.getElementType() << ", " << stringifyScope(type.getScope());
+  os << ">";
+}
+
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   switch (type.getKind()) {
   case TypeKind::Array:
     print(type.cast<ArrayType>(), os);
+    return;
+  case TypeKind::CooperativeMatrix:
+    print(type.cast<CooperativeMatrixNVType>(), os);
     return;
   case TypeKind::Pointer:
     print(type.cast<PointerType>(), os);
