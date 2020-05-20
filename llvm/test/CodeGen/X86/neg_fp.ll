@@ -54,3 +54,30 @@ define double @negation_propagation(double* %arg, double %arg1, double %arg2) no
   %t18 = fadd double %t16, %t7
   ret double %t18
 }
+
+; This would crash because the negated expression for %sub4
+; creates a new use of %sub1 and that alters the negated cost
+
+define float @fdiv_extra_use_changes_cost(float %a0, float %a1, float %a2) nounwind {
+; CHECK-LABEL: fdiv_extra_use_changes_cost:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm2
+; CHECK-NEXT:    mulss %xmm0, %xmm2
+; CHECK-NEXT:    subss %xmm1, %xmm0
+; CHECK-NEXT:    divss %xmm2, %xmm0
+; CHECK-NEXT:    movss %xmm0, (%esp)
+; CHECK-NEXT:    flds (%esp)
+; CHECK-NEXT:    popl %eax
+; CHECK-NEXT:    retl
+  %sub1 = fsub fast float %a0, %a1
+  %mul2 = fmul fast float %sub1, %a2
+  %neg = fneg fast float %a0
+  %add3 = fadd fast float %a1, %neg
+  %sub4 = fadd fast float %add3, %a2
+  %div5 = fdiv fast float %sub4, %mul2
+  ret float %div5
+}
