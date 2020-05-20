@@ -297,6 +297,21 @@ clang-format
           bar();
         });
 
+- Option ``AlignConsecutiveBitFields`` has been added to align bit field
+  declarations across multiple adjacent lines
+
+  .. code-block:: c++
+
+      true:
+        bool aaa  : 1;
+        bool a    : 1;
+        bool bb   : 1;
+
+      false:
+        bool aaa : 1;
+        bool a : 1;
+        bool bb : 1;
+
 libclang
 --------
 
