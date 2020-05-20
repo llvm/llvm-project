@@ -2548,6 +2548,44 @@ SmallVector<SubViewOp::Range, 8> SubViewOp::getOrCreateRanges(OpBuilder &b,
   return res;
 }
 
+SmallVector<Value, 4> SubViewOp::getOrCreateOffsets(OpBuilder &b,
+                                                    Location loc) {
+  unsigned dynamicIdx = 1;
+  return llvm::to_vector<4>(llvm::map_range(
+      static_offsets().cast<ArrayAttr>(), [&](Attribute a) -> Value {
+        int64_t staticOffset = a.cast<IntegerAttr>().getInt();
+        if (ShapedType::isDynamicStrideOrOffset(staticOffset))
+          return getOperand(dynamicIdx++);
+        else
+          return b.create<ConstantIndexOp>(loc, staticOffset);
+      }));
+}
+
+SmallVector<Value, 4> SubViewOp::getOrCreateSizes(OpBuilder &b, Location loc) {
+  unsigned dynamicIdx = 1 + offsets().size();
+  return llvm::to_vector<4>(llvm::map_range(
+      static_sizes().cast<ArrayAttr>(), [&](Attribute a) -> Value {
+        int64_t staticSize = a.cast<IntegerAttr>().getInt();
+        if (ShapedType::isDynamic(staticSize))
+          return getOperand(dynamicIdx++);
+        else
+          return b.create<ConstantIndexOp>(loc, staticSize);
+      }));
+}
+
+SmallVector<Value, 4> SubViewOp::getOrCreateStrides(OpBuilder &b,
+                                                    Location loc) {
+  unsigned dynamicIdx = 1 + offsets().size() + sizes().size();
+  return llvm::to_vector<4>(llvm::map_range(
+      static_strides().cast<ArrayAttr>(), [&](Attribute a) -> Value {
+        int64_t staticStride = a.cast<IntegerAttr>().getInt();
+        if (ShapedType::isDynamicStrideOrOffset(staticStride))
+          return getOperand(dynamicIdx++);
+        else
+          return b.create<ConstantIndexOp>(loc, staticStride);
+      }));
+}
+
 LogicalResult
 SubViewOp::getStaticStrides(SmallVectorImpl<int64_t> &staticStrides) {
   if (!strides().empty())
