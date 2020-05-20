@@ -69,7 +69,8 @@ public:
       auto step = rewriter.create<ConstantIndexOp>(loc, 1);
       auto loop =
           rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
-      loop.getBody()->clear();
+      for (Operation &nested : *loop.getBody())
+        rewriter.eraseOp(&nested);
       loopIvs.push_back(loop.getInductionVar());
 
       // Terminate the loop body.

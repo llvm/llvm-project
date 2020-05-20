@@ -419,7 +419,7 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
   // The spv.module build method adds a block with a terminator. Remove that
   // block. The terminator of the module op in the remaining block will be
   // legalized later.
-  spvModuleRegion.back().erase();
+  rewriter.eraseBlock(&spvModuleRegion.back());
   rewriter.eraseOp(moduleOp);
   return success();
 }
