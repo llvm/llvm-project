@@ -39,7 +39,7 @@ define void @test_varargs() {
   ; CHECK:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
   ; CHECK:   G_STORE [[C7]](s64), [[PTR_ADD4]](p0) :: (store 8 into stack + 32, align 1)
-  ; CHECK:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; CHECK:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; CHECK:   ADJCALLSTACKUP 40, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
   call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i8 3, i16 1, i32 4, float 1.0, double 2.0)
@@ -87,7 +87,7 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
   ; CHECK:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store 1 into stack + 5)
-  ; CHECK:   BL @i8i16callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
+  ; CHECK:   BL @i8i16callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK:   ADJCALLSTACKUP 6, 0, implicit-def $sp, implicit $sp
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
