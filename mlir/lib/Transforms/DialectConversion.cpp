@@ -509,7 +509,7 @@ struct ConversionPatternRewriterImpl {
 
   /// The kind of the block action performed during the rewrite.  Actions can be
   /// undone if the conversion fails.
-  enum class BlockActionKind { Create, Move, Split, TypeConversion };
+  enum class BlockActionKind { Create, Erase, Move, Split, TypeConversion };
 
   /// Original position of the given block in its parent region.  We cannot use
   /// a region iterator because it could have been invalidated by other region
@@ -524,6 +524,9 @@ struct ConversionPatternRewriterImpl {
   struct BlockAction {
     static BlockAction getCreate(Block *block) {
       return {BlockActionKind::Create, block, {}};
+    }
+    static BlockAction getErase(Block *block, BlockPosition originalPos) {
+      return {BlockActionKind::Erase, block, {originalPos}};
     }
     static BlockAction getMove(Block *block, BlockPosition originalPos) {
       return {BlockActionKind::Move, block, {originalPos}};
@@ -544,9 +547,9 @@ struct ConversionPatternRewriterImpl {
     Block *block;
 
     union {
-      // In use if kind == BlockActionKind::Move and contains a pointer to the
-      // region that originally contained the block as well as the position of
-      // the block in that region.
+      // In use if kind == BlockActionKind::Move or BlockActionKind::Erase, and
+      // contains a pointer to the region that originally contained the block as
+      // well as the position of the block in that region.
       BlockPosition originalPosition;
       // In use if kind == BlockActionKind::Split and contains a pointer to the
       // block that was split into two parts.
@@ -563,6 +566,10 @@ struct ConversionPatternRewriterImpl {
 
   /// Reset the state of the rewriter to a previously saved point.
   void resetState(RewriterState state);
+
+  /// Erase any blocks that were unlinked from their regions and stored in block
+  /// actions.
+  void eraseDanglingBlocks();
 
   /// Undo the block actions (motions, splits) one by one in reverse order until
   /// "numActionsToKeep" actions remains.
@@ -586,6 +593,9 @@ struct ConversionPatternRewriterImpl {
 
   /// PatternRewriter hook for replacing the results of an operation.
   void replaceOp(Operation *op, ValueRange newValues);
+
+  /// Notifies that a block is about to be erased.
+  void notifyBlockIsBeingErased(Block *block);
 
   /// Notifies that a block was created.
   void notifyCreatedBlock(Block *block);
@@ -711,6 +721,14 @@ void ConversionPatternRewriterImpl::resetState(RewriterState state) {
     ignoredOps.pop_back();
 }
 
+void ConversionPatternRewriterImpl::eraseDanglingBlocks() {
+  for (auto &action : blockActions) {
+    if (action.kind != BlockActionKind::Erase)
+      continue;
+    delete action.block;
+  }
+}
+
 void ConversionPatternRewriterImpl::undoBlockActions(
     unsigned numActionsToKeep) {
   for (auto &action :
@@ -725,6 +743,14 @@ void ConversionPatternRewriterImpl::undoBlockActions(
         blockOps.remove(blockOps.begin());
       action.block->dropAllDefinedValueUses();
       action.block->erase();
+      break;
+    }
+    // Put the block (owned by action) back into its original position.
+    case BlockActionKind::Erase: {
+      auto &blockList = action.originalPosition.region->getBlocks();
+      blockList.insert(
+          std::next(blockList.begin(), action.originalPosition.position),
+          action.block);
       break;
     }
     // Move the block back to its original position.
@@ -806,6 +832,9 @@ void ConversionPatternRewriterImpl::applyRewrites() {
     repl.op->erase();
 
   argConverter.applyRewrites(mapping);
+
+  // Now that the ops have been erased, also erase dangling blocks.
+  eraseDanglingBlocks();
 }
 
 LogicalResult
@@ -851,6 +880,12 @@ void ConversionPatternRewriterImpl::replaceOp(Operation *op,
   /// Mark this operation as recursively ignored so that we don't need to
   /// convert any nested operations.
   markNestedOpsIgnored(op);
+}
+
+void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
+  Region *region = block->getParent();
+  auto position = std::distance(region->begin(), Region::iterator(block));
+  blockActions.push_back(BlockAction::getErase(block, {region, position}));
 }
 
 void ConversionPatternRewriterImpl::notifyCreatedBlock(Block *block) {
@@ -942,7 +977,17 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
 }
 
 void ConversionPatternRewriter::eraseBlock(Block *block) {
-  llvm_unreachable("erasing blocks for dialect conversion not implemented");
+  impl->notifyBlockIsBeingErased(block);
+
+  // Mark all ops for erasure.
+  for (Operation &op : *block)
+    eraseOp(&op);
+
+  // Unlink the block from its parent region. The block is kept in the block
+  // action and will be actually destroyed when rewrites are applied. This
+  // allows us to keep the operations in the block live and undo the removal by
+  // re-inserting the block.
+  block->getParent()->getBlocks().remove(block);
 }
 
 /// Apply a signature conversion to the entry block of the given region.
@@ -1334,7 +1379,8 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
        i != e; ++i) {
     auto &action = rewriterImpl.blockActions[i];
     if (action.kind ==
-        ConversionPatternRewriterImpl::BlockActionKind::TypeConversion)
+            ConversionPatternRewriterImpl::BlockActionKind::TypeConversion ||
+        action.kind == ConversionPatternRewriterImpl::BlockActionKind::Erase)
       continue;
 
     // Convert the block signature.
