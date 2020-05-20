@@ -43,7 +43,8 @@ using LoweringCallback =
 /// instead uses a small wrapper library that exports a stable and conveniently
 /// typed ABI on top of GPU runtimes such as CUDA or ROCm (HIP).
 std::unique_ptr<OperationPass<ModuleOp>>
-createConvertGpuLaunchFuncToGpuRuntimeCallsPass();
+createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
+    StringRef gpuBinaryAnnotation = "");
 
 /// Creates a pass to convert kernel functions into GPU target object blobs.
 ///

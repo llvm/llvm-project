@@ -123,6 +123,11 @@ private:
   void translateGpuLaunchCalls(mlir::gpu::LaunchFuncOp launchOp);
 
 public:
+  GpuLaunchFuncToGpuRuntimeCallsPass() = default;
+  GpuLaunchFuncToGpuRuntimeCallsPass(StringRef gpuBinaryAnnotation) {
+    this->gpuBinaryAnnotation = gpuBinaryAnnotation.str();
+  }
+
   // Run the dialect converter on the module.
   void runOnOperation() override {
     // Cache the LLVMDialect for the current module.
@@ -457,6 +462,8 @@ void GpuLaunchFuncToGpuRuntimeCallsPass::translateGpuLaunchCalls(
 }
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createConvertGpuLaunchFuncToGpuRuntimeCallsPass() {
-  return std::make_unique<GpuLaunchFuncToGpuRuntimeCallsPass>();
+mlir::createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
+    StringRef gpuBinaryAnnotation) {
+  return std::make_unique<GpuLaunchFuncToGpuRuntimeCallsPass>(
+      gpuBinaryAnnotation);
 }
