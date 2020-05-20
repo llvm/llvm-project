@@ -2991,8 +2991,10 @@ class SignlessOrUnsignedIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, IOrUI<w>),
               StrJoinInt<widths, "/">.result # "-bit signless/unsigned integer">;
 
-def SPV_IsPtrType : CPred<"$_self.isa<::mlir::spirv::PointerType>()">;
 def SPV_IsArrayType : CPred<"$_self.isa<::mlir::spirv::ArrayType>()">;
+def SPV_IsCooperativeMatrixType :
+  CPred<"$_self.isa<::mlir::spirv::CooperativeMatrixNVType>()">;
+def SPV_IsPtrType : CPred<"$_self.isa<::mlir::spirv::PointerType>()">;
 def SPV_IsRTArrayType : CPred<"$_self.isa<::mlir::spirv::RuntimeArrayType>()">;
 def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
 
@@ -3012,6 +3014,9 @@ def SPV_AnyPtr : DialectType<SPIRV_Dialect, SPV_IsPtrType,
                              "any SPIR-V pointer type">;
 def SPV_AnyArray : DialectType<SPIRV_Dialect, SPV_IsArrayType,
                                "any SPIR-V array type">;
+def SPV_AnyCooperativeMatrix : DialectType<SPIRV_Dialect,
+                               SPV_IsCooperativeMatrixType,
+                               "any SPIR-V cooperative matrix type">;
 def SPV_AnyRTArray : DialectType<SPIRV_Dialect, SPV_IsRTArrayType,
                                  "any SPIR-V runtime array type">;
 def SPV_AnyStruct : DialectType<SPIRV_Dialect, SPV_IsStructType,
@@ -3220,6 +3225,8 @@ def SPV_OC_OpGroupNonUniformSMax       : I32EnumAttrCase<"OpGroupNonUniformSMax"
 def SPV_OC_OpGroupNonUniformUMax       : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
 def SPV_OC_OpGroupNonUniformFMax       : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
 def SPV_OC_OpSubgroupBallotKHR         : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
+def SPV_OC_OpTypeCooperativeMatrixNV   : I32EnumAttrCase<"OpTypeCooperativeMatrixNV", 5358>;
+def SPV_OC_OpCooperativeMatrixLoadNV   : I32EnumAttrCase<"OpCooperativeMatrixLoadNV", 5359>;
 
 def SPV_OpcodeAttr :
     SPV_I32EnumAttr<"Opcode", "valid SPIR-V instructions", [
@@ -3271,7 +3278,8 @@ def SPV_OpcodeAttr :
       SPV_OC_OpGroupNonUniformFMul, SPV_OC_OpGroupNonUniformSMin,
       SPV_OC_OpGroupNonUniformUMin, SPV_OC_OpGroupNonUniformFMin,
       SPV_OC_OpGroupNonUniformSMax, SPV_OC_OpGroupNonUniformUMax,
-      SPV_OC_OpGroupNonUniformFMax, SPV_OC_OpSubgroupBallotKHR
+      SPV_OC_OpGroupNonUniformFMax, SPV_OC_OpSubgroupBallotKHR,
+      SPV_OC_OpTypeCooperativeMatrixNV, SPV_OC_OpCooperativeMatrixLoadNV
     ]>;
 
 // End opcode section. Generated from SPIR-V spec; DO NOT MODIFY!

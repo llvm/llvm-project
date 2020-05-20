@@ -327,3 +327,23 @@ func @struct_type_missing_comma(!spv.struct<f32 [0 NonWritable], i32 [4]>)
 
 // expected-error @+1 {{expected ']'}}
 func @struct_type_missing_comma(!spv.struct<f32 [0, NonWritable NonReadable], i32 [4]>)
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// CooperativeMatrix
+//===----------------------------------------------------------------------===//
+
+// CHECK: func @coop_matrix_type(!spv.coopmatrix<8x16xi32, Subgroup>, !spv.coopmatrix<8x8xf32, Workgroup>)
+func @coop_matrix_type(!spv.coopmatrix<8x16xi32, Subgroup>, !spv.coopmatrix<8x8xf32, Workgroup>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected ','}}
+func @missing_scope(!spv.coopmatrix<8x16xi32>) -> ()
+
+// -----
+
+// expected-error @+1 {{expected rows and columns size}}
+func @missing_count(!spv.coopmatrix<8xi32, Subgroup>) -> ()
+

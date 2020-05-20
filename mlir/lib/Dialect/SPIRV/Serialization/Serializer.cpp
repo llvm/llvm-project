@@ -1096,6 +1096,21 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
     return success();
   }
 
+  if (auto cooperativeMatrixType =
+          type.dyn_cast<spirv::CooperativeMatrixNVType>()) {
+    uint32_t elementTypeID = 0;
+    if (failed(processType(loc, cooperativeMatrixType.getElementType(),
+                           elementTypeID))) {
+      return failure();
+    }
+    typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
+    operands.push_back(elementTypeID);
+    operands.push_back(static_cast<uint32_t>(cooperativeMatrixType.getScope()));
+    operands.push_back(cooperativeMatrixType.getRows());
+    operands.push_back(cooperativeMatrixType.getColumns());
+    return success();
+  }
+
   // TODO(ravishankarm) : Handle other types.
   return emitError(loc, "unhandled type in serialization: ") << type;
 }
