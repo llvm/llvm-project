@@ -10,7 +10,7 @@ config.test_source_root = os.path.dirname(__file__)
 
 # Path to the shared library
 shared_libscudo = os.path.join(config.compiler_rt_libdir, "libclang_rt.scudo%s.so" % config.target_suffix)
-shared_minlibscudo = os.path.join(config.compiler_rt_libdir, "libclang_rt.scudo_minimal-%s.so" % config.target_arch)
+shared_minlibscudo = os.path.join(config.compiler_rt_libdir, "libclang_rt.scudo_minimal%s.so" % config.target_suffix)
 
 # Test suffixes.
 config.suffixes = ['.c', '.cpp', '.test']
