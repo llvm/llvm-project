@@ -94,8 +94,6 @@ private:
 
   void SetStopped();
 
-  void ResetStopReason();
-
   // Member Variables
   lldb::StateType m_state;
   ThreadStopInfo m_stop_info;
