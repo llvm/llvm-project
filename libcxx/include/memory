@@ -1306,8 +1306,6 @@ struct __allocator_traits_rebind
     _LIBCPP_SUPPRESS_DEPRECATED_POP
 };
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
 template <template <class, class...> class _Alloc, class _Tp, class ..._Args, class _Up>
 struct __allocator_traits_rebind<_Alloc<_Tp, _Args...>, _Up, true>
 {
@@ -1321,62 +1319,6 @@ struct __allocator_traits_rebind<_Alloc<_Tp, _Args...>, _Up, false>
 {
     typedef _LIBCPP_NODEBUG_TYPE _Alloc<_Up, _Args...> type;
 };
-
-#else  // _LIBCPP_HAS_NO_VARIADICS
-
-template <template <class> class _Alloc, class _Tp, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp>, _Up, true>
-{
-    typedef typename _Alloc<_Tp>::template rebind<_Up>::other type;
-};
-
-template <template <class> class _Alloc, class _Tp, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp>, _Up, false>
-{
-    typedef _Alloc<_Up> type;
-};
-
-template <template <class, class> class _Alloc, class _Tp, class _A0, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp, _A0>, _Up, true>
-{
-    typedef typename _Alloc<_Tp, _A0>::template rebind<_Up>::other type;
-};
-
-template <template <class, class> class _Alloc, class _Tp, class _A0, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp, _A0>, _Up, false>
-{
-    typedef _Alloc<_Up, _A0> type;
-};
-
-template <template <class, class, class> class _Alloc, class _Tp, class _A0,
-                                         class _A1, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1>, _Up, true>
-{
-    typedef typename _Alloc<_Tp, _A0, _A1>::template rebind<_Up>::other type;
-};
-
-template <template <class, class, class> class _Alloc, class _Tp, class _A0,
-                                         class _A1, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1>, _Up, false>
-{
-    typedef _Alloc<_Up, _A0, _A1> type;
-};
-
-template <template <class, class, class, class> class _Alloc, class _Tp, class _A0,
-                                                class _A1, class _A2, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1, _A2>, _Up, true>
-{
-    typedef typename _Alloc<_Tp, _A0, _A1, _A2>::template rebind<_Up>::other type;
-};
-
-template <template <class, class, class, class> class _Alloc, class _Tp, class _A0,
-                                                class _A1, class _A2, class _Up>
-struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1, _A2>, _Up, false>
-{
-    typedef _Alloc<_Up, _A0, _A1, _A2> type;
-};
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
 
 #ifndef _LIBCPP_CXX03_LANG
 
