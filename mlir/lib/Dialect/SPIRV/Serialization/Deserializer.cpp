@@ -217,6 +217,8 @@ private:
 
   LogicalResult processArrayType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processCooperativeMatrixType(ArrayRef<uint32_t> operands);
+
   LogicalResult processFunctionType(ArrayRef<uint32_t> operands);
 
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
@@ -1160,6 +1162,8 @@ LogicalResult Deserializer::processType(spirv::Opcode opcode,
   } break;
   case spirv::Opcode::OpTypeArray:
     return processArrayType(operands);
+  case spirv::Opcode::OpTypeCooperativeMatrixNV:
+    return processCooperativeMatrixType(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1226,6 +1230,35 @@ LogicalResult Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
     returnTypes = llvm::makeArrayRef(returnType);
   }
   typeMap[operands[0]] = FunctionType::get(argTypes, returnTypes, context);
+  return success();
+}
+
+LogicalResult
+Deserializer::processCooperativeMatrixType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 5) {
+    return emitError(unknownLoc, "OpTypeCooperativeMatrix must have element "
+                                 "type and row x column parameters");
+  }
+
+  Type elementTy = getType(operands[1]);
+  if (!elementTy) {
+    return emitError(unknownLoc,
+                     "OpTypeCooperativeMatrix references undefined <id> ")
+           << operands[1];
+  }
+
+  auto scope = spirv::symbolizeScope(operands[2]);
+  if (!scope) {
+    return emitError(unknownLoc,
+                     "OpTypeCooperativeMatrix references undefined scope <id> ")
+           << operands[2];
+  }
+
+  unsigned rows = operands[3];
+  unsigned columns = operands[4];
+
+  typeMap[operands[0]] = spirv::CooperativeMatrixNVType::get(
+      elementTy, scope.getValue(), rows, columns);
   return success();
 }
 
@@ -2210,6 +2243,7 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
   case spirv::Opcode::OpTypeRuntimeArray:
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
+  case spirv::Opcode::OpTypeCooperativeMatrixNV:
     return processType(opcode, operands);
   case spirv::Opcode::OpConstant:
     return processConstant(operands, /*isSpec=*/false);

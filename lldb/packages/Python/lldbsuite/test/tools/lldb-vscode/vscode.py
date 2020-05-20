@@ -10,6 +10,7 @@ import string
 import subprocess
 import sys
 import threading
+import time
 
 
 def dump_memory(base_addr, data, num_per_line, outfile):
@@ -120,6 +121,7 @@ class DebugCommunication(object):
         self.configuration_done_sent = False
         self.frame_scopes = {}
         self.init_commands = init_commands
+        self.debugging = False
 
     @classmethod
     def encode_content(cls, s):
@@ -147,6 +149,15 @@ class DebugCommunication(object):
                     del self.output[category]
         self.output_condition.release()
         return output
+
+    def collect_output(self, category, duration, clear=True):
+        end_time = time.time() + duration
+        collected_output = ""
+        while end_time > time.time():
+            output = self.get_output(category, timeout=0.25, clear=clear)
+            if output:
+                collected_output += output
+        return collected_output if collected_output else None
 
     def enqueue_recv_packet(self, packet):
         self.recv_condition.acquire()
@@ -208,9 +219,13 @@ class DebugCommunication(object):
                 self.breakpoint_events.append(packet)
                 # no need to add 'breakpoint' event packets to our packets list
                 return keepGoing
-        elif packet_type == 'response':
-            if packet['command'] == 'disconnect':
+            elif event == 'initialized':
+                self.debugging = True
+            elif event == 'terminated':
+                self.debugging = False
                 keepGoing = False
+            elif event == 'exited':
+                self.debugging = False
         self.enqueue_recv_packet(packet)
         return keepGoing
 
@@ -450,7 +465,8 @@ class DebugCommunication(object):
     def request_attach(self, program=None, pid=None, waitFor=None, trace=None,
                        initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None,
-                       attachCommands=None, coreFile=None):
+                       attachCommands=None, terminateCommands=None,
+                       coreFile=None):
         args_dict = {}
         if pid is not None:
             args_dict['pid'] = pid
@@ -469,6 +485,8 @@ class DebugCommunication(object):
             args_dict['stopCommands'] = stopCommands
         if exitCommands:
             args_dict['exitCommands'] = exitCommands
+        if terminateCommands:
+            args_dict['terminateCommands'] = terminateCommands
         if attachCommands:
             args_dict['attachCommands'] = attachCommands
         if coreFile:
@@ -571,7 +589,8 @@ class DebugCommunication(object):
                        stopOnEntry=False, disableASLR=True,
                        disableSTDIO=False, shellExpandArguments=False,
                        trace=False, initCommands=None, preRunCommands=None,
-                       stopCommands=None, exitCommands=None, sourcePath=None,
+                       stopCommands=None, exitCommands=None,
+                       terminateCommands=None ,sourcePath=None,
                        debuggerRoot=None, launchCommands=None, sourceMap=None):
         args_dict = {
             'program': program
@@ -601,6 +620,8 @@ class DebugCommunication(object):
             args_dict['stopCommands'] = stopCommands
         if exitCommands:
             args_dict['exitCommands'] = exitCommands
+        if terminateCommands:
+            args_dict['terminateCommands'] = terminateCommands
         if sourcePath:
             args_dict['sourcePath'] = sourcePath
         if debuggerRoot:
@@ -905,7 +926,8 @@ def run_vscode(dbg, args, options):
                                       initCommands=options.initCmds,
                                       preRunCommands=options.preRunCmds,
                                       stopCommands=options.stopCmds,
-                                      exitCommands=options.exitCmds)
+                                      exitCommands=options.exitCmds,
+                                      terminateCommands=options.terminateCmds)
     else:
         response = dbg.request_launch(options.program,
                                       args=args,
@@ -916,7 +938,8 @@ def run_vscode(dbg, args, options):
                                       initCommands=options.initCmds,
                                       preRunCommands=options.preRunCmds,
                                       stopCommands=options.stopCmds,
-                                      exitCommands=options.exitCmds)
+                                      exitCommands=options.exitCmds,
+                                      terminateCommands=options.terminateCmds)
 
     if response['success']:
         if options.sourceBreakpoints:
@@ -1088,6 +1111,15 @@ def main():
         default=[],
         help=('Specify a LLDB command that will be executed when the process '
               'exits. Can be specified more than once.'))
+
+    parser.add_option(
+        '--terminateCommand',
+        type='string',
+        action='append',
+        dest='terminateCmds',
+        default=[],
+        help=('Specify a LLDB command that will be executed when the debugging '
+              'session is terminated. Can be specified more than once.'))
 
     parser.add_option(
         '--env',

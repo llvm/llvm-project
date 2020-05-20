@@ -153,9 +153,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                      MVT::v2f64})
         setOperationAction(Op, T, Custom);
 
-    // There is no i64x2.mul instruction
-    // TODO: Actually, there is now. Implement it.
-    setOperationAction(ISD::MUL, MVT::v2i64, Expand);
+    // There is no i8x16.mul instruction
+    setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
     // There are no vector select instructions
     for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT})
@@ -1715,8 +1714,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   // Hoist vector bitcasts that don't change the number of lanes out of unary
   // shuffles, where they are less likely to get in the way of other combines.
-  // (shuffle (vNxT1 (bitcast (vNxT0 x))),  undef, mask) ->
-  //  (vNxT1 (bitcast (vNxt0 (shuffle x, undef, mask))))
+  // (shuffle (vNxT1 (bitcast (vNxT0 x))), undef, mask) ->
+  //  (vNxT1 (bitcast (vNxT0 (shuffle x, undef, mask))))
   SDValue Bitcast = N->getOperand(0);
   if (Bitcast.getOpcode() != ISD::BITCAST)
     return SDValue();
@@ -1725,7 +1724,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDValue CastOp = Bitcast.getOperand(0);
   MVT SrcType = CastOp.getSimpleValueType();
   MVT DstType = Bitcast.getSimpleValueType();
-  if (SrcType.getVectorNumElements() != DstType.getVectorNumElements())
+  if (!SrcType.is128BitVector() ||
+      SrcType.getVectorNumElements() != DstType.getVectorNumElements())
     return SDValue();
   SDValue NewShuffle = DAG.getVectorShuffle(
       SrcType, SDLoc(N), CastOp, DAG.getUNDEF(SrcType), Shuffle->getMask());

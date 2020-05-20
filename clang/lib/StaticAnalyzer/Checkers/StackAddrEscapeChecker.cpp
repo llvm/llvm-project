@@ -43,6 +43,7 @@ public:
   };
 
   DefaultBool ChecksEnabled[CK_NumCheckKinds];
+  CheckerNameRef CheckNames[CK_NumCheckKinds];
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
@@ -156,7 +157,8 @@ void StackAddrEscapeChecker::EmitStackError(CheckerContext &C,
     return;
   if (!BT_returnstack)
     BT_returnstack = std::make_unique<BuiltinBug>(
-        this, "Return of address to stack-allocated memory");
+        CheckNames[CK_StackAddrEscapeChecker],
+        "Return of address to stack-allocated memory");
   // Generate a report for this bug.
   SmallString<128> buf;
   llvm::raw_svector_ostream os(buf);
@@ -195,7 +197,8 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
       continue;
     if (!BT_capturedstackasync)
       BT_capturedstackasync = std::make_unique<BuiltinBug>(
-          this, "Address of stack-allocated memory is captured");
+          CheckNames[CK_StackAddrAsyncEscapeChecker],
+          "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
     llvm::raw_svector_ostream Out(Buf);
     SourceRange Range = genName(Out, Region, C.getASTContext());
@@ -218,7 +221,8 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
       continue;
     if (!BT_capturedstackret)
       BT_capturedstackret = std::make_unique<BuiltinBug>(
-          this, "Address of stack-allocated memory is captured");
+          CheckNames[CK_StackAddrEscapeChecker],
+          "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
     llvm::raw_svector_ostream Out(Buf);
     SourceRange Range = genName(Out, Region, C.getASTContext());
@@ -277,7 +281,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
 
   // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
   // so the stack address is not escaping here.
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
     if (isa<BlockDataRegion>(R) &&
         ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
       return;
@@ -333,7 +337,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
   if (!BT_stackleak)
     BT_stackleak = std::make_unique<BuiltinBug>(
-        this, "Stack address stored into global variable",
+        CheckNames[CK_StackAddrEscapeChecker],
+        "Stack address stored into global variable",
         "Stack address was saved into a global variable. "
         "This is dangerous because the address will become "
         "invalid after returning from the function");
@@ -371,14 +376,13 @@ bool ento::shouldRegisterStackAddrEscapeBase(const CheckerManager &mgr) {
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &Mgr) {                             \
-    StackAddrEscapeChecker *Chk =                                              \
-        Mgr.getChecker<StackAddrEscapeChecker>();                              \
+    StackAddrEscapeChecker *Chk = Mgr.getChecker<StackAddrEscapeChecker>();    \
     Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true;              \
+    Chk->CheckNames[StackAddrEscapeChecker::CK_##name] =                       \
+        Mgr.getCurrentCheckerName();                                           \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const CheckerManager &mgr) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
 REGISTER_CHECKER(StackAddrEscapeChecker)
 REGISTER_CHECKER(StackAddrAsyncEscapeChecker)

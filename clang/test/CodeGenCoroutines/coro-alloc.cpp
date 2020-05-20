@@ -230,7 +230,7 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK: %[[Gro:.+]] = alloca i32
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: %[[MEM:.+]] = call noalias i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* dereferenceable(1) @_ZStL7nothrow)
+  // CHECK: %[[MEM:.+]] = call noalias i8* @_ZnwmRKSt9nothrow_t(i64 %[[SIZE]], %"struct.std::nothrow_t"* nonnull align 1 dereferenceable(1) @_ZStL7nothrow)
   // CHECK: %[[OK:.+]] = icmp ne i8* %[[MEM]], null
   // CHECK: br i1 %[[OK]], label %[[OKBB:.+]], label %[[ERRBB:.+]]
 

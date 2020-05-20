@@ -132,6 +132,30 @@ def Shape_ConstSizeOp : Shape_Op<"const_size",
   let assemblyFormat = "attr-dict $value";
 }
 
+def Shape_FromExtentsOp : Shape_Op<"from_extents", [
+    NoSideEffect,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>
+    ]> {
+  let summary = "Creates a shape from extents";
+  let description = [{
+    Creates a shape from multiple SSA values representing the extents of
+    the shape.
+
+    ```mlir
+    // Rank 2 shape.
+    %s0 = shape.from_extents %a, %b
+    // Rank 0 shape.
+    %s1 = shape.from_extents
+    ```
+  }];
+  let arguments = (ins Variadic<Index>:$extents);
+  let results = (outs Shape_ShapeType:$shape);
+
+  let assemblyFormat = "attr-dict $extents";
+
+  let hasFolder = 1;
+}
+
 def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", []> {
   let summary = "Creates a shape from a tensor of extents";
   let description = [{

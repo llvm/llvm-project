@@ -8,12 +8,12 @@
 
 #include "Cocoa.h"
 
+#include "Plugins/Language/ObjC/Utilities.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/DataFormatters/Mock.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/Time.h"
@@ -794,8 +794,8 @@ bool lldb_private::formatters::NSDate::FormatDateValue(double date_value,
     return true;
   }
 
-  if (date_value > std::numeric_limits<time_t>::max() ||
-      date_value < std::numeric_limits<time_t>::min())
+  if ((time_t)date_value > std::numeric_limits<time_t>::max() ||
+      (time_t)date_value < std::numeric_limits<time_t>::min())
     return false;
 
   time_t epoch = GetOSXEpoch();

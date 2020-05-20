@@ -31,7 +31,7 @@ struct TT{
   tx &operator[](int i) { return X; }
 };
 
-// CHECK: define weak void @__omp_offloading_{{.+}}_{{.+}}targetBar{{.+}}_l45(i32* [[PTR1:%.+]], i32** dereferenceable{{.*}} [[PTR2_REF:%.+]])
+// CHECK: define weak void @__omp_offloading_{{.+}}_{{.+}}targetBar{{.+}}_l45(i32* [[PTR1:%.+]], i32** nonnull align {{[0-9]+}} dereferenceable{{.*}} [[PTR2_REF:%.+]])
 // CHECK: store i32* [[PTR1]], i32** [[PTR1_ADDR:%.+]],
 // CHECK: store i32** [[PTR2_REF]], i32*** [[PTR2_REF_PTR:%.+]],
 // CHECK: [[PTR2_REF:%.+]] = load i32**, i32*** [[PTR2_REF_PTR]],
@@ -573,7 +573,7 @@ int baz(int f, double &a) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define{{ hidden | }}i32 [[BAZ]](i32 [[F:%.*]], double* dereferenceable{{.*}})
+  // CHECK: define{{ hidden | }}i32 [[BAZ]](i32 [[F:%.*]], double* nonnull align {{[0-9]+}} dereferenceable{{.*}})
   // CHECK: alloca i32,
   // CHECK: [[LOCAL_F_PTR:%.+]] = alloca i32,
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,

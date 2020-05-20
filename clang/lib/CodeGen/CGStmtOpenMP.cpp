@@ -1138,7 +1138,7 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
         if (const auto *RefTy = PrivateVD->getType()->getAs<ReferenceType>())
           PrivateAddr =
               Address(Builder.CreateLoad(PrivateAddr),
-                      getNaturalTypeAlignment(RefTy->getPointeeType()));
+                      CGM.getNaturalTypeAlignment(RefTy->getPointeeType()));
         // Store the last value to the private copy in the last iteration.
         if (C->getKind() == OMPC_LASTPRIVATE_conditional)
           CGM.getOpenMPRuntime().emitLastprivateConditionalFinalUpdate(

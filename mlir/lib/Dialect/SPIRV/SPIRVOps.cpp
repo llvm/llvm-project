@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 
+#include "mlir/Dialect/SPIRV/ParserUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
@@ -138,25 +139,6 @@ parseEnumStrAttr(EnumClass &value, OpAsmParser &parser, OperationState &state,
   state.addAttribute(attrName, parser.getBuilder().getI32IntegerAttr(
                                    llvm::bit_cast<int32_t>(value)));
   return success();
-}
-
-/// Parses the next keyword in `parser` as an enumerant of the given
-/// `EnumClass`.
-template <typename EnumClass>
-static ParseResult
-parseEnumKeywordAttr(EnumClass &value, OpAsmParser &parser,
-                     StringRef attrName = spirv::attributeName<EnumClass>()) {
-  StringRef keyword;
-  SmallVector<NamedAttribute, 1> attr;
-  auto loc = parser.getCurrentLocation();
-  if (parser.parseKeyword(&keyword))
-    return failure();
-  if (Optional<EnumClass> attr = spirv::symbolizeEnum<EnumClass>(keyword)) {
-    value = attr.getValue();
-    return success();
-  }
-  return parser.emitError(loc, "invalid ")
-         << attrName << " attribute specification: " << keyword;
 }
 
 /// Parses the next keyword in `parser` as an enumerant of the given `EnumClass`
@@ -2635,6 +2617,49 @@ static LogicalResult verify(spirv::VariableOp varOp) {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.CooperativeMatrixLoadNV
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseCooperativeMatrixLoadNVOp(OpAsmParser &parser,
+                                                  OperationState &state) {
+  spirv::StorageClass storageClass;
+  SmallVector<OpAsmParser::OperandType, 3> operandInfo;
+  Type strideType = parser.getBuilder().getIntegerType(32);
+  Type columnMajorType = parser.getBuilder().getIntegerType(1);
+  Type elementType;
+  if (parseEnumStrAttr(storageClass, parser) ||
+      parser.parseOperandList(operandInfo, 3) ||
+      parseMemoryAccessAttributes(parser, state) || parser.parseColon() ||
+      parser.parseType(elementType)) {
+    return failure();
+  }
+
+  auto ptrType = spirv::PointerType::get(
+      elementType.cast<spirv::CooperativeMatrixNVType>().getElementType(),
+      storageClass);
+  SmallVector<Type, 3> OperandType = {ptrType, strideType, columnMajorType};
+  if (parser.resolveOperands(operandInfo, OperandType, parser.getNameLoc(),
+                             state.operands)) {
+    return failure();
+  }
+
+  state.addTypes(elementType);
+  return success();
+}
+
+static void print(spirv::CooperativeMatrixLoadNVOp M, OpAsmPrinter &printer) {
+  StringRef sc = stringifyStorageClass(
+      M.pointer().getType().cast<spirv::PointerType>().getStorageClass());
+  printer << spirv::CooperativeMatrixLoadNVOp::getOperationName() << " \"" << sc
+          << "\" " << M.pointer() << ", " << M.stride() << ", "
+          << M.columnmajor();
+  // Print optional memory access attribute.
+  if (auto memAccess = M.memory_access())
+    printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"]";
+  printer << " : " << M.getType();
 }
 
 namespace mlir {

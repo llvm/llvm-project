@@ -27,6 +27,7 @@
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
@@ -119,8 +120,17 @@ bool ExecutionEngine::setupTargetTriple(Module *llvmModule) {
     errs() << "NO target: " << errorMessage << "\n";
     return true;
   }
-  std::unique_ptr<llvm::TargetMachine> machine(
-      target->createTargetMachine(targetTriple, "generic", "", {}, {}));
+
+  std::string cpu(llvm::sys::getHostCPUName());
+  llvm::SubtargetFeatures features;
+  llvm::StringMap<bool> hostFeatures;
+
+  if (llvm::sys::getHostCPUFeatures(hostFeatures))
+    for (auto &f : hostFeatures)
+      features.AddFeature(f.first(), f.second);
+
+  std::unique_ptr<llvm::TargetMachine> machine(target->createTargetMachine(
+      targetTriple, cpu, features.getString(), {}, {}));
   llvmModule->setDataLayout(machine->createDataLayout());
   llvmModule->setTargetTriple(targetTriple);
   return false;

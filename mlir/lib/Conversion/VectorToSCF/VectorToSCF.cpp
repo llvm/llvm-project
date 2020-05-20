@@ -35,6 +35,7 @@ using namespace mlir::edsc::intrinsics;
 using vector::TransferReadOp;
 using vector::TransferWriteOp;
 
+namespace {
 /// Helper class captures the common information needed to lower N>1-D vector
 /// transfer operations (read and write).
 /// On construction, this class opens an edsc::ScopedContext for simpler IR
@@ -271,6 +272,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
   return success();
 }
 
+} // namespace
+  
 /// Analyzes the `transfer` to find an access dimension along the fastest remote
 /// MemRef dimension. If such a dimension with coalescing properties is found,
 /// `pivs` and `vectorBoundsCapture` are swapped so that the invocation of

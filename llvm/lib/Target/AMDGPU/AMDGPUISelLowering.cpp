@@ -811,24 +811,24 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
   }
 }
 
-TargetLowering::NegatibleCost
-AMDGPUTargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
-                                       bool LegalOperations, bool ForCodeSize,
-                                       unsigned Depth) const {
+SDValue AMDGPUTargetLowering::getNegatedExpression(
+    SDValue Op, SelectionDAG &DAG, bool LegalOperations, bool ForCodeSize,
+    NegatibleCost &Cost, unsigned Depth) const {
+
   switch (Op.getOpcode()) {
   case ISD::FMA:
   case ISD::FMAD: {
     // Negating a fma is not free if it has users without source mods.
     if (!allUsesHaveSourceMods(Op.getNode()))
-      return NegatibleCost::Expensive;
+      return SDValue();
     break;
   }
   default:
     break;
   }
 
-  return TargetLowering::getNegatibleCost(Op, DAG, LegalOperations, ForCodeSize,
-                                          Depth);
+  return TargetLowering::getNegatedExpression(Op, DAG, LegalOperations,
+                                              ForCodeSize, Cost, Depth);
 }
 
 //===---------------------------------------------------------------------===//
