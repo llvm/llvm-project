@@ -1099,17 +1099,27 @@ Value impl::foldCastOp(Operation *op) {
 /// is empty, insert a new block first. `buildTerminatorOp` should return the
 /// terminator operation to insert.
 void impl::ensureRegionTerminator(
-    Region &region, Location loc,
-    function_ref<Operation *(OpBuilder &)> buildTerminatorOp) {
+    Region &region, OpBuilder &builder, Location loc,
+    function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp) {
+  OpBuilder::InsertionGuard guard(builder);
   if (region.empty())
-    region.push_back(new Block);
+    builder.createBlock(&region);
 
   Block &block = region.back();
   if (!block.empty() && block.back().isKnownTerminator())
     return;
 
-  OpBuilder builder(loc.getContext());
-  block.push_back(buildTerminatorOp(builder));
+  builder.setInsertionPointToEnd(&block);
+  builder.insert(buildTerminatorOp(builder, loc));
+}
+
+/// Create a simple OpBuilder and forward to the OpBuilder version of this
+/// function.
+void impl::ensureRegionTerminator(
+    Region &region, Builder &builder, Location loc,
+    function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp) {
+  OpBuilder opBuilder(builder.getContext());
+  ensureRegionTerminator(region, opBuilder, loc, buildTerminatorOp);
 }
 
 //===----------------------------------------------------------------------===//
