@@ -2175,7 +2175,7 @@ void UnwrappedLineParser::parseDoWhile() {
   if (FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false);
-    if (Style.BraceWrapping.IndentBraces)
+    if (Style.BraceWrapping.BeforeWhile)
       addUnwrappedLine();
   } else {
     addUnwrappedLine();

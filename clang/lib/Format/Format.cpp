@@ -604,6 +604,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
     IO.mapOptional("BeforeElse", Wrapping.BeforeElse);
     IO.mapOptional("BeforeLambdaBody", Wrapping.BeforeLambdaBody);
+    IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
     IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
     IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
@@ -687,12 +688,24 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   if (Style.BreakBeforeBraces == FormatStyle::BS_Custom)
     return Style;
   FormatStyle Expanded = Style;
-  Expanded.BraceWrapping = {false, false, FormatStyle::BWACS_Never,
-                            false, false, false,
-                            false, false, false,
-                            false, false, false,
-                            false, false, true,
-                            true,  true};
+  Expanded.BraceWrapping = {/*AfterCaseLabel=*/false,
+                            /*AfterClass=*/false,
+                            /*AfterControlStatement=*/FormatStyle::BWACS_Never,
+                            /*AfterEnum=*/false,
+                            /*AfterFunction=*/false,
+                            /*AfterNamespace=*/false,
+                            /*AfterObjCDeclaration=*/false,
+                            /*AfterStruct=*/false,
+                            /*AfterUnion=*/false,
+                            /*AfterExternBlock=*/false,
+                            /*BeforeCatch=*/false,
+                            /*BeforeElse=*/false,
+                            /*BeforeLambdaBody=*/false,
+                            /*BeforeWhile=*/false,
+                            /*IndentBraces=*/false,
+                            /*SplitEmptyFunction=*/true,
+                            /*SplitEmptyRecord=*/true,
+                            /*SplitEmptyNamespace=*/true};
   switch (Style.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;
@@ -743,12 +756,25 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.BeforeLambdaBody = true;
     break;
   case FormatStyle::BS_GNU:
-    Expanded.BraceWrapping = {true,  true, FormatStyle::BWACS_Always,
-                              true,  true, true,
-                              true,  true, true,
-                              true,  true, true,
-                              false, true, true,
-                              true,  true};
+    Expanded.BraceWrapping = {
+        /*AfterCaseLabel=*/true,
+        /*AfterClass=*/true,
+        /*AfterControlStatement=*/FormatStyle::BWACS_Always,
+        /*AfterEnum=*/true,
+        /*AfterFunction=*/true,
+        /*AfterNamespace=*/true,
+        /*AfterObjCDeclaration=*/true,
+        /*AfterStruct=*/true,
+        /*AfterUnion=*/true,
+        /*AfterExternBlock=*/true,
+        /*BeforeCatch=*/true,
+        /*BeforeElse=*/true,
+        /*BeforeLambdaBody=*/false,
+        /*BeforeWhile=*/true,
+        /*IndentBraces=*/true,
+        /*SplitEmptyFunction=*/true,
+        /*SplitEmptyRecord=*/true,
+        /*SplitEmptyNamespace=*/true};
     break;
   case FormatStyle::BS_WebKit:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -790,12 +816,24 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
-  LLVMStyle.BraceWrapping = {false, false, FormatStyle::BWACS_Never,
-                             false, false, false,
-                             false, false, false,
-                             false, false, false,
-                             false, false, true,
-                             true,  true};
+  LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
+                             /*AfterClass=*/false,
+                             /*AfterControlStatement=*/FormatStyle::BWACS_Never,
+                             /*AfterEnum=*/false,
+                             /*AfterFunction=*/false,
+                             /*AfterNamespace=*/false,
+                             /*AfterObjCDeclaration=*/false,
+                             /*AfterStruct=*/false,
+                             /*AfterUnion=*/false,
+                             /*AfterExternBlock=*/false,
+                             /*BeforeCatch=*/false,
+                             /*BeforeElse=*/false,
+                             /*BeforeLambdaBody=*/false,
+                             /*BeforeWhile=*/false,
+                             /*IndentBraces=*/false,
+                             /*SplitEmptyFunction=*/true,
+                             /*SplitEmptyRecord=*/true,
+                             /*SplitEmptyNamespace=*/true};
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -1159,6 +1197,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.BraceWrapping.AfterExternBlock = true;
   Style.BraceWrapping.BeforeCatch = true;
   Style.BraceWrapping.BeforeElse = true;
+  Style.BraceWrapping.BeforeWhile = false;
   Style.PenaltyReturnTypeOnItsOwnLine = 1000;
   Style.AllowShortEnumsOnASingleLine = false;
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
