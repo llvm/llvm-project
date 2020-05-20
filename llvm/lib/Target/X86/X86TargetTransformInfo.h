@@ -153,17 +153,10 @@ public:
 
   unsigned getAtomicMemIntrinsicMaxElementSize() const;
 
-  int getIntrinsicInstrCost(
-    Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys,
-    FastMathFlags FMF, unsigned ScalarizationCostPassed = UINT_MAX,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr);
-
-  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Value *> Args, FastMathFlags FMF,
-                            unsigned VF = 1,
-                            TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                            const Instruction *I = nullptr);
+  int getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                     TTI::TargetCostKind CostKind);
+  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                            TTI::TargetCostKind CostKind);
 
   int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm,

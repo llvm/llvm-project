@@ -3322,14 +3322,9 @@ unsigned LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
   assert(ID && "Expected intrinsic call!");
 
-  FastMathFlags FMF;
-  if (auto *FPMO = dyn_cast<FPMathOperator>(CI))
-    FMF = FPMO->getFastMathFlags();
-
-  SmallVector<Value *, 4> Operands(CI->arg_operands());
-  return TTI.getIntrinsicInstrCost(ID, CI->getType(), Operands, FMF, VF,
-                                   TargetTransformInfo::TCK_RecipThroughput,
-                                   CI);
+  IntrinsicCostAttributes CostAttrs(ID, *CI, VF);
+  return TTI.getIntrinsicInstrCost(CostAttrs,
+                                   TargetTransformInfo::TCK_RecipThroughput);
 }
 
 static Type *smallestIntegerVectorType(Type *T1, Type *T2) {
