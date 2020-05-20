@@ -32,52 +32,13 @@ class ParallelOp;
 
 namespace edsc {
 class AffineLoopNestBuilder;
+class LoopNestBuilder;
 class ParallelLoopNestBuilder;
-
-/// A LoopRangeBuilder is a generic NestedBuilder for scf.for operations.
-/// More specifically it is meant to be used as a temporary object for
-/// representing any nested MLIR construct that is "related to" an mlir::Value
-/// (for now an induction variable).
-class LoopRangeBuilder : public NestedBuilder {
-public:
-  /// Constructs a new scf.for and captures the associated induction
-  /// variable. A Value pointer is passed as the first argument and is the
-  /// *only* way to capture the loop induction variable.
-  LoopRangeBuilder(Value *iv, Value range);
-  LoopRangeBuilder(Value *iv, SubViewOp::Range range);
-
-  LoopRangeBuilder(const LoopRangeBuilder &) = delete;
-  LoopRangeBuilder(LoopRangeBuilder &&) = default;
-
-  LoopRangeBuilder &operator=(const LoopRangeBuilder &) = delete;
-  LoopRangeBuilder &operator=(LoopRangeBuilder &&) = default;
-
-  /// The only purpose of this operator is to serve as a sequence point so that
-  /// the evaluation of `fun` (which build IR snippets in a scoped fashion) is
-  /// scoped within a LoopRangeBuilder.
-  Value operator()(std::function<void(void)> fun = nullptr);
-};
-
-/// Helper class to sugar building scf.for loop nests from ranges.
-/// This is similar to edsc::AffineLoopNestBuilder except it works on ranges
-/// directly. In the current implementation it produces scf.for operations.
-class LoopNestRangeBuilder {
-public:
-  LoopNestRangeBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> ranges);
-  LoopNestRangeBuilder(MutableArrayRef<Value> ivs,
-                       ArrayRef<SubViewOp::Range> ranges);
-  Value operator()(std::function<void(void)> fun = nullptr);
-
-private:
-  SmallVector<LoopRangeBuilder, 4> loops;
-};
 
 /// Helper template class for building scf.for and affine.loop nests from
 /// ranges.
 template <typename LoopTy> class GenericLoopNestRangeBuilder {
 public:
-  GenericLoopNestRangeBuilder(MutableArrayRef<Value> ivs,
-                              ArrayRef<Value> ranges);
   GenericLoopNestRangeBuilder(MutableArrayRef<Value> ivs,
                               ArrayRef<SubViewOp::Range> ranges);
   void operator()(std::function<void(void)> fun = nullptr) { (*builder)(fun); }
@@ -85,7 +46,7 @@ public:
 private:
   using LoopOrAffineLoopBuilder =
       typename std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
-                                  AffineLoopNestBuilder, LoopNestRangeBuilder>;
+                                  AffineLoopNestBuilder, LoopNestBuilder>;
   using BuilderType =
       typename std::conditional_t<std::is_same<LoopTy, scf::ParallelOp>::value,
                                   ParallelLoopNestBuilder,
