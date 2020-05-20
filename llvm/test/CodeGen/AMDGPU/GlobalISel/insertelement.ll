@@ -1066,8 +1066,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s18, 1
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, v0
-; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
@@ -1138,8 +1136,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s4, 1
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s2
-; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s3
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
@@ -1422,8 +1418,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, v16
-; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, v17
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
@@ -3046,8 +3040,6 @@ define amdgpu_ps <16 x i64> @dyn_insertelement_v16i64_s_v_s(<16 x i64> inreg %ve
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s0
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s33, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, v0
-; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    s_set_gpr_idx_on s33, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v2
@@ -3262,8 +3254,6 @@ define amdgpu_ps <16 x double> @dyn_insertelement_v16f64_s_v_s(<16 x double> inr
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s0
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s33, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, v0
-; GPRIDX-NEXT:    s_set_gpr_idx_off
-; GPRIDX-NEXT:    s_set_gpr_idx_on s33, gpr_idx(DST)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v2
