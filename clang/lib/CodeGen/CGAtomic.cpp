@@ -602,21 +602,25 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     break;
 
   case AtomicExpr::AO__atomic_add_fetch:
-    PostOp = llvm::Instruction::Add;
+    PostOp = E->getValueType()->isFloatingType() ? llvm::Instruction::FAdd
+                                                 : llvm::Instruction::Add;
     LLVM_FALLTHROUGH;
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
-    Op = llvm::AtomicRMWInst::Add;
+    Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FAdd
+                                             : llvm::AtomicRMWInst::Add;
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
-    PostOp = llvm::Instruction::Sub;
+    PostOp = E->getValueType()->isFloatingType() ? llvm::Instruction::FSub
+                                                 : llvm::Instruction::Sub;
     LLVM_FALLTHROUGH;
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
-    Op = llvm::AtomicRMWInst::Sub;
+    Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FSub
+                                             : llvm::AtomicRMWInst::Sub;
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -813,6 +817,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
   bool UseLibcall = Misaligned | Oversized;
+  bool ShouldCastToIntPtrTy = true;
+
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
 
@@ -892,11 +898,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       EmitStoreOfScalar(Val1Scalar, MakeAddrLValue(Temp, Val1Ty));
       break;
     }
-      LLVM_FALLTHROUGH;
+    LLVM_FALLTHROUGH;
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__atomic_sub_fetch:
+    ShouldCastToIntPtrTy = !MemTy->isFloatingType();
+    LLVM_FALLTHROUGH;
+
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_store:
@@ -937,15 +946,23 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   LValue AtomicVal = MakeAddrLValue(Ptr, AtomicTy);
   AtomicInfo Atomics(*this, AtomicVal);
 
-  Ptr = Atomics.emitCastToAtomicIntPointer(Ptr);
-  if (Val1.isValid()) Val1 = Atomics.convertToAtomicIntPointer(Val1);
-  if (Val2.isValid()) Val2 = Atomics.convertToAtomicIntPointer(Val2);
-  if (Dest.isValid())
-    Dest = Atomics.emitCastToAtomicIntPointer(Dest);
-  else if (E->isCmpXChg())
+  if (ShouldCastToIntPtrTy) {
+    Ptr = Atomics.emitCastToAtomicIntPointer(Ptr);
+    if (Val1.isValid())
+      Val1 = Atomics.convertToAtomicIntPointer(Val1);
+    if (Val2.isValid())
+      Val2 = Atomics.convertToAtomicIntPointer(Val2);
+  }
+  if (Dest.isValid()) {
+    if (ShouldCastToIntPtrTy)
+      Dest = Atomics.emitCastToAtomicIntPointer(Dest);
+  } else if (E->isCmpXChg())
     Dest = CreateMemTemp(RValTy, "cmpxchg.bool");
-  else if (!RValTy->isVoidType())
-    Dest = Atomics.emitCastToAtomicIntPointer(Atomics.CreateTempAlloca());
+  else if (!RValTy->isVoidType()) {
+    Dest = Atomics.CreateTempAlloca();
+    if (ShouldCastToIntPtrTy)
+      Dest = Atomics.emitCastToAtomicIntPointer(Dest);
+  }
 
   // Use a library call.  See: http://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary .
   if (UseLibcall) {
