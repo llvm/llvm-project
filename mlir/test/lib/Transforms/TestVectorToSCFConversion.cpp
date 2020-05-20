@@ -19,10 +19,20 @@ namespace {
 
 struct TestVectorToSCFPass
     : public PassWrapper<TestVectorToSCFPass, FunctionPass> {
+  TestVectorToSCFPass() = default;
+  TestVectorToSCFPass(const TestVectorToSCFPass &pass) {}
+
+  Option<bool> fullUnroll{
+      *this, "full-unroll",
+      llvm::cl::desc(
+          "Perform full unrolling when converting vector transfers to SCF"),
+      llvm::cl::init(false)};
+
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     auto *context = &getContext();
-    populateVectorToSCFConversionPatterns(patterns, context);
+    populateVectorToSCFConversionPatterns(
+        patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
