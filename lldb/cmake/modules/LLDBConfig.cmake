@@ -286,7 +286,6 @@ if (APPLE)
        ${CORE_SERVICES_LIBRARY}
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
-  include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
 if( WIN32 AND NOT CYGWIN )
