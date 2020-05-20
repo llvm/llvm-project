@@ -233,3 +233,18 @@ func @undo_block_arg_replace() {
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }
+
+// -----
+
+// The op in this function is attempted to be rewritten to another illegal op
+// with an attached region containing an invalid terminator. The terminator is
+// created before the parent op. The deletion should not crash when deleting
+// created ops in the inverse order, i.e. deleting the parent op and then the
+// child op.
+// CHECK-LABEL: @undo_child_created_before_parent
+func @undo_child_created_before_parent() {
+  // expected-remark@+1 {{is not legalizable}}
+  "test.illegal_op_with_region_anchor"() : () -> ()
+  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  return
+}
