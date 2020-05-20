@@ -95,6 +95,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   calculateLineBreakInformation();
   alignConsecutiveMacros();
   alignConsecutiveDeclarations();
+  alignConsecutiveBitFields();
   alignConsecutiveAssignments();
   alignChainedConditionals();
   alignTrailingComments();
@@ -613,6 +614,26 @@ void WhitespaceManager::alignConsecutiveAssignments() {
           return false;
 
         return C.Tok->is(tok::equal);
+      },
+      Changes, /*StartAt=*/0);
+}
+
+void WhitespaceManager::alignConsecutiveBitFields() {
+  if (!Style.AlignConsecutiveBitFields)
+    return;
+
+  AlignTokens(
+      Style,
+      [&](Change const &C) {
+        // Do not align on ':' that is first on a line.
+        if (C.NewlinesBefore > 0)
+          return false;
+
+        // Do not align on ':' that is last on a line.
+        if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
+          return false;
+
+        return C.Tok->is(TT_BitFieldColon);
       },
       Changes, /*StartAt=*/0);
 }
