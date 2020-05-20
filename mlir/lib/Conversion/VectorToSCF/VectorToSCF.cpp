@@ -438,14 +438,14 @@ clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
 }
 
 template <typename TransferOpTy>
-VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
+mlir::VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
     VectorTransferToSCFOptions options, MLIRContext *context)
     : RewritePattern(TransferOpTy::getOperationName(), 1, context),
       options(options) {}
 
 /// Used for staging the transfer in a local buffer.
 template <typename TransferOpTy>
-MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
+MemRefType mlir::VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
     TransferOpTy transfer) const {
   auto vectorType = transfer.getVectorType();
   return MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
@@ -496,7 +496,7 @@ MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
 
 /// Performs the rewrite.
 template <>
-LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
+LogicalResult mlir::VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   using namespace mlir::edsc::op;
 
@@ -569,7 +569,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
 /// TODO(ntv): implement alternatives to clipping.
 /// TODO(ntv): support non-data-parallel operations.
 template <>
-LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
+LogicalResult mlir::VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   using namespace edsc::op;
 
