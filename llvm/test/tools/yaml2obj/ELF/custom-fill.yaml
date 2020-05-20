@@ -294,3 +294,49 @@ ProgramHeaders:
   - Type: PT_LOAD
     Sections:
       - Section: fill
+
+## Show that we can use the "Offset" key to set an arbitrary offset for a Fill.
+
+## 0x41 is the minimal possible valid offset for Fill,
+## because the .foo section of size 0x1 is placed at 0x40.
+# RUN: yaml2obj --docnum=11 -DOFFSET=0x41 -o %t11 %s
+# RUN: llvm-readelf --section-headers %t11 | FileCheck %s --check-prefix=OFFSET-MIN
+
+## 0x123 is an arbitrary offset.
+# RUN: yaml2obj --docnum=11 -DOFFSET=0x123 -o %t12 %s
+# RUN: llvm-readelf --section-headers %t12 | FileCheck %s --check-prefix=OFFSET
+
+# OFFSET-MIN:      Section Headers:
+# OFFSET-MIN-NEXT:  [Nr] Name Type     Address          Off    Size
+# OFFSET-MIN-NEXT:  [ 0]      NULL     0000000000000000 000000 000000
+# OFFSET-MIN-NEXT:  [ 1] .foo PROGBITS 0000000000000000 000040 000001
+# OFFSET-MIN-NEXT:  [ 2] .bar PROGBITS 0000000000000000 000042 000001
+
+# OFFSET:      Section Headers:
+# OFFSET-NEXT:  [Nr] Name Type     Address          Off    Size
+# OFFSET-NEXT:  [ 0]      NULL     0000000000000000 000000 000000
+# OFFSET-NEXT:  [ 1] .foo PROGBITS 0000000000000000 000040 000001
+# OFFSET-NEXT:  [ 2] .bar PROGBITS 0000000000000000 000124 000001
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 1
+  - Type:    Fill
+    Pattern: "AA"
+    Size:    0x1
+    Offset:  [[OFFSET]]
+  - Name: .bar
+    Type: SHT_PROGBITS
+    Size: 1
+
+## Show that the "Offset" value can't go backward.
+# RUN: not yaml2obj --docnum=11 -DOFFSET=0x40 2>&1 %s | FileCheck %s --check-prefix=OFFSET-ERR
+
+# OFFSET-ERR: error: the 'Offset' value (0x40) goes backward
