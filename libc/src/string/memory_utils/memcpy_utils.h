@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_MEMCPY_UTILS_H
-#define LLVM_LIBC_SRC_MEMORY_UTILS_MEMCPY_UTILS_H
+#ifndef LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H
 
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t
@@ -99,4 +99,4 @@ static void CopyAligned(char *__restrict dst, const char *__restrict src,
 
 } // namespace __llvm_libc
 
-#endif //  LLVM_LIBC_SRC_MEMORY_UTILS_MEMCPY_UTILS_H
+#endif //  LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H

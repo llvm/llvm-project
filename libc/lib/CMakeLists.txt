@@ -23,9 +23,11 @@ add_entrypoint_library(
     libc.src.stdlib.abort
 
     # string.h entrypoints
+    libc.src.string.bzero
     libc.src.string.memcpy
-    libc.src.string.strcpy
+    libc.src.string.memset
     libc.src.string.strcat
+    libc.src.string.strcpy
     libc.src.string.strlen
 
     # sys/mman.h entrypoints

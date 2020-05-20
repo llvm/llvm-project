@@ -204,6 +204,18 @@ the configuration (without a prefix: ``Auto``).
     int b    = 23;
     int ccc  = 23;
 
+**AlignConsecutiveBitFields** (``bool``)
+  If ``true``, aligns consecutive bitfield members.
+
+  This will align the bitfield separators of consecutive lines. This
+  will result in formattings like
+
+  .. code-block:: c++
+
+    int aaaa : 1;
+    int b    : 12;
+    int ccc  : 8;
+
 **AlignConsecutiveDeclarations** (``bool``)
   If ``true``, aligns consecutive declarations.
 
@@ -1012,6 +1024,21 @@ the configuration (without a prefix: ``Auto``).
         foo();
         bar();
       });
+
+  * ``bool BeforeWhile`` Wrap before ``while``.
+
+    .. code-block:: c++
+
+      true:
+      do {
+        foo();
+      }
+      while (1);
+
+      false:
+      do {
+        foo();
+      } while (1);
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 

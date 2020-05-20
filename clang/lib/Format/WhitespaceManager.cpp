@@ -95,6 +95,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   calculateLineBreakInformation();
   alignConsecutiveMacros();
   alignConsecutiveDeclarations();
+  alignConsecutiveBitFields();
   alignConsecutiveAssignments();
   alignChainedConditionals();
   alignTrailingComments();
@@ -445,8 +446,16 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
     int LineLengthAfter = Changes[i].TokenLength;
-    for (unsigned j = i + 1; j != e && Changes[j].NewlinesBefore == 0; ++j)
-      LineLengthAfter += Changes[j].Spaces + Changes[j].TokenLength;
+    for (unsigned j = i + 1; j != e && Changes[j].NewlinesBefore == 0; ++j) {
+      LineLengthAfter += Changes[j].Spaces;
+      // Changes are generally 1:1 with the tokens, but a change could also be
+      // inside of a token, in which case it's counted more than once: once for
+      // the whitespace surrounding the token (!IsInsideToken) and once for
+      // each whitespace change within it (IsInsideToken).
+      // Therefore, changes inside of a token should only count the space.
+      if (!Changes[j].IsInsideToken)
+        LineLengthAfter += Changes[j].TokenLength;
+    }
     unsigned ChangeMaxColumn = Style.ColumnLimit - LineLengthAfter;
 
     // If we are restricted by the maximum column width, end the sequence.
@@ -605,6 +614,26 @@ void WhitespaceManager::alignConsecutiveAssignments() {
           return false;
 
         return C.Tok->is(tok::equal);
+      },
+      Changes, /*StartAt=*/0);
+}
+
+void WhitespaceManager::alignConsecutiveBitFields() {
+  if (!Style.AlignConsecutiveBitFields)
+    return;
+
+  AlignTokens(
+      Style,
+      [&](Change const &C) {
+        // Do not align on ':' that is first on a line.
+        if (C.NewlinesBefore > 0)
+          return false;
+
+        // Do not align on ':' that is last on a line.
+        if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
+          return false;
+
+        return C.Tok->is(TT_BitFieldColon);
       },
       Changes, /*StartAt=*/0);
 }
