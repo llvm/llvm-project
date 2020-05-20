@@ -114,6 +114,7 @@ class APIDefaultConstructorTestCase(TestBase):
         sb_compileunit.fuzz_obj(obj)
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_SBDebugger(self):
         obj = lldb.SBDebugger()
         if self.TraceOn():
@@ -180,6 +181,7 @@ class APIDefaultConstructorTestCase(TestBase):
         sb_function.fuzz_obj(obj)
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_SBFile(self):
         sbf = lldb.SBFile()
         self.assertFalse(sbf.IsValid())
