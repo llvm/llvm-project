@@ -39,7 +39,7 @@ protected:
     // physical cores, which is currently only supported/tested for
     // x86_64 Linux and Darwin.
     return (Host.isOSWindows() && llvm_is_multithreaded()) ||
-           (Host.getArch() == Triple::x86_64 &&
+           (Host.isX86() &&
             (Host.isOSDarwin() || Host.getOS() == Triple::Linux));
   }
 
