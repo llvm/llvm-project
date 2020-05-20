@@ -232,20 +232,8 @@ public:
       bool IsPairwise,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
-  template <typename T>
-  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy, ArrayRef<T *> Args,
-                            FastMathFlags FMF, unsigned VF,
-                            TTI::TargetCostKind CostKind,
-                            const Instruction *I = nullptr);
-  int getIntrinsicInstrCost(
-    Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
-    unsigned ScalarizationCostPassed = UINT_MAX,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr);
-  int getIntrinsicInstrCost(
-    Intrinsic::ID IID, Type *RetTy, ArrayRef<Value *> Args, FastMathFlags FMF,
-    unsigned VF = 1, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr);
+  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                            TTI::TargetCostKind CostKind);
   int getMinMaxReductionCost(
     VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);

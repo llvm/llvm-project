@@ -558,18 +558,15 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   }
 }
 
-template <typename T>
-int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                      ArrayRef<T *> Args, FastMathFlags FMF,
-                                      unsigned VF,
-                                      TTI::TargetCostKind CostKind,
-                                      const Instruction *I) {
-  if (!intrinsicHasPackedVectorBenefit(ID))
-    return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
+int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                      TTI::TargetCostKind CostKind) {
+  if (!intrinsicHasPackedVectorBenefit(ICA.getID()))
+    return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
+  Type *RetTy = ICA.getReturnType();
   EVT OrigTy = TLI->getValueType(DL, RetTy);
   if (!OrigTy.isSimple()) {
-    return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
+    return BaseT::getIntrinsicInstrCost(ICA, CostKind);
   }
 
   // Legalize the type.
@@ -588,29 +585,12 @@ int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
 
   // TODO: Get more refined intrinsic costs?
   unsigned InstRate = getQuarterRateInstrCost();
-  if (ID == Intrinsic::fma) {
+  if (ICA.getID() == Intrinsic::fma) {
     InstRate = ST->hasFastFMAF32() ? getHalfRateInstrCost()
                                    : getQuarterRateInstrCost();
   }
 
   return LT.first * NElts * InstRate;
-}
-
-int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                      ArrayRef<Value *> Args, FastMathFlags FMF,
-                                      unsigned VF,
-                                      TTI::TargetCostKind CostKind,
-                                      const Instruction *I) {
-  return getIntrinsicInstrCost<Value>(ID, RetTy, Args, FMF, VF, CostKind, I);
-}
-
-int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                      ArrayRef<Type *> Tys, FastMathFlags FMF,
-                                      unsigned ScalarizationCostPassed,
-                                      TTI::TargetCostKind CostKind,
-                                      const Instruction *I) {
-  return getIntrinsicInstrCost<Type>(ID, RetTy, Tys, FMF,
-                                     ScalarizationCostPassed, CostKind, I);
 }
 
 unsigned GCNTTIImpl::getCFInstrCost(unsigned Opcode,
@@ -981,12 +961,8 @@ GCNTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
   }
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-      SmallVector<Value *, 4> Args(II->arg_operands());
-      FastMathFlags FMF;
-      if (auto *FPMO = dyn_cast<FPMathOperator>(II))
-        FMF = FPMO->getFastMathFlags();
-      return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
-                                   FMF, 1, CostKind, II);
+      IntrinsicCostAttributes CostAttrs(*II);
+      return getIntrinsicInstrCost(CostAttrs, CostKind);
     } else {
       return BaseT::getUserCost(U, Operands, CostKind);
     }
