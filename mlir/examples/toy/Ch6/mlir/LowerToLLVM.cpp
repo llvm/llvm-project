@@ -73,7 +73,7 @@ public:
       loopIvs.push_back(loop.getInductionVar());
 
       // Terminate the loop body.
-      rewriter.setInsertionPointToStart(loop.getBody());
+      rewriter.setInsertionPointToEnd(loop.getBody());
 
       // Insert a newline after each of the inner dimensions of the shape.
       if (i != e - 1)
