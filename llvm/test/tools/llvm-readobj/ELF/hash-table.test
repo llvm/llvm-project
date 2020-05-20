@@ -1,7 +1,7 @@
 ## Check how the SHT_HASH section is dumped with --hash-table.
 
-# RUN: yaml2obj --docnum=1 %s -o %t.x64
-# RUN: yaml2obj --docnum=2 %s -o %t.x32
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t.x64
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -o %t.x32
 
 # RUN: llvm-readobj --hash-table %t.x64 | FileCheck %s --check-prefix=HASH
 # RUN: llvm-readelf --hash-table %t.x64 | FileCheck %s --check-prefix=HASH
@@ -18,36 +18,10 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:   .hash
-    Type:   SHT_HASH
-    Flags:  [ SHF_ALLOC ]
-    Bucket: [ 1, 2 ]
-    Chain:  [ 3, 4, 5 ]
-  - Name:  .dynamic
-    Type:  SHT_DYNAMIC
-    Flags: [ SHF_ALLOC ]
-    Entries:
-      - Tag:   DT_HASH
-        Value: 0x0
-      - Tag:   DT_NULL
-        Value: 0x0
-ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Machine: [[MACHINE]]
 Sections:
   - Name:   .hash
     Type:   SHT_HASH
@@ -71,7 +45,7 @@ ProgramHeaders:
 ## Check we can dump the SHT_HASH section even when an object
 ## does not have the section header table.
 
-# RUN: yaml2obj --docnum=3 %s -o %t.noshdr
+# RUN: yaml2obj --docnum=2 %s -o %t.noshdr
 # RUN: llvm-readobj --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
 # RUN: llvm-readelf --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
 
@@ -119,7 +93,7 @@ ProgramHeaders:
 ## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
 ## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
 
-# RUN: yaml2obj --docnum=4 %s -o %t4.o
+# RUN: yaml2obj --docnum=3 %s -o %t4.o
 # RUN: llvm-readelf --hash-table %t4.o 2>&1 | FileCheck %s --check-prefix=ERR1 -DFILE=%t4.o
 # RUN: llvm-readobj --hash-table %t4.o 2>&1 | FileCheck %s --check-prefix=ERR1 -DFILE=%t4.o
 
@@ -159,7 +133,7 @@ ProgramHeaders:
 
 ## Case A.1: the hash table ends right before the EOF. We have a broken nbucket
 ##           field that has a value larger than the number of buckets.
-# RUN: yaml2obj --docnum=5 %s -o %t5.1.o -DNBUCKET=0x5d -DNCHAIN=0x1
+# RUN: yaml2obj --docnum=4 %s -o %t5.1.o -DNBUCKET=0x5d -DNCHAIN=0x1
 # RUN: llvm-readelf --hash-table %t5.1.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NOERR1 --implicit-check-not="warning:"
 # RUN: llvm-readobj --hash-table %t5.1.o 2>&1 | \
@@ -176,7 +150,7 @@ ProgramHeaders:
 
 ## Case A.2: the hash table ends 1 byte past the EOF. We have a broken nbucket
 ##           field that has a value larger than the number of buckets.
-# RUN: yaml2obj --docnum=5 %s -o %t5.2.o -DNBUCKET=0x5e -DNCHAIN=0x1
+# RUN: yaml2obj --docnum=4 %s -o %t5.2.o -DNBUCKET=0x5e -DNCHAIN=0x1
 # RUN: llvm-readelf --hash-table %t5.2.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR2 -DFILE=%t5.2.o --implicit-check-not="warning:"
 # RUN: llvm-readobj --hash-table %t5.2.o 2>&1 | \
@@ -188,7 +162,7 @@ ProgramHeaders:
 
 ## Case B.1: the hash table ends right before the EOF. We have a broken nchain
 ##           field that has a value larger than the number of chains.
-# RUN: yaml2obj --docnum=5 %s -o %t5.3.o -DNBUCKET=0x1 -DNCHAIN=0x5d
+# RUN: yaml2obj --docnum=4 %s -o %t5.3.o -DNBUCKET=0x1 -DNCHAIN=0x5d
 # RUN: llvm-readelf --hash-table %t5.3.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NOERR2 -DFILE=%t5.3.o --implicit-check-not="warning:"
 # RUN: llvm-readobj --hash-table %t5.3.o 2>&1 | \
@@ -206,7 +180,7 @@ ProgramHeaders:
 
 ## Case B.2: the hash table ends 1 byte past the EOF. We have a broken nchain
 ##           field that has a value larger than the number of chains.
-# RUN: yaml2obj --docnum=5 %s -o %t5.4.o -DNBUCKET=0x1 -DNCHAIN=0x5e
+# RUN: yaml2obj --docnum=4 %s -o %t5.4.o -DNBUCKET=0x1 -DNCHAIN=0x5e
 # RUN: llvm-readelf --hash-table %t5.4.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR3 -DFILE=%t5.4.o --implicit-check-not="warning:"
 # RUN: llvm-readobj --hash-table %t5.4.o 2>&1 | \
