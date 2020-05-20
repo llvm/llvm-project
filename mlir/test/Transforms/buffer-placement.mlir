@@ -457,3 +457,32 @@ func @nested_regions_and_cond_branch(%arg0: i1, %arg1: memref<2xf32>, %arg2: mem
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  linalg.copy
 // CHECK-NEXT:  dealloc %[[GENERIC1_ALLOC]]
+
+// -----
+
+// Test Case: buffer deallocation escaping
+// BufferPlacement Expected Behaviour: It must not dealloc %arg1 and %x
+// since they are operands of return operation and should escape from
+// deallocating. It should dealloc %y after linalg.copy.
+
+#map0 = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL: func @memref_in_function_results
+func @memref_in_function_results(%arg0: memref<5xf32>, %arg1: memref<10xf32>, %arg2: memref<5xf32>) -> (memref<10xf32>, memref<15xf32>) {
+  %x = alloc() : memref<15xf32>
+  %y = alloc() : memref<5xf32>
+  linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg0, %y {
+  ^bb0(%arg3: f32, %arg4: f32):
+    %2 = exp %arg3 : f32
+    linalg.yield %2 : f32
+  }: memref<5xf32>, memref<5xf32>
+  linalg.copy(%y, %arg2) : memref<5xf32>, memref<5xf32>
+  return %arg1, %x : memref<10xf32>, memref<15xf32>
+}
+// CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>, %[[RESULT:.*]]: memref<5xf32>)
+// CHECK: %[[X:.*]] = alloc()
+// CHECK: %[[Y:.*]] = alloc()
+// CHECK: linalg.copy
+// CHECK: dealloc %[[Y]]
+// CHECK: return %[[ARG1]], %[[X]]
+
