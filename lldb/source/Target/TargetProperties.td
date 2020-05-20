@@ -1,13 +1,9 @@
 include "../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "experimental" in {
+let Definition = "target_experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
-  def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
-    Global,
-    DefaultTrue,
-    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
 }
 
 let Definition = "target" in {
@@ -161,6 +157,13 @@ let Definition = "target" in {
   def RequireHardwareBreakpoints: Property<"require-hardware-breakpoint", "Boolean">,
     DefaultFalse,
     Desc<"Require all breakpoints to be hardware breakpoints.">;
+}
+
+let Definition = "process_experimental" in {
+  def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
 }
 
 let Definition = "process" in {
