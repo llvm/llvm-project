@@ -407,8 +407,11 @@ void mlir::populateLoopToStdConversionPatterns(
 void SCFToStandardPass::runOnOperation() {
   OwningRewritePatternList patterns;
   populateLoopToStdConversionPatterns(patterns, &getContext());
+  // Configure conversion to lower out scf.for, scf.if and scf.parallel.
+  // Anything else is fine.
   ConversionTarget target(getContext());
-  target.addLegalDialect<StandardOpsDialect>();
+  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp>();
+  target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(applyPartialConversion(getOperation(), target, patterns)))
     signalPassFailure();
 }
