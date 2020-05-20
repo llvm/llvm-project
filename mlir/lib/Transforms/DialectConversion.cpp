@@ -663,6 +663,22 @@ RewriterState ConversionPatternRewriterImpl::getCurrentState() {
                        ignoredOps.size(), rootUpdates.size());
 }
 
+/// Detach any operations nested in the given operation from their parent
+/// blocks, and erase the given operation. This can be used when the nested
+/// operations are scheduled for erasure themselves, so deleting the regions of
+/// the given operation together with their content would result in double-free.
+/// This happens, for example, when rolling back op creation in the reverse
+/// order and if the nested ops were created before the parent op. This function
+/// does not need to collect nested ops recursively because it is expected to
+/// also be called for each nested op when it is about to be deleted.
+static void detachNestedAndErase(Operation *op) {
+  for (Region &region : op->getRegions())
+    for (Block &block : region.getBlocks())
+      while (!block.getOperations().empty())
+        block.getOperations().remove(block.getOperations().begin());
+  op->erase();
+}
+
 void ConversionPatternRewriterImpl::resetState(RewriterState state) {
   // Reset any operations that were updated in place.
   for (unsigned i = state.numRootUpdates, e = rootUpdates.size(); i != e; ++i)
@@ -686,7 +702,7 @@ void ConversionPatternRewriterImpl::resetState(RewriterState state) {
 
   // Pop all of the newly created operations.
   while (createdOps.size() != state.numCreatedOps) {
-    createdOps.back()->erase();
+    detachNestedAndErase(createdOps.back());
     createdOps.pop_back();
   }
 
@@ -746,7 +762,7 @@ void ConversionPatternRewriterImpl::discardRewrites() {
 
   // Remove any newly created ops.
   for (auto *op : llvm::reverse(createdOps))
-    op->erase();
+    detachNestedAndErase(op);
 }
 
 void ConversionPatternRewriterImpl::applyRewrites() {
