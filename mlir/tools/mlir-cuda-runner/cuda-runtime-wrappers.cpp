@@ -30,7 +30,7 @@ int32_t reportErrorIfAny(CUresult result, const char *where) {
 }
 } // anonymous namespace
 
-extern "C" int32_t mcuModuleLoad(void **module, void *data) {
+extern "C" int32_t mgpuModuleLoad(void **module, void *data) {
   int32_t err = reportErrorIfAny(
       cuModuleLoadData(reinterpret_cast<CUmodule *>(module), data),
       "ModuleLoad");
@@ -48,11 +48,11 @@ extern "C" int32_t mcuModuleGetFunction(void **function, void *module,
 // The wrapper uses intptr_t instead of CUDA's unsigned int to match
 // the type of MLIR's index type. This avoids the need for casts in the
 // generated MLIR code.
-extern "C" int32_t mcuLaunchKernel(void *function, intptr_t gridX,
-                                   intptr_t gridY, intptr_t gridZ,
-                                   intptr_t blockX, intptr_t blockY,
-                                   intptr_t blockZ, int32_t smem, void *stream,
-                                   void **params, void **extra) {
+extern "C" int32_t mgpuLaunchKernel(void *function, intptr_t gridX,
+                                    intptr_t gridY, intptr_t gridZ,
+                                    intptr_t blockX, intptr_t blockY,
+                                    intptr_t blockZ, int32_t smem, void *stream,
+                                    void **params, void **extra) {
   return reportErrorIfAny(
       cuLaunchKernel(reinterpret_cast<CUfunction>(function), gridX, gridY,
                      gridZ, blockX, blockY, blockZ, smem,
@@ -60,13 +60,13 @@ extern "C" int32_t mcuLaunchKernel(void *function, intptr_t gridX,
       "LaunchKernel");
 }
 
-extern "C" void *mcuGetStreamHelper() {
+extern "C" void *mgpuGetStreamHelper() {
   CUstream stream;
   reportErrorIfAny(cuStreamCreate(&stream, CU_STREAM_DEFAULT), "StreamCreate");
   return stream;
 }
 
-extern "C" int32_t mcuStreamSynchronize(void *stream) {
+extern "C" int32_t mgpuStreamSynchronize(void *stream) {
   return reportErrorIfAny(
       cuStreamSynchronize(reinterpret_cast<CUstream>(stream)), "StreamSync");
 }
@@ -75,7 +75,7 @@ extern "C" int32_t mcuStreamSynchronize(void *stream) {
 
 // Allows to register byte array with the CUDA runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void mcuMemHostRegister(void *ptr, uint64_t sizeBytes) {
+extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
   reportErrorIfAny(cuMemHostRegister(ptr, sizeBytes, /*flags=*/0),
                    "MemHostRegister");
 }
@@ -99,7 +99,7 @@ void mcuMemHostRegisterMemRef(T *pointer, llvm::ArrayRef<int64_t> sizes,
   assert(strides == llvm::makeArrayRef(denseStrides));
 
   std::fill_n(pointer, count, value);
-  mcuMemHostRegister(pointer, count * sizeof(T));
+  mgpuMemHostRegister(pointer, count * sizeof(T));
 }
 
 extern "C" void mcuMemHostRegisterFloat(int64_t rank, void *ptr) {

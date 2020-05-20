@@ -79,12 +79,18 @@ def ConvertAVX512ToLLVM : Pass<"convert-avx512-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// GPUToCUDA
+// GPUCommon
 //===----------------------------------------------------------------------===//
 
-def ConvertGpuLaunchFuncToCudaCalls : Pass<"launch-func-to-cuda", "ModuleOp"> {
-  let summary = "Convert all launch_func ops to CUDA runtime calls";
-  let constructor = "mlir::createConvertGpuLaunchFuncToCudaCallsPass()";
+def ConvertGpuLaunchFuncToGpuRuntimeCalls : Pass<"launch-func-to-gpu-runtime",
+                                                 "ModuleOp"> {
+  let summary = "Convert all launch_func ops to GPU runtime calls";
+  let constructor = "mlir::createConvertGpuLaunchFuncToGpuRuntimeCallsPass()";
+  let options = [
+    Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
+           "\"nvvm.cubin\"",
+           "Annotation attribute string for GPU binary">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
