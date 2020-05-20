@@ -643,6 +643,11 @@ uint32_t Type::GetEncodingMask() {
   return encoding_mask;
 }
 
+void Type::GetDeclContext(
+    llvm::SmallVectorImpl<lldb_private::CompilerContext> &context) const {
+  m_symbol_file->GetDeclContextForUID(context, GetID());
+}
+
 CompilerType Type::GetFullCompilerType() {
   ResolveClangType(ResolveState::Full);
   return m_compiler_type;

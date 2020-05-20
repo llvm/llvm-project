@@ -1387,6 +1387,12 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   return CompilerDeclContext();
 }
 
+void SymbolFileDWARF::GetDeclContextForUID(
+    llvm::SmallVectorImpl<CompilerContext> &context, lldb::user_id_t type_uid) {
+  if (DWARFDIE die = GetDIE(type_uid))
+    return die.GetDeclContext(context);
+}
+
 Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling

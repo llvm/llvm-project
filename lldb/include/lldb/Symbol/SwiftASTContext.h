@@ -31,6 +31,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Target/TargetOptions.h"
 
+// FIXME: needed only for the DenseMap.
+#include "clang/Basic/Module.h"
+#include "clang/APINotes/APINotesManager.h"
+
 #include <map>
 #include <set>
 
@@ -67,6 +71,12 @@ class TypeConverter;
 }
 } // namespace swift
 
+namespace clang {
+namespace api_notes {
+class APINotesManager;
+}
+} // namespace clang
+
 class DWARFASTParser;
 class SwiftEnumDescriptor;
 
@@ -74,6 +84,8 @@ namespace lldb_private {
 
 struct SourceModule;
 class SwiftASTContext;
+class ClangExternalASTSourceCallbacks;
+
 CompilerType ToCompilerType(swift::Type qual_type);
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemSwift.
@@ -489,8 +501,19 @@ private:
   swift::Demangle::NodePointer
   DemangleCanonicalType(swift::Demangle::Demangler &Dem,
                         lldb::opaque_compiler_type_t type);
+
+  /// Return an APINotes manager for the module with module id \id.
+  /// APINotes are used to get at the SDK swiftification annotations.
+  clang::api_notes::APINotesManager *
+  GetAPINotesManager(ClangExternalASTSourceCallbacks *source, unsigned id);
+
   /// The sibling SwiftASTContext.
   SwiftASTContext *m_swift_ast_context = nullptr;
+
+  /// The APINotesManager responsible for each Clang module.
+  llvm::DenseMap<clang::Module *,
+                 std::unique_ptr<clang::api_notes::APINotesManager>>
+      m_apinotes_manager;
 };
 
 /// This "middle" class between TypeSystemSwiftTypeRef and
