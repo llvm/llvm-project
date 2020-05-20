@@ -22,7 +22,7 @@ class RecordKeeper;
 /// Returns true on error, false otherwise.
 using TableGenMainFn = bool (raw_ostream &OS, RecordKeeper &Records);
 
-int TableGenMain(char *argv0, TableGenMainFn *MainFn);
+int TableGenMain(const char *argv0, TableGenMainFn *MainFn);
 
 } // end namespace llvm
 

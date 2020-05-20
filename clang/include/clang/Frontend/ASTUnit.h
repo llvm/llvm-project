@@ -172,7 +172,7 @@ private:
 
   /// Sorted (by file offset) vector of pairs of file offset/Decl.
   using LocDeclsTy = SmallVector<std::pair<unsigned, Decl *>, 64>;
-  using FileDeclsTy = llvm::DenseMap<FileID, LocDeclsTy *>;
+  using FileDeclsTy = llvm::DenseMap<FileID, std::unique_ptr<LocDeclsTy>>;
 
   /// Map from FileID to the file-level declarations that it contains.
   /// The files and decls are only local (and non-preamble) ones.

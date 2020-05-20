@@ -4,7 +4,7 @@
 define void @test(i32 zeroext %parts) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmplwi 0, 3, 1
+; CHECK-NEXT:    cmplwi 3, 1
 ; CHECK-NEXT:    bnelr+ 0
 ; CHECK-NEXT:  # %bb.1: # %test2.exit.us.unr-lcssa
 ; CHECK-NEXT:    ld 3, 0(3)

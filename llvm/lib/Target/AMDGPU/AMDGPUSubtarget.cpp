@@ -722,20 +722,20 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return MaxNumVGPRs;
 }
 
-void GCNSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
-                                         SDep &Dep) const {
+void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
+                                         int UseOpIdx, SDep &Dep) const {
   if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
-      !Src->isInstr() || !Dst->isInstr())
+      !Def->isInstr() || !Use->isInstr())
     return;
 
-  MachineInstr *SrcI = Src->getInstr();
-  MachineInstr *DstI = Dst->getInstr();
+  MachineInstr *DefI = Def->getInstr();
+  MachineInstr *UseI = Use->getInstr();
 
-  if (SrcI->isBundle()) {
+  if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();
-    MachineBasicBlock::const_instr_iterator I(SrcI->getIterator());
-    MachineBasicBlock::const_instr_iterator E(SrcI->getParent()->instr_end());
+    MachineBasicBlock::const_instr_iterator I(DefI->getIterator());
+    MachineBasicBlock::const_instr_iterator E(DefI->getParent()->instr_end());
     unsigned Lat = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
       if (I->modifiesRegister(Reg, TRI))
@@ -744,12 +744,12 @@ void GCNSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
         --Lat;
     }
     Dep.setLatency(Lat);
-  } else if (DstI->isBundle()) {
+  } else if (UseI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();
-    MachineBasicBlock::const_instr_iterator I(DstI->getIterator());
-    MachineBasicBlock::const_instr_iterator E(DstI->getParent()->instr_end());
-    unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *SrcI);
+    MachineBasicBlock::const_instr_iterator I(UseI->getIterator());
+    MachineBasicBlock::const_instr_iterator E(UseI->getParent()->instr_end());
+    unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *DefI);
     for (++I; I != E && I->isBundledWithPred() && Lat; ++I) {
       if (I->readsRegister(Reg, TRI))
         break;

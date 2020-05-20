@@ -18,7 +18,7 @@
 # Test CGR -> CG
 # CHECK: name:            fun1
 # CHECK: CG %10, %stack.0, 0, $noreg, implicit-def $cc :: (load 8 from %stack.0)
-# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit killed $cc
+# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit $cc
 ---
 name:            fun1
 alignment:       16
@@ -95,7 +95,7 @@ body:             |
 # Test CLGR -> CLG
 # CHECK: name:            fun2
 # CHECK: CLG %10, %stack.0, 0, $noreg, implicit-def $cc :: (load 8 from %stack.0)
-# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit killed $cc
+# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit $cc
 ---
 name:            fun2
 alignment:       16
@@ -172,7 +172,7 @@ body:             |
 # Test CR -> C
 # CHECK: name:            fun3
 # CHECK: C %10, %stack.0, 0, $noreg, implicit-def $cc :: (load 4 from %stack.0)
-# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit killed $cc
+# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit $cc
 ---
 name:            fun3
 alignment:       16
@@ -249,7 +249,7 @@ body:             |
 # Test CLR -> CL
 # CHECK: name:            fun4
 # CHECK: CL %10, %stack.0, 0, $noreg, implicit-def $cc :: (load 4 from %stack.0)
-# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit killed $cc
+# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit $cc
 ---
 name:            fun4
 alignment:       16

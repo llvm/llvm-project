@@ -485,17 +485,9 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: EM_X86_64
-Sections:
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_NULL
-        Value: 0
 ProgramHeaders:
   - Type:   PT_DYNAMIC
     Offset: 0xffff0000
-    Sections:
-      - Section: .dynamic
 
 ## PT_DYNAMIC's p_filesz field is so large that p_offset + p_filesz is larger
 ## than the object size. Check llvm-readobj reports it.

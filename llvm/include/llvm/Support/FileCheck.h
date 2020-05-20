@@ -24,13 +24,15 @@ namespace llvm {
 
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {
-  std::vector<std::string> CheckPrefixes;
+  std::vector<StringRef> CheckPrefixes;
+  std::vector<StringRef> CommentPrefixes;
   bool NoCanonicalizeWhiteSpace = false;
-  std::vector<std::string> ImplicitCheckNot;
-  std::vector<std::string> GlobalDefines;
+  std::vector<StringRef> ImplicitCheckNot;
+  std::vector<StringRef> GlobalDefines;
   bool AllowEmptyInput = false;
   bool MatchFullLines = false;
   bool IgnoreCase = false;
+  bool IsDefaultCheckPrefix = false;
   bool EnableVarScope = false;
   bool AllowDeprecatedDagOverlap = false;
   bool Verbose = false;
@@ -52,6 +54,7 @@ enum FileCheckKind {
   CheckDAG,
   CheckLabel,
   CheckEmpty,
+  CheckComment,
 
   /// Indicates the pattern only matches the end of file. This is used for
   /// trailing CHECK-NOTs.
@@ -87,7 +90,7 @@ struct FileCheckDiag {
   /// What is the FileCheck directive for this diagnostic?
   Check::FileCheckType CheckTy;
   /// Where is the FileCheck directive for this diagnostic?
-  unsigned CheckLine, CheckCol;
+  SMLoc CheckLoc;
   /// What type of match result does this diagnostic describe?
   ///
   /// A directive's supplied pattern is said to be either expected or excluded
@@ -159,7 +162,13 @@ public:
   ///
   /// Only expected strings whose prefix is one of those listed in \p PrefixRE
   /// are recorded. \returns true in case of an error, false otherwise.
-  bool readCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE);
+  ///
+  /// If \p ImpPatBufferIDRange, then the range (inclusive start, exclusive end)
+  /// of IDs for source buffers added to \p SM for implicit patterns are
+  /// recorded in it.  The range is empty if there are none.
+  bool
+  readCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+                std::pair<unsigned, unsigned> *ImpPatBufferIDRange = nullptr);
 
   bool ValidateCheckPrefixes();
 

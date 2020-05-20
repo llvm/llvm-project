@@ -775,7 +775,7 @@ struct NullPointer {
 
 // Procedure pointer targets are treated as if they were typeless.
 // They are either procedure designators or values returned from
-// function references.
+// references to functions that return procedure (not object) pointers.
 using TypelessExpression = std::variant<BOZLiteralConstant, NullPointer,
     ProcedureDesignator, ProcedureRef>;
 

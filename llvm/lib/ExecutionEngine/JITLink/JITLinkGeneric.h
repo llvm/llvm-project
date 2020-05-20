@@ -80,13 +80,13 @@ protected:
   // For debug dumping of the link graph.
   virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
 
-  // Alight a JITTargetAddress to conform with block alignment requirements.
+  // Align a JITTargetAddress to conform with block alignment requirements.
   static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
     uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
     return Addr + Delta;
   }
 
-  // Alight a pointer to conform with block alignment requirements.
+  // Align a pointer to conform with block alignment requirements.
   static char *alignToBlock(char *P, Block &B) {
     uint64_t PAddr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(P));
     uint64_t Delta = (B.getAlignmentOffset() - PAddr) % B.getAlignment();

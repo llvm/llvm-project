@@ -430,6 +430,10 @@ struct ClientCapabilities {
   /// textDocument.completion.completionItemKind.valueSet
   llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
 
+  /// The documentation format that should be used for textDocument/completion.
+  /// textDocument.completion.completionItem.documentationFormat
+  MarkupKind CompletionDocumentationFormat = MarkupKind::PlainText;
+
   /// Client supports CodeAction return value for textDocument/codeAction.
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool CodeActionStructure = false;
@@ -1105,7 +1109,7 @@ struct CompletionItem {
   std::string detail;
 
   /// A human-readable string that represents a doc-comment.
-  std::string documentation;
+  llvm::Optional<MarkupContent> documentation;
 
   /// A string that should be used when comparing this item with other items.
   /// When `falsy` the label is used.

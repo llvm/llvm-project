@@ -13,94 +13,35 @@
 #ifndef SHAPE_OPS
 #define SHAPE_OPS
 
-include "mlir/IR/OpBase.td"
+include "mlir/Dialect/Shape/IR/ShapeBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// TODO(jpienaar): Move to base.
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
-
-//===----------------------------------------------------------------------===//
-// Shape Inference dialect definitions
-//===----------------------------------------------------------------------===//
-
-def ShapeDialect : Dialect {
-  let name = "shape";
-
-  let summary = "Types and operations for shape dialect";
-  let description = [{
-    This dialect contains operations for shape inference.
-
-    Note: Unless explicitly stated, all functions that return a shape and take
-    shapes as input, return the invalid shape if one of its operands is an
-    invalid shape. This avoids flagging multiple errors for one verification
-    failure. The dialect itself does not specify how errors should be combined
-    (there are multiple different options, from always choosing first operand,
-    concatting etc. on how to combine them).
-  }];
-
-  let cppNamespace = "shape";
-}
-
-def Shape_ComponentType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ComponentType>()">, "component type"> {
+def Shape_WitnessType : DialectType<ShapeDialect,
+    CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
+    BuildableType<"$_builder.getType<::mlir::shape::WitnessType>()"> {
   let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
+    A witness is a structural device in the compiler to maintain ordering of
+    code relying on information obtained from passing assertions. Witnesses do
+    not represent any physical data.
+
+    "cstr_" operations will return witnesses and be lowered into assertion logic
+    when not resolvable at compile time.
+
+    "assuming_" operations will take witnesses as input and represent only
+    information to the compiler, so they do not exist in executing code. Code
+    that is dependent on "assuming_" operations can assume all cstr operations
+    transitively before are honored as true.
+
+    These abstractions are intended to allow the compiler more freedom with
+    assertions by merely showing the assertion through dataflow at this time
+    rather than a side effecting operation that acts as a barrier. This can be
+    viewed similarly to a compiler representation of promises from asynchronous,
+    possibly crashing assertions. Reliant code will not be reordered to before
+    the code and non-reliant code can be reordered freely, and there are no
+    guarantees on the final ordering of the assertions or their related code.
   }];
 }
-
-def Shape_ElementType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ElementType>()">, "element type"> {
-  let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
-  }];
-}
-
-def Shape_ShapeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ShapeType>()">, "shape"> {
-  let typeDescription = [{
-    `shape.type` represents either an unranked shape, a ranked shape with
-    possibly unknown dimensions or an invalid shape. The rank is of type
-    `shape.size` and, if rank is known, the extent is a 1D tensor of type
-    `shape.size`.
-
-    Shape is printed:
-    * `[*]` if it is an unranked shape
-    * `[?, 2]` if a rank 2 tensor with one unknown dimension
-    * `[3, 4]` is a rank 2 static tensor
-    * `[]` is a scalar
-    * `[1]` is a rank 1 tensor with 1 element
-    * `[invalid]` for an invalid shape
-  }];
-}
-
-def Shape_SizeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::SizeType>()">, "size"> {
-  let typeDescription = [{
-    `shape.size` represents a non-negative integer with support for being
-    unknown and invalid.
-
-    Operations on `shape.size` types are specialized to handle unknown/dynamic
-    value. So, for example, `<unknown> + x == <unknown>` for all non-error `x :
-    !shape.size` (e.g., an unknown value does not become known due to addition).
-  }];
-}
-
-def Shape_ValueShapeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ValueShapeType>()">, "value shape"> {
-  let typeDescription = [{
-    `shape.value_shape` represents the value produced by an operation (this
-    corresponds to `Value` in the compiler) and a shape. Conceptually this is a
-    tuple of a value (potentially unknown) and `shape.type`. The value and shape
-    can either or both be unknown. If both the `value` and `shape` are known,
-    then the shape of `value` is conformant with `shape`.
-  }];
-}
-
-def Shape_ShapeOrSizeType: AnyTypeOf<[Shape_SizeType, Shape_ShapeType],
-  "shape or size">;
 
 //===----------------------------------------------------------------------===//
 // Shape op definitions
@@ -122,7 +63,8 @@ def Shape_AddOp : Shape_Op<"add", [SameOperandsAndResultType]> {
   let results = (outs Shape_SizeType:$result);
 }
 
-def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
+def Shape_BroadcastOp : Shape_Op<"broadcast",
+    [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Returns the broadcasted output shape of two inputs";
   let description = [{
     Computes the broadcasted output shape following:
@@ -144,29 +86,50 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
   let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs,
                    OptionalAttr<StrAttr>:$error);
   let results = (outs Shape_ShapeType:$result);
+
+  let hasFolder = 1;
 }
 
-def Shape_ConstantOp : Shape_Op<"constant", []> {
-  let summary = "Creates a shape constant";
+def Shape_ConstShapeOp : Shape_Op<"const_shape",
+    [ConstantLike,
+     NoSideEffect,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Creates a constant of !shape.shape type.";
   let description = [{
-    An operation that builds a size or shape from integer or array attribute.
-    It allows for creating dynamically valued shapes by using `?` for unknown
-    values. A constant shape specified with `*` will return an unranked shape.
+    Creates a !shape.shape with rank given by the length of `shape` and with
+    dimension sizes given by the values of `shape`.
 
     ```mlir
-    %x = shape.constant 10 : !shape.size
+    %0 = shape.const_shape []
+    %1 = shape.const_shape [1, 2, 3]
     ```
   }];
-
-  // TODO(jpienaar): Change to a more specialized attribute that would
-  // encapsulate the unknown parsing while using denser packing.
-  let arguments = (ins AnyAttr:$value);
-  let results = (outs Shape_ShapeOrSizeType:$result);
+  let arguments = (ins I64ElementsAttr:$shape);
+  let results = (outs Shape_ShapeType:$result);
 
   // TODO: Move this to main so that all shape ops implement these.
   let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+  let hasFolder = 1;
+}
+
+def Shape_ConstSizeOp : Shape_Op<"const_size",
+    [ConstantLike,
+     NoSideEffect,
+     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Creates a constant of !shape.size type.";
+  let description = [{
+    Creates a !shape.size type representing the constant size given by `value`.
+
+    ```mlir
+    %x = shape.const_size 10
+    ```
+  }];
+
+  let arguments = (ins IndexAttr:$value);
+  let results = (outs Shape_SizeType:$result);
+
+  let assemblyFormat = "attr-dict $value";
 }
 
 def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", []> {
@@ -198,6 +161,8 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", []> {
 
   let arguments = (ins Shape_ShapeType:$input);
   let results = (outs IndexTensor:$result);
+
+  let hasFolder = 1;
 }
 
 def Shape_JoinOp : Shape_Op<"join", []> {
@@ -286,11 +251,16 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
   let regions = (region SizedRegion<1>:$body);
 }
 
-def Shape_ShapeOfOp : Shape_Op<"shape_of", []> {
+def Shape_ShapeOfOp : Shape_Op<"shape_of",
+    [NoSideEffect, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Returns shape of a value or shaped type operand";
 
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeType:$result);
+
+  let assemblyFormat = "attr-dict $arg `:` type($arg)";
+
+  let hasFolder = 1;
 }
 
 def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
@@ -299,7 +269,7 @@ def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result", [{ build(b, result, llvm::None); }]
+    "OpBuilder &b, OperationState &result", [{ build(b, result, llvm::None); }]
   >];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
@@ -347,6 +317,7 @@ def Shape_SplitAtOp : Shape_Op<"split_at",
 
   let arguments = (ins Shape_ShapeType:$operand, I32:$index);
   let results = (outs Shape_ShapeType:$head, Shape_ShapeType:$tail);
+  let hasFolder = 1;
 }
 
 def Shape_ConcatOp : Shape_Op<"concat",
@@ -364,6 +335,127 @@ def Shape_ConcatOp : Shape_Op<"concat",
 
   let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
   let results = (outs Shape_ShapeType:$result);
+
+  let hasFolder = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Shape constraint related ops.
+//===----------------------------------------------------------------------===//
+
+//TODO(tpopp): Move the code below and witnesses to a different file.
+def Shape_AnyOp : Shape_Op<"any",
+    [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Return any combination of the input shapes.";
+  let description = [{
+    This operation takes multiple input shapes and returns some combination of
+    their dimensions. This can be best seen with examples below.
+
+    The result is undefined, but still side-effect free, in cases where the
+    inputs have differing ranks or differ in extents of shared dimensions.
+
+    Example:
+    ```mlir
+      %s0 = shape.any([2,?], [?,3]) // [2,3]
+      %s1 = shape.any([?,?], [1,2]) // [1,2]
+    ```
+  }];
+
+  let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
+  let results = (outs Shape_ShapeType:$result);
+}
+
+def Shape_AssumingAllOp : Shape_Op<"assuming_all", []> {
+  let summary = "Return a logical AND of all witnesses.";
+  let description = [{
+    Used to simplify constraints as any single failing precondition is enough
+    to prevent execution.
+
+    "assuming" operations represent an execution order restriction to the
+    compiler, information for dependent code to rely on (by assuming), and
+    nothing else. They should not exist after a program is fully lowered and
+    ready to execute.
+
+    Example:
+    ```mlir
+      %w0 = shape.cstr_broadcastable([2,2], [3,1,2]) // Success
+      %w1 = shape.cstr_broadcastable([2,2], [3,2])    // Failure
+      %w2 = shape.cstr_eq([1,2], [1,2], [1,2]) // Success
+      %wf = shape.assume_all(%w0, %w1) // Failure
+      %wt = shape.assume_all(%w0, %w2) // Success
+    ```
+  }];
+
+  let arguments = (ins Variadic<Shape_WitnessType>:$inputs);
+  let results = (outs Shape_WitnessType:$result);
+}
+
+def Shape_AssumingOp : Shape_Op<"assuming",
+                           [SingleBlockImplicitTerminator<"AssumingYieldOp">,
+                            RecursiveSideEffects]> {
+  let summary = "Execute the region.";
+  let description = [{
+    Executes the region assuming all witnesses are true.
+
+    "assuming" operations represent an execution order restriction to the
+    compiler, information for dependent code to rely on (by assuming), and
+    nothing else. They should not exist after a program is fully lowered and
+    ready to execute.
+  }];
+  let arguments = (ins Shape_WitnessType);
+  let regions = (region SizedRegion<1>:$thenRegion);
+  let results = (outs Variadic<AnyType>:$results);
+}
+
+def Shape_AssumingYieldOp : Shape_Op<"assuming_yield", [Terminator]> {
+  let summary = "Yield operation";
+  let description = [{
+    This yield operation represents a return operation within the assert_and_exec
+    region. The operation takes variable number of operands and produces no
+    results. The operand number and types must match the return signature of
+    the region that contains the operation.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+}
+
+def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", []> {
+  let summary = "Determines if 2 shapes can be successfully broadcasted.";
+  let description = [{
+    Given 2 input shapes, return a witness specifying if they are broadcastable.
+    This broadcastable follows the same logic as what shape.broadcast documents.
+
+    "cstr" operations represent runtime assertions.
+
+    Example:
+    ```mlir
+      %w0 = shape.cstr_broadcastable([2,2], [3,1,2])  // Success
+      %w1 = shape.cstr_broadcastable([2,2], [3,2])    // Failure
+    ```
+  }];
+
+  let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
+  let results = (outs Shape_WitnessType:$result);
+}
+
+def Shape_CstrEqOp : Shape_Op<"cstr_eq", []> {
+  let summary = "Determines if all input shapes are equal.";
+  let description = [{
+    Given 1 or more input shapes, determine if all shapes are the exact same.
+
+    "cstr" operations represent runtime assertions.
+
+    Example:
+    ```mlir
+      %w0 = shape.cstr_eq([1,2], [1,2], [1,2]) // Success
+      %w1 = shape.cstr_eq([2,2], [1,2])        // Failure
+    ```
+  }];
+  let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
+  let results = (outs Shape_WitnessType:$result);
+}
+
+
+// Canonicalization patterns.
 
 #endif // SHAPE_OPS

@@ -350,6 +350,13 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+struct PublicSym32Header {
+  ulittle32_t Flags;
+  ulittle32_t Offset;
+  ulittle16_t Segment;
+  // char Name[];
+};
+
 // S_PUB32
 class PublicSym32 : public SymbolRecord {
 public:

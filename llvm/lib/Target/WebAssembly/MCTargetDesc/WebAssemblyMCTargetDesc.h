@@ -24,14 +24,10 @@ namespace llvm {
 
 class MCAsmBackend;
 class MCCodeEmitter;
-class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
-class MCSubtargetInfo;
 class MVT;
-class Target;
 class Triple;
-class raw_pwrite_stream;
 
 MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 

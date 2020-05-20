@@ -11,14 +11,15 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
 
 namespace lld {
 namespace macho {
 
-class InputFile;
-class InputSection;
 class ArchiveFile;
+class DylibFile;
+class InputSection;
 class Symbol;
 
 class SymbolTable {
@@ -26,6 +27,11 @@ public:
   Symbol *addDefined(StringRef name, InputSection *isec, uint32_t value);
 
   Symbol *addUndefined(StringRef name);
+
+  Symbol *addDylib(StringRef name, DylibFile *file);
+
+  Symbol *addLazy(StringRef name, ArchiveFile *file,
+                  const llvm::object::Archive::Symbol &sym);
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
   Symbol *find(StringRef name);

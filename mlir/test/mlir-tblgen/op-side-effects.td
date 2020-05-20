@@ -1,6 +1,6 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
 
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def TEST_Dialect : Dialect {
   let name = "test";
@@ -8,13 +8,15 @@ def TEST_Dialect : Dialect {
 class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<TEST_Dialect, mnemonic, traits>;
 
+def CustomResource : Resource<"CustomResource">;
+
 def SideEffectOpA : TEST_Op<"side_effect_op_a"> {
   let arguments = (ins Arg<Variadic<AnyMemRef>, "", [MemRead]>);
-  let results = (outs Res<AnyMemRef, "", [MemAlloc<"CustomResource">]>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<CustomResource>]>);
 }
 
 def SideEffectOpB : TEST_Op<"side_effect_op_b",
-    [MemoryEffects<[MemWrite<"CustomResource">]>]>;
+    [MemoryEffects<[MemWrite<CustomResource>]>]>;
 
 // CHECK: void SideEffectOpA::getEffects
 // CHECK:   for (Value value : getODSOperands(0))

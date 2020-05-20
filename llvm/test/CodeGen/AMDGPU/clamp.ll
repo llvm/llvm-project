@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,VI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,GFX678 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,VI,GFX678 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
 ; GCN-LABEL: {{^}}v_clamp_f32:
@@ -74,7 +74,8 @@ define amdgpu_kernel void @v_clamp_negzero_f32(float addrspace(1)* %out, float a
 
 ; GCN-LABEL: {{^}}v_clamp_negzero_maybe_snan_f32:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[QUIET:v[0-9]+]], 1.0, [[A]]
+; GFX678: v_mul_f32_e32 [[QUIET:v[0-9]+]], 1.0, [[A]]
+; GFX9: v_max_f32_e32 [[QUIET:v[0-9]+]], [[A]], [[A]]
 ; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0x80000000, [[QUIET]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], 1.0, [[MAX]]
 define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
@@ -91,7 +92,8 @@ define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}v_clamp_multi_use_max_f32:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[QUIET_A:v[0-9]+]], 1.0, [[A]]
+; GFX678: v_mul_f32_e32 [[QUIET_A:v[0-9]+]], 1.0, [[A]]
+; GFX9: v_max_f32_e32 [[QUIET_A:v[0-9]+]], [[A]], [[A]]
 ; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0, [[QUIET_A]]
 ; GCN: v_min_f32_e32 [[MED:v[0-9]+]], 1.0, [[QUIET_A]]
 ; GCN-NOT: [[MAX]]
@@ -416,7 +418,8 @@ define amdgpu_kernel void @v_clamp_f32_snan_dx10clamp(float addrspace(1)* %out, 
 
 ; GCN-LABEL: {{^}}v_clamp_f32_snan_no_dx10clamp:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[QUIET_A:v[0-9]+]], 1.0, [[A]]
+; GFX678: v_mul_f32_e32 [[QUIET_A:v[0-9]+]], 1.0, [[A]]
+; GFX9: v_max_f32_e32 [[QUIET_A:v[0-9]+]], [[A]], [[A]]
 ; GCN: v_med3_f32 {{v[0-9]+}}, [[QUIET_A]], 0, 1.0
 define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #4 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

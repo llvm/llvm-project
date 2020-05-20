@@ -1579,6 +1579,12 @@ static enum CXChildVisitResult PrintType(CXCursor cursor, CXCursor p,
         PrintTypeTemplateArgs(CT, " [canonicaltemplateargs/%d=");
       }
     }
+    /* Print the value type if it exists. */
+    {
+      CXType VT = clang_Type_getValueType(T);
+      if (VT.kind != CXType_Invalid)
+        PrintTypeAndTypeKind(VT, " [valuetype=%s] [valuetypekind=%s]");
+    }
     /* Print the modified type if it exists. */
     {
       CXType MT = clang_Type_getModifiedType(T);

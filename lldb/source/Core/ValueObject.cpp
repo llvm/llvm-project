@@ -687,6 +687,11 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
         language_flags);
   }
 
+  if (!valobj && synthetic_array_member)
+    valobj = GetSyntheticValue()
+                 ->GetChildAtIndex(synthetic_index, synthetic_array_member)
+                 .get();
+
   return valobj;
 }
 
@@ -1933,10 +1938,7 @@ ValueObject::GetSyntheticExpressionPathChild(const char *expression,
   return synthetic_child_sp;
 }
 
-void ValueObject::CalculateSyntheticValue(bool use_synthetic) {
-  if (!use_synthetic)
-    return;
-
+void ValueObject::CalculateSyntheticValue() {
   TargetSP target_sp(GetTargetSP());
   if (target_sp && !target_sp->GetEnableSyntheticValue()) {
     m_synthetic_value = nullptr;
@@ -1988,11 +1990,8 @@ ValueObjectSP ValueObject::GetStaticValue() { return GetSP(); }
 
 lldb::ValueObjectSP ValueObject::GetNonSyntheticValue() { return GetSP(); }
 
-ValueObjectSP ValueObject::GetSyntheticValue(bool use_synthetic) {
-  if (!use_synthetic)
-    return ValueObjectSP();
-
-  CalculateSyntheticValue(use_synthetic);
+ValueObjectSP ValueObject::GetSyntheticValue() {
+  CalculateSyntheticValue();
 
   if (m_synthetic_value)
     return m_synthetic_value->GetSP();
@@ -2006,7 +2005,7 @@ bool ValueObject::HasSyntheticValue() {
   if (m_synthetic_children_sp.get() == nullptr)
     return false;
 
-  CalculateSyntheticValue(true);
+  CalculateSyntheticValue();
 
   return m_synthetic_value != nullptr;
 }
@@ -2810,7 +2809,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     const bool transparent_pointers = false;
     CompilerType compiler_type = GetCompilerType();
     CompilerType child_compiler_type;
-    uint64_t language_flags;
+    uint64_t language_flags = 0;
 
     ExecutionContext exe_ctx(GetExecutionContextRef());
 
@@ -2830,6 +2829,27 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
           child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
           language_flags);
     }
+
+    // In case of incomplete child compiler type, use the pointee type and try
+    // to recreate a new ValueObjectChild using it.
+    if (!m_deref_valobj) {
+      if (HasSyntheticValue()) {
+        child_compiler_type = compiler_type.GetPointeeType();
+
+        if (child_compiler_type) {
+          ConstString child_name;
+          if (!child_name_str.empty())
+            child_name.SetCString(child_name_str.c_str());
+
+          m_deref_valobj = new ValueObjectChild(
+              *this, child_compiler_type, child_name, child_byte_size,
+              child_byte_offset, child_bitfield_bit_size,
+              child_bitfield_bit_offset, child_is_base_class,
+              child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
+        }
+      }
+    }
+
   } else if (HasSyntheticValue()) {
     m_deref_valobj =
         GetSyntheticValue()
@@ -3341,7 +3361,7 @@ lldb::ValueObjectSP ValueObjectManager::GetSP() {
   }
 
   if (m_use_synthetic) {
-    lldb::ValueObjectSP synthetic_sp = m_user_valobj_sp->GetSyntheticValue(m_use_synthetic);
+    lldb::ValueObjectSP synthetic_sp = m_user_valobj_sp->GetSyntheticValue();
     if (synthetic_sp)
       m_user_valobj_sp = synthetic_sp;
   }

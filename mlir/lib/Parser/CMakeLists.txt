@@ -5,8 +5,7 @@ add_mlir_library(MLIRParser
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Parser
-  )
-target_link_libraries(MLIRParser
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRIR
-  MLIRAnalysis)
+  )

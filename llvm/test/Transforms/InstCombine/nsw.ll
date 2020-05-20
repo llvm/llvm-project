@@ -128,3 +128,15 @@ define <3 x i32> @shl_nuw_nsw_shuffle_undef_elt_splat_vec(<2 x i8> %x) {
   ret <3 x i32> %t3
 }
 
+; Make sure we don't crash on a ConstantExpr shufflevector
+define <vscale x 2 x i64> @mul_nuw_nsw_shuffle_constant_expr(<vscale x 2 x i8> %z) {
+; CHECK-LABEL: @mul_nuw_nsw_shuffle_constant_expr(
+; CHECK-NEXT:    [[XX:%.*]] = zext <vscale x 2 x i8> [[Z:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[T3:%.*]] = mul <vscale x 2 x i64> [[XX]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 3, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[T3]]
+;
+  %xx = zext <vscale x 2 x i8> %z to <vscale x 2 x i64>
+  %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 3, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  %t3 = mul <vscale x 2 x i64> %shuf, %xx
+  ret <vscale x 2 x i64> %t3
+}

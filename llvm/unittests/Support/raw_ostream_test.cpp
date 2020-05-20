@@ -18,7 +18,12 @@ namespace {
 
 template<typename T> std::string printToString(const T &Value) {
   std::string res;
-  return (llvm::raw_string_ostream(res) << Value).str();
+  {
+    llvm::raw_string_ostream OS(res);
+    OS.SetBuffered();
+    OS << Value;
+  }
+  return res;
 }
 
 /// printToString - Print the given value to a stream which only has \arg

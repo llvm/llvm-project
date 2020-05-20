@@ -4,9 +4,9 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_3 -DUSE_4
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fobjc-arc -I %S/Inputs -fmodules-cache-path=%t %s -verify -DUSE_4
 
-// expected-note@Inputs/def.h:5 0-1{{previous}}
-// expected-note@Inputs/def.h:16 0-1{{previous}}
-// expected-note@Inputs/def-include.h:11 0-1{{previous}}
+// expected-note@Inputs/def.h:5 0-1{{here}}
+// expected-note@Inputs/def.h:16 0-1{{here}}
+// expected-note@Inputs/def-include.h:11 0-1{{here}}
 
 @class Def;
 Def *def;

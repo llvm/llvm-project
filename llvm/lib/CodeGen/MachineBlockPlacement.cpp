@@ -1570,7 +1570,7 @@ MachineBlockPlacement::selectBestSuccessor(
   // For blocks with CFG violations, we may be able to lay them out anyway with
   // tail-duplication. We keep this vector so we can perform the probability
   // calculations the minimum number of times.
-  SmallVector<std::tuple<BranchProbability, MachineBasicBlock *>, 4>
+  SmallVector<std::pair<BranchProbability, MachineBasicBlock *>, 4>
       DupCandidates;
   for (MachineBasicBlock *Succ : Successors) {
     auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
@@ -1584,7 +1584,7 @@ MachineBlockPlacement::selectBestSuccessor(
                                    Chain, BlockFilter)) {
       // If tail duplication would make Succ profitable, place it.
       if (allowTailDupPlacement() && shouldTailDuplicate(Succ))
-        DupCandidates.push_back(std::make_tuple(SuccProb, Succ));
+        DupCandidates.emplace_back(SuccProb, Succ);
       continue;
     }
 

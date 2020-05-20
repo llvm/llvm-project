@@ -297,7 +297,7 @@ int main(int, char**)
 #else
     static_assert(std::alignment_of<T1>::value >=
                   TEST_ALIGNOF(natural_alignment), "");
-    static_assert(std::alignment_of<T1>::value <= 16);
+    static_assert(std::alignment_of<T1>::value <= 16, "");
     static_assert(sizeof(T1) % TEST_ALIGNOF(natural_alignment) == 0, "");
 #endif
     }

@@ -29,23 +29,6 @@ function(add_loader_test target_name)
 
   set_target_properties(${fq_target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-  set(dep_objects "")
-  if(ADD_LOADER_TEST_DEPENDS)
-    get_fq_deps_list(fq_deps_list ${ADD_LOADER_TEST_DEPENDS})
-    add_dependencies(${fq_target_name} ${fq_deps_list})
-    foreach(dep IN LISTS fq_deps_list)
-      get_target_property(objfile ${dep} "OBJECT_FILES")
-      if(NOT objfile)
-        message(
-            FATAL_ERROR
-            "Unexpected dependency of an `add_loader_test` target. A dependency "
-            "should be a target of type `add_entrypoint_object, `add_object`, or "
-            "`add_loader_object`.")
-      endif()
-      list(APPEND dep_objects ${objfile})
-    endforeach(dep)
-  endif()
-
   target_include_directories(
     ${fq_target_name}
     PRIVATE
@@ -54,7 +37,9 @@ function(add_loader_test target_name)
       ${LIBC_BUILD_DIR}/include
   )
 
-  target_link_libraries(${fq_target_name} ${dep_objects})
+  get_fq_deps_list(fq_deps_list ${ADD_LOADER_TEST_DEPENDS})
+  get_object_files_for_test(link_object_files ${fq_deps_list})
+  target_link_libraries(${fq_target_name} ${link_object_files})
 
   target_link_options(
     ${fq_target_name}

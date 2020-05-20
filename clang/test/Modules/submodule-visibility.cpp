@@ -22,7 +22,7 @@
 // The use of -fmodule-name=x causes us to textually include the above headers.
 // The submodule visibility rules are still applied in this case.
 //
-// expected-error@b.h:1 {{declaration of 'n' must be imported from module 'x.a'}}
+// expected-error@b.h:1 {{missing '#include "a.h"'; 'n' must be declared}}
 // expected-note@a.h:1 {{here}}
 #endif
 

@@ -645,7 +645,7 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) 
 ; CHECK-NEXT:    mfvsrd r3, vs34
 ; CHECK-NEXT:    rldicl r6, r3, 32, 56
 ; CHECK-NEXT:    rldicl r3, r3, 56, 56
-; CHECK-NEXT:    mfvsrd r4, f0
+; CHECK-NEXT:    mffprd r4, f0
 ; CHECK-NEXT:    stb r6, 1(r5)
 ; CHECK-NEXT:    stb r3, 2(r5)
 ; CHECK-NEXT:    rldicl r6, r4, 32, 56
@@ -661,7 +661,7 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) 
 ; CHECK-BE-NEXT:    xxswapd vs0, vs34
 ; CHECK-BE-NEXT:    mfvsrd r3, vs34
 ; CHECK-BE-NEXT:    rldicl r6, r3, 40, 56
-; CHECK-BE-NEXT:    mfvsrd r4, f0
+; CHECK-BE-NEXT:    mffprd r4, f0
 ; CHECK-BE-NEXT:    stb r6, 0(r5)
 ; CHECK-BE-NEXT:    rldicl r6, r4, 40, 56
 ; CHECK-BE-NEXT:    rldicl r4, r4, 16, 56
@@ -734,7 +734,7 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-NEXT:    rldicl r6, r3, 56, 56
 ; CHECK-NEXT:    stb r4, 1(r5)
 ; CHECK-NEXT:    rldicl r4, r3, 40, 56
-; CHECK-NEXT:    mfvsrd r7, f0
+; CHECK-NEXT:    mffprd r7, f0
 ; CHECK-NEXT:    stb r6, 2(r5)
 ; CHECK-NEXT:    rldicl r6, r3, 24, 56
 ; CHECK-NEXT:    stb r4, 6(r5)
@@ -767,7 +767,7 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-BE-NEXT:    clrldi r6, r3, 56
 ; CHECK-BE-NEXT:    stb r4, 0(r5)
 ; CHECK-BE-NEXT:    rldicl r4, r3, 56, 56
-; CHECK-BE-NEXT:    mfvsrd r7, f0
+; CHECK-BE-NEXT:    mffprd r7, f0
 ; CHECK-BE-NEXT:    stb r6, 3(r5)
 ; CHECK-BE-NEXT:    rldicl r6, r3, 8, 56
 ; CHECK-BE-NEXT:    stb r4, 4(r5)

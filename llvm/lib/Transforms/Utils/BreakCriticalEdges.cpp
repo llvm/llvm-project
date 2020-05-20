@@ -388,13 +388,22 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     if (FirstNonPHI->isEHPad() || Target->isLandingPad())
       continue;
 
+    // Remember edge probabilities if needed.
+    SmallVector<BranchProbability, 4> EdgeProbabilities;
+    if (ShouldUpdateAnalysis) {
+      EdgeProbabilities.reserve(Target->getTerminator()->getNumSuccessors());
+      for (unsigned I = 0, E = Target->getTerminator()->getNumSuccessors();
+           I < E; ++I)
+        EdgeProbabilities.emplace_back(BPI->getEdgeProbability(Target, I));
+      BPI->eraseBlock(Target);
+    }
+
     BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
       for (unsigned I = 0, E = BodyBlock->getTerminator()->getNumSuccessors();
            I < E; ++I)
-        BPI->setEdgeProbability(BodyBlock, I,
-                                BPI->getEdgeProbability(Target, I));
+        BPI->setEdgeProbability(BodyBlock, I, EdgeProbabilities[I]);
       BFI->setBlockFreq(BodyBlock, BFI->getBlockFreq(Target).getFrequency());
     }
     // It's possible Target was its own successor through an indirectbr.
@@ -423,7 +432,6 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       BlockFrequency NewBlockFreqForTarget =
           BFI->getBlockFreq(Target) - BlockFreqForDirectSucc;
       BFI->setBlockFreq(Target, NewBlockFreqForTarget.getFrequency());
-      BPI->eraseBlock(Target);
     }
 
     // Ok, now fix up the PHIs. We know the two blocks only have PHIs, and that

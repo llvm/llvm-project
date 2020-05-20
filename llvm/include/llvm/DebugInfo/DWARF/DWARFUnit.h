@@ -291,6 +291,7 @@ public:
     return Header.getDwarfOffsetByteSize();
   }
   uint64_t getLength() const { return Header.getLength(); }
+  dwarf::DwarfFormat getFormat() const { return Header.getFormat(); }
   uint8_t getUnitType() const { return Header.getUnitType(); }
   bool isTypeUnit() const { return Header.isTypeUnit(); }
   uint64_t getNextUnitOffset() const { return Header.getNextUnitOffset(); }

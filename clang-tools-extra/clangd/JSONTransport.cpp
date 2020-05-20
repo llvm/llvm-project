@@ -5,11 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Cancellation.h"
-#include "Logger.h"
 #include "Protocol.h" // For LSPError
-#include "Shutdown.h"
 #include "Transport.h"
+#include "support/Cancellation.h"
+#include "support/Logger.h"
+#include "support/Shutdown.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 

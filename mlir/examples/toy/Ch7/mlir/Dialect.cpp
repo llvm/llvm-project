@@ -154,9 +154,9 @@ static void printBinaryOp(mlir::OpAsmPrinter &printer, mlir::Operation *op) {
 /// Build a constant operation.
 /// The builder is passed as an argument, so is the state that this method is
 /// expected to fill in order to build the operation.
-void ConstantOp::build(mlir::Builder *builder, mlir::OperationState &state,
+void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                        double value) {
-  auto dataType = RankedTensorType::get({}, builder->getF64Type());
+  auto dataType = RankedTensorType::get({}, builder.getF64Type());
   auto dataAttribute = DenseElementsAttr::get(dataType, value);
   ConstantOp::build(builder, state, dataType, dataAttribute);
 }
@@ -260,9 +260,9 @@ void ConstantOp::inferShapes() { getResult().setType(value().getType()); }
 //===----------------------------------------------------------------------===//
 // AddOp
 
-void AddOp::build(mlir::Builder *builder, mlir::OperationState &state,
+void AddOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                   mlir::Value lhs, mlir::Value rhs) {
-  state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands({lhs, rhs});
 }
 
@@ -280,12 +280,12 @@ void CastOp::inferShapes() { getResult().setType(getOperand().getType()); }
 //===----------------------------------------------------------------------===//
 // GenericCallOp
 
-void GenericCallOp::build(mlir::Builder *builder, mlir::OperationState &state,
+void GenericCallOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                           StringRef callee, ArrayRef<mlir::Value> arguments) {
   // Generic call always returns an unranked Tensor initially.
-  state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands(arguments);
-  state.addAttribute("callee", builder->getSymbolRefAttr(callee));
+  state.addAttribute("callee", builder.getSymbolRefAttr(callee));
 }
 
 /// Return the callee of the generic call operation, this is required by the
@@ -301,9 +301,9 @@ Operation::operand_range GenericCallOp::getArgOperands() { return inputs(); }
 //===----------------------------------------------------------------------===//
 // MulOp
 
-void MulOp::build(mlir::Builder *builder, mlir::OperationState &state,
+void MulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                   mlir::Value lhs, mlir::Value rhs) {
-  state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands({lhs, rhs});
 }
 
@@ -343,16 +343,15 @@ static mlir::LogicalResult verify(ReturnOp op) {
       resultType.isa<mlir::UnrankedTensorType>())
     return mlir::success();
 
-  return op.emitError() << "type of return operand ("
-                        << *op.operand_type_begin()
+  return op.emitError() << "type of return operand (" << inputType
                         << ") doesn't match function result type ("
-                        << results.front() << ")";
+                        << resultType << ")";
 }
 
 //===----------------------------------------------------------------------===//
 // StructAccessOp
 
-void StructAccessOp::build(mlir::Builder *b, mlir::OperationState &state,
+void StructAccessOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
                            mlir::Value input, size_t index) {
   // Extract the result type from the input type.
   StructType structTy = input.getType().cast<StructType>();
@@ -360,7 +359,7 @@ void StructAccessOp::build(mlir::Builder *b, mlir::OperationState &state,
   mlir::Type resultType = structTy.getElementTypes()[index];
 
   // Call into the auto-generated build method.
-  build(b, state, resultType, input, b->getI64IntegerAttr(index));
+  build(b, state, resultType, input, b.getI64IntegerAttr(index));
 }
 
 static mlir::LogicalResult verify(StructAccessOp op) {
@@ -379,9 +378,9 @@ static mlir::LogicalResult verify(StructAccessOp op) {
 //===----------------------------------------------------------------------===//
 // TransposeOp
 
-void TransposeOp::build(mlir::Builder *builder, mlir::OperationState &state,
+void TransposeOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         mlir::Value value) {
-  state.addTypes(UnrankedTensorType::get(builder->getF64Type()));
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands(value);
 }
 

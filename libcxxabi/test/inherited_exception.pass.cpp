@@ -24,7 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // Clang emits  warnings about exceptions of type 'Child' being caught by
 // an earlier handler of type 'Base'. Congrats clang, you've just

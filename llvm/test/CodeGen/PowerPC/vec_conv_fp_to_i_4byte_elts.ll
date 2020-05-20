@@ -12,16 +12,16 @@
 define i64 @test2elt(i64 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    mtvsrd f0, r3
+; CHECK-P8-NEXT:    mtfprd f0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    xvcvspuxws vs0, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    mfvsrd r3, f0
+; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrd f0, r3
+; CHECK-P9-NEXT:    mtfprd f0, r3
 ; CHECK-P9-NEXT:    xxswapd v2, vs0
 ; CHECK-P9-NEXT:    xvcvspuxws vs0, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, vs0
@@ -29,9 +29,9 @@ define i64 @test2elt(i64 %a.coerce) local_unnamed_addr #0 {
 ;
 ; CHECK-BE-LABEL: test2elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrd f0, r3
+; CHECK-BE-NEXT:    mtfprd f0, r3
 ; CHECK-BE-NEXT:    xvcvspuxws vs0, vs0
-; CHECK-BE-NEXT:    mfvsrd r3, f0
+; CHECK-BE-NEXT:    mffprd r3, f0
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast i64 %a.coerce to <2 x float>
@@ -159,16 +159,16 @@ entry:
 define i64 @test2elt_signed(i64 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    mtvsrd f0, r3
+; CHECK-P8-NEXT:    mtfprd f0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    xvcvspsxws vs0, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
-; CHECK-P8-NEXT:    mfvsrd r3, f0
+; CHECK-P8-NEXT:    mffprd r3, f0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrd f0, r3
+; CHECK-P9-NEXT:    mtfprd f0, r3
 ; CHECK-P9-NEXT:    xxswapd v2, vs0
 ; CHECK-P9-NEXT:    xvcvspsxws vs0, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, vs0
@@ -176,9 +176,9 @@ define i64 @test2elt_signed(i64 %a.coerce) local_unnamed_addr #0 {
 ;
 ; CHECK-BE-LABEL: test2elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrd f0, r3
+; CHECK-BE-NEXT:    mtfprd f0, r3
 ; CHECK-BE-NEXT:    xvcvspsxws vs0, vs0
-; CHECK-BE-NEXT:    mfvsrd r3, f0
+; CHECK-BE-NEXT:    mffprd r3, f0
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast i64 %a.coerce to <2 x float>

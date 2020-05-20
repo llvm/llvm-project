@@ -24,15 +24,48 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+using GetPrintableElementType = StringPrinter::GetPrintableElementType;
+using StringElementType = StringPrinter::StringElementType;
+
+/// DecodedCharBuffer stores the decoded contents of a single character. It
+/// avoids managing memory on the heap by copying decoded bytes into an in-line
+/// buffer.
+struct DecodedCharBuffer {
+  static constexpr unsigned MaxLength = 16;
+
+public:
+  DecodedCharBuffer(std::nullptr_t) {}
+
+  DecodedCharBuffer(const uint8_t *bytes, size_t size) : m_size(size) {
+    if (size > MaxLength)
+      llvm_unreachable("unsupported length");
+    memcpy(m_data, bytes, size);
+  }
+
+  DecodedCharBuffer(const char *bytes, size_t size)
+      : DecodedCharBuffer(reinterpret_cast<const uint8_t *>(bytes), size) {}
+
+  const uint8_t *GetBytes() const { return m_data; }
+
+  size_t GetSize() const { return m_size; }
+
+private:
+  size_t m_size = 0;
+  uint8_t m_data[MaxLength] = {0};
+};
+
+using EscapingHelper =
+    std::function<DecodedCharBuffer(uint8_t *, uint8_t *, uint8_t *&)>;
 
 // we define this for all values of type but only implement it for those we
 // care about that's good because we get linker errors for any unsupported type
-template <lldb_private::formatters::StringPrinter::StringElementType type>
-static StringPrinter::StringPrinterBufferPointer
-GetPrintableImpl(uint8_t *buffer, uint8_t *buffer_end, uint8_t *&next);
+template <StringElementType type>
+static DecodedCharBuffer
+GetPrintableImpl(uint8_t *buffer, uint8_t *buffer_end, uint8_t *&next,
+                 StringPrinter::EscapeStyle escape_style);
 
-// mimic isprint() for Unicode codepoints
-static bool isprint(char32_t codepoint) {
+// Mimic isprint() for Unicode codepoints.
+static bool isprint32(char32_t codepoint) {
   if (codepoint <= 0x1F || codepoint == 0x7F) // C0
   {
     return false;
@@ -59,57 +92,73 @@ static bool isprint(char32_t codepoint) {
   return true;
 }
 
-template <>
-StringPrinter::StringPrinterBufferPointer
-GetPrintableImpl<StringPrinter::StringElementType::ASCII>(uint8_t *buffer,
-                                                          uint8_t *buffer_end,
-                                                          uint8_t *&next) {
-  StringPrinter::StringPrinterBufferPointer retval = {nullptr};
-
-  switch (*buffer) {
+DecodedCharBuffer attemptASCIIEscape(char32_t c,
+                                     StringPrinter::EscapeStyle escape_style) {
+  const bool is_swift_escape_style =
+      escape_style == StringPrinter::EscapeStyle::Swift;
+  switch (c) {
   case 0:
-    retval = {"\\0", 2};
-    break;
+    return {"\\0", 2};
   case '\a':
-    retval = {"\\a", 2};
-    break;
+    return {"\\a", 2};
   case '\b':
-    retval = {"\\b", 2};
-    break;
+    if (is_swift_escape_style)
+      return nullptr;
+    return {"\\b", 2};
   case '\f':
-    retval = {"\\f", 2};
-    break;
+    if (is_swift_escape_style)
+      return nullptr;
+    return {"\\f", 2};
   case '\n':
-    retval = {"\\n", 2};
-    break;
+    return {"\\n", 2};
   case '\r':
-    retval = {"\\r", 2};
-    break;
+    return {"\\r", 2};
   case '\t':
-    retval = {"\\t", 2};
-    break;
+    return {"\\t", 2};
   case '\v':
-    retval = {"\\v", 2};
-    break;
+    if (is_swift_escape_style)
+      return nullptr;
+    return {"\\v", 2};
   case '\"':
-    retval = {"\\\"", 2};
-    break;
+    return {"\\\"", 2};
+  case '\'':
+    if (is_swift_escape_style)
+      return {"\\'", 2};
+    return nullptr;
   case '\\':
-    retval = {"\\\\", 2};
-    break;
-  default:
-    if (isprint(*buffer))
-      retval = {buffer, 1};
-    else {
-      uint8_t *data = new uint8_t[5];
-      sprintf((char *)data, "\\x%02x", *buffer);
-      retval = {data, 4, [](const uint8_t *c) { delete[] c; }};
-      break;
-    }
+    return {"\\\\", 2};
   }
+  return nullptr;
+}
 
+template <>
+DecodedCharBuffer GetPrintableImpl<StringElementType::ASCII>(
+    uint8_t *buffer, uint8_t *buffer_end, uint8_t *&next,
+    StringPrinter::EscapeStyle escape_style) {
+  // The ASCII helper always advances 1 byte at a time.
   next = buffer + 1;
-  return retval;
+
+  DecodedCharBuffer retval = attemptASCIIEscape(*buffer, escape_style);
+  if (retval.GetSize())
+    return retval;
+  if (isprint(*buffer))
+    return {buffer, 1};
+
+  unsigned escaped_len;
+  constexpr unsigned max_buffer_size = 7;
+  uint8_t data[max_buffer_size];
+  switch (escape_style) {
+  case StringPrinter::EscapeStyle::CXX:
+    // Prints 4 characters, then a \0 terminator.
+    escaped_len = sprintf((char *)data, "\\x%02x", *buffer);
+    break;
+  case StringPrinter::EscapeStyle::Swift:
+    // Prints up to 6 characters, then a \0 terminator.
+    escaped_len = sprintf((char *)data, "\\u{%x}", *buffer);
+    break;
+  }
+  lldbassert(escaped_len > 0 && "unknown string escape style");
+  return {data, escaped_len};
 }
 
 static char32_t ConvertUTF8ToCodePoint(unsigned char c0, unsigned char c1) {
@@ -125,28 +174,25 @@ static char32_t ConvertUTF8ToCodePoint(unsigned char c0, unsigned char c1,
 }
 
 template <>
-StringPrinter::StringPrinterBufferPointer
-GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
-                                                         uint8_t *buffer_end,
-                                                         uint8_t *&next) {
-  StringPrinter::StringPrinterBufferPointer retval{nullptr};
-
+DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
+    uint8_t *buffer, uint8_t *buffer_end, uint8_t *&next,
+    StringPrinter::EscapeStyle escape_style) {
   const unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
 
   // If the utf8 encoded length is invalid, or if there aren't enough bytes to
   // print, this is some kind of corrupted string.
   if (utf8_encoded_len == 0 || utf8_encoded_len > 4)
-    return retval;
+    return nullptr;
   if ((buffer_end - buffer) < utf8_encoded_len)
     // There's no room in the buffer for the utf8 sequence.
-    return retval;
+    return nullptr;
 
   char32_t codepoint = 0;
   switch (utf8_encoded_len) {
   case 1:
     // this is just an ASCII byte - ask ASCII
-    return GetPrintableImpl<StringPrinter::StringElementType::ASCII>(
-        buffer, buffer_end, next);
+    return GetPrintableImpl<StringElementType::ASCII>(buffer, buffer_end, next,
+                                                      escape_style);
   case 2:
     codepoint = ConvertUTF8ToCodePoint((unsigned char)*buffer,
                                        (unsigned char)*(buffer + 1));
@@ -163,105 +209,84 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
     break;
   }
 
-  if (codepoint) {
-    switch (codepoint) {
-    case 0:
-      retval = {"\\0", 2};
-      break;
-    case '\a':
-      retval = {"\\a", 2};
-      break;
-    case '\b':
-      retval = {"\\b", 2};
-      break;
-    case '\f':
-      retval = {"\\f", 2};
-      break;
-    case '\n':
-      retval = {"\\n", 2};
-      break;
-    case '\r':
-      retval = {"\\r", 2};
-      break;
-    case '\t':
-      retval = {"\\t", 2};
-      break;
-    case '\v':
-      retval = {"\\v", 2};
-      break;
-    case '\"':
-      retval = {"\\\"", 2};
-      break;
-    case '\\':
-      retval = {"\\\\", 2};
-      break;
-    default:
-      if (isprint(codepoint))
-        retval = {buffer, utf8_encoded_len};
-      else {
-        uint8_t *data = new uint8_t[11];
-        sprintf((char *)data, "\\U%08x", (unsigned)codepoint);
-        retval = {data, 10, [](const uint8_t *c) { delete[] c; }};
-        break;
-      }
-    }
+  // We couldn't figure out how to print this codepoint.
+  if (!codepoint)
+    return nullptr;
 
-    next = buffer + utf8_encoded_len;
+  // The UTF8 helper always advances by the utf8 encoded length.
+  next = buffer + utf8_encoded_len;
+  DecodedCharBuffer retval = attemptASCIIEscape(codepoint, escape_style);
+  if (retval.GetSize())
     return retval;
-  }
+  if (isprint32(codepoint))
+    return {buffer, utf8_encoded_len};
 
-  // We couldn't figure out how to print this string.
-  return retval;
+  unsigned escaped_len;
+  constexpr unsigned max_buffer_size = 13;
+  uint8_t data[max_buffer_size];
+  switch (escape_style) {
+  case StringPrinter::EscapeStyle::CXX:
+    // Prints 10 characters, then a \0 terminator.
+    escaped_len = sprintf((char *)data, "\\U%08x", (unsigned)codepoint);
+    break;
+  case StringPrinter::EscapeStyle::Swift:
+    // Prints up to 12 characters, then a \0 terminator.
+    escaped_len = sprintf((char *)data, "\\u{%x}", (unsigned)codepoint);
+    break;
+  }
+  lldbassert(escaped_len > 0 && "unknown string escape style");
+  return {data, escaped_len};
 }
 
 // Given a sequence of bytes, this function returns: a sequence of bytes to
 // actually print out + a length the following unscanned position of the buffer
 // is in next
-static StringPrinter::StringPrinterBufferPointer
-GetPrintable(StringPrinter::StringElementType type, uint8_t *buffer,
-             uint8_t *buffer_end, uint8_t *&next) {
+static DecodedCharBuffer GetPrintable(StringElementType type, uint8_t *buffer,
+                                      uint8_t *buffer_end, uint8_t *&next,
+                                      StringPrinter::EscapeStyle escape_style) {
   if (!buffer || buffer >= buffer_end)
     return {nullptr};
 
   switch (type) {
-  case StringPrinter::StringElementType::ASCII:
-    return GetPrintableImpl<StringPrinter::StringElementType::ASCII>(
-        buffer, buffer_end, next);
-  case StringPrinter::StringElementType::UTF8:
-    return GetPrintableImpl<StringPrinter::StringElementType::UTF8>(
-        buffer, buffer_end, next);
+  case StringElementType::ASCII:
+    return GetPrintableImpl<StringElementType::ASCII>(buffer, buffer_end, next,
+                                                      escape_style);
+  case StringElementType::UTF8:
+    return GetPrintableImpl<StringElementType::UTF8>(buffer, buffer_end, next,
+                                                     escape_style);
   default:
     return {nullptr};
   }
 }
 
-StringPrinter::EscapingHelper
-StringPrinter::GetDefaultEscapingHelper(GetPrintableElementType elem_type) {
+static EscapingHelper
+GetDefaultEscapingHelper(GetPrintableElementType elem_type,
+                         StringPrinter::EscapeStyle escape_style) {
   switch (elem_type) {
   case GetPrintableElementType::UTF8:
-    return [](uint8_t *buffer, uint8_t *buffer_end,
-              uint8_t *&next) -> StringPrinter::StringPrinterBufferPointer {
-      return GetPrintable(StringPrinter::StringElementType::UTF8, buffer,
-                          buffer_end, next);
-    };
   case GetPrintableElementType::ASCII:
-    return [](uint8_t *buffer, uint8_t *buffer_end,
-              uint8_t *&next) -> StringPrinter::StringPrinterBufferPointer {
-      return GetPrintable(StringPrinter::StringElementType::ASCII, buffer,
-                          buffer_end, next);
+    return [escape_style, elem_type](uint8_t *buffer, uint8_t *buffer_end,
+                                     uint8_t *&next) -> DecodedCharBuffer {
+      return GetPrintable(elem_type == GetPrintableElementType::UTF8
+                              ? StringElementType::UTF8
+                              : StringElementType::ASCII,
+                          buffer, buffer_end, next, escape_style);
     };
   }
   llvm_unreachable("bad element type");
 }
 
-// use this call if you already have an LLDB-side buffer for the data
+/// Read a string encoded in accordance with \tparam SourceDataType from a
+/// host-side LLDB buffer, then pretty-print it to a stream using \p style.
 template <typename SourceDataType>
-static bool DumpUTFBufferToStream(
+static bool DumpEncodedBufferToStream(
+    GetPrintableElementType style,
     llvm::ConversionResult (*ConvertFunction)(const SourceDataType **,
                                               const SourceDataType *,
                                               llvm::UTF8 **, llvm::UTF8 *,
                                               llvm::ConversionFlags),
     const StringPrinter::ReadBufferAndDumpToStreamOptions &dump_options) {
+  assert(dump_options.GetStream() && "need a Stream to print the string to");
   Stream &stream(*dump_options.GetStream());
   if (dump_options.GetPrefixToken() != nullptr)
     stream.Printf("%s", dump_options.GetPrefixToken());
@@ -321,18 +346,10 @@ static bool DumpUTFBufferToStream(
     }
 
     const bool escape_non_printables = dump_options.GetEscapeNonPrintables();
-    lldb_private::formatters::StringPrinter::EscapingHelper escaping_callback;
-    if (escape_non_printables) {
-      if (Language *language = Language::FindPlugin(dump_options.GetLanguage()))
-        escaping_callback = language->GetStringPrinterEscapingHelper(
-            lldb_private::formatters::StringPrinter::GetPrintableElementType::
-                UTF8);
-      else
-        escaping_callback =
-            lldb_private::formatters::StringPrinter::GetDefaultEscapingHelper(
-                lldb_private::formatters::StringPrinter::
-                    GetPrintableElementType::UTF8);
-    }
+    EscapingHelper escaping_callback;
+    if (escape_non_printables)
+      escaping_callback =
+          GetDefaultEscapingHelper(style, dump_options.GetEscapeStyle());
 
     // since we tend to accept partial data (and even partially malformed data)
     // we might end up with no NULL terminator before the end_ptr hence we need
@@ -394,144 +411,58 @@ lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStreamOptions::
   SetQuote(options.GetQuote());
   SetEscapeNonPrintables(options.GetEscapeNonPrintables());
   SetBinaryZeroIsTerminator(options.GetBinaryZeroIsTerminator());
-  SetLanguage(options.GetLanguage());
+  SetEscapeStyle(options.GetEscapeStyle());
 }
 
 namespace lldb_private {
 
 namespace formatters {
 
-template <>
-bool StringPrinter::ReadStringAndDumpToStream<
-    StringPrinter::StringElementType::ASCII>(
-    const ReadStringAndDumpToStreamOptions &options) {
-  assert(options.GetStream() && "need a Stream to print the string to");
-  Status my_error;
-
-  ProcessSP process_sp(options.GetProcessSP());
-
-  if (process_sp.get() == nullptr || options.GetLocation() == 0)
-    return false;
-
-  size_t size;
-  const auto max_size = process_sp->GetTarget().GetMaximumSizeOfStringSummary();
-  bool is_truncated = false;
-
-  if (options.GetSourceSize() == 0)
-    size = max_size;
-  else if (!options.GetIgnoreMaxLength()) {
-    size = options.GetSourceSize();
-    if (size > max_size) {
-      size = max_size;
-      is_truncated = true;
-    }
-  } else
-    size = options.GetSourceSize();
-
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(size, 0));
-
-  process_sp->ReadCStringFromMemory(
-      options.GetLocation(), (char *)buffer_sp->GetBytes(), size, my_error);
-
-  if (my_error.Fail())
-    return false;
-
-  const char *prefix_token = options.GetPrefixToken();
-  char quote = options.GetQuote();
-
-  if (prefix_token != nullptr)
-    options.GetStream()->Printf("%s%c", prefix_token, quote);
-  else if (quote != 0)
-    options.GetStream()->Printf("%c", quote);
-
-  uint8_t *data_end = buffer_sp->GetBytes() + buffer_sp->GetByteSize();
-
-  const bool escape_non_printables = options.GetEscapeNonPrintables();
-  lldb_private::formatters::StringPrinter::EscapingHelper escaping_callback;
-  if (escape_non_printables) {
-    if (Language *language = Language::FindPlugin(options.GetLanguage()))
-      escaping_callback = language->GetStringPrinterEscapingHelper(
-          lldb_private::formatters::StringPrinter::GetPrintableElementType::
-              ASCII);
-    else
-      escaping_callback =
-          lldb_private::formatters::StringPrinter::GetDefaultEscapingHelper(
-              lldb_private::formatters::StringPrinter::GetPrintableElementType::
-                  ASCII);
-  }
-
-  // since we tend to accept partial data (and even partially malformed data)
-  // we might end up with no NULL terminator before the end_ptr hence we need
-  // to take a slower route and ensure we stay within boundaries
-  for (uint8_t *data = buffer_sp->GetBytes(); *data && (data < data_end);) {
-    if (escape_non_printables) {
-      uint8_t *next_data = nullptr;
-      auto printable = escaping_callback(data, data_end, next_data);
-      auto printable_bytes = printable.GetBytes();
-      auto printable_size = printable.GetSize();
-
-      // We failed to figure out how to print this string.
-      if (!printable_bytes || !next_data)
-        return false;
-
-      for (unsigned c = 0; c < printable_size; c++)
-        options.GetStream()->Printf("%c", *(printable_bytes + c));
-      data = (uint8_t *)next_data;
-    } else {
-      options.GetStream()->Printf("%c", *data);
-      data++;
-    }
-  }
-
-  const char *suffix_token = options.GetSuffixToken();
-
-  if (suffix_token != nullptr)
-    options.GetStream()->Printf("%c%s", quote, suffix_token);
-  else if (quote != 0)
-    options.GetStream()->Printf("%c", quote);
-
-  if (is_truncated)
-    options.GetStream()->Printf("...");
-
-  return true;
-}
-
 template <typename SourceDataType>
-static bool ReadUTFBufferAndDumpToStream(
+static bool ReadEncodedBufferAndDumpToStream(
+    StringElementType elem_type,
     const StringPrinter::ReadStringAndDumpToStreamOptions &options,
     llvm::ConversionResult (*ConvertFunction)(const SourceDataType **,
                                               const SourceDataType *,
                                               llvm::UTF8 **, llvm::UTF8 *,
                                               llvm::ConversionFlags)) {
   assert(options.GetStream() && "need a Stream to print the string to");
+  if (!options.GetStream())
+    return false;
 
   if (options.GetLocation() == 0 ||
       options.GetLocation() == LLDB_INVALID_ADDRESS)
     return false;
 
   lldb::ProcessSP process_sp(options.GetProcessSP());
-
   if (!process_sp)
     return false;
 
-  const int type_width = sizeof(SourceDataType);
-  const int origin_encoding = 8 * type_width;
+  constexpr int type_width = sizeof(SourceDataType);
+  constexpr int origin_encoding = 8 * type_width;
   if (origin_encoding != 8 && origin_encoding != 16 && origin_encoding != 32)
     return false;
-  // if not UTF8, I need a conversion function to return proper UTF8
+  // If not UTF8 or ASCII, conversion to UTF8 is necessary.
   if (origin_encoding != 8 && !ConvertFunction)
     return false;
 
-  if (!options.GetStream())
-    return false;
-
-  uint32_t sourceSize;
   bool needs_zero_terminator = options.GetNeedsZeroTermination();
 
   bool is_truncated = false;
   const auto max_size = process_sp->GetTarget().GetMaximumSizeOfStringSummary();
 
-  if (options.HasSourceSize()) {
+  uint32_t sourceSize;
+  if (elem_type == StringElementType::ASCII && !options.GetSourceSize()) {
+    // FIXME: The NSString formatter sets HasSourceSize(true) when the size is
+    // actually unknown, as well as SetBinaryZeroIsTerminator(false). IIUC the
+    // C++ formatter also sets SetBinaryZeroIsTerminator(false) when it doesn't
+    // mean to. I don't see how this makes sense: we should fix the formatters.
+    //
+    // Until then, the behavior that's expected for ASCII strings with unknown
+    // lengths is to read up to the max size and then null-terminate. Do that.
+    sourceSize = max_size;
+    needs_zero_terminator = true;
+  } else if (options.HasSourceSize()) {
     sourceSize = options.GetSourceSize();
     if (!options.GetIgnoreMaxLength()) {
       if (sourceSize > max_size) {
@@ -545,7 +476,6 @@ static bool ReadUTFBufferAndDumpToStream(
   }
 
   const int bufferSPSize = sourceSize * type_width;
-
   lldb::DataBufferSP buffer_sp(new DataBufferHeap(bufferSPSize, 0));
 
   // Check if we got bytes. We never get any bytes if we have an empty
@@ -557,14 +487,15 @@ static bool ReadUTFBufferAndDumpToStream(
   Status error;
   char *buffer = reinterpret_cast<char *>(buffer_sp->GetBytes());
 
-  if (needs_zero_terminator)
+  if (elem_type == StringElementType::ASCII)
+    process_sp->ReadCStringFromMemory(options.GetLocation(), buffer,
+                                      bufferSPSize, error);
+  else if (needs_zero_terminator)
     process_sp->ReadStringFromMemory(options.GetLocation(), buffer,
                                      bufferSPSize, error, type_width);
   else
-    process_sp->ReadMemoryFromInferior(options.GetLocation(),
-                                       (char *)buffer_sp->GetBytes(),
+    process_sp->ReadMemoryFromInferior(options.GetLocation(), buffer,
                                        bufferSPSize, error);
-
   if (error.Fail()) {
     options.GetStream()->Printf("unable to read data");
     return true;
@@ -577,67 +508,79 @@ static bool ReadUTFBufferAndDumpToStream(
   dump_options.SetData(data);
   dump_options.SetSourceSize(sourceSize);
   dump_options.SetIsTruncated(is_truncated);
+  dump_options.SetNeedsZeroTermination(needs_zero_terminator);
+  if (needs_zero_terminator)
+    dump_options.SetBinaryZeroIsTerminator(true);
 
-  return DumpUTFBufferToStream(ConvertFunction, dump_options);
+  GetPrintableElementType print_style = (elem_type == StringElementType::ASCII)
+                                            ? GetPrintableElementType::ASCII
+                                            : GetPrintableElementType::UTF8;
+  return DumpEncodedBufferToStream(print_style, ConvertFunction, dump_options);
 }
 
 template <>
-bool StringPrinter::ReadStringAndDumpToStream<
-    StringPrinter::StringElementType::UTF8>(
+bool StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF8>(
     const ReadStringAndDumpToStreamOptions &options) {
-  return ReadUTFBufferAndDumpToStream<llvm::UTF8>(options, nullptr);
+  return ReadEncodedBufferAndDumpToStream<llvm::UTF8>(StringElementType::UTF8,
+                                                      options, nullptr);
 }
 
 template <>
-bool StringPrinter::ReadStringAndDumpToStream<
-    StringPrinter::StringElementType::UTF16>(
+bool StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF16>(
     const ReadStringAndDumpToStreamOptions &options) {
-  return ReadUTFBufferAndDumpToStream<llvm::UTF16>(options,
-                                                   llvm::ConvertUTF16toUTF8);
+  return ReadEncodedBufferAndDumpToStream<llvm::UTF16>(
+      StringElementType::UTF16, options, llvm::ConvertUTF16toUTF8);
 }
 
 template <>
-bool StringPrinter::ReadStringAndDumpToStream<
-    StringPrinter::StringElementType::UTF32>(
+bool StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF32>(
     const ReadStringAndDumpToStreamOptions &options) {
-  return ReadUTFBufferAndDumpToStream<llvm::UTF32>(options,
-                                                   llvm::ConvertUTF32toUTF8);
+  return ReadEncodedBufferAndDumpToStream<llvm::UTF32>(
+      StringElementType::UTF32, options, llvm::ConvertUTF32toUTF8);
 }
 
 template <>
-bool StringPrinter::ReadBufferAndDumpToStream<
-    StringPrinter::StringElementType::UTF8>(
+bool StringPrinter::ReadStringAndDumpToStream<StringElementType::ASCII>(
+    const ReadStringAndDumpToStreamOptions &options) {
+  return ReadEncodedBufferAndDumpToStream<char>(StringElementType::ASCII,
+                                                options, nullptr);
+}
+
+template <>
+bool StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF8>(
     const ReadBufferAndDumpToStreamOptions &options) {
-  assert(options.GetStream() && "need a Stream to print the string to");
-
-  return DumpUTFBufferToStream<llvm::UTF8>(nullptr, options);
+  return DumpEncodedBufferToStream<llvm::UTF8>(GetPrintableElementType::UTF8,
+                                               nullptr, options);
 }
 
 template <>
-bool StringPrinter::ReadBufferAndDumpToStream<
-    StringPrinter::StringElementType::ASCII>(
+bool StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF16>(
     const ReadBufferAndDumpToStreamOptions &options) {
-  // treat ASCII the same as UTF8
-  // FIXME: can we optimize ASCII some more?
+  return DumpEncodedBufferToStream(GetPrintableElementType::UTF8,
+                                   llvm::ConvertUTF16toUTF8, options);
+}
+
+template <>
+bool StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF32>(
+    const ReadBufferAndDumpToStreamOptions &options) {
+  return DumpEncodedBufferToStream(GetPrintableElementType::UTF8,
+                                   llvm::ConvertUTF32toUTF8, options);
+}
+
+template <>
+bool StringPrinter::ReadBufferAndDumpToStream<StringElementType::ASCII>(
+    const ReadBufferAndDumpToStreamOptions &options) {
+  // Treat ASCII the same as UTF8.
+  //
+  // FIXME: This is probably not the right thing to do (well, it's debatable).
+  // If an ASCII-encoded string happens to contain a sequence of invalid bytes
+  // that forms a valid UTF8 character, we'll print out that character. This is
+  // good if you're playing fast and loose with encodings (probably good for
+  // std::string users), but maybe not so good if you care about your string
+  // formatter respecting the semantics of your selected string encoding. In
+  // the latter case you'd want to see the character byte sequence ('\x..'), not
+  // the UTF8 character itself.
   return ReadBufferAndDumpToStream<StringElementType::UTF8>(options);
-}
-
-template <>
-bool StringPrinter::ReadBufferAndDumpToStream<
-    StringPrinter::StringElementType::UTF16>(
-    const ReadBufferAndDumpToStreamOptions &options) {
-  assert(options.GetStream() && "need a Stream to print the string to");
-
-  return DumpUTFBufferToStream(llvm::ConvertUTF16toUTF8, options);
-}
-
-template <>
-bool StringPrinter::ReadBufferAndDumpToStream<
-    StringPrinter::StringElementType::UTF32>(
-    const ReadBufferAndDumpToStreamOptions &options) {
-  assert(options.GetStream() && "need a Stream to print the string to");
-
-  return DumpUTFBufferToStream(llvm::ConvertUTF32toUTF8, options);
 }
 
 } // namespace formatters

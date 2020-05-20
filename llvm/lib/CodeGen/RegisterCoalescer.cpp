@@ -675,6 +675,12 @@ bool RegisterCoalescer::adjustCopiesBackFrom(const CoalescerPair &CP,
       S.removeSegment(*SS, true);
       continue;
     }
+    // The subrange may have ended before FillerStart. If so, extend it.
+    if (!S.getVNInfoAt(FillerStart)) {
+      SlotIndex BBStart =
+          LIS->getMBBStartIdx(LIS->getMBBFromIndex(FillerStart));
+      S.extendInBlock(BBStart, FillerStart);
+    }
     VNInfo *SubBValNo = S.getVNInfoAt(CopyIdx);
     S.addSegment(LiveInterval::Segment(FillerStart, FillerEnd, SubBValNo));
     VNInfo *SubValSNo = S.getVNInfoAt(AValNo->def.getPrevSlot());
@@ -3854,6 +3860,23 @@ void RegisterCoalescer::releaseMemory() {
 }
 
 bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
+  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
+                    << "********** Function: " << fn.getName() << '\n');
+
+  // Variables changed between a setjmp and a longjump can have undefined value
+  // after the longjmp. This behaviour can be observed if such a variable is
+  // spilled, so longjmp won't restore the value in the spill slot.
+  // RegisterCoalescer should not run in functions with a setjmp to avoid
+  // merging such undefined variables with predictable ones.
+  //
+  // TODO: Could specifically disable coalescing registers live across setjmp
+  // calls
+  if (fn.exposesReturnsTwice()) {
+    LLVM_DEBUG(
+        dbgs() << "* Skipped as it exposes funcions that returns twice.\n");
+    return false;
+  }
+
   MF = &fn;
   MRI = &fn.getRegInfo();
   const TargetSubtargetInfo &STI = fn.getSubtarget();
@@ -3871,9 +3894,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // either be enabled unconditionally or replaced by a more general live range
   // splitting optimization.
   JoinSplitEdges = EnableJoinSplits;
-
-  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
-                    << "********** Function: " << MF->getName() << '\n');
 
   if (VerifyCoalescing)
     MF->verify(this, "Before register coalescing");

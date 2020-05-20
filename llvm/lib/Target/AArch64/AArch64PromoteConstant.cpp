@@ -250,6 +250,20 @@ static bool isConstantUsingVectorTy(const Type *CstTy) {
   return false;
 }
 
+// Returns true if \p C contains only ConstantData leafs and no global values,
+// block addresses or constant expressions. Traverses ConstantAggregates.
+static bool containsOnlyConstantData(const Constant *C) {
+  if (isa<ConstantData>(C))
+    return true;
+
+  if (isa<GlobalValue>(C) || isa<BlockAddress>(C) || isa<ConstantExpr>(C))
+    return false;
+
+  return all_of(C->operands(), [](const Use &U) {
+    return containsOnlyConstantData(cast<Constant>(&U));
+  });
+}
+
 /// Check if the given use (Instruction + OpIdx) of Cst should be converted into
 /// a load of a global variable initialized with Cst.
 /// A use should be converted if it is legal to do so.
@@ -304,7 +318,7 @@ static bool shouldConvertUse(const Constant *Cst, const Instruction *Instr,
 
   // Do not mess with inline asm.
   const CallInst *CI = dyn_cast<const CallInst>(Instr);
-  return !(CI && isa<const InlineAsm>(CI->getCalledValue()));
+  return !(CI && CI->isInlineAsm());
 }
 
 /// Check if the given Cst should be converted into
@@ -550,9 +564,10 @@ bool AArch64PromoteConstant::runOnFunction(Function &F,
     for (Use &U : I.operands()) {
       Constant *Cst = dyn_cast<Constant>(U);
       // There is no point in promoting global values as they are already
-      // global. Do not promote constant expressions either, as they may
-      // require some code expansion.
-      if (!Cst || isa<GlobalValue>(Cst) || isa<ConstantExpr>(Cst))
+      // global. Do not promote constants containing constant expression, global
+      // values or blockaddresses either, as they may require some code
+      // expansion.
+      if (!Cst || isa<GlobalValue>(Cst) || !containsOnlyConstantData(Cst))
         continue;
 
       // Check if this constant is worth promoting.

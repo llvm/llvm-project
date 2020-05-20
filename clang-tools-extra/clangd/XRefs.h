@@ -13,11 +13,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 
-#include "FormattedString.h"
-#include "Path.h"
 #include "Protocol.h"
+#include "SourceCode.h"
 #include "index/Index.h"
 #include "index/SymbolLocation.h"
+#include "support/Path.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Type.h"
 #include "clang/Format/Format.h"
 #include "clang/Index/IndexSymbol.h"
@@ -26,6 +27,10 @@
 #include <vector>
 
 namespace clang {
+namespace syntax {
+class Token;
+class TokenBuffer;
+} // namespace syntax
 namespace clangd {
 class ParsedAST;
 
@@ -49,20 +54,22 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedSymbol &);
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index = nullptr);
 
-// Tries to provide a textual fallback for locating a symbol referenced at
-// a location, by looking up the word under the cursor as a symbol name in the
-// index. The aim is to pick up references to symbols in contexts where
+// Tries to provide a textual fallback for locating a symbol by looking up the
+// word under the cursor as a symbol name in the index.
+// The aim is to pick up references to symbols in contexts where
 // AST-based resolution does not work, such as comments, strings, and PP
-// disabled regions. The implementation takes a number of measures to avoid
-// false positives, such as looking for some signal that the word at the
-// given location is likely to be an identifier. The function does not
-// currently return results for locations that end up as real expanded
-// tokens, although this may be relaxed for e.g. dependent code in the future.
+// disabled regions.
 // (This is for internal use by locateSymbolAt, and is exposed for testing).
 std::vector<LocatedSymbol>
-locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
-                             SourceLocation Loc,
-                             const std::string &MainFilePath);
+locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
+                      const SymbolIndex *Index, const std::string &MainFilePath,
+                      ASTNodeKind NodeKind);
+
+// Try to find a proximate occurrence of `Word` as an identifier, which can be
+// used to resolve it.
+// (This is for internal use by locateSymbolAt, and is exposed for testing).
+const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
+                                          const syntax::TokenBuffer &TB);
 
 /// Get all document links
 std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST);

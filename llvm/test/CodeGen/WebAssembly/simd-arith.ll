@@ -1,7 +1,7 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+unimplemented-simd128 | FileCheck %s --check-prefixes CHECK,SIMD128,SIMD128-SLOW
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+unimplemented-simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128,SIMD128-FAST
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128-VM
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128-VM
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 -fast-isel | FileCheck %s
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -fast-isel | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
@@ -308,7 +308,6 @@ define <16 x i8> @not_v16i8(<16 x i8> %x) {
 
 ; CHECK-LABEL: andnot_v16i8:
 ; NO-SIMD128-NOT: v128
-; SIMD128-VM-NOT: v128.andnot
 ; SIMD128-NEXT: .functype andnot_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
@@ -625,7 +624,6 @@ define <8 x i16> @not_v8i16(<8 x i16> %x) {
 }
 
 ; CHECK-LABEL: andnot_v8i16:
-; SIMD128-VM-NOT: v128.andnot
 ; NO-SIMD128-NOT: v128
 ; SIMD128-NEXT: .functype andnot_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
@@ -904,7 +902,6 @@ define <4 x i32> @not_v4i32(<4 x i32> %x) {
 }
 
 ; CHECK-LABEL: andnot_v4i32:
-; SIMD128-VM-NOT: v128.andnot
 ; NO-SIMD128-NOT: v128
 ; SIMD128-NEXT: .functype andnot_v4i32 (v128, v128) -> (v128){{$}}
 ; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
@@ -1222,7 +1219,6 @@ define <2 x i64> @not_v2i64(<2 x i64> %x) {
 }
 
 ; CHECK-LABEL: andnot_v2i64:
-; SIMD128-VM-NOT: v128.andnot
 ; NO-SIMD128-NOT: v128
 ; SIMD128-NEXT: .functype andnot_v2i64 (v128, v128) -> (v128){{$}}
 ; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}

@@ -16,9 +16,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class MCSymbol;
 class WebAssemblyTargetStreamer;
-class WebAssemblyMCInstLower;
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
   const WebAssemblySubtarget *Subtarget;

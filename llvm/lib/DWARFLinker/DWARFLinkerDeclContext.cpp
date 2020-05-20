@@ -80,8 +80,12 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     break;
   }
 
-  const char *Name = DIE.getName(DINameKind::LinkageName);
-  const char *ShortName = DIE.getName(DINameKind::ShortName);
+  const char *Name = DIE.getLinkageName();
+  const char *ShortName = DIE.getShortName();
+
+  if (!Name)
+    Name = ShortName;
+
   StringRef NameRef;
   StringRef ShortNameRef;
   StringRef FileRef;

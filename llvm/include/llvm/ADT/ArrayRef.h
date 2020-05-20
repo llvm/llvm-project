@@ -38,7 +38,7 @@ namespace llvm {
   /// This is intended to be trivially copyable, so it should be passed by
   /// value.
   template<typename T>
-  class LLVM_NODISCARD ArrayRef {
+  class LLVM_GSL_POINTER LLVM_NODISCARD ArrayRef {
   public:
     using iterator = const T *;
     using const_iterator = const T *;

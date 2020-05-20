@@ -553,6 +553,8 @@ body:             |
     B %bb.1
 
   bb.3:
+    liveins: $x2
+
     B %bb.1
 
   bb.1:

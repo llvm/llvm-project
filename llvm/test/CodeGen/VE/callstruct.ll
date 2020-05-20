@@ -28,7 +28,7 @@ define void @caller() {
 ; CHECK-NEXT:    lea %s0, -8(, %s9)
 ; CHECK-NEXT:    or %s1, 3, (0)1
 ; CHECK-NEXT:    or %s2, 4, (0)1
-; CHECK-NEXT:    bsic %lr, (,%s12)
+; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    ld %s0, -8(, %s9)
 ; CHECK-NEXT:    lea %s1, A@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0

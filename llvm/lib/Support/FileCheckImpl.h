@@ -356,8 +356,6 @@ public:
 // Pattern handling code.
 //===----------------------------------------------------------------------===//
 
-struct FileCheckDiag;
-
 /// Class holding the Pattern global state, shared by all patterns: tables
 /// holding values of variables and whether they are defined or not at any
 /// given time in the matching process.
@@ -407,7 +405,7 @@ public:
   /// command line, passed as a vector of [#]VAR=VAL strings in
   /// \p CmdlineDefines. \returns an error list containing diagnostics against
   /// \p SM for all definition parsing failures, if any, or Success otherwise.
-  Error defineCmdlineVariables(std::vector<std::string> &CmdlineDefines,
+  Error defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines,
                                SourceMgr &SM);
 
   /// Create @LINE pseudo variable. Value is set when pattern are being

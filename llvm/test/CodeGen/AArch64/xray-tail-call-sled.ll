@@ -28,9 +28,11 @@ define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  ret
 }
 ; CHECK-LABEL: xray_instr_map
-; CHECK-LABEL: Lxray_sleds_start0:
-; CHECK:       .xword .Lxray_sled_0
-; CHECK:       .xword .Lxray_sled_1
+; CHECK-LABEL: .Lxray_sleds_start0:
+; CHECK-NEXT:  .Ltmp2:
+; CHECK:       .xword .Lxray_sled_0-.Ltmp2
+; CHECK:       .Ltmp3:
+; CHECK-NEXT:  .xword .Lxray_sled_1-.Ltmp3
 ; CHECK-LABEL: Lxray_sleds_end0:
 ; CHECK-LABEL: xray_fn_idx
 ; CHECK:       .xword .Lxray_sleds_start0
@@ -47,7 +49,7 @@ define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-; CHECK-LABEL: .Ltmp2:
+; CHECK-LABEL: .Ltmp4:
 ; CHECK:       .p2align	2
 ; CHECK-LABEL: Lxray_sled_3:
 ; CHECK-NEXT:  b	#32
@@ -58,7 +60,7 @@ define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
 ; CHECK-NEXT:  nop
-; CHECK-LABEL: .Ltmp3:
+; CHECK-LABEL: .Ltmp5:
   %retval = tail call i32 @callee()
 ; CHECK:       b	callee
   ret i32 %retval

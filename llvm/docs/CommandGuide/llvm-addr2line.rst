@@ -17,6 +17,11 @@ GNU's :program:`addr2line`.
 
 Here are some of those differences:
 
+-  ``llvm-addr2line`` interprets all addresses as hexadecimal and ignores an
+   optional ``0x`` prefix, whereas ``llvm-symbolizer`` attempts to determine
+   the base from the literal's prefix and defaults to decimal if there is no
+   prefix.
+
 -  ``llvm-addr2line`` defaults not to print function names. Use `-f`_ to enable
    that.
 

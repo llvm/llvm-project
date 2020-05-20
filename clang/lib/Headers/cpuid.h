@@ -24,6 +24,10 @@
 #define signature_CYRIX_ebx 0x69727943
 #define signature_CYRIX_edx 0x736e4978
 #define signature_CYRIX_ecx 0x64616574
+/* HYGON:   "HygonGenuine" */
+#define signature_HYGON_ebx 0x6f677948
+#define signature_HYGON_edx 0x6e65476e
+#define signature_HYGON_ecx 0x656e6975
 /* INTEL:   "GenuineIntel" */
 #define signature_INTEL_ebx 0x756e6547
 #define signature_INTEL_edx 0x49656e69

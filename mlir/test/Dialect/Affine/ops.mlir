@@ -103,8 +103,8 @@ func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
     affine.for %arg4 = 0 to %13 step 264 {
       %18 = dim %0, 0 : memref<?x?xf32>
       %20 = std.subview %0[%c0, %c0][%18,%arg4][%c1,%c1] : memref<?x?xf32>
-                          to memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
-      %24 = dim %20, 0 : memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
+                          to memref<?x?xf32, offset : ?, strides : [?, ?]>
+      %24 = dim %20, 0 : memref<?x?xf32, offset : ?, strides : [?, ?]>
       affine.for %arg5 = 0 to %24 step 768 {
         "foo"() : () -> ()
       }
@@ -112,6 +112,44 @@ func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
   }
   return
 }
+
+// -----
+
+// Test symbol constraints for ops with AffineScope trait.
+
+// CHECK-LABEL: func @valid_symbol_affine_scope
+func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
+  test.affine_scope {
+    %c1 = constant 1 : index
+    %l = subi %n, %c1 : index
+    // %l, %n are valid symbols since test.affine_scope defines a new affine
+    // scope.
+    affine.for %i = %l to %n {
+      %m = subi %l, %i : index
+      test.affine_scope {
+        // %m and %n are valid symbols.
+        affine.for %j = %m to %n {
+          %v = affine.load %A[%n - 1] : memref<?xf32>
+          affine.store %v, %A[%n - 1] : memref<?xf32>
+        }
+        "terminate"() : () -> ()
+      }
+    }
+    "terminate"() : () -> ()
+  }
+  return
+}
+
+// -----
+
+// Test the fact that module op always provides an affine scope.
+
+%idx = "test.foo"() : () -> (index)
+"test.func"() ({
+^bb0(%A : memref<?xf32>):
+  affine.load %A[%idx] : memref<?xf32>
+  "terminate"() : () -> ()
+}) : () -> ()
 
 // -----
 

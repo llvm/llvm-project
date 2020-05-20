@@ -8,7 +8,6 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -25,7 +24,7 @@ class Lowerer : public coro::LowererBase {
   PointerType *const AnyResumeFnPtrTy;
   Constant *NoopCoro = nullptr;
 
-  void lowerResumeOrDestroy(CallSite CS, CoroSubFnInst::ResumeKind);
+  void lowerResumeOrDestroy(CallBase &CB, CoroSubFnInst::ResumeKind);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
   void lowerCoroNoop(IntrinsicInst *II);
@@ -44,12 +43,11 @@ public:
 // an address returned by coro.subfn.addr intrinsic. This is done so that
 // CGPassManager recognizes devirtualization when CoroElide pass replaces a call
 // to coro.subfn.addr with an appropriate function address.
-void Lowerer::lowerResumeOrDestroy(CallSite CS,
+void Lowerer::lowerResumeOrDestroy(CallBase &CB,
                                    CoroSubFnInst::ResumeKind Index) {
-  Value *ResumeAddr =
-      makeSubFnCall(CS.getArgOperand(0), Index, CS.getInstruction());
-  CS.setCalledFunction(ResumeAddr);
-  CS.setCallingConv(CallingConv::Fast);
+  Value *ResumeAddr = makeSubFnCall(CB.getArgOperand(0), Index, &CB);
+  CB.setCalledOperand(ResumeAddr);
+  CB.setCallingConv(CallingConv::Fast);
 }
 
 // Coroutine promise field is always at the fixed offset from the beginning of
@@ -153,8 +151,8 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   for (auto IB = inst_begin(F), IE = inst_end(F); IB != IE;) {
     Instruction &I = *IB++;
-    if (auto CS = CallSite(&I)) {
-      switch (CS.getIntrinsicID()) {
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      switch (CB->getIntrinsicID()) {
       default:
         continue;
       case Intrinsic::coro_free:
@@ -164,13 +162,13 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         // Make sure that final suspend point is not duplicated as CoroSplit
         // pass expects that there is at most one final suspend point.
         if (cast<CoroSuspendInst>(&I)->isFinal())
-          CS.setCannotDuplicate();
+          CB->setCannotDuplicate();
         break;
       case Intrinsic::coro_end:
         // Make sure that fallthrough coro.end is not duplicated as CoroSplit
         // pass expects that there is at most one fallthrough coro.end.
         if (cast<CoroEndInst>(&I)->isFallthrough())
-          CS.setCannotDuplicate();
+          CB->setCannotDuplicate();
         break;
       case Intrinsic::coro_noop:
         lowerCoroNoop(cast<IntrinsicInst>(&I));
@@ -192,10 +190,10 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
         break;
       case Intrinsic::coro_resume:
-        lowerResumeOrDestroy(CS, CoroSubFnInst::ResumeIndex);
+        lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
         break;
       case Intrinsic::coro_destroy:
-        lowerResumeOrDestroy(CS, CoroSubFnInst::DestroyIndex);
+        lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
         break;
       case Intrinsic::coro_promise:
         lowerCoroPromise(cast<CoroPromiseInst>(&I));

@@ -85,8 +85,8 @@ void MyOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
 }
 ```
 
-See the [quickstart guide](QuickstartRewrites.md) for information on defining
-operation rewrites.
+See the [quickstart guide](Tutorials/QuickstartRewrites.md) for information on
+defining operation rewrites.
 
 ### Canonicalizing with `fold`
 

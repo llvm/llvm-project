@@ -485,6 +485,14 @@ public: // FIXME
   Register SGPRForFPSaveRestoreCopy;
   Optional<int> FramePointerSaveIndex;
 
+  /// If this is set, an SGPR used for save/restore of the register used for the
+  /// base pointer.
+  Register SGPRForBPSaveRestoreCopy;
+  Optional<int> BasePointerSaveIndex;
+
+  Register VGPRReservedForSGPRSpill;
+  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
+
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 
@@ -499,6 +507,14 @@ public:
   ArrayRef<SGPRSpillVGPRCSR> getSGPRSpillVGPRs() const {
     return SpillVGPRs;
   }
+
+  void setSGPRSpillVGPRs(Register NewVGPR, Optional<int> newFI, int Index) {
+    SpillVGPRs[Index].VGPR = NewVGPR;
+    SpillVGPRs[Index].FI = newFI;
+    VGPRReservedForSGPRSpill = NewVGPR;
+  }
+
+  bool removeVGPRForSGPRSpill(Register ReservedVGPR, MachineFunction &MF);
 
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
@@ -517,6 +533,7 @@ public:
   bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,
                                  unsigned NumLane) const;
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
+  bool reserveVGPRforSGPRSpills(MachineFunction &MF);
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
   void removeDeadFrameIndices(MachineFrameInfo &MFI);
 
@@ -675,6 +692,8 @@ public:
   unsigned getGITPtrHigh() const {
     return GITPtrHigh;
   }
+
+  Register getGITPtrLoReg(const MachineFunction &MF) const;
 
   uint32_t get32BitAddressHighBits() const {
     return HighBitsOf32BitAddress;

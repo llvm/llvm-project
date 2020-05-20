@@ -71,8 +71,8 @@ Communication::~Communication() {
 
 void Communication::Clear() {
   SetReadThreadBytesReceivedCallback(nullptr, nullptr);
-  Disconnect(nullptr);
   StopReadThread(nullptr);
+  Disconnect(nullptr);
 }
 
 ConnectionStatus Communication::Connect(const char *url, Status *error_ptr) {
@@ -93,6 +93,8 @@ ConnectionStatus Communication::Disconnect(Status *error_ptr) {
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
            "{0} Communication::Disconnect ()", this);
 
+  assert((!m_read_thread_enabled || m_read_thread_did_exit) &&
+         "Disconnecting while the read thread is running is racy!");
   lldb::ConnectionSP connection_sp(m_connection_sp);
   if (connection_sp) {
     ConnectionStatus status = connection_sp->Disconnect(error_ptr);

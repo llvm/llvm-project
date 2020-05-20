@@ -56,7 +56,7 @@ private:
   /// labels in the middle of the section.
   DenseMap<const MCSection*, bool> HasSectionLabel;
 
-  void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void emitDataRegion(DataRegionData::KindTy Kind);
   void emitDataRegionEnd();
@@ -81,7 +81,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void ChangeSection(MCSection *Sect, const MCExpr *Subsect) override;
+  void changeSection(MCSection *Sect, const MCExpr *Subsect) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
@@ -114,7 +114,7 @@ public:
     getAssembler().getLOHContainer().addDirective(Kind, Args);
   }
 
-  void FinishImpl() override;
+  void finishImpl() override;
 };
 
 } // end anonymous namespace.
@@ -123,7 +123,7 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   // These sections are created by the assembler itself after the end of
   // the .s file.
   StringRef SegName = MSec.getSegmentName();
-  StringRef SecName = MSec.getSectionName();
+  StringRef SecName = MSec.getName();
 
   if (SegName == "__LD" && SecName == "__compact_unwind")
     return true;
@@ -146,7 +146,7 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   return false;
 }
 
-void MCMachOStreamer::ChangeSection(MCSection *Section,
+void MCMachOStreamer::changeSection(MCSection *Section,
                                     const MCExpr *Subsection) {
   // Change the section normally.
   bool Created = changeSectionImpl(Section, Subsection);
@@ -326,6 +326,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_ELF_TypeCommon:
   case MCSA_ELF_TypeNoType:
   case MCSA_ELF_TypeGnuUniqueObject:
+  case MCSA_Extern:
   case MCSA_Hidden:
   case MCSA_IndirectSymbol:
   case MCSA_Internal:
@@ -454,7 +455,7 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   emitZerofill(Section, Symbol, Size, ByteAlignment);
 }
 
-void MCMachOStreamer::EmitInstToData(const MCInst &Inst,
+void MCMachOStreamer::emitInstToData(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
   MCDataFragment *DF = getOrCreateDataFragment();
 
@@ -472,8 +473,8 @@ void MCMachOStreamer::EmitInstToData(const MCInst &Inst,
   DF->getContents().append(Code.begin(), Code.end());
 }
 
-void MCMachOStreamer::FinishImpl() {
-  EmitFrames(&getAssembler().getBackend());
+void MCMachOStreamer::finishImpl() {
+  emitFrames(&getAssembler().getBackend());
 
   // We have to set the fragment atom associations so we can relax properly for
   // Mach-O.
@@ -502,7 +503,7 @@ void MCMachOStreamer::FinishImpl() {
     }
   }
 
-  this->MCObjectStreamer::FinishImpl();
+  this->MCObjectStreamer::finishImpl();
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,

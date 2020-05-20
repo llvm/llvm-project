@@ -13,7 +13,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/VMRange.h"
 
 #include <inttypes.h>
@@ -283,15 +282,15 @@ bool Section::ContainsFileAddress(addr_t vm_addr) const {
   return false;
 }
 
-void Section::Dump(Stream *s, Target *target, uint32_t depth) const {
-  //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
-  s->Indent();
-  s->Printf("0x%8.8" PRIx64 " %-16s ", GetID(), GetTypeAsCString());
+void Section::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
+                   uint32_t depth) const {
+  s.indent(indent);
+  s << llvm::format("0x%8.8" PRIx64 " %-16s ", GetID(), GetTypeAsCString());
   bool resolved = true;
   addr_t addr = LLDB_INVALID_ADDRESS;
 
   if (GetByteSize() == 0)
-    s->Printf("%39s", "");
+    s.indent(39);
   else {
     if (target)
       addr = GetLoadBaseAddress(target);
@@ -303,27 +302,27 @@ void Section::Dump(Stream *s, Target *target, uint32_t depth) const {
     }
 
     VMRange range(addr, addr + m_byte_size);
-    range.Dump(s->AsRawOstream(), 0);
+    range.Dump(s, 0);
   }
 
-  s->Printf("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ",
-            resolved ? ' ' : '*', m_readable ? 'r' : '-',
-            m_writable ? 'w' : '-', m_executable ? 'x' : '-', m_file_offset,
-            m_file_size, Get());
+  s << llvm::format("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ",
+                    resolved ? ' ' : '*', m_readable ? 'r' : '-',
+                    m_writable ? 'w' : '-', m_executable ? 'x' : '-',
+                    m_file_offset, m_file_size, Get());
 
   DumpName(s);
 
-  s->EOL();
+  s << "\n";
 
   if (depth > 0)
-    m_children.Dump(s, target, false, depth - 1);
+    m_children.Dump(s, indent, target, false, depth - 1);
 }
 
-void Section::DumpName(Stream *s) const {
+void Section::DumpName(llvm::raw_ostream &s) const {
   SectionSP parent_sp(GetParent());
   if (parent_sp) {
     parent_sp->DumpName(s);
-    s->PutChar('.');
+    s << '.';
   } else {
     // The top most section prints the module basename
     const char *name = nullptr;
@@ -336,9 +335,9 @@ void Section::DumpName(Stream *s) const {
     if ((!name || !name[0]) && module_sp)
       name = module_sp->GetFileSpec().GetFilename().AsCString();
     if (name && name[0])
-      s->Printf("%s.", name);
+      s << name << '.';
   }
-  m_name.Dump(s);
+  s << m_name.GetStringRef();
 }
 
 bool Section::IsDescendant(const Section *section) {
@@ -568,31 +567,27 @@ bool SectionList::ContainsSection(user_id_t sect_id) const {
   return FindSectionByID(sect_id).get() != nullptr;
 }
 
-void SectionList::Dump(Stream *s, Target *target, bool show_header,
-                       uint32_t depth) const {
+void SectionList::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
+                       bool show_header, uint32_t depth) const {
   bool target_has_loaded_sections =
       target && !target->GetSectionLoadList().IsEmpty();
   if (show_header && !m_sections.empty()) {
-    s->Indent();
-    s->Printf("SectID     Type             %s Address                          "
-              "   Perm File Off.  File Size  Flags "
-              "     Section Name\n",
-              target_has_loaded_sections ? "Load" : "File");
-    s->Indent();
-    s->PutCString("---------- ---------------- "
-                  "---------------------------------------  ---- ---------- "
-                  "---------- "
-                  "---------- ----------------------------\n");
+    s.indent(indent);
+    s << llvm::formatv(
+        "SectID     Type             {0} Address                          "
+        "   Perm File Off.  File Size  Flags "
+        "     Section Name\n",
+        target_has_loaded_sections ? "Load" : "File");
+    s.indent(indent);
+    s << "---------- ---------------- "
+         "---------------------------------------  ---- ---------- "
+         "---------- "
+         "---------- ----------------------------\n";
   }
 
-  const_iterator sect_iter;
-  const_iterator end = m_sections.end();
-  for (sect_iter = m_sections.begin(); sect_iter != end; ++sect_iter) {
-    (*sect_iter)->Dump(s, target_has_loaded_sections ? target : nullptr, depth);
-  }
-
-  if (show_header && !m_sections.empty())
-    s->IndentLess();
+  for (const auto &section_sp : m_sections)
+    section_sp->Dump(s, indent, target_has_loaded_sections ? target : nullptr,
+                     depth);
 }
 
 size_t SectionList::Slide(addr_t slide_amount, bool slide_children) {

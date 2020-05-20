@@ -374,8 +374,8 @@ private:
         continue;
       Visited.insert(&NextJD);
       DFSLinkOrder.push_back(&NextJD);
-      NextJD.withSearchOrderDo([&](const JITDylibSearchOrder &SearchOrder) {
-        for (auto &KV : SearchOrder)
+      NextJD.withLinkOrderDo([&](const JITDylibSearchOrder &LinkOrder) {
+        for (auto &KV : LinkOrder)
           WorkStack.push_back(KV.first);
       });
     }
@@ -965,12 +965,6 @@ LLJIT::~LLJIT() {
     CompileThreads->wait();
 }
 
-Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
-  auto InternedName = ES->intern(Name);
-  SymbolMap Symbols({{InternedName, Sym}});
-  return Main->define(absoluteSymbols(std::move(Symbols)));
-}
-
 Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
@@ -1080,10 +1074,15 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     CompileThreads =
         std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
     ES->setDispatchMaterialization(
-        [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
-          // FIXME: Switch to move capture once we have c++14.
+        [this](std::unique_ptr<MaterializationUnit> MU,
+               MaterializationResponsibility MR) {
+          // FIXME: Switch to move capture once ThreadPool uses unique_function.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
+          auto SharedMR =
+              std::make_shared<MaterializationResponsibility>(std::move(MR));
+          auto Work = [SharedMU, SharedMR]() mutable {
+            SharedMU->materialize(std::move(*SharedMR));
+          };
           CompileThreads->async(std::move(Work));
         });
   }

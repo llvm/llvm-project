@@ -14,7 +14,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -66,6 +66,10 @@ static cl::opt<int> ProfileSummaryColdCount(
     cl::desc("A fixed cold count that overrides the count derived from"
              " profile-summary-cutoff-cold"));
 
+static cl::opt<bool> PartialProfile(
+    "partial-profile", cl::Hidden, cl::init(false),
+    cl::desc("Specify the current profile is used as a partial profile."));
+
 // Find the summary entry for a desired percentile of counts.
 static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
                                                         uint64_t Percentile) {
@@ -101,13 +105,10 @@ bool ProfileSummaryInfo::computeSummary() {
   return true;
 }
 
-Optional<uint64_t>
-ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
-                                    BlockFrequencyInfo *BFI,
-                                    bool AllowSynthetic) {
-  if (!Inst)
-    return None;
-  assert((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
+Optional<uint64_t> ProfileSummaryInfo::getProfileCount(const CallBase &Call,
+                                                       BlockFrequencyInfo *BFI,
+                                                       bool AllowSynthetic) {
+  assert((isa<CallInst>(Call) || isa<InvokeInst>(Call)) &&
          "We can only get profile count for call/invoke instruction.");
   if (hasSampleProfile()) {
     // In sample PGO mode, check if there is a profile metadata on the
@@ -115,12 +116,12 @@ ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
     // since the sampled entry count may not be accurate. If there is no
     // annotated on the instruction, return None.
     uint64_t TotalCount;
-    if (Inst->extractProfTotalWeight(TotalCount))
+    if (Call.extractProfTotalWeight(TotalCount))
       return TotalCount;
     return None;
   }
   if (BFI)
-    return BFI->getBlockProfileCount(Inst->getParent(), AllowSynthetic);
+    return BFI->getBlockProfileCount(Call.getParent(), AllowSynthetic);
   return None;
 }
 
@@ -155,7 +156,7 @@ bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F,
     for (const auto &BB : *F)
       for (const auto &I : BB)
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
-          if (auto CallCount = getProfileCount(&I, nullptr))
+          if (auto CallCount = getProfileCount(cast<CallBase>(I), nullptr))
             TotalCallCount += CallCount.getValue();
     if (isHotCount(TotalCallCount))
       return true;
@@ -184,7 +185,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
     for (const auto &BB : *F)
       for (const auto &I : BB)
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
-          if (auto CallCount = getProfileCount(&I, nullptr))
+          if (auto CallCount = getProfileCount(cast<CallBase>(I), nullptr))
             TotalCallCount += CallCount.getValue();
     if (!isColdCount(TotalCallCount))
       return false;
@@ -193,6 +194,11 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
     if (!isColdBlock(&BB, &BFI))
       return false;
   return true;
+}
+
+bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) {
+  assert(hasPartialSampleProfile() && "Expect partial sample profile");
+  return !F.getEntryCount().hasValue();
 }
 
 template<bool isHot>
@@ -213,7 +219,7 @@ bool ProfileSummaryInfo::isFunctionHotOrColdInCallGraphNthPercentile(
     for (const auto &BB : *F)
       for (const auto &I : BB)
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
-          if (auto CallCount = getProfileCount(&I, nullptr))
+          if (auto CallCount = getProfileCount(cast<CallBase>(I), nullptr))
             TotalCallCount += CallCount.getValue();
     if (isHot && isHotCountNthPercentile(PercentileCutoff, TotalCallCount))
       return true;
@@ -385,21 +391,27 @@ bool ProfileSummaryInfo::isColdBlockNthPercentile(int PercentileCutoff,
   return isHotOrColdBlockNthPercentile<false>(PercentileCutoff, BB, BFI);
 }
 
-bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,
+bool ProfileSummaryInfo::isHotCallSite(const CallBase &CB,
                                        BlockFrequencyInfo *BFI) {
-  auto C = getProfileCount(CS.getInstruction(), BFI);
+  auto C = getProfileCount(CB, BFI);
   return C && isHotCount(*C);
 }
 
-bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
+bool ProfileSummaryInfo::isColdCallSite(const CallBase &CB,
                                         BlockFrequencyInfo *BFI) {
-  auto C = getProfileCount(CS.getInstruction(), BFI);
+  auto C = getProfileCount(CB, BFI);
   if (C)
     return isColdCount(*C);
 
   // In SamplePGO, if the caller has been sampled, and there is no profile
   // annotated on the callsite, we consider the callsite as cold.
-  return hasSampleProfile() && CS.getCaller()->hasProfileData();
+  return hasSampleProfile() && CB.getCaller()->hasProfileData();
+}
+
+bool ProfileSummaryInfo::hasPartialSampleProfile() {
+  return hasProfileSummary() &&
+         Summary->getKind() == ProfileSummary::PSK_Sample &&
+         (PartialProfile || Summary->isPartialProfile());
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

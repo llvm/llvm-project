@@ -58,14 +58,14 @@ struct PerFunctionStats {
   unsigned NumParamTypes = 0;
   /// Number of function parameters with a DW_AT_location.
   unsigned NumParamLocations = 0;
-  /// Number of variables.
-  unsigned NumVars = 0;
-  /// Number of variables with source location.
-  unsigned NumVarSourceLocations = 0;
-  /// Number of variables with type.
-  unsigned NumVarTypes = 0;
-  /// Number of variables with DW_AT_location.
-  unsigned NumVarLocations = 0;
+  /// Number of local variables.
+  unsigned NumLocalVars = 0;
+  /// Number of local variables with source location.
+  unsigned NumLocalVarSourceLocations = 0;
+  /// Number of local variables with type.
+  unsigned NumLocalVarTypes = 0;
+  /// Number of local variables with DW_AT_location.
+  unsigned NumLocalVarLocations = 0;
 };
 
 /// Holds accumulated global statistics about DIEs.
@@ -80,21 +80,19 @@ struct GlobalStats {
   /// Total number of PC range bytes covered by DW_AT_locations of
   /// formal parameters.
   unsigned ParamScopeBytesCovered = 0;
-  /// Total number of PC range bytes in each variable's enclosing scope
-  /// (only for parameters).
+  /// Total number of PC range bytes in each parameter's enclosing scope.
   unsigned ParamScopeBytes = 0;
   /// Total number of PC range bytes covered by DW_AT_locations with
   /// the debug entry values (DW_OP_entry_value) (only for parameters).
   unsigned ParamScopeEntryValueBytesCovered = 0;
   /// Total number of PC range bytes covered by DW_AT_locations (only for local
   /// variables).
-  unsigned VarScopeBytesCovered = 0;
-  /// Total number of PC range bytes in each variable's enclosing scope
-  /// (only for local variables).
-  unsigned VarScopeBytes = 0;
+  unsigned LocalVarScopeBytesCovered = 0;
+  /// Total number of PC range bytes in each local variable's enclosing scope.
+  unsigned LocalVarScopeBytes = 0;
   /// Total number of PC range bytes covered by DW_AT_locations with
   /// the debug entry values (DW_OP_entry_value) (only for local variables).
-  unsigned VarScopeEntryValueBytesCovered = 0;
+  unsigned LocalVarScopeEntryValueBytesCovered = 0;
   /// Total number of call site entries (DW_AT_call_file & DW_AT_call_line).
   unsigned CallSiteEntries = 0;
   /// Total number of call site DIEs (DW_TAG_call_site).
@@ -130,10 +128,10 @@ struct LocationStats {
   std::vector<unsigned> ParamNonEntryValLocStats{
       std::vector<unsigned>(NumOfCoverageCategories, 0)};
   /// The debug location statistics for local variables.
-  std::vector<unsigned> VarLocStats{
+  std::vector<unsigned> LocalVarLocStats{
       std::vector<unsigned>(NumOfCoverageCategories, 0)};
   /// Map non debug entry values coverage for local variables.
-  std::vector<unsigned> VarNonEntryValLocStats{
+  std::vector<unsigned> LocalVarNonEntryValLocStats{
       std::vector<unsigned>(NumOfCoverageCategories, 0)};
   /// Total number of local variables and function parameters processed.
   unsigned NumVarParam = 0;
@@ -148,8 +146,8 @@ struct LocationStats {
 static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
                             std::vector<unsigned> &VarParamLocStats,
                             std::vector<unsigned> &ParamLocStats,
-                            std::vector<unsigned> &VarLocStats, bool IsParam,
-                            bool IsLocalVar) {
+                            std::vector<unsigned> &LocalVarLocStats,
+                            bool IsParam, bool IsLocalVar) {
   auto getCoverageBucket = [BytesCovered, BytesInScope]() -> unsigned {
     // No debug location at all for the variable.
     if (BytesCovered == 0)
@@ -168,7 +166,7 @@ static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
   if (IsParam)
     ParamLocStats[CoverageBucket]++;
   else if (IsLocalVar)
-    VarLocStats[CoverageBucket]++;
+    LocalVarLocStats[CoverageBucket]++;
 }
 /// Construct an identifier for a given DIE from its Prefix, Name, DeclFileName
 /// and DeclLine. The identifier aims to be unique for any unique entities,
@@ -214,7 +212,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
   bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
-  bool IsVariable = Die.getTag() == dwarf::DW_TAG_variable;
+  bool IsLocalVar = Die.getTag() == dwarf::DW_TAG_variable;
   bool IsConstantMember = Die.getTag() == dwarf::DW_TAG_member &&
                           Die.find(dwarf::DW_AT_const_value);
 
@@ -230,13 +228,13 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     return;
   }
 
-  if (!IsParam && !IsVariable && !IsConstantMember) {
+  if (!IsParam && !IsLocalVar && !IsConstantMember) {
     // Not a variable or constant member.
     return;
   }
 
   // Ignore declarations of global variables.
-  if (IsVariable && Die.find(dwarf::DW_AT_declaration))
+  if (IsLocalVar && Die.find(dwarf::DW_AT_declaration))
     return;
 
   if (Die.findRecursively(dwarf::DW_AT_decl_file) &&
@@ -250,7 +248,8 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     DWARFUnit *U = Die.getDwarfUnit();
     DataExtractor Data(toStringRef(D),
                        Die.getDwarfUnit()->getContext().isLittleEndian(), 0);
-    DWARFExpression Expression(Data, U->getAddressByteSize());
+    DWARFExpression Expression(Data, U->getAddressByteSize(),
+                               U->getFormParams().Format);
     // Consider the expression containing the DW_OP_entry_value as
     // an entry value.
     return llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
@@ -293,17 +292,17 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     LocStats.NumVarParam++;
     if (IsParam)
       LocStats.NumParam++;
-    else if (IsVariable)
+    else if (IsLocalVar)
       LocStats.NumVar++;
 
     collectLocStats(BytesCovered, BytesInScope, LocStats.VarParamLocStats,
-                    LocStats.ParamLocStats, LocStats.VarLocStats, IsParam,
-                    IsVariable);
+                    LocStats.ParamLocStats, LocStats.LocalVarLocStats, IsParam,
+                    IsLocalVar);
     // Non debug entry values coverage statistics.
     collectLocStats(BytesCovered - BytesEntryValuesCovered, BytesInScope,
                     LocStats.VarParamNonEntryValLocStats,
                     LocStats.ParamNonEntryValLocStats,
-                    LocStats.VarNonEntryValLocStats, IsParam, IsVariable);
+                    LocStats.LocalVarNonEntryValLocStats, IsParam, IsLocalVar);
   }
 
   // Collect PC range coverage data.
@@ -324,10 +323,12 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
           std::min(BytesInScope, BytesCovered);
       GlobalStats.ParamScopeBytes += BytesInScope;
       GlobalStats.ParamScopeEntryValueBytesCovered += BytesEntryValuesCovered;
-    } else if (IsVariable) {
-      GlobalStats.VarScopeBytesCovered += std::min(BytesInScope, BytesCovered);
-      GlobalStats.VarScopeBytes += BytesInScope;
-      GlobalStats.VarScopeEntryValueBytesCovered += BytesEntryValuesCovered;
+    } else if (IsLocalVar) {
+      GlobalStats.LocalVarScopeBytesCovered +=
+          std::min(BytesInScope, BytesCovered);
+      GlobalStats.LocalVarScopeBytes += BytesInScope;
+      GlobalStats.LocalVarScopeEntryValueBytesCovered +=
+          BytesEntryValuesCovered;
     }
     assert(GlobalStats.ScopeBytesCovered <= GlobalStats.ScopeBytes);
   }
@@ -352,14 +353,14 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
       FnStats.NumParamSourceLocations++;
     if (HasLoc)
       FnStats.NumParamLocations++;
-  } else if (IsVariable) {
-    FnStats.NumVars++;
+  } else if (IsLocalVar) {
+    FnStats.NumLocalVars++;
     if (HasType)
-      FnStats.NumVarTypes++;
+      FnStats.NumLocalVarTypes++;
     if (HasSrcLoc)
-      FnStats.NumVarSourceLocations++;
+      FnStats.NumLocalVarSourceLocations++;
     if (HasLoc)
-      FnStats.NumVarLocations++;
+      FnStats.NumLocalVarLocations++;
   }
 }
 
@@ -473,33 +474,41 @@ static void printDatum(raw_ostream &OS, const char *Key, json::Value Value) {
   LLVM_DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
 }
 
-static void printLocationStats(raw_ostream &OS,
-                               const char *Key,
+static void printLocationStats(raw_ostream &OS, const char *Key,
                                std::vector<unsigned> &LocationStats) {
-  OS << ",\"" << Key << " with 0% of its scope covered\":"
+  OS << ",\"" << Key << " with 0% of parent scope covered by DW_AT_location\":"
      << LocationStats[0];
-  LLVM_DEBUG(llvm::dbgs() << Key << " with 0% of its scope covered: "
-                          << LocationStats[0] << '\n');
-  OS << ",\"" << Key << " with (0%,10%) of its scope covered\":"
+  LLVM_DEBUG(
+      llvm::dbgs() << Key
+                   << " with 0% of parent scope covered by DW_AT_location: \\"
+                   << LocationStats[0] << '\n');
+  OS << ",\"" << Key
+     << " with (0%,10%) of parent scope covered by DW_AT_location\":"
      << LocationStats[1];
-  LLVM_DEBUG(llvm::dbgs() << Key << " with (0%,10%) of its scope covered: "
-                          << LocationStats[1] << '\n');
+  LLVM_DEBUG(llvm::dbgs()
+             << Key
+             << " with (0%,10%) of parent scope covered by DW_AT_location: "
+             << LocationStats[1] << '\n');
   for (unsigned i = 2; i < NumOfCoverageCategories - 1; ++i) {
     OS << ",\"" << Key << " with [" << (i - 1) * 10 << "%," << i * 10
-       << "%) of its scope covered\":" << LocationStats[i];
+       << "%) of parent scope covered by DW_AT_location\":" << LocationStats[i];
     LLVM_DEBUG(llvm::dbgs()
                << Key << " with [" << (i - 1) * 10 << "%," << i * 10
-               << "%) of its scope covered: " << LocationStats[i]);
+               << "%) of parent scope covered by DW_AT_location: "
+               << LocationStats[i]);
   }
-  OS << ",\"" << Key << " with 100% of its scope covered\":"
+  OS << ",\"" << Key
+     << " with 100% of parent scope covered by DW_AT_location\":"
      << LocationStats[NumOfCoverageCategories - 1];
-  LLVM_DEBUG(llvm::dbgs() << Key << " with 100% of its scope covered: "
-                          << LocationStats[NumOfCoverageCategories - 1]);
+  LLVM_DEBUG(
+      llvm::dbgs() << Key
+                   << " with 100% of parent scope covered by DW_AT_location: "
+                   << LocationStats[NumOfCoverageCategories - 1]);
 }
 
 static void printSectionSizes(raw_ostream &OS, const SectionSizes &Sizes) {
   for (const auto &DebugSec : Sizes.DebugSectionSizes)
-    OS << ",\"size of " << DebugSec.getKey() << "\":" << DebugSec.getValue();
+    OS << ",\"#bytes in " << DebugSec.getKey() << "\":" << DebugSec.getValue();
 }
 
 /// \}
@@ -531,7 +540,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
   /// version.
-  unsigned Version = 4;
+  unsigned Version = 5;
   unsigned VarParamTotal = 0;
   unsigned VarParamUnique = 0;
   unsigned VarParamWithLoc = 0;
@@ -543,17 +552,18 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   unsigned ParamWithType = 0;
   unsigned ParamWithLoc = 0;
   unsigned ParamWithSrcLoc = 0;
-  unsigned VarTotal = 0;
-  unsigned VarWithType = 0;
-  unsigned VarWithSrcLoc = 0;
-  unsigned VarWithLoc = 0;
+  unsigned LocalVarTotal = 0;
+  unsigned LocalVarWithType = 0;
+  unsigned LocalVarWithSrcLoc = 0;
+  unsigned LocalVarWithLoc = 0;
   for (auto &Entry : Statistics) {
     PerFunctionStats &Stats = Entry.getValue();
     unsigned TotalVars = Stats.VarsInFunction.size() *
                          (Stats.NumFnInlined + Stats.NumFnOutOfLine);
     // Count variables in global scope.
     if (!Stats.IsFunction)
-      TotalVars = Stats.NumVars + Stats.ConstantMembers + Stats.NumArtificial;
+      TotalVars =
+          Stats.NumLocalVars + Stats.ConstantMembers + Stats.NumArtificial;
     unsigned Constants = Stats.ConstantMembers;
     VarParamWithLoc += Stats.TotalVarWithLoc + Constants;
     VarParamTotal += TotalVars;
@@ -569,10 +579,10 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     ParamWithType += Stats.NumParamTypes;
     ParamWithLoc += Stats.NumParamLocations;
     ParamWithSrcLoc += Stats.NumParamSourceLocations;
-    VarTotal += Stats.NumVars;
-    VarWithType += Stats.NumVarTypes;
-    VarWithLoc += Stats.NumVarLocations;
-    VarWithSrcLoc += Stats.NumVarSourceLocations;
+    LocalVarTotal += Stats.NumLocalVars;
+    LocalVarWithType += Stats.NumLocalVarTypes;
+    LocalVarWithLoc += Stats.NumLocalVarLocations;
+    LocalVarWithSrcLoc += Stats.NumLocalVarSourceLocations;
   }
 
   // Print summary.
@@ -580,57 +590,97 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   OS << "{\"version\":" << Version;
   LLVM_DEBUG(llvm::dbgs() << "Variable location quality metrics\n";
              llvm::dbgs() << "---------------------------------\n");
+
   printDatum(OS, "file", Filename.str());
   printDatum(OS, "format", FormatName);
-  printDatum(OS, "source functions", NumFunctions);
-  printDatum(OS, "source functions with location", NumFuncsWithSrcLoc);
-  printDatum(OS, "inlined functions", NumInlinedFunctions);
-  printDatum(OS, "inlined funcs with abstract origins", NumAbstractOrigins);
-  printDatum(OS, "unique source variables", VarParamUnique);
-  printDatum(OS, "source variables", VarParamTotal);
-  printDatum(OS, "variables with location", VarParamWithLoc);
-  printDatum(OS, "call site entries", GlobalStats.CallSiteEntries);
-  printDatum(OS, "call site DIEs", GlobalStats.CallSiteDIEs);
-  printDatum(OS, "call site parameter DIEs", GlobalStats.CallSiteParamDIEs);
-  printDatum(OS, "scope bytes total", GlobalStats.ScopeBytes);
-  printDatum(OS, "scope bytes covered", GlobalStats.ScopeBytesCovered);
-  printDatum(OS, "entry value scope bytes covered",
+
+  printDatum(OS, "#functions", NumFunctions);
+  printDatum(OS, "#functions with location", NumFuncsWithSrcLoc);
+  printDatum(OS, "#inlined functions", NumInlinedFunctions);
+  printDatum(OS, "#inlined functions with abstract origins",
+             NumAbstractOrigins);
+
+  // This includes local variables and formal parameters.
+  printDatum(OS, "#unique source variables", VarParamUnique);
+  printDatum(OS, "#source variables", VarParamTotal);
+  printDatum(OS, "#source variables with location", VarParamWithLoc);
+
+  printDatum(OS, "#call site entries", GlobalStats.CallSiteEntries);
+  printDatum(OS, "#call site DIEs", GlobalStats.CallSiteDIEs);
+  printDatum(OS, "#call site parameter DIEs", GlobalStats.CallSiteParamDIEs);
+
+  printDatum(OS, "sum_all_variables(#bytes in parent scope)",
+             GlobalStats.ScopeBytes);
+  printDatum(OS,
+             "sum_all_variables(#bytes in parent scope covered by "
+             "DW_AT_location)",
+             GlobalStats.ScopeBytesCovered);
+  printDatum(OS,
+             "sum_all_variables(#bytes in parent scope covered by "
+             "DW_OP_entry_value)",
              GlobalStats.ScopeEntryValueBytesCovered);
-  printDatum(OS, "formal params scope bytes total",
+
+  printDatum(OS, "sum_all_params(#bytes in parent scope)",
              GlobalStats.ParamScopeBytes);
-  printDatum(OS, "formal params scope bytes covered",
-             GlobalStats.ParamScopeBytesCovered);
-  printDatum(OS, "formal params entry value scope bytes covered",
+  printDatum(
+      OS,
+      "sum_all_params(#bytes in parent scope covered by DW_AT_location)",
+      GlobalStats.ParamScopeBytesCovered);
+  printDatum(OS,
+             "sum_all_params(#bytes in parent scope covered by "
+             "DW_OP_entry_value)",
              GlobalStats.ParamScopeEntryValueBytesCovered);
-  printDatum(OS, "vars scope bytes total", GlobalStats.VarScopeBytes);
-  printDatum(OS, "vars scope bytes covered", GlobalStats.VarScopeBytesCovered);
-  printDatum(OS, "vars entry value scope bytes covered",
-             GlobalStats.VarScopeEntryValueBytesCovered);
-  printDatum(OS, "total function size", GlobalStats.FunctionSize);
-  printDatum(OS, "total inlined function size", GlobalStats.InlineFunctionSize);
-  printDatum(OS, "total formal params", ParamTotal);
-  printDatum(OS, "formal params with source location", ParamWithSrcLoc);
-  printDatum(OS, "formal params with type", ParamWithType);
-  printDatum(OS, "formal params with binary location", ParamWithLoc);
-  printDatum(OS, "total vars", VarTotal);
-  printDatum(OS, "vars with source location", VarWithSrcLoc);
-  printDatum(OS, "vars with type", VarWithType);
-  printDatum(OS, "vars with binary location", VarWithLoc);
-  printDatum(OS, "total variables procesed by location statistics",
-             LocStats.NumVarParam);
+
+  printDatum(OS, "sum_all_local_vars(#bytes in parent scope)",
+             GlobalStats.LocalVarScopeBytes);
+  printDatum(OS,
+             "sum_all_local_vars(#bytes in parent scope covered by "
+             "DW_AT_location)",
+             GlobalStats.LocalVarScopeBytesCovered);
+  printDatum(OS,
+             "sum_all_local_vars(#bytes in parent scope covered by "
+             "DW_OP_entry_value)",
+             GlobalStats.LocalVarScopeEntryValueBytesCovered);
+
+  printDatum(OS, "#bytes witin functions", GlobalStats.FunctionSize);
+  printDatum(OS, "#bytes witin inlined functions",
+             GlobalStats.InlineFunctionSize);
+
+  // Print the summary for formal parameters.
+  printDatum(OS, "#params", ParamTotal);
+  printDatum(OS, "#params with source location", ParamWithSrcLoc);
+  printDatum(OS, "#params with type", ParamWithType);
+  printDatum(OS, "#params with binary location", ParamWithLoc);
+
+  // Print the summary for local variables.
+  printDatum(OS, "#local vars", LocalVarTotal);
+  printDatum(OS, "#local vars with source location", LocalVarWithSrcLoc);
+  printDatum(OS, "#local vars with type", LocalVarWithType);
+  printDatum(OS, "#local vars with binary location", LocalVarWithLoc);
+
+  // Print the debug section sizes.
   printSectionSizes(OS, Sizes);
-  printLocationStats(OS, "variables", LocStats.VarParamLocStats);
-  printLocationStats(OS, "variables (excluding the debug entry values)",
+
+  // Print the location statistics for variables (includes local variables
+  // and formal parameters).
+  printDatum(OS, "#variables processed by location statistics",
+             LocStats.NumVarParam);
+  printLocationStats(OS, "#variables", LocStats.VarParamLocStats);
+  printLocationStats(OS, "#variables - entry values",
                      LocStats.VarParamNonEntryValLocStats);
-  printDatum(OS, "total params procesed by location statistics",
-             LocStats.NumParam);
-  printLocationStats(OS, "params", LocStats.ParamLocStats);
-  printLocationStats(OS, "params (excluding the debug entry values)",
+
+  // Print the location statistics for formal parameters.
+  printDatum(OS, "#params processed by location statistics", LocStats.NumParam);
+  printLocationStats(OS, "#params", LocStats.ParamLocStats);
+  printLocationStats(OS, "#params - entry values",
                      LocStats.ParamNonEntryValLocStats);
-  printDatum(OS, "total vars procesed by location statistics", LocStats.NumVar);
-  printLocationStats(OS, "vars", LocStats.VarLocStats);
-  printLocationStats(OS, "vars (excluding the debug entry values)",
-                     LocStats.VarNonEntryValLocStats);
+
+  // Print the location statistics for local variables.
+  printDatum(OS, "#local vars processed by location statistics",
+             LocStats.NumVar);
+  printLocationStats(OS, "#local vars", LocStats.LocalVarLocStats);
+  printLocationStats(OS, "#local vars - entry values",
+                     LocStats.LocalVarNonEntryValLocStats);
   OS << "}\n";
   LLVM_DEBUG(
       llvm::dbgs() << "Total Availability: "

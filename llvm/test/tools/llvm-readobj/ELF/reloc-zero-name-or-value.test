@@ -101,8 +101,8 @@ ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
     Sections:
-      - Section: .rela.dyn
       - Section: .dynamic
+      - Section: .rela.dyn
   - Type: PT_DYNAMIC
     VAddr: 0x1000
     Sections:

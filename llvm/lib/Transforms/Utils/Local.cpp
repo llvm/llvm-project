@@ -41,7 +41,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -404,9 +403,22 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
       return true;
 
-    // Lifetime intrinsics are dead when their right-hand is undef.
-    if (II->isLifetimeStartOrEnd())
-      return isa<UndefValue>(II->getArgOperand(1));
+    if (II->isLifetimeStartOrEnd()) {
+      auto *Arg = II->getArgOperand(1);
+      // Lifetime intrinsics are dead when their right-hand is undef.
+      if (isa<UndefValue>(Arg))
+        return true;
+      // If the right-hand is an alloc, global, or argument and the only uses
+      // are lifetime intrinsics then the intrinsics are dead.
+      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
+        return llvm::all_of(Arg->uses(), [](Use &Use) {
+          if (IntrinsicInst *IntrinsicUse =
+                  dyn_cast<IntrinsicInst>(Use.getUser()))
+            return IntrinsicUse->isLifetimeStartOrEnd();
+          return false;
+        });
+      return false;
+    }
 
     // Assumptions are dead if their condition is trivially true.  Guards on
     // true are operationally no-ops.  In the future we can consider more
@@ -1156,9 +1168,8 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 /// often possible though. If alignment is important, a more reliable approach
 /// is to simply align all global variables and allocation instructions to
 /// their preferred alignment from the beginning.
-static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
-                                      unsigned PrefAlign,
-                                      const DataLayout &DL) {
+static Align enforceKnownAlignment(Value *V, Align Alignment, Align PrefAlign,
+                                   const DataLayout &DL) {
   assert(PrefAlign > Alignment);
 
   V = V->stripPointerCasts();
@@ -1170,21 +1181,21 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     // stripPointerCasts recurses through infinite layers of bitcasts,
     // while computeKnownBits is not allowed to traverse more than 6
     // levels.
-    Alignment = std::max(AI->getAlignment(), Alignment);
+    Alignment = std::max(AI->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(Align(PrefAlign)))
+    if (DL.exceedsNaturalStackAlignment(PrefAlign))
       return Alignment;
-    AI->setAlignment(Align(PrefAlign));
+    AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Alignment = std::max(GO->getAlignment(), Alignment);
+    Alignment = max(GO->getAlign(), Alignment);
     if (PrefAlign <= Alignment)
       return Alignment;
 
@@ -1195,18 +1206,18 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     if (!GO->canIncreaseAlignment())
       return Alignment;
 
-    GO->setAlignment(Align(PrefAlign));
+    GO->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   return Alignment;
 }
 
-unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
-                                          const DataLayout &DL,
-                                          const Instruction *CxtI,
-                                          AssumptionCache *AC,
-                                          const DominatorTree *DT) {
+Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
+                                       const DataLayout &DL,
+                                       const Instruction *CxtI,
+                                       AssumptionCache *AC,
+                                       const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
@@ -1215,18 +1226,16 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.
-  TrailZ = std::min(TrailZ, unsigned(sizeof(unsigned) * CHAR_BIT - 1));
+  // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
+  TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  unsigned Align = 1u << std::min(Known.getBitWidth() - 1, TrailZ);
+  Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
 
-  // LLVM doesn't support alignments larger than this currently.
-  Align = std::min(Align, +Value::MaximumAlignment);
-
-  if (PrefAlign > Align)
-    Align = enforceKnownAlignment(V, Align, PrefAlign, DL);
+  if (PrefAlign && *PrefAlign > Alignment)
+    Alignment = enforceKnownAlignment(V, Alignment, *PrefAlign, DL);
 
   // We don't need to make any adjustment.
-  return Align;
+  return Alignment;
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1689,13 +1698,14 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
-    // No-op casts and zexts are irrelevant for debug info.
-    if (CI->isNoopCast(DL) || isa<ZExtInst>(&I))
+    // No-op casts are irrelevant for debug info.
+    if (CI->isNoopCast(DL))
       return SrcDIExpr;
 
     Type *Type = CI->getType();
-    // Casts other than Trunc or SExt to scalar types cannot be salvaged.
-    if (Type->isVectorTy() || (!isa<TruncInst>(&I) && !isa<SExtInst>(&I)))
+    // Casts other than Trunc, SExt, or ZExt to scalar types cannot be salvaged.
+    if (Type->isVectorTy() ||
+        !(isa<TruncInst>(&I) || isa<SExtInst>(&I) || isa<ZExtInst>(&I)))
       return nullptr;
 
     Value *FromValue = CI->getOperand(0);
@@ -1967,7 +1977,7 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
   CallInst *NewCall = CallInst::Create(II->getFunctionType(),
-                                       II->getCalledValue(), Args, OpBundles);
+                                       II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
   NewCall->setDebugLoc(II->getDebugLoc());
@@ -2018,7 +2028,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   // as of this time.
 
   InvokeInst *II =
-      InvokeInst::Create(CI->getFunctionType(), CI->getCalledValue(), Split,
+      InvokeInst::Create(CI->getFunctionType(), CI->getCalledOperand(), Split,
                          UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
   II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
@@ -2049,7 +2059,7 @@ static bool markAliveBlocks(Function &F,
     // canonicalizes unreachable insts into stores to null or undef.
     for (Instruction &I : *BB) {
       if (auto *CI = dyn_cast<CallInst>(&I)) {
-        Value *Callee = CI->getCalledValue();
+        Value *Callee = CI->getCalledOperand();
         // Handle intrinsic calls.
         if (Function *F = dyn_cast<Function>(Callee)) {
           auto IntrinsicID = F->getIntrinsicID();
@@ -2124,7 +2134,7 @@ static bool markAliveBlocks(Function &F,
     Instruction *Terminator = BB->getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
       // Turn invokes that call 'nounwind' functions into ordinary calls.
-      Value *Callee = II->getCalledValue();
+      Value *Callee = II->getCalledOperand();
       if ((isa<ConstantPointerNull>(Callee) &&
            !NullPointerIsDefined(BB->getParent())) ||
           isa<UndefValue>(Callee)) {
@@ -2555,7 +2565,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
   LibFunc LF;
-  if (TLI.getLibFunc(ImmutableCallSite(Call), LF)) {
+  if (TLI.getLibFunc(*Call, LF)) {
     return TLI.has(LF);
   }
 
@@ -2936,37 +2946,38 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     return true;
   case Instruction::Call:
   case Instruction::Invoke: {
-    ImmutableCallSite CS(I);
+    const auto &CB = cast<CallBase>(*I);
 
     // Can't handle inline asm. Skip it.
-    if (CS.isInlineAsm())
+    if (CB.isInlineAsm())
       return false;
 
     // Constant bundle operands may need to retain their constant-ness for
     // correctness.
-    if (CS.isBundleOperand(OpIdx))
+    if (CB.isBundleOperand(OpIdx))
       return false;
 
-    if (OpIdx < CS.getNumArgOperands()) {
+    if (OpIdx < CB.getNumArgOperands()) {
       // Some variadic intrinsics require constants in the variadic arguments,
       // which currently aren't markable as immarg.
-      if (CS.isIntrinsic() && OpIdx >= CS.getFunctionType()->getNumParams()) {
+      if (isa<IntrinsicInst>(CB) &&
+          OpIdx >= CB.getFunctionType()->getNumParams()) {
         // This is known to be OK for stackmap.
-        return CS.getIntrinsicID() == Intrinsic::experimental_stackmap;
+        return CB.getIntrinsicID() == Intrinsic::experimental_stackmap;
       }
 
       // gcroot is a special case, since it requires a constant argument which
       // isn't also required to be a simple ConstantInt.
-      if (CS.getIntrinsicID() == Intrinsic::gcroot)
+      if (CB.getIntrinsicID() == Intrinsic::gcroot)
         return false;
 
       // Some intrinsic operands are required to be immediates.
-      return !CS.paramHasAttr(OpIdx, Attribute::ImmArg);
+      return !CB.paramHasAttr(OpIdx, Attribute::ImmArg);
     }
 
     // It is never allowed to replace the call argument to an intrinsic, but it
     // may be possible for a call.
-    return !CS.isIntrinsic();
+    return !isa<IntrinsicInst>(CB);
   }
   case Instruction::ShuffleVector:
     // Shufflevector masks are constant.

@@ -48,7 +48,7 @@ enum LangFeatures {
   CPlusPlus11 = (1 << 6),
   CPlusPlus14 = (1 << 7),
   CPlusPlus17 = (1 << 8),
-  CPlusPlus2a = (1 << 9),
+  CPlusPlus20 = (1 << 9),
   Digraphs = (1 << 10),
   GNUMode = (1 << 11),
   HexFloat = (1 << 12),
@@ -108,8 +108,8 @@ public:
   /// isCPlusPlus17 - Language is a C++17 variant (or later).
   bool isCPlusPlus17() const { return Flags & CPlusPlus17; }
 
-  /// isCPlusPlus2a - Language is a post-C++17 variant (or later).
-  bool isCPlusPlus2a() const { return Flags & CPlusPlus2a; }
+  /// isCPlusPlus20 - Language is a C++20 variant (or later).
+  bool isCPlusPlus20() const { return Flags & CPlusPlus20; }
 
   /// hasDigraphs - Language supports digraphs.
   bool hasDigraphs() const { return Flags & Digraphs; }

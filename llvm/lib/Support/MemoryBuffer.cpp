@@ -329,7 +329,7 @@ static bool shouldUseMmap(sys::fs::file_t FD,
   // mmap may leave the buffer without null terminator if the file size changed
   // by the time the last page is mapped in, so avoid it if the file size is
   // likely to change.
-  if (IsVolatile)
+  if (IsVolatile && RequiresNullTerminator)
     return false;
 
   // We don't use mmap for small files because this can severely fragment our

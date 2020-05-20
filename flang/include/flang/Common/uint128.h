@@ -12,8 +12,11 @@
 #ifndef FORTRAN_COMMON_UINT128_H_
 #define FORTRAN_COMMON_UINT128_H_
 
+// Define AVOID_NATIVE_UINT128_T to force the use of UnsignedInt128 below
+// instead of the C++ compiler's native 128-bit unsigned integer type, if
+// it has one.
 #ifndef AVOID_NATIVE_UINT128_T
-#define AVOID_NATIVE_UINT128_T 1 // always use this code for now for testing
+#define AVOID_NATIVE_UINT128_T 0
 #endif
 
 #include "leading-zero-bit-count.h"

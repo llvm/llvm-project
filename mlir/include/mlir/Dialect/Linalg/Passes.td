@@ -32,6 +32,12 @@ def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   let constructor = "mlir::createConvertLinalgToLoopsPass()";
 }
 
+def LinalgOnTensorsToBuffers : Pass<"convert-linalg-on-tensors-to-buffers", "ModuleOp"> {
+  let summary = "Convert the Linalg operations which work on tensor-type "
+                "operands or results to use buffers instead";
+  let constructor = "mlir::createConvertLinalgOnTensorsToBuffersPass()";
+}
+
 def LinalgLowerToParallelLoops
     : FunctionPass<"convert-linalg-to-parallel-loops"> {
   let summary = "Lower the operations from the linalg dialect into parallel "

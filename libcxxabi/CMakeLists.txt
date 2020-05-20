@@ -65,6 +65,12 @@ option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
 option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
   "Build libc++abi with an externalized threading library.
    This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON" OFF)
+option(LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST
+"Make dynamic_cast more forgiving when type_info's mistakenly have hidden \
+visibility, and thus multiple type_infos can exist for a single type. \
+When the dynamic_cast would normally fail, this option will cause the \
+library to try comparing the type_info names to see if they are equal \
+instead." OFF)
 
 # FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
 # programs to due undefined references to new/delete in libc++abi. Once this

@@ -95,6 +95,10 @@ static cl::opt<bool> DisableLoopAlignment(
   cl::desc("Do not align and prefetch loops"),
   cl::init(false));
 
+static cl::opt<bool> VGPRReserveforSGPRSpill(
+    "amdgpu-reserve-vgpr-for-sgpr-spill",
+    cl::desc("Allocates one VGPR for future SGPR Spill"), cl::init(true));
+
 static bool hasFP32Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().allFP32Denormals();
@@ -141,11 +145,20 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v5i32, &AMDGPU::SGPR_160RegClass);
   addRegisterClass(MVT::v5f32, &AMDGPU::VReg_160RegClass);
 
-  addRegisterClass(MVT::v8i32, &AMDGPU::SReg_256RegClass);
+  addRegisterClass(MVT::v8i32, &AMDGPU::SGPR_256RegClass);
   addRegisterClass(MVT::v8f32, &AMDGPU::VReg_256RegClass);
 
-  addRegisterClass(MVT::v16i32, &AMDGPU::SReg_512RegClass);
+  addRegisterClass(MVT::v4i64, &AMDGPU::SGPR_256RegClass);
+  addRegisterClass(MVT::v4f64, &AMDGPU::VReg_256RegClass);
+
+  addRegisterClass(MVT::v16i32, &AMDGPU::SGPR_512RegClass);
   addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
+
+  addRegisterClass(MVT::v8i64, &AMDGPU::SGPR_512RegClass);
+  addRegisterClass(MVT::v8f64, &AMDGPU::VReg_512RegClass);
+
+  addRegisterClass(MVT::v16i64, &AMDGPU::SGPR_1024RegClass);
+  addRegisterClass(MVT::v16f64, &AMDGPU::VReg_1024RegClass);
 
   if (Subtarget->has16BitInsts()) {
     addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
@@ -158,10 +171,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v4f16, &AMDGPU::SReg_64RegClass);
   }
 
-  if (Subtarget->hasMAIInsts()) {
-    addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
-    addRegisterClass(MVT::v32f32, &AMDGPU::VReg_1024RegClass);
-  }
+  addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
+  addRegisterClass(MVT::v32f32, &AMDGPU::VReg_1024RegClass);
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -229,6 +240,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
   setOperationAction(ISD::FP_ROUND, MVT::v2f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v4i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v4f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v8i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v8f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v16i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v16f32, Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i1, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i1, Custom);
@@ -265,7 +282,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // with > 4 elements.
   for (MVT VT : { MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32,
                   MVT::v2i64, MVT::v2f64, MVT::v4i16, MVT::v4f16,
-                  MVT::v32i32, MVT::v32f32 }) {
+                  MVT::v4i64, MVT::v4f64, MVT::v8i64, MVT::v8f64,
+                  MVT::v16i64, MVT::v16f64, MVT::v32i32, MVT::v32f32 }) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -307,6 +325,48 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
     AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v4i32);
+  }
+
+  for (MVT Vec64 : { MVT::v4i64, MVT::v4f64 }) {
+    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v8i32);
+
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v8i32);
+
+    setOperationAction(ISD::INSERT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::INSERT_VECTOR_ELT, Vec64, MVT::v8i32);
+
+    setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v8i32);
+  }
+
+  for (MVT Vec64 : { MVT::v8i64, MVT::v8f64 }) {
+    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v16i32);
+
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v16i32);
+
+    setOperationAction(ISD::INSERT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::INSERT_VECTOR_ELT, Vec64, MVT::v16i32);
+
+    setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v16i32);
+  }
+
+  for (MVT Vec64 : { MVT::v16i64, MVT::v16f64 }) {
+    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v32i32);
+
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v32i32);
+
+    setOperationAction(ISD::INSERT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::INSERT_VECTOR_ELT, Vec64, MVT::v32i32);
+
+    setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v32i32);
   }
 
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i32, Expand);
@@ -895,9 +955,8 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
 static EVT memVTFromImageData(Type *Ty, unsigned DMaskLanes) {
   assert(DMaskLanes != 0);
 
-  if (auto *VT = dyn_cast<VectorType>(Ty)) {
-    unsigned NumElts = std::min(DMaskLanes,
-                                static_cast<unsigned>(VT->getNumElements()));
+  if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    unsigned NumElts = std::min(DMaskLanes, VT->getNumElements());
     return EVT::getVectorVT(Ty->getContext(),
                             EVT::getEVT(VT->getElementType()),
                             NumElts);
@@ -1253,9 +1312,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // addressing modes, so treat them as having no offset like flat
     // instructions.
     return isLegalFlatAddressingMode(AM);
-  } else {
-    llvm_unreachable("unhandled address space");
   }
+
+  // Assume a user alias of global for unknown address spaces.
+  return isLegalGlobalAddressingMode(AM);
 }
 
 bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
@@ -3602,6 +3662,26 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   switch (MI.getOpcode()) {
+  case AMDGPU::S_UADDO_PSEUDO:
+  case AMDGPU::S_USUBO_PSEUDO: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    MachineOperand &Dest0 = MI.getOperand(0);
+    MachineOperand &Dest1 = MI.getOperand(1);
+    MachineOperand &Src0 = MI.getOperand(2);
+    MachineOperand &Src1 = MI.getOperand(3);
+
+    unsigned Opc = (MI.getOpcode() == AMDGPU::S_UADDO_PSEUDO)
+                       ? AMDGPU::S_ADD_I32
+                       : AMDGPU::S_SUB_I32;
+    BuildMI(*BB, MI, DL, TII->get(Opc), Dest0.getReg()).add(Src0).add(Src1);
+
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
+        .addImm(1)
+        .addImm(0);
+
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
@@ -3617,35 +3697,146 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
-     Src0, BoolRC, AMDGPU::sub0,
-     &AMDGPU::SReg_32RegClass);
-    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
-      Src0, BoolRC, AMDGPU::sub1,
-      &AMDGPU::SReg_32RegClass);
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
 
-    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
-      Src1, BoolRC, AMDGPU::sub0,
-      &AMDGPU::SReg_32RegClass);
-    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
-      Src1, BoolRC, AMDGPU::sub1,
-      &AMDGPU::SReg_32RegClass);
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
 
     unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
     unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
-      .add(Src0Sub0)
-      .add(Src1Sub0);
-    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
-      .add(Src0Sub1)
-      .add(Src1Sub1);
+    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
+    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-      .addReg(DestSub0)
-      .addImm(AMDGPU::sub0)
-      .addReg(DestSub1)
-      .addImm(AMDGPU::sub1);
+        .addReg(DestSub0)
+        .addImm(AMDGPU::sub0)
+        .addReg(DestSub1)
+        .addImm(AMDGPU::sub1);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::V_ADD_U64_PSEUDO:
+  case AMDGPU::V_SUB_U64_PSEUDO: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
+
+    const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    Register CarryReg = MRI.createVirtualRegister(CarryRC);
+    Register DeadCarryReg = MRI.createVirtualRegister(CarryRC);
+
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+    MachineOperand &Src1 = MI.getOperand(2);
+
+    const TargetRegisterClass *Src0RC = Src0.isReg()
+                                            ? MRI.getRegClass(Src0.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                            ? MRI.getRegClass(Src1.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegClass(Src0RC, AMDGPU::sub0);
+    const TargetRegisterClass *Src1SubRC =
+        TRI->getSubRegClass(Src1RC, AMDGPU::sub1);
+
+    MachineOperand SrcReg0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+    MachineOperand SrcReg1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+    MachineOperand SrcReg0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+    MachineOperand SrcReg1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
+    unsigned LoOpc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    MachineInstr *LoHalf = BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
+                               .addReg(CarryReg, RegState::Define)
+                               .add(SrcReg0Sub0)
+                               .add(SrcReg1Sub0)
+                               .addImm(0); // clamp bit
+
+    unsigned HiOpc = IsAdd ? AMDGPU::V_ADDC_U32_e64 : AMDGPU::V_SUBB_U32_e64;
+    MachineInstr *HiHalf =
+        BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+            .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
+            .add(SrcReg0Sub1)
+            .add(SrcReg1Sub1)
+            .addReg(CarryReg, RegState::Kill)
+            .addImm(0); // clamp bit
+
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+        .addReg(DestSub0)
+        .addImm(AMDGPU::sub0)
+        .addReg(DestSub1)
+        .addImm(AMDGPU::sub1);
+    TII->legalizeOperands(*LoHalf);
+    TII->legalizeOperands(*HiHalf);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::S_ADD_CO_PSEUDO:
+  case AMDGPU::S_SUB_CO_PSEUDO: {
+    // This pseudo has a chance to be selected
+    // only from uniform add/subcarry node. All the VGPR operands
+    // therefore assumed to be splat vectors.
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    MachineBasicBlock::iterator MII = MI;
+    const DebugLoc &DL = MI.getDebugLoc();
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(2);
+    MachineOperand &Src1 = MI.getOperand(3);
+    MachineOperand &Src2 = MI.getOperand(4);
+    unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO)
+                       ? AMDGPU::S_ADDC_U32
+                       : AMDGPU::S_SUBB_U32;
+    if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
+      Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
+          .addReg(Src0.getReg());
+      Src0.setReg(RegOp0);
+    }
+    if (Src1.isReg() && TRI->isVectorRegister(MRI, Src1.getReg())) {
+      Register RegOp1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp1)
+          .addReg(Src1.getReg());
+      Src1.setReg(RegOp1);
+    }
+    Register RegOp2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    if (TRI->isVectorRegister(MRI, Src2.getReg())) {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp2)
+          .addReg(Src2.getReg());
+      Src2.setReg(RegOp2);
+    }
+
+    if (TRI->getRegSizeInBits(*MRI.getRegClass(Src2.getReg())) == 64) {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
+          .addReg(Src2.getReg())
+          .addImm(0);
+    } else {
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMPK_LG_U32))
+          .addReg(Src2.getReg())
+          .addImm(0);
+    }
+
+    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg()).add(Src0).add(Src1);
     MI.eraseFromParent();
     return BB;
   }
@@ -3742,12 +3933,14 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::SI_INDIRECT_SRC_V4:
   case AMDGPU::SI_INDIRECT_SRC_V8:
   case AMDGPU::SI_INDIRECT_SRC_V16:
+  case AMDGPU::SI_INDIRECT_SRC_V32:
     return emitIndirectSrc(MI, *BB, *getSubtarget());
   case AMDGPU::SI_INDIRECT_DST_V1:
   case AMDGPU::SI_INDIRECT_DST_V2:
   case AMDGPU::SI_INDIRECT_DST_V4:
   case AMDGPU::SI_INDIRECT_DST_V8:
   case AMDGPU::SI_INDIRECT_DST_V16:
+  case AMDGPU::SI_INDIRECT_DST_V32:
     return emitIndirectDst(MI, *BB, *getSubtarget());
   case AMDGPU::SI_KILL_F32_COND_IMM_PSEUDO:
   case AMDGPU::SI_KILL_I1_PSEUDO:
@@ -4518,13 +4711,6 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
     Target = BR->getOperand(1);
   }
 
-  // FIXME: This changes the types of the intrinsics instead of introducing new
-  // nodes with the correct types.
-  // e.g. llvm.amdgcn.loop
-
-  // eg: i1,ch = llvm.amdgcn.loop t0, TargetConstant:i32<6271>, t3
-  // =>     t9: ch = llvm.amdgcn.loop t0, TargetConstant:i32<6271>, t3, BasicBlock:ch<bb1 0x7fee5286d088>
-
   unsigned CFNode = isCFIntrinsic(Intr);
   if (CFNode == 0) {
     // This is a uniform branch so we don't need to legalize.
@@ -4739,7 +4925,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
 
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned UserSGPR = Info->getQueuePtrUserSGPR();
+  Register UserSGPR = Info->getQueuePtrUserSGPR();
   assert(UserSGPR != AMDGPU::NoRegister);
 
   SDValue QueuePtr = CreateLiveInRegister(
@@ -4809,6 +4995,10 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
                          FlatNullPtr);
     }
   }
+
+  if (ASC->getDestAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
+      Src.getValueType() == MVT::i64)
+    return DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
   // global <-> flat are no-ops and never emitted.
 
@@ -5842,8 +6032,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_rsq_legacy:
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
-
-    return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
+    return SDValue();
   case Intrinsic::amdgcn_rcp_legacy:
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
@@ -8777,7 +8966,6 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::RCP_LEGACY:
-  case AMDGPUISD::RSQ_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::TRIG_PREOP:
   case AMDGPUISD::DIV_SCALE:
@@ -8882,6 +9070,11 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_fdot2:
+    case Intrinsic::amdgcn_rcp:
+    case Intrinsic::amdgcn_rsq:
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_rcp_legacy:
+    case Intrinsic::amdgcn_rsq_legacy:
       return true;
     default:
       break;
@@ -10068,10 +10261,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::FRACT:
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RCP_LEGACY:
-  case AMDGPUISD::RSQ_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::LDEXP: {
+    // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(0);
     if (Src.isUndef())
       return Src;
@@ -10581,89 +10774,50 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                MVT VT) const {
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
+    const unsigned BitWidth = VT.getSizeInBits();
     switch (Constraint[0]) {
     default:
       return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     case 's':
     case 'r':
-      switch (VT.getSizeInBits()) {
-      default:
-        return std::make_pair(0U, nullptr);
-      case 32:
+      switch (BitWidth) {
       case 16:
         RC = &AMDGPU::SReg_32RegClass;
         break;
       case 64:
         RC = &AMDGPU::SGPR_64RegClass;
         break;
-      case 96:
-        RC = &AMDGPU::SReg_96RegClass;
-        break;
-      case 128:
-        RC = &AMDGPU::SGPR_128RegClass;
-        break;
-      case 160:
-        RC = &AMDGPU::SReg_160RegClass;
-        break;
-      case 256:
-        RC = &AMDGPU::SReg_256RegClass;
-        break;
-      case 512:
-        RC = &AMDGPU::SReg_512RegClass;
+      default:
+        RC = SIRegisterInfo::getSGPRClassForBitWidth(BitWidth);
+        if (!RC)
+          return std::make_pair(0U, nullptr);
         break;
       }
       break;
     case 'v':
-      switch (VT.getSizeInBits()) {
-      default:
-        return std::make_pair(0U, nullptr);
-      case 32:
+      switch (BitWidth) {
       case 16:
         RC = &AMDGPU::VGPR_32RegClass;
         break;
-      case 64:
-        RC = &AMDGPU::VReg_64RegClass;
-        break;
-      case 96:
-        RC = &AMDGPU::VReg_96RegClass;
-        break;
-      case 128:
-        RC = &AMDGPU::VReg_128RegClass;
-        break;
-      case 160:
-        RC = &AMDGPU::VReg_160RegClass;
-        break;
-      case 256:
-        RC = &AMDGPU::VReg_256RegClass;
-        break;
-      case 512:
-        RC = &AMDGPU::VReg_512RegClass;
+      default:
+        RC = SIRegisterInfo::getVGPRClassForBitWidth(BitWidth);
+        if (!RC)
+          return std::make_pair(0U, nullptr);
         break;
       }
       break;
     case 'a':
       if (!Subtarget->hasMAIInsts())
         break;
-      switch (VT.getSizeInBits()) {
-      default:
-        return std::make_pair(0U, nullptr);
-      case 32:
+      switch (BitWidth) {
       case 16:
         RC = &AMDGPU::AGPR_32RegClass;
         break;
-      case 64:
-        RC = &AMDGPU::AReg_64RegClass;
+      default:
+        RC = SIRegisterInfo::getAGPRClassForBitWidth(BitWidth);
+        if (!RC)
+          return std::make_pair(0U, nullptr);
         break;
-      case 128:
-        RC = &AMDGPU::AReg_128RegClass;
-        break;
-      case 512:
-        RC = &AMDGPU::AReg_512RegClass;
-        break;
-      case 1024:
-        RC = &AMDGPU::AReg_1024RegClass;
-        // v32 types are not legal but we support them here.
-        return std::make_pair(0U, RC);
       }
       break;
     }
@@ -10758,6 +10912,13 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   }
 
   TargetLoweringBase::finalizeLowering(MF);
+
+  // Allocate a VGPR for future SGPR Spill if
+  // "amdgpu-reserve-vgpr-for-sgpr-spill" option is used
+  // FIXME: We won't need this hack if we split SGPR allocation from VGPR
+  if (VGPRReserveforSGPRSpill && !Info->VGPRReservedForSGPRSpill &&
+      !Info->isEntryFunction() && MF.getFrameInfo().hasStackObjects())
+    Info->reserveVGPRforSGPRSpills(MF);
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
@@ -11045,7 +11206,7 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
 bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
                                                const Value *V) const {
   if (const CallInst *CI = dyn_cast<CallInst>(V)) {
-    if (isa<InlineAsm>(CI->getCalledValue())) {
+    if (CI->isInlineAsm()) {
       // FIXME: This cannot give a correct answer. This should only trigger in
       // the case where inline asm returns mixed SGPR and VGPR results, used
       // outside the defining block. We don't have a specific result to

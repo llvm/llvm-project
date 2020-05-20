@@ -15,11 +15,13 @@
 #define LLVM_SUPPORT_ARMTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include <vector>
 
 namespace llvm {
+
+class Triple;
+
 namespace ARM {
 
 // Arch extension modifiers for CPUs.
@@ -47,14 +49,15 @@ enum ArchExtKind : uint64_t {
   AEK_FP_DP   =     1 << 18,
   AEK_LOB     =     1 << 19,
   AEK_BF16    =     1 << 20,
-  AEK_CDECP0 =      1 << 21,
-  AEK_CDECP1 =      1 << 22,
-  AEK_CDECP2 =      1 << 23,
-  AEK_CDECP3 =      1 << 24,
-  AEK_CDECP4 =      1 << 25,
-  AEK_CDECP5 =      1 << 26,
-  AEK_CDECP6 =      1 << 27,
-  AEK_CDECP7 =      1 << 28,
+  AEK_I8MM    =     1 << 21,
+  AEK_CDECP0 =      1 << 22,
+  AEK_CDECP1 =      1 << 23,
+  AEK_CDECP2 =      1 << 24,
+  AEK_CDECP3 =      1 << 25,
+  AEK_CDECP4 =      1 << 26,
+  AEK_CDECP5 =      1 << 27,
+  AEK_CDECP6 =      1 << 28,
+  AEK_CDECP7 =      1 << 29,
 
   // Unsupported extensions.
   AEK_OS       =    1ULL << 59,

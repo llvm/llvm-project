@@ -18,13 +18,14 @@
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
-#include "Threading.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
+#include "support/Threading.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -59,7 +60,9 @@ MATCHER_P(Labeled, Label, "") {
 }
 MATCHER_P(SigHelpLabeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.Kind == K; }
-MATCHER_P(Doc, D, "") { return arg.Documentation == D; }
+MATCHER_P(Doc, D, "") {
+  return arg.Documentation && arg.Documentation->asPlainText() == D;
+}
 MATCHER_P(ReturnType, D, "") { return arg.ReturnType == D; }
 MATCHER_P(HasInclude, IncludeHeader, "") {
   return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader;
@@ -83,7 +86,7 @@ Matcher<const std::vector<CodeCompletion> &> Has(std::string Name,
                                                  CompletionItemKind K) {
   return Contains(AllOf(Named(std::move(Name)), Kind(K)));
 }
-MATCHER(IsDocumented, "") { return !arg.Documentation.empty(); }
+MATCHER(IsDocumented, "") { return arg.Documentation.hasValue(); }
 MATCHER(Deprecated, "") { return arg.Deprecated; }
 
 std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
@@ -842,7 +845,7 @@ TEST(CompletionTest, Documentation) {
       Results.Completions,
       Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
   EXPECT_THAT(Results.Completions,
-              Contains(AllOf(Named("baz"), Doc("Multi-line\nblock comment"))));
+              Contains(AllOf(Named("baz"), Doc("Multi-line block comment"))));
 }
 
 TEST(CompletionTest, CommentsFromSystemHeaders) {
@@ -1186,6 +1189,31 @@ TEST(SignatureHelpTest, OpeningParen) {
   }
 }
 
+TEST(SignatureHelpTest, StalePreamble) {
+  TestTU TU;
+  TU.Code = "";
+  IgnoreDiagnostics Diags;
+  auto Inputs = TU.inputs();
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI);
+  auto EmptyPreamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                                     /*InMemory=*/true, /*Callback=*/nullptr);
+  ASSERT_TRUE(EmptyPreamble);
+
+  TU.AdditionalFiles["a.h"] = "int foo(int x);";
+  const Annotations Test(R"cpp(
+    #include "a.h"
+    void bar() { foo(^2); })cpp");
+  TU.Code = Test.code().str();
+  Inputs = TU.inputs();
+  auto Results =
+      signatureHelp(testPath(TU.Filename), Inputs.CompileCommand,
+                    *EmptyPreamble, TU.Code, Test.point(), Inputs.FS, nullptr);
+  EXPECT_THAT(Results.signatures, ElementsAre(Sig("foo([[int x]]) -> int")));
+  EXPECT_EQ(0, Results.activeSignature);
+  EXPECT_EQ(0, Results.activeParameter);
+}
+
 class IndexRequestCollector : public SymbolIndex {
 public:
   bool
@@ -1481,8 +1509,10 @@ TEST(CompletionTest, OverloadBundling) {
   EXPECT_EQ(A.Kind, CompletionItemKind::Method);
   EXPECT_EQ(A.ReturnType, "int"); // All overloads return int.
   // For now we just return one of the doc strings arbitrarily.
-  EXPECT_THAT(A.Documentation, AnyOf(HasSubstr("Overload with int"),
-                                     HasSubstr("Overload with bool")));
+  ASSERT_TRUE(A.Documentation);
+  EXPECT_THAT(
+      A.Documentation->asPlainText(),
+      AnyOf(HasSubstr("Overload with int"), HasSubstr("Overload with bool")));
   EXPECT_EQ(A.SnippetSuffix, "($0)");
 }
 
@@ -1616,7 +1646,8 @@ TEST(CompletionTest, Render) {
   C.ReturnType = "int";
   C.RequiredQualifier = "Foo::";
   C.Scope = "ns::Foo::";
-  C.Documentation = "This is x().";
+  C.Documentation.emplace();
+  C.Documentation->addParagraph().appendText("This is ").appendCode("x()");
   C.Includes.emplace_back();
   auto &Include = C.Includes.back();
   Include.Header = "\"foo.h\"";
@@ -1635,8 +1666,8 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertText, "Foo::x");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
   EXPECT_EQ(R.filterText, "x");
-  EXPECT_EQ(R.detail, "int\n\"foo.h\"");
-  EXPECT_EQ(R.documentation, "This is x().");
+  EXPECT_EQ(R.detail, "int");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
@@ -1658,11 +1689,16 @@ TEST(CompletionTest, Render) {
 
   C.BundleSize = 2;
   R = C.render(Opts);
-  EXPECT_EQ(R.detail, "[2 overloads]\n\"foo.h\"");
+  EXPECT_EQ(R.detail, "[2 overloads]");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
 
   C.Deprecated = true;
   R = C.render(Opts);
   EXPECT_TRUE(R.deprecated);
+
+  Opts.DocumentationFormat = MarkupKind::Markdown;
+  R = C.render(Opts);
+  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`  \nThis is `x()`");
 }
 
 TEST(CompletionTest, IgnoreRecoveryResults) {
@@ -2791,6 +2827,34 @@ TEST(NoCompileCompletionTest, WithIndex) {
       Syms, Opts);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(Qualifier(""), Scope("a::"))));
+}
+
+TEST(AllowImplicitCompletion, All) {
+  const char *Yes[] = {
+      "foo.^bar",
+      "foo->^bar",
+      "foo::^bar",
+      "  #  include <^foo.h>",
+      "#import <foo/^bar.h>",
+      "#include_next \"^",
+  };
+  const char *No[] = {
+      "foo>^bar",
+      "foo:^bar",
+      "foo\n^bar",
+      "#include <foo.h> //^",
+      "#include \"foo.h\"^",
+      "#error <^",
+      "#<^",
+  };
+  for (const char *Test : Yes) {
+    llvm::Annotations A(Test);
+    EXPECT_TRUE(allowImplicitCompletion(A.code(), A.point())) << Test;
+  }
+  for (const char *Test : No) {
+    llvm::Annotations A(Test);
+    EXPECT_FALSE(allowImplicitCompletion(A.code(), A.point())) << Test;
+  }
 }
 
 } // namespace

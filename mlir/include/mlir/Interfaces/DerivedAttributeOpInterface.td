@@ -31,6 +31,14 @@ def DerivedAttributeOpInterface : OpInterface<"DerivedAttributeOpInterface"> {
       /*methodName=*/"isDerivedAttribute",
       /*args=*/(ins "StringRef":$name)
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Materializes the derived attributes. Returns null attribute where
+        unable to materialize a derived attribute as attribute.
+      }],
+      /*retTy=*/"DictionaryAttr",
+      /*methodName=*/"materializeDerivedAttributes"
+    >,
   ];
 }
 

@@ -72,6 +72,7 @@ static_library("Utils") {
     "SymbolRewriter.cpp",
     "UnifyFunctionExitNodes.cpp",
     "UnifyLoopExits.cpp",
+    "UniqueInternalLinkageNames.cpp",
     "Utils.cpp",
     "VNCoercion.cpp",
     "ValueMapper.cpp",

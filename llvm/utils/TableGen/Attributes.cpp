@@ -39,23 +39,23 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
   OS << "#define ATTRIBUTE_ALL(FIRST, SECOND)\n";
   OS << "#endif\n\n";
 
-  auto Emiter = [&](StringRef KindName, StringRef MacroName) {
-    std::vector<Record *> Attrs = Records.getAllDerivedDefinitions(KindName);
-
+  auto Emit = [&](ArrayRef<StringRef> KindNames, StringRef MacroName) {
     OS << "#ifndef " << MacroName << "\n";
-    OS << "#define " << MacroName << "(FIRST, SECOND) ATTRIBUTE_ALL(FIRST, "
-          "SECOND)\n";
+    OS << "#define " << MacroName
+       << "(FIRST, SECOND) ATTRIBUTE_ALL(FIRST, SECOND)\n";
     OS << "#endif\n\n";
-
-    for (auto A : Attrs) {
-      OS << "" << MacroName << "(" << A->getName() << ","
-         << A->getValueAsString("AttrString") << ")\n";
+    for (StringRef KindName : KindNames) {
+      for (auto A : Records.getAllDerivedDefinitions(KindName)) {
+        OS << MacroName << "(" << A->getName() << ","
+           << A->getValueAsString("AttrString") << ")\n";
+      }
     }
     OS << "#undef " << MacroName << "\n\n";
   };
 
-  Emiter("EnumAttr", "ATTRIBUTE_ENUM");
-  Emiter("StrBoolAttr", "ATTRIBUTE_STRBOOL");
+  // Emit attribute enums in the same order llvm::Attribute::operator< expects.
+  Emit({"EnumAttr", "TypeAttr", "IntAttr"}, "ATTRIBUTE_ENUM");
+  Emit({"StrBoolAttr"}, "ATTRIBUTE_STRBOOL");
 
   OS << "#undef ATTRIBUTE_ALL\n";
   OS << "#endif\n";

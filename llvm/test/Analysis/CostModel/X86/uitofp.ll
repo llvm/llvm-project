@@ -109,7 +109,7 @@ define i32 @uitofp_i64_double() {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_i64_f64 = uitofp i64 undef to double
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cvt_v2i64_v2f64 = uitofp <2 x i64> undef to <2 x double>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %cvt_v4i64_v4f64 = uitofp <4 x i64> undef to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %cvt_v8i64_v8f64 = uitofp <8 x i64> undef to <8 x double>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %cvt_v8i64_v8f64 = uitofp <8 x i64> undef to <8 x double>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'uitofp_i64_double'
@@ -136,6 +136,7 @@ define i32 @uitofp_i64_double() {
 define i32 @uitofp_i8_float() {
 ; SSE-LABEL: 'uitofp_i8_float'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i8_f32 = uitofp i8 undef to float
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i8_v2f32 = uitofp <2 x i8> undef to <2 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v4i8_v4f32 = uitofp <4 x i8> undef to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v8i8_v8f32 = uitofp <8 x i8> undef to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v16i8_v16f32 = uitofp <16 x i8> undef to <16 x float>
@@ -143,6 +144,7 @@ define i32 @uitofp_i8_float() {
 ;
 ; AVX-LABEL: 'uitofp_i8_float'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i8_f32 = uitofp i8 undef to float
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i8_v2f32 = uitofp <2 x i8> undef to <2 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v4i8_v4f32 = uitofp <4 x i8> undef to <4 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cvt_v8i8_v8f32 = uitofp <8 x i8> undef to <8 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %cvt_v16i8_v16f32 = uitofp <16 x i8> undef to <16 x float>
@@ -150,12 +152,14 @@ define i32 @uitofp_i8_float() {
 ;
 ; AVX512-LABEL: 'uitofp_i8_float'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i8_f32 = uitofp i8 undef to float
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i8_v2f32 = uitofp <2 x i8> undef to <2 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v4i8_v4f32 = uitofp <4 x i8> undef to <4 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v8i8_v8f32 = uitofp <8 x i8> undef to <8 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v16i8_v16f32 = uitofp <16 x i8> undef to <16 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %cvt_i8_f32 = uitofp i8 undef to float
+  %cvt_v2i8_v2f32 = uitofp <2 x i8> undef to <2 x float>
   %cvt_v4i8_v4f32 = uitofp <4 x i8> undef to <4 x float>
   %cvt_v8i8_v8f32 = uitofp <8 x i8> undef to <8 x float>
   %cvt_v16i8_v16f32 = uitofp <16 x i8> undef to <16 x float>
@@ -165,6 +169,7 @@ define i32 @uitofp_i8_float() {
 define i32 @uitofp_i16_float() {
 ; SSE-LABEL: 'uitofp_i16_float'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i16_f32 = uitofp i16 undef to float
+; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %cvt_v2i16_v2f32 = uitofp <2 x i16> undef to <2 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %cvt_v4i16_v4f32 = uitofp <4 x i16> undef to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %cvt_v8i16_v8f32 = uitofp <8 x i16> undef to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %cvt_v16i16_v16f32 = uitofp <16 x i16> undef to <16 x float>
@@ -172,6 +177,7 @@ define i32 @uitofp_i16_float() {
 ;
 ; AVX-LABEL: 'uitofp_i16_float'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i16_f32 = uitofp i16 undef to float
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i16_v2f32 = uitofp <2 x i16> undef to <2 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v4i16_v4f32 = uitofp <4 x i16> undef to <4 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cvt_v8i16_v8f32 = uitofp <8 x i16> undef to <8 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %cvt_v16i16_v16f32 = uitofp <16 x i16> undef to <16 x float>
@@ -179,12 +185,14 @@ define i32 @uitofp_i16_float() {
 ;
 ; AVX512-LABEL: 'uitofp_i16_float'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i16_f32 = uitofp i16 undef to float
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i16_v2f32 = uitofp <2 x i16> undef to <2 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v4i16_v4f32 = uitofp <4 x i16> undef to <4 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v8i16_v8f32 = uitofp <8 x i16> undef to <8 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v16i16_v16f32 = uitofp <16 x i16> undef to <16 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %cvt_i16_f32 = uitofp i16 undef to float
+  %cvt_v2i16_v2f32 = uitofp <2 x i16> undef to <2 x float>
   %cvt_v4i16_v4f32 = uitofp <4 x i16> undef to <4 x float>
   %cvt_v8i16_v8f32 = uitofp <8 x i16> undef to <8 x float>
   %cvt_v16i16_v16f32 = uitofp <16 x i16> undef to <16 x float>
@@ -194,6 +202,7 @@ define i32 @uitofp_i16_float() {
 define i32 @uitofp_i32_float() {
 ; SSE-LABEL: 'uitofp_i32_float'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f32 = uitofp i32 undef to float
+; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i32_v2f32 = uitofp <2 x i32> undef to <2 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v4i32_v4f32 = uitofp <4 x i32> undef to <4 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v8i32_v8f32 = uitofp <8 x i32> undef to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
@@ -201,20 +210,23 @@ define i32 @uitofp_i32_float() {
 ;
 ; AVX1-LABEL: 'uitofp_i32_float'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f32 = uitofp i32 undef to float
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i32_v2f32 = uitofp <2 x i32> undef to <2 x float>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %cvt_v4i32_v4f32 = uitofp <4 x i32> undef to <4 x float>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %cvt_v8i32_v8f32 = uitofp <8 x i32> undef to <8 x float>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'uitofp_i32_float'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f32 = uitofp i32 undef to float
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i32_v2f32 = uitofp <2 x i32> undef to <2 x float>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %cvt_v4i32_v4f32 = uitofp <4 x i32> undef to <4 x float>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v8i32_v8f32 = uitofp <8 x i32> undef to <8 x float>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'uitofp_i32_float'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f32 = uitofp i32 undef to float
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v2i32_v2f32 = uitofp <2 x i32> undef to <2 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v4i32_v4f32 = uitofp <4 x i32> undef to <4 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v8i32_v8f32 = uitofp <8 x i32> undef to <8 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
@@ -222,12 +234,14 @@ define i32 @uitofp_i32_float() {
 ;
 ; BTVER2-LABEL: 'uitofp_i32_float'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f32 = uitofp i32 undef to float
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i32_v2f32 = uitofp <2 x i32> undef to <2 x float>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %cvt_v4i32_v4f32 = uitofp <4 x i32> undef to <4 x float>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %cvt_v8i32_v8f32 = uitofp <8 x i32> undef to <8 x float>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %cvt_i32_f32 = uitofp i32 undef to float
+  %cvt_v2i32_v2f32 = uitofp <2 x i32> undef to <2 x float>
   %cvt_v4i32_v4f32 = uitofp <4 x i32> undef to <4 x float>
   %cvt_v8i32_v8f32 = uitofp <8 x i32> undef to <8 x float>
   %cvt_v16i32_v16f32 = uitofp <16 x i32> undef to <16 x float>
@@ -248,7 +262,7 @@ define i32 @uitofp_i64_float() {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %cvt_v2i64_v2f32 = uitofp <2 x i64> undef to <2 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %cvt_v4i64_v4f32 = uitofp <4 x i64> undef to <4 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %cvt_v8i64_v8f32 = uitofp <8 x i64> undef to <8 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 91 for instruction: %cvt_v16i64_v16f32 = uitofp <16 x i64> undef to <16 x float>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %cvt_v16i64_v16f32 = uitofp <16 x i64> undef to <16 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'uitofp_i64_float'

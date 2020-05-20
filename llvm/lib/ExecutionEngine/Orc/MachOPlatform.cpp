@@ -271,8 +271,8 @@ std::vector<JITDylib *> MachOPlatform::getDFSLinkOrder(JITDylib &JD) {
       continue;
     Visited.insert(NextJD);
     Result.push_back(NextJD);
-    NextJD->withSearchOrderDo([&](const JITDylibSearchOrder &SO) {
-      for (auto &KV : SO)
+    NextJD->withLinkOrderDo([&](const JITDylibSearchOrder &LO) {
+      for (auto &KV : LO)
         WorkStack.push_back(KV.first);
     });
   }

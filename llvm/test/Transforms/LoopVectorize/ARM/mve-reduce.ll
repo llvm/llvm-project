@@ -1,7 +1,7 @@
 ; RUN: opt -loop-vectorize < %s -S -o - | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8.1m.main-arm-none-eabi"
+target triple = "thumbv8.1m.main-none-none-eabi"
 
 ; CHECK-LABEL: check4
 ; CHECK: call i32 @llvm.experimental.vector.reduce.add.v4i32

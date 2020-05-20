@@ -1,4 +1,4 @@
-//===-- VOP1Instructions.td - Vector Instruction Defintions ---------------===//
+//===-- VOP1Instructions.td - Vector Instruction Definitions --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -100,8 +100,13 @@ class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
 
 multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag> {
-  def _e32 : VOP1_Pseudo <opName, P>;
-  def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
+  // We only want to set this on the basic, non-SDWA or DPP forms.
+  defvar should_mov_imm = !eq(opName, "v_mov_b32");
+
+  let isMoveImm = should_mov_imm in {
+    def _e32 : VOP1_Pseudo <opName, P>;
+    def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
+  }
 
   foreach _ = BoolToList<P.HasExtSDWA>.ret in
     def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
@@ -144,7 +149,7 @@ let VOPAsmPrefer32Bit = 1 in {
 defm V_NOP : VOP1Inst <"v_nop", VOP_NONE>;
 }
 
-let isMoveImm = 1, isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOP_I32_I32>;
 } // End isMoveImm = 1
 
@@ -325,7 +330,7 @@ let SubtargetPredicate = isGFX6GFX7 in {
     defm V_RSQ_CLAMP_F32 :
       VOP1Inst<"v_rsq_clamp_f32", VOP_F32_F32, AMDGPUrsq_clamp>;
     defm V_RSQ_LEGACY_F32 :
-      VOP1Inst<"v_rsq_legacy_f32", VOP_F32_F32, AMDGPUrsq_legacy>;
+      VOP1Inst<"v_rsq_legacy_f32", VOP_F32_F32, int_amdgcn_rsq_legacy>;
   } // End SchedRW = [WriteQuarterRate32]
 
   let SchedRW = [WriteDouble] in {

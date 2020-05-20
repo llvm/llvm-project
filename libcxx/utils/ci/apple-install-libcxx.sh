@@ -10,33 +10,38 @@
 set -e
 
 PROGNAME="$(basename "${0}")"
+
+function error() { printf "error: %s\n" "$*"; exit 1; }
+
 function usage() {
 cat <<EOF
 Usage:
-${PROGNAME} [-h|--help] --llvm-root <DIR> --build-dir <DIR> --install-dir <DIR> --symbols-dir <DIR> --sdk <SDK> --architectures <architectures...> --version <X.Y.Z> --cache <PATH>
+${PROGNAME} [options]
 
---llvm-root     Full path to the root of the LLVM monorepo. Only the libcxx
-                and libcxxabi directories are required.
+[-h|--help]                  Display this help and exit.
 
---build-dir     Directory to use for building. This will contain intermediate
-                build products.
+--llvm-root <DIR>            Full path to the root of the LLVM monorepo. Only the libcxx
+                             and libcxxabi directories are required.
 
---install-dir   Directory to install the library to.
+--build-dir <DIR>            Full path to the directory to use for building. This will
+                             contain intermediate build products.
 
---symbols-dir   Directory to install the .dSYM bundle to.
+--install-dir <DIR>          Full path to the directory to install the library to.
 
---sdk           SDK used for building the library. This represents the target
-                platform that the library will run on. You can get a list of
-                SDKs with \`xcodebuild -showsdks\`.
+--symbols-dir <DIR>          Full path to the directory to install the .dSYM bundle to.
 
---architectures A whitespace separated list of architectures to build for.
-                The library will be built for each architecture independently,
-                and a universal binary containing all architectures will be
-                created from that.
+--sdk <SDK>                  SDK used for building the library. This represents
+                             the target platform that the library will run on.
+                             You can get a list of SDKs with \`xcodebuild -showsdks\`.
 
---version       The version of the library to encode in the dylib.
+--architectures "<arch>..."  A whitespace separated list of architectures to build for.
+                             The library will be built for each architecture independently,
+                             and a universal binary containing all architectures will be
+                             created from that.
 
---cache         The CMake cache to use to control how the library gets built.
+--version X[.Y[.Z]]          The version of the library to encode in the dylib.
+
+--cache <PATH>               The CMake cache to use to control how the library gets built.
 EOF
 }
 
@@ -67,15 +72,8 @@ while [[ $# -gt 0 ]]; do
             shift; shift
             ;;
         --architectures)
-            architectures=""
-            shift
-            while [[ $# -gt 0 ]]; do
-                if [[ "${1}" == "-"* ]]; then
-                    break
-                fi
-                architectures+=" ${1}"
-                shift
-            done
+            architectures="${2}"
+            shift; shift
             ;;
         --version)
             version="${2}"
@@ -86,19 +84,16 @@ while [[ $# -gt 0 ]]; do
             shift; shift
             ;;
         *)
-            echo "Unknown argument '${1}'"
-            exit 1
+            error "Unknown argument '${1}'"
             ;;
     esac
 done
 
 for arg in llvm_root build_dir symbols_dir install_dir sdk architectures version cache; do
     if [ -z ${!arg+x} ]; then
-        echo "Missing required argument '--${arg//_/-}'"
-        exit 1
+        error "Missing required argument '--${arg//_/-}'"
     elif [ "${!arg}" == "" ]; then
-        echo "Argument to --${arg//_/-} must not be empty"
-        exit 1
+        error "Argument to --${arg//_/-} must not be empty"
     fi
 done
 

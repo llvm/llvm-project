@@ -1642,7 +1642,7 @@ def : Mips16Pat<(select (i32 (setle CPU16Regs:$a, CPU16Regs:$b)),
                  CPU16Regs:$b, CPU16Regs:$a)>;
 
 //
-// unnsigned
+// unsigned
 // x = (a <= b)? x : y
 //
 // if  (b < a) x = y

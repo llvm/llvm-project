@@ -1,5 +1,5 @@
 REQUIRES: zlib
-; RUN: llvm-profdata merge -sample -extbinary -use-md5 -compress-all-sections -partial-profile -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.1.output
+; RUN: llvm-profdata merge -sample -extbinary -use-md5 -compress-all-sections -gen-partial-profile -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.1.output
 ; RUN: wc -c < %t.1.output > %t.txt
 ; RUN: llvm-profdata show -sample -show-sec-info-only %t.1.output >> %t.txt
 ; RUN: FileCheck %s --input-file=%t.txt

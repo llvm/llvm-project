@@ -31,6 +31,8 @@
 
 namespace llvm {
 
+class LoopVectorizationLegality;
+class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 
 /// VPlan-based builder utility analogous to IRBuilder.
@@ -239,7 +241,7 @@ public:
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.
-  Optional<VectorizationFactor> plan(unsigned UserVF);
+  Optional<VectorizationFactor> plan(unsigned UserVF, unsigned UserIC);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.

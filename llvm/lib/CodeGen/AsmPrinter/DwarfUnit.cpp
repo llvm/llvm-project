@@ -1128,6 +1128,11 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
     addString(MDie, dwarf::DW_AT_LLVM_include_path, M->getIncludePath());
   if (!M->getAPINotesFile().empty())
     addString(MDie, dwarf::DW_AT_LLVM_apinotes, M->getAPINotesFile());
+  if (M->getFile())
+    addUInt(MDie, dwarf::DW_AT_decl_file, None,
+            getOrCreateSourceID(M->getFile()));
+  if (M->getLineNo())
+    addUInt(MDie, dwarf::DW_AT_decl_line, None, M->getLineNo());
 
   return &MDie;
 }
@@ -1409,6 +1414,17 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
               CTy->getSizeInBits() / CHAR_BIT);
   }
 
+  if (DIVariable *Var = CTy->getDataLocation()) {
+    if (auto *VarDIE = getDIE(Var))
+      addDIEEntry(Buffer, dwarf::DW_AT_data_location, *VarDIE);
+  } else if (DIExpression *Expr = CTy->getDataLocationExp()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+    DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.addExpression(Expr);
+    addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
+  }
+
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 
@@ -1449,8 +1465,7 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       DIE &Enumerator = createAndAddDIE(dwarf::DW_TAG_enumerator, Buffer);
       StringRef Name = Enum->getName();
       addString(Enumerator, dwarf::DW_AT_name, Name);
-      auto Value = static_cast<uint64_t>(Enum->getValue());
-      addConstantValue(Enumerator, IsUnsigned, Value);
+      addConstantValue(Enumerator, Enum->getValue(), IsUnsigned);
       if (IndexEnumerators)
         addGlobalName(Name, Enumerator, Context);
     }

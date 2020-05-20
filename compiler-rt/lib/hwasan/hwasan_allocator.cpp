@@ -363,7 +363,7 @@ int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
     // OOM error is already taken care of by HwasanAllocate.
     return errno_ENOMEM;
   CHECK(IsAligned((uptr)ptr, alignment));
-  *memptr = ptr;
+  *(void **)UntagPtr(memptr) = ptr;
   return 0;
 }
 

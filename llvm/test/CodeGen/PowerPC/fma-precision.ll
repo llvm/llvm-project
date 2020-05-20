@@ -11,10 +11,10 @@ define double @fsub1(double %a, double %b, double %c, double %d)  {
 ; CHECK-NEXT:    xsmuldp 1, 0, 1
 ; CHECK-NEXT:    blr
 entry:
-  %mul = fmul fast double %b, %a
-  %mul1 = fmul fast double %d, %c
-  %sub = fsub fast double %mul, %mul1
-  %mul3 = fmul fast double %mul, %sub
+  %mul = fmul reassoc double %b, %a
+  %mul1 = fmul reassoc double %d, %c
+  %sub = fsub reassoc double %mul, %mul1
+  %mul3 = fmul reassoc double %mul, %sub
   ret double %mul3
 }
 
@@ -28,10 +28,10 @@ define double @fsub2(double %a, double %b, double %c, double %d)  {
 ; CHECK-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %mul = fmul fast double %b, %a
-  %mul1 = fmul fast double %d, %c
-  %sub = fsub fast double %mul, %mul1
-  %mul3 = fmul fast double %mul1, %sub
+  %mul = fmul reassoc double %b, %a
+  %mul1 = fmul reassoc double %d, %c
+  %sub = fsub reassoc double %mul, %mul1
+  %mul3 = fmul reassoc double %mul1, %sub
   ret double %mul3
 }
 
@@ -44,9 +44,9 @@ define double @fsub3(double %a, double %b, double %c, double %d)  {
 ; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %mul = fmul fast double %b, %a
-  %mul1 = fmul fast double %d, %c
-  %sub = fsub fast double %mul, %mul1
+  %mul = fmul reassoc double %b, %a
+  %mul1 = fmul reassoc double %d, %c
+  %sub = fsub reassoc double %mul, %mul1
   ret double %sub
 }
 
@@ -60,10 +60,10 @@ define double @fadd1(double %a, double %b, double %c, double %d)  {
 ; CHECK-NEXT:    xsmuldp 1, 0, 1
 ; CHECK-NEXT:    blr
 entry:
-  %mul = fmul fast double %b, %a
-  %mul1 = fmul fast double %d, %c
-  %add = fadd fast double %mul1, %mul
-  %mul3 = fmul fast double %mul, %add
+  %mul = fmul reassoc double %b, %a
+  %mul1 = fmul reassoc double %d, %c
+  %add = fadd reassoc double %mul1, %mul
+  %mul3 = fmul reassoc double %mul, %add
   ret double %mul3
 }
 
@@ -77,10 +77,10 @@ define double @fadd2(double %a, double %b, double %c, double %d)  {
 ; CHECK-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %mul = fmul fast double %b, %a
-  %mul1 = fmul fast double %d, %c
-  %add = fadd fast double %mul1, %mul
-  %mul3 = fmul fast double %mul1, %add
+  %mul = fmul reassoc double %b, %a
+  %mul1 = fmul reassoc double %d, %c
+  %add = fadd reassoc double %mul1, %mul
+  %mul3 = fmul reassoc double %mul1, %add
   ret double %mul3
 }
 
@@ -92,9 +92,9 @@ define double @fadd3(double %a, double %b, double %c, double %d)  {
 ; CHECK-NEXT:    xsmaddadp 1, 4, 3
 ; CHECK-NEXT:    blr
 entry:
-  %mul = fmul fast double %b, %a
-  %mul1 = fmul fast double %d, %c
-  %add = fadd fast double %mul1, %mul
+  %mul = fmul reassoc double %b, %a
+  %mul1 = fmul reassoc double %d, %c
+  %add = fadd reassoc double %mul1, %mul
   ret double %add
 }
 
@@ -108,12 +108,12 @@ define double @fma_multi_uses1(double %a, double %b, double %c, double %d, doubl
 ; CHECK-NEXT:    xsnmsubadp 1, 3, 4
 ; CHECK-NEXT:    stfd 0, 0(9)
 ; CHECK-NEXT:    blr
-  %ab = fmul fast double %a, %b
-  %cd = fmul fast double %c, %d
+  %ab = fmul reassoc double %a, %b
+  %cd = fmul reassoc double %c, %d
   store double %ab, double* %p1 ; extra use of %ab
   store double %ab, double* %p2 ; another extra use of %ab
   store double %cd, double* %p3 ; extra use of %cd
-  %r = fsub fast double %ab, %cd
+  %r = fsub reassoc double %ab, %cd
   ret double %r
 }
 
@@ -128,12 +128,12 @@ define double @fma_multi_uses2(double %a, double %b, double %c, double %d, doubl
 ; CHECK-NEXT:    xsmsubadp 0, 1, 2
 ; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
-  %ab = fmul fast double %a, %b
-  %cd = fmul fast double %c, %d
+  %ab = fmul reassoc double %a, %b
+  %cd = fmul reassoc double %c, %d
   store double %ab, double* %p1 ; extra use of %ab
   store double %cd, double* %p2 ; extra use of %cd
   store double %cd, double* %p3 ; another extra use of %cd
-  %r = fsub fast double %ab, %cd
+  %r = fsub reassoc double %ab, %cd
   ret double %r
 }
 
@@ -150,14 +150,14 @@ define double @fma_multi_uses3(double %a, double %b, double %c, double %d, doubl
 ; CHECK-NEXT:    xsnmsubadp 0, 3, 4
 ; CHECK-NEXT:    xsadddp 1, 0, 1
 ; CHECK-NEXT:    blr
-  %ab = fmul fast double %a, %b
-  %cd = fmul fast double %c, %d
-  %fg = fmul fast double %f, %g
+  %ab = fmul reassoc double %a, %b
+  %cd = fmul reassoc double %c, %d
+  %fg = fmul reassoc double %f, %g
   store double %ab, double* %p1 ; extra use of %ab
   store double %ab, double* %p2 ; another extra use of %ab
   store double %fg, double* %p3 ; extra use of %fg
-  %q = fsub fast double %fg, %cd ; The uses of %cd reduce to 1 after %r is folded. 2 uses of %fg, fold %cd, remove def of %cd
-  %r = fsub fast double %ab, %cd ; Fold %r before %q. 3 uses of %ab, 2 uses of %cd, fold %cd
-  %add = fadd fast double %r, %q
+  %q = fsub reassoc double %fg, %cd ; The uses of %cd reduce to 1 after %r is folded. 2 uses of %fg, fold %cd, remove def of %cd
+  %r = fsub reassoc double %ab, %cd ; Fold %r before %q. 3 uses of %ab, 2 uses of %cd, fold %cd
+  %add = fadd reassoc double %r, %q
   ret double %add
 }

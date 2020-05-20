@@ -40,7 +40,14 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
                                     bool verifyPasses, SourceMgr &sourceMgr,
                                     MLIRContext *context,
                                     const PassPipelineCLParser &passPipeline) {
+  // Disable multi-threading when parsing the input file. This removes the
+  // unnecessary/costly context synchronization when parsing.
+  bool wasThreadingEnabled = context->isMultithreadingEnabled();
+  context->disableMultithreading();
+
+  // Parse the input file and reset the context threading state.
   OwningModuleRef module(parseSourceFile(sourceMgr, context));
+  context->enableMultithreading(wasThreadingEnabled);
   if (!module)
     return failure();
 

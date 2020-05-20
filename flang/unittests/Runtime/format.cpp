@@ -3,7 +3,6 @@
 #include "testing.h"
 #include "../runtime/format-implementation.h"
 #include "../runtime/io-error.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstdarg>
 #include <cstring>
 #include <string>

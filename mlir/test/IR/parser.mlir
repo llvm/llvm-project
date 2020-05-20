@@ -697,6 +697,20 @@ func @densetensorattr() -> () {
   "intscalar"(){bar = dense<1> : tensor<i32>} : () -> ()
 // CHECK: "floatscalar"() {bar = dense<5.000000e+00> : tensor<f32>} : () -> ()
   "floatscalar"(){bar = dense<5.0> : tensor<f32>} : () -> ()
+
+// CHECK: "index"() {bar = dense<1> : tensor<index>} : () -> ()
+  "index"(){bar = dense<1> : tensor<index>} : () -> ()
+// CHECK: "index"() {bar = dense<[1, 2]> : tensor<2xindex>} : () -> ()
+  "index"(){bar = dense<[1, 2]> : tensor<2xindex>} : () -> ()
+
+  // CHECK: dense<(1,1)> : tensor<complex<i64>>
+  "complex_attr"(){bar = dense<(1,1)> : tensor<complex<i64>>} : () -> ()
+  // CHECK: dense<[(1,1), (2,2)]> : tensor<2xcomplex<i64>>
+  "complex_attr"(){bar = dense<[(1,1), (2,2)]> : tensor<2xcomplex<i64>>} : () -> ()
+  // CHECK: dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>
+  "complex_attr"(){bar = dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>} : () -> ()
+  // CHECK: dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>
+  "complex_attr"(){bar = dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>} : () -> ()
   return
 }
 
@@ -759,6 +773,11 @@ func @sparsetensorattr() -> () {
   "foof320"(){bar = sparse<[], []> : tensor<0xf32>} : () -> ()
 // CHECK: "foof321"() {bar = sparse<{{\[}}], {{\[}}]> : tensor<f32>} : () -> ()
   "foof321"(){bar = sparse<[], []> : tensor<f32>} : () -> ()
+
+// CHECK: "foostr"() {bar = sparse<0, "foo"> : tensor<1x1x1x!unknown<"">>} : () -> ()
+  "foostr"(){bar = sparse<0, "foo"> : tensor<1x1x1x!unknown<"">>} : () -> ()
+// CHECK: "foostr"() {bar = sparse<{{\[\[}}1, 1, 0], {{\[}}0, 1, 0], {{\[}}0, 0, 1]], {{\[}}"a", "b", "c"]> : tensor<2x2x2x!unknown<"">>} : () -> ()
+  "foostr"(){bar = sparse<[[1, 1, 0], [0, 1, 0], [0, 0, 1]], ["a", "b", "c"]> : tensor<2x2x2x!unknown<"">>} : () -> ()
   return
 }
 
@@ -821,12 +840,12 @@ func @verbose_if(%N: index) {
   "affine.if"(%c, %N, %c) ({
     // CHECK-NEXT: "add"
     %y = "add"(%c, %N) : (index, index) -> index
-    "affine.terminator"() : () -> ()
+    "affine.yield"() : () -> ()
     // CHECK-NEXT: } else {
   }, { // The else region.
     // CHECK-NEXT: "add"
     %z = "add"(%c, %c) : (index, index) -> index
-    "affine.terminator"() : () -> ()
+    "affine.yield"() : () -> ()
   })
   { condition = #set0 } : (index, index, index) -> ()
   return
@@ -1225,9 +1244,16 @@ func @pretty_names() {
   return
 }
 
-// CHECK-LABEL: func @zero_whitespace() {
-// CHECK-NEXT: return
-func @zero_whitespace() {
-     // This is a \0 byte.
-  return
-}
+func @unreachable_dominance_violation_ok() -> i1 {
+  %c = constant 0 : i1       // CHECK: [[VAL:%.*]] = constant 0 : i1
+  return %c : i1    // CHECK:   return [[VAL]] : i1
+^bb1:         // CHECK: ^bb1:   // no predecessors
+  // %1 is not dominated by it's definition, but block is not reachable.
+  %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1) // CHECK: [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
+  br ^bb4     // CHECK:   br ^bb3
+^bb2:         // CHECK: ^bb2:   // pred: ^bb2
+  br ^bb2     // CHECK:   br ^bb2
+^bb4:         // CHECK: ^bb3:   // pred: ^bb1
+  %1 = "foo"() : ()->i64 // CHECK: [[VAL3]] = "foo"() : () -> i64
+  return %2#1 : i1 // CHECK: return [[VAL2]]#1 : i1
+}            // CHECK: }

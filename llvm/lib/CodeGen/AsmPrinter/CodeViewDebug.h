@@ -310,8 +310,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitDebugInfoForRetainedTypes();
 
-  void
-  emitDebugInfoForUDTs(ArrayRef<std::pair<std::string, const DIType *>> UDTs);
+  void emitDebugInfoForUDTs(
+      const std::vector<std::pair<std::string, const DIType *>> &UDTs);
 
   void emitDebugInfoForGlobals();
   void emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals);
@@ -442,6 +442,15 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex recordTypeIndexForDINode(const DINode *Node,
                                                codeview::TypeIndex TI,
                                                const DIType *ClassTy = nullptr);
+
+  /// Collect the names of parent scopes, innermost to outermost. Return the
+  /// innermost subprogram scope if present. Ensure that parent type scopes are
+  /// inserted into the type table.
+  const DISubprogram *
+  collectParentScopeNames(const DIScope *Scope,
+                          SmallVectorImpl<StringRef> &ParentScopeNames);
+  std::string getFullyQualifiedName(const DIScope *Scope, StringRef Name);
+  std::string getFullyQualifiedName(const DIScope *Scope);
 
   unsigned getPointerSizeInBytes();
 

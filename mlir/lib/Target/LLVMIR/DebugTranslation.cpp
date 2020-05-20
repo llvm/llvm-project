@@ -110,10 +110,11 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     return nullptr;
 
   // Check for a cached instance.
-  const auto *&llvmLoc = locationToLoc[std::make_pair(loc, scope)];
-  if (llvmLoc)
-    return llvmLoc;
+  auto existingIt = locationToLoc.find(std::make_pair(loc, scope));
+  if (existingIt != locationToLoc.end())
+    return existingIt->second;
 
+  const llvm::DILocation *llvmLoc = nullptr;
   switch (loc->getKind()) {
   case StandardAttributes::CallSiteLocation: {
     auto callLoc = loc.dyn_cast<CallSiteLoc>();
@@ -154,6 +155,7 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
   default:
     llvm_unreachable("unknown location kind");
   }
+  locationToLoc.try_emplace(std::make_pair(loc, scope), llvmLoc);
   return llvmLoc;
 }
 

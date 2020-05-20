@@ -244,6 +244,7 @@ template<class T, class charT, class traits>
 #include <stdexcept>
 #include <cmath>
 #include <iosfwd>
+#include <sstream>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1441,7 +1442,12 @@ template<class _Tp, class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x)
 {
-    return __os << '(' << __x.real() << ',' << __x.imag() << ')';
+    basic_ostringstream<_CharT, _Traits> __s;
+    __s.flags(__os.flags());
+    __s.imbue(__os.getloc());
+    __s.precision(__os.precision());
+    __s << '(' << __x.real() << ',' << __x.imag() << ')';
+    return __os << __s.str();
 }
 
 #if _LIBCPP_STD_VER > 11

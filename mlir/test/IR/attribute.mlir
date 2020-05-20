@@ -8,6 +8,8 @@ func @int_attrs_pass() {
   "test.int_attrs"() {
     // CHECK: any_i32_attr = 5 : ui32
     any_i32_attr = 5 : ui32,
+    // CHECK-SAME: index_attr = 8 : index
+    index_attr = 8 : index,
     // CHECK-SAME: si32_attr = 7 : si32
     si32_attr = 7 : si32,
     // CHECK-SAME: ui32_attr = 6 : ui32
@@ -17,6 +19,7 @@ func @int_attrs_pass() {
   "test.int_attrs"() {
     // CHECK: any_i32_attr = 5 : si32
     any_i32_attr = 5 : si32,
+    index_attr = 8 : index,
     si32_attr = 7 : si32,
     ui32_attr = 6 : ui32
   } : () -> ()
@@ -24,6 +27,7 @@ func @int_attrs_pass() {
   "test.int_attrs"() {
     // CHECK: any_i32_attr = 5 : i32
     any_i32_attr = 5 : i32,
+    index_attr = 8 : index,
     si32_attr = 7 : si32,
     ui32_attr = 6 : ui32
   } : () -> ()
@@ -122,6 +126,7 @@ func @wrong_int_attrs_signedness_fail() {
   // expected-error @+1 {{'si32_attr' failed to satisfy constraint: 32-bit signed integer attribute}}
   "test.int_attrs"() {
     any_i32_attr = 5 : i32,
+    index_attr = 8 : index,
     si32_attr = 7 : ui32,
     ui32_attr = 6 : ui32
   } : () -> ()
@@ -134,6 +139,7 @@ func @wrong_int_attrs_signedness_fail() {
   // expected-error @+1 {{'ui32_attr' failed to satisfy constraint: 32-bit unsigned integer attribute}}
   "test.int_attrs"() {
     any_i32_attr = 5 : i32,
+    index_attr = 8 : index,
     si32_attr = 7 : si32,
     ui32_attr = 6 : si32
   } : () -> ()
@@ -385,6 +391,40 @@ func @correct_type_pass() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Test StringElementsAttr
+//===----------------------------------------------------------------------===//
+
+func @simple_scalar_example() {
+  "test.string_elements_attr"() {
+    // CHECK: dense<"example">
+    scalar_string_attr = dense<"example"> : tensor<2x!unknown<"">>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @escape_string_example() {
+  "test.string_elements_attr"() {
+    // CHECK: dense<"new\0Aline">
+    scalar_string_attr = dense<"new\nline"> : tensor<2x!unknown<"">>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @simple_scalar_example() {
+  "test.string_elements_attr"() {
+    // CHECK: dense<["example1", "example2"]>
+    scalar_string_attr = dense<["example1", "example2"]> : tensor<2x!unknown<"">>
+  } : () -> ()
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Test SymbolRefAttr
 //===----------------------------------------------------------------------===//
 
@@ -494,6 +534,26 @@ func @wrong_shape_fail() {
     matrix_i64_attr = dense<6> : tensor<4x8xi64>,
     vector_i32_attr = dense<5> : tensor<i32>
   } : () -> ()
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// Test StructAttr
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func @missing_fields() {
+  // expected-error @+1 {{failed to satisfy constraint: DictionaryAttr with field(s): 'some_field', 'some_other_field' (each field having its own constraints)}}
+  "test.struct_attr"() {the_struct_attr = {}} : () -> ()
+  return
+}
+
+// -----
+
+func @erroneous_fields() {
+  // expected-error @+1 {{failed to satisfy constraint: DictionaryAttr with field(s): 'some_field', 'some_other_field' (each field having its own constraints)}}
+  "test.struct_attr"() {the_struct_attr = {some_field = 1 : i8, some_other_field = 1}} : () -> ()
   return
 }
 

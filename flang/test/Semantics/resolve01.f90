@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 integer :: x
 !ERROR: The type of 'x' has already been declared
 real :: x

@@ -69,8 +69,14 @@ int main(int argc, char *argv[]) {
                       auto ObjLinkingLayer =
                           std::make_unique<RTDyldObjectLinkingLayer>(
                               ES, std::move(GetMemMgr));
+
+                      // Register the event listener.
                       ObjLinkingLayer->registerJITEventListener(
                           *JITEventListener::createGDBRegistrationListener());
+
+                      // Make sure the debug info sections aren't stripped.
+                      ObjLinkingLayer->setProcessAllSections(true);
+
                       return ObjLinkingLayer;
                     })
                     .create());

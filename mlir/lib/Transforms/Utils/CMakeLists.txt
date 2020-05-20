@@ -12,14 +12,12 @@ add_mlir_library(MLIRTransformUtils
 
   DEPENDS
   MLIRStandardOpsIncGen
-  )
 
-target_link_libraries(MLIRTransformUtils
-  PUBLIC
-  MLIRAffine
+  LINK_LIBS PUBLIC
+  MLIRAffineOps
   MLIRAnalysis
   MLIRLoopAnalysis
-  MLIRLoopOps
+  MLIRSCF
   MLIRPass
   MLIRStandardOps
   )

@@ -48,7 +48,7 @@ ProgramHeaders:
 # RUN: od -A x -t x2 %t2.out | FileCheck %s --check-prefix=CHECK2 --ignore-case
 # RUN: wc -c %t2.out | FileCheck %s --check-prefix=SIZE2
 
-## The computed LMA of .data is 0x4000. The minimum LMA of all sections is 0x1000.
+## The computed LMA of .data is 0x4000. The minimum LMA of all non-empty sections is 0x1000.
 ## The content of .data will be written at 0x4000-0x1000 = 0x3000.
 # CHECK2:      000000 c3c3 c3c3 0000 0000 0000 0000 0000 0000
 # CHECK2-NEXT: 000010 0000 0000 0000 0000 0000 0000 0000 0000
@@ -93,7 +93,7 @@ ProgramHeaders:
 # RUN: od -A x -t x2 %t3.out | FileCheck %s --check-prefix=CHECK3 --ignore-case
 # RUN: wc -c %t3.out | FileCheck %s --check-prefix=SIZE3
 
-## The minimum LMA of all sections is 0x1000.
+## The minimum LMA of all non-empty sections is 0x1000.
 ## The content of .data will be written at 0x3000-0x1000 = 0x2000.
 # CHECK3:      000000 c3c3 c3c3 0000 0000 0000 0000 0000 0000
 # CHECK3-NEXT: 000010 0000 0000 0000 0000 0000 0000 0000 0000
@@ -129,3 +129,58 @@ ProgramHeaders:
     VAddr: 0x3000
     Sections:
       - Section: .data
+
+## The first section (.text) is empty. Test that we skip its LMA until the first
+## non-empty section, otherwise we would leave a large number of leading zeroes.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objcopy -O binary %t4 %t4.out
+# RUN: od -A x -t x2 %t4.out | FileCheck %s --check-prefix=SKIPEMPTY
+
+# SKIPEMPTY:      000000 3232
+# SKIPEMPTY-NEXT: 000002
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+  - Name:         gap
+    Type:         Fill
+    Size:         0x1000
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Content:      "3232"
+
+## The last section (.data) is empty. Test that we stop dumping after the last
+## non-empty section, otherwise we would leave a large number of trailing zeroes.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objcopy -O binary %t5 %t5.out
+# RUN: od -A x -t x2 %t5.out | FileCheck %s --check-prefix=SKIPEMPTY
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Content:      "3232"
+  - Name:         gap
+    Type:         Fill
+    Size:         0xffd
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]

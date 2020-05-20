@@ -8,7 +8,7 @@ void foo() {
   XYZLogEvent(xyzRiskyCloseOpenParam, xyzRiskyCloseOpenParam); // expected-error {{implicit declaration of function 'XYZLogEvent'}} expected-error {{declaration of 'XYZLogEvent' must be imported}} expected-error {{declaration of 'xyzRiskyCloseOpenParam' must be imported from module 'NCI.A'}} expected-error {{declaration of 'xyzRiskyCloseOpenParam' must be imported from module 'NCI.A'}}
 }
 
-// expected-note@Inputs/diagnose-missing-import/a.h:5 {{previous declaration is here}}
-// expected-note@Inputs/diagnose-missing-import/a.h:5 {{previous declaration is here}}
-// expected-note@Inputs/diagnose-missing-import/a.h:6 {{previous declaration is here}}
+// expected-note@Inputs/diagnose-missing-import/a.h:5 {{declaration here is not visible}}
+// expected-note@Inputs/diagnose-missing-import/a.h:5 {{declaration here is not visible}}
+// expected-note@Inputs/diagnose-missing-import/a.h:6 {{declaration here is not visible}}
 

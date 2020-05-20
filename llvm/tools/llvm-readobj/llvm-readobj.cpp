@@ -489,7 +489,7 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
-    Dumper->printGnuHashTable();
+    Dumper->printGnuHashTable(Obj);
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
   if (Obj->isELF()) {

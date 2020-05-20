@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // std::uncaught_exceptions() was introduced in the dylib on Mac OS 10.12
 // XFAIL: with_system_cxx_lib=macosx10.11

@@ -10,6 +10,9 @@
 #ifdef __clang__
 #pragma clang diagnostic ignored "-W#warnings"
 #endif
+#ifdef __GNUC__
+#pragma GCC diagnostic push "-Wcpp"
+#endif
 
 // Poison the std:: names we might use inside __gnu_cxx to ensure they're
 // properly qualified.

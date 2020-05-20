@@ -217,7 +217,7 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P8-NEXT:    ld r3, 0(r3)
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI12_0@toc@ha
 ; CHECK-P8-NEXT:    xxlxor v4, v4, v4
-; CHECK-P8-NEXT:    mtvsrd f0, r3
+; CHECK-P8-NEXT:    mtfprd f0, r3
 ; CHECK-P8-NEXT:    addi r3, r4, .LCPI12_0@toc@l
 ; CHECK-P8-NEXT:    lvx v3, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0

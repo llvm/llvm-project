@@ -75,6 +75,7 @@ bool llvm::applyDebugifyMetadata(
 
   DIBuilder DIB(M);
   LLVMContext &Ctx = M.getContext();
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
 
   // Get a DIType which corresponds to Ty.
   DenseMap<uint64_t, DIType *> TypeCache;
@@ -99,6 +100,7 @@ bool llvm::applyDebugifyMetadata(
     if (isFunctionSkipped(F))
       continue;
 
+    bool InsertedDbgVal = false;
     auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
     DISubprogram::DISPFlags SPFlags =
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
@@ -107,6 +109,23 @@ bool llvm::applyDebugifyMetadata(
     auto SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
                                  SPType, NextLine, DINode::FlagZero, SPFlags);
     F.setSubprogram(SP);
+
+    // Helper that inserts a dbg.value before \p InsertBefore, copying the
+    // location (and possibly the type, if it's non-void) from \p TemplateInst.
+    auto insertDbgVal = [&](Instruction &TemplateInst,
+                            Instruction *InsertBefore) {
+      std::string Name = utostr(NextVar++);
+      Value *V = &TemplateInst;
+      if (TemplateInst.getType()->isVoidTy())
+        V = ConstantInt::get(Int32Ty, 0);
+      const DILocation *Loc = TemplateInst.getDebugLoc().get();
+      auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
+                                             getCachedDIType(V->getType()),
+                                             /*AlwaysPreserve=*/true);
+      DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
+                                  InsertBefore);
+    };
+
     for (BasicBlock &BB : F) {
       // Attach debug locations.
       for (Instruction &I : BB)
@@ -141,14 +160,18 @@ bool llvm::applyDebugifyMetadata(
         if (!isa<PHINode>(I) && !I->isEHPad())
           InsertBefore = I->getNextNode();
 
-        std::string Name = utostr(NextVar++);
-        const DILocation *Loc = I->getDebugLoc().get();
-        auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
-                                               getCachedDIType(I->getType()),
-                                               /*AlwaysPreserve=*/true);
-        DIB.insertDbgValueIntrinsic(I, LocalVar, DIB.createExpression(), Loc,
-                                    InsertBefore);
+        insertDbgVal(*I, InsertBefore);
+        InsertedDbgVal = true;
       }
+    }
+    // Make sure we emit at least one dbg.value, otherwise MachineDebugify may
+    // not have anything to work with as it goes about inserting DBG_VALUEs.
+    // (It's common for MIR tests to be written containing skeletal IR with
+    // empty functions -- we're still interested in debugifying the MIR within
+    // those tests, and this helps with that.)
+    if (DebugifyLevel == Level::LocationsAndVariables && !InsertedDbgVal) {
+      auto *Term = findTerminatingInstruction(F.getEntryBlock());
+      insertDbgVal(*Term, Term);
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
@@ -158,10 +181,9 @@ bool llvm::applyDebugifyMetadata(
 
   // Track the number of distinct lines and variables.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.debugify");
-  auto *IntTy = Type::getInt32Ty(Ctx);
   auto addDebugifyOperand = [&](unsigned N) {
     NMD->addOperand(MDNode::get(
-        Ctx, ValueAsMetadata::getConstant(ConstantInt::get(IntTy, N))));
+        Ctx, ValueAsMetadata::getConstant(ConstantInt::get(Int32Ty, N))));
   };
   addDebugifyOperand(NextLine - 1); // Original number of lines.
   addDebugifyOperand(NextVar - 1);  // Original number of variables.
@@ -202,7 +224,8 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   // Strip out the module-level Debug Info Version metadata.
   // FIXME: There must be an easier way to remove an operand from a NamedMDNode.
   NamedMDNode *NMD = M.getModuleFlagsMetadata();
-  assert(NMD && "debugify metadata present without Debug Info Version set?");
+  if (!NMD)
+    return Changed;
   SmallVector<MDNode *, 4> Flags;
   for (MDNode *Flag : NMD->operands())
     Flags.push_back(Flag);

@@ -30,7 +30,7 @@ TEST(Parallel, sort) {
   for (auto &i : array)
     i = dist(randEngine);
 
-  sort(parallel::par, std::begin(array), std::end(array));
+  parallelSort(std::begin(array), std::end(array));
   ASSERT_TRUE(llvm::is_sorted(array));
 }
 
@@ -40,7 +40,7 @@ TEST(Parallel, parallel_for) {
   // writing.
   uint32_t range[2050];
   std::fill(range, range + 2050, 1);
-  for_each_n(parallel::par, 0, 2049, [&range](size_t I) { ++range[I]; });
+  parallelForEachN(0, 2049, [&range](size_t I) { ++range[I]; });
 
   uint32_t expected[2049];
   std::fill(expected, expected + 2049, 2);

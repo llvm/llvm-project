@@ -1,3 +1,4 @@
+UNSUPPORTED: host-byteorder-big-endian
 UNSUPPORTED: linux
 UNSUPPORTED: darwin
 

@@ -1674,13 +1674,25 @@ void PPCFrameLowering::createTailCallBranchInstr(MachineBasicBlock &MBB) const {
   DebugLoc dl = MBBI->getDebugLoc();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
 
-  // Create branch instruction for pseudo tail call return instruction
+  // Create branch instruction for pseudo tail call return instruction.
+  // The TCRETURNdi variants are direct calls. Valid targets for those are
+  // MO_GlobalAddress operands as well as MO_ExternalSymbol with PC-Rel
+  // since we can tail call external functions with PC-Rel (i.e. we don't need
+  // to worry about different TOC pointers). Some of the external functions will
+  // be MO_GlobalAddress while others like memcpy for example, are going to
+  // be MO_ExternalSymbol.
   unsigned RetOpcode = MBBI->getOpcode();
   if (RetOpcode == PPC::TCRETURNdi) {
     MBBI = MBB.getLastNonDebugInstr();
     MachineOperand &JumpTarget = MBBI->getOperand(0);
-    BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB)).
-      addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset());
+    if (JumpTarget.isGlobal())
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB)).
+        addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset());
+    else if (JumpTarget.isSymbol())
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB)).
+        addExternalSymbol(JumpTarget.getSymbolName());
+    else
+      llvm_unreachable("Expecting Global or External Symbol");
   } else if (RetOpcode == PPC::TCRETURNri) {
     MBBI = MBB.getLastNonDebugInstr();
     assert(MBBI->getOperand(0).isReg() && "Expecting register operand.");
@@ -1692,8 +1704,14 @@ void PPCFrameLowering::createTailCallBranchInstr(MachineBasicBlock &MBB) const {
   } else if (RetOpcode == PPC::TCRETURNdi8) {
     MBBI = MBB.getLastNonDebugInstr();
     MachineOperand &JumpTarget = MBBI->getOperand(0);
-    BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB8)).
-      addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset());
+    if (JumpTarget.isGlobal())
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB8)).
+        addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset());
+    else if (JumpTarget.isSymbol())
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::TAILB8)).
+        addExternalSymbol(JumpTarget.getSymbolName());
+    else
+      llvm_unreachable("Expecting Global or External Symbol");
   } else if (RetOpcode == PPC::TCRETURNri8) {
     MBBI = MBB.getLastNonDebugInstr();
     assert(MBBI->getOperand(0).isReg() && "Expecting register operand.");
@@ -1965,11 +1983,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
       std::min<unsigned>(TRI->getEncodingValue(MinGPR),
                          TRI->getEncodingValue(MinG8R));
 
-    if (Subtarget.isPPC64()) {
-      LowerBound -= (31 - MinReg + 1) * 8;
-    } else {
-      LowerBound -= (31 - MinReg + 1) * 4;
-    }
+    const unsigned GPRegSize = Subtarget.isPPC64() ? 8 : 4;
+    LowerBound -= (31 - MinReg + 1) * GPRegSize;
   }
 
   // For 32-bit only, the CR save area is below the general register

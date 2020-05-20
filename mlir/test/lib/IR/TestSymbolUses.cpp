@@ -66,7 +66,7 @@ struct SymbolUsesPass
     // Walk nested symbols.
     SmallVector<FuncOp, 4> deadFunctions;
     module.getBodyRegion().walk([&](Operation *nestedOp) {
-      if (SymbolTable::isSymbol(nestedOp))
+      if (isa<SymbolOpInterface>(nestedOp))
         return operateOnSymbol(nestedOp, module, deadFunctions);
       return WalkResult::advance();
     });

@@ -26,49 +26,56 @@ bool CallGraphUpdater::finalize() {
                          DeadFunctionsInComdats.end());
   }
 
-  for (Function *DeadFn : DeadFunctions) {
-    DeadFn->removeDeadConstantUsers();
+  if (CG) {
+    // First remove all references, e.g., outgoing via called functions. This is
+    // necessary as we can delete functions that have circular references.
+    for (Function *DeadFn : DeadFunctions) {
+      DeadFn->removeDeadConstantUsers();
+      CallGraphNode *DeadCGN = (*CG)[DeadFn];
+      DeadCGN->removeAllCalledFunctions();
+      CG->getExternalCallingNode()->removeAnyCallEdgeTo(DeadCGN);
+      DeadFn->replaceAllUsesWith(UndefValue::get(DeadFn->getType()));
+    }
 
-    if (CG) {
-      CallGraphNode *OldCGN = CG->getOrInsertFunction(DeadFn);
-      CG->getExternalCallingNode()->removeAnyCallEdgeTo(OldCGN);
-      OldCGN->removeAllCalledFunctions();
+    // Then remove the node and function from the module.
+    for (Function *DeadFn : DeadFunctions) {
+      CallGraphNode *DeadCGN = CG->getOrInsertFunction(DeadFn);
+      assert(DeadCGN->getNumReferences() == 0 &&
+             "References should have been handled by now");
+      delete CG->removeFunctionFromModule(DeadCGN);
+    }
+  } else {
+    // This is the code path for the new lazy call graph and for the case were
+    // no call graph was provided.
+    for (Function *DeadFn : DeadFunctions) {
+      DeadFn->removeDeadConstantUsers();
       DeadFn->replaceAllUsesWith(UndefValue::get(DeadFn->getType()));
 
-      assert(OldCGN->getNumReferences() == 0);
+      if (LCG && !ReplacedFunctions.count(DeadFn)) {
+        // Taken mostly from the inliner:
+        LazyCallGraph::Node &N = LCG->get(*DeadFn);
+        auto *DeadSCC = LCG->lookupSCC(N);
+        assert(DeadSCC && DeadSCC->size() == 1 &&
+               &DeadSCC->begin()->getFunction() == DeadFn);
+        auto &DeadRC = DeadSCC->getOuterRefSCC();
 
-      delete CG->removeFunctionFromModule(OldCGN);
-      continue;
+        FunctionAnalysisManager &FAM =
+            AM->getResult<FunctionAnalysisManagerCGSCCProxy>(*DeadSCC, *LCG)
+                .getManager();
+
+        FAM.clear(*DeadFn, DeadFn->getName());
+        AM->clear(*DeadSCC, DeadSCC->getName());
+        LCG->removeDeadFunction(*DeadFn);
+
+        // Mark the relevant parts of the call graph as invalid so we don't
+        // visit them.
+        UR->InvalidatedSCCs.insert(DeadSCC);
+        UR->InvalidatedRefSCCs.insert(&DeadRC);
+      }
+
+      // The function is now really dead and de-attached from everything.
+      DeadFn->eraseFromParent();
     }
-
-    // The old style call graph (CG) has a value handle we do not want to
-    // replace with undef so we do this here.
-    DeadFn->replaceAllUsesWith(UndefValue::get(DeadFn->getType()));
-
-    if (LCG && !ReplacedFunctions.count(DeadFn)) {
-      // Taken mostly from the inliner:
-      LazyCallGraph::Node &N = LCG->get(*DeadFn);
-      auto *DeadSCC = LCG->lookupSCC(N);
-      assert(DeadSCC && DeadSCC->size() == 1 &&
-             &DeadSCC->begin()->getFunction() == DeadFn);
-      auto &DeadRC = DeadSCC->getOuterRefSCC();
-
-      FunctionAnalysisManager &FAM =
-          AM->getResult<FunctionAnalysisManagerCGSCCProxy>(*DeadSCC, *LCG)
-              .getManager();
-
-      FAM.clear(*DeadFn, DeadFn->getName());
-      AM->clear(*DeadSCC, DeadSCC->getName());
-      LCG->removeDeadFunction(*DeadFn);
-
-      // Mark the relevant parts of the call graph as invalid so we don't visit
-      // them.
-      UR->InvalidatedSCCs.insert(DeadSCC);
-      UR->InvalidatedRefSCCs.insert(&DeadRC);
-    }
-
-    // The function is now really dead and de-attached from everything.
-    DeadFn->eraseFromParent();
   }
 
   bool Changed = !DeadFunctions.empty();
@@ -85,7 +92,7 @@ void CallGraphUpdater::reanalyzeFunction(Function &Fn) {
   } else if (LCG) {
     LazyCallGraph::Node &N = LCG->get(Fn);
     LazyCallGraph::SCC *C = LCG->lookupSCC(N);
-    updateCGAndAnalysisManagerForCGSCCPass(*LCG, *C, N, *AM, *UR);
+    updateCGAndAnalysisManagerForCGSCCPass(*LCG, *C, N, *AM, *UR, *FAM);
   }
 }
 
@@ -103,6 +110,13 @@ void CallGraphUpdater::removeFunction(Function &DeadFn) {
     DeadFunctionsInComdats.push_back(&DeadFn);
   else
     DeadFunctions.push_back(&DeadFn);
+
+  // For the old call graph we remove the function from the SCC right away.
+  if (CG && !ReplacedFunctions.count(&DeadFn)) {
+    CallGraphNode *DeadCGN = (*CG)[&DeadFn];
+    DeadCGN->removeAllCalledFunctions();
+    CGSCC->DeleteNode(DeadCGN);
+  }
 }
 
 void CallGraphUpdater::replaceFunctionWith(Function &OldFn, Function &NewFn) {
@@ -110,10 +124,10 @@ void CallGraphUpdater::replaceFunctionWith(Function &OldFn, Function &NewFn) {
   ReplacedFunctions.insert(&OldFn);
   if (CG) {
     // Update the call graph for the newly promoted function.
-    // CG->spliceFunction(&OldFn, &NewFn);
     CallGraphNode *OldCGN = (*CG)[&OldFn];
     CallGraphNode *NewCGN = CG->getOrInsertFunction(&NewFn);
     NewCGN->stealCalledFunctionsFrom(OldCGN);
+    CG->ReplaceExternalCallEdge(OldCGN, NewCGN);
 
     // And update the SCC we're iterating as well.
     CGSCC->ReplaceNode(OldCGN, NewCGN);

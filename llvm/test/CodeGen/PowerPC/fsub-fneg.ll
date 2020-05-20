@@ -8,9 +8,9 @@
 define double @neg_ext_op1_extra_use(float %x, double %y) nounwind {
 ; CHECK-LABEL: neg_ext_op1_extra_use:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xsadddp 0, 2, 1
-; CHECK-NEXT:    fneg 1, 1
-; CHECK-NEXT:    xsdivdp 1, 1, 0
+; CHECK-NEXT:    xsnegdp 0, 1
+; CHECK-NEXT:    xsadddp 1, 2, 1
+; CHECK-NEXT:    xsdivdp 1, 0, 1
 ; CHECK-NEXT:    blr
   %t1 = fsub float -0.0, %x
   %t2 = fpext float %t1 to double

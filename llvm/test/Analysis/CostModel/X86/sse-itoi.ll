@@ -584,13 +584,13 @@ define void @truncate_v8i16_to_v8i8(<8 x i16>* %a) {
 define void @truncate_v4i16_to_v4i8(<4 x i16>* %a) {
 ; SSE2-LABEL: 'truncate_v4i16_to_v4i8'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <4 x i16>, <4 x i16>* %a
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = trunc <4 x i16> %1 to <4 x i8>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = trunc <4 x i16> %1 to <4 x i8>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> %2, <4 x i8>* undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE41-LABEL: 'truncate_v4i16_to_v4i8'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <4 x i16>, <4 x i16>* %a
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = trunc <4 x i16> %1 to <4 x i8>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = trunc <4 x i16> %1 to <4 x i8>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> %2, <4 x i8>* undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

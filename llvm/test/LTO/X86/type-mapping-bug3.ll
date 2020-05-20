@@ -25,7 +25,7 @@ define void @b() {
 entry:
   %f.addr = alloca %"T3"*load %"T3"*, %"T3"** %f.addr
 
-  ; The call with the getCalledValue() vs getCalledFunction() mismatch.
+  ; The call with the getCalledOperand() vs getCalledFunction() mismatch.
   call void @d(%"T3"* %0)
   unreachable
 }

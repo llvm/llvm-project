@@ -1038,6 +1038,8 @@ public:
     return HasNSAtoVMEMBug;
   }
 
+  bool hasHardClauses() const { return getGeneration() >= GFX10; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
@@ -1193,7 +1195,8 @@ public:
     return AMDGPU::IsaInfo::getMinWavesPerEU(this);
   }
 
-  void adjustSchedDependency(SUnit *Src, SUnit *Dst, SDep &Dep) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep) const override;
 };
 
 class R600Subtarget final : public R600GenSubtargetInfo,

@@ -437,9 +437,11 @@ basic_istream<charT, traits>&
 getline(basic_istream<charT, traits>& is, basic_string<charT, traits, Allocator>& str);
 
 template<class charT, class traits, class Allocator, class U>
-void erase(basic_string<charT, traits, Allocator>& c, const U& value); // C++20
+typename basic_string<charT, traits, Allocator>::size_type
+erase(basic_string<charT, traits, Allocator>& c, const U& value);    // C++20
 template<class charT, class traits, class Allocator, class Predicate>
-void erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
+typename basic_string<charT, traits, Allocator>::size_type
+erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
 
 typedef basic_string<char>    string;
 typedef basic_string<wchar_t> wstring;
@@ -689,13 +691,8 @@ public:
     static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
-#if defined(_LIBCPP_RAW_ITERATORS)
-    typedef pointer                                      iterator;
-    typedef const_pointer                                const_iterator;
-#else  // defined(_LIBCPP_RAW_ITERATORS)
     typedef __wrap_iter<pointer>                         iterator;
     typedef __wrap_iter<const_pointer>                   const_iterator;
-#endif  // defined(_LIBCPP_RAW_ITERATORS)
     typedef _VSTD::reverse_iterator<iterator>             reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator>       const_reverse_iterator;
 
@@ -4379,15 +4376,25 @@ getline(basic_istream<_CharT, _Traits>&& __is,
 #endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 17
-template<class _CharT, class _Traits, class _Allocator, class _Up>
+template <class _CharT, class _Traits, class _Allocator, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
-void erase(basic_string<_CharT, _Traits, _Allocator>& __str, const _Up& __v)
-{ __str.erase(_VSTD::remove(__str.begin(), __str.end(), __v), __str.end()); }
+    typename basic_string<_CharT, _Traits, _Allocator>::size_type
+    erase(basic_string<_CharT, _Traits, _Allocator>& __str, const _Up& __v) {
+  auto __old_size = __str.size();
+  __str.erase(_VSTD::remove(__str.begin(), __str.end(), __v), __str.end());
+  return __old_size - __str.size();
+}
 
-template<class _CharT, class _Traits, class _Allocator, class _Predicate>
+template <class _CharT, class _Traits, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
-void erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred)
-{ __str.erase(_VSTD::remove_if(__str.begin(), __str.end(), __pred), __str.end()); }
+    typename basic_string<_CharT, _Traits, _Allocator>::size_type
+    erase_if(basic_string<_CharT, _Traits, _Allocator>& __str,
+             _Predicate __pred) {
+  auto __old_size = __str.size();
+  __str.erase(_VSTD::remove_if(__str.begin(), __str.end(), __pred),
+              __str.end());
+  return __old_size - __str.size();
+}
 #endif
 
 #if _LIBCPP_DEBUG_LEVEL >= 2

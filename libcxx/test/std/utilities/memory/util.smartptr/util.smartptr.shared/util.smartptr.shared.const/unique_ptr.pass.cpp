@@ -56,6 +56,19 @@ struct D {
 void ref(D);
 }
 
+template <class T>
+struct StatefulDeleter {
+  int state = 0;
+
+  StatefulDeleter(int val = 0) : state(val) {}
+  StatefulDeleter(StatefulDeleter const&) { assert(false); }
+
+  void operator()(T* ptr) {
+    assert(state == 42);
+    delete ptr;
+  }
+};
+
 int main(int, char**)
 {
     {
@@ -90,11 +103,29 @@ int main(int, char**)
             assert(A::count == 0);
             assert(B::count == 0);
             assert(ptr.get() == 0);
-#endif
+#endif // TEST_STD_VER >= 11
         }
     }
 #endif
+
+#if TEST_STD_VER > 14
+    {
+      std::unique_ptr<int> ptr;
+      std::shared_ptr<int> p(std::move(ptr));
+      assert(p.get() == 0);
+      assert(p.use_count() == 0);
+    }
+#endif
+
+    {
+      StatefulDeleter<A> d;
+      std::unique_ptr<A, StatefulDeleter<A>&> u(new A, d);
+      std::shared_ptr<A> p(std::move(u));
+      d.state = 42;
+      assert(A::count == 1);
+    }
     assert(A::count == 0);
+
     { // LWG 2399
         fn(std::unique_ptr<int>(new int));
     }

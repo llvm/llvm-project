@@ -664,9 +664,10 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
     if (!Symbol)
       reportError(Symbol.takeError(), coff->getFileName());
 
-    StringRef Name;
-    if (std::error_code EC = coff->getSymbolName(*Symbol, Name))
-      reportError(errorCodeToError(EC), coff->getFileName());
+    Expected<StringRef> NameOrErr = coff->getSymbolName(*Symbol);
+    if (!NameOrErr)
+      reportError(NameOrErr.takeError(), coff->getFileName());
+    StringRef Name = *NameOrErr;
 
     outs() << "[" << format("%2d", SI) << "]"
            << "(sec " << format("%2d", int(Symbol->getSectionNumber())) << ")"

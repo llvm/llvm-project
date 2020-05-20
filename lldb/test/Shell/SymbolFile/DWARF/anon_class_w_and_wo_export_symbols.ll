@@ -1,3 +1,4 @@
+; XFAIL: target-arm && linux-gnu
 ; UNSUPPORTED: system-windows
 ;
 ; This test verifies that we do the right thing with DIFlagExportSymbols which is the new

@@ -423,8 +423,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
 TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddEndCommentForShortNamespace) {
   EXPECT_EQ("namespace {}", fixNamespaceEndComments("namespace {}"));
   EXPECT_EQ("namespace A {}", fixNamespaceEndComments("namespace A {}"));
-  EXPECT_EQ("namespace A { a }",
-            fixNamespaceEndComments("namespace A { a }"));
+  EXPECT_EQ("namespace A { a }", fixNamespaceEndComments("namespace A { a }"));
   EXPECT_EQ("namespace A { a };",
             fixNamespaceEndComments("namespace A { a };"));
 }

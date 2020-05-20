@@ -109,7 +109,6 @@ macro(add_flang_tool name)
   endif()
 
   add_flang_executable(${name} ${ARGN})
-  add_dependencies(${name} flang-resource-headers)
 
   if (FLANG_BUILD_TOOLS)
     set(export_to_flangtargets)

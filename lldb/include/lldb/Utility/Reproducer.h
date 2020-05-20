@@ -27,6 +27,7 @@ class Reproducer;
 enum class ReproducerMode {
   Capture,
   Replay,
+  PassiveReplay,
   Off,
 };
 
@@ -146,6 +147,9 @@ public:
       return;
     m_cwd = std::string(cwd.str());
   }
+
+  void Update(llvm::StringRef path) { m_cwd = std::string(path); }
+
   struct Info {
     static const char *name;
     static const char *file;
@@ -287,7 +291,7 @@ private:
 
 class Loader final {
 public:
-  Loader(FileSpec root);
+  Loader(FileSpec root, bool passive = false);
 
   template <typename T> FileSpec GetFile() {
     if (!HasFile(T::file))
@@ -309,12 +313,15 @@ public:
 
   const FileSpec &GetRoot() const { return m_root; }
 
+  bool IsPassiveReplay() const { return m_passive_replay; }
+
 private:
   bool HasFile(llvm::StringRef file);
 
   FileSpec m_root;
   std::vector<std::string> m_files;
   bool m_loaded;
+  bool m_passive_replay;
 };
 
 /// The reproducer enables clients to obtain access to the Generator and
@@ -342,7 +349,7 @@ public:
 
 protected:
   llvm::Error SetCapture(llvm::Optional<FileSpec> root);
-  llvm::Error SetReplay(llvm::Optional<FileSpec> root);
+  llvm::Error SetReplay(llvm::Optional<FileSpec> root, bool passive = false);
 
 private:
   static llvm::Optional<Reproducer> &InstanceImpl();

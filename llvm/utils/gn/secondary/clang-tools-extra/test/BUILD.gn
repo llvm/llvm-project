@@ -1,4 +1,5 @@
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+import("//clang/tools/libclang/include_clang_tools_extra.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("clang_tools_extra_lit_site_cfg_files.gni")
@@ -34,13 +35,19 @@ write_lit_config("lit_site_cfg") {
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
-    "PYTHON_EXECUTABLE=$python_path",
+    "Python3_EXECUTABLE=$python_path",
   ]
 
   if (clang_enable_static_analyzer) {
     extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
   } else {
     extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=0" ]
+  }
+
+  if (libclang_include_clang_tools_extra) {
+    extra_values += [ "LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=1" ]
+  } else {
+    extra_values += [ "LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=0" ]
   }
 }
 

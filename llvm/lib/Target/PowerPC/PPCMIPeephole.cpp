@@ -57,8 +57,8 @@ STATISTIC(NumRotatesCollapsed,
           "Number of pairs of rotate left, clear left/right collapsed");
 STATISTIC(NumEXTSWAndSLDICombined,
           "Number of pairs of EXTSW and SLDI combined as EXTSWSLI");
-STATISTIC(NumX2FoundForPCRel, "Number of times the X2 TOC pointer has been "
-                              "found when PC relative NOTOC is being used.");
+STATISTIC(NumLoadImmZeroFoldedAndRemoved,
+          "Number of LI(8) reg, 0 that are folded to r0 and removed");
 
 static cl::opt<bool>
 FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
@@ -101,11 +101,6 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
-  // Perform peepholes that cannot be skipped.
-  // Some peephole simplifications are required for correctness and will not
-  // be skipped even if skipFunction(MF.getFunction()) returns true.
-  void unskipableSimplifyCode(void);
-
   // Perform peepholes.
   bool simplifyCode(void);
 
@@ -132,11 +127,11 @@ public:
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
     initialize(MF);
-    // FIXME: This introduces another complete traversal of the instructions
-    // in the function in the common case (function is not skipped). Although
-    // this is less than ideal for compile time, this code will go away once
-    // our PC-Rel implementation is complete.
-    unskipableSimplifyCode();
+    // At this point, TOC pointer should not be used in a function that uses
+    // PC-Relative addressing.
+    assert((MF.getRegInfo().use_empty(PPC::X2) ||
+            !MF.getSubtarget<PPCSubtarget>().isUsingPCRelativeCalls()) &&
+           "TOC pointer used in a function using PC-Relative addressing!");
     if (skipFunction(MF.getFunction()))
       return false;
     return simplifyCode();
@@ -272,41 +267,6 @@ void PPCMIPeephole::UpdateTOCSaves(
   TOCSaves[MI] = Keep;
 }
 
-void PPCMIPeephole::unskipableSimplifyCode(void) {
-  // If this function has no uses of R2 there is nothing to do here.
-  if(MF->getRegInfo().use_empty(PPC::X2))
-    return;
-
-  // This is only for PCRelative calls.
-  if (!MF->getSubtarget<PPCSubtarget>().isUsingPCRelativeCalls()) {
-    return;
-  }
-
-  // This function has R2 so we need to mark an implicit def for it.
-  PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
-  FuncInfo->setUsesTOCBasePtr();
-  for (MachineBasicBlock &MBB : *MF) {
-    for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == PPC::BL8_NOTOC) {
-        // At this point the BL8_NOTOC instruction is not really safe because it
-        // assumes that the caller does not need the TOC. It will be safe
-        // later once the full PC relative implementation is complete but it is
-        // not now.
-        // Here we are looking for X2. Since this is Pre-RA the only uses of X2
-        // would indicate the use of the TOC. We want to detect all uses of the
-        // TOC. Once the work is done we should not see any uses of the TOC.
-        // TODO: Once the implementation is complete this should be turned into
-        // an assert
-        Register Reg = MF->getSubtarget<PPCSubtarget>().getTOCPointerRegister();
-        MachineOperand MO = MachineOperand::CreateReg(Reg, false, true);
-        MI.addOperand(*MF, MO);
-        MI.setDesc(TII->get(PPC::BL8_NOP));
-        ++NumX2FoundForPCRel;
-      }
-    }
-  }
-}
-
 // Perform peephole optimizations.
 bool PPCMIPeephole::simplifyCode(void) {
   bool Simplified = false;
@@ -361,7 +321,22 @@ bool PPCMIPeephole::simplifyCode(void) {
 
       default:
         break;
-
+      case PPC::LI:
+      case PPC::LI8: {
+        // If we are materializing a zero, look for any use operands for which
+        // zero means immediate zero. All such operands can be replaced with
+        // PPC::ZERO.
+        if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != 0)
+          break;
+        unsigned MIDestReg = MI.getOperand(0).getReg();
+        for (MachineInstr& UseMI : MRI->use_instructions(MIDestReg))
+          Simplified |= TII->onlyFoldImmediate(UseMI, MI, MIDestReg);
+        if (MRI->use_nodbg_empty(MIDestReg)) {
+          ++NumLoadImmZeroFoldedAndRemoved;
+          ToErase = &MI;
+        }
+        break;
+      }
       case PPC::STD: {
         MachineFrameInfo &MFI = MF->getFrameInfo();
         if (MFI.hasVarSizedObjects() ||

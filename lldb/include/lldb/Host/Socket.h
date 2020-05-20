@@ -36,6 +36,8 @@ typedef SOCKET NativeSocket;
 #else
 typedef int NativeSocket;
 #endif
+class TCPSocket;
+class UDPSocket;
 
 class Socket : public IOObject {
 public:
@@ -64,13 +66,16 @@ public:
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
   // implemented separately because the caller may wish to manipulate or query
   // the socket after it is initialized, but before entering a blocking accept.
-  static Status TcpListen(llvm::StringRef host_and_port,
-                          bool child_processes_inherit, Socket *&socket,
-                          Predicate<uint16_t> *predicate, int backlog = 5);
-  static Status TcpConnect(llvm::StringRef host_and_port,
-                           bool child_processes_inherit, Socket *&socket);
-  static Status UdpConnect(llvm::StringRef host_and_port,
-                           bool child_processes_inherit, Socket *&socket);
+  static llvm::Expected<std::unique_ptr<TCPSocket>>
+  TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
+            Predicate<uint16_t> *predicate, int backlog = 5);
+
+  static llvm::Expected<std::unique_ptr<Socket>>
+  TcpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
+
+  static llvm::Expected<std::unique_ptr<UDPSocket>>
+  UdpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
+
   static Status UnixDomainConnect(llvm::StringRef host_and_port,
                                   bool child_processes_inherit,
                                   Socket *&socket);

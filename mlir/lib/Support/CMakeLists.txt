@@ -1,6 +1,5 @@
 set(LLVM_OPTIONAL_SOURCES
   FileUtilities.cpp
-  JitRunner.cpp
   MlirOptMain.cpp
   StorageUniquer.cpp
   ToolUtilities.cpp
@@ -13,10 +12,8 @@ add_mlir_library(MLIRSupport
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
-  )
-target_link_libraries(MLIRSupport
-  PUBLIC
-  LLVMSupport
+
+  LINK_LIBS PUBLIC
   ${LLVM_PTHREAD_LIB})
 
 add_mlir_library(MLIROptLib
@@ -24,28 +21,9 @@ add_mlir_library(MLIROptLib
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
-  )
-target_link_libraries(MLIROptLib
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRPass
   MLIRParser
-  LLVMSupport
   MLIRSupport
   )
-
-add_llvm_library(MLIRJitRunner
-  JitRunner.cpp
-)
-target_link_libraries(MLIRJitRunner
-  PUBLIC
-  MLIRExecutionEngine
-  MLIRIR
-  MLIRParser
-  MLIRStandardOps
-  MLIRTargetLLVMIR
-  MLIRTransforms
-  MLIRStandardToLLVM
-  MLIRSupport
-  LLVMCore
-  LLVMSupport
-)

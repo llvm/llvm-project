@@ -289,6 +289,7 @@ def llvm_v1f64_ty      : LLVMType<v1f64>;    //  1 x double
 def llvm_v2f64_ty      : LLVMType<v2f64>;    //  2 x double
 def llvm_v4f64_ty      : LLVMType<v4f64>;    //  4 x double
 def llvm_v8f64_ty      : LLVMType<v8f64>;    //  8 x double
+def llvm_v16f64_ty     : LLVMType<v16f64>;   // 16 x double
 
 def llvm_vararg_ty     : LLVMType<isVoid>;   // this means vararg here
 
@@ -507,6 +508,9 @@ def int_instrprof_value_profile : Intrinsic<[],
                                              llvm_i64_ty, llvm_i32_ty,
                                              llvm_i32_ty],
                                             []>;
+
+def int_call_preallocated_setup : Intrinsic<[llvm_token_ty], [llvm_i32_ty]>;
+def int_call_preallocated_arg : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
 
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
@@ -1156,7 +1160,7 @@ def int_is_constant : Intrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 "llvm.is.constant">;
 
 // Intrinsic to mask out bits of a pointer.
-def int_ptrmask: Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_anyint_ty],
+def int_ptrmask: Intrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_anyint_ty],
                            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===---------------- Vector Predication Intrinsics --------------===//

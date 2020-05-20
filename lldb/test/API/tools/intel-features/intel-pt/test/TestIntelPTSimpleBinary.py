@@ -7,6 +7,7 @@ import time
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import configuration
 
 
 class TestIntelPTSimpleBinary(TestBase):
@@ -14,22 +15,22 @@ class TestIntelPTSimpleBinary(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    def setUp(self):
+        TestBase.setUp(self)
+
+        if 'intel-pt' not in configuration.enabled_plugins:
+            self.skipTest("The intel-pt test plugin is not enabled")
+
+        plugin_path = os.path.join(os.environ["LLDB_IMPLIB_DIR"], "liblldbIntelFeatures.so")
+        self.runCmd("plugin load " + plugin_path)
+
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['i386', 'x86_64']))
     @skipIfRemote
     def test_basic_flow(self):
         """Test collection, decoding, and dumping instructions"""
-        if os.environ.get('TEST_INTEL_PT') != '1':
-            self.skipTest("The environment variable TEST_INTEL_PT=1 is needed to run this test.")
-
-        lldb_exec_dir = os.environ["LLDB_IMPLIB_DIR"]
-        lldb_lib_dir = os.path.join(lldb_exec_dir, os.pardir, "lib")
-        plugin_file = os.path.join(lldb_lib_dir, "liblldbIntelFeatures.so")
 
         self.build()
-
-        self.runCmd("plugin load " + plugin_file)
-
         exe = self.getBuildArtifact("a.out")
         lldbutil.run_to_name_breakpoint(self, "main", exe_name=exe)
         # We start tracing from main
@@ -52,9 +53,9 @@ class TestIntelPTSimpleBinary(TestBase):
         self.expect("processor-trace show-instr-log -c 100",
             patterns=[
                 # We expect to have seen the first instruction of 'fun'
-                hex(fun_start_adddress),  
+                hex(fun_start_adddress),
                 # We expect to see the exit condition of the for loop
-                "at main.cpp:" + str(line_number('main.cpp', '// Break for loop')) 
+                "at main.cpp:" + str(line_number('main.cpp', '// Break for loop'))
             ])
 
         self.runCmd("processor-trace stop")

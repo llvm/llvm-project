@@ -443,6 +443,7 @@ TEST_F(BackgroundIndexTest, NoDotsInAbsPath) {
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex Idx(Context::empty(), FS, CDB,
                       [&](llvm::StringRef) { return &MSS; });
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
   tooling::CompileCommand Cmd;
   FS.Files[testPath("root/A.cc")] = "";
@@ -450,14 +451,15 @@ TEST_F(BackgroundIndexTest, NoDotsInAbsPath) {
   Cmd.Directory = testPath("root/build");
   Cmd.CommandLine = {"clang++", "../A.cc"};
   CDB.setCompileCommand(testPath("root/build/../A.cc"), Cmd);
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
   FS.Files[testPath("root/B.cc")] = "";
   Cmd.Filename = "./B.cc";
   Cmd.Directory = testPath("root");
   Cmd.CommandLine = {"clang++", "./B.cc"};
   CDB.setCompileCommand(testPath("root/./B.cc"), Cmd);
-
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
   for (llvm::StringRef AbsPath : MSS.AccessedPaths.keys()) {
     EXPECT_FALSE(AbsPath.contains("./")) << AbsPath;
     EXPECT_FALSE(AbsPath.contains("../")) << AbsPath;

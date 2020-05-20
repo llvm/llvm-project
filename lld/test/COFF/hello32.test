@@ -14,6 +14,7 @@ HEADER-NEXT:   SectionCount: 4
 HEADER-NEXT:   TimeDateStamp: 
 HEADER-NEXT:   PointerToSymbolTable: 0x0
 HEADER-NEXT:   SymbolCount: 0
+HEADER-NEXT:   StringTableSize: 0
 HEADER-NEXT:   OptionalHeaderSize: 224
 HEADER-NEXT:   Characteristics [ (0x102)
 HEADER-NEXT:     IMAGE_FILE_32BIT_MACHINE (0x100)

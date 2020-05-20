@@ -195,12 +195,15 @@ void tblgen::OpClass::setHasOperandAdaptorClass(bool has) {
   hasOperandAdaptor = has;
 }
 
-// Adds the given trait to this op.
-void tblgen::OpClass::addTrait(Twine trait) { traits.push_back(trait.str()); }
+void tblgen::OpClass::addTrait(Twine trait) {
+  auto traitStr = trait.str();
+  if (traitsSet.insert(traitStr).second)
+    traitsVec.push_back(std::move(traitStr));
+}
 
 void tblgen::OpClass::writeDeclTo(raw_ostream &os) const {
   os << "class " << className << " : public Op<" << className;
-  for (const auto &trait : traits)
+  for (const auto &trait : traitsVec)
     os << ", " << trait;
   os << "> {\npublic:\n";
   os << "  using Op::Op;\n";

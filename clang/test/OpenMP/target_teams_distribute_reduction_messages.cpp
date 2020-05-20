@@ -1,12 +1,19 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -168,7 +175,7 @@ T tmain(T argc) {
 #pragma omp parallel reduction(min : i)
 #pragma omp target teams distribute reduction(max : j) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute allocate(omp_thread_mem_alloc: fl) reduction(+ : fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute' directive}}
+#pragma omp target teams distribute uses_allocators(omp_thread_mem_alloc) allocate(omp_thread_mem_alloc: fl) reduction(+ : fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute' directive}} omp45-error {{unexpected OpenMP clause 'uses_allocators' in directive '#pragma omp target teams distribute'}}
     for (int j=0; j<100; j++) foo();
 
   return T();
@@ -261,6 +268,8 @@ int main(int argc, char **argv) {
     for (int j=0; j<100; j++) foo();
   static int m;
 #pragma omp target teams distribute reduction(+ : m) // OK
+  for (int j=0; j<100; j++) foo();
+#pragma omp target teams distribute reduction(task, + : m) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
   for (int j=0; j<100; j++) foo();
 
   return tmain(argc) + tmain(fl); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<float>' requested here}}

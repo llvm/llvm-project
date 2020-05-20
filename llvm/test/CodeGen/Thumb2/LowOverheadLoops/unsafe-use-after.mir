@@ -125,7 +125,7 @@ body:             |
 
   bb.1.preheader:
     successors: %bb.2(0x80000000)
-    liveins: $r0
+    liveins: $r0, $r1
     $lr = tMOVr $r0, 14, $noreg
 
   bb.2.while.body:

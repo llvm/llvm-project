@@ -19,7 +19,7 @@ define dso_local i64 @test1(i8* nocapture readonly %p, i32 signext %count) local
 ; CHECK-NEXT:    ldx 3, 3, 8
 ; CHECK-NEXT:    mffprd 8, 0
 ; CHECK-NEXT:    mfvsrld 10, 1
-; CHECK-NEXT:    mfvsrd 11, 1
+; CHECK-NEXT:    mffprd 11, 1
 ; CHECK-NEXT:    mulld 8, 9, 8
 ; CHECK-NEXT:    mulld 5, 8, 5
 ; CHECK-NEXT:    mulld 5, 5, 10

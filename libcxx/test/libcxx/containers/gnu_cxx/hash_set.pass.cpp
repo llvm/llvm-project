@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // Prevent emission of the deprecated warning.
 #ifdef __clang__
 #pragma clang diagnostic ignored "-W#warnings"
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wcpp"
 #endif
 
 #include <ext/hash_set>

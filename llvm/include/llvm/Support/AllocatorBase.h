@@ -48,16 +48,17 @@ public:
 
   /// Deallocate \a Ptr to \a Size bytes of memory allocated by this
   /// allocator.
-  void Deallocate(const void *Ptr, size_t Size) {
+  void Deallocate(const void *Ptr, size_t Size, size_t Alignment) {
 #ifdef __clang__
-    static_assert(static_cast<void (AllocatorBase::*)(const void *, size_t)>(
-                      &AllocatorBase::Deallocate) !=
-                      static_cast<void (DerivedT::*)(const void *, size_t)>(
-                          &DerivedT::Deallocate),
-                  "Class derives from AllocatorBase without implementing the "
-                  "core Deallocate(void *) overload!");
+    static_assert(
+        static_cast<void (AllocatorBase::*)(const void *, size_t, size_t)>(
+            &AllocatorBase::Deallocate) !=
+            static_cast<void (DerivedT::*)(const void *, size_t, size_t)>(
+                &DerivedT::Deallocate),
+        "Class derives from AllocatorBase without implementing the "
+        "core Deallocate(void *) overload!");
 #endif
-    return static_cast<DerivedT *>(this)->Deallocate(Ptr, Size);
+    return static_cast<DerivedT *>(this)->Deallocate(Ptr, Size, Alignment);
   }
 
   // The rest of these methods are helpers that redirect to one of the above
@@ -72,7 +73,7 @@ public:
   template <typename T>
   std::enable_if_t<!std::is_same<std::remove_cv_t<T>, void>::value, void>
   Deallocate(T *Ptr, size_t Num = 1) {
-    Deallocate(static_cast<const void *>(Ptr), Num * sizeof(T));
+    Deallocate(static_cast<const void *>(Ptr), Num * sizeof(T), alignof(T));
   }
 };
 
@@ -80,16 +81,15 @@ class MallocAllocator : public AllocatorBase<MallocAllocator> {
 public:
   void Reset() {}
 
-  LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
-                                                size_t /*Alignment*/) {
-    return safe_malloc(Size);
+  LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, size_t Alignment) {
+    return allocate_buffer(Size, Alignment);
   }
 
   // Pull in base class overloads.
   using AllocatorBase<MallocAllocator>::Allocate;
 
-  void Deallocate(const void *Ptr, size_t /*Size*/) {
-    free(const_cast<void *>(Ptr));
+  void Deallocate(const void *Ptr, size_t Size, size_t Alignment) {
+    deallocate_buffer(const_cast<void *>(Ptr), Size, Alignment);
   }
 
   // Pull in base class overloads.

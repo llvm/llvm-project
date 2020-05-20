@@ -12,6 +12,7 @@
 #define FORTRAN_EVALUATE_CHECK_EXPRESSION_H_
 
 #include "expression.h"
+#include "intrinsics.h"
 #include "type.h"
 #include <optional>
 
@@ -35,29 +36,35 @@ extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
-bool IsInitialDataTarget(const Expr<SomeType> &, parser::ContextualMessages &);
+bool IsInitialDataTarget(
+    const Expr<SomeType> &, parser::ContextualMessages * = nullptr);
 
 // Check whether an expression is a specification expression
 // (10.1.11(2), C1010).  Constant expressions are always valid
 // specification expressions.
+
 template <typename A>
-void CheckSpecificationExpr(
-    const A &, parser::ContextualMessages &, const semantics::Scope &);
+void CheckSpecificationExpr(const A &, parser::ContextualMessages &,
+    const semantics::Scope &, const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
-    parser::ContextualMessages &, const semantics::Scope &);
+    parser::ContextualMessages &, const semantics::Scope &,
+    const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
-    parser::ContextualMessages &, const semantics::Scope &);
+    parser::ContextualMessages &, const semantics::Scope &,
+    const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
-    parser::ContextualMessages &, const semantics::Scope &);
+    parser::ContextualMessages &, const semantics::Scope &,
+    const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeType>> &x, parser::ContextualMessages &,
-    const semantics::Scope &);
+    const semantics::Scope &, const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeInteger>> &x, parser::ContextualMessages &,
-    const semantics::Scope &);
+    const semantics::Scope &, const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &x,
-    parser::ContextualMessages &, const semantics::Scope &);
+    parser::ContextualMessages &, const semantics::Scope &,
+    const IntrinsicProcTable &);
 
 // Simple contiguity (9.5.4)
 template <typename A>

@@ -40,6 +40,7 @@
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:         Natural Loop Information
+; CHECK-NEXT:         Post-Dominator Tree Construction
 ; CHECK-NEXT:         Branch Probability Analysis
 ; CHECK-NEXT:         Block Frequency Analysis
 ; CHECK-NEXT:     FunctionPass Manager
@@ -88,6 +89,7 @@
 ; CHECK-NEXT:         Combine redundant instructions
 ; CHECK-NEXT:         Conditionally eliminate dead library calls
 ; CHECK-NEXT:         Natural Loop Information
+; CHECK-NEXT:         Post-Dominator Tree Construction
 ; CHECK-NEXT:         Branch Probability Analysis
 ; CHECK-NEXT:         Block Frequency Analysis
 ; CHECK-NEXT:         Lazy Branch Probability Analysis
@@ -192,6 +194,7 @@
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:         Natural Loop Information
+; CHECK-NEXT:         Post-Dominator Tree Construction
 ; CHECK-NEXT:         Branch Probability Analysis
 ; CHECK-NEXT:         Block Frequency Analysis
 ; CHECK-NEXT:     Dead Global Elimination
@@ -216,6 +219,7 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Loop Distribution
+; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Scalar Evolution Analysis
@@ -285,6 +289,7 @@
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Canonicalize natural loops
@@ -312,6 +317,7 @@
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Natural Loop Information
+; CHECK-NEXT:     Post-Dominator Tree Construction
 ; CHECK-NEXT:     Branch Probability Analysis
 ; CHECK-NEXT:     Block Frequency Analysis
 ; CHECK-NEXT: Pass Arguments:
@@ -319,6 +325,7 @@
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Natural Loop Information
+; CHECK-NEXT:     Post-Dominator Tree Construction
 ; CHECK-NEXT:     Branch Probability Analysis
 ; CHECK-NEXT:     Block Frequency Analysis
 

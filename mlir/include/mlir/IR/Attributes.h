@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <complex>
 
 namespace mlir {
 class AffineMap;
@@ -40,7 +41,8 @@ struct SymbolRefAttributeStorage;
 struct TypeAttributeStorage;
 
 /// Elements Attributes.
-struct DenseElementsAttributeStorage;
+struct DenseIntOrFPElementsAttributeStorage;
+struct DenseStringElementsAttributeStorage;
 struct OpaqueElementsAttributeStorage;
 struct SparseElementsAttributeStorage;
 } // namespace detail
@@ -141,10 +143,11 @@ enum Kind {
   Unit,
 
   /// Elements Attributes.
-  DenseElements,
+  DenseIntOrFPElements,
+  DenseStringElements,
   OpaqueElements,
   SparseElements,
-  FIRST_ELEMENTS_ATTR = DenseElements,
+  FIRST_ELEMENTS_ATTR = DenseIntOrFPElements,
   LAST_ELEMENTS_ATTR = SparseElements,
 
   /// Locations.
@@ -266,6 +269,9 @@ public:
 /// be non-null.
 using NamedAttribute = std::pair<Identifier, Attribute>;
 
+bool operator<(const NamedAttribute &lhs, const NamedAttribute &rhs);
+bool operator<(const NamedAttribute &lhs, StringRef rhs);
+
 /// Dictionary attribute is an attribute that represents a sorted collection of
 /// named attribute values. The elements are sorted by name, and each name must
 /// be unique within the collection.
@@ -276,14 +282,27 @@ public:
   using Base::Base;
   using ValueType = ArrayRef<NamedAttribute>;
 
+  /// Construct a dictionary attribute with the provided list of named
+  /// attributes. This method assumes that the provided list is unordered. If
+  /// the caller can guarantee that the attributes are ordered by name,
+  /// getWithSorted should be used instead.
   static DictionaryAttr get(ArrayRef<NamedAttribute> value,
                             MLIRContext *context);
+
+  /// Construct a dictionary with an array of values that is known to already be
+  /// sorted by name and uniqued.
+  static DictionaryAttr getWithSorted(ArrayRef<NamedAttribute> value,
+                                      MLIRContext *context);
 
   ArrayRef<NamedAttribute> getValue() const;
 
   /// Return the specified attribute if present, null otherwise.
   Attribute get(StringRef name) const;
   Attribute get(Identifier name) const;
+
+  /// Return the specified named attribute if present, None otherwise.
+  Optional<NamedAttribute> getNamed(StringRef name) const;
+  Optional<NamedAttribute> getNamed(Identifier name) const;
 
   /// Support range iteration.
   using iterator = llvm::ArrayRef<NamedAttribute>::iterator;
@@ -292,10 +311,26 @@ public:
   bool empty() const { return size() == 0; }
   size_t size() const;
 
+  /// Sorts the NamedAttributes in the array ordered by name as expected by
+  /// getWithSorted and returns whether the values were sorted.
+  /// Requires: uniquely named attributes.
+  static bool sort(ArrayRef<NamedAttribute> values,
+                   SmallVectorImpl<NamedAttribute> &storage);
+
+  /// Sorts the NamedAttributes in the array ordered by name as expected by
+  /// getWithSorted in place on an array and returns whether the values needed
+  /// to be sorted.
+  /// Requires: uniquely named attributes.
+  static bool sortInPlace(SmallVectorImpl<NamedAttribute> &array);
+
   /// Methods for supporting type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) {
     return kind == StandardAttributes::Dictionary;
   }
+
+private:
+  /// Return empty dictionary.
+  static DictionaryAttr getEmpty(MLIRContext *context);
 };
 
 //===----------------------------------------------------------------------===//
@@ -667,24 +702,29 @@ protected:
   /// Return the data base pointer.
   const char *getData() const { return this->base.getPointer(); }
 };
+
+/// Type trait detector that checks if a given type T is a complex type.
+template <typename T> struct is_complex_t : public std::false_type {};
+template <typename T>
+struct is_complex_t<std::complex<T>> : public std::true_type {};
 } // namespace detail
 
 /// An attribute that represents a reference to a dense vector or tensor object.
 ///
-class DenseElementsAttr
-    : public Attribute::AttrBase<DenseElementsAttr, ElementsAttr,
-                                 detail::DenseElementsAttributeStorage> {
+class DenseElementsAttr : public ElementsAttr {
 public:
-  using Base::Base;
+  using ElementsAttr::ElementsAttr;
 
   /// Method for support type inquiry through isa, cast and dyn_cast.
   static bool classof(Attribute attr) {
-    return attr.getKind() == StandardAttributes::DenseElements;
+    return attr.getKind() == StandardAttributes::DenseIntOrFPElements ||
+           attr.getKind() == StandardAttributes::DenseStringElements;
   }
 
   /// Constructs a dense elements attribute from an array of element values.
   /// Each element attribute value is expected to be an element of 'type'.
-  /// 'type' must be a vector or tensor with static shape.
+  /// 'type' must be a vector or tensor with static shape. If the element of
+  /// `type` is non-integer/index/float it is assumed to be a string type.
   static DenseElementsAttr get(ShapedType type, ArrayRef<Attribute> values);
 
   /// Constructs a dense integer elements attribute from an array of integer
@@ -704,13 +744,33 @@ public:
   /// Constructs a dense integer elements attribute from a single element.
   template <typename T, typename = typename std::enable_if<
                             std::numeric_limits<T>::is_integer ||
-                            llvm::is_one_of<T, float, double>::value>::type>
+                            llvm::is_one_of<T, float, double>::value ||
+                            detail::is_complex_t<T>::value>::type>
   static DenseElementsAttr get(const ShapedType &type, T value) {
     return get(type, llvm::makeArrayRef(value));
   }
 
+  /// Constructs a dense complex elements attribute from an array of complex
+  /// values. Each value is expected to be the same bitwidth of the element type
+  /// of 'type'. 'type' must be a vector or tensor with static shape.
+  template <typename T, typename ElementT = typename T::value_type,
+            typename = typename std::enable_if<
+                detail::is_complex_t<T>::value &&
+                (std::numeric_limits<ElementT>::is_integer ||
+                 llvm::is_one_of<ElementT, float, double>::value)>::type>
+  static DenseElementsAttr get(const ShapedType &type, ArrayRef<T> values) {
+    const char *data = reinterpret_cast<const char *>(values.data());
+    return getRawComplex(type, ArrayRef<char>(data, values.size() * sizeof(T)),
+                         sizeof(T), std::numeric_limits<ElementT>::is_integer,
+                         std::numeric_limits<ElementT>::is_signed);
+  }
+
   /// Overload of the above 'get' method that is specialized for boolean values.
   static DenseElementsAttr get(ShapedType type, ArrayRef<bool> values);
+
+  /// Overload of the above 'get' method that is specialized for StringRef
+  /// values.
+  static DenseElementsAttr get(ShapedType type, ArrayRef<StringRef> values);
 
   /// Constructs a dense integer elements attribute from an array of APInt
   /// values. Each APInt value is expected to have the same bitwidth as the
@@ -718,11 +778,25 @@ public:
   /// shape.
   static DenseElementsAttr get(ShapedType type, ArrayRef<APInt> values);
 
+  /// Constructs a dense complex elements attribute from an array of APInt
+  /// values. Each APInt value is expected to have the same bitwidth as the
+  /// element type of 'type'. 'type' must be a vector or tensor with static
+  /// shape.
+  static DenseElementsAttr get(ShapedType type,
+                               ArrayRef<std::complex<APInt>> values);
+
   /// Constructs a dense float elements attribute from an array of APFloat
   /// values. Each APFloat value is expected to have the same bitwidth as the
   /// element type of 'type'. 'type' must be a vector or tensor with static
   /// shape.
   static DenseElementsAttr get(ShapedType type, ArrayRef<APFloat> values);
+
+  /// Constructs a dense complex elements attribute from an array of APFloat
+  /// values. Each APFloat value is expected to have the same bitwidth as the
+  /// element type of 'type'. 'type' must be a vector or tensor with static
+  /// shape.
+  static DenseElementsAttr get(ShapedType type,
+                               ArrayRef<std::complex<APFloat>> values);
 
   /// Construct a dense elements attribute for an initializer_list of values.
   /// Each value is expected to be the same bitwidth of the element type of
@@ -739,6 +813,12 @@ public:
   static DenseElementsAttr getFromRawBuffer(ShapedType type,
                                             ArrayRef<char> rawBuffer,
                                             bool isSplatBuffer);
+
+  /// Returns true if the given buffer is a valid raw buffer for the given type.
+  /// `detectedSplat` is set if the buffer is valid and represents a splat
+  /// buffer.
+  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer,
+                               bool &detectedSplat);
 
   //===--------------------------------------------------------------------===//
   // Iterators
@@ -816,6 +896,26 @@ public:
     size_t bitWidth;
   };
 
+  /// A utility iterator that allows walking over the internal raw complex APInt
+  /// values.
+  class ComplexIntElementIterator
+      : public detail::DenseElementIndexedIteratorImpl<
+            ComplexIntElementIterator, std::complex<APInt>, std::complex<APInt>,
+            std::complex<APInt>> {
+  public:
+    /// Accesses the raw std::complex<APInt> value at this iterator position.
+    std::complex<APInt> operator*() const;
+
+  private:
+    friend DenseElementsAttr;
+
+    /// Constructs a new iterator.
+    ComplexIntElementIterator(DenseElementsAttr attr, size_t dataIndex);
+
+    /// The bitwidth of the element type.
+    size_t bitWidth;
+  };
+
   /// Iterator for walking over APFloat values.
   class FloatElementIterator final
       : public llvm::mapped_iterator<IntElementIterator,
@@ -827,6 +927,21 @@ public:
 
   public:
     using reference = APFloat;
+  };
+
+  /// Iterator for walking over complex APFloat values.
+  class ComplexFloatElementIterator final
+      : public llvm::mapped_iterator<
+            ComplexIntElementIterator,
+            std::function<std::complex<APFloat>(const std::complex<APInt> &)>> {
+    friend DenseElementsAttr;
+
+    /// Initializes the float element iterator to the specified iterator.
+    ComplexFloatElementIterator(const llvm::fltSemantics &smt,
+                                ComplexIntElementIterator it);
+
+  public:
+    using reference = std::complex<APFloat>;
   };
 
   //===--------------------------------------------------------------------===//
@@ -876,10 +991,36 @@ public:
   llvm::iterator_range<ElementIterator<T>> getValues() const {
     assert(isValidIntOrFloat(sizeof(T), std::numeric_limits<T>::is_integer,
                              std::numeric_limits<T>::is_signed));
-    auto rawData = getRawData().data();
+    const char *rawData = getRawData().data();
     bool splat = isSplat();
     return {ElementIterator<T>(rawData, splat, 0),
             ElementIterator<T>(rawData, splat, getNumElements())};
+  }
+
+  /// Return the held element values as a range of std::complex.
+  template <typename T, typename ElementT = typename T::value_type,
+            typename = typename std::enable_if<
+                detail::is_complex_t<T>::value &&
+                (std::numeric_limits<ElementT>::is_integer ||
+                 llvm::is_one_of<ElementT, float, double>::value)>::type>
+  llvm::iterator_range<ElementIterator<T>> getValues() const {
+    assert(isValidComplex(sizeof(T), std::numeric_limits<ElementT>::is_integer,
+                          std::numeric_limits<ElementT>::is_signed));
+    const char *rawData = getRawData().data();
+    bool splat = isSplat();
+    return {ElementIterator<T>(rawData, splat, 0),
+            ElementIterator<T>(rawData, splat, getNumElements())};
+  }
+
+  /// Return the held element values as a range of StringRef.
+  template <typename T, typename = typename std::enable_if<
+                            std::is_same<T, StringRef>::value>::type>
+  llvm::iterator_range<ElementIterator<StringRef>> getValues() const {
+    auto stringRefs = getRawStringData();
+    const char *ptr = reinterpret_cast<const char *>(stringRefs.data());
+    bool splat = isSplat();
+    return {ElementIterator<StringRef>(ptr, splat, 0),
+            ElementIterator<StringRef>(ptr, splat, getNumElements())};
   }
 
   /// Return the held element values as a range of Attributes.
@@ -926,6 +1067,15 @@ public:
   IntElementIterator int_value_begin() const;
   IntElementIterator int_value_end() const;
 
+  /// Return the held element values as a range of complex APInts. The element
+  /// type of this attribute must be a complex of integer type.
+  llvm::iterator_range<ComplexIntElementIterator> getComplexIntValues() const;
+  template <typename T, typename = typename std::enable_if<
+                            std::is_same<T, std::complex<APInt>>::value>::type>
+  llvm::iterator_range<ComplexIntElementIterator> getValues() const {
+    return getComplexIntValues();
+  }
+
   /// Return the held element values as a range of APFloat. The element type of
   /// this attribute must be of float type.
   llvm::iterator_range<FloatElementIterator> getFloatValues() const;
@@ -937,10 +1087,23 @@ public:
   FloatElementIterator float_value_begin() const;
   FloatElementIterator float_value_end() const;
 
+  /// Return the held element values as a range of complex APFloat. The element
+  /// type of this attribute must be a complex of float type.
+  llvm::iterator_range<ComplexFloatElementIterator>
+  getComplexFloatValues() const;
+  template <typename T, typename = typename std::enable_if<std::is_same<
+                            T, std::complex<APFloat>>::value>::type>
+  llvm::iterator_range<ComplexFloatElementIterator> getValues() const {
+    return getComplexFloatValues();
+  }
+
   /// Return the raw storage data held by this attribute. Users should generally
   /// not use this directly, as the internal storage format is not always in the
   /// form the user might expect.
   ArrayRef<char> getRawData() const;
+
+  /// Return the raw StringRef data held by this attribute.
+  ArrayRef<StringRef> getRawStringData() const;
 
   //===--------------------------------------------------------------------===//
   // Mutation Utilities
@@ -973,15 +1136,12 @@ protected:
     return IntElementIterator(*this, getNumElements());
   }
 
-  /// Constructs a dense elements attribute from an array of raw APInt values.
-  /// Each APInt value is expected to have the same bitwidth as the element type
-  /// of 'type'. 'type' must be a vector or tensor with static shape.
-  static DenseElementsAttr getRaw(ShapedType type, ArrayRef<APInt> values);
-
-  /// Get or create a new dense elements attribute instance with the given raw
-  /// data buffer. 'type' must be a vector or tensor with static shape.
-  static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data,
-                                  bool isSplat);
+  /// Overload of the raw 'get' method that asserts that the given type is of
+  /// complex type. This method is used to verify type invariants that the
+  /// templatized 'get' method cannot.
+  static DenseElementsAttr getRawComplex(ShapedType type, ArrayRef<char> data,
+                                         int64_t dataEltSize, bool isInt,
+                                         bool isSigned);
 
   /// Overload of the raw 'get' method that asserts that the given type is of
   /// integer or floating-point type. This method is used to verify type
@@ -995,15 +1155,93 @@ protected:
   /// the current attribute. This method is used to verify specific type
   /// invariants that the templatized 'getValues' method cannot.
   bool isValidIntOrFloat(int64_t dataEltSize, bool isInt, bool isSigned) const;
+
+  /// Check the information for a C++ data type, check if this type is valid for
+  /// the current attribute. This method is used to verify specific type
+  /// invariants that the templatized 'getValues' method cannot.
+  bool isValidComplex(int64_t dataEltSize, bool isInt, bool isSigned) const;
+};
+
+/// An attribute class for representing dense arrays of strings. The structure
+/// storing and querying a list of densely packed strings.
+class DenseStringElementsAttr
+    : public Attribute::AttrBase<DenseStringElementsAttr, DenseElementsAttr,
+                                 detail::DenseStringElementsAttributeStorage> {
+
+public:
+  using Base::Base;
+
+  /// Method for support type inquiry through isa, cast and dyn_cast.
+  static bool kindof(unsigned kind) {
+    return kind == StandardAttributes::DenseStringElements;
+  }
+
+  /// Overload of the raw 'get' method that asserts that the given type is of
+  /// integer or floating-point type. This method is used to verify type
+  /// invariants that the templatized 'get' method cannot.
+  static DenseStringElementsAttr get(ShapedType type, ArrayRef<StringRef> data);
+
+protected:
+  friend DenseElementsAttr;
+};
+
+/// An attribute class for specializing behavior of Int and Floating-point
+/// densely packed string arrays.
+class DenseIntOrFPElementsAttr
+    : public Attribute::AttrBase<DenseIntOrFPElementsAttr, DenseElementsAttr,
+                                 detail::DenseIntOrFPElementsAttributeStorage> {
+
+public:
+  using Base::Base;
+
+  /// Method for support type inquiry through isa, cast and dyn_cast.
+  static bool kindof(unsigned kind) {
+    return kind == StandardAttributes::DenseIntOrFPElements;
+  }
+
+protected:
+  friend DenseElementsAttr;
+
+  /// Constructs a dense elements attribute from an array of raw APFloat values.
+  /// Each APFloat value is expected to have the same bitwidth as the element
+  /// type of 'type'. 'type' must be a vector or tensor with static shape.
+  static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
+                                  ArrayRef<APFloat> values, bool isSplat);
+
+  /// Constructs a dense elements attribute from an array of raw APInt values.
+  /// Each APInt value is expected to have the same bitwidth as the element type
+  /// of 'type'. 'type' must be a vector or tensor with static shape.
+  static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
+                                  ArrayRef<APInt> values, bool isSplat);
+
+  /// Get or create a new dense elements attribute instance with the given raw
+  /// data buffer. 'type' must be a vector or tensor with static shape.
+  static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data,
+                                  bool isSplat);
+
+  /// Overload of the raw 'get' method that asserts that the given type is of
+  /// complex type. This method is used to verify type invariants that the
+  /// templatized 'get' method cannot.
+  static DenseElementsAttr getRawComplex(ShapedType type, ArrayRef<char> data,
+                                         int64_t dataEltSize, bool isInt,
+                                         bool isSigned);
+
+  /// Overload of the raw 'get' method that asserts that the given type is of
+  /// integer or floating-point type. This method is used to verify type
+  /// invariants that the templatized 'get' method cannot.
+  static DenseElementsAttr getRawIntOrFloat(ShapedType type,
+                                            ArrayRef<char> data,
+                                            int64_t dataEltSize, bool isInt,
+                                            bool isSigned);
 };
 
 /// An attribute that represents a reference to a dense float vector or tensor
 /// object. Each element is stored as a double.
-class DenseFPElementsAttr : public DenseElementsAttr {
+class DenseFPElementsAttr : public DenseIntOrFPElementsAttr {
 public:
   using iterator = DenseElementsAttr::FloatElementIterator;
 
-  using DenseElementsAttr::DenseElementsAttr;
+  using DenseIntOrFPElementsAttr::DenseIntOrFPElementsAttr;
 
   /// Get an instance of a DenseFPElementsAttr with the given arguments. This
   /// simply wraps the DenseElementsAttr::get calls.
@@ -1035,13 +1273,13 @@ public:
 
 /// An attribute that represents a reference to a dense integer vector or tensor
 /// object.
-class DenseIntElementsAttr : public DenseElementsAttr {
+class DenseIntElementsAttr : public DenseIntOrFPElementsAttr {
 public:
   /// DenseIntElementsAttr iterates on APInt, so we can use the raw element
   /// iterator directly.
   using iterator = DenseElementsAttr::IntElementIterator;
 
-  using DenseElementsAttr::DenseElementsAttr;
+  using DenseIntOrFPElementsAttr::DenseIntOrFPElementsAttr;
 
   /// Get an instance of a DenseIntElementsAttr with the given arguments. This
   /// simply wraps the DenseElementsAttr::get calls.
@@ -1194,19 +1432,37 @@ private:
   getZeroValue() const {
     return getZeroAPInt();
   }
+  template <typename T>
+  typename std::enable_if<std::is_same<std::complex<APInt>, T>::value, T>::type
+  getZeroValue() const {
+    APInt intZero = getZeroAPInt();
+    return {intZero, intZero};
+  }
   /// Get a zero for an APFloat.
   template <typename T>
   typename std::enable_if<std::is_same<APFloat, T>::value, T>::type
   getZeroValue() const {
     return getZeroAPFloat();
   }
-  /// Get a zero for an C++ integer or float type.
   template <typename T>
-  typename std::enable_if<std::numeric_limits<T>::is_integer ||
-                              llvm::is_one_of<T, float, double>::value,
+  typename std::enable_if<std::is_same<std::complex<APFloat>, T>::value,
                           T>::type
   getZeroValue() const {
-    return T(0);
+    APFloat floatZero = getZeroAPFloat();
+    return {floatZero, floatZero};
+  }
+
+  /// Get a zero for an C++ integer, float, StringRef, or complex type.
+  template <typename T>
+  typename std::enable_if<
+      std::numeric_limits<T>::is_integer ||
+          llvm::is_one_of<T, float, double, StringRef>::value ||
+          (detail::is_complex_t<T>::value &&
+           !llvm::is_one_of<T, std::complex<APInt>,
+                            std::complex<APFloat>>::value),
+      T>::type
+  getZeroValue() const {
+    return T();
   }
 
   /// Flatten, and return, all of the sparse indices in this attribute in
@@ -1266,7 +1522,7 @@ class ElementsAttrIterator
             typename... Args>
   RetT process(Args &... args) const {
     switch (attrKind) {
-    case StandardAttributes::DenseElements:
+    case StandardAttributes::DenseIntOrFPElements:
       return ProcessFn<DenseIteratorT>()(args...);
     case StandardAttributes::SparseElements:
       return ProcessFn<SparseIteratorT>()(args...);
@@ -1387,32 +1643,31 @@ inline ::llvm::hash_code hash_value(Attribute arg) {
 }
 
 //===----------------------------------------------------------------------===//
-// NamedAttributeList
+// MutableDictionaryAttr
 //===----------------------------------------------------------------------===//
 
-/// A NamedAttributeList is used to manage a list of named attributes. This
-/// provides simple interfaces for adding/removing/finding attributes from
+/// A MutableDictionaryAttr is a mutable wrapper around a DictionaryAttr. It
+/// provides additional interfaces for adding, removing, replacing attributes
 /// within a DictionaryAttr.
 ///
 /// We assume there will be relatively few attributes on a given operation
 /// (maybe a dozen or so, but not hundreds or thousands) so we use linear
 /// searches for everything.
-class NamedAttributeList {
+class MutableDictionaryAttr {
 public:
-  NamedAttributeList(DictionaryAttr attrs = nullptr)
+  MutableDictionaryAttr(DictionaryAttr attrs = nullptr)
       : attrs((attrs && !attrs.empty()) ? attrs : nullptr) {}
-  NamedAttributeList(ArrayRef<NamedAttribute> attributes);
+  MutableDictionaryAttr(ArrayRef<NamedAttribute> attributes);
 
-  bool operator!=(const NamedAttributeList &other) const {
+  bool operator!=(const MutableDictionaryAttr &other) const {
     return !(*this == other);
   }
-  bool operator==(const NamedAttributeList &other) const {
+  bool operator==(const MutableDictionaryAttr &other) const {
     return attrs == other.attrs;
   }
 
-  /// Return the underlying dictionary attribute. This may be null, if this list
-  /// has no attributes.
-  DictionaryAttr getDictionary() const { return attrs; }
+  /// Return the underlying dictionary attribute.
+  DictionaryAttr getDictionary(MLIRContext *context) const;
 
   /// Return all of the attributes on this operation.
   ArrayRef<NamedAttribute> getAttrs() const;
@@ -1424,6 +1679,10 @@ public:
   Attribute get(StringRef name) const;
   Attribute get(Identifier name) const;
 
+  /// Return the specified named attribute if present, None otherwise.
+  Optional<NamedAttribute> getNamed(StringRef name) const;
+  Optional<NamedAttribute> getNamed(Identifier name) const;
+
   /// If the an attribute exists with the specified name, change it to the new
   /// value.  Otherwise, add a new attribute with the specified name/value.
   void set(Identifier name, Attribute value);
@@ -1434,9 +1693,19 @@ public:
   /// value indicates whether the attribute was present or not.
   RemoveResult remove(Identifier name);
 
+  bool empty() const { return attrs == nullptr; }
+
 private:
+  friend ::llvm::hash_code hash_value(const MutableDictionaryAttr &arg);
+
   DictionaryAttr attrs;
 };
+
+inline ::llvm::hash_code hash_value(const MutableDictionaryAttr &arg) {
+  if (!arg.attrs)
+    return ::llvm::hash_value((void *)nullptr);
+  return hash_value(arg.attrs);
+}
 
 } // end namespace mlir.
 

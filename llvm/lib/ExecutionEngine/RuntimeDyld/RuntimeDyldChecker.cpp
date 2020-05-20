@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "RuntimeDyldCheckerImpl.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -708,7 +709,7 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
   const char *LineStart = MemBuf->getBufferStart();
 
   // Eat whitespace.
-  while (LineStart != MemBuf->getBufferEnd() && std::isspace(*LineStart))
+  while (LineStart != MemBuf->getBufferEnd() && isSpace(*LineStart))
     ++LineStart;
 
   while (LineStart != MemBuf->getBufferEnd() && *LineStart != '\0') {
@@ -734,7 +735,7 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
 
     // Eat whitespace.
     LineStart = LineEnd;
-    while (LineStart != MemBuf->getBufferEnd() && std::isspace(*LineStart))
+    while (LineStart != MemBuf->getBufferEnd() && isSpace(*LineStart))
       ++LineStart;
   }
   return DidAllTestsPass && (NumRules != 0);

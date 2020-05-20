@@ -17,7 +17,6 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -970,11 +969,11 @@ void Writer::createMiscChunks() {
   if (config->guardCF != GuardCFLevel::Off)
     createGuardCFTables();
 
-  if (config->mingw) {
+  if (config->autoImport)
     createRuntimePseudoRelocs();
 
+  if (config->mingw)
     insertCtorDtorSymbols();
-  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1721,6 +1720,15 @@ void Writer::createRuntimePseudoRelocs() {
     if (!sc || !sc->live)
       continue;
     sc->getRuntimePseudoRelocs(rels);
+  }
+
+  if (!config->pseudoRelocs) {
+    // Not writing any pseudo relocs; if some were needed, error out and
+    // indicate what required them.
+    for (const RuntimePseudoReloc &rpr : rels)
+      error("automatic dllimport of " + rpr.sym->getName() + " in " +
+            toString(rpr.target->file) + " requires pseudo relocations");
+    return;
   }
 
   if (!rels.empty())

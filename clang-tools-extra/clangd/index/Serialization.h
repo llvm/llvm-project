@@ -77,6 +77,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O);
 std::string toYAML(const Symbol &);
 std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &);
 std::string toYAML(const Relation &);
+std::string toYAML(const Ref &);
+
+// Deserialize a single symbol from YAML.
+llvm::Expected<clangd::Symbol> symbolFromYAML(StringRef YAML,
+                                              llvm::UniqueStringSaver *Strings);
+llvm::Expected<clangd::Ref> refFromYAML(StringRef YAML,
+                                        llvm::UniqueStringSaver *Strings);
 
 // Build an in-memory static index from an index file.
 // The size should be relatively small, so data can be managed in memory.

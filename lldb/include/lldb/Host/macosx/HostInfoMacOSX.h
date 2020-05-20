@@ -35,7 +35,7 @@ public:
   static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
 
   /// Query xcrun to find an Xcode SDK directory.
-  static std::string GetXcodeSDK(XcodeSDK sdk);
+  static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk);
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

@@ -10,7 +10,7 @@ class TestWatchpointCount(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @skipIf(oslist=["linux"], archs=["aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_watchpoint_count(self):
         self.build()
         (_, process, thread, _) = lldbutil.run_to_source_breakpoint(self, "patatino", lldb.SBFileSpec("main.c"))

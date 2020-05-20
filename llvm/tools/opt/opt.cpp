@@ -21,6 +21,7 @@
 #include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -118,8 +119,12 @@ static cl::opt<std::string> ThinLinkBitcodeFile(
 static cl::opt<bool>
 NoVerify("disable-verify", cl::desc("Do not run the verifier"), cl::Hidden);
 
-static cl::opt<bool>
-VerifyEach("verify-each", cl::desc("Verify after each transform"));
+static cl::opt<bool> NoUpgradeDebugInfo("disable-upgrade-debug-info",
+                                        cl::desc("Generate invalid output"),
+                                        cl::ReallyHidden);
+
+static cl::opt<bool> VerifyEach("verify-each",
+                                cl::desc("Verify after each transform"));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
@@ -616,8 +621,18 @@ int main(int argc, char **argv) {
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
 
   // Load the input module...
-  std::unique_ptr<Module> M =
-      parseIRFile(InputFilename, Err, Context, !NoVerify, ClDataLayout);
+  auto SetDataLayout = [](StringRef) -> Optional<std::string> {
+    if (ClDataLayout.empty())
+      return None;
+    return ClDataLayout;
+  };
+  std::unique_ptr<Module> M;
+  if (NoUpgradeDebugInfo)
+    M = parseAssemblyFileWithIndexNoUpgradeDebugInfo(
+            InputFilename, Err, Context, nullptr, SetDataLayout)
+            .Mod;
+  else
+    M = parseIRFile(InputFilename, Err, Context, SetDataLayout);
 
   if (!M) {
     Err.print(argv[0], errs());

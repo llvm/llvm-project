@@ -246,7 +246,8 @@ DIMacroFile *DIBuilder::createTempMacroFile(DIMacroFile *Parent,
 DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val,
                                           bool IsUnsigned) {
   assert(!Name.empty() && "Unable to create enumerator without name");
-  return DIEnumerator::get(VMContext, Val, IsUnsigned, Name);
+  return DIEnumerator::get(VMContext, APInt(64, Val, !IsUnsigned), IsUnsigned,
+                           Name);
 }
 
 DIBasicType *DIBuilder::createUnspecifiedType(StringRef Name) {
@@ -831,10 +832,10 @@ DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
 
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,
                                   StringRef ConfigurationMacros,
-                                  StringRef IncludePath,
-                                  StringRef APINotesFile) {
-  return DIModule::get(VMContext, getNonCompileUnitScope(Scope), Name,
-                       ConfigurationMacros, IncludePath, APINotesFile);
+                                  StringRef IncludePath, StringRef APINotesFile,
+                                  DIFile *File, unsigned LineNo) {
+  return DIModule::get(VMContext, File, getNonCompileUnitScope(Scope), Name,
+                       ConfigurationMacros, IncludePath, APINotesFile, LineNo);
 }
 
 DILexicalBlockFile *DIBuilder::createLexicalBlockFile(DIScope *Scope,

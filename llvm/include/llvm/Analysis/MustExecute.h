@@ -122,8 +122,6 @@ public:
                                      const DominatorTree *DT,
                                      const Loop *CurLoop) const;
 
-  SimpleLoopSafetyInfo() : LoopSafetyInfo() {};
-
   virtual ~SimpleLoopSafetyInfo() {};
 };
 
@@ -170,8 +168,6 @@ public:
   /// from its block. It will make all cache updates to keep it correct after
   /// this removal.
   void removeInstruction(const Instruction *Inst);
-
-  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT), MW(DT) {};
 
   virtual ~ICFLoopSafetyInfo() {};
 };
@@ -420,11 +416,6 @@ struct MustBeExecutedContextExplorer {
         ExploreCFGBackward(ExploreCFGBackward), LIGetter(LIGetter),
         DTGetter(DTGetter), PDTGetter(PDTGetter), EndIterator(*this, nullptr) {}
 
-  /// Clean up the dynamically allocated iterators.
-  ~MustBeExecutedContextExplorer() {
-    DeleteContainerSeconds(InstructionIteratorMap);
-  }
-
   /// Iterator-based interface. \see MustBeExecutedIterator.
   ///{
   using iterator = MustBeExecutedIterator;
@@ -432,15 +423,15 @@ struct MustBeExecutedContextExplorer {
 
   /// Return an iterator to explore the context around \p PP.
   iterator &begin(const Instruction *PP) {
-    auto *&It = InstructionIteratorMap[PP];
+    auto &It = InstructionIteratorMap[PP];
     if (!It)
-      It = new iterator(*this, PP);
+      It.reset(new iterator(*this, PP));
     return *It;
   }
 
   /// Return an iterator to explore the cached context around \p PP.
   const_iterator &begin(const Instruction *PP) const {
-    return *InstructionIteratorMap.lookup(PP);
+    return *InstructionIteratorMap.find(PP)->second;
   }
 
   /// Return an universal end iterator.
@@ -468,7 +459,7 @@ struct MustBeExecutedContextExplorer {
   /// This method will evaluate \p Pred and return
   /// true if \p Pred holds in every instruction.
   bool checkForAllContext(const Instruction *PP,
-                          const function_ref<bool(const Instruction *)> &Pred) {
+                          function_ref<bool(const Instruction *)> Pred) {
     for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; ++EIt)
       if (!Pred(*EIt))
         return false;
@@ -548,7 +539,7 @@ private:
   DenseMap<const Function*, Optional<bool>> IrreducibleControlMap;
 
   /// Map from instructions to associated must be executed iterators.
-  DenseMap<const Instruction *, MustBeExecutedIterator *>
+  DenseMap<const Instruction *, std::unique_ptr<MustBeExecutedIterator>>
       InstructionIteratorMap;
 
   /// A unique end iterator.

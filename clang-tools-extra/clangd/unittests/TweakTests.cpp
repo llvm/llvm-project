@@ -173,6 +173,15 @@ TEST_F(ShowSelectionTreeTest, Test) {
         *IntegerLiteral 2
 )";
   EXPECT_EQ(apply("int fcall(int); int x = fca[[ll(2 +]]2);"), Output);
+
+  Output = R"(message:
+ TranslationUnitDecl 
+   FunctionDecl void x()
+     CompoundStmt { …
+       ForStmt for (;;) …
+        *BreakStmt break;
+)";
+  EXPECT_EQ(apply("void x() { for (;;) br^eak; }"), Output);
 }
 
 TWEAK_TEST(DumpRecordLayout);
@@ -2444,6 +2453,7 @@ class cc {
 public:
   struct st {};
   static void mm() {}
+  cc operator|(const cc& x) const { return x; }
 };
 }
 })cpp";
@@ -2463,6 +2473,16 @@ public:
   // test that we don't crash.
   EXPECT_UNAVAILABLE(Header +
                      "template<typename TT> using foo = one::tt<T^T>;");
+  // Test that we don't crash or misbehave on unnamed DeclRefExpr.
+  EXPECT_UNAVAILABLE(Header +
+                     "void fun() { one::two::cc() ^| one::two::cc(); }");
+
+  // Check that we do not trigger in header files.
+  FileName = "test.h";
+  ExtraArgs.push_back("-xc++-header"); // .h file is treated a C by default.
+  EXPECT_UNAVAILABLE(Header + "void fun() { one::two::f^f(); }");
+  FileName = "test.hpp";
+  EXPECT_UNAVAILABLE(Header + "void fun() { one::two::f^f(); }");
 }
 
 TEST_F(AddUsingTest, Apply) {
@@ -2656,6 +2676,23 @@ using one::two::ff;
 
 void fun() {
   CALL(ff);
+})cpp"},
+            // Parent namespace != lexical parent namespace
+            {R"cpp(
+#include "test.hpp"
+namespace foo { void fun(); }
+
+void foo::fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+using one::two::ff;
+
+namespace foo { void fun(); }
+
+void foo::fun() {
+  ff();
 })cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {

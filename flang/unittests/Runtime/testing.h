@@ -1,8 +1,8 @@
 #ifndef FORTRAN_TEST_RUNTIME_TESTING_H_
 #define FORTRAN_TEST_RUNTIME_TESTING_H_
 
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
-#include <iosfwd>
 
 namespace llvm {
 class raw_ostream;

@@ -13,20 +13,6 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 
-namespace llvm {
-class raw_ostream;
-class StringRef;
-} // namespace llvm
-
-namespace mlir {
-class Attribute;
-class DialectAsmParser;
-class DialectAsmPrinter;
-class Location;
-class MLIRContext;
-class Type;
-} // namespace mlir
-
 namespace fir {
 
 /// FIR dialect
@@ -52,7 +38,7 @@ inline void registerFIR() {
   [[maybe_unused]] static bool init_once = [] {
     mlir::registerDialect<mlir::AffineDialect>();
     mlir::registerDialect<mlir::LLVM::LLVMDialect>();
-    mlir::registerDialect<mlir::loop::LoopOpsDialect>();
+    mlir::registerDialect<mlir::scf::SCFDialect>();
     mlir::registerDialect<mlir::StandardOpsDialect>();
     mlir::registerDialect<mlir::vector::VectorDialect>();
     mlir::registerDialect<FIROpsDialect>();

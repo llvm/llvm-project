@@ -597,7 +597,8 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         switch (operand_type->getTypeID()) {
         default:
           break;
-        case Type::VectorTyID: {
+        case Type::FixedVectorTyID:
+        case Type::ScalableVectorTyID: {
           LLDB_LOGF(log, "Unsupported operand type: %s",
                     PrintType(operand_type).c_str());
           error.SetErrorString(unsupported_operand_error);
@@ -1370,7 +1371,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       // Find the address of the callee function
       lldb_private::Scalar I;
-      const llvm::Value *val = call_inst->getCalledValue();
+      const llvm::Value *val = call_inst->getCalledOperand();
 
       if (!frame.EvaluateValue(I, val, module)) {
         error.SetErrorToGenericError();

@@ -214,3 +214,65 @@ func @test_prefetch(%arg0 : index, %arg1 : index) {
   }
   return
 }
+
+// -----
+
+// CHECK: [[MAP_ID:#map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
+
+// Test with just loop IVs.
+func @vector_load_vector_store_iv() {
+  %0 = alloc() : memref<100x100xf32>
+  affine.for %i0 = 0 to 16 {
+    affine.for %i1 = 0 to 16 step 8 {
+      %1 = affine.vector_load %0[%i0, %i1] : memref<100x100xf32>, vector<8xf32>
+      affine.vector_store %1, %0[%i0, %i1] : memref<100x100xf32>, vector<8xf32>
+// CHECK:      %[[buf:.*]] = alloc
+// CHECK-NEXT: affine.for %[[i0:.*]] = 0
+// CHECK-NEXT:   affine.for %[[i1:.*]] = 0
+// CHECK-NEXT:     %[[val:.*]] = affine.vector_load %[[buf]][%[[i0]], %[[i1]]] : memref<100x100xf32>, vector<8xf32>
+// CHECK-NEXT:     affine.vector_store %[[val]], %[[buf]][%[[i0]], %[[i1]]] : memref<100x100xf32>, vector<8xf32>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 3, d1 + 7)>
+
+// Test with loop IVs and constants.
+func @vector_load_vector_store_iv_constant() {
+  %0 = alloc() : memref<100x100xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 16 step 4 {
+      %1 = affine.vector_load %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>, vector<4xf32>
+      affine.vector_store %1, %0[%i0 + 3, %i1 + 7] : memref<100x100xf32>, vector<4xf32>
+// CHECK:      %[[buf:.*]] = alloc
+// CHECK-NEXT: affine.for %[[i0:.*]] = 0
+// CHECK-NEXT:   affine.for %[[i1:.*]] = 0
+// CHECK-NEXT:     %[[val:.*]] = affine.vector_load %{{.*}}[%{{.*}} + 3, %{{.*}} + 7] : memref<100x100xf32>, vector<4xf32>
+// CHECK-NEXT:     affine.vector_store %[[val]], %[[buf]][%[[i0]] + 3, %[[i1]] + 7] : memref<100x100xf32>, vector<4xf32>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
+
+func @vector_load_vector_store_2d() {
+  %0 = alloc() : memref<100x100xf32>
+  affine.for %i0 = 0 to 16 step 2{
+    affine.for %i1 = 0 to 16 step 8 {
+      %1 = affine.vector_load %0[%i0, %i1] : memref<100x100xf32>, vector<2x8xf32>
+      affine.vector_store %1, %0[%i0, %i1] : memref<100x100xf32>, vector<2x8xf32>
+// CHECK:      %[[buf:.*]] = alloc
+// CHECK-NEXT: affine.for %[[i0:.*]] = 0
+// CHECK-NEXT:   affine.for %[[i1:.*]] = 0
+// CHECK-NEXT:     %[[val:.*]] = affine.vector_load %[[buf]][%[[i0]], %[[i1]]] : memref<100x100xf32>, vector<2x8xf32>
+// CHECK-NEXT:     affine.vector_store %[[val]], %[[buf]][%[[i0]], %[[i1]]] : memref<100x100xf32>, vector<2x8xf32>
+    }
+  }
+  return
+}

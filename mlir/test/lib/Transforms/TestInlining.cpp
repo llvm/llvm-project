@@ -44,9 +44,8 @@ struct Inliner : public PassWrapper<Inliner, FunctionPass> {
       // Inline the functional region operation, but only clone the internal
       // region if there is more than one use.
       if (failed(inlineRegion(
-              interface, &callee.body(), caller,
-              llvm::to_vector<8>(caller.getArgOperands()),
-              SmallVector<Value, 8>(caller.getResults()), caller.getLoc(),
+              interface, &callee.body(), caller, caller.getArgOperands(),
+              caller.getResults(), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;
 

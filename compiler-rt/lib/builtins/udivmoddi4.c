@@ -87,7 +87,7 @@ COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
     // K K
     // ---
     // K 0
-    sr = __builtin_clz(d.s.high) - __builtin_clz(n.s.high);
+    sr = clzsi(d.s.high) - clzsi(n.s.high);
     // 0 <= sr <= n_uword_bits - 2 or sr large
     if (sr > n_uword_bits - 2) {
       if (rem)
@@ -120,7 +120,7 @@ COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
       // K X
       // ---
       // 0 K
-      sr = 1 + n_uword_bits + __builtin_clz(d.s.low) - __builtin_clz(n.s.high);
+      sr = 1 + n_uword_bits + clzsi(d.s.low) - clzsi(n.s.high);
       // 2 <= sr <= n_udword_bits - 1
       // q.all = n.all << (n_udword_bits - sr);
       // r.all = n.all >> sr;
@@ -145,7 +145,7 @@ COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
       // K X
       // ---
       // K K
-      sr = __builtin_clz(d.s.high) - __builtin_clz(n.s.high);
+      sr = clzsi(d.s.high) - clzsi(n.s.high);
       // 0 <= sr <= n_uword_bits - 1 or sr large
       if (sr > n_uword_bits - 1) {
         if (rem)

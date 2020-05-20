@@ -1,4 +1,4 @@
-; RUN: opt -passes=attributor-cgscc -attributor-disable=false -attributor-annotate-decl-cs -attributor-allow-shallow-wrappers -S < %s | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes=attributor-cgscc  -attributor-annotate-decl-cs -attributor-allow-shallow-wrappers -S < %s | FileCheck %s --check-prefix=CHECK
 
 ; TEST 1: simple test, without argument
 ; A wrapper will be generated for this function, Check the wrapper first

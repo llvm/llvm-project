@@ -54,6 +54,10 @@ IndexType Builder::getIndexType() { return IndexType::get(context); }
 
 IntegerType Builder::getI1Type() { return IntegerType::get(1, context); }
 
+IntegerType Builder::getI32Type() { return IntegerType::get(32, context); }
+
+IntegerType Builder::getI64Type() { return IntegerType::get(64, context); }
+
 IntegerType Builder::getIntegerType(unsigned width) {
   return IntegerType::get(width, context);
 }
@@ -202,12 +206,17 @@ Builder::getSymbolRefAttr(StringRef value,
   return SymbolRefAttr::get(value, nestedReferences, getContext());
 }
 
+ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [this](bool v) -> Attribute { return getBoolAttr(v); }));
+  return getArrayAttr(attrs);
+}
+
 ArrayAttr Builder::getI32ArrayAttr(ArrayRef<int32_t> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }));
   return getArrayAttr(attrs);
 }
-
 ArrayAttr Builder::getI64ArrayAttr(ArrayRef<int64_t> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }));
@@ -330,15 +339,18 @@ AffineMap Builder::getShiftedAffineMap(AffineMap map, int64_t shift) {
 }
 
 //===----------------------------------------------------------------------===//
-// OpBuilder.
+// OpBuilder
 //===----------------------------------------------------------------------===//
 
-OpBuilder::~OpBuilder() {}
+OpBuilder::Listener::~Listener() {}
 
 /// Insert the given operation at the current insertion point and return it.
 Operation *OpBuilder::insert(Operation *op) {
   if (block)
     block->getOperations().insert(insertPoint, op);
+
+  if (listener)
+    listener->notifyOperationInserted(op);
   return op;
 }
 
@@ -355,6 +367,9 @@ Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt,
   b->addArguments(argTypes);
   parent->getBlocks().insert(insertPt, b);
   setInsertionPointToEnd(b);
+
+  if (listener)
+    listener->notifyBlockCreated(b);
   return b;
 }
 

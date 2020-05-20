@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Filesystem.h"
-#include "lld/Common/Threads.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #if LLVM_ON_UNIX
 #include <unistd.h>
 #endif

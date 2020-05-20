@@ -52,6 +52,18 @@ enum NodeType : unsigned {
   ADC,
   SBC, // adc, sbc instructions
 
+  // Arithmetic instructions
+  SDIV_PRED,
+  UDIV_PRED,
+  SMIN_PRED,
+  UMIN_PRED,
+  SMAX_PRED,
+  UMAX_PRED,
+  SHL_PRED,
+  SRL_PRED,
+  SRA_PRED,
+  SETCC_PRED,
+
   // Arithmetic instructions which write flags.
   ADDS,
   SUBS,
@@ -120,6 +132,10 @@ enum NodeType : unsigned {
   SQSHLU_I,
   SRSHR_I,
   URSHR_I,
+
+  // Vector shift by constant and insert
+  VSLI,
+  VSRI,
 
   // Vector comparisons
   CMEQ,
@@ -196,8 +212,10 @@ enum NodeType : unsigned {
   UMULL,
 
   // Reciprocal estimates and steps.
-  FRECPE, FRECPS,
-  FRSQRTE, FRSQRTS,
+  FRECPE,
+  FRECPS,
+  FRSQRTE,
+  FRSQRTS,
 
   SUNPKHI,
   SUNPKLO,
@@ -211,6 +229,14 @@ enum NodeType : unsigned {
   REV,
   TBL,
 
+  // Floating-point reductions.
+  FADDA_PRED,
+  FADDV_PRED,
+  FMAXV_PRED,
+  FMAXNMV_PRED,
+  FMINV_PRED,
+  FMINNMV_PRED,
+
   INSR,
   PTEST,
   PTRUE,
@@ -220,10 +246,13 @@ enum NodeType : unsigned {
 
   REINTERPRET_CAST,
 
+  LD1,
+  LD1S,
   LDNF1,
   LDNF1S,
   LDFF1,
   LDFF1S,
+  LD1RQ,
 
   // Unsigned gather loads.
   GLD1,
@@ -265,6 +294,8 @@ enum NodeType : unsigned {
   GLDNT1,
   GLDNT1_INDEX,
   GLDNT1S,
+
+  ST1,
 
   // Scatter store
   SST1,
@@ -776,6 +807,8 @@ private:
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
+                              unsigned NewOp) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;

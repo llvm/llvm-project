@@ -649,7 +649,10 @@ Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
   if (error.Fail())
     return error;
 
-  error = ConnectToDebugserver(remote_url);
+  if (repro::Loader *loader = repro::Reproducer::Instance().GetLoader())
+    error = ConnectToReplayServer(loader);
+  else
+    error = ConnectToDebugserver(remote_url);
 
   if (error.Fail())
     return error;

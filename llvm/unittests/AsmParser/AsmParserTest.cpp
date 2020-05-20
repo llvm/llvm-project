@@ -232,7 +232,7 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
   // Check the details of the vector.
   VectorType *VT = cast<VectorType>(Ty);
   ASSERT_TRUE(VT->getNumElements() == 5);
-  ASSERT_TRUE(VT->getBitWidth() == 160);
+  ASSERT_TRUE(VT->getPrimitiveSizeInBits().getFixedSize() == 160);
   Ty = VT->getElementType();
   ASSERT_TRUE(Ty->isIntegerTy());
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
@@ -364,7 +364,7 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
   // Check the details of the vector.
   VectorType *VT = cast<VectorType>(Ty);
   ASSERT_TRUE(VT->getNumElements() == 5);
-  ASSERT_TRUE(VT->getBitWidth() == 160);
+  ASSERT_TRUE(VT->getPrimitiveSizeInBits().getFixedSize() == 160);
   Ty = VT->getElementType();
   ASSERT_TRUE(Ty->isIntegerTy());
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);

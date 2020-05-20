@@ -31,8 +31,8 @@ LoadCommands:
         size:            61
         offset:          0x00000198
         align:           4
-        reloff:          0x00000250
-        nreloc:          1
+        reloff:          0x0
+        nreloc:          0
         flags:           0x80000400
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -43,8 +43,8 @@ LoadCommands:
         size:            40
         offset:          0x000001D8
         align:           2
-        reloff:          0x00000258
-        nreloc:          2
+        reloff:          0x0
+        nreloc:          0
         flags:           0x02000000
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -67,9 +67,9 @@ LoadCommands:
     sdk:             0
   - cmd:             LC_SYMTAB
     cmdsize:         24
-    symoff:          616
+    symoff:          592
     nsyms:           2
-    stroff:          640
+    stroff:          616
     strsize:         16
   - cmd:             LC_DYSYMTAB
     cmdsize:         80

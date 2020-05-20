@@ -221,6 +221,84 @@ TEST(TransformerClangTidyCheckTest, AddIncludeAngled) {
             test::runCheckOnCode<IncludeCheck<IncludeFormat::Angled>>(Input));
 }
 
+class IncludeOrderCheck : public TransformerClangTidyCheck {
+  static RewriteRule rule() {
+    using namespace ::clang::ast_matchers;
+    RewriteRule Rule = transformer::makeRule(integerLiteral(), change(cat("5")),
+                                             cat("no message"));
+    addInclude(Rule, "bar.h", IncludeFormat::Quoted);
+    return Rule;
+  }
+
+public:
+  IncludeOrderCheck(StringRef Name, ClangTidyContext *Context)
+      : TransformerClangTidyCheck(rule(), Name, Context) {}
+};
+
+TEST(TransformerClangTidyCheckTest, AddIncludeObeysSortStyleLocalOption) {
+  std::string Input = R"cc(#include "input.h"
+int h(int x) { return 3; })cc";
+
+  std::string TreatsAsLibraryHeader = R"cc(#include "input.h"
+
+#include "bar.h"
+int h(int x) { return 5; })cc";
+
+  std::string TreatsAsNormalHeader = R"cc(#include "bar.h"
+#include "input.h"
+int h(int x) { return 5; })cc";
+
+  ClangTidyOptions Options;
+  std::map<StringRef, StringRef> PathsToContent = {{"input.h", "\n"}};
+  Options.CheckOptions["test-check-0.IncludeStyle"] = "llvm";
+  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
+                                       Input, nullptr, "inputTest.cpp", None,
+                                       Options, PathsToContent));
+  EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
+                                      Input, nullptr, "input_test.cpp", None,
+                                      Options, PathsToContent));
+
+  Options.CheckOptions["test-check-0.IncludeStyle"] = "google";
+  EXPECT_EQ(TreatsAsNormalHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "inputTest.cc", None, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
+                                       Input, nullptr, "input_test.cc", None,
+                                       Options, PathsToContent));
+}
+
+TEST(TransformerClangTidyCheckTest, AddIncludeObeysSortStyleGlobalOption) {
+  std::string Input = R"cc(#include "input.h"
+int h(int x) { return 3; })cc";
+
+  std::string TreatsAsLibraryHeader = R"cc(#include "input.h"
+
+#include "bar.h"
+int h(int x) { return 5; })cc";
+
+  std::string TreatsAsNormalHeader = R"cc(#include "bar.h"
+#include "input.h"
+int h(int x) { return 5; })cc";
+
+  ClangTidyOptions Options;
+  std::map<StringRef, StringRef> PathsToContent = {{"input.h", "\n"}};
+  Options.CheckOptions["IncludeStyle"] = "llvm";
+  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
+                                       Input, nullptr, "inputTest.cpp", None,
+                                       Options, PathsToContent));
+  EXPECT_EQ(TreatsAsNormalHeader, test::runCheckOnCode<IncludeOrderCheck>(
+                                      Input, nullptr, "input_test.cpp", None,
+                                      Options, PathsToContent));
+
+  Options.CheckOptions["IncludeStyle"] = "google";
+  EXPECT_EQ(TreatsAsNormalHeader,
+            test::runCheckOnCode<IncludeOrderCheck>(
+                Input, nullptr, "inputTest.cc", None, Options, PathsToContent));
+  EXPECT_EQ(TreatsAsLibraryHeader, test::runCheckOnCode<IncludeOrderCheck>(
+                                       Input, nullptr, "input_test.cc", None,
+                                       Options, PathsToContent));
+}
+
 } // namespace
 } // namespace utils
 } // namespace tidy

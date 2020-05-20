@@ -397,24 +397,6 @@ public:
 
 FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 
-template <typename T> struct Variable {
-  using Result = T;
-  static_assert(IsSpecificIntrinsicType<Result> ||
-      std::is_same_v<Result, SomeKind<TypeCategory::Derived>>);
-  EVALUATE_UNION_CLASS_BOILERPLATE(Variable)
-  std::optional<DynamicType> GetType() const {
-    return std::visit([](const auto &x) { return x.GetType(); }, u);
-  }
-  int Rank() const {
-    return std::visit([](const auto &x) { return x.Rank(); }, u);
-  }
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const {
-    std::visit([&](const auto &x) { x.AsFortran(o); }, u);
-    return o;
-  }
-  std::variant<Designator<Result>, FunctionRef<Result>> u;
-};
-
 class DescriptorInquiry {
 public:
   using Result = SubscriptInteger;

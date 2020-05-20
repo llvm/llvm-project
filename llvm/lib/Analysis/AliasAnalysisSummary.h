@@ -37,10 +37,13 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/InstrTypes.h"
 #include <bitset>
 
 namespace llvm {
+
+class CallBase;
+class Value;
+
 namespace cflaa {
 
 //===----------------------------------------------------------------------===//

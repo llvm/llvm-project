@@ -62,10 +62,6 @@ func @f(%arg0: f32) {
 // Test case: Delete block arguments for cond_br.
 
 // CHECK:      func @f(%arg0: f32, %arg1: i1)
-// CHECK-NEXT:   cond_br %arg1, ^bb1, ^bb2
-// CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   return
-// CHECK-NEXT: ^bb2:
 // CHECK-NEXT:   return
 
 func @f(%arg0: f32, %pred: i1) {

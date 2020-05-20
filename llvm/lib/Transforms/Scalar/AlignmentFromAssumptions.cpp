@@ -325,16 +325,14 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
     if (LoadInst *LI = dyn_cast<LoadInst>(J)) {
       Align NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
                                            LI->getPointerOperand(), SE);
-
-      if (NewAlignment > *LI->getAlign()) {
+      if (NewAlignment > LI->getAlign()) {
         LI->setAlignment(NewAlignment);
         ++NumLoadAlignChanged;
       }
     } else if (StoreInst *SI = dyn_cast<StoreInst>(J)) {
       Align NewAlignment = getNewAlignment(AASCEV, AlignSCEV, OffSCEV,
                                            SI->getPointerOperand(), SE);
-
-      if (NewAlignment > *SI->getAlign()) {
+      if (NewAlignment > SI->getAlign()) {
         SI->setAlignment(NewAlignment);
         ++NumStoreAlignChanged;
       }

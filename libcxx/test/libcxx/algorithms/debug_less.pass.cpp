@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // <algorithm>
 
@@ -183,6 +183,7 @@ inline bool operator<(FooImp<T> const& x, Tag<0> y) {
 template <class T>
 inline bool operator<(Tag<0>, FooImp<T> const&) {
     static_assert(sizeof(FooImp<T>) != sizeof(FooImp<T>), "should not be instantiated");
+    return false;
 }
 
 template <class T>
@@ -193,6 +194,7 @@ inline bool operator<(Tag<1> x, FooImp<T> const& y) {
 template <class T>
 inline bool operator<(FooImp<T> const&, Tag<1>) {
     static_assert(sizeof(FooImp<T>) != sizeof(FooImp<T>), "should not be instantiated");
+    return false;
 }
 
 typedef FooImp<> Foo;

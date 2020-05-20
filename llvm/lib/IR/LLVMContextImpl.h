@@ -29,7 +29,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -53,8 +52,7 @@
 
 namespace llvm {
 
-class ConstantFP;
-class ConstantInt;
+class StringRef;
 class Type;
 class Value;
 class ValueHandleBase;
@@ -355,19 +353,22 @@ template <> struct MDNodeKeyImpl<DISubrange> {
 };
 
 template <> struct MDNodeKeyImpl<DIEnumerator> {
-  int64_t Value;
+  APInt Value;
   MDString *Name;
   bool IsUnsigned;
 
-  MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
+  MDNodeKeyImpl(APInt Value, bool IsUnsigned, MDString *Name)
       : Value(Value), Name(Name), IsUnsigned(IsUnsigned) {}
+  MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
+      : Value(APInt(64, Value, !IsUnsigned)), Name(Name),
+        IsUnsigned(IsUnsigned) {}
   MDNodeKeyImpl(const DIEnumerator *N)
       : Value(N->getValue()), Name(N->getRawName()),
         IsUnsigned(N->isUnsigned()) {}
 
   bool isKeyOf(const DIEnumerator *RHS) const {
-    return Value == RHS->getValue() && IsUnsigned == RHS->isUnsigned() &&
-           Name == RHS->getRawName();
+    return APInt::isSameValue(Value, RHS->getValue()) &&
+           IsUnsigned == RHS->isUnsigned() && Name == RHS->getRawName();
   }
 
   unsigned getHashValue() const { return hash_combine(Value, Name); }
@@ -509,19 +510,21 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *TemplateParams;
   MDString *Identifier;
   Metadata *Discriminator;
+  Metadata *DataLocation;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
                 Metadata *Elements, unsigned RuntimeLang,
                 Metadata *VTableHolder, Metadata *TemplateParams,
-                MDString *Identifier, Metadata *Discriminator)
+                MDString *Identifier, Metadata *Discriminator,
+                Metadata *DataLocation)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
         RuntimeLang(RuntimeLang), VTableHolder(VTableHolder),
         TemplateParams(TemplateParams), Identifier(Identifier),
-        Discriminator(Discriminator) {}
+        Discriminator(Discriminator), DataLocation(DataLocation) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -531,7 +534,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         RuntimeLang(N->getRuntimeLang()), VTableHolder(N->getRawVTableHolder()),
         TemplateParams(N->getRawTemplateParams()),
         Identifier(N->getRawIdentifier()),
-        Discriminator(N->getRawDiscriminator()) {}
+        Discriminator(N->getRawDiscriminator()),
+        DataLocation(N->getRawDataLocation()) {}
 
   bool isKeyOf(const DICompositeType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -545,7 +549,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            VTableHolder == RHS->getRawVTableHolder() &&
            TemplateParams == RHS->getRawTemplateParams() &&
            Identifier == RHS->getRawIdentifier() &&
-           Discriminator == RHS->getRawDiscriminator();
+           Discriminator == RHS->getRawDiscriminator() &&
+           DataLocation == RHS->getRawDataLocation();
   }
 
   unsigned getHashValue() const {
@@ -815,27 +820,32 @@ template <> struct MDNodeKeyImpl<DICommonBlock> {
 };
 
 template <> struct MDNodeKeyImpl<DIModule> {
+  Metadata *File;
   Metadata *Scope;
   MDString *Name;
   MDString *ConfigurationMacros;
   MDString *IncludePath;
   MDString *APINotesFile;
+  unsigned LineNo;
 
-  MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *ConfigurationMacros,
-                MDString *IncludePath, MDString *APINotesFile)
-      : Scope(Scope), Name(Name), ConfigurationMacros(ConfigurationMacros),
-        IncludePath(IncludePath), APINotesFile(APINotesFile) {}
+  MDNodeKeyImpl(Metadata *File, Metadata *Scope, MDString *Name,
+                MDString *ConfigurationMacros, MDString *IncludePath,
+                MDString *APINotesFile, unsigned LineNo)
+      : File(File), Scope(Scope), Name(Name),
+        ConfigurationMacros(ConfigurationMacros), IncludePath(IncludePath),
+        APINotesFile(APINotesFile), LineNo(LineNo) {}
   MDNodeKeyImpl(const DIModule *N)
-      : Scope(N->getRawScope()), Name(N->getRawName()),
+      : File(N->getRawFile()), Scope(N->getRawScope()), Name(N->getRawName()),
         ConfigurationMacros(N->getRawConfigurationMacros()),
         IncludePath(N->getRawIncludePath()),
-        APINotesFile(N->getRawAPINotesFile()) {}
+        APINotesFile(N->getRawAPINotesFile()), LineNo(N->getLineNo()) {}
 
   bool isKeyOf(const DIModule *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            ConfigurationMacros == RHS->getRawConfigurationMacros() &&
            IncludePath == RHS->getRawIncludePath() &&
-           APINotesFile == RHS->getRawAPINotesFile();
+           APINotesFile == RHS->getRawAPINotesFile() &&
+           File == RHS->getRawFile() && LineNo == RHS->getLineNo();
   }
 
   unsigned getHashValue() const {
@@ -1332,7 +1342,8 @@ public:
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
   // Basic type instances.
-  Type VoidTy, LabelTy, HalfTy, FloatTy, DoubleTy, MetadataTy, TokenTy;
+  Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
+      TokenTy;
   Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
@@ -1378,9 +1389,6 @@ public:
   /// integer representing the next DWARF path discriminator to assign to
   /// instructions in different blocks at the same location.
   DenseMap<std::pair<const char *, unsigned>, unsigned> DiscriminatorTable;
-
-  int getOrAddScopeRecordIdxEntry(MDNode *N, int ExistingIdx);
-  int getOrAddScopeInlinedAtIdxEntry(MDNode *Scope, MDNode *IA,int ExistingIdx);
 
   /// A set of interned tags for operand bundles.  The StringMap maps
   /// bundle tags to their IDs.

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -verify %s
+// RUN: %clang_cc1 -std=c++20 -verify %s
 
 using intptr_t = __INTPTR_TYPE__;
 
@@ -135,3 +136,33 @@ static_assert(mutate6(true) == 10);
 // not being a pointer to the start of a string literal.
 namespace std { struct type_info; }
 static_assert(__builtin_constant_p(&typeid(int)));
+
+void mutate_as_side_effect() {
+  int a;
+  static_assert(!__builtin_constant_p(((void)++a, 1)));
+}
+
+namespace dtor_side_effect {
+  struct A {
+    constexpr A() {}
+    ~A();
+  };
+  static_assert(!__builtin_constant_p((A{}, 123)));
+}
+
+#if __cplusplus >= 202002L
+namespace constexpr_dtor {
+  struct A {
+    int *p;
+    constexpr ~A() { *p = 0; }
+  };
+  struct Q { int n; constexpr int *get() { return &n; } };
+  static_assert(!__builtin_constant_p((A{}, 123)));
+  // FIXME: We should probably accept this. GCC does.
+  // However, GCC appears to do so by running the destructors at the end of the
+  // enclosing full-expression, which seems broken; running them at the end of
+  // the evaluation of the __builtin_constant_p argument would be more
+  // defensible.
+  static_assert(!__builtin_constant_p((A{Q().get()}, 123)));
+}
+#endif

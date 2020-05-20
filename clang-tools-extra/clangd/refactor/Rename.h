@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
 
-#include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "support/Path.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"

@@ -12,7 +12,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -134,7 +133,7 @@ TEST_F(ProfileSummaryInfoTest, TestNoProfile) {
   EXPECT_FALSE(PSI.isHotBlock(&BB0, &BFI));
   EXPECT_FALSE(PSI.isColdBlock(&BB0, &BFI));
 
-  CallSite CS1(BB1->getFirstNonPHI());
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
   EXPECT_FALSE(PSI.isHotCallSite(CS1, &BFI));
   EXPECT_FALSE(PSI.isColdCallSite(CS1, &BFI));
 }
@@ -228,9 +227,9 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
-  CallSite CS1(BB1->getFirstNonPHI());
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
-  CallSite CS2(CI2);
+  CallBase &CS2 = cast<CallBase>(*CI2);
 
   EXPECT_TRUE(PSI.isHotCallSite(CS1, &BFI));
   EXPECT_FALSE(PSI.isHotCallSite(CS2, &BFI));
@@ -323,14 +322,14 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
-  CallSite CS1(BB1->getFirstNonPHI());
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
   // Manually attach branch weights metadata to the call instruction.
   SmallVector<uint32_t, 1> Weights;
   Weights.push_back(1000);
   MDBuilder MDB(M->getContext());
   CI2->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
-  CallSite CS2(CI2);
+  CallBase &CS2 = cast<CallBase>(*CI2);
 
   EXPECT_FALSE(PSI.isHotCallSite(CS1, &BFI));
   EXPECT_TRUE(PSI.isHotCallSite(CS2, &BFI));

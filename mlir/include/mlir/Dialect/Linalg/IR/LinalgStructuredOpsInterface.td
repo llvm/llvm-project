@@ -64,7 +64,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       "Operation::operand_range", "getInputs"
     >,
     InterfaceMethod<[{
-        Return the type of the input shape at the given index.
+        Return the `i`-th input shaped type, irrespective of buffer or tensor
+        type.
       }], "ShapedType", "getInputShapedType", (ins "unsigned":$i)>,
     InterfaceMethod<[{
         Return the subset of input operands that are of ranked tensor type.
@@ -89,6 +90,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     InterfaceMethod<[{
         Return the type of the output buffer at the given index.
       }], "MemRefType", "getOutputBufferType", (ins "unsigned":$i)>,
+    InterfaceMethod<[{
+        Return the `i`-th output shaped type, irrespective of buffer or tensor
+        type.
+      }], "ShapedType", "getOutputShapedType", (ins "unsigned":$i)>,
     InterfaceMethod<[{
         Return the results that are of ranked tensor type.
       }], "SmallVector<RankedTensorType, 4>", "getOutputTensorTypes">,

@@ -194,7 +194,7 @@ public:
 
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  lldb::LanguageType Language() override { return m_language; }
+  lldb::LanguageType Language() const override { return m_language; }
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.

@@ -230,20 +230,20 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
 void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   struct FeatureEntry {
     uint8_t Prefix;
-    StringRef Name;
+    std::string Name;
   };
 
   // Read target features and linkage policies from module metadata
   SmallVector<FeatureEntry, 4> EmittedFeatures;
-  for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-    std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
+  auto EmitFeature = [&](std::string Feature) {
+    std::string MDKey = (StringRef("wasm-feature-") + Feature).str();
     Metadata *Policy = M.getModuleFlag(MDKey);
     if (Policy == nullptr)
-      continue;
+      return;
 
     FeatureEntry Entry;
     Entry.Prefix = 0;
-    Entry.Name = KV.Key;
+    Entry.Name = Feature;
 
     if (auto *MD = cast<ConstantAsMetadata>(Policy))
       if (auto *I = cast<ConstantInt>(MD->getValue()))
@@ -253,10 +253,16 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
     if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
         Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
         Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
-      continue;
+      return;
 
     EmittedFeatures.push_back(Entry);
+  };
+
+  for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
+    EmitFeature(KV.Key);
   }
+  // This pseudo-feature tells the linker whether shared memory would be safe
+  EmitFeature("shared-mem");
 
   if (EmittedFeatures.size() == 0)
     return;

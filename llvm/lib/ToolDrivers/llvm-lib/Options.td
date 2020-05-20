@@ -18,6 +18,9 @@ def out    : P<"out", "Path to file to write output">;
 def llvmlibthin : F<"llvmlibthin">,
     HelpText<"Make .lib point to .obj files instead of copying their contents">;
 
+def llvmlibempty : F<"llvmlibempty">,
+    HelpText<"When given no contents, produce an empty .lib file">;
+
 def machine: P<"machine", "Specify target platform">;
 
 def help : F<"help">;

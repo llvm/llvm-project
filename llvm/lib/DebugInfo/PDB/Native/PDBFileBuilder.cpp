@@ -144,7 +144,7 @@ Error PDBFileBuilder::finalizeMsfLayout() {
     if (Dbi) {
       Dbi->setPublicsStreamIndex(Gsi->getPublicsStreamIndex());
       Dbi->setGlobalsStreamIndex(Gsi->getGlobalsStreamIndex());
-      Dbi->setSymbolRecordStreamIndex(Gsi->getRecordStreamIdx());
+      Dbi->setSymbolRecordStreamIndex(Gsi->getRecordStreamIndex());
     }
   }
   if (Tpi) {

@@ -153,6 +153,20 @@ protected:
   static Scope getScope(StringRef Name, uint8_t Type);
   static bool isAltEntry(const NormalizedSymbol &NSym);
 
+  MachO::relocation_info
+  getRelocationInfo(const object::relocation_iterator RelItr) {
+    MachO::any_relocation_info ARI =
+        getObject().getRelocation(RelItr->getRawDataRefImpl());
+    MachO::relocation_info RI;
+    RI.r_address = ARI.r_word0;
+    RI.r_symbolnum = ARI.r_word1 & 0xffffff;
+    RI.r_pcrel = (ARI.r_word1 >> 24) & 1;
+    RI.r_length = (ARI.r_word1 >> 25) & 3;
+    RI.r_extern = (ARI.r_word1 >> 27) & 1;
+    RI.r_type = (ARI.r_word1 >> 28);
+    return RI;
+  }
+
 private:
   static unsigned getPointerSize(const object::MachOObjectFile &Obj);
   static support::endianness getEndianness(const object::MachOObjectFile &Obj);

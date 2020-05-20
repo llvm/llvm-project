@@ -34,6 +34,17 @@ function(find_standalone_test_dependencies)
     set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
     return()
   endif()
+
+  find_program(OPENMP_NOT_EXECUTABLE
+    NAMES not
+    PATHS ${OPENMP_LLVM_TOOLS_DIR})
+  if (NOT OPENMP_NOT_EXECUTABLE)
+    message(STATUS "Cannot find 'not'.")
+    message(STATUS "Please put 'not' in your PATH, set OPENMP_NOT_EXECUTABLE to its full path, or point OPENMP_LLVM_TOOLS_DIR to its directory.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
+    return()
+  endif()
 endfunction()
 
 if (${OPENMP_STANDALONE_BUILD})
@@ -55,6 +66,7 @@ if (${OPENMP_STANDALONE_BUILD})
   separate_arguments(OPENMP_LIT_ARGS)
 else()
   set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 endif()
 
 # Macro to extract information about compiler from file. (no own scope)

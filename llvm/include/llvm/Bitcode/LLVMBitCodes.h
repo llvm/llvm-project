@@ -166,7 +166,9 @@ enum TypeCodes {
 
   TYPE_CODE_FUNCTION = 21, // FUNCTION: [vararg, retty, paramty x N]
 
-  TYPE_CODE_TOKEN = 22 // TOKEN
+  TYPE_CODE_TOKEN = 22, // TOKEN
+
+  TYPE_CODE_BFLOAT = 23 // BRAIN FLOATING POINT
 };
 
 enum OperandBundleTagCode {
@@ -633,6 +635,9 @@ enum AttributeKindCodes {
   ATTR_KIND_NOFREE = 62,
   ATTR_KIND_NOSYNC = 63,
   ATTR_KIND_SANITIZE_MEMTAG = 64,
+  ATTR_KIND_PREALLOCATED = 65,
+  ATTR_KIND_NO_MERGE = 66,
+  ATTR_KIND_NULL_POINTER_IS_VALID = 67,
 };
 
 enum ComdatSelectionKindCodes {

@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -138,7 +139,7 @@ int foomain(I argc, C **argv) {
 #pragma omp target parallel for private(argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp target parallel for private(e, g) allocate(omp_thread_mem_alloc: e) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}}
+#pragma omp target parallel for private(e, g) allocate(omp_thread_mem_alloc: e) uses_allocators(omp_thread_mem_alloc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for' directive}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target parallel for private(h) // expected-error {{threadprivate or thread local variable cannot be private}}

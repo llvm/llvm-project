@@ -15,6 +15,7 @@
 #include "lldb/API/SBBlock.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDeclaration.h"
@@ -40,6 +41,7 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBBreakpointLocation>(R);
   RegisterMethods<SBBreakpointName>(R);
   RegisterMethods<SBBroadcaster>(R);
+  RegisterMethods<SBCommandInterpreter>(R);
   RegisterMethods<SBCommandInterpreterRunOptions>(R);
   RegisterMethods<SBCommandReturnObject>(R);
   RegisterMethods<SBCommunication>(R);
@@ -111,6 +113,12 @@ const char *SBReproducer::Capture() {
     error = llvm::toString(std::move(e));
     return error.c_str();
   }
+
+  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
+    auto &p = g->GetOrCreate<SBProvider>();
+    InstrumentationData::Initialize(p.GetSerializer(), p.GetRegistry());
+  }
+
   return nullptr;
 }
 
@@ -121,15 +129,35 @@ const char *SBReproducer::Capture(const char *path) {
     error = llvm::toString(std::move(e));
     return error.c_str();
   }
+
+  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
+    auto &p = g->GetOrCreate<SBProvider>();
+    InstrumentationData::Initialize(p.GetSerializer(), p.GetRegistry());
+  }
+
   return nullptr;
 }
 
 const char *SBReproducer::PassiveReplay(const char *path) {
   static std::string error;
-  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
+  if (auto e = Reproducer::Initialize(ReproducerMode::PassiveReplay,
+                                      FileSpec(path))) {
     error = llvm::toString(std::move(e));
     return error.c_str();
   }
+
+  if (auto *l = lldb_private::repro::Reproducer::Instance().GetLoader()) {
+    FileSpec file = l->GetFile<SBProvider::Info>();
+    auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
+    if (!error_or_file) {
+      error =
+          "unable to read SB API data: " + error_or_file.getError().message();
+      return error.c_str();
+    }
+    static ReplayData r(std::move(*error_or_file));
+    InstrumentationData::Initialize(r.GetDeserializer(), r.GetRegistry());
+  }
+
   return nullptr;
 }
 
@@ -201,6 +229,12 @@ const char *SBReproducer::GetPath() {
   auto &r = Reproducer::Instance();
   path = r.GetReproducerPath().GetCString();
   return path.c_str();
+}
+
+void SBReproducer::SetWorkingDirectory(const char *path) {
+  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
+    g->GetOrCreate<WorkingDirectoryProvider>().Update(path);
+  }
 }
 
 char lldb_private::repro::SBProvider::ID = 0;

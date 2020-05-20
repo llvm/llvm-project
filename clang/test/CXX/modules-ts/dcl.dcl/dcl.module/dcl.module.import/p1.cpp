@@ -23,7 +23,7 @@ module MODULE_NAME;
 int use_1 = a;
 #if !MODULE_X
 // expected-error@-2 {{declaration of 'a' must be imported from module 'x' before it is required}}
-// expected-note@x.cppm:1 {{here}}
+// expected-note@x.cppm:1 {{not visible}}
 #endif
 
 import x;
@@ -32,7 +32,7 @@ int use_2 = b; // ok
 
 // There is no relation between module x and module x.y.
 int use_3 = c; // expected-error {{declaration of 'c' must be imported from module 'x.y'}}
-               // expected-note@x.y.cppm:1 {{here}}
+               // expected-note@x.y.cppm:1 {{not visible}}
 
 import x [[]];
 import x [[foo]]; // expected-warning {{unknown attribute 'foo' ignored}}

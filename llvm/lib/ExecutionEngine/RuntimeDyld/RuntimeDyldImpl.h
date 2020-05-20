@@ -36,8 +36,6 @@ using namespace llvm::object;
 
 namespace llvm {
 
-class Twine;
-
 #define UNIMPLEMENTED_RELOC(RelType) \
   case RelType: \
     return make_error<RuntimeDyldError>("Unimplemented relocation: " #RelType)

@@ -1,3 +1,25 @@
+add_object_library(
+  math_utils
+  SRCS
+    math_utils.cpp
+  HDRS
+    math_utils.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+)
+
+add_object_library(
+  sincosf_utils
+  HDRS
+    sincosf_utils.h
+  SRCS
+    sincosf_data.cpp
+  DEPENDS
+    .math_utils
+)
+
 add_entrypoint_object(
   round
   REDIRECTED
@@ -11,4 +33,94 @@ add_redirector_object(
   round_redirector
   SRC
     round_redirector.cpp
+)
+
+add_entrypoint_object(
+  cosf
+  SRCS
+    cosf.cpp
+  HDRS
+    cosf.h
+  DEPENDS
+    .sincosf_utils
+    libc.include.math
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  sinf
+  SRCS
+    sinf.cpp
+  HDRS
+    sinf.h
+  DEPENDS
+    .sincosf_utils
+    libc.include.math
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  sincosf
+  SRCS
+    sincosf.cpp
+  HDRS
+    sincosf.h
+  DEPENDS
+    .sincosf_utils
+    libc.include.math
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  fabs
+  SRCS
+    fabs.cpp
+  HDRS
+    fabs.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_entrypoint_object(
+  fabsf
+  SRCS
+    fabsf.cpp
+  HDRS
+    fabsf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+)
+
+add_object_library(
+  exp_utils
+  HDRS
+    exp_utils.h
+  SRCS
+    exp_utils.cpp
+  DEPENDS
+    .math_utils
+)
+
+add_entrypoint_object(
+  expf
+  SRCS
+    expf.cpp
+  HDRS
+    expf.h
+  DEPENDS
+    .exp_utils
+    .math_utils
+    libc.include.math
+)
+
+add_entrypoint_object(
+  exp2f
+  SRCS
+    exp2f.cpp
+  HDRS
+    exp2f.h
+  DEPENDS
+    .exp_utils
+    .math_utils
+    libc.include.math
 )

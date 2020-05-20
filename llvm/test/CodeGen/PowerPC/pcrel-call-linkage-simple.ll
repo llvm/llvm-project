@@ -7,13 +7,11 @@
 
 
 ; CHECK-S-LABEL: caller
-; CHECK-S: bl callee@notoc
-; CHECK-S: blr
+; CHECK-S: b callee@notoc
 
 ; CHECK-O-LABEL: caller
-; CHECK-O: bl
+; CHECK-O: b
 ; CHECK-O-NEXT: R_PPC64_REL24_NOTOC callee
-; CHECK-O: blr
 define dso_local signext i32 @caller() local_unnamed_addr {
 entry:
   %call = tail call signext i32 bitcast (i32 (...)* @callee to i32 ()*)()
@@ -25,13 +23,11 @@ declare signext i32 @callee(...) local_unnamed_addr
 
 ; Some calls can be considered Extrnal Symbols.
 ; CHECK-S-LABEL: ExternalSymbol
-; CHECK-S: bl memcpy@notoc
-; CHECK-S: blr
+; CHECK-S: b memcpy@notoc
 
 ; CHECK-O-LABEL: ExternalSymbol
-; CHECK-O: bl
+; CHECK-O: b
 ; CHECK-O-NEXT: R_PPC64_REL24_NOTOC memcpy
-; CHECK-O: blr
 define dso_local void @ExternalSymbol(i8* nocapture %out, i8* nocapture readonly %in, i64 %num) local_unnamed_addr {
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %out, i8* align 1 %in, i64 %num, i1 false)

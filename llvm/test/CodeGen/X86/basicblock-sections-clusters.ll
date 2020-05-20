@@ -14,7 +14,7 @@
 ; RUN: echo '!!1 3' >> %t2
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=%t2 | FileCheck %s -check-prefix=LINUX-SECTIONS2
 
-define void @foo(i1 zeroext) {
+define void @foo(i1 zeroext) nounwind {
   %2 = alloca i8, align 1
   %3 = zext i1 %0 to i8
   store i8 %3, i8* %2, align 1
@@ -44,12 +44,12 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS1-NOT:  	.section
 ; LINUX-SECTIONS1-LABEL:	# %bb.2:
 ; LINUX-SECTIONS1:		.section        .text.foo,"ax",@progbits,unique,1
-; LINUX-SECTIONS1-LABEL:	a.BB.foo:
+; LINUX-SECTIONS1-LABEL:	foo.1:
 ; LINUX-SECTIONS1-LABEL:	.Ltmp0:
-; LINUX-SECTIONS1-NEXT:		.size a.BB.foo, .Ltmp0-a.BB.foo
+; LINUX-SECTIONS1-NEXT:        .size   foo.1, .Ltmp0-foo.1
 ; LINUX-SECTIONS1-NOT:  	.section
-; LINUX-SECTIONS1:		.section        .text.foo.unlikely,"ax",@progbits
-; LINUX-SECTIONS1-LABEL:	raa.BB.foo:
+; LINUX-SECTIONS1:		.section        .text.unlikely.foo,"ax",@progbits
+; LINUX-SECTIONS1-LABEL:	foo.cold:
 ; LINUX-SECTIONS1:	   	.section	.text.foo,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL:	.Lfunc_end0:
 ; LINUX-SECTIONS1-NEXT:		.size foo, .Lfunc_end0-foo
@@ -60,12 +60,11 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS2-NOT:   	.section
 ; LINUX-SECTIONS2-LABEL:	# %bb.2:
 ; LINUX-SECTIONS2:		.section        .text.foo,"ax",@progbits,unique,1
-; LINUX-SECTIONS2-NEXT:		a.BB.foo:
+; LINUX-SECTIONS2-NEXT:		foo.0:
 ; LINUX-SECTIONS2-NOT:  	.section
 ; LINUX-SECTIONS2-LABEL:	.LBB0_3:
 ; LINUX-SECTIONS2-LABEL:	.Ltmp0:
-; LINUX-SECTIONS2-NEXT:		.size a.BB.foo, .Ltmp0-a.BB.foo
+; LINUX-SECTIONS2-NEXT:        .size   foo.0, .Ltmp0-foo.0
 ; LINUX-SECTIONS2:		.section        .text.foo,"ax",@progbits
 ; LINUX-SECTIONS2-LABEL:	.Lfunc_end0:
 ; LINUX-SECTIONS2-NEXT:		.size foo, .Lfunc_end0-foo
-

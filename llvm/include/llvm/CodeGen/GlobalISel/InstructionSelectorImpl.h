@@ -57,6 +57,7 @@ bool InstructionSelector::executeMatchTable(
 
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
+  uint16_t Flags = State.MIs[0]->getFlags();
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -69,6 +70,15 @@ bool InstructionSelector::executeMatchTable(
                     dbgs() << CurrentIdx << ": Resume at " << CurrentIdx << " ("
                            << OnFailResumeAt.size() << " try-blocks remain)\n");
     return RejectAndResume;
+  };
+
+  auto propagateFlags = [&](NewMIVector &OutMIs) {
+    if (Flags == MachineInstr::MIFlag::NoFlags)
+      return false;
+    for (auto MIB : OutMIs)
+      MIB.setMIFlags(Flags);
+
+    return true;
   };
 
   while (true) {
@@ -1065,6 +1075,7 @@ bool InstructionSelector::executeMatchTable(
     case GIR_Done:
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_Done\n");
+      propagateFlags(OutMIs);
       return true;
 
     default:

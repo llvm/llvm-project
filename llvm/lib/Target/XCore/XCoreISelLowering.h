@@ -22,7 +22,6 @@ namespace llvm {
 
   // Forward delcarations
   class XCoreSubtarget;
-  class XCoreTargetMachine;
 
   namespace XCoreISD {
     enum NodeType : unsigned {

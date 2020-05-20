@@ -79,6 +79,20 @@ TEST(CommandMangler, StripOutput) {
     EXPECT_THAT(Cmd, Not(Contains(Stripped)));
 }
 
+TEST(CommandMangler, StripShowIncludes) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang-cl", "/showIncludes", "foo.cc"};
+  Mangler.adjust(Cmd);
+  EXPECT_THAT(Cmd, Not(Contains("/showIncludes")));
+}
+
+TEST(CommandMangler, StripShowIncludesUser) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang-cl", "/showIncludes:user", "foo.cc"};
+  Mangler.adjust(Cmd);
+  EXPECT_THAT(Cmd, Not(Contains("/showIncludes:user")));
+}
+
 TEST(CommandMangler, ClangPath) {
   auto Mangler = CommandMangler::forTests();
   Mangler.ClangPath = testPath("fake/clang");

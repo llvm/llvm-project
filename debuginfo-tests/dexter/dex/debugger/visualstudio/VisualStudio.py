@@ -131,7 +131,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
             raise Error('attempted to access stack frame {} out of {}'
                 .format(idx, len(stack_frames)))
 
-    def get_step_info(self):
+    def get_step_info(self, watches, step_index):
         thread = self._debugger.CurrentThread
         stackframes = thread.StackFrames
 
@@ -154,7 +154,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
                                      is_inlined=frame.is_inlined,
                                      watches={})
 
-            for watch in self.watches:
+            for watch in watches:
                 state_frame.watches[watch] = self.evaluate_expression(
                     watch, idx)
 
@@ -174,7 +174,7 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         program_state = ProgramState(frames=state_frames)
 
         return StepIR(
-            step_index=self.step_index, frames=frames, stop_reason=reason,
+            step_index=step_index, frames=frames, stop_reason=reason,
             program_state=program_state)
 
     @property

@@ -226,13 +226,8 @@ define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) nounwind {
 ;
 ; X64-LABEL: ashr_add_shl_v4i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
-; X64-NEXT:    packuswb %xmm0, %xmm0
-; X64-NEXT:    packuswb %xmm0, %xmm0
-; X64-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-NEXT:    psubb %xmm1, %xmm0
-; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X64-NEXT:    pslld $24, %xmm0
+; X64-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; X64-NEXT:    psrad $24, %xmm0
 ; X64-NEXT:    retq
   %conv = shl <4 x i32> %r, <i32 24, i32 24, i32 24, i32 24>

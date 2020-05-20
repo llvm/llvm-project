@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Check for semantic errors in ALLOCATE statements
 
 ! TODO: Function Pointer in allocate and derived types!
@@ -38,6 +38,7 @@ subroutine C937(var)
 
   type B
     type(A) y
+    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'y%x')
     type(B), pointer :: forward
     real :: u
   end type
@@ -47,6 +48,7 @@ subroutine C937(var)
   end type
 
   type D
+    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'x')
     type(A), pointer :: potential
   end type
 

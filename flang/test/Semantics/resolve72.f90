@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C709 An assumed-type entity shall be a dummy data object that does not have 
 ! the ALLOCATABLE, CODIMENSION, INTENT (OUT), POINTER, or VALUE attribute and 
 ! is not an explicit-shape array.

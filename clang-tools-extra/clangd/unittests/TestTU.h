@@ -19,8 +19,8 @@
 
 #include "Compiler.h"
 #include "ParsedAST.h"
-#include "Path.h"
 #include "index/Index.h"
+#include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
 #include "gtest/gtest.h"
 #include <string>

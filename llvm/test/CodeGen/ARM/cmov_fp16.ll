@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fullfp16 %s -o - | FileCheck %s --check-prefixes CHECK-THUMB,CHECK
+; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+fullfp16 %s -o - | FileCheck %s --check-prefixes CHECK-THUMB,CHECK
 ; RUN: llc -mtriple=armv8.2a-arm-none-eabi -mattr=+fullfp16 %s -o - | FileCheck %s --check-prefixes CHECK-ARM,CHECK
 
 define i32 @test_ne(i32 %x, i32 %y, i32 %a, i32 %b) {

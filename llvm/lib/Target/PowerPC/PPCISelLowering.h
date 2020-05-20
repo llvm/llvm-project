@@ -679,18 +679,6 @@ namespace llvm {
       return VT.isScalarInteger();
     }
 
-    bool supportSplitCSR(MachineFunction *MF) const override {
-      return
-        MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
-        MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
-    }
-
-    void initializeSplitCSR(MachineBasicBlock *Entry) const override;
-
-    void insertCopiesSplitCSR(
-      MachineBasicBlock *Entry,
-      const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
-
     /// getSetCCResultType - Return the ISD::SETCC ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;

@@ -3,7 +3,7 @@
 
 #include "cycle1.h"
 C1 c1;
-C2 c2; // expected-error {{must be imported}}
+C2 c2; // expected-error {{missing '#include "cycle2.h"'; 'C2' must be declared}}
 // expected-note@cycle2.h:6 {{here}}
 
 #include "cycle2.h"

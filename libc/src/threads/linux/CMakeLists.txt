@@ -47,7 +47,7 @@ add_entrypoint_object(
     libc.config.linux.linux_syscall_h
     libc.include.sys_syscall
     libc.include.threads
-    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
     libc.src.__support.common
 )
 

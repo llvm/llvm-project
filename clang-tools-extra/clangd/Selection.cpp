@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
-#include "Logger.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -24,6 +25,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -34,6 +36,21 @@ namespace clangd {
 namespace {
 using Node = SelectionTree::Node;
 using ast_type_traits::DynTypedNode;
+
+// Measure the fraction of selections that were enabled by recovery AST.
+void recordMetrics(const SelectionTree &S) {
+  static constexpr trace::Metric SelectionUsedRecovery(
+      "selection_recovery", trace::Metric::Distribution);
+  const auto *Common = S.commonAncestor();
+  for (const auto *N = Common; N; N = N->Parent) {
+    if (N->ASTNode.get<RecoveryExpr>()) {
+      SelectionUsedRecovery.record(1); // used recovery ast.
+      return;
+    }
+  }
+  if (Common)
+    SelectionUsedRecovery.record(0); // unused.
+}
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
 //
@@ -692,6 +709,24 @@ private:
 
 } // namespace
 
+llvm::SmallString<256> abbreviatedString(DynTypedNode N,
+                                         const PrintingPolicy &PP) {
+  llvm::SmallString<256> Result;
+  {
+    llvm::raw_svector_ostream OS(Result);
+    N.print(OS, PP);
+  }
+  auto Pos = Result.find('\n');
+  if (Pos != llvm::StringRef::npos) {
+    bool MoreText =
+        !llvm::all_of(llvm::StringRef(Result).drop_front(Pos), llvm::isSpace);
+    Result.resize(Pos);
+    if (MoreText)
+      Result.append(" …");
+  }
+  return Result;
+}
+
 void SelectionTree::print(llvm::raw_ostream &OS, const SelectionTree::Node &N,
                           int Indent) const {
   if (N.Selected)
@@ -700,9 +735,7 @@ void SelectionTree::print(llvm::raw_ostream &OS, const SelectionTree::Node &N,
   else
     OS.indent(Indent);
   printNodeKind(OS, N.ASTNode);
-  OS << ' ';
-  N.ASTNode.print(OS, PrintPolicy);
-  OS << "\n";
+  OS << ' ' << abbreviatedString(N.ASTNode, PrintPolicy) << "\n";
   for (const Node *Child : N.Children)
     print(OS, *Child, Indent + 2);
 }
@@ -774,6 +807,7 @@ SelectionTree::SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
            .printToString(SM));
   Nodes = SelectionVisitor::collect(AST, Tokens, PrintPolicy, Begin, End, FID);
   Root = Nodes.empty() ? nullptr : &Nodes.front();
+  recordMetrics(*this);
   dlog("Built selection tree\n{0}", *this);
 }
 

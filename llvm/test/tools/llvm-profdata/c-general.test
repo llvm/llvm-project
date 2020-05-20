@@ -10,7 +10,7 @@ $ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
 
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s
 RUN: llvm-profdata show %p/Inputs/c-general.profraw --topn=3 -o - | FileCheck %s --check-prefix=TOPN
-RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | FileCheck %s -check-prefix=SWITCHES -check-prefix=CHECK
+RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | FileCheck %s -check-prefixes=SWITCHES,CHECK
 
 SWITCHES-LABEL: Counters:
 SWITCHES-NEXT:   switches:

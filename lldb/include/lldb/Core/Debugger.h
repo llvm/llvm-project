@@ -273,6 +273,10 @@ public:
 
   bool SetUseColor(bool use_color);
 
+  bool GetUseSourceCache() const;
+
+  bool SetUseSourceCache(bool use_source_cache);
+
   bool GetHighlightSource() const;
 
   lldb::StopShowColumn GetStopShowColumn() const;

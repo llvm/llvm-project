@@ -3,7 +3,6 @@ Test process list.
 """
 
 
-
 import os
 import lldb
 import shutil
@@ -18,7 +17,7 @@ class ProcessListTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows # https://bugs.llvm.org/show_bug.cgi?id=43702
+    @skipIfWindows  # https://bugs.llvm.org/show_bug.cgi?id=43702
     def test_process_list_with_args(self):
         """Test process list show process args"""
         self.build()
@@ -28,5 +27,11 @@ class ProcessListTestCase(TestBase):
         popen = self.spawnSubprocess(exe, args=["arg1", "--arg2", "arg3"])
         self.addTearDownHook(self.cleanupSubprocesses)
 
-        self.expect("platform process list -v",
-                    substrs=[str(popen.pid), "TestProcess arg1 --arg2 arg3"])
+        substrs = [str(popen.pid), "TestProcess arg1 --arg2 arg3"]
+
+        # Because LLDB isn't the one spawning the subprocess, the PID will be
+        # different during replay.
+        if configuration.is_reproducer_replay():
+            substrs.pop(0)
+
+        self.expect("platform process list -v", substrs=substrs)

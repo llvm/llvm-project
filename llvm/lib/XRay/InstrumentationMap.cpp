@@ -68,10 +68,13 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
 
   StringRef Contents = "";
   const auto &Sections = ObjFile.getBinary()->sections();
+  uint64_t Address = 0;
   auto I = llvm::find_if(Sections, [&](object::SectionRef Section) {
     Expected<StringRef> NameOrErr = Section.getName();
-    if (NameOrErr)
+    if (NameOrErr) {
+      Address = Section.getAddress();
       return *NameOrErr == "xray_instr_map";
+    }
     consumeError(NameOrErr.takeError());
     return false;
   });
@@ -111,8 +114,11 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
           auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend();
           auto A = AddendOrErr ? *AddendOrErr : 0;
-          uint64_t resolved = Resolver(Reloc, Reloc.getSymbol()->getValue(), A);
-          Relocs.insert({Reloc.getOffset(), resolved});
+          Expected<uint64_t> ValueOrErr = Reloc.getSymbol()->getValue();
+          if (!ValueOrErr)
+            // TODO: Test this error.
+            return ValueOrErr.takeError();
+          Relocs.insert({Reloc.getOffset(), Resolver(Reloc, *ValueOrErr, A)});
         } else if (Reloc.getType() == RelativeRelocation) {
           if (auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend())
             Relocs.insert({Reloc.getOffset(), *AddendOrErr});
@@ -141,6 +147,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     return Address;
   };
 
+  const int WordSize = 8;
   int32_t FuncId = 1;
   uint64_t CurFn = 0;
   for (; C != Contents.bytes_end(); C += ELF64SledEntrySize) {
@@ -165,6 +172,11 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
           std::make_error_code(std::errc::executable_format_error));
     Entry.Kind = Kinds[Kind];
     Entry.AlwaysInstrument = Extractor.getU8(&OffsetPtr) != 0;
+    Entry.Version = Extractor.getU8(&OffsetPtr);
+    if (Entry.Version >= 2) {
+      Entry.Address += C - Contents.bytes_begin() + Address;
+      Entry.Function += C - Contents.bytes_begin() + WordSize + Address;
+    }
 
     // We do replicate the function id generation scheme implemented in the
     // XRay runtime.
@@ -209,8 +221,8 @@ loadYAML(sys::fs::file_t Fd, size_t FileSize, StringRef Filename,
   for (const auto &Y : YAMLSleds) {
     FunctionAddresses[Y.FuncId] = Y.Function;
     FunctionIds[Y.Function] = Y.FuncId;
-    Sleds.push_back(
-        SledEntry{Y.Address, Y.Function, Y.Kind, Y.AlwaysInstrument});
+    Sleds.push_back(SledEntry{Y.Address, Y.Function, Y.Kind, Y.AlwaysInstrument,
+                              Y.Version});
   }
   return Error::success();
 }

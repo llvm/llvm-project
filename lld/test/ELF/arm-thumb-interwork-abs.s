@@ -27,12 +27,12 @@ thumb_caller:
   blx sym
 // WARN: branch and link relocation: R_ARM_THM_CALL to non STT_FUNC symbol: sym interworking not performed; consider using directive '.type sym, %function' to give symbol type STT_FUNC if interworking between ARM and Thumb is required
 
-// CHECK: 00012000 <arm_caller>:
-// CHECK-NEXT:    12000: b   #4088
-// CHECK-NEXT:    12004: bl  #4084
-// CHECK-NEXT:    12008: blx #4080
+// CHECK: 00021000 <arm_caller>:
+// CHECK-NEXT:    21000: b   #-57352
+// CHECK-NEXT:    21004: bl  #-57356
+// CHECK-NEXT:    21008: blx #-57360
 
-// CHECK: 0001200c <thumb_caller>:
-// CHECK-NEXT:    1200c: b.w     #4080
-// CHECK-NEXT:    12010: bl      #4076
-// CHECK-NEXT:    12014: blx     #4076
+// CHECK: 0002100c <thumb_caller>:
+// CHECK-NEXT:    2100c: b.w     #-57360
+// CHECK-NEXT:    21010: bl      #-57364
+// CHECK-NEXT:    21014: blx     #-57364

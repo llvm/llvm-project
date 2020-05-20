@@ -165,15 +165,9 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_CORE
   Machine: EM_X86_64
-Sections:
-  - Name:  .note
-    Type:  SHT_NOTE
-    Notes: []
 ProgramHeaders:
-  - Type: PT_NOTE
+  - Type:   PT_NOTE
     Offset: 0xffff0000
-    Sections:
-      - Section: .note
 
 ## Test tools report an error if a note program header has an invalid size that
 ## goes past the end of file.

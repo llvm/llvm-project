@@ -934,7 +934,7 @@ void TargetPassConfig::addMachinePasses() {
   } else {
     // If the target requests it, assign local variables to stack slots relative
     // to one another and simplify frame index references where possible.
-    addPass(&LocalStackSlotAllocationID, false);
+    addPass(&LocalStackSlotAllocationID);
   }
 
   if (TM->Options.EnableIPRA)
@@ -1006,10 +1006,10 @@ void TargetPassConfig::addMachinePasses() {
     addBlockPlacement();
 
   // Insert before XRay Instrumentation.
-  addPass(&FEntryInserterID, false);
+  addPass(&FEntryInserterID);
 
-  addPass(&XRayInstrumentationID, false);
-  addPass(&PatchableFunctionID, false);
+  addPass(&XRayInstrumentationID);
+  addPass(&PatchableFunctionID);
 
   addPreEmitPass();
 
@@ -1018,6 +1018,8 @@ void TargetPassConfig::addMachinePasses() {
     // clobbered registers, to be used to optimize call sites.
     addPass(createRegUsageInfoCollector());
 
+  // FIXME: Some backends are incompatible with running the verifier after
+  // addPreEmitPass.  Maybe only pass "false" here for those targets?
   addPass(&FuncletLayoutID, false);
 
   addPass(&StackMapLivenessID, false);
@@ -1048,15 +1050,15 @@ void TargetPassConfig::addMachineSSAOptimization() {
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more
   // instructions dead.
-  addPass(&OptimizePHIsID, false);
+  addPass(&OptimizePHIsID);
 
   // This pass merges large allocas. StackSlotColoring is a different pass
   // which merges spill slots.
-  addPass(&StackColoringID, false);
+  addPass(&StackColoringID);
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.
-  addPass(&LocalStackSlotAllocationID, false);
+  addPass(&LocalStackSlotAllocationID);
 
   // With optimization, dead code should already be eliminated. However
   // there is one known exception: lowered code for arguments that are only
@@ -1069,8 +1071,8 @@ void TargetPassConfig::addMachineSSAOptimization() {
   // loop info, just like LICM and CSE below.
   addILPOpts();
 
-  addPass(&EarlyMachineLICMID, false);
-  addPass(&MachineCSEID, false);
+  addPass(&EarlyMachineLICMID);
+  addPass(&MachineCSEID);
 
   addPass(&MachineSinkingID);
 

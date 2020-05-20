@@ -618,6 +618,10 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     DataExtractor CUIndexData(CurCUIndexSection, Obj.isLittleEndian(), 0);
     if (!CUIndex.parse(CUIndexData))
       return make_error<DWPError>("failed to parse cu_index");
+    if (CUIndex.getVersion() != 2)
+      return make_error<DWPError>(
+          "unsupported cu_index version: " + utostr(CUIndex.getVersion()) +
+          " (only version 2 is supported)");
 
     for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
       auto *I = E.getContributions();
@@ -655,6 +659,11 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       DataExtractor TUIndexData(CurTUIndexSection, Obj.isLittleEndian(), 0);
       if (!TUIndex.parse(TUIndexData))
         return make_error<DWPError>("failed to parse tu_index");
+      if (TUIndex.getVersion() != 2)
+        return make_error<DWPError>(
+            "unsupported tu_index version: " + utostr(TUIndex.getVersion()) +
+            " (only version 2 is supported)");
+
       addAllTypesFromDWP(
           Out, TypeIndexEntries, TUIndex, TypesSection, CurTypesSection.front(),
           CurEntry,

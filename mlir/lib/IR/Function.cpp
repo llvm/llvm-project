@@ -24,8 +24,8 @@ using namespace mlir;
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs) {
   OperationState state(location, "func");
-  Builder builder(location->getContext());
-  FuncOp::build(&builder, state, name, type, attrs);
+  OpBuilder builder(location->getContext());
+  FuncOp::build(builder, state, name, type, attrs);
   return cast<FuncOp>(Operation::create(state));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
@@ -35,29 +35,29 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
-                      ArrayRef<NamedAttributeList> argAttrs) {
+                      ArrayRef<MutableDictionaryAttr> argAttrs) {
   FuncOp func = create(location, name, type, attrs);
   func.setAllArgAttrs(argAttrs);
   return func;
 }
 
-void FuncOp::build(Builder *builder, OperationState &result, StringRef name,
+void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder->getStringAttr(name));
+                      builder.getStringAttr(name));
   result.addAttribute(getTypeAttrName(), TypeAttr::get(type));
   result.attributes.append(attrs.begin(), attrs.end());
   result.addRegion();
 }
 
-void FuncOp::build(Builder *builder, OperationState &result, StringRef name,
+void FuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
-                   ArrayRef<NamedAttributeList> argAttrs) {
+                   ArrayRef<MutableDictionaryAttr> argAttrs) {
   build(builder, result, name, type, attrs);
   assert(type.getNumInputs() == argAttrs.size());
   SmallString<8> argAttrName;
   for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
-    if (auto argDict = argAttrs[i].getDictionary())
+    if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
       result.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 
@@ -115,7 +115,7 @@ void FuncOp::eraseArguments(ArrayRef<unsigned> argIndices) {
 
   // Update the function type and arg attrs.
   SmallVector<Type, 4> newInputTypes;
-  SmallVector<NamedAttributeList, 4> newArgAttrs;
+  SmallVector<MutableDictionaryAttr, 4> newArgAttrs;
   for (int i = 0; i < originalNumArgs; i++) {
     if (shouldEraseArg(i))
       continue;

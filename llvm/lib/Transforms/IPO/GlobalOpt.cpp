@@ -28,7 +28,6 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -130,7 +129,8 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
       default: break;
       case Type::PointerTyID:
         return true;
-      case Type::VectorTyID:
+      case Type::FixedVectorTyID:
+      case Type::ScalableVectorTyID:
         if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
           return true;
         break;
@@ -467,14 +467,19 @@ static bool CanDoGlobalSRA(GlobalVariable *GV) {
 /// Copy over the debug info for a variable to its SRA replacements.
 static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
                                  uint64_t FragmentOffsetInBits,
-                                 uint64_t FragmentSizeInBits,
-                                 unsigned NumElements) {
+                                 uint64_t FragmentSizeInBits) {
   SmallVector<DIGlobalVariableExpression *, 1> GVs;
   GV->getDebugInfo(GVs);
   for (auto *GVE : GVs) {
     DIVariable *Var = GVE->getVariable();
+    Optional<uint64_t> VarSize = Var->getSizeInBits();
+
     DIExpression *Expr = GVE->getExpression();
-    if (NumElements > 1) {
+    // If the FragmentSize is smaller than the variable,
+    // emit a fragment expression.
+    // If the variable size is unknown a fragment must be
+    // emitted to be safe.
+    if (!VarSize || FragmentSizeInBits < *VarSize) {
       if (auto E = DIExpression::createFragmentExpression(
               Expr, FragmentOffsetInBits, FragmentSizeInBits))
         Expr = *E;
@@ -556,8 +561,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       // Copy over the debug info for the variable.
       uint64_t Size = DL.getTypeAllocSizeInBits(NGV->getValueType());
       uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(ElementIdx);
-      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size,
-                           STy->getNumElements());
+      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size);
     } else {
       uint64_t EltSize = DL.getTypeAllocSize(ElTy);
       Align EltAlign(DL.getABITypeAlignment(ElTy));
@@ -570,7 +574,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       if (NewAlign > EltAlign)
         NGV->setAlignment(NewAlign);
       transferSRADebugInfo(GV, NGV, FragmentSizeInBits * ElementIdx,
-                           FragmentSizeInBits, GetSRASequentialNumElements(Ty));
+                           FragmentSizeInBits);
     }
   }
 
@@ -658,12 +662,12 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
         return false;  // Storing the value.
       }
     } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
-      if (CI->getCalledValue() != V) {
+      if (CI->getCalledOperand() != V) {
         //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Not calling the ptr
       }
     } else if (const InvokeInst *II = dyn_cast<InvokeInst>(U)) {
-      if (II->getCalledValue() != V) {
+      if (II->getCalledOperand() != V) {
         //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Not calling the ptr
       }
@@ -721,7 +725,7 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
       }
     } else if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
       CallBase *CB = cast<CallBase>(I);
-      if (CB->getCalledValue() == V) {
+      if (CB->getCalledOperand() == V) {
         // Calling through the pointer!  Turn into a direct call, but be careful
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);
@@ -2188,12 +2192,12 @@ static bool hasChangeableCC(Function *F) {
 
 /// Return true if the block containing the call site has a BlockFrequency of
 /// less than ColdCCRelFreq% of the entry block.
-static bool isColdCallSite(CallSite CS, BlockFrequencyInfo &CallerBFI) {
+static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
   const BranchProbability ColdProb(ColdCCRelFreq, 100);
-  auto CallSiteBB = CS.getInstruction()->getParent();
+  auto *CallSiteBB = CB.getParent();
   auto CallSiteFreq = CallerBFI.getBlockFreq(CallSiteBB);
   auto CallerEntryFreq =
-      CallerBFI.getBlockFreq(&(CS.getCaller()->getEntryBlock()));
+      CallerBFI.getBlockFreq(&(CB.getCaller()->getEntryBlock()));
   return CallSiteFreq < CallerEntryFreq * ColdProb;
 }
 
@@ -2213,10 +2217,10 @@ isValidCandidateForColdCC(Function &F,
     if (isa<BlockAddress>(U))
       continue;
 
-    CallSite CS(cast<Instruction>(U));
-    Function *CallerFunc = CS.getInstruction()->getParent()->getParent();
+    CallBase &CB = cast<CallBase>(*U);
+    Function *CallerFunc = CB.getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(CS, CallerBFI))
+    if (!isColdCallSite(CB, CallerBFI))
       return false;
     auto It = std::find(AllCallsCold.begin(), AllCallsCold.end(), CallerFunc);
     if (It == AllCallsCold.end())
@@ -2242,7 +2246,6 @@ hasOnlyColdCalls(Function &F,
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        CallSite CS(cast<Instruction>(CI));
         // Skip over isline asm instructions since they aren't function calls.
         if (CI->isInlineAsm())
           continue;
@@ -2259,7 +2262,7 @@ hasOnlyColdCalls(Function &F,
             CalledFn->hasAddressTaken())
           return false;
         BlockFrequencyInfo &CallerBFI = GetBFI(F);
-        if (!isColdCallSite(CS, CallerBFI))
+        if (!isColdCallSite(*CI, CallerBFI))
           return false;
       }
     }

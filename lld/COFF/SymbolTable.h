@@ -77,7 +77,6 @@ public:
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
   void addCombinedLTOObjects();
-  std::vector<StringRef> compileBitcodeFiles();
 
   // Creates an Undefined symbol for a given name.
   Symbol *addUndefined(StringRef name);

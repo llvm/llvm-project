@@ -95,15 +95,6 @@ private:
         ", length=" + formatv("{0:d}", RI.r_length));
   }
 
-  MachO::relocation_info
-  getRelocationInfo(const object::relocation_iterator RelItr) {
-    MachO::any_relocation_info ARI =
-        getObject().getRelocation(RelItr->getRawDataRefImpl());
-    MachO::relocation_info RI;
-    memcpy(&RI, &ARI, sizeof(MachO::relocation_info));
-    return RI;
-  }
-
   using PairRelocInfo = std::tuple<MachOX86RelocationKind, Symbol *, uint64_t>;
 
   // Parses paired SUBTRACTOR/UNSIGNED relocations and, on success,

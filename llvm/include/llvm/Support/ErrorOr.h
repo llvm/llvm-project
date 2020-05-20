@@ -56,7 +56,7 @@ template<class T>
 class ErrorOr {
   template <class OtherT> friend class ErrorOr;
 
-  static const bool isRef = std::is_reference<T>::value;
+  static constexpr bool isRef = std::is_reference<T>::value;
 
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
 

@@ -538,7 +538,7 @@ bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
 
   // Now walk checking that the rest of the instructions will compute the same
   // value and that we're not overwriting anything. Don't move the instruction
-  // past any memory, control-flow or other ambigious instructions.
+  // past any memory, control-flow or other ambiguous instructions.
   for (auto I = ++Iterator(From), E = Iterator(To); I != E; ++I) {
     if (mayHaveSideEffects(*I))
       return false;

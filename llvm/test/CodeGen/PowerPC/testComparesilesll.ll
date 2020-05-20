@@ -19,7 +19,7 @@ define signext i32 @test_ilesll(i64 %a, i64 %b) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sradi r5, r4, 63
 ; CHECK-BE-NEXT:    rldicl r6, r3, 1, 63
-; CHECK-BE-NEXT:    subfc r3, r3, r4
+; CHECK-BE-NEXT:    subc r3, r4, r3
 ; CHECK-BE-NEXT:    adde r3, r5, r6
 ; CHECK-BE-NEXT:    blr
 ;
@@ -27,7 +27,7 @@ define signext i32 @test_ilesll(i64 %a, i64 %b) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sradi r5, r4, 63
 ; CHECK-LE-NEXT:    rldicl r6, r3, 1, 63
-; CHECK-LE-NEXT:    subfc r3, r3, r4
+; CHECK-LE-NEXT:    subc r3, r4, r3
 ; CHECK-LE-NEXT:    adde r3, r5, r6
 ; CHECK-LE-NEXT:    blr
 entry:
@@ -49,7 +49,7 @@ define signext i32 @test_ilesll_sext(i64 %a, i64 %b) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sradi r5, r4, 63
 ; CHECK-BE-NEXT:    rldicl r6, r3, 1, 63
-; CHECK-BE-NEXT:    subfc r3, r3, r4
+; CHECK-BE-NEXT:    subc r3, r4, r3
 ; CHECK-BE-NEXT:    adde r3, r5, r6
 ; CHECK-BE-NEXT:    neg r3, r3
 ; CHECK-BE-NEXT:    blr
@@ -58,7 +58,7 @@ define signext i32 @test_ilesll_sext(i64 %a, i64 %b) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sradi r5, r4, 63
 ; CHECK-LE-NEXT:    rldicl r6, r3, 1, 63
-; CHECK-LE-NEXT:    subfc r3, r3, r4
+; CHECK-LE-NEXT:    subc r3, r4, r3
 ; CHECK-LE-NEXT:    adde r3, r5, r6
 ; CHECK-LE-NEXT:    neg r3, r3
 ; CHECK-LE-NEXT:    blr
@@ -135,7 +135,7 @@ define void @test_ilesll_store(i64 %a, i64 %b) {
 ; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    sradi r6, r4, 63
 ; CHECK-BE-NEXT:    ld r5, .LC0@toc@l(r5)
-; CHECK-BE-NEXT:    subfc r4, r3, r4
+; CHECK-BE-NEXT:    subc r4, r4, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    adde r3, r6, r3
 ; CHECK-BE-NEXT:    std r3, 0(r5)
@@ -145,7 +145,7 @@ define void @test_ilesll_store(i64 %a, i64 %b) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sradi r6, r4, 63
 ; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
-; CHECK-LE-NEXT:    subfc r4, r3, r4
+; CHECK-LE-NEXT:    subc r4, r4, r3
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    adde r3, r6, r3
 ; CHECK-LE-NEXT:    std r3, glob@toc@l(r5)
@@ -172,7 +172,7 @@ define void @test_ilesll_sext_store(i64 %a, i64 %b) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sradi r6, r4, 63
 ; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; CHECK-BE-NEXT:    subfc r4, r3, r4
+; CHECK-BE-NEXT:    subc r4, r4, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-BE-NEXT:    adde r3, r6, r3
@@ -184,7 +184,7 @@ define void @test_ilesll_sext_store(i64 %a, i64 %b) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    sradi r6, r4, 63
 ; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
-; CHECK-LE-NEXT:    subfc r4, r3, r4
+; CHECK-LE-NEXT:    subc r4, r4, r3
 ; CHECK-LE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-LE-NEXT:    adde r3, r6, r3
 ; CHECK-LE-NEXT:    neg r3, r3

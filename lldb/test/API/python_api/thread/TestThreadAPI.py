@@ -38,6 +38,7 @@ class ThreadAPITestCase(TestBase):
         self.run_to_address(self.exe_name)
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["linux"], archs=['arm'], bugnumber="llvm.org/pr45892")
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])
     @expectedFailureNetBSD

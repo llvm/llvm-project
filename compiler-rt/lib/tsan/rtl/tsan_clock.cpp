@@ -196,9 +196,13 @@ void ThreadClock::releaseStoreAcquire(ClockCache *c, SyncClock *sc) {
     return;
   }
 
-  // Check if we need to resize dst.
+  nclk_ = max(nclk_, (uptr) sc->size_);
+
+  // Check if we need to resize sc.
   if (sc->size_ < nclk_)
     sc->Resize(c, nclk_);
+
+  bool acquired = false;
 
   sc->Unshare(c);
   // Update sc->clk_.
@@ -206,13 +210,22 @@ void ThreadClock::releaseStoreAcquire(ClockCache *c, SyncClock *sc) {
   uptr i = 0;
   for (ClockElem &ce : *sc) {
     u64 tmp = clk_[i];
-    clk_[i] = max(ce.epoch, clk_[i]);
+    if (clk_[i] < ce.epoch) {
+      clk_[i] = ce.epoch;
+      acquired = true;
+    }
     ce.epoch = tmp;
     ce.reused = 0;
     i++;
   }
   sc->release_store_tid_ = kInvalidTid;
   sc->release_store_reused_ = 0;
+
+  if (acquired) {
+    CPP_STAT_INC(StatClockAcquiredSomething);
+    last_acquire_ = clk_[tid_];
+    ResetCached(c);
+  }
 }
 
 void ThreadClock::release(ClockCache *c, SyncClock *dst) {

@@ -353,8 +353,8 @@ private:
   }
 
   bool isSameAttrList(spirv::StoreOp lhs, spirv::StoreOp rhs) const {
-    return lhs.getOperation()->getAttrList().getDictionary() ==
-           rhs.getOperation()->getAttrList().getDictionary();
+    return lhs.getOperation()->getAttrDictionary() ==
+           rhs.getOperation()->getAttrDictionary();
   }
 
 

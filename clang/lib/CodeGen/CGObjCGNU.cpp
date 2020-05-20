@@ -255,11 +255,11 @@ protected:
       isDynamic=true) {
     int attrs = property->getPropertyAttributes();
     // For read-only properties, clear the copy and retain flags
-    if (attrs & ObjCPropertyDecl::OBJC_PR_readonly) {
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_copy;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_retain;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_weak;
-      attrs &= ~ObjCPropertyDecl::OBJC_PR_strong;
+    if (attrs & ObjCPropertyAttribute::kind_readonly) {
+      attrs &= ~ObjCPropertyAttribute::kind_copy;
+      attrs &= ~ObjCPropertyAttribute::kind_retain;
+      attrs &= ~ObjCPropertyAttribute::kind_weak;
+      attrs &= ~ObjCPropertyAttribute::kind_strong;
     }
     // The first flags field has the same attribute values as clang uses internally
     Fields.addInt(Int8Ty, attrs & 0xff);

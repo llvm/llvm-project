@@ -18,8 +18,10 @@
 
 namespace mlir {
 class FuncOp;
+class MLIRContext;
 class ModuleOp;
 template <typename T> class OperationPass;
+class OwningRewritePatternList;
 class Pass;
 
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFusionPass();
@@ -35,11 +37,11 @@ std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers);
 std::unique_ptr<OperationPass<FuncOp>> createLinalgPromotionPass();
 
-/// Create a pass to convert Linalg operations to loop.for loops and
+/// Create a pass to convert Linalg operations to scf.for loops and
 /// std.load/std.store accesses.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToLoopsPass();
 
-/// Create a pass to convert Linalg operations to loop.parallel loops and
+/// Create a pass to convert Linalg operations to scf.parallel loops and
 /// std.load/std.store accesses.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToParallelLoopsPass();
 
@@ -47,6 +49,15 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToParallelLoopsPass();
 /// affine_load/affine_store accesses.
 /// Placeholder for now, this is NYI.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
+
+/// Create a pass to convert Linalg operations which work on tensors to use
+/// buffers instead.
+std::unique_ptr<OperationPass<ModuleOp>>
+createConvertLinalgOnTensorsToBuffersPass();
+
+/// Patterns for fusing linalg operation on tensors.
+void populateLinalgTensorOpsFusionPatterns(MLIRContext *context,
+                                           OwningRewritePatternList &patterns);
 
 } // namespace mlir
 

@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "Cancellation.h"
 #include "ClangdServer.h"
-#include "Context.h"
 #include "Diagnostics.h"
 #include "Matchers.h"
 #include "ParsedAST.h"
-#include "Path.h"
 #include "Preamble.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
-#include "Threading.h"
+#include "support/Cancellation.h"
+#include "support/Context.h"
+#include "support/Path.h"
+#include "support/TestTracer.h"
+#include "support/Threading.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -41,6 +42,7 @@ using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::Pointee;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
 MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
@@ -242,66 +244,6 @@ TEST_F(TUSchedulerTests, Debounce) {
                     [&](std::vector<Diag>) { ++CallbackCount; });
 
     ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  }
-  EXPECT_EQ(2, CallbackCount);
-}
-
-static std::vector<std::string> includes(const PreambleData *Preamble) {
-  std::vector<std::string> Result;
-  if (Preamble)
-    for (const auto &Inclusion : Preamble->Includes.MainFileIncludes)
-      Result.push_back(Inclusion.Written);
-  return Result;
-}
-
-TEST_F(TUSchedulerTests, PreambleConsistency) {
-  std::atomic<int> CallbackCount(0);
-  {
-    Notification InconsistentReadDone; // Must live longest.
-    TUScheduler S(CDB, optsForTest());
-    auto Path = testPath("foo.cpp");
-    // Schedule two updates (A, B) and two preamble reads (stale, consistent).
-    // The stale read should see A, and the consistent read should see B.
-    // (We recognize the preambles by their included files).
-    auto Inputs = getInputs(Path, "#include <A>");
-    Inputs.Version = "A";
-    updateWithCallback(S, Path, Inputs, WantDiagnostics::Yes, [&]() {
-      // This callback runs in between the two preamble updates.
-
-      // This blocks update B, preventing it from winning the race
-      // against the stale read.
-      // If the first read was instead consistent, this would deadlock.
-      InconsistentReadDone.wait();
-      // This delays update B, preventing it from winning a race
-      // against the consistent read. The consistent read sees B
-      // only because it waits for it.
-      // If the second read was stale, it would usually see A.
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    });
-    Inputs.Contents = "#include <B>";
-    Inputs.Version = "B";
-    S.update(Path, Inputs, WantDiagnostics::Yes);
-
-    S.runWithPreamble("StaleRead", Path, TUScheduler::Stale,
-                      [&](Expected<InputsAndPreamble> Pre) {
-                        ASSERT_TRUE(bool(Pre));
-                        ASSERT_TRUE(Pre->Preamble);
-                        EXPECT_EQ(Pre->Preamble->Version, "A");
-                        EXPECT_THAT(includes(Pre->Preamble),
-                                    ElementsAre("<A>"));
-                        InconsistentReadDone.notify();
-                        ++CallbackCount;
-                      });
-    S.runWithPreamble("ConsistentRead", Path, TUScheduler::Consistent,
-                      [&](Expected<InputsAndPreamble> Pre) {
-                        ASSERT_TRUE(bool(Pre));
-                        ASSERT_TRUE(Pre->Preamble);
-                        EXPECT_EQ(Pre->Preamble->Version, "B");
-                        EXPECT_THAT(includes(Pre->Preamble),
-                                    ElementsAre("<B>"));
-                        ++CallbackCount;
-                      });
-    S.blockUntilIdle(timeoutSeconds(10));
   }
   EXPECT_EQ(2, CallbackCount);
 }
@@ -562,6 +504,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   auto Opts = optsForTest();
   Opts.AsyncThreadsCount = 1;
   Opts.RetentionPolicy.MaxRetainedASTs = 2;
+  trace::TestTracer Tracer;
   TUScheduler S(CDB, Opts);
 
   llvm::StringLiteral SourceContents = R"cpp(
@@ -577,12 +520,16 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   auto Bar = testPath("bar.cpp");
   auto Baz = testPath("baz.cpp");
 
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
   // Build one file in advance. We will not access it later, so it will be the
   // one that the cache will evict.
   updateWithCallback(S, Foo, SourceContents, WantDiagnostics::Yes,
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_EQ(BuiltASTCounter.load(), 1);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(1));
 
   // Build two more files. Since we can retain only 2 ASTs, these should be
   // the ones we see in the cache later.
@@ -592,6 +539,8 @@ TEST_F(TUSchedulerTests, EvictedAST) {
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_EQ(BuiltASTCounter.load(), 3);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(2));
 
   // Check only the last two ASTs are retained.
   ASSERT_THAT(S.getFilesWithCachedAST(), UnorderedElementsAre(Bar, Baz));
@@ -601,6 +550,8 @@ TEST_F(TUSchedulerTests, EvictedAST) {
                      [&BuiltASTCounter]() { ++BuiltASTCounter; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_EQ(BuiltASTCounter.load(), 4);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(1));
 
   // Check the AST for foo.cpp is retained now and one of the others got
   // evicted.
@@ -818,11 +769,16 @@ TEST_F(TUSchedulerTests, ForceRebuild) {
   EXPECT_EQ(DiagCount, 2U);
 }
 TEST_F(TUSchedulerTests, NoChangeDiags) {
+  trace::TestTracer Tracer;
   TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto FooCpp = testPath("foo.cpp");
-  auto Contents = "int a; int b;";
+  const auto *Contents = "int a; int b;";
 
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "miss"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
   updateWithDiags(
       S, FooCpp, Contents, WantDiagnostics::No,
       [](std::vector<Diag>) { ADD_FAILURE() << "Should not be called."; });
@@ -831,6 +787,8 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
     cantFail(std::move(IA));
   });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "hit"), SizeIs(0));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_read", "miss"), SizeIs(1));
 
   // Even though the inputs didn't change and AST can be reused, we need to
   // report the diagnostics, as they were not reported previously.
@@ -839,6 +797,8 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
                   [&](std::vector<Diag>) { SeenDiags = true; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   ASSERT_TRUE(SeenDiags);
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "hit"), SizeIs(1));
+  EXPECT_THAT(Tracer.takeMetric("ast_access_diag", "miss"), SizeIs(0));
 
   // Subsequent request does not get any diagnostics callback because the same
   // diags have previously been reported and the inputs didn't change.

@@ -13,13 +13,15 @@ import subprocess
 import sys
 from tempfile import NamedTemporaryFile
 
-from dex.command import find_all_commands
+from dex.command import get_command_infos
 from dex.dextIR import DextIR
 from dex.utils import get_root_directory, Timer
 from dex.utils.Environment import is_native_windows
-from dex.utils.Exceptions import CommandParseError, DebuggerException
 from dex.utils.Exceptions import ToolArgumentError
 from dex.utils.Warning import warn
+from dex.utils.Exceptions import DebuggerException
+
+from dex.debugger.DebuggerControllers.DefaultController import DefaultController
 
 from dex.debugger.dbgeng.dbgeng import DbgEng
 from dex.debugger.lldb.LLDB import LLDB
@@ -133,55 +135,26 @@ def handle_debugger_tool_options(context, defaults):  # noqa
             _warn_meaningless_option(context, '--show-debugger')
 
 
-def _get_command_infos(context):
-    commands = find_all_commands(context.options.source_files)
-    command_infos = OrderedDict()
-    for command_type in commands:
-        for command in commands[command_type].values():
-            if command_type not in command_infos:
-                command_infos[command_type] = []
-            command_infos[command_type].append(command)
-    return OrderedDict(command_infos)
-
-
-def empty_debugger_steps(context):
-    return DextIR(
-        executable_path=context.options.executable,
-        source_paths=context.options.source_files,
-        dexter_version=context.version)
-
-
-def get_debugger_steps(context):
-    step_collection = empty_debugger_steps(context)
-
-    with Timer('parsing commands'):
-        try:
-            step_collection.commands = _get_command_infos(context)
-        except CommandParseError as e:
-            msg = 'parser error: <d>{}({}):</> {}\n{}\n{}\n'.format(
-                e.filename, e.lineno, e.info, e.src, e.caret)
-            raise DebuggerException(msg)
-
+def run_debugger_subprocess(debugger_controller, working_dir_path):
     with NamedTemporaryFile(
-            dir=context.working_directory.path, delete=False) as fp:
-        pickle.dump(step_collection, fp, protocol=pickle.HIGHEST_PROTOCOL)
-        steps_path = fp.name
-
-    with NamedTemporaryFile(
-            dir=context.working_directory.path, delete=False, mode='wb') as fp:
-        pickle.dump(context.options, fp, protocol=pickle.HIGHEST_PROTOCOL)
-        options_path = fp.name
+            dir=working_dir_path, delete=False, mode='wb') as fp:
+        pickle.dump(debugger_controller, fp, protocol=pickle.HIGHEST_PROTOCOL)
+        controller_path = fp.name
 
     dexter_py = os.path.basename(sys.argv[0])
     if not os.path.isfile(dexter_py):
         dexter_py = os.path.join(get_root_directory(), '..', dexter_py)
     assert os.path.isfile(dexter_py)
 
-    with NamedTemporaryFile(dir=context.working_directory.path) as fp:
+    with NamedTemporaryFile(dir=working_dir_path) as fp:
         args = [
-            sys.executable, dexter_py, 'run-debugger-internal-', steps_path,
-            options_path, '--working-directory', context.working_directory.path,
-            '--unittest=off', '--indent-timer-level={}'.format(Timer.indent + 2)
+            sys.executable,
+            dexter_py,
+            'run-debugger-internal-',
+            controller_path,
+            '--working-directory={}'.format(working_dir_path),
+            '--unittest=off',
+            '--indent-timer-level={}'.format(Timer.indent + 2)
         ]
         try:
             with Timer('running external debugger process'):
@@ -189,10 +162,10 @@ def get_debugger_steps(context):
         except subprocess.CalledProcessError as e:
             raise DebuggerException(e)
 
-    with open(steps_path, 'rb') as fp:
-        step_collection = pickle.load(fp)
+    with open(controller_path, 'rb') as fp:
+        debugger_controller = pickle.load(fp)
 
-    return step_collection
+    return debugger_controller
 
 
 class Debuggers(object):
@@ -207,10 +180,9 @@ class Debuggers(object):
     def __init__(self, context):
         self.context = context
 
-    def load(self, key, step_collection=None):
+    def load(self, key):
         with Timer('load {}'.format(key)):
-            return Debuggers.potential_debuggers()[key](self.context,
-                                                        step_collection)
+            return Debuggers.potential_debuggers()[key](self.context)
 
     def _populate_debugger_cache(self):
         debuggers = []

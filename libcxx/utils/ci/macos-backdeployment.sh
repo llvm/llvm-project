@@ -4,13 +4,12 @@ set -ue
 
 function usage() {
   cat <<EOM
-$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --arch <ARCHITECTURE> --deployment-target <TARGET> --sdk-version <SDK-VERSION> [--libcxx-roots <DIR>] [--lit-args <ARGS...>] [--no-cleanup]
+$(basename ${0}) [-h|--help] --monorepo-root <MONOREPO-ROOT> --std <STD> --deployment-target <TARGET> --sdk-version <SDK-VERSION> [--libcxx-roots <DIR>] [--lit-args <ARGS...>] [--no-cleanup]
 
 This script is used to continually test the back-deployment use case of libc++ and libc++abi on MacOS.
 
   --monorepo-root     Full path to the root of the LLVM monorepo. Both libc++ and libc++abi headers from the monorepo are used.
   --std               Version of the C++ Standard to run the tests under (c++03, c++11, etc..).
-  --arch              Architecture to build the tests for (32, 64).
   --deployment-target The deployment target to run the tests for. This should be a version number of MacOS (e.g. 10.12). All MacOS versions until and including 10.9 are supported.
   --sdk-version       The version of the SDK to test with. This should be a version number of MacOS (e.g. 10.12). We'll link against the libc++ dylib in that SDK, but we'll run against the one on the given deployment target. The SDK version must be no older than the deployment target.
   [--libcxx-roots]    The path to previous libc++/libc++abi dylibs to use for back-deployment testing. Those are normally downloaded automatically, but if specified, this option will override the directory used. The directory should have the same layout as the roots downloaded automatically.
@@ -41,10 +40,6 @@ while [[ $# -gt 0 ]]; do
     ;;
     --std)
     STD="${2}"
-    shift; shift
-    ;;
-    --arch)
-    ARCH="${2}"
     shift; shift
     ;;
     --deployment-target)
@@ -81,7 +76,6 @@ done
 
 if [[ -z ${MONOREPO_ROOT+x} ]]; then echo "--monorepo-root is a required parameter"; usage; exit 1; fi
 if [[ -z ${STD+x} ]]; then echo "--std is a required parameter"; usage; exit 1; fi
-if [[ -z ${ARCH+x} ]]; then echo "--arch is a required parameter"; usage; exit 1; fi
 if [[ -z ${DEPLOYMENT_TARGET+x} ]]; then echo "--deployment-target is a required parameter"; usage; exit 1; fi
 if [[ -z ${MACOS_SDK_VERSION+x} ]]; then echo "--sdk-version is a required parameter"; usage; exit 1; fi
 if [[ -z ${ADDITIONAL_LIT_ARGS+x} ]]; then ADDITIONAL_LIT_ARGS=""; fi
@@ -113,14 +107,6 @@ PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
 LLVM_TARBALL_URL="https://github.com/llvm-mirror/llvm/archive/master.tar.gz"
 
 
-echo "@@@ Setting up LIT flags for architecture @@@"
-LIT_ARCH_STRING=""
-if [[ "${ARCH}" == "32" ]]; then
-  LIT_ARCH_STRING="--param=enable_32bit=true"
-fi
-echo "@@@@@@"
-
-
 echo "@@@ Configuring CMake @@@"
 mkdir -p "${LLVM_BUILD_DIR}"
 (cd "${LLVM_BUILD_DIR}" &&
@@ -129,7 +115,7 @@ mkdir -p "${LLVM_BUILD_DIR}"
     -GNinja \
     -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
     -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-    -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" \
+    -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     "${MONOREPO_ROOT}/llvm"
 )
 echo "@@@@@@"
@@ -149,20 +135,20 @@ if [[ ${PREVIOUS_DYLIBS_DIR} == "" ]]; then
   echo "@@@@@@"
 fi
 
-LIBCXX_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/${DEPLOYMENT_TARGET}/libc++.dylib"
-LIBCXXABI_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/${DEPLOYMENT_TARGET}/libc++abi.dylib"
-LIBCXX_IN_SDK="${PREVIOUS_DYLIBS_DIR}/macOS/${MACOS_SDK_VERSION}/libc++.dylib"
+LIBCXX_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++/${DEPLOYMENT_TARGET}"
+LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+LIBCXX_ROOT_IN_SDK="${PREVIOUS_DYLIBS_DIR}/macOS/libc++/${MACOS_SDK_VERSION}"
 
 # TODO: We need to also run the tests for libc++abi.
 echo "@@@ Running tests for libc++ @@@"
 "${LLVM_BUILD_DIR}/bin/llvm-lit" -sv "${MONOREPO_ROOT}/libcxx/test" \
                                  --param=enable_experimental=false \
-                                 ${LIT_ARCH_STRING} \
                                  --param=cxx_headers="${LLVM_INSTALL_DIR}/include/c++/v1" \
                                  --param=std="${STD}" \
                                  --param=platform="macosx${DEPLOYMENT_TARGET}" \
-                                 --param=cxx_runtime_root="$(dirname "${LIBCXX_ON_DEPLOYMENT_TARGET}")" \
-                                 --param=abi_library_path="$(dirname "${LIBCXXABI_ON_DEPLOYMENT_TARGET}")" \
-                                 --param=use_system_cxx_lib="$(dirname "${LIBCXX_IN_SDK}")" \
+                                 --param=cxx_library_root="${LIBCXX_ROOT_IN_SDK}" \
+                                 --param=cxx_runtime_root="${LIBCXX_ROOT_ON_DEPLOYMENT_TARGET}" \
+                                 --param=abi_library_path="${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}" \
+                                 --param=use_system_cxx_lib="True" \
                                  ${ADDITIONAL_LIT_ARGS}
 echo "@@@@@@"

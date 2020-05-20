@@ -12,9 +12,13 @@
 #include <time.h>        // clock_gettime, CLOCK_MONOTONIC and CLOCK_REALTIME
 #include "include/apple_availability.h"
 
-#if !defined(__APPLE__)
+#if __has_include(<unistd.h>)
+#include <unistd.h>
+#endif
+
+#if !defined(__APPLE__) && _POSIX_TIMERS > 0
 #define _LIBCPP_USE_CLOCK_GETTIME
-#endif // __APPLE__
+#endif
 
 #if defined(_LIBCPP_WIN32API)
 #define WIN32_LEAN_AND_MEAN
@@ -25,8 +29,8 @@
 #endif
 #else
 #if !defined(CLOCK_REALTIME) || !defined(_LIBCPP_USE_CLOCK_GETTIME)
-#include <sys/time.h>        // for gettimeofday and timeval
-#endif // !defined(CLOCK_REALTIME)
+#include <sys/time.h> // for gettimeofday and timeval
+#endif
 #endif // defined(_LIBCPP_WIN32API)
 
 #if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)

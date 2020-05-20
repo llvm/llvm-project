@@ -877,9 +877,9 @@ static_assert((Derived*)(Base*)pb1 == (Derived*)pok2, "");
 // null pointer in C++11. Just check for an integer literal with value 0.
 constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Class::Base *const' with an rvalue of type 'int'}}
 constexpr Base *nullB1 = 0;
-static_assert((Bottom*)nullB == 0, "");
-static_assert((Derived*)nullB == 0, "");
-static_assert((void*)(Bottom*)nullB == (void*)(Derived*)nullB, "");
+static_assert((Bottom*)nullB == 0, ""); // expected-error {{static_assert expression is not an integral constant expression}}
+static_assert((Derived*)nullB1 == 0, "");
+static_assert((void*)(Bottom*)nullB1 == (void*)(Derived*)nullB1, "");
 Base *nullB2 = '\0'; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'char'}}
 Base *nullB3 = (0);
 Base *nullB4 = false; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'bool'}}

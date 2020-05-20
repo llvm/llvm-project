@@ -177,6 +177,13 @@ def create_parser():
         dest='lldb_libs_dir',
         metavar='path',
         help='The path to LLDB library directory (containing liblldb)')
+    group.add_argument(
+        '--enable-plugin',
+        dest='enabled_plugins',
+        action='append',
+        type=str,
+        metavar='A plugin whose tests will be enabled',
+        help='A plugin whose tests will be enabled. The only currently supported plugin is intel-pt.')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')

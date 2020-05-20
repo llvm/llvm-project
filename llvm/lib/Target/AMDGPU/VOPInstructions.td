@@ -1,4 +1,4 @@
-//===-- VOPInstructions.td - Vector Instruction Defintions ----------------===//
+//===-- VOPInstructions.td - Vector Instruction Definitions ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -160,7 +160,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
   VOPProfile Pfl = ps.Pfl;
 }
 
-// XXX - Is there any reason to distingusih this from regular VOP3
+// XXX - Is there any reason to distinguish this from regular VOP3
 // here?
 class VOP3P_Real<VOP_Pseudo ps, int EncodingFamily> :
   VOP3_Real<ps, EncodingFamily>;

@@ -1643,7 +1643,9 @@ rnb_err_t RNBRemote::HandlePacket_qLaunchSuccess(const char *p) {
     return SendPacket("OK");
   std::ostringstream ret_str;
   std::string status_str;
-  ret_str << "E" << m_ctx.LaunchStatusAsString(status_str);
+  std::string error_quoted = binary_encode_string
+               (m_ctx.LaunchStatusAsString(status_str));
+  ret_str << "E" << error_quoted;
 
   return SendPacket(ret_str.str());
 }
@@ -2677,8 +2679,9 @@ std::string cstring_to_asciihex_string(const char *str) {
   std::string hex_str;
   hex_str.reserve (strlen (str) * 2);
   while (str && *str) {
+    uint8_t c = *str++;
     char hexbuf[5];
-    snprintf (hexbuf, sizeof(hexbuf), "%02x", *str++);
+    snprintf (hexbuf, sizeof(hexbuf), "%02x", c);
     hex_str += hexbuf;
   }
   return hex_str;
@@ -3663,30 +3666,6 @@ static bool process_does_not_exist (nub_process_t pid) {
   return true; // process does not exist
 }
 
-static bool attach_failed_due_to_sip (nub_process_t pid) {
-  bool retval = false;
-#if defined(__APPLE__) &&                                                      \
-  (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000)
-
-  // csr_check(CSR_ALLOW_TASK_FOR_PID) will be nonzero if System Integrity
-  // Protection is in effect.
-  if (csr_check(CSR_ALLOW_TASK_FOR_PID) == 0) 
-    return false;
-
-  if (rootless_allows_task_for_pid(pid) == 0)
-    retval = true;
-
-  int csops_flags = 0;
-  int csops_ret = ::csops(pid, CS_OPS_STATUS, &csops_flags,
-                       sizeof(csops_flags));
-  if (csops_ret != -1 && (csops_flags & CS_RESTRICT)) {
-    retval = true;
-  }
-#endif
-
-  return retval;
-}
-
 // my_uid and process_uid are only initialized if this function
 // returns true -- that there was a uid mismatch -- and those
 // id's may want to be used in the error message.
@@ -4063,13 +4042,6 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                                            "non-interactive debug session, "
                                            "cannot get permission to debug "
                                            "processes.");
-          return SendPacket(return_message.c_str());
-        }
-        if (attach_failed_due_to_sip (pid_attaching_to)) {
-          DNBLogError("Attach failed because of SIP protection.");
-          std::string return_message = "E96;";
-          return_message += cstring_to_asciihex_string("cannot attach "
-                            "to process due to System Integrity Protection");
           return SendPacket(return_message.c_str());
         }
       }

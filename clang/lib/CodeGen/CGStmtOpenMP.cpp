@@ -1169,32 +1169,34 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
   SmallVector<const Expr *, 4> ReductionOps;
   SmallVector<const Expr *, 4> LHSs;
   SmallVector<const Expr *, 4> RHSs;
+  OMPTaskDataTy Data;
+  SmallVector<const Expr *, 4> TaskLHSs;
+  SmallVector<const Expr *, 4> TaskRHSs;
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
-    auto IPriv = C->privates().begin();
-    auto IRed = C->reduction_ops().begin();
-    auto ILHS = C->lhs_exprs().begin();
-    auto IRHS = C->rhs_exprs().begin();
-    for (const Expr *Ref : C->varlists()) {
-      Shareds.emplace_back(Ref);
-      Privates.emplace_back(*IPriv);
-      ReductionOps.emplace_back(*IRed);
-      LHSs.emplace_back(*ILHS);
-      RHSs.emplace_back(*IRHS);
-      std::advance(IPriv, 1);
-      std::advance(IRed, 1);
-      std::advance(ILHS, 1);
-      std::advance(IRHS, 1);
+    Shareds.append(C->varlist_begin(), C->varlist_end());
+    Privates.append(C->privates().begin(), C->privates().end());
+    ReductionOps.append(C->reduction_ops().begin(), C->reduction_ops().end());
+    LHSs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
+    RHSs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
+    if (C->getModifier() == OMPC_REDUCTION_task) {
+      Data.ReductionVars.append(C->privates().begin(), C->privates().end());
+      Data.ReductionOrigs.append(C->varlist_begin(), C->varlist_end());
+      Data.ReductionCopies.append(C->privates().begin(), C->privates().end());
+      Data.ReductionOps.append(C->reduction_ops().begin(),
+                               C->reduction_ops().end());
+      TaskLHSs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
+      TaskRHSs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
     }
   }
-  ReductionCodeGen RedCG(Shareds, Privates, ReductionOps);
+  ReductionCodeGen RedCG(Shareds, Shareds, Privates, ReductionOps);
   unsigned Count = 0;
-  auto ILHS = LHSs.begin();
-  auto IRHS = RHSs.begin();
-  auto IPriv = Privates.begin();
+  auto *ILHS = LHSs.begin();
+  auto *IRHS = RHSs.begin();
+  auto *IPriv = Privates.begin();
   for (const Expr *IRef : Shareds) {
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IPriv)->getDecl());
     // Emit private VarDecl with reduction init.
-    RedCG.emitSharedLValue(*this, Count);
+    RedCG.emitSharedOrigLValue(*this, Count);
     RedCG.emitAggregateType(*this, Count);
     AutoVarEmission Emission = EmitAutoVarAlloca(*PrivateVD);
     RedCG.emitInitialization(*this, Count, Emission.getAllocatedAddress(),
@@ -1261,6 +1263,117 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     ++IPriv;
     ++Count;
   }
+  if (!Data.ReductionVars.empty()) {
+    Data.IsReductionWithTaskMod = true;
+    Data.IsWorksharingReduction =
+        isOpenMPWorksharingDirective(D.getDirectiveKind());
+    llvm::Value *ReductionDesc = CGM.getOpenMPRuntime().emitTaskReductionInit(
+        *this, D.getBeginLoc(), TaskLHSs, TaskRHSs, Data);
+    const Expr *TaskRedRef = nullptr;
+    switch (D.getDirectiveKind()) {
+    case OMPD_parallel:
+      TaskRedRef = cast<OMPParallelDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_for:
+      TaskRedRef = cast<OMPForDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_sections:
+      TaskRedRef = cast<OMPSectionsDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_parallel_for:
+      TaskRedRef = cast<OMPParallelForDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_parallel_master:
+      TaskRedRef =
+          cast<OMPParallelMasterDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_parallel_sections:
+      TaskRedRef =
+          cast<OMPParallelSectionsDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_target_parallel:
+      TaskRedRef =
+          cast<OMPTargetParallelDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_target_parallel_for:
+      TaskRedRef =
+          cast<OMPTargetParallelForDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_distribute_parallel_for:
+      TaskRedRef =
+          cast<OMPDistributeParallelForDirective>(D).getTaskReductionRefExpr();
+      break;
+    case OMPD_teams_distribute_parallel_for:
+      TaskRedRef = cast<OMPTeamsDistributeParallelForDirective>(D)
+                       .getTaskReductionRefExpr();
+      break;
+    case OMPD_target_teams_distribute_parallel_for:
+      TaskRedRef = cast<OMPTargetTeamsDistributeParallelForDirective>(D)
+                       .getTaskReductionRefExpr();
+      break;
+    case OMPD_simd:
+    case OMPD_for_simd:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_parallel_for_simd:
+    case OMPD_task:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_taskgroup:
+    case OMPD_flush:
+    case OMPD_depobj:
+    case OMPD_scan:
+    case OMPD_ordered:
+    case OMPD_atomic:
+    case OMPD_teams:
+    case OMPD_target:
+    case OMPD_cancellation_point:
+    case OMPD_cancel:
+    case OMPD_target_data:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
+    case OMPD_parallel_master_taskloop:
+    case OMPD_parallel_master_taskloop_simd:
+    case OMPD_distribute:
+    case OMPD_target_update:
+    case OMPD_distribute_parallel_for_simd:
+    case OMPD_distribute_simd:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_simd:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_target_teams:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_threadprivate:
+    case OMPD_allocate:
+    case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
+    case OMPD_declare_simd:
+    case OMPD_requires:
+    case OMPD_declare_variant:
+    case OMPD_begin_declare_variant:
+    case OMPD_end_declare_variant:
+    case OMPD_unknown:
+      llvm_unreachable("Enexpected directive with task reductions.");
+    }
+
+    const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(TaskRedRef)->getDecl());
+    EmitVarDecl(*VD);
+    EmitStoreOfScalar(ReductionDesc, GetAddrOfLocalVar(VD),
+                      /*Volatile=*/false, TaskRedRef->getType());
+  }
 }
 
 void CodeGenFunction::EmitOMPReductionClauseFinal(
@@ -1272,14 +1385,22 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
   llvm::SmallVector<const Expr *, 8> RHSExprs;
   llvm::SmallVector<const Expr *, 8> ReductionOps;
   bool HasAtLeastOneReduction = false;
+  bool IsReductionWithTaskMod = false;
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
     HasAtLeastOneReduction = true;
     Privates.append(C->privates().begin(), C->privates().end());
     LHSExprs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
     RHSExprs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
     ReductionOps.append(C->reduction_ops().begin(), C->reduction_ops().end());
+    IsReductionWithTaskMod =
+        IsReductionWithTaskMod || C->getModifier() == OMPC_REDUCTION_task;
   }
   if (HasAtLeastOneReduction) {
+    if (IsReductionWithTaskMod) {
+      CGM.getOpenMPRuntime().emitTaskReductionFini(
+          *this, D.getBeginLoc(),
+          isOpenMPWorksharingDirective(D.getDirectiveKind()));
+    }
     bool WithNowait = D.getSingleClause<OMPNowaitClause>() ||
                       isOpenMPParallelDirective(D.getDirectiveKind()) ||
                       ReductionKind == OMPD_simd;
@@ -2934,8 +3055,9 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
         C, &IVRefExpr, &UBRefExpr, BO_LE, C.BoolTy, VK_RValue, OK_Ordinary,
         S.getBeginLoc(), FPOptions(C.getLangOpts()));
     // Increment for loop counter.
-    UnaryOperator Inc(&IVRefExpr, UO_PreInc, KmpInt32Ty, VK_RValue, OK_Ordinary,
-                      S.getBeginLoc(), true);
+    UnaryOperator *Inc = UnaryOperator::Create(
+        C, &IVRefExpr, UO_PreInc, KmpInt32Ty, VK_RValue, OK_Ordinary,
+        S.getBeginLoc(), true, FPOptions(C.getLangOpts()));
     auto &&BodyGen = [CapturedStmt, CS, &S, &IV](CodeGenFunction &CGF) {
       // Iterate through all sections and emit a switch construct:
       // switch (IV) {
@@ -3005,7 +3127,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     // IV = LB;
     CGF.EmitStoreOfScalar(CGF.EmitLoadOfScalar(LB, S.getBeginLoc()), IV);
     // while (idx <= UB) { BODY; ++idx; }
-    CGF.EmitOMPInnerLoop(S, /*RequiresCleanup=*/false, Cond, &Inc, BodyGen,
+    CGF.EmitOMPInnerLoop(S, /*RequiresCleanup=*/false, Cond, Inc, BodyGen,
                          [](CodeGenFunction &) {});
     // Tell the runtime we are done.
     auto &&CodeGen = [&S](CodeGenFunction &CGF) {
@@ -3382,21 +3504,13 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
   SmallVector<const Expr *, 4> LHSs;
   SmallVector<const Expr *, 4> RHSs;
   for (const auto *C : S.getClausesOfKind<OMPReductionClause>()) {
-    auto IPriv = C->privates().begin();
-    auto IRed = C->reduction_ops().begin();
-    auto ILHS = C->lhs_exprs().begin();
-    auto IRHS = C->rhs_exprs().begin();
-    for (const Expr *Ref : C->varlists()) {
-      Data.ReductionVars.emplace_back(Ref);
-      Data.ReductionCopies.emplace_back(*IPriv);
-      Data.ReductionOps.emplace_back(*IRed);
-      LHSs.emplace_back(*ILHS);
-      RHSs.emplace_back(*IRHS);
-      std::advance(IPriv, 1);
-      std::advance(IRed, 1);
-      std::advance(ILHS, 1);
-      std::advance(IRHS, 1);
-    }
+    Data.ReductionVars.append(C->varlist_begin(), C->varlist_end());
+    Data.ReductionOrigs.append(C->varlist_begin(), C->varlist_end());
+    Data.ReductionCopies.append(C->privates().begin(), C->privates().end());
+    Data.ReductionOps.append(C->reduction_ops().begin(),
+                             C->reduction_ops().end());
+    LHSs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
+    RHSs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
   }
   Data.Reductions = CGM.getOpenMPRuntime().emitTaskReductionInit(
       *this, S.getBeginLoc(), LHSs, RHSs, Data);
@@ -3478,12 +3592,12 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       }
       (void)FirstprivateScope.Privatize();
       OMPLexicalScope LexScope(CGF, S, CapturedRegion);
-      ReductionCodeGen RedCG(Data.ReductionVars, Data.ReductionCopies,
-                             Data.ReductionOps);
+      ReductionCodeGen RedCG(Data.ReductionVars, Data.ReductionVars,
+                             Data.ReductionCopies, Data.ReductionOps);
       llvm::Value *ReductionsPtr = CGF.Builder.CreateLoad(
           CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(9)));
       for (unsigned Cnt = 0, E = Data.ReductionVars.size(); Cnt < E; ++Cnt) {
-        RedCG.emitSharedLValue(CGF, Cnt);
+        RedCG.emitSharedOrigLValue(CGF, Cnt);
         RedCG.emitAggregateType(CGF, Cnt);
         // FIXME: This must removed once the runtime library is fixed.
         // Emit required threadprivate variables for
@@ -3528,9 +3642,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     // privatized earlier.
     OMPPrivateScope InRedScope(CGF);
     if (!InRedVars.empty()) {
-      ReductionCodeGen RedCG(InRedVars, InRedPrivs, InRedOps);
+      ReductionCodeGen RedCG(InRedVars, InRedVars, InRedPrivs, InRedOps);
       for (unsigned Cnt = 0, E = InRedVars.size(); Cnt < E; ++Cnt) {
-        RedCG.emitSharedLValue(CGF, Cnt);
+        RedCG.emitSharedOrigLValue(CGF, Cnt);
         RedCG.emitAggregateType(CGF, Cnt);
         // The taskgroup descriptor variable is always implicit firstprivate and
         // privatized already during processing of the firstprivates.
@@ -3776,21 +3890,13 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
       SmallVector<const Expr *, 4> RHSs;
       OMPTaskDataTy Data;
       for (const auto *C : S.getClausesOfKind<OMPTaskReductionClause>()) {
-        auto IPriv = C->privates().begin();
-        auto IRed = C->reduction_ops().begin();
-        auto ILHS = C->lhs_exprs().begin();
-        auto IRHS = C->rhs_exprs().begin();
-        for (const Expr *Ref : C->varlists()) {
-          Data.ReductionVars.emplace_back(Ref);
-          Data.ReductionCopies.emplace_back(*IPriv);
-          Data.ReductionOps.emplace_back(*IRed);
-          LHSs.emplace_back(*ILHS);
-          RHSs.emplace_back(*IRHS);
-          std::advance(IPriv, 1);
-          std::advance(IRed, 1);
-          std::advance(ILHS, 1);
-          std::advance(IRHS, 1);
-        }
+        Data.ReductionVars.append(C->varlist_begin(), C->varlist_end());
+        Data.ReductionOrigs.append(C->varlist_begin(), C->varlist_end());
+        Data.ReductionCopies.append(C->privates().begin(), C->privates().end());
+        Data.ReductionOps.append(C->reduction_ops().begin(),
+                                 C->reduction_ops().end());
+        LHSs.append(C->lhs_exprs().begin(), C->lhs_exprs().end());
+        RHSs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
       }
       llvm::Value *ReductionDesc =
           CGF.CGM.getOpenMPRuntime().emitTaskReductionInit(CGF, S.getBeginLoc(),
@@ -4627,6 +4733,8 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_detach:
   case OMPC_inclusive:
   case OMPC_exclusive:
+  case OMPC_uses_allocators:
+  case OMPC_affinity:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

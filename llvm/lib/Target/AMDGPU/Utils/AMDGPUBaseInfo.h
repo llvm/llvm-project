@@ -12,7 +12,6 @@
 #include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
@@ -26,17 +25,13 @@
 namespace llvm {
 
 class Argument;
-class AMDGPUSubtarget;
-class FeatureBitset;
 class Function;
 class GCNSubtarget;
 class GlobalValue;
-class MCContext;
 class MCRegisterClass;
 class MCRegisterInfo;
-class MCSection;
 class MCSubtargetInfo;
-class MachineMemOperand;
+class StringRef;
 class Triple;
 
 namespace AMDGPU {
@@ -297,6 +292,9 @@ bool getMUBUFHasSrsrc(unsigned Opc);
 
 LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
+bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -640,6 +638,15 @@ bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 
+LLVM_READONLY
+bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
+                                      int64_t EncodedOffset);
+
+LLVM_READONLY
+bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
+                                    int64_t EncodedOffset,
+                                    bool IsBuffer);
+
 /// Convert \p ByteOffset to dwords if the subtarget uses dword SMRD immediate
 /// offsets.
 uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
@@ -750,7 +757,7 @@ struct SIModeRegisterDefaults {
   /// Returns true if a flag is compatible if it's enabled in the callee, but
   /// disabled in the caller.
   static bool oneWayCompatible(bool CallerMode, bool CalleeMode) {
-    return CallerMode == CalleeMode || (CallerMode && !CalleeMode);
+    return CallerMode == CalleeMode || (!CallerMode && CalleeMode);
   }
 
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should

@@ -27,7 +27,7 @@ class TargetMachine;
 
 namespace mlir {
 
-/// Initialize LLVM passes that can be when running MLIR code using
+/// Initialize LLVM passes that can be used when running MLIR code using
 /// ExecutionEngine.
 void initializeLLVMPasses();
 

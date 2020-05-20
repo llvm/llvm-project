@@ -25,14 +25,6 @@
 //CHECK-ERROR: error: expected writable system register or pstate
 //CHECK-ERROR: error: expected readable system register
 
-  msr ERXTS_EL1, x0
-  mrs x0,ERXTS_EL1
-
-//CHECK:  msr ERXTS_EL1, x0           // encoding: [0xe0,0x55,0x18,0xd5]
-//CHECK:  mrs x0, ERXTS_EL1           // encoding: [0xe0,0x55,0x38,0xd5]
-//CHECK-ERROR: error: expected writable system register or pstate
-//CHECK-ERROR: error: expected readable system register
-
   msr ERXMISC2_EL1, x0
   mrs x0, ERXMISC2_EL1
 

@@ -264,12 +264,15 @@ static sys::TimePoint<std::chrono::seconds> now(bool Deterministic) {
 }
 
 static bool isArchiveSymbol(const object::BasicSymbolRef &S) {
-  uint32_t Symflags = S.getFlags();
-  if (Symflags & object::SymbolRef::SF_FormatSpecific)
+  Expected<uint32_t> SymFlagsOrErr = S.getFlags();
+  if (!SymFlagsOrErr)
+    // TODO: Actually report errors helpfully.
+    report_fatal_error(SymFlagsOrErr.takeError());
+  if (*SymFlagsOrErr & object::SymbolRef::SF_FormatSpecific)
     return false;
-  if (!(Symflags & object::SymbolRef::SF_Global))
+  if (!(*SymFlagsOrErr & object::SymbolRef::SF_Global))
     return false;
-  if (Symflags & object::SymbolRef::SF_Undefined)
+  if (*SymFlagsOrErr & object::SymbolRef::SF_Undefined)
     return false;
   return true;
 }

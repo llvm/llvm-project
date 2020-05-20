@@ -20,20 +20,20 @@ define void @hoge(i32 %arg) {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB1:%.*]] ], [ [[ARG:%.*]], [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* @global, !h !0
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* @global, align 4, !h !0
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb6:
-; CHECK-NEXT:    store i32 [[TMP]], i32* @global.1, !h !0
+; CHECK-NEXT:    store i32 [[TMP]], i32* @global.1, align 4, !h !0
 ; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB1]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 false, label [[BB9:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    store i8 undef, i8* null, align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    store i32 0, i32* @global, !h !0
+; CHECK-NEXT:    store i32 0, i32* @global, align 4, !h !0
 ; CHECK-NEXT:    br label [[BB7]]
 ;
 bb:

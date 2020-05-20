@@ -15,7 +15,8 @@
 
 include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Type constraint accepting standard integers, indices and wrapped LLVM integer
 // types.
@@ -85,7 +86,8 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   }];
 }
 
-def GPU_GPUFuncOp : GPU_Op<"func", [AutomaticAllocationScope, FunctionLike,
+def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
+                                    AutomaticAllocationScope, FunctionLike,
                                     IsolatedFromAbove, Symbol]> {
   let summary = "Function executable on a GPU";
 
@@ -152,7 +154,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [AutomaticAllocationScope, FunctionLike,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, StringRef name, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
               "FunctionType type, ArrayRef<Type> workgroupAttributions = {}, "
               "ArrayRef<Type> privateAttributions = {}, "
               "ArrayRef<NamedAttribute> attrs = {}">
@@ -259,13 +261,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
     outlining the kernel body into a function in a dedicated module, which
     reflects the separate compilation process. The kernel function is required
     to have the `gpu.kernel` attribute. The module containing the kernel
-    function is required to have the `gpu.kernel_module` attribute and must be
-    named. And finally, the module containing the kernel module (which thus
-    cannot be the top-level module) is required to have the
-    `gpu.container_module` attribute. The `gpu.launch_func` operation has a
-    string attribute named `kernel` to specify the name of the kernel function
-    to launch and an attribute named `kernel_module` to specify the name of the
-    module containing that kernel function.
+    function is required to be a gpu.module. And finally, the module containing
+    the kernel module (which thus cannot be the top-level module) is required
+    to have the `gpu.container_module` attribute. The `gpu.launch_func`
+    operation has a symbol attribute named `kernel` to identify the fully specified
+    kernel function to launch (both the gpu.module and func).
 
     The operation takes at least six operands, with the first three operands
     being grid sizes along x,y,z dimensions and the following three being block
@@ -281,7 +281,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
     module attributes {gpu.container_module} {
 
       // This module creates a separate compilation unit for the GPU compiler.
-      module @kernels attributes {gpu.kernel_module} {
+      gpu.module @kernels {
         func @kernel_1(%arg0 : f32, %arg1 : !llvm<"float*">)
             attributes { nvvm.kernel = true } {
 
@@ -323,25 +323,27 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, GPUFuncOp kernelFunc, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, GPUFuncOp kernelFunc, "
               "Value gridSizeX, Value gridSizeY, Value gridSizeZ, "
               "Value blockSizeX, Value blockSizeY, Value blockSizeZ, "
               "ValueRange kernelOperands">,
-    OpBuilder<"Builder *builder, OperationState &result, GPUFuncOp kernelFunc, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, GPUFuncOp kernelFunc, "
               "KernelDim3 gridSize, KernelDim3 blockSize, "
               "ValueRange kernelOperands">
   ];
 
   let extraClassDeclaration = [{
     /// The kernel function specified by the operation's `kernel` attribute.
-    StringRef kernel();
+    SymbolRefAttr kernel();
 
     /// The number of operands passed to the kernel function.
     unsigned getNumKernelOperands();
 
-    /// The name of the kernel module specified by the operation's
-    /// `kernel_module` attribute.
+    /// The name of the kernel's containing module.
     StringRef getKernelModuleName();
+
+    /// The name of the kernel.
+    StringRef getKernelName();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);
@@ -361,12 +363,8 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
     friend LogicalResult GPUDialect::verifyOperationAttribute(Operation *,
                                                               NamedAttribute);
 
-    /// The name of the symbolRef attribute specifying the kernel to launch.
+    /// The name of the symbol reference attribute specifying the kernel to launch.
     static StringRef getKernelAttrName() { return "kernel"; }
-
-    /// The name of the symbolRef attribute specifying the name of the module
-    /// containing the kernel to launch.
-    static StringRef getKernelModuleAttrName() { return "kernel_module"; }
   }];
 
   let verifier = [{ return ::verify(*this); }];
@@ -444,7 +442,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, Value gridSizeX,"
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value gridSizeX,"
               "Value gridSizeY, Value gridSizeZ, Value blockSizeX,"
               "Value blockSizeY, Value blockSizeZ">
   ];
@@ -491,7 +489,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
     by an invocation of the `gpu.func`.
   }];
 
-  let builders = [OpBuilder<"Builder *builder, OperationState &result", " // empty">];
+  let builders = [OpBuilder<"OpBuilder &builder, OperationState &result", " // empty">];
 
   let parser = [{ return parseReturnOp(parser, result); }];
   let printer = [{ p << getOperationName(); }];
@@ -670,7 +668,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilder<"Builder *builder, OperationState &result, "
+  let builders = [OpBuilder<"OpBuilder &builder, OperationState &result, "
                             "StringRef name">];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];

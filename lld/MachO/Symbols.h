@@ -18,7 +18,7 @@ namespace lld {
 namespace macho {
 
 class InputSection;
-class InputFile;
+class DylibFile;
 class ArchiveFile;
 
 struct StringRefZ {
@@ -34,6 +34,8 @@ public:
   enum Kind {
     DefinedKind,
     UndefinedKind,
+    DylibKind,
+    LazyKind,
   };
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
@@ -42,11 +44,8 @@ public:
 
   uint64_t getVA() const;
 
-  InputFile *file;
-
 protected:
-  Symbol(Kind k, InputFile *file, StringRefZ name)
-      : file(file), symbolKind(k), name(name) {}
+  Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
 
   Kind symbolKind;
   StringRefZ name;
@@ -55,7 +54,7 @@ protected:
 class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputSection *isec, uint32_t value)
-      : Symbol(DefinedKind, nullptr, name), isec(isec), value(value) {}
+      : Symbol(DefinedKind, name), isec(isec), value(value) {}
 
   InputSection *isec;
   uint32_t value;
@@ -65,20 +64,49 @@ public:
 
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name) : Symbol(UndefinedKind, nullptr, name) {}
+  Undefined(StringRefZ name) : Symbol(UndefinedKind, name) {}
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
 };
 
+class DylibSymbol : public Symbol {
+public:
+  DylibSymbol(DylibFile *file, StringRefZ name)
+      : Symbol(DylibKind, name), file(file) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
+
+  DylibFile *file;
+  uint32_t gotIndex = UINT32_MAX;
+  uint32_t stubsIndex = UINT32_MAX;
+  uint32_t lazyBindOffset = UINT32_MAX;
+};
+
+class LazySymbol : public Symbol {
+public:
+  LazySymbol(ArchiveFile *file, const llvm::object::Archive::Symbol &sym)
+      : Symbol(LazyKind, sym.getName()), file(file), sym(sym) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
+
+  void fetchArchiveMember();
+
+private:
+  ArchiveFile *file;
+  const llvm::object::Archive::Symbol sym;
+};
+
 inline uint64_t Symbol::getVA() const {
   if (auto *d = dyn_cast<Defined>(this))
-    return d->isec->addr + d->value - ImageBase;
+    return d->isec->getVA() + d->value;
   return 0;
 }
 
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
+  alignas(DylibSymbol) char c[sizeof(DylibSymbol)];
+  alignas(LazySymbol) char d[sizeof(LazySymbol)];
 };
 
 template <typename T, typename... ArgT>

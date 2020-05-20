@@ -35,6 +35,15 @@ static bool getDefaultStorageParams(unsigned numBits, bool narrowRange,
       qmin = 0;
       qmax = 65535;
     }
+  } else if (numBits <= 32) {
+    storageType = IntegerType::get(32, ctx);
+    if (isSigned) {
+      qmin = std::numeric_limits<int32_t>::min();
+      qmax = std::numeric_limits<int32_t>::max();
+    } else {
+      qmin = std::numeric_limits<uint32_t>::min();
+      qmax = std::numeric_limits<uint32_t>::max();
+    }
   } else {
     return true;
   }

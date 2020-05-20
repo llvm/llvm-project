@@ -83,7 +83,7 @@ void g() {
   // a big spew of errors here.
   //
   // expected-error@Inputs/cxx-templates-a.h:19 {{definition of 'DefinedInBImpl' must be imported}}
-  // expected-note@Inputs/cxx-templates-b-impl.h:1 +{{definition is here}}
+  // expected-note@Inputs/cxx-templates-b-impl.h:1 +{{definition here is not reachable}}
   // expected-error@Inputs/cxx-templates-a.h:19 +{{}}
   // expected-error@Inputs/cxx-templates-a.h:20 +{{}}
   PerformDelayedLookup(defined_in_b_impl); // expected-note {{in instantiation of}}
@@ -106,8 +106,8 @@ void g() {
   TemplateInstantiationVisibility<char[1]> tiv1;
   TemplateInstantiationVisibility<char[2]> tiv2;
   TemplateInstantiationVisibility<char[3]> tiv3; // expected-error 5{{must be imported from module 'cxx_templates_b_impl'}}
-  // expected-note@cxx-templates-b-impl.h:10 3{{explicit specialization declared here}}
-  // expected-note@cxx-templates-b-impl.h:10 2{{previous definition is here}}
+  // expected-note@cxx-templates-b-impl.h:10 3{{explicit specialization declared here is not reachable}}
+  // expected-note@cxx-templates-b-impl.h:10 2{{definition here is not reachable}}
   TemplateInstantiationVisibility<char[4]> tiv4;
 
   int &p = WithPartialSpecializationUse().f();

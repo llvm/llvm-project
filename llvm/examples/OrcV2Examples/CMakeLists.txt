@@ -1,6 +1,7 @@
 add_subdirectory(LLJITDumpObjects)
 add_subdirectory(LLJITWithCustomObjectLinkingLayer)
 add_subdirectory(LLJITWithGDBRegistrationListener)
+add_subdirectory(LLJITWithInitializers)
 add_subdirectory(LLJITWithLazyReexports)
 add_subdirectory(LLJITWithObjectCache)
 add_subdirectory(LLJITWithObjectLinkingLayerPlugin)

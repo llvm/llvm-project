@@ -52,7 +52,7 @@ struct EquivalenceObject {
 using EquivalenceSet = std::vector<EquivalenceObject>;
 
 class Scope {
-  using mapType = std::map<SourceName, common::Reference<Symbol>>;
+  using mapType = std::map<SourceName, MutableSymbolRef>;
 
 public:
   ENUM_CLASS(Kind, Global, Module, MainProgram, Subprogram, BlockData,
@@ -108,12 +108,15 @@ public:
   const_iterator cbegin() const { return symbols_.cbegin(); }
   const_iterator cend() const { return symbols_.cend(); }
 
+  // Return symbols in declaration order (the iterators above are in name order)
+  SymbolVector GetSymbols() const;
+  MutableSymbolVector GetSymbols();
+
   iterator find(const SourceName &name);
   const_iterator find(const SourceName &name) const {
     return symbols_.find(name);
   }
   size_type erase(const SourceName &);
-  size_type size() const { return symbols_.size(); }
   bool empty() const { return symbols_.empty(); }
 
   // Look for symbol by name in this scope and host (depending on imports).
@@ -144,7 +147,10 @@ public:
   // Make a copy of a symbol in this scope; nullptr if one is already there
   Symbol *CopySymbol(const Symbol &);
 
-  const std::list<EquivalenceSet> &equivalenceSets() const;
+  std::list<EquivalenceSet> &equivalenceSets() { return equivalenceSets_; }
+  const std::list<EquivalenceSet> &equivalenceSets() const {
+    return equivalenceSets_;
+  }
   void add_equivalenceSet(EquivalenceSet &&);
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
@@ -182,6 +188,11 @@ public:
   // that are referenced by SourceName objects.
   void set_chars(parser::CookedSource &);
 
+  std::size_t size() const { return size_; }
+  void set_size(std::size_t size) { size_ = size; }
+  std::size_t alignment() const { return alignment_; }
+  void set_alignment(std::size_t alignment) { alignment_ = alignment; }
+
   ImportKind GetImportKind() const;
   // Names appearing in IMPORT statements in this scope
   std::set<SourceName> importNames() const { return importNames_; }
@@ -217,6 +228,8 @@ public:
 private:
   Scope &parent_; // this is enclosing scope, not extended derived type base
   const Kind kind_;
+  std::size_t size_{0}; // size in bytes
+  std::size_t alignment_{0}; // required alignment in bytes
   parser::CharBlock sourceRange_;
   Symbol *const symbol_; // if not null, symbol_->scope() == this
   std::list<Scope> children_;

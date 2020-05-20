@@ -45,25 +45,23 @@ static const char *const builderOpState = "odsState";
 // {1}: The total number of non-variadic operands/results.
 // {2}: The total number of variadic operands/results.
 // {3}: The total number of actual values.
-// {4}: The begin iterator of the actual values.
-// {5}: "operand" or "result".
+// {4}: "operand" or "result".
 const char *sameVariadicSizeValueRangeCalcCode = R"(
   bool isVariadic[] = {{{0}};
   int prevVariadicCount = 0;
   for (unsigned i = 0; i < index; ++i)
     if (isVariadic[i]) ++prevVariadicCount;
 
-  // Calculate how many dynamic values a static variadic {5} corresponds to.
-  // This assumes all static variadic {5}s have the same dynamic value count.
+  // Calculate how many dynamic values a static variadic {4} corresponds to.
+  // This assumes all static variadic {4}s have the same dynamic value count.
   int variadicSize = ({3} - {1}) / {2};
   // `index` passed in as the parameter is the static index which counts each
-  // {5} (variadic or not) as size 1. So here for each previous static variadic
-  // {5}, we need to offset by (variadicSize - 1) to get where the dynamic
-  // value pack for this static {5} starts.
-  int offset = index + (variadicSize - 1) * prevVariadicCount;
+  // {4} (variadic or not) as size 1. So here for each previous static variadic
+  // {4}, we need to offset by (variadicSize - 1) to get where the dynamic
+  // value pack for this static {4} starts.
+  int start = index + (variadicSize - 1) * prevVariadicCount;
   int size = isVariadic[index] ? variadicSize : 1;
-
-  return {{std::next({4}, offset), std::next({4}, offset + size)};
+  return {{start, size};
 )";
 
 // The logic to calculate the actual value range for a declared operand/result
@@ -72,14 +70,23 @@ const char *sameVariadicSizeValueRangeCalcCode = R"(
 // (variadic or not).
 //
 // {0}: The name of the attribute specifying the segment sizes.
-// {1}: The begin iterator of the actual values.
 const char *attrSizedSegmentValueRangeCalcCode = R"(
   auto sizeAttr = getAttrOfType<DenseIntElementsAttr>("{0}");
   unsigned start = 0;
   for (unsigned i = 0; i < index; ++i)
     start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned end = start + (*(sizeAttr.begin() + index)).getZExtValue();
-  return {{std::next({1}, start), std::next({1}, end)};
+  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+  return {{start, size};
+)";
+
+// The logic to build a range of either operand or result values.
+//
+// {0}: The begin iterator of the actual values.
+// {1}: The call to generate the start and length of the value range.
+const char *valueRangeReturnCode = R"(
+  auto valueRange = {1};
+  return {{std::next({0}, valueRange.first),
+           std::next({0}, valueRange.first + valueRange.second)};
 )";
 
 static const char *const opCommentHeader = R"(
@@ -176,6 +183,9 @@ private:
 
   // Generates getters for named operands.
   void genNamedOperandGetters();
+
+  // Generates setters for named operands.
+  void genNamedOperandSetters();
 
   // Generates getters for named results.
   void genNamedResultGetters();
@@ -310,6 +320,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genOpAsmInterface();
   genOpNameGetter();
   genNamedOperandGetters();
+  genNamedOperandSetters();
   genNamedResultGetters();
   genNamedRegionGetters();
   genNamedSuccessorGetters();
@@ -396,21 +407,66 @@ void OpEmitter::genAttrGetters() {
     }
   }
 
-  // Generate helper method to query whether a named attribute is a derived
-  // attribute. This enables, for example, avoiding adding an attribute that
-  // overlaps with a derived attribute.
-  auto derivedAttr = make_filter_range(op.getAttributes(),
-                                       [](const NamedAttribute &namedAttr) {
-                                         return namedAttr.attr.isDerivedAttr();
-                                       });
-  if (!derivedAttr.empty()) {
+  auto derivedAttrs = make_filter_range(op.getAttributes(),
+                                        [](const NamedAttribute &namedAttr) {
+                                          return namedAttr.attr.isDerivedAttr();
+                                        });
+  if (!derivedAttrs.empty()) {
     opClass.addTrait("DerivedAttributeOpInterface::Trait");
-    auto &method = opClass.newMethod("bool", "isDerivedAttribute",
-                                     "StringRef name", OpMethod::MP_Static);
-    auto &body = method.body();
-    for (auto namedAttr : derivedAttr)
-      body << "    if (name == \"" << namedAttr.name << "\") return true;\n";
-    body << " return false;";
+    // Generate helper method to query whether a named attribute is a derived
+    // attribute. This enables, for example, avoiding adding an attribute that
+    // overlaps with a derived attribute.
+    {
+      auto &method = opClass.newMethod("bool", "isDerivedAttribute",
+                                       "StringRef name", OpMethod::MP_Static);
+      auto &body = method.body();
+      for (auto namedAttr : derivedAttrs)
+        body << "  if (name == \"" << namedAttr.name << "\") return true;\n";
+      body << " return false;";
+    }
+    // Generate method to materialize derived attributes as a DictionaryAttr.
+    {
+      OpMethod &method =
+          opClass.newMethod("DictionaryAttr", "materializeDerivedAttributes");
+      auto &body = method.body();
+
+      auto nonMaterializable =
+          make_filter_range(derivedAttrs, [](const NamedAttribute &namedAttr) {
+            return namedAttr.attr.getConvertFromStorageCall().empty();
+          });
+      if (!nonMaterializable.empty()) {
+        std::string attrs;
+        llvm::raw_string_ostream os(attrs);
+        interleaveComma(nonMaterializable, os,
+                        [&](const NamedAttribute &attr) { os << attr.name; });
+        PrintWarning(
+            op.getLoc(),
+            formatv(
+                "op has non-materialzable derived attributes '{0}', skipping",
+                os.str()));
+        body << formatv("  emitOpError(\"op has non-materializable derived "
+                        "attributes '{0}'\");\n",
+                        attrs);
+        body << "  return nullptr;";
+        return;
+      }
+
+      body << "  MLIRContext* ctx = getContext();\n";
+      body << "  Builder odsBuilder(ctx); (void)odsBuilder;\n";
+      body << "  return DictionaryAttr::get({\n";
+      interleave(
+          derivedAttrs, body,
+          [&](const NamedAttribute &namedAttr) {
+            auto tmpl = namedAttr.attr.getConvertFromStorageCall();
+            body << "    {Identifier::get(\"" << namedAttr.name << "\", ctx),\n"
+                 << tgfmt(tmpl, &fctx.withSelf(namedAttr.name + "()")
+                                     .withBuilder("odsBuilder")
+                                     .addSubst("_ctx", "ctx"))
+                 << "}";
+          },
+          ",\n");
+      body << "\n    }, ctx);";
+    }
   }
 }
 
@@ -430,6 +486,37 @@ void OpEmitter::genAttrSetters() {
     const auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr())
       emitAttrWithStorageType(name, attr);
+  }
+}
+
+// Generates the code to compute the start and end index of an operand or result
+// range.
+template <typename RangeT>
+static void
+generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
+                              int numVariadic, int numNonVariadic,
+                              StringRef rangeSizeCall, bool hasAttrSegmentSize,
+                              StringRef segmentSizeAttr, RangeT &&odsValues) {
+  auto &method = opClass.newMethod("std::pair<unsigned, unsigned>", methodName,
+                                   "unsigned index");
+
+  if (numVariadic == 0) {
+    method.body() << "  return {index, 1};\n";
+  } else if (hasAttrSegmentSize) {
+    method.body() << formatv(attrSizedSegmentValueRangeCalcCode,
+                             segmentSizeAttr);
+  } else {
+    // Because the op can have arbitrarily interleaved variadic and non-variadic
+    // operands, we need to embed a list in the "sink" getter method for
+    // calculation at run-time.
+    llvm::SmallVector<StringRef, 4> isVariadic;
+    isVariadic.reserve(llvm::size(odsValues));
+    for (auto &it : odsValues)
+      isVariadic.push_back(it.isVariableLength() ? "true" : "false");
+    std::string isVariadicList = llvm::join(isVariadic, ", ");
+    method.body() << formatv(sameVariadicSizeValueRangeCalcCode, isVariadicList,
+                             numNonVariadic, numVariadic, rangeSizeCall,
+                             "operand");
   }
 }
 
@@ -474,32 +561,16 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
                     "'SameVariadicOperandSize' traits");
   }
 
-  // First emit a "sink" getter method upon which we layer all nicer named
+  // First emit a few "sink" getter methods upon which we layer all nicer named
   // getter methods.
+  generateValueRangeStartAndEnd(
+      opClass, "getODSOperandIndexAndLength", numVariadicOperands,
+      numNormalOperands, rangeSizeCall, attrSizedOperands,
+      "operand_segment_sizes", const_cast<Operator &>(op).getOperands());
+
   auto &m = opClass.newMethod(rangeType, "getODSOperands", "unsigned index");
-
-  if (numVariadicOperands == 0) {
-    // We still need to match the return type, which is a range.
-    m.body() << "  return {std::next(" << rangeBeginCall
-             << ", index), std::next(" << rangeBeginCall << ", index + 1)};";
-  } else if (attrSizedOperands) {
-    m.body() << formatv(attrSizedSegmentValueRangeCalcCode,
-                        "operand_segment_sizes", rangeBeginCall);
-  } else {
-    // Because the op can have arbitrarily interleaved variadic and non-variadic
-    // operands, we need to embed a list in the "sink" getter method for
-    // calculation at run-time.
-    llvm::SmallVector<StringRef, 4> isVariadic;
-    isVariadic.reserve(numOperands);
-    for (int i = 0; i < numOperands; ++i)
-      isVariadic.push_back(op.getOperand(i).isVariableLength() ? "true"
-                                                               : "false");
-    std::string isVariadicList = llvm::join(isVariadic, ", ");
-
-    m.body() << formatv(sameVariadicSizeValueRangeCalcCode, isVariadicList,
-                        numNormalOperands, numVariadicOperands, rangeSizeCall,
-                        rangeBeginCall, "operand");
-  }
+  m.body() << formatv(valueRangeReturnCode, rangeBeginCall,
+                      "getODSOperandIndexAndLength(index)");
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
@@ -534,6 +605,26 @@ void OpEmitter::genNamedOperandGetters() {
       /*getOperandCallPattern=*/"getOperation()->getOperand({0})");
 }
 
+void OpEmitter::genNamedOperandSetters() {
+  auto *attrSizedOperands = op.getTrait("OpTrait::AttrSizedOperandSegments");
+  for (int i = 0, e = op.getNumOperands(); i != e; ++i) {
+    const auto &operand = op.getOperand(i);
+    if (operand.name.empty())
+      continue;
+    auto &m = opClass.newMethod("::mlir::MutableOperandRange",
+                                (operand.name + "Mutable").str());
+    auto &body = m.body();
+    body << "  auto range = getODSOperandIndexAndLength(" << i << ");\n"
+         << "  return ::mlir::MutableOperandRange(getOperation(), "
+            "range.first, range.second";
+    if (attrSizedOperands)
+      body << ", ::mlir::MutableOperandRange::OperandSegment(" << i
+           << "u, *getOperation()->getMutableAttrDict().getNamed("
+              "\"operand_segment_sizes\"))";
+    body << ");\n";
+  }
+}
+
 void OpEmitter::genNamedResultGetters() {
   const int numResults = op.getNumResults();
   const int numVariadicResults = op.getNumVariableLengthResults();
@@ -562,29 +653,14 @@ void OpEmitter::genNamedResultGetters() {
                     "'SameVariadicResultSize' traits");
   }
 
+  generateValueRangeStartAndEnd(
+      opClass, "getODSResultIndexAndLength", numVariadicResults,
+      numNormalResults, "getOperation()->getNumResults()", attrSizedResults,
+      "result_segment_sizes", op.getResults());
   auto &m = opClass.newMethod("Operation::result_range", "getODSResults",
                               "unsigned index");
-
-  if (numVariadicResults == 0) {
-    m.body() << "  return {std::next(getOperation()->result_begin(), index), "
-                "std::next(getOperation()->result_begin(), index + 1)};";
-  } else if (attrSizedResults) {
-    m.body() << formatv(attrSizedSegmentValueRangeCalcCode,
-                        "result_segment_sizes",
-                        "getOperation()->result_begin()");
-  } else {
-    llvm::SmallVector<StringRef, 4> isVariadic;
-    isVariadic.reserve(numResults);
-    for (int i = 0; i < numResults; ++i)
-      isVariadic.push_back(op.getResult(i).isVariableLength() ? "true"
-                                                              : "false");
-    std::string isVariadicList = llvm::join(isVariadic, ", ");
-
-    m.body() << formatv(sameVariadicSizeValueRangeCalcCode, isVariadicList,
-                        numNormalResults, numVariadicResults,
-                        "getOperation()->getNumResults()",
-                        "getOperation()->result_begin()", "result");
-  }
+  m.body() << formatv(valueRangeReturnCode, "getOperation()->result_begin()",
+                      "getODSResultIndexAndLength(index)");
 
   for (int i = 0; i != numResults; ++i) {
     const auto &result = op.getResult(i);
@@ -685,6 +761,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
     auto &m =
         opClass.newMethod("void", "build", paramList, OpMethod::MP_Static);
     auto &body = m.body();
+
     genCodeForAddingArgAndRegionForBuilder(
         body, /*isRawValueAttr=*/attrType == AttrParamKind::UnwrappedValue);
 
@@ -697,8 +774,9 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // TODO(jpienaar): Expand to handle regions.
       body << formatv(R"(
         SmallVector<Type, 2> inferredReturnTypes;
-        if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
-                      {1}.location, {1}.operands, {1}.attributes,
+        if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+                      {1}.location, {1}.operands,
+                      {1}.attributes.getDictionary({1}.getContext()),
                       /*regions=*/{{}, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
         else
@@ -754,7 +832,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
   // Signature
   std::string params =
-      std::string("Builder *odsBuilder, OperationState &") + builderOpState +
+      std::string("OpBuilder &odsBuilder, OperationState &") + builderOpState +
       ", ValueRange operands, ArrayRef<NamedAttribute> attributes";
   if (op.getNumVariadicRegions())
     params += ", unsigned numRegions";
@@ -762,7 +840,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   auto &body = m.body();
 
   // Operands
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -784,19 +862,54 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   // TODO(jpienaar): Expand to support regions.
   const char *params =
-      "Builder *odsBuilder, OperationState &{0}, "
+      "OpBuilder &odsBuilder, OperationState &{0}, "
       "ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m =
       opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
                         OpMethod::MP_Static);
   auto &body = m.body();
+
+  int numResults = op.getNumResults();
+  int numVariadicResults = op.getNumVariableLengthResults();
+  int numNonVariadicResults = numResults - numVariadicResults;
+
+  int numOperands = op.getNumOperands();
+  int numVariadicOperands = op.getNumVariableLengthOperands();
+  int numNonVariadicOperands = numOperands - numVariadicOperands;
+
+  // Operands
+  if (numVariadicOperands == 0 || numNonVariadicOperands != 0)
+    body << "  assert(operands.size()"
+         << (numVariadicOperands != 0 ? " >= " : " == ")
+         << numNonVariadicOperands
+         << "u && \"mismatched number of parameters\");\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+  body << "  " << builderOpState << ".addAttributes(attributes);\n";
+
+  // Create the correct number of regions
+  if (int numRegions = op.getNumRegions()) {
+    body << llvm::formatv(
+        "  for (unsigned i = 0; i != {0}; ++i)\n",
+        (op.getNumVariadicRegions() ? "numRegions" : Twine(numRegions)));
+    body << "    (void)" << builderOpState << ".addRegion();\n";
+  }
+
+  // Result types
   body << formatv(R"(
     SmallVector<Type, 2> inferredReturnTypes;
-    if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
-                  {1}.location, operands, attributes,
-                  /*regions=*/{{}, inferredReturnTypes)))
-      build(odsBuilder, odsState, inferredReturnTypes, operands, attributes);
-    else
+    if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+                  {1}.location, operands,
+                  {1}.attributes.getDictionary({1}.getContext()),
+                  /*regions=*/{{}, inferredReturnTypes))) {{)",
+                  opClass.getClassName(), builderOpState);
+  if (numVariadicResults == 0 || numNonVariadicResults != 0)
+    body << "  assert(inferredReturnTypes.size()"
+         << (numVariadicResults != 0 ? " >= " : " == ") << numNonVariadicResults
+         << "u && \"mismatched number of return types\");\n";
+  body << "      " << builderOpState << ".addTypes(inferredReturnTypes);";
+
+  body << formatv(R"(
+    } else
       llvm::report_fatal_error("Failed to infer result type(s).");)",
                   opClass.getClassName(), builderOpState);
 }
@@ -825,7 +938,7 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
 
 void OpEmitter::genUseAttrAsResultTypeBuilder() {
   std::string params =
-      std::string("Builder *odsBuilder, OperationState &") + builderOpState +
+      std::string("OpBuilder &odsBuilder, OperationState &") + builderOpState +
       ", ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
@@ -843,7 +956,8 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
   }
 
   // Operands
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
+
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
 
@@ -914,7 +1028,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   int numVariadicOperands = op.getNumVariableLengthOperands();
   int numNonVariadicOperands = numOperands - numVariadicOperands;
   // Signature
-  std::string params = std::string("Builder *, OperationState &") +
+  std::string params = std::string("OpBuilder &, OperationState &") +
                        builderOpState +
                        ", ArrayRef<Type> resultTypes, ValueRange operands, "
                        "ArrayRef<NamedAttribute> attributes";
@@ -929,7 +1043,7 @@ void OpEmitter::genCollectiveParamBuilder() {
          << (numVariadicOperands != 0 ? " >= " : " == ")
          << numNonVariadicOperands
          << "u && \"mismatched number of parameters\");\n";
-  body << "  " << builderOpState << ".addOperands(operands);\n\n";
+  body << "  " << builderOpState << ".addOperands(operands);\n";
 
   // Attributes
   body << "  " << builderOpState << ".addAttributes(attributes);\n";
@@ -966,7 +1080,7 @@ void OpEmitter::buildParamList(std::string &paramList,
   auto numResults = op.getNumResults();
   resultTypeNames.reserve(numResults);
 
-  paramList = "Builder *odsBuilder, OperationState &";
+  paramList = "OpBuilder &odsBuilder, OperationState &";
   paramList.append(builderOpState);
 
   switch (typeParamKind) {
@@ -1104,17 +1218,15 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
   if (op.getTrait("OpTrait::AttrSizedOperandSegments")) {
     body << "  " << builderOpState
          << ".addAttribute(\"operand_segment_sizes\", "
-            "odsBuilder->getI32VectorAttr({";
-    llvm::interleaveComma(
-        llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
-          if (op.getOperand(i).isOptional())
-            body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
-          else if (op.getOperand(i).isVariadic())
-            body << "static_cast<int32_t>(" << getArgumentName(op, i)
-                 << ".size())";
-          else
-            body << "1";
-        });
+            "odsBuilder.getI32VectorAttr({";
+    interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+      if (op.getOperand(i).isOptional())
+        body << "(" << getArgumentName(op, i) << " ? 1 : 0)";
+      else if (op.getOperand(i).isVariadic())
+        body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
+      else
+        body << "1";
+    });
     body << "}));\n";
   }
 
@@ -1130,7 +1242,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         // If this is a raw value, then we need to wrap it in an Attribute
         // instance.
         FmtContext fctx;
-        fctx.withBuilder("(*odsBuilder)");
+        fctx.withBuilder("odsBuilder");
 
         std::string builderTemplate =
             std::string(attr.getConstBuilderTemplate());
@@ -1206,16 +1318,29 @@ void OpEmitter::genOpInterfaceMethods() {
     if (!opTrait || !opTrait->shouldDeclareMethods())
       continue;
     auto interface = opTrait->getOpInterface();
-    for (auto method : interface.getMethods()) {
-      // Don't declare if the method has a body or a default implementation.
-      if (method.getBody() || method.getDefaultImplementation())
+
+    // Get the set of methods that should always be declared.
+    auto alwaysDeclaredMethodsVec = opTrait->getAlwaysDeclaredMethods();
+    llvm::StringSet<> alwaysDeclaredMethods;
+    alwaysDeclaredMethods.insert(alwaysDeclaredMethodsVec.begin(),
+                                 alwaysDeclaredMethodsVec.end());
+
+    for (const OpInterfaceMethod &method : interface.getMethods()) {
+      // Don't declare if the method has a body.
+      if (method.getBody())
         continue;
+      // Don't declare if the method has a default implementation and the op
+      // didn't request that it always be declared.
+      if (method.getDefaultImplementation() &&
+          !alwaysDeclaredMethods.count(method.getName()))
+        continue;
+
       std::string args;
       llvm::raw_string_ostream os(args);
-      llvm::interleaveComma(method.getArguments(), os,
-                            [&](const OpInterfaceMethod::Argument &arg) {
-                              os << arg.type << " " << arg.name;
-                            });
+      interleaveComma(method.getArguments(), os,
+                      [&](const OpInterfaceMethod::Argument &arg) {
+                        os << arg.type << " " << arg.name;
+                      });
       opClass.newMethod(method.getReturnType(), method.getName(), os.str(),
                         method.isStatic() ? OpMethod::MP_Static
                                           : OpMethod::MP_None,
@@ -1241,9 +1366,11 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   auto resolveDecorators = [&](Operator::var_decorator_range decorators,
                                unsigned index, unsigned kind) {
     for (auto decorator : decorators)
-      if (SideEffect *effect = dyn_cast<SideEffect>(&decorator))
+      if (SideEffect *effect = dyn_cast<SideEffect>(&decorator)) {
+        opClass.addTrait(effect->getInterfaceTrait());
         interfaceEffects[effect->getBaseEffectName()].push_back(
             EffectLocation{*effect, index, kind});
+      }
   };
 
   // Collect effects that were specified via:
@@ -1766,7 +1893,7 @@ static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
 static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
   IfDefScope scope("GET_OP_LIST", os);
 
-  llvm::interleave(
+  interleave(
       // TODO: We are constructing the Operator wrapper instance just for
       // getting it's qualified class name here. Reduce the overhead by having a
       // lightweight version of Operator class just for that purpose.

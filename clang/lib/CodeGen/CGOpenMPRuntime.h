@@ -100,6 +100,7 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> LastprivateVars;
   SmallVector<const Expr *, 4> LastprivateCopies;
   SmallVector<const Expr *, 4> ReductionVars;
+  SmallVector<const Expr *, 4> ReductionOrigs;
   SmallVector<const Expr *, 4> ReductionCopies;
   SmallVector<const Expr *, 4> ReductionOps;
   struct DependData {
@@ -118,6 +119,8 @@ struct OMPTaskDataTy final {
   unsigned NumberOfParts = 0;
   bool Tied = true;
   bool Nogroup = false;
+  bool IsReductionWithTaskMod = false;
+  bool IsWorksharingReduction = false;
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.
@@ -125,20 +128,26 @@ class ReductionCodeGen {
 private:
   /// Data required for codegen of reduction clauses.
   struct ReductionData {
-    /// Reference to the original shared item.
+    /// Reference to the item shared between tasks to reduce into.
+    const Expr *Shared = nullptr;
+    /// Reference to the original item.
     const Expr *Ref = nullptr;
     /// Helper expression for generation of private copy.
     const Expr *Private = nullptr;
     /// Helper expression for generation reduction operation.
     const Expr *ReductionOp = nullptr;
-    ReductionData(const Expr *Ref, const Expr *Private, const Expr *ReductionOp)
-        : Ref(Ref), Private(Private), ReductionOp(ReductionOp) {}
+    ReductionData(const Expr *Shared, const Expr *Ref, const Expr *Private,
+                  const Expr *ReductionOp)
+        : Shared(Shared), Ref(Ref), Private(Private), ReductionOp(ReductionOp) {
+    }
   };
   /// List of reduction-based clauses.
   SmallVector<ReductionData, 4> ClausesData;
 
-  /// List of addresses of original shared variables/expressions.
+  /// List of addresses of shared variables/expressions.
   SmallVector<std::pair<LValue, LValue>, 4> SharedAddresses;
+  /// List of addresses of original variables/expressions.
+  SmallVector<std::pair<LValue, LValue>, 4> OrigAddresses;
   /// Sizes of the reduction items in chars.
   SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4> Sizes;
   /// Base declarations for the reduction items.
@@ -158,12 +167,12 @@ private:
                                    const OMPDeclareReductionDecl *DRD);
 
 public:
-  ReductionCodeGen(ArrayRef<const Expr *> Shareds,
+  ReductionCodeGen(ArrayRef<const Expr *> Shareds, ArrayRef<const Expr *> Origs,
                    ArrayRef<const Expr *> Privates,
                    ArrayRef<const Expr *> ReductionOps);
-  /// Emits lvalue for a reduction item.
+  /// Emits lvalue for the shared and original reduction item.
   /// \param N Number of the reduction item.
-  void emitSharedLValue(CodeGenFunction &CGF, unsigned N);
+  void emitSharedOrigLValue(CodeGenFunction &CGF, unsigned N);
   /// Emits the code for the variable-modified type, if required.
   /// \param N Number of the reduction item.
   void emitAggregateType(CodeGenFunction &CGF, unsigned N);
@@ -195,6 +204,8 @@ public:
                                Address PrivateAddr);
   /// Returns LValue for the reduction item.
   LValue getSharedLValue(unsigned N) const { return SharedAddresses[N].first; }
+  /// Returns LValue for the original reduction item.
+  LValue getOrigLValue(unsigned N) const { return OrigAddresses[N].first; }
   /// Returns the size of the reduction item (in chars and total number of
   /// elements in the item), or nullptr, if the size is a constant.
   std::pair<llvm::Value *, llvm::Value *> getSizes(unsigned N) const {
@@ -1410,18 +1421,34 @@ public:
   /// should be emitted for reduction:
   /// \code
   ///
-  /// _task_red_item_t red_data[n];
+  /// _taskred_item_t red_data[n];
   /// ...
-  /// red_data[i].shar = &origs[i];
+  /// red_data[i].shar = &shareds[i];
+  /// red_data[i].orig = &origs[i];
   /// red_data[i].size = sizeof(origs[i]);
   /// red_data[i].f_init = (void*)RedInit<i>;
   /// red_data[i].f_fini = (void*)RedDest<i>;
   /// red_data[i].f_comb = (void*)RedOp<i>;
   /// red_data[i].flags = <Flag_i>;
   /// ...
-  /// void* tg1 = __kmpc_task_reduction_init(gtid, n, red_data);
+  /// void* tg1 = __kmpc_taskred_init(gtid, n, red_data);
   /// \endcode
+  /// For reduction clause with task modifier it emits the next call:
+  /// \code
   ///
+  /// _taskred_item_t red_data[n];
+  /// ...
+  /// red_data[i].shar = &shareds[i];
+  /// red_data[i].orig = &origs[i];
+  /// red_data[i].size = sizeof(origs[i]);
+  /// red_data[i].f_init = (void*)RedInit<i>;
+  /// red_data[i].f_fini = (void*)RedDest<i>;
+  /// red_data[i].f_comb = (void*)RedOp<i>;
+  /// red_data[i].flags = <Flag_i>;
+  /// ...
+  /// void* tg1 = __kmpc_taskred_modifier_init(loc, gtid, is_worksharing, n,
+  /// red_data);
+  /// \endcode
   /// \param LHSExprs List of LHS in \a Data.ReductionOps reduction operations.
   /// \param RHSExprs List of RHS in \a Data.ReductionOps reduction operations.
   /// \param Data Additional data for task generation like tiedness, final
@@ -1432,11 +1459,16 @@ public:
                                              ArrayRef<const Expr *> RHSExprs,
                                              const OMPTaskDataTy &Data);
 
+  /// Emits the following code for reduction clause with task modifier:
+  /// \code
+  /// __kmpc_task_reduction_modifier_fini(loc, gtid, is_worksharing);
+  /// \endcode
+  virtual void emitTaskReductionFini(CodeGenFunction &CGF, SourceLocation Loc,
+                                     bool IsWorksharingReduction);
+
   /// Required to resolve existing problems in the runtime. Emits threadprivate
   /// variables to store the size of the VLAs/array sections for
-  /// initializer/combiner/finalizer functions + emits threadprivate variable to
-  /// store the pointer to the original reduction item for the custom
-  /// initializer defined by declare reduction construct.
+  /// initializer/combiner/finalizer functions.
   /// \param RCG Allows to reuse an existing data for the reductions.
   /// \param N Reduction item for which fixups must be emitted.
   virtual void emitTaskReductionFixups(CodeGenFunction &CGF, SourceLocation Loc,
@@ -1800,6 +1832,14 @@ public:
   /// \param NewDepKind New dependency kind.
   void emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
                         OpenMPDependClauseKind NewDepKind, SourceLocation Loc);
+
+  /// Initializes user defined allocators specified in the uses_allocators
+  /// clauses.
+  void emitUsesAllocatorsInit(CodeGenFunction &CGF, const Expr *Allocator,
+                              const Expr *AllocatorTraits);
+
+  /// Destroys user defined allocators specified in the uses_allocators clause.
+  void emitUsesAllocatorsFini(CodeGenFunction &CGF, const Expr *Allocator);
 };
 
 /// Class supports emissionof SIMD-only code.
@@ -2186,18 +2226,34 @@ public:
   /// should be emitted for reduction:
   /// \code
   ///
-  /// _task_red_item_t red_data[n];
+  /// _taskred_item_t red_data[n];
   /// ...
-  /// red_data[i].shar = &origs[i];
+  /// red_data[i].shar = &shareds[i];
+  /// red_data[i].orig = &origs[i];
   /// red_data[i].size = sizeof(origs[i]);
   /// red_data[i].f_init = (void*)RedInit<i>;
   /// red_data[i].f_fini = (void*)RedDest<i>;
   /// red_data[i].f_comb = (void*)RedOp<i>;
   /// red_data[i].flags = <Flag_i>;
   /// ...
-  /// void* tg1 = __kmpc_task_reduction_init(gtid, n, red_data);
+  /// void* tg1 = __kmpc_taskred_init(gtid, n, red_data);
   /// \endcode
+  /// For reduction clause with task modifier it emits the next call:
+  /// \code
   ///
+  /// _taskred_item_t red_data[n];
+  /// ...
+  /// red_data[i].shar = &shareds[i];
+  /// red_data[i].orig = &origs[i];
+  /// red_data[i].size = sizeof(origs[i]);
+  /// red_data[i].f_init = (void*)RedInit<i>;
+  /// red_data[i].f_fini = (void*)RedDest<i>;
+  /// red_data[i].f_comb = (void*)RedOp<i>;
+  /// red_data[i].flags = <Flag_i>;
+  /// ...
+  /// void* tg1 = __kmpc_taskred_modifier_init(loc, gtid, is_worksharing, n,
+  /// red_data);
+  /// \endcode
   /// \param LHSExprs List of LHS in \a Data.ReductionOps reduction operations.
   /// \param RHSExprs List of RHS in \a Data.ReductionOps reduction operations.
   /// \param Data Additional data for task generation like tiedness, final
@@ -2206,6 +2262,13 @@ public:
                                      ArrayRef<const Expr *> LHSExprs,
                                      ArrayRef<const Expr *> RHSExprs,
                                      const OMPTaskDataTy &Data) override;
+
+  /// Emits the following code for reduction clause with task modifier:
+  /// \code
+  /// __kmpc_task_reduction_modifier_fini(loc, gtid, is_worksharing);
+  /// \endcode
+  void emitTaskReductionFini(CodeGenFunction &CGF, SourceLocation Loc,
+                             bool IsWorksharingReduction) override;
 
   /// Required to resolve existing problems in the runtime. Emits threadprivate
   /// variables to store the size of the VLAs/array sections for

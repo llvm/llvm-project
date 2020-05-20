@@ -1286,10 +1286,6 @@ public:
 
   Value *getCalledOperand() const { return Op<CalledOperandOpEndIdx>(); }
 
-  // DEPRECATED: This routine will be removed in favor of `getCalledOperand` in
-  // the near future.
-  Value *getCalledValue() const { return getCalledOperand(); }
-
   const Use &getCalledOperandUse() const { return Op<CalledOperandOpEndIdx>(); }
   Use &getCalledOperandUse() { return Op<CalledOperandOpEndIdx>(); }
 
@@ -1545,10 +1541,12 @@ public:
     return paramHasAttr(ArgNo, Attribute::InAlloca);
   }
 
-  /// Determine whether this argument is passed by value or in an alloca.
-  bool isByValOrInAllocaArgument(unsigned ArgNo) const {
+  /// Determine whether this argument is passed by value, in an alloca, or is
+  /// preallocated.
+  bool isPassPointeeByValueArgument(unsigned ArgNo) const {
     return paramHasAttr(ArgNo, Attribute::ByVal) ||
-           paramHasAttr(ArgNo, Attribute::InAlloca);
+           paramHasAttr(ArgNo, Attribute::InAlloca) ||
+           paramHasAttr(ArgNo, Attribute::Preallocated);
   }
 
   /// Determine if there are is an inalloca argument. Only the last argument can
@@ -1716,6 +1714,9 @@ public:
   void setCannotDuplicate() {
     addAttribute(AttributeList::FunctionIndex, Attribute::NoDuplicate);
   }
+
+  /// Determine if the call cannot be tail merged.
+  bool cannotMerge() const { return hasFnAttr(Attribute::NoMerge); }
 
   /// Determine if the invoke is convergent
   bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }

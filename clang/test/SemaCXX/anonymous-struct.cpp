@@ -133,3 +133,23 @@ namespace ValidButUnsupported {
     int arr[&f<X> ? 1 : 2];
   } C; // expected-note {{by this typedef}}
 }
+
+namespace ImplicitDecls {
+struct Destructor {
+  ~Destructor() {}
+};
+typedef struct {
+} Empty;
+
+typedef struct {
+  Destructor x;
+} A;
+
+typedef struct {
+  Empty E;
+} B;
+
+typedef struct {
+  const Empty E;
+} C;
+} // namespace ImplicitDecls

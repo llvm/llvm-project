@@ -17,7 +17,6 @@
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
-class MCOperand;
 
 class RISCVInstPrinter : public MCInstPrinter {
 public:

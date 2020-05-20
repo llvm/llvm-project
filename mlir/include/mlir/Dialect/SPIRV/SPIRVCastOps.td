@@ -15,7 +15,7 @@
 #define SPIRV_CAST_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
                  list<OpTrait> traits = []> :

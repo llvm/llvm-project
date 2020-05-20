@@ -84,7 +84,7 @@ public:
     UP,
   };
 
-  static const WordType WORDTYPE_MAX = ~WordType(0);
+  static constexpr WordType WORDTYPE_MAX = ~WordType(0);
 
 private:
   /// This union is used to store the integer value. When the

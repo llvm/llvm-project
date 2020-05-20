@@ -46,7 +46,59 @@ define i64 @atomic_load_monotonic_i64(i64 addrspace(3)* %ptr) {
 ; GCN-NEXT: s_waitcnt lgkmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i64 @atomic_load_monotonic_i64_offset(i64 addrspace(3)* %ptr) {
-  %gep = getelementptr inbounds i64, i64 addrspace(3)* %ptr, i64 16
+  %gep = getelementptr inbounds i64, i64 addrspace(3)* %ptr, i32 16
   %load = load atomic i64, i64 addrspace(3)* %gep monotonic, align 8
   ret i64 %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_f32_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_b32 v0, v0 offset:64{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define float @atomic_load_monotonic_f32_offset(float addrspace(3)* %ptr) {
+  %gep = getelementptr inbounds float, float addrspace(3)* %ptr, i32 16
+  %load = load atomic float, float addrspace(3)* %gep monotonic, align 4
+  ret float %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_f64_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_b64 v[0:1], v0 offset:128{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define double @atomic_load_monotonic_f64_offset(double addrspace(3)* %ptr) {
+  %gep = getelementptr inbounds double, double addrspace(3)* %ptr, i32 16
+  %load = load atomic double, double addrspace(3)* %gep monotonic, align 8
+  ret double %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_p0i8_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_b64 v[0:1], v0 offset:128{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i8* @atomic_load_monotonic_p0i8_offset(i8* addrspace(3)* %ptr) {
+  %gep = getelementptr inbounds i8*, i8* addrspace(3)* %ptr, i32 16
+  %load = load atomic i8*, i8* addrspace(3)* %gep monotonic, align 8
+  ret i8* %load
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_p3i8_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_b32 v0, v0 offset:64{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i8 addrspace(3)* @atomic_load_monotonic_p3i8_offset(i8 addrspace(3)* addrspace(3)* %ptr) {
+  %gep = getelementptr inbounds i8 addrspace(3)*, i8 addrspace(3)* addrspace(3)* %ptr, i32 16
+  %load = load atomic i8 addrspace(3)*, i8 addrspace(3)* addrspace(3)* %gep monotonic, align 4
+  ret i8 addrspace(3)* %load
 }

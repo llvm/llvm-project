@@ -38,7 +38,7 @@ protected:
   SerializationTest() { createModuleOp(); }
 
   void createModuleOp() {
-    Builder builder(&context);
+    OpBuilder builder(&context);
     OperationState state(UnknownLoc::get(&context),
                          spirv::ModuleOp::getOperationName());
     state.addAttribute("addressing_model",
@@ -51,7 +51,7 @@ protected:
                        spirv::VerCapExtAttr::get(
                            spirv::Version::V_1_0, ArrayRef<spirv::Capability>(),
                            ArrayRef<spirv::Extension>(), &context));
-    spirv::ModuleOp::build(&builder, state);
+    spirv::ModuleOp::build(builder, state);
     module = cast<spirv::ModuleOp>(Operation::create(state));
   }
 

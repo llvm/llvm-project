@@ -17,6 +17,7 @@
 
 #include "llvm-objdump.h"
 #include "COFFDump.h"
+#include "ELFDump.h"
 #include "MachODump.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
@@ -131,11 +132,11 @@ static cl::alias DisassembleAllShort("D",
                                      cl::NotHidden, cl::Grouping,
                                      cl::aliasopt(DisassembleAll));
 
-static cl::opt<bool>
-    SymbolDescription("symbol-description",
-                      cl::desc("Add symbol description for disassembly. This "
-                               "option is for XCOFF files only"),
-                      cl::init(false), cl::cat(ObjdumpCat));
+cl::opt<bool> objdump::SymbolDescription(
+    "symbol-description",
+    cl::desc("Add symbol description for disassembly. This "
+             "option is for XCOFF files only"),
+    cl::init(false), cl::cat(ObjdumpCat));
 
 static cl::list<std::string>
     DisassembleSymbols("disassemble-symbols", cl::CommaSeparated,
@@ -1090,37 +1091,30 @@ static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
   return (It - 1)->second;
 }
 
-static uint64_t
-dumpARMELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
-               const ObjectFile *Obj, ArrayRef<uint8_t> Bytes,
-               ArrayRef<MappingSymbolPair> MappingSymbols) {
+static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
+                               uint64_t End, const ObjectFile *Obj,
+                               ArrayRef<uint8_t> Bytes,
+                               ArrayRef<MappingSymbolPair> MappingSymbols) {
   support::endianness Endian =
       Obj->isLittleEndian() ? support::little : support::big;
-  while (Index < End) {
-    outs() << format("%8" PRIx64 ":", SectionAddr + Index);
-    outs() << "\t";
-    if (Index + 4 <= End) {
-      dumpBytes(Bytes.slice(Index, 4), outs());
-      outs() << "\t.word\t"
-             << format_hex(
-                    support::endian::read32(Bytes.data() + Index, Endian), 10);
-      Index += 4;
-    } else if (Index + 2 <= End) {
-      dumpBytes(Bytes.slice(Index, 2), outs());
-      outs() << "\t\t.short\t"
-             << format_hex(
-                    support::endian::read16(Bytes.data() + Index, Endian), 6);
-      Index += 2;
-    } else {
-      dumpBytes(Bytes.slice(Index, 1), outs());
-      outs() << "\t\t.byte\t" << format_hex(Bytes[0], 4);
-      ++Index;
-    }
-    outs() << "\n";
-    if (getMappingSymbolKind(MappingSymbols, Index) != 'd')
-      break;
+  outs() << format("%8" PRIx64 ":\t", SectionAddr + Index);
+  if (Index + 4 <= End) {
+    dumpBytes(Bytes.slice(Index, 4), outs());
+    outs() << "\t.word\t"
+           << format_hex(support::endian::read32(Bytes.data() + Index, Endian),
+                         10);
+    return 4;
   }
-  return Index;
+  if (Index + 2 <= End) {
+    dumpBytes(Bytes.slice(Index, 2), outs());
+    outs() << "\t\t.short\t"
+           << format_hex(support::endian::read16(Bytes.data() + Index, Endian),
+                         6);
+    return 2;
+  }
+  dumpBytes(Bytes.slice(Index, 1), outs());
+  outs() << "\t\t.byte\t" << format_hex(Bytes[0], 4);
+  return 1;
 }
 
 static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
@@ -1245,12 +1239,17 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   addPltEntries(Obj, AllSymbols, Saver);
 
   // Create a mapping from virtual address to section. An empty section can
-  // cause more than one section at the same address. Use a stable sort to
-  // stabilize the output.
+  // cause more than one section at the same address. Sort such sections to be
+  // before same-addressed non-empty sections so that symbol lookups prefer the
+  // non-empty section.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
   for (SectionRef Sec : Obj->sections())
     SectionAddresses.emplace_back(Sec.getAddress(), Sec);
-  llvm::stable_sort(SectionAddresses, llvm::less_first());
+  llvm::stable_sort(SectionAddresses, [](const auto &LHS, const auto &RHS) {
+    if (LHS.first != RHS.first)
+      return LHS.first < RHS.first;
+    return LHS.second.getSize() < RHS.second.getSize();
+  });
 
   // Linked executables (.exe and .dll files) typically don't include a real
   // symbol table but they might contain an export table.
@@ -1417,8 +1416,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
       if (Obj->isXCOFF() && SymbolDescription) {
-        printXCOFFSymbolDescription(Symbols[SI], SymbolName);
-        outs() << ":\n";
+        outs() << getXCOFFSymbolDescription(Symbols[SI], SymbolName) << ":\n";
       } else
         outs() << '<' << SymbolName << ">:\n";
 
@@ -1453,115 +1451,139 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       bool CheckARMELFData = hasMappingSymbols(Obj) &&
                              Symbols[SI].Type != ELF::STT_OBJECT &&
                              !DisassembleAll;
+      bool DumpARMELFData = false;
       while (Index < End) {
         // ARM and AArch64 ELF binaries can interleave data and text in the
         // same section. We rely on the markers introduced to understand what
         // we need to dump. If the data marker is within a function, it is
         // denoted as a word/short etc.
-        if (CheckARMELFData &&
-            getMappingSymbolKind(MappingSymbols, Index) == 'd') {
-          Index = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                 MappingSymbols);
-          continue;
-        }
-
-        // When -z or --disassemble-zeroes are given we always dissasemble
-        // them. Otherwise we might want to skip zero bytes we see.
-        if (!DisassembleZeroes) {
-          uint64_t MaxOffset = End - Index;
-          // For --reloc: print zero blocks patched by relocations, so that
-          // relocations can be shown in the dump.
-          if (RelCur != RelEnd)
-            MaxOffset = RelCur->getOffset() - Index;
-
-          if (size_t N =
-                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
-            outs() << "\t\t..." << '\n';
-            Index += N;
-            continue;
+        if (CheckARMELFData) {
+          char Kind = getMappingSymbolKind(MappingSymbols, Index);
+          DumpARMELFData = Kind == 'd';
+          if (SecondarySTI) {
+            if (Kind == 'a') {
+              STI = PrimaryIsThumb ? SecondarySTI : PrimarySTI;
+              DisAsm = PrimaryIsThumb ? SecondaryDisAsm : PrimaryDisAsm;
+            } else if (Kind == 't') {
+              STI = PrimaryIsThumb ? PrimarySTI : SecondarySTI;
+              DisAsm = PrimaryIsThumb ? PrimaryDisAsm : SecondaryDisAsm;
+            }
           }
         }
 
-        if (SecondarySTI) {
-          if (getMappingSymbolKind(MappingSymbols, Index) == 'a') {
-            STI = PrimaryIsThumb ? SecondarySTI : PrimarySTI;
-            DisAsm = PrimaryIsThumb ? SecondaryDisAsm : PrimaryDisAsm;
-          } else if (getMappingSymbolKind(MappingSymbols, Index) == 't') {
-            STI = PrimaryIsThumb ? PrimarySTI : SecondarySTI;
-            DisAsm = PrimaryIsThumb ? PrimaryDisAsm : SecondaryDisAsm;
+        if (DumpARMELFData) {
+          Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
+                                MappingSymbols);
+        } else {
+          // When -z or --disassemble-zeroes are given we always dissasemble
+          // them. Otherwise we might want to skip zero bytes we see.
+          if (!DisassembleZeroes) {
+            uint64_t MaxOffset = End - Index;
+            // For --reloc: print zero blocks patched by relocations, so that
+            // relocations can be shown in the dump.
+            if (RelCur != RelEnd)
+              MaxOffset = RelCur->getOffset() - Index;
+
+            if (size_t N =
+                    countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+              outs() << "\t\t..." << '\n';
+              Index += N;
+              continue;
+            }
           }
-        }
 
-        // Disassemble a real instruction or a data when disassemble all is
-        // provided
-        MCInst Inst;
-        bool Disassembled = DisAsm->getInstruction(
-            Inst, Size, Bytes.slice(Index), SectionAddr + Index, CommentStream);
-        if (Size == 0)
-          Size = 1;
+          // Disassemble a real instruction or a data when disassemble all is
+          // provided
+          MCInst Inst;
+          bool Disassembled =
+              DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
+                                     SectionAddr + Index, CommentStream);
+          if (Size == 0)
+            Size = 1;
 
-        PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
-                      Bytes.slice(Index, Size),
-                      {SectionAddr + Index + VMAAdjustment, Section.getIndex()},
-                      outs(), "", *STI, &SP, Obj->getFileName(), &Rels);
-        outs() << CommentStream.str();
-        Comments.clear();
+          PIP.printInst(
+              *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
+              {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, outs(),
+              "", *STI, &SP, Obj->getFileName(), &Rels);
+          outs() << CommentStream.str();
+          Comments.clear();
 
-        // If disassembly has failed, avoid analysing invalid/incomplete
-        // instruction information. Otherwise, try to resolve the target of a
-        // call, tail call, etc. to a specific symbol.
-        if (Disassembled && MIA &&
-            (MIA->isCall(Inst) || MIA->isUnconditionalBranch(Inst) ||
-             MIA->isConditionalBranch(Inst))) {
-          uint64_t Target;
-          if (MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target)) {
-            // In a relocatable object, the target's section must reside in
-            // the same section as the call instruction or it is accessed
-            // through a relocation.
-            //
-            // In a non-relocatable object, the target may be in any section.
-            //
-            // N.B. We don't walk the relocations in the relocatable case yet.
-            auto *TargetSectionSymbols = &Symbols;
-            if (!Obj->isRelocatableObject()) {
-              auto It = partition_point(
-                  SectionAddresses,
-                  [=](const std::pair<uint64_t, SectionRef> &O) {
-                    return O.first <= Target;
-                  });
-              if (It != SectionAddresses.begin()) {
-                --It;
-                TargetSectionSymbols = &AllSymbols[It->second];
-              } else {
-                TargetSectionSymbols = &AbsoluteSymbols;
+          // If disassembly has failed, avoid analysing invalid/incomplete
+          // instruction information. Otherwise, try to resolve the target
+          // address (jump target or memory operand address) and print it on the
+          // right of the instruction.
+          if (Disassembled && MIA) {
+            uint64_t Target;
+            bool PrintTarget =
+                MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
+            if (!PrintTarget)
+              if (Optional<uint64_t> MaybeTarget =
+                      MIA->evaluateMemoryOperandAddress(
+                          Inst, SectionAddr + Index, Size)) {
+                Target = *MaybeTarget;
+                PrintTarget = true;
+                outs() << "  # " << Twine::utohexstr(Target);
               }
-            }
+            if (PrintTarget) {
+              // In a relocatable object, the target's section must reside in
+              // the same section as the call instruction or it is accessed
+              // through a relocation.
+              //
+              // In a non-relocatable object, the target may be in any section.
+              // In that case, locate the section(s) containing the target
+              // address and find the symbol in one of those, if possible.
+              //
+              // N.B. We don't walk the relocations in the relocatable case yet.
+              std::vector<const SectionSymbolsTy *> TargetSectionSymbols;
+              if (!Obj->isRelocatableObject()) {
+                auto It = llvm::partition_point(
+                    SectionAddresses,
+                    [=](const std::pair<uint64_t, SectionRef> &O) {
+                      return O.first <= Target;
+                    });
+                uint64_t TargetSecAddr = 0;
+                while (It != SectionAddresses.begin()) {
+                  --It;
+                  if (TargetSecAddr == 0)
+                    TargetSecAddr = It->first;
+                  if (It->first != TargetSecAddr)
+                    break;
+                  TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+                }
+              } else {
+                TargetSectionSymbols.push_back(&Symbols);
+              }
+              TargetSectionSymbols.push_back(&AbsoluteSymbols);
 
-            // Find the last symbol in the section whose offset is less than
-            // or equal to the target. If there isn't a section that contains
-            // the target, find the nearest preceding absolute symbol.
-            auto TargetSym = partition_point(
-                *TargetSectionSymbols,
-                [=](const SymbolInfoTy &O) {
-                  return O.Addr <= Target;
-                });
-            if (TargetSym == TargetSectionSymbols->begin()) {
-              TargetSectionSymbols = &AbsoluteSymbols;
-              TargetSym = partition_point(
-                  AbsoluteSymbols,
-                  [=](const SymbolInfoTy &O) {
-                    return O.Addr <= Target;
-                  });
-            }
-            if (TargetSym != TargetSectionSymbols->begin()) {
-              --TargetSym;
-              uint64_t TargetAddress = TargetSym->Addr;
-              StringRef TargetName = TargetSym->Name;
-              outs() << " <" << TargetName;
-              uint64_t Disp = Target - TargetAddress;
-              if (Disp)
-                outs() << "+0x" << Twine::utohexstr(Disp);
-              outs() << '>';
+              // Find the last symbol in the first candidate section whose
+              // offset is less than or equal to the target. If there are no
+              // such symbols, try in the next section and so on, before finally
+              // using the nearest preceding absolute symbol (if any), if there
+              // are no other valid symbols.
+              const SymbolInfoTy *TargetSym = nullptr;
+              for (const SectionSymbolsTy *TargetSymbols :
+                   TargetSectionSymbols) {
+                auto It = llvm::partition_point(
+                    *TargetSymbols,
+                    [=](const SymbolInfoTy &O) { return O.Addr <= Target; });
+                if (It != TargetSymbols->begin()) {
+                  TargetSym = &*(It - 1);
+                  break;
+                }
+              }
+
+              if (TargetSym != nullptr) {
+                uint64_t TargetAddress = TargetSym->Addr;
+                std::string TargetName = TargetSym->Name.str();
+                if (Demangle)
+                  TargetName = demangle(TargetName);
+
+                outs() << " <" << TargetName;
+                uint64_t Disp = Target - TargetAddress;
+                if (Disp)
+                  outs() << "+0x" << Twine::utohexstr(Disp);
+                outs() << '>';
+              }
             }
           }
         }
@@ -1929,7 +1951,8 @@ void printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
     return;
   SymbolRef::Type Type =
       unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
-  uint32_t Flags = Symbol.getFlags();
+  uint32_t Flags =
+      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   // Don't ask a Mach-O STAB symbol for its section unless you know that
   // STAB symbol's section field refers to a valid section index. Otherwise

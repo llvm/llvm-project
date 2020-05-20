@@ -12,16 +12,16 @@ name: fred
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $r0, $w0
+    liveins: $r0, $r1, $r2, $m0, $w0
     $r1 = A2_tfrsi 2
     $r2 = A2_tfrsi 1
-    $m0 = A2_tfrrcr killed $r1
+    $m0 = A2_tfrrcr $r1
     J2_loop0i %bb.1, 128, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
 
   bb.1:
     liveins: $r0, $r1, $r2, $m0, $w0
     $r1 = A2_addi $r1, 1
-    V6_vgathermhw_pseudo killed $r0, killed $r2, killed $m0, killed $w0, implicit-def $vtmp
+    V6_vgathermhw_pseudo $r0, $r2, $m0, $w0, implicit-def $vtmp
     ENDLOOP0 %bb.1, implicit $lc0, implicit $sa0, implicit-def $lc0, implicit-def $p3, implicit-def $pc, implicit-def $usr
 
   bb.2:

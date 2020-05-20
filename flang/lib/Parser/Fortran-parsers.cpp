@@ -829,7 +829,8 @@ TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
 //        null-init | initial-data-target | structure-constructor
 // TODO: Some structure constructors can be misrecognized as array
 // references into constant subobjects.
-TYPE_PARSER(first(construct<DataStmtConstant>(scalar(Parser<ConstantValue>{})),
+TYPE_PARSER(sourced(first(
+    construct<DataStmtConstant>(scalar(Parser<ConstantValue>{})),
     construct<DataStmtConstant>(nullInit),
     construct<DataStmtConstant>(scalar(constantSubobject)) / !"("_tok,
     construct<DataStmtConstant>(Parser<StructureConstructor>{}),
@@ -837,7 +838,7 @@ TYPE_PARSER(first(construct<DataStmtConstant>(scalar(Parser<ConstantValue>{})),
     construct<DataStmtConstant>(signedIntLiteralConstant),
     extension<LanguageFeature::SignedComplexLiteral>(
         construct<DataStmtConstant>(Parser<SignedComplexLiteralConstant>{})),
-    construct<DataStmtConstant>(initialDataTarget)))
+    construct<DataStmtConstant>(initialDataTarget))))
 
 // R848 dimension-stmt ->
 //        DIMENSION [::] array-name ( array-spec )

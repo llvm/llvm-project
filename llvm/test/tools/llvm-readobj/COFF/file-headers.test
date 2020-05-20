@@ -12,6 +12,7 @@
 # ARM-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 # ARM-NEXT:  PointerToSymbolTable: 0x0
 # ARM-NEXT:  SymbolCount: 0
+# ARM-NEXT:  StringTableSize: 0
 # ARM-NEXT:  OptionalHeaderSize: 0
 # ARM-NEXT:  Characteristics [ (0x0)
 # ARM-NEXT:  ]
@@ -39,6 +40,7 @@ symbols:
 # ARM64-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 # ARM64-NEXT:  PointerToSymbolTable: 0x0
 # ARM64-NEXT:  SymbolCount: 0
+# ARM64-NEXT:  StringTableSize: 0
 # ARM64-NEXT:  OptionalHeaderSize: 0
 # ARM64-NEXT:  Characteristics [ (0x0)
 # ARM64-NEXT:  ]
@@ -66,6 +68,7 @@ symbols:
 # I386-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 # I386-NEXT:  PointerToSymbolTable: 0x0
 # I386-NEXT:  SymbolCount: 0
+# I386-NEXT:  StringTableSize: 0
 # I386-NEXT:  OptionalHeaderSize: 0
 # I386-NEXT:  Characteristics [ (0x0)
 # I386-NEXT:  ]
@@ -93,6 +96,7 @@ symbols:
 # X86-64-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 # X86-64-NEXT:  PointerToSymbolTable: 0x0
 # X86-64-NEXT:  SymbolCount: 0
+# X86-64-NEXT:  StringTableSize: 0
 # X86-64-NEXT:  OptionalHeaderSize: 0
 # X86-64-NEXT:  Characteristics [ (0x0)
 # X86-64-NEXT:  ]
@@ -120,6 +124,7 @@ symbols:
 # I386-CUSTOM-HEADER-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 # I386-CUSTOM-HEADER-NEXT:  PointerToSymbolTable: 0x0
 # I386-CUSTOM-HEADER-NEXT:  SymbolCount: 0
+# I386-CUSTOM-HEADER-NEXT:  StringTableSize: 0
 # I386-CUSTOM-HEADER-NEXT:  OptionalHeaderSize: 224
 # I386-CUSTOM-HEADER-NEXT:  Characteristics [ (0x102)
 # I386-CUSTOM-HEADER-NEXT:    IMAGE_FILE_32BIT_MACHINE (0x100)
@@ -297,6 +302,7 @@ symbols:         []
 # UNKNOWN-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
 # UNKNOWN-NEXT:  PointerToSymbolTable: 0x0
 # UNKNOWN-NEXT:  SymbolCount: 0
+# UNKNOWN-NEXT:  StringTableSize: 0
 # UNKNOWN-NEXT:  OptionalHeaderSize: 0
 # UNKNOWN-NEXT:  Characteristics [ (0x0)
 # UNKNOWN-NEXT:  ]

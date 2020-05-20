@@ -54,6 +54,10 @@
 // RUN: -mcpu=power9 -std=c++11 -mno-vsx -mfloat128 %s 2>&1 | \
 // RUN: FileCheck %s -check-prefix=CHECK-NVSX-FLT128
 
+// RUN: not %clang -target powerpc64le-unknown-unknown -fsyntax-only \
+// RUN: -mcpu=power9 -std=c++11 -mno-vsx -mfloat128 -mpower9-vector %s 2>&1 | \
+// RUN: FileCheck %s -check-prefix=CHECK-NVSX-MULTI
+
 #ifdef __VSX__
 static_assert(false, "VSX enabled");
 #endif
@@ -78,5 +82,7 @@ static_assert(false, "Neither enabled");
 // CHECK-NVSX-P9V: error: option '-mpower9-vector' cannot be specified with '-mno-vsx'
 // CHECK-NVSX-FLT128: error: option '-mfloat128' cannot be specified with '-mno-vsx'
 // CHECK-NVSX-DMV: error: option '-mdirect-move' cannot be specified with '-mno-vsx'
+// CHECK-NVSX-MULTI: error: option '-mfloat128' cannot be specified with '-mno-vsx'
+// CHECK-NVSX-MULTI: error: option '-mpower9-vector' cannot be specified with '-mno-vsx'
 // CHECK-NVSX: Neither enabled
 // CHECK-VSX: VSX enabled

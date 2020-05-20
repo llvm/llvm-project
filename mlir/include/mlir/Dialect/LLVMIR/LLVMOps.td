@@ -14,15 +14,16 @@
 #define LLVMIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
 }
 
 def LLVM_OneResultOpBuilder : OpBuilder<
-  "Builder *, OperationState &result, Type resultType, "
+  "OpBuilder &, OperationState &result, Type resultType, "
   "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
   [{
     if (resultType) result.addTypes(resultType);
@@ -33,7 +34,7 @@ def LLVM_OneResultOpBuilder : OpBuilder<
   }]>;
 
 def LLVM_ZeroResultOpBuilder : OpBuilder<
-  "Builder *, OperationState &result, ValueRange operands, "
+  "OpBuilder &, OperationState &result, ValueRange operands, "
   "ArrayRef<NamedAttribute> attributes = {}",
   [{
     result.addOperands(operands);
@@ -55,7 +56,7 @@ class LLVM_OneResultOp<string mnemonic, list<OpTrait> traits = []> :
 // Compatibility builder that takes an instance of wrapped llvm::VoidType
 // to indicate no result.
 def LLVM_VoidResultTypeOpBuilder : OpBuilder<
-  "Builder *builder, OperationState &result, Type resultType, "
+  "OpBuilder &builder, OperationState &result, Type resultType, "
   "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
   [{
     auto llvmType = resultType.dyn_cast<LLVM::LLVMType>(); (void)llvmType;
@@ -73,7 +74,7 @@ class LLVM_ZeroResultOp<string mnemonic, list<OpTrait> traits = []> :
 
 // Opaque builder used for terminator operations that contain successors.
 def LLVM_TerminatorPassthroughOpBuilder : OpBuilder<
-  "Builder *, OperationState &result, ValueRange operands, "
+  "OpBuilder &, OperationState &result, ValueRange operands, "
   "SuccessorRange destinations, ArrayRef<NamedAttribute> attributes = {}",
   [{
     result.addOperands(operands);
@@ -149,11 +150,11 @@ def LLVM_ICmpOp : LLVM_OneResultOp<"icmp", [NoSideEffect]>,
     $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, ICmpPredicate predicate, Value lhs, "
+    "OpBuilder &b, OperationState &result, ICmpPredicate predicate, Value lhs, "
     "Value rhs", [{
       LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
       build(b, result, LLVMType::getInt1Ty(dialect),
-            b->getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
+            b.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
   let printer = [{ printICmpOp(p, *this); }];
@@ -196,11 +197,11 @@ def LLVM_FCmpOp : LLVM_OneResultOp<"fcmp", [NoSideEffect]>,
     $res = builder.CreateFCmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, FCmpPredicate predicate, Value lhs, "
+    "OpBuilder &b, OperationState &result, FCmpPredicate predicate, Value lhs, "
     "Value rhs", [{
       LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
       build(b, result, LLVMType::getInt1Ty(dialect),
-            b->getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
+            b.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
   let printer = [{ printFCmpOp(p, *this); }];
@@ -224,17 +225,17 @@ def LLVM_AllocaOp :
     if ($alignment.hasValue()) {
       auto align = $alignment.getValue().getZExtValue();
       if (align != 0)
-        alloca->setAlignment(llvm::MaybeAlign(align));
+        alloca->setAlignment(llvm::Align(align));
     }
     $res = alloca;
   }];
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Type resultType, Value arraySize, "
+    "OpBuilder &b, OperationState &result, Type resultType, Value arraySize, "
     "unsigned alignment",
     [{
       if (alignment == 0)
         return build(b, result, resultType, arraySize, IntegerAttr());
-      build(b, result, resultType, arraySize, b->getI64IntegerAttr(alignment));
+      build(b, result, resultType, arraySize, b.getI64IntegerAttr(alignment));
   }]>];
   let parser = [{ return parseAllocaOp(parser, result); }];
   let printer = [{ printAllocaOp(p, *this); }];
@@ -257,7 +258,7 @@ def LLVM_GEPOp : LLVM_OneResultOp<"getelementptr", [NoSideEffect]>,
 def LLVM_LoadOp : LLVM_OneResultOp<"load">, Arguments<(ins LLVM_Type:$addr)>,
                   LLVM_Builder<"$res = builder.CreateLoad($addr);"> {
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value addr",
+    "OpBuilder &b, OperationState &result, Value addr",
     [{
       auto type = addr.getType().cast<LLVM::LLVMType>().getPointerElementTy();
       build(b, result, type, addr);
@@ -311,7 +312,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                               AnySuccessor:$unwindDest);
 
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, ArrayRef<Type> tys, "
+    "OpBuilder &b, OperationState &result, ArrayRef<Type> tys, "
     "FlatSymbolRefAttr callee, ValueRange ops, Block* normal, "
     "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
     [{
@@ -319,7 +320,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
       build(b, result, tys, ops, normal, normalOps, unwind, unwindOps);
     }]>,
     OpBuilder<
-    "Builder *b, OperationState &result, ArrayRef<Type> tys, "
+    "OpBuilder &b, OperationState &result, ArrayRef<Type> tys, "
     "ValueRange ops, Block* normal, "
     "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
     [{
@@ -344,13 +345,13 @@ def LLVM_CallOp : LLVM_Op<"call">,
                              Variadic<LLVM_Type>)>,
                   Results<(outs Variadic<LLVM_Type>)> {
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, LLVMFuncOp func,"
+    "OpBuilder &builder, OperationState &result, LLVMFuncOp func,"
     "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
     [{
       LLVMType resultType = func.getType().getFunctionResultType();
       if (!resultType.isVoidTy())
         result.addTypes(resultType);
-      result.addAttribute("callee", builder->getSymbolRefAttr(func));
+      result.addAttribute("callee", builder.getSymbolRefAttr(func));
       result.addAttributes(attributes);
       result.addOperands(operands);
     }]>];
@@ -369,7 +370,7 @@ def LLVM_ExtractElementOp : LLVM_OneResultOp<"extractelement", [NoSideEffect]>,
     $res = builder.CreateExtractElement($vector, $position);
   }];
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value vector, Value position,"
+    "OpBuilder &b, OperationState &result, Value vector, Value position,"
     "ArrayRef<NamedAttribute> attrs = {}">];
   let parser = [{ return parseExtractElementOp(parser, result); }];
   let printer = [{ printExtractElementOp(p, *this); }];
@@ -400,7 +401,7 @@ def LLVM_InsertValueOp : LLVM_OneResultOp<"insertvalue", [NoSideEffect]>,
                                      extractPosition($position));
   }];
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value container, Value value, "
+    "OpBuilder &b, OperationState &result, Value container, Value value, "
     "ArrayAttr position",
     [{
       build(b, result, container.getType(), container, value, position);
@@ -410,11 +411,14 @@ def LLVM_InsertValueOp : LLVM_OneResultOp<"insertvalue", [NoSideEffect]>,
 }
 def LLVM_ShuffleVectorOp
     : LLVM_OneResultOp<"shufflevector", [NoSideEffect]>,
-      Arguments<(ins LLVM_Type:$v1, LLVM_Type:$v2, ArrayAttr:$mask)>,
-      LLVM_Builder<
-      "$res = builder.CreateShuffleVector($v1, $v2, extractPosition($mask));"> {
+      Arguments<(ins LLVM_Type:$v1, LLVM_Type:$v2, ArrayAttr:$mask)> {
+  string llvmBuilder = [{
+      SmallVector<unsigned, 4> position = extractPosition($mask);
+      SmallVector<int, 4> mask(position.begin(), position.end());
+      $res = builder.CreateShuffleVector($v1, $v2, mask);
+  }];
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value v1, Value v2, "
+    "OpBuilder &b, OperationState &result, Value v1, Value v2, "
     "ArrayAttr mask, ArrayRef<NamedAttribute> attrs = {}">];
   let verifier = [{
     auto wrappedVectorType1 = v1().getType().cast<LLVM::LLVMType>();
@@ -439,7 +443,7 @@ def LLVM_SelectOp
       LLVM_Builder<
           "$res = builder.CreateSelect($condition, $trueValue, $falseValue);"> {
   let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value condition, Value lhs, "
+    "OpBuilder &b, OperationState &result, Value condition, Value lhs, "
     "Value rhs", [{
       build(b, result, lhs.getType(), condition, lhs, rhs);
     }]>];
@@ -476,13 +480,13 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
   }];
 
   let builders = [OpBuilder<
-    "Builder *builder, OperationState &result, Value condition,"
+    "OpBuilder &builder, OperationState &result, Value condition,"
     "Block *trueDest, ValueRange trueOperands,"
     "Block *falseDest, ValueRange falseOperands", [{
       build(builder, result, condition, trueOperands, falseOperands, trueDest,
             falseDest);
   }]>, OpBuilder<
-    "Builder *builder, OperationState &result, Value condition,"
+    "OpBuilder &builder, OperationState &result, Value condition,"
     "Block *trueDest, Block *falseDest, ValueRange falseOperands = {}", [{
       build(builder, result, condition, trueDest, ValueRange(), falseDest,
             falseOperands);
@@ -572,13 +576,13 @@ def LLVM_AddressOfOp
     : LLVM_OneResultOp<"mlir.addressof">,
       Arguments<(ins FlatSymbolRefAttr:$global_name)> {
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, LLVMType resType, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, LLVMType resType, "
               "StringRef name, ArrayRef<NamedAttribute> attrs = {}", [{
-      result.addAttribute("global_name", builder->getSymbolRefAttr(name));
+      result.addAttribute("global_name", builder.getSymbolRefAttr(name));
       result.addAttributes(attrs);
       result.addTypes(resType);}]>,
 
-    OpBuilder<"Builder *builder, OperationState &result, GlobalOp global, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, GlobalOp global, "
               "ArrayRef<NamedAttribute> attrs = {}", [{
       build(builder, result,
             global.getType().getPointerTo(global.addr_space().getZExtValue()),
@@ -625,7 +629,7 @@ def LLVM_GlobalOp
   let regions = (region AnyRegion:$initializer);
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, LLVMType type, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, LLVMType type, "
               "bool isConstant, Linkage linkage, StringRef name, "
               "Attribute value, unsigned addrSpace = 0, "
               "ArrayRef<NamedAttribute> attrs = {}">
@@ -673,10 +677,10 @@ def LLVM_LLVMFuncOp
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result, StringRef name, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
               "LLVMType type, LLVM::Linkage linkage = LLVM::Linkage::External, "
               "ArrayRef<NamedAttribute> attrs = {}, "
-              "ArrayRef<NamedAttributeList> argAttrs = {}">
+              "ArrayRef<MutableDictionaryAttr> argAttrs = {}">
   ];
 
   let extraClassDeclaration = [{
@@ -784,6 +788,7 @@ def LLVM_LogOp : LLVM_UnaryIntrinsicOp<"log">;
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]>,
                     Arguments<(ins LLVM_Type:$addr, LLVM_Type:$rw,
                                LLVM_Type:$hint, LLVM_Type:$cache)>;
+def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 
 //

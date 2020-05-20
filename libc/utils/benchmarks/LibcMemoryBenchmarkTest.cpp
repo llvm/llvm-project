@@ -47,7 +47,6 @@ TEST(OffsetDistribution, AlignToBegin) {
 TEST(OffsetDistribution, NoAlignment) {
   StudyConfiguration Conf;
   Conf.BufferSize = 8192;
-  Conf.AddressAlignment = Align::None();
   Conf.Size.To = 1;
 
   OffsetDistribution OD(Conf);

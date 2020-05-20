@@ -18,9 +18,9 @@ T tmain(T argc) {
   static T a;
 // CHECK: static T a;
 #pragma omp taskgroup allocate(d) task_reduction(+: d)
-#pragma omp parallel master taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g) allocate(g)
+#pragma omp parallel master taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g) allocate(g) reduction(task,^:c)
   // CHECK-NEXT: #pragma omp taskgroup allocate(d) task_reduction(+: d)
-  // CHECK-NEXT: #pragma omp parallel master taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g) allocate(g){{$}}
+  // CHECK-NEXT: #pragma omp parallel master taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g) allocate(g) reduction(task, ^: c){{$}}
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

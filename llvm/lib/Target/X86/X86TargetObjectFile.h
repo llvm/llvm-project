@@ -10,7 +10,6 @@
 #define LLVM_LIB_TARGET_X86_X86TARGETOBJECTFILE_H
 
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 

@@ -1,5 +1,5 @@
 typedef struct {
-  int b;
+  int anon_field_b;
 } StructB;
 
 namespace Namespace {

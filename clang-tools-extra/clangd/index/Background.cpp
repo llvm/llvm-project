@@ -8,16 +8,10 @@
 
 #include "index/Background.h"
 #include "Compiler.h"
-#include "Context.h"
-#include "FSProvider.h"
 #include "Headers.h"
-#include "Logger.h"
 #include "ParsedAST.h"
-#include "Path.h"
 #include "SourceCode.h"
 #include "Symbol.h"
-#include "Threading.h"
-#include "Trace.h"
 #include "URI.h"
 #include "index/BackgroundIndexLoader.h"
 #include "index/FileIndex.h"
@@ -27,6 +21,12 @@
 #include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
+#include "support/Context.h"
+#include "support/FSProvider.h"
+#include "support/Logger.h"
+#include "support/Path.h"
+#include "support/Threading.h"
+#include "support/Trace.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Types.h"
@@ -174,44 +174,50 @@ void BackgroundIndex::update(
     llvm::StringRef MainFile, IndexFileIn Index,
     const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
     bool HadErrors) {
-  llvm::StringMap<FileDigest> FilesToUpdate;
+  // Keys are URIs.
+  llvm::StringMap<std::pair<Path, FileDigest>> FilesToUpdate;
+  // Note that sources do not contain any information regarding missing headers,
+  // since we don't even know what absolute path they should fall in.
   for (const auto &IndexIt : *Index.Sources) {
     const auto &IGN = IndexIt.getValue();
-    // Note that sources do not contain any information regarding missing
-    // headers, since we don't even know what absolute path they should fall in.
-    auto AbsPath = llvm::cantFail(URI::resolve(IGN.URI, MainFile),
-                                  "Failed to resovle URI");
-    const auto DigestIt = ShardVersionsSnapshot.find(AbsPath);
+    auto AbsPath = URI::resolve(IGN.URI, MainFile);
+    if (!AbsPath) {
+      elog("Failed to resolve URI: {0}", AbsPath.takeError());
+      continue;
+    }
+    const auto DigestIt = ShardVersionsSnapshot.find(*AbsPath);
     // File has different contents, or indexing was successful this time.
     if (DigestIt == ShardVersionsSnapshot.end() ||
         DigestIt->getValue().Digest != IGN.Digest ||
         (DigestIt->getValue().HadErrors && !HadErrors))
-      FilesToUpdate[AbsPath] = IGN.Digest;
+      FilesToUpdate[IGN.URI] = {std::move(*AbsPath), IGN.Digest};
   }
 
   // Shard slabs into files.
-  FileShardedIndex ShardedIndex(std::move(Index), MainFile);
+  FileShardedIndex ShardedIndex(std::move(Index));
 
   // Build and store new slabs for each updated file.
   for (const auto &FileIt : FilesToUpdate) {
-    PathRef Path = FileIt.first();
-    auto IF = ShardedIndex.getShard(Path);
+    auto Uri = FileIt.first();
+    auto IF = ShardedIndex.getShard(Uri);
+    assert(IF && "no shard for file in Index.Sources?");
+    PathRef Path = FileIt.getValue().first;
 
     // Only store command line hash for main files of the TU, since our
     // current model keeps only one version of a header file.
     if (Path != MainFile)
-      IF.Cmd.reset();
+      IF->Cmd.reset();
 
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
     // FIXME: Also skip serializing the shard if it is already up-to-date.
-    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, IF))
+    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, *IF))
       elog("Failed to write background-index shard for file {0}: {1}", Path,
            std::move(Error));
 
     {
       std::lock_guard<std::mutex> Lock(ShardVersionsMu);
-      const auto &Hash = FileIt.getValue();
+      const auto &Hash = FileIt.getValue().second;
       auto DigestIt = ShardVersions.try_emplace(Path);
       ShardVersion &SV = DigestIt.first->second;
       // Skip if file is already up to date, unless previous index was broken
@@ -225,9 +231,9 @@ void BackgroundIndex::update(
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
       IndexedSymbols.update(
-          Path, std::make_unique<SymbolSlab>(std::move(*IF.Symbols)),
-          std::make_unique<RefSlab>(std::move(*IF.Refs)),
-          std::make_unique<RelationSlab>(std::move(*IF.Relations)),
+          Path, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
+          std::make_unique<RefSlab>(std::move(*IF->Refs)),
+          std::make_unique<RelationSlab>(std::move(*IF->Relations)),
           Path == MainFile);
     }
   }

@@ -225,6 +225,34 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return Latency;
 }
 
+/// This is an architecture-specific helper function of reassociateOps.
+/// Set special operand attributes for new instructions after reassociation.
+void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
+                                         MachineInstr &OldMI2,
+                                         MachineInstr &NewMI1,
+                                         MachineInstr &NewMI2) const {
+  // Propagate FP flags from the original instructions.
+  // But clear poison-generating flags because those may not be valid now.
+  uint16_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
+  NewMI1.setFlags(IntersectedFlags);
+  NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
+  NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);
+  NewMI1.clearFlag(MachineInstr::MIFlag::IsExact);
+
+  NewMI2.setFlags(IntersectedFlags);
+  NewMI2.clearFlag(MachineInstr::MIFlag::NoSWrap);
+  NewMI2.clearFlag(MachineInstr::MIFlag::NoUWrap);
+  NewMI2.clearFlag(MachineInstr::MIFlag::IsExact);
+}
+
+void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
+                                         uint16_t Flags) const {
+  MI.setFlags(Flags);
+  MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MI.clearFlag(MachineInstr::MIFlag::IsExact);
+}
+
 // This function does not list all associative and commutative operations, but
 // only those worth feeding through the machine combiner in an attempt to
 // reduce the critical path. Mostly, this means floating-point operations,
@@ -258,7 +286,8 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case PPC::QVFMUL:
   case PPC::QVFMULS:
   case PPC::QVFMULSs:
-    return true;
+    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
+           Inst.getFlag(MachineInstr::MIFlag::FmNsz);
   default:
     return false;
   }
@@ -270,10 +299,6 @@ bool PPCInstrInfo::getMachineCombinerPatterns(
   // Using the machine combiner in this way is potentially expensive, so
   // restrict to when aggressive optimizations are desired.
   if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOpt::Aggressive)
-    return false;
-
-  // FP reassociation is only legal when we don't need strict IEEE semantics.
-  if (!Root.getParent()->getParent()->getTarget().Options.UnsafeFPMath)
     return false;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns);
@@ -1333,9 +1358,11 @@ reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   return false;
 }
 
-bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                 Register Reg, MachineRegisterInfo *MRI) const {
-  // For some instructions, it is legal to fold ZERO into the RA register field.
+// For some instructions, it is legal to fold ZERO into the RA register field.
+// This function performs that fold by replacing the operand with PPC::ZERO,
+// it does not consider whether the load immediate zero is no longer in use.
+bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                     Register Reg) const {
   // A zero immediate should always be loaded with a single li.
   unsigned DefOpc = DefMI.getOpcode();
   if (DefOpc != PPC::LI && DefOpc != PPC::LI8)
@@ -1355,6 +1382,8 @@ bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (UseMCID.isPseudo())
     return false;
 
+  // We need to find which of the User's operands is to be folded, that will be
+  // the operand that matches the given register ID.
   unsigned UseIdx;
   for (UseIdx = 0; UseIdx < UseMI.getNumOperands(); ++UseIdx)
     if (UseMI.getOperand(UseIdx).isReg() &&
@@ -1392,13 +1421,19 @@ bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               PPC::ZERO8 : PPC::ZERO;
   }
 
-  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
   UseMI.getOperand(UseIdx).setReg(ZeroReg);
-
-  if (DeleteDef)
-    DefMI.eraseFromParent();
-
   return true;
+}
+
+// Folds zero into instructions which have a load immediate zero as an operand
+// but also recognize zero as immediate zero. If the definition of the load
+// has no more users it is deleted.
+bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                 Register Reg, MachineRegisterInfo *MRI) const {
+  bool Changed = onlyFoldImmediate(UseMI, DefMI, Reg);
+  if (MRI->use_nodbg_empty(Reg))
+    DefMI.eraseFromParent();
+  return Changed;
 }
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {
@@ -1433,17 +1468,6 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
   // final word on whether not the instruction can be (further) predicated.
 
   return false;
-}
-
-bool PPCInstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
-  if (!MI.isTerminator())
-    return false;
-
-  // Conditional branch is a special case.
-  if (MI.isBranch() && !MI.isBarrier())
-    return true;
-
-  return !isPredicated(MI);
 }
 
 bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
@@ -2048,7 +2072,8 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_PLT, "ppc-plt"},
       {MO_PIC_FLAG, "ppc-pic"},
-      {MO_PCREL_FLAG, "ppc-pcrel"}};
+      {MO_PCREL_FLAG, "ppc-pcrel"},
+      {MO_GOT_FLAG, "ppc-got"}};
   return makeArrayRef(TargetFlags);
 }
 

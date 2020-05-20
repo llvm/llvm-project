@@ -245,22 +245,13 @@ __ZTVSt9bad_alloc
 __ZTVSt9exception
 __ZTVSt9type_info
 
-# Itanium C++ ABI requirements
-___cxa_allocate_dependent_exception
-___cxa_allocate_exception
+# Itanium C++ ABI requirements (minus most exception support)
 ___cxa_bad_cast
 ___cxa_bad_typeid
-___cxa_begin_catch
-___cxa_call_unexpected
-___cxa_current_exception_type
 ___cxa_current_primary_exception
 ___cxa_decrement_exception_refcount
 ___cxa_deleted_virtual
 ___cxa_demangle
-___cxa_end_catch
-___cxa_free_dependent_exception
-___cxa_free_exception
-___cxa_get_exception_ptr
 ___cxa_get_globals
 ___cxa_get_globals_fast
 ___cxa_guard_abort
@@ -268,9 +259,7 @@ ___cxa_guard_acquire
 ___cxa_guard_release
 ___cxa_increment_exception_refcount
 ___cxa_pure_virtual
-___cxa_rethrow
 ___cxa_rethrow_primary_exception
-___cxa_throw
 ___cxa_throw_bad_array_new_length
 ___cxa_uncaught_exception
 ___cxa_uncaught_exceptions

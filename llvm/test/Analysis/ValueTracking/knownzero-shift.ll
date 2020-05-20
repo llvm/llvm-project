@@ -15,9 +15,15 @@ define i1 @test(i8 %p, i8* %pq) {
 
 !0 = !{ i8 1, i8 5 }
 
+; The following cases only get folded by InstCombine,
+; see InstCombine/shift-shift.ll. If we wanted to,
+; we could explicitly handle them in InstSimplify as well.
+
 define i32 @shl_shl(i32 %A) {
 ; CHECK-LABEL: @shl_shl(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[B:%.*]] = shl i32 [[A:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[B]], 28
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = shl i32 %A, 6
   %C = shl i32 %B, 28
@@ -26,7 +32,9 @@ define i32 @shl_shl(i32 %A) {
 
 define <2 x i33> @shl_shl_splat_vec(<2 x i33> %A) {
 ; CHECK-LABEL: @shl_shl_splat_vec(
-; CHECK-NEXT:    ret <2 x i33> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shl <2 x i33> [[A:%.*]], <i33 5, i33 5>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i33> [[B]], <i33 28, i33 28>
+; CHECK-NEXT:    ret <2 x i33> [[C]]
 ;
   %B = shl <2 x i33> %A, <i33 5, i33 5>
   %C = shl <2 x i33> %B, <i33 28, i33 28>
@@ -37,7 +45,7 @@ define <2 x i33> @shl_shl_splat_vec(<2 x i33> %A) {
 
 define <2 x i33> @shl_shl_vec(<2 x i33> %A) {
 ; CHECK-LABEL: @shl_shl_vec(
-; CHECK-NEXT:    [[B:%.*]] = shl <2 x i33> %A, <i33 6, i33 5>
+; CHECK-NEXT:    [[B:%.*]] = shl <2 x i33> [[A:%.*]], <i33 6, i33 5>
 ; CHECK-NEXT:    [[C:%.*]] = shl <2 x i33> [[B]], <i33 27, i33 28>
 ; CHECK-NEXT:    ret <2 x i33> [[C]]
 ;
@@ -48,7 +56,9 @@ define <2 x i33> @shl_shl_vec(<2 x i33> %A) {
 
 define i232 @lshr_lshr(i232 %A) {
 ; CHECK-LABEL: @lshr_lshr(
-; CHECK-NEXT:    ret i232 0
+; CHECK-NEXT:    [[B:%.*]] = lshr i232 [[A:%.*]], 231
+; CHECK-NEXT:    [[C:%.*]] = lshr i232 [[B]], 1
+; CHECK-NEXT:    ret i232 [[C]]
 ;
   %B = lshr i232 %A, 231
   %C = lshr i232 %B, 1
@@ -57,7 +67,9 @@ define i232 @lshr_lshr(i232 %A) {
 
 define <2 x i32> @lshr_lshr_splat_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @lshr_lshr_splat_vec(
-; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 28, i32 28>
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %B = lshr <2 x i32> %A, <i32 28, i32 28>
   %C = lshr <2 x i32> %B, <i32 4, i32 4>
@@ -66,7 +78,9 @@ define <2 x i32> @lshr_lshr_splat_vec(<2 x i32> %A) {
 
 define <2 x i32> @lshr_lshr_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @lshr_lshr_vec(
-; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 29, i32 28>
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 4, i32 5>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %B = lshr <2 x i32> %A, <i32 29, i32 28>
   %C = lshr <2 x i32> %B, <i32 4, i32 5>

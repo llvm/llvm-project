@@ -212,8 +212,8 @@ module LLVM_Pass {
     // PassSupport.h and PassAnalysisSupport.h are made available only through
     // Pass.h.
     header "Pass.h"
-    header "PassSupport.h"
-    header "PassAnalysisSupport.h"
+    textual header "PassSupport.h"
+    textual header "PassAnalysisSupport.h"
     export *
   }
 
@@ -234,7 +234,7 @@ module LLVM_intrinsic_gen {
     extern module LLVM_Extern_IR_Attributes_Gen "module.extern.modulemap"
     export *
   }
-  module IR_CallSite { header "IR/CallSite.h" export * }
+  module IR_AbstractCallSite { header "IR/AbstractCallSite.h" export * }
   module IR_ConstantFolder { header "IR/ConstantFolder.h" export * }
   module IR_GlobalVariable { header "IR/GlobalVariable.h" export * }
   module IR_NoFolder { header "IR/NoFolder.h" export * }

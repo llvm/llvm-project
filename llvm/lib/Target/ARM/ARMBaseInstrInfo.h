@@ -21,6 +21,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include <array>
 #include <cstdint>
 
@@ -152,9 +154,10 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string createMIROperandComment(const MachineInstr &MI,
-                                      const MachineOperand &Op,
-                                      unsigned OpIdx) const override;
+  std::string
+  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
+                          unsigned OpIdx,
+                          const TargetRegisterInfo *TRI) const override;
 
   ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
     int PIdx = MI.findFirstPredOperandIdx();
@@ -353,6 +356,22 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableBitmaskMachineOperandTargetFlags() const override;
 
+  /// ARM supports the MachineOutliner.
+  bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                   bool OutlineFromLinkOnceODRs) const override;
+  outliner::OutlinedFunction getOutliningCandidateInfo(
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MIT,
+                                       unsigned Flags) const override;
+  bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                              unsigned &Flags) const override;
+  void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
+                          const outliner::OutlinedFunction &OF) const override;
+  MachineBasicBlock::iterator
+  insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator &It, MachineFunction &MF,
+                     const outliner::Candidate &C) const override;
+
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;
 
@@ -501,25 +520,6 @@ bool isUncondBranchOpcode(int Opc) {
 // This table shows the VPT instruction variants, i.e. the different
 // mask field encodings, see also B5.6. Predication/conditional execution in
 // the ArmARM.
-
-
-inline static ARM::PredBlockMask getARMVPTBlockMask(unsigned NumInsts) {
-  switch (NumInsts) {
-  case 1:
-    return ARM::PredBlockMask::T;
-  case 2:
-    return ARM::PredBlockMask::TT;
-  case 3:
-    return ARM::PredBlockMask::TTT;
-  case 4:
-    return ARM::PredBlockMask::TTTT;
-  default:
-    break;
-  };
-  llvm_unreachable("Unexpected number of instruction in a VPT block");
-}
-
-
 static inline bool isVPTOpcode(int Opc) {
   return Opc == ARM::MVE_VPTv16i8 || Opc == ARM::MVE_VPTv16u8 ||
          Opc == ARM::MVE_VPTv16s8 || Opc == ARM::MVE_VPTv8i16 ||
@@ -786,6 +786,70 @@ unsigned ConstantMaterializationCost(unsigned Val,
 bool HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
                                          const ARMSubtarget *Subtarget,
                                          bool ForCodesize = false);
+
+// Return the immediate if this is ADDri or SUBri, scaled as appropriate.
+// Returns 0 for unknown instructions.
+inline int getAddSubImmediate(MachineInstr &MI) {
+  int Scale = 1;
+  unsigned ImmOp;
+  switch (MI.getOpcode()) {
+  case ARM::t2ADDri:
+    ImmOp = 2;
+    break;
+  case ARM::t2SUBri:
+  case ARM::t2SUBri12:
+    ImmOp = 2;
+    Scale = -1;
+    break;
+  case ARM::tSUBi3:
+  case ARM::tSUBi8:
+    ImmOp = 3;
+    Scale = -1;
+    break;
+  default:
+    return 0;
+  }
+  return Scale * MI.getOperand(ImmOp).getImm();
+}
+
+// Given a memory access Opcode, check that the give Imm would be a valid Offset
+// for this instruction using its addressing mode.
+inline bool isLegalAddressImm(unsigned Opcode, int Imm,
+                              const TargetInstrInfo *TII) {
+  const MCInstrDesc &Desc = TII->get(Opcode);
+  unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
+  switch (AddrMode) {
+  case ARMII::AddrModeT2_i7:
+    return std::abs(Imm) < (((1 << 7) * 1) - 1);
+  case ARMII::AddrModeT2_i7s2:
+    return std::abs(Imm) < (((1 << 7) * 2) - 1) && Imm % 2 == 0;
+  case ARMII::AddrModeT2_i7s4:
+    return std::abs(Imm) < (((1 << 7) * 4) - 1) && Imm % 4 == 0;
+  default:
+    llvm_unreachable("Unhandled Addressing mode");
+  }
+}
+
+// Return true if the given intrinsic is a gather or scatter
+inline bool isGatherScatter(IntrinsicInst *IntInst) {
+  if (IntInst == nullptr)
+    return false;
+  unsigned IntrinsicID = IntInst->getIntrinsicID();
+  return (IntrinsicID == Intrinsic::masked_gather ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset ||
+          IntrinsicID == Intrinsic::arm_mve_vldr_gather_offset_predicated ||
+          IntrinsicID == Intrinsic::masked_scatter ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_base_wb_predicated ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset ||
+          IntrinsicID == Intrinsic::arm_mve_vstr_scatter_offset_predicated);
+}
 
 } // end namespace llvm
 

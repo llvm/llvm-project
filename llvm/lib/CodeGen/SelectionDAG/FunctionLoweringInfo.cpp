@@ -134,8 +134,20 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Type *Ty = AI->getAllocatedType();
+        Align TyPrefAlign = MF->getDataLayout().getPrefTypeAlign(Ty);
+        // The "specified" alignment is the alignment written on the alloca,
+        // or the preferred alignment of the type if none is specified.
+        //
+        // (Unspecified alignment on allocas will be going away soon.)
+        Align SpecifiedAlign = AI->getAlign();
+
+        // If the preferred alignment of the type is higher than the specified
+        // alignment of the alloca, promote the alignment, as long as it doesn't
+        // require realigning the stack.
+        //
+        // FIXME: Do we really want to second-guess the IR in isel?
         Align Alignment =
-            max(MF->getDataLayout().getPrefTypeAlign(Ty), AI->getAlign());
+            std::max(std::min(TyPrefAlign, StackAlign), SpecifiedAlign);
 
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't
@@ -161,7 +173,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
           // Scalable vectors may need a special StackID to distinguish
           // them from other (fixed size) stack objects.
-          if (Ty->isVectorTy() && cast<VectorType>(Ty)->isScalable())
+          if (isa<ScalableVectorType>(Ty))
             MF->getFrameInfo().setStackID(FrameIndex,
                                           TFI->getStackIDForScalableVectors());
 
@@ -183,7 +195,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
       // Look for inline asm that clobbers the SP register.
       if (auto *Call = dyn_cast<CallBase>(&I)) {
-        if (isa<InlineAsm>(Call->getCalledValue())) {
+        if (Call->isInlineAsm()) {
           unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =

@@ -126,6 +126,13 @@ class InlineTest(TestBase):
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())
 
+    def _get_breakpoint_ids(self, thread):
+        ids = set()
+        for i in range(0, thread.GetStopReasonDataCount(), 2):
+            ids.add(thread.GetStopReasonDataAtIndex(i))
+        self.assertGreater(len(ids), 0)
+        return sorted(ids)
+
     def do_test(self):
         exe = self.getBuildArtifact("a.out")
         source_files = [f for f in os.listdir(self.getSourceDir())
@@ -145,8 +152,8 @@ class InlineTest(TestBase):
             hit_breakpoints += 1
             thread = lldbutil.get_stopped_thread(
                 process, lldb.eStopReasonBreakpoint)
-            breakpoint_id = thread.GetStopReasonDataAtIndex(0)
-            parser.handle_breakpoint(self, breakpoint_id)
+            for bp_id in self._get_breakpoint_ids(thread):
+                parser.handle_breakpoint(self, bp_id)
             process.Continue()
 
         self.assertTrue(hit_breakpoints > 0,

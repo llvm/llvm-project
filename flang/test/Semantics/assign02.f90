@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Pointer assignment constraints 10.2.2.2
 
 module m1
@@ -11,7 +11,7 @@ module m1
   end type
 contains
 
-  ! C853
+  ! C852
   subroutine s0
     !ERROR: 'p1' may not have both the POINTER and TARGET attributes
     real, pointer :: p1, p3

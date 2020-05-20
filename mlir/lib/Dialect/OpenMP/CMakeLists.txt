@@ -6,8 +6,7 @@ add_mlir_dialect_library(MLIROpenMP
 
   DEPENDS
   MLIROpenMPOpsIncGen
-  )
-target_link_libraries(MLIROpenMP
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRIR
   )

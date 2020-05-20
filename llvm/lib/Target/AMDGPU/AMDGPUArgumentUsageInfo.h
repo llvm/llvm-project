@@ -11,15 +11,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
 class Function;
 class raw_ostream;
-class GCNSubtarget;
-class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 

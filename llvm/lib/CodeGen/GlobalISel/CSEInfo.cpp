@@ -217,9 +217,6 @@ void GISelCSEInfo::handleRecordedInsts() {
 }
 
 bool GISelCSEInfo::shouldCSE(unsigned Opc) const {
-  // Only GISel opcodes are CSEable
-  if (!isPreISelGenericOpcode(Opc))
-    return false;
   assert(CSEOpt.get() && "CSEConfig not set");
   return CSEOpt->shouldCSEOpc(Opc);
 }

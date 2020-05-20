@@ -3,6 +3,9 @@
 # RUN: llvm-objdump -r %p/Inputs/xcoff-section-headers.o | \
 # RUN:   FileCheck --match-full-lines --strict-whitespace %s
 
+# RUN: llvm-objdump -r --symbol-description %p/Inputs/xcoff-section-headers.o | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace --check-prefix=DESCP %s
+
 ## xcoff-section-headers.o Compiled with IBM XL C/C++ for AIX, V16.1.0
 ## compiler command: xlc -qtls -o xcoff-section-headers.o -c test.c
 ## test.c:
@@ -29,3 +32,18 @@ CHECK-EMPTY:
  CHECK-NEXT:00000014 R_POS                    .func
  CHECK-NEXT:00000018 R_POS                    TOC
 CHECK-EMPTY:
+
+      DESCP:RELOCATION RECORDS FOR [.text]:
+ DESCP-NEXT:OFFSET   TYPE                     VALUE
+ DESCP-NEXT:00000002 R_TOC                    (idx: 26) a[TC]
+DESCP-EMPTY:
+      DESCP:RELOCATION RECORDS FOR [.data]:
+ DESCP-NEXT:OFFSET   TYPE                     VALUE
+ DESCP-NEXT:00000000 R_POS                    (idx: 20) func[DS]
+ DESCP-NEXT:00000004 R_POS                    (idx: 24) a[RW]
+ DESCP-NEXT:00000008 R_POS                    (idx: 28) b[RW]
+ DESCP-NEXT:0000000c R_TLS                    (idx: 32) c[UL]
+ DESCP-NEXT:00000010 R_TLS                    (idx: 36) d[TL]
+ DESCP-NEXT:00000014 R_POS                    (idx: 16) .func
+ DESCP-NEXT:00000018 R_POS                    (idx: 18) TOC[TC0]
+DESCP-EMPTY:

@@ -1,12 +1,14 @@
 # Interfaces
 
-MLIR is generic and very extensible; it allows for opaquely representing many
-different dialects that have their own operations, attributes, types, and so on.
-This allows for dialects to be very expressive in their semantics and for MLIR
-to capture many different levels of abstraction. The downside to this is that
-transformations and analyses must be extremely conservative about the operations
-that they encounter, and must special-case the different dialects that they
-support. To combat this, MLIR provides the concept of `interfaces`.
+MLIR is a generic and extensible framework, representing different
+dialects with their own operations, attributes, types, and so on.
+MLIR Dialects can express operations with a wide variety of semantics
+and different levels of abstraction. The downside to this is that MLIR
+transformations and analyses need to account for the semantics of
+every operation, or handle operations conservatively. Without care,
+this can result in code with special-cases for each supported
+operation type. To combat this, MLIR provides the concept of
+`interfaces`.
 
 ## Motivation
 
@@ -19,8 +21,9 @@ transformations/analyses.
 
 ### Dialect Interfaces
 
-Dialect interfaces are generally useful for transformation passes or analyses
-that want to opaquely operate on operations, even *across* dialects. These
+Dialect interfaces are generally useful for transformation passes or
+analyses that want to operate generically on a set of operations,
+which might even be defined in different dialects. These
 interfaces generally involve wide coverage over the entire dialect and are only
 used for a handful of transformations/analyses. In these cases, registering the
 interface directly on each operation is overly complex and cumbersome. The
@@ -68,8 +71,9 @@ AffineDialect::AffineDialect(MLIRContext *context) ... {
 }
 ```
 
-Once registered, these interfaces can be opaquely queried from the dialect by
-the transformation/analysis that wants to use them:
+Once registered, these interfaces can be queried from the dialect by
+the transformation/analysis that wants to use them, without
+determining the particular dialect subclass:
 
 ```c++
 Dialect *dialect = ...;
@@ -105,7 +109,7 @@ if(!interface.isLegalToInline(...))
 ### Operation Interfaces
 
 Operation interfaces, as the name suggests, are those registered at the
-Operation level. These interfaces provide an opaque view into derived operations
+Operation level. These interfaces provide access to derived operations
 by providing a virtual interface that must be implemented. As an example, the
 `Linalg` dialect may implement an interface that provides general queries about
 some of the dialects library operations. These queries may provide things like:

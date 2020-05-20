@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FS_H
 
-#include "Path.h"
+#include "support/Path.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"

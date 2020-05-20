@@ -11,7 +11,7 @@
 
 #include <ciso646>
 #ifndef _LIBCPP_VERSION
-#error This header may only be used for libc++ tests"
+#error This header may only be used for libc++ tests
 #endif
 
 #ifndef _LIBCPP_DEBUG

@@ -3,17 +3,13 @@ add_mlir_dialect_library(MLIRLinalgUtils
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
-  DEPENDS
-  intrinsics_gen
-  )
 
-target_link_libraries(MLIRLinalgUtils
-  PUBLIC
-  MLIRAffine
+  LINK_LIBS PUBLIC
+  MLIRAffineOps
   MLIREDSC
   MLIRIR
   MLIRLinalgOps
-  MLIRLoopOps
+  MLIRSCF
   MLIRPass
   MLIRStandardOps
   MLIRTransformUtils

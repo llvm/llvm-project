@@ -1,7 +1,9 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: readability-identifier-naming.MemberCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase} \
+// RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
+// RUN:     {key: readability-identifier-naming.MethodCase, value: camelBack}, \
+// RUN:     {key: readability-identifier-naming.AggressiveDependentMemberLookup, value: 1} \
 // RUN:  ]}' -- -fno-delayed-template-parsing
 
 int set_up(int);
@@ -63,32 +65,23 @@ public:
   // CHECK-FIXES: {{^}}  int getBar2() const { return this->BarBaz; } // comment-9
 };
 
-TempTest<int> x; //force an instantiation
-
-int blah() {
-  return x.getBar2(); // gotta have a reference to the getBar2 so that the
-                      // compiler will generate the function and resolve
-                      // the DependantScopeMemberExpr
-}
-
 namespace Bug41122 {
 namespace std {
 
 // for this example we aren't bothered about how std::vector is treated
-template <typename T> //NOLINT
-class vector { //NOLINT
-public:
-  void push_back(bool); //NOLINT
-  void pop_back(); //NOLINT
-}; //NOLINT
-}; // namespace std
+template <typename T>   // NOLINT
+struct vector {         // NOLINT
+  void push_back(bool); // NOLINT
+  void pop_back();      // NOLINT
+};                      // NOLINT
+};                      // namespace std
 
-class Foo { 
+class Foo {
   std::vector<bool> &stack;
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: invalid case style for member 'stack' [readability-identifier-naming]
 public:
   Foo(std::vector<bool> &stack)
-  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for parameter 'stack' [readability-identifier-naming]
+      // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for parameter 'stack' [readability-identifier-naming]
       // CHECK-FIXES: {{^}}  Foo(std::vector<bool> &Stack)
       : stack(stack) {
     // CHECK-FIXES: {{^}}      : Stack(Stack) {
@@ -134,4 +127,92 @@ public:
 void foo() {
   Container<int, 5> container;
 }
-}; // namespace CtorInits
+} // namespace CtorInits
+
+namespace resolved_dependance {
+template <typename T>
+struct A0 {
+  int value;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for member 'value'
+  A0 &operator=(const A0 &Other) {
+    value = Other.value;       // A0
+    this->value = Other.value; // A0
+    // CHECK-FIXES:      {{^}}    Value = Other.Value;       // A0
+    // CHECK-FIXES-NEXT: {{^}}    this->Value = Other.Value; // A0
+    return *this;
+  }
+  void outOfLineReset();
+};
+
+template <typename T>
+void A0<T>::outOfLineReset() {
+  this->value -= value; // A0
+  // CHECK-FIXES: {{^}}  this->Value -= Value; // A0
+}
+
+template <typename T>
+struct A1 {
+  int value; // A1
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for member 'value'
+  // CHECK-FIXES: {{^}}  int Value; // A1
+  int GetValue() const { return value; } // A1
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for method 'GetValue'
+  // CHECK-FIXES {{^}}  int getValue() const { return Value; } // A1
+  void SetValue(int Value) { this->value = Value; } // A1
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for method 'SetValue'
+  // CHECK-FIXES {{^}}  void setValue(int Value) { this->Value = Value; } // A1
+  A1 &operator=(const A1 &Other) {
+    this->SetValue(Other.GetValue()); // A1
+    this->value = Other.value;        // A1
+    // CHECK-FIXES:      {{^}}    this->setValue(Other.getValue()); // A1
+    // CHECK-FIXES-NEXT: {{^}}    this->Value = Other.Value;        // A1
+    return *this;
+  }
+  void outOfLineReset();
+};
+
+template <typename T>
+void A1<T>::outOfLineReset() {
+  this->value -= value; // A1
+  // CHECK-FIXES: {{^}}  this->Value -= Value; // A1
+}
+
+template <unsigned T>
+struct A2 {
+  int value; // A2
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for member 'value'
+  // CHECK-FIXES: {{^}}  int Value; // A2
+  A2 &operator=(const A2 &Other) {
+    value = Other.value;       // A2
+    this->value = Other.value; // A2
+    // CHECK-FIXES:      {{^}}    Value = Other.Value;       // A2
+    // CHECK-FIXES-NEXT: {{^}}    this->Value = Other.Value; // A2
+    return *this;
+  }
+};
+
+// create some instances to check it works when instantiated.
+A1<int> AInt{};
+A1<int> BInt = (AInt.outOfLineReset(), AInt);
+A1<unsigned> AUnsigned{};
+A1<unsigned> BUnsigned = AUnsigned;
+} // namespace resolved_dependance
+
+namespace unresolved_dependance {
+template <typename T>
+struct DependentBase {
+  int depValue;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for member 'depValue'
+  // CHECK-FIXES:  {{^}}  int DepValue;
+};
+
+template <typename T>
+struct Derived : DependentBase<T> {
+  Derived &operator=(const Derived &Other) {
+    this->depValue = Other.depValue;
+    // CHECK-FIXES: {{^}}    this->DepValue = Other.DepValue;
+    return *this;
+  }
+};
+
+} // namespace unresolved_dependance

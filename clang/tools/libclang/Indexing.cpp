@@ -227,7 +227,8 @@ private:
   }
 
   bool isParsedOnceInclude(const FileEntry *FE) {
-    return PP.getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE);
+    return PP.getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE) ||
+           PP.getHeaderSearchInfo().hasFileBeenImported(FE);
   }
 };
 

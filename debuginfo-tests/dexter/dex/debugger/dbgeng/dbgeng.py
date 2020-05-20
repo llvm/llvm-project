@@ -96,7 +96,7 @@ class DbgEng(DebuggerBase):
         # We never go -- we always single step.
         pass
 
-    def get_step_info(self):
+    def get_step_info(self, watches, step_index):
         frames = self.step_info
         state_frames = []
 
@@ -118,12 +118,12 @@ class DbgEng(DebuggerBase):
                                    watches={})
           for expr in map(
               lambda watch, idx=i: self.evaluate_expression(watch, idx),
-              self.watches):
+              watches):
               state_frame.watches[expr.expression] = expr
           state_frames.append(state_frame)
 
         return StepIR(
-            step_index=self.step_index, frames=dex_frames,
+            step_index=step_index, frames=dex_frames,
             stop_reason=StopReason.STEP,
             program_state=ProgramState(state_frames))
 

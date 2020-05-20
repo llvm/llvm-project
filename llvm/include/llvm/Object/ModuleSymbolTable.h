@@ -28,6 +28,7 @@
 namespace llvm {
 
 class GlobalValue;
+class Module;
 
 class ModuleSymbolTable {
 public:

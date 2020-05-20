@@ -98,6 +98,13 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
 
+  /// Cast the given value to an LLT::scalar with an equivalent size. Returns
+  /// the register to use if an instruction was inserted. Returns the original
+  /// register if no coercion was necessary.
+  //
+  // This may also fail and return Register() if there is no legal way to cast.
+  Register coerceToScalar(Register Val);
+
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by extending the operand's type to \p WideTy using the specified \p
   /// ExtOpcode for the extension instruction, and replacing the vreg of the
@@ -215,11 +222,6 @@ public:
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);
 
-  /// Legalize a simple vector instruction where all operands are the same type
-  /// by splitting into multiple components.
-  LegalizeResult fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
-                                          LLT NarrowTy);
-
   /// Legalize a instruction with a vector type where each operand may have a
   /// different element type. All type indexes must have the same number of
   /// elements.
@@ -250,6 +252,16 @@ public:
 
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+
+  /// Legalize an instruction by reducing the operation width, either by
+  /// narrowing the type of the operation or by reducing the number of elements
+  /// of a vector.
+  /// The used strategy (narrow vs. fewerElements) is decided by \p NarrowTy.
+  /// Narrow is used if the scalar type of \p NarrowTy and \p DstTy differ,
+  /// fewerElements is used when the scalar type is the same but the number of
+  /// elements between \p NarrowTy and \p DstTy differ.
+  LegalizeResult reduceOperationWidth(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT NarrowTy);
 
   LegalizeResult fewerElementsVectorSextInReg(MachineInstr &MI, unsigned TypeIdx,
                                               LLT NarrowTy);
@@ -287,6 +299,7 @@ public:
   LegalizeResult lowerFMad(MachineInstr &MI);
   LegalizeResult lowerIntrinsicRound(MachineInstr &MI);
   LegalizeResult lowerFFloor(MachineInstr &MI);
+  LegalizeResult lowerMergeValues(MachineInstr &MI);
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);

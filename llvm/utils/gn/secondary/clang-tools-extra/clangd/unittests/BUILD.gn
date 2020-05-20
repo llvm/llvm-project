@@ -23,6 +23,7 @@ unittest("ClangdTests") {
     "//llvm/lib/Testing/Support",
   ]
   include_dirs = [
+    ".",
     "//clang-tools-extra/clangd",
 
     # To pick up the generated inc files.
@@ -32,7 +33,6 @@ unittest("ClangdTests") {
     "ASTTests.cpp",
     "Annotations.cpp",
     "BackgroundIndexTests.cpp",
-    "CancellationTests.cpp",
     "CanonicalIncludesTests.cpp",
     "ClangdLSPServerTests.cpp",
     "ClangdTests.cpp",
@@ -40,7 +40,7 @@ unittest("ClangdTests") {
     "CodeCompletionStringsTests.cpp",
     "CollectMacrosTests.cpp",
     "CompileCommandsTests.cpp",
-    "ContextTests.cpp",
+    "CompilerTests.cpp",
     "DexTests.cpp",
     "DiagnosticsTests.cpp",
     "DraftStoreTests.cpp",
@@ -51,8 +51,6 @@ unittest("ClangdTests") {
     "FindSymbolsTests.cpp",
     "FindTargetTests.cpp",
     "FormatTests.cpp",
-    "FormattedStringTests.cpp",
-    "FunctionTests.cpp",
     "FuzzyMatchTests.cpp",
     "GlobalCompilationDatabaseTests.cpp",
     "HeaderSourceSwitchTests.cpp",
@@ -64,6 +62,7 @@ unittest("ClangdTests") {
     "LSPClient.cpp",
     "ParsedASTTests.cpp",
     "PathMappingTests.cpp",
+    "PreambleTests.cpp",
     "PrintASTTests.cpp",
     "QualityTests.cpp",
     "RIFFTests.cpp",
@@ -80,12 +79,17 @@ unittest("ClangdTests") {
     "TestFS.cpp",
     "TestIndex.cpp",
     "TestTU.cpp",
-    "ThreadingTests.cpp",
-    "TraceTests.cpp",
     "TweakTesting.cpp",
     "TweakTests.cpp",
     "TypeHierarchyTests.cpp",
     "URITests.cpp",
     "XRefsTests.cpp",
+    "support/CancellationTests.cpp",
+    "support/ContextTests.cpp",
+    "support/FunctionTests.cpp",
+    "support/MarkupTests.cpp",
+    "support/TestTracer.cpp",
+    "support/ThreadingTests.cpp",
+    "support/TraceTests.cpp",
   ]
 }

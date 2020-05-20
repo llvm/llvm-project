@@ -16,8 +16,9 @@ def run_reproducer(path):
     reason = None
     try:
         outs, errs = proc.communicate(timeout=TIMEOUT)
-        result = 'PASSED' if proc.returncode == 0 else 'FAILED'
-        if proc.returncode != 0:
+        success = proc.returncode == 0
+        result = 'PASSED' if success else 'FAILED'
+        if not success:
             outs = outs.decode()
             errs = errs.decode()
             # Do some pattern matching to find out the cause of the failure.
@@ -35,11 +36,18 @@ def run_reproducer(path):
                 reason = f'Exit code {proc.returncode}'
     except subprocess.TimeoutExpired:
         proc.kill()
+        success = False
         outs, errs = proc.communicate()
         result = 'TIMEOUT'
 
-    reason_str = f' ({reason})' if reason else ''
-    print(f'{result}: {path}{reason_str}')
+    if not FAILURE_ONLY or not success:
+        reason_str = f' ({reason})' if reason else ''
+        print(f'{result}: {path}{reason_str}')
+        if VERBOSE:
+            if outs:
+                print(outs)
+            if errs:
+                print(errs)
 
 
 def find_reproducers(path):
@@ -82,12 +90,23 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='Path to the LLDB command line driver')
+    parser.add_argument('-v',
+                        '--verbose',
+                        help='Print replay output.',
+                        action='store_true')
+    parser.add_argument('--failure-only',
+                        help='Only log failures.',
+                        action='store_true')
     args = parser.parse_args()
 
     global LLDB
     global TIMEOUT
+    global VERBOSE
+    global FAILURE_ONLY
     LLDB = args.lldb
     TIMEOUT = args.timeout
+    VERBOSE = args.verbose
+    FAILURE_ONLY = args.failure_only
 
     print(
         f'Replaying reproducers in {args.path} with {args.threads} threads and a {args.timeout} seconds timeout'

@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "VE.h"
-#include "llvm/IR/Module.h"
+#include "TargetInfo/VETargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;

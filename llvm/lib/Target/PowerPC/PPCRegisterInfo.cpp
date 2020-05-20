@@ -142,15 +142,14 @@ const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg) {
+    if (!TM.isPPC64() && Subtarget.isAIXABI())
+      report_fatal_error("AnyReg unimplemented on 32-bit AIX.");
     if (Subtarget.hasVSX())
       return CSR_64_AllRegs_VSX_SaveList;
     if (Subtarget.hasAltivec())
       return CSR_64_AllRegs_Altivec_SaveList;
     return CSR_64_AllRegs_SaveList;
   }
-
-  if (TM.isPPC64() && MF->getInfo<PPCFunctionInfo>()->isSplitCSR())
-    return CSR_SRV464_TLS_PE_SaveList;
 
   // On PPC64, we might need to save r2 (but only if it is not reserved).
   // We do not need to treat R2 as callee-saved when using PC-Relative calls
@@ -164,6 +163,8 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   // Cold calling convention CSRs.
   if (MF->getFunction().getCallingConv() == CallingConv::Cold) {
+    if (Subtarget.isAIXABI())
+      report_fatal_error("Cold calling unimplemented on AIX.");
     if (TM.isPPC64()) {
       if (Subtarget.hasAltivec())
         return SaveR2 ? CSR_SVR64_ColdCC_R2_Altivec_SaveList
@@ -186,34 +187,13 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
   }
   // 32-bit targets.
+  if (Subtarget.isAIXABI())
+    return CSR_AIX32_SaveList;
   if (Subtarget.hasAltivec())
     return CSR_SVR432_Altivec_SaveList;
   else if (Subtarget.hasSPE())
     return CSR_SVR432_SPE_SaveList;
   return CSR_SVR432_SaveList;
-}
-
-const MCPhysReg *
-PPCRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
-  assert(MF && "Invalid MachineFunction pointer.");
-  const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
-  if (!TM.isPPC64())
-    return nullptr;
-  if (MF->getFunction().getCallingConv() != CallingConv::CXX_FAST_TLS)
-    return nullptr;
-  if (!MF->getInfo<PPCFunctionInfo>()->isSplitCSR())
-    return nullptr;
-
-  // On PPC64, we might need to save r2 (but only if it is not reserved).
-  bool SaveR2 = !getReservedRegs(*MF).test(PPC::X2);
-  if (Subtarget.hasAltivec())
-    return SaveR2
-      ? CSR_SVR464_R2_Altivec_ViaCopy_SaveList
-      : CSR_SVR464_Altivec_ViaCopy_SaveList;
-  else
-    return SaveR2
-      ? CSR_SVR464_R2_ViaCopy_SaveList
-      : CSR_SVR464_ViaCopy_SaveList;
 }
 
 const uint32_t *

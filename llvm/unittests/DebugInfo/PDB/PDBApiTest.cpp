@@ -82,17 +82,17 @@ class MockSession : public IPDBSession {
                      uint32_t &Offset) const override {
     return false;
   }
-  std::unique_ptr<PDBSymbol>
-  findSymbolByAddress(uint64_t Address, PDB_SymType Type) const override {
+  std::unique_ptr<PDBSymbol> findSymbolByAddress(uint64_t Address,
+                                                 PDB_SymType Type) override {
     return nullptr;
   }
   std::unique_ptr<PDBSymbol> findSymbolByRVA(uint32_t RVA,
-                                             PDB_SymType Type) const override {
+                                             PDB_SymType Type) override {
     return nullptr;
   }
-  std::unique_ptr<PDBSymbol>
-  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
-                         PDB_SymType Type) const override {
+  std::unique_ptr<PDBSymbol> findSymbolBySectOffset(uint32_t Sect,
+                                                    uint32_t Offset,
+                                                    PDB_SymType Type) override {
     return nullptr;
   }
   std::unique_ptr<IPDBEnumLineNumbers>

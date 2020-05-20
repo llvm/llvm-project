@@ -101,6 +101,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64LegalizerInfo.cpp",
     "AArch64LoadStoreOptimizer.cpp",
     "AArch64MCInstLower.cpp",
+    "AArch64MachineFunctionInfo.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
     "AArch64PreLegalizerCombiner.cpp",

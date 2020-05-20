@@ -405,10 +405,7 @@ private:
 
   bool parseRegister(Register &Reg, bool RestoreOnFailure = false);
 
-  bool parseRegister(Register &Reg, RegisterGroup Group, const unsigned *Regs);
-
   OperandMatchResultTy parseRegister(OperandVector &Operands,
-                                     RegisterGroup Group, const unsigned *Regs,
                                      RegisterKind Kind);
 
   OperandMatchResultTy parseAnyRegister(OperandVector &Operands);
@@ -421,7 +418,7 @@ private:
   bool ParseDirectiveInsn(SMLoc L);
 
   OperandMatchResultTy parseAddress(OperandVector &Operands,
-                                    MemoryKind MemKind, const unsigned *Regs,
+                                    MemoryKind MemKind,
                                     RegisterKind RegKind);
 
   OperandMatchResultTy parsePCRel(OperandVector &Operands, int64_t MinVal,
@@ -459,78 +456,78 @@ public:
 
   // Used by the TableGen code to parse particular operand types.
   OperandMatchResultTy parseGR32(OperandVector &Operands) {
-    return parseRegister(Operands, RegGR, SystemZMC::GR32Regs, GR32Reg);
+    return parseRegister(Operands, GR32Reg);
   }
   OperandMatchResultTy parseGRH32(OperandVector &Operands) {
-    return parseRegister(Operands, RegGR, SystemZMC::GRH32Regs, GRH32Reg);
+    return parseRegister(Operands, GRH32Reg);
   }
   OperandMatchResultTy parseGRX32(OperandVector &Operands) {
     llvm_unreachable("GRX32 should only be used for pseudo instructions");
   }
   OperandMatchResultTy parseGR64(OperandVector &Operands) {
-    return parseRegister(Operands, RegGR, SystemZMC::GR64Regs, GR64Reg);
+    return parseRegister(Operands, GR64Reg);
   }
   OperandMatchResultTy parseGR128(OperandVector &Operands) {
-    return parseRegister(Operands, RegGR, SystemZMC::GR128Regs, GR128Reg);
+    return parseRegister(Operands, GR128Reg);
   }
   OperandMatchResultTy parseADDR32(OperandVector &Operands) {
     // For the AsmParser, we will accept %r0 for ADDR32 as well.
-    return parseRegister(Operands, RegGR, SystemZMC::GR32Regs, GR32Reg);
+    return parseRegister(Operands, GR32Reg);
   }
   OperandMatchResultTy parseADDR64(OperandVector &Operands) {
     // For the AsmParser, we will accept %r0 for ADDR64 as well.
-    return parseRegister(Operands, RegGR, SystemZMC::GR64Regs, GR64Reg);
+    return parseRegister(Operands, GR64Reg);
   }
   OperandMatchResultTy parseADDR128(OperandVector &Operands) {
     llvm_unreachable("Shouldn't be used as an operand");
   }
   OperandMatchResultTy parseFP32(OperandVector &Operands) {
-    return parseRegister(Operands, RegFP, SystemZMC::FP32Regs, FP32Reg);
+    return parseRegister(Operands, FP32Reg);
   }
   OperandMatchResultTy parseFP64(OperandVector &Operands) {
-    return parseRegister(Operands, RegFP, SystemZMC::FP64Regs, FP64Reg);
+    return parseRegister(Operands, FP64Reg);
   }
   OperandMatchResultTy parseFP128(OperandVector &Operands) {
-    return parseRegister(Operands, RegFP, SystemZMC::FP128Regs, FP128Reg);
+    return parseRegister(Operands, FP128Reg);
   }
   OperandMatchResultTy parseVR32(OperandVector &Operands) {
-    return parseRegister(Operands, RegV, SystemZMC::VR32Regs, VR32Reg);
+    return parseRegister(Operands, VR32Reg);
   }
   OperandMatchResultTy parseVR64(OperandVector &Operands) {
-    return parseRegister(Operands, RegV, SystemZMC::VR64Regs, VR64Reg);
+    return parseRegister(Operands, VR64Reg);
   }
   OperandMatchResultTy parseVF128(OperandVector &Operands) {
     llvm_unreachable("Shouldn't be used as an operand");
   }
   OperandMatchResultTy parseVR128(OperandVector &Operands) {
-    return parseRegister(Operands, RegV, SystemZMC::VR128Regs, VR128Reg);
+    return parseRegister(Operands, VR128Reg);
   }
   OperandMatchResultTy parseAR32(OperandVector &Operands) {
-    return parseRegister(Operands, RegAR, SystemZMC::AR32Regs, AR32Reg);
+    return parseRegister(Operands, AR32Reg);
   }
   OperandMatchResultTy parseCR64(OperandVector &Operands) {
-    return parseRegister(Operands, RegCR, SystemZMC::CR64Regs, CR64Reg);
+    return parseRegister(Operands, CR64Reg);
   }
   OperandMatchResultTy parseAnyReg(OperandVector &Operands) {
     return parseAnyRegister(Operands);
   }
   OperandMatchResultTy parseBDAddr32(OperandVector &Operands) {
-    return parseAddress(Operands, BDMem, SystemZMC::GR32Regs, GR32Reg);
+    return parseAddress(Operands, BDMem, GR32Reg);
   }
   OperandMatchResultTy parseBDAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDMem, SystemZMC::GR64Regs, GR64Reg);
+    return parseAddress(Operands, BDMem, GR64Reg);
   }
   OperandMatchResultTy parseBDXAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDXMem, SystemZMC::GR64Regs, GR64Reg);
+    return parseAddress(Operands, BDXMem, GR64Reg);
   }
   OperandMatchResultTy parseBDLAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDLMem, SystemZMC::GR64Regs, GR64Reg);
+    return parseAddress(Operands, BDLMem, GR64Reg);
   }
   OperandMatchResultTy parseBDRAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDRMem, SystemZMC::GR64Regs, GR64Reg);
+    return parseAddress(Operands, BDRMem, GR64Reg);
   }
   OperandMatchResultTy parseBDVAddr64(OperandVector &Operands) {
-    return parseAddress(Operands, BDVMem, SystemZMC::GR64Regs, GR64Reg);
+    return parseAddress(Operands, BDVMem, GR64Reg);
   }
   OperandMatchResultTy parsePCRel12(OperandVector &Operands) {
     return parsePCRel(Operands, -(1LL << 12), (1LL << 12) - 1, false);
@@ -748,37 +745,113 @@ bool SystemZAsmParser::parseRegister(Register &Reg, bool RestoreOnFailure) {
   return false;
 }
 
-// Parse a register of group Group.  If Regs is nonnull, use it to map
-// the raw register number to LLVM numbering, with zero entries
-// indicating an invalid register.  Allow FP Group if expecting
-// RegV Group, since the f-prefix yields the FP group even while used
-// with vector instructions.
-bool SystemZAsmParser::parseRegister(Register &Reg, RegisterGroup Group,
-                                     const unsigned *Regs) {
-  if (parseRegister(Reg))
-    return true;
-  if (Reg.Group != Group && !(Reg.Group == RegFP && Group == RegV))
-    return Error(Reg.StartLoc, "invalid operand for instruction");
-  if (Regs && Regs[Reg.Num] == 0)
-    return Error(Reg.StartLoc, "invalid register pair");
-  if (Regs)
-    Reg.Num = Regs[Reg.Num];
-  return false;
-}
-
-// Parse a register and add it to Operands.  The other arguments are as above.
+// Parse a register of kind Kind and add it to Operands.
 OperandMatchResultTy
-SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterGroup Group,
-                                const unsigned *Regs, RegisterKind Kind) {
-  if (Parser.getTok().isNot(AsmToken::Percent))
+SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterKind Kind) {
+  SMLoc StartLoc, EndLoc;
+  unsigned RegNum;
+
+  // Handle register names of the form %<prefix><number>.
+  if (Parser.getTok().is(AsmToken::Percent)) {
+    Register Reg;
+    if (parseRegister(Reg))
+      return MatchOperand_ParseFail;
+
+    // Verify that a register prefix appropriate for Kind was used.
+    bool PrefixMatch;
+    switch (Kind) {
+    case GR32Reg:
+    case GRH32Reg:
+    case GR64Reg:
+    case GR128Reg:
+      PrefixMatch = Reg.Group == RegGR;
+      break;
+    case FP32Reg:
+    case FP64Reg:
+    case FP128Reg:
+      PrefixMatch = Reg.Group == RegFP;
+      break;
+    case VR32Reg:
+    case VR64Reg:
+    case VR128Reg:
+      // It is OK to use the %f prefix with vector instructions that
+      // expect some VR..Reg kind, so accept the RegFP group as well.
+      PrefixMatch = Reg.Group == RegV || Reg.Group == RegFP;
+      break;
+    case AR32Reg:
+      PrefixMatch = Reg.Group == RegAR;
+      break;
+    case CR64Reg:
+      PrefixMatch = Reg.Group == RegCR;
+      break;
+    }
+    if (!PrefixMatch) {
+      Error(Reg.StartLoc, "invalid operand for instruction");
+      return MatchOperand_ParseFail;
+    }
+
+    RegNum = Reg.Num;
+    StartLoc = Reg.StartLoc;
+    EndLoc = Reg.EndLoc;
+  }
+  // Also allow specifying just a plain register number as integer.
+  else if (Parser.getTok().is(AsmToken::Integer)) {
+    const MCExpr *Register;
+    StartLoc = Parser.getTok().getLoc();
+    if (Parser.parseExpression(Register))
+      return MatchOperand_ParseFail;
+
+    auto *CE = dyn_cast<MCConstantExpr>(Register);
+    if (!CE)
+      return MatchOperand_ParseFail;
+
+    int64_t MaxRegNum;
+    switch (Kind) {
+    case VR32Reg:
+    case VR64Reg:
+    case VR128Reg:
+      MaxRegNum = 31;
+      break;
+    default:
+      MaxRegNum = 15;
+      break;
+    }
+    int64_t Value = CE->getValue();
+    if (Value < 0 || Value > MaxRegNum) {
+      Error(StartLoc, "invalid register");
+      return MatchOperand_ParseFail;
+    }
+    RegNum = (unsigned) Value;
+
+    EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  }
+  // Otherwise we didn't match a register operand.
+  else
     return MatchOperand_NoMatch;
 
-  Register Reg;
-  if (parseRegister(Reg, Group, Regs))
+  // Determine the LLVM register number according to Kind.
+  const unsigned *Regs;
+  switch (Kind) {
+  case GR32Reg:  Regs = SystemZMC::GR32Regs;  break;
+  case GRH32Reg: Regs = SystemZMC::GRH32Regs; break;
+  case GR64Reg:  Regs = SystemZMC::GR64Regs;  break;
+  case GR128Reg: Regs = SystemZMC::GR128Regs; break;
+  case FP32Reg:  Regs = SystemZMC::FP32Regs;  break;
+  case FP64Reg:  Regs = SystemZMC::FP64Regs;  break;
+  case FP128Reg: Regs = SystemZMC::FP128Regs; break;
+  case VR32Reg:  Regs = SystemZMC::VR32Regs;  break;
+  case VR64Reg:  Regs = SystemZMC::VR64Regs;  break;
+  case VR128Reg: Regs = SystemZMC::VR128Regs; break;
+  case AR32Reg:  Regs = SystemZMC::AR32Regs;  break;
+  case CR64Reg:  Regs = SystemZMC::CR64Regs;  break;
+  }
+  if (Regs[RegNum] == 0) {
+    Error(StartLoc, "invalid register pair");
     return MatchOperand_ParseFail;
+  }
 
-  Operands.push_back(SystemZOperand::createReg(Kind, Reg.Num,
-                                               Reg.StartLoc, Reg.EndLoc));
+  Operands.push_back(SystemZOperand::createReg(Kind, Regs[RegNum],
+                                               StartLoc, EndLoc));
   return MatchOperand_Success;
 }
 
@@ -903,7 +976,7 @@ SystemZAsmParser::parseAddressRegister(Register &Reg) {
 // are as above.
 OperandMatchResultTy
 SystemZAsmParser::parseAddress(OperandVector &Operands, MemoryKind MemKind,
-                               const unsigned *Regs, RegisterKind RegKind) {
+                               RegisterKind RegKind) {
   SMLoc StartLoc = Parser.getTok().getLoc();
   unsigned Base = 0, Index = 0, LengthReg = 0;
   Register Reg1, Reg2;
@@ -912,6 +985,13 @@ SystemZAsmParser::parseAddress(OperandVector &Operands, MemoryKind MemKind,
   const MCExpr *Length;
   if (parseAddress(HaveReg1, Reg1, HaveReg2, Reg2, Disp, Length))
     return MatchOperand_ParseFail;
+
+  const unsigned *Regs;
+  switch (RegKind) {
+  case GR32Reg: Regs = SystemZMC::GR32Regs; break;
+  case GR64Reg: Regs = SystemZMC::GR64Regs; break;
+  default: llvm_unreachable("invalid RegKind");
+  }
 
   switch (MemKind) {
   case BDMem:

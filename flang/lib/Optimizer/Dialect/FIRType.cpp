@@ -8,15 +8,12 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/StandardTypes.h"
-#include "mlir/Parser.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace fir;
 
@@ -181,7 +178,7 @@ SequenceType parseSequence(mlir::DialectAsmParser &parser, mlir::Location) {
   return SequenceType::get(shape, eleTy, map);
 }
 
-bool verifyIntegerType(mlir::Type ty) {
+static bool verifyIntegerType(mlir::Type ty) {
   return ty.isa<mlir::IntegerType>() || ty.isa<IntType>();
 }
 
@@ -842,6 +839,14 @@ bool isa_ref_type(mlir::Type t) {
   return t.isa<ReferenceType>() || t.isa<PointerType>() || t.isa<HeapType>();
 }
 
+bool isa_box_type(mlir::Type t) {
+  return t.isa<BoxType>() || t.isa<BoxCharType>() || t.isa<BoxProcType>();
+}
+
+bool isa_passbyref_type(mlir::Type t) {
+  return t.isa<ReferenceType>() || isa_box_type(t);
+}
+
 bool isa_aggregate(mlir::Type t) {
   return t.isa<SequenceType>() || t.isa<RecordType>();
 }
@@ -903,6 +908,10 @@ int fir::IntType::getFKind() const { return getImpl()->getFKind(); }
 
 CplxType fir::CplxType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, FIR_COMPLEX, kind);
+}
+
+mlir::Type fir::CplxType::getElementType() const {
+  return fir::RealType::get(getContext(), getFKind());
 }
 
 KindTy fir::CplxType::getFKind() const { return getImpl()->getFKind(); }
@@ -1061,6 +1070,34 @@ SequenceType::Shape fir::SequenceType::getShape() const {
   return getImpl()->getShape();
 }
 
+unsigned fir::SequenceType::getConstantRows() const {
+  auto shape = getShape();
+  unsigned count = 0;
+  for (auto d : shape) {
+    if (d < 0)
+      break;
+    ++count;
+  }
+  return count;
+}
+
+// This test helps us determine if we can degenerate an array to a
+// pointer to some interior section (possibly a single element) of the
+// sequence. This is used to determine if we can lower to the LLVM IR.
+bool fir::SequenceType::hasConstantInterior() const {
+  if (hasUnknownShape())
+    return true;
+  auto rows = getConstantRows();
+  auto dim = getDimension();
+  if (rows == dim)
+    return true;
+  auto shape = getShape();
+  for (unsigned i{rows}, size{dim}; i < size; ++i)
+    if (shape[i] != getUnknownExtent())
+      return false;
+  return true;
+}
+
 mlir::LogicalResult fir::SequenceType::verifyConstructionInvariants(
     mlir::Location loc, const SequenceType::Shape &shape, mlir::Type eleTy,
     mlir::AffineMapAttr map) {
@@ -1177,6 +1214,12 @@ void printBounds(llvm::raw_ostream &os, const SequenceType::Shape &bounds) {
 llvm::SmallPtrSet<detail::RecordTypeStorage const *, 4> recordTypeVisited;
 
 } // namespace
+
+void fir::verifyIntegralType(mlir::Type type) {
+  if (verifyIntegerType(type) || type.isa<mlir::IndexType>())
+    return;
+  llvm_unreachable("expected integral type");
+}
 
 void fir::printFirType(FIROpsDialect *, mlir::Type ty,
                        mlir::DialectAsmPrinter &p) {

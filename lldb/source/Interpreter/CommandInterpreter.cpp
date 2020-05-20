@@ -116,8 +116,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
       m_command_io_handler_sp(), m_comment_char('#'),
       m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
-      m_command_source_depth(0), m_num_errors(0), m_quit_requested(false),
-      m_stopped_for_crash(false) {
+      m_command_source_depth(0), m_result() {
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
@@ -379,6 +378,16 @@ void CommandInterpreter::Initialize() {
           "evaluate EXPRESSION to get the address of an array of COUNT "
           "objects in memory, and will call po on them.");
       poarray_alias->SetHelpLong("");
+    }
+  }
+
+  cmd_obj_sp = GetCommandSPExact("platform shell", false);
+  if (cmd_obj_sp) {
+    CommandAlias *shell_alias = AddAlias("shell", cmd_obj_sp, " --host --");
+    if (shell_alias) {
+      shell_alias->SetHelp("Run a shell command on the host.");
+      shell_alias->SetHelpLong("");
+      shell_alias->SetSyntax("shell <shell-command>");
     }
   }
 
@@ -2816,23 +2825,26 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     break;
 
   case eReturnStatusFailed:
-    m_num_errors++;
-    if (io_handler.GetFlags().Test(eHandleCommandFlagStopOnError))
+    m_result.IncrementNumberOfErrors();
+    if (io_handler.GetFlags().Test(eHandleCommandFlagStopOnError)) {
+      m_result.SetResult(lldb::eCommandInterpreterResultCommandError);
       io_handler.SetIsDone(true);
+    }
     break;
 
   case eReturnStatusQuit:
-    m_quit_requested = true;
+    m_result.SetResult(lldb::eCommandInterpreterResultQuitRequested);
     io_handler.SetIsDone(true);
     break;
   }
 
   // Finally, if we're going to stop on crash, check that here:
-  if (!m_quit_requested && result.GetDidChangeProcessState() &&
+  if (m_result.IsResult(lldb::eCommandInterpreterResultSuccess) &&
+      result.GetDidChangeProcessState() &&
       io_handler.GetFlags().Test(eHandleCommandFlagStopOnCrash) &&
       DidProcessStopAbnormally()) {
     io_handler.SetIsDone(true);
-    m_stopped_for_crash = true;
+    m_result.SetResult(lldb::eCommandInterpreterResultInferiorCrash);
   }
 }
 
@@ -2950,26 +2962,27 @@ CommandInterpreter::GetIOHandler(bool force_create,
   return m_command_io_handler_sp;
 }
 
-void CommandInterpreter::RunCommandInterpreter(
-    bool auto_handle_events, bool spawn_thread,
+CommandInterpreterRunResult CommandInterpreter::RunCommandInterpreter(
     CommandInterpreterRunOptions &options) {
   // Always re-create the command interpreter when we run it in case any file
   // handles have changed.
   bool force_create = true;
   m_debugger.RunIOHandlerAsync(GetIOHandler(force_create, &options));
-  m_stopped_for_crash = false;
+  m_result = CommandInterpreterRunResult();
 
-  if (auto_handle_events)
+  if (options.GetAutoHandleEvents())
     m_debugger.StartEventHandlerThread();
 
-  if (spawn_thread) {
+  if (options.GetSpawnThread()) {
     m_debugger.StartIOHandlerThread();
   } else {
     m_debugger.RunIOHandlers();
 
-    if (auto_handle_events)
+    if (options.GetAutoHandleEvents())
       m_debugger.StopEventHandlerThread();
   }
+
+  return m_result;
 }
 
 CommandObject *

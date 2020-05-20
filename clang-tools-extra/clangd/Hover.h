@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HOVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HOVER_H
 
-#include "FormattedString.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 
 namespace clang {
@@ -80,6 +80,7 @@ struct HoverInfo {
 };
 
 // Try to infer structure of a documentation comment (e.g. line breaks).
+// FIXME: move to another file so CodeComplete doesn't depend on Hover.
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output);
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const HoverInfo::Param &);

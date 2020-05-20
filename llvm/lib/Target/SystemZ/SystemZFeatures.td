@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 class SystemZFeature<string extname, string intname, dag featdag, string desc>
-  : Predicate<"Subtarget->has"##intname##"()">,
+  : Predicate<"Subtarget->has"#intname#"()">,
     AssemblerPredicate<featdag, extname>,
-    SubtargetFeature<extname, "Has"##intname, "true", desc>;
+    SubtargetFeature<extname, "Has"#intname, "true", desc>;
 
 class SystemZMissingFeature<string intname>
-  : Predicate<"!Subtarget->has"##intname##"()">;
+  : Predicate<"!Subtarget->has"#intname#"()">;
 
 class SystemZFeatureList<list<SystemZFeature> x> {
   list<SystemZFeature> List = x;

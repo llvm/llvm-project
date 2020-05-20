@@ -1958,7 +1958,7 @@ def)",
   }
 }
 
-TEST(Hover, DocCommentLineBreakConversion) {
+TEST(Hover, ParseDocumentation) {
   struct Case {
     llvm::StringRef Documentation;
     llvm::StringRef ExpectedRenderMarkdown;
@@ -2017,6 +2017,21 @@ TEST(Hover, DocCommentLineBreakConversion) {
                    "foo\nbar",
                    "foo bar",
                    "foo bar",
+               },
+               {
+                   "Tests primality of `p`.",
+                   "Tests primality of `p`.",
+                   "Tests primality of `p`.",
+               },
+               {
+                   "'`' should not occur in `Code`",
+                   "'\\`' should not occur in `Code`",
+                   "'`' should not occur in `Code`",
+               },
+               {
+                   "`not\nparsed`",
+                   "\\`not parsed\\`",
+                   "`not parsed`",
                }};
 
   for (const auto &C : Cases) {

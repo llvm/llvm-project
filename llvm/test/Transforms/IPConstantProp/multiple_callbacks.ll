@@ -1,8 +1,8 @@
 ; RUN: opt -ipconstprop -S < %s | FileCheck %s
 ; FIXME: There seems to be another instance of nondeterminism which causes the number of iterations to be either 1 or 3, depending on the system. 
 ;        This needs to be investigated and resolved. In the meantime we do not verify the number of iterations.
-; opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=1 < %s | FileCheck %s
-; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify=false -attributor-max-iterations=3 < %s | FileCheck %s
+; opt -S -passes=attributor -aa-pipeline='basic-aa'  -attributor-max-iterations-verify -attributor-max-iterations=1 < %s | FileCheck %s
+; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa'  -attributor-max-iterations-verify=false -attributor-max-iterations=3 < %s | FileCheck %s
 ;
 ;
 ;                            /---------------------------------------|

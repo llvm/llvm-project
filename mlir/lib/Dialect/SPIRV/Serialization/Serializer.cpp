@@ -41,7 +41,7 @@ static LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
                                            ArrayRef<uint32_t> operands) {
   uint32_t wordCount = 1 + operands.size();
   binary.push_back(spirv::getPrefixedOpcode(wordCount, op));
-    binary.append(operands.begin(), operands.end());
+  binary.append(operands.begin(), operands.end());
   return success();
 }
 
@@ -132,7 +132,7 @@ namespace {
 class Serializer {
 public:
   /// Creates a serializer for the given SPIR-V `module`.
-  explicit Serializer(spirv::ModuleOp module);
+  explicit Serializer(spirv::ModuleOp module, bool emitDebugInfo = false);
 
   /// Serializes the remembered SPIR-V module.
   LogicalResult serialize();
@@ -188,6 +188,8 @@ private:
   uint32_t getOrCreateFunctionID(StringRef fnName);
 
   void processCapability();
+
+  void processDebugInfo();
 
   void processExtension();
 
@@ -375,12 +377,29 @@ private:
   LogicalResult emitDecoration(uint32_t target, spirv::Decoration decoration,
                                ArrayRef<uint32_t> params = {});
 
+  /// Emits an OpLine instruction with the given `loc` location information into
+  /// the given `binary` vector.
+  LogicalResult emitDebugLine(SmallVectorImpl<uint32_t> &binary, Location loc);
+
 private:
   /// The SPIR-V module to be serialized.
   spirv::ModuleOp module;
 
   /// An MLIR builder for getting MLIR constructs.
   mlir::Builder mlirBuilder;
+
+  /// A flag which indicates if the debuginfo should be emitted.
+  bool emitDebugInfo = false;
+
+  /// A flag which indicates if the last processed instruction was a merge
+  /// instruction.
+  /// According to SPIR-V spec: "If a branch merge instruction is used, the last
+  /// OpLine in the block must be before its merge instruction".
+  bool lastProcessedWasMergeInst = false;
+
+  /// The <id> of the OpString instruction, which specifies a file name, for
+  /// use by other debug instructions.
+  uint32_t fileID = 0;
 
   /// The next available result <id>.
   uint32_t nextID = 1;
@@ -394,7 +413,7 @@ private:
   SmallVector<uint32_t, 3> memoryModel;
   SmallVector<uint32_t, 0> entryPoints;
   SmallVector<uint32_t, 4> executionModes;
-  // TODO(antiagainst): debug instructions
+  SmallVector<uint32_t, 0> debug;
   SmallVector<uint32_t, 0> names;
   SmallVector<uint32_t, 0> decorations;
   SmallVector<uint32_t, 0> typesGlobalValues;
@@ -482,8 +501,9 @@ private:
 };
 } // namespace
 
-Serializer::Serializer(spirv::ModuleOp module)
-    : module(module), mlirBuilder(module.getContext()) {}
+Serializer::Serializer(spirv::ModuleOp module, bool emitDebugInfo)
+    : module(module), mlirBuilder(module.getContext()),
+      emitDebugInfo(emitDebugInfo) {}
 
 LogicalResult Serializer::serialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting serialization +++\n");
@@ -495,6 +515,7 @@ LogicalResult Serializer::serialize() {
   processCapability();
   processExtension();
   processMemoryModel();
+  processDebugInfo();
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
@@ -525,6 +546,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(memoryModel.begin(), memoryModel.end());
   binary.append(entryPoints.begin(), entryPoints.end());
   binary.append(executionModes.begin(), executionModes.end());
+  binary.append(debug.begin(), debug.end());
   binary.append(names.begin(), names.end());
   binary.append(decorations.begin(), decorations.end());
   binary.append(typesGlobalValues.begin(), typesGlobalValues.end());
@@ -567,6 +589,19 @@ void Serializer::processCapability() {
   for (auto cap : module.vce_triple()->getCapabilities())
     encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
                           {static_cast<uint32_t>(cap)});
+}
+
+void Serializer::processDebugInfo() {
+  if (!emitDebugInfo)
+    return;
+  auto fileLoc = module.getLoc().dyn_cast<FileLineColLoc>();
+  auto fileName = fileLoc ? fileLoc.getFilename() : "<unknown>";
+  fileID = getNextID();
+  SmallVector<uint32_t, 16> operands;
+  operands.push_back(fileID);
+  spirv::encodeStringLiteralInto(operands, fileName);
+  encodeInstructionInto(debug, spirv::Opcode::OpString, operands);
+  // TODO: Encode more debug instructions.
 }
 
 void Serializer::processExtension() {
@@ -823,8 +858,8 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
     }
     operands.push_back(argID);
   }
-  encodeInstructionInto(functionHeader, spirv::getOpcode<spirv::VariableOp>(),
-                        operands);
+  emitDebugLine(functionHeader, op.getLoc());
+  encodeInstructionInto(functionHeader, spirv::Opcode::OpVariable, operands);
   for (auto attr : op.getAttrs()) {
     if (llvm::any_of(elidedAttrs,
                      [&](StringRef elided) { return attr.first == elided; })) {
@@ -886,6 +921,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
     elidedAttrs.push_back("initializer");
   }
 
+  emitDebugLine(typesGlobalValues, varOp.getLoc());
   if (failed(encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpVariable,
                                    operands))) {
     elidedAttrs.push_back("initializer");
@@ -1488,11 +1524,14 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   auto *headerBlock = selectionOp.getHeaderBlock();
   auto *mergeBlock = selectionOp.getMergeBlock();
   auto mergeID = getBlockID(mergeBlock);
+  auto loc = selectionOp.getLoc();
 
   // Emit the selection header block, which dominates all other blocks, first.
   // We need to emit an OpSelectionMerge instruction before the selection header
   // block's terminator.
   auto emitSelectionMerge = [&]() {
+    emitDebugLine(functionBody, loc);
+    lastProcessedWasMergeInst = true;
     // TODO(antiagainst): properly support selection control here
     encodeInstructionInto(
         functionBody, spirv::Opcode::OpSelectionMerge,
@@ -1537,6 +1576,7 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   auto headerID = getBlockID(headerBlock);
   auto continueID = getBlockID(continueBlock);
   auto mergeID = getBlockID(mergeBlock);
+  auto loc = loopOp.getLoc();
 
   // This LoopOp is in some MLIR block with preceding and following ops. In the
   // binary format, it should reside in separate SPIR-V blocks from its
@@ -1553,6 +1593,8 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   // need to emit an OpLoopMerge instruction before the loop header block's
   // terminator.
   auto emitLoopMerge = [&]() {
+    emitDebugLine(functionBody, loc);
+    lastProcessedWasMergeInst = true;
     // TODO(antiagainst): properly support loop control here
     encodeInstructionInto(
         functionBody, spirv::Opcode::OpLoopMerge,
@@ -1592,11 +1634,13 @@ LogicalResult Serializer::processBranchConditionalOp(
       arguments.push_back(val.cast<IntegerAttr>().getInt());
   }
 
+  emitDebugLine(functionBody, condBranchOp.getLoc());
   return encodeInstructionInto(functionBody, spirv::Opcode::OpBranchConditional,
                                arguments);
 }
 
 LogicalResult Serializer::processBranchOp(spirv::BranchOp branchOp) {
+  emitDebugLine(functionBody, branchOp.getLoc());
   return encodeInstructionInto(functionBody, spirv::Opcode::OpBranch,
                                {getOrCreateBlockID(branchOp.getTarget())});
 }
@@ -1838,13 +1882,31 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
   return success();
 }
 
+LogicalResult Serializer::emitDebugLine(SmallVectorImpl<uint32_t> &binary,
+                                        Location loc) {
+  if (!emitDebugInfo)
+    return success();
+
+  if (lastProcessedWasMergeInst) {
+    lastProcessedWasMergeInst = false;
+    return success();
+  }
+
+  auto fileLoc = loc.dyn_cast<FileLineColLoc>();
+  if (fileLoc)
+    encodeInstructionInto(binary, spirv::Opcode::OpLine,
+                          {fileID, fileLoc.getLine(), fileLoc.getColumn()});
+  return success();
+}
+
 LogicalResult spirv::serialize(spirv::ModuleOp module,
-                               SmallVectorImpl<uint32_t> &binary) {
+                               SmallVectorImpl<uint32_t> &binary,
+                               bool emitDebugInfo) {
   if (!module.vce_triple().hasValue())
     return module.emitError(
         "module must have 'vce_triple' attribute to be serializeable");
 
-  Serializer serializer(module);
+  Serializer serializer(module, emitDebugInfo);
 
   if (failed(serializer.serialize()))
     return failure();

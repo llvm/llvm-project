@@ -10,10 +10,14 @@
 //  Declarations that describe the VE register file
 //===----------------------------------------------------------------------===//
 
-class VEReg<bits<7> Enc, string n> : Register<n> {
+class VEReg<bits<7> enc, string n, list<Register> subregs = [],
+            list<string> altNames = [], list<Register> aliases = []>
+        : Register<n, altNames> {
   let HWEncoding{15-7} = 0;
-  let HWEncoding{6-0} = Enc;
+  let HWEncoding{6-0} = enc;
   let Namespace = "VE";
+  let SubRegs = subregs;
+  let Aliases = aliases;
 }
 
 let Namespace = "VE" in {
@@ -21,41 +25,45 @@ let Namespace = "VE" in {
   def sub_i16     : SubRegIndex<16, 48>;        // Low 16 bit (48..63)
   def sub_i32     : SubRegIndex<32, 32>;        // Low 32 bit (32..63)
   def sub_f32     : SubRegIndex<32>;            // High 32 bit (0..31)
+  def AsmName     : RegAltNameIndex;
 }
 
-// Registers are identified with 7-bit ID numbers.
-// R - 64-bit integer or floating-point registers
-class R<bits<7> Enc, string n, list<Register> subregs = [],
-        list<Register> aliases = []>: VEReg<Enc, n> {
-  let SubRegs = subregs;
-  let Aliases = aliases;
-}
+//-----------------------------------------------------------------------------
+// Gneric Registers
+//-----------------------------------------------------------------------------
+
+let RegAltNameIndices = [AsmName] in {
 
 // Generic integer registers - 8 bits wide
 foreach I = 0-63 in
-  def SB#I : R<I, "S"#I>, DwarfRegNum<[I]>;
+  def SB#I : VEReg<I, "sb"#I, [], ["s"#I]>, DwarfRegNum<[I]>;
 
 // Generic integer registers - 16 bits wide
 let SubRegIndices = [sub_i8] in
 foreach I = 0-63 in
-  def SH#I : R<I, "S"#I, [!cast<R>("SB"#I)]>, DwarfRegNum<[I]>;
+  def SH#I : VEReg<I, "sh"#I, [!cast<VEReg>("SB"#I)], ["s"#I]>,
+                   DwarfRegNum<[I]>;
 
 // Generic integer registers - 32 bits wide
 let SubRegIndices = [sub_i16] in
 foreach I = 0-63 in
-  def SW#I : R<I, "S"#I, [!cast<R>("SH"#I)]>, DwarfRegNum<[I]>;
+  def SW#I : VEReg<I, "sw"#I, [!cast<VEReg>("SH"#I)], ["s"#I]>,
+                   DwarfRegNum<[I]>;
 
 // Generic floating point registers - 32 bits wide
 //   NOTE: Mark SF#I as alias of SW#I temporary to avoid register allocation
 //         problem.
 foreach I = 0-63 in
-  def SF#I : R<I, "S"#I, [], [!cast<R>("SW"#I)]>, DwarfRegNum<[I]>;
+  def SF#I : VEReg<I, "sf"#I, [], ["s"#I], [!cast<VEReg>("SW"#I)]>,
+                   DwarfRegNum<[I]>;
 
 // Generic integer registers - 64 bits wide
 let SubRegIndices = [sub_i32, sub_f32], CoveredBySubRegs = 1 in
 foreach I = 0-63 in
-  def SX#I : R<I, "S"#I, [!cast<R>("SW"#I), !cast<R>("SF"#I)]>,
-             DwarfRegNum<[I]>;
+  def SX#I : VEReg<I, "s"#I, [!cast<VEReg>("SW"#I), !cast<VEReg>("SF"#I)],
+                   ["s"#I]>, DwarfRegNum<[I]>;
+
+} // RegAltNameIndices = [AsmName]
 
 // Register classes.
 //

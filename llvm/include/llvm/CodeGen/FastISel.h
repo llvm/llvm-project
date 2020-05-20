@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -128,7 +127,7 @@ public:
                                 const CallBase &Call,
                                 unsigned FixedArgs = ~0U) {
       RetTy = ResultTy;
-      Callee = Call.getCalledValue();
+      Callee = Call.getCalledOperand();
       Symbol = Target;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);

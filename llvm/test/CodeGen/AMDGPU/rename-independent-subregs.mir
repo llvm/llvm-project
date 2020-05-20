@@ -73,7 +73,7 @@ body: |
 # (1) %0.sub0 + %0.sub0 and (2) %0.sub1 + %0.sub1
 # Check that renaming (2) does not inadvertently rename (1).
 # CHECK-LABEL: name: test2
-# CHECK: INLINEASM &"", 32, 327690, def undef %0.sub0, 327690, def dead %1.sub1, 2147483657, undef %0.sub0(tied-def 3), 2147549193, %1.sub1(tied-def 5)
+# CHECK: INLINEASM &"", 32 /* isconvergent attdialect */, 327690 /* regdef:SReg_1_with_sub0 */, def undef %0.sub0, 327690 /* regdef:SReg_1_with_sub0 */, def dead %1.sub1, 2147483657 /* reguse tiedto:$0 */, undef %0.sub0(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %1.sub1(tied-def 5)
 name: test2
 body: |
   bb.0:

@@ -38,9 +38,9 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 namespace {
 class ScriptParser final : ScriptLexer {
 public:
@@ -290,22 +290,40 @@ void ScriptParser::addFile(StringRef s) {
   }
 
   if (s.startswith("/")) {
+    // Case 1: s is an absolute path. Just open it.
     driver->addFile(s, /*withLOption=*/false);
   } else if (s.startswith("=")) {
+    // Case 2: relative to the sysroot.
     if (config->sysroot.empty())
       driver->addFile(s.substr(1), /*withLOption=*/false);
     else
       driver->addFile(saver.save(config->sysroot + "/" + s.substr(1)),
                       /*withLOption=*/false);
   } else if (s.startswith("-l")) {
+    // Case 3: search in the list of library paths.
     driver->addLibrary(s.substr(2));
-  } else if (sys::fs::exists(s)) {
-    driver->addFile(s, /*withLOption=*/false);
   } else {
-    if (Optional<std::string> path = findFromSearchPaths(s))
-      driver->addFile(saver.save(*path), /*withLOption=*/true);
-    else
-      setError("unable to find " + s);
+    // Case 4: s is a relative path. Search in the directory of the script file.
+    std::string filename = std::string(getCurrentMB().getBufferIdentifier());
+    StringRef directory = sys::path::parent_path(filename);
+    if (!directory.empty()) {
+      SmallString<0> path(directory);
+      sys::path::append(path, s);
+      if (sys::fs::exists(path)) {
+        driver->addFile(path, /*withLOption=*/false);
+        return;
+      }
+    }
+    // Then search in the current working directory.
+    if (sys::fs::exists(s)) {
+      driver->addFile(s, /*withLOption=*/false);
+    } else {
+      // Finally, search in the list of library paths.
+      if (Optional<std::string> path = findFromSearchPaths(s))
+        driver->addFile(saver.save(*path), /*withLOption=*/true);
+      else
+        setError("unable to find " + s);
+    }
   }
 }
 
@@ -404,6 +422,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf64-tradlittlemips", {ELF64LEKind, EM_MIPS})
       .Case("elf32-littleriscv", {ELF32LEKind, EM_RISCV})
       .Case("elf64-littleriscv", {ELF64LEKind, EM_RISCV})
+      .Case("elf64-sparc", {ELF64BEKind, EM_SPARCV9})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -1346,7 +1365,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return cmd->size; };
   }
   if (tok == "SIZEOF_HEADERS")
-    return [=] { return getHeaderSize(); };
+    return [=] { return elf::getHeaderSize(); };
 
   // Tok is the dot.
   if (tok == ".")
@@ -1588,19 +1607,18 @@ std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
   return {flags, negFlags};
 }
 
-void readLinkerScript(MemoryBufferRef mb) {
+void elf::readLinkerScript(MemoryBufferRef mb) {
   ScriptParser(mb).readLinkerScript();
 }
 
-void readVersionScript(MemoryBufferRef mb) {
+void elf::readVersionScript(MemoryBufferRef mb) {
   ScriptParser(mb).readVersionScript();
 }
 
-void readDynamicList(MemoryBufferRef mb) { ScriptParser(mb).readDynamicList(); }
-
-void readDefsym(StringRef name, MemoryBufferRef mb) {
-  ScriptParser(mb).readDefsym(name);
+void elf::readDynamicList(MemoryBufferRef mb) {
+  ScriptParser(mb).readDynamicList();
 }
 
-} // namespace elf
-} // namespace lld
+void elf::readDefsym(StringRef name, MemoryBufferRef mb) {
+  ScriptParser(mb).readDefsym(name);
+}

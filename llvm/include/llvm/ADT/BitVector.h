@@ -759,7 +759,9 @@ public:
   }
   bool isInvalid() const { return Size == (unsigned)-1; }
 
-  ArrayRef<BitWord> getData() const { return Bits; }
+  ArrayRef<BitWord> getData() const {
+    return Bits.take_front(NumBitWords(size()));
+  }
 
   //===--------------------------------------------------------------------===//
   // Portable bit mask operations.

@@ -228,11 +228,6 @@ void GCNHazardRecognizer::processBundle() {
   CurrCycleInstr = nullptr;
 }
 
-unsigned GCNHazardRecognizer::PreEmitNoops(SUnit *SU) {
-  IsHazardRecognizerMode = false;
-  return PreEmitNoopsCommon(SU->getInstr());
-}
-
 unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   IsHazardRecognizerMode = true;
   CurrCycleInstr = MI;
@@ -486,6 +481,14 @@ void GCNHazardRecognizer::addClauseInst(const MachineInstr &MI) {
   addRegsToSet(TRI, MI.uses(), ClauseUses);
 }
 
+static bool breaksSMEMSoftClause(MachineInstr *MI) {
+  return !SIInstrInfo::isSMRD(*MI);
+}
+
+static bool breaksVMEMSoftClause(MachineInstr *MI) {
+  return !SIInstrInfo::isVMEM(*MI) && !SIInstrInfo::isFLAT(*MI);
+}
+
 int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
   // SMEM soft clause are only present on VI+, and only matter if xnack is
   // enabled.
@@ -512,7 +515,7 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
     if (!MI)
       break;
 
-    if (IsSMRD != SIInstrInfo::isSMRD(*MI))
+    if (IsSMRD ? breaksSMEMSoftClause(MI) : breaksVMEMSoftClause(MI))
       break;
 
     addClauseInst(*MI);

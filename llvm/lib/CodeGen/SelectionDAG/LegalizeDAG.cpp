@@ -328,7 +328,7 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
 
   SDValue CPIdx =
       DAG.getConstantPool(LLVMC, TLI.getPointerTy(DAG.getDataLayout()));
-  unsigned Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlignment();
+  Align Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlign();
   if (Extend) {
     SDValue Result = DAG.getExtLoad(
         ISD::EXTLOAD, dl, OrigVT, DAG.getEntryNode(), CPIdx,
@@ -348,7 +348,7 @@ SDValue SelectionDAGLegalize::ExpandConstant(ConstantSDNode *CP) {
   EVT VT = CP->getValueType(0);
   SDValue CPIdx = DAG.getConstantPool(CP->getConstantIntValue(),
                                       TLI.getPointerTy(DAG.getDataLayout()));
-  unsigned Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlignment();
+  Align Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlign();
   SDValue Result = DAG.getLoad(
       VT, dl, DAG.getEntryNode(), CPIdx,
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), Alignment);
@@ -387,7 +387,9 @@ SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
   SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, Tmp3);
 
   // Store the scalar value.
-  Ch = DAG.getTruncStore(Ch, dl, Tmp2, StackPtr2, MachinePointerInfo(), EltVT);
+  Ch = DAG.getTruncStore(
+      Ch, dl, Tmp2, StackPtr2,
+      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), EltVT);
   // Load the updated vector.
   return DAG.getLoad(VT, dl, Ch, StackPtr, MachinePointerInfo::getFixedStack(
                                                DAG.getMachineFunction(), SPFI));
@@ -1379,7 +1381,9 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   SDValue SubStackPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
 
   // Store the subvector.
-  Ch = DAG.getStore(Ch, dl, Part, SubStackPtr, MachinePointerInfo());
+  Ch = DAG.getStore(
+      Ch, dl, Part, SubStackPtr,
+      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
 
   // Finally, load the updated vector.
   return DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr, PtrInfo);
@@ -1409,8 +1413,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
     unsigned Offset = TypeByteSize*i;
 
-    SDValue Idx = DAG.getConstant(Offset, dl, FIPtr.getValueType());
-    Idx = DAG.getMemBasePlusOffset(FIPtr, Idx, dl);
+    SDValue Idx = DAG.getMemBasePlusOffset(FIPtr, Offset, dl);
 
     // If the destination vector element type is narrower than the source
     // element type, only store the bits necessary.
@@ -1964,7 +1967,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
     Constant *CP = ConstantVector::get(CV);
     SDValue CPIdx =
         DAG.getConstantPool(CP, TLI.getPointerTy(DAG.getDataLayout()));
-    unsigned Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlignment();
+    Align Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlign();
     return DAG.getLoad(
         VT, dl, DAG.getEntryNode(), CPIdx,
         MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
@@ -2356,13 +2359,9 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     // Get the stack frame index of a 8 byte buffer.
     SDValue StackSlot = DAG.CreateStackTemporary(MVT::f64);
 
-    // word offset constant for Hi/Lo address computation
-    SDValue WordOff = DAG.getConstant(sizeof(int), dl,
-                                      StackSlot.getValueType());
     // set up Hi and Lo (into buffer) address based on endian
     SDValue Hi = StackSlot;
-    SDValue Lo = DAG.getNode(ISD::ADD, dl, StackSlot.getValueType(),
-                             StackSlot, WordOff);
+    SDValue Lo = DAG.getMemBasePlusOffset(StackSlot, 4, dl);
     if (DAG.getDataLayout().isLittleEndian())
       std::swap(Hi, Lo);
 
@@ -2505,9 +2504,9 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
 
   SDValue CPIdx =
       DAG.getConstantPool(FudgeFactor, TLI.getPointerTy(DAG.getDataLayout()));
-  unsigned Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlignment();
+  Align Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlign();
   CPIdx = DAG.getNode(ISD::ADD, dl, CPIdx.getValueType(), CPIdx, CstOffset);
-  Alignment = std::min(Alignment, 4u);
+  Alignment = commonAlignment(Alignment, 4);
   SDValue FudgeInReg;
   if (DestVT == MVT::f32)
     FudgeInReg = DAG.getLoad(

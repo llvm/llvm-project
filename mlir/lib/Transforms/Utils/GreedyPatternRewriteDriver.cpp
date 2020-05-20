@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements mlir::applyPatternsGreedily.
+// This file implements mlir::applyPatternsAndFoldGreedily.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/SideEffects.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -77,10 +77,7 @@ public:
 protected:
   // Implement the hook for inserting operations, and make sure that newly
   // inserted ops are added to the worklist for processing.
-  Operation *insert(Operation *op) override {
-    addToWorklist(op);
-    return OpBuilder::insert(op);
-  }
+  void notifyOperationInserted(Operation *op) override { addToWorklist(op); }
 
   // If an operation is about to be removed, make sure it is not in our
   // worklist anymore because we'd get dangling references to it.
@@ -265,9 +262,6 @@ public:
       : PatternRewriter(ctx), matcher(patterns), folder(ctx) {}
 
   bool simplifyLocally(Operation *op, int maxIterations, bool &erased);
-
-  /// No additional action needed other than inserting the op.
-  Operation *insert(Operation *op) override { return OpBuilder::insert(op); }
 
   // These are hooks implemented for PatternRewriter.
 protected:

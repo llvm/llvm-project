@@ -132,7 +132,7 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   // with scalable vectors, e.g. LLVMType<nxv4i32>.
   Type *SrcVecTy = VectorType::get(Builder.getHalfTy(), 8, true);
   Type *DstVecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
-  Type *PredTy = VectorType::get(Builder.getInt1Ty(), 16, true);
+  Type *PredTy = VectorType::get(Builder.getInt1Ty(), 4, true);
 
   SmallVector<Value*, 3> ArgTys;
   ArgTys.push_back(UndefValue::get(DstVecTy));

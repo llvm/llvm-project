@@ -64,14 +64,14 @@ public:
                       unsigned ByteAlignment) override;
   void emitIdent(StringRef IdentString) override;
   void EmitWinEHHandlerData(SMLoc Loc) override;
-  void FinishImpl() override;
+  void finishImpl() override;
 
   /// \}
 
 protected:
   const MCSymbol *CurSymbol;
 
-  void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
+  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
 private:
   void Error(const Twine &Msg) const;

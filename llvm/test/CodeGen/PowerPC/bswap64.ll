@@ -11,7 +11,7 @@ define i64 @bswap64(i64 %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrdd 34, 3, 3
 ; CHECK-NEXT:    xxbrd 0, 34
-; CHECK-NEXT:    mfvsrd 3, 0
+; CHECK-NEXT:    mffprd 3, 0
 ; CHECK-NEXT:    blr
 ;
 ; NO-ALTIVEC-LABEL: bswap64:

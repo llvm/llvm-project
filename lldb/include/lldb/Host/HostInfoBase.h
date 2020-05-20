@@ -93,7 +93,7 @@ public:
                                            llvm::StringRef dir);
 
   /// Return the directory containing a specific Xcode SDK.
-  static std::string GetXcodeSDK(XcodeSDK sdk) { return {}; }
+  static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk) { return {}; }
 
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);

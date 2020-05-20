@@ -105,7 +105,7 @@ static ParseResult
 parseEnumStrAttr(EnumClass &value, OpAsmParser &parser,
                  StringRef attrName = spirv::attributeName<EnumClass>()) {
   Attribute attrVal;
-  SmallVector<NamedAttribute, 1> attr;
+  NamedAttrList attr;
   auto loc = parser.getCurrentLocation();
   if (parser.parseAttribute(attrVal, parser.getBuilder().getNoneType(),
                             attrName, attr)) {
@@ -788,7 +788,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
   return spirv::PointerType::get(resultType, resultStorageClass);
 }
 
-void spirv::AccessChainOp::build(Builder *builder, OperationState &state,
+void spirv::AccessChainOp::build(OpBuilder &builder, OperationState &state,
                                  Value basePtr, ValueRange indices) {
   auto type = getElementPtrType(basePtr.getType(), indices, state.location);
   assert(type && "Unable to deduce return type based on basePtr and indices");
@@ -857,9 +857,9 @@ static LogicalResult verify(spirv::AccessChainOp accessChainOp) {
 // spv._address_of
 //===----------------------------------------------------------------------===//
 
-void spirv::AddressOfOp::build(Builder *builder, OperationState &state,
+void spirv::AddressOfOp::build(OpBuilder &builder, OperationState &state,
                                spirv::GlobalVariableOp var) {
-  build(builder, state, var.type(), builder->getSymbolRefAttr(var));
+  build(builder, state, var.type(), builder.getSymbolRefAttr(var));
 }
 
 static LogicalResult verify(spirv::AddressOfOp addressOfOp) {
@@ -987,25 +987,22 @@ static LogicalResult verify(spirv::BitcastOp bitcastOp) {
 // spv.BranchOp
 //===----------------------------------------------------------------------===//
 
-Optional<OperandRange> spirv::BranchOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+spirv::BranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return getOperands();
+  return targetOperandsMutable();
 }
-
-bool spirv::BranchOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // spv.BranchConditionalOp
 //===----------------------------------------------------------------------===//
 
-Optional<OperandRange>
-spirv::BranchConditionalOp::getSuccessorOperands(unsigned index) {
+Optional<MutableOperandRange>
+spirv::BranchConditionalOp::getMutableSuccessorOperands(unsigned index) {
   assert(index < 2 && "invalid successor index");
-  return index == kTrueIndex ? getTrueBlockArguments()
-                             : getFalseBlockArguments();
+  return index == kTrueIndex ? trueTargetOperandsMutable()
+                             : falseTargetOperandsMutable();
 }
-
-bool spirv::BranchConditionalOp::canEraseSuccessorOperand() { return true; }
 
 static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
                                             OperationState &state) {
@@ -1022,7 +1019,7 @@ static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
   // Parse the optional branch weights.
   if (succeeded(parser.parseOptionalLSquare())) {
     IntegerAttr trueWeight, falseWeight;
-    SmallVector<NamedAttribute, 2> weights;
+    NamedAttrList weights;
 
     auto i32Type = builder.getIntegerType(32);
     if (parser.parseAttribute(trueWeight, i32Type, "weight", weights) ||
@@ -1163,10 +1160,10 @@ static LogicalResult verify(spirv::CompositeConstructOp compositeConstructOp) {
 // spv.CompositeExtractOp
 //===----------------------------------------------------------------------===//
 
-void spirv::CompositeExtractOp::build(Builder *builder, OperationState &state,
+void spirv::CompositeExtractOp::build(OpBuilder &builder, OperationState &state,
                                       Value composite,
                                       ArrayRef<int32_t> indices) {
-  auto indexAttr = builder->getI32ArrayAttr(indices);
+  auto indexAttr = builder.getI32ArrayAttr(indices);
   auto elementType =
       getElementType(composite.getType(), indexAttr, state.location);
   if (!elementType) {
@@ -1316,7 +1313,7 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   } break;
-  case StandardAttributes::DenseElements:
+  case StandardAttributes::DenseIntOrFPElements:
   case StandardAttributes::SparseElements: {
     if (valueType == opType)
       break;
@@ -1386,28 +1383,28 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
 }
 
 spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
-                                             OpBuilder *builder) {
+                                             OpBuilder &builder) {
   if (auto intType = type.dyn_cast<IntegerType>()) {
     unsigned width = intType.getWidth();
     if (width == 1)
-      return builder->create<spirv::ConstantOp>(loc, type,
-                                                builder->getBoolAttr(false));
-    return builder->create<spirv::ConstantOp>(
-        loc, type, builder->getIntegerAttr(type, APInt(width, 0)));
+      return builder.create<spirv::ConstantOp>(loc, type,
+                                               builder.getBoolAttr(false));
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
   }
 
   llvm_unreachable("unimplemented types for ConstantOp::getZero()");
 }
 
 spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
-                                            OpBuilder *builder) {
+                                            OpBuilder &builder) {
   if (auto intType = type.dyn_cast<IntegerType>()) {
     unsigned width = intType.getWidth();
     if (width == 1)
-      return builder->create<spirv::ConstantOp>(loc, type,
-                                                builder->getBoolAttr(true));
-    return builder->create<spirv::ConstantOp>(
-        loc, type, builder->getIntegerAttr(type, APInt(width, 1)));
+      return builder.create<spirv::ConstantOp>(loc, type,
+                                               builder.getBoolAttr(true));
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
   }
 
   llvm_unreachable("unimplemented types for ConstantOp::getOne()");
@@ -1417,14 +1414,14 @@ spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
 // spv.EntryPoint
 //===----------------------------------------------------------------------===//
 
-void spirv::EntryPointOp::build(Builder *builder, OperationState &state,
+void spirv::EntryPointOp::build(OpBuilder &builder, OperationState &state,
                                 spirv::ExecutionModel executionModel,
                                 spirv::FuncOp function,
                                 ArrayRef<Attribute> interfaceVars) {
   build(builder, state,
-        builder->getI32IntegerAttr(static_cast<int32_t>(executionModel)),
-        builder->getSymbolRefAttr(function),
-        builder->getArrayAttr(interfaceVars));
+        builder.getI32IntegerAttr(static_cast<int32_t>(executionModel)),
+        builder.getSymbolRefAttr(function),
+        builder.getArrayAttr(interfaceVars));
 }
 
 static ParseResult parseEntryPointOp(OpAsmParser &parser,
@@ -1446,7 +1443,7 @@ static ParseResult parseEntryPointOp(OpAsmParser &parser,
       // The name of the interface variable attribute isnt important
       auto attrName = "var_symbol";
       FlatSymbolRefAttr var;
-      SmallVector<NamedAttribute, 1> attrs;
+      NamedAttrList attrs;
       if (parser.parseAttribute(var, Type(), attrName, attrs)) {
         return failure();
       }
@@ -1479,13 +1476,13 @@ static LogicalResult verify(spirv::EntryPointOp entryPointOp) {
 // spv.ExecutionMode
 //===----------------------------------------------------------------------===//
 
-void spirv::ExecutionModeOp::build(Builder *builder, OperationState &state,
+void spirv::ExecutionModeOp::build(OpBuilder &builder, OperationState &state,
                                    spirv::FuncOp function,
                                    spirv::ExecutionMode executionMode,
                                    ArrayRef<int32_t> params) {
-  build(builder, state, builder->getSymbolRefAttr(function),
-        builder->getI32IntegerAttr(static_cast<int32_t>(executionMode)),
-        builder->getI32ArrayAttr(params));
+  build(builder, state, builder.getSymbolRefAttr(function),
+        builder.getI32IntegerAttr(static_cast<int32_t>(executionMode)),
+        builder.getI32ArrayAttr(params));
 }
 
 static ParseResult parseExecutionModeOp(OpAsmParser &parser,
@@ -1500,7 +1497,7 @@ static ParseResult parseExecutionModeOp(OpAsmParser &parser,
   SmallVector<int32_t, 4> values;
   Type i32Type = parser.getBuilder().getIntegerType(32);
   while (!parser.parseOptionalComma()) {
-    SmallVector<NamedAttribute, 1> attr;
+    NamedAttrList attr;
     Attribute value;
     if (parser.parseAttribute(value, i32Type, "value", attr)) {
       return failure();
@@ -1532,8 +1529,8 @@ static void print(spirv::ExecutionModeOp execModeOp, OpAsmPrinter &printer) {
 
 static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
   SmallVector<OpAsmParser::OperandType, 4> entryArgs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 4> argAttrs;
-  SmallVector<SmallVector<NamedAttribute, 2>, 4> resultAttrs;
+  SmallVector<NamedAttrList, 4> argAttrs;
+  SmallVector<NamedAttrList, 4> resultAttrs;
   SmallVector<Type, 4> argTypes;
   SmallVector<Type, 4> resultTypes;
   auto &builder = parser.getBuilder();
@@ -1632,16 +1629,15 @@ LogicalResult spirv::FuncOp::verifyBody() {
   return failure(walkResult.wasInterrupted());
 }
 
-void spirv::FuncOp::build(Builder *builder, OperationState &state,
+void spirv::FuncOp::build(OpBuilder &builder, OperationState &state,
                           StringRef name, FunctionType type,
                           spirv::FunctionControl control,
                           ArrayRef<NamedAttribute> attrs) {
   state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder->getStringAttr(name));
+                     builder.getStringAttr(name));
   state.addAttribute(getTypeAttrName(), TypeAttr::get(type));
-  state.addAttribute(
-      spirv::attributeName<spirv::FunctionControl>(),
-      builder->getI32IntegerAttr(static_cast<uint32_t>(control)));
+  state.addAttribute(spirv::attributeName<spirv::FunctionControl>(),
+                     builder.getI32IntegerAttr(static_cast<uint32_t>(control)));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
 }
@@ -1725,27 +1721,27 @@ Operation::operand_range spirv::FunctionCallOp::getArgOperands() {
 // spv.globalVariable
 //===----------------------------------------------------------------------===//
 
-void spirv::GlobalVariableOp::build(Builder *builder, OperationState &state,
+void spirv::GlobalVariableOp::build(OpBuilder &builder, OperationState &state,
                                     Type type, StringRef name,
                                     unsigned descriptorSet, unsigned binding) {
-  build(builder, state, TypeAttr::get(type), builder->getStringAttr(name),
+  build(builder, state, TypeAttr::get(type), builder.getStringAttr(name),
         nullptr);
   state.addAttribute(
       spirv::SPIRVDialect::getAttributeName(spirv::Decoration::DescriptorSet),
-      builder->getI32IntegerAttr(descriptorSet));
+      builder.getI32IntegerAttr(descriptorSet));
   state.addAttribute(
       spirv::SPIRVDialect::getAttributeName(spirv::Decoration::Binding),
-      builder->getI32IntegerAttr(binding));
+      builder.getI32IntegerAttr(binding));
 }
 
-void spirv::GlobalVariableOp::build(Builder *builder, OperationState &state,
+void spirv::GlobalVariableOp::build(OpBuilder &builder, OperationState &state,
                                     Type type, StringRef name,
                                     spirv::BuiltIn builtin) {
-  build(builder, state, TypeAttr::get(type), builder->getStringAttr(name),
+  build(builder, state, TypeAttr::get(type), builder.getStringAttr(name),
         nullptr);
   state.addAttribute(
       spirv::SPIRVDialect::getAttributeName(spirv::Decoration::BuiltIn),
-      builder->getStringAttr(spirv::stringifyBuiltIn(builtin)));
+      builder.getStringAttr(spirv::stringifyBuiltIn(builtin)));
 }
 
 static ParseResult parseGlobalVariableOp(OpAsmParser &parser,
@@ -1849,10 +1845,10 @@ static LogicalResult verify(spirv::GroupNonUniformBallotOp ballotOp) {
 // spv.GroupNonUniformElectOp
 //===----------------------------------------------------------------------===//
 
-void spirv::GroupNonUniformElectOp::build(Builder *builder,
+void spirv::GroupNonUniformElectOp::build(OpBuilder &builder,
                                           OperationState &state,
                                           spirv::Scope scope) {
-  build(builder, state, builder->getI1Type(), scope);
+  build(builder, state, builder.getI1Type(), scope);
 }
 
 static LogicalResult verify(spirv::GroupNonUniformElectOp groupOp) {
@@ -1868,7 +1864,7 @@ static LogicalResult verify(spirv::GroupNonUniformElectOp groupOp) {
 // spv.LoadOp
 //===----------------------------------------------------------------------===//
 
-void spirv::LoadOp::build(Builder *builder, OperationState &state,
+void spirv::LoadOp::build(OpBuilder &builder, OperationState &state,
                           Value basePtr, IntegerAttr memory_access,
                           IntegerAttr alignment) {
   auto ptrType = basePtr.getType().cast<spirv::PointerType>();
@@ -1926,9 +1922,9 @@ static LogicalResult verify(spirv::LoadOp loadOp) {
 // spv.loop
 //===----------------------------------------------------------------------===//
 
-void spirv::LoopOp::build(Builder *builder, OperationState &state) {
+void spirv::LoopOp::build(OpBuilder &builder, OperationState &state) {
   state.addAttribute("loop_control",
-                     builder->getI32IntegerAttr(
+                     builder.getI32IntegerAttr(
                          static_cast<uint32_t>(spirv::LoopControl::None)));
   state.addRegion();
 }
@@ -2104,19 +2100,19 @@ static LogicalResult verify(spirv::MergeOp mergeOp) {
 // spv.module
 //===----------------------------------------------------------------------===//
 
-void spirv::ModuleOp::build(Builder *builder, OperationState &state) {
-  ensureTerminator(*state.addRegion(), *builder, state.location);
+void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state) {
+  ensureTerminator(*state.addRegion(), builder, state.location);
 }
 
-void spirv::ModuleOp::build(Builder *builder, OperationState &state,
+void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
                             spirv::AddressingModel addressing_model,
                             spirv::MemoryModel memory_model) {
   state.addAttribute(
       "addressing_model",
-      builder->getI32IntegerAttr(static_cast<int32_t>(addressing_model)));
-  state.addAttribute("memory_model", builder->getI32IntegerAttr(
+      builder.getI32IntegerAttr(static_cast<int32_t>(addressing_model)));
+  state.addAttribute("memory_model", builder.getI32IntegerAttr(
                                          static_cast<int32_t>(memory_model)));
-  ensureTerminator(*state.addRegion(), *builder, state.location);
+  ensureTerminator(*state.addRegion(), builder, state.location);
 }
 
 static ParseResult parseModuleOp(OpAsmParser &parser, OperationState &state) {
@@ -2272,8 +2268,8 @@ static LogicalResult verify(spirv::ReturnValueOp retValOp) {
 // spv.Select
 //===----------------------------------------------------------------------===//
 
-void spirv::SelectOp::build(Builder *builder, OperationState &state, Value cond,
-                            Value trueValue, Value falseValue) {
+void spirv::SelectOp::build(OpBuilder &builder, OperationState &state,
+                            Value cond, Value trueValue, Value falseValue) {
   build(builder, state, trueValue.getType(), cond, trueValue, falseValue);
 }
 
@@ -2381,10 +2377,10 @@ void spirv::SelectionOp::addMergeBlock() {
 
 spirv::SelectionOp spirv::SelectionOp::createIfThen(
     Location loc, Value condition,
-    function_ref<void(OpBuilder *builder)> thenBody, OpBuilder *builder) {
-  auto selectionControl = builder->getI32IntegerAttr(
+    function_ref<void(OpBuilder &builder)> thenBody, OpBuilder &builder) {
+  auto selectionControl = builder.getI32IntegerAttr(
       static_cast<uint32_t>(spirv::SelectionControl::None));
-  auto selectionOp = builder->create<spirv::SelectionOp>(loc, selectionControl);
+  auto selectionOp = builder.create<spirv::SelectionOp>(loc, selectionControl);
 
   selectionOp.addMergeBlock();
   Block *mergeBlock = selectionOp.getMergeBlock();
@@ -2392,17 +2388,17 @@ spirv::SelectionOp spirv::SelectionOp::createIfThen(
 
   // Build the "then" block.
   {
-    OpBuilder::InsertionGuard guard(*builder);
-    thenBlock = builder->createBlock(mergeBlock);
+    OpBuilder::InsertionGuard guard(builder);
+    thenBlock = builder.createBlock(mergeBlock);
     thenBody(builder);
-    builder->create<spirv::BranchOp>(loc, mergeBlock);
+    builder.create<spirv::BranchOp>(loc, mergeBlock);
   }
 
   // Build the header block.
   {
-    OpBuilder::InsertionGuard guard(*builder);
-    builder->createBlock(thenBlock);
-    builder->create<spirv::BranchConditionalOp>(
+    OpBuilder::InsertionGuard guard(builder);
+    builder.createBlock(thenBlock);
+    builder.create<spirv::BranchConditionalOp>(
         loc, condition, thenBlock,
         /*trueArguments=*/ArrayRef<Value>(), mergeBlock,
         /*falseArguments=*/ArrayRef<Value>());

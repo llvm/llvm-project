@@ -52,7 +52,7 @@ namespace __xray {
 bool patchFunctionEntry(const bool Enable, uint32_t FuncId,
                         const XRaySledEntry &Sled,
                         void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   if (Enable) {
     // lis 0, FuncId[16..32]
     // li 0, FuncId[0..15]
@@ -70,7 +70,7 @@ bool patchFunctionEntry(const bool Enable, uint32_t FuncId,
 
 bool patchFunctionExit(const bool Enable, uint32_t FuncId,
                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  const uint64_t Address = Sled.Address;
+  const uint64_t Address = Sled.address();
   if (Enable) {
     // lis 0, FuncId[16..32]
     // li 0, FuncId[0..15]

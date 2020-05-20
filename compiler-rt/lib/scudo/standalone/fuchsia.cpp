@@ -170,6 +170,8 @@ u64 getMonotonicTime() { return _zx_clock_get_monotonic(); }
 
 u32 getNumberOfCPUs() { return _zx_system_get_num_cpus(); }
 
+u32 getThreadID() { return 0; }
+
 bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
   static_assert(MaxRandomLength <= ZX_CPRNG_DRAW_MAX_LEN, "");
   if (UNLIKELY(!Buffer || !Length || Length > MaxRandomLength))

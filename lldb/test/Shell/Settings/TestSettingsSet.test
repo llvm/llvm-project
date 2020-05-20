@@ -1,7 +1,7 @@
 # This tests setting setting values.
 
 # Check that setting an empty value with -f(orce) clears the value.
-# RUN: %lldb -b -s %s 2>&1 | FileCheck %s
+# RUN: not %lldb -b -s %s 2>&1 | FileCheck %s
 
 settings set tab-size 16
 settings show tab-size

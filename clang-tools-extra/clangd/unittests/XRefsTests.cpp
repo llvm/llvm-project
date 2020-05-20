@@ -663,16 +663,6 @@ TEST(LocateSymbol, Textual) {
         int myFunction(int);
         // Not triggered for token which survived preprocessing.
         int var = m^yFunction();
-      )cpp",
-      R"cpp(// Dependent type
-        struct Foo {
-          void uniqueMethodName();
-        };
-        template <typename T>
-        void f(T t) {
-          // Not triggered for token which survived preprocessing.
-          t->u^niqueMethodName();
-        }
       )cpp"};
 
   for (const char *Test : Tests) {
@@ -685,10 +675,15 @@ TEST(LocateSymbol, Textual) {
 
     auto AST = TU.build();
     auto Index = TU.index();
-    auto Results = locateSymbolNamedTextuallyAt(
-        AST, Index.get(),
+    auto Word = SpelledWord::touching(
         cantFail(sourceLocationInMainFile(AST.getSourceManager(), T.point())),
-        testPath(TU.Filename));
+        AST.getTokens(), AST.getLangOpts());
+    if (!Word) {
+      ADD_FAILURE() << "No word touching point!" << Test;
+      continue;
+    }
+    auto Results = locateSymbolTextually(*Word, AST, Index.get(),
+                                         testPath(TU.Filename), ASTNodeKind());
 
     if (!WantDecl) {
       EXPECT_THAT(Results, IsEmpty()) << Test;
@@ -773,28 +768,36 @@ TEST(LocateSymbol, Ambiguous) {
                                    Sym("baz", T.range("StaticOverload2"))));
 }
 
-TEST(LocateSymbol, TextualAmbiguous) {
-  auto T = Annotations(R"cpp(
+TEST(LocateSymbol, TextualDependent) {
+  // Put the declarations in the header to make sure we are
+  // finding them via the index heuristic and not the
+  // nearby-ident heuristic.
+  Annotations Header(R"cpp(
         struct Foo {
           void $FooLoc[[uniqueMethodName]]();
         };
         struct Bar {
           void $BarLoc[[uniqueMethodName]]();
         };
-        // Will call u^niqueMethodName() on t.
+        )cpp");
+  Annotations Source(R"cpp(
         template <typename T>
-        void f(T t);
+        void f(T t) {
+          t.u^niqueMethodName();
+        }
       )cpp");
-  auto TU = TestTU::withCode(T.code());
+  TestTU TU;
+  TU.Code = std::string(Source.code());
+  TU.HeaderCode = std::string(Header.code());
   auto AST = TU.build();
   auto Index = TU.index();
-  auto Results = locateSymbolNamedTextuallyAt(
-      AST, Index.get(),
-      cantFail(sourceLocationInMainFile(AST.getSourceManager(), T.point())),
-      testPath(TU.Filename));
-  EXPECT_THAT(Results,
-              UnorderedElementsAre(Sym("uniqueMethodName", T.range("FooLoc")),
-                                   Sym("uniqueMethodName", T.range("BarLoc"))));
+  // Need to use locateSymbolAt() since we are testing an
+  // interaction between locateASTReferent() and
+  // locateSymbolNamedTextuallyAt().
+  auto Results = locateSymbolAt(AST, Source.point(), Index.get());
+  EXPECT_THAT(Results, UnorderedElementsAre(
+                           Sym("uniqueMethodName", Header.range("FooLoc")),
+                           Sym("uniqueMethodName", Header.range("BarLoc"))));
 }
 
 TEST(LocateSymbol, TemplateTypedefs) {
@@ -983,6 +986,101 @@ TEST(LocateSymbol, WithPreamble) {
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithoutHeader.point())),
       ElementsAre(Sym("foo", FooWithoutHeader.range())));
+}
+
+TEST(LocateSymbol, NearbyTokenSmoke) {
+  auto T = Annotations(R"cpp(
+    // prints e^rr and crashes
+    void die(const char* [[err]]);
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  // We don't pass an index, so can't hit index-based fallback.
+  EXPECT_THAT(locateSymbolAt(AST, T.point()),
+              ElementsAre(Sym("err", T.range())));
+}
+
+TEST(LocateSymbol, NearbyIdentifier) {
+  const char *Tests[] = {
+      R"cpp(
+      // regular identifiers (won't trigger)
+      int hello;
+      int y = he^llo;
+    )cpp",
+      R"cpp(
+      // disabled preprocessor sections
+      int [[hello]];
+      #if 0
+      int y = ^hello;
+      #endif
+    )cpp",
+      R"cpp(
+      // comments
+      // he^llo, world
+      int [[hello]];
+    )cpp",
+      R"cpp(
+      // not triggered by string literals
+      int hello;
+      const char* greeting = "h^ello, world";
+    )cpp",
+
+      R"cpp(
+      // can refer to macro invocations
+      #define INT int
+      [[INT]] x;
+      // I^NT
+    )cpp",
+
+      R"cpp(
+      // can refer to macro invocations (even if they expand to nothing)
+      #define EMPTY
+      [[EMPTY]] int x;
+      // E^MPTY
+    )cpp",
+
+      R"cpp(
+      // prefer nearest occurrence, backwards is worse than forwards
+      int hello;
+      int x = hello;
+      // h^ello
+      int y = [[hello]];
+      int z = hello;
+    )cpp",
+
+      R"cpp(
+      // short identifiers find near results
+      int [[hi]];
+      // h^i
+    )cpp",
+      R"cpp(
+      // short identifiers don't find far results
+      int hi;
+
+
+
+      // h^i
+    )cpp",
+  };
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    auto AST = TestTU::withCode(T.code()).build();
+    const auto &SM = AST.getSourceManager();
+    llvm::Optional<Range> Nearby;
+    auto Word =
+        SpelledWord::touching(cantFail(sourceLocationInMainFile(SM, T.point())),
+                              AST.getTokens(), AST.getLangOpts());
+    if (!Word) {
+      ADD_FAILURE() << "No word at point! " << Test;
+      continue;
+    }
+    if (const auto *Tok = findNearbyIdentifier(*Word, AST.getTokens()))
+      Nearby = halfOpenToRange(SM, CharSourceRange::getCharRange(
+                                       Tok->location(), Tok->endLocation()));
+    if (T.ranges().empty())
+      EXPECT_THAT(Nearby, Eq(llvm::None)) << Test;
+    else
+      EXPECT_EQ(Nearby, T.range()) << Test;
+  }
 }
 
 TEST(FindReferences, WithinAST) {
@@ -1392,14 +1490,15 @@ TEST(GetNonLocalDeclRefs, All) {
 
 TEST(DocumentLinks, All) {
   Annotations MainCpp(R"cpp(
-      #include $foo[["foo.h"]]
+      #/*comments*/include /*comments*/ $foo[["foo.h"]] //more comments
       int end_of_preamble = 0;
-      #include $bar[["bar.h"]]
+      #include $bar[[<bar.h>]]
     )cpp");
 
   TestTU TU;
   TU.Code = std::string(MainCpp.code());
   TU.AdditionalFiles = {{"foo.h", ""}, {"bar.h", ""}};
+  TU.ExtraArgs = {"-isystem."};
   auto AST = TU.build();
 
   EXPECT_THAT(

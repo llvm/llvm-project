@@ -22,6 +22,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -80,7 +81,7 @@ struct ControlSection {
 
   SmallVector<Symbol, 1> Syms;
   SmallVector<XCOFFRelocation, 1> Relocations;
-  StringRef getName() const { return MCCsect->getSectionName(); }
+  StringRef getName() const { return MCCsect->getName(); }
   ControlSection(const MCSectionXCOFF *MCSec)
       : MCCsect(MCSec), SymbolTableIndex(-1), Address(-1), Size(0) {}
 };
@@ -333,8 +334,8 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 
     // If the name does not fit in the storage provided in the symbol table
     // entry, add it to the string table.
-    if (nameShouldBeInStringTable(MCSec->getSectionName()))
-      Strings.add(MCSec->getSectionName());
+    if (nameShouldBeInStringTable(MCSec->getName()))
+      Strings.add(MCSec->getName());
 
     CsectGroup &Group = getCsectGroup(MCSec);
     Group.emplace_back(MCSec);
@@ -353,21 +354,24 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
       // Handle undefined symbol.
       UndefinedCsects.emplace_back(ContainingCsect);
       SectionMap[ContainingCsect] = &UndefinedCsects.back();
-    } else {
-      // If the symbol is the csect itself, we don't need to put the symbol
-      // into csect's Syms.
-      if (XSym == ContainingCsect->getQualNameSymbol())
-        continue;
-
-      // Only put a label into the symbol table when it is an external label.
-      if (!XSym->isExternal())
-        continue;
-
-      assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
-             "Expected containing csect to exist in map");
-      // Lookup the containing csect and add the symbol to it.
-      SectionMap[ContainingCsect]->Syms.emplace_back(XSym);
+      if (nameShouldBeInStringTable(ContainingCsect->getName()))
+        Strings.add(ContainingCsect->getName());
+      continue;
     }
+
+    // If the symbol is the csect itself, we don't need to put the symbol
+    // into csect's Syms.
+    if (XSym == ContainingCsect->getQualNameSymbol())
+      continue;
+
+    // Only put a label into the symbol table when it is an external label.
+    if (!XSym->isExternal())
+      continue;
+
+    assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
+           "Expected containing csect to exist in map");
+    // Lookup the containing csect and add the symbol to it.
+    SectionMap[ContainingCsect]->Syms.emplace_back(XSym);
 
     // If the name does not fit in the storage provided in the symbol table
     // entry, add it to the string table.

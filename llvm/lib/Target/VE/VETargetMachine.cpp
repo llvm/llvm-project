@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VETargetMachine.h"
+#include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
 #include "VETargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"

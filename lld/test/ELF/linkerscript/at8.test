@@ -20,7 +20,7 @@ SECTIONS {
 # PT_LOAD header.
 
 # CHECK: Name              Type            Address          Off
-# CHECK: .text             PROGBITS        0000000008000000 001000
+# CHECK: .text             PROGBITS        0000000008000000 000158
 # CHECK: .sec1             PROGBITS        0000000020000000 001000
 # CHECK: .sec2             PROGBITS        0000000020000008 001008
 # CHECK: .sec3             PROGBITS        0000000020000010 001010

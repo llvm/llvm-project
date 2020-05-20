@@ -22,6 +22,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/SectionKind.h"
@@ -307,7 +308,8 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
     const ArrayType *ATy = cast<const ArrayType>(Ty);
     return getSmallestAddressableSize(ATy->getElementType(), GV, TM);
   }
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     const VectorType *PTy = cast<const VectorType>(Ty);
     return getSmallestAddressableSize(PTy->getElementType(), GV, TM);
   }
@@ -322,6 +324,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   }
   case Type::FunctionTyID:
   case Type::VoidTyID:
+  case Type::BFloatTyID:
   case Type::X86_FP80TyID:
   case Type::FP128TyID:
   case Type::PPC_FP128TyID:

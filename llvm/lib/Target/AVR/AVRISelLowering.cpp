@@ -151,10 +151,12 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setOperationAction(ISD::SREM, MVT::i16, Expand);
 
   // Make division and modulus custom
-  for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::UDIVREM, VT, Custom);
-    setOperationAction(ISD::SDIVREM, VT, Custom);
-  }
+  setOperationAction(ISD::UDIVREM, MVT::i8, Custom);
+  setOperationAction(ISD::UDIVREM, MVT::i16, Custom);
+  setOperationAction(ISD::UDIVREM, MVT::i32, Custom);
+  setOperationAction(ISD::SDIVREM, MVT::i8, Custom);
+  setOperationAction(ISD::SDIVREM, MVT::i16, Custom);
+  setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
 
   // Do not use MUL. The AVR instructions are closer to SMUL_LOHI &co.
   setOperationAction(ISD::MUL, MVT::i8, Expand);
@@ -190,41 +192,29 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
     // improvements in how we treat 16-bit "registers" to be feasible.
   }
 
-  // Division rtlib functions (not supported)
+  // Division rtlib functions (not supported), use divmod functions instead
   setLibcallName(RTLIB::SDIV_I8, nullptr);
   setLibcallName(RTLIB::SDIV_I16, nullptr);
   setLibcallName(RTLIB::SDIV_I32, nullptr);
-  setLibcallName(RTLIB::SDIV_I64, nullptr);
-  setLibcallName(RTLIB::SDIV_I128, nullptr);
   setLibcallName(RTLIB::UDIV_I8, nullptr);
   setLibcallName(RTLIB::UDIV_I16, nullptr);
   setLibcallName(RTLIB::UDIV_I32, nullptr);
-  setLibcallName(RTLIB::UDIV_I64, nullptr);
-  setLibcallName(RTLIB::UDIV_I128, nullptr);
 
-  // Modulus rtlib functions (not supported)
+  // Modulus rtlib functions (not supported), use divmod functions instead
   setLibcallName(RTLIB::SREM_I8, nullptr);
   setLibcallName(RTLIB::SREM_I16, nullptr);
   setLibcallName(RTLIB::SREM_I32, nullptr);
-  setLibcallName(RTLIB::SREM_I64, nullptr);
-  setLibcallName(RTLIB::SREM_I128, nullptr);
   setLibcallName(RTLIB::UREM_I8, nullptr);
   setLibcallName(RTLIB::UREM_I16, nullptr);
   setLibcallName(RTLIB::UREM_I32, nullptr);
-  setLibcallName(RTLIB::UREM_I64, nullptr);
-  setLibcallName(RTLIB::UREM_I128, nullptr);
 
   // Division and modulus rtlib functions
   setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
   setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
   setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-  setLibcallName(RTLIB::SDIVREM_I64, "__divmoddi4");
-  setLibcallName(RTLIB::SDIVREM_I128, "__divmodti4");
   setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
   setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
   setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
-  setLibcallName(RTLIB::UDIVREM_I64, "__udivmoddi4");
-  setLibcallName(RTLIB::UDIVREM_I128, "__udivmodti4");
 
   // Several of the runtime library functions use a special calling conv
   setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
@@ -370,12 +360,6 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
     break;
   case MVT::i32:
     LC = IsSigned ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
-    break;
-  case MVT::i64:
-    LC = IsSigned ? RTLIB::SDIVREM_I64 : RTLIB::UDIVREM_I64;
-    break;
-  case MVT::i128:
-    LC = IsSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
     break;
   }
 

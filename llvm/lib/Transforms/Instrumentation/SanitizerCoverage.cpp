@@ -16,7 +16,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -323,7 +322,8 @@ private:
 
 PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
                                                    ModuleAnalysisManager &MAM) {
-  ModuleSanitizerCoverage ModuleSancov(Options);
+  ModuleSanitizerCoverage ModuleSancov(Options, Whitelist.get(),
+                                       Blacklist.get());
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto DTCallback = [&FAM](Function &F) -> const DominatorTree * {
     return &FAM.getResult<DominatorTreeAnalysis>(F);
@@ -661,8 +661,8 @@ void ModuleSanitizerCoverage::instrumentFunction(
       BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {
-        CallSite CS(&Inst);
-        if (CS && !CS.getCalledFunction())
+        CallBase *CB = dyn_cast<CallBase>(&Inst);
+        if (CB && !CB->getCalledFunction())
           IndirCalls.push_back(&Inst);
       }
       if (Options.TraceCmp) {
@@ -786,8 +786,8 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
          Options.Inline8bitCounters || Options.InlineBoolFlag);
   for (auto I : IndirCalls) {
     IRBuilder<> IRB(I);
-    CallSite CS(I);
-    Value *Callee = CS.getCalledValue();
+    CallBase &CB = cast<CallBase>(*I);
+    Value *Callee = CB.getCalledOperand();
     if (isa<InlineAsm>(Callee))
       continue;
     IRB.CreateCall(SanCovTracePCIndir, IRB.CreatePointerCast(Callee, IntptrTy));
@@ -946,7 +946,12 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto FlagPtr = IRB.CreateGEP(
         FunctionBoolArray->getValueType(), FunctionBoolArray,
         {ConstantInt::get(IntptrTy, 0), ConstantInt::get(IntptrTy, Idx)});
-    auto Store = IRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    auto Load = IRB.CreateLoad(Int1Ty, FlagPtr);
+    auto ThenTerm =
+        SplitBlockAndInsertIfThen(IRB.CreateIsNull(Load), &*IP, false);
+    IRBuilder<> ThenIRB(ThenTerm);
+    auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    SetNoSanitizeMetadata(Load);
     SetNoSanitizeMetadata(Store);
   }
   if (Options.StackDepth && IsEntryBB && !IsLeafFunc) {

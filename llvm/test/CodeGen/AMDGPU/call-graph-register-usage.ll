@@ -13,15 +13,15 @@ define void @use_vcc() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_vcc:
-; GCN: v_writelane_b32 v32, s33, 2
-; GCN: v_writelane_b32 v32, s30, 0
-; GCN: v_writelane_b32 v32, s31, 1
+; GCN: v_writelane_b32 v40, s33, 2
+; GCN: v_writelane_b32 v40, s30, 0
+; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN: v_readlane_b32 s4, v32, 0
-; GCN: v_readlane_b32 s5, v32, 1
-; GCN: v_readlane_b32 s33, v32, 2
+; GCN: v_readlane_b32 s4, v40, 0
+; GCN: v_readlane_b32 s5, v40, 1
+; GCN: v_readlane_b32 s33, v40, 2
 ; GCN: ; NumSgprs: 36
-; GCN: ; NumVgprs: 33
+; GCN: ; NumVgprs: 41
 define void @indirect_use_vcc() #1 {
   call void @use_vcc()
   ret void
@@ -32,7 +32,7 @@ define void @indirect_use_vcc() #1 {
 ; CI: ; NumSgprs: 38
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
-; GCN: ; NumVgprs: 33
+; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2level_use_vcc_kernel(i32 addrspace(1)* %out) #0 {
   call void @indirect_use_vcc()
   ret void
@@ -50,7 +50,7 @@ define void @use_flat_scratch() #1 {
 ; GCN-LABEL: {{^}}indirect_use_flat_scratch:
 ; CI: ; NumSgprs: 38
 ; VI: ; NumSgprs: 40
-; GCN: ; NumVgprs: 33
+; GCN: ; NumVgprs: 41
 define void @indirect_use_flat_scratch() #1 {
   call void @use_flat_scratch()
   ret void
@@ -61,7 +61,7 @@ define void @indirect_use_flat_scratch() #1 {
 ; CI: ; NumSgprs: 38
 ; VI-NOBUG: ; NumSgprs: 40
 ; VI-BUG: ; NumSgprs: 96
-; GCN: ; NumVgprs: 33
+; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2level_use_flat_scratch_kernel(i32 addrspace(1)* %out) #0 {
   call void @indirect_use_flat_scratch()
   ret void
@@ -76,7 +76,7 @@ define void @use_10_vgpr() #1 {
 }
 
 ; GCN-LABEL: {{^}}indirect_use_10_vgpr:
-; GCN: ; NumVgprs: 33
+; GCN: ; NumVgprs: 41
 define void @indirect_use_10_vgpr() #0 {
   call void @use_10_vgpr()
   ret void
@@ -84,23 +84,23 @@ define void @indirect_use_10_vgpr() #0 {
 
 ; GCN-LABEL: {{^}}indirect_2_level_use_10_vgpr:
 ; GCN: is_dynamic_callstack = 0
-; GCN: ; NumVgprs: 33
+; GCN: ; NumVgprs: 41
 define amdgpu_kernel void @indirect_2_level_use_10_vgpr() #0 {
   call void @indirect_use_10_vgpr()
   ret void
 }
 
-; GCN-LABEL: {{^}}use_40_vgpr:
-; GCN: ; NumVgprs: 40
-define void @use_40_vgpr() #1 {
-  call void asm sideeffect "", "~{v39}"() #0
+; GCN-LABEL: {{^}}use_50_vgpr:
+; GCN: ; NumVgprs: 50
+define void @use_50_vgpr() #1 {
+  call void asm sideeffect "", "~{v49}"() #0
   ret void
 }
 
-; GCN-LABEL: {{^}}indirect_use_40_vgpr:
-; GCN: ; NumVgprs: 40
-define void @indirect_use_40_vgpr() #0 {
-  call void @use_40_vgpr()
+; GCN-LABEL: {{^}}indirect_use_50_vgpr:
+; GCN: ; NumVgprs: 50
+define void @indirect_use_50_vgpr() #0 {
+  call void @use_50_vgpr()
   ret void
 }
 

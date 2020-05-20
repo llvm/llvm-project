@@ -12,7 +12,7 @@
     check against.  It also checks that virtual bases work properly
 */
 
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 #include <exception>
 #include <stdlib.h>

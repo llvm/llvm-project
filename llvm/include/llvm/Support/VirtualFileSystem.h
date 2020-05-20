@@ -656,7 +656,7 @@ private:
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
   // slashes (representing a root) to match backslashes (and vice versa).  Note
-  // that, other than the root, patch components should not contain slashes or
+  // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
     if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_lower(rhs)))

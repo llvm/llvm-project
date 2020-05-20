@@ -159,10 +159,10 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movb	%spl, (%rax)
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       movb	%bpl, (%rcx)
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       movb	%sil, (%rdx)
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       movb	%dil, (%rbx)
-# CHECK-NEXT:        1     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       movb	%bpl, (%rcx)
+# CHECK-NEXT: 2.     1     3.0    1.0    0.0       movb	%sil, (%rdx)
+# CHECK-NEXT: 3.     1     4.0    1.0    0.0       movb	%dil, (%rbx)
+# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -273,10 +273,10 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movw	%sp, (%rax)
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       movw	%bp, (%rcx)
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       movw	%si, (%rdx)
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       movw	%di, (%rbx)
-# CHECK-NEXT:        1     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       movw	%bp, (%rcx)
+# CHECK-NEXT: 2.     1     3.0    1.0    0.0       movw	%si, (%rdx)
+# CHECK-NEXT: 3.     1     4.0    1.0    0.0       movw	%di, (%rbx)
+# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -387,10 +387,10 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movl	%esp, (%rax)
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       movl	%ebp, (%rcx)
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       movl	%esi, (%rdx)
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       movl	%edi, (%rbx)
-# CHECK-NEXT:        1     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       movl	%ebp, (%rcx)
+# CHECK-NEXT: 2.     1     3.0    1.0    0.0       movl	%esi, (%rdx)
+# CHECK-NEXT: 3.     1     4.0    1.0    0.0       movl	%edi, (%rbx)
+# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -501,10 +501,10 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movq	%rsp, (%rax)
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       movq	%rbp, (%rcx)
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       movq	%rsi, (%rdx)
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       movq	%rdi, (%rbx)
-# CHECK-NEXT:        1     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       movq	%rbp, (%rcx)
+# CHECK-NEXT: 2.     1     3.0    1.0    0.0       movq	%rsi, (%rdx)
+# CHECK-NEXT: 3.     1     4.0    1.0    0.0       movq	%rdi, (%rbx)
+# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
@@ -732,10 +732,10 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movaps	%xmm0, (%rax)
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       movaps	%xmm1, (%rcx)
-# CHECK-NEXT: 2.     1     4.0    1.0    0.0       movaps	%xmm2, (%rdx)
-# CHECK-NEXT: 3.     1     5.0    0.0    0.0       movaps	%xmm3, (%rbx)
-# CHECK-NEXT:        1     3.0    0.5    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       movaps	%xmm1, (%rcx)
+# CHECK-NEXT: 2.     1     4.0    2.0    0.0       movaps	%xmm2, (%rdx)
+# CHECK-NEXT: 3.     1     5.0    1.0    0.0       movaps	%xmm3, (%rbx)
+# CHECK-NEXT:        1     3.0    1.3    0.0       <total>
 
 # CHECK:      [6] Code Region
 
@@ -846,7 +846,7 @@ vmovaps %ymm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vmovaps	%ymm0, (%rax)
-# CHECK-NEXT: 1.     1     2.0    1.0    0.0       vmovaps	%ymm1, (%rcx)
-# CHECK-NEXT: 2.     1     35.0   33.0   0.0       vmovaps	%ymm2, (%rdx)
-# CHECK-NEXT: 3.     1     36.0   1.0    0.0       vmovaps	%ymm3, (%rbx)
-# CHECK-NEXT:        1     18.5   9.0    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    2.0    0.0       vmovaps	%ymm1, (%rcx)
+# CHECK-NEXT: 2.     1     35.0   34.0   0.0       vmovaps	%ymm2, (%rdx)
+# CHECK-NEXT: 3.     1     36.0   2.0    0.0       vmovaps	%ymm3, (%rbx)
+# CHECK-NEXT:        1     18.5   9.8    0.0       <total>

@@ -222,7 +222,7 @@ static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
   // Otherwise, if the instruction is in the entry block and is not an invoke,
   // then it obviously dominates all phi nodes.
   if (I->getParent() == &I->getFunction()->getEntryBlock() &&
-      !isa<InvokeInst>(I))
+      !isa<InvokeInst>(I) && !isa<CallBrInst>(I))
     return true;
 
   return false;
@@ -1480,10 +1480,11 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   else
     return nullptr;
 
-  // X < Y && Y != 0  -->  X < Y
-  // X < Y || Y != 0  -->  Y != 0
-  if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE)
-    return IsAnd ? UnsignedICmp : ZeroICmp;
+  // X > Y && Y == 0  -->  Y == 0  iff X != 0
+  // X > Y || Y == 0  -->  X > Y   iff X != 0
+  if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
+      isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+    return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X <= Y && Y != 0  -->  X <= Y  iff X != 0
   // X <= Y || Y != 0  -->  Y != 0  iff X != 0
@@ -1491,15 +1492,19 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
       isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? UnsignedICmp : ZeroICmp;
 
+  // The transforms below here are expected to be handled more generally with
+  // simplifyAndOrOfICmpsWithLimitConst() or in InstCombine's
+  // foldAndOrOfICmpsWithConstEq(). If we are looking to trim optimizer overlap,
+  // these are candidates for removal.
+
+  // X < Y && Y != 0  -->  X < Y
+  // X < Y || Y != 0  -->  Y != 0
+  if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE)
+    return IsAnd ? UnsignedICmp : ZeroICmp;
+
   // X >= Y && Y == 0  -->  Y == 0
   // X >= Y || Y == 0  -->  X >= Y
   if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_EQ)
-    return IsAnd ? ZeroICmp : UnsignedICmp;
-
-  // X > Y && Y == 0  -->  Y == 0  iff X != 0
-  // X > Y || Y == 0  -->  X > Y   iff X != 0
-  if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-      isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X < Y && Y == 0  -->  false
@@ -1690,6 +1695,64 @@ static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
+/// Try to eliminate compares with signed or unsigned min/max constants.
+static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                                 bool IsAnd) {
+  // Canonicalize an equality compare as Cmp0.
+  if (Cmp1->isEquality())
+    std::swap(Cmp0, Cmp1);
+  if (!Cmp0->isEquality())
+    return nullptr;
+
+  // The equality compare must be against a constant. Convert the 'null' pointer
+  // constant to an integer zero value.
+  APInt MinMaxC;
+  const APInt *C;
+  if (match(Cmp0->getOperand(1), m_APInt(C)))
+    MinMaxC = *C;
+  else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
+    MinMaxC = APInt::getNullValue(8);
+  else
+    return nullptr;
+
+  // The non-equality compare must include a common operand (X). Canonicalize
+  // the common operand as operand 0 (the predicate is swapped if the common
+  // operand was operand 1).
+  ICmpInst::Predicate Pred0 = Cmp0->getPredicate();
+  Value *X = Cmp0->getOperand(0);
+  ICmpInst::Predicate Pred1;
+  if (!match(Cmp1, m_c_ICmp(Pred1, m_Specific(X), m_Value())) ||
+      ICmpInst::isEquality(Pred1))
+    return nullptr;
+
+  // DeMorganize if this is 'or': P0 || P1 --> !P0 && !P1.
+  if (!IsAnd) {
+    Pred0 = ICmpInst::getInversePredicate(Pred0);
+    Pred1 = ICmpInst::getInversePredicate(Pred1);
+  }
+
+  // Normalize to unsigned compare and unsigned min/max value.
+  // Example for 8-bit: -128 + 128 -> 0; 127 + 128 -> 255
+  if (ICmpInst::isSigned(Pred1)) {
+    Pred1 = ICmpInst::getUnsignedPredicate(Pred1);
+    MinMaxC += APInt::getSignedMinValue(MinMaxC.getBitWidth());
+  }
+
+  // (X != MAX) && (X < Y) --> X < Y
+  // (X == MAX) || (X >= Y) --> X >= Y
+  if (MinMaxC.isMaxValue())
+    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_ULT)
+      return Cmp1;
+
+  // (X != MIN) && (X > Y) -->  X > Y
+  // (X == MIN) || (X <= Y) --> X <= Y
+  if (MinMaxC.isMinValue())
+    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_UGT)
+      return Cmp1;
+
+  return nullptr;
+}
+
 static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
                                  const SimplifyQuery &Q) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true, Q))
@@ -1703,6 +1766,9 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, true))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
@@ -1776,6 +1842,9 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, false))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
@@ -4082,8 +4151,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (isa<UndefValue>(Ops[0]))
     return UndefValue::get(GEPTy);
 
-  bool IsScalableVec =
-      isa<VectorType>(SrcTy) && cast<VectorType>(SrcTy)->isScalable();
+  bool IsScalableVec = isa<ScalableVectorType>(SrcTy);
 
   if (Ops.size() == 2) {
     // getelementptr P, 0 -> P.
@@ -4225,8 +4293,8 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
 
   // For fixed-length vector, fold into undef if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
-    if (!cast<VectorType>(Vec->getType())->isScalable() &&
-        CI->uge(cast<VectorType>(Vec->getType())->getNumElements()))
+    if (isa<FixedVectorType>(Vec->getType()) &&
+        CI->uge(cast<FixedVectorType>(Vec->getType())->getNumElements()))
       return UndefValue::get(Vec->getType());
   }
 
@@ -4234,9 +4302,9 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (isa<UndefValue>(Idx))
     return UndefValue::get(Vec->getType());
 
-  // Inserting an undef scalar? Assume it is the same value as the existing
-  // vector element.
-  if (isa<UndefValue>(Val))
+  // If the scalar is undef, and there is no risk of propagating poison from the
+  // vector value, simplify to the vector value.
+  if (isa<UndefValue>(Val) && isGuaranteedNotToBeUndefOrPoison(Vec))
     return Vec;
 
   // If we are extracting a value from a vector, then inserting it into the same
@@ -4299,7 +4367,8 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
     // For fixed-length vector, fold into undef if index is out of bounds.
-    if (!VecVTy->isScalable() && IdxC->getValue().uge(VecVTy->getNumElements()))
+    if (isa<FixedVectorType>(VecVTy) &&
+        IdxC->getValue().uge(VecVTy->getNumElements()))
       return UndefValue::get(VecVTy->getElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
@@ -5338,7 +5407,7 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
 }
 
 Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
-  Value *Callee = Call->getCalledValue();
+  Value *Callee = Call->getCalledOperand();
 
   // musttail calls can only be simplified if they are also DCEd.
   // As we can't guarantee this here, don't simplify them.
@@ -5531,9 +5600,6 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     break;
   case Instruction::Call: {
     Result = SimplifyCall(cast<CallInst>(I), Q);
-    // Don't perform known bits simplification below for musttail calls.
-    if (cast<CallInst>(I)->isMustTailCall())
-      return Result;
     break;
   }
   case Instruction::Freeze:
@@ -5549,14 +5615,6 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     // No simplifications for Alloca and it can't be constant folded.
     Result = nullptr;
     break;
-  }
-
-  // In general, it is possible for computeKnownBits to determine all bits in a
-  // value even when the operands are not all constants.
-  if (!Result && I->getType()->isIntOrIntVectorTy()) {
-    KnownBits Known = computeKnownBits(I, Q.DL, /*Depth*/ 0, Q.AC, I, Q.DT, ORE);
-    if (Known.isConstant())
-      Result = ConstantInt::get(I->getType(), Known.getConstant());
   }
 
   /// If called on unreachable code, the above logic may report that the

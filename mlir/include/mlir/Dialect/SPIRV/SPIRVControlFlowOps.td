@@ -17,7 +17,7 @@
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
@@ -55,7 +55,7 @@ def SPV_BranchOp : SPV_Op<"Branch", [
 
   let builders = [
     OpBuilder<
-      "Builder *, OperationState &state, "
+      "OpBuilder &, OperationState &state, "
       "Block *successor, ValueRange arguments = {}", [{
         state.addSuccessors(successor);
         state.addOperands(arguments);
@@ -137,7 +137,7 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
 
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, Value condition, "
+      "OpBuilder &builder, OperationState &state, Value condition, "
       "Block *trueBlock, ValueRange trueArguments, "
       "Block *falseBlock, ValueRange falseArguments, "
       "Optional<std::pair<uint32_t, uint32_t>> weights = {}",
@@ -145,8 +145,8 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
         ArrayAttr weightsAttr;
         if (weights) {
           weightsAttr =
-              builder->getI32ArrayAttr({static_cast<int32_t>(weights->first),
-                                        static_cast<int32_t>(weights->second)});
+              builder.getI32ArrayAttr({static_cast<int32_t>(weights->first),
+                                       static_cast<int32_t>(weights->second)});
         }
         build(builder, state, condition, trueArguments, falseArguments,
               weightsAttr, trueBlock, falseBlock);
@@ -290,7 +290,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
 
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilder<"Builder *builder, OperationState &state">];
+  let builders = [OpBuilder<"OpBuilder &builder, OperationState &state">];
 
   let extraClassDeclaration = [{
     // Returns the entry block.
@@ -465,8 +465,8 @@ def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
     /// newly inserted spv.selection op afterwards.
     static SelectionOp createIfThen(
         Location loc, Value condition,
-        function_ref<void(OpBuilder *builder)> thenBody,
-        OpBuilder *builder);
+        function_ref<void(OpBuilder &builder)> thenBody,
+        OpBuilder &builder);
   }];
 
   let hasOpcode = 0;

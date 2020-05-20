@@ -29,7 +29,7 @@ if prog == 'rm':
   # We use `shell=True` so that any wildcard globs get expanded by the shell.
   exitcode = subprocess.call(rm_cmd_line_str, shell=True)
 else:
-  exitcode = subprocess.call(["xcrun", "simctl", "spawn", device_id] + sys.argv[1:])
+  exitcode = subprocess.call(["xcrun", "simctl", "spawn", "--standalone", device_id] + sys.argv[1:])
 if exitcode > 125:
   exitcode = 126
 sys.exit(exitcode)

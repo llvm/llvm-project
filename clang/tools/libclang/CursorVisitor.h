@@ -241,6 +241,7 @@ public:
   bool VisitUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D);
   bool VisitStaticAssertDecl(StaticAssertDecl *D);
   bool VisitFriendDecl(FriendDecl *D);
+  bool VisitDecompositionDecl(DecompositionDecl *D);
 
   // Name visitor
   bool VisitDeclarationNameInfo(DeclarationNameInfo Name);

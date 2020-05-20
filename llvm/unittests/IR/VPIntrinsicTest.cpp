@@ -107,7 +107,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     if (MaskParamPos.hasValue()) {
       Type *MaskParamType = F.getArg(MaskParamPos.getValue())->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
-      ASSERT_TRUE(MaskParamType->getVectorElementType()->isIntegerTy(1));
+      ASSERT_TRUE(cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
     }
 
     Optional<int> VecLenParamPos =

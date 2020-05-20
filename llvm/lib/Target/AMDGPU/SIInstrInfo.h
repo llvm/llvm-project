@@ -827,11 +827,7 @@ public:
     const MachineOperand &MO = MI.getOperand(OpNo);
     if (MO.isReg()) {
       if (unsigned SubReg = MO.getSubReg()) {
-        assert(RI.getRegSizeInBits(*RI.getSubClassWithSubReg(
-                                   MI.getParent()->getParent()->getRegInfo().
-                                     getRegClass(MO.getReg()), SubReg)) >= 32 &&
-               "Sub-dword subregs are not supported");
-        return RI.getNumChannelsFromSubReg(SubReg) * 4;
+        return RI.getSubRegIdxSize(SubReg) / 8;
       }
     }
     return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;

@@ -122,6 +122,10 @@ project(Flang)
          "Generate build targets for the Flang unit tests."
          ON)
   add_custom_target(check-all DEPENDS check-flang)
+  if (LLVM_BUILD_DOCS)
+    add_custom_target(doxygen ALL)
+  endif()
+
 else()
   option(FLANG_INCLUDE_TESTS
          "Generate build targets for the Flang unit tests."
@@ -332,12 +336,11 @@ if (FLANG_INCLUDE_TESTS)
   add_subdirectory(unittests)
 endif()
 
-# TODO: Add doxygen support.
-#option(FLANG_INCLUDE_DOCS "Generate build targets for the Flang docs."
-#       ${LLVM_INCLUDE_DOCS})
-#if (FLANG_INCLUDE_DOCS)
-#  add_subdirectory(documentation)
-#endif()
+option(FLANG_INCLUDE_DOCS "Generate build targets for the Flang docs."
+       ${LLVM_INCLUDE_DOCS})
+if (FLANG_INCLUDE_DOCS)
+  add_subdirectory(docs)
+endif()
 
 # Custom target to install Flang libraries.
 add_custom_target(flang-libraries)

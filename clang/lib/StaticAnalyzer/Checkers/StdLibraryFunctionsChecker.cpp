@@ -266,21 +266,15 @@ class StdLibraryFunctionsChecker
       return T;
     }
 
-    /// Try our best to figure out if the call expression is the call of
+    /// Try our best to figure out if the summary's signature matches
     /// *the* library function to which this specification applies.
-    bool matchesCall(const FunctionDecl *FD) const;
+    bool matchesSignature(const FunctionDecl *FD) const;
   };
-
-  // The same function (as in, function identifier) may have different
-  // summaries assigned to it, with different argument and return value types.
-  // We call these "variants" of the function. This can be useful for handling
-  // C++ function overloads, and also it can be used when the same function
-  // may have different definitions on different platforms.
-  typedef std::vector<Summary> Summaries;
 
   // The map of all functions supported by the checker. It is initialized
   // lazily, and it doesn't change after initialization.
-  mutable llvm::StringMap<Summaries> FunctionSummaryMap;
+  using FunctionSummaryMapType = llvm::DenseMap<const FunctionDecl *, Summary>;
+  mutable FunctionSummaryMapType FunctionSummaryMap;
 
   mutable std::unique_ptr<BugType> BT_InvalidArg;
 
@@ -288,14 +282,6 @@ class StdLibraryFunctionsChecker
   // in a unified manner.
   static QualType getArgType(const Summary &Summary, ArgNo ArgN) {
     return Summary.getArgType(ArgN);
-  }
-  static QualType getArgType(const CallEvent &Call, ArgNo ArgN) {
-    return ArgN == Ret ? Call.getResultType().getCanonicalType()
-                       : Call.getArgExpr(ArgN)->getType().getCanonicalType();
-  }
-  static QualType getArgType(const CallExpr *CE, ArgNo ArgN) {
-    return ArgN == Ret ? CE->getType().getCanonicalType()
-                       : CE->getArg(ArgN)->getType().getCanonicalType();
   }
   static SVal getArgSVal(const CallEvent &Call, ArgNo ArgN) {
     return ArgN == Ret ? Call.getReturnValue() : Call.getArgSVal(ArgN);
@@ -313,6 +299,8 @@ public:
   };
   DefaultBool ChecksEnabled[CK_NumCheckKinds];
   CheckerNameRef CheckNames[CK_NumCheckKinds];
+
+  bool DisplayLoadedSummaries = false;
 
 private:
   Optional<Summary> findFunctionSummary(const FunctionDecl *FD,
@@ -440,7 +428,7 @@ ProgramStateRef StdLibraryFunctionsChecker::ComparisonConstraint::apply(
   BinaryOperator::Opcode Op = getOpcode();
   ArgNo OtherArg = getOtherArgNo();
   SVal OtherV = getArgSVal(Call, OtherArg);
-  QualType OtherT = getArgType(Call, OtherArg);
+  QualType OtherT = getArgType(Summary, OtherArg);
   // Note: we avoid integral promotion for comparison.
   OtherV = SVB.evalCast(OtherV, T, OtherT);
   if (auto CompV = SVB.evalBinOp(State, Op, V, OtherV, CondT)
@@ -530,7 +518,7 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
   llvm_unreachable("Unknown invalidation kind!");
 }
 
-bool StdLibraryFunctionsChecker::Summary::matchesCall(
+bool StdLibraryFunctionsChecker::Summary::matchesSignature(
     const FunctionDecl *FD) const {
   // Check number of arguments:
   if (FD->param_size() != ArgTys.size())
@@ -565,28 +553,10 @@ StdLibraryFunctionsChecker::findFunctionSummary(const FunctionDecl *FD,
 
   initFunctionSummaries(C);
 
-  IdentifierInfo *II = FD->getIdentifier();
-  if (!II)
-    return None;
-  StringRef Name = II->getName();
-  if (Name.empty() || !C.isCLibraryFunction(FD, Name))
-    return None;
-
-  auto FSMI = FunctionSummaryMap.find(Name);
+  auto FSMI = FunctionSummaryMap.find(FD->getCanonicalDecl());
   if (FSMI == FunctionSummaryMap.end())
     return None;
-
-  // Verify that function signature matches the spec in advance.
-  // Otherwise we might be modeling the wrong function.
-  // Strict checking is important because we will be conducting
-  // very integral-type-sensitive operations on arguments and
-  // return values.
-  const Summaries &SpecVariants = FSMI->second;
-  for (const Summary &Spec : SpecVariants)
-    if (Spec.matchesCall(FD))
-      return Spec;
-
-  return None;
+  return FSMI->second;
 }
 
 Optional<StdLibraryFunctionsChecker::Summary>
@@ -596,6 +566,21 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
   if (!FD)
     return None;
   return findFunctionSummary(FD, C);
+}
+
+llvm::Optional<const FunctionDecl *>
+lookupGlobalCFunction(StringRef Name, const ASTContext &ACtx) {
+  IdentifierInfo &II = ACtx.Idents.get(Name);
+  auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
+  if (LookupRes.size() == 0)
+    return None;
+
+  assert(LookupRes.size() == 1 && "In C, identifiers should be unique");
+  Decl *D = LookupRes.front()->getCanonicalDecl();
+  auto *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
+    return None;
+  return FD->getCanonicalDecl();
 }
 
 void StdLibraryFunctionsChecker::initFunctionSummaries(
@@ -652,6 +637,47 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     return -1;
   }();
 
+  // Auxiliary class to aid adding summaries to the summary map.
+  struct AddToFunctionSummaryMap {
+    const ASTContext &ACtx;
+    FunctionSummaryMapType &Map;
+    bool DisplayLoadedSummaries;
+    AddToFunctionSummaryMap(const ASTContext &ACtx, FunctionSummaryMapType &FSM,
+                            bool DisplayLoadedSummaries)
+        : ACtx(ACtx), Map(FSM), DisplayLoadedSummaries(DisplayLoadedSummaries) {
+    }
+
+    // Add a summary to a FunctionDecl found by lookup. The lookup is performed
+    // by the given Name, and in the global scope. The summary will be attached
+    // to the found FunctionDecl only if the signatures match.
+    void operator()(StringRef Name, const Summary &S) {
+      IdentifierInfo &II = ACtx.Idents.get(Name);
+      auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
+      if (LookupRes.size() == 0)
+        return;
+      for (Decl *D : LookupRes) {
+        if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+          if (S.matchesSignature(FD)) {
+            auto Res = Map.insert({FD->getCanonicalDecl(), S});
+            assert(Res.second && "Function already has a summary set!");
+            (void)Res;
+            if (DisplayLoadedSummaries) {
+              llvm::errs() << "Loaded summary for: ";
+              FD->print(llvm::errs());
+              llvm::errs() << "\n";
+            }
+            return;
+          }
+        }
+      }
+    }
+    // Add several summaries for the given name.
+    void operator()(StringRef Name, const std::vector<Summary> &Summaries) {
+      for (const Summary &S : Summaries)
+        operator()(Name, S);
+    }
+  } addToFunctionSummaryMap(ACtx, FunctionSummaryMap, DisplayLoadedSummaries);
+
   // We are finally ready to define specifications for all supported functions.
   //
   // The signature needs to have the correct number of arguments.
@@ -677,7 +703,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // return value, however the correct range is [-1, 10].
   //
   // Please update the list of functions in the header after editing!
-  //
 
   // Below are helpers functions to create the summaries.
   auto ArgumentCondition = [](ArgNo ArgN, RangeKind Kind,
@@ -739,243 +764,194 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         .Case({ReturnValueCondition(WithinRange, {{-1, -1}, {1, Max}})});
   };
 
-  FunctionSummaryMap = {
-      // The isascii() family of functions.
-      // The behavior is undefined if the value of the argument is not
-      // representable as unsigned char or is not equal to EOF. See e.g. C99
-      // 7.4.1.2 The isalpha function (p: 181-182).
-      {
-          "isalnum",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  // Boils down to isupper() or islower() or isdigit().
-                  .Case(
-                      {ArgumentCondition(0U, WithinRange,
-                                         {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}}),
-                       ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  // The locale-specific range.
-                  // No post-condition. We are completely unaware of
-                  // locale-specific return values.
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{128, UCharRangeMax}})})
-                  .Case({ArgumentCondition(0U, OutOfRange,
-                                           {{'0', '9'},
-                                            {'A', 'Z'},
-                                            {'a', 'z'},
-                                            {128, UCharRangeMax}}),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})
-                  .ArgConstraint(ArgumentCondition(
-                      0U, WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}}))},
-      },
-      {
-          "isalpha",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{'A', 'Z'}, {'a', 'z'}}),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{128, UCharRangeMax}})})
-                  .Case({ArgumentCondition(
-                             0U, OutOfRange,
-                             {{'A', 'Z'}, {'a', 'z'}, {128, UCharRangeMax}}),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isascii",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange, Range(0, 127)),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case({ArgumentCondition(0U, OutOfRange, Range(0, 127)),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isblank",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{'\t', '\t'}, {' ', ' '}}),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case({ArgumentCondition(0U, OutOfRange,
-                                           {{'\t', '\t'}, {' ', ' '}}),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "iscntrl",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{0, 32}, {127, 127}}),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case(
-                      {ArgumentCondition(0U, OutOfRange, {{0, 32}, {127, 127}}),
-                       ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isdigit",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange, Range('0', '9')),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case({ArgumentCondition(0U, OutOfRange, Range('0', '9')),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isgraph",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange, Range(33, 126)),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case({ArgumentCondition(0U, OutOfRange, Range(33, 126)),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "islower",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  // Is certainly lowercase.
-                  .Case({ArgumentCondition(0U, WithinRange, Range('a', 'z')),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  // Is ascii but not lowercase.
-                  .Case({ArgumentCondition(0U, WithinRange, Range(0, 127)),
-                         ArgumentCondition(0U, OutOfRange, Range('a', 'z')),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})
-                  // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{128, UCharRangeMax}})})
-                  // Is not an unsigned char.
-                  .Case({ArgumentCondition(0U, OutOfRange,
-                                           Range(0, UCharRangeMax)),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isprint",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(0U, WithinRange, Range(32, 126)),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case({ArgumentCondition(0U, OutOfRange, Range(32, 126)),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "ispunct",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case({ArgumentCondition(
-                             0U, WithinRange,
-                             {{'!', '/'}, {':', '@'}, {'[', '`'}, {'{', '~'}}),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case({ArgumentCondition(
-                             0U, OutOfRange,
-                             {{'!', '/'}, {':', '@'}, {'[', '`'}, {'{', '~'}}),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isspace",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  // Space, '\f', '\n', '\r', '\t', '\v'.
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{9, 13}, {' ', ' '}}),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{128, UCharRangeMax}})})
-                  .Case({ArgumentCondition(
-                             0U, OutOfRange,
-                             {{9, 13}, {' ', ' '}, {128, UCharRangeMax}}),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isupper",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  // Is certainly uppercase.
-                  .Case({ArgumentCondition(0U, WithinRange, Range('A', 'Z')),
-                         ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange,
-                                           {{128, UCharRangeMax}})})
-                  // Other.
-                  .Case({ArgumentCondition(0U, OutOfRange,
-                                           {{'A', 'Z'}, {128, UCharRangeMax}}),
-                         ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
-      {
-          "isxdigit",
-          Summaries{
-              Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                  .Case(
-                      {ArgumentCondition(0U, WithinRange,
-                                         {{'0', '9'}, {'A', 'F'}, {'a', 'f'}}),
-                       ReturnValueCondition(OutOfRange, SingleValue(0))})
-                  .Case(
-                      {ArgumentCondition(0U, OutOfRange,
-                                         {{'0', '9'}, {'A', 'F'}, {'a', 'f'}}),
-                       ReturnValueCondition(WithinRange, SingleValue(0))})},
-      },
+  // The isascii() family of functions.
+  // The behavior is undefined if the value of the argument is not
+  // representable as unsigned char or is not equal to EOF. See e.g. C99
+  // 7.4.1.2 The isalpha function (p: 181-182).
+  addToFunctionSummaryMap(
+      "isalnum",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          // Boils down to isupper() or islower() or isdigit().
+          .Case({ArgumentCondition(0U, WithinRange,
+                                   {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          // The locale-specific range.
+          // No post-condition. We are completely unaware of
+          // locale-specific return values.
+          .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
+          .Case(
+              {ArgumentCondition(
+                   0U, OutOfRange,
+                   {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}, {128, UCharRangeMax}}),
+               ReturnValueCondition(WithinRange, SingleValue(0))})
+          .ArgConstraint(ArgumentCondition(
+              0U, WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})));
+  addToFunctionSummaryMap(
+      "isalpha",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, {{'A', 'Z'}, {'a', 'z'}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          // The locale-specific range.
+          .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
+          .Case({ArgumentCondition(
+                     0U, OutOfRange,
+                     {{'A', 'Z'}, {'a', 'z'}, {128, UCharRangeMax}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isascii",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, Range(0, 127)),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange, Range(0, 127)),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isblank",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, {{'\t', '\t'}, {' ', ' '}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange, {{'\t', '\t'}, {' ', ' '}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "iscntrl",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, {{0, 32}, {127, 127}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange, {{0, 32}, {127, 127}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isdigit",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, Range('0', '9')),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange, Range('0', '9')),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isgraph",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, Range(33, 126)),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange, Range(33, 126)),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "islower",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          // Is certainly lowercase.
+          .Case({ArgumentCondition(0U, WithinRange, Range('a', 'z')),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          // Is ascii but not lowercase.
+          .Case({ArgumentCondition(0U, WithinRange, Range(0, 127)),
+                 ArgumentCondition(0U, OutOfRange, Range('a', 'z')),
+                 ReturnValueCondition(WithinRange, SingleValue(0))})
+          // The locale-specific range.
+          .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
+          // Is not an unsigned char.
+          .Case({ArgumentCondition(0U, OutOfRange, Range(0, UCharRangeMax)),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isprint",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange, Range(32, 126)),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange, Range(32, 126)),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "ispunct",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(
+                     0U, WithinRange,
+                     {{'!', '/'}, {':', '@'}, {'[', '`'}, {'{', '~'}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(
+                     0U, OutOfRange,
+                     {{'!', '/'}, {':', '@'}, {'[', '`'}, {'{', '~'}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isspace",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          // Space, '\f', '\n', '\r', '\t', '\v'.
+          .Case({ArgumentCondition(0U, WithinRange, {{9, 13}, {' ', ' '}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          // The locale-specific range.
+          .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
+          .Case({ArgumentCondition(0U, OutOfRange,
+                                   {{9, 13}, {' ', ' '}, {128, UCharRangeMax}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isupper",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          // Is certainly uppercase.
+          .Case({ArgumentCondition(0U, WithinRange, Range('A', 'Z')),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          // The locale-specific range.
+          .Case({ArgumentCondition(0U, WithinRange, {{128, UCharRangeMax}})})
+          // Other.
+          .Case({ArgumentCondition(0U, OutOfRange,
+                                   {{'A', 'Z'}, {128, UCharRangeMax}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
+  addToFunctionSummaryMap(
+      "isxdigit",
+      Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+          .Case({ArgumentCondition(0U, WithinRange,
+                                   {{'0', '9'}, {'A', 'F'}, {'a', 'f'}}),
+                 ReturnValueCondition(OutOfRange, SingleValue(0))})
+          .Case({ArgumentCondition(0U, OutOfRange,
+                                   {{'0', '9'}, {'A', 'F'}, {'a', 'f'}}),
+                 ReturnValueCondition(WithinRange, SingleValue(0))}));
 
-      // The getc() family of functions that returns either a char or an EOF.
-      {"getc", Summaries{Getc()}},
-      {"fgetc", Summaries{Getc()}},
-      {"getchar",
-       Summaries{Summary(ArgTypes{}, RetType{IntTy}, NoEvalCall)
+  // The getc() family of functions that returns either a char or an EOF.
+  addToFunctionSummaryMap("getc", Getc());
+  addToFunctionSummaryMap("fgetc", Getc());
+  addToFunctionSummaryMap(
+      "getchar", Summary(ArgTypes{}, RetType{IntTy}, NoEvalCall)
                      .Case({ReturnValueCondition(
-                         WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})})}},
+                         WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})}));
 
-      // read()-like functions that never return more than buffer size.
-      // We are not sure how ssize_t is defined on every platform, so we
-      // provide three variants that should cover common cases.
-      {"read", Summaries{Read(IntTy, IntMax), Read(LongTy, LongMax),
-                         Read(LongLongTy, LongLongMax)}},
-      {"write", Summaries{Read(IntTy, IntMax), Read(LongTy, LongMax),
-                          Read(LongLongTy, LongLongMax)}},
-      {"fread", Summaries{Fread()}},
-      {"fwrite", Summaries{Fwrite()}},
-      // getline()-like functions either fail or read at least the delimiter.
-      {"getline", Summaries{Getline(IntTy, IntMax), Getline(LongTy, LongMax),
-                            Getline(LongLongTy, LongLongMax)}},
-      {"getdelim", Summaries{Getline(IntTy, IntMax), Getline(LongTy, LongMax),
-                             Getline(LongLongTy, LongLongMax)}},
-  };
+  // read()-like functions that never return more than buffer size.
+  // We are not sure how ssize_t is defined on every platform, so we
+  // provide three variants that should cover common cases.
+  addToFunctionSummaryMap("read", {Read(IntTy, IntMax), Read(LongTy, LongMax),
+                                   Read(LongLongTy, LongLongMax)});
+  addToFunctionSummaryMap("write", {Read(IntTy, IntMax), Read(LongTy, LongMax),
+                                    Read(LongLongTy, LongLongMax)});
+  addToFunctionSummaryMap("fread", Fread());
+  addToFunctionSummaryMap("fwrite", Fwrite());
+  // getline()-like functions either fail or read at least the delimiter.
+  addToFunctionSummaryMap("getline",
+                          {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
+                           Getline(LongLongTy, LongLongMax)});
+  addToFunctionSummaryMap("getdelim",
+                          {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
+                           Getline(LongLongTy, LongLongMax)});
 
   // Functions for testing.
   if (ChecksEnabled[CK_StdCLibraryFunctionsTesterChecker]) {
-    llvm::StringMap<Summaries> TestFunctionSummaryMap = {
-        {"__two_constrained_args",
-         Summaries{
-             Summary(ArgTypes{IntTy, IntTy}, RetType{IntTy}, EvalCallAsPure)
-                 .ArgConstraint(
-                     ArgumentCondition(0U, WithinRange, SingleValue(1)))
-                 .ArgConstraint(
-                     ArgumentCondition(1U, WithinRange, SingleValue(1)))}},
-        {"__arg_constrained_twice",
-         Summaries{Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
-                       .ArgConstraint(
-                           ArgumentCondition(0U, OutOfRange, SingleValue(1)))
-                       .ArgConstraint(
-                           ArgumentCondition(0U, OutOfRange, SingleValue(2)))}},
-        {"__defaultparam", Summaries{Summary(ArgTypes{Irrelevant, IntTy},
-                                             RetType{IntTy}, EvalCallAsPure)
-                                         .ArgConstraint(NotNull(ArgNo(0)))}},
-        {"__variadic", Summaries{Summary(ArgTypes{VoidPtrTy, ConstCharPtrTy},
-                                         RetType{IntTy}, EvalCallAsPure)
-                                     .ArgConstraint(NotNull(ArgNo(0)))
-                                     .ArgConstraint(NotNull(ArgNo(1)))}}};
-    for (auto &E : TestFunctionSummaryMap) {
-      auto InsertRes =
-          FunctionSummaryMap.insert({std::string(E.getKey()), E.getValue()});
-      assert(InsertRes.second &&
-             "Test functions must not clash with modeled functions");
-      (void)InsertRes;
-    }
+    addToFunctionSummaryMap(
+        "__two_constrained_args",
+        Summary(ArgTypes{IntTy, IntTy}, RetType{IntTy}, EvalCallAsPure)
+            .ArgConstraint(ArgumentCondition(0U, WithinRange, SingleValue(1)))
+            .ArgConstraint(ArgumentCondition(1U, WithinRange, SingleValue(1))));
+    addToFunctionSummaryMap(
+        "__arg_constrained_twice",
+        Summary(ArgTypes{IntTy}, RetType{IntTy}, EvalCallAsPure)
+            .ArgConstraint(ArgumentCondition(0U, OutOfRange, SingleValue(1)))
+            .ArgConstraint(ArgumentCondition(0U, OutOfRange, SingleValue(2))));
+    addToFunctionSummaryMap(
+        "__defaultparam",
+        Summary(ArgTypes{Irrelevant, IntTy}, RetType{IntTy}, EvalCallAsPure)
+            .ArgConstraint(NotNull(ArgNo(0))));
+    addToFunctionSummaryMap("__variadic",
+                            Summary(ArgTypes{VoidPtrTy, ConstCharPtrTy},
+                                    RetType{IntTy}, EvalCallAsPure)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1))));
   }
 }
 
 void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
-  mgr.registerChecker<StdLibraryFunctionsChecker>();
+  auto *Checker = mgr.registerChecker<StdLibraryFunctionsChecker>();
+  Checker->DisplayLoadedSummaries =
+      mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Checker, "DisplayLoadedSummaries");
 }
 
 bool ento::shouldRegisterStdCLibraryFunctionsChecker(const CheckerManager &mgr) {

@@ -17,13 +17,15 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 
 namespace llvm {
 
 class MachineInstrBuilder;
 class MCInstrDesc;
+class SDDbgLabel;
 class SDDbgValue;
+class TargetLowering;
 
 class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   MachineFunction *MF;

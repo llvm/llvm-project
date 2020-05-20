@@ -3235,7 +3235,8 @@ bool MasmParser::parseDirectiveLoc() {
     Lex();
   }
 
-  unsigned Flags = DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0;
+  auto PrevFlags = getContext().getCurrentDwarfLoc().getFlags();
+  unsigned Flags = PrevFlags & DWARF2_FLAG_IS_STMT;
   unsigned Isa = 0;
   int64_t Discriminator = 0;
 
@@ -3508,7 +3509,7 @@ bool MasmParser::parseDirectiveCVLoc() {
   if (parseMany(parseOp, false /*hasComma*/))
     return true;
 
-  getStreamer().EmitCVLocDirective(FunctionId, FileNumber, LineNumber,
+  getStreamer().emitCVLocDirective(FunctionId, FileNumber, LineNumber,
                                    ColumnPos, PrologueEnd, IsStmt, StringRef(),
                                    DirectiveLoc);
   return false;
@@ -3534,7 +3535,7 @@ bool MasmParser::parseDirectiveCVLinetable() {
   MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
   MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
 
-  getStreamer().EmitCVLinetableDirective(FunctionId, FnStartSym, FnEndSym);
+  getStreamer().emitCVLinetableDirective(FunctionId, FnStartSym, FnEndSym);
   return false;
 }
 
@@ -3568,7 +3569,7 @@ bool MasmParser::parseDirectiveCVInlineLinetable() {
 
   MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
   MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
-  getStreamer().EmitCVInlineLinetableDirective(PrimaryFunctionId, SourceFileId,
+  getStreamer().emitCVInlineLinetableDirective(PrimaryFunctionId, SourceFileId,
                                                SourceLineNum, FnStartSym,
                                                FnEndSym);
   return false;
@@ -3625,7 +3626,7 @@ bool MasmParser::parseDirectiveCVDefRange() {
     codeview::DefRangeRegisterHeader DRHdr;
     DRHdr.Register = DRRegister;
     DRHdr.MayHaveNoName = 0;
-    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
     break;
   }
   case CVDR_DEFRANGE_FRAMEPOINTER_REL: {
@@ -3637,7 +3638,7 @@ bool MasmParser::parseDirectiveCVDefRange() {
 
     codeview::DefRangeFramePointerRelHeader DRHdr;
     DRHdr.Offset = DROffset;
-    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
     break;
   }
   case CVDR_DEFRANGE_SUBFIELD_REGISTER: {
@@ -3656,7 +3657,7 @@ bool MasmParser::parseDirectiveCVDefRange() {
     DRHdr.Register = DRRegister;
     DRHdr.MayHaveNoName = 0;
     DRHdr.OffsetInParent = DROffsetInParent;
-    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
     break;
   }
   case CVDR_DEFRANGE_REGISTER_REL: {
@@ -3681,7 +3682,7 @@ bool MasmParser::parseDirectiveCVDefRange() {
     DRHdr.Register = DRRegister;
     DRHdr.Flags = DRFlags;
     DRHdr.BasePointerOffset = DRBasePointerOffset;
-    getStreamer().EmitCVDefRangeDirective(Ranges, DRHdr);
+    getStreamer().emitCVDefRangeDirective(Ranges, DRHdr);
     break;
   }
   default:
@@ -3707,14 +3708,14 @@ bool MasmParser::parseDirectiveCVString() {
 /// parseDirectiveCVStringTable
 /// ::= .cv_stringtable
 bool MasmParser::parseDirectiveCVStringTable() {
-  getStreamer().EmitCVStringTableDirective();
+  getStreamer().emitCVStringTableDirective();
   return false;
 }
 
 /// parseDirectiveCVFileChecksums
 /// ::= .cv_filechecksums
 bool MasmParser::parseDirectiveCVFileChecksums() {
-  getStreamer().EmitCVFileChecksumsDirective();
+  getStreamer().emitCVFileChecksumsDirective();
   return false;
 }
 
@@ -3726,7 +3727,7 @@ bool MasmParser::parseDirectiveCVFileChecksumOffset() {
     return true;
   if (parseToken(AsmToken::EndOfStatement, "Expected End of Statement"))
     return true;
-  getStreamer().EmitCVFileChecksumOffsetDirective(FileNo);
+  getStreamer().emitCVFileChecksumOffsetDirective(FileNo);
   return false;
 }
 

@@ -130,6 +130,8 @@ private:
       return CCCR_Warning;
     }
   }
+
+  bool hasExtIntType() const override { return true; }
 };
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo
     : public WebAssemblyTargetInfo {

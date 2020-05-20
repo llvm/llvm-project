@@ -27,8 +27,8 @@ enum NodeType : unsigned {
   Hi,
   Lo, // Hi/Lo operations, typically on a global address.
 
-  GETFUNPLT,       // load function address through %plt insturction
-  GETTLSADDR,  // load address for TLS access
+  GETFUNPLT,  // load function address through %plt insturction
+  GETTLSADDR, // load address for TLS access
 
   CALL,            // A call instruction.
   RET_FLAG,        // Return with a flag operand.

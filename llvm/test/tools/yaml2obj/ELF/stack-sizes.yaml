@@ -50,15 +50,15 @@ FileHeader:
   Machine: EM_X86_64
 Sections:
 ## Valid.
-  - Name:    '.stack_sizes [1]'
+  - Name:    '.stack_sizes (1)'
     Type:    SHT_PROGBITS
     Content: "100000000000000020"
 ## Truncated.
-  - Name:    '.stack_sizes [2]'
+  - Name:    '.stack_sizes (2)'
     Type:    SHT_PROGBITS
     Content: "1000000000000000"
 ## Empty.
-  - Name:    '.stack_sizes [3]'
+  - Name:    '.stack_sizes (3)'
     Type:    SHT_PROGBITS
     Content: ""
 
@@ -287,12 +287,12 @@ FileHeader:
   Type:    ET_EXEC
   Machine: EM_X86_64
 Sections:
-  - Name:    '.stack_sizes [1]'
+  - Name:    '.stack_sizes (1)'
     Type:    SHT_PROGBITS
     Entries:
       - Address: 0x10
         Size:    0x20
-  - Name:    '.stack_sizes [2]'
+  - Name:    '.stack_sizes (2)'
     Type:    SHT_PROGBITS
     Entries:
       - Address: 0x30

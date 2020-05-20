@@ -97,9 +97,6 @@ define double @sumIfVector(double* nocapture readonly %arr) {
 ; AVX:       vector.body:
 ; AVX-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
-; AVX-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
-; AVX-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; AVX-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; AVX-NEXT:    [[TMP1:%.*]] = getelementptr double, double* [[ARR:%.*]], i32 [[TMP0]]
 ; AVX-NEXT:    [[TMP2:%.*]] = getelementptr double, double* [[TMP1]], i32 0

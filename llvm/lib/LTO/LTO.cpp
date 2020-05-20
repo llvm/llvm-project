@@ -603,6 +603,7 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   if (LTOInfo->IsThinLTO)
     return addThinLTO(BM, ModSyms, ResI, ResE);
 
+  RegularLTO.EmptyCombinedModule = false;
   Expected<RegularLTOState::AddedModule> ModOrErr =
       addRegularLTO(BM, ModSyms, ResI, ResE);
   if (!ModOrErr)
@@ -1026,10 +1027,13 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
       return Error::success();
   }
-  if (Error Err =
-          backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-                  std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex))
-    return Err;
+
+  if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
+    if (Error Err = backend(
+            Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
+            std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex))
+      return Err;
+  }
 
   return finalizeOptimizationRemarks(std::move(*DiagFileOrErr));
 }

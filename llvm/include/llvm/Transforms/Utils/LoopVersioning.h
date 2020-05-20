@@ -15,7 +15,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 #define LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -26,6 +25,12 @@ class Loop;
 class LoopAccessInfo;
 class LoopInfo;
 class ScalarEvolution;
+struct RuntimeCheckingPtrGroup;
+typedef std::pair<const RuntimeCheckingPtrGroup *,
+                  const RuntimeCheckingPtrGroup *>
+    RuntimePointerCheck;
+
+template <typename T> class ArrayRef;
 
 /// This class emits a version of the loop where run-time checks ensure
 /// that may-alias pointers can't overlap.
@@ -71,8 +76,7 @@ public:
   Loop *getNonVersionedLoop() { return NonVersionedLoop; }
 
   /// Sets the runtime alias checks for versioning the loop.
-  void setAliasChecks(
-      SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks);
+  void setAliasChecks(ArrayRef<RuntimePointerCheck> Checks);
 
   /// Sets the runtime SCEV checks for versioning the loop.
   void setSCEVChecks(SCEVUnionPredicate Check);
@@ -122,22 +126,20 @@ private:
   ValueToValueMapTy VMap;
 
   /// The set of alias checks that we are versioning for.
-  SmallVector<RuntimePointerChecking::PointerCheck, 4> AliasChecks;
+  SmallVector<RuntimePointerCheck, 4> AliasChecks;
 
   /// The set of SCEV checks that we are versioning for.
   SCEVUnionPredicate Preds;
 
   /// Maps a pointer to the pointer checking group that the pointer
   /// belongs to.
-  DenseMap<const Value *, const RuntimePointerChecking::CheckingPtrGroup *>
-      PtrToGroup;
+  DenseMap<const Value *, const RuntimeCheckingPtrGroup *> PtrToGroup;
 
   /// The alias scope corresponding to a pointer checking group.
-  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *, MDNode *>
-      GroupToScope;
+  DenseMap<const RuntimeCheckingPtrGroup *, MDNode *> GroupToScope;
 
   /// The list of alias scopes that a pointer checking group can't alias.
-  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *, MDNode *>
+  DenseMap<const RuntimeCheckingPtrGroup *, MDNode *>
       GroupToNonAliasingScopeList;
 
   /// Analyses used.

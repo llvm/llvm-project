@@ -20,6 +20,8 @@
 
 namespace llvm {
 class IntrinsicInst;
+class AssumptionCache;
+class DominatorTree;
 
 /// Index of elements in the operand bundle.
 /// If the element exist it is guaranteed to be what is specified in this enum
@@ -27,14 +29,6 @@ class IntrinsicInst;
 enum AssumeBundleArg {
   ABA_WasOn = 0,
   ABA_Argument = 1,
-};
-
-/// It is possible to have multiple Value for the argument of an attribute in
-/// the same llvm.assume on the same llvm::Value. This is rare but need to be
-/// dealt with.
-enum class AssumeQuery {
-  Highest, ///< Take the highest value available.
-  Lowest,  ///< Take the lowest value available.
 };
 
 /// Query the operand bundle of an llvm.assume to find a single attribute of
@@ -46,14 +40,12 @@ enum class AssumeQuery {
 /// Return true iff the queried attribute was found.
 /// If ArgVal is set. the argument will be stored to ArgVal.
 bool hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn, StringRef AttrName,
-                          uint64_t *ArgVal = nullptr,
-                          AssumeQuery AQR = AssumeQuery::Highest);
+                          uint64_t *ArgVal = nullptr);
 inline bool hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
                                  Attribute::AttrKind Kind,
-                                 uint64_t *ArgVal = nullptr,
-                                 AssumeQuery AQR = AssumeQuery::Highest) {
-  return hasAttributeInAssume(
-      AssumeCI, IsOn, Attribute::getNameFromAttrKind(Kind), ArgVal, AQR);
+                                 uint64_t *ArgVal = nullptr) {
+  return hasAttributeInAssume(AssumeCI, IsOn,
+                              Attribute::getNameFromAttrKind(Kind), ArgVal);
 }
 
 template<> struct DenseMapInfo<Attribute::AttrKind> {
@@ -98,13 +90,24 @@ using RetainedKnowledgeMap =
 void fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result);
 
 /// Represent one information held inside an operand bundle of an llvm.assume.
-/// AttrKind is the property that hold.
+/// AttrKind is the property that holds.
 /// WasOn if not null is that Value for which AttrKind holds.
-/// ArgValue is optionally an argument.
+/// ArgValue is optionally an argument of the attribute.
+/// For example if we know that %P has an alignment of at least four:
+///  - AttrKind will be Attribute::Alignment.
+///  - WasOn will be %P.
+///  - ArgValue will be 4.
 struct RetainedKnowledge {
   Attribute::AttrKind AttrKind = Attribute::None;
-  Value *WasOn = nullptr;
   unsigned ArgValue = 0;
+  Value *WasOn = nullptr;
+  bool operator==(RetainedKnowledge Other) const {
+    return AttrKind == Other.AttrKind && WasOn == Other.WasOn &&
+           ArgValue == Other.ArgValue;
+  }
+  bool operator!=(RetainedKnowledge Other) const { return !(*this == Other); }
+  operator bool() const { return AttrKind != Attribute::None; }
+  static RetainedKnowledge none() { return RetainedKnowledge{}; }
 };
 
 /// Retreive the information help by Assume on the operand at index Idx.
@@ -119,6 +122,9 @@ inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
                                          U->getOperandNo());
 }
 
+/// Tag in operand bundle indicating that this bundle should be ignored.
+constexpr StringRef IgnoreBundleTag = "ignore";
+
 /// Return true iff the operand bundles of the provided llvm.assume doesn't
 /// contain any valuable information. This is true when:
 ///  - The operand bundle is empty
@@ -128,6 +134,33 @@ inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
 /// the argument to the call of llvm.assume may still be useful even if the
 /// function returned true.
 bool isAssumeWithEmptyBundle(CallInst &Assume);
+
+/// Return a valid Knowledge associated to the Use U if its Attribute kind is
+/// in AttrKinds.
+RetainedKnowledge getKnowledgeFromUse(const Use *U,
+                                      ArrayRef<Attribute::AttrKind> AttrKinds);
+
+/// Return a valid Knowledge associated to the Value V if its Attribute kind is
+/// in AttrKinds and it matches the Filter.
+RetainedKnowledge getKnowledgeForValue(
+    const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
+    AssumptionCache *AC = nullptr,
+    function_ref<bool(RetainedKnowledge, Instruction *,
+                            const CallBase::BundleOpInfo *)>
+        Filter = [](auto...) { return true; });
+
+/// Return a valid Knowledge associated to the Value V if its Attribute kind is
+/// in AttrKinds and the knowledge is suitable to be used in the context of
+/// CtxI.
+RetainedKnowledge getKnowledgeValidInContext(
+    const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
+    const Instruction *CtxI, const DominatorTree *DT = nullptr,
+    AssumptionCache *AC = nullptr);
+
+/// This extracts the Knowledge from an element of an operand bundle.
+/// This is mostly for use in the assume builder.
+RetainedKnowledge getKnowledgeFromBundle(CallInst &Assume,
+                                         const CallBase::BundleOpInfo &BOI);
 
 } // namespace llvm
 

@@ -21,10 +21,38 @@
 
 namespace scudo {
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(SCUDO_FUZZ)
 
 inline constexpr bool archSupportsMemoryTagging() { return true; }
 inline constexpr uptr archMemoryTagGranuleSize() { return 16; }
+
+inline uptr untagPointer(uptr Ptr) { return Ptr & ((1ULL << 56) - 1); }
+
+inline uint8_t extractTag(uptr Ptr) {
+  return (Ptr >> 56) & 0xf;
+}
+
+#else
+
+inline constexpr bool archSupportsMemoryTagging() { return false; }
+
+inline uptr archMemoryTagGranuleSize() {
+  UNREACHABLE("memory tagging not supported");
+}
+
+inline uptr untagPointer(uptr Ptr) {
+  (void)Ptr;
+  UNREACHABLE("memory tagging not supported");
+}
+
+inline uint8_t extractTag(uptr Ptr) {
+  (void)Ptr;
+  UNREACHABLE("memory tagging not supported");
+}
+
+#endif
+
+#if defined(__aarch64__)
 
 inline bool systemSupportsMemoryTagging() {
 #if defined(ANDROID_EXPERIMENTAL_MTE)
@@ -51,10 +79,22 @@ inline void enableMemoryTagChecksTestOnly() {
   __asm__ __volatile__(".arch_extension mte; msr tco, #0");
 }
 
-inline uptr untagPointer(uptr Ptr) { return Ptr & ((1ULL << 56) - 1); }
+class ScopedDisableMemoryTagChecks {
+  size_t PrevTCO;
 
-inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
-                         uptr *TaggedEnd) {
+ public:
+  ScopedDisableMemoryTagChecks() {
+    __asm__ __volatile__(".arch_extension mte; mrs %0, tco; msr tco, #1"
+                         : "=r"(PrevTCO));
+  }
+
+  ~ScopedDisableMemoryTagChecks() {
+    __asm__ __volatile__(".arch_extension mte; msr tco, %0" : : "r"(PrevTCO));
+  }
+};
+
+inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
+                         uptr *TaggedBegin, uptr *TaggedEnd) {
   void *End;
   __asm__ __volatile__(
       R"(
@@ -62,7 +102,7 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
 
     // Set a random tag for Ptr in TaggedPtr. This needs to happen even if
     // Size = 0 so that TaggedPtr ends up pointing at a valid address.
-    irg %[TaggedPtr], %[Ptr]
+    irg %[TaggedPtr], %[Ptr], %[ExcludeMask]
     mov %[Cur], %[TaggedPtr]
 
     // Skip the loop if Size = 0. We don't want to do any tagging in this case.
@@ -80,9 +120,9 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
 
   2:
   )"
-      : [ TaggedPtr ] "=&r"(*TaggedBegin), [ Cur ] "=&r"(*TaggedEnd),
-        [ End ] "=&r"(End)
-      : [ Ptr ] "r"(Ptr), [ Size ] "r"(Size)
+      :
+      [TaggedPtr] "=&r"(*TaggedBegin), [Cur] "=&r"(*TaggedEnd), [End] "=&r"(End)
+      : [Ptr] "r"(Ptr), [Size] "r"(Size), [ExcludeMask] "r"(ExcludeMask)
       : "memory");
 }
 
@@ -98,7 +138,7 @@ inline void *prepareTaggedChunk(void *Ptr, uptr Size, uptr BlockEnd) {
                        : "memory");
 
   uptr TaggedBegin, TaggedEnd;
-  setRandomTag(Ptr, Size, &TaggedBegin, &TaggedEnd);
+  setRandomTag(Ptr, Size, 0, &TaggedBegin, &TaggedEnd);
 
   // Finally, set the tag of the granule past the end of the allocation to 0,
   // to catch linear overflows even if a previous larger allocation used the
@@ -154,10 +194,6 @@ inline void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr BlockEnd) {
                        : "memory");
 }
 
-inline uptr tagPointer(uptr UntaggedPtr, uptr Tag) {
-  return UntaggedPtr | (Tag & (0xfUL << 56));
-}
-
 inline uptr loadTag(uptr Ptr) {
   uptr TaggedPtr = Ptr;
   __asm__ __volatile__(".arch_extension mte; ldg %0, [%0]"
@@ -169,17 +205,11 @@ inline uptr loadTag(uptr Ptr) {
 
 #else
 
-inline constexpr bool archSupportsMemoryTagging() { return false; }
-
 inline bool systemSupportsMemoryTagging() {
   UNREACHABLE("memory tagging not supported");
 }
 
 inline bool systemDetectsMemoryTagFaultsTestOnly() {
-  UNREACHABLE("memory tagging not supported");
-}
-
-inline uptr archMemoryTagGranuleSize() {
   UNREACHABLE("memory tagging not supported");
 }
 
@@ -191,15 +221,15 @@ inline void enableMemoryTagChecksTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline uptr untagPointer(uptr Ptr) {
-  (void)Ptr;
-  UNREACHABLE("memory tagging not supported");
-}
+struct ScopedDisableMemoryTagChecks {
+  ScopedDisableMemoryTagChecks() {}
+};
 
-inline void setRandomTag(void *Ptr, uptr Size, uptr *TaggedBegin,
-                         uptr *TaggedEnd) {
+inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
+                         uptr *TaggedBegin, uptr *TaggedEnd) {
   (void)Ptr;
   (void)Size;
+  (void)ExcludeMask;
   (void)TaggedBegin;
   (void)TaggedEnd;
   UNREACHABLE("memory tagging not supported");

@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// XFAIL: dylib-has-no-bad_optional_access && !libcpp-no-exceptions
+// XFAIL: dylib-has-no-bad_optional_access && !no-exceptions
 
 // constexpr T& optional<T>::value() &&;
 

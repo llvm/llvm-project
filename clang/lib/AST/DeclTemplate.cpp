@@ -693,7 +693,7 @@ NonTypeTemplateParmDecl::Create(const ASTContext &C, DeclContext *DC,
                                 QualType T, bool ParameterPack,
                                 TypeSourceInfo *TInfo) {
   AutoType *AT =
-      C.getLangOpts().CPlusPlus2a ? T->getContainedAutoType() : nullptr;
+      C.getLangOpts().CPlusPlus20 ? T->getContainedAutoType() : nullptr;
   return new (C, DC,
               additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
                                     Expr *>(0,

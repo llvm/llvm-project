@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRAffine
+add_mlir_dialect_library(MLIRAffineOps
   AffineOps.cpp
   AffineValueMap.cpp
 
@@ -7,12 +7,11 @@ add_mlir_dialect_library(MLIRAffine
 
   DEPENDS
   MLIRAffineOpsIncGen
-  )
-target_link_libraries(MLIRAffine
-  PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIREDSC
   MLIRIR
   MLIRLoopLikeInterface
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRStandardOps
   )

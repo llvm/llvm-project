@@ -2,7 +2,15 @@
 # variable `b`, which is `local` and not `static`.
 
 # REQUIRES: x86
-# UNSUPPORTED: lldb-repro
+
+# Original test case (for future reference), compiled with:
+# $ clang-10 -g -Og test.c -o test
+# $ cat test.c
+# volatile int a;
+# main() {
+#   int b = 3;
+#   a;
+# }
 
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.15.0 -filetype=obj %s > %t.o
 # RUN: lldb-test symbols %t.o | FileCheck %s

@@ -8,11 +8,11 @@
 
 #include "AST.h"
 #include "FindTarget.h"
-#include "Logger.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "XRefs.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"

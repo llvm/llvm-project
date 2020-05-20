@@ -1804,8 +1804,8 @@ Expected<uint64_t> MachOObjectFile::getSymbolAddress(DataRefImpl Sym) const {
 }
 
 uint32_t MachOObjectFile::getSymbolAlignment(DataRefImpl DRI) const {
-  uint32_t flags = getSymbolFlags(DRI);
-  if (flags & SymbolRef::SF_Common) {
+  uint32_t Flags = cantFail(getSymbolFlags(DRI));
+  if (Flags & SymbolRef::SF_Common) {
     MachO::nlist_base Entry = getSymbolTableEntryBase(*this, DRI);
     return 1 << MachO::GET_COMM_ALIGN(Entry.n_desc);
   }
@@ -1840,7 +1840,7 @@ MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
   return SymbolRef::ST_Other;
 }
 
-uint32_t MachOObjectFile::getSymbolFlags(DataRefImpl DRI) const {
+Expected<uint32_t> MachOObjectFile::getSymbolFlags(DataRefImpl DRI) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(*this, DRI);
 
   uint8_t MachOType = Entry.n_type;

@@ -49,20 +49,6 @@ void testIterator()
     ASSERT_SAME_TYPE(typename ItT::difference_type,   typename S::difference_type);
 }
 
-template <typename S, typename Iter>
-void testConstIterator()
-{
-    typedef std::iterator_traits<Iter> ItT;
-
-    ASSERT_SAME_TYPE(typename ItT::iterator_category, std::random_access_iterator_tag);
-    ASSERT_SAME_TYPE(typename ItT::value_type,        typename S::value_type);
-//  I'd like to say 'const typename S::pointer' here, but that gives me
-//      a const pointer to a non-const value, which is not what I want.
-    ASSERT_SAME_TYPE(typename ItT::reference,         typename S::element_type const &);
-    ASSERT_SAME_TYPE(typename ItT::pointer,           typename S::element_type const *);
-    ASSERT_SAME_TYPE(typename ItT::difference_type,   typename S::difference_type);
-}
-
 template <typename S, typename ElementType, std::size_t Size>
 void testSpan()
 {
@@ -79,8 +65,6 @@ void testSpan()
 
     testIterator<S, typename S::iterator>();
     testIterator<S, typename S::reverse_iterator>();
-    testConstIterator<S, typename S::const_iterator>();
-    testConstIterator<S, typename S::const_reverse_iterator>();
 }
 
 

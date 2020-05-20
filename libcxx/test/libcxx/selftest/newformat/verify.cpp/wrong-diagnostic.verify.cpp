@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: verify-support
-
 // XFAIL: *
 
 // Make sure the test DOES NOT pass if the expected diagnostic is wrong.

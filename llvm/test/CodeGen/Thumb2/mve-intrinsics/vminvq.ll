@@ -220,14 +220,11 @@ entry:
 define arm_aapcs_vfpcc float @test_vminnmvq_f16(float %a.coerce, <8 x half> %b) {
 ; CHECK-LABEL: test_vminnmvq_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vminnmv.f16 r0, q1
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -255,14 +252,11 @@ entry:
 define arm_aapcs_vfpcc float @test_vminnmavq_f16(float %a.coerce, <8 x half> %b) {
 ; CHECK-LABEL: test_vminnmavq_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vminnmav.f16 r0, q1
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -290,14 +284,11 @@ entry:
 define arm_aapcs_vfpcc float @test_vmaxnmvq_f16(float %a.coerce, <8 x half> %b) {
 ; CHECK-LABEL: test_vmaxnmvq_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmaxnmv.f16 r0, q1
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -325,14 +316,11 @@ entry:
 define arm_aapcs_vfpcc float @test_vmaxnmavq_f16(float %a.coerce, <8 x half> %b) {
 ; CHECK-LABEL: test_vmaxnmavq_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmaxnmav.f16 r0, q1
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -648,16 +636,13 @@ entry:
 define arm_aapcs_vfpcc float @test_vminnmvq_p_f16(float %a.coerce, <8 x half> %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vminnmvq_p_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vminnmvt.f16 r1, q1
 ; CHECK-NEXT:    vmov s0, r1
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -691,16 +676,13 @@ entry:
 define arm_aapcs_vfpcc float @test_vminnmavq_p_f16(float %a.coerce, <8 x half> %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vminnmavq_p_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vminnmavt.f16 r1, q1
 ; CHECK-NEXT:    vmov s0, r1
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -734,16 +716,13 @@ entry:
 define arm_aapcs_vfpcc float @test_vmaxnmvq_p_f16(float %a.coerce, <8 x half> %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vmaxnmvq_p_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmaxnmvt.f16 r1, q1
 ; CHECK-NEXT:    vmov s0, r1
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32
@@ -777,16 +756,13 @@ entry:
 define arm_aapcs_vfpcc float @test_vmaxnmavq_p_f16(float %a.coerce, <8 x half> %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vmaxnmavq_p_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmaxnmavt.f16 r1, q1
 ; CHECK-NEXT:    vmov s0, r1
-; CHECK-NEXT:    vstr.16 s0, [sp, #2]
-; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %a.coerce to i32

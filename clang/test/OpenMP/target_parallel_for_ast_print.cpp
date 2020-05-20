@@ -10,6 +10,17 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {}
 
 struct S {
@@ -195,8 +206,8 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target parallel for default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
-#pragma omp target parallel for if (5) num_threads(s) proc_bind(close) reduction(^:e, f, arr[0:5][:argc]) reduction(&& : h)
-// CHECK-NEXT: #pragma omp target parallel for if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(&&: h)
+#pragma omp target parallel for if (5) num_threads(s) proc_bind(close) reduction(^:e, f, arr[0:5][:argc]) reduction(&& : h) allocate(omp_const_mem_alloc: h) uses_allocators(omp_const_mem_alloc)
+// CHECK-NEXT: #pragma omp target parallel for if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(&&: h) allocate(omp_const_mem_alloc: h) uses_allocators(omp_const_mem_alloc)
   for (int i = 0; i < 2; ++i) {}
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
@@ -245,8 +256,8 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 2; ++i) {}
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
-#pragma omp target parallel for defaultmap(tofrom: scalar)
-// CHECK-NEXT: #pragma omp target parallel for defaultmap(tofrom: scalar)
+#pragma omp target parallel for defaultmap(tofrom: scalar) reduction(task, +: argc)
+// CHECK-NEXT: #pragma omp target parallel for defaultmap(tofrom: scalar) reduction(task, +: argc)
   for (int i = 0; i < 2; ++i) {}
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }

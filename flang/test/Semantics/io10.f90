@@ -1,5 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
-!OPTIONS: -Mstandard
+! RUN: %S/test_errors.sh %s %t %f18 -Mstandard
 
   write(*, '(B0)')
   write(*, '(B3)')

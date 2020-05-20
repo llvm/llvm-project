@@ -29,6 +29,9 @@ public:
   // Return the name of the base C++ effect.
   StringRef getBaseEffectName() const;
 
+  // Return the name of the Interface that the effect belongs to.
+  StringRef getInterfaceTrait() const;
+
   // Return the name of the resource class.
   StringRef getResource() const;
 

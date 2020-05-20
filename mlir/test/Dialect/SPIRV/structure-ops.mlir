@@ -53,15 +53,15 @@ spv.module Logical GLSL450 {
 //===----------------------------------------------------------------------===//
 
 func @const() -> () {
-  // CHECK: %0 = spv.constant true
-  // CHECK: %1 = spv.constant 42 : i32
-  // CHECK: %2 = spv.constant 5.000000e-01 : f32
-  // CHECK: %3 = spv.constant dense<[2, 3]> : vector<2xi32>
-  // CHECK: %4 = spv.constant [dense<3.000000e+00> : vector<2xf32>] : !spv.array<1 x vector<2xf32>>
-  // CHECK: %5 = spv.constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  // CHECK: %6 = spv.constant dense<1.000000e+00> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
-  // CHECK: %7 = spv.constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
-  // CHECK: %8 = spv.constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  // CHECK: spv.constant true
+  // CHECK: spv.constant 42 : i32
+  // CHECK: spv.constant 5.000000e-01 : f32
+  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
+  // CHECK: spv.constant [dense<3.000000e+00> : vector<2xf32>] : !spv.array<1 x vector<2xf32>>
+  // CHECK: spv.constant dense<1> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  // CHECK: spv.constant dense<1.000000e+00> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  // CHECK: spv.constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
+  // CHECK: spv.constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
 
   %0 = spv.constant true
   %1 = spv.constant 42 : i32

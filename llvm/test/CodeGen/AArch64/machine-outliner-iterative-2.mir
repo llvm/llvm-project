@@ -1,0 +1,118 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=machine-outliner \
+# RUN:   -machine-outliner-reruns=0 -verify-machineinstrs %s -o - | FileCheck --check-prefix=ITER1 %s
+
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=machine-outliner \
+# RUN:   -machine-outliner-reruns=1 -verify-machineinstrs %s -o - | FileCheck --check-prefix=ITER2 %s
+
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=machine-outliner \
+# RUN:   -machine-outliner-reruns=2 -debug-only=machine-outliner \
+# RUN:   -verify-machineinstrs %s -o /dev/null 2>&1  | FileCheck --check-prefix=ITER3 %s
+
+--- |
+  declare void @z1(i32, i32)
+  declare void @z2(i32, i32, i32)
+  define void @a(i32 %p1) { unreachable }
+  define void @b(i32 %p1) { unreachable }
+...
+---
+#ITER1-LABEL: name: a
+#ITER1:      $w19 = ORRWrs $wzr, killed $w0, 0
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-NEXT: $w1 = ORRWri $wzr, 1
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-NEXT: $w1 = ORRWri $wzr, 1984
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+
+#ITER2-LABEL: name: a
+#ITER2:      $w19 = ORRWrs $wzr, killed $w0, 0
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-NEXT: $w1 = ORRWri $wzr, 1
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+name:            a
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $x19
+
+    early-clobber $sp = frame-setup STPXpre killed $x19, killed $lr, $sp, -2 :: (store 8), (store 8)
+    $w19 = ORRWrs $wzr, killed $w0, 0
+    $w0 = ORRWri $wzr, 0
+    $w1 = ORRWri $wzr, 1
+    BL @z1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp
+    $w1 = ORRWri $wzr, 1
+    $w2 = ORRWri $wzr, 1920
+    $w0 = ORRWrs $wzr, $w19, 0
+    BL @z2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit-def $sp
+    $w1 = ORRWri $wzr, 1984
+    $w2 = ORRWri $wzr, 1920
+    $w0 = ORRWrs $wzr, killed $w19, 0
+    BL @z2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit-def $sp
+    $w0 = ORRWri $wzr, 0
+    $w1 = ORRWri $wzr, 1
+    BL @z1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp
+    early-clobber $sp, $x19, $lr = frame-destroy LDPXpost $sp, 2 :: (load 8), (load 8)
+    RET undef $lr
+
+...
+---
+#ITER1-LABEL: name: b
+#ITER1:      $w19 = ORRWrs $wzr, killed $w0, 0
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-NEXT: $w1 = ORRWri $wzr, 1984
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-NEXT: $w1 = ORRWri $wzr, 1984
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+
+#ITER2-LABEL: name: b
+#ITER2:      $w19 = ORRWrs $wzr, killed $w0, 0
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
+name:            b
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $x19
+
+    early-clobber $sp = frame-setup STPXpre killed $x19, killed $lr, $sp, -2 :: (store 8), (store 8)
+    $w19 = ORRWrs $wzr, killed $w0, 0
+    $w0 = ORRWri $wzr, 0
+    $w1 = ORRWri $wzr, 1
+    BL @z1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp
+    $w1 = ORRWri $wzr, 1984
+    $w2 = ORRWri $wzr, 1920
+    $w0 = ORRWrs $wzr, $w19, 0
+    BL @z2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit-def $sp
+    $w1 = ORRWri $wzr, 1984
+    $w2 = ORRWri $wzr, 1920
+    $w0 = ORRWrs $wzr, killed $w19, 0
+    BL @z2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit-def $sp
+    $w0 = ORRWri $wzr, 0
+    $w1 = ORRWri $wzr, 1
+    BL @z1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp
+    early-clobber $sp, $x19, $lr = frame-destroy LDPXpost $sp, 2 :: (load 8), (load 8)
+    RET undef $lr
+...
+
+#ITER1-LABEL: name: OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER1-LABEL: name: OUTLINED_FUNCTION_{{[0-9]+}}
+
+#ITER2-LABEL: name: OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-LABEL: name: OUTLINED_FUNCTION_{{[0-9]+}}
+#ITER2-LABEL: name: OUTLINED_FUNCTION_{{[0-9]+}}
+
+# ITER3: Did not outline on iteration 3 out of 3

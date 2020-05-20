@@ -145,7 +145,7 @@ namespace {
 /// Legacy pass for lowering is.constant intrinsics out of the IR.
 ///
 /// When this pass is run over a function it converts is.constant intrinsics
-/// into 'true' or 'false'. This is completements the normal constand folding
+/// into 'true' or 'false'. This complements the normal constant folding
 /// to 'true' as part of Instruction Simplify passes.
 class LowerConstantIntrinsics : public FunctionPass {
 public:

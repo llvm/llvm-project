@@ -18,7 +18,8 @@
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 
-# CHECK: "traceEvents": [
+# CHECK:      "beginningOfTime": {{[0-9]{16},}}
+# CHECK-NEXT: "traceEvents": [
 
 # Check one event has correct fields
 # CHECK:      "dur":
@@ -34,6 +35,7 @@
 # Check process_name entry field
 # CHECK: "name": "ld.lld{{(.exe)?}}"
 # CHECK: "name": "process_name"
+# CHECK: "name": "thread_name"
 
 .globl _start
 _start:

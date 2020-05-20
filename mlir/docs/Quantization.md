@@ -232,7 +232,7 @@ which tensors can have fake_quant applied are somewhat involved), then
 TensorFlow Lite would use the attributes of the fake_quant operations to make a
 judgment about how to convert to use kernels from its quantized operations subset.
 
-In MLIR-based quantization, fake_quant_\* operationss are handled by converting them to
+In MLIR-based quantization, fake_quant_\* operations are handled by converting them to
 a sequence of *qcast* (quantize) followed by *dcast* (dequantize) with an
 appropriate *UniformQuantizedType* as the target of the qcast operation.
 
@@ -242,7 +242,7 @@ flexibility to move the casts as it simplifies the computation and converts it
 to a form based on integral arithmetic.
 
 This scheme also naturally allows computations that are *partially quantized*
-where the parts which could not be reduced to integral operationss are still carried out
+where the parts which could not be reduced to integral operations are still carried out
 in floating point with appropriate conversions at the boundaries.
 
 ## TFLite native quantization

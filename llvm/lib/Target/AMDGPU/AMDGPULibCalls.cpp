@@ -1126,8 +1126,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
     Type* rTy = opr0->getType();
     Type* nTyS = eltType->isDoubleTy() ? B.getInt64Ty() : B.getInt32Ty();
     Type *nTy = nTyS;
-    if (const VectorType *vTy = dyn_cast<VectorType>(rTy))
-      nTy = VectorType::get(nTyS, vTy->getNumElements());
+    if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
+      nTy = FixedVectorType::get(nTyS, vTy);
     unsigned size = nTy->getScalarSizeInBits();
     opr_n = CI->getArgOperand(1);
     if (opr_n->getType()->isIntegerTy())
@@ -1416,8 +1416,8 @@ AllocaInst* AMDGPULibCalls::insertAlloca(CallInst *UI, IRBuilder<> &B,
   B.SetInsertPoint(&*ItNew);
   AllocaInst *Alloc = B.CreateAlloca(RetType, 0,
     std::string(prefix) + UI->getName());
-  Alloc->setAlignment(MaybeAlign(
-      UCallee->getParent()->getDataLayout().getTypeAllocSize(RetType)));
+  Alloc->setAlignment(
+      Align(UCallee->getParent()->getDataLayout().getTypeAllocSize(RetType)));
   return Alloc;
 }
 

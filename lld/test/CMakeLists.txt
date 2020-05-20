@@ -35,8 +35,9 @@ set(LLD_TEST_DEPS lld)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
     FileCheck count llc llvm-ar llvm-as llvm-bcanalyzer llvm-config llvm-cvtres
-    llvm-dis llvm-dwarfdump llvm-lib llvm-mc llvm-nm llvm-objcopy llvm-objdump
-    llvm-pdbutil llvm-readelf llvm-readobj not obj2yaml opt yaml2obj
+    llvm-dis llvm-dwarfdump llvm-lib llvm-lipo llvm-mc llvm-nm llvm-objcopy
+    llvm-objdump llvm-pdbutil llvm-readelf llvm-readobj llvm-strip not obj2yaml
+    opt yaml2obj
     )
 endif()
 

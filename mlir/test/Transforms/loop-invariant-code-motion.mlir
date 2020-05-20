@@ -228,8 +228,8 @@ func @invariant_loop_dialect() {
   %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
-  loop.for %arg0 = %ci0 to %ci10 step %ci1 {
-    loop.for %arg1 = %ci0 to %ci10 step %ci1 {
+  scf.for %arg0 = %ci0 to %ci10 step %ci1 {
+    scf.for %arg1 = %ci0 to %ci10 step %ci1 {
       %v0 = addf %cf7, %cf8 : f32
     }
   }
@@ -249,15 +249,15 @@ func @variant_loop_dialect() {
   %ci10 = constant 10 : index
   %ci1 = constant 1 : index
   %m = alloc() : memref<10xf32>
-  loop.for %arg0 = %ci0 to %ci10 step %ci1 {
-    loop.for %arg1 = %ci0 to %ci10 step %ci1 {
+  scf.for %arg0 = %ci0 to %ci10 step %ci1 {
+    scf.for %arg1 = %ci0 to %ci10 step %ci1 {
       %v0 = addi %arg0, %arg1 : index
     }
   }
 
   // CHECK: %0 = alloc() : memref<10xf32>
-  // CHECK-NEXT: loop.for
-  // CHECK-NEXT: loop.for
+  // CHECK-NEXT: scf.for
+  // CHECK-NEXT: scf.for
   // CHECK-NEXT: addi
 
   return
@@ -271,7 +271,7 @@ func @parallel_loop_with_invariant() {
   %c1 = constant 1 : index
   %c7 = constant 7 : i32
   %c8 = constant 8 : i32
-  loop.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+  scf.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
       %v0 = addi %c7, %c8 : i32
       %v3 = addi %arg0, %arg1 : index
   }
@@ -283,7 +283,7 @@ func @parallel_loop_with_invariant() {
   // CHECK-NEXT: %c7_i32 = constant 7 : i32
   // CHECK-NEXT: %c8_i32 = constant 8 : i32
   // CHECK-NEXT: addi %c7_i32, %c8_i32 : i32
-  // CHECK-NEXT: loop.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1)
+  // CHECK-NEXT: scf.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1)
   // CHECK-NEXT:   addi %arg0, %arg1 : index
   // CHECK-NEXT:   yield
   // CHECK-NEXT: }

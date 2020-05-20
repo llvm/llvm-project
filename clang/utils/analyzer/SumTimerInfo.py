@@ -12,8 +12,8 @@ import sys
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: ', sys.argv[0],\
-                             'scan_build_output_file', file=sys.stderr)
+        print('Usage: ', sys.argv[0],
+              'scan_build_output_file', file=sys.stderr)
         sys.exit(-1)
 
     f = open(sys.argv[1], 'r')

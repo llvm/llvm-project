@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -223,9 +222,9 @@ class FunctionDifferenceEngine {
   bool matchForBlockDiff(Instruction *L, Instruction *R);
   void runBlockDiff(BasicBlock::iterator LI, BasicBlock::iterator RI);
 
-  bool diffCallSites(CallSite L, CallSite R, bool Complain) {
+  bool diffCallSites(CallBase &L, CallBase &R, bool Complain) {
     // FIXME: call attributes
-    if (!equivalentAsOperands(L.getCalledValue(), R.getCalledValue())) {
+    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand())) {
       if (Complain) Engine.log("called functions differ");
       return true;
     }
@@ -234,10 +233,10 @@ class FunctionDifferenceEngine {
       return true;
     }
     for (unsigned I = 0, E = L.arg_size(); I != E; ++I)
-      if (!equivalentAsOperands(L.getArgument(I), R.getArgument(I))) {
+      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I))) {
         if (Complain)
           Engine.logf("arguments %l and %r differ")
-            << L.getArgument(I) << R.getArgument(I);
+              << L.getArgOperand(I) << R.getArgOperand(I);
         return true;
       }
     return false;
@@ -259,7 +258,7 @@ class FunctionDifferenceEngine {
         return true;
       }
     } else if (isa<CallInst>(L)) {
-      return diffCallSites(CallSite(L), CallSite(R), Complain);
+      return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain);
     } else if (isa<PHINode>(L)) {
       // FIXME: implement.
 
@@ -274,14 +273,14 @@ class FunctionDifferenceEngine {
 
     // Terminators.
     } else if (isa<InvokeInst>(L)) {
-      InvokeInst *LI = cast<InvokeInst>(L);
-      InvokeInst *RI = cast<InvokeInst>(R);
-      if (diffCallSites(CallSite(LI), CallSite(RI), Complain))
+      InvokeInst &LI = cast<InvokeInst>(*L);
+      InvokeInst &RI = cast<InvokeInst>(*R);
+      if (diffCallSites(LI, RI, Complain))
         return true;
 
       if (TryUnify) {
-        tryUnify(LI->getNormalDest(), RI->getNormalDest());
-        tryUnify(LI->getUnwindDest(), RI->getUnwindDest());
+        tryUnify(LI.getNormalDest(), RI.getNormalDest());
+        tryUnify(LI.getUnwindDest(), RI.getUnwindDest());
       }
       return false;
 
@@ -639,7 +638,8 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::iterator LStart,
     if (!isa<CallInst>(*I)) return;
     CallInst *LCall = cast<CallInst>(&*I);
     InvokeInst *RInvoke = cast<InvokeInst>(RTerm);
-    if (!equivalentAsOperands(LCall->getCalledValue(), RInvoke->getCalledValue()))
+    if (!equivalentAsOperands(LCall->getCalledOperand(),
+                              RInvoke->getCalledOperand()))
       return;
     if (!LCall->use_empty())
       Values[LCall] = RInvoke;
@@ -652,7 +652,8 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::iterator LStart,
     if (!isa<CallInst>(*I)) return;
     CallInst *RCall = cast<CallInst>(I);
     InvokeInst *LInvoke = cast<InvokeInst>(LTerm);
-    if (!equivalentAsOperands(LInvoke->getCalledValue(), RCall->getCalledValue()))
+    if (!equivalentAsOperands(LInvoke->getCalledOperand(),
+                              RCall->getCalledOperand()))
       return;
     if (!LInvoke->use_empty())
       Values[LInvoke] = RCall;

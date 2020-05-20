@@ -231,6 +231,8 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   switch (RC.getID()) {
   case AArch64::FPR8RegClassID:
   case AArch64::FPR16RegClassID:
+  case AArch64::FPR16_loRegClassID:
+  case AArch64::FPR32_with_hsub_in_FPR16_loRegClassID:
   case AArch64::FPR32RegClassID:
   case AArch64::FPR64RegClassID:
   case AArch64::FPR64_loRegClassID:
@@ -684,7 +686,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // In that case, we want the default mapping to be on FPR
       // instead of blind map every scalar to GPR.
       for (const MachineInstr &UseMI :
-           MRI.use_instructions(MI.getOperand(0).getReg())) {
+           MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
         // If we have at least one direct use in a FP instruction,
         // assume this was a floating point load in the IR.
         // If it was not, we would have had a bitcast before
@@ -731,9 +733,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     //
     // %z = G_SELECT %cond %x %y
     // fpr = G_FOO %z ...
-    if (any_of(
-            MRI.use_instructions(MI.getOperand(0).getReg()),
-            [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); }))
+    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); }))
       ++NumFP;
 
     // Check if the defs of the source values always produce floating point
@@ -774,7 +775,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // UNMERGE into scalars from a vector should always use FPR.
     // Likewise if any of the uses are FP instructions.
     if (SrcTy.isVector() || SrcTy == LLT::scalar(128) ||
-        any_of(MRI.use_instructions(MI.getOperand(0).getReg()),
+        any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); })) {
       // Set the register bank of every operand to FPR.
       for (unsigned Idx = 0, NumOperands = MI.getNumOperands();

@@ -296,9 +296,8 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 define dso_local i32 @or_mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c, i32* noalias nocapture readonly %d, i32 %N) {
 ; CHECK-LABEL: or_mul_reduce_add:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    ldr.w r12, [sp, #20]
+; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    ldr.w r12, [sp, #16]
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq .LBB3_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
@@ -315,21 +314,16 @@ define dso_local i32 @or_mul_reduce_add(i32* noalias nocapture readonly %a, i32*
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r12
 ; CHECK-NEXT:    vmov q0, q1
-; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r1], #16
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
+; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vsub.i32 q1, q2, q1
-; CHECK-NEXT:    vcmp.i32 eq, q1, zr
-; CHECK-NEXT:    vmrs r5, p0
-; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vmrs r6, p0
-; CHECK-NEXT:    orrs r5, r6
-; CHECK-NEXT:    vmsr p0, r5
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q1, [r3], #16
-; CHECK-NEXT:    vldrwt.u32 q2, [r2], #16
+; CHECK-NEXT:    sub.w r12, r12, #4
+; CHECK-NEXT:    vpstee
+; CHECK-NEXT:    vcmpt.i32 ne, q1, zr
+; CHECK-NEXT:    vldrwe.u32 q1, [r3], #16
+; CHECK-NEXT:    vldrwe.u32 q2, [r2], #16
 ; CHECK-NEXT:    vmul.i32 q1, q2, q1
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
 ; CHECK-NEXT:    le lr, .LBB3_2
@@ -337,12 +331,10 @@ define dso_local i32 @or_mul_reduce_add(i32* noalias nocapture readonly %a, i32*
 ; CHECK-NEXT:    vctp.32 r4
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vaddv.u32 r0, q0
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.cond.cleanup, label %vector.ph

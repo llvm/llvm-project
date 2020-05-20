@@ -9,6 +9,11 @@
 
 import sys
 
+if sys.version_info < (3, 6, 0):
+    sys.stderr.write("You need python 3.6 or later to run DExTer\n")
+    # Equivalent to sys.exit(ReturnCode._ERROR).
+    sys.exit(1)
+
 from dex.tools import main
 
 if __name__ == '__main__':

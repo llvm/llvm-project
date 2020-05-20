@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
   character*20 c(25), cv
   character(kind=1,len=59) msg
   logical*2 v(5), lv

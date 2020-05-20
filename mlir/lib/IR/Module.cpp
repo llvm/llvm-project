@@ -16,19 +16,19 @@ using namespace mlir;
 // Module Operation.
 //===----------------------------------------------------------------------===//
 
-void ModuleOp::build(Builder *builder, OperationState &result,
+void ModuleOp::build(OpBuilder &builder, OperationState &result,
                      Optional<StringRef> name) {
-  ensureTerminator(*result.addRegion(), *builder, result.location);
+  ensureTerminator(*result.addRegion(), builder, result.location);
   if (name)
-    result.attributes.push_back(builder->getNamedAttr(
-        mlir::SymbolTable::getSymbolAttrName(), builder->getStringAttr(*name)));
+    result.attributes.push_back(builder.getNamedAttr(
+        mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));
 }
 
 /// Construct a module from the given context.
 ModuleOp ModuleOp::create(Location loc, Optional<StringRef> name) {
   OperationState state(loc, "module");
-  Builder builder(loc->getContext());
-  ModuleOp::build(&builder, state, name);
+  OpBuilder builder(loc->getContext());
+  ModuleOp::build(builder, state, name);
   return cast<ModuleOp>(Operation::create(state));
 }
 
@@ -83,7 +83,7 @@ LogicalResult ModuleOp::verify() {
 
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : getOperation()->getAttrList().getAttrs()) {
+  for (auto attr : getOperation()->getMutableAttrDict().getAttrs()) {
     if (!attr.first.strref().contains('.') &&
         !llvm::is_contained(
             ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),

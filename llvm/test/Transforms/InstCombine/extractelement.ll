@@ -319,7 +319,8 @@ define <4 x double> @invalid_extractelement(<2 x double> %a, <4 x double> %b, do
 ; ANY-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> [[TMP1]], <4 x i32> <i32 undef, i32 1, i32 4, i32 3>
 ; ANY-NEXT:    [[E:%.*]] = extractelement <4 x double> [[B]], i32 1
 ; ANY-NEXT:    store double [[E]], double* [[P:%.*]], align 8
-; ANY-NEXT:    ret <4 x double> [[T4]]
+; ANY-NEXT:    [[R:%.*]] = insertelement <4 x double> [[T4]], double undef, i64 0
+; ANY-NEXT:    ret <4 x double> [[R]]
 ;
   %t3 = extractelement <2 x double> %a, i32 0
   %t4 = insertelement <4 x double> %b, double %t3, i32 2

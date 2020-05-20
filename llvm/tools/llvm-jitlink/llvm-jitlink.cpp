@@ -657,13 +657,13 @@ Error loadObjects(Session &S) {
     // Set every dylib to link against every other, in command line order.
     for (auto *JD : S.JDSearchOrder) {
       auto LookupFlags = JITDylibLookupFlags::MatchExportedSymbolsOnly;
-      JITDylibSearchOrder O;
+      JITDylibSearchOrder LinkOrder;
       for (auto *JD2 : S.JDSearchOrder) {
         if (JD2 == JD)
           continue;
-        O.push_back(std::make_pair(JD2, LookupFlags));
+        LinkOrder.push_back(std::make_pair(JD2, LookupFlags));
       }
-      JD->setSearchOrder(std::move(O));
+      JD->setLinkOrder(std::move(LinkOrder));
     }
   }
 

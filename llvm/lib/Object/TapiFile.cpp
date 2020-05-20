@@ -86,7 +86,7 @@ Error TapiFile::printSymbolName(raw_ostream &OS, DataRefImpl DRI) const {
   return Error::success();
 }
 
-uint32_t TapiFile::getSymbolFlags(DataRefImpl DRI) const {
+Expected<uint32_t> TapiFile::getSymbolFlags(DataRefImpl DRI) const {
   const auto *Sym = reinterpret_cast<const Symbol *>(DRI.p);
   return Sym->Flags;
 }

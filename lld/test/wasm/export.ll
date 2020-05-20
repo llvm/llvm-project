@@ -10,9 +10,9 @@
 ; RUN: wasm-ld --export=hidden_function -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=CHECK,EMSCRIPTEN
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @used_function to i8*)], section "llvm.metadata"
-
 target triple = "wasm32-unknown-unknown"
+
+@llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @used_function to i8*)], section "llvm.metadata"
 
 ; Not exported by default, but forced via commandline
 define hidden i32 @hidden_function() local_unnamed_addr {

@@ -12,8 +12,15 @@ test.format_literal_op keyword_$. -> :, = <> () [] {foo.some_attr}
 // CHECK-NOT: {attr
 test.format_attr_op 10
 
+// CHECK: test.format_opt_attr_op(10)
+// CHECK-NOT: {opt_attr
+test.format_opt_attr_op(10)
+
 // CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
+
+// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
+test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
 
 // CHECK: test.format_buildable_type_op %[[I64]]
 %ignored = test.format_buildable_type_op %i64

@@ -28,7 +28,7 @@ describe all the instructions using that model. TableGen parses all the relation
 models and uses the information to construct relation tables which relate
 instructions with each other. These tables are emitted in the
 ``XXXInstrInfo.inc`` file along with the functions to query them. Following
-is the definition of ``InstrMapping`` class definied in Target.td file:
+is the definition of ``InstrMapping`` class defined in Target.td file:
 
 .. code-block:: text
 

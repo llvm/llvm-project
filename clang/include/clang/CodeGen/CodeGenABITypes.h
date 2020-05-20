@@ -28,6 +28,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 
 namespace llvm {
+class AttrBuilder;
 class Constant;
 class DataLayout;
 class Module;
@@ -38,6 +39,7 @@ class Type;
 
 namespace clang {
 class ASTContext;
+class CXXConstructorDecl;
 class CXXRecordDecl;
 class CXXMethodDecl;
 class CodeGenOptions;
@@ -51,6 +53,16 @@ class PreprocessorOptions;
 namespace CodeGen {
 class CGFunctionInfo;
 class CodeGenModule;
+
+/// Additional implicit arguments to add to a constructor argument list.
+struct ImplicitCXXConstructorArgs {
+  /// Implicit arguments to add before the explicit arguments, but after the
+  /// `*this` argument (which always comes first).
+  SmallVector<llvm::Value *, 1> Prefix;
+
+  /// Implicit arguments to add after the explicit arguments.
+  SmallVector<llvm::Value *, 1> Suffix;
+};
 
 const CGFunctionInfo &arrangeObjCMessageSendSignature(CodeGenModule &CGM,
                                                       const ObjCMethodDecl *MD,
@@ -73,6 +85,11 @@ const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
                                               FunctionType::ExtInfo info,
                                               RequiredArgs args);
 
+/// Returns the implicit arguments to add to a complete, non-delegating C++
+/// constructor call.
+ImplicitCXXConstructorArgs
+getImplicitCXXConstructorArgs(CodeGenModule &CGM, const CXXConstructorDecl *D);
+
 /// Returns null if the function type is incomplete and can't be lowered.
 llvm::FunctionType *convertFreeFunctionType(CodeGenModule &CGM,
                                             const FunctionDecl *FD);
@@ -85,6 +102,25 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 /// be a field in RD directly (i.e. not an inherited field).
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
+
+/// Given the language and code-generation options that Clang was configured
+/// with, set the default LLVM IR attributes for a function definition.
+/// The attributes set here are mostly global target-configuration and
+/// pipeline-configuration options like the target CPU, variant stack
+/// rules, whether to optimize for size, and so on.  This is useful for
+/// frontends (such as Swift) that generally intend to interoperate with
+/// C code and rely on Clang's target configuration logic.
+///
+/// As a general rule, this function assumes that meaningful attributes
+/// haven't already been added to the builder.  It won't intentionally
+/// displace any existing attributes, but it also won't check to avoid
+/// overwriting them.  Callers should generally apply customizations after
+/// making this call.
+///
+/// This function assumes that the caller is not defining a function that
+/// requires special no-builtin treatment.
+void addDefaultFunctionDefinitionAttributes(CodeGenModule &CGM,
+                                            llvm::AttrBuilder &attrs);
 
 /// Returns the default constructor for a C struct with non-trivially copyable
 /// fields, generating it if necessary. The returned function uses the `cdecl`

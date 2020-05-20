@@ -56,16 +56,38 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleLLVMOptions)
 
   if(LLVM_INCLUDE_TESTS)
-    include(FindPythonInterp)
-    if(NOT PYTHONINTERP_FOUND)
-      message(FATAL_ERROR
-"Unable to find Python interpreter, required for testing.
+    if(CMAKE_VERSION VERSION_LESS 3.12)
+      include(FindPythonInterp)
+      if(NOT PYTHONINTERP_FOUND)
+        message(FATAL_ERROR
+  "Unable to find Python interpreter, required for testing.
 
-Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-    endif()
+  Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
+      endif()
 
-    if(${PYTHON_VERSION_STRING} VERSION_LESS 2.7)
-      message(FATAL_ERROR "Python 2.7 or newer is required")
+      if(${PYTHON_VERSION_STRING} VERSION_LESS 2.7)
+        message(FATAL_ERROR "Python 2.7 or newer is required")
+      endif()
+
+      add_executable(Python3::Interpeter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    else()
+      find_package(Python3 COMPONENTS Interpreter)
+      if(NOT Python3_Interpreter_FOUND)
+        message(WARNING "Python3 not found, using python2 as a fallback")
+        find_package(Python2 COMPONENTS Interpreter REQUIRED)
+        if(Python2_VERSION VERSION_LESS 2.7)
+          message(SEND_ERROR "Python 2.7 or newer is required")
+        endif()
+
+        # Treat python2 as python3
+        add_executable(Python3::Interpreter IMPORTED)
+        set_target_properties(Python3::Interpreter PROPERTIES
+          IMPORTED_LOCATION ${Python2_EXECUTABLE})
+        set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+      endif()
     endif()
 
     # Check prebuilt llvm/utils.
@@ -119,6 +141,13 @@ endif()
 set(LLD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLD_INCLUDE_DIR ${LLD_SOURCE_DIR}/include )
 set(LLD_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+set(LLD_VENDOR ${PACKAGE_VENDOR} CACHE STRING
+  "Vendor-specific text for showing with version information.")
+
+if(LLD_VENDOR)
+  add_definitions(-DLLD_VENDOR="${LLD_VENDOR}")
+endif()
 
 # Compute the LLD version from the LLVM version.
 string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" LLD_VERSION
@@ -197,3 +226,5 @@ add_subdirectory(ELF)
 add_subdirectory(MachO)
 add_subdirectory(MinGW)
 add_subdirectory(wasm)
+
+add_subdirectory(cmake/modules)

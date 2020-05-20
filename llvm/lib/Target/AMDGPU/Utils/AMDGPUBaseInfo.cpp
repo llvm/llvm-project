@@ -148,10 +148,17 @@ struct MTBUFInfo {
   bool has_soffset;
 };
 
+struct SMInfo {
+  uint16_t Opcode;
+  bool IsBuffer;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
+#define GET_SMInfoTable_DECL
+#define GET_SMInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -212,6 +219,11 @@ bool getMUBUFHasSrsrc(unsigned Opc) {
 bool getMUBUFHasSoffset(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->has_soffset : false;
+}
+
+bool getSMEMIsBuffer(unsigned Opc) {
+  const SMInfo *Info = getSMEMOpcodeHelper(Opc);
+  return Info ? Info->IsBuffer : false;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -1083,6 +1095,11 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 // (move from MC* level to Target* level). Return size in bits.
 unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
+  case AMDGPU::VGPR_LO16RegClassID:
+  case AMDGPU::VGPR_HI16RegClassID:
+  case AMDGPU::SGPR_LO16RegClassID:
+  case AMDGPU::AGPR_LO16RegClassID:
+    return 16;
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
   case AMDGPU::VRegOrLds_32RegClassID:
@@ -1104,6 +1121,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
   case AMDGPU::VReg_96RegClassID:
+  case AMDGPU::AReg_96RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
@@ -1113,14 +1131,24 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
   case AMDGPU::VReg_160RegClassID:
+  case AMDGPU::AReg_160RegClassID:
     return 160;
+  case AMDGPU::SGPR_192RegClassID:
+  case AMDGPU::SReg_192RegClassID:
+  case AMDGPU::VReg_192RegClassID:
+  case AMDGPU::AReg_192RegClassID:
+    return 192;
+  case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
   case AMDGPU::VReg_256RegClassID:
+  case AMDGPU::AReg_256RegClassID:
     return 256;
+  case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
   case AMDGPU::VReg_512RegClassID:
   case AMDGPU::AReg_512RegClassID:
     return 512;
+  case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:
   case AMDGPU::AReg_1024RegClassID:
@@ -1252,10 +1280,18 @@ static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
   return isGFX9(ST) || isGFX10(ST);
 }
 
-static bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
-                                             int64_t EncodedOffset) {
+bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
+                                      int64_t EncodedOffset) {
   return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
                                : isUInt<8>(EncodedOffset);
+}
+
+bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
+                                    int64_t EncodedOffset,
+                                    bool IsBuffer) {
+  return !IsBuffer &&
+         hasSMRDSignedImmOffset(ST) &&
+         isInt<21>(EncodedOffset);
 }
 
 static bool isDwordAligned(uint64_t ByteOffset) {

@@ -188,7 +188,7 @@ public:
 
   /// Return the value of the symbol depending on the object this can be an
   /// offset or a virtual address.
-  uint64_t getValue() const;
+  Expected<uint64_t> getValue() const;
 
   /// Get the alignment of this symbol as the actual value (not log 2).
   uint32_t getAlignment() const;
@@ -289,14 +289,18 @@ protected:
   virtual void getRelocationTypeName(DataRefImpl Rel,
                                      SmallVectorImpl<char> &Result) const = 0;
 
-  uint64_t getSymbolValue(DataRefImpl Symb) const;
+  Expected<uint64_t> getSymbolValue(DataRefImpl Symb) const;
 
 public:
   ObjectFile() = delete;
   ObjectFile(const ObjectFile &other) = delete;
 
   uint64_t getCommonSymbolSize(DataRefImpl Symb) const {
-    assert(getSymbolFlags(Symb) & SymbolRef::SF_Common);
+    Expected<uint32_t> SymbolFlagsOrErr = getSymbolFlags(Symb);
+    if (!SymbolFlagsOrErr)
+      // TODO: Actually report errors helpfully.
+      report_fatal_error(SymbolFlagsOrErr.takeError());
+    assert(*SymbolFlagsOrErr & SymbolRef::SF_Common);
     return getCommonSymbolSizeImpl(Symb);
   }
 
@@ -386,7 +390,7 @@ inline Expected<uint64_t> SymbolRef::getAddress() const {
   return getObject()->getSymbolAddress(getRawDataRefImpl());
 }
 
-inline uint64_t SymbolRef::getValue() const {
+inline Expected<uint64_t> SymbolRef::getValue() const {
   return getObject()->getSymbolValue(getRawDataRefImpl());
 }
 

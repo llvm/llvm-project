@@ -239,7 +239,7 @@ class VSCodeTestCaseBase(TestBase):
 
     def attach(self, program=None, pid=None, waitFor=None, trace=None,
                initCommands=None, preRunCommands=None, stopCommands=None,
-               exitCommands=None, attachCommands=None):
+               exitCommands=None, attachCommands=None, coreFile=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
@@ -257,7 +257,7 @@ class VSCodeTestCaseBase(TestBase):
             program=program, pid=pid, waitFor=waitFor, trace=trace,
             initCommands=initCommands, preRunCommands=preRunCommands,
             stopCommands=stopCommands, exitCommands=exitCommands,
-            attachCommands=attachCommands)
+            attachCommands=attachCommands, coreFile=coreFile)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'attach failed (%s)' % (response['message']))

@@ -77,8 +77,6 @@ for.end19:                                  ; preds = %outer.inc, %entry
 ; CHECK: Unsupported conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-
 define void @divergent_branch(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:
   %cmp39 = icmp sgt i32 %N, 0

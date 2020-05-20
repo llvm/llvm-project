@@ -287,11 +287,11 @@ public:
   /// Returns -1 if the next unset bit is not found.
   int find_next_unset(unsigned Prev) const {
     if (isSmall()) {
-      ++Prev;
       uintptr_t Bits = getSmallBits();
       // Mask in previous bits.
-      uintptr_t Mask = (uintptr_t(1) << Prev) - 1;
-      Bits |= Mask;
+      Bits |= (uintptr_t(1) << (Prev + 1)) - 1;
+      // Mask in unused bits.
+      Bits |= ~uintptr_t(0) << getSmallSize();
 
       if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
         return -1;
@@ -668,8 +668,11 @@ public:
   }
   bool isInvalid() const { return X == (uintptr_t)-1; }
 
-  ArrayRef<uintptr_t> getData() const {
-    return isSmall() ? makeArrayRef(X) : getPointer()->getData();
+  ArrayRef<uintptr_t> getData(uintptr_t &Store) const {
+    if (!isSmall())
+      return getPointer()->getData();
+    Store = getSmallBits();
+    return makeArrayRef(Store);
   }
 
 private:
@@ -717,8 +720,9 @@ template <> struct DenseMapInfo<SmallBitVector> {
     return V;
   }
   static unsigned getHashValue(const SmallBitVector &V) {
+    uintptr_t Store;
     return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
-        std::make_pair(V.size(), V.getData()));
+        std::make_pair(V.size(), V.getData(Store)));
   }
   static bool isEqual(const SmallBitVector &LHS, const SmallBitVector &RHS) {
     if (LHS.isInvalid() || RHS.isInvalid())

@@ -1478,13 +1478,43 @@ void LiveIntervals::handleMove(MachineInstr &MI, bool UpdateFlags) {
   HME.updateAllRanges(&MI);
 }
 
-void LiveIntervals::handleMoveIntoBundle(MachineInstr &MI,
-                                         MachineInstr &BundleStart,
-                                         bool UpdateFlags) {
-  SlotIndex OldIndex = Indexes->getInstructionIndex(MI);
-  SlotIndex NewIndex = Indexes->getInstructionIndex(BundleStart);
-  HMEditor HME(*this, *MRI, *TRI, OldIndex, NewIndex, UpdateFlags);
-  HME.updateAllRanges(&MI);
+void LiveIntervals::handleMoveIntoNewBundle(MachineInstr &BundleStart,
+                                            bool UpdateFlags) {
+  assert((BundleStart.getOpcode() == TargetOpcode::BUNDLE) &&
+         "Bundle start is not a bundle");
+  SmallVector<SlotIndex, 16> ToProcess;
+  const SlotIndex NewIndex = Indexes->insertMachineInstrInMaps(BundleStart);
+  auto BundleEnd = getBundleEnd(BundleStart.getIterator());
+
+  auto I = BundleStart.getIterator();
+  I++;
+  while (I != BundleEnd) {
+    if (!Indexes->hasIndex(*I))
+      continue;
+    SlotIndex OldIndex = Indexes->getInstructionIndex(*I, true);
+    ToProcess.push_back(OldIndex);
+    Indexes->removeMachineInstrFromMaps(*I, true);
+    I++;
+  }
+  for (SlotIndex OldIndex : ToProcess) {
+    HMEditor HME(*this, *MRI, *TRI, OldIndex, NewIndex, UpdateFlags);
+    HME.updateAllRanges(&BundleStart);
+  }
+
+  // Fix up dead defs
+  const SlotIndex Index = getInstructionIndex(BundleStart);
+  for (unsigned Idx = 0, E = BundleStart.getNumOperands(); Idx != E; ++Idx) {
+    MachineOperand &MO = BundleStart.getOperand(Idx);
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg.isVirtual() && hasInterval(Reg) && !MO.isUndef()) {
+      LiveInterval &LI = getInterval(Reg);
+      LiveQueryResult LRQ = LI.Query(Index);
+      if (LRQ.isDeadDef())
+        MO.setIsDead();
+    }
+  }
 }
 
 void LiveIntervals::repairOldRegInRange(const MachineBasicBlock::iterator Begin,

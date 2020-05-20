@@ -767,6 +767,8 @@ static const llvm::opt::OptTable::Info infoTable[] = {
 
 COFFOptTable::COFFOptTable() : OptTable(infoTable, true) {}
 
+COFFOptTable optTable;
+
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
 static void handleColorDiagnostics(opt::InputArgList &args) {
@@ -812,8 +814,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   // options so we parse here before and ignore all the options but
   // --rsp-quoting and /lldignoreenv.
   // (This means --rsp-quoting can't be added through %LINK%.)
-  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
-
+  opt::InputArgList args = optTable.ParseArgs(argv, missingIndex, missingCount);
 
   // Expand response files (arguments in the form of @<filename>) and insert
   // flags from %LINK% and %_LINK_%, and then parse the argument again.
@@ -822,8 +823,8 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   if (!args.hasArg(OPT_lldignoreenv))
     addLINK(expandedArgv);
   cl::ExpandResponseFiles(saver, getQuotingStyle(args), expandedArgv);
-  args = table.ParseArgs(makeArrayRef(expandedArgv).drop_front(), missingIndex,
-                         missingCount);
+  args = optTable.ParseArgs(makeArrayRef(expandedArgv).drop_front(),
+                            missingIndex, missingCount);
 
   // Print the real command line if response files are expanded.
   if (args.hasArg(OPT_verbose) && argv.size() != expandedArgv.size()) {
@@ -847,7 +848,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 
   for (auto *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
-    if (table.findNearest(arg->getAsString(args), nearest) > 1)
+    if (optTable.findNearest(arg->getAsString(args), nearest) > 1)
       warn("ignoring unknown argument '" + arg->getAsString(args) + "'");
     else
       warn("ignoring unknown argument '" + arg->getAsString(args) +
@@ -861,30 +862,38 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 }
 
 // Tokenizes and parses a given string as command line in .drective section.
-// /EXPORT options are processed in fastpath.
-std::pair<opt::InputArgList, std::vector<StringRef>>
-ArgParser::parseDirectives(StringRef s) {
-  std::vector<StringRef> exports;
+ParsedDirectives ArgParser::parseDirectives(StringRef s) {
+  ParsedDirectives result;
   SmallVector<const char *, 16> rest;
 
-  for (StringRef tok : tokenize(s)) {
+  // Handle /EXPORT and /INCLUDE in a fast path. These directives can appear for
+  // potentially every symbol in the object, so they must be handled quickly.
+  SmallVector<StringRef, 16> tokens;
+  cl::TokenizeWindowsCommandLineNoCopy(s, saver, tokens);
+  for (StringRef tok : tokens) {
     if (tok.startswith_lower("/export:") || tok.startswith_lower("-export:"))
-      exports.push_back(tok.substr(strlen("/export:")));
-    else
-      rest.push_back(tok.data());
+      result.exports.push_back(tok.substr(strlen("/export:")));
+    else if (tok.startswith_lower("/include:") ||
+             tok.startswith_lower("-include:"))
+      result.includes.push_back(tok.substr(strlen("/include:")));
+    else {
+      // Save non-null-terminated strings to make proper C strings.
+      bool HasNul = tok.data()[tok.size()] == '\0';
+      rest.push_back(HasNul ? tok.data() : saver.save(tok).data());
+    }
   }
 
   // Make InputArgList from unparsed string vectors.
   unsigned missingIndex;
   unsigned missingCount;
 
-  opt::InputArgList args = table.ParseArgs(rest, missingIndex, missingCount);
+  result.args = optTable.ParseArgs(rest, missingIndex, missingCount);
 
   if (missingCount)
-    fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
-  for (auto *arg : args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + arg->getAsString(args));
-  return {std::move(args), std::move(exports)};
+    fatal(Twine(result.args.getArgString(missingIndex)) + ": missing argument");
+  for (auto *arg : result.args.filtered(OPT_UNKNOWN))
+    warn("ignoring unknown argument: " + arg->getAsString(result.args));
+  return result;
 }
 
 // link.exe has an interesting feature. If LINK or _LINK_ environment
@@ -909,9 +918,9 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void printHelp(const char *argv0) {
-  COFFOptTable().PrintHelp(lld::outs(),
-                           (std::string(argv0) + " [options] file...").c_str(),
-                           "LLVM Linker", false);
+  optTable.PrintHelp(lld::outs(),
+                     (std::string(argv0) + " [options] file...").c_str(),
+                     "LLVM Linker", false);
 }
 
 } // namespace coff

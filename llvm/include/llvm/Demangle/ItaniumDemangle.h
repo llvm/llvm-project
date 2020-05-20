@@ -98,7 +98,7 @@
     X(BoolExpr) \
     X(StringLiteral) \
     X(LambdaExpr) \
-    X(IntegerCastExpr) \
+    X(EnumLiteral)    \
     X(IntegerLiteral) \
     X(FloatLiteral) \
     X(DoubleLiteral) \
@@ -2036,22 +2036,26 @@ public:
   }
 };
 
-class IntegerCastExpr : public Node {
+class EnumLiteral : public Node {
   // ty(integer)
   const Node *Ty;
   StringView Integer;
 
 public:
-  IntegerCastExpr(const Node *Ty_, StringView Integer_)
-      : Node(KIntegerCastExpr), Ty(Ty_), Integer(Integer_) {}
+  EnumLiteral(const Node *Ty_, StringView Integer_)
+      : Node(KEnumLiteral), Ty(Ty_), Integer(Integer_) {}
 
   template<typename Fn> void match(Fn F) const { F(Ty, Integer); }
 
   void printLeft(OutputStream &S) const override {
-    S += "(";
+    S << "(";
     Ty->print(S);
-    S += ")";
-    S += Integer;
+    S << ")";
+
+    if (Integer[0] == 'n')
+      S << "-" << Integer.dropFront(1);
+    else
+      S << Integer;
   }
 };
 
@@ -4064,8 +4068,11 @@ Qualifiers AbstractManglingParser<Alloc, Derived>::parseCVQualifiers() {
 //                  ::= fp <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L == 0, second and later parameters
 //                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> _         # L > 0, first parameter
 //                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L > 0, second and later parameters
+//                  ::= fpT      # 'this' expression (not part of standard?)
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseFunctionParam() {
+  if (consumeIf("fpT"))
+    return make<NameType>("this");
   if (consumeIf("fp")) {
     parseCVQualifiers();
     StringView Num = parseNumber();
@@ -4270,12 +4277,12 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
     Node *T = getDerived().parseType();
     if (T == nullptr)
       return nullptr;
-    StringView N = parseNumber();
+    StringView N = parseNumber(/*AllowNegative=*/true);
     if (N.empty())
       return nullptr;
     if (!consumeIf('E'))
       return nullptr;
-    return make<IntegerCastExpr>(T, N);
+    return make<EnumLiteral>(T, N);
   }
   }
 }

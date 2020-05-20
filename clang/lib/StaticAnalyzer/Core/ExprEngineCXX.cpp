@@ -875,13 +875,18 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
 void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
                                     ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  ProgramStateRef state = Pred->getState();
-  Bldr.generateNode(CDE, Pred, state);
+
+  CallEventManager &CEMgr = getStateManager().getCallEventManager();
+  CallEventRef<CXXDeallocatorCall> Call = CEMgr.getCXXDeallocatorCall(
+      CDE, Pred->getState(), Pred->getLocationContext());
+
+  ExplodedNodeSet DstPreCall;
+  getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);
+
+  getCheckerManager().runCheckersForPostCall(Dst, DstPreCall, *Call, *this);
 }
 
-void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS,
-                                   ExplodedNode *Pred,
+void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   const VarDecl *VD = CS->getExceptionDecl();
   if (!VD) {

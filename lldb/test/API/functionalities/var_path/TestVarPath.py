@@ -25,7 +25,7 @@ class TestVarPath(TestBase):
     def verify_point(self, frame, var_name, var_typename, x_value, y_value):
         v = frame.GetValueForVariablePath(var_name)
         self.assertTrue(v.GetError().Success(), "Make sure we find '%s'" % (var_name))
-        self.assertEquals(v.GetType().GetName(), var_typename, 
+        self.assertEquals(v.GetType().GetName(), var_typename,
                         "Make sure '%s' has type '%s'" % (var_name, var_typename))
 
         if '*' in var_typename:
@@ -76,11 +76,14 @@ class TestVarPath(TestBase):
         self.verify_point(frame, 'pt_ptr[1]', 'Point', 5050, 6060)
         # Test arrays
         v = frame.GetValueForVariablePath('points')
-        self.assertTrue(v.GetError().Success(), 
+        self.assertTrue(v.GetError().Success(),
                         "Make sure we find 'points'")
         self.verify_point(frame, 'points[0]', 'Point', 1010, 2020)
         self.verify_point(frame, 'points[1]', 'Point', 3030, 4040)
         self.verify_point(frame, 'points[2]', 'Point', 5050, 6060)
+        v = frame.GetValueForVariablePath('points[0]+5')
+        self.assertTrue(v.GetError().Fail(),
+                        "Make sure we do not ignore characters between ']' and the end")
         # Test a reference
         self.verify_point(frame, 'pt_ref', 'Point &', 1, 2)
         v = frame.GetValueForVariablePath('pt_sp')
@@ -88,7 +91,7 @@ class TestVarPath(TestBase):
         # Make sure we don't crash when looking for non existant child
         # in type with synthetic children. This used to cause a crash.
         v = frame.GetValueForVariablePath('pt_sp->not_valid_child')
-        self.assertTrue(v.GetError().Fail(), 
+        self.assertTrue(v.GetError().Fail(),
                         "Make sure we don't find 'pt_sp->not_valid_child'")
 
 

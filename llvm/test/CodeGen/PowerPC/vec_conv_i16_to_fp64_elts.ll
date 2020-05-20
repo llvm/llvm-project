@@ -13,7 +13,7 @@ define <2 x double> @test2elt(i32 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI0_0@toc@ha
-; CHECK-P8-NEXT:    mtvsrd f0, r3
+; CHECK-P8-NEXT:    mtfprd f0, r3
 ; CHECK-P8-NEXT:    addi r3, r4, .LCPI0_0@toc@l
 ; CHECK-P8-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
@@ -53,7 +53,7 @@ define void @test4elt(<4 x double>* noalias nocapture sret %agg.result, i64 %a.c
 ; CHECK-P8-LABEL: test4elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI1_0@toc@ha
-; CHECK-P8-NEXT:    mtvsrd f0, r4
+; CHECK-P8-NEXT:    mtfprd f0, r4
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI1_1@toc@ha
 ; CHECK-P8-NEXT:    addi r5, r5, .LCPI1_0@toc@l
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI1_1@toc@l
@@ -74,7 +74,7 @@ define void @test4elt(<4 x double>* noalias nocapture sret %agg.result, i64 %a.c
 ;
 ; CHECK-P9-LABEL: test4elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrd f0, r4
+; CHECK-P9-NEXT:    mtfprd f0, r4
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI1_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI1_0@toc@l
 ; CHECK-P9-NEXT:    lxvx v3, 0, r4
@@ -370,7 +370,7 @@ define <2 x double> @test2elt_signed(i32 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI4_0@toc@ha
-; CHECK-P8-NEXT:    mtvsrd f0, r3
+; CHECK-P8-NEXT:    mtfprd f0, r3
 ; CHECK-P8-NEXT:    addi r3, r4, .LCPI4_0@toc@l
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    lvx v3, 0, r3
@@ -415,7 +415,7 @@ define void @test4elt_signed(<4 x double>* noalias nocapture sret %agg.result, i
 ; CHECK-P8-LABEL: test4elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI5_0@toc@ha
-; CHECK-P8-NEXT:    mtvsrd f0, r4
+; CHECK-P8-NEXT:    mtfprd f0, r4
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI5_2@toc@ha
 ; CHECK-P8-NEXT:    addi r5, r5, .LCPI5_0@toc@l
 ; CHECK-P8-NEXT:    addi r4, r4, .LCPI5_2@toc@l
@@ -443,7 +443,7 @@ define void @test4elt_signed(<4 x double>* noalias nocapture sret %agg.result, i
 ;
 ; CHECK-P9-LABEL: test4elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrd f0, r4
+; CHECK-P9-NEXT:    mtfprd f0, r4
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI5_0@toc@l
 ; CHECK-P9-NEXT:    lxvx v3, 0, r4

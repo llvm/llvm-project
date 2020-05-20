@@ -14,9 +14,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <CoreServices/CoreServices.h>
+#include <TargetConditionals.h>
 
 using namespace llvm;
 using namespace clang;
+
+#if TARGET_OS_OSX
 
 static void stopFSEventStream(FSEventStreamRef);
 
@@ -249,3 +252,17 @@ llvm::Expected<std::unique_ptr<DirectoryWatcher>> clang::DirectoryWatcher::creat
 
   return Result;
 }
+
+#else // TARGET_OS_OSX
+
+llvm::Expected<std::unique_ptr<DirectoryWatcher>>
+clang::DirectoryWatcher::create(
+    StringRef Path,
+    std::function<void(llvm::ArrayRef<DirectoryWatcher::Event>, bool)> Receiver,
+    bool WaitForInitialSync) {
+  return llvm::make_error<llvm::StringError>(
+      "DirectoryWatcher is not implemented for this platform!",
+      llvm::inconvertibleErrorCode());
+}
+
+#endif // TARGET_OS_OSX

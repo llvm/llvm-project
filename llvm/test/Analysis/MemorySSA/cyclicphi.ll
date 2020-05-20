@@ -152,4 +152,4 @@ bb77:                                             ; preds = %bb68, %bb26
   br label %bb26
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }

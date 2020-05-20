@@ -720,17 +720,17 @@ declare void @__kmpc_end_critical(%struct.ident_t*, i32, [8 x i32]*)
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local i32 @omp_get_supported_active_levels() #0
 
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
-; CHECK-NEXT: declare void @__kmpc_barrier(%struct.ident_t*, i32)
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32)
 
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-NEXT: declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32)
 
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
-; CHECK-NEXT: declare i32 @__kmpc_cancel_barrier(%struct.ident_t*, i32)
+; CHECK-NOT: Function Attrs
+; CHECK: declare i32 @__kmpc_cancel_barrier(%struct.ident_t*, i32)
 
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
-; CHECK-NEXT: declare void @__kmpc_flush(%struct.ident_t*)
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_flush(%struct.ident_t*)
 
 ; CHECK: Function Attrs: nounwind
 ; CHECK-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
@@ -738,8 +738,8 @@ declare void @__kmpc_end_critical(%struct.ident_t*, i32, [8 x i32]*)
 ; CHECK: Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
-; CHECK-NEXT: declare i32 @__kmpc_omp_taskwait(%struct.ident_t*, i32)
+; CHECK-NOT: Function Attrs
+; CHECK: declare i32 @__kmpc_omp_taskwait(%struct.ident_t*, i32)
 
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-NEXT: declare i32 @__kmpc_omp_taskyield(%struct.ident_t*, i32, i32)

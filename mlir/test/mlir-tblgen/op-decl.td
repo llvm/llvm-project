@@ -1,7 +1,7 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck --dump-input-on-failure %s
 
 include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -67,6 +67,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   Operation::operand_range getODSOperands(unsigned index);
 // CHECK:   Value a();
 // CHECK:   Operation::operand_range b();
+// CHECK:   ::mlir::MutableOperandRange aMutable();
+// CHECK:   ::mlir::MutableOperandRange bMutable();
 // CHECK:   Operation::result_range getODSResults(unsigned index);
 // CHECK:   Value r();
 // CHECK:   Region &someRegion();
@@ -76,9 +78,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   FloatAttr attr2Attr()
 // CHECK:   Optional< APFloat > attr2();
 // CHECK:   static void build(Value val);
-// CHECK:   static void build(Builder *odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
-// CHECK:   static void build(Builder *odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
-// CHECK:   static void build(Builder *, OperationState &odsState, ArrayRef<Type> resultTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes, unsigned numRegions)
+// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, IntegerAttr attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, Type r, ArrayRef<Type> s, Value a, ValueRange b, APInt attr1, /*optional*/FloatAttr attr2, unsigned someRegionsCount)
+// CHECK:   static void build(OpBuilder &, OperationState &odsState, ArrayRef<Type> resultTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes, unsigned numRegions)
 // CHECK:   static ParseResult parse(OpAsmParser &parser, OperationState &result);
 // CHECK:   void print(OpAsmPrinter &p);
 // CHECK:   LogicalResult verify();
@@ -119,8 +121,9 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 
 // CHECK-LABEL: NS::EOp declarations
 // CHECK:   Value a();
+// CHECK:   ::mlir::MutableOperandRange aMutable();
 // CHECK:   Value b();
-// CHECK:   static void build(Builder *odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
+// CHECK:   static void build(OpBuilder &odsBuilder, OperationState &odsState, /*optional*/Type b, /*optional*/Value a)
 
 // Check that default builders can be suppressed.
 // ---

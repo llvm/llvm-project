@@ -1,4 +1,6 @@
-@RUN: llvm-mc -triple arm-unknown-linux -filetype=obj %s | llvm-objdump -d - | FileCheck %s
+@ RUN: llvm-mc -triple arm-unknown-linux -filetype=obj %s -o %t
+@ RUN: llvm-objdump -d %t | FileCheck %s
+@ RUN: llvm-objdump -d -r %t | FileCheck --check-prefixes=CHECK,RELOC %s
 
 	.cpu arm7tdmi
 	.global	myInt
@@ -32,5 +34,8 @@ myStr:
         .string "test string"
 
 
-@CHECK:     .word   0x00000000
-@CHECK-DAG: 74 65 73 74 20 73 74 72         test str
+@ CHECK:       .word   0x00000000
+@ RELOC-NEXT:    R_ARM_ABS32  myInt
+@ CHECK-EMPTY:
+@ CHECK-NEXT:  <myStr>:
+@ CHECK-NEXT:    74 65 73 74 20 73 74 72         test str

@@ -124,7 +124,7 @@ class LLDB(DebuggerBase):
         self._process.Continue()
         return ReturnCode.OK
 
-    def get_step_info(self):
+    def get_step_info(self, watches, step_index):
         frames = []
         state_frames = []
 
@@ -164,7 +164,7 @@ class LLDB(DebuggerBase):
                                      watches={})
             for expr in map(
                 lambda watch, idx=i: self.evaluate_expression(watch, idx),
-                self.watches):
+                watches):
                 state_frame.watches[expr.expression] = expr
             state_frames.append(state_frame)
 
@@ -175,7 +175,7 @@ class LLDB(DebuggerBase):
         reason = self._translate_stop_reason(self._thread.GetStopReason())
 
         return StepIR(
-            step_index=self.step_index, frames=frames, stop_reason=reason,
+            step_index=step_index, frames=frames, stop_reason=reason,
             program_state=ProgramState(state_frames))
 
     @property

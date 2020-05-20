@@ -21,7 +21,6 @@
 #include "Writer.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/Threads.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -29,6 +28,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>
@@ -43,10 +43,10 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
-LinkerScript *script;
+LinkerScript *elf::script;
 
 static uint64_t getOutputSectionVA(SectionBase *sec) {
   OutputSection *os = sec->getOutputSection();
@@ -407,14 +407,15 @@ static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
 
 // Compute and remember which sections the InputSectionDescription matches.
 std::vector<InputSectionBase *>
-LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
+LinkerScript::computeInputSections(const InputSectionDescription *cmd,
+                                   ArrayRef<InputSectionBase *> sections) {
   std::vector<InputSectionBase *> ret;
 
   // Collects all sections that satisfy constraints of Cmd.
   for (const SectionPattern &pat : cmd->sectionPatterns) {
     size_t sizeBefore = ret.size();
 
-    for (InputSectionBase *sec : inputSections) {
+    for (InputSectionBase *sec : sections) {
       if (!sec->isLive() || sec->parent)
         continue;
 
@@ -465,13 +466,29 @@ void LinkerScript::discard(InputSectionBase *s) {
     discard(ds);
 }
 
+void LinkerScript::discardSynthetic(OutputSection &outCmd) {
+  for (Partition &part : partitions) {
+    if (!part.armExidx || !part.armExidx->isLive())
+      continue;
+    std::vector<InputSectionBase *> secs(part.armExidx->exidxSections.begin(),
+                                         part.armExidx->exidxSections.end());
+    for (BaseCommand *base : outCmd.sectionCommands)
+      if (auto *cmd = dyn_cast<InputSectionDescription>(base)) {
+        std::vector<InputSectionBase *> matches =
+            computeInputSections(cmd, secs);
+        for (InputSectionBase *s : matches)
+          discard(s);
+      }
+  }
+}
+
 std::vector<InputSectionBase *>
 LinkerScript::createInputSectionList(OutputSection &outCmd) {
   std::vector<InputSectionBase *> ret;
 
   for (BaseCommand *base : outCmd.sectionCommands) {
     if (auto *cmd = dyn_cast<InputSectionDescription>(base)) {
-      cmd->sectionBases = computeInputSections(cmd);
+      cmd->sectionBases = computeInputSections(cmd, inputSections);
       for (InputSectionBase *s : cmd->sectionBases)
         s->parent = &outCmd;
       ret.insert(ret.end(), cmd->sectionBases.begin(), cmd->sectionBases.end());
@@ -492,6 +509,7 @@ void LinkerScript::processSectionCommands() {
       if (sec->name == "/DISCARD/") {
         for (InputSectionBase *s : v)
           discard(s);
+        discardSynthetic(*sec);
         sec->sectionCommands.clear();
         continue;
       }
@@ -1229,6 +1247,3 @@ std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *cmd) {
   }
   return ret;
 }
-
-} // namespace elf
-} // namespace lld

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! 9.4.5
 subroutine s1
   type :: t(k, l)
@@ -43,7 +43,7 @@ subroutine s3
   !ERROR: Left-hand side of assignment is not modifiable
   y%a(i) = 2
   x%b = 4
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Assignment to constant 'y%b' is not allowed
   y%b = 5
 end
 
