@@ -1,8 +1,5 @@
 ; RUN: opt < %s -deadargelim -S | FileCheck %s
 
-declare token @llvm.call.preallocated.setup(i32)
-declare i8* @llvm.call.preallocated.arg(token, i32)
-
 %Ty = type <{ i32, i32 }>
 
 ; Check if the pass doesn't modify anything that doesn't need changing. We feed
@@ -44,24 +41,6 @@ define i32 @caller2() {
 	%m = alloca inalloca i32
 	store i32 42, i32* %m
 	%v = call x86_thiscallcc i32 @unused_this(i32* %t, i32* inalloca %m)
-	ret i32 %v
-}
-
-; We can't remove 'this' here, as that would put argmem in ecx instead of
-; memory.
-define internal x86_thiscallcc i32 @unused_this_preallocated(i32* %this, i32* preallocated(i32) %argmem) {
-	%v = load i32, i32* %argmem
-	ret i32 %v
-}
-; CHECK-LABEL: define internal x86_thiscallcc i32 @unused_this_preallocated(i32* %this, i32* preallocated(i32) %argmem)
-
-define i32 @caller3() {
-	%t = alloca i32
-	%c = call token @llvm.call.preallocated.setup(i32 1)
-	%M = call i8* @llvm.call.preallocated.arg(token %c, i32 0) preallocated(i32)
-	%m = bitcast i8* %M to i32*
-	store i32 42, i32* %m
-	%v = call x86_thiscallcc i32 @unused_this_preallocated(i32* %t, i32* preallocated(i32) %m) ["preallocated"(token %c)]
 	ret i32 %v
 }
 

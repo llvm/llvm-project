@@ -56,12 +56,6 @@ define void @test7_1(i32* inalloca %a) {
   ret void
 }
 
-; CHECK: define void @test7_2(i32* nocapture preallocated(i32) %a)
-; preallocated parameters are always considered written
-define void @test7_2(i32* preallocated(i32) %a) {
-  ret void
-}
-
 ; CHECK: define i32* @test8_1(i32* readnone returned %p)
 define i32* @test8_1(i32* %p) {
 entry:

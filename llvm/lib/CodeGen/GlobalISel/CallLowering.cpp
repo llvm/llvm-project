@@ -96,12 +96,10 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     Flags.setSwiftError();
   if (Attrs.hasAttribute(OpIdx, Attribute::ByVal))
     Flags.setByVal();
-  if (Attrs.hasAttribute(OpIdx, Attribute::Preallocated))
-    Flags.setPreallocated();
   if (Attrs.hasAttribute(OpIdx, Attribute::InAlloca))
     Flags.setInAlloca();
 
-  if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
+  if (Flags.isByVal() || Flags.isInAlloca()) {
     Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
 
     auto Ty = Attrs.getAttribute(OpIdx, Attribute::ByVal).getValueAsType();

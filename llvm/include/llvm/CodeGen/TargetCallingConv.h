@@ -35,7 +35,6 @@ namespace ISD {
     unsigned IsReturned : 1; ///< Always returned
     unsigned IsSplit : 1;
     unsigned IsInAlloca : 1;   ///< Passed with inalloca
-    unsigned IsPreallocated : 1; ///< ByVal without the copy
     unsigned IsSplitEnd : 1;   ///< Last part of a split
     unsigned IsSwiftSelf : 1;  ///< Swift self parameter
     unsigned IsSwiftError : 1; ///< Swift error parameter
@@ -57,9 +56,9 @@ namespace ISD {
   public:
     ArgFlagsTy()
         : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsNest(0),
-          IsReturned(0), IsSplit(0), IsInAlloca(0), IsPreallocated(0),
-          IsSplitEnd(0), IsSwiftSelf(0), IsSwiftError(0), IsCFGuardTarget(0),
-          IsHva(0), IsHvaStart(0), IsSecArgPass(0), ByValAlign(0), OrigAlign(0),
+          IsReturned(0), IsSplit(0), IsInAlloca(0), IsSplitEnd(0),
+          IsSwiftSelf(0), IsSwiftError(0), IsCFGuardTarget(0), IsHva(0),
+          IsHvaStart(0), IsSecArgPass(0), ByValAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
           IsCopyElisionCandidate(0), IsPointer(0), ByValSize(0),
           PointerAddrSpace(0) {
@@ -83,9 +82,6 @@ namespace ISD {
 
     bool isInAlloca() const { return IsInAlloca; }
     void setInAlloca() { IsInAlloca = 1; }
-
-    bool isPreallocated() const { return IsPreallocated; }
-    void setPreallocated() { IsPreallocated = 1; }
 
     bool isSwiftSelf() const { return IsSwiftSelf; }
     void setSwiftSelf() { IsSwiftSelf = 1; }
