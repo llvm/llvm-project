@@ -2391,7 +2391,7 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
     return TC_NotApplicable;
   auto SrcPointeeType = SrcPtrType->getPointeeType();
   auto DestPointeeType = DestPtrType->getPointeeType();
-  if (!DestPtrType->isAddressSpaceOverlapping(*SrcPtrType)) {
+  if (!DestPointeeType.isAddressSpaceOverlapping(SrcPointeeType)) {
     msg = diag::err_bad_cxx_cast_addr_space_mismatch;
     return TC_Failed;
   }
@@ -2434,9 +2434,9 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
       const PointerType *SrcPPtr = cast<PointerType>(SrcPtr);
       QualType DestPPointee = DestPPtr->getPointeeType();
       QualType SrcPPointee = SrcPPtr->getPointeeType();
-      if (Nested ? DestPPointee.getAddressSpace() !=
-                   SrcPPointee.getAddressSpace()
-                 : !DestPPtr->isAddressSpaceOverlapping(*SrcPPtr)) {
+      if (Nested
+              ? DestPPointee.getAddressSpace() != SrcPPointee.getAddressSpace()
+              : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee)) {
         Self.Diag(OpRange.getBegin(), DiagID)
             << SrcType << DestType << Sema::AA_Casting
             << SrcExpr.get()->getSourceRange();

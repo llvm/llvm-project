@@ -1064,6 +1064,21 @@ public:
   /// Return the address space of this type.
   inline LangAS getAddressSpace() const;
 
+  /// Returns true if address space qualifiers overlap with T address space
+  /// qualifiers.
+  /// OpenCL C defines conversion rules for pointers to different address spaces
+  /// and notion of overlapping address spaces.
+  /// CL1.1 or CL1.2:
+  ///   address spaces overlap iff they are they same.
+  /// OpenCL C v2.0 s6.5.5 adds:
+  ///   __generic overlaps with any address space except for __constant.
+  bool isAddressSpaceOverlapping(QualType T) const {
+    Qualifiers Q = getQualifiers();
+    Qualifiers TQ = T.getQualifiers();
+    // Address spaces overlap if at least one of them is a superset of another
+    return Q.isAddressSpaceSupersetOf(TQ) || TQ.isAddressSpaceSupersetOf(Q);
+  }
+
   /// Returns gc attribute of this type.
   inline Qualifiers::GC getObjCGCAttr() const;
 
@@ -2630,22 +2645,6 @@ class PointerType : public Type, public llvm::FoldingSetNode {
 
 public:
   QualType getPointeeType() const { return PointeeType; }
-
-  /// Returns true if address spaces of pointers overlap.
-  /// OpenCL v2.0 defines conversion rules for pointers to different
-  /// address spaces (OpenCLC v2.0 s6.5.5) and notion of overlapping
-  /// address spaces.
-  /// CL1.1 or CL1.2:
-  ///   address spaces overlap iff they are they same.
-  /// CL2.0 adds:
-  ///   __generic overlaps with any address space except for __constant.
-  bool isAddressSpaceOverlapping(const PointerType &other) const {
-    Qualifiers thisQuals = PointeeType.getQualifiers();
-    Qualifiers otherQuals = other.getPointeeType().getQualifiers();
-    // Address spaces overlap if at least one of them is a superset of another
-    return thisQuals.isAddressSpaceSupersetOf(otherQuals) ||
-           otherQuals.isAddressSpaceSupersetOf(thisQuals);
-  }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
