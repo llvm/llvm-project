@@ -108,6 +108,50 @@ AnyOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
 }
 
 //===----------------------------------------------------------------------===//
+// AssumingOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseAssumingOp(OpAsmParser &parser,
+                                   OperationState &result) {
+  result.regions.reserve(1);
+  Region *doRegion = result.addRegion();
+
+  auto &builder = parser.getBuilder();
+  OpAsmParser::OperandType cond;
+  if (parser.parseOperand(cond) ||
+      parser.resolveOperand(cond, builder.getType<WitnessType>(),
+                            result.operands))
+    return failure();
+
+  // Parse optional results type list.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Parse the region and add a terminator if elided.
+  if (parser.parseRegion(*doRegion, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+  AssumingOp::ensureTerminator(*doRegion, parser.getBuilder(), result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+static void print(OpAsmPrinter &p, AssumingOp op) {
+  bool yieldsResults = !op.results().empty();
+
+  p << AssumingOp::getOperationName() << " " << op.witness();
+  if (yieldsResults) {
+    p << " -> (" << op.getResultTypes() << ")";
+  }
+  p.printRegion(op.doRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/yieldsResults);
+  p.printOptionalAttrDict(op.getAttrs());
+}
+
+//===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 

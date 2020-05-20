@@ -74,9 +74,9 @@ func @test_constraints() {
   %w0 = "shape.cstr_broadcastable"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.witness
   %w1 = "shape.cstr_eq"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.witness
   %w3 = "shape.assuming_all"(%w0, %w1) : (!shape.witness, !shape.witness) -> !shape.witness
-  "shape.assuming"(%w3) ( {
+  shape.assuming %w3 -> !shape.shape {
     %2 = "shape.any"(%0, %1)  : (!shape.shape, !shape.shape) -> !shape.shape
     "shape.assuming_yield"(%2) : (!shape.shape) -> ()
-  }) : (!shape.witness) -> !shape.shape
+  }
   return
 }
