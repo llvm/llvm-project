@@ -234,7 +234,6 @@ if (LLDB_ENABLE_LZMA)
 endif()
 
 if (LLDB_ENABLE_LIBXML2)
-  list(APPEND system_libs ${LIBXML2_LIBRARIES})
   include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
@@ -280,12 +279,7 @@ if (APPLE)
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
   find_library(SECURITY_LIBRARY Security)
-  list(APPEND system_libs
-       ${FOUNDATION_LIBRARY}
-       ${CORE_FOUNDATION_LIBRARY}
-       ${CORE_SERVICES_LIBRARY}
-       ${SECURITY_LIBRARY}
-       ${DEBUG_SYMBOLS_LIBRARY})
+  include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
 if( WIN32 AND NOT CYGWIN )
@@ -295,10 +289,7 @@ endif()
 if(NOT PURE_WINDOWS)
   set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
   find_package(Threads REQUIRED)
-  list(APPEND system_libs ${CMAKE_THREAD_LIBS_INIT})
 endif()
-
-list(APPEND system_libs ${CMAKE_DL_LIBS})
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.
