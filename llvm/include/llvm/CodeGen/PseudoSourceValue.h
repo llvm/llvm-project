@@ -23,11 +23,10 @@ namespace llvm {
 class MachineFrameInfo;
 class MachineMemOperand;
 class MIRFormatter;
+class PseudoSourceValue;
 class raw_ostream;
 class TargetInstrInfo;
 
-raw_ostream &operator<<(raw_ostream &OS, const MachineMemOperand &MMO);
-class PseudoSourceValue;
 raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
 
 /// Special value supplied for machine level alias analysis. It indicates that
