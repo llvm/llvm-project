@@ -24,8 +24,7 @@ ShapeDialect::ShapeDialect(MLIRContext *context)
 #define GET_OP_LIST
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
       >();
-  addTypes<ComponentType, ElementType, ShapeType, SizeType, ValueShapeType,
-           WitnessType>();
+  addTypes<ComponentType, ElementType, ShapeType, SizeType, ValueShapeType>();
   // Allow unknown operations during prototyping and testing. As the dialect is
   // still evolving it makes it simple to start with an unregistered ops and
   // try different variants before actually defining the op.
@@ -61,8 +60,6 @@ Type ShapeDialect::parseType(DialectAsmParser &parser) const {
     return SizeType::get(getContext());
   if (keyword == "value_shape")
     return ValueShapeType::get(getContext());
-  if (keyword == "witness")
-    return WitnessType::get(getContext());
 
   parser.emitError(parser.getNameLoc(), "unknown shape type: ") << keyword;
   return Type();
@@ -86,25 +83,9 @@ void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
   case ShapeTypes::ValueShape:
     os << "value_shape";
     return;
-  case ShapeTypes::Witness:
-    os << "witness";
-    return;
   default:
     llvm_unreachable("unexpected 'shape' type kind");
   }
-}
-
-//===----------------------------------------------------------------------===//
-// AnyOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-AnyOp::inferReturnTypes(MLIRContext *context, Optional<Location> location,
-                        ValueRange operands, DictionaryAttr attributes,
-                        RegionRange regions,
-                        SmallVectorImpl<Type> &inferredReturnTypes) {
-  inferredReturnTypes.push_back(ShapeType::get(context));
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

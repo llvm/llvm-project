@@ -1350,11 +1350,9 @@ reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   return false;
 }
 
-// For some instructions, it is legal to fold ZERO into the RA register field.
-// This function performs that fold by replacing the operand with PPC::ZERO,
-// it does not consider whether the load immediate zero is no longer in use.
-bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                     Register Reg) const {
+bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                 Register Reg, MachineRegisterInfo *MRI) const {
+  // For some instructions, it is legal to fold ZERO into the RA register field.
   // A zero immediate should always be loaded with a single li.
   unsigned DefOpc = DefMI.getOpcode();
   if (DefOpc != PPC::LI && DefOpc != PPC::LI8)
@@ -1374,8 +1372,6 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (UseMCID.isPseudo())
     return false;
 
-  // We need to find which of the User's operands is to be folded, that will be
-  // the operand that matches the given register ID.
   unsigned UseIdx;
   for (UseIdx = 0; UseIdx < UseMI.getNumOperands(); ++UseIdx)
     if (UseMI.getOperand(UseIdx).isReg() &&
@@ -1413,19 +1409,13 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               PPC::ZERO8 : PPC::ZERO;
   }
 
+  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
   UseMI.getOperand(UseIdx).setReg(ZeroReg);
-  return true;
-}
 
-// Folds zero into instructions which have a load immediate zero as an operand
-// but also recognize zero as immediate zero. If the definition of the load
-// has no more users it is deleted.
-bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
-                                 Register Reg, MachineRegisterInfo *MRI) const {
-  bool Changed = onlyFoldImmediate(UseMI, DefMI, Reg);
-  if (MRI->use_nodbg_empty(Reg))
+  if (DeleteDef)
     DefMI.eraseFromParent();
-  return Changed;
+
+  return true;
 }
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {

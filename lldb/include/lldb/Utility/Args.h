@@ -14,7 +14,6 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -35,9 +34,6 @@ public:
   struct ArgEntry {
   private:
     friend class Args;
-    friend struct llvm::yaml::MappingTraits<Args>;
-    friend struct llvm::yaml::MappingTraits<Args::ArgEntry>;
-
     std::unique_ptr<char[]> ptr;
     char quote;
 
@@ -287,8 +283,6 @@ public:
                                                char quote_char);
 
 private:
-  friend struct llvm::yaml::MappingTraits<Args>;
-
   std::vector<ArgEntry> m_entries;
   std::vector<char *> m_argv;
 };
@@ -378,29 +372,5 @@ private:
 };
 
 } // namespace lldb_private
-
-namespace llvm {
-namespace yaml {
-template <> struct MappingTraits<lldb_private::Args::ArgEntry> {
-  class NormalizedArgEntry {
-  public:
-    NormalizedArgEntry(IO &) {}
-    NormalizedArgEntry(IO &, lldb_private::Args::ArgEntry &entry)
-        : value(entry.ref()), quote(entry.quote) {}
-    lldb_private::Args::ArgEntry denormalize(IO &) {
-      return lldb_private::Args::ArgEntry(value, quote);
-    }
-    StringRef value;
-    char quote;
-  };
-  static void mapping(IO &io, lldb_private::Args::ArgEntry &v);
-};
-template <> struct MappingTraits<lldb_private::Args> {
-  static void mapping(IO &io, lldb_private::Args &v);
-};
-} // namespace yaml
-} // namespace llvm
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::Args::ArgEntry)
 
 #endif // LLDB_UTILITY_ARGS_H

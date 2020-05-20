@@ -159,14 +159,12 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   assert(PType && "Expecting pointer type in handleByValParam");
 
   Type *StructType = PType->getElementType();
-  const DataLayout &DL = Func->getParent()->getDataLayout();
-  unsigned AS = DL.getAllocaAddrSpace();
+  unsigned AS = Func->getParent()->getDataLayout().getAllocaAddrSpace();
   AllocaInst *AllocA = new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
   // Set the alignment to alignment of the byval parameter. This is because,
   // later load/stores assume that alignment, and we are going to replace
   // the use of the byval parameter with this alloca instruction.
-  AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
-                           .getValueOr(DL.getPrefTypeAlign(StructType)));
+  AllocA->setAlignment(MaybeAlign(Func->getParamAlignment(Arg->getArgNo())));
   Arg->replaceAllUsesWith(AllocA);
 
   Value *ArgInParam = new AddrSpaceCastInst(

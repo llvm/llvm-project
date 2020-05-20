@@ -132,7 +132,8 @@ define float @lower_constantpool(float %a) nounwind {
 ; RV32I-SMALL-LABEL: lower_constantpool:
 ; RV32I-SMALL:       # %bb.0:
 ; RV32I-SMALL-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV32I-SMALL-NEXT:    flw ft0, %lo(.LCPI3_0)(a1)
+; RV32I-SMALL-NEXT:    addi a1, a1, %lo(.LCPI3_0)
+; RV32I-SMALL-NEXT:    flw ft0, 0(a1)
 ; RV32I-SMALL-NEXT:    fmv.w.x ft1, a0
 ; RV32I-SMALL-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32I-SMALL-NEXT:    fmv.x.w a0, ft0

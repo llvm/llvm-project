@@ -9,9 +9,6 @@ bar:
 ; CHECK: R_AVR_LDI SYMBOL+0x3
 ldi r21, SYMBOL+3
 
-; CHECK: R_AVR_6 SYMBOL+0x4
-ldd r8, Y+SYMBOL+4
-
 ; CHECK-NEXT: R_AVR_6_ADIW FOO
 adiw r24, FOO
 

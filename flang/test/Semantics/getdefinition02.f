@@ -1,4 +1,4 @@
-!RUN: %S/test_any.sh %s %t %f18
+!RUN: %S/test_any.sh %s %flang %t
 ! Tests -fget-definition with fixed form.
       module m2
        private :: f

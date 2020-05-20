@@ -121,19 +121,8 @@ int main(int argc, char **argv) {
 
   // Parse the file now...
   SMDiagnostic Err;
-  auto SetDataLayout = [](StringRef) -> Optional<std::string> {
-    if (ClDataLayout.empty())
-      return None;
-    return ClDataLayout;
-  };
-  ParsedModuleAndIndex ModuleAndIndex;
-  if (DisableVerify) {
-    ModuleAndIndex = parseAssemblyFileWithIndexNoUpgradeDebugInfo(
-        InputFilename, Err, Context, nullptr, SetDataLayout);
-  } else {
-    ModuleAndIndex = parseAssemblyFileWithIndex(InputFilename, Err, Context,
-                                                nullptr, SetDataLayout);
-  }
+  auto ModuleAndIndex = parseAssemblyFileWithIndex(
+      InputFilename, Err, Context, nullptr, !DisableVerify, ClDataLayout);
   std::unique_ptr<Module> M = std::move(ModuleAndIndex.Mod);
   if (!M.get()) {
     Err.print(argv[0], errs());

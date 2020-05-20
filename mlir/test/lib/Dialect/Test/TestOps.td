@@ -13,11 +13,11 @@ include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/SideEffects.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/SideEffects.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -1214,15 +1214,9 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
-// Test that we elide optional attributes that are within the syntax.
-def FormatOptAttrOp : TEST_Op<"format_opt_attr_op"> {
-  let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "(`(`$opt_attr^`)`)? attr-dict";
-}
-
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
-  let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
+  let arguments = (ins I64Attr:$attr);
   let assemblyFormat = "attr-dict-with-keyword";
 }
 

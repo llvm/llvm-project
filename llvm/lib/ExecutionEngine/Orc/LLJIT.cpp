@@ -1074,15 +1074,10 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     CompileThreads =
         std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
     ES->setDispatchMaterialization(
-        [this](std::unique_ptr<MaterializationUnit> MU,
-               MaterializationResponsibility MR) {
-          // FIXME: Switch to move capture once ThreadPool uses unique_function.
+        [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
+          // FIXME: Switch to move capture once we have c++14.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto SharedMR =
-              std::make_shared<MaterializationResponsibility>(std::move(MR));
-          auto Work = [SharedMU, SharedMR]() mutable {
-            SharedMU->materialize(std::move(*SharedMR));
-          };
+          auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
           CompileThreads->async(std::move(Work));
         });
   }

@@ -1710,13 +1710,12 @@ bool CastExpr::CastConsistency() const {
     auto Ty = getType();
     auto SETy = getSubExpr()->getType();
     assert(getValueKindForType(Ty) == Expr::getValueKindForType(SETy));
-    if (isRValue() && !Ty->isDependentType() && !SETy->isDependentType()) {
+    if (isRValue()) {
       Ty = Ty->getPointeeType();
       SETy = SETy->getPointeeType();
     }
-    assert((Ty->isDependentType() || SETy->isDependentType()) ||
-           (!Ty.isNull() && !SETy.isNull() &&
-            Ty.getAddressSpace() != SETy.getAddressSpace()));
+    assert(!Ty.isNull() && !SETy.isNull() &&
+           Ty.getAddressSpace() != SETy.getAddressSpace());
     goto CheckNoBasePath;
   }
   // These should not have an inheritance path.
@@ -3205,7 +3204,6 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
   case ObjCBridgedCastExprClass:
   case CXXDynamicCastExprClass:
   case CXXReinterpretCastExprClass:
-  case CXXAddrspaceCastExprClass:
   case CXXConstCastExprClass: {
     const CastExpr *CE = cast<CastExpr>(this);
 
@@ -3497,7 +3495,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXStaticCastExprClass:
   case CXXReinterpretCastExprClass:
   case CXXConstCastExprClass:
-  case CXXAddrspaceCastExprClass:
   case CXXFunctionalCastExprClass:
   case BuiltinBitCastExprClass: {
     // While volatile reads are side-effecting in both C and C++, we treat them
@@ -4651,24 +4648,25 @@ QualType OMPArraySectionExpr::getBaseOriginalType(const Expr *Base) {
   return OriginalTy;
 }
 
-RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
+RecoveryExpr::RecoveryExpr(ASTContext &Ctx, SourceLocation BeginLoc,
                            SourceLocation EndLoc, ArrayRef<Expr *> SubExprs)
-    : Expr(RecoveryExprClass, T, VK_LValue, OK_Ordinary), BeginLoc(BeginLoc),
-      EndLoc(EndLoc), NumExprs(SubExprs.size()) {
-  assert(!T.isNull());
-  assert(llvm::all_of(SubExprs, [](Expr* E) { return E != nullptr; }));
+    : Expr(RecoveryExprClass, Ctx.DependentTy, VK_LValue, OK_Ordinary),
+      BeginLoc(BeginLoc), EndLoc(EndLoc), NumExprs(SubExprs.size()) {
+#ifndef NDEBUG
+  for (auto *E : SubExprs)
+    assert(E != nullptr);
+#endif
 
   llvm::copy(SubExprs, getTrailingObjects<Expr *>());
   setDependence(computeDependence(this));
 }
 
-RecoveryExpr *RecoveryExpr::Create(ASTContext &Ctx, QualType T,
-                                   SourceLocation BeginLoc,
+RecoveryExpr *RecoveryExpr::Create(ASTContext &Ctx, SourceLocation BeginLoc,
                                    SourceLocation EndLoc,
                                    ArrayRef<Expr *> SubExprs) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(SubExprs.size()),
                            alignof(RecoveryExpr));
-  return new (Mem) RecoveryExpr(Ctx, T, BeginLoc, EndLoc, SubExprs);
+  return new (Mem) RecoveryExpr(Ctx, BeginLoc, EndLoc, SubExprs);
 }
 
 RecoveryExpr *RecoveryExpr::CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs) {

@@ -13,8 +13,7 @@
 
 
 ; CHECK:             .comm   common[RW],4,2
-; ASM32-NEXT:        .csect .data[RW], 2
-; ASM64-NEXT:        .csect .data[RW], 3
+; CHECK-NEXT:        .csect .data[RW]
 ; CHECK-NEXT:        .globl  pointer
 ; ASM32-NEXT:        .align  2
 ; ASM64-NEXT:        .align  3

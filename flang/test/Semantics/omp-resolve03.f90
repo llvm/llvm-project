@@ -1,4 +1,5 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+!OPTIONS: -fopenmp
 
 ! 2.15.3 Although variables in common blocks can be accessed by use association
 ! or host association, common block names cannot. As a result, a common block

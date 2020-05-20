@@ -1716,8 +1716,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXConstCastExprClass:
     case Stmt::CXXFunctionalCastExprClass:
     case Stmt::BuiltinBitCastExprClass:
-    case Stmt::ObjCBridgedCastExprClass:
-    case Stmt::CXXAddrspaceCastExprClass: {
+    case Stmt::ObjCBridgedCastExprClass: {
       Bldr.takeNodes(Pred);
       const auto *C = cast<CastExpr>(S);
       ExplodedNodeSet dstExpr;

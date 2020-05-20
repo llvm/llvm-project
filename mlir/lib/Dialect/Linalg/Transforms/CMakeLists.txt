@@ -23,7 +23,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgEDSC
   MLIRLinalgOps
   MLIRLinalgUtils
-  MLIRSCF
+  MLIRLoopOps
   MLIRPass
   MLIRStandardOps
   MLIRStandardToLLVM

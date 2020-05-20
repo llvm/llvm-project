@@ -238,7 +238,7 @@ const (
 	PointerTypeKind        TypeKind = C.LLVMPointerTypeKind
 	MetadataTypeKind       TypeKind = C.LLVMMetadataTypeKind
 	TokenTypeKind          TypeKind = C.LLVMTokenTypeKind
-	VectorTypeKind    	   TypeKind = C.LLVMVectorTypeKind
+	FixedVectorTypeKind    TypeKind = C.LLVMFixedVectorTypeKind
 	ScalableVectorTypeKind TypeKind = C.LLVMScalableVectorTypeKind
 )
 

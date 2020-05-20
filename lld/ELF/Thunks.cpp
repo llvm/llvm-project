@@ -40,8 +40,9 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 
@@ -713,8 +714,8 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(dr.section);
 }
 
-void elf::writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
-                                const InputFile *file, int64_t addend) {
+void writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
+                           const InputFile *file, int64_t addend) {
   if (!config->isPic) {
     write32(buf + 0, 0x3d600000 | (gotPltVA + 0x8000) >> 16); // lis r11,ha
     write32(buf + 4, 0x816b0000 | (uint16_t)gotPltVA);        // lwz r11,l(r11)
@@ -798,7 +799,7 @@ void PPC32LongThunk::writeTo(uint8_t *buf) {
   write32(buf + 4, 0x4e800420);              // bctr
 }
 
-void elf::writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
+void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
 
@@ -955,7 +956,7 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
   return make<PPC64PDLongBranchThunk>(s, a);
 }
 
-Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
+Thunk *addThunk(const InputSection &isec, Relocation &rel) {
   Symbol &s = *rel.sym;
   int64_t a = rel.addend;
 
@@ -976,3 +977,6 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
 
   llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
 }
+
+} // end namespace elf
+} // end namespace lld

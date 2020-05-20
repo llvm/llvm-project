@@ -172,7 +172,6 @@ struct Section : public Chunk {
   StringRef Link;
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
-  Optional<llvm::yaml::Hex64> Offset;
 
   // Usually sections are not created implicitly, but loaded from YAML.
   // When they are, this flag is used to signal about that.

@@ -1239,7 +1239,7 @@ private:
     // variables on Data-sharing attribute clauses
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
     bool withinConstruct{false};
-    std::int64_t associatedLoopLevel{0};
+    std::size_t associatedLoopLevel{0};
   };
   // back() is the top of the stack
   OmpContext &GetContext() {
@@ -1272,10 +1272,10 @@ private:
     return it != GetContext().objectWithDSA.end();
   }
 
-  void SetContextAssociatedLoopLevel(std::int64_t level) {
+  void SetContextAssociatedLoopLevel(std::size_t level) {
     GetContext().associatedLoopLevel = level;
   }
-  std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
+  std::size_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
 
   Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev, Scope &scope) {
     const auto pair{scope.try_emplace(name, Attrs{}, HostAssocDetails{prev})};
@@ -3671,13 +3671,6 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     if (!symbol) {
       Say(paramName,
           "No definition found for type parameter '%s'"_err_en_US); // C742
-      // No symbol for a type param.  Create one and mark it as containing an
-      // error to improve subsequent semantic processing
-      BeginAttrs();
-      Symbol *typeParam{MakeTypeSymbol(
-          paramName, TypeParamDetails{common::TypeParamAttr::Len})};
-      typeParam->set(Symbol::Flag::Error);
-      EndAttrs();
     } else if (!symbol->has<TypeParamDetails>()) {
       Say2(paramName, "'%s' is not defined as a type parameter"_err_en_US,
           *symbol, "Definition of '%s'"_en_US); // C741
@@ -3913,7 +3906,7 @@ bool DeclarationVisitor::Pre(const parser::ProcComponentDefStmt &) {
   CHECK(!interfaceName_);
   return true;
 }
-void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &stmt) {
+void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &) {
   interfaceName_ = nullptr;
 }
 bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
@@ -4689,7 +4682,7 @@ void DeclarationVisitor::SetType(
       SetType(name,
           currScope().MakeCharacterType(std::move(length), std::move(kind)));
       return;
-    } else { // C753
+    } else {
       Say(name,
           "A length specifier cannot be used to declare the non-character entity '%s'"_err_en_US);
     }
@@ -4817,23 +4810,21 @@ bool DeclarationVisitor::OkToAddComponent(
   for (const Scope *scope{&currScope()}; scope;) {
     CHECK(scope->IsDerivedType());
     if (auto *prev{FindInScope(*scope, name)}) {
-      if (!prev->test(Symbol::Flag::Error)) {
-        auto msg{""_en_US};
-        if (extends) {
-          msg = "Type cannot be extended as it has a component named"
-                " '%s'"_err_en_US;
-        } else if (prev->test(Symbol::Flag::ParentComp)) {
-          msg = "'%s' is a parent type of this type and so cannot be"
-                " a component"_err_en_US;
-        } else if (scope != &currScope()) {
-          msg = "Component '%s' is already declared in a parent of this"
-                " derived type"_err_en_US;
-        } else {
-          msg = "Component '%s' is already declared in this"
-                " derived type"_err_en_US;
-        }
-        Say2(name, std::move(msg), *prev, "Previous declaration of '%s'"_en_US);
+      auto msg{""_en_US};
+      if (extends) {
+        msg = "Type cannot be extended as it has a component named"
+              " '%s'"_err_en_US;
+      } else if (prev->test(Symbol::Flag::ParentComp)) {
+        msg = "'%s' is a parent type of this type and so cannot be"
+              " a component"_err_en_US;
+      } else if (scope != &currScope()) {
+        msg = "Component '%s' is already declared in a parent of this"
+              " derived type"_err_en_US;
+      } else {
+        msg = "Component '%s' is already declared in this"
+              " derived type"_err_en_US;
       }
+      Say2(name, std::move(msg), *prev, "Previous declaration of '%s'"_en_US);
       return false;
     }
     if (scope == &currScope() && extends) {
@@ -6535,10 +6526,10 @@ const parser::DoConstruct *OmpAttributeVisitor::GetDoConstructIf(
   return nullptr;
 }
 
-std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
+std::size_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
     const parser::OmpClauseList &x) {
-  std::int64_t orderedLevel{0};
-  std::int64_t collapseLevel{0};
+  std::size_t orderedLevel{0};
+  std::size_t collapseLevel{0};
   for (const auto &clause : x.v) {
     if (const auto *orderedClause{
             std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
@@ -6573,13 +6564,11 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 //   - The loop iteration variables in the associated do-loops of a simd
 //     construct with multiple associated do-loops are lastprivate.
 //
-// TODO: revisit after semantics checks are completed for do-loop association of
-//       collapse and ordered
+// TODO: This assumes that the do-loops association for collapse/ordered
+//       clause has been performed (the number of nested do-loops >= n).
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     const parser::OpenMPLoopConstruct &x) {
-  std::int64_t level{GetContext().associatedLoopLevel};
-  if (level <= 0)
-    return;
+  std::size_t level{GetContext().associatedLoopLevel};
   Symbol::Flag ivDSA{Symbol::Flag::OmpPrivate};
   if (simdSet.test(GetContext().directive)) {
     if (level == 1) {

@@ -802,16 +802,11 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   if (!BBI)
     return;
 
-  BasicBlock *BB = BBI->getParent();
   for (auto &AssumeVH : AC->assumptionsFor(Val)) {
     if (!AssumeVH)
       continue;
-
-    // Only check assumes in the block of the context instruction. Other
-    // assumes will have already been taken into account when the value was
-    // propagated from predecessor blocks.
     auto *I = cast<CallInst>(AssumeVH);
-    if (I->getParent() != BB || !isValidAssumeForContext(I, BBI))
+    if (!isValidAssumeForContext(I, BBI, DT))
       continue;
 
     BBLV = intersect(BBLV, getValueFromCondition(Val, I->getArgOperand(0)));
@@ -823,10 +818,10 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   if (!GuardDecl || GuardDecl->use_empty())
     return;
 
-  if (BBI->getIterator() == BB->begin())
+  if (BBI->getIterator() == BBI->getParent()->begin())
     return;
   for (Instruction &I : make_range(std::next(BBI->getIterator().getReverse()),
-                                   BB->rend())) {
+                                   BBI->getParent()->rend())) {
     Value *Cond = nullptr;
     if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))
       BBLV = intersect(BBLV, getValueFromCondition(Val, Cond));

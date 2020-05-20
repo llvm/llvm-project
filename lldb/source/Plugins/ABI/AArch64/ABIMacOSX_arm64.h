@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIMACOSX_ARM64_H
 #define LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIMACOSX_ARM64_H
 
-#include "Plugins/ABI/AArch64/ABIAArch64.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
-class ABIMacOSX_arm64 : public ABIAArch64 {
+class ABIMacOSX_arm64 : public lldb_private::RegInfoBasedABI {
 public:
   ~ABIMacOSX_arm64() override = default;
 
@@ -62,6 +62,9 @@ public:
     return true;
   }
 
+  const lldb_private::RegisterInfo *
+  GetRegisterInfoArray(uint32_t &count) override;
+
   // Static Functions
 
   static void Initialize();
@@ -90,7 +93,7 @@ protected:
                            lldb_private::CompilerType &ast_type) const override;
 
 private:
-  using ABIAArch64::ABIAArch64; // Call CreateInstance instead.
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_AARCH64_ABIMACOSX_ARM64_H

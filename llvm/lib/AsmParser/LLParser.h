@@ -16,7 +16,6 @@
 #include "LLLexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -157,17 +156,23 @@ namespace llvm {
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
 
+    /// DataLayout string to override that in LLVM assembly.
+    StringRef DataLayoutStr;
+
     std::string SourceFileName;
 
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
-             SlotMapping *Slots = nullptr)
+             SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true,
+             StringRef DataLayoutString = "")
         : Context(Context), Lex(F, SM, Err, Context), M(M), Index(Index),
-          Slots(Slots), BlockAddressPFS(nullptr) {}
-    bool Run(
-        bool UpgradeDebugInfo,
-        DataLayoutCallbackTy DataLayoutCallback = [](Module *) {});
+          Slots(Slots), BlockAddressPFS(nullptr),
+          UpgradeDebugInfo(UpgradeDebugInfo), DataLayoutStr(DataLayoutString) {
+      if (!DataLayoutStr.empty())
+        M->setDataLayout(DataLayoutStr);
+    }
+    bool Run();
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
@@ -297,7 +302,7 @@ namespace llvm {
 
     // Top-Level Entities
     bool ParseTopLevelEntities();
-    bool ValidateEndOfModule(bool UpgradeDebugInfo);
+    bool ValidateEndOfModule();
     bool ValidateEndOfIndex();
     bool ParseTargetDefinitions();
     bool ParseTargetDefinition();

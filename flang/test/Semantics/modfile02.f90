@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Check modfile generation for private type in public API.
 
 module m

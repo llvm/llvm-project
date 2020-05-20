@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %S/test_symbols.sh %s %flang %t
 !DEF: /m1 Module
 module m1
 contains

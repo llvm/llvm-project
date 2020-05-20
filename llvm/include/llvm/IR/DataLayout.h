@@ -651,7 +651,6 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::IntegerTyID:
     return TypeSize::Fixed(Ty->getIntegerBitWidth());
   case Type::HalfTyID:
-  case Type::BFloatTyID:
     return TypeSize::Fixed(16);
   case Type::FloatTyID:
     return TypeSize::Fixed(32);

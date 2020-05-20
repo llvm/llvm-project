@@ -31,13 +31,13 @@ public:
   explicit StringSet(AllocatorTy a) : Base(a) {}
 
   std::pair<typename Base::iterator, bool> insert(StringRef key) {
-    return Base::try_emplace(key);
+    return Base::insert(std::make_pair(key, None));
   }
 
   template <typename InputIt>
   void insert(const InputIt &begin, const InputIt &end) {
     for (auto it = begin; it != end; ++it)
-      insert(*it);
+      Base::insert(std::make_pair(*it, None));
   }
 
   template <typename ValueTy>

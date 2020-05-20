@@ -34,7 +34,6 @@ add_unittest(ClangdUnitTests ClangdTests
   CodeCompletionStringsTests.cpp
   CollectMacrosTests.cpp
   CompileCommandsTests.cpp
-  CompilerTests.cpp
   DexTests.cpp
   DiagnosticsTests.cpp
   DraftStoreTests.cpp

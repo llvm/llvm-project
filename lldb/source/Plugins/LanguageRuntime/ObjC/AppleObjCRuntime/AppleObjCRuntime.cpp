@@ -501,32 +501,19 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
   return ValueObjectSP();
 }
 
-/// Utility method for error handling in GetBacktraceThreadFromException.
-/// \param msg The message to add to the log.
-/// \return An invalid ThreadSP to be returned from
-///         GetBacktraceThreadFromException.
-LLVM_NODISCARD
-static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
-  LLDB_LOG(log, "Failed getting backtrace from exception: {0}", msg);
-  return ThreadSP();
-}
-
 ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     lldb::ValueObjectSP exception_sp) {
   ValueObjectSP reserved_dict =
       exception_sp->GetChildMemberWithName(ConstString("reserved"), true);
-  if (!reserved_dict)
-    return FailExceptionParsing("Failed to get 'reserved' member.");
+  if (!reserved_dict) return ThreadSP();
 
   reserved_dict = reserved_dict->GetSyntheticValue();
-  if (!reserved_dict)
-    return FailExceptionParsing("Failed to get synthetic value.");
+  if (!reserved_dict) return ThreadSP();
 
   TypeSystemClang *clang_ast_context =
       TypeSystemClang::GetScratch(*exception_sp->GetTargetSP());
   if (!clang_ast_context)
-    return FailExceptionParsing("Failed to get scratch AST.");
+    return ThreadSP();
   CompilerType objc_id =
       clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);
   ValueObjectSP return_addresses;
@@ -567,22 +554,15 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     }
   }
 
-  if (!return_addresses)
-    return FailExceptionParsing("Failed to get return addresses.");
+  if (!return_addresses) return ThreadSP();
   auto frames_value =
       return_addresses->GetChildMemberWithName(ConstString("_frames"), true);
-  if (!frames_value)
-    return FailExceptionParsing("Failed to get frames_value.");
   addr_t frames_addr = frames_value->GetValueAsUnsigned(0);
   auto count_value =
       return_addresses->GetChildMemberWithName(ConstString("_cnt"), true);
-  if (!count_value)
-    return FailExceptionParsing("Failed to get count_value.");
   size_t count = count_value->GetValueAsUnsigned(0);
   auto ignore_value =
       return_addresses->GetChildMemberWithName(ConstString("_ignore"), true);
-  if (!ignore_value)
-    return FailExceptionParsing("Failed to get ignore_value.");
   size_t ignore = ignore_value->GetValueAsUnsigned(0);
 
   size_t ptr_size = m_process->GetAddressByteSize();
@@ -594,8 +574,7 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     pcs.push_back(pc);
   }
 
-  if (pcs.empty())
-    return FailExceptionParsing("Failed to get PC list.");
+  if (pcs.empty()) return ThreadSP();
 
   ThreadSP new_thread_sp(new HistoryThread(*m_process, 0, pcs));
   m_process->GetExtendedThreadList().AddThread(new_thread_sp);

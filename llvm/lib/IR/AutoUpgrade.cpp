@@ -4245,7 +4245,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   return Res;
 }
 
-void llvm::UpgradeAttributes(AttrBuilder &B) {
+void llvm::UpgradeFramePointerAttributes(AttrBuilder &B) {
   StringRef FramePointer;
   if (B.contains("no-frame-pointer-elim")) {
     // The value can be "true" or "false".
@@ -4260,17 +4260,7 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
       FramePointer = "non-leaf";
     B.removeAttribute("no-frame-pointer-elim-non-leaf");
   }
+
   if (!FramePointer.empty())
     B.addAttribute("frame-pointer", FramePointer);
-
-  if (B.contains("null-pointer-is-valid")) {
-    // The value can be "true" or "false".
-    bool NullPointerIsValid = false;
-    for (const auto &I : B.td_attrs())
-      if (I.first == "null-pointer-is-valid")
-        NullPointerIsValid = I.second == "true";
-    B.removeAttribute("null-pointer-is-valid");
-    if (NullPointerIsValid)
-      B.addAttribute(Attribute::NullPointerIsValid);
-  }
 }

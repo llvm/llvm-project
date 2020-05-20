@@ -333,7 +333,6 @@ struct BuiltInTypes {
   uint16_t        u16;
   uint8_t         u8;
   bool            b;
-  char            c;
   int64_t         s64;
   int32_t         s32;
   int16_t         s16;
@@ -358,7 +357,6 @@ namespace yaml {
       io.mapRequired("u16",      bt.u16);
       io.mapRequired("u8",       bt.u8);
       io.mapRequired("b",        bt.b);
-      io.mapRequired("c",        bt.c);
       io.mapRequired("s64",      bt.s64);
       io.mapRequired("s32",      bt.s32);
       io.mapRequired("s16",      bt.s16);
@@ -388,7 +386,6 @@ TEST(YAMLIO, TestReadBuiltInTypes) {
             "u16:      65000\n"
             "u8:       255\n"
             "b:        false\n"
-            "c:        'c'\n"
             "s64:      -5000000000\n"
             "s32:      -2000000000\n"
             "s16:      -32000\n"
@@ -399,7 +396,7 @@ TEST(YAMLIO, TestReadBuiltInTypes) {
             "h16:      0x8765\n"
             "h32:      0xFEDCBA98\n"
             "h64:      0xFEDCBA9876543210\n"
-            "...\n");
+           "...\n");
   yin >> map;
 
   EXPECT_FALSE(yin.error());
@@ -410,7 +407,6 @@ TEST(YAMLIO, TestReadBuiltInTypes) {
   EXPECT_EQ(map.u16, 65000);
   EXPECT_EQ(map.u8,  255);
   EXPECT_EQ(map.b,   false);
-  EXPECT_EQ(map.c,   'c');
   EXPECT_EQ(map.s64, -5000000000LL);
   EXPECT_EQ(map.s32, -2000000000L);
   EXPECT_EQ(map.s16, -32000);
@@ -438,7 +434,6 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
     map.u16 = 50000;
     map.u8  = 254;
     map.b   = true;
-    map.c   = 'd';
     map.s64 = -6000000000LL;
     map.s32 = -2000000000;
     map.s16 = -32000;
@@ -468,7 +463,6 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
     EXPECT_EQ(map.u16,      50000);
     EXPECT_EQ(map.u8,       254);
     EXPECT_EQ(map.b,        true);
-    EXPECT_EQ(map.c,        'd');
     EXPECT_EQ(map.s64,      -6000000000LL);
     EXPECT_EQ(map.s32,      -2000000000L);
     EXPECT_EQ(map.s16,      -32000);

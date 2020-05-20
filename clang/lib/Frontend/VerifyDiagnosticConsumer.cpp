@@ -89,10 +89,9 @@ namespace {
 class StandardDirective : public Directive {
 public:
   StandardDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-                    bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-                    unsigned Min, unsigned Max)
-      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyFileAndLine,
-                  MatchAnyLine, Text, Min, Max) {}
+                    bool MatchAnyLine, StringRef Text, unsigned Min,
+                    unsigned Max)
+      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max) {}
 
   bool isValid(std::string &Error) override {
     // all strings are considered valid; even empty ones
@@ -108,10 +107,9 @@ public:
 class RegexDirective : public Directive {
 public:
   RegexDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-                 bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-                 unsigned Min, unsigned Max, StringRef RegexStr)
-      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyFileAndLine,
-                  MatchAnyLine, Text, Min, Max),
+                 bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max,
+                 StringRef RegexStr)
+      : Directive(DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max),
         Regex(RegexStr) {}
 
   bool isValid(std::string &Error) override {
@@ -296,13 +294,11 @@ struct UnattachedDirective {
 // Attach the specified directive to the line of code indicated by
 // \p ExpectedLoc.
 void attachDirective(DiagnosticsEngine &Diags, const UnattachedDirective &UD,
-                     SourceLocation ExpectedLoc,
-                     bool MatchAnyFileAndLine = false,
-                     bool MatchAnyLine = false) {
+                     SourceLocation ExpectedLoc, bool MatchAnyLine = false) {
   // Construct new directive.
-  std::unique_ptr<Directive> D = Directive::create(
-      UD.RegexKind, UD.DirectivePos, ExpectedLoc, MatchAnyFileAndLine,
-      MatchAnyLine, UD.Text, UD.Min, UD.Max);
+  std::unique_ptr<Directive> D =
+      Directive::create(UD.RegexKind, UD.DirectivePos, ExpectedLoc,
+                        MatchAnyLine, UD.Text, UD.Min, UD.Max);
 
   std::string Error;
   if (!D->isValid(Error)) {
@@ -502,7 +498,6 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // Next optional token: @
     SourceLocation ExpectedLoc;
     StringRef Marker;
-    bool MatchAnyFileAndLine = false;
     bool MatchAnyLine = false;
     if (!PH.Next("@")) {
       ExpectedLoc = Pos;
@@ -531,39 +526,26 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         StringRef Filename(PH.C, PH.P-PH.C);
         PH.Advance();
 
-        if (Filename == "*") {
-          MatchAnyFileAndLine = true;
-          if (!PH.Next("*")) {
-            Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
-                         diag::err_verify_missing_line)
-                << "'*'";
-            continue;
-          }
+        // Lookup file via Preprocessor, like a #include.
+        const DirectoryLookup *CurDir;
+        Optional<FileEntryRef> File =
+            PP->LookupFile(Pos, Filename, false, nullptr, nullptr, CurDir,
+                           nullptr, nullptr, nullptr, nullptr, nullptr);
+        if (!File) {
+          Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
+                       diag::err_verify_missing_file) << Filename << KindStr;
+          continue;
+        }
+
+        const FileEntry *FE = &File->getFileEntry();
+        if (SM.translateFile(FE).isInvalid())
+          SM.createFileID(FE, Pos, SrcMgr::C_User);
+
+        if (PH.Next(Line) && Line > 0)
+          ExpectedLoc = SM.translateFileLineCol(FE, Line, 1);
+        else if (PH.Next("*")) {
           MatchAnyLine = true;
-          ExpectedLoc = SourceLocation();
-        } else {
-          // Lookup file via Preprocessor, like a #include.
-          const DirectoryLookup *CurDir;
-          Optional<FileEntryRef> File =
-              PP->LookupFile(Pos, Filename, false, nullptr, nullptr, CurDir,
-                             nullptr, nullptr, nullptr, nullptr, nullptr);
-          if (!File) {
-            Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
-                         diag::err_verify_missing_file)
-                << Filename << KindStr;
-            continue;
-          }
-
-          const FileEntry *FE = &File->getFileEntry();
-          if (SM.translateFile(FE).isInvalid())
-            SM.createFileID(FE, Pos, SrcMgr::C_User);
-
-          if (PH.Next(Line) && Line > 0)
-            ExpectedLoc = SM.translateFileLineCol(FE, Line, 1);
-          else if (PH.Next("*")) {
-            MatchAnyLine = true;
-            ExpectedLoc = SM.translateFileLineCol(FE, 1, 1);
-          }
+          ExpectedLoc = SM.translateFileLineCol(FE, 1, 1);
         }
       } else if (PH.Next("*")) {
         MatchAnyLine = true;
@@ -649,7 +631,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     }
 
     if (Marker.empty())
-      attachDirective(Diags, D, ExpectedLoc, MatchAnyFileAndLine, MatchAnyLine);
+      attachDirective(Diags, D, ExpectedLoc, MatchAnyLine);
     else
       Markers.addDirective(Marker, D);
     FoundDirective = true;
@@ -895,7 +877,7 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
   SmallString<256> Fmt;
   llvm::raw_svector_ostream OS(Fmt);
   for (const auto *D : DL) {
-    if (D->DiagnosticLoc.isInvalid() || D->MatchAnyFileAndLine)
+    if (D->DiagnosticLoc.isInvalid())
       OS << "\n  File *";
     else
       OS << "\n  File " << SourceMgr.getFilename(D->DiagnosticLoc);
@@ -955,7 +937,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
             continue;
         }
 
-        if (!D.DiagnosticLoc.isInvalid() && !D.MatchAnyFileAndLine &&
+        if (!D.DiagnosticLoc.isInvalid() &&
             !IsFromSameFile(SourceMgr, D.DiagnosticLoc, II->first))
           continue;
 
@@ -1132,13 +1114,11 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
 std::unique_ptr<Directive> Directive::create(bool RegexKind,
                                              SourceLocation DirectiveLoc,
                                              SourceLocation DiagnosticLoc,
-                                             bool MatchAnyFileAndLine,
                                              bool MatchAnyLine, StringRef Text,
                                              unsigned Min, unsigned Max) {
   if (!RegexKind)
     return std::make_unique<StandardDirective>(DirectiveLoc, DiagnosticLoc,
-                                               MatchAnyFileAndLine,
-                                               MatchAnyLine, Text, Min, Max);
+                                                MatchAnyLine, Text, Min, Max);
 
   // Parse the directive into a regular expression.
   std::string RegexStr;
@@ -1163,7 +1143,6 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
     }
   }
 
-  return std::make_unique<RegexDirective>(DirectiveLoc, DiagnosticLoc,
-                                          MatchAnyFileAndLine, MatchAnyLine,
-                                          Text, Min, Max, RegexStr);
+  return std::make_unique<RegexDirective>(
+      DirectiveLoc, DiagnosticLoc, MatchAnyLine, Text, Min, Max, RegexStr);
 }

@@ -245,12 +245,9 @@ class LinkerScript final {
   void expandMemoryRegions(uint64_t size);
 
   std::vector<InputSectionBase *>
-  computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>);
+  computeInputSections(const InputSectionDescription *);
 
   std::vector<InputSectionBase *> createInputSectionList(OutputSection &cmd);
-
-  void discardSynthetic(OutputSection &);
 
   std::vector<size_t> getPhdrIndices(OutputSection *sec);
 

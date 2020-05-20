@@ -393,8 +393,9 @@ void VPInstruction::execute(VPTransformState &State) {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "\"EMIT ";
+  O << " +\n" << Indent << "\"EMIT ";
   print(O, SlotTracker);
+  O << "\\l\"";
 }
 
 void VPInstruction::print(raw_ostream &O) const {
@@ -655,11 +656,8 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
       Pred->printAsOperand(OS, SlotTracker);
   }
 
-  for (const VPRecipeBase &Recipe : *BasicBlock) {
-    OS << " +\n" << Indent;
+  for (const VPRecipeBase &Recipe : *BasicBlock)
     Recipe.print(OS, Indent, SlotTracker);
-    OS << "\\l\"";
-  }
 
   // Dump the condition bit.
   const VPValue *CBV = BasicBlock->getCondBit();
@@ -718,51 +716,53 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, Value *V) {
 
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-CALL " << VPlanIngredient(&Ingredient);
+  O << " +\n"
+    << Indent << "\"WIDEN-CALL " << VPlanIngredient(&Ingredient) << "\\l\"";
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-SELECT" << VPlanIngredient(&Ingredient)
-    << (InvariantCond ? " (condition is loop invariant)" : "");
+  O << " +\n"
+    << Indent << "\"WIDEN-SELECT" << VPlanIngredient(&Ingredient)
+    << (InvariantCond ? " (condition is loop invariant)" : "") << "\\l\"";
 }
 
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN\\l\"";
-  O << "\"  " << VPlanIngredient(&Ingredient);
+  O << " +\n" << Indent << "\"WIDEN\\l\"";
+  O << "\"  " << VPlanIngredient(&Ingredient) << "\\l\"";
 }
 
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-INDUCTION";
+  O << " +\n" << Indent << "\"WIDEN-INDUCTION";
   if (Trunc) {
     O << "\\l\"";
     O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(Trunc);
+    O << " +\n" << Indent << "\"  " << VPlanIngredient(Trunc) << "\\l\"";
   } else
-    O << " " << VPlanIngredient(IV);
+    O << " " << VPlanIngredient(IV) << "\\l\"";
 }
 
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-GEP ";
+  O << " +\n" << Indent << "\"WIDEN-GEP ";
   O << (IsPtrLoopInvariant ? "Inv" : "Var");
   size_t IndicesNumber = IsIndexLoopInvariant.size();
   for (size_t I = 0; I < IndicesNumber; ++I)
     O << "[" << (IsIndexLoopInvariant[I] ? "Inv" : "Var") << "]";
   O << "\\l\"";
-  O << " +\n" << Indent << "\"  " << VPlanIngredient(GEP);
+  O << " +\n" << Indent << "\"  "  << VPlanIngredient(GEP) << "\\l\"";
 }
 
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN-PHI " << VPlanIngredient(Phi);
+  O << " +\n" << Indent << "\"WIDEN-PHI " << VPlanIngredient(Phi) << "\\l\"";
 }
 
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "\"BLEND ";
+  O << " +\n" << Indent << "\"BLEND ";
   Phi->printAsOperand(O, false);
   O << " =";
   if (getNumIncomingValues() == 1) {
@@ -778,24 +778,29 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
       getMask(I)->printAsOperand(O, SlotTracker);
     }
   }
+  O << "\\l\"";
 }
 
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")
+  O << " +\n"
+    << Indent << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")
     << VPlanIngredient(Ingredient);
   if (AlsoPack)
     O << " (S->V)";
+  O << "\\l\"";
 }
 
 void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "\"PHI-PREDICATED-INSTRUCTION " << VPlanIngredient(PredInst);
+  O << " +\n"
+    << Indent << "\"PHI-PREDICATED-INSTRUCTION " << VPlanIngredient(PredInst)
+    << "\\l\"";
 }
 
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN " << VPlanIngredient(&Instr);
+  O << " +\n" << Indent << "\"WIDEN " << VPlanIngredient(&Instr);
   O << ", ";
   getAddr()->printAsOperand(O, SlotTracker);
   VPValue *Mask = getMask();
@@ -803,6 +808,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << ", ";
     Mask->printAsOperand(O, SlotTracker);
   }
+  O << "\\l\"";
 }
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
@@ -823,9 +829,9 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
 
 void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
-  O << "\"EMIT ";
+  O << " +\n" << Indent << "\"EMIT ";
   getVPValue()->printAsOperand(O, SlotTracker);
-  O << " = WIDEN-CANONICAL-INDUCTION";
+  O << " = WIDEN-CANONICAL-INDUCTION \\l\"";
 }
 
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);

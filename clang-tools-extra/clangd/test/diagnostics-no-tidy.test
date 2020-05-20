@@ -32,7 +32,8 @@
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c",
+# CHECK-NEXT:    "version": null
 # CHECK-NEXT:  }
 ---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}

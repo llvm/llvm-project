@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %S/test_symbols.sh %s %flang %t
 ! Statement functions
 
 !DEF: /p1 MainProgram

@@ -642,17 +642,13 @@ void MCContext::addDebugPrefixMapEntry(const std::string &From,
 
 void MCContext::RemapDebugPaths() {
   const auto &DebugPrefixMap = this->DebugPrefixMap;
-  if (DebugPrefixMap.empty())
-    return;
-
   const auto RemapDebugPath = [&DebugPrefixMap](std::string &Path) {
-    SmallString<256> P(Path);
-    for (const auto &Entry : DebugPrefixMap) {
-      if (llvm::sys::path::replace_path_prefix(P, Entry.first, Entry.second)) {
-        Path = P.str().str();
-        break;
+    for (const auto &Entry : DebugPrefixMap)
+      if (StringRef(Path).startswith(Entry.first)) {
+        std::string RemappedPath =
+            (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
+        Path.swap(RemappedPath);
       }
-    }
   };
 
   // Remap compilation directory.

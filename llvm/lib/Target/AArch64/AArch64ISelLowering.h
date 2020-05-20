@@ -62,7 +62,6 @@ enum NodeType : unsigned {
   SHL_PRED,
   SRL_PRED,
   SRA_PRED,
-  SETCC_PRED,
 
   // Arithmetic instructions which write flags.
   ADDS,
@@ -132,10 +131,6 @@ enum NodeType : unsigned {
   SQSHLU_I,
   SRSHR_I,
   URSHR_I,
-
-  // Vector shift by constant and insert
-  VSLI,
-  VSRI,
 
   // Vector comparisons
   CMEQ,
@@ -212,10 +207,8 @@ enum NodeType : unsigned {
   UMULL,
 
   // Reciprocal estimates and steps.
-  FRECPE,
-  FRECPS,
-  FRSQRTE,
-  FRSQRTS,
+  FRECPE, FRECPS,
+  FRSQRTE, FRSQRTS,
 
   SUNPKHI,
   SUNPKLO,

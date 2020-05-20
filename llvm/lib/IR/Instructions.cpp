@@ -1246,15 +1246,6 @@ static Value *getAISize(LLVMContext &Context, Value *Amt) {
   return Amt;
 }
 
-Align computeAllocaDefaultAlign(Type *Ty, BasicBlock *BB) {
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  return DL.getPrefTypeAlign(Ty);
-}
-
-Align computeAllocaDefaultAlign(Type *Ty, Instruction *I) {
-  return computeAllocaDefaultAlign(Ty, I->getParent());
-}
-
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
                        Instruction *InsertBefore)
   : AllocaInst(Ty, AddrSpace, /*ArraySize=*/nullptr, Name, InsertBefore) {}
@@ -1265,29 +1256,27 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        const Twine &Name, Instruction *InsertBefore)
-    : AllocaInst(Ty, AddrSpace, ArraySize,
-                 computeAllocaDefaultAlign(Ty, InsertBefore), Name,
-                 InsertBefore) {}
+    : AllocaInst(Ty, AddrSpace, ArraySize, /*Align=*/None, Name, InsertBefore) {
+}
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        const Twine &Name, BasicBlock *InsertAtEnd)
-    : AllocaInst(Ty, AddrSpace, ArraySize,
-                 computeAllocaDefaultAlign(Ty, InsertAtEnd), Name,
-                 InsertAtEnd) {}
+    : AllocaInst(Ty, AddrSpace, ArraySize, /*Align=*/None, Name, InsertAtEnd) {}
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                       Align Align, const Twine &Name,
+                       MaybeAlign Align, const Twine &Name,
                        Instruction *InsertBefore)
     : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertBefore),
       AllocatedType(Ty) {
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   assert(!Ty->isVoidTy() && "Cannot allocate void!");
   setName(Name);
 }
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                       Align Align, const Twine &Name, BasicBlock *InsertAtEnd)
+                       MaybeAlign Align, const Twine &Name,
+                       BasicBlock *InsertAtEnd)
     : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertAtEnd),
       AllocatedType(Ty) {
@@ -1296,12 +1285,16 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
   setName(Name);
 }
 
-void AllocaInst::setAlignment(Align Align) {
-  assert(Align <= MaximumAlignment &&
+void AllocaInst::setAlignment(MaybeAlign Align) {
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~31) |
                              encode(Align));
-  assert(getAlignment() == Align.value() && "Alignment representation error!");
+  if (Align)
+    assert(getAlignment() == Align->value() &&
+           "Alignment representation error!");
+  else
+    assert(getAlignment() == 0 && "Alignment representation error!");
 }
 
 bool AllocaInst::isArrayAllocation() const {
@@ -1333,15 +1326,6 @@ void LoadInst::AssertOK() {
          "Alignment required for atomic load");
 }
 
-Align computeLoadStoreDefaultAlign(Type *Ty, BasicBlock *BB) {
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  return DL.getABITypeAlign(Ty);
-}
-
-Align computeLoadStoreDefaultAlign(Type *Ty, Instruction *I) {
-  return computeLoadStoreDefaultAlign(Ty, I->getParent());
-}
-
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
                    Instruction *InsertBef)
     : LoadInst(Ty, Ptr, Name, /*isVolatile=*/false, InsertBef) {}
@@ -1352,38 +1336,36 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Instruction *InsertBef)
-    : LoadInst(Ty, Ptr, Name, isVolatile,
-               computeLoadStoreDefaultAlign(Ty, InsertBef), InsertBef) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/None, InsertBef) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    BasicBlock *InsertAE)
-    : LoadInst(Ty, Ptr, Name, isVolatile,
-               computeLoadStoreDefaultAlign(Ty, InsertAE), InsertAE) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/None, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   Align Align, Instruction *InsertBef)
+                   MaybeAlign Align, Instruction *InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertBef) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   Align Align, BasicBlock *InsertAE)
+                   MaybeAlign Align, BasicBlock *InsertAE)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   Align Align, AtomicOrdering Order, SyncScope::ID SSID,
+                   MaybeAlign Align, AtomicOrdering Order, SyncScope::ID SSID,
                    Instruction *InsertBef)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
 }
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   Align Align, AtomicOrdering Order, SyncScope::ID SSID,
+                   MaybeAlign Align, AtomicOrdering Order, SyncScope::ID SSID,
                    BasicBlock *InsertAE)
     : UnaryInstruction(Ty, Load, Ptr, InsertAE) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
@@ -1394,8 +1376,8 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
   setName(Name);
 }
 
-void LoadInst::setAlignment(Align Align) {
-  assert(Align <= MaximumAlignment &&
+void LoadInst::setAlignment(MaybeAlign Align) {
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
                              (encode(Align) << 1));
@@ -1425,27 +1407,23 @@ StoreInst::StoreInst(Value *val, Value *addr, BasicBlock *InsertAtEnd)
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      Instruction *InsertBefore)
-    : StoreInst(val, addr, isVolatile,
-                computeLoadStoreDefaultAlign(val->getType(), InsertBefore),
-                InsertBefore) {}
+    : StoreInst(val, addr, isVolatile, /*Align=*/None, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      BasicBlock *InsertAtEnd)
-    : StoreInst(val, addr, isVolatile,
-                computeLoadStoreDefaultAlign(val->getType(), InsertAtEnd),
-                InsertAtEnd) {}
+    : StoreInst(val, addr, isVolatile, /*Align=*/None, InsertAtEnd) {}
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
                      Instruction *InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertBefore) {}
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
                      BasicBlock *InsertAtEnd)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertAtEnd) {}
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
                      Instruction *InsertBefore)
     : Instruction(Type::getVoidTy(val->getContext()), Store,
@@ -1459,7 +1437,7 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
   AssertOK();
 }
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
                      BasicBlock *InsertAtEnd)
     : Instruction(Type::getVoidTy(val->getContext()), Store,
@@ -1473,8 +1451,8 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
   AssertOK();
 }
 
-void StoreInst::setAlignment(Align Alignment) {
-  assert(Alignment <= MaximumAlignment &&
+void StoreInst::setAlignment(MaybeAlign Alignment) {
+  assert((!Alignment || *Alignment <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
                              (encode(Alignment) << 1));
@@ -4247,7 +4225,7 @@ InsertValueInst *InsertValueInst::cloneImpl() const {
 AllocaInst *AllocaInst::cloneImpl() const {
   AllocaInst *Result =
       new AllocaInst(getAllocatedType(), getType()->getAddressSpace(),
-                     getOperand(0), getAlign());
+                     (Value *)getOperand(0), MaybeAlign(getAlignment()));
   Result->setUsedWithInAlloca(isUsedWithInAlloca());
   Result->setSwiftError(isSwiftError());
   return Result;
@@ -4255,12 +4233,14 @@ AllocaInst *AllocaInst::cloneImpl() const {
 
 LoadInst *LoadInst::cloneImpl() const {
   return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlign(), getOrdering(), getSyncScopeID());
+                      MaybeAlign(getAlignment()), getOrdering(),
+                      getSyncScopeID());
 }
 
 StoreInst *StoreInst::cloneImpl() const {
-  return new StoreInst(getOperand(0), getOperand(1), isVolatile(), getAlign(),
-                       getOrdering(), getSyncScopeID());
+  return new StoreInst(getOperand(0), getOperand(1), isVolatile(),
+                       MaybeAlign(getAlignment()), getOrdering(),
+                       getSyncScopeID());
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {

@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %S/test_folding.sh %s %flang %t
 ! Test numeric model inquiry intrinsics
 
 module m

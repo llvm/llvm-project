@@ -16,7 +16,7 @@ add_mlir_dialect_library(MLIRVector
   MLIRIR
   MLIRStandardOps
   MLIRAffineOps
-  MLIRSCF
+  MLIRLoopOps
   MLIRLoopAnalysis
-  MLIRSideEffectInterfaces
+  MLIRSideEffects
   )

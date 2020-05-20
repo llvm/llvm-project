@@ -248,10 +248,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   initAsmInfo();
-
-  // ARM supports the MachineOutliner.
-  setMachineOutliner(true);
-  setSupportsDefaultOutlining(false);
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;

@@ -438,7 +438,7 @@ void SymbolTable::resolveRemainingUndefines() {
     if (name.contains("_PchSym_"))
       continue;
 
-    if (config->autoImport && handleMinGWAutomaticImport(sym, name))
+    if (config->mingw && handleMinGWAutomaticImport(sym, name))
       continue;
 
     // Remaining undefined symbols are not fatal if /force is specified.

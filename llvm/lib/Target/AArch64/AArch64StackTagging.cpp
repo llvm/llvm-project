@@ -484,7 +484,7 @@ void AArch64StackTagging::alignAndPadAlloca(AllocaInfo &Info) {
   auto *NewAI = new AllocaInst(
       TypeWithPadding, Info.AI->getType()->getAddressSpace(), nullptr, "", Info.AI);
   NewAI->takeName(Info.AI);
-  NewAI->setAlignment(Info.AI->getAlign());
+  NewAI->setAlignment(MaybeAlign(Info.AI->getAlignment()));
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
   NewAI->setSwiftError(Info.AI->isSwiftError());
   NewAI->copyMetadata(*Info.AI);

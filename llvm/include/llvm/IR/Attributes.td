@@ -103,9 +103,6 @@ def NoInline : EnumAttr<"noinline">;
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind">;
 
-/// Disable merging for call sites
-def NoMerge : EnumAttr<"nomerge">;
-
 /// Pointer is known to be not null.
 def NonNull : EnumAttr<"nonnull">;
 
@@ -126,9 +123,6 @@ def NoCfCheck : EnumAttr<"nocf_check">;
 
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind">;
-
-/// Null pointer in address space zero is valid.
-def NullPointerIsValid : EnumAttr<"null_pointer_is_valid">;
 
 /// Select optimizations for best fuzzing signal.
 def OptForFuzzing : EnumAttr<"optforfuzzing">;

@@ -287,19 +287,19 @@ public:
   /// a copy from the register.
   SDValue CreateLiveInRegister(SelectionDAG &DAG,
                                const TargetRegisterClass *RC,
-                               Register Reg, EVT VT,
+                               unsigned Reg, EVT VT,
                                const SDLoc &SL,
                                bool RawReg = false) const;
   SDValue CreateLiveInRegister(SelectionDAG &DAG,
                                const TargetRegisterClass *RC,
-                               Register Reg, EVT VT) const {
+                               unsigned Reg, EVT VT) const {
     return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()));
   }
 
   // Returns the raw live in register rather than a copy from it.
   SDValue CreateLiveInRegisterRaw(SelectionDAG &DAG,
                                   const TargetRegisterClass *RC,
-                                  Register Reg, EVT VT) const {
+                                  unsigned Reg, EVT VT) const {
     return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()), true);
   }
 

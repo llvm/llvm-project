@@ -1,5 +1,5 @@
 ! Tests -fget-symbols with INCLUDE
-!RUN: %S/test_any.sh %s %t %f18
+!RUN: %S/test_any.sh %s %flang %t
 INCLUDE "Inputs/getsymbols03-b.f90"
 
 program main

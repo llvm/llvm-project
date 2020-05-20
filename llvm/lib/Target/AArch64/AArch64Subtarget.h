@@ -66,8 +66,7 @@ public:
     ThunderXT81,
     ThunderXT83,
     ThunderXT88,
-    TSV110,
-    ThunderX3T110
+    TSV110
   };
 
 protected:

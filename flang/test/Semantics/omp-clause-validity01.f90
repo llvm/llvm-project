@@ -1,4 +1,5 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! OPTIONS: -fopenmp
 
 ! Check OpenMP clause validity for the following directives:
 !
@@ -48,15 +49,6 @@
      enddo
   enddo
   !$omp end parallel
-
-  !ERROR: The parameter of the COLLAPSE clause must be a constant positive integer expression
-  !$omp do collapse(-1)
-  do i = 1, N
-    do j = 1, N
-      a = 3.14
-    enddo
-  enddo
-  !$omp end do
 
   a = 1.0
   !$omp parallel firstprivate(a)

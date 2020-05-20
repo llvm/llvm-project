@@ -123,12 +123,9 @@ void DerivedTypeSpec::EvaluateParameters(
             continue;
           }
         }
-        if (!symbol.test(Symbol::Flag::Error)) {
-          evaluate::SayWithDeclaration(messages, symbol,
-              "Value of type parameter '%s' (%s) is not convertible to its"
-              " type"_err_en_US,
-              name, expr->AsFortran());
-        }
+        evaluate::SayWithDeclaration(messages, symbol,
+            "Value of type parameter '%s' (%s) is not convertible to its type"_err_en_US,
+            name, expr->AsFortran());
       }
     }
   }
@@ -150,7 +147,7 @@ void DerivedTypeSpec::EvaluateParameters(
         auto expr{
             evaluate::Fold(foldingContext, common::Clone(details.init()))};
         AddParamValue(name, ParamValue{std::move(*expr), details.attr()});
-      } else if (!symbol.test(Symbol::Flag::Error)) {
+      } else {
         messages.Say(name_,
             "Type parameter '%s' lacks a value and has no default"_err_en_US,
             name);

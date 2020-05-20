@@ -69,7 +69,6 @@ static_library("LLVMBPFCodeGen") {
     "BPFMIChecking.cpp",
     "BPFMIPeephole.cpp",
     "BPFMISimplifyPatchable.cpp",
-    "BPFPreserveDIType.cpp",
     "BPFRegisterInfo.cpp",
     "BPFSelectionDAGInfo.cpp",
     "BPFSubtarget.cpp",

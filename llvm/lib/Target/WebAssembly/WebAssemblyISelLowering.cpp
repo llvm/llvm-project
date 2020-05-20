@@ -120,9 +120,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
-    // Hoist bitcasts out of shuffles
-    setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
-
     // Support saturating add for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
@@ -242,10 +239,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       }
     }
     // But some vector extending loads are legal
-    for (auto Ext : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
-      setLoadExtAction(Ext, MVT::v8i16, MVT::v8i8, Legal);
-      setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
-      setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
+    if (Subtarget->hasUnimplementedSIMD128()) {
+      for (auto Ext : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
+        setLoadExtAction(Ext, MVT::v8i16, MVT::v8i8, Legal);
+        setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
+        setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
+      }
     }
   }
 
@@ -600,6 +599,8 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 }
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
+  if (!Subtarget->hasUnimplementedSIMD128())
+    return false;
   MVT ExtT = ExtVal.getSimpleValueType();
   MVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getSimpleValueType(0);
   return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
@@ -1352,24 +1353,6 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
                            Op.getOperand(3)  // thrown value
                        });
   }
-
-  case Intrinsic::wasm_shuffle: {
-    // Drop in-chain and replace undefs, but otherwise pass through unchanged
-    SDValue Ops[18];
-    size_t OpIdx = 0;
-    Ops[OpIdx++] = Op.getOperand(1);
-    Ops[OpIdx++] = Op.getOperand(2);
-    while (OpIdx < 18) {
-      const SDValue &MaskIdx = Op.getOperand(OpIdx + 1);
-      if (MaskIdx.isUndef() ||
-          cast<ConstantSDNode>(MaskIdx.getNode())->getZExtValue() >= 32) {
-        Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32);
-      } else {
-        Ops[OpIdx++] = MaskIdx;
-      }
-    }
-    return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
-  }
   }
 }
 
@@ -1422,7 +1405,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   const EVT VecT = Op.getValueType();
   const EVT LaneT = Op.getOperand(0).getValueType();
   const size_t Lanes = Op.getNumOperands();
-  bool CanSwizzle = VecT == MVT::v16i8;
+  bool CanSwizzle = Subtarget->hasUnimplementedSIMD128() && VecT == MVT::v16i8;
 
   // BUILD_VECTORs are lowered to the instruction that initializes the highest
   // possible number of lanes at once followed by a sequence of replace_lane
@@ -1521,37 +1504,38 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // original instruction
   std::function<bool(size_t, const SDValue &)> IsLaneConstructed;
   SDValue Result;
-  // Prefer swizzles over vector consts over splats
-  if (NumSwizzleLanes >= NumSplatLanes &&
-      (!Subtarget->hasUnimplementedSIMD128() ||
-       NumSwizzleLanes >= NumConstantLanes)) {
-    Result = DAG.getNode(WebAssemblyISD::SWIZZLE, DL, VecT, SwizzleSrc,
-                         SwizzleIndices);
-    auto Swizzled = std::make_pair(SwizzleSrc, SwizzleIndices);
-    IsLaneConstructed = [&, Swizzled](size_t I, const SDValue &Lane) {
-      return Swizzled == GetSwizzleSrcs(I, Lane);
-    };
-  } else if (NumConstantLanes >= NumSplatLanes &&
-             Subtarget->hasUnimplementedSIMD128()) {
-    SmallVector<SDValue, 16> ConstLanes;
-    for (const SDValue &Lane : Op->op_values()) {
-      if (IsConstant(Lane)) {
-        ConstLanes.push_back(Lane);
-      } else if (LaneT.isFloatingPoint()) {
-        ConstLanes.push_back(DAG.getConstantFP(0, DL, LaneT));
-      } else {
-        ConstLanes.push_back(DAG.getConstant(0, DL, LaneT));
+  if (Subtarget->hasUnimplementedSIMD128()) {
+    // Prefer swizzles over vector consts over splats
+    if (NumSwizzleLanes >= NumSplatLanes &&
+        NumSwizzleLanes >= NumConstantLanes) {
+      Result = DAG.getNode(WebAssemblyISD::SWIZZLE, DL, VecT, SwizzleSrc,
+                           SwizzleIndices);
+      auto Swizzled = std::make_pair(SwizzleSrc, SwizzleIndices);
+      IsLaneConstructed = [&, Swizzled](size_t I, const SDValue &Lane) {
+        return Swizzled == GetSwizzleSrcs(I, Lane);
+      };
+    } else if (NumConstantLanes >= NumSplatLanes) {
+      SmallVector<SDValue, 16> ConstLanes;
+      for (const SDValue &Lane : Op->op_values()) {
+        if (IsConstant(Lane)) {
+          ConstLanes.push_back(Lane);
+        } else if (LaneT.isFloatingPoint()) {
+          ConstLanes.push_back(DAG.getConstantFP(0, DL, LaneT));
+        } else {
+          ConstLanes.push_back(DAG.getConstant(0, DL, LaneT));
+        }
       }
+      Result = DAG.getBuildVector(VecT, DL, ConstLanes);
+      IsLaneConstructed = [&](size_t _, const SDValue &Lane) {
+        return IsConstant(Lane);
+      };
     }
-    Result = DAG.getBuildVector(VecT, DL, ConstLanes);
-    IsLaneConstructed = [&](size_t _, const SDValue &Lane) {
-      return IsConstant(Lane);
-    };
   }
   if (!Result) {
     // Use a splat, but possibly a load_splat
     LoadSDNode *SplattedLoad;
-    if ((SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
+    if (Subtarget->hasUnimplementedSIMD128() &&
+        (SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
         SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
       Result = DAG.getMemIntrinsicNode(
           WebAssemblyISD::LOAD_SPLAT, DL, DAG.getVTList(VecT),
@@ -1706,39 +1690,5 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
 }
 
 //===----------------------------------------------------------------------===//
-//   Custom DAG combine hooks
+//                          WebAssembly Optimization Hooks
 //===----------------------------------------------------------------------===//
-static SDValue
-performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
-  auto &DAG = DCI.DAG;
-  auto Shuffle = cast<ShuffleVectorSDNode>(N);
-
-  // Hoist vector bitcasts that don't change the number of lanes out of unary
-  // shuffles, where they are less likely to get in the way of other combines.
-  // (shuffle (vNxT1 (bitcast (vNxT0 x))),  undef, mask) ->
-  //  (vNxT1 (bitcast (vNxt0 (shuffle x, undef, mask))))
-  SDValue Bitcast = N->getOperand(0);
-  if (Bitcast.getOpcode() != ISD::BITCAST)
-    return SDValue();
-  if (!N->getOperand(1).isUndef())
-    return SDValue();
-  SDValue CastOp = Bitcast.getOperand(0);
-  MVT SrcType = CastOp.getSimpleValueType();
-  MVT DstType = Bitcast.getSimpleValueType();
-  if (SrcType.getVectorNumElements() != DstType.getVectorNumElements())
-    return SDValue();
-  SDValue NewShuffle = DAG.getVectorShuffle(
-      SrcType, SDLoc(N), CastOp, DAG.getUNDEF(SrcType), Shuffle->getMask());
-  return DAG.getBitcast(DstType, NewShuffle);
-}
-
-SDValue
-WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
-                                             DAGCombinerInfo &DCI) const {
-  switch (N->getOpcode()) {
-  default:
-    return SDValue();
-  case ISD::VECTOR_SHUFFLE:
-    return performVECTOR_SHUFFLECombine(N, DCI);
-  }
-}

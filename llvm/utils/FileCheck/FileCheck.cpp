@@ -44,14 +44,6 @@ static cl::alias CheckPrefixesAlias(
     cl::desc(
         "Alias for -check-prefix permitting multiple comma separated values"));
 
-static cl::list<std::string> CommentPrefixes(
-    "comment-prefixes", cl::CommaSeparated, cl::Hidden,
-    cl::desc("Comma-separated list of comment prefixes to use from check file\n"
-             "(defaults to 'COM,RUN'). Please avoid using this feature in\n"
-             "LLVM's LIT-based test suites, which should be easier to\n"
-             "maintain if they all follow a consistent comment style. This\n"
-             "feature is meant for non-LIT test suites using FileCheck."));
-
 static cl::opt<bool> NoCanonicalizeWhiteSpace(
     "strict-whitespace",
     cl::desc("Do not treat all horizontal whitespace as equivalent"));
@@ -287,8 +279,6 @@ std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
     return "label";
   case Check::CheckEmpty:
     return "empty";
-  case Check::CheckComment:
-    return "com";
   case Check::CheckEOF:
     return "eof";
   case Check::CheckBadNot:
@@ -575,9 +565,6 @@ int main(int argc, char **argv) {
   for (StringRef Prefix : CheckPrefixes)
     Req.CheckPrefixes.push_back(Prefix);
 
-  for (StringRef Prefix : CommentPrefixes)
-    Req.CommentPrefixes.push_back(Prefix);
-
   for (StringRef CheckNot : ImplicitCheckNot)
     Req.ImplicitCheckNot.push_back(CheckNot);
 
@@ -614,8 +601,12 @@ int main(int argc, char **argv) {
     Req.Verbose = true;
 
   FileCheck FC(Req);
-  if (!FC.ValidateCheckPrefixes())
+  if (!FC.ValidateCheckPrefixes()) {
+    errs() << "Supplied check-prefix is invalid! Prefixes must be unique and "
+              "start with a letter and contain only alphanumeric characters, "
+              "hyphens and underscores\n";
     return 2;
+  }
 
   Regex PrefixRE = FC.buildCheckPrefixRegex();
   std::string REError;

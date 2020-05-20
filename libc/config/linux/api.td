@@ -150,10 +150,6 @@ def MathAPI : PublicAPI<"math.h"> {
   ];
   let Functions = [
    "cosf",
-   "fabs",
-   "fabsf",
-   "expf",
-   "exp2f",
    "round",
    "sincosf",
    "sinf",

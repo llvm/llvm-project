@@ -1038,8 +1038,6 @@ public:
     return HasNSAtoVMEMBug;
   }
 
-  bool hasHardClauses() const { return getGeneration() >= GFX10; }
-
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;

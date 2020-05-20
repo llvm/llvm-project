@@ -526,7 +526,6 @@ class Base(unittest2.TestCase):
             if traceAlways:
                 print("Change dir to:", full_dir, file=sys.stderr)
             os.chdir(full_dir)
-            lldb.SBReproducer.SetWorkingDirectory(full_dir)
 
         # Set platform context.
         cls.platformContext = lldbplatformutil.createPlatformContext()

@@ -1,4 +1,4 @@
-! RUN: %S/test_any.sh %s %t %f18
+! RUN: %S/test_any.sh %s %flang %t
 ! negative test -- invalid labels, out of range
 
 ! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s

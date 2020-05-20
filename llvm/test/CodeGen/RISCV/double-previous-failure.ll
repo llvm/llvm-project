@@ -24,12 +24,14 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft0, 0(sp)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32IFD-NEXT:    fld ft1, %lo(.LCPI1_0)(a0)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_0)
+; RV32IFD-NEXT:    fld ft1, 0(a0)
 ; RV32IFD-NEXT:    flt.d a0, ft0, ft1
 ; RV32IFD-NEXT:    bnez a0, .LBB1_3
 ; RV32IFD-NEXT:  # %bb.1: # %entry
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_1)
-; RV32IFD-NEXT:    fld ft1, %lo(.LCPI1_1)(a0)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI1_1)
+; RV32IFD-NEXT:    fld ft1, 0(a0)
 ; RV32IFD-NEXT:    flt.d a0, ft1, ft0
 ; RV32IFD-NEXT:    xori a0, a0, 1
 ; RV32IFD-NEXT:    beqz a0, .LBB1_3

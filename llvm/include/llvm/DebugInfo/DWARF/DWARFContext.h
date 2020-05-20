@@ -277,10 +277,10 @@ public:
   const DWARFDebugAranges *getDebugAranges();
 
   /// Get a pointer to the parsed frame information object.
-  Expected<const DWARFDebugFrame *> getDebugFrame();
+  const DWARFDebugFrame *getDebugFrame();
 
   /// Get a pointer to the parsed eh frame information object.
-  Expected<const DWARFDebugFrame *> getEHFrame();
+  const DWARFDebugFrame *getEHFrame();
 
   /// Get a pointer to the parsed DebugMacinfo information object.
   const DWARFDebugMacro *getDebugMacinfo();

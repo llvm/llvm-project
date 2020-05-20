@@ -22,9 +22,8 @@
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h"
-#include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
-#include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
+#include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -32,8 +31,8 @@
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/LoopOps/Passes.h"
 #include "mlir/Dialect/Quant/Passes.h"
-#include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Transforms/LocationSnapshot.h"
@@ -79,7 +78,7 @@ inline void registerAllPasses() {
 
   // Loop
 #define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/SCF/Passes.h.inc"
+#include "mlir/Dialect/LoopOps/Passes.h.inc"
 
   // Quant
 #define GEN_PASS_REGISTRATION

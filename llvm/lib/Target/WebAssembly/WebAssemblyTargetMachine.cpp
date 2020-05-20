@@ -45,16 +45,6 @@ static cl::opt<bool> EnableEmSjLj(
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
 
-// A command-line option to keep implicit locals
-// for the purpose of testing with lit/llc ONLY.
-// This produces output which is not valid WebAssembly, and is not supported
-// by assemblers/disassemblers and other MC based tools.
-static cl::opt<bool> WasmDisableExplicitLocals(
-    "wasm-disable-explicit-locals", cl::Hidden,
-    cl::desc("WebAssembly: output implicit locals in"
-             " instruction output for test purposes only."),
-    cl::init(false));
-
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(
@@ -85,7 +75,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyExplicitLocalsPass(PR);
   initializeWebAssemblyLowerBrUnlessPass(PR);
   initializeWebAssemblyRegNumberingPass(PR);
-  initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
 }
 
@@ -478,8 +467,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyCFGStackify());
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals)
-    addPass(createWebAssemblyExplicitLocals());
+  addPass(createWebAssemblyExplicitLocals());
 
   // Lower br_unless into br_if.
   addPass(createWebAssemblyLowerBrUnless());
@@ -490,10 +478,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
   addPass(createWebAssemblyRegNumbering());
-
-  // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals)
-    addPass(createWebAssemblyDebugFixup());
 }
 
 yaml::MachineFunctionInfo *

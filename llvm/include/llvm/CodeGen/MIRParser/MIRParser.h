@@ -29,9 +29,6 @@ class MachineModuleInfo;
 class SMDiagnostic;
 class StringRef;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
-    DataLayoutCallbackTy;
-
 /// This class initializes machine functions by applying the state loaded from
 /// a MIR file.
 class MIRParser {
@@ -46,8 +43,7 @@ public:
   ///
   /// A new, empty module is created if the LLVM IR isn't present.
   /// \returns nullptr if a parsing error occurred.
-  std::unique_ptr<Module> parseIRModule(
-      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+  std::unique_ptr<Module> parseIRModule();
 
   /// Parses MachineFunctions in the MIR file and add them to the given
   /// MachineModuleInfo \p MMI.

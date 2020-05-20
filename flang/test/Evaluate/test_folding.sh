@@ -19,20 +19,18 @@
 #   - test_x is not folded (it is neither .true. nor .false.). This means the
 #     compiler could not fold the expression.
 
+CMD="$2 -fdebug-dump-symbols -fparse-only"
+
 if [[ $# < 3 ]]; then
-  echo "Usage: $0 <fortran-source> <temp test dir> <f18-executable>"
+  echo "Usage: $0 <fortran-source> <f18-executable> <temp test dir>"
   exit 1
 fi
 
 src=$1
 [[ ! -f $src ]] && echo "File not found: $src" && exit 1
-shift
 
-temp=$1
+temp=$3
 mkdir -p $temp
-shift
-
-CMD="$* -fdebug-dump-symbols -fparse-only"
 
 # Check if tests should assume folding is using libpgmath
 if [[ $LIBPGMATH ]]; then

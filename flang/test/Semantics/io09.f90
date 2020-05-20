@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
   !ERROR: String edit descriptor in READ format expression
   read(*,'("abc")')
 

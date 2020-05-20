@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple arm-unknown-linux-gnueabi -emit-llvm %s -o - | FileCheck -check-prefix=LIBCALL %s
-// RUN: %clang_cc1 -triple armv8-eabi -emit-llvm %s -o - | FileCheck -check-prefix=NATIVE %s
+// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
 // PR45476
 
 // This test used to get into an infinite loop,
@@ -12,10 +11,8 @@ struct s3 {
 _Atomic struct s3 a;
 
 extern "C" void foo() {
-  // LIBCALL-LABEL: @foo
-  // LIBCALL: call void @__atomic_store
-  // NATIVE-LABEL: @foo
-  // NATIVE: store atomic i32
+  // CHECK-LABEL: @foo
+  // CHECK: store atomic i32
 
   a = s3{1, 2, 3};
 }

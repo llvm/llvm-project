@@ -443,8 +443,12 @@ unsigned ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
   if (!Subtarget->hasVFP2Base()) return false;
 
   // MachineConstantPool wants an explicit alignment.
-  Align Alignment = DL.getPrefTypeAlign(CFP->getType());
-  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
+  unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
+  if (Align == 0) {
+    // TODO: Figure out if this is correct.
+    Align = DL.getTypeAllocSize(CFP->getType());
+  }
+  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Align);
   unsigned DestReg = createResultReg(TLI.getRegClassFor(VT));
   unsigned Opc = is64bit ? ARM::VLDRD : ARM::VLDRS;
 
@@ -503,8 +507,12 @@ unsigned ARMFastISel::ARMMaterializeInt(const Constant *C, MVT VT) {
     return 0;
 
   // MachineConstantPool wants an explicit alignment.
-  Align Alignment = DL.getPrefTypeAlign(C->getType());
-  unsigned Idx = MCP.getConstantPoolIndex(C, Alignment);
+  unsigned Align = DL.getPrefTypeAlignment(C->getType());
+  if (Align == 0) {
+    // TODO: Figure out if this is correct.
+    Align = DL.getTypeAllocSize(C->getType());
+  }
+  unsigned Idx = MCP.getConstantPoolIndex(C, Align);
   ResultReg = createResultReg(TLI.getRegClassFor(VT));
   if (isThumb2)
     AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
@@ -572,7 +580,7 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
     ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(GV, Id,
                                                                 ARMCP::CPValue,
                                                                 PCAdj);
-    unsigned Idx = MCP.getConstantPoolIndex(CPV, Alignment);
+    unsigned Idx = MCP.getConstantPoolIndex(CPV, Alignment.value());
 
     // Load value.
     MachineInstrBuilder MIB;
@@ -2077,7 +2085,6 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
 bool ARMFastISel::SelectRet(const Instruction *I) {
   const ReturnInst *Ret = cast<ReturnInst>(I);
   const Function &F = *I->getParent()->getParent();
-  const bool IsCmseNSEntry = F.hasFnAttribute("cmse_nonsecure_entry");
 
   if (!FuncInfo.CanLowerReturn)
     return false;
@@ -2154,17 +2161,8 @@ bool ARMFastISel::SelectRet(const Instruction *I) {
     RetRegs.push_back(VA.getLocReg());
   }
 
-  unsigned RetOpc;
-  if (IsCmseNSEntry)
-    if (isThumb2)
-      RetOpc = ARM::tBXNS_RET;
-    else
-      llvm_unreachable("CMSE not valid for non-Thumb targets");
-  else
-    RetOpc = Subtarget->getReturnOpcode();
-
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-                                    TII.get(RetOpc));
+                                    TII.get(Subtarget->getReturnOpcode()));
   AddOptionalDefs(MIB);
   for (unsigned R : RetRegs)
     MIB.addReg(R, RegState::Implicit);
@@ -2955,8 +2953,8 @@ unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV, MVT VT) {
       UseGOT_PREL ? ARMCP::GOT_PREL : ARMCP::no_modifier,
       /*AddCurrentAddress=*/UseGOT_PREL);
 
-  Align ConstAlign =
-      MF->getDataLayout().getPrefTypeAlign(Type::getInt32PtrTy(*Context));
+  unsigned ConstAlign =
+      MF->getDataLayout().getPrefTypeAlignment(Type::getInt32PtrTy(*Context));
   unsigned Idx = MF->getConstantPool()->getConstantPoolIndex(CPV, ConstAlign);
   MachineMemOperand *CPMMO =
       MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),

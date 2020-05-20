@@ -26,8 +26,9 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class MSP430 final : public TargetInfo {
@@ -89,7 +90,10 @@ void MSP430::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getMSP430TargetInfo() {
+TargetInfo *getMSP430TargetInfo() {
   static MSP430 target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

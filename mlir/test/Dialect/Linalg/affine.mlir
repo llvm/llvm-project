@@ -3,6 +3,7 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s -convert-linalg-to-affine-loops -convert-linalg-to-llvm -o=/dev/null 2>&1
 
+// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 
 // CHECK-DAG: #[[stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
@@ -12,10 +13,10 @@
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
-  %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
-  %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
-  linalg.matmul(%A, %B, %C) : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  linalg.matmul(%A, %B, %C) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
   return
 }
 
@@ -23,18 +24,18 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 // CHECK-SAME: [[M:arg[0-9]+]]: index
 // CHECK-SAME: [[N:arg[0-9]+]]: index
 // CHECK-SAME: [[K:arg[0-9]+]]: index
-//       CHECK: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32, #[[strided2D]]>
+//       CHECK: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32, #[[strided2D]]>
+//       CHECK: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32, #[[strided2D]]>
 //       CHECK: affine.for %{{.*}}  = 0 to %{{.*}} {
 //       CHECK:   affine.for %{{.*}} = 0 to %{{.*}} {
 //       CHECK:     affine.for %{{.*}} = 0 to %{{.*}} {
-//   CHECK-DAG:       %[[a:.*]] = affine.load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
-//   CHECK-DAG:       %[[b:.*]] = affine.load %[[B]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//   CHECK-DAG:       %[[a:.*]] = affine.load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32, #[[strided2D]]>
+//   CHECK-DAG:       %[[b:.*]] = affine.load %[[B]][%{{.*}}, %{{.*}}] : memref<?x?xf32, #[[strided2D]]>
 //   CHECK-DAG:       %[[inc:.*]] = mulf %[[a]], %[[b]] : f32
-//   CHECK-DAG:       %[[c:.*]] = affine.load %[[C]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//   CHECK-DAG:       %[[c:.*]] = affine.load %[[C]][%{{.*}}, %{{.*}}] : memref<?x?xf32, #[[strided2D]]>
 //   CHECK-DAG:       %[[res:.*]] = addf %[[c]], %[[inc]] : f32
-//       CHECK:       affine.store %[[res]], %[[C]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECK:       affine.store %[[res]], %[[C]][%{{.*}}, %{{.*}}] : memref<?x?xf32, #[[strided2D]]>
 
 func @conv_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
   linalg.conv(%arg0, %arg1, %arg2) {strides = [2]}: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>

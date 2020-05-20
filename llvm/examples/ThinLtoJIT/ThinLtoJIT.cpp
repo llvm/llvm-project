@@ -266,21 +266,16 @@ void ThinLtoJIT::setupLayers(JITTargetMachineBuilder JTMB,
   CompileThreads = std::make_unique<ThreadPool>(
       llvm::hardware_concurrency(NumCompileThreads));
   ES.setDispatchMaterialization(
-      [this](std::unique_ptr<MaterializationUnit> MU,
-             MaterializationResponsibility MR) {
+      [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
         if (IsTrivialModule(MU.get())) {
           // This should be quick and we may save a few session locks.
-          MU->materialize(std::move(MR));
+          MU->doMaterialize(JD);
         } else {
           // FIXME: Drop the std::shared_ptr workaround once ThreadPool::async()
           // accepts llvm::unique_function to define jobs.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto SharedMR =
-            std::make_shared<MaterializationResponsibility>(std::move(MR));
           CompileThreads->async(
-              [MU = std::move(SharedMU), MR = std::move(SharedMR)]() {
-                MU->materialize(std::move(*MR));
-              });
+              [MU = std::move(SharedMU), &JD]() { MU->doMaterialize(JD); });
         }
       });
 

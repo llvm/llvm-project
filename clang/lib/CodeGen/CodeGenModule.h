@@ -1170,11 +1170,7 @@ public:
   /// on the function more conservative.  But it's unsafe to call this on a
   /// function which relies on particular fast-math attributes for correctness.
   /// It's up to you to ensure that this is safe.
-  void addDefaultFunctionDefinitionAttributes(llvm::Function &F);
-
-  /// Like the overload taking a `Function &`, but intended specifically
-  /// for frontends that want to build on Clang's target-configuration logic.
-  void addDefaultFunctionDefinitionAttributes(llvm::AttrBuilder &attrs);
+  void AddDefaultFnAttrs(llvm::Function &F);
 
   StringRef getMangledName(GlobalDecl GD);
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
@@ -1536,12 +1532,11 @@ private:
   /// function.
   void SimplifyPersonality();
 
-  /// Helper function for ConstructAttributeList and
-  /// addDefaultFunctionDefinitionAttributes.  Builds a set of function
-  /// attributes to add to a function with the given properties.
-  void getDefaultFunctionAttributes(StringRef Name, bool HasOptnone,
-                                    bool AttrOnCallSite,
-                                    llvm::AttrBuilder &FuncAttrs);
+  /// Helper function for ConstructAttributeList and AddDefaultFnAttrs.
+  /// Constructs an AttrList for a function with the given properties.
+  void ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
+                                  bool AttrOnCallSite,
+                                  llvm::AttrBuilder &FuncAttrs);
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);

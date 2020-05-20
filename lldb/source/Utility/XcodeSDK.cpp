@@ -41,7 +41,6 @@ static llvm::StringRef GetName(XcodeSDK::Type type) {
   case XcodeSDK::unknown:
     return {};
   }
-  llvm_unreachable("Unhandled sdk type!");
 }
 
 XcodeSDK::XcodeSDK(XcodeSDK::Info info) : m_name(GetName(info.type).str()) {

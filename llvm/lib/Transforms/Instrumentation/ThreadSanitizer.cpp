@@ -72,10 +72,6 @@ static cl::opt<bool>  ClDistinguishVolatile(
     "tsan-distinguish-volatile", cl::init(false),
     cl::desc("Emit special instrumentation for accesses to volatiles"),
     cl::Hidden);
-static cl::opt<bool>  ClInstrumentReadBeforeWrite(
-    "tsan-instrument-read-before-write", cl::init(false),
-    cl::desc("Do not eliminate read instrumentation for read-before-writes"),
-    cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -143,9 +139,7 @@ private:
 };
 
 struct ThreadSanitizerLegacyPass : FunctionPass {
-  ThreadSanitizerLegacyPass() : FunctionPass(ID) {
-    initializeThreadSanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  ThreadSanitizerLegacyPass() : FunctionPass(ID) {}
   StringRef getPassName() const override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
@@ -417,7 +411,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       Value *Addr = Load->getPointerOperand();
       if (!shouldInstrumentReadWriteFromAddress(I->getModule(), Addr))
         continue;
-      if (!ClInstrumentReadBeforeWrite && WriteTargets.count(Addr)) {
+      if (WriteTargets.count(Addr)) {
         // We will write to this temp, so no reason to analyze the read.
         NumOmittedReadsBeforeWrite++;
         continue;

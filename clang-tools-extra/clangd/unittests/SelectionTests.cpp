@@ -9,7 +9,6 @@
 #include "Selection.h"
 #include "SourceCode.h"
 #include "TestTU.h"
-#include "support/TestTracer.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
@@ -391,7 +390,6 @@ TEST(SelectionTest, CommonAncestor) {
       )cpp", "DeclRefExpr"} // DeclRefExpr to the "operator->" method.
   };
   for (const Case &C : Cases) {
-    trace::TestTracer Tracer;
     Annotations Test(C.Code);
 
     TestTU TU;
@@ -409,7 +407,6 @@ TEST(SelectionTest, CommonAncestor) {
     if (Test.ranges().empty()) {
       // If no [[range]] is marked in the example, there should be no selection.
       EXPECT_FALSE(T.commonAncestor()) << C.Code << "\n" << T;
-      EXPECT_THAT(Tracer.takeMetric("selection_recovery"), testing::IsEmpty());
     } else {
       // If there is an expected selection, common ancestor should exist
       // with the appropriate node type.
@@ -425,8 +422,6 @@ TEST(SelectionTest, CommonAncestor) {
       // and no nodes outside it are selected.
       EXPECT_TRUE(verifyCommonAncestor(T.root(), T.commonAncestor(), C.Code))
           << C.Code;
-      EXPECT_THAT(Tracer.takeMetric("selection_recovery"),
-                  testing::ElementsAreArray({0}));
     }
   }
 }
@@ -439,20 +434,6 @@ TEST(SelectionTest, InjectedClassName) {
   ASSERT_EQ("CXXRecordDecl", nodeKind(T.commonAncestor())) << T;
   auto *D = dyn_cast<CXXRecordDecl>(T.commonAncestor()->ASTNode.get<Decl>());
   EXPECT_FALSE(D->isInjectedClassName());
-}
-
-TEST(SelectionTree, Metrics) {
-  const char *Code = R"cpp(
-    // error-ok: testing behavior on recovery expression
-    int foo();
-    int foo(int, int);
-    int x = fo^o(42);
-  )cpp";
-  auto AST = TestTU::withCode(Annotations(Code).code()).build();
-  trace::TestTracer Tracer;
-  auto T = makeSelectionTree(Code, AST);
-  EXPECT_THAT(Tracer.takeMetric("selection_recovery"),
-              testing::ElementsAreArray({1}));
 }
 
 // FIXME: Doesn't select the binary operator node in

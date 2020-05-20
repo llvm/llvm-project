@@ -28,7 +28,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -41,15 +40,14 @@ class FileInfo;
 
 namespace GCOV {
 
-enum GCOVVersion { V402, V407, V408, V800, V900 };
+enum GCOVVersion { V402, V404, V704 };
 
 /// A struct for passing gcov options between functions.
 struct Options {
-  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N,
-          bool T, bool X)
+  Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N, bool X)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),
         PreservePaths(P), UncondBranch(U), LongFileNames(L), NoOutput(N),
-        UseStdout(T), HashFilenames(X) {}
+        HashFilenames(X) {}
 
   bool AllBlocks;
   bool BranchInfo;
@@ -59,7 +57,6 @@ struct Options {
   bool UncondBranch;
   bool LongFileNames;
   bool NoOutput;
-  bool UseStdout;
   bool HashFilenames;
 };
 
@@ -95,33 +92,23 @@ public:
 
   /// readGCOVVersion - Read GCOV version.
   bool readGCOVVersion(GCOV::GCOVVersion &Version) {
-    StringRef Str = Buffer->getBuffer().slice(Cursor, Cursor + 4);
-    Cursor += 4;
-    int Major =
-        Str[3] >= 'A' ? (Str[3] - 'A') * 10 + Str[2] - '0' : Str[3] - '0';
-    int Minor = Str[1] - '0';
-    if (Major >= 9) {
-      // PR gcov-profile/84846, r269678
-      Version = GCOV::V900;
-      return true;
-    } else if (Major >= 8) {
-      // PR gcov-profile/48463
-      Version = GCOV::V800;
-      return true;
-    } else if (Major > 4 || (Major == 4 && Minor >= 8)) {
-      // r189778: the exit block moved from the last to the second.
-      Version = GCOV::V408;
-      return true;
-    } else if (Major == 4 && Minor >= 7) {
-      // r173147: split checksum into cfg checksum and line checksum.
-      Version = GCOV::V407;
-      return true;
-    } else {
+    StringRef VersionStr = Buffer->getBuffer().slice(Cursor, Cursor + 4);
+    if (VersionStr == "*204") {
+      Cursor += 4;
       Version = GCOV::V402;
       return true;
     }
-    Cursor -= 4;
-    errs() << "unexpected version: " << Str << "\n";
+    if (VersionStr == "*404") {
+      Cursor += 4;
+      Version = GCOV::V404;
+      return true;
+    }
+    if (VersionStr == "*704") {
+      Cursor += 4;
+      Version = GCOV::V704;
+      return true;
+    }
+    errs() << "Unexpected version: " << VersionStr << ".\n";
     return false;
   }
 
@@ -173,6 +160,42 @@ public:
     return true;
   }
 
+  /// readArcTag - If cursor points to an gcda arc tag then increment the
+  /// cursor and return true otherwise return false.
+  bool readArcTag() {
+    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
+    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\xa1' ||
+        Tag[3] != '\1') {
+      return false;
+    }
+    Cursor += 4;
+    return true;
+  }
+
+  /// readObjectTag - If cursor points to an object summary tag then increment
+  /// the cursor and return true otherwise return false.
+  bool readObjectTag() {
+    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
+    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\0' ||
+        Tag[3] != '\xa1') {
+      return false;
+    }
+    Cursor += 4;
+    return true;
+  }
+
+  /// readProgramTag - If cursor points to a program summary tag then increment
+  /// the cursor and return true otherwise return false.
+  bool readProgramTag() {
+    StringRef Tag = Buffer->getBuffer().slice(Cursor, Cursor + 4);
+    if (Tag.empty() || Tag[0] != '\0' || Tag[1] != '\0' || Tag[2] != '\0' ||
+        Tag[3] != '\xa3') {
+      return false;
+    }
+    Cursor += 4;
+    return true;
+  }
+
   bool readInt(uint32_t &Val) {
     if (Buffer->getBuffer().size() < Cursor + 4) {
       errs() << "Unexpected end of memory buffer: " << Cursor + 4 << ".\n";
@@ -193,9 +216,12 @@ public:
   }
 
   bool readString(StringRef &Str) {
-    uint32_t Len;
-    if (!readInt(Len) || Len == 0)
-      return false;
+    uint32_t Len = 0;
+    // Keep reading until we find a non-zero length. This emulates gcov's
+    // behaviour, which appears to do the same.
+    while (Len == 0)
+      if (!readInt(Len))
+        return false;
     Len *= 4;
     if (Buffer->getBuffer().size() < Cursor + Len) {
       errs() << "Unexpected end of memory buffer: " << Cursor + Len << ".\n";
@@ -208,7 +234,6 @@ public:
 
   uint64_t getCursor() const { return Cursor; }
   void advanceCursor(uint32_t n) { Cursor += n * 4; }
-  void setCursor(uint64_t c) { Cursor = c; }
 
 private:
   MemoryBuffer *Buffer;
@@ -223,7 +248,6 @@ public:
 
   bool readGCNO(GCOVBuffer &Buffer);
   bool readGCDA(GCOVBuffer &Buffer);
-  GCOV::GCOVVersion getVersion() const { return Version; }
   uint32_t getChecksum() const { return Checksum; }
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -233,20 +257,17 @@ private:
   bool GCNOInitialized = false;
   GCOV::GCOVVersion Version;
   uint32_t Checksum = 0;
-  StringRef cwd;
   SmallVector<std::unique_ptr<GCOVFunction>, 16> Functions;
-  std::map<uint32_t, GCOVFunction *> IdentToFunction;
   uint32_t RunCount = 0;
   uint32_t ProgramCount = 0;
 };
 
-struct GCOVArc {
-  GCOVArc(GCOVBlock &src, GCOVBlock &dst, bool fallthrough)
-      : src(src), dst(dst), fallthrough(fallthrough) {}
+/// GCOVEdge - Collects edge information.
+struct GCOVEdge {
+  GCOVEdge(GCOVBlock &S, GCOVBlock &D) : Src(S), Dst(D) {}
 
-  GCOVBlock &src;
-  GCOVBlock &dst;
-  bool fallthrough;
+  GCOVBlock &Src;
+  GCOVBlock &Dst;
   uint64_t Count = 0;
   uint64_t CyclesCount = 0;
 };
@@ -257,9 +278,10 @@ public:
   using BlockIterator = pointee_iterator<
       SmallVectorImpl<std::unique_ptr<GCOVBlock>>::const_iterator>;
 
-  GCOVFunction(GCOVFile &P) {}
+  GCOVFunction(GCOVFile &P) : Parent(P) {}
 
   bool readGCNO(GCOVBuffer &Buffer, GCOV::GCOVVersion Version);
+  bool readGCDA(GCOVBuffer &Buffer, GCOV::GCOVVersion Version);
   StringRef getName() const { return Name; }
   StringRef getFilename() const { return Filename; }
   size_t getNumBlocks() const { return Blocks.size(); }
@@ -276,18 +298,15 @@ public:
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
-  uint32_t ident = 0;
-  uint32_t linenoChecksum;
-  uint32_t cfgChecksum = 0;
-  uint32_t startLine = 0;
-  uint32_t startColumn = 0;
-  uint32_t endLine = 0;
-  uint32_t endColumn = 0;
-  uint8_t artificial = 0;
+private:
+  GCOVFile &Parent;
+  uint32_t Ident = 0;
+  uint32_t Checksum;
+  uint32_t LineNumber = 0;
   StringRef Name;
   StringRef Filename;
-  SmallVector<std::unique_ptr<GCOVBlock>, 0> Blocks;
-  SmallVector<std::unique_ptr<GCOVArc>, 0> arcs, treeArcs;
+  SmallVector<std::unique_ptr<GCOVBlock>, 16> Blocks;
+  SmallVector<std::unique_ptr<GCOVEdge>, 16> Edges;
 };
 
 /// GCOVBlock - Collects block information.
@@ -300,31 +319,47 @@ class GCOVBlock {
   };
 
 public:
-  using EdgeIterator = SmallVectorImpl<GCOVArc *>::const_iterator;
+  using EdgeIterator = SmallVectorImpl<GCOVEdge *>::const_iterator;
   using BlockVector = SmallVector<const GCOVBlock *, 4>;
   using BlockVectorLists = SmallVector<BlockVector, 4>;
-  using Edges = SmallVector<GCOVArc *, 4>;
+  using Edges = SmallVector<GCOVEdge *, 4>;
 
   GCOVBlock(GCOVFunction &P, uint32_t N) : Parent(P), Number(N) {}
+  ~GCOVBlock();
 
   const GCOVFunction &getParent() const { return Parent; }
   void addLine(uint32_t N) { Lines.push_back(N); }
   uint32_t getLastLine() const { return Lines.back(); }
+  void addCount(size_t DstEdgeNo, uint64_t N);
   uint64_t getCount() const { return Counter; }
 
-  void addSrcEdge(GCOVArc *Edge) { pred.push_back(Edge); }
-
-  void addDstEdge(GCOVArc *Edge) { succ.push_back(Edge); }
-
-  size_t getNumSrcEdges() const { return pred.size(); }
-  size_t getNumDstEdges() const { return succ.size(); }
-
-  iterator_range<EdgeIterator> srcs() const {
-    return make_range(pred.begin(), pred.end());
+  void addSrcEdge(GCOVEdge *Edge) {
+    assert(&Edge->Dst == this); // up to caller to ensure edge is valid
+    SrcEdges.push_back(Edge);
   }
 
+  void addDstEdge(GCOVEdge *Edge) {
+    assert(&Edge->Src == this); // up to caller to ensure edge is valid
+    // Check if adding this edge causes list to become unsorted.
+    if (DstEdges.size() && DstEdges.back()->Dst.Number > Edge->Dst.Number)
+      DstEdgesAreSorted = false;
+    DstEdges.push_back(Edge);
+  }
+
+  size_t getNumSrcEdges() const { return SrcEdges.size(); }
+  size_t getNumDstEdges() const { return DstEdges.size(); }
+  void sortDstEdges();
+
+  EdgeIterator src_begin() const { return SrcEdges.begin(); }
+  EdgeIterator src_end() const { return SrcEdges.end(); }
+  iterator_range<EdgeIterator> srcs() const {
+    return make_range(src_begin(), src_end());
+  }
+
+  EdgeIterator dst_begin() const { return DstEdges.begin(); }
+  EdgeIterator dst_end() const { return DstEdges.end(); }
   iterator_range<EdgeIterator> dsts() const {
-    return make_range(succ.begin(), succ.end());
+    return make_range(dst_begin(), dst_end());
   }
 
   void print(raw_ostream &OS) const;
@@ -341,12 +376,13 @@ public:
   static void getCyclesCount(const BlockVector &Blocks, uint64_t &Count);
   static uint64_t getLineCount(const BlockVector &Blocks);
 
-public:
+private:
   GCOVFunction &Parent;
   uint32_t Number;
   uint64_t Counter = 0;
-  SmallVector<GCOVArc *, 2> pred;
-  SmallVector<GCOVArc *, 2> succ;
+  bool DstEdgesAreSorted = true;
+  SmallVector<GCOVEdge *, 16> SrcEdges;
+  SmallVector<GCOVEdge *, 16> DstEdges;
   SmallVector<uint32_t, 16> Lines;
 };
 
@@ -402,7 +438,7 @@ public:
   void setRunCount(uint32_t Runs) { RunCount = Runs; }
   void setProgramCount(uint32_t Programs) { ProgramCount = Programs; }
   void print(raw_ostream &OS, StringRef MainFilename, StringRef GCNOFile,
-             StringRef GCDAFile, GCOV::GCOVVersion Version);
+             StringRef GCDAFile);
 
 protected:
   std::string getCoveragePath(StringRef Filename, StringRef MainFilename);

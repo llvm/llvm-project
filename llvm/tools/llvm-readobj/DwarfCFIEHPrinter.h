@@ -191,8 +191,7 @@ void PrinterContext<ELFT>::printEHFrame(
                         ELFT::Is64Bits ? 8 : 4);
   DWARFDebugFrame EHFrame(Triple::ArchType(ObjF->getArch()), /*IsEH=*/true,
                           /*EHFrameAddress=*/Address);
-  if (Error E = EHFrame.parse(DE))
-    reportError(std::move(E), ObjF->getFileName());
+  EHFrame.parse(DE);
 
   for (const auto &Entry : EHFrame) {
     if (const auto *CIE = dyn_cast<dwarf::CIE>(&Entry)) {

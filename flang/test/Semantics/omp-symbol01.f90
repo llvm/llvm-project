@@ -1,4 +1,5 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %S/test_symbols.sh %s %flang %t
+!OPTIONS: -fopenmp
 
 ! Test clauses that accept list.
 ! 2.1 Directive Format

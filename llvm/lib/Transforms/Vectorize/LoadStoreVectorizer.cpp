@@ -128,6 +128,15 @@ public:
 private:
   unsigned getPointerAddressSpace(Value *I);
 
+  Align getAlign(LoadInst *LI) const {
+    return DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
+  }
+
+  Align getAlign(StoreInst *SI) const {
+    return DL.getValueOrABITypeAlignment(SI->getAlign(),
+                                         SI->getValueOperand()->getType());
+  }
+
   static const unsigned MaxDepth = 3;
 
   bool isConsecutiveAccess(Value *A, Value *B);
@@ -941,7 +950,7 @@ bool Vectorizer::vectorizeStoreChain(
   unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
   unsigned VF = VecRegSize / Sz;
   unsigned ChainSize = Chain.size();
-  Align Alignment = S0->getAlign();
+  Align Alignment = getAlign(S0);
 
   if (!isPowerOf2_32(Sz) || VF < 2 || ChainSize < 2) {
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
@@ -1094,7 +1103,7 @@ bool Vectorizer::vectorizeLoadChain(
   unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
   unsigned VF = VecRegSize / Sz;
   unsigned ChainSize = Chain.size();
-  Align Alignment = L0->getAlign();
+  Align Alignment = getAlign(L0);
 
   if (!isPowerOf2_32(Sz) || VF < 2 || ChainSize < 2) {
     InstructionsProcessed->insert(Chain.begin(), Chain.end());

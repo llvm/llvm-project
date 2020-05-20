@@ -72,7 +72,10 @@ public:
     return ValueOptional;
   }
 
-  StringRef getValueName() const override { return StringRef(); }
+  void printOptionInfo(const Option &O, size_t GlobalWidth) const {
+    outs() << "  -" << O.ArgStr;
+    Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
+  }
 
   void printOptionDiff(const Option &O, OffsetOption V, OptVal Default,
                        size_t GlobalWidth) const {

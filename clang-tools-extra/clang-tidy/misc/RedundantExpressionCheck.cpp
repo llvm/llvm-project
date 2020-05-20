@@ -533,8 +533,8 @@ static ast_matchers::internal::Matcher<Expr>
 matchBinOpIntegerConstantExpr(StringRef Id) {
   const auto BinOpCstExpr =
       expr(anyOf(binaryOperator(hasAnyOperatorName("+", "|", "&"),
-                                hasOperands(matchSymbolicExpr(Id),
-                                            matchIntegerConstantExpr(Id))),
+                                hasEitherOperand(matchSymbolicExpr(Id)),
+                                hasEitherOperand(matchIntegerConstantExpr(Id))),
                  binaryOperator(hasOperatorName("-"),
                                 hasLHS(matchSymbolicExpr(Id)),
                                 hasRHS(matchIntegerConstantExpr(Id)))))
@@ -900,14 +900,13 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match expressions like: (X << 8) & 0xFF
   Finder->addMatcher(
-      binaryOperator(
-          hasOperatorName("&"),
-          hasOperands(
-              ignoringParenImpCasts(
-                  binaryOperator(hasOperatorName("<<"),
-                                 hasRHS(ignoringParenImpCasts(
-                                     integerLiteral().bind("shift-const"))))),
-              ignoringParenImpCasts(integerLiteral().bind("and-const"))))
+      binaryOperator(hasOperatorName("&"),
+                     hasEitherOperand(ignoringParenImpCasts(binaryOperator(
+                         hasOperatorName("<<"),
+                         hasRHS(ignoringParenImpCasts(
+                             integerLiteral().bind("shift-const")))))),
+                     hasEitherOperand(ignoringParenImpCasts(
+                         integerLiteral().bind("and-const"))))
           .bind("left-right-shift-confusion"),
       this);
 
@@ -924,7 +923,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match expressions like: x <op> 0xFF == 0xF00.
   Finder->addMatcher(binaryOperator(isComparisonOperator(),
-                                    hasOperands(BinOpCstLeft, CstRight))
+                                    hasEitherOperand(BinOpCstLeft),
+                                    hasEitherOperand(CstRight))
                          .bind("binop-const-compare-to-const"),
                      this);
 

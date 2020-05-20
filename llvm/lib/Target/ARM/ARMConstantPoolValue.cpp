@@ -73,7 +73,7 @@ StringRef ARMConstantPoolValue::getModifierText() const {
 }
 
 int ARMConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                    Align Alignment) {
+                                                    unsigned Alignment) {
   llvm_unreachable("Shouldn't be calling this directly!");
 }
 
@@ -189,7 +189,7 @@ const BlockAddress *ARMConstantPoolConstant::getBlockAddress() const {
 }
 
 int ARMConstantPoolConstant::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                       Align Alignment) {
+                                                       unsigned Alignment) {
   int index =
     getExistingMachineCPValueImpl<ARMConstantPoolConstant>(CP, Alignment);
   if (index != -1) {
@@ -237,7 +237,7 @@ ARMConstantPoolSymbol *ARMConstantPoolSymbol::Create(LLVMContext &C,
 }
 
 int ARMConstantPoolSymbol::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                     Align Alignment) {
+                                                     unsigned Alignment) {
   return getExistingMachineCPValueImpl<ARMConstantPoolSymbol>(CP, Alignment);
 }
 
@@ -277,7 +277,7 @@ ARMConstantPoolMBB *ARMConstantPoolMBB::Create(LLVMContext &C,
 }
 
 int ARMConstantPoolMBB::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                  Align Alignment) {
+                                                  unsigned Alignment) {
   return getExistingMachineCPValueImpl<ARMConstantPoolMBB>(CP, Alignment);
 }
 

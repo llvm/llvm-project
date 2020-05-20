@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %S/test_symbols.sh %s %flang %t
 ! Forward references in pointer initializers and TBP bindings.
 
 !DEF: /m Module

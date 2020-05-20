@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -23,12 +23,12 @@ struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
   void runOnFunction() override {
     FuncOp func = getFunction();
 
-    func.walk([](scf::ForOp op) {
+    func.walk([](loop::ForOp op) {
       // Ignore nested loops.
-      if (op.getParentOfType<scf::ForOp>())
+      if (op.getParentOfType<loop::ForOp>())
         return;
 
-      SmallVector<scf::ForOp, 4> loops;
+      SmallVector<loop::ForOp, 4> loops;
       getPerfectlyNestedLoops(loops, op);
       LLVM_DEBUG(llvm::dbgs()
                  << "found a perfect nest of depth " << loops.size() << '\n');

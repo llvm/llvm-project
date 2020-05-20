@@ -156,7 +156,7 @@ public:
                       SmallVectorImpl<Register> &UpdatedDefs) {
     assert(MI.getOpcode() == TargetOpcode::G_SEXT);
 
-    Builder.setInstrAndDebugLoc(MI);
+    Builder.setInstr(MI);
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 

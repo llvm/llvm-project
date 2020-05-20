@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 subroutine s
   !ERROR: Declaration of 'x' conflicts with its use as internal procedure
   real :: x

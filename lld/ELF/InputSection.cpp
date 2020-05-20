@@ -36,16 +36,16 @@ using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::sys;
-using namespace lld;
-using namespace lld::elf;
 
-std::vector<InputSectionBase *> elf::inputSections;
-DenseSet<std::pair<const Symbol *, uint64_t>> elf::ppc64noTocRelax;
-
+namespace lld {
 // Returns a string to construct an error message.
-std::string lld::toString(const InputSectionBase *sec) {
+std::string toString(const elf::InputSectionBase *sec) {
   return (toString(sec->file) + ":(" + sec->name + ")").str();
 }
+
+namespace elf {
+std::vector<InputSectionBase *> inputSections;
+DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
@@ -1137,7 +1137,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
                                                    end, f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
-        error(lld::toString(this) + ": " + f->getName() +
+        error(toString(this) + ": " + f->getName() +
               " (with -fsplit-stack) calls " + rel.sym->getName() +
               " (without -fsplit-stack), but couldn't adjust its prologue");
     }
@@ -1400,3 +1400,6 @@ template void EhInputSection::split<ELF32LE>();
 template void EhInputSection::split<ELF32BE>();
 template void EhInputSection::split<ELF64LE>();
 template void EhInputSection::split<ELF64BE>();
+
+} // namespace elf
+} // namespace lld

@@ -34,7 +34,7 @@ def diff_dicts(curr, prev):
 
 
 # Represents any program state trait that is a dictionary of key-value pairs.
-class GenericMap:
+class GenericMap(object):
     def __init__(self, items):
         self.generic_map = collections.OrderedDict(items)
 
@@ -47,8 +47,9 @@ class GenericMap:
 
 
 # A deserialized source location.
-class SourceLocation:
+class SourceLocation(object):
     def __init__(self, json_loc):
+        super(SourceLocation, self).__init__()
         logging.debug('json: %s' % json_loc)
         self.line = json_loc['line']
         self.col = json_loc['column']
@@ -62,8 +63,9 @@ class SourceLocation:
 
 
 # A deserialized program point.
-class ProgramPoint:
+class ProgramPoint(object):
     def __init__(self, json_pp):
+        super(ProgramPoint, self).__init__()
         self.kind = json_pp['kind']
         self.tag = json_pp['tag']
         self.node_id = json_pp['node_id']
@@ -88,8 +90,9 @@ class ProgramPoint:
 
 
 # A single expression acting as a key in a deserialized Environment.
-class EnvironmentBindingKey:
+class EnvironmentBindingKey(object):
     def __init__(self, json_ek):
+        super(EnvironmentBindingKey, self).__init__()
         # CXXCtorInitializer is not a Stmt!
         self.stmt_id = json_ek['stmt_id'] if 'stmt_id' in json_ek \
             else json_ek['init_id']
@@ -107,8 +110,9 @@ class EnvironmentBindingKey:
 
 
 # Deserialized description of a location context.
-class LocationContext:
+class LocationContext(object):
     def __init__(self, json_frame):
+        super(LocationContext, self).__init__()
         self.lctx_id = json_frame['lctx_id']
         self.caption = json_frame['location_context']
         self.decl = json_frame['calling']
@@ -127,8 +131,9 @@ class LocationContext:
 
 # A group of deserialized Environment bindings that correspond to a specific
 # location context.
-class EnvironmentFrame:
+class EnvironmentFrame(object):
     def __init__(self, json_frame):
+        super(EnvironmentFrame, self).__init__()
         self.location_context = LocationContext(json_frame)
         self.bindings = collections.OrderedDict(
             [(EnvironmentBindingKey(b),
@@ -145,8 +150,9 @@ class EnvironmentFrame:
 
 # A deserialized Environment. This class can also hold other entities that
 # are similar to Environment, such as Objects Under Construction.
-class GenericEnvironment:
+class GenericEnvironment(object):
     def __init__(self, json_e):
+        super(GenericEnvironment, self).__init__()
         self.frames = [EnvironmentFrame(f) for f in json_e]
 
     def diff_frames(self, prev):
@@ -175,8 +181,9 @@ class GenericEnvironment:
 
 
 # A single binding key in a deserialized RegionStore cluster.
-class StoreBindingKey:
+class StoreBindingKey(object):
     def __init__(self, json_sk):
+        super(StoreBindingKey, self).__init__()
         self.kind = json_sk['kind']
         self.offset = json_sk['offset']
 
@@ -191,8 +198,9 @@ class StoreBindingKey:
 
 
 # A single cluster of the deserialized RegionStore.
-class StoreCluster:
+class StoreCluster(object):
     def __init__(self, json_sc):
+        super(StoreCluster, self).__init__()
         self.base_region = json_sc['cluster']
         self.bindings = collections.OrderedDict(
             [(StoreBindingKey(b), b['value']) for b in json_sc['items']])
@@ -206,8 +214,9 @@ class StoreCluster:
 
 
 # A deserialized RegionStore.
-class Store:
+class Store(object):
     def __init__(self, json_s):
+        super(Store, self).__init__()
         self.ptr = json_s['pointer']
         self.clusters = collections.OrderedDict(
             [(c['pointer'], StoreCluster(c)) for c in json_s['items']])
@@ -226,8 +235,9 @@ class Store:
 
 # Deserialized messages from a single checker in a single program state.
 # Basically a list of raw strings.
-class CheckerLines:
+class CheckerLines(object):
     def __init__(self, json_lines):
+        super(CheckerLines, self).__init__()
         self.lines = json_lines
 
     def diff_lines(self, prev):
@@ -240,8 +250,9 @@ class CheckerLines:
 
 
 # Deserialized messages of all checkers, separated by checker.
-class CheckerMessages:
+class CheckerMessages(object):
     def __init__(self, json_m):
+        super(CheckerMessages, self).__init__()
         self.items = collections.OrderedDict(
             [(m['checker'], CheckerLines(m['messages'])) for m in json_m])
 
@@ -258,8 +269,9 @@ class CheckerMessages:
 
 
 # A deserialized program state.
-class ProgramState:
+class ProgramState(object):
     def __init__(self, state_id, json_ps):
+        super(ProgramState, self).__init__()
         logging.debug('Adding ProgramState ' + str(state_id))
 
         if json_ps is None:
@@ -303,8 +315,9 @@ class ProgramState:
 # A deserialized exploded graph node. Has a default constructor because it
 # may be referenced as part of an edge before its contents are deserialized,
 # and in this moment we already need a room for predecessors and successors.
-class ExplodedNode:
+class ExplodedNode(object):
     def __init__(self):
+        super(ExplodedNode, self).__init__()
         self.predecessors = []
         self.successors = []
 
@@ -325,7 +338,7 @@ class ExplodedNode:
 
 # A deserialized ExplodedGraph. Constructed by consuming a .dot file
 # line-by-line.
-class ExplodedGraph:
+class ExplodedGraph(object):
     # Parse .dot files with regular expressions.
     node_re = re.compile(
         '^(Node0x[0-9a-f]*) \\[shape=record,.*label="{(.*)\\\\l}"\\];$')
@@ -333,6 +346,7 @@ class ExplodedGraph:
         '^(Node0x[0-9a-f]*) -> (Node0x[0-9a-f]*);$')
 
     def __init__(self):
+        super(ExplodedGraph, self).__init__()
         self.nodes = collections.defaultdict(ExplodedNode)
         self.root_id = None
         self.incomplete_line = ''
@@ -393,9 +407,10 @@ class ExplodedGraph:
 
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
-class DotDumpVisitor:
+class DotDumpVisitor(object):
     def __init__(self, do_diffs, dark_mode, gray_mode,
                  topo_mode, dump_dot_only):
+        super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
@@ -881,7 +896,10 @@ class DotDumpVisitor:
 
 
 # BasicExplorer explores the whole graph in no particular order.
-class BasicExplorer:
+class BasicExplorer(object):
+    def __init__(self):
+        super(BasicExplorer, self).__init__()
+
     def explore(self, graph, visitor):
         visitor.visit_begin_graph(graph)
         for node in sorted(graph.nodes):
@@ -901,7 +919,10 @@ class BasicExplorer:
 
 # SinglePathTrimmer keeps only a single path - the leftmost path from the root.
 # Useful when the trimmed graph is still too large.
-class SinglePathTrimmer:
+class SinglePathTrimmer(object):
+    def __init__(self):
+        super(SinglePathTrimmer, self).__init__()
+
     def trim(self, graph):
         visited_nodes = set()
         node_id = graph.root_id
@@ -925,8 +946,9 @@ class SinglePathTrimmer:
 # TargetedTrimmer keeps paths that lead to specific nodes and discards all
 # other paths. Useful when you cannot use -trim-egraph (e.g. when debugging
 # a crash).
-class TargetedTrimmer:
+class TargetedTrimmer(object):
     def __init__(self, target_nodes):
+        super(TargetedTrimmer, self).__init__()
         self._target_nodes = target_nodes
 
     @staticmethod

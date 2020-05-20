@@ -40,7 +40,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   switch (IDNumber) {
   case VoidTyID      : return getVoidTy(C);
   case HalfTyID      : return getHalfTy(C);
-  case BFloatTyID    : return getBFloatTy(C);
   case FloatTyID     : return getFloatTy(C);
   case DoubleTyID    : return getDoubleTy(C);
   case X86_FP80TyID  : return getX86_FP80Ty(C);
@@ -113,7 +112,6 @@ bool Type::isEmptyTy() const {
 TypeSize Type::getPrimitiveSizeInBits() const {
   switch (getTypeID()) {
   case Type::HalfTyID: return TypeSize::Fixed(16);
-  case Type::BFloatTyID: return TypeSize::Fixed(16);
   case Type::FloatTyID: return TypeSize::Fixed(32);
   case Type::DoubleTyID: return TypeSize::Fixed(64);
   case Type::X86_FP80TyID: return TypeSize::Fixed(80);
@@ -144,7 +142,6 @@ int Type::getFPMantissaWidth() const {
     return VTy->getElementType()->getFPMantissaWidth();
   assert(isFloatingPointTy() && "Not a floating point type!");
   if (getTypeID() == HalfTyID) return 11;
-  if (getTypeID() == BFloatTyID) return 8;
   if (getTypeID() == FloatTyID) return 24;
   if (getTypeID() == DoubleTyID) return 53;
   if (getTypeID() == X86_FP80TyID) return 64;
@@ -170,7 +167,6 @@ bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
 Type *Type::getVoidTy(LLVMContext &C) { return &C.pImpl->VoidTy; }
 Type *Type::getLabelTy(LLVMContext &C) { return &C.pImpl->LabelTy; }
 Type *Type::getHalfTy(LLVMContext &C) { return &C.pImpl->HalfTy; }
-Type *Type::getBFloatTy(LLVMContext &C) { return &C.pImpl->BFloatTy; }
 Type *Type::getFloatTy(LLVMContext &C) { return &C.pImpl->FloatTy; }
 Type *Type::getDoubleTy(LLVMContext &C) { return &C.pImpl->DoubleTy; }
 Type *Type::getMetadataTy(LLVMContext &C) { return &C.pImpl->MetadataTy; }
@@ -193,10 +189,6 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
 
 PointerType *Type::getHalfPtrTy(LLVMContext &C, unsigned AS) {
   return getHalfTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getBFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getBFloatTy(C)->getPointerTo(AS);
 }
 
 PointerType *Type::getFloatPtrTy(LLVMContext &C, unsigned AS) {

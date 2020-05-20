@@ -12,7 +12,7 @@ add_mlir_dialect_library(MLIRLinalgOps
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRSideEffectInterfaces
+  MLIRSideEffects
   MLIRViewLikeInterface
   MLIRStandardOps
   )

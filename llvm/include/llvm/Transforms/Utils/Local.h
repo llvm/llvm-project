@@ -48,6 +48,7 @@ class DbgValueInst;
 class DIBuilder;
 class Function;
 class Instruction;
+class LazyValueInfo;
 class LoadInst;
 class MDNode;
 class MemorySSAUpdater;

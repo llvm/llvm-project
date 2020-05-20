@@ -42,12 +42,3 @@ void j() {
 }
 
 }
-
-namespace volatile_array {
-void test() {
-  char a[10];
-  volatile char b[10];
-  a; // expected-warning-re {{expression result unused{{$}}}}
-  b; // expected-warning-re {{expression result unused{{$}}}}
-}
-}

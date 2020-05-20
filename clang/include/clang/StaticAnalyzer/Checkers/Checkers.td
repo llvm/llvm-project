@@ -293,22 +293,13 @@ let ParentPackage = APIModeling in {
 
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Improve modeling of the C standard library functions">,
-  Dependencies<[NonNullParamChecker, CallAndMessageChecker]>,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "DisplayLoadedSummaries",
-                  "If set to true, the checker displays the found summaries "
-                  "for the given translation unit.",
-                  "false",
-                  Released>
-  ]>,
   Documentation<NotDocumented>;
 
 def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
   HelpText<"Check constraints of arguments of C standard library functions, "
            "such as whether the parameter of isalpha is in the range [0, 255] "
            "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
+  Dependencies<[StdCLibraryFunctionsChecker, CallAndMessageChecker]>,
   Documentation<NotDocumented>;
 
 def TrustNonnullChecker : Checker<"TrustNonnull">,
@@ -1439,14 +1430,9 @@ def TaintTesterChecker : Checker<"TaintTest">,
   HelpText<"Mark tainted symbols as such.">,
   Documentation<NotDocumented>;
 
-// This checker *technically* depends on SteamChecker, but we don't allow
-// dependency checkers to emit diagnostics, and a debug checker isn't worth
-// the chore needed to create a modeling portion on its own. Since this checker
-// is for development purposes only anyways, make sure that StreamChecker is
-// also enabled, at least for the time being.
 def StreamTesterChecker : Checker<"StreamTester">,
-  HelpText<"Add test functions to StreamChecker for test and debugging "
-           "purposes.">,
+  HelpText<"Add test functions to StreamChecker for test and debugging purposes.">,
+  Dependencies<[StreamChecker]>,
   Documentation<NotDocumented>;
 
 def ExprInspectionChecker : Checker<"ExprInspection">,

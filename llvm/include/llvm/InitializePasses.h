@@ -71,7 +71,6 @@ void initializeAggressiveInstCombinerLegacyPassPass(PassRegistry&);
 void initializeAliasSetPrinterPass(PassRegistry&);
 void initializeAlignmentFromAssumptionsPass(PassRegistry&);
 void initializeAlwaysInlinerLegacyPassPass(PassRegistry&);
-void initializeAssumeSimplifyPassLegacyPassPass(PassRegistry &);
 void initializeOpenMPOptLegacyPassPass(PassRegistry &);
 void initializeArgPromotionPass(PassRegistry&);
 void initializeAssumptionCacheTrackerPass(PassRegistry&);

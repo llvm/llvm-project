@@ -1,4 +1,4 @@
-//===- MVETailPredication.cpp - MVE Tail Predication ------------*- C++ -*-===//
+//===- MVETailPredication.cpp - MVE Tail Predication ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -84,11 +84,11 @@ struct TripCountPattern {
   Value *NumElements = nullptr;
 
   // Other instructions in the icmp chain that calculate the predicate.
-  FixedVectorType *VecTy = nullptr;
+  VectorType *VecTy = nullptr;
   Instruction *Shuffle = nullptr;
   Instruction *Induction = nullptr;
 
-  TripCountPattern(Instruction *P, Value *TC, FixedVectorType *VT)
+  TripCountPattern(Instruction *P, Value *TC, VectorType *VT)
       : Predicate(P), TripCount(TC), VecTy(VT){};
 };
 
@@ -323,7 +323,7 @@ bool MVETailPredication::isTailPredicate(TripCountPattern &TCP) {
     return false;
 
   Value *InLoop = Phi->getIncomingValueForBlock(L->getLoopLatch());
-  unsigned Lanes = cast<FixedVectorType>(Insert->getType())->getNumElements();
+  unsigned Lanes = cast<VectorType>(Insert->getType())->getNumElements();
 
   Instruction *LHS = nullptr;
   if (!match(InLoop, m_Add(m_Instruction(LHS), m_SpecificInt(Lanes))))
@@ -332,10 +332,10 @@ bool MVETailPredication::isTailPredicate(TripCountPattern &TCP) {
   return LHS == Phi;
 }
 
-static FixedVectorType *getVectorType(IntrinsicInst *I) {
+static VectorType *getVectorType(IntrinsicInst *I) {
   unsigned TypeOp = I->getIntrinsicID() == Intrinsic::masked_load ? 0 : 1;
   auto *PtrTy = cast<PointerType>(I->getOperand(TypeOp)->getType());
-  return cast<FixedVectorType>(PtrTy->getElementType());
+  return cast<VectorType>(PtrTy->getElementType());
 }
 
 bool MVETailPredication::IsPredicatedVectorLoop() {
@@ -345,7 +345,7 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
       if (IsMasked(&I)) {
-        FixedVectorType *VecTy = getVectorType(cast<IntrinsicInst>(&I));
+        VectorType *VecTy = getVectorType(cast<IntrinsicInst>(&I));
         unsigned Lanes = VecTy->getNumElements();
         unsigned ElementWidth = VecTy->getScalarSizeInBits();
         // MVE vectors are 128-bit, but don't support 128 x i1.

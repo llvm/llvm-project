@@ -5,7 +5,6 @@ import sys
 
 Verbose = 1
 
-
 def which(command, paths=None):
     """which(command, [paths]) - Look up the given command in the paths string
     (or the PATH environment variable, if unspecified)."""

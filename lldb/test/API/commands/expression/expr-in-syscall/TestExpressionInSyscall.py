@@ -14,7 +14,6 @@ class ExprSyscallTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
     @expectedFailureNetBSD
-    @skipIfReproducer
     def test_setpgid(self):
         self.build()
         self.expr_syscall()

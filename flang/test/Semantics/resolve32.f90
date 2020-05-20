@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 module m2
   public s2, s4
   private s3

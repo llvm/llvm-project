@@ -52,7 +52,6 @@ static_library("Analysis") {
     "IVDescriptors.cpp",
     "IVUsers.cpp",
     "IndirectCallPromotionAnalysis.cpp",
-    "InlineAdvisor.cpp",
     "InlineCost.cpp",
     "InstCount.cpp",
     "InstructionPrecedenceTracking.cpp",

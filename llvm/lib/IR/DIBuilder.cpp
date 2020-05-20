@@ -832,10 +832,10 @@ DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
 
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,
                                   StringRef ConfigurationMacros,
-                                  StringRef IncludePath, StringRef APINotesFile,
-                                  DIFile *File, unsigned LineNo) {
-  return DIModule::get(VMContext, File, getNonCompileUnitScope(Scope), Name,
-                       ConfigurationMacros, IncludePath, APINotesFile, LineNo);
+                                  StringRef IncludePath,
+                                  StringRef APINotesFile) {
+  return DIModule::get(VMContext, getNonCompileUnitScope(Scope), Name,
+                       ConfigurationMacros, IncludePath, APINotesFile);
 }
 
 DILexicalBlockFile *DIBuilder::createLexicalBlockFile(DIScope *Scope,

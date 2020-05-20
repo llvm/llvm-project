@@ -63,7 +63,8 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
                   mlir::PatternRewriter &rewriter) const override {
     // Look through the input of the current transpose.
     mlir::Value transposeInput = op.getOperand();
-    TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
+    TransposeOp transposeInputOp =
+        llvm::dyn_cast_or_null<TransposeOp>(transposeInput.getDefiningOp());
 
     // Input defined by another transpose? If not, no match.
     if (!transposeInputOp)

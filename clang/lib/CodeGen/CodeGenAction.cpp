@@ -246,7 +246,7 @@ namespace clang {
       for (auto &LM : LinkModules) {
         if (LM.PropagateAttrs)
           for (Function &F : *LM.Module)
-            Gen->CGM().addDefaultFunctionDefinitionAttributes(F);
+            Gen->CGM().AddDefaultFnAttrs(F);
 
         CurLinkModule = LM.Module.get();
 

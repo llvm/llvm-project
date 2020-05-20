@@ -444,9 +444,9 @@ public:
     if (FS != iter->second.end())
       return &FS->second;
     // If we cannot find exact match of the callee name, return the FS with
-    // the max total count. Only do this when CalleeName is not provided,
+    // the max total count. Only do this when CalleeName is not provided, 
     // i.e., only for indirect calls.
-    if (!CalleeName.empty())
+    if (!CalleeName.empty()) 
       return nullptr;
     uint64_t MaxTotalSamples = 0;
     const FunctionSamples *R = nullptr;
@@ -527,20 +527,15 @@ public:
                             uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
-    auto isDeclaration = [](const Function *F) {
-      return !F || F->isDeclaration();
-    };
-    if (isDeclaration(M->getFunction(getFuncName()))) {
-      // Add to the import list only when it's defined out of module.
-      S.insert(getGUID(Name));
-    }
+    S.insert(getGUID(Name));
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
         if (TS.getValue() > Threshold) {
-          const Function *Callee = M->getFunction(getFuncName(TS.getKey()));
-          if (isDeclaration(Callee))
+          const Function *Callee =
+              M->getFunction(getNameInModule(TS.getKey(), M));
+          if (!Callee || !Callee->getSubprogram())
             S.insert(getGUID(TS.getKey()));
         }
     for (const auto &CS : CallsiteSamples)
@@ -554,8 +549,10 @@ public:
   /// Return the function name.
   StringRef getName() const { return Name; }
 
-  /// Return the original function name.
-  StringRef getFuncName() const { return getFuncName(Name); }
+  /// Return the original function name if it exists in Module \p M.
+  StringRef getFuncNameInModule(const Module *M) const {
+    return getNameInModule(Name, M);
+  }
 
   /// Return the canonical name for a function, taking into account
   /// suffix elision policy attributes.
@@ -585,14 +582,13 @@ public:
     return F.getName();
   }
 
-  /// Translate \p Name into its original name.
+  /// Translate \p Name into its original name in Module.
   /// When profile doesn't use MD5, \p Name needs no translation.
   /// When profile uses MD5, \p Name in current FunctionSamples
-  /// is actually GUID of the original function name. getFuncName will
-  /// translate \p Name in current FunctionSamples into its original name
-  /// by looking up in the function map GUIDToFuncNameMap.
-  /// If the original name doesn't exist in the map, return empty StringRef.
-  StringRef getFuncName(StringRef Name) const {
+  /// is actually GUID of the original function name. getNameInModule will
+  /// translate \p Name in current FunctionSamples into its original name.
+  /// If the original name doesn't exist in \p M, return empty StringRef.
+  StringRef getNameInModule(StringRef Name, const Module *M) const {
     if (!UseMD5)
       return Name;
 

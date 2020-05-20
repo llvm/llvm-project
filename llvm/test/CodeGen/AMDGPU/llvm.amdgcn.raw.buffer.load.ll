@@ -120,7 +120,6 @@ entry:
 
 ;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_and:
 ;CHECK-NEXT: %bb.
-;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
 ;CHECK: s_waitcnt
@@ -146,7 +145,6 @@ main_body:
 ;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_or:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: v_lshlrev_b32_e32 v{{[0-9]}}, 6, v0
-;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:4
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:28
 ;CHECK: s_waitcnt
@@ -172,7 +170,6 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_glc_slc:
 ;CHECK-NEXT: %bb.
-;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4{{$}}
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:12 glc{{$}}
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28 glc slc{{$}}
@@ -236,7 +233,6 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_x1_offset_merged:
 ;CHECK-NEXT: %bb.
-;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:28
 ;CHECK: s_waitcnt
@@ -406,7 +402,6 @@ main_body:
 
 ;CHECK-LABEL: {{^}}raw_buffer_load_x1_offset_merged:
 ;CHECK-NEXT: %bb.
-;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:28
 ;CHECK: s_waitcnt
@@ -425,7 +420,6 @@ main_body:
 
 ;CHECK-LABEL: {{^}}raw_buffer_load_x1_offset_swizzled_not_merged:
 ;CHECK-NEXT: %bb.
-;GFX10-NEXT: s_clause
 ;CHECK-NEXT: buffer_load_dword v{{[0-9]}}, off, s[0:3], 0 offset:4
 ;CHECK-NEXT: buffer_load_dword v{{[0-9]}}, off, s[0:3], 0 offset:8
 ;CHECK-NEXT: buffer_load_dword v{{[0-9]}}, off, s[0:3], 0 offset:12

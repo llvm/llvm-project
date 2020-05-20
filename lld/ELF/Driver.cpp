@@ -66,17 +66,18 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::sys;
 using namespace llvm::support;
-using namespace lld;
-using namespace lld::elf;
 
-Configuration *elf::config;
-LinkerDriver *elf::driver;
+namespace lld {
+namespace elf {
+
+Configuration *config;
+LinkerDriver *driver;
 
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
-bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
-               raw_ostream &stdoutOS, raw_ostream &stderrOS) {
+bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
+          raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
@@ -2095,3 +2096,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Write the result to the file.
   writeResult<ELFT>();
 }
+
+} // namespace elf
+} // namespace lld

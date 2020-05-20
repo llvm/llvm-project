@@ -41,8 +41,9 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 // Creates an empty file to store a list of object files for final
 // linking of distributed ThinLTO.
@@ -350,3 +351,6 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       ret.push_back(createObjectFile(*file));
   return ret;
 }
+
+} // namespace elf
+} // namespace lld

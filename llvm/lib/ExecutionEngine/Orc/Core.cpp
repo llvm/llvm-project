@@ -187,12 +187,12 @@ MaterializationResponsibility::~MaterializationResponsibility() {
 }
 
 SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
-  return JD->getRequestedSymbols(SymbolFlags);
+  return JD.getRequestedSymbols(SymbolFlags);
 }
 
 Error MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
   LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " resolving " << Symbols << "\n";
+    dbgs() << "In " << JD.getName() << " resolving " << Symbols << "\n";
   });
 #ifndef NDEBUG
   for (auto &KV : Symbols) {
@@ -207,16 +207,16 @@ Error MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
   }
 #endif
 
-  return JD->resolve(Symbols);
+  return JD.resolve(Symbols);
 }
 
 Error MaterializationResponsibility::notifyEmitted() {
 
   LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " emitting " << SymbolFlags << "\n";
+    dbgs() << "In " << JD.getName() << " emitting " << SymbolFlags << "\n";
   });
 
-  if (auto Err = JD->emit(SymbolFlags))
+  if (auto Err = JD.emit(SymbolFlags))
     return Err;
 
   SymbolFlags.clear();
@@ -227,10 +227,10 @@ Error MaterializationResponsibility::defineMaterializing(
     SymbolFlagsMap NewSymbolFlags) {
 
   LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " defining materializing symbols "
-           << NewSymbolFlags << "\n";
-  });
-  if (auto AcceptedDefs = JD->defineMaterializing(std::move(NewSymbolFlags))) {
+      dbgs() << "In " << JD.getName() << " defining materializing symbols "
+             << NewSymbolFlags << "\n";
+    });
+  if (auto AcceptedDefs = JD.defineMaterializing(std::move(NewSymbolFlags))) {
     // Add all newly accepted symbols to this responsibility object.
     for (auto &KV : *AcceptedDefs)
       SymbolFlags.insert(KV);
@@ -242,17 +242,17 @@ Error MaterializationResponsibility::defineMaterializing(
 void MaterializationResponsibility::failMaterialization() {
 
   LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " failing materialization for "
+    dbgs() << "In " << JD.getName() << " failing materialization for "
            << SymbolFlags << "\n";
   });
 
   JITDylib::FailedSymbolsWorklist Worklist;
 
   for (auto &KV : SymbolFlags)
-    Worklist.push_back(std::make_pair(JD.get(), KV.first));
+    Worklist.push_back(std::make_pair(&JD, KV.first));
   SymbolFlags.clear();
 
-  JD->notifyFailed(std::move(Worklist));
+  JD.notifyFailed(std::move(Worklist));
 }
 
 void MaterializationResponsibility::replace(
@@ -271,12 +271,12 @@ void MaterializationResponsibility::replace(
   if (MU->getInitializerSymbol() == InitSymbol)
     InitSymbol = nullptr;
 
-  LLVM_DEBUG(JD->getExecutionSession().runSessionLocked([&]() {
-    dbgs() << "In " << JD->getName() << " replacing symbols with " << *MU
+  LLVM_DEBUG(JD.getExecutionSession().runSessionLocked([&]() {
+    dbgs() << "In " << JD.getName() << " replacing symbols with " << *MU
            << "\n";
   }););
 
-  JD->replace(std::move(MU));
+  JD.replace(std::move(MU));
 }
 
 MaterializationResponsibility
@@ -315,7 +315,7 @@ void MaterializationResponsibility::addDependencies(
   });
   assert(SymbolFlags.count(Name) &&
          "Symbol not covered by this MaterializationResponsibility instance");
-  JD->addDependencies(Name, Dependencies);
+  JD.addDependencies(Name, Dependencies);
 }
 
 void MaterializationResponsibility::addDependenciesForAll(
@@ -325,7 +325,7 @@ void MaterializationResponsibility::addDependenciesForAll(
            << Dependencies << "\n";
   });
   for (auto &KV : SymbolFlags)
-    JD->addDependencies(KV.first, Dependencies);
+    JD.addDependencies(KV.first, Dependencies);
 }
 
 AbsoluteSymbolsMaterializationUnit::AbsoluteSymbolsMaterializationUnit(
@@ -703,11 +703,8 @@ void JITDylib::replace(std::unique_ptr<MaterializationUnit> MU) {
         return nullptr;
       });
 
-  if (MustRunMU) {
-    auto MR =
-        MustRunMU->createMaterializationResponsibility(shared_from_this());
-    ES.dispatchMaterialization(std::move(MustRunMU), std::move(MR));
-  }
+  if (MustRunMU)
+    ES.dispatchMaterialization(*this, std::move(MustRunMU));
 }
 
 SymbolNameSet
@@ -1451,11 +1448,8 @@ JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   // Add MUs to the OutstandingMUs list.
   {
     std::lock_guard<std::recursive_mutex> Lock(ES.OutstandingMUsMutex);
-    auto ThisJD = shared_from_this();
-    for (auto &MU : MUs) {
-      auto MR = MU->createMaterializationResponsibility(ThisJD);
-      ES.OutstandingMUs.push_back(make_pair(std::move(MU), std::move(MR)));
-    }
+    for (auto &MU : MUs)
+      ES.OutstandingMUs.push_back(make_pair(this, std::move(MU)));
   }
   ES.runOutstandingMUs();
 
@@ -1789,7 +1783,7 @@ JITDylib &ExecutionSession::createBareJITDylib(std::string Name) {
   assert(!getJITDylibByName(Name) && "JITDylib with that name already exists");
   return runSessionLocked([&, this]() -> JITDylib & {
     JDs.push_back(
-        std::shared_ptr<JITDylib>(new JITDylib(*this, std::move(Name))));
+        std::unique_ptr<JITDylib>(new JITDylib(*this, std::move(Name))));
     return *JDs.back();
   });
 }
@@ -1978,13 +1972,9 @@ void ExecutionSession::lookup(
   {
     std::lock_guard<std::recursive_mutex> Lock(OutstandingMUsMutex);
 
-    for (auto &KV : CollectedMUsMap) {
-      auto JD = KV.first->shared_from_this();
-      for (auto &MU : KV.second) {
-        auto MR = MU->createMaterializationResponsibility(JD);
-        OutstandingMUs.push_back(std::make_pair(std::move(MU), std::move(MR)));
-      }
-    }
+    for (auto &KV : CollectedMUsMap)
+      for (auto &MU : KV.second)
+        OutstandingMUs.push_back(std::make_pair(KV.first, std::move(MU)));
   }
 
   runOutstandingMUs();
@@ -2079,23 +2069,22 @@ void ExecutionSession::dump(raw_ostream &OS) {
 
 void ExecutionSession::runOutstandingMUs() {
   while (1) {
-    Optional<std::pair<std::unique_ptr<MaterializationUnit>,
-                       MaterializationResponsibility>>
-        JMU;
+    std::pair<JITDylib *, std::unique_ptr<MaterializationUnit>> JITDylibAndMU;
 
     {
       std::lock_guard<std::recursive_mutex> Lock(OutstandingMUsMutex);
       if (!OutstandingMUs.empty()) {
-        JMU.emplace(std::move(OutstandingMUs.back()));
+        JITDylibAndMU = std::move(OutstandingMUs.back());
         OutstandingMUs.pop_back();
       }
     }
 
-    if (!JMU)
+    if (JITDylibAndMU.first) {
+      assert(JITDylibAndMU.second && "JITDylib, but no MU?");
+      dispatchMaterialization(*JITDylibAndMU.first,
+                              std::move(JITDylibAndMU.second));
+    } else
       break;
-
-    assert(JMU->first && "No MU?");
-    dispatchMaterialization(std::move(JMU->first), std::move(JMU->second));
   }
 }
 

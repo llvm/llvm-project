@@ -112,15 +112,12 @@ private:
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
     this->ES->setDispatchMaterialization(
-        [this](std::unique_ptr<MaterializationUnit> MU,
-               MaterializationResponsibility MR) {
+
+        [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
           // FIXME: Switch to move capture once we have C++14.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto SharedMR =
-            std::make_shared<MaterializationResponsibility>(std::move(MR));
-          CompileThreads.async([SharedMU, SharedMR]() {
-            SharedMU->materialize(std::move(*SharedMR));
-          });
+          auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
+          CompileThreads.async(std::move(Work));
         });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;

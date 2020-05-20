@@ -779,11 +779,9 @@ TEST_F(LoopPassManagerTest, IndirectOuterPassInvalidation) {
       .WillByDefault(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR) {
         auto &FAMP = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR);
+        auto &FAM = FAMP.getManager();
         Function &F = *L.getHeader()->getParent();
-        // This call will assert when trying to get the actual analysis if the
-        // FunctionAnalysis can be invalidated. Only check its existence.
-        // Alternatively, use FAM above, for the purposes of this unittest.
-        if (FAMP.cachedResultExists<FunctionAnalysis>(F))
+        if (FAM.getCachedResult<FunctionAnalysis>(F))
           FAMP.registerOuterAnalysisInvalidation<FunctionAnalysis,
                                                  LoopAnalysis>();
         return MLAHandle.getResult();

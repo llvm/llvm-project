@@ -168,18 +168,14 @@ namespace {
 
       // Same for a full set.
       bool addRequired(const RegSet &RS) {
-        bool Changed = false;
-        for (unsigned Reg : RS)
-          Changed |= addRequired(Reg);
-        return Changed;
+        return llvm::any_of(
+            RS, [this](unsigned Reg) { return this->addRequired(Reg); });
       }
 
       // Same for a full map.
       bool addRequired(const RegMap &RM) {
-        bool Changed = false;
-        for (const auto &I : RM)
-          Changed |= addRequired(I.first);
-        return Changed;
+        return llvm::any_of(
+            RM, [this](const auto &P) { return this->addRequired(P.first); });
       }
 
       // Live-out registers are either in regsLiveOut or vregsPassed.

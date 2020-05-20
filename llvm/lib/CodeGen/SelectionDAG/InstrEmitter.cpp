@@ -418,9 +418,9 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
     unsigned Idx;
     MachineConstantPool *MCP = MF->getConstantPool();
     if (CP->isMachineConstantPoolEntry())
-      Idx = MCP->getConstantPoolIndex(CP->getMachineCPVal(), Alignment);
+      Idx = MCP->getConstantPoolIndex(CP->getMachineCPVal(), Alignment.value());
     else
-      Idx = MCP->getConstantPoolIndex(CP->getConstVal(), Alignment);
+      Idx = MCP->getConstantPoolIndex(CP->getConstVal(), Alignment.value());
     MIB.addConstantPoolIndex(Idx, Offset, CP->getTargetFlags());
   } else if (ExternalSymbolSDNode *ES = dyn_cast<ExternalSymbolSDNode>(Op)) {
     MIB.addExternalSymbol(ES->getSymbol(), ES->getTargetFlags());

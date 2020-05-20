@@ -793,7 +793,10 @@ static LogicalResult vectorizeRootOrTerminal(Value iv,
     LLVM_DEBUG(permutationMap.print(dbgs()));
     auto transfer = b.create<vector::TransferReadOp>(
         opInst->getLoc(), vectorType, memoryOp.getMemRef(), indices,
-        permutationMap);
+        AffineMapAttr::get(permutationMap),
+        // TODO(b/144455320) add a proper padding value, not just 0.0 : f32
+        state->folder->create<ConstantFloatOp>(b, opInst->getLoc(),
+                                               APFloat(0.0f), b.getF32Type()));
     state->registerReplacement(opInst, transfer.getOperation());
   } else {
     state->registerTerminal(opInst);
@@ -962,7 +965,7 @@ static Value vectorizeOperand(Value operand, Operation *op,
     return nullptr;
   }
   // 3. vectorize constant.
-  if (auto constant = operand.getDefiningOp<ConstantOp>()) {
+  if (auto constant = dyn_cast_or_null<ConstantOp>(operand.getDefiningOp())) {
     return vectorizeConstant(
         op, constant,
         VectorType::get(state->strategy->vectorSizes, operand.getType()));
@@ -1017,7 +1020,8 @@ static Operation *vectorizeOneOperation(Operation *opInst,
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
     LLVM_DEBUG(permutationMap.print(dbgs()));
     auto transfer = b.create<vector::TransferWriteOp>(
-        opInst->getLoc(), vectorValue, memRef, indices, permutationMap);
+        opInst->getLoc(), vectorValue, memRef, indices,
+        AffineMapAttr::get(permutationMap));
     auto *res = transfer.getOperation();
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *res);
     // "Terminals" (i.e. AffineStoreOps) are erased on the spot.

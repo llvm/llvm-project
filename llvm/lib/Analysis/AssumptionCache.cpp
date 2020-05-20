@@ -80,7 +80,7 @@ findAffectedValues(CallInst *CI,
 
   for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
     if (CI->getOperandBundleAt(Idx).Inputs.size() > ABA_WasOn &&
-        CI->getOperandBundleAt(Idx).getTagName() != IgnoreBundleTag)
+        CI->getOperandBundleAt(Idx).getTagName() != "ignore")
       AddAffected(CI->getOperandBundleAt(Idx).Inputs[ABA_WasOn], Idx);
   }
 

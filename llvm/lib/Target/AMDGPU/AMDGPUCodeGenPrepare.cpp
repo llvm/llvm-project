@@ -255,7 +255,7 @@ Type *AMDGPUCodeGenPrepare::getI32Ty(IRBuilder<> &B, const Type *T) const {
 
   if (T->isIntegerTy())
     return B.getInt32Ty();
-  return FixedVectorType::get(B.getInt32Ty(), cast<FixedVectorType>(T));
+  return VectorType::get(B.getInt32Ty(), cast<VectorType>(T)->getNumElements());
 }
 
 bool AMDGPUCodeGenPrepare::isSigned(const BinaryOperator &I) const {
@@ -477,7 +477,7 @@ bool AMDGPUCodeGenPrepare::isU24(Value *V, unsigned ScalarSize) const {
 
 static void extractValues(IRBuilder<> &Builder,
                           SmallVectorImpl<Value *> &Values, Value *V) {
-  auto *VT = dyn_cast<FixedVectorType>(V->getType());
+  VectorType *VT = dyn_cast<VectorType>(V->getType());
   if (!VT) {
     Values.push_back(V);
     return;
@@ -777,7 +777,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
   Value *Den = FDiv.getOperand(1);
 
   Value *NewFDiv = nullptr;
-  if (auto *VT = dyn_cast<FixedVectorType>(FDiv.getType())) {
+  if (VectorType *VT = dyn_cast<VectorType>(FDiv.getType())) {
     NewFDiv = UndefValue::get(VT);
 
     // FIXME: Doesn't do the right thing for cases where the vector is partially
@@ -1233,7 +1233,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
-    if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
       NewDiv = UndefValue::get(VT);
 
       for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {

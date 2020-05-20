@@ -58,7 +58,7 @@ cond.end:
   %call = tail call i32 @bar(i8* %3, i8* %6)
   ret i32 %call
 }
-attributes #0 = { null_pointer_is_valid }
+attributes #0 = { "null-pointer-is-valid"="true" }
 
 declare i32 @bar(i8*, i8*) local_unnamed_addr #1
 !llvm.dbg.cu = !{!0}

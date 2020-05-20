@@ -163,10 +163,10 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   if (WarnOnSizeOfCompareToConstant) {
     Finder->addMatcher(
         binaryOperator(matchers::isRelationalOperator(),
-                       hasOperands(ignoringParenImpCasts(SizeOfExpr),
-                                   ignoringParenImpCasts(anyOf(
-                                       integerLiteral(equals(0)),
-                                       integerLiteral(isBiggerThan(0x80000))))))
+                       hasEitherOperand(ignoringParenImpCasts(SizeOfExpr)),
+                       hasEitherOperand(ignoringParenImpCasts(
+                           anyOf(integerLiteral(equals(0)),
+                                 integerLiteral(isBiggerThan(0x80000))))))
             .bind("sizeof-compare-constant"),
         this);
   }
@@ -205,11 +205,10 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       binaryOperator(hasOperatorName("*"),
-                     hasOperands(ignoringParenImpCasts(SizeOfExpr),
-                                 ignoringParenImpCasts(binaryOperator(
-                                     hasOperatorName("*"),
-                                     hasEitherOperand(
-                                         ignoringParenImpCasts(SizeOfExpr))))))
+                     hasEitherOperand(ignoringParenImpCasts(SizeOfExpr)),
+                     hasEitherOperand(ignoringParenImpCasts(binaryOperator(
+                         hasOperatorName("*"),
+                         hasEitherOperand(ignoringParenImpCasts(SizeOfExpr))))))
           .bind("sizeof-multiply-sizeof"),
       this);
 
@@ -233,12 +232,12 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("==", "!=", "<", "<=", ">", ">=", "+", "-"),
-          hasOperands(expr(anyOf(ignoringParenImpCasts(SizeOfExpr),
-                                 ignoringParenImpCasts(binaryOperator(
-                                     hasOperatorName("*"),
-                                     hasEitherOperand(
-                                         ignoringParenImpCasts(SizeOfExpr)))))),
-                      ignoringParenImpCasts(PtrDiffExpr)))
+          hasEitherOperand(expr(anyOf(
+              ignoringParenImpCasts(SizeOfExpr),
+              ignoringParenImpCasts(binaryOperator(
+                  hasOperatorName("*"),
+                  hasEitherOperand(ignoringParenImpCasts(SizeOfExpr))))))),
+          hasEitherOperand(ignoringParenImpCasts(PtrDiffExpr)))
           .bind("sizeof-in-ptr-arithmetic-mul"),
       this);
 

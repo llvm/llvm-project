@@ -1170,8 +1170,9 @@ AddressSanitizerPass::AddressSanitizerPass(bool CompileKernel, bool Recover,
 PreservedAnalyses AddressSanitizerPass::run(Function &F,
                                             AnalysisManager<Function> &AM) {
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto &MAM = MAMProxy.getManager();
   Module &M = *F.getParent();
-  if (auto *R = MAMProxy.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
+  if (auto *R = MAM.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
     const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
     AddressSanitizer Sanitizer(M, R, CompileKernel, Recover, UseAfterScope);
     if (Sanitizer.instrumentFunction(F, TLI))
@@ -2944,7 +2945,7 @@ Value *FunctionStackPoisoner::createAllocaForLayout(
   }
   assert((ClRealignStack & (ClRealignStack - 1)) == 0);
   size_t FrameAlignment = std::max(L.FrameAlignment, (size_t)ClRealignStack);
-  Alloca->setAlignment(Align(FrameAlignment));
+  Alloca->setAlignment(MaybeAlign(FrameAlignment));
   return IRB.CreatePointerCast(Alloca, IntptrTy);
 }
 
@@ -3329,7 +3330,7 @@ void FunctionStackPoisoner::poisonAlloca(Value *V, uint64_t Size,
 void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   IRBuilder<> IRB(AI);
 
-  const unsigned Alignment = std::max(kAllocaRzSize, AI->getAlignment());
+  const unsigned Align = std::max(kAllocaRzSize, AI->getAlignment());
   const uint64_t AllocaRedzoneMask = kAllocaRzSize - 1;
 
   Value *Zero = Constant::getNullValue(IntptrTy);
@@ -3356,21 +3357,21 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   Value *Cond = IRB.CreateICmpNE(Misalign, AllocaRzSize);
   Value *PartialPadding = IRB.CreateSelect(Cond, Misalign, Zero);
 
-  // AdditionalChunkSize = Alignment + PartialPadding + kAllocaRzSize
-  // Alignment is added to locate left redzone, PartialPadding for possible
+  // AdditionalChunkSize = Align + PartialPadding + kAllocaRzSize
+  // Align is added to locate left redzone, PartialPadding for possible
   // partial redzone and kAllocaRzSize for right redzone respectively.
   Value *AdditionalChunkSize = IRB.CreateAdd(
-      ConstantInt::get(IntptrTy, Alignment + kAllocaRzSize), PartialPadding);
+      ConstantInt::get(IntptrTy, Align + kAllocaRzSize), PartialPadding);
 
   Value *NewSize = IRB.CreateAdd(OldSize, AdditionalChunkSize);
 
-  // Insert new alloca with new NewSize and Alignment params.
+  // Insert new alloca with new NewSize and Align params.
   AllocaInst *NewAlloca = IRB.CreateAlloca(IRB.getInt8Ty(), NewSize);
-  NewAlloca->setAlignment(Align(Alignment));
+  NewAlloca->setAlignment(MaybeAlign(Align));
 
-  // NewAddress = Address + Alignment
+  // NewAddress = Address + Align
   Value *NewAddress = IRB.CreateAdd(IRB.CreatePtrToInt(NewAlloca, IntptrTy),
-                                    ConstantInt::get(IntptrTy, Alignment));
+                                    ConstantInt::get(IntptrTy, Align));
 
   // Insert __asan_alloca_poison call for new created alloca.
   IRB.CreateCall(AsanAllocaPoisonFunc, {NewAddress, OldSize});

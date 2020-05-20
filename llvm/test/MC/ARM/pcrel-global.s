@@ -1,7 +1,5 @@
 @ RUN: llvm-mc -filetype=obj -triple=armv7 %s -o %t
 @ RUN: llvm-readelf -r %t | FileCheck %s
-@ RUN: llvm-mc -filetype=obj -triple=armebv7 %s -o %t
-@ RUN: llvm-readelf -r %t | FileCheck %s
 
 @ CHECK: There are no relocations in this file.
 .syntax unified

@@ -10,6 +10,6 @@ add_mlir_dialect_library(MLIRLinalgEDSC
   MLIRAffineOps
   MLIRAffineEDSC
   MLIRLinalgOps
-  MLIRSCF
+  MLIRLoopOps
   MLIRStandardOps
   )

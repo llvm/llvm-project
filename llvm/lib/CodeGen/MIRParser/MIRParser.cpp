@@ -93,8 +93,7 @@ public:
   /// file.
   ///
   /// Return null if an error occurred.
-  std::unique_ptr<Module>
-  parseIRModule(DataLayoutCallbackTy DataLayoutCallback);
+  std::unique_ptr<Module> parseIRModule();
 
   /// Create an empty function with the given name.
   Function *createDummyFunction(StringRef Name, Module &M);
@@ -217,17 +216,13 @@ void MIRParserImpl::reportDiagnostic(const SMDiagnostic &Diag) {
   Context.diagnose(DiagnosticInfoMIRParser(Kind, Diag));
 }
 
-std::unique_ptr<Module>
-MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
+std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
   if (!In.setCurrentDocument()) {
     if (In.error())
       return nullptr;
     // Create an empty module when the MIR file is empty.
     NoMIRDocuments = true;
-    auto M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
-      M->setDataLayout(*LayoutOverride);
-    return M;
+    return std::make_unique<Module>(Filename, Context);
   }
 
   std::unique_ptr<Module> M;
@@ -237,7 +232,7 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
           dyn_cast_or_null<yaml::BlockScalarNode>(In.getCurrentNode())) {
     SMDiagnostic Error;
     M = parseAssembly(MemoryBufferRef(BSN->getValue(), Filename), Error,
-                      Context, &IRSlots, DataLayoutCallback);
+                      Context, &IRSlots, /*UpgradeDebugInfo=*/false);
     if (!M) {
       reportDiagnostic(diagFromBlockStringDiag(Error, BSN->getSourceRange()));
       return nullptr;
@@ -248,8 +243,6 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   } else {
     // Create an new, empty module.
     M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
-      M->setDataLayout(*LayoutOverride);
     NoLLVMIR = true;
   }
   return M;
@@ -848,7 +841,8 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
     const Align PrefTypeAlign =
         M.getDataLayout().getPrefTypeAlign(Value->getType());
     const Align Alignment = YamlConstant.Alignment.getValueOr(PrefTypeAlign);
-    unsigned Index = ConstantPool.getConstantPoolIndex(Value, Alignment);
+    unsigned Index =
+        ConstantPool.getConstantPoolIndex(Value, Alignment.value());
     if (!ConstantPoolSlots.insert(std::make_pair(YamlConstant.ID.Value, Index))
              .second)
       return error(YamlConstant.ID.SourceRange.Start,
@@ -940,9 +934,8 @@ MIRParser::MIRParser(std::unique_ptr<MIRParserImpl> Impl)
 
 MIRParser::~MIRParser() {}
 
-std::unique_ptr<Module>
-MIRParser::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
-  return Impl->parseIRModule(DataLayoutCallback);
+std::unique_ptr<Module> MIRParser::parseIRModule() {
+  return Impl->parseIRModule();
 }
 
 bool MIRParser::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {

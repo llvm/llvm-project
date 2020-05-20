@@ -18,7 +18,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/SideEffects.h"
 
 namespace mlir {
 namespace shape {
@@ -30,8 +30,7 @@ enum Kind {
   Shape,
   Size,
   ValueShape,
-  Witness,
-  LAST_SHAPE_TYPE = Witness
+  LAST_SHAPE_TYPE = ValueShape
 };
 } // namespace ShapeTypes
 
@@ -103,22 +102,6 @@ public:
   /// Support method to enable LLVM-style type casting.
   static bool kindof(unsigned kind) {
     return kind == ShapeTypes::Kind::ValueShape;
-  }
-};
-
-/// The Witness represents a runtime constraint, to be used as shape related
-/// preconditions on code execution.
-class WitnessType : public Type::TypeBase<WitnessType, Type> {
-public:
-  using Base::Base;
-
-  static WitnessType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::Witness);
-  }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == ShapeTypes::Kind::Witness;
   }
 };
 

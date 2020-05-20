@@ -1,4 +1,3 @@
-// XFAIL: target-arm && linux-gnu
 // UNSUPPORTED: system-windows
 //
 // Test to verify we are correctly generating anonymous flags when parsing

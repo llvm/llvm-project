@@ -1,4 +1,5 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! OPTIONS: -fopenmp
 
 ! Check the association between OpenMPLoopConstruct and DoConstruct
 

@@ -388,15 +388,6 @@ class OwningRewritePatternList {
   using PatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
-  OwningRewritePatternList() = default;
-
-  /// Construct a OwningRewritePatternList populated with the pattern `t` of
-  /// type `T`.
-  template <typename T>
-  OwningRewritePatternList(T &&t) {
-    patterns.emplace_back(std::make_unique<T>(t));
-  }
-
   PatternListT::iterator begin() { return patterns.begin(); }
   PatternListT::iterator end() { return patterns.end(); }
   PatternListT::const_iterator begin() const { return patterns.begin(); }
@@ -408,13 +399,12 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Add an instance of each of the pattern types 'Ts' to the pattern list with
-  /// the given arguments. Return a reference to `this` for chaining insertions.
+  /// the given arguments.
   /// Note: ConstructorArg is necessary here to separate the two variadic lists.
   template <typename... Ts, typename ConstructorArg,
             typename... ConstructorArgs,
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
-  OwningRewritePatternList &insert(ConstructorArg &&arg,
-                                   ConstructorArgs &&... args) {
+  void insert(ConstructorArg &&arg, ConstructorArgs &&... args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
@@ -422,7 +412,6 @@ public:
     using dummy = int[];
     (void)dummy{
         0, (patterns.emplace_back(std::make_unique<Ts>(arg, args...)), 0)...};
-    return *this;
   }
 
 private:

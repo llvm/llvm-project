@@ -28,47 +28,21 @@
 using namespace clang;
 using namespace sema;
 
-namespace {
-class LogicalBinOp {
-  OverloadedOperatorKind Op = OO_None;
-  const Expr *LHS = nullptr;
-  const Expr *RHS = nullptr;
-
-public:
-  LogicalBinOp(const Expr *E) {
-    if (auto *BO = dyn_cast<BinaryOperator>(E)) {
-      Op = BinaryOperator::getOverloadedOperator(BO->getOpcode());
-      LHS = BO->getLHS();
-      RHS = BO->getRHS();
-    } else if (auto *OO = dyn_cast<CXXOperatorCallExpr>(E)) {
-      Op = OO->getOperator();
-      LHS = OO->getArg(0);
-      RHS = OO->getArg(1);
-    }
-  }
-
-  bool isAnd() const { return Op == OO_AmpAmp; }
-  bool isOr() const { return Op == OO_PipePipe; }
-  explicit operator bool() const { return isAnd() || isOr(); }
-
-  const Expr *getLHS() const { return LHS; }
-  const Expr *getRHS() const { return RHS; }
-};
-}
-
-bool Sema::CheckConstraintExpression(const Expr *ConstraintExpression,
-                                     Token NextToken, bool *PossibleNonPrimary,
-                                     bool IsTrailingRequiresClause) {
+bool
+Sema::CheckConstraintExpression(Expr *ConstraintExpression, Token NextToken,
+                                bool *PossibleNonPrimary,
+                                bool IsTrailingRequiresClause) {
   // C++2a [temp.constr.atomic]p1
   // ..E shall be a constant expression of type bool.
 
   ConstraintExpression = ConstraintExpression->IgnoreParenImpCasts();
 
-  if (LogicalBinOp BO = ConstraintExpression) {
-    return CheckConstraintExpression(BO.getLHS(), NextToken,
-                                     PossibleNonPrimary) &&
-           CheckConstraintExpression(BO.getRHS(), NextToken,
-                                     PossibleNonPrimary);
+  if (auto *BinOp = dyn_cast<BinaryOperator>(ConstraintExpression)) {
+    if (BinOp->getOpcode() == BO_LAnd || BinOp->getOpcode() == BO_LOr)
+      return CheckConstraintExpression(BinOp->getLHS(), NextToken,
+                                       PossibleNonPrimary) &&
+             CheckConstraintExpression(BinOp->getRHS(), NextToken,
+                                       PossibleNonPrimary);
   } else if (auto *C = dyn_cast<ExprWithCleanups>(ConstraintExpression))
     return CheckConstraintExpression(C->getSubExpr(), NextToken,
                                      PossibleNonPrimary);
@@ -86,7 +60,7 @@ bool Sema::CheckConstraintExpression(const Expr *ConstraintExpression,
           (NextToken.is(tok::l_paren) &&
            (IsTrailingRequiresClause ||
             (Type->isDependentType() &&
-             isa<UnresolvedLookupExpr>(ConstraintExpression)) ||
+             IsDependentFunctionNameExpr(ConstraintExpression)) ||
             Type->isFunctionType() ||
             Type->isSpecificBuiltinType(BuiltinType::Overload))) ||
           // We have the following case:
@@ -125,37 +99,39 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
                                 AtomicEvaluator &&Evaluator) {
   ConstraintExpr = ConstraintExpr->IgnoreParenImpCasts();
 
-  if (LogicalBinOp BO = ConstraintExpr) {
-    if (calculateConstraintSatisfaction(S, BO.getLHS(), Satisfaction,
-                                        Evaluator))
-      return true;
+  if (auto *BO = dyn_cast<BinaryOperator>(ConstraintExpr)) {
+    if (BO->getOpcode() == BO_LAnd || BO->getOpcode() == BO_LOr) {
+      if (calculateConstraintSatisfaction(S, BO->getLHS(), Satisfaction,
+                                          Evaluator))
+        return true;
 
-    bool IsLHSSatisfied = Satisfaction.IsSatisfied;
+      bool IsLHSSatisfied = Satisfaction.IsSatisfied;
 
-    if (BO.isOr() && IsLHSSatisfied)
-      // [temp.constr.op] p3
-      //    A disjunction is a constraint taking two operands. To determine if
-      //    a disjunction is satisfied, the satisfaction of the first operand
-      //    is checked. If that is satisfied, the disjunction is satisfied.
-      //    Otherwise, the disjunction is satisfied if and only if the second
-      //    operand is satisfied.
-      return false;
+      if (BO->getOpcode() == BO_LOr && IsLHSSatisfied)
+        // [temp.constr.op] p3
+        //    A disjunction is a constraint taking two operands. To determine if
+        //    a disjunction is satisfied, the satisfaction of the first operand
+        //    is checked. If that is satisfied, the disjunction is satisfied.
+        //    Otherwise, the disjunction is satisfied if and only if the second
+        //    operand is satisfied.
+        return false;
 
-    if (BO.isAnd() && !IsLHSSatisfied)
-      // [temp.constr.op] p2
-      //    A conjunction is a constraint taking two operands. To determine if
-      //    a conjunction is satisfied, the satisfaction of the first operand
-      //    is checked. If that is not satisfied, the conjunction is not
-      //    satisfied. Otherwise, the conjunction is satisfied if and only if
-      //    the second operand is satisfied.
-      return false;
+      if (BO->getOpcode() == BO_LAnd && !IsLHSSatisfied)
+        // [temp.constr.op] p2
+        //    A conjunction is a constraint taking two operands. To determine if
+        //    a conjunction is satisfied, the satisfaction of the first operand
+        //    is checked. If that is not satisfied, the conjunction is not
+        //    satisfied. Otherwise, the conjunction is satisfied if and only if
+        //    the second operand is satisfied.
+        return false;
 
-    return calculateConstraintSatisfaction(
-        S, BO.getRHS(), Satisfaction, std::forward<AtomicEvaluator>(Evaluator));
-  } else if (auto *C = dyn_cast<ExprWithCleanups>(ConstraintExpr)) {
+      return calculateConstraintSatisfaction(S, BO->getRHS(), Satisfaction,
+          std::forward<AtomicEvaluator>(Evaluator));
+    }
+  }
+  else if (auto *C = dyn_cast<ExprWithCleanups>(ConstraintExpr))
     return calculateConstraintSatisfaction(S, C->getSubExpr(), Satisfaction,
         std::forward<AtomicEvaluator>(Evaluator));
-  }
 
   // An atomic constraint expression
   ExprResult SubstitutedAtomicExpr = Evaluator(ConstraintExpr);
@@ -749,16 +725,19 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
   // - The normal form of an expression (E) is the normal form of E.
   // [...]
   E = E->IgnoreParenImpCasts();
-  if (LogicalBinOp BO = E) {
-    auto LHS = fromConstraintExpr(S, D, BO.getLHS());
-    if (!LHS)
-      return None;
-    auto RHS = fromConstraintExpr(S, D, BO.getRHS());
-    if (!RHS)
-      return None;
+  if (auto *BO = dyn_cast<const BinaryOperator>(E)) {
+    if (BO->getOpcode() == BO_LAnd || BO->getOpcode() == BO_LOr) {
+      auto LHS = fromConstraintExpr(S, D, BO->getLHS());
+      if (!LHS)
+        return None;
+      auto RHS = fromConstraintExpr(S, D, BO->getRHS());
+      if (!RHS)
+        return None;
 
-    return NormalizedConstraint(S.Context, std::move(*LHS), std::move(*RHS),
-                                BO.isAnd() ? CCK_Conjunction : CCK_Disjunction);
+      return NormalizedConstraint(
+          S.Context, std::move(*LHS), std::move(*RHS),
+          BO->getOpcode() == BO_LAnd ? CCK_Conjunction : CCK_Disjunction);
+    }
   } else if (auto *CSE = dyn_cast<const ConceptSpecializationExpr>(E)) {
     const NormalizedConstraint *SubNF;
     {

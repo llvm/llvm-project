@@ -1,4 +1,3 @@
-# For a better template to copy, see examples/standalone
 include_directories(include)
 add_subdirectory(include)
 
@@ -30,6 +29,6 @@ target_link_libraries(toyc-ch3
     MLIRIR
     MLIRParser
     MLIRPass
-    MLIRSideEffectInterfaces
+    MLIRSideEffects
     MLIRTransforms)
 

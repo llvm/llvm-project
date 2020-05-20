@@ -140,7 +140,8 @@ default.
 .. option:: cxx_library_root=<path/to/lib/>
 
   Specify the directory of the libc++ library to be tested. By default the
-  library folder of the build directory is used.
+  library folder of the build directory is used. This option cannot be used
+  when use_system_cxx_lib is provided.
 
 
 .. option:: cxx_runtime_root=<path/to/lib/>
@@ -155,10 +156,7 @@ default.
   **Default**: False
 
   Enable or disable testing against the installed version of libc++ library.
-  This impacts whether the ``with_system_cxx_lib`` Lit feature is defined or
-  not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
-  still be used to specify the path of the library to link to and run against,
-  respectively.
+  Note: This does not use the installed headers.
 
 .. option:: use_lit_shell=<bool>
 

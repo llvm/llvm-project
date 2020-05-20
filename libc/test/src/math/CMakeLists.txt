@@ -23,6 +23,12 @@ function(add_math_unittest name)
   endif()
 endfunction(add_math_unittest)
 
+add_header_library(
+  float_utils
+  HDRS
+    float.h
+)
+
 add_math_unittest(
   cosf_test
   NEED_MPFR
@@ -33,10 +39,9 @@ add_math_unittest(
   HDRS
     sdcomp26094.h
   DEPENDS
-    libc.include.errno
+    .float_utils
     libc.src.math.cosf
     libc.utils.CPP.standalone_cpp
-    libc.utils.FPUtil.fputil
 )
 
 add_math_unittest(
@@ -49,10 +54,9 @@ add_math_unittest(
   HDRS
     sdcomp26094.h
   DEPENDS
-    libc.include.errno
+    .float_utils
     libc.src.math.sinf
     libc.utils.CPP.standalone_cpp
-    libc.utils.FPUtil.fputil
 )
 
 add_math_unittest(
@@ -65,62 +69,7 @@ add_math_unittest(
   HDRS
     sdcomp26094.h
   DEPENDS
-    libc.include.errno
+    .float_utils
     libc.src.math.sincosf
     libc.utils.CPP.standalone_cpp
-    libc.utils.FPUtil.fputil
-)
-
-add_math_unittest(
-  fabs_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    fabs_test.cpp
-  DEPENDS
-    libc.include.math
-    libc.src.math.fabs
-    libc.utils.FPUtil.fputil
-)
-
-add_math_unittest(
-  fabsf_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    fabsf_test.cpp
-  DEPENDS
-    libc.include.math
-    libc.src.math.fabsf
-    libc.utils.FPUtil.fputil
-)
-
-add_math_unittest(
-  expf_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    expf_test.cpp
-  DEPENDS
-    libc.include.errno
-    libc.include.math
-    libc.src.math.expf
-    libc.utils.FPUtil.fputil
-)
-
-add_math_unittest(
-  exp2f_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    exp2f_test.cpp
-  DEPENDS
-    libc.include.errno
-    libc.include.math
-    libc.src.math.exp2f
-    libc.utils.FPUtil.fputil
 )

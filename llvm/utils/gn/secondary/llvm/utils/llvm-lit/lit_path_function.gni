@@ -1,4 +1,0 @@
-lit_path_function =
-    "# Takes a path that's relative to __file__ and makes it absolute.\n" +
-    "def path(p):\n" +
-    "    return os.path.abspath(os.path.join(__file__, '..', p)) if p else ''"

@@ -1624,9 +1624,6 @@ public:
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);
-  QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
-                           SourceLocation AttrLoc);
-
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
@@ -3890,8 +3887,7 @@ public:
 
   /// Attempts to produce a RecoveryExpr after some AST node cannot be created.
   ExprResult CreateRecoveryExpr(SourceLocation Begin, SourceLocation End,
-                                ArrayRef<Expr *> SubExprs,
-                                QualType T = QualType());
+                                ArrayRef<Expr *> SubExprs);
 
   ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
@@ -5707,8 +5703,7 @@ public:
   void CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
                                       bool IsDereference, SourceRange Range);
 
-  /// ActOnCXXNamedCast - Parse
-  /// {dynamic,static,reinterpret,const,addrspace}_cast's.
+  /// ActOnCXXNamedCast - Parse {dynamic,static,reinterpret,const}_cast's.
   ExprResult ActOnCXXNamedCast(SourceLocation OpLoc,
                                tok::TokenKind Kind,
                                SourceLocation LAngleBracketLoc,
@@ -6392,9 +6387,14 @@ public:
   /// A diagnostic is emitted if it is not, false is returned, and
   /// PossibleNonPrimary will be set to true if the failure might be due to a
   /// non-primary expression being used as an atomic constraint.
-  bool CheckConstraintExpression(const Expr *CE, Token NextToken = Token(),
+  bool CheckConstraintExpression(Expr *CE, Token NextToken = Token(),
                                  bool *PossibleNonPrimary = nullptr,
                                  bool IsTrailingRequiresClause = false);
+
+  /// Check whether the given type-dependent expression will be the name of a
+  /// function or another callable function-like entity (e.g. a function
+  // template or overload set) for any substitution.
+  bool IsDependentFunctionNameExpr(Expr *E);
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were
@@ -10837,8 +10837,9 @@ public:
                                                   bool Diagnose = true);
 
   // DefaultLvalueConversion - performs lvalue-to-rvalue conversion on
-  // the operand. This function is a no-op if the operand has a function type
-  // or an array type.
+  // the operand.  This is DefaultFunctionArrayLvalueConversion,
+  // except that it assumes the operand isn't of function or array
+  // type.
   ExprResult DefaultLvalueConversion(Expr *E);
 
   // DefaultArgumentPromotion (C99 6.5.2.2p6). Used for function calls that
@@ -11646,8 +11647,6 @@ public:
   CUDAFunctionTarget CurrentCUDATarget() {
     return IdentifyCUDATarget(dyn_cast<FunctionDecl>(CurContext));
   }
-
-  static bool IsCUDAImplicitHostDeviceFunction(const FunctionDecl *D);
 
   // CUDA function call preference. Must be ordered numerically from
   // worst to best.

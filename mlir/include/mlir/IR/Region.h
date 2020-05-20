@@ -231,7 +231,7 @@ private:
   BlockListType blocks;
 
   /// This is the object we are part of.
-  Operation *container = nullptr;
+  Operation *container;
 };
 
 /// This class provides an abstraction over the different types of ranges over

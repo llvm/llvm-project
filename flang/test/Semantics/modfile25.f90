@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %f18 %t
 ! Test compile-time analysis of shapes.
 
 module m1

@@ -26,10 +26,10 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
 
-SymbolTable *elf::symtab;
+namespace lld {
+namespace elf {
+SymbolTable *symtab;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Swap symbols as instructed by -wrap.
@@ -269,3 +269,6 @@ void SymbolTable::scanVersionScript() {
   // --dynamic-list.
   handleDynamicList();
 }
+
+} // namespace elf
+} // namespace lld

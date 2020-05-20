@@ -1,4 +1,3 @@
-# For a better template to copy, see examples/standalone
 add_subdirectory(include)
 
 set(LLVM_LINK_COMPONENTS
@@ -22,5 +21,5 @@ target_link_libraries(toyc-ch2
     MLIRAnalysis
     MLIRIR
     MLIRParser
-    MLIRSideEffectInterfaces
+    MLIRSideEffects
     MLIRTransforms)

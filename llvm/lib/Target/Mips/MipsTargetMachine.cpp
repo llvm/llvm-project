@@ -131,9 +131,6 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                       MaybeAlign(Options.StackAlignmentOverride)) {
   Subtarget = &DefaultSubtarget;
   initAsmInfo();
-
-  // Mips supports the debug entry values.
-  setSupportsDebugEntryValues(true);
 }
 
 MipsTargetMachine::~MipsTargetMachine() = default;

@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %S/test_symbols.sh %s %flang %t
 !DEF: /main MainProgram
 program main
  !DEF: /main/x POINTER ObjectEntity REAL(4)

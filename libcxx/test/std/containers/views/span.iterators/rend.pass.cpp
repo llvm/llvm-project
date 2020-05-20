@@ -22,34 +22,46 @@ template <class Span>
 constexpr bool testConstexprSpan(Span s)
 {
     bool ret = true;
-    typename Span::reverse_iterator e = s.rend();
+    typename Span::reverse_iterator e        = s. rend();
+    typename Span::const_reverse_iterator ce = s.crend();
     if (s.empty())
     {
-        ret = ret &&  (e == s.rbegin());
+        ret = ret &&  ( e ==  s.rbegin());
+        ret = ret &&  (ce == s.crbegin());
     }
     else
     {
-        ret = ret &&  (e != s.rbegin());
+        ret = ret &&  ( e !=  s.rbegin());
+        ret = ret &&  (ce != s.crbegin());
     }
 
-    ret = ret &&  (static_cast<size_t>(e - s.rbegin()) == s.size());
+    ret = ret &&  (static_cast<size_t>( e -  s.rbegin()) == s.size());
+    ret = ret &&  (static_cast<size_t>(ce - s.crbegin()) == s.size());
+
+    ret = ret &&  (e == ce);
     return ret;
 }
 
 template <class Span>
 void testRuntimeSpan(Span s)
 {
-    typename Span::reverse_iterator e = s.rend();
+    typename Span::reverse_iterator e        = s. rend();
+    typename Span::const_reverse_iterator ce = s.crend();
     if (s.empty())
     {
-        assert(e == s.rbegin());
+        assert( e ==  s.rbegin());
+        assert(ce == s.crbegin());
     }
     else
     {
-        assert(e != s.rbegin());
+        assert( e !=  s.rbegin());
+        assert(ce != s.crbegin());
     }
 
-    assert(static_cast<size_t>(e - s.rbegin()) == s.size());
+    assert(static_cast<size_t>( e -  s.rbegin()) == s.size());
+    assert(static_cast<size_t>(ce - s.crbegin()) == s.size());
+
+    assert(e == ce);
 }
 
 

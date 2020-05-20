@@ -291,9 +291,10 @@ static mlir::LogicalResult verify(ReturnOp op) {
       resultType.isa<mlir::UnrankedTensorType>())
     return mlir::success();
 
-  return op.emitError() << "type of return operand (" << inputType
+  return op.emitError() << "type of return operand ("
+                        << *op.operand_type_begin()
                         << ") doesn't match function result type ("
-                        << resultType << ")";
+                        << results.front() << ")";
 }
 
 //===----------------------------------------------------------------------===//

@@ -120,7 +120,6 @@ def CXXStaticCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXDynamicCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXReinterpretCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXConstCastExpr : StmtNode<CXXNamedCastExpr>;
-def CXXAddrspaceCastExpr : StmtNode<CXXNamedCastExpr>;
 def CXXFunctionalCastExpr : StmtNode<ExplicitCastExpr>;
 def CXXTypeidExpr : StmtNode<Expr>;
 def UserDefinedLiteral : StmtNode<CallExpr>;

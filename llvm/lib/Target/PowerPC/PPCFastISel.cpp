@@ -1688,6 +1688,9 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
   if (!FuncInfo.CanLowerReturn)
     return false;
 
+  if (TLI.supportSplitCSR(FuncInfo.MF))
+    return false;
+
   const ReturnInst *Ret = cast<ReturnInst>(I);
   const Function &F = *I->getParent()->getParent();
 
@@ -1994,7 +1997,8 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   // All FP constants are loaded from the constant pool.
   Align Alignment = DL.getPrefTypeAlign(CFP->getType());
-  unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
+  unsigned Idx =
+      MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment.value());
   const bool HasSPE = PPCSubTarget->hasSPE();
   const TargetRegisterClass *RC;
   if (HasSPE)

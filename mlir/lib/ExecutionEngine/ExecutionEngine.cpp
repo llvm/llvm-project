@@ -51,9 +51,7 @@ using llvm::orc::DynamicLibrarySearchGenerator;
 using llvm::orc::ExecutionSession;
 using llvm::orc::IRCompileLayer;
 using llvm::orc::JITTargetMachineBuilder;
-using llvm::orc::MangleAndInterner;
 using llvm::orc::RTDyldObjectLinkingLayer;
-using llvm::orc::SymbolMap;
 using llvm::orc::ThreadSafeModule;
 using llvm::orc::TMOwningSimpleCompiler;
 
@@ -99,14 +97,6 @@ void SimpleObjectCache::dumpToObjectFile(StringRef outputFilename) {
 
 void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   cache->dumpToObjectFile(filename);
-}
-
-void ExecutionEngine::registerSymbols(
-    llvm::function_ref<SymbolMap(MangleAndInterner)> symbolMap) {
-  auto &mainJitDylib = jit->getMainJITDylib();
-  cantFail(mainJitDylib.define(
-      absoluteSymbols(symbolMap(llvm::orc::MangleAndInterner(
-          mainJitDylib.getExecutionSession(), jit->getDataLayout())))));
 }
 
 // Setup LLVM target triple from the current machine.
@@ -204,7 +194,7 @@ ExecutionEngine::ExecutionEngine(bool enableObjectCache,
                        : nullptr) {}
 
 Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
-    ModuleOp m, llvm::function_ref<Error(llvm::Module *)> transformer,
+    ModuleOp m, std::function<Error(llvm::Module *)> transformer,
     Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel,
     ArrayRef<StringRef> sharedLibPaths, bool enableObjectCache,
     bool enableGDBNotificationListener, bool enablePerfNotificationListener) {

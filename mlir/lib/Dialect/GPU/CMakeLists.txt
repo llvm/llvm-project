@@ -18,9 +18,9 @@ add_mlir_dialect_library(MLIRGPU
   MLIREDSC
   MLIRIR
   MLIRLLVMIR
-  MLIRSCF
+  MLIRLoopOps
   MLIRPass
-  MLIRSideEffectInterfaces
+  MLIRSideEffects
   MLIRStandardOps
   MLIRSupport
   MLIRTransformUtils

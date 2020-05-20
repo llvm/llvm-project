@@ -1185,8 +1185,8 @@ private:
   static void getModuleAAResultImpl(Function &F, FunctionAnalysisManager &AM,
                                     AAResults &AAResults) {
     auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    if (auto *R =
-            MAMProxy.template getCachedResult<AnalysisT>(*F.getParent())) {
+    auto &MAM = MAMProxy.getManager();
+    if (auto *R = MAM.template getCachedResult<AnalysisT>(*F.getParent())) {
       AAResults.addAAResult(*R);
       MAMProxy
           .template registerOuterAnalysisInvalidation<AnalysisT, AAManager>();

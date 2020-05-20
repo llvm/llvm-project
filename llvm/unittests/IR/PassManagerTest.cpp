@@ -107,23 +107,20 @@ struct TestPreservingModulePass : PassInfoMixin<TestPreservingModulePass> {
 
 struct TestFunctionPass : PassInfoMixin<TestFunctionPass> {
   TestFunctionPass(int &RunCount, int &AnalyzedInstrCount,
-                   int &AnalyzedFunctionCount, ModuleAnalysisManager &MAM,
+                   int &AnalyzedFunctionCount,
                    bool OnlyUseCachedResults = false)
       : RunCount(RunCount), AnalyzedInstrCount(AnalyzedInstrCount),
-        AnalyzedFunctionCount(AnalyzedFunctionCount), MAM(MAM),
+        AnalyzedFunctionCount(AnalyzedFunctionCount),
         OnlyUseCachedResults(OnlyUseCachedResults) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     ++RunCount;
 
-    // Getting a cached result that isn't stateless through the proxy will
-    // trigger an assert:
-    // auto &ModuleProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    // Use MAM, for the purposes of this unittest.
+    const ModuleAnalysisManager &MAM =
+        AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
     if (TestModuleAnalysis::Result *TMA =
-            MAM.getCachedResult<TestModuleAnalysis>(*F.getParent())) {
+            MAM.getCachedResult<TestModuleAnalysis>(*F.getParent()))
       AnalyzedFunctionCount += TMA->FunctionCount;
-    }
 
     if (OnlyUseCachedResults) {
       // Hack to force the use of the cached interface.
@@ -142,7 +139,6 @@ struct TestFunctionPass : PassInfoMixin<TestFunctionPass> {
   int &RunCount;
   int &AnalyzedInstrCount;
   int &AnalyzedFunctionCount;
-  ModuleAnalysisManager &MAM;
   bool OnlyUseCachedResults;
 };
 
@@ -440,9 +436,8 @@ TEST_F(PassManagerTest, Basic) {
     {
       // Pointless scope to test move assignment.
       FunctionPassManager NestedFPM(/*DebugLogging*/ true);
-      NestedFPM.addPass(TestFunctionPass(FunctionPassRunCount1,
-                                         AnalyzedInstrCount1,
-                                         AnalyzedFunctionCount1, MAM));
+      NestedFPM.addPass(TestFunctionPass(
+          FunctionPassRunCount1, AnalyzedInstrCount1, AnalyzedFunctionCount1));
       FPM = std::move(NestedFPM);
     }
     NestedMPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -460,7 +455,7 @@ TEST_F(PassManagerTest, Basic) {
   {
     FunctionPassManager FPM(/*DebugLogging*/ true);
     FPM.addPass(TestFunctionPass(FunctionPassRunCount2, AnalyzedInstrCount2,
-                                 AnalyzedFunctionCount2, MAM));
+                                 AnalyzedFunctionCount2));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
@@ -473,7 +468,7 @@ TEST_F(PassManagerTest, Basic) {
   {
     FunctionPassManager FPM(/*DebugLogging*/ true);
     FPM.addPass(TestFunctionPass(FunctionPassRunCount3, AnalyzedInstrCount3,
-                                 AnalyzedFunctionCount3, MAM));
+                                 AnalyzedFunctionCount3));
     FPM.addPass(TestInvalidationFunctionPass("f"));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
@@ -487,7 +482,7 @@ TEST_F(PassManagerTest, Basic) {
   {
     FunctionPassManager FPM;
     FPM.addPass(TestFunctionPass(FunctionPassRunCount4, AnalyzedInstrCount4,
-                                 AnalyzedFunctionCount4, MAM));
+                                 AnalyzedFunctionCount4));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
@@ -500,7 +495,7 @@ TEST_F(PassManagerTest, Basic) {
     FunctionPassManager FPM(/*DebugLogging*/ true);
     FPM.addPass(TestInvalidationFunctionPass("f"));
     FPM.addPass(TestFunctionPass(FunctionPassRunCount5, AnalyzedInstrCount5,
-                                 AnalyzedFunctionCount5, MAM,
+                                 AnalyzedFunctionCount5,
                                  /*OnlyUseCachedResults=*/true));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
@@ -617,22 +612,21 @@ struct TestIndirectFunctionAnalysis
     }
   };
 
-  TestIndirectFunctionAnalysis(int &Runs, ModuleAnalysisManager &MAM)
-      : Runs(Runs), MAM(MAM) {}
+  TestIndirectFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
   /// Run the analysis pass over the function and return a result.
   Result run(Function &F, FunctionAnalysisManager &AM) {
     ++Runs;
     auto &FDep = AM.getResult<TestFunctionAnalysis>(F);
-    auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    auto &Proxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    const ModuleAnalysisManager &MAM = Proxy.getManager();
     // For the test, we insist that the module analysis starts off in the
-    // cache. Getting a cached result that isn't stateless trigger an assert.
-    // Use MAM, for the purposes of this unittest.
+    // cache.
     auto &MDep = *MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
     // And register the dependency as module analysis dependencies have to be
     // pre-registered on the proxy.
-    MAMProxy.registerOuterAnalysisInvalidation<TestModuleAnalysis,
-                                               TestIndirectFunctionAnalysis>();
+    Proxy.registerOuterAnalysisInvalidation<TestModuleAnalysis,
+                                            TestIndirectFunctionAnalysis>();
     return Result(FDep, MDep);
   }
 
@@ -641,7 +635,6 @@ private:
   static AnalysisKey Key;
 
   int &Runs;
-  ModuleAnalysisManager &MAM;
 };
 
 AnalysisKey TestIndirectFunctionAnalysis::Key;
@@ -700,16 +693,16 @@ struct LambdaPass : public PassInfoMixin<LambdaPass> {
 
 TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
   int FunctionAnalysisRuns = 0, ModuleAnalysisRuns = 0,
       IndirectAnalysisRuns = 0, DoublyIndirectAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
   FAM.registerPass(
-      [&] { return TestIndirectFunctionAnalysis(IndirectAnalysisRuns, MAM); });
+      [&] { return TestIndirectFunctionAnalysis(IndirectAnalysisRuns); });
   FAM.registerPass([&] {
     return TestDoublyIndirectFunctionAnalysis(DoublyIndirectAnalysisRuns);
   });
 
+  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
   MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });

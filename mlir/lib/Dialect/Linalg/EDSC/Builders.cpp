@@ -10,7 +10,7 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
-#include "mlir/Dialect/SCF/EDSC/Builders.h"
+#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -19,7 +19,7 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
-using namespace mlir::scf;
+using namespace mlir::loop;
 
 mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv, Value range) {
   assert(range.getType() && "expected !linalg.range type");
@@ -79,7 +79,7 @@ namespace mlir {
 namespace edsc {
 
 template <>
-GenericLoopNestRangeBuilder<scf::ForOp>::GenericLoopNestRangeBuilder(
+GenericLoopNestRangeBuilder<loop::ForOp>::GenericLoopNestRangeBuilder(
     MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
   builder = std::make_unique<LoopNestRangeBuilder>(ivs, ranges);
 }
@@ -102,7 +102,7 @@ GenericLoopNestRangeBuilder<AffineForOp>::GenericLoopNestRangeBuilder(
 }
 
 template <>
-GenericLoopNestRangeBuilder<scf::ParallelOp>::GenericLoopNestRangeBuilder(
+GenericLoopNestRangeBuilder<loop::ParallelOp>::GenericLoopNestRangeBuilder(
     MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
   SmallVector<Value, 4> lbs, ubs, steps;
   for (Value range : ranges) {

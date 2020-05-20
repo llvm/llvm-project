@@ -421,7 +421,7 @@ public:
 
   /// Returns the target JITDylib that these symbols are being materialized
   ///        into.
-  JITDylib &getTargetJITDylib() const { return *JD; }
+  JITDylib &getTargetJITDylib() const { return JD; }
 
   /// Returns the VModuleKey for this instance.
   VModuleKey getVModuleKey() const { return K; }
@@ -526,16 +526,14 @@ public:
 private:
   /// Create a MaterializationResponsibility for the given JITDylib and
   ///        initial symbols.
-  MaterializationResponsibility(std::shared_ptr<JITDylib> JD,
-                                SymbolFlagsMap SymbolFlags,
+  MaterializationResponsibility(JITDylib &JD, SymbolFlagsMap SymbolFlags,
                                 SymbolStringPtr InitSymbol, VModuleKey K)
-      : JD(std::move(JD)), SymbolFlags(std::move(SymbolFlags)),
+      : JD(JD), SymbolFlags(std::move(SymbolFlags)),
         InitSymbol(std::move(InitSymbol)), K(std::move(K)) {
-    assert(this->JD && "Cannot initialize with null JD");
     assert(!this->SymbolFlags.empty() && "Materializing nothing?");
   }
 
-  std::shared_ptr<JITDylib> JD;
+  JITDylib &JD;
   SymbolFlagsMap SymbolFlags;
   SymbolStringPtr InitSymbol;
   VModuleKey K;
@@ -550,9 +548,6 @@ private:
 /// is requested via the lookup method. The JITDylib will call discard if a
 /// stronger definition is added or already present.
 class MaterializationUnit {
-  friend class ExecutionSession;
-  friend class JITDylib;
-
 public:
   MaterializationUnit(SymbolFlagsMap InitalSymbolFlags,
                       SymbolStringPtr InitSymbol, VModuleKey K)
@@ -574,10 +569,13 @@ public:
   /// Returns the initialization symbol for this MaterializationUnit (if any).
   const SymbolStringPtr &getInitializerSymbol() const { return InitSymbol; }
 
-  /// Implementations of this method should materialize all symbols
-  ///        in the materialzation unit, except for those that have been
-  ///        previously discarded.
-  virtual void materialize(MaterializationResponsibility R) = 0;
+  /// Called by materialization dispatchers (see
+  /// ExecutionSession::DispatchMaterializationFunction) to trigger
+  /// materialization of this MaterializationUnit.
+  void doMaterialize(JITDylib &JD) {
+    materialize(MaterializationResponsibility(
+        JD, std::move(SymbolFlags), std::move(InitSymbol), std::move(K)));
+  }
 
   /// Called by JITDylibs to notify MaterializationUnits that the given symbol
   /// has been overridden.
@@ -594,11 +592,10 @@ protected:
 private:
   virtual void anchor();
 
-  MaterializationResponsibility
-  createMaterializationResponsibility(std::shared_ptr<JITDylib> JD) {
-    return MaterializationResponsibility(std::move(JD), std::move(SymbolFlags),
-                                         std::move(InitSymbol), K);
-  }
+  /// Implementations of this method should materialize all symbols
+  ///        in the materialzation unit, except for those that have been
+  ///        previously discarded.
+  virtual void materialize(MaterializationResponsibility R) = 0;
 
   /// Implementations of this method should discard the given symbol
   ///        from the source (e.g. if the source is an LLVM IR Module and the
@@ -776,7 +773,7 @@ private:
 /// their addresses may be used as keys for resource management.
 /// JITDylib state changes must be made via an ExecutionSession to guarantee
 /// that they are synchronized with respect to other JITDylib operations.
-class JITDylib : public std::enable_shared_from_this<JITDylib> {
+class JITDylib {
   friend class AsynchronousSymbolQuery;
   friend class ExecutionSession;
   friend class Platform;
@@ -1047,7 +1044,6 @@ private:
 
   ExecutionSession &ES;
   std::string JITDylibName;
-  bool Open = true;
   SymbolTable Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
@@ -1094,9 +1090,8 @@ public:
   using ErrorReporter = std::function<void(Error)>;
 
   /// For dispatching MaterializationUnit::materialize calls.
-  using DispatchMaterializationFunction =
-      std::function<void(std::unique_ptr<MaterializationUnit> MU,
-                         MaterializationResponsibility MR)>;
+  using DispatchMaterializationFunction = std::function<void(
+      JITDylib &JD, std::unique_ptr<MaterializationUnit> MU)>;
 
   /// Construct an ExecutionSession.
   ///
@@ -1248,11 +1243,11 @@ public:
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Materialize the given unit.
-  void dispatchMaterialization(std::unique_ptr<MaterializationUnit> MU,
-                               MaterializationResponsibility MR) {
+  void dispatchMaterialization(JITDylib &JD,
+                               std::unique_ptr<MaterializationUnit> MU) {
     assert(MU && "MU must be non-null");
-    DEBUG_WITH_TYPE("orc", dumpDispatchInfo(MR.getTargetJITDylib(), *MU));
-    DispatchMaterialization(std::move(MU), std::move(MR));
+    DEBUG_WITH_TYPE("orc", dumpDispatchInfo(JD, *MU));
+    DispatchMaterialization(JD, std::move(MU));
   }
 
   /// Dump the state of all the JITDylibs in this session.
@@ -1264,9 +1259,9 @@ private:
   }
 
   static void
-  materializeOnCurrentThread(std::unique_ptr<MaterializationUnit> MU,
-                             MaterializationResponsibility MR) {
-    MU->materialize(std::move(MR));
+  materializeOnCurrentThread(JITDylib &JD,
+                             std::unique_ptr<MaterializationUnit> MU) {
+    MU->doMaterialize(JD);
   }
 
   void runOutstandingMUs();
@@ -1283,13 +1278,12 @@ private:
   DispatchMaterializationFunction DispatchMaterialization =
       materializeOnCurrentThread;
 
-  std::vector<std::shared_ptr<JITDylib>> JDs;
+  std::vector<std::unique_ptr<JITDylib>> JDs;
 
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.
   mutable std::recursive_mutex OutstandingMUsMutex;
-  std::vector<std::pair<std::unique_ptr<MaterializationUnit>,
-                        MaterializationResponsibility>>
+  std::vector<std::pair<JITDylib *, std::unique_ptr<MaterializationUnit>>>
       OutstandingMUs;
 };
 

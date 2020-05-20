@@ -300,8 +300,6 @@ public:
   DefaultBool ChecksEnabled[CK_NumCheckKinds];
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
-  bool DisplayLoadedSummaries = false;
-
 private:
   Optional<Summary> findFunctionSummary(const FunctionDecl *FD,
                                         CheckerContext &C) const;
@@ -641,12 +639,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   struct AddToFunctionSummaryMap {
     const ASTContext &ACtx;
     FunctionSummaryMapType &Map;
-    bool DisplayLoadedSummaries;
-    AddToFunctionSummaryMap(const ASTContext &ACtx, FunctionSummaryMapType &FSM,
-                            bool DisplayLoadedSummaries)
-        : ACtx(ACtx), Map(FSM), DisplayLoadedSummaries(DisplayLoadedSummaries) {
-    }
-
+    AddToFunctionSummaryMap(const ASTContext &ACtx, FunctionSummaryMapType &FSM)
+        : ACtx(ACtx), Map(FSM) {}
     // Add a summary to a FunctionDecl found by lookup. The lookup is performed
     // by the given Name, and in the global scope. The summary will be attached
     // to the found FunctionDecl only if the signatures match.
@@ -661,11 +655,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             auto Res = Map.insert({FD->getCanonicalDecl(), S});
             assert(Res.second && "Function already has a summary set!");
             (void)Res;
-            if (DisplayLoadedSummaries) {
-              llvm::errs() << "Loaded summary for: ";
-              FD->print(llvm::errs());
-              llvm::errs() << "\n";
-            }
             return;
           }
         }
@@ -676,7 +665,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       for (const Summary &S : Summaries)
         operator()(Name, S);
     }
-  } addToFunctionSummaryMap(ACtx, FunctionSummaryMap, DisplayLoadedSummaries);
+  } addToFunctionSummaryMap(ACtx, FunctionSummaryMap);
 
   // We are finally ready to define specifications for all supported functions.
   //
@@ -948,10 +937,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 }
 
 void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
-  auto *Checker = mgr.registerChecker<StdLibraryFunctionsChecker>();
-  Checker->DisplayLoadedSummaries =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          Checker, "DisplayLoadedSummaries");
+  mgr.registerChecker<StdLibraryFunctionsChecker>();
 }
 
 bool ento::shouldRegisterStdCLibraryFunctionsChecker(const CheckerManager &mgr) {

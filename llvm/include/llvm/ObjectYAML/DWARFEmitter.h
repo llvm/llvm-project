@@ -32,7 +32,6 @@ void EmitDebugAbbrev(raw_ostream &OS, const Data &DI);
 void EmitDebugStr(raw_ostream &OS, const Data &DI);
 
 void EmitDebugAranges(raw_ostream &OS, const Data &DI);
-void EmitDebugRanges(raw_ostream &OS, const Data &DI);
 void EmitPubSection(raw_ostream &OS, const PubSection &Sect,
                     bool IsLittleEndian);
 void EmitDebugInfo(raw_ostream &OS, const Data &DI);

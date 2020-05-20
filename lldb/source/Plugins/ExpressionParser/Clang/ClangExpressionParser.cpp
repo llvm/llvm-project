@@ -162,7 +162,8 @@ public:
     m_options->ShowPresumedLoc = true;
     m_options->ShowLevel = false;
     m_os.reset(new llvm::raw_string_ostream(m_output));
-    m_passthrough.reset(new clang::TextDiagnosticPrinter(*m_os, m_options));
+    m_passthrough.reset(
+        new clang::TextDiagnosticPrinter(*m_os, m_options, false));
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {

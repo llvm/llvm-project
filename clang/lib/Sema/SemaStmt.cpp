@@ -370,10 +370,7 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
     }
   }
 
-  // Tell the user to assign it into a variable to force a volatile load if this
-  // isn't an array.
-  if (E->isGLValue() && E->getType().isVolatileQualified() &&
-      !E->getType()->isArrayType()) {
+  if (E->isGLValue() && E->getType().isVolatileQualified()) {
     Diag(Loc, diag::warn_unused_volatile) << R1 << R2;
     return;
   }

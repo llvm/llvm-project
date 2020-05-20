@@ -1,7 +1,8 @@
-# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t
-# RUN: not llvm-dwarfdump -debug-frame %t 2>&1 | FileCheck %s
+# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
+# RUN:   not --crash llvm-dwarfdump -debug-frame - 2>&1 | \
+# RUN:   FileCheck %s
 
-# CHECK: parsing FDE data at 0x0 failed due to missing CIE
+# CHECK: Parsing FDE data at 0 failed due to missing CIE
 
         .section .eh_frame,"a",@unwind
 ## This FDE was formerly wrongly interpreted as a CIE because its CIE pointer

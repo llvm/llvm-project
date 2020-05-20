@@ -13,7 +13,6 @@ class BreakpointSetRestart(TestBase):
     BREAKPOINT_TEXT = 'Set a breakpoint here'
 
     @skipIfNetBSD
-    @skipIfReproducer
     def test_breakpoint_set_restart(self):
         self.build()
 

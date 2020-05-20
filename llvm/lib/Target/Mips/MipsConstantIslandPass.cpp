@@ -529,7 +529,7 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
   MF->push_back(BB);
 
   // MachineConstantPool measures alignment in bytes. We measure in log2(bytes).
-  const Align MaxAlign = MCP->getConstantPoolAlign();
+  const Align MaxAlign(MCP->getConstantPoolAlignment());
 
   // Mark the basic block as required by the const-pool.
   // If AlignConstantIslands isn't set, use 4-byte alignment for everything.
@@ -554,13 +554,14 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
   for (unsigned i = 0, e = CPs.size(); i != e; ++i) {
     unsigned Size = TD.getTypeAllocSize(CPs[i].getType());
     assert(Size >= 4 && "Too small constant pool entry");
-    Align Alignment = CPs[i].getAlign();
+    unsigned Align = CPs[i].getAlignment();
+    assert(isPowerOf2_32(Align) && "Invalid alignment");
     // Verify that all constant pool entries are a multiple of their alignment.
     // If not, we would have to pad them out so that instructions stay aligned.
-    assert(isAligned(Alignment, Size) && "CP Entry not multiple of 4 bytes!");
+    assert((Size % Align) == 0 && "CP Entry not multiple of 4 bytes!");
 
     // Insert CONSTPOOL_ENTRY before entries with a smaller alignment.
-    unsigned LogAlign = Log2(Alignment);
+    unsigned LogAlign = Log2_32(Align);
     MachineBasicBlock::iterator InsAt = InsPoint[LogAlign];
 
     MachineInstr *CPEMI =
@@ -578,7 +579,7 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
     CPEntries.emplace_back(1, CPEntry(CPEMI, i));
     ++NumCPEs;
     LLVM_DEBUG(dbgs() << "Moved CPI#" << i << " to end of function, size = "
-                      << Size << ", align = " << Alignment.value() << '\n');
+                      << Size << ", align = " << Align << '\n');
   }
   LLVM_DEBUG(BB->dump());
 }
@@ -627,7 +628,7 @@ Align MipsConstantIslands::getCPEAlign(const MachineInstr &CPEMI) {
 
   unsigned CPI = CPEMI.getOperand(1).getIndex();
   assert(CPI < MCP->getConstants().size() && "Invalid constant pool index.");
-  return MCP->getConstants()[CPI].getAlign();
+  return Align(MCP->getConstants()[CPI].getAlignment());
 }
 
 /// initializeFunctionInfo - Do the initial scan of the function, building up
@@ -1655,7 +1656,7 @@ void MipsConstantIslands::prescanForConstants() {
             Type *Int32Ty =
               Type::getInt32Ty(MF->getFunction().getContext());
             const Constant *C = ConstantInt::get(Int32Ty, V);
-            unsigned index = MCP->getConstantPoolIndex(C, Align(4));
+            unsigned index = MCP->getConstantPoolIndex(C, 4);
             I->getOperand(2).ChangeToImmediate(index);
             LLVM_DEBUG(dbgs() << "constant island constant " << *I << "\n");
             I->setDesc(TII->get(Mips::LwRxPcTcp16));

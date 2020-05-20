@@ -22,17 +22,22 @@ template <class Span>
 constexpr bool testConstexprSpan(Span s)
 {
     bool ret = true;
-    typename Span::reverse_iterator b = s.rbegin();
+    typename Span::reverse_iterator b        = s. rbegin();
+    typename Span::const_reverse_iterator cb = s.crbegin();
     if (s.empty())
     {
         ret = ret &&  ( b ==  s.rend());
+        ret = ret &&  (cb == s.crend());
     }
     else
     {
         const typename Span::size_type last = s.size() - 1;
-        ret = ret && ( *b ==  s[last]);
-        ret = ret && (&*b == &s[last]);
+        ret = ret &&  (  *b ==  s[last]);
+        ret = ret &&  ( &*b == &s[last]);
+        ret = ret &&  ( *cb ==  s[last]);
+        ret = ret &&  (&*cb == &s[last]);
     }
+    ret = ret &&  (b == cb);
     return ret;
 }
 
@@ -40,17 +45,22 @@ constexpr bool testConstexprSpan(Span s)
 template <class Span>
 void testRuntimeSpan(Span s)
 {
-    typename Span::reverse_iterator b = s.rbegin();
+    typename Span::reverse_iterator b        = s. rbegin();
+    typename Span::const_reverse_iterator cb = s.crbegin();
     if (s.empty())
     {
-        assert(b == s.rend());
+        assert( b ==  s.rend());
+        assert(cb == s.crend());
     }
     else
     {
         const typename Span::size_type last = s.size() - 1;
-        assert( *b ==  s[last]);
-        assert(&*b == &s[last]);
+        assert(  *b ==  s[last]);
+        assert( &*b == &s[last]);
+        assert( *cb ==  s[last]);
+        assert(&*cb == &s[last]);
     }
+    assert(b == cb);
 }
 
 

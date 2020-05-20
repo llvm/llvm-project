@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRLinalgUtils
   MLIREDSC
   MLIRIR
   MLIRLinalgOps
-  MLIRSCF
+  MLIRLoopOps
   MLIRPass
   MLIRStandardOps
   MLIRTransformUtils

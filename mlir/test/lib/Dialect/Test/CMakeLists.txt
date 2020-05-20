@@ -33,7 +33,7 @@ add_mlir_library(MLIRTestDialect
   MLIRLinalgTransforms
   MLIRPass
   MLIRStandardOps
-  MLIRStandardOpsTransforms
+  MLIRStandardToStandard
   MLIRTransformUtils
   MLIRTransforms
 )

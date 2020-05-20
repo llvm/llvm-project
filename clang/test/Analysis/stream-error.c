@@ -1,8 +1,4 @@
-// RUN: %clang_analyze_cc1 -verify %s \
-// RUN: -analyzer-checker=core \
-// RUN: -analyzer-checker=alpha.unix.Stream \
-// RUN: -analyzer-checker=debug.StreamTester \
-// RUN: -analyzer-checker=debug.ExprInspection
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-checker=debug.StreamTester,debug.ExprInspection -analyzer-store region -verify %s
 
 #include "Inputs/system-header-simulator.h"
 

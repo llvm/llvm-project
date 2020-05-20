@@ -160,23 +160,51 @@ LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
 }
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
-    StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
+    StringRef opName, MLIRContext *context,
+    ArrayRef<unsigned> operandsToPromote, unsigned alignment,
     LinalgMarker marker, PatternBenefit benefit)
     : RewritePattern(opName, {}, benefit, context), marker(marker),
-      options(options) {}
+      operandsToPromote(operandsToPromote.begin(), operandsToPromote.end()),
+      alignment(alignment) {}
 
 LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
-  if (failed(marker.checkAndNotify(rewriter, op)))
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
+  if (!linalgOp)
     return failure();
-  if (failed(promoteSubviewsPrecondition(op, options)))
+  if (failed(marker.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  rewriter.updateRootInPlace(op, [&]() {
-    auto promotedOp = promoteSubViews(rewriter, op, options);
-    (void)promotedOp;
-    assert(promotedOp && "Unexpected pattern failure");
-    marker.replaceLinalgMarker(rewriter, op);
-  });
+  if (operandsToPromote.empty()) {
+    if (failed(promoteSubviewsLinalgOpPrecondition(op, llvm::None)))
+      return failure();
+  } else {
+    DenseSet<unsigned> set;
+    set.insert(operandsToPromote.begin(), operandsToPromote.end());
+    if (failed(promoteSubviewsLinalgOpPrecondition(op, set)))
+      return failure();
+  }
+
+  llvm::SetVector<Value> subViews;
+  if (!operandsToPromote.empty()) {
+    for (unsigned idx : operandsToPromote) {
+      auto *op = linalgOp.getBuffer(idx).getDefiningOp();
+      if (auto sv = dyn_cast_or_null<SubViewOp>(op))
+        subViews.insert(sv);
+    }
+  } else {
+    unsigned nBuffers = linalgOp.getNumInputsAndOutputBuffers();
+    for (unsigned idx = 0; idx < nBuffers; ++idx) {
+      auto *op = linalgOp.getBuffer(idx).getDefiningOp();
+      if (auto sv = dyn_cast_or_null<SubViewOp>(op))
+        subViews.insert(sv);
+    }
+  }
+
+  auto promotedOp =
+      promoteSubViewOperands(rewriter, op, subViews, /*dynamicBuffers=*/false,
+                             /*alignment=*/alignment);
+  marker.replaceLinalgMarker(rewriter, promotedOp.getOperation());
+  rewriter.eraseOp(op);
   return success();
 }
 
@@ -196,26 +224,5 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     return failure();
   vectorizeLinalgOp(rewriter, op);
   rewriter.eraseOp(op);
-  return success();
-}
-
-LogicalResult mlir::linalg::applyStagedPatterns(
-    Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
-    const OwningRewritePatternList &stage2Patterns,
-    llvm::function_ref<LogicalResult(Operation *)> stage3Lambda) {
-  for (const auto &patterns : stage1Patterns) {
-    if (!applyPatternsAndFoldGreedily(op, patterns)) {
-      llvm::dbgs() << "Underlying first stage rewrite did not converge";
-      return failure();
-    }
-    if (!applyPatternsAndFoldGreedily(op, stage2Patterns)) {
-      llvm::dbgs() << "Underlying second stage rewrite did not converge";
-      return failure();
-    }
-    if (stage3Lambda) {
-      if (failed(stage3Lambda(op)))
-        return failure();
-    }
-  }
   return success();
 }

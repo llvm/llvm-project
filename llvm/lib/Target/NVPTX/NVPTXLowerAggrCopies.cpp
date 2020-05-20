@@ -113,8 +113,8 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
     createMemCpyLoopKnownSize(/* ConvertedInst */ SI,
                               /* SrcAddr */ SrcAddr, /* DstAddr */ DstAddr,
                               /* CopyLen */ CopyLen,
-                              /* SrcAlign */ LI->getAlign(),
-                              /* DestAlign */ SI->getAlign(),
+                              /* SrcAlign */ LI->getAlign().valueOrOne(),
+                              /* DestAlign */ SI->getAlign().valueOrOne(),
                               /* SrcIsVolatile */ LI->isVolatile(),
                               /* DstIsVolatile */ SI->isVolatile(), TTI);
 

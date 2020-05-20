@@ -9,8 +9,6 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolPublicSymbol.h"
 #include "llvm/Support/Path.h"
 
 #include "llvm/Testing/Support/Error.h"
@@ -32,11 +30,9 @@ static std::string getExePath() {
 
 TEST(NativeSessionTest, TestCreateFromExe) {
   std::unique_ptr<IPDBSession> S;
-  std::string ExePath = getExePath();
-  Expected<std::string> PdbPath = NativeSession::searchForPdb({ExePath});
-  ASSERT_TRUE((bool)PdbPath);
-
-  Error E = NativeSession::createFromPdbPath(PdbPath.get(), S);
+  // Tests that the PDB file can be found if it is in the same directory as the
+  // executable.
+  Error E = pdb::loadDataForEXE(PDB_ReaderType::Native, getExePath(), S);
   ASSERT_THAT_ERROR(std::move(E), Succeeded());
 }
 

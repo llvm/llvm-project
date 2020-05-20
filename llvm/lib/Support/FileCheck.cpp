@@ -151,7 +151,7 @@ Expected<std::string> StringSubstitution::getResult() const {
   return Regex::escape(*VarVal);
 }
 
-bool Pattern::isValidVarNameStart(char C) { return C == '_' || isAlpha(C); }
+bool Pattern::isValidVarNameStart(char C) { return C == '_' || isalpha(C); }
 
 Expected<Pattern::VariableProperties>
 Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
@@ -171,7 +171,7 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
       return ErrorDiagnostic::get(SM, Str, "invalid variable name");
 
     // Variable names are composed of alphanumeric characters and underscores.
-    if (Str[I] != '_' && !isAlnum(Str[I]))
+    if (Str[I] != '_' && !isalnum(Str[I]))
       break;
     ParsedOneChar = true;
   }
@@ -1079,7 +1079,7 @@ FileCheckDiag::FileCheckDiag(const SourceMgr &SM,
 }
 
 static bool IsPartOfWord(char c) {
-  return (isAlnum(c) || c == '-' || c == '_');
+  return (isalnum(c) || c == '-' || c == '_');
 }
 
 Check::FileCheckType &Check::FileCheckType::setCount(int C) {
@@ -1110,8 +1110,6 @@ std::string Check::FileCheckType::getDescription(StringRef Prefix) const {
     return Prefix.str() + "-LABEL";
   case Check::CheckEmpty:
     return Prefix.str() + "-EMPTY";
-  case Check::CheckComment:
-    return std::string(Prefix);
   case Check::CheckEOF:
     return "implicit EOF";
   case Check::CheckBadNot:
@@ -1123,24 +1121,13 @@ std::string Check::FileCheckType::getDescription(StringRef Prefix) const {
 }
 
 static std::pair<Check::FileCheckType, StringRef>
-FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
+FindCheckType(StringRef Buffer, StringRef Prefix) {
   if (Buffer.size() <= Prefix.size())
     return {Check::CheckNone, StringRef()};
 
   char NextChar = Buffer[Prefix.size()];
 
   StringRef Rest = Buffer.drop_front(Prefix.size() + 1);
-
-  // Check for comment.
-  if (Req.CommentPrefixes.end() != std::find(Req.CommentPrefixes.begin(),
-                                             Req.CommentPrefixes.end(),
-                                             Prefix)) {
-    if (NextChar == ':')
-      return {Check::CheckComment, Rest};
-    // Ignore a comment prefix if it has a suffix like "-NOT".
-    return {Check::CheckNone, StringRef()};
-  }
-
   // Verify that the : is present after the prefix.
   if (NextChar == ':')
     return {Check::CheckPlain, Rest};
@@ -1219,9 +1206,8 @@ static size_t SkipWord(StringRef Str, size_t Loc) {
 /// If no valid prefix is found, the state of Buffer, LineNumber, and CheckTy
 /// is unspecified.
 static std::pair<StringRef, StringRef>
-FindFirstMatchingPrefix(const FileCheckRequest &Req, Regex &PrefixRE,
-                        StringRef &Buffer, unsigned &LineNumber,
-                        Check::FileCheckType &CheckTy) {
+FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
+                        unsigned &LineNumber, Check::FileCheckType &CheckTy) {
   SmallVector<StringRef, 2> Matches;
 
   while (!Buffer.empty()) {
@@ -1249,7 +1235,7 @@ FindFirstMatchingPrefix(const FileCheckRequest &Req, Regex &PrefixRE,
     if (Skipped.empty() || !IsPartOfWord(Skipped.back())) {
       // Now extract the type.
       StringRef AfterSuffix;
-      std::tie(CheckTy, AfterSuffix) = FindCheckType(Req, Buffer, Prefix);
+      std::tie(CheckTy, AfterSuffix) = FindCheckType(Buffer, Prefix);
 
       // If we've found a valid check type for this prefix, we're done.
       if (CheckTy != Check::CheckNone)
@@ -1330,7 +1316,7 @@ bool FileCheck::readCheckFile(
   // found.
   unsigned LineNumber = 1;
 
-  bool FoundUsedCheckPrefix = false;
+  bool FoundUsedPrefix = false;
   while (1) {
     Check::FileCheckType CheckTy;
 
@@ -1338,11 +1324,10 @@ bool FileCheck::readCheckFile(
     StringRef UsedPrefix;
     StringRef AfterSuffix;
     std::tie(UsedPrefix, AfterSuffix) =
-        FindFirstMatchingPrefix(Req, PrefixRE, Buffer, LineNumber, CheckTy);
+        FindFirstMatchingPrefix(PrefixRE, Buffer, LineNumber, CheckTy);
     if (UsedPrefix.empty())
       break;
-    if (CheckTy != Check::CheckComment)
-      FoundUsedCheckPrefix = true;
+    FoundUsedPrefix = true;
 
     assert(UsedPrefix.data() == Buffer.data() &&
            "Failed to move Buffer's start forward, or pointed prefix outside "
@@ -1385,17 +1370,9 @@ bool FileCheck::readCheckFile(
     // Remember the location of the start of the pattern, for diagnostics.
     SMLoc PatternLoc = SMLoc::getFromPointer(Buffer.data());
 
-    // Extract the pattern from the buffer.
-    StringRef PatternBuffer = Buffer.substr(0, EOL);
-    Buffer = Buffer.substr(EOL);
-
-    // If this is a comment, we're done.
-    if (CheckTy == Check::CheckComment)
-      continue;
-
     // Parse the pattern.
     Pattern P(CheckTy, PatternContext.get(), LineNumber);
-    if (P.parsePattern(PatternBuffer, UsedPrefix, SM, Req))
+    if (P.parsePattern(Buffer.substr(0, EOL), UsedPrefix, SM, Req))
       return true;
 
     // Verify that CHECK-LABEL lines do not define or use variables
@@ -1406,6 +1383,8 @@ bool FileCheck::readCheckFile(
                                    " with variable definition or use");
       return true;
     }
+
+    Buffer = Buffer.substr(EOL);
 
     // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line before them.
     if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame ||
@@ -1435,7 +1414,7 @@ bool FileCheck::readCheckFile(
 
   // When there are no used prefixes we report an error except in the case that
   // no prefix is specified explicitly but -implicit-check-not is specified.
-  if (!FoundUsedCheckPrefix &&
+  if (!FoundUsedPrefix &&
       (ImplicitNegativeChecks.empty() || !Req.IsDefaultCheckPrefix)) {
     errs() << "error: no check strings found with prefix"
            << (Req.CheckPrefixes.size() > 1 ? "es " : " ");
@@ -1895,75 +1874,45 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
   return StartPos;
 }
 
-static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
-                             ArrayRef<StringRef> SuppliedPrefixes) {
-  for (StringRef Prefix : SuppliedPrefixes) {
-    if (Prefix.empty()) {
-      errs() << "error: supplied " << Kind << " prefix must not be the empty "
-             << "string\n";
-      return false;
-    }
-    static const Regex Validator("^[a-zA-Z0-9_-]*$");
-    if (!Validator.match(Prefix)) {
-      errs() << "error: supplied " << Kind << " prefix must start with a "
-             << "letter and contain only alphanumeric characters, hyphens, and "
-             << "underscores: '" << Prefix << "'\n";
-      return false;
-    }
-    if (!UniquePrefixes.insert(Prefix).second) {
-      errs() << "error: supplied " << Kind << " prefix must be unique among "
-             << "check and comment prefixes: '" << Prefix << "'\n";
-      return false;
-    }
-  }
-  return true;
+// A check prefix must contain only alphanumeric, hyphens and underscores.
+static bool ValidateCheckPrefix(StringRef CheckPrefix) {
+  static const Regex Validator("^[a-zA-Z0-9_-]*$");
+  return Validator.match(CheckPrefix);
 }
 
-static const char *DefaultCheckPrefixes[] = {"CHECK"};
-static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
-
 bool FileCheck::ValidateCheckPrefixes() {
-  StringSet<> UniquePrefixes;
-  // Add default prefixes to catch user-supplied duplicates of them below.
-  if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      UniquePrefixes.insert(Prefix);
+  StringSet<> PrefixSet;
+
+  for (StringRef Prefix : Req.CheckPrefixes) {
+    // Reject empty prefixes.
+    if (Prefix.empty())
+      return false;
+
+    if (!PrefixSet.insert(Prefix).second)
+      return false;
+
+    if (!ValidateCheckPrefix(Prefix))
+      return false;
   }
-  if (Req.CommentPrefixes.empty()) {
-    for (const char *Prefix : DefaultCommentPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
-  // Do not validate the default prefixes, or diagnostics about duplicates might
-  // incorrectly indicate that they were supplied by the user.
-  if (!ValidatePrefixes("check", UniquePrefixes, Req.CheckPrefixes))
-    return false;
-  if (!ValidatePrefixes("comment", UniquePrefixes, Req.CommentPrefixes))
-    return false;
+
   return true;
 }
 
 Regex FileCheck::buildCheckPrefixRegex() {
+  // I don't think there's a way to specify an initial value for cl::list,
+  // so if nothing was specified, add the default
   if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      Req.CheckPrefixes.push_back(Prefix);
+    Req.CheckPrefixes.push_back("CHECK");
     Req.IsDefaultCheckPrefix = true;
   }
-  if (Req.CommentPrefixes.empty()) {
-    for (const char *Prefix : DefaultCommentPrefixes)
-      Req.CommentPrefixes.push_back(Prefix);
-  }
 
-  // We already validated the contents of CheckPrefixes and CommentPrefixes so
-  // just concatenate them as alternatives.
+  // We already validated the contents of CheckPrefixes so just concatenate
+  // them as alternatives.
   SmallString<32> PrefixRegexStr;
   for (size_t I = 0, E = Req.CheckPrefixes.size(); I != E; ++I) {
     if (I != 0)
       PrefixRegexStr.push_back('|');
     PrefixRegexStr.append(Req.CheckPrefixes[I]);
-  }
-  for (StringRef Prefix : Req.CommentPrefixes) {
-    PrefixRegexStr.push_back('|');
-    PrefixRegexStr.append(Prefix);
   }
 
   return Regex(PrefixRegexStr);

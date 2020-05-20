@@ -158,7 +158,7 @@ bool FormatTokenLexer::tryMergeNSStringLiteral() {
   At->TokenText = StringRef(At->TokenText.begin(),
                             String->TokenText.end() - At->TokenText.begin());
   At->ColumnWidth += String->ColumnWidth;
-  At->setType(TT_ObjCStringLiteral);
+  At->Type = TT_ObjCStringLiteral;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -177,7 +177,7 @@ bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
       StringRef(Hash->TokenText.begin(),
                 Identifier->TokenText.end() - Hash->TokenText.begin());
   Hash->ColumnWidth += Identifier->ColumnWidth;
-  Hash->setType(TT_JsPrivateIdentifier);
+  Hash->Type = TT_JsPrivateIdentifier;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -201,7 +201,7 @@ bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
   // would require similar work as that done for JavaScript template strings
   // in `handleTemplateStrings()`.
   auto &CSharpInterpolatedString = *(Tokens.end() - 2);
-  if (CSharpInterpolatedString->getType() == TT_CSharpStringLiteral &&
+  if (CSharpInterpolatedString->Type == TT_CSharpStringLiteral &&
       (CSharpInterpolatedString->TokenText.startswith(R"($")") ||
        CSharpInterpolatedString->TokenText.startswith(R"($@")"))) {
     int UnmatchedOpeningBraceCount = 0;
@@ -258,7 +258,7 @@ bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
           StringRef(Dollar->TokenText.begin(),
                     String->TokenText.end() - Dollar->TokenText.begin());
       Dollar->ColumnWidth += (At->ColumnWidth + String->ColumnWidth);
-      Dollar->setType(TT_CSharpStringLiteral);
+      Dollar->Type = TT_CSharpStringLiteral;
       Tokens.erase(Tokens.end() - 2);
       Tokens.erase(Tokens.end() - 1);
       return true;
@@ -270,7 +270,7 @@ bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
   At->TokenText = StringRef(At->TokenText.begin(),
                             String->TokenText.end() - At->TokenText.begin());
   At->ColumnWidth += String->ColumnWidth;
-  At->setType(TT_CSharpStringLiteral);
+  At->Type = TT_CSharpStringLiteral;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -294,7 +294,7 @@ bool FormatTokenLexer::tryMergeCSharpDoubleQuestion() {
                                        SecondQuestion->TokenText.end() -
                                            FirstQuestion->TokenText.begin());
   FirstQuestion->ColumnWidth += SecondQuestion->ColumnWidth;
-  FirstQuestion->setType(TT_CSharpNullCoalescing);
+  FirstQuestion->Type = TT_CSharpNullCoalescing;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -315,10 +315,10 @@ bool FormatTokenLexer::tryMergeCSharpNullConditional() {
 
   if (PeriodOrLSquare->is(tok::l_square)) {
     Question->Tok.setKind(tok::question); // no '?[' in clang tokens.
-    Question->setType(TT_CSharpNullConditionalLSquare);
+    Question->Type = TT_CSharpNullConditionalLSquare;
   } else {
     Question->Tok.setKind(tok::question); // no '?.' in clang tokens.
-    Question->setType(TT_CSharpNullConditional);
+    Question->Type = TT_CSharpNullConditional;
   }
 
   Tokens.erase(Tokens.end() - 1);
@@ -339,7 +339,7 @@ bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
   At->TokenText = StringRef(At->TokenText.begin(),
                             Keyword->TokenText.end() - At->TokenText.begin());
   At->ColumnWidth += Keyword->ColumnWidth;
-  At->setType(Keyword->getType());
+  At->Type = Keyword->Type;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -354,7 +354,7 @@ bool FormatTokenLexer::tryTransformCSharpForEach() {
   if (Identifier->TokenText != "foreach")
     return false;
 
-  Identifier->setType(TT_ForEachMacro);
+  Identifier->Type = TT_ForEachMacro;
   Identifier->Tok.setKind(tok::kw_for);
   return true;
 }
@@ -405,7 +405,7 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   First[0]->TokenText = StringRef(First[0]->TokenText.data(),
                                   First[0]->TokenText.size() + AddLength);
   First[0]->ColumnWidth += AddLength;
-  First[0]->setType(NewType);
+  First[0]->Type = NewType;
   return true;
 }
 
@@ -494,7 +494,7 @@ void FormatTokenLexer::tryParseJSRegexLiteral() {
     }
   }
 
-  RegexToken->setType(TT_RegexLiteral);
+  RegexToken->Type = TT_RegexLiteral;
   // Treat regex literals like other string_literals.
   RegexToken->Tok.setKind(tok::string_literal);
   RegexToken->TokenText = StringRef(RegexBegin, Offset - RegexBegin);
@@ -506,7 +506,7 @@ void FormatTokenLexer::tryParseJSRegexLiteral() {
 void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
   FormatToken *CSharpStringLiteral = Tokens.back();
 
-  if (CSharpStringLiteral->getType() != TT_CSharpStringLiteral)
+  if (CSharpStringLiteral->Type != TT_CSharpStringLiteral)
     return;
 
   // Deal with multiline strings.
@@ -606,7 +606,7 @@ void FormatTokenLexer::handleTemplateStrings() {
   }
 
   StringRef LiteralText(TmplBegin, Offset - TmplBegin + 1);
-  BacktickToken->setType(TT_TemplateString);
+  BacktickToken->Type = TT_TemplateString;
   BacktickToken->Tok.setKind(tok::string_literal);
   BacktickToken->TokenText = LiteralText;
 
@@ -644,7 +644,7 @@ void FormatTokenLexer::tryParsePythonComment() {
   if (To == StringRef::npos)
     To = Lex->getBuffer().size();
   size_t Len = To - From;
-  HashToken->setType(TT_LineComment);
+  HashToken->Type = TT_LineComment;
   HashToken->Tok.setKind(tok::comment);
   HashToken->TokenText = Lex->getBuffer().substr(From, Len);
   SourceLocation Loc = To < Lex->getBuffer().size()
@@ -742,7 +742,7 @@ bool FormatTokenLexer::tryMergeConflictMarkers() {
     // We do not need to build a complete token here, as we will skip it
     // during parsing anyway (as we must not touch whitespace around conflict
     // markers).
-    Tokens.back()->setType(Type);
+    Tokens.back()->Type = Type;
     Tokens.back()->Tok.setKind(tok::kw___unknown_anytype);
 
     Tokens.push_back(Next);
@@ -829,13 +829,13 @@ FormatToken *FormatTokenLexer::getNextToken() {
         break;
       case '\\':
         if (i + 1 == e || (Text[i + 1] != '\r' && Text[i + 1] != '\n'))
-          FormatTok->setType(TT_ImplicitStringLiteral);
+          FormatTok->Type = TT_ImplicitStringLiteral;
         break;
       default:
-        FormatTok->setType(TT_ImplicitStringLiteral);
+        FormatTok->Type = TT_ImplicitStringLiteral;
         break;
       }
-      if (FormatTok->getType() == TT_ImplicitStringLiteral)
+      if (FormatTok->Type == TT_ImplicitStringLiteral)
         break;
     }
 
@@ -963,12 +963,12 @@ FormatToken *FormatTokenLexer::getNextToken() {
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&
         it != Macros.end()) {
-      FormatTok->setType(it->second);
+      FormatTok->Type = it->second;
     } else if (FormatTok->is(tok::identifier)) {
       if (MacroBlockBeginRegex.match(Text)) {
-        FormatTok->setType(TT_MacroBlockBegin);
+        FormatTok->Type = TT_MacroBlockBegin;
       } else if (MacroBlockEndRegex.match(Text)) {
-        FormatTok->setType(TT_MacroBlockEnd);
+        FormatTok->Type = TT_MacroBlockEnd;
       }
     }
   }

@@ -163,12 +163,12 @@ func @contains_regions(%cond : i1) {
   cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
-  scf.if %cond {
+  loop.if %cond {
     "foo.op"() : () -> ()
   }
   return
 ^bb2:
-  scf.if %cond {
+  loop.if %cond {
     "foo.op"() : () -> ()
   }
   return

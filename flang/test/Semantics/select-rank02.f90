@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
-
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 !Shape analysis related tests for SELECT RANK Construct(R1148)
 program select_rank
    implicit none

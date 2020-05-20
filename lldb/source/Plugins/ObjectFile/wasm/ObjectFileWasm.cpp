@@ -436,8 +436,7 @@ void ObjectFileWasm::Dump(Stream *s) {
 
   SectionList *sections = GetSectionList();
   if (sections) {
-    sections->Dump(s->AsRawOstream(), s->GetIndentLevel(), nullptr, true,
-                   UINT32_MAX);
+    sections->Dump(s, nullptr, true, UINT32_MAX);
   }
   ostream << "\n";
   DumpSectionHeaders(ostream);

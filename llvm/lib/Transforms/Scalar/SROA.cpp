@@ -1275,7 +1275,7 @@ static void speculatePHINodeLoads(PHINode &PN) {
   // matter which one we get and if any differ.
   AAMDNodes AATags;
   SomeLoad->getAAMetadata(AATags);
-  Align Alignment = SomeLoad->getAlign();
+  const MaybeAlign Align = MaybeAlign(SomeLoad->getAlignment());
 
   // Rewrite all loads of the PN to use the new PHI.
   while (!PN.use_empty()) {
@@ -1302,10 +1302,11 @@ static void speculatePHINodeLoads(PHINode &PN) {
     Instruction *TI = Pred->getTerminator();
     IRBuilderTy PredBuilder(TI);
 
-    LoadInst *Load = PredBuilder.CreateAlignedLoad(
-        LoadTy, InVal, Alignment,
+    LoadInst *Load = PredBuilder.CreateLoad(
+        LoadTy, InVal,
         (PN.getName() + ".sroa.speculate.load." + Pred->getName()));
     ++NumLoadsSpeculated;
+    Load->setAlignment(Align);
     if (AATags)
       Load->setAAMetadata(AATags);
     NewPN->addIncoming(Load, Pred);
@@ -1685,8 +1686,20 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
 }
 
 /// Compute the adjusted alignment for a load or store from an offset.
-static Align getAdjustedAlignment(Instruction *I, uint64_t Offset) {
-  return commonAlignment(getLoadStoreAlignment(I), Offset);
+static Align getAdjustedAlignment(Instruction *I, uint64_t Offset,
+                                  const DataLayout &DL) {
+  MaybeAlign Alignment;
+  Type *Ty;
+  if (auto *LI = dyn_cast<LoadInst>(I)) {
+    Alignment = MaybeAlign(LI->getAlignment());
+    Ty = LI->getType();
+  } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+    Alignment = MaybeAlign(SI->getAlignment());
+    Ty = SI->getValueOperand()->getType();
+  } else {
+    llvm_unreachable("Only loads and stores are allowed!");
+  }
+  return commonAlignment(DL.getValueOrABITypeAlignment(Alignment, Ty), Offset);
 }
 
 /// Test whether we can convert a value from the old to the new type.
@@ -2432,9 +2445,14 @@ private:
   ///
   /// You can optionally pass a type to this routine and if that type's ABI
   /// alignment is itself suitable, this will return zero.
-  Align getSliceAlign() {
-    return commonAlignment(NewAI.getAlign(),
-                           NewBeginOffset - NewAllocaBeginOffset);
+  MaybeAlign getSliceAlign(Type *Ty = nullptr) {
+    const MaybeAlign NewAIAlign = DL.getValueOrABITypeAlignment(
+        MaybeAlign(NewAI.getAlignment()), NewAI.getAllocatedType());
+    const MaybeAlign Align =
+        commonAlignment(NewAIAlign, NewBeginOffset - NewAllocaBeginOffset);
+    return (Ty && Align && Align->value() == DL.getABITypeAlignment(Ty))
+               ? None
+               : Align;
   }
 
   unsigned getIndex(uint64_t Offset) {
@@ -2550,9 +2568,9 @@ private:
           }
     } else {
       Type *LTy = TargetTy->getPointerTo(AS);
-      LoadInst *NewLI =
-          IRB.CreateAlignedLoad(TargetTy, getNewAllocaSlicePtr(IRB, LTy),
-                                getSliceAlign(), LI.isVolatile(), LI.getName());
+      LoadInst *NewLI = IRB.CreateAlignedLoad(
+          TargetTy, getNewAllocaSlicePtr(IRB, LTy), getSliceAlign(TargetTy),
+          LI.isVolatile(), LI.getName());
       if (AATags)
         NewLI->setAAMetadata(AATags);
       if (LI.isVolatile())
@@ -2578,8 +2596,7 @@ private:
       // the computed value, and then replace the placeholder with LI, leaving
       // LI only used for this computation.
       Value *Placeholder = new LoadInst(
-          LI.getType(), UndefValue::get(LI.getType()->getPointerTo(AS)), "",
-          false, Align(1));
+          LI.getType(), UndefValue::get(LI.getType()->getPointerTo(AS)));
       V = insertInteger(DL, IRB, Placeholder, V, NewBeginOffset - BeginOffset,
                         "insert");
       LI.replaceAllUsesWith(V);
@@ -2704,8 +2721,8 @@ private:
     } else {
       unsigned AS = SI.getPointerAddressSpace();
       Value *NewPtr = getNewAllocaSlicePtr(IRB, V->getType()->getPointerTo(AS));
-      NewSI =
-          IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(), SI.isVolatile());
+      NewSI = IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(V->getType()),
+                                     SI.isVolatile());
     }
     NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
@@ -3123,12 +3140,17 @@ private:
       Instruction *I = Uses.pop_back_val();
 
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-        LI->setAlignment(std::min(LI->getAlign(), getSliceAlign()));
+        MaybeAlign LoadAlign = DL.getValueOrABITypeAlignment(
+            MaybeAlign(LI->getAlignment()), LI->getType());
+        LI->setAlignment(std::min(LoadAlign, getSliceAlign()));
         continue;
       }
       if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-        SI->setAlignment(std::min(SI->getAlign(), getSliceAlign()));
-        continue;
+          Value *Op = SI->getOperand(0);
+          MaybeAlign StoreAlign = DL.getValueOrABITypeAlignment(
+              MaybeAlign(SI->getAlignment()), Op->getType());
+          SI->setAlignment(std::min(StoreAlign, getSliceAlign()));
+          continue;
       }
 
       assert(isa<BitCastInst>(I) || isa<AddrSpaceCastInst>(I) ||
@@ -3378,7 +3400,7 @@ private:
     AAMDNodes AATags;
     LI.getAAMetadata(AATags);
     LoadOpSplitter Splitter(&LI, *U, LI.getType(), AATags,
-                            getAdjustedAlignment(&LI, 0), DL);
+                            getAdjustedAlignment(&LI, 0, DL), DL);
     Value *V = UndefValue::get(LI.getType());
     Splitter.emitSplitOps(LI.getType(), V, LI.getName() + ".fca");
     LI.replaceAllUsesWith(V);
@@ -3425,7 +3447,7 @@ private:
     AAMDNodes AATags;
     SI.getAAMetadata(AATags);
     StoreOpSplitter Splitter(&SI, *U, V->getType(), AATags,
-                             getAdjustedAlignment(&SI, 0), DL);
+                             getAdjustedAlignment(&SI, 0, DL), DL);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     SI.eraseFromParent();
     return true;
@@ -3874,7 +3896,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
           getAdjustedPtr(IRB, DL, BasePtr,
                          APInt(DL.getIndexSizeInBits(AS), PartOffset),
                          PartPtrTy, BasePtr->getName() + "."),
-          getAdjustedAlignment(LI, PartOffset),
+          getAdjustedAlignment(LI, PartOffset, DL),
           /*IsVolatile*/ false, LI->getName());
       PLoad->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
                                 LLVMContext::MD_access_group});
@@ -3932,7 +3954,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
             getAdjustedPtr(IRB, DL, StoreBasePtr,
                            APInt(DL.getIndexSizeInBits(AS), PartOffset),
                            PartPtrTy, StoreBasePtr->getName() + "."),
-            getAdjustedAlignment(SI, PartOffset),
+            getAdjustedAlignment(SI, PartOffset, DL),
             /*IsVolatile*/ false);
         PStore->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
                                    LLVMContext::MD_access_group});
@@ -4017,7 +4039,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
             getAdjustedPtr(IRB, DL, LoadBasePtr,
                            APInt(DL.getIndexSizeInBits(AS), PartOffset),
                            LoadPartPtrTy, LoadBasePtr->getName() + "."),
-            getAdjustedAlignment(LI, PartOffset),
+            getAdjustedAlignment(LI, PartOffset, DL),
             /*IsVolatile*/ false, LI->getName());
       }
 
@@ -4029,7 +4051,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
           getAdjustedPtr(IRB, DL, StoreBasePtr,
                          APInt(DL.getIndexSizeInBits(AS), PartOffset),
                          StorePartPtrTy, StoreBasePtr->getName() + "."),
-          getAdjustedAlignment(SI, PartOffset),
+          getAdjustedAlignment(SI, PartOffset, DL),
           /*IsVolatile*/ false);
 
       // Now build a new slice for the alloca.
@@ -4165,14 +4187,19 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // FIXME: We might want to defer PHI speculation until after here.
     // FIXME: return nullptr;
   } else {
-    // Make sure the alignment is compatible with P.beginOffset().
-    const Align Alignment = commonAlignment(AI.getAlign(), P.beginOffset());
+    // If alignment is unspecified we fallback on the one required by the ABI
+    // for this type. We also make sure the alignment is compatible with
+    // P.beginOffset().
+    const Align Alignment = commonAlignment(
+        DL.getValueOrABITypeAlignment(MaybeAlign(AI.getAlignment()),
+                                      AI.getAllocatedType()),
+        P.beginOffset());
     // If we will get at least this much alignment from the type alone, leave
     // the alloca's alignment unconstrained.
     const bool IsUnconstrained = Alignment <= DL.getABITypeAlignment(SliceTy);
     NewAI = new AllocaInst(
         SliceTy, AI.getType()->getAddressSpace(), nullptr,
-        IsUnconstrained ? DL.getPrefTypeAlign(SliceTy) : Alignment,
+        IsUnconstrained ? MaybeAlign() : Alignment,
         AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()), &AI);
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 program main
   implicit none
   integer :: i = -1

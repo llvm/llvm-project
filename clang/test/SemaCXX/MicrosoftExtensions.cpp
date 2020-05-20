@@ -154,9 +154,6 @@ struct X0 {
 #endif
 
   enum E1 : seventeen;
-#if __cplusplus >= 201103L
-  // expected-error@-2 {{bit-field}}
-#endif
 };
 
 #if __cplusplus <= 199711L

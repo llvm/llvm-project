@@ -112,12 +112,6 @@ void TransformerClangTidyCheck::check(
   }
 }
 
-void TransformerClangTidyCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle,
-                IncludeSorter::getMapping());
-}
-
 } // namespace utils
 } // namespace tidy
 } // namespace clang

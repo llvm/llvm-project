@@ -2,8 +2,6 @@
 # various types of debug info, and then run those programs under a debugger
 # such as GDB or LLDB to verify the results.
 
-find_package(Python3 COMPONENTS Interpreter)
-
 add_llvm_executable(check-gdb-llvm-support
         llvm-prettyprinters/gdb/llvm-support.cpp
 )

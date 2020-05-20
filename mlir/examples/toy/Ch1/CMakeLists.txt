@@ -1,4 +1,3 @@
-# For a better template to copy, see examples/standalone
 set(LLVM_LINK_COMPONENTS
   Support
   )

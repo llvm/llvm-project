@@ -1643,9 +1643,7 @@ rnb_err_t RNBRemote::HandlePacket_qLaunchSuccess(const char *p) {
     return SendPacket("OK");
   std::ostringstream ret_str;
   std::string status_str;
-  std::string error_quoted = binary_encode_string
-               (m_ctx.LaunchStatusAsString(status_str));
-  ret_str << "E" << error_quoted;
+  ret_str << "E" << m_ctx.LaunchStatusAsString(status_str);
 
   return SendPacket(ret_str.str());
 }
@@ -2679,9 +2677,8 @@ std::string cstring_to_asciihex_string(const char *str) {
   std::string hex_str;
   hex_str.reserve (strlen (str) * 2);
   while (str && *str) {
-    uint8_t c = *str++;
     char hexbuf[5];
-    snprintf (hexbuf, sizeof(hexbuf), "%02x", c);
+    snprintf (hexbuf, sizeof(hexbuf), "%02x", *str++);
     hex_str += hexbuf;
   }
   return hex_str;

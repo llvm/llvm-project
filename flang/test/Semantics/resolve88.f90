@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
 ! C746, C747, and C748
 module m
   use ISO_FORTRAN_ENV

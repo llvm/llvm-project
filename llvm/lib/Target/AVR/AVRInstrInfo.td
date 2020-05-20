@@ -107,9 +107,7 @@ def imm_com8 : Operand<i8> {
 
 def ioaddr_XFORM : SDNodeXForm<imm,
 [{
-  uint8_t offset = Subtarget->getIORegisterOffset();
-  return CurDAG->getTargetConstant(uint8_t(N->getZExtValue()) - offset,
-                                   SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(uint8_t(N->getZExtValue()) - 0x20, SDLoc(N), MVT::i8);
 }]>;
 
 def iobitpos8_XFORM : SDNodeXForm<imm,
@@ -126,23 +124,20 @@ def iobitposn8_XFORM : SDNodeXForm<imm,
 
 def ioaddr8 : PatLeaf<(imm),
 [{
-  uint8_t offset = Subtarget->getIORegisterOffset();
-  uint64_t val = N->getZExtValue() - offset;
-  return val >= 0x0 && val < 0x40;
+  uint64_t val = N->getZExtValue();
+  return val >= 0x20 && val < 0x60;
 }], ioaddr_XFORM>;
 
 def lowioaddr8 : PatLeaf<(imm),
 [{
-  uint8_t offset = Subtarget->getIORegisterOffset();
-  uint64_t val = N->getZExtValue() - offset;
-  return val >= 0x0 && val < 0x20;
+  uint64_t val = N->getZExtValue();
+  return val >= 0x20 && val < 0x40;
 }], ioaddr_XFORM>;
 
 def ioaddr16 : PatLeaf<(imm),
 [{
-  uint8_t offset = Subtarget->getIORegisterOffset();
-  uint64_t val = N->getZExtValue() - offset;
-  return val >= 0x0 && val < 0x3f;
+  uint64_t val = N->getZExtValue();
+  return val >= 0x20 && val < 0x5f;
 }], ioaddr_XFORM>;
 
 def iobitpos8 : PatLeaf<(imm),

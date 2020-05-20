@@ -1941,14 +1941,10 @@ static uint64_t getDwoId(const DWARFDie &CUDie, const DWARFUnit &Unit) {
 
 static std::string remapPath(StringRef Path,
                              const objectPrefixMap &ObjectPrefixMap) {
-  if (ObjectPrefixMap.empty())
-    return Path.str();
-
-  SmallString<256> p = Path;
   for (const auto &Entry : ObjectPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(p, Entry.first, Entry.second))
-      break;
-  return p.str().str();
+    if (Path.startswith(Entry.first))
+      return (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
+  return Path.str();
 }
 
 bool DWARFLinker::registerModuleReference(

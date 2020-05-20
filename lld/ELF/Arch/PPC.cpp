@@ -17,8 +17,9 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-using namespace lld;
-using namespace lld::elf;
+
+namespace lld {
+namespace elf {
 
 namespace {
 class PPC final : public TargetInfo {
@@ -70,7 +71,7 @@ static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
   write32(config->isLE ? loc : loc - 2, insn);
 }
 
-void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
+void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // Create canonical PLT entries for non-PIE code. Compilers don't generate
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
   uint32_t glink = in.plt->getVA(); // VA of .glink
@@ -467,7 +468,10 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo() {
+TargetInfo *getPPCTargetInfo() {
   static PPC target;
   return &target;
 }
+
+} // namespace elf
+} // namespace lld

@@ -36,7 +36,7 @@ func @dependent_loops() {
   %0 = alloc() : memref<10xf32>
   %cst = constant 7.000000e+00 : f32
   // There is a dependence from 0 to 1 at depth 1 (common surrounding loops 0)
-  // because the first loop with the store dominates the second scf.
+  // because the first loop with the store dominates the second loop.
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %0[%i0] : memref<10xf32>
     // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
@@ -332,7 +332,7 @@ func @store_range_load_first_in_range() {
     %a0 = affine.apply affine_map<(d0) -> (d0)> (%i0)
     // Dependence from 0 to 1 at depth 1 is a range because all loads at
     // constant index zero are reads after first store at index zero during
-    // first iteration of the scf.
+    // first iteration of the loop.
     affine.store %c7, %m[%a0] : memref<100xf32>
     // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
     // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
@@ -785,7 +785,7 @@ func @delinearize_mod_floordiv() {
 
 // -----
 
-// Load and store ops access the same elements in strided scf.
+// Load and store ops access the same elements in strided loop.
 // CHECK-LABEL: func @strided_loop_with_dependence_at_depth2
 func @strided_loop_with_dependence_at_depth2() {
   %0 = alloc() : memref<10xf32>

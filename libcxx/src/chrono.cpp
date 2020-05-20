@@ -12,7 +12,7 @@
 #include <time.h>        // clock_gettime, CLOCK_MONOTONIC and CLOCK_REALTIME
 #include "include/apple_availability.h"
 
-#if __has_include(<unistd.h>)
+#if !defined(_WIN32)
 #include <unistd.h>
 #endif
 

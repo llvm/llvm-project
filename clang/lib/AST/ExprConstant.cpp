@@ -10350,7 +10350,6 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
   case Type::BlockPointer:
   case Type::Vector:
   case Type::ExtVector:
-  case Type::ConstantMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
@@ -14203,7 +14202,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::StmtExprClass:
   case Expr::CXXMemberCallExprClass:
   case Expr::CUDAKernelCallExprClass:
-  case Expr::CXXAddrspaceCastExprClass:
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXTypeidExprClass:
   case Expr::CXXUuidofExprClass:

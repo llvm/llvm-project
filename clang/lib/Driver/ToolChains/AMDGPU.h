@@ -75,8 +75,6 @@ private:
   // CheckRocmVersionSupportsArch.
   mutable llvm::SmallSet<CudaArch, 4> ArchsWithBadVersion;
 
-  void scanLibDevicePath();
-
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
                            const llvm::opt::ArgList &Args);
@@ -218,13 +216,10 @@ public:
   llvm::DenormalMode getDefaultDenormalModeForType(
       const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const override;
-
-  static bool isWave64(const llvm::opt::ArgList &DriverArgs,
-                       llvm::AMDGPU::GPUKind Kind);
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
-protected:
+private:
   RocmInstallationDetector RocmInstallation;
 
 public:

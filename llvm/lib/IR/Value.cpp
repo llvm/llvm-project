@@ -599,9 +599,9 @@ const Value *Value::stripPointerCastsAndInvariantGroups() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndInvariantGroups>(this);
 }
 
-const Value *Value::stripAndAccumulateConstantOffsets(
-    const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
-    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
+const Value *
+Value::stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
+                                         bool AllowNonInbounds) const {
   if (!getType()->isPtrOrPtrVectorTy())
     return this;
 
@@ -627,7 +627,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // of GEP's pointer type rather than the size of the original
       // pointer type.
       APInt GEPOffset(DL.getIndexTypeSizeInBits(V->getType()), 0);
-      if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+      if (!GEP->accumulateConstantOffset(DL, GEPOffset))
         return V;
 
       // Stop traversal if the pointer offset wouldn't fit in the bit-width
@@ -636,20 +636,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       if (GEPOffset.getMinSignedBits() > BitWidth)
         return V;
 
-      // External Analysis can return a result higher/lower than the value
-      // represents. We need to detect overflow/underflow.
-      APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
-      if (!ExternalAnalysis) {
-        Offset += GEPOffsetST;
-      } else {
-        bool Overflow = false;
-        APInt OldOffset = Offset;
-        Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
-        if (Overflow) {
-          Offset = OldOffset;
-          return V;
-        }
-      }
+      Offset += GEPOffset.sextOrTrunc(BitWidth);
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
@@ -831,12 +818,12 @@ void Value::reverseUseList() {
   while (Current) {
     Use *Next = Current->Next;
     Current->Next = Head;
-    Head->Prev = &Current->Next;
+    Head->setPrev(&Current->Next);
     Head = Current;
     Current = Next;
   }
   UseList = Head;
-  Head->Prev = &UseList;
+  Head->setPrev(&UseList);
 }
 
 bool Value::isSwiftError() const {

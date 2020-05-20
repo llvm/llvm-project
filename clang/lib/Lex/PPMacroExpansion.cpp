@@ -1456,8 +1456,10 @@ static void remapMacroPath(
     const std::map<std::string, std::string, std::greater<std::string>>
         &MacroPrefixMap) {
   for (const auto &Entry : MacroPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
+    if (Path.startswith(Entry.first)) {
+      Path = (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
       break;
+    }
 }
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
@@ -1541,8 +1543,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       } else {
         FN += PLoc.getFilename();
       }
-      remapMacroPath(FN, PPOpts->MacroPrefixMap);
       Lexer::Stringify(FN);
+      remapMacroPath(FN, PPOpts->MacroPrefixMap);
       OS << '"' << FN << '"';
     }
     Tok.setKind(tok::string_literal);

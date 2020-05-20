@@ -202,6 +202,7 @@ write_cmake_config("config") {
       "HAVE_ISATTY=",
       "HAVE_LIBPTHREAD=",
       "HAVE_PTHREAD_SETNAME_NP=",
+      "HAVE_LIBZ=",
       "HAVE_PREAD=",
       "HAVE_PTHREAD_GETSPECIFIC=",
       "HAVE_PTHREAD_H=",
@@ -220,6 +221,7 @@ write_cmake_config("config") {
       "HAVE_SYS_TIME_H=",
       "HAVE_TERMIOS_H=",
       "HAVE_UNISTD_H=",
+      "HAVE_ZLIB_H=",
       "HAVE__CHSIZE_S=1",
       "HAVE__UNWIND_BACKTRACE=",
       "stricmp=_stricmp",
@@ -238,6 +240,7 @@ write_cmake_config("config") {
       "HAVE_ISATTY=1",
       "HAVE_LIBPTHREAD=1",
       "HAVE_PTHREAD_SETNAME_NP=1",
+      "HAVE_LIBZ=1",
       "HAVE_PREAD=1",
       "HAVE_PTHREAD_GETSPECIFIC=1",
       "HAVE_PTHREAD_H=1",
@@ -256,6 +259,7 @@ write_cmake_config("config") {
       "HAVE_SYS_TIME_H=1",
       "HAVE_TERMIOS_H=1",
       "HAVE_UNISTD_H=1",
+      "HAVE_ZLIB_H=1",
       "HAVE__CHSIZE_S=",
       "HAVE__UNWIND_BACKTRACE=1",
       "stricmp=",
@@ -295,20 +299,10 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
-  # FIXME: Once https://reviews.llvm.org/D79219 is in, remove the two
-  # redundant HAVE_ variables.
   if (llvm_enable_zlib) {
-    values += [
-      "HAVE_LIBZ=1",
-      "HAVE_ZLIB_H=1",
-      "LLVM_ENABLE_ZLIB=1",
-    ]
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
-    values += [
-      "HAVE_LIBZ=",
-      "HAVE_ZLIB_H=",
-      "LLVM_ENABLE_ZLIB=",
-    ]
+    values += [ "LLVM_ENABLE_ZLIB=" ]
   }
 
   if (llvm_enable_libxml2) {

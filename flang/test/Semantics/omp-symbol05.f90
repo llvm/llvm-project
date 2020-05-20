@@ -1,4 +1,5 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %S/test_symbols.sh %s %flang %t
+!OPTIONS: -fopenmp
 
 ! 2.15.2 threadprivate Directive
 ! The threadprivate directive specifies that variables are replicated,

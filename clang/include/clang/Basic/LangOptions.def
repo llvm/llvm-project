@@ -149,7 +149,6 @@ LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template t
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 
 COMPATIBLE_LANGOPT(RecoveryAST, 1, 0, "Preserve expressions in AST when encountering errors")
-COMPATIBLE_LANGOPT(RecoveryASTType, 1, 0, "Preserve the type in recovery expressions")
 
 BENIGN_LANGOPT(ThreadsafeStatics , 1, 1, "thread-safe static initializers")
 LANGOPT(POSIXThreads      , 1, 0, "POSIX thread support")
@@ -272,9 +271,6 @@ LANGOPT(ObjCAutoRefCount , 1, 0, "Objective-C automated reference counting")
 LANGOPT(ObjCWeakRuntime     , 1, 0, "__weak support in the ARC runtime")
 LANGOPT(ObjCWeak            , 1, 0, "Objective-C __weak in ARC and MRC files")
 LANGOPT(ObjCSubscriptingLegacyRuntime         , 1, 0, "Subscripting support in legacy ObjectiveC runtime")
-BENIGN_LANGOPT(CompatibilityQualifiedIdBlockParamTypeChecking, 1, 0,
-               "compatibility mode for type checking block parameters "
-               "involving qualified id types")
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
@@ -355,8 +351,6 @@ LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
 
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
-LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
-
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")
 
 ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAddressScopeKind::None,
@@ -364,8 +358,6 @@ ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAd
 ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddressKeyKind::AKey,
              "Key used for return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, "Branch-target enforcement enabled")
-
-LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

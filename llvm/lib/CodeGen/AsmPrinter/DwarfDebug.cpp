@@ -654,9 +654,9 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     return;
 
   auto *MBB = CallMI->getParent();
-  const auto &TRI = *MF->getSubtarget().getRegisterInfo();
-  const auto &TII = *MF->getSubtarget().getInstrInfo();
-  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+  const auto &TRI = MF->getSubtarget().getRegisterInfo();
+  const auto &TII = MF->getSubtarget().getInstrInfo();
+  const auto &TLI = MF->getSubtarget().getTargetLowering();
 
   // Skip the call instruction.
   auto I = std::next(CallMI->getReverseIterator());
@@ -717,7 +717,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       if (MO.isReg() && MO.isDef() &&
           Register::isPhysicalRegister(MO.getReg())) {
         for (auto FwdReg : ForwardedRegWorklist)
-          if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
+          if (TRI->regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
       }
     }
@@ -745,17 +745,17 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       continue;
 
     for (auto ParamFwdReg : FwdRegDefs) {
-      if (auto ParamValue = TII.describeLoadedValue(*I, ParamFwdReg)) {
+      if (auto ParamValue = TII->describeLoadedValue(*I, ParamFwdReg)) {
         if (ParamValue->first.isImm()) {
           int64_t Val = ParamValue->first.getImm();
           finishCallSiteParams(Val, ParamValue->second,
                                ForwardedRegWorklist[ParamFwdReg], Params);
         } else if (ParamValue->first.isReg()) {
           Register RegLoc = ParamValue->first.getReg();
-          unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
-          Register FP = TRI.getFrameRegister(*MF);
+          unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+          Register FP = TRI->getFrameRegister(*MF);
           bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
-          if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
+          if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
             MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
             finishCallSiteParams(MLoc, ParamValue->second,
                                  ForwardedRegWorklist[ParamFwdReg], Params);
@@ -1277,7 +1277,8 @@ void DwarfDebug::finalizeModuleInfo() {
 
     // We don't keep track of which addresses are used in which CU so this
     // is a bit pessimistic under LTO.
-    if ((HasSplitUnit || getDwarfVersion() >= 5) && !AddrPool.isEmpty())
+    if ((!AddrPool.isEmpty() || TheCU.hasRangeLists()) &&
+        (getDwarfVersion() >= 5 || HasSplitUnit))
       U.addAddrTableBase();
 
     if (getDwarfVersion() >= 5) {
@@ -1485,6 +1486,10 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (LSRange.size() == 0)
     return false;
 
+  // If this range is neither open ended nor a constant, then it is not a
+  // candidate for being validThroughout.
+  if (RangeEnd && !DbgValue->getOperand(0).isImm())
+    return false;
 
   // Determine if the DBG_VALUE is valid at the beginning of its lexical block.
   const MachineInstr *LScopeBegin = LSRange.front().first;
@@ -1526,28 +1531,7 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (DbgValue->getOperand(0).isImm() && MBB->pred_empty())
     return true;
 
-  // Now check for situations where an "open-ended" DBG_VALUE isn't enough to
-  // determine eligibility for a single location, e.g. nested scopes, inlined
-  // functions.
-  // FIXME: For now we just handle a simple (but common) case where the scope
-  // is contained in MBB. We could be smarter here.
-  //
-  // At this point we know that our scope ends in MBB. So, if RangeEnd exists
-  // outside of the block we can ignore it; the location is just leaking outside
-  // its scope.
-  assert(LScopeEnd->getParent() == MBB && "Scope ends outside MBB");
-  if (RangeEnd->getParent() != DbgValue->getParent())
-    return true;
-
-  // The location range and variable's enclosing scope are both contained within
-  // MBB, test if location terminates before end of scope.
-  for (auto I = RangeEnd->getIterator(); I != MBB->end(); ++I)
-    if (&*I == LScopeEnd)
-      return false;
-
-  // There's a single location which starts at the scope start, and ends at or
-  // after the scope end.
-  return true;
+  return false;
 }
 
 /// Build the location list for all DBG_VALUEs in the function that
@@ -3293,7 +3277,5 @@ const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
   return SectionLabels.find(S)->second;
 }
 void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
-  if (SectionLabels.insert(std::make_pair(&S->getSection(), S)).second)
-    if (useSplitDwarf() || getDwarfVersion() >= 5)
-      AddrPool.getIndex(S);
+  SectionLabels.insert(std::make_pair(&S->getSection(), S));
 }

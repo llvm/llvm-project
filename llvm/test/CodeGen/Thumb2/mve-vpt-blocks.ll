@@ -117,10 +117,20 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vptet_block(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: vptet_block:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vptet.s32 ge, q0, q2
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s32 ge, q0, q2
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vorrt q0, q1, q2
-; CHECK-NEXT:    vmove q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %a, %c
@@ -134,11 +144,21 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vpttet_block(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: vpttet_block:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpttet.s32 ge, q0, q2
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s32 ge, q0, q2
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vorrt q0, q1, q2
 ; CHECK-NEXT:    vmovt q0, q2
-; CHECK-NEXT:    vmove q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %a, %c
@@ -153,11 +173,21 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vptett_block(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: vptett_block:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vptett.s32 ge, q0, q2
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s32 ge, q0, q2
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vorrt q0, q1, q2
-; CHECK-NEXT:    vmove q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vmovt q0, q2
 ; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %a, %c
@@ -172,11 +202,25 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vpteet_block(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: vpteet_block:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpteet.s32 ge, q0, q2
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    vcmp.s32 ge, q0, q2
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vorrt q0, q1, q2
-; CHECK-NEXT:    vmove q0, q2
-; CHECK-NEXT:    vmove q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %a, %c
@@ -210,11 +254,25 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vptete_block(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: vptete_block:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vptete.s32 ge, q0, q2
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    vcmp.s32 ge, q0, q2
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vorrt q0, q1, q2
-; CHECK-NEXT:    vmove q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vmovt q0, q2
-; CHECK-NEXT:    vmove q0, q2
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sge <4 x i32> %a, %c

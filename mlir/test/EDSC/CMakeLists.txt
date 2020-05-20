@@ -16,7 +16,7 @@ target_link_libraries(mlir-edsc-builder-api-test
   MLIRIR
   MLIRLinalgEDSC
   MLIRLinalgOps
-  MLIRSCF
+  MLIRLoopOps
   MLIRStandardOps
   MLIRTransforms
   MLIRVector

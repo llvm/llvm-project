@@ -26,7 +26,6 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
     VoidTy(C, Type::VoidTyID),
     LabelTy(C, Type::LabelTyID),
     HalfTy(C, Type::HalfTyID),
-    BFloatTy(C, Type::BFloatTyID),
     FloatTy(C, Type::FloatTyID),
     DoubleTy(C, Type::DoubleTyID),
     MetadataTy(C, Type::MetadataTyID),

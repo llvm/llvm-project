@@ -90,8 +90,8 @@ protected:
               // This is a conditional branch to the return. Replace the branch
               // with a bclr.
               BuildMI(**PI, J, J->getDebugLoc(), TII->get(PPC::BCCLR))
-                  .add(J->getOperand(0))
-                  .add(J->getOperand(1))
+                  .addImm(J->getOperand(0).getImm())
+                  .addReg(J->getOperand(1).getReg())
                   .copyImplicitOps(*I);
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
@@ -106,7 +106,7 @@ protected:
               BuildMI(
                   **PI, J, J->getDebugLoc(),
                   TII->get(J->getOpcode() == PPC::BC ? PPC::BCLR : PPC::BCLRn))
-                  .add(J->getOperand(0))
+                  .addReg(J->getOperand(0).getReg())
                   .copyImplicitOps(*I);
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();

@@ -1,4 +1,5 @@
-! RUN: %S/test_errors.sh %s %t %f18 -flogical-abbreviations -fxor-operator
+! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+!OPTIONS: -flogical-abbreviations -fxor-operator
 
 ! Like m4 in resolve63 but compiled with different options.
 ! Alternate operators are enabled so treat these as intrinsic.

@@ -1233,7 +1233,7 @@ public:
     if (!LI && !SI)
       return false;
     auto *Ty = getMemInstValueType(V);
-    Align Align = getLoadStoreAlignment(V);
+    MaybeAlign Align = getLoadStoreAlignment(V);
     return (LI && isLegalMaskedGather(Ty, Align)) ||
            (SI && isLegalMaskedScatter(Ty, Align));
   }
@@ -1909,12 +1909,11 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
     return;
   }
 
-  // All IV users are scalar instructions, so only emit a scalar IV, not a
-  // vectorised IV. Except when we tail-fold, then the splat IV feeds the
-  // predicate used by the masked loads/stores.
+  // If we haven't yet vectorized the induction variable, splat the scalar
+  // induction variable, and build the necessary step vectors.
+  // TODO: Don't do it unless the vectorized IV is really required.
   Value *ScalarIV = CreateScalarIV(Step);
-  if (!Cost->isScalarEpilogueAllowed())
-    CreateSplatIV(ScalarIV, Step);
+  CreateSplatIV(ScalarIV, Step);
   buildScalarSteps(ScalarIV, Step, EntryVal, ID);
 }
 
@@ -2383,7 +2382,11 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
 
   Type *ScalarDataTy = getMemInstValueType(Instr);
   Type *DataTy = VectorType::get(ScalarDataTy, VF);
-  const Align Alignment = getLoadStoreAlignment(Instr);
+  // An alignment of 0 means target abi alignment. We need to use the scalar's
+  // target abi alignment in such a case.
+  const DataLayout &DL = Instr->getModule()->getDataLayout();
+  const Align Alignment =
+      DL.getValueOrABITypeAlignment(getLoadStoreAlignment(Instr), ScalarDataTy);
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -2782,15 +2785,10 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   // Generate the code that checks in runtime if arrays overlap. We put the
   // checks into a separate block to make the more common case of few elements
   // faster.
-  auto *LAI = Legal->getLAI();
-  const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
-  if (!RtPtrChecking.Need)
-    return;
   Instruction *FirstCheckInst;
   Instruction *MemRuntimeCheck;
   std::tie(FirstCheckInst, MemRuntimeCheck) =
-      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
-                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
+      Legal->getLAI()->addRuntimeChecks(MemCheckBlock->getTerminator());
   if (!MemRuntimeCheck)
     return;
 
@@ -4591,11 +4589,6 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
     if (Induction.second.getKind() == InductionDescriptor::IK_PtrInduction)
       continue;
 
-    // If tail-folding is applied, the primary induction variable will be used
-    // to feed a vector compare.
-    if (Ind == Legal->getPrimaryInduction() && foldTailByMasking())
-      continue;
-
     // Determine if all users of the induction variable are scalar after
     // vectorization.
     auto ScalarInd = llvm::all_of(Ind->users(), [&](User *U) -> bool {
@@ -4646,7 +4639,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigne
              "Widening decision should be ready at this moment");
       return WideningDecision == CM_Scalarize;
     }
-    const Align Alignment = getLoadStoreAlignment(I);
+    const MaybeAlign Alignment = getLoadStoreAlignment(I);
     return isa<LoadInst>(I) ? !(isLegalMaskedLoad(Ty, Ptr, Alignment) ||
                                 isLegalMaskedGather(Ty, Alignment))
                             : !(isLegalMaskedStore(Ty, Ptr, Alignment) ||
@@ -4693,7 +4686,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(Instruction *I,
          "Masked interleave-groups for predicated accesses are not enabled.");
 
   auto *Ty = getMemInstValueType(I);
-  const Align Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment)
                           : TTI.isLegalMaskedStore(Ty, Alignment);
 }
@@ -5841,7 +5834,7 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   // Don't pass *I here, since it is scalar but will actually be part of a
   // vectorized loop where the user of it is a vectorized instruction.
-  const Align Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   Cost += VF * TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
                                    Alignment, AS, 
                                    TTI::TCK_RecipThroughput);
@@ -5876,11 +5869,12 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
          "Stride should be 1 or -1 for consecutive memory access");
-  const Align Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   unsigned Cost = 0;
   if (Legal->isMaskRequired(I))
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy,
-                                      Alignment.value(), AS, CostKind);
+                                      Alignment ? Alignment->value() : 0, AS,
+                                      CostKind);
   else
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                 CostKind, I);
@@ -5895,7 +5889,7 @@ unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                          unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  const Align Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   if (isa<LoadInst>(I)) {
@@ -5920,12 +5914,13 @@ unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                           unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  const Align Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   Value *Ptr = getLoadStorePointerOperand(I);
 
   return TTI.getAddressComputationCost(VectorTy) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
-                                    Legal->isMaskRequired(I), Alignment.value(),
+                                    Legal->isMaskRequired(I),
+                                    Alignment ? Alignment->value() : 0,
                                     TargetTransformInfo::TCK_RecipThroughput,
                                     I);
 }
@@ -5975,7 +5970,7 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // moment.
   if (VF == 1) {
     Type *ValTy = getMemInstValueType(I);
-    const Align Alignment = getLoadStoreAlignment(I);
+    const MaybeAlign Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
     return TTI.getAddressComputationCost(ValTy) +
@@ -7409,7 +7404,8 @@ Value *LoopVectorizationPlanner::VPCallbackILV::getOrCreateScalarValue(
 
 void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
-  O << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
+  O << " +\n"
+    << Indent << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
   O << ", ";
   getAddr()->printAsOperand(O, SlotTracker);
@@ -7418,9 +7414,11 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
     O << ", ";
     Mask->printAsOperand(O, SlotTracker);
   }
+  O << "\\l\"";
   for (unsigned i = 0; i < IG->getFactor(); ++i)
     if (Instruction *I = IG->getMember(i))
-      O << "\\l\" +\n" << Indent << "\"  " << VPlanIngredient(I) << " " << i;
+      O << " +\n"
+        << Indent << "\"  " << VPlanIngredient(I) << " " << i << "\\l\"";
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
@@ -8063,9 +8061,10 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
       return LAM.getResult<LoopAccessAnalysis>(L, AR);
     };
-    auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    const ModuleAnalysisManager &MAM =
+        AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
     ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+        MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
     LoopVectorizeResult Result =
         runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, GetLAA, ORE, PSI);
     if (!Result.MadeAnyChange)

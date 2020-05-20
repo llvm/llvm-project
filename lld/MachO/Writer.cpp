@@ -52,7 +52,6 @@ public:
   uint64_t fileOff = 0;
   MachHeaderSection *headerSection = nullptr;
   BindingSection *bindingSection = nullptr;
-  LazyBindingSection *lazyBindingSection = nullptr;
   ExportSection *exportSection = nullptr;
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
@@ -61,11 +60,8 @@ public:
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
 class LCDyldInfo : public LoadCommand {
 public:
-  LCDyldInfo(BindingSection *bindingSection,
-             LazyBindingSection *lazyBindingSection,
-             ExportSection *exportSection)
-      : bindingSection(bindingSection), lazyBindingSection(lazyBindingSection),
-        exportSection(exportSection) {}
+  LCDyldInfo(BindingSection *bindingSection, ExportSection *exportSection)
+      : bindingSection(bindingSection), exportSection(exportSection) {}
 
   uint32_t getSize() const override { return sizeof(dyld_info_command); }
 
@@ -77,10 +73,6 @@ public:
       c->bind_off = bindingSection->fileOff;
       c->bind_size = bindingSection->getFileSize();
     }
-    if (lazyBindingSection->isNeeded()) {
-      c->lazy_bind_off = lazyBindingSection->fileOff;
-      c->lazy_bind_size = lazyBindingSection->getFileSize();
-    }
     if (exportSection->isNeeded()) {
       c->export_off = exportSection->fileOff;
       c->export_size = exportSection->getFileSize();
@@ -88,7 +80,6 @@ public:
   }
 
   BindingSection *bindingSection;
-  LazyBindingSection *lazyBindingSection;
   ExportSection *exportSection;
 };
 
@@ -191,13 +182,9 @@ public:
   StringTableSection *stringTableSection = nullptr;
 };
 
-// There are several dylib load commands that share the same structure:
-//   * LC_LOAD_DYLIB
-//   * LC_ID_DYLIB
-//   * LC_REEXPORT_DYLIB
-class LCDylib : public LoadCommand {
+class LCLoadDylib : public LoadCommand {
 public:
-  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {}
+  LCLoadDylib(StringRef path) : path(path) {}
 
   uint32_t getSize() const override {
     return alignTo(sizeof(dylib_command) + path.size() + 1, 8);
@@ -207,7 +194,7 @@ public:
     auto *c = reinterpret_cast<dylib_command *>(buf);
     buf += sizeof(dylib_command);
 
-    c->cmd = type;
+    c->cmd = LC_LOAD_DYLIB;
     c->cmdsize = getSize();
     c->dylib.name = sizeof(dylib_command);
 
@@ -216,8 +203,31 @@ public:
   }
 
 private:
-  LoadCommandType type;
   StringRef path;
+};
+
+class LCIdDylib : public LoadCommand {
+public:
+  LCIdDylib(StringRef name) : name(name) {}
+
+  uint32_t getSize() const override {
+    return alignTo(sizeof(dylib_command) + name.size() + 1, 8);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<dylib_command *>(buf);
+    buf += sizeof(dylib_command);
+
+    c->cmd = LC_ID_DYLIB;
+    c->cmdsize = getSize();
+    c->dylib.name = sizeof(dylib_command);
+
+    memcpy(buf, name.data(), name.size());
+    buf[name.size()] = '\0';
+  }
+
+private:
+  StringRef name;
 };
 
 class LCLoadDylinker : public LoadCommand {
@@ -250,12 +260,12 @@ void Writer::scanRelocations() {
     for (Reloc &r : sect->relocs)
       if (auto *s = r.target.dyn_cast<Symbol *>())
         if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
-          target->prepareDylibSymbolRelocation(*dylibSymbol, r.type);
+          in.got->addEntry(*dylibSymbol);
 }
 
 void Writer::createLoadCommands() {
   headerSection->addLoadCommand(
-      make<LCDyldInfo>(bindingSection, lazyBindingSection, exportSection));
+      make<LCDyldInfo>(bindingSection, exportSection));
   headerSection->addLoadCommand(
       make<LCSymtab>(symtabSection, stringTableSection));
   headerSection->addLoadCommand(make<LCDysymtab>());
@@ -266,8 +276,7 @@ void Writer::createLoadCommands() {
     headerSection->addLoadCommand(make<LCLoadDylinker>());
     break;
   case MH_DYLIB:
-    headerSection->addLoadCommand(
-        make<LCDylib>(LC_ID_DYLIB, config->installName));
+    headerSection->addLoadCommand(make<LCIdDylib>(config->installName));
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -282,22 +291,21 @@ void Writer::createLoadCommands() {
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      headerSection->addLoadCommand(
-          make<LCDylib>(LC_LOAD_DYLIB, dylibFile->dylibName));
+      headerSection->addLoadCommand(make<LCLoadDylib>(dylibFile->dylibName));
       dylibFile->ordinal = dylibOrdinal++;
-
-      if (dylibFile->reexport)
-        headerSection->addLoadCommand(
-            make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
     }
   }
+
+  // TODO: dyld requires libSystem to be loaded. libSystem is a universal
+  // binary and we don't have support for that yet, so mock it out here.
+  headerSection->addLoadCommand(
+      make<LCLoadDylib>("/usr/lib/libSystem.B.dylib"));
 }
 
 void Writer::createOutputSections() {
   // First, create hidden sections
   headerSection = make<MachHeaderSection>();
   bindingSection = make<BindingSection>();
-  lazyBindingSection = make<LazyBindingSection>();
   stringTableSection = make<StringTableSection>();
   symtabSection = make<SymtabSection>(*stringTableSection);
   exportSection = make<ExportSection>();
@@ -379,8 +387,6 @@ void Writer::run() {
       getOrCreateOutputSegment(segment_names::linkEdit);
 
   scanRelocations();
-  if (in.stubHelper->isNeeded())
-    in.stubHelper->setup();
 
   // Sort and assign sections to their respective segments. No more sections nor
   // segments may be created after this method runs.
@@ -401,7 +407,6 @@ void Writer::run() {
 
   // Fill __LINKEDIT contents.
   bindingSection->finalizeContents();
-  lazyBindingSection->finalizeContents();
   exportSection->finalizeContents();
   symtabSection->finalizeContents();
 
@@ -421,10 +426,4 @@ void Writer::run() {
 
 void macho::writeResult() { Writer().run(); }
 
-void macho::createSyntheticSections() {
-  in.got = make<GotSection>();
-  in.lazyPointers = make<LazyPointerSection>();
-  in.stubs = make<StubsSection>();
-  in.stubHelper = make<StubHelperSection>();
-  in.imageLoaderCache = make<ImageLoaderCacheSection>();
-}
+void macho::createSyntheticSections() { in.got = make<GotSection>(); }

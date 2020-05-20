@@ -4401,6 +4401,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       setInsertPointAfterBundle(E);
 
       LoadInst *LI = cast<LoadInst>(VL0);
+      Type *ScalarLoadTy = LI->getType();
       unsigned AS = LI->getPointerAddressSpace();
 
       Value *VecPtr = Builder.CreateBitCast(LI->getPointerOperand(),
@@ -4413,7 +4414,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (getTreeEntry(PO))
         ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
 
-      LI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
+      Align Alignment = DL->getValueOrABITypeAlignment(LI->getAlign(),
+                                                       ScalarLoadTy);
+      LI = Builder.CreateAlignedLoad(VecTy, VecPtr, Alignment);
       Value *V = propagateMetadata(LI, E->Scalars);
       if (IsReorder) {
         SmallVector<int, 4> Mask;
@@ -4434,6 +4437,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       bool IsReorder = !E->ReorderIndices.empty();
       auto *SI = cast<StoreInst>(
           IsReorder ? E->Scalars[E->ReorderIndices.front()] : VL0);
+      unsigned Alignment = SI->getAlignment();
       unsigned AS = SI->getPointerAddressSpace();
 
       setInsertPointAfterBundle(E);
@@ -4449,8 +4453,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *ScalarPtr = SI->getPointerOperand();
       Value *VecPtr = Builder.CreateBitCast(
           ScalarPtr, VecValue->getType()->getPointerTo(AS));
-      StoreInst *ST = Builder.CreateAlignedStore(VecValue, VecPtr,
-                                                 SI->getAlign());
+      StoreInst *ST = Builder.CreateStore(VecValue, VecPtr);
 
       // The pointer operand uses an in-tree scalar, so add the new BitCast to
       // ExternalUses to make sure that an extract will be generated in the
@@ -4458,6 +4461,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (getTreeEntry(ScalarPtr))
         ExternalUses.push_back(ExternalUser(ScalarPtr, cast<User>(VecPtr), 0));
 
+      if (!Alignment)
+        Alignment = DL->getABITypeAlignment(SI->getValueOperand()->getType());
+
+      ST->setAlignment(Align(Alignment));
       Value *V = propagateMetadata(ST, E->Scalars);
       if (NeedToShuffleReuses) {
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),

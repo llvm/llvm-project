@@ -26,7 +26,6 @@ namespace llvm {
 class AsmPrinter;
 class BTFDebug;
 class DIType;
-class GlobalVariable;
 class MCStreamer;
 class MCSymbol;
 class MachineFunction;
@@ -251,7 +250,7 @@ class BTFDebug : public DebugHandlerBase {
   StringMap<std::vector<std::string>> FileContent;
   std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
-  std::map<const GlobalVariable *, uint32_t> PatchImms;
+  std::map<std::string, uint32_t> PatchImms;
   std::map<StringRef, std::pair<bool, std::vector<BTFTypeDerived *>>>
       FixupDerivedTypes;
   std::set<const Function *>ProtoFunctions;
@@ -301,11 +300,11 @@ class BTFDebug : public DebugHandlerBase {
   void processFuncPrototypes(const Function *);
 
   /// Generate one field relocation record.
-  void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
-                             const GlobalVariable *, bool IsAma);
+  void generateFieldReloc(const MCSymbol *ORSym, DIType *RootTy,
+                          StringRef AccessPattern);
 
-  /// Populating unprocessed type on demand.
-  unsigned populateType(const DIType *Ty);
+  /// Populating unprocessed struct type.
+  unsigned populateStructType(const DIType *Ty);
 
   /// Process relocation instructions.
   void processReloc(const MachineOperand &MO);

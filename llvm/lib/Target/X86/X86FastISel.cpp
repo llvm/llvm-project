@@ -3784,7 +3784,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
     PICBase = X86::RIP;
 
   // Create the load from the constant pool.
-  unsigned CPI = MCP.getConstantPoolIndex(CFP, Alignment);
+  unsigned CPI = MCP.getConstantPoolIndex(CFP, Alignment.value());
   unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT.SimpleTy));
 
   if (CM == CodeModel::Large) {
@@ -3930,12 +3930,14 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   const X86InstrInfo &XII = (const X86InstrInfo &)TII;
 
   unsigned Size = DL.getTypeAllocSize(LI->getType());
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
 
   SmallVector<MachineOperand, 8> AddrOps;
   AM.getFullAddress(AddrOps);
 
   MachineInstr *Result = XII.foldMemoryOperandImpl(
-      *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, LI->getAlign(),
+      *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, Alignment,
       /*AllowCommute=*/true);
   if (!Result)
     return false;
