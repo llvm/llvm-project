@@ -16,14 +16,14 @@
 
 The `lldb-vscode` tool creates a command line tool that implements the [Visual
 Studio Code Debug API](https://code.visualstudio.com/docs/extensionAPI/api-debugging).
-It can be installed as an extension for the Visual Studio Code and Nuclide IDE.
+It can be installed as an extension for the Visual Studio Code and Nuclide IDE. 
 The protocol is easy to run remotely and also can allow other tools and IDEs to
-get a full featured debugger with a well defined protocol.
+get a full featured debugger with a well defined protocol. 
 
 # Installation for Visual Studio Code
 
 Installing the plug-in involves creating a directory in the `~/.vscode/extensions` folder and copying the package.json file that is in the same directory as this
-documentation into it, and copying to symlinking a lldb-vscode binary into
+documentation into it, and copying to symlinking a lldb-vscode binary into 
 the `bin` directory inside the plug-in directory.
 
 If you want to make a stand alone plug-in that you can send to others on unix systems:
@@ -86,7 +86,6 @@ file that defines how your program will be run. The JSON configuration file can 
 |**preRunCommands** |[string]| | LLDB commands executed just before launching after the LLDB target has been created. Commands and command output will be sent to the debugger console when they are executed.
 |**stopCommands**   |[string]| | LLDB commands executed just after each stop. Commands and command output will be sent to the debugger console when they are executed.
 |**exitCommands**   |[string]| | LLDB commands executed when the program exits. Commands and command output will be sent to the debugger console when they are executed.
-|**terminateCommands** |[string]| | LLDB commands executed when the debugging session ends. Commands and command output will be sent to the debugger console when they are executed.
 |**sourceMap**      |[string[2]]| | Specify an array of path re-mappings. Each element in the array must be a two element array containing a source and destination pathname.
 |**debuggerRoot**   | string| |Specify a working directory to use when launching lldb-vscode. If the debug information in your executable contains relative paths, this option can be used so that `lldb-vscode` can find source files and object files that have relative paths.
 
@@ -113,7 +112,6 @@ The JSON configuration file can contain the following `lldb-vscode` specific lau
 |**preRunCommands** |[string]| | LLDB commands executed just before launching after the LLDB target has been created. Commands and command output will be sent to the debugger console when they are executed.
 |**stopCommands**   |[string]| | LLDB commands executed just after each stop. Commands and command output will be sent to the debugger console when they are executed.
 |**exitCommands**   |[string]| | LLDB commands executed when the program exits. Commands and command output will be sent to the debugger console when they are executed.
-|**terminateCommands** |[string]| | LLDB commands executed when the debugging session ends. Commands and command output will be sent to the debugger console when they are executed.
 |**attachCommands** |[string]| | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
 
 
