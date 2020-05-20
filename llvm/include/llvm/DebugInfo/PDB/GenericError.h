@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_ERROR_H
 #define LLVM_DEBUGINFO_PDB_ERROR_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
