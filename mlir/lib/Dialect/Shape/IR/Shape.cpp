@@ -101,6 +101,16 @@ void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
 // AnyOp
 //===----------------------------------------------------------------------===//
 
+// TODO: Canonicalization should be implemented for shapes that can be
+// determined through mixtures of the known dimensions of the inputs.
+OpFoldResult AnyOp::fold(ArrayRef<Attribute> operands) {
+  // Only the last operand is checked because AnyOp is commutative.
+  if (operands.back())
+    return operands.back();
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // AssumingOp
 //===----------------------------------------------------------------------===//
