@@ -449,26 +449,17 @@ define dso_local arm_aapcs_vfpcc void @range_test(i32* noalias nocapture %arg, i
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:    add.w r12, r3, #3
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    bic r12, r12, #3
-; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB5_1: @ %bb12
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q0, [r0]
-; CHECK-NEXT:    vpttt.i32 ne, q0, zr
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vcmpt.s32 le, q0, r2
-; CHECK-NEXT:    vctpt.32 r3
 ; CHECK-NEXT:    vldrwt.u32 q1, [r1], #16
-; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
-; CHECK-NEXT:    le lr, .LBB5_1
+; CHECK-NEXT:    letp lr, .LBB5_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb32
 ; CHECK-NEXT:    pop {r7, pc}
 bb:
