@@ -1173,6 +1173,18 @@ def LOAD_STACK_GUARD : StandardPseudoInstruction {
   let hasSideEffects = 0;
   bit isPseudo = 1;
 }
+def PREALLOCATED_SETUP : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i32imm:$a);
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+}
+def PREALLOCATED_ARG : StandardPseudoInstruction {
+  let OutOperandList = (outs ptr_rc:$loc);
+  let InOperandList = (ins i32imm:$a, i32imm:$b);
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+}
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
