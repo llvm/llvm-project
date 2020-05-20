@@ -32,23 +32,28 @@ add_libc_unittest(
     libc.src.string.strlen
 )
 
-# Tests all implementations of memcpy that can run on the host.
-get_property(memcpy_implementations GLOBAL PROPERTY memcpy_implementations)
-foreach(memcpy_config_name IN LISTS memcpy_implementations)
-  get_target_property(require_cpu_features libc.src.string.${memcpy_config_name} REQUIRE_CPU_FEATURES)
-  host_supports(can_run "${require_cpu_features}")
-  if(can_run)
-    add_libc_unittest(
-      ${memcpy_config_name}_test
-      SUITE
-        libc_string_unittests
-      SRCS
-        memcpy_test.cpp
-      DEPENDS
-        libc.src.string.${memcpy_config_name}
-    )
-  else()
-    message(STATUS "Skipping test for '${memcpy_config_name}' insufficient host cpu features")
-  endif()
-endforeach()
+# Tests all implementations that can run on the host.
+function(add_libc_multi_impl_test name)
+  get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
+  foreach(fq_config_name IN LISTS fq_implementations)
+    get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
+    host_supports(can_run "${required_cpu_features}")
+    if(can_run)
+      add_libc_unittest(
+        ${fq_config_name}_test
+        SUITE
+          libc_string_unittests
+        DEPENDS
+          ${fq_config_name}
+        ${ARGN}
+      )
+    else()
+      message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
+    endif()
+  endforeach()
+endfunction()
+
+add_libc_multi_impl_test(memcpy SRCS memcpy_test.cpp)
+add_libc_multi_impl_test(memset SRCS memset_test.cpp)
+add_libc_multi_impl_test(bzero SRCS bzero_test.cpp)
 

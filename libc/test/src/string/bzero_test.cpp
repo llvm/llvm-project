@@ -1,4 +1,4 @@
-//===-- Unittests for memcpy ----------------------------------------------===//
+//===-- Unittests for bzero -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/memcpy.h"
+#include "src/string/bzero.h"
 #include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
@@ -14,7 +14,6 @@ using __llvm_libc::cpp::Array;
 using __llvm_libc::cpp::ArrayRef;
 using Data = Array<char, 2048>;
 
-static const ArrayRef<char> kNumbers("0123456789", 10);
 static const ArrayRef<char> kDeadcode("DEADC0DE", 8);
 
 // Returns a Data object filled with a repetition of `filler`.
@@ -25,23 +24,19 @@ Data getData(ArrayRef<char> filler) {
   return out;
 }
 
-TEST(MemcpyTest, Thorough) {
-  const Data groundtruth = getData(kNumbers);
+TEST(BzeroTest, Thorough) {
   const Data dirty = getData(kDeadcode);
   for (size_t count = 0; count < 1024; ++count) {
     for (size_t align = 0; align < 64; ++align) {
       auto buffer = dirty;
-      const char *const src = groundtruth.data();
-      void *const dst = &buffer[align];
-      void *const ret = __llvm_libc::memcpy(dst, src, count);
-      // Return value is `dst`.
-      ASSERT_EQ(ret, dst);
+      char *const dst = &buffer[align];
+      __llvm_libc::bzero(dst, count);
       // Everything before copy is untouched.
       for (size_t i = 0; i < align; ++i)
         ASSERT_EQ(buffer[i], dirty[i]);
       // Everything in between is copied.
       for (size_t i = 0; i < count; ++i)
-        ASSERT_EQ(buffer[align + i], groundtruth[i]);
+        ASSERT_EQ(buffer[align + i], char(0));
       // Everything after copy is untouched.
       for (size_t i = align + count; i < dirty.size(); ++i)
         ASSERT_EQ(buffer[i], dirty[i]);
