@@ -5562,165 +5562,79 @@ verifyReturnAddressArgumentIsConstant(SDValue Op, SelectionDAG &DAG) const {
   return false;
 }
 
-TargetLowering::NegatibleCost
-TargetLowering::getNegatibleCost(SDValue Op, SelectionDAG &DAG,
-                                 bool LegalOperations, bool ForCodeSize,
-                                 unsigned Depth) const {
+SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                             bool LegalOps, bool OptForSize,
+                                             NegatibleCost &Cost,
+                                             unsigned Depth) const {
   // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG)
-    return NegatibleCost::Cheaper;
-
-  // Don't allow anything with multiple uses unless we know it is free.
-  EVT VT = Op.getValueType();
-  const SDNodeFlags Flags = Op->getFlags();
-  const TargetOptions &Options = DAG.getTarget().Options;
-  if (!Op.hasOneUse()) {
-    bool IsFreeExtend = Op.getOpcode() == ISD::FP_EXTEND &&
-                        isFPExtFree(VT, Op.getOperand(0).getValueType());
-
-    // If we already have the use of the negated floating constant, it is free
-    // to negate it even it has multiple uses.
-    bool IsFreeConstant =
-        Op.getOpcode() == ISD::ConstantFP &&
-        !negateExpression(Op, DAG, LegalOperations, ForCodeSize).use_empty();
-
-    if (!IsFreeExtend && !IsFreeConstant)
-      return NegatibleCost::Expensive;
+  if (Op.getOpcode() == ISD::FNEG) {
+    Cost = NegatibleCost::Cheaper;
+    return Op.getOperand(0);
   }
 
   // Don't recurse exponentially.
   if (Depth > SelectionDAG::MaxRecursionDepth)
-    return NegatibleCost::Expensive;
+    return SDValue();
 
-  switch (Op.getOpcode()) {
+  // Pre-increment recursion depth for use in recursive calls.
+  ++Depth;
+  const SDNodeFlags Flags = Op->getFlags();
+  const TargetOptions &Options = DAG.getTarget().Options;
+  EVT VT = Op.getValueType();
+  unsigned Opcode = Op.getOpcode();
+
+  // Don't allow anything with multiple uses unless we know it is free.
+  if (!Op.hasOneUse() && Opcode != ISD::ConstantFP) {
+    bool IsFreeExtend = Opcode == ISD::FP_EXTEND &&
+                        isFPExtFree(VT, Op.getOperand(0).getValueType());
+    if (!IsFreeExtend)
+      return SDValue();
+  }
+
+  SDLoc DL(Op);
+
+  switch (Opcode) {
   case ISD::ConstantFP: {
-    if (!LegalOperations)
-      return NegatibleCost::Neutral;
-
     // Don't invert constant FP values after legalization unless the target says
     // the negated constant is legal.
-    if (isOperationLegal(ISD::ConstantFP, VT) ||
+    bool IsOpLegal =
+        isOperationLegal(ISD::ConstantFP, VT) ||
         isFPImmLegal(neg(cast<ConstantFPSDNode>(Op)->getValueAPF()), VT,
-                     ForCodeSize))
-      return NegatibleCost::Neutral;
-    break;
+                     OptForSize);
+
+    if (LegalOps && !IsOpLegal)
+      break;
+
+    APFloat V = cast<ConstantFPSDNode>(Op)->getValueAPF();
+    V.changeSign();
+    SDValue CFP = DAG.getConstantFP(V, DL, VT);
+
+    // If we already have the use of the negated floating constant, it is free
+    // to negate it even it has multiple uses.
+    if (!Op.hasOneUse() && CFP.use_empty())
+      break;
+    Cost = NegatibleCost::Neutral;
+    return CFP;
   }
   case ISD::BUILD_VECTOR: {
     // Only permit BUILD_VECTOR of constants.
     if (llvm::any_of(Op->op_values(), [&](SDValue N) {
           return !N.isUndef() && !isa<ConstantFPSDNode>(N);
         }))
-      return NegatibleCost::Expensive;
-    if (!LegalOperations)
-      return NegatibleCost::Neutral;
-    if (isOperationLegal(ISD::ConstantFP, VT) &&
-        isOperationLegal(ISD::BUILD_VECTOR, VT))
-      return NegatibleCost::Neutral;
-    if (llvm::all_of(Op->op_values(), [&](SDValue N) {
+      break;
+
+    bool IsOpLegal =
+        (isOperationLegal(ISD::ConstantFP, VT) &&
+         isOperationLegal(ISD::BUILD_VECTOR, VT)) ||
+        llvm::all_of(Op->op_values(), [&](SDValue N) {
           return N.isUndef() ||
                  isFPImmLegal(neg(cast<ConstantFPSDNode>(N)->getValueAPF()), VT,
-                              ForCodeSize);
-        }))
-      return NegatibleCost::Neutral;
-    break;
-  }
-  case ISD::FADD: {
-    if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return NegatibleCost::Expensive;
+                              OptForSize);
+        });
 
-    // After operation legalization, it might not be legal to create new FSUBs.
-    if (LegalOperations && !isOperationLegalOrCustom(ISD::FSUB, VT))
-      return NegatibleCost::Expensive;
+    if (LegalOps && !IsOpLegal)
+      break;
 
-    // fold (fneg (fadd A, B)) -> (fsub (fneg A), B)
-    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-    if (V0 != NegatibleCost::Expensive)
-      return V0;
-    // fold (fneg (fadd A, B)) -> (fsub (fneg B), A)
-    return getNegatibleCost(Op.getOperand(1), DAG, LegalOperations, ForCodeSize,
-                            Depth + 1);
-  }
-  case ISD::FSUB:
-    // We can't turn -(A-B) into B-A when we honor signed zeros.
-    if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return NegatibleCost::Expensive;
-
-    // fold (fneg (fsub A, B)) -> (fsub B, A)
-    return NegatibleCost::Neutral;
-  case ISD::FMUL:
-  case ISD::FDIV: {
-    // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y) or (fmul X, (fneg Y))
-    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-    if (V0 != NegatibleCost::Expensive)
-      return V0;
-
-    // Ignore X * 2.0 because that is expected to be canonicalized to X + X.
-    if (auto *C = isConstOrConstSplatFP(Op.getOperand(1)))
-      if (C->isExactlyValue(2.0) && Op.getOpcode() == ISD::FMUL)
-        return NegatibleCost::Expensive;
-
-    return getNegatibleCost(Op.getOperand(1), DAG, LegalOperations, ForCodeSize,
-                            Depth + 1);
-  }
-  case ISD::FMA:
-  case ISD::FMAD: {
-    if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
-      return NegatibleCost::Expensive;
-
-    // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
-    // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
-    NegatibleCost V2 = getNegatibleCost(Op.getOperand(2), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-    if (NegatibleCost::Expensive == V2)
-      return NegatibleCost::Expensive;
-
-    // One of Op0/Op1 must be cheaply negatible, then select the cheapest.
-    NegatibleCost V0 = getNegatibleCost(Op.getOperand(0), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-    NegatibleCost V1 = getNegatibleCost(Op.getOperand(1), DAG, LegalOperations,
-                                        ForCodeSize, Depth + 1);
-    NegatibleCost V01 = std::min(V0, V1);
-    if (V01 == NegatibleCost::Expensive)
-      return NegatibleCost::Expensive;
-    return std::min(V01, V2);
-  }
-
-  case ISD::FP_EXTEND:
-  case ISD::FP_ROUND:
-  case ISD::FSIN:
-    return getNegatibleCost(Op.getOperand(0), DAG, LegalOperations, ForCodeSize,
-                            Depth + 1);
-  }
-
-  return NegatibleCost::Expensive;
-}
-
-SDValue TargetLowering::negateExpression(SDValue Op, SelectionDAG &DAG,
-                                         bool LegalOps, bool OptForSize,
-                                         unsigned Depth) const {
-  // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG)
-    return Op.getOperand(0);
-
-  assert(Depth <= SelectionDAG::MaxRecursionDepth &&
-         "negateExpression doesn't match getNegatibleCost");
-
-  // Pre-increment recursion depth for use in recursive calls.
-  ++Depth;
-  const SDNodeFlags Flags = Op->getFlags();
-  EVT VT = Op.getValueType();
-  unsigned Opcode = Op.getOpcode();
-  SDLoc DL(Op);
-
-  switch (Opcode) {
-  case ISD::ConstantFP: {
-    APFloat V = cast<ConstantFPSDNode>(Op)->getValueAPF();
-    V.changeSign();
-    return DAG.getConstantFP(V, DL, VT);
-  }
-  case ISD::BUILD_VECTOR: {
     SmallVector<SDValue, 4> Ops;
     for (SDValue C : Op->op_values()) {
       if (C.isUndef()) {
@@ -5731,85 +5645,138 @@ SDValue TargetLowering::negateExpression(SDValue Op, SelectionDAG &DAG,
       V.changeSign();
       Ops.push_back(DAG.getConstantFP(V, DL, C.getValueType()));
     }
+    Cost = NegatibleCost::Neutral;
     return DAG.getBuildVector(VT, DL, Ops);
   }
   case ISD::FADD: {
+    if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
+      break;
+
+    // After operation legalization, it might not be legal to create new FSUBs.
+    if (LegalOps && !isOperationLegalOrCustom(ISD::FSUB, VT))
+      break;
     SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
-    assert((DAG.getTarget().Options.NoSignedZerosFPMath ||
-            Flags.hasNoSignedZeros()) &&
-           "Expected NSZ fp-flag");
 
     // fold (fneg (fadd X, Y)) -> (fsub (fneg X), Y)
-    NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
-    if (CostX != NegatibleCost::Expensive)
-      return DAG.getNode(ISD::FSUB, DL, VT,
-                         negateExpression(X, DAG, LegalOps, OptForSize, Depth),
-                         Y, Flags);
-
+    NegatibleCost CostX = NegatibleCost::Expensive;
+    SDValue NegX =
+        getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
     // fold (fneg (fadd X, Y)) -> (fsub (fneg Y), X)
-    return DAG.getNode(ISD::FSUB, DL, VT,
-                       negateExpression(Y, DAG, LegalOps, OptForSize, Depth), X,
-                       Flags);
+    NegatibleCost CostY = NegatibleCost::Expensive;
+    SDValue NegY =
+        getNegatedExpression(Y, DAG, LegalOps, OptForSize, CostY, Depth);
+
+    // Negate the X if its cost is less or equal than Y.
+    if (NegX && (CostX <= CostY)) {
+      Cost = CostX;
+      return DAG.getNode(ISD::FSUB, DL, VT, NegX, Y, Flags);
+    }
+
+    // Negate the Y if it is not expensive.
+    if (NegY) {
+      Cost = CostY;
+      return DAG.getNode(ISD::FSUB, DL, VT, NegY, X, Flags);
+    }
+    break;
   }
   case ISD::FSUB: {
+    // We can't turn -(A-B) into B-A when we honor signed zeros.
+    if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
+      break;
+
     SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
     // fold (fneg (fsub 0, Y)) -> Y
     if (ConstantFPSDNode *C = isConstOrConstSplatFP(X, /*AllowUndefs*/ true))
-      if (C->isZero())
+      if (C->isZero()) {
+        Cost = NegatibleCost::Cheaper;
         return Y;
+      }
 
     // fold (fneg (fsub X, Y)) -> (fsub Y, X)
+    Cost = NegatibleCost::Neutral;
     return DAG.getNode(ISD::FSUB, DL, VT, Y, X, Flags);
   }
   case ISD::FMUL:
   case ISD::FDIV: {
     SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
-    // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
-    NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
-    if (CostX != NegatibleCost::Expensive)
-      return DAG.getNode(Opcode, DL, VT,
-                         negateExpression(X, DAG, LegalOps, OptForSize, Depth),
-                         Y, Flags);
 
+    // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
+    NegatibleCost CostX = NegatibleCost::Expensive;
+    SDValue NegX =
+        getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
     // fold (fneg (fmul X, Y)) -> (fmul X, (fneg Y))
-    return DAG.getNode(Opcode, DL, VT, X,
-                       negateExpression(Y, DAG, LegalOps, OptForSize, Depth),
-                       Flags);
+    NegatibleCost CostY = NegatibleCost::Expensive;
+    SDValue NegY =
+        getNegatedExpression(Y, DAG, LegalOps, OptForSize, CostY, Depth);
+
+    // Negate the X if its cost is less or equal than Y.
+    if (NegX && (CostX <= CostY)) {
+      Cost = CostX;
+      return DAG.getNode(Opcode, DL, VT, NegX, Y, Flags);
+    }
+
+    // Ignore X * 2.0 because that is expected to be canonicalized to X + X.
+    if (auto *C = isConstOrConstSplatFP(Op.getOperand(1)))
+      if (C->isExactlyValue(2.0) && Op.getOpcode() == ISD::FMUL)
+        break;
+
+    // Negate the Y if it is not expensive.
+    if (NegY) {
+      Cost = CostY;
+      return DAG.getNode(Opcode, DL, VT, X, NegY, Flags);
+    }
+    break;
   }
   case ISD::FMA:
   case ISD::FMAD: {
-    assert((DAG.getTarget().Options.NoSignedZerosFPMath ||
-            Flags.hasNoSignedZeros()) &&
-           "Expected NSZ fp-flag");
+    if (!Options.NoSignedZerosFPMath && !Flags.hasNoSignedZeros())
+      break;
 
     SDValue X = Op.getOperand(0), Y = Op.getOperand(1), Z = Op.getOperand(2);
-    SDValue NegZ = negateExpression(Z, DAG, LegalOps, OptForSize, Depth);
-    NegatibleCost CostX = getNegatibleCost(X, DAG, LegalOps, OptForSize, Depth);
-    NegatibleCost CostY = getNegatibleCost(Y, DAG, LegalOps, OptForSize, Depth);
-    if (CostX <= CostY) {
-      // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
-      SDValue NegX = negateExpression(X, DAG, LegalOps, OptForSize, Depth);
+    NegatibleCost CostZ = NegatibleCost::Expensive;
+    SDValue NegZ =
+        getNegatedExpression(Z, DAG, LegalOps, OptForSize, CostZ, Depth);
+    // Give up if fail to negate the Z.
+    if (!NegZ)
+      break;
+
+    // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
+    NegatibleCost CostX = NegatibleCost::Expensive;
+    SDValue NegX =
+        getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
+    // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
+    NegatibleCost CostY = NegatibleCost::Expensive;
+    SDValue NegY =
+        getNegatedExpression(Y, DAG, LegalOps, OptForSize, CostY, Depth);
+
+    // Negate the X if its cost is less or equal than Y.
+    if (NegX && (CostX <= CostY)) {
+      Cost = std::min(CostX, CostZ);
       return DAG.getNode(Opcode, DL, VT, NegX, Y, NegZ, Flags);
     }
 
-    // fold (fneg (fma X, Y, Z)) -> (fma X, (fneg Y), (fneg Z))
-    SDValue NegY = negateExpression(Y, DAG, LegalOps, OptForSize, Depth);
-    return DAG.getNode(Opcode, DL, VT, X, NegY, NegZ, Flags);
+    // Negate the Y if it is not expensive.
+    if (NegY) {
+      Cost = std::min(CostY, CostZ);
+      return DAG.getNode(Opcode, DL, VT, X, NegY, NegZ, Flags);
+    }
+    break;
   }
 
   case ISD::FP_EXTEND:
   case ISD::FSIN:
-    return DAG.getNode(
-        Opcode, DL, VT,
-        negateExpression(Op.getOperand(0), DAG, LegalOps, OptForSize, Depth));
+    if (SDValue NegV = getNegatedExpression(Op.getOperand(0), DAG, LegalOps,
+                                            OptForSize, Cost, Depth))
+      return DAG.getNode(Opcode, DL, VT, NegV);
+    break;
   case ISD::FP_ROUND:
-    return DAG.getNode(
-        ISD::FP_ROUND, DL, VT,
-        negateExpression(Op.getOperand(0), DAG, LegalOps, OptForSize, Depth),
-        Op.getOperand(1));
+    if (SDValue NegV = getNegatedExpression(Op.getOperand(0), DAG, LegalOps,
+                                            OptForSize, Cost, Depth))
+      return DAG.getNode(ISD::FP_ROUND, DL, VT, NegV, Op.getOperand(1));
+    break;
   }
 
-  llvm_unreachable("Unknown code");
+  return SDValue();
 }
 
 //===----------------------------------------------------------------------===//
