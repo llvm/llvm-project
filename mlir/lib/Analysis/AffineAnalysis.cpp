@@ -660,10 +660,12 @@ static void computeDirectionVector(
 void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
   // Get affine map from AffineLoad/Store.
   AffineMap map;
-  if (auto loadOp = dyn_cast<AffineLoadOp>(opInst))
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(opInst)) {
     map = loadOp.getAffineMap();
-  else if (auto storeOp = dyn_cast<AffineStoreOp>(opInst))
+  } else {
+    auto storeOp = cast<AffineWriteOpInterface>(opInst);
     map = storeOp.getAffineMap();
+  }
   SmallVector<Value, 8> operands(indices.begin(), indices.end());
   fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
@@ -771,9 +773,10 @@ DependenceResult mlir::checkMemrefAccessDependence(
   if (srcAccess.memref != dstAccess.memref)
     return DependenceResult::NoDependence;
 
-  // Return 'NoDependence' if one of these accesses is not an AffineStoreOp.
-  if (!allowRAR && !isa<AffineStoreOp>(srcAccess.opInst) &&
-      !isa<AffineStoreOp>(dstAccess.opInst))
+  // Return 'NoDependence' if one of these accesses is not an
+  // AffineWriteOpInterface.
+  if (!allowRAR && !isa<AffineWriteOpInterface>(srcAccess.opInst) &&
+      !isa<AffineWriteOpInterface>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
   // Get composed access function for 'srcAccess'.
@@ -857,7 +860,8 @@ void mlir::getDependenceComponents(
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
   forOp.getOperation()->walk([&](Operation *opInst) {
-    if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst))
+    if (isa<AffineReadOpInterface>(opInst) ||
+        isa<AffineWriteOpInterface>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
   });
 
