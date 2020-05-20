@@ -54,6 +54,7 @@ SmallVector<Capability, 0> getRecursiveImpliedCapabilities(Capability cap);
 
 namespace detail {
 struct ArrayTypeStorage;
+struct CooperativeMatrixTypeStorage;
 struct ImageTypeStorage;
 struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
@@ -63,6 +64,7 @@ struct StructTypeStorage;
 namespace TypeKind {
 enum Kind {
   Array = Type::FIRST_SPIRV_TYPE,
+  CooperativeMatrix,
   Image,
   Pointer,
   RuntimeArray,
@@ -323,6 +325,34 @@ public:
   // Offset) associated with the `i`-th member of the StructType.
   void getMemberDecorations(
       unsigned i, SmallVectorImpl<spirv::Decoration> &memberDecorations) const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     Optional<spirv::StorageClass> storage = llvm::None);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       Optional<spirv::StorageClass> storage = llvm::None);
+};
+
+// SPIR-V cooperative matrix type
+class CooperativeMatrixNVType
+    : public Type::TypeBase<CooperativeMatrixNVType, SPIRVType,
+                            detail::CooperativeMatrixTypeStorage> {
+public:
+  using Base::Base;
+
+  static bool kindof(unsigned kind) {
+    return kind == TypeKind::CooperativeMatrix;
+  }
+
+  static CooperativeMatrixNVType get(Type elementType, spirv::Scope scope,
+                                     unsigned rows, unsigned columns);
+  Type getElementType() const;
+
+  /// Return the scope of the cooperative matrix.
+  spirv::Scope getScope() const;
+  /// return the number of rows of the matrix.
+  unsigned getRows() const;
+  /// return the number of columns of the matrix.
+  unsigned getColumns() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<spirv::StorageClass> storage = llvm::None);
