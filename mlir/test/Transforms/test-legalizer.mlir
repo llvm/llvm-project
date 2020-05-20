@@ -236,6 +236,27 @@ func @undo_block_arg_replace() {
 
 // -----
 
+// The op in this function is rewritten to itself (and thus remains illegal) by
+// a pattern that removes its second block after adding an operation into it.
+// Check that we can undo block removal succesfully.
+// CHECK-LABEL: @undo_block_erase
+func @undo_block_erase() {
+  // CHECK: test.undo_block_erase
+  "test.undo_block_erase"() ({
+    // expected-remark@-1 {{not legalizable}}
+    // CHECK: "unregistered.return"()[^[[BB:.*]]]
+    "unregistered.return"()[^bb1] : () -> ()
+    // expected-remark@-1 {{not legalizable}}
+  // CHECK: ^[[BB]]
+  ^bb1:
+    // CHECK: unregistered.return
+    "unregistered.return"() : () -> ()
+    // expected-remark@-1 {{not legalizable}}
+  }) : () -> ()
+}
+
+// -----
+
 // The op in this function is attempted to be rewritten to another illegal op
 // with an attached region containing an invalid terminator. The terminator is
 // created before the parent op. The deletion should not crash when deleting
