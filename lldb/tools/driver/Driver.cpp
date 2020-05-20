@@ -856,9 +856,12 @@ int main(int argc, char const *argv[]) {
     return 0;
   }
 
-  for (auto *arg : input_args.filtered(OPT_UNKNOWN)) {
-    WithColor::warning() << "ignoring unknown option: " << arg->getSpelling()
-                         << '\n';
+  // Error out on unknown options.
+  if (input_args.hasArg(OPT_UNKNOWN)) {
+    for (auto *arg : input_args.filtered(OPT_UNKNOWN)) {
+      WithColor::error() << "unknown option: " << arg->getSpelling() << '\n';
+    }
+    return 1;
   }
 
   if (auto exit_code = InitializeReproducer(input_args)) {
