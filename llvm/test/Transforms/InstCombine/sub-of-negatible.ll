@@ -921,8 +921,8 @@ define i4 @negate_extractelement(<2 x i4> %x, i32 %y, i4 %z) {
 ; CHECK-LABEL: @negate_extractelement(
 ; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i4> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    call void @use_v2i4(<2 x i4> [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = extractelement <2 x i4> [[T0]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = sub i4 [[Z:%.*]], [[T1]]
+; CHECK-NEXT:    [[T1_NEG:%.*]] = extractelement <2 x i4> [[X]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i4 [[T1_NEG]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i4 [[T2]]
 ;
   %t0 = sub <2 x i4> zeroinitializer, %x
