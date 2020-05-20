@@ -373,7 +373,11 @@ def Vector_ExtractOp :
   }];
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, Value source,"
-    "ArrayRef<int64_t>">];
+    "ArrayRef<int64_t> position">,
+    // Convenience builder which assumes the values in `position` are defined by
+    // ConstantIndexOp.
+    OpBuilder<"OpBuilder &builder, OperationState &result, Value source,"
+    "ValueRange position">];
   let extraClassDeclaration = [{
     static StringRef getPositionAttrName() { return "position"; }
     VectorType getVectorType() {
@@ -535,8 +539,12 @@ def Vector_InsertOp :
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value source, " #
-    "Value dest, ArrayRef<int64_t>">];
+    "OpBuilder &builder, OperationState &result, Value source, "
+    "Value dest, ArrayRef<int64_t> position">,
+    // Convenience builder which assumes all values are constant indices.
+    OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value source, "
+    "Value dest, ValueRange position">];
   let extraClassDeclaration = [{
     static StringRef getPositionAttrName() { return "position"; }
     Type getSourceType() { return source().getType(); }
