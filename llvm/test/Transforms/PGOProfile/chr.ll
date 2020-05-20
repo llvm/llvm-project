@@ -2004,6 +2004,27 @@ bb10:
 ; Test a case with a really long use-def chains. This test checks that it's not
 ; really slow and doesn't appear to be hanging.
 define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
+; CHECK-LABEL: @test_chr_22(
+; CHECK-NEXT:  bb0:
+; CHECK-NEXT:    [[V1:%.*]] = add i64 [[V0:%.*]], 3
+; CHECK-NEXT:    [[V2:%.*]] = add i64 [[V1]], [[V0]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[V2]], 100
+; CHECK-NEXT:    [[V300:%.*]] = mul i64 [[V2]], -8647960034816487527
+; CHECK-NEXT:    [[V301:%.*]] = icmp ne i64 [[V300]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[C1]], [[V301]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof !15
+; CHECK:       bb0.split:
+; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
+; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4
+; CHECK-NEXT:    ret i64 99
+; CHECK:       bb0.split.nonchr:
+; CHECK-NEXT:    [[V300_NONCHR:%.*]] = mul i64 [[V2]], -8647960034816487527
+; CHECK-NEXT:    [[V301_NONCHR:%.*]] = icmp eq i64 [[V300_NONCHR]], 100
+; CHECK-NEXT:    [[V302_NONCHR_V:%.*]] = select i1 [[V301_NONCHR]], i64 1938697607916024098, i64 7860086430977039991, !prof !16
+; CHECK-NEXT:    [[V302_NONCHR:%.*]] = mul i64 [[V2]], [[V302_NONCHR_V]]
+; CHECK-NEXT:    store i64 [[V302_NONCHR]], i64* [[J]], align 4
+; CHECK-NEXT:    ret i64 99
+;
 bb0:
   %v1 = add i64 %v0, 3
   %v2 = add i64 %v1, %v0
@@ -2317,6 +2338,12 @@ bb0:
 ; test_chr_22 in that it has nested control structures (multiple scopes) and
 ; covers additional code.
 define i64 @test_chr_23(i64 %v0) !prof !14 {
+; CHECK-LABEL: @test_chr_23(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[V0:%.*]], 50
+; CHECK-NEXT:    [[V10:%.*]] = icmp ne i64 [[TMP0]], -50
+; CHECK-NEXT:    ret i64 99
+;
 entry:
   %v1 = add i64 %v0, 3
   %v2 = add i64 %v1, %v1
@@ -2465,6 +2492,25 @@ end:
 
 ; Test to not crash upon a 0:0 branch_weight metadata.
 define void @test_chr_24(i32* %i) !prof !14 {
+; CHECK-LABEL: @test_chr_24(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB1:%.*]], label [[BB0:%.*]], !prof !21
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[BB3:%.*]], label [[BB2:%.*]], !prof !21
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = load i32, i32* %i
   %1 = and i32 %0, 1
