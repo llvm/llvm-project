@@ -794,8 +794,8 @@ bool lldb_private::formatters::NSDate::FormatDateValue(double date_value,
     return true;
   }
 
-  if ((time_t)date_value > std::numeric_limits<time_t>::max() ||
-      (time_t)date_value < std::numeric_limits<time_t>::min())
+  if (date_value > std::numeric_limits<time_t>::max() ||
+      date_value < std::numeric_limits<time_t>::min())
     return false;
 
   time_t epoch = GetOSXEpoch();
