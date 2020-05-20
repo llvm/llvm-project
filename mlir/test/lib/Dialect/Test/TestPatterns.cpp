@@ -443,6 +443,18 @@ struct TestBoundedRecursiveRewrite
   /// The conversion target handles bounding the recursion of this pattern.
   bool hasBoundedRewriteRecursion() const final { return true; }
 };
+
+struct TestNestedOpCreationUndoRewrite
+    : public OpRewritePattern<IllegalOpWithRegionAnchor> {
+  using OpRewritePattern<IllegalOpWithRegionAnchor>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IllegalOpWithRegionAnchor op,
+                                PatternRewriter &rewriter) const final {
+    // rewriter.replaceOpWithNewOp<IllegalOpWithRegion>(op);
+    rewriter.replaceOpWithNewOp<IllegalOpWithRegion>(op);
+    return success();
+  };
+};
 } // namespace
 
 namespace {
@@ -498,8 +510,8 @@ struct TestLegalizePatternDriver
                     TestSplitReturnType, TestChangeProducerTypeI32ToF32,
                     TestChangeProducerTypeF32ToF64,
                     TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-                    TestNonRootReplacement, TestBoundedRecursiveRewrite>(
-        &getContext());
+                    TestNonRootReplacement, TestBoundedRecursiveRewrite,
+                    TestNestedOpCreationUndoRewrite>(&getContext());
     patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
