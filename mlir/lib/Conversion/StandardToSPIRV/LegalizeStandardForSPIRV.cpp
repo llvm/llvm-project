@@ -64,34 +64,15 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
   // TODO: Aborting when the offsets are static. There might be a way to fold
   // the subview op with load even if the offsets have been canonicalized
   // away.
-  if (subViewOp.getNumOffsets() == 0)
-    return failure();
-
-  ValueRange opOffsets = subViewOp.offsets();
-  SmallVector<Value, 2> opStrides;
-  if (subViewOp.getNumStrides()) {
-    // If the strides are dynamic, get the stride operands.
-    opStrides = llvm::to_vector<2>(subViewOp.strides());
-  } else {
-    // When static, the stride operands can be retrieved by taking the strides
-    // of the result of the subview op, and dividing the strides of the base
-    // memref.
-    SmallVector<int64_t, 2> staticStrides;
-    if (failed(subViewOp.getStaticStrides(staticStrides))) {
-      return failure();
-    }
-    opStrides.reserve(opOffsets.size());
-    for (auto stride : staticStrides) {
-      auto constValAttr = rewriter.getIntegerAttr(
-          IndexType::get(rewriter.getContext()), stride);
-      opStrides.emplace_back(rewriter.create<ConstantOp>(loc, constValAttr));
-    }
-  }
-  assert(opOffsets.size() == opStrides.size());
+  SmallVector<Value, 4> opOffsets = subViewOp.getOrCreateOffsets(rewriter, loc);
+  SmallVector<Value, 4> opStrides = subViewOp.getOrCreateStrides(rewriter, loc);
+  assert(opOffsets.size() == indices.size() &&
+         "expected as many indices as rank of subview op result type");
+  assert(opStrides.size() == indices.size() &&
+         "expected as many indices as rank of subview op result type");
 
   // New indices for the load are the current indices * subview_stride +
   // subview_offset.
-  assert(indices.size() == opStrides.size());
   sourceIndices.resize(indices.size());
   for (auto index : llvm::enumerate(indices)) {
     auto offset = opOffsets[index.index()];
