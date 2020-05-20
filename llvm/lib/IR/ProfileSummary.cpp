@@ -145,13 +145,29 @@ static bool getSummaryFromMD(MDTuple *MD, SummaryEntryVector &Summary) {
   return true;
 }
 
+// Get the value of an optional field. Increment 'Idx' if it was present. Return
+// true if we can move onto the next field.
+template <typename ValueType>
+static bool getOptionalVal(MDTuple *Tuple, unsigned &Idx, const char *Key,
+                           ValueType &Value) {
+  if (getVal(dyn_cast<MDTuple>(Tuple->getOperand(Idx)), Key, Value)) {
+    Idx++;
+    // Need to make sure when the key is present, we won't step over the bound
+    // of Tuple operand array. Since (non-optional) DetailedSummary always comes
+    // last, the next entry in the tuple operand array must exist.
+    return Idx < Tuple->getNumOperands();
+  }
+  // It was absent, keep going.
+  return true;
+}
+
 ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   MDTuple *Tuple = dyn_cast_or_null<MDTuple>(MD);
-  if (!Tuple && (Tuple->getNumOperands() < 8 || Tuple->getNumOperands() > 9))
+  if (!Tuple || Tuple->getNumOperands() < 8 || Tuple->getNumOperands() > 9)
     return nullptr;
 
-  int i = 0;
-  auto &FormatMD = Tuple->getOperand(i++);
+  unsigned I = 0;
+  auto &FormatMD = Tuple->getOperand(I++);
   ProfileSummary::Kind SummaryKind;
   if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
                      "SampleProfile"))
@@ -167,39 +183,31 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
 
   uint64_t NumCounts, TotalCount, NumFunctions, MaxFunctionCount, MaxCount,
       MaxInternalCount;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "TotalCount",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(I++)), "TotalCount",
               TotalCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "MaxCount", MaxCount))
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(I++)), "MaxCount", MaxCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "MaxInternalCount",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(I++)), "MaxInternalCount",
               MaxInternalCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "MaxFunctionCount",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(I++)), "MaxFunctionCount",
               MaxFunctionCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "NumCounts",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(I++)), "NumCounts",
               NumCounts))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "NumFunctions",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(I++)), "NumFunctions",
               NumFunctions))
     return nullptr;
-  // Initialize IsPartialProfile because the field is optional.
-  uint64_t IsPartialProfile = 0;
 
-  // IsPartialProfile is optional so it doesn't matter even if the next val
-  // is not IsPartialProfile.
-  if (getVal(dyn_cast<MDTuple>(Tuple->getOperand(i)), "IsPartialProfile",
-             IsPartialProfile)) {
-    // Need to make sure when IsPartialProfile is presented, we won't step
-    // over the bound of Tuple operand array.
-    if (Tuple->getNumOperands() < 9)
-      return nullptr;
-    i++;
-  }
+  // Optional fields. Need to initialize because the fields are optional.
+  uint64_t IsPartialProfile = 0;
+  if (!getOptionalVal(Tuple, I, "IsPartialProfile", IsPartialProfile))
+    return nullptr;
 
   SummaryEntryVector Summary;
-  if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(i++)), Summary))
+  if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(I++)), Summary))
     return nullptr;
   return new ProfileSummary(SummaryKind, std::move(Summary), TotalCount,
                             MaxCount, MaxInternalCount, MaxFunctionCount,
