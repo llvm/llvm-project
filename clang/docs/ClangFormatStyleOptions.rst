@@ -1739,6 +1739,52 @@ the configuration (without a prefix: ``Auto``).
        plop();                                  plop();
      }                                      }
 
+**IndentExternBlock** (``IndentExternBlockStyle``)
+  IndentExternBlockStyle is the type of indenting of extern blocks.
+
+  Possible values:
+
+  * ``IEBS_AfterExternBlock`` (in configuration: ``AfterExternBlock``)
+    Backwards compatible with AfterExternBlock's indenting.
+
+    .. code-block:: c++
+
+       IndentExternBlock: AfterExternBlock
+       BraceWrapping.AfterExternBlock: true
+       extern "C"
+       {
+           void foo();
+       }
+
+
+    .. code-block:: c++
+
+       IndentExternBlock: AfterExternBlock
+       BraceWrapping.AfterExternBlock: false
+       extern "C" {
+       void foo();
+       }
+
+  * ``IEBS_NoIndent`` (in configuration: ``NoIndent``)
+    Does not indent extern blocks.
+
+    .. code-block:: c++
+
+        extern "C" {
+        void foo();
+        }
+
+  * ``IEBS_Indent`` (in configuration: ``Indent``)
+    Indents extern blocks.
+
+    .. code-block:: c++
+
+        extern "C" {
+          void foo();
+        }
+
+
+
 **IndentGotoLabels** (``bool``)
   Indent goto labels.
 
