@@ -676,13 +676,11 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     LLDB_LOGV(log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
               namespace_map.get(), namespace_map->size());
 
-    for (ClangASTImporter::NamespaceMap::iterator i = namespace_map->begin(),
-                                                  e = namespace_map->end();
-         i != e; ++i) {
+    for (ClangASTImporter::NamespaceMapItem &n : *namespace_map) {
       LLDB_LOG(log, "  CEDM::FEVD Searching namespace {0} in module {1}",
-               i->second.GetName(), i->first->GetFileSpec().GetFilename());
+               n.second.GetName(), n.first->GetFileSpec().GetFilename());
 
-      FindExternalVisibleDecls(context, i->first, i->second);
+      FindExternalVisibleDecls(context, n.first, n.second);
     }
   } else if (isa<TranslationUnitDecl>(context.m_decl_context)) {
     CompilerDeclContext namespace_decl;
