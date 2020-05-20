@@ -850,9 +850,10 @@ int main(int argc, char const *argv[]) {
   unsigned MAC;
   ArrayRef<const char *> arg_arr = makeArrayRef(argv + 1, argc - 1);
   opt::InputArgList input_args = T.ParseArgs(arg_arr, MAI, MAC);
+  llvm::StringRef argv0 = llvm::sys::path::filename(argv[0]);
 
   if (input_args.hasArg(OPT_help)) {
-    printHelp(T, llvm::sys::path::filename(argv[0]));
+    printHelp(T, argv0);
     return 0;
   }
 
@@ -861,6 +862,8 @@ int main(int argc, char const *argv[]) {
     for (auto *arg : input_args.filtered(OPT_UNKNOWN)) {
       WithColor::error() << "unknown option: " << arg->getSpelling() << '\n';
     }
+    llvm::errs() << "Use '" << argv0
+                 << " --help' for a complete list of options.\n";
     return 1;
   }
 
