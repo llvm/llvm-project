@@ -196,8 +196,8 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
                                     ComputationSliceState *sliceState,
                                     bool addMemRefDimBounds) {
-  assert((isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op)) &&
-         "affine load/store op expected");
+  assert((isa<AffineReadOpInterface>(op) || isa<AffineWriteOpInterface>(op)) &&
+         "affine read/write op expected");
 
   MemRefAccess access(op);
   memref = access.memref;
@@ -404,9 +404,10 @@ Optional<uint64_t> mlir::getMemRefSizeInBytes(MemRefType memRefType) {
 template <typename LoadOrStoreOp>
 LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
                                             bool emitError) {
-  static_assert(
-      llvm::is_one_of<LoadOrStoreOp, AffineLoadOp, AffineStoreOp>::value,
-      "argument should be either a AffineLoadOp or a AffineStoreOp");
+  static_assert(llvm::is_one_of<LoadOrStoreOp, AffineReadOpInterface,
+                                AffineWriteOpInterface>::value,
+                "argument should be either a AffineReadOpInterface or a "
+                "AffineWriteOpInterface");
 
   Operation *op = loadOrStoreOp.getOperation();
   MemRefRegion region(op->getLoc());
@@ -456,10 +457,10 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 }
 
 // Explicitly instantiate the template so that the compiler knows we need them!
-template LogicalResult mlir::boundCheckLoadOrStoreOp(AffineLoadOp loadOp,
-                                                     bool emitError);
-template LogicalResult mlir::boundCheckLoadOrStoreOp(AffineStoreOp storeOp,
-                                                     bool emitError);
+template LogicalResult
+mlir::boundCheckLoadOrStoreOp(AffineReadOpInterface loadOp, bool emitError);
+template LogicalResult
+mlir::boundCheckLoadOrStoreOp(AffineWriteOpInterface storeOp, bool emitError);
 
 // Returns in 'positions' the Block positions of 'op' in each ancestor
 // Block from the Block containing operation, stopping at 'limitBlock'.
@@ -575,8 +576,8 @@ LogicalResult mlir::computeSliceUnion(ArrayRef<Operation *> opsA,
         return failure();
       }
 
-      bool readReadAccesses = isa<AffineLoadOp>(srcAccess.opInst) &&
-                              isa<AffineLoadOp>(dstAccess.opInst);
+      bool readReadAccesses = isa<AffineReadOpInterface>(srcAccess.opInst) &&
+                              isa<AffineReadOpInterface>(dstAccess.opInst);
       FlatAffineConstraints dependenceConstraints;
       // Check dependence between 'srcAccess' and 'dstAccess'.
       DependenceResult result = checkMemrefAccessDependence(
@@ -768,7 +769,8 @@ void mlir::getComputationSliceState(
                       : std::prev(srcLoopIVs[loopDepth - 1].getBody()->end());
 
   llvm::SmallDenseSet<Value, 8> sequentialLoops;
-  if (isa<AffineLoadOp>(depSourceOp) && isa<AffineLoadOp>(depSinkOp)) {
+  if (isa<AffineReadOpInterface>(depSourceOp) &&
+      isa<AffineReadOpInterface>(depSinkOp)) {
     // For read-read access pairs, clear any slice bounds on sequential loops.
     // Get sequential loops in loop nest rooted at 'srcLoopIVs[0]'.
     getSequentialLoops(isBackwardSlice ? srcLoopIVs[0] : dstLoopIVs[0],
@@ -865,7 +867,7 @@ mlir::insertBackwardComputationSlice(Operation *srcOpInst, Operation *dstOpInst,
 // Constructs  MemRefAccess populating it with the memref, its indices and
 // opinst from 'loadOrStoreOpInst'.
 MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
-  if (auto loadOp = dyn_cast<AffineLoadOp>(loadOrStoreOpInst)) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(loadOrStoreOpInst)) {
     memref = loadOp.getMemRef();
     opInst = loadOrStoreOpInst;
     auto loadMemrefType = loadOp.getMemRefType();
@@ -874,8 +876,9 @@ MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
       indices.push_back(index);
     }
   } else {
-    assert(isa<AffineStoreOp>(loadOrStoreOpInst) && "load/store op expected");
-    auto storeOp = dyn_cast<AffineStoreOp>(loadOrStoreOpInst);
+    assert(isa<AffineWriteOpInterface>(loadOrStoreOpInst) &&
+           "Affine read/write op expected");
+    auto storeOp = cast<AffineWriteOpInterface>(loadOrStoreOpInst);
     opInst = loadOrStoreOpInst;
     memref = storeOp.getMemRef();
     auto storeMemrefType = storeOp.getMemRefType();
@@ -890,7 +893,9 @@ unsigned MemRefAccess::getRank() const {
   return memref.getType().cast<MemRefType>().getRank();
 }
 
-bool MemRefAccess::isStore() const { return isa<AffineStoreOp>(opInst); }
+bool MemRefAccess::isStore() const {
+  return isa<AffineWriteOpInterface>(opInst);
+}
 
 /// Returns the nesting depth of this statement, i.e., the number of loops
 /// surrounding this statement.
@@ -947,7 +952,8 @@ static Optional<int64_t> getMemoryFootprintBytes(Block &block,
 
   // Walk this 'affine.for' operation to gather all memory regions.
   auto result = block.walk(start, end, [&](Operation *opInst) -> WalkResult {
-    if (!isa<AffineLoadOp>(opInst) && !isa<AffineStoreOp>(opInst)) {
+    if (!isa<AffineReadOpInterface>(opInst) &&
+        !isa<AffineWriteOpInterface>(opInst)) {
       // Neither load nor a store op.
       return WalkResult::advance();
     }
@@ -1007,7 +1013,8 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
   auto walkResult = forOp.walk([&](Operation *opInst) -> WalkResult {
-    if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst))
+    if (isa<AffineReadOpInterface>(opInst) ||
+        isa<AffineWriteOpInterface>(opInst))
       loadAndStoreOpInsts.push_back(opInst);
     else if (!isa<AffineForOp>(opInst) && !isa<AffineTerminatorOp>(opInst) &&
              !isa<AffineIfOp>(opInst) &&
