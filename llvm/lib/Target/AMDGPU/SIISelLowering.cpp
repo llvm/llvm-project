@@ -99,6 +99,12 @@ static cl::opt<bool> VGPRReserveforSGPRSpill(
     "amdgpu-reserve-vgpr-for-sgpr-spill",
     cl::desc("Allocates one VGPR for future SGPR Spill"), cl::init(true));
 
+static cl::opt<bool> UseDivergentRegisterIndexing(
+  "amdgpu-use-divergent-register-indexing",
+  cl::Hidden,
+  cl::desc("Use indirect register addressing for divergent indexes"),
+  cl::init(false));
+
 static bool hasFP32Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().allFP32Denormals();
@@ -9533,7 +9539,10 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // Sub-dword vectors of size 2 dword or less have better implementation.
   // Vectors of size bigger than 8 dwords would yield too many v_cndmask_b32
   // instructions.
-  if (VecSize <= 256 && (VecSize > 64 || EltSize >= 32) &&
+  // Always do this if var-idx is divergent, otherwise it will become a loop.
+  if (!UseDivergentRegisterIndexing &&
+      (VecSize <= 256 || N->getOperand(1)->isDivergent()) &&
+      (VecSize > 64 || EltSize >= 32) &&
       !isa<ConstantSDNode>(N->getOperand(1))) {
     SDLoc SL(N);
     SDValue Idx = N->getOperand(1);
@@ -9603,8 +9612,10 @@ SITargetLowering::performInsertVectorEltCombine(SDNode *N,
   // Sub-dword vectors of size 2 dword or less have better implementation.
   // Vectors of size bigger than 8 dwords would yield too many v_cndmask_b32
   // instructions.
-  if (isa<ConstantSDNode>(Idx) ||
-      VecSize > 256 || (VecSize <= 64 && EltSize < 32))
+  // Always do this if var-idx is divergent, otherwise it will become a loop.
+  if (UseDivergentRegisterIndexing || isa<ConstantSDNode>(Idx) ||
+      (VecSize > 256 && !Idx->isDivergent()) ||
+      (VecSize <= 64 && EltSize < 32))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
