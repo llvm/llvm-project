@@ -89,6 +89,9 @@ public:
   // Return the interfaces extra class declaration code.
   llvm::Optional<StringRef> getExtraClassDeclaration() const;
 
+  // Return the traits extra class declaration code.
+  llvm::Optional<StringRef> getExtraTraitClassDeclaration() const;
+
   // Return the verify method body if it has one.
   llvm::Optional<StringRef> getVerify() const;
 

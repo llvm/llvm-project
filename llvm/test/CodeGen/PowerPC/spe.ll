@@ -1355,3 +1355,70 @@ return:
   ret double %1
 
 }
+
+define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fma:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stw 0, 4(1)
+; CHECK-NEXT:    stwu 1, -48(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    .cfi_offset r29, -12
+; CHECK-NEXT:    .cfi_offset r30, -8
+; CHECK-NEXT:    .cfi_offset r29, -40
+; CHECK-NEXT:    .cfi_offset r30, -32
+; CHECK-NEXT:    cmpwi 3, 1
+; CHECK-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
+; CHECK-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; CHECK-NEXT:    evstdd 29, 8(1) # 8-byte Folded Spill
+; CHECK-NEXT:    evstdd 30, 16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    blt 0, .LBB57_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    mr 30, 3
+; CHECK-NEXT:    li 29, 0
+; CHECK-NEXT:    # implicit-def: $r5
+; CHECK-NEXT:  .LBB57_2: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    efscfsi 3, 29
+; CHECK-NEXT:    mr 4, 3
+; CHECK-NEXT:    bl fmaf
+; CHECK-NEXT:    addi 29, 29, 1
+; CHECK-NEXT:    cmplw 30, 29
+; CHECK-NEXT:    mr 5, 3
+; CHECK-NEXT:    bne 0, .LBB57_2
+; CHECK-NEXT:    b .LBB57_4
+; CHECK-NEXT:  .LBB57_3:
+; CHECK-NEXT:    # implicit-def: $r5
+; CHECK-NEXT:  .LBB57_4: # %for.cond.cleanup
+; CHECK-NEXT:    evldd 30, 16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    evldd 29, 8(1) # 8-byte Folded Reload
+; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 0, 52(1)
+; CHECK-NEXT:    addi 1, 1, 48
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
+entry:
+  %cmp8 = icmp sgt i32 %d, 0
+  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %e.0.lcssa = phi float [ undef, %entry ], [ %0, %for.body ]
+  ret float %e.0.lcssa
+
+for.body:                                         ; preds = %for.body, %entry
+  %f.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %e.09 = phi float [ %0, %for.body ], [ undef, %entry ]
+  %conv = sitofp i32 %f.010 to float
+  %0 = tail call float @llvm.fma.f32(float %conv, float %conv, float %e.09)
+  %inc = add nuw nsw i32 %f.010, 1
+  %exitcond = icmp eq i32 %inc, %d
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; Function Attrs: nounwind readnone speculatable willreturn
+declare float @llvm.fma.f32(float, float, float) #1
+
+attributes #1 = { nounwind readnone speculatable willreturn }

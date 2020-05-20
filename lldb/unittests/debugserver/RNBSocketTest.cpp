@@ -17,6 +17,7 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
 
@@ -26,15 +27,16 @@ std::string goodbye = "Goodbye!";
 static void ServerCallbackv4(const void *baton, in_port_t port) {
   auto child_pid = fork();
   if (child_pid == 0) {
-    Socket *client_socket;
     char addr_buffer[256];
     sprintf(addr_buffer, "%s:%d", baton, port);
-    Status err = Socket::TcpConnect(addr_buffer, false, client_socket);
-    if (err.Fail())
-      abort();
+    llvm::Expected<std::unique_ptr<Socket>> socket_or_err =
+        Socket::TcpConnect(addr_buffer, false);
+    ASSERT_THAT_EXPECTED(socket_or_err, llvm::Succeeded());
+    Socket *client_socket = socket_or_err->get();
+
     char buffer[32];
     size_t read_size = 32;
-    err = client_socket->Read((void *)&buffer[0], read_size);
+    Status err = client_socket->Read((void *)&buffer[0], read_size);
     if (err.Fail())
       abort();
     std::string Recv(&buffer[0], read_size);
@@ -102,9 +104,10 @@ void TestSocketConnect(const char *addr) {
   Socket *server_socket;
   Predicate<uint16_t> port_predicate;
   port_predicate.SetValue(0, eBroadcastNever);
-  Status err =
-      Socket::TcpListen(addr_wrap, false, server_socket, &port_predicate);
-  ASSERT_FALSE(err.Fail());
+  llvm::Expected<std::unique_ptr<Socket>> socket_or_err =
+      Socket::TcpListen(addr_wrap, false, &port_predicate);
+  ASSERT_THAT_EXPECTED(socket_or_err, llvm::Succeeded());
+  server_socket = socket_or_err->get();
 
   auto port = ((TCPSocket *)server_socket)->GetLocalPortNumber();
   auto child_pid = fork();
@@ -120,7 +123,7 @@ void TestSocketConnect(const char *addr) {
     ASSERT_EQ(bye, goodbye);
   } else {
     Socket *connected_socket;
-    err = server_socket->Accept(connected_socket);
+    Status err = server_socket->Accept(connected_socket);
     if (err.Fail()) {
       llvm::errs() << err.AsCString();
       abort();

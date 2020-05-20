@@ -666,9 +666,10 @@ define i64 @test50(i64 %x) {
 define i64 @test51(i64 %A, i1 %cond) {
 ; ALL-LABEL: @test51(
 ; ALL-NEXT:    [[C:%.*]] = and i64 [[A:%.*]], 4294967294
-; ALL-NEXT:    [[D:%.*]] = or i64 [[A]], 1
-; ALL-NEXT:    [[E:%.*]] = select i1 [[COND:%.*]], i64 [[C]], i64 [[D]]
-; ALL-NEXT:    [[SEXT:%.*]] = shl i64 [[E]], 32
+; ALL-NEXT:    [[NOT_COND:%.*]] = xor i1 [[COND:%.*]], true
+; ALL-NEXT:    [[MASKSEL:%.*]] = zext i1 [[NOT_COND]] to i64
+; ALL-NEXT:    [[E:%.*]] = or i64 [[C]], [[MASKSEL]]
+; ALL-NEXT:    [[SEXT:%.*]] = shl nuw i64 [[E]], 32
 ; ALL-NEXT:    [[F:%.*]] = ashr exact i64 [[SEXT]], 32
 ; ALL-NEXT:    ret i64 [[F]]
 ;

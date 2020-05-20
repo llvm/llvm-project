@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibcBenchmark.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Host.h"
 
 namespace llvm {

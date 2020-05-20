@@ -139,6 +139,8 @@ public:
   bool parse(DataExtractor IndexData);
   void dump(raw_ostream &OS) const;
 
+  uint32_t getVersion() const { return Header.Version; }
+
   const Entry *getFromOffset(uint32_t Offset) const;
   const Entry *getFromHash(uint64_t Offset) const;
 

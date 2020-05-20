@@ -29,6 +29,7 @@ class MiniDumpNewTestCase(TestBase):
         self.process = self.target.LoadCore(minidump_path)
         return self.process
 
+    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def check_state(self):
         with open(os.devnull) as devnul:
             # sanitize test output

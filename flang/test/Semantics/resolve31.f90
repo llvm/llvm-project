@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C735 If EXTENDS appears, SEQUENCE shall not appear.
 ! C738 The same private-or-sequence shall not appear more than once in a
 ! given derived-type-def .
@@ -84,7 +84,7 @@ module m4
     !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
     type(plainType) :: testField1
     type(sequenceType) :: testField2
-    procedure(real), nopass :: procField
+    procedure(real), pointer, nopass :: procField
   end type testType
   !ERROR: A sequence type may not have type parameters
   type :: paramType(param)

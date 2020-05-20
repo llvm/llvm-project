@@ -50,7 +50,7 @@
 
 using namespace clang;
 
-using ManagedAnalysisMap = llvm::DenseMap<const void *, ManagedAnalysis *>;
+using ManagedAnalysisMap = llvm::DenseMap<const void *, std::unique_ptr<ManagedAnalysis>>;
 
 AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *ADCMgr,
                                          const Decl *D,
@@ -617,7 +617,7 @@ AnalysisDeclContext::getReferencedBlockVars(const BlockDecl *BD) {
   return llvm::make_range(V->begin(), V->end());
 }
 
-ManagedAnalysis *&AnalysisDeclContext::getAnalysisImpl(const void *tag) {
+std::unique_ptr<ManagedAnalysis> &AnalysisDeclContext::getAnalysisImpl(const void *tag) {
   if (!ManagedAnalyses)
     ManagedAnalyses = new ManagedAnalysisMap();
   ManagedAnalysisMap *M = (ManagedAnalysisMap*) ManagedAnalyses;
@@ -633,12 +633,7 @@ ManagedAnalysis::~ManagedAnalysis() = default;
 AnalysisDeclContext::~AnalysisDeclContext() {
   delete forcedBlkExprs;
   delete ReferencedBlockVars;
-  // Release the managed analyses.
-  if (ManagedAnalyses) {
-    ManagedAnalysisMap *M = (ManagedAnalysisMap*) ManagedAnalyses;
-    llvm::DeleteContainerSeconds(*M);
-    delete M;
-  }
+  delete (ManagedAnalysisMap*) ManagedAnalyses;
 }
 
 LocationContext::~LocationContext() = default;

@@ -260,6 +260,9 @@ public:
   /// Allows to generate log of linking process to the standard output.
   void setVerbosity(bool Verbose) { Options.Verbose = Verbose; }
 
+  /// Print statistics to standard output.
+  void setStatistics(bool Statistics) { Options.Statistics = Statistics; }
+
   /// Do not emit linked dwarf info.
   void setNoOutput(bool NoOut) { Options.NoOutput = NoOut; }
 
@@ -556,9 +559,10 @@ private:
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
-    void cloneAllCompileUnits(DWARFContext &DwarfContext, const DwarfFile &File,
-                              OffsetsStringPool &StringPool,
-                              bool IsLittleEndian);
+    uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
+                                  const DwarfFile &File,
+                                  OffsetsStringPool &StringPool,
+                                  bool IsLittleEndian);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -756,6 +760,9 @@ private:
   struct DWARFLinkerOptions {
     /// Generate processing log to the standard output.
     bool Verbose = false;
+
+    /// Print statistics.
+    bool Statistics = false;
 
     /// Skip emitting output
     bool NoOutput = false;

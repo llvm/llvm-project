@@ -30,9 +30,9 @@
 // in the paths that are explicitly whitelisted by the user.
 
 #include "GlobalCompilationDatabase.h"
-#include "Logger.h"
-#include "Path.h"
-#include "Trace.h"
+#include "support/Logger.h"
+#include "support/Path.h"
+#include "support/Trace.h"
 #include "clang/Driver/Types.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseMap.h"

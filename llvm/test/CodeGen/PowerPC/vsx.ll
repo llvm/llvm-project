@@ -2437,7 +2437,7 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-LE-LABEL: test80:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    mtvsrd f0, r3
+; CHECK-LE-NEXT:    mtfprd f0, r3
 ; CHECK-LE-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r4, .LCPI65_0@toc@l
 ; CHECK-LE-NEXT:    xxswapd vs0, vs0

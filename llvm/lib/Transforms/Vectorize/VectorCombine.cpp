@@ -34,6 +34,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "vector-combine"
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
+STATISTIC(NumScalarBO, "Number of scalar binops formed");
 
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
@@ -58,7 +59,7 @@ static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
          isa<ConstantInt>(Ext1->getOperand(1)) &&
          "Expected constant extract indexes");
   Type *ScalarTy = Ext0->getType();
-  Type *VecTy = Ext0->getOperand(0)->getType();
+  auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
   int ScalarOpCost, VectorOpCost;
 
   // Get cost estimates for scalar and vector versions of the operation.
@@ -259,9 +260,9 @@ static bool foldExtractExtract(Instruction &I, const TargetTransformInfo &TTI) {
   return true;
 }
 
-/// If this is a bitcast to narrow elements from a shuffle of wider elements,
-/// try to bitcast the source vector to the narrow type followed by shuffle.
-/// This can enable further transforms by moving bitcasts or shuffles together.
+/// If this is a bitcast of a shuffle, try to bitcast the source vector to the
+/// destination type followed by shuffle. This can enable further transforms by
+/// moving bitcasts or shuffles together.
 static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
   Value *V;
   ArrayRef<int> Mask;
@@ -269,15 +270,11 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
                                                     m_Mask(Mask))))))
     return false;
 
+  // Disallow non-vector casts and length-changing shuffles.
+  // TODO: We could allow any shuffle.
   auto *DestTy = dyn_cast<VectorType>(I.getType());
   auto *SrcTy = cast<VectorType>(V->getType());
   if (!DestTy || I.getOperand(0)->getType() != SrcTy)
-    return false;
-
-  // TODO: Handle bitcast from narrow element type to wide element type.
-  unsigned DestNumElts = DestTy->getNumElements();
-  unsigned SrcNumElts = SrcTy->getNumElements();
-  if (SrcNumElts > DestNumElts)
     return false;
 
   // The new shuffle must not cost more than the old shuffle. The bitcast is
@@ -286,18 +283,88 @@ static bool foldBitcastShuf(Instruction &I, const TargetTransformInfo &TTI) {
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy))
     return false;
 
-  // Bitcast the source vector and expand the shuffle mask to the equivalent for
-  // narrow elements.
+  unsigned DestNumElts = DestTy->getNumElements();
+  unsigned SrcNumElts = SrcTy->getNumElements();
+  SmallVector<int, 16> NewMask;
+  if (SrcNumElts <= DestNumElts) {
+    // The bitcast is from wide to narrow/equal elements. The shuffle mask can
+    // always be expanded to the equivalent form choosing narrower elements.
+    assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = DestNumElts / SrcNumElts;
+    narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
+  } else {
+    // The bitcast is from narrow elements to wide elements. The shuffle mask
+    // must choose consecutive elements to allow casting first.
+    assert(SrcNumElts % DestNumElts == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = SrcNumElts / DestNumElts;
+    if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
+      return false;
+  }
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   IRBuilder<> Builder(&I);
   Value *CastV = Builder.CreateBitCast(V, DestTy);
-  SmallVector<int, 16> NewMask;
-  assert(DestNumElts % SrcNumElts == 0 && "Unexpected shuffle mask");
-  unsigned ScaleFactor = DestNumElts / SrcNumElts;
-  narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   Value *Shuf = Builder.CreateShuffleVector(CastV, UndefValue::get(DestTy),
                                             NewMask);
   I.replaceAllUsesWith(Shuf);
+  return true;
+}
+
+/// Match a vector binop instruction with inserted scalar operands and convert
+/// to scalar binop followed by insertelement.
+static bool scalarizeBinop(Instruction &I, const TargetTransformInfo &TTI) {
+  Instruction *Ins0, *Ins1;
+  if (!match(&I, m_BinOp(m_Instruction(Ins0), m_Instruction(Ins1))))
+    return false;
+
+  // TODO: Deal with mismatched index constants and variable indexes?
+  Constant *VecC0, *VecC1;
+  Value *V0, *V1;
+  uint64_t Index;
+  if (!match(Ins0, m_InsertElement(m_Constant(VecC0), m_Value(V0),
+                                   m_ConstantInt(Index))) ||
+      !match(Ins1, m_InsertElement(m_Constant(VecC1), m_Value(V1),
+                                   m_SpecificInt(Index))))
+    return false;
+
+  Type *ScalarTy = V0->getType();
+  Type *VecTy = I.getType();
+  assert(VecTy->isVectorTy() && ScalarTy == V1->getType() &&
+         (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy()) &&
+         "Unexpected types for insert into binop");
+
+  Instruction::BinaryOps Opcode = cast<BinaryOperator>(&I)->getOpcode();
+  int ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
+  int VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
+
+  // Get cost estimate for the insert element. This cost will factor into
+  // both sequences.
+  int InsertCost =
+      TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, Index);
+  int OldCost = InsertCost + InsertCost + VectorOpCost;
+  int NewCost = ScalarOpCost + InsertCost +
+                !Ins0->hasOneUse() * InsertCost +
+                !Ins1->hasOneUse() * InsertCost;
+
+  // We want to scalarize unless the vector variant actually has lower cost.
+  if (OldCost < NewCost)
+    return false;
+
+  // vec_bo (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
+  // inselt NewVecC, (scalar_bo V0, V1), Index
+  ++NumScalarBO;
+  IRBuilder<> Builder(&I);
+  Value *Scalar = Builder.CreateBinOp(Opcode, V0, V1, I.getName() + ".scalar");
+
+  // All IR flags are safe to back-propagate. There is no potential for extra
+  // poison to be created by the scalar instruction.
+  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
+    ScalarInst->copyIRFlags(&I);
+
+  // Fold the vector constants in the original vectors into a new base vector.
+  Constant *NewVecC = ConstantExpr::get(Opcode, VecC0, VecC1);
+  Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
+  I.replaceAllUsesWith(Insert);
+  Insert->takeName(&I);
   return true;
 }
 
@@ -314,15 +381,15 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
     if (!DT.isReachableFromEntry(&BB))
       continue;
     // Do not delete instructions under here and invalidate the iterator.
-    // Walk the block backwards for efficiency. We're matching a chain of
-    // use->defs, so we're more likely to succeed by starting from the bottom.
+    // Walk the block forwards to enable simple iterative chains of transforms.
     // TODO: It could be more efficient to remove dead instructions
     //       iteratively in this loop rather than waiting until the end.
-    for (Instruction &I : make_range(BB.rbegin(), BB.rend())) {
+    for (Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       MadeChange |= foldExtractExtract(I, TTI);
       MadeChange |= foldBitcastShuf(I, TTI);
+      MadeChange |= scalarizeBinop(I, TTI);
     }
   }
 

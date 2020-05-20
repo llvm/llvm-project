@@ -82,9 +82,18 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
   size_t NumBefore = Gsym.getNumFunctionInfos();
   for (const object::SymbolRef &Sym : Obj.symbols()) {
     Expected<SymbolRef::Type> SymType = Sym.getType();
-    const uint64_t Addr = Sym.getValue();
-    if (!SymType || SymType.get() != SymbolRef::Type::ST_Function ||
-        !Gsym.IsValidTextAddress(Addr) || Gsym.hasFunctionInfoForAddress(Addr))
+    if (!SymType) {
+      consumeError(SymType.takeError());
+      continue;
+    }
+    Expected<uint64_t> AddrOrErr = Sym.getValue();
+    if (!AddrOrErr)
+      // TODO: Test this error.
+      return AddrOrErr.takeError();
+
+    if (SymType.get() != SymbolRef::Type::ST_Function ||
+        !Gsym.IsValidTextAddress(*AddrOrErr) ||
+        Gsym.hasFunctionInfoForAddress(*AddrOrErr))
       continue;
     // Function size for MachO files will be 0
     constexpr bool NoCopy = false;
@@ -98,8 +107,8 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
     // for mach-o files.
     if (IsMachO)
       Name->consume_front("_");
-    Gsym.addFunctionInfo(FunctionInfo(Addr, size,
-                                      Gsym.insertString(*Name, NoCopy)));
+    Gsym.addFunctionInfo(
+        FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
   }
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
   Log << "Loaded " << FunctionsAddedCount << " functions from symbol table.\n";

@@ -6,8 +6,8 @@
 # RUN: lld-link /out:%t2.exe /entry:f /subsystem:console /lldmap:%t2.map %t.obj %t.lto.obj
 # RUN: FileCheck --check-prefix=CHECK2 %s < %t2.map
 
-# CHECK1: lto.tmp
-# CHECK1: lto.tmp
+# CHECK1:      .lto.obj:
+# CHECK1-NEXT: .lto.obj:
 # CHECK1-NEXT: 0 g
 
 # CHECK2: weak-external3.test.tmp.obj

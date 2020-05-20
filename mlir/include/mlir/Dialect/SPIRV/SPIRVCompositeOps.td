@@ -15,7 +15,7 @@
 #define SPIRV_COMPOSITE_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
@@ -111,7 +111,7 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
   );
 
   let builders = [
-    OpBuilder<[{Builder *builder, OperationState &state,
+    OpBuilder<[{OpBuilder &builder, OperationState &state,
                 Value composite, ArrayRef<int32_t> indices}]>
   ];
 

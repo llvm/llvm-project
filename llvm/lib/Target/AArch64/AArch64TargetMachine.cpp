@@ -11,6 +11,7 @@
 
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetObjectFile.h"
@@ -26,6 +27,7 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -660,4 +662,25 @@ void AArch64PassConfig::addPreEmitPass() {
 
   // SVE bundles move prefixes with destructive operations.
   addPass(createUnpackMachineBundles(nullptr));
+}
+
+yaml::MachineFunctionInfo *
+AArch64TargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::AArch64FunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+AArch64TargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<AArch64FunctionInfo>();
+  return new yaml::AArch64FunctionInfo(*MFI);
+}
+
+bool AArch64TargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI =
+      reinterpret_cast<const yaml::AArch64FunctionInfo &>(MFI);
+  MachineFunction &MF = PFS.MF;
+  MF.getInfo<AArch64FunctionInfo>()->initializeBaseYamlFields(YamlMFI);
+  return false;
 }

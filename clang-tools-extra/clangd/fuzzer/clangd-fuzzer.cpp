@@ -15,8 +15,8 @@
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
-#include "FSProvider.h"
 #include "refactor/Rename.h"
+#include "support/FSProvider.h"
 #include <cstdio>
 #include <sstream>
 

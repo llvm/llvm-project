@@ -214,8 +214,12 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   {
     JITSymbolResolver::LookupSet Symbols;
     for (auto &Sym : Obj.symbols()) {
-      uint32_t Flags = Sym.getFlags();
-      if ((Flags & SymbolRef::SF_Common) || (Flags & SymbolRef::SF_Weak)) {
+      Expected<uint32_t> FlagsOrErr = Sym.getFlags();
+      if (!FlagsOrErr)
+        // TODO: Test this error.
+        return FlagsOrErr.takeError();
+      if ((*FlagsOrErr & SymbolRef::SF_Common) ||
+          (*FlagsOrErr & SymbolRef::SF_Weak)) {
         // Get symbol name.
         if (auto NameOrErr = Sym.getName())
           Symbols.insert(*NameOrErr);
@@ -234,10 +238,13 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   LLVM_DEBUG(dbgs() << "Parse symbols:\n");
   for (symbol_iterator I = Obj.symbol_begin(), E = Obj.symbol_end(); I != E;
        ++I) {
-    uint32_t Flags = I->getFlags();
+    Expected<uint32_t> FlagsOrErr = I->getFlags();
+    if (!FlagsOrErr)
+      // TODO: Test this error.
+      return FlagsOrErr.takeError();
 
     // Skip undefined symbols.
-    if (Flags & SymbolRef::SF_Undefined)
+    if (*FlagsOrErr & SymbolRef::SF_Undefined)
       continue;
 
     // Get the symbol type.
@@ -287,7 +294,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       }
     }
 
-    if (Flags & SymbolRef::SF_Absolute &&
+    if (*FlagsOrErr & SymbolRef::SF_Absolute &&
         SymType != object::SymbolRef::ST_File) {
       uint64_t Addr = 0;
       if (auto AddrOrErr = I->getAddress())
@@ -300,7 +307,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       LLVM_DEBUG(dbgs() << "\tType: " << SymType << " (absolute) Name: " << Name
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)Addr)
-                        << " flags: " << Flags << "\n");
+                        << " flags: " << *FlagsOrErr << "\n");
       GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, *JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
@@ -332,7 +339,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       LLVM_DEBUG(dbgs() << "\tType: " << SymType << " Name: " << Name
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)SectOffset)
-                        << " flags: " << Flags << "\n");
+                        << " flags: " << *FlagsOrErr << "\n");
       GlobalSymbolTable[Name] =
           SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
     }
@@ -592,8 +599,11 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
   uint32_t CommonAlign = 1;
   for (symbol_iterator I = Obj.symbol_begin(), E = Obj.symbol_end(); I != E;
        ++I) {
-    uint32_t Flags = I->getFlags();
-    if (Flags & SymbolRef::SF_Common) {
+    Expected<uint32_t> FlagsOrErr = I->getFlags();
+    if (!FlagsOrErr)
+      // TODO: Test this error.
+      return FlagsOrErr.takeError();
+    if (*FlagsOrErr & SymbolRef::SF_Common) {
       // Add the common symbols to a list.  We'll allocate them all below.
       uint64_t Size = I->getCommonSize();
       uint32_t Align = I->getAlignment();

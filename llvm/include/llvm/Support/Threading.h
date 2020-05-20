@@ -157,6 +157,10 @@ void llvm_execute_on_thread_async(
     // std::thread per core.
     bool UseHyperThreads = true;
 
+    // If set, will constrain 'ThreadsRequested' to the number of hardware
+    // threads, or hardware cores.
+    bool Limit = false;
+
     /// Retrieves the max available threads for the current strategy. This
     /// accounts for affinity masks and takes advantage of all CPU sockets.
     unsigned compute_thread_count() const;

@@ -83,10 +83,10 @@ Let's break down the anatomy of this MLIR operation:
     *   This is the location in the source code from which this operation
         originated.
 
-Shown here is the general form of an operation. As described above, the set of
-operations in MLIR is extensible. This means that the infrastructure must be
-able to opaquely reason about the structure of an operation. This is done by
-boiling down the composition of an operation into discrete pieces:
+Shown here is the general form of an operation. As described above,
+the set of operations in MLIR is extensible. Operations are modeled
+using a small set of concepts, enabling operations to be reasoned
+about and manipulated generically. These concepts are:
 
 -   A name for the operation.
 -   A list of SSA operand values.
@@ -115,12 +115,14 @@ compiler passes - does not include locations in the output by default. The
 
 ### Opaque API
 
-MLIR is designed to be a completely extensible system, and as such, the
-infrastructure has the capability to opaquely represent all of its core
-components: attributes, operations, types, etc. This allows MLIR to parse,
-represent, and [round-trip](../../../getting_started/Glossary.md#round-trip) any valid IR. For
-example, we could place our Toy operation from above into an `.mlir` file and
-round-trip through *mlir-opt* without registering any dialect:
+MLIR is designed to allow most IR elements, such as attributes,
+operations, and types, to be customized. At the same time, IR
+elements can always be reduced to the above fundmental concepts. This
+allows MLIR to parse, represent, and
+[round-trip](../../../getting_started/Glossary.md#round-trip) IR for
+*any* operation. For example, we could place our Toy operation from
+above into an `.mlir` file and round-trip through *mlir-opt* without
+registering any dialect:
 
 ```mlir
 func @toy_func(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> {
@@ -129,19 +131,21 @@ func @toy_func(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> {
 }
 ```
 
-In the cases of unregistered attributes, operations, and types, MLIR will
-enforce some structural constraints (SSA, block termination, etc.), but
-otherwise they are completely opaque. This can be useful for bootstrapping
-purposes, but it is generally advised against. Opaque operations must be treated
-conservatively by transformations and analyses, and they are much harder to
-construct and manipulate.
+In the cases of unregistered attributes, operations, and types, MLIR
+will enforce some structural constraints (SSA, block termination,
+etc.), but otherwise they are completely opaque. For instance, MLIR
+has little information about whether an unregisted operation can
+operate on particular datatypes, how many operands it can take, or how
+many results it produces. This flexibility can be useful for
+bootstrapping purposes, but it is generally advised against in mature
+systems. Unregistered operations must be treated conservatively by
+transformations and analyses, and they are much harder to construct
+and manipulate.
 
 This handling can be observed by crafting what should be an invalid IR for Toy
 and seeing it round-trip without tripping the verifier:
 
 ```mlir
-// RUN: toyc %s -emit=mlir
-
 func @main() {
   %0 = "toy.print"() : () -> tensor<2x3xf64>
 }
@@ -155,7 +159,7 @@ verifier, and add nicer APIs to manipulate our operations.
 ## Defining a Toy Dialect
 
 To effectively interface with MLIR, we will define a new Toy dialect. This
-dialect will properly model the semantics of the Toy language, as well as
+dialect will model the structure of the Toy language, as well as
 provide an easy avenue for high-level analysis and transformation.
 
 ```c++
@@ -232,13 +236,13 @@ class ConstantOp : public mlir::Op<ConstantOp,
   /// operations. This state is a collection of all of the discrete elements
   /// that an operation may contain.
   /// Build a constant with the given return type and `value` attribute.
-  static void build(mlir::Builder *builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::Type result, mlir::DenseElementsAttr value);
   /// Build a constant and reuse the type from the given 'value'.
-  static void build(mlir::Builder *builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::DenseElementsAttr value);
   /// Build a constant by broadcasting the given 'value'.
-  static void build(mlir::Builder *builder, mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     double value);
 };
 ```
@@ -254,18 +258,28 @@ ToyDialect::ToyDialect(mlir::MLIRContext *ctx)
 
 ### Op vs Operation: Using MLIR Operations
 
-Now that we have defined an operation, we will want to access and transform it.
-In MLIR, there are two main classes related to operations: `Operation` and `Op`.
-Operation is the actual opaque instance of the operation, and represents the
-general API into an operation instance. An `Op` is the base class of a derived
-operation, like `ConstantOp`, and acts as smart pointer wrapper around a
-`Operation*`. This means that when we define our Toy operations, we are actually
-providing a clean interface for building and interfacing with the `Operation`
-class; this is why our `ConstantOp` defines no class fields. Therefore, we
-always pass these classes around by value, instead of by reference or pointer
-(*passing by value* is a common idiom and applies similarly to attributes,
-types, etc). We can always get an instance of our toy operation by using LLVM's
-casting infrastructure:
+Now that we have defined an operation, we will want to access and
+transform it.  In MLIR, there are two main classes related to
+operations: `Operation` and `Op`.  The `Operation` class is used to
+generically model all operations.  It is 'opaque', in the sense that
+it does not describe the properties of particular operations or types
+of operations.  Instead, the 'Operation' class provides a general API
+into an operation instance.  On the other hand, each specific type of
+operation is represented by an `Op` derived class.  For instance
+`ConstantOp` represents a operation with zero inputs, and one output,
+which is always set to the same value.  `Op` derived classes act as
+smart pointer wrapper around a `Operation*`, provide
+operation-specific accessor methods, and type-safe properties of
+operations. This means that when we define our Toy operations, we are
+simply defining a clean, semantically useful interface for building
+and interfacing with the `Operation` class.  This is why our
+`ConstantOp` defines no class fields; all the data structures are
+stored in the referenced `Operation`.  A side effect is that we always
+pass around `Op` derived classes by value, instead of by reference or
+pointer (*passing by value* is a common idiom and applies similarly to
+attributes, types, etc).  Given a generic `Operation*` instance, we
+can always get a specific `Op` instance using LLVM's casting
+infrastructure:
 
 ```c++
 void processConstantOp(mlir::Operation *operation) {
@@ -476,7 +490,7 @@ def ConstantOp : Toy_Op<"constant"> {
   // using `builder.create<ConstantOp>(...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
-    OpBuilder<"Builder *builder, OperationState &result, "
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
               "DenseElementsAttr value", [{
       // Call into an autogenerated `build` method.
       build(builder, result, value.getType(), value);
@@ -484,15 +498,14 @@ def ConstantOp : Toy_Op<"constant"> {
 
     // Build a constant with a given constant floating-point value. This builder
     // creates a declaration for `ConstantOp::build` with the given parameters.
-    OpBuilder<"Builder *builder, OperationState &result, double value">
+    OpBuilder<"OpBuilder &builder, OperationState &result, double value">
   ];
 }
 ```
 
 #### Specifying a Custom Assembly Format
 
-At this point we can generate our "Toy IR". A simplified version of the previous
-example:
+At this point we can generate our "Toy IR". For example, the following:
 
 ```toy
 # User defined generic function that operates on unknown shaped arguments.
@@ -514,22 +527,22 @@ Results in the following IR:
 ```mlir
 module {
   func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-    %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64> loc("test/codegen.toy":5:10)
-    %1 = "toy.transpose"(%arg1) : (tensor<*xf64>) -> tensor<*xf64> loc("test/codegen.toy":5:25)
-    %2 = "toy.mul"(%0, %1) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64> loc("test/codegen.toy":5:25)
-    "toy.return"(%2) : (tensor<*xf64>) -> () loc("test/codegen.toy":5:3)
-  } loc("test/codegen.toy":4:1)
+    %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:10)
+    %1 = "toy.transpose"(%arg1) : (tensor<*xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    %2 = "toy.mul"(%0, %1) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    "toy.return"(%2) : (tensor<*xf64>) -> () loc("test/Examples/Toy/Ch2/codegen.toy":5:3)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":4:1)
   func @main() {
-    %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64> loc("test/codegen.toy":9:17)
-    %1 = "toy.reshape"(%0) : (tensor<2x3xf64>) -> tensor<2x3xf64> loc("test/codegen.toy":9:3)
-    %2 = "toy.constant"() {value = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>} : () -> tensor<6xf64> loc("test/codegen.toy":10:17)
-    %3 = "toy.reshape"(%2) : (tensor<6xf64>) -> tensor<2x3xf64> loc("test/codegen.toy":10:3)
-    %4 = "toy.generic_call"(%1, %3) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
-    %5 = "toy.generic_call"(%3, %1) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
-    "toy.print"(%5) : (tensor<*xf64>) -> () loc("test/codegen.toy":13:3)
-    "toy.return"() : () -> () loc("test/codegen.toy":8:1)
-  } loc("test/codegen.toy":8:1)
-} loc("test/codegen.toy":0:0)
+    %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:17)
+    %1 = "toy.reshape"(%0) : (tensor<2x3xf64>) -> tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:3)
+    %2 = "toy.constant"() {value = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>} : () -> tensor<6xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:17)
+    %3 = "toy.reshape"(%2) : (tensor<6xf64>) -> tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:3)
+    %4 = "toy.generic_call"(%1, %3) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":11:11)
+    %5 = "toy.generic_call"(%3, %1) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":12:11)
+    "toy.print"(%5) : (tensor<*xf64>) -> () loc("test/Examples/Toy/Ch2/codegen.toy":13:3)
+    "toy.return"() : () -> () loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+} loc(unknown)
 ```
 
 One thing to notice here is that all of our Toy operations are printed using the
@@ -645,22 +658,22 @@ now get a much more readable:
 ```mlir
 module {
   func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:10)
-    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:25)
-    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/codegen.toy":5:25)
-    toy.return %2 : tensor<*xf64> loc("test/codegen.toy":5:3)
-  } loc("test/codegen.toy":4:1)
+    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:10)
+    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    toy.return %2 : tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:3)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":4:1)
   func @main() {
-    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/codegen.toy":9:17)
-    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/codegen.toy":9:3)
-    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/codegen.toy":10:17)
-    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/codegen.toy":10:3)
-    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
-    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
-    toy.print %5 : tensor<*xf64> loc("test/codegen.toy":13:3)
-    toy.return loc("test/codegen.toy":8:1)
-  } loc("test/codegen.toy":8:1)
-} loc("test/codegen.toy":0:0)
+    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:17)
+    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:3)
+    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:17)
+    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:3)
+    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":11:11)
+    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":12:11)
+    toy.print %5 : tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":13:3)
+    toy.return loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+} loc(unknown)
 ```
 
 Above we introduce several of the concepts for defining operations in the ODS
@@ -670,53 +683,12 @@ variadic operands, etc. Check out the
 
 ## Complete Toy Example
 
-At this point we can generate our "Toy IR". A simplified version of the previous
-example:
-
-```toy
-# User defined generic function that operates on unknown shaped arguments.
-def multiply_transpose(a, b) {
-  return transpose(a) * transpose(b);
-}
-
-def main() {
-  var a<2, 3> = [[1, 2, 3], [4, 5, 6]];
-  var b<2, 3> = [1, 2, 3, 4, 5, 6];
-  var c = multiply_transpose(a, b);
-  var d = multiply_transpose(b, a);
-  print(d);
-}
-```
-
-Results in the following IR:
-
-```mlir
-module {
-  func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:10)
-    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:25)
-    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/codegen.toy":5:25)
-    toy.return %2 : tensor<*xf64> loc("test/codegen.toy":5:3)
-  } loc("test/codegen.toy":4:1)
-  func @main() {
-    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/codegen.toy":9:17)
-    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/codegen.toy":9:3)
-    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/codegen.toy":10:17)
-    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/codegen.toy":10:3)
-    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
-    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
-    toy.print %5 : tensor<*xf64> loc("test/codegen.toy":13:3)
-    toy.return loc("test/codegen.toy":8:1)
-  } loc("test/codegen.toy":8:1)
-} loc("test/codegen.toy":0:0)
-```
-
-You can build `toyc-ch2` and try yourself: `toyc-ch2
-test/Examples/Toy/Ch2/codegen.toy -emit=mlir -mlir-print-debuginfo`. We can also
-check our RoundTrip: `toyc-ch2 test/Examples/Toy/Ch2/codegen.toy -emit=mlir
--mlir-print-debuginfo 2> codegen.mlir` followed by `toyc-ch2 codegen.mlir
--emit=mlir`. You should also use `mlir-tblgen` on the final definition file and
-study the generated C++ code.
+We can now generate our "Toy IR". You can build `toyc-ch2` and try yourself on
+the above example: `toyc-ch2 test/Examples/Toy/Ch2/codegen.toy -emit=mlir 
+-mlir-print-debuginfo`. We can also check our RoundTrip: `toyc-ch2 
+test/Examples/Toy/Ch2/codegen.toy -emit=mlir -mlir-print-debuginfo 2> 
+codegen.mlir` followed by `toyc-ch2 codegen.mlir -emit=mlir`. You should also 
+use `mlir-tblgen` on the final definition file and study the generated C++ code.
 
 At this point, MLIR knows about our Toy dialect and operations. In the
 [next chapter](Ch-3.md), we will leverage our new dialect to implement some

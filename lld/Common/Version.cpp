@@ -19,9 +19,16 @@
 // Returns a version string, e.g.:
 // lld 9.0.0 (https://github.com/llvm/llvm-project.git 9efdd7ac5e914d3c9fa1ef)
 std::string lld::getLLDVersion() {
-#if defined(LLD_REPOSITORY) && defined(LLD_REVISION)
-  return "LLD " LLD_VERSION_STRING " (" LLD_REPOSITORY " " LLD_REVISION ")";
+#ifdef LLD_VENDOR
+#define LLD_VENDOR_DISPLAY LLD_VENDOR " "
 #else
-  return "LLD " LLD_VERSION_STRING;
+#define LLD_VENDOR_DISPLAY
 #endif
+#if defined(LLD_REPOSITORY) && defined(LLD_REVISION)
+  return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING " (" LLD_REPOSITORY
+                            " " LLD_REVISION ")";
+#else
+  return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING;
+#endif
+#undef LLD_VENDOR_DISPLAY
 }

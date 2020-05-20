@@ -180,18 +180,14 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
     // Copy edges to NewBlock (recording their iterators so that we can remove
     // them from B), and update of Edges remaining on B.
     std::vector<Block::edge_iterator> EdgesToRemove;
-    for (auto I = B.edges().begin(), E = B.edges().end(); I != E; ++I) {
+    for (auto I = B.edges().begin(); I != B.edges().end();) {
       if (I->getOffset() < SplitIndex) {
         NewBlock.addEdge(*I);
-        EdgesToRemove.push_back(I);
-      } else
+        I = B.removeEdge(I);
+      } else {
         I->setOffset(I->getOffset() - SplitIndex);
-    }
-
-    // Remove edges that were transfered to NewBlock from B.
-    while (!EdgesToRemove.empty()) {
-      B.removeEdge(EdgesToRemove.back());
-      EdgesToRemove.pop_back();
+        ++I;
+      }
     }
   }
 

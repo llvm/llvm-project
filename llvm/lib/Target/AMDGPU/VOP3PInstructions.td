@@ -1,4 +1,4 @@
-//===-- VOP3PInstructions.td - Vector Instruction Defintions --------------===//
+//===-- VOP3PInstructions.td - Vector Instruction Definitions -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@ class VOP3_VOP3PInst<string OpName, VOPProfile P, bit UseTiedOutput = 0,
          // FIXME: clampmod0 misbehaves with the non-default vdst_in
          // following it. For now workaround this by requiring clamp
          // in tied patterns. This should use undef_tied_input, but it
-         // seems underdeveloped and doesns't apply the right register
+         // seems underdeveloped and doesn't apply the right register
          // class constraints.
          !if(UseTiedOutput, (ins clampmod:$clamp, VGPR_32:$vdst_in),
                             (ins clampmod0:$clamp))),
@@ -210,7 +210,7 @@ foreach Type = ["I", "U"] in
   foreach Index = 0-3 in {
     // Defines patterns that extract each Index'ed 8bit from an unsigned
     // 32bit scalar value;
-    def #Type#Index#"_8bit" : Extract<!shl(Index, 3), 255, !if (!eq (Type, "U"), 1, 0)>;
+    def Type#Index#"_8bit" : Extract<!shl(Index, 3), 255, !if (!eq (Type, "U"), 1, 0)>;
 
     // Defines multiplication patterns where the multiplication is happening on each
     // Index'ed 8bit of a 32bit scalar value.
@@ -218,8 +218,8 @@ foreach Type = ["I", "U"] in
     def Mul#Type#_Elt#Index : PatFrag<
       (ops node:$src0, node:$src1),
       (!cast<HasOneUseBinOp>(!if (!eq (Type, "I"), AMDGPUmul_i24_oneuse, AMDGPUmul_u24_oneuse))
-                            (!cast<Extract>(#Type#Index#"_8bit") node:$src0),
-                            (!cast<Extract>(#Type#Index#"_8bit") node:$src1))>;
+                            (!cast<Extract>(Type#Index#"_8bit") node:$src0),
+                            (!cast<Extract>(Type#Index#"_8bit") node:$src1))>;
   }
 
 // Different variants of dot8 patterns cause a huge increase in the compile time.
@@ -238,15 +238,15 @@ foreach Type = ["I", "U"] in
   foreach Index = 0-7 in {
     // Defines patterns that extract each Index'ed 4bit from an unsigned
     // 32bit scalar value;
-    def #Type#Index#"_4bit" : Extract<!shl(Index, 2), 15, !if (!eq (Type, "U"), 1, 0)>;
+    def Type#Index#"_4bit" : Extract<!shl(Index, 2), 15, !if (!eq (Type, "U"), 1, 0)>;
 
     // Defines multiplication patterns where the multiplication is happening on each
     // Index'ed 8bit of a 32bit scalar value.
     def Mul#Type#Index#"_4bit" : PatFrag<
       (ops node:$src0, node:$src1),
       (!cast<HasOneUseBinOp>(!if (!eq (Type, "I"), NonACAMDGPUmul_i24_oneuse, NonACAMDGPUmul_u24_oneuse))
-                             (!cast<Extract>(#Type#Index#"_4bit") node:$src0),
-                             (!cast<Extract>(#Type#Index#"_4bit") node:$src1))>;
+                             (!cast<Extract>(Type#Index#"_4bit") node:$src0),
+                             (!cast<Extract>(Type#Index#"_4bit") node:$src1))>;
   }
 
 class UDot2Pat<Instruction Inst> : GCNPat <

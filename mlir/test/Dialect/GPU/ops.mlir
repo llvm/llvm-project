@@ -27,7 +27,7 @@ module attributes {gpu.container_module} {
   }
 
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
       %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
       %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
       %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
@@ -59,7 +59,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) attributes {gpu.kernel} {
+    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) kernel {
       gpu.return
     }
   }
@@ -70,20 +70,20 @@ module attributes {gpu.container_module} {
     // CHECK: %{{.*}} = constant 8
     %cst = constant 8 : index
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_1", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_1} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_1", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_1}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = "kernel_2", kernel_module = @kernels} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_2} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = "kernel_2", kernel_module = @kernels }
+    { kernel = @kernels::@kernel_2}
         : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
 
     return
   }
 
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
     // CHECK:       workgroup
     // CHECK:       private

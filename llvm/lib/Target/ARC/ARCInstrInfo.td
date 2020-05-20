@@ -34,7 +34,7 @@ def ARCGAWrapper : SDNode<"ARCISD::GAWRAPPER", SDT_ARCmov, []>;
 // Comparison
 def ARCcmp : SDNode<"ARCISD::CMP", SDT_ARCcmptst, [SDNPOutGlue]>;
 
-// Conditionanal mov
+// Conditional mov
 def ARCcmov : SDNode<"ARCISD::CMOV", SDT_ARCcmov, [SDNPInGlue]>;
 
 // Conditional Branch
@@ -206,7 +206,7 @@ multiclass ArcBinaryEXT5Inst<bits<6> mincode, string opasm> :
 multiclass ArcUnaryGEN4Inst<bits<6> mincode, string opasm> :
   ArcUnaryInst<0b00100, mincode, opasm>;
 
-// Pattern generation for differnt instruction variants.
+// Pattern generation for different instruction variants.
 multiclass MultiPat<SDPatternOperator InFrag,
                Instruction RRR, Instruction RRU6, Instruction RRLImm> {
   def _rrr : Pat<(InFrag i32:$B, i32:$C), (RRR i32:$B, i32:$C)>;
@@ -215,7 +215,7 @@ multiclass MultiPat<SDPatternOperator InFrag,
 }
 
 // ---------------------------------------------------------------------------
-// Instruction defintions and patterns for 3 operand binary instructions.
+// Instruction definitions and patterns for 3 operand binary instructions.
 // ---------------------------------------------------------------------------
 
 // Definitions for 3 operand binary instructions.

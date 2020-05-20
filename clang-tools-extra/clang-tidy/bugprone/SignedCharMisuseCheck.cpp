@@ -29,10 +29,14 @@ static Matcher<TypedefDecl> hasAnyListedName(const std::string &Names) {
 SignedCharMisuseCheck::SignedCharMisuseCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CharTypdefsToIgnoreList(Options.get("CharTypdefsToIgnore", "")) {}
+      CharTypdefsToIgnoreList(Options.get("CharTypdefsToIgnore", "")),
+      DiagnoseSignedUnsignedCharComparisons(
+          Options.get("DiagnoseSignedUnsignedCharComparisons", true)) {}
 
 void SignedCharMisuseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CharTypdefsToIgnore", CharTypdefsToIgnoreList);
+  Options.store(Opts, "DiagnoseSignedUnsignedCharComparisons",
+                DiagnoseSignedUnsignedCharComparisons);
 }
 
 // Create a matcher for char -> integer cast.
@@ -92,21 +96,43 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(Declaration, this);
 
-  // Catch signed char/unsigned char comparison.
-  const auto CompareOperator =
-      expr(binaryOperator(hasAnyOperatorName("==", "!="),
-                          anyOf(allOf(hasLHS(SignedCharCastExpr),
-                                      hasRHS(UnSignedCharCastExpr)),
-                                allOf(hasLHS(UnSignedCharCastExpr),
-                                      hasRHS(SignedCharCastExpr)))))
-          .bind("comparison");
+  if (DiagnoseSignedUnsignedCharComparisons) {
+    // Catch signed char/unsigned char comparison.
+    const auto CompareOperator =
+        expr(binaryOperator(hasAnyOperatorName("==", "!="),
+                            anyOf(allOf(hasLHS(SignedCharCastExpr),
+                                        hasRHS(UnSignedCharCastExpr)),
+                                  allOf(hasLHS(UnSignedCharCastExpr),
+                                        hasRHS(SignedCharCastExpr)))))
+            .bind("comparison");
 
-  Finder->addMatcher(CompareOperator, this);
+    Finder->addMatcher(CompareOperator, this);
+  }
+
+  // Catch array subscripts with signed char -> integer conversion.
+  // Matcher for C arrays.
+  const auto CArraySubscript =
+      arraySubscriptExpr(hasIndex(SignedCharCastExpr)).bind("arraySubscript");
+
+  Finder->addMatcher(CArraySubscript, this);
+
+  // Matcher for std arrays.
+  const auto STDArraySubscript =
+      cxxOperatorCallExpr(
+          hasOverloadedOperatorName("[]"),
+          hasArgument(0, hasType(cxxRecordDecl(hasName("::std::array")))),
+          hasArgument(1, SignedCharCastExpr))
+          .bind("arraySubscript");
+
+  Finder->addMatcher(STDArraySubscript, this);
 }
 
 void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *SignedCastExpression =
       Result.Nodes.getNodeAs<ImplicitCastExpr>("signedCastExpression");
+  const auto *IntegerType = Result.Nodes.getNodeAs<QualType>("integerType");
+  assert(SignedCastExpression);
+  assert(IntegerType);
 
   // Ignore the match if we know that the signed char's value is not negative.
   // The potential misinterpretation happens for negative values only.
@@ -135,14 +161,17 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
 
     diag(Comparison->getBeginLoc(),
          "comparison between 'signed char' and 'unsigned char'");
-  } else if (const auto *IntegerType =
-                 Result.Nodes.getNodeAs<QualType>("integerType")) {
+  } else if (Result.Nodes.getNodeAs<Expr>("arraySubscript")) {
+    diag(SignedCastExpression->getBeginLoc(),
+         "'signed char' to %0 conversion in array subscript; "
+         "consider casting to 'unsigned char' first.")
+        << *IntegerType;
+  } else {
     diag(SignedCastExpression->getBeginLoc(),
          "'signed char' to %0 conversion; "
          "consider casting to 'unsigned char' first.")
         << *IntegerType;
-  } else
-    llvm_unreachable("Unexpected match");
+  }
 }
 
 } // namespace bugprone

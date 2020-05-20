@@ -30,6 +30,7 @@
 ; CHECK-NEXT:      Remove unreachable blocks from the CFG
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Block Frequency Analysis
 ; CHECK-NEXT:      Constant Hoisting
@@ -70,6 +71,7 @@
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
 ; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
@@ -94,6 +96,7 @@
 ; CHECK-NEXT:      Remove dead machine instructions
 ; CHECK-NEXT:      MVE VPT Optimisation Pass
 ; CHECK-NEXT:      ARM MLA / MLS expansion pass
+; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM pre- register allocation load / store optimization pass
 ; CHECK-NEXT:      ARM A15 S->D optimizer
 ; CHECK-NEXT:      Detect Dead Lanes
@@ -125,9 +128,8 @@
 ; CHECK-NEXT:      Machine Loop Invariant Code Motion
 ; CHECK-NEXT:      Fixup Statepoint Caller Saved
 ; CHECK-NEXT:      PostRA Machine Sink
-; CHECK-NEXT:      MachineDominator Tree Construction
-; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Machine Block Frequency Analysis
+; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter

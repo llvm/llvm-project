@@ -80,7 +80,7 @@ namespace llvm {
         NumElements = ATy->getNumElements();
       } else if (auto *VTy = dyn_cast<VectorType>(Ty)) {
         CurTy = VTy->getElementType();
-        if (VTy->isScalable())
+        if (isa<ScalableVectorType>(VTy))
           NumElements = Unbounded;
         else
           NumElements = VTy->getNumElements();

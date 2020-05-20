@@ -19,7 +19,6 @@ define amdgpu_ps half @image_sample_2d_f16(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX81-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX81-NEXT:    s_wqm_b64 exec, exec
 ; GFX81-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GFX81-NEXT:    s_nop 0
 ; GFX81-NEXT:    image_sample v0, v[0:1], s[0:7], s[8:11] dmask:0x1 d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
@@ -73,12 +72,9 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX81-NEXT:    v_mov_b32_e32 v5, s13
 ; GFX81-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX81-NEXT:    s_and_b64 exec, exec, s[14:15]
-; GFX81-NEXT:    s_nop 0
 ; GFX81-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    v_mov_b32_e32 v0, v2
-; GFX81-NEXT:    s_nop 0
-; GFX81-NEXT:    s_nop 0
 ; GFX81-NEXT:    flat_store_dword v[4:5], v3
 ; GFX81-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
@@ -173,8 +169,6 @@ define amdgpu_ps <2 x float> @image_sample_c_d_1d_v2f16_tfe(<8 x i32> inreg %rsr
 ; GFX81:       ; %bb.0: ; %main_body
 ; GFX81-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX81-NEXT:    v_mov_b32_e32 v5, v4
-; GFX81-NEXT:    s_nop 0
-; GFX81-NEXT:    s_nop 0
 ; GFX81-NEXT:    image_sample_c_d v[4:5], v[0:3], s[0:7], s[8:11] dmask:0x3 tfe d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    v_mov_b32_e32 v0, v4
@@ -231,7 +225,6 @@ define amdgpu_ps <2 x float> @image_sample_b_2d_v4f16(<8 x i32> inreg %rsrc, <4 
 ; GFX81-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX81-NEXT:    s_wqm_b64 exec, exec
 ; GFX81-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GFX81-NEXT:    s_nop 0
 ; GFX81-NEXT:    image_sample_b v[0:1], v[0:2], s[0:7], s[8:11] dmask:0xf d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
@@ -288,7 +281,6 @@ define amdgpu_ps <4 x float> @image_sample_b_2d_v4f16_tfe(<8 x i32> inreg %rsrc,
 ; GFX81-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX81-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX81-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GFX81-NEXT:    s_nop 0
 ; GFX81-NEXT:    image_sample_b v[3:5], v[0:2], s[0:7], s[8:11] dmask:0xf tfe d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    v_mov_b32_e32 v0, v3

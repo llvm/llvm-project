@@ -85,10 +85,7 @@
 ; CHECK-O: Running pass: PostOrderFunctionAttrsPass on (main)
 ; CHECK-O: Invalidating all non-preserved analyses for: (main)
 ; CHECK-O: Clearing all analysis results for: main
-; CHECK-O: Invalidating analysis: FunctionAnalysisManagerCGSCCProxy on (main)
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
-; CHECK-O2: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
-; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
 ; CHECK-O3: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O3: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>

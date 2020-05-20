@@ -12,65 +12,43 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
-OperationHandle mlir::edsc::intrinsics::std_br(BlockHandle bh,
-                                               ArrayRef<ValueHandle> operands) {
+BranchOp mlir::edsc::intrinsics::std_br(BlockHandle bh, ValueRange operands) {
   assert(bh && "Expected already captured BlockHandle");
-  for (auto &o : operands) {
-    (void)o;
-    assert(o && "Expected already captured ValueHandle");
-  }
   SmallVector<Value, 4> ops(operands.begin(), operands.end());
-  return OperationHandle::create<BranchOp>(bh.getBlock(), ops);
+  return OperationBuilder<BranchOp>(bh.getBlock(), ops);
 }
 
-static void enforceEmptyCapturesMatchOperands(ArrayRef<ValueHandle *> captures,
-                                              ArrayRef<ValueHandle> operands) {
-  assert(captures.size() == operands.size() &&
-         "Expected same number of captures as operands");
-  for (auto it : llvm::zip(captures, operands)) {
-    (void)it;
-    assert(!std::get<0>(it)->hasValue() &&
-           "Unexpected already captured ValueHandle");
-    assert(std::get<1>(it) && "Expected already captured ValueHandle");
-    assert(std::get<0>(it)->getType() == std::get<1>(it).getType() &&
-           "Expected the same type for capture and operand");
-  }
-}
-
-OperationHandle mlir::edsc::intrinsics::std_br(BlockHandle *bh,
-                                               ArrayRef<ValueHandle *> captures,
-                                               ArrayRef<ValueHandle> operands) {
+BranchOp mlir::edsc::intrinsics::std_br(BlockHandle *bh, ArrayRef<Type> types,
+                                        MutableArrayRef<Value> captures,
+                                        ValueRange operands) {
   assert(!*bh && "Unexpected already captured BlockHandle");
-  enforceEmptyCapturesMatchOperands(captures, operands);
-  BlockBuilder(bh, captures)(/* no body */);
+  BlockBuilder(bh, types, captures)(/* no body */);
   SmallVector<Value, 4> ops(operands.begin(), operands.end());
-  return OperationHandle::create<BranchOp>(bh->getBlock(), ops);
+  return OperationBuilder<BranchOp>(bh->getBlock(), ops);
 }
 
-OperationHandle
-mlir::edsc::intrinsics::std_cond_br(ValueHandle cond, BlockHandle trueBranch,
-                                    ArrayRef<ValueHandle> trueOperands,
-                                    BlockHandle falseBranch,
-                                    ArrayRef<ValueHandle> falseOperands) {
+CondBranchOp mlir::edsc::intrinsics::std_cond_br(Value cond,
+                                                 BlockHandle trueBranch,
+                                                 ValueRange trueOperands,
+                                                 BlockHandle falseBranch,
+                                                 ValueRange falseOperands) {
   SmallVector<Value, 4> trueOps(trueOperands.begin(), trueOperands.end());
   SmallVector<Value, 4> falseOps(falseOperands.begin(), falseOperands.end());
-  return OperationHandle::create<CondBranchOp>(
-      cond, trueBranch.getBlock(), trueOps, falseBranch.getBlock(), falseOps);
+  return OperationBuilder<CondBranchOp>(cond, trueBranch.getBlock(), trueOps,
+                                        falseBranch.getBlock(), falseOps);
 }
 
-OperationHandle mlir::edsc::intrinsics::std_cond_br(
-    ValueHandle cond, BlockHandle *trueBranch,
-    ArrayRef<ValueHandle *> trueCaptures, ArrayRef<ValueHandle> trueOperands,
-    BlockHandle *falseBranch, ArrayRef<ValueHandle *> falseCaptures,
-    ArrayRef<ValueHandle> falseOperands) {
+CondBranchOp mlir::edsc::intrinsics::std_cond_br(
+    Value cond, BlockHandle *trueBranch, ArrayRef<Type> trueTypes,
+    MutableArrayRef<Value> trueCaptures, ValueRange trueOperands,
+    BlockHandle *falseBranch, ArrayRef<Type> falseTypes,
+    MutableArrayRef<Value> falseCaptures, ValueRange falseOperands) {
   assert(!*trueBranch && "Unexpected already captured BlockHandle");
   assert(!*falseBranch && "Unexpected already captured BlockHandle");
-  enforceEmptyCapturesMatchOperands(trueCaptures, trueOperands);
-  enforceEmptyCapturesMatchOperands(falseCaptures, falseOperands);
-  BlockBuilder(trueBranch, trueCaptures)(/* no body */);
-  BlockBuilder(falseBranch, falseCaptures)(/* no body */);
+  BlockBuilder(trueBranch, trueTypes, trueCaptures)(/* no body */);
+  BlockBuilder(falseBranch, falseTypes, falseCaptures)(/* no body */);
   SmallVector<Value, 4> trueOps(trueOperands.begin(), trueOperands.end());
   SmallVector<Value, 4> falseOps(falseOperands.begin(), falseOperands.end());
-  return OperationHandle::create<CondBranchOp>(
-      cond, trueBranch->getBlock(), trueOps, falseBranch->getBlock(), falseOps);
+  return OperationBuilder<CondBranchOp>(cond, trueBranch->getBlock(), trueOps,
+                                        falseBranch->getBlock(), falseOps);
 }

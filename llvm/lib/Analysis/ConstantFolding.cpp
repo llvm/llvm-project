@@ -509,7 +509,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
                                           const DataLayout &DL) {
   // Bail out early. Not expect to load from scalable global variable.
-  if (LoadTy->isVectorTy() && cast<VectorType>(LoadTy)->isScalable())
+  if (isa<ScalableVectorType>(LoadTy))
     return nullptr;
 
   auto *PTy = cast<PointerType>(C->getType());
@@ -836,8 +836,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   Type *SrcElemTy = GEP->getSourceElementType();
   Type *ResElemTy = GEP->getResultElementType();
   Type *ResTy = GEP->getType();
-  if (!SrcElemTy->isSized() ||
-      (SrcElemTy->isVectorTy() && cast<VectorType>(SrcElemTy)->isScalable()))
+  if (!SrcElemTy->isSized() || isa<ScalableVectorType>(SrcElemTy))
     return nullptr;
 
   if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy,
@@ -2572,7 +2571,7 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
 
   // Do not iterate on scalable vector. The number of elements is unknown at
   // compile-time.
-  if (VTy->isScalable())
+  if (isa<ScalableVectorType>(VTy))
     return nullptr;
 
   if (IntrinsicID == Intrinsic::masked_load) {

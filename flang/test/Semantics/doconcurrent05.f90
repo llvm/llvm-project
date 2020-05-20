@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C1167 -- An exit-stmt shall not appear within a DO CONCURRENT construct if 
 ! it belongs to that construct or an outer construct.
 

@@ -235,6 +235,8 @@ struct Configuration {
   bool swaprunNet = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
+  bool autoImport = false;
+  bool pseudoRelocs = false;
 };
 
 extern Configuration *config;

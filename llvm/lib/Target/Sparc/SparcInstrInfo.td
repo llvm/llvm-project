@@ -1080,7 +1080,7 @@ let hasSideEffects = 1, rd = 0, rs1 = 0b01111, rs2 = 0 in
   def STBAR : F3_1<2, 0b101000, (outs), (ins), "stbar", []>;
 
 
-// Section B.31 - Unimplmented Instruction
+// Section B.31 - Unimplemented Instruction
 let rd = 0 in
   def UNIMP : F2_1<0b000, (outs), (ins i32imm:$imm22),
                   "unimp $imm22", []>;

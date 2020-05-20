@@ -65,8 +65,8 @@ kernel void format_v4f64(half4 arg_h, float4 arg_f, double4 arg_d)
 
 kernel void format_v4f16(half4 arg_h, float4 arg_f, double4 arg_d)
 {
-  printf("%v4hf\n", arg_d); // expected-warning{{format specifies type '__fp16 __attribute__((ext_vector_type(4)))' but the argument has type 'double4' (vector of 4 'double' values)}}
-  printf("%v4hf\n", arg_f); // expected-warning{{format specifies type '__fp16 __attribute__((ext_vector_type(4)))' but the argument has type 'float4' (vector of 4 'float' values)}}
+  printf("%v4hf\n", arg_d); // expected-warning{{format specifies type 'half __attribute__((ext_vector_type(4)))' but the argument has type 'double4' (vector of 4 'double' values)}}
+  printf("%v4hf\n", arg_f); // expected-warning{{format specifies type 'half __attribute__((ext_vector_type(4)))' but the argument has type 'float4' (vector of 4 'float' values)}}
   printf("%v4hf\n", arg_h);
 }
 

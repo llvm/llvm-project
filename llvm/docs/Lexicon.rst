@@ -254,7 +254,7 @@ S
 **Safe Point**
     In garbage collection, it is necessary to identify `stack roots`_ so that
     reachability analysis may proceed. It may be infeasible to provide this
-    information for every instruction, so instead the information may is
+    information for every instruction, so instead the information is
     calculated only at designated safe points. With a copying collector,
     `derived pointers`_ must not be retained across safe points and `object
     pointers`_ must be reloaded from stack roots.

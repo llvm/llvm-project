@@ -54,7 +54,6 @@ struct SVEIntrinsicOpts : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  static IntrinsicInst *isReinterpretFromSVBool(Value *V);
   static IntrinsicInst *isReinterpretToSVBool(Value *V);
 
   static bool optimizeIntrinsic(Instruction *I);
@@ -91,18 +90,6 @@ IntrinsicInst *SVEIntrinsicOpts::isReinterpretToSVBool(Value *V) {
     return nullptr;
 
   if (I->getIntrinsicID() != Intrinsic::aarch64_sve_convert_to_svbool)
-    return nullptr;
-
-  return I;
-}
-
-/// Returns V if it's a cast to <n x 16 x i1> (aka svbool_t), nullptr otherwise.
-IntrinsicInst *SVEIntrinsicOpts::isReinterpretFromSVBool(Value *V) {
-  IntrinsicInst *I = dyn_cast<IntrinsicInst>(V);
-  if (!I)
-    return nullptr;
-
-  if (I->getIntrinsicID() != Intrinsic::aarch64_sve_convert_from_svbool)
     return nullptr;
 
   return I;
@@ -183,7 +170,8 @@ bool SVEIntrinsicOpts::optimizePTest(IntrinsicInst *I) {
 }
 
 bool SVEIntrinsicOpts::optimizeConvertFromSVBool(IntrinsicInst *I) {
-  assert(isReinterpretFromSVBool(I));
+  assert(I->getIntrinsicID() == Intrinsic::aarch64_sve_convert_from_svbool &&
+         "Unexpected opcode");
 
   // If the reinterpret instruction operand is a PHI Node
   if (isa<PHINode>(I->getArgOperand(0)))

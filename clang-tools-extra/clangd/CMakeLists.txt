@@ -1,3 +1,5 @@
+add_subdirectory(support)
+
 # Configure the Features.inc file.
 if (NOT DEFINED CLANGD_BUILD_XPC)
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -25,19 +27,8 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-if(CLANG_BUILT_STANDALONE)
-  # needed to get HAVE_CXX_ATOMICS64_WITHOUT_LIB defined
-  include(CheckAtomic)
-endif()
-
-set(CLANGD_ATOMIC_LIB "")
-if(NOT HAVE_CXX_ATOMICS_WITHOUT_LIB OR NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
-  list(APPEND CLANGD_ATOMIC_LIB "atomic")
-endif()
-
 add_clang_library(clangDaemon
   AST.cpp
-  Cancellation.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
   CodeComplete.cpp
@@ -45,7 +36,6 @@ add_clang_library(clangDaemon
   CollectMacros.cpp
   CompileCommands.cpp
   Compiler.cpp
-  Context.cpp
   Diagnostics.cpp
   DraftStore.cpp
   ExpectedTypes.cpp
@@ -54,8 +44,6 @@ add_clang_library(clangDaemon
   FileDistance.cpp
   Format.cpp
   FS.cpp
-  FSProvider.cpp
-  FormattedString.cpp
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp
@@ -63,7 +51,6 @@ add_clang_library(clangDaemon
   Hover.cpp
   IncludeFixer.cpp
   JSONTransport.cpp
-  Logger.cpp
   PathMapping.cpp
   Protocol.cpp
   Quality.cpp
@@ -73,11 +60,8 @@ add_clang_library(clangDaemon
   Selection.cpp
   SemanticHighlighting.cpp
   SemanticSelection.cpp
-  Shutdown.cpp
   SourceCode.cpp
   QueryDriverDatabase.cpp
-  Threading.cpp
-  Trace.cpp
   TUScheduler.cpp
   URI.cpp
   XRefs.cpp
@@ -128,8 +112,8 @@ add_clang_library(clangDaemon
   clangToolingInclusions
   clangToolingRefactoring
   clangToolingSyntax
+  clangdSupport
   ${LLVM_PTHREAD_LIB}
-  ${CLANGD_ATOMIC_LIB}
   ${ALL_CLANG_TIDY_CHECKS}
   )
 
@@ -140,7 +124,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 endif()
 add_subdirectory(tool)
 add_subdirectory(indexer)
-add_subdirectory(index/dex/dexp)
 
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
@@ -153,3 +136,13 @@ if(CLANG_INCLUDE_TESTS)
 add_subdirectory(test)
 add_subdirectory(unittests)
 endif()
+
+# FIXME(kirillbobyrev): Document this in the LLVM docs once remote index is stable.
+option(CLANGD_ENABLE_REMOTE "Use gRPC library to enable remote index support for Clangd" OFF)
+set(GRPC_INSTALL_PATH "" CACHE PATH "Path to gRPC library manual installation.")
+
+if (CLANGD_ENABLE_REMOTE)
+  include(FindGRPC)
+endif()
+add_subdirectory(index/remote)
+add_subdirectory(index/dex/dexp)

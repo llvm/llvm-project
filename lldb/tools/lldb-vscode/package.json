@@ -218,8 +218,12 @@
 							},
 							"exitCommands": {
 								"type": "array",
-									"description": "Commands executed at the end of debugging session.",
-									"default": []
+								"description": "Commands executed at the end of debugging session.",
+								"default": []
+							},
+							"coreFile": {
+								"type": "string",
+								"description": "Path to the core file to debug."
 							}
 						}
 					}

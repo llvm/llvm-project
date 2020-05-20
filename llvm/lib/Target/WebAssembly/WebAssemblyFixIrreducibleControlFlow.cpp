@@ -413,31 +413,33 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   }
 
   // Record if each entry has a layout predecessor. This map stores
-  // <<Predecessor is within the loop?, loop entry>, layout predecessor>
-  std::map<std::pair<bool, MachineBasicBlock *>, MachineBasicBlock *>
+  // <<loop entry, Predecessor is within the loop?>, layout predecessor>
+  DenseMap<PointerIntPair<MachineBasicBlock *, 1, bool>, MachineBasicBlock *>
       EntryToLayoutPred;
-  for (auto *Pred : AllPreds)
+  for (auto *Pred : AllPreds) {
+    bool PredInLoop = InLoop.count(Pred);
     for (auto *Entry : Pred->successors())
       if (Entries.count(Entry) && Pred->isLayoutSuccessor(Entry))
-        EntryToLayoutPred[std::make_pair(InLoop.count(Pred), Entry)] = Pred;
+        EntryToLayoutPred[{Entry, PredInLoop}] = Pred;
+  }
 
   // We need to create at most two routing blocks per entry: one for
   // predecessors outside the loop and one for predecessors inside the loop.
   // This map stores
-  // <<Predecessor is within the loop?, loop entry>, routing block>
-  std::map<std::pair<bool, MachineBasicBlock *>, MachineBasicBlock *> Map;
+  // <<loop entry, Predecessor is within the loop?>, routing block>
+  DenseMap<PointerIntPair<MachineBasicBlock *, 1, bool>, MachineBasicBlock *>
+      Map;
   for (auto *Pred : AllPreds) {
     bool PredInLoop = InLoop.count(Pred);
     for (auto *Entry : Pred->successors()) {
-      if (!Entries.count(Entry) ||
-          Map.count(std::make_pair(InLoop.count(Pred), Entry)))
+      if (!Entries.count(Entry) || Map.count({Entry, PredInLoop}))
         continue;
       // If there exists a layout predecessor of this entry and this predecessor
       // is not that, we rather create a routing block after that layout
       // predecessor to save a branch.
-      if (EntryToLayoutPred.count(std::make_pair(PredInLoop, Entry)) &&
-          EntryToLayoutPred[std::make_pair(PredInLoop, Entry)] != Pred)
-        continue;
+      if (auto *OtherPred = EntryToLayoutPred.lookup({Entry, PredInLoop}))
+        if (OtherPred != Pred)
+          continue;
 
       // This is a successor we need to rewrite.
       MachineBasicBlock *Routing = MF.CreateMachineBasicBlock();
@@ -453,7 +455,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
           .addImm(Indices[Entry]);
       BuildMI(Routing, DebugLoc(), TII.get(WebAssembly::BR)).addMBB(Dispatch);
       Routing->addSuccessor(Dispatch);
-      Map[std::make_pair(PredInLoop, Entry)] = Routing;
+      Map[{Entry, PredInLoop}] = Routing;
     }
   }
 
@@ -463,12 +465,12 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
     for (MachineInstr &Term : Pred->terminators())
       for (auto &Op : Term.explicit_uses())
         if (Op.isMBB() && Indices.count(Op.getMBB()))
-          Op.setMBB(Map[std::make_pair(PredInLoop, Op.getMBB())]);
+          Op.setMBB(Map[{Op.getMBB(), PredInLoop}]);
 
     for (auto *Succ : Pred->successors()) {
       if (!Entries.count(Succ))
         continue;
-      auto *Routing = Map[std::make_pair(PredInLoop, Succ)];
+      auto *Routing = Map[{Succ, PredInLoop}];
       Pred->replaceSuccessor(Succ, Routing);
     }
   }

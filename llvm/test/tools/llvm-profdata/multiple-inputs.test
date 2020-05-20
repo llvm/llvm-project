@@ -23,8 +23,8 @@ FOO3EMPTY: Maximum function count: 1
 FOO3EMPTY: Maximum internal block count: 3
 
 RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3bar3-1.proftext -o %t
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO3FOO3BAR3 --check-prefix=FOO3FOO3BAR3-1
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO3FOO3BAR3 --check-prefix=FOO3FOO3BAR3-2
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefixes=FOO3FOO3BAR3,FOO3FOO3BAR3-1
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefixes=FOO3FOO3BAR3,FOO3FOO3BAR3-2
 FOO3FOO3BAR3-1: foo:
 FOO3FOO3BAR3-1: Counters: 3
 FOO3FOO3BAR3-1: Function count: 3
@@ -38,8 +38,8 @@ FOO3FOO3BAR3: Maximum function count: 7
 FOO3FOO3BAR3: Maximum internal block count: 13
 
 RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/bar3-1.proftext -o %t
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=DISJOINT --check-prefix=DISJOINT-1
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=DISJOINT --check-prefix=DISJOINT-2
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefixes=DISJOINT,DISJOINT-1
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefixes=DISJOINT,DISJOINT-2
 DISJOINT-1: foo:
 DISJOINT-1: Counters: 3
 DISJOINT-1: Function count: 1

@@ -562,6 +562,10 @@ void CallGraphSCC::ReplaceNode(CallGraphNode *Old, CallGraphNode *New) {
   CGI->ReplaceNode(Old, New);
 }
 
+void CallGraphSCC::DeleteNode(CallGraphNode *Old) {
+  ReplaceNode(Old, /*New=*/nullptr);
+}
+
 //===----------------------------------------------------------------------===//
 // CallGraphSCCPass Implementation
 //===----------------------------------------------------------------------===//

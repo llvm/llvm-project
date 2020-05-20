@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! C815 An entity shall not be explicitly given any attribute more than once in 
 ! a scoping unit.
 !

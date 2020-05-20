@@ -18,9 +18,8 @@
 using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class ARM final : public TargetInfo {
@@ -65,6 +64,7 @@ ARM::ARM() {
   ipltEntrySize = 16;
   trapInstr = {0xd4, 0xd4, 0xd4, 0xd4};
   needsThunks = true;
+  defaultMaxPageSize = 65536;
 }
 
 uint32_t ARM::calcEFlags() const {
@@ -844,10 +844,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-TargetInfo *getARMTargetInfo() {
+TargetInfo *elf::getARMTargetInfo() {
   static ARM target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

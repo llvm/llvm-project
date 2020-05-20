@@ -448,34 +448,39 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
                                                     nullptr, RecordRecoverable);
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
   DWARFDebugLine::LineTable Result(**ExpectedLineTable);
-  // Undo the earlier modification so that it can be compared against a
-  // "default" prologue.
-  Result.Prologue.PrologueLength += 2;
-  checkDefaultPrologue(Version, Format, Result.Prologue, 0);
+
+  if (Version != 5) {
+    // Parsing will stop before reading a complete file entry.
+    ASSERT_EQ(Result.Prologue.IncludeDirectories.size(), 1u);
+    EXPECT_EQ(toStringRef(Result.Prologue.IncludeDirectories[0]), "a dir");
+    EXPECT_EQ(Result.Prologue.FileNames.size(), 0u);
+  } else {
+    // Parsing will continue past the presumed end of prologue.
+    ASSERT_EQ(Result.Prologue.FileNames.size(), 1u);
+    ASSERT_EQ(Result.Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
+    ASSERT_EQ(Result.Prologue.FileNames[0].DirIdx, 0u);
+    EXPECT_EQ(toStringRef(Result.Prologue.FileNames[0].Name), "a file");
+  }
 
   uint64_t ExpectedEnd =
       Prologue.TotalLength - 2 + Prologue.sizeofTotalLength();
   std::vector<std::string> Errs;
-  // Parsing of a DWARFv2-4 file table stops at the end of an entry once the
-  // prologue end has been reached, whether or not the trailing null terminator
-  // has been found. As such, the expected error message will be slightly
-  // different.
-  uint64_t ActualEnd = Version == 5 ? ExpectedEnd + 2 : ExpectedEnd + 1;
   if (Version != 5) {
     Errs.emplace_back(
         (Twine("parsing line table prologue at 0x00000000 found an invalid "
                "directory or file table description at 0x000000") +
-         Twine::utohexstr(ActualEnd))
+         Twine::utohexstr(ExpectedEnd + 1))
             .str());
     Errs.emplace_back("file names table was not null terminated before the end "
                       "of the prologue");
+  } else {
+    Errs.emplace_back(
+        (Twine("parsing line table prologue at 0x00000000 should have ended at "
+               "0x000000") +
+         Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
+         Twine::utohexstr(ExpectedEnd + 2))
+            .str());
   }
-  Errs.emplace_back(
-      (Twine("parsing line table prologue at 0x00000000 should have ended at "
-             "0x000000") +
-       Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
-       Twine::utohexstr(ActualEnd))
-          .str());
   EXPECT_THAT_ERROR(std::move(Recoverable),
                     FailedWithMessageArray(testing::ElementsAreArray(Errs)));
 }

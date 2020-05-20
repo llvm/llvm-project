@@ -8,7 +8,7 @@ function(add_loader_object name)
   )
 
   get_fq_target_name(${name} fq_target_name)
-
+  get_fq_deps_list(fq_deps_list ${ADD_LOADER_OBJECT_DEPENDS})
   if(ADD_LOADER_OBJECT_ALIAS)
     list(LENGTH ADD_LOADER_OBJECT_DEPENDS deps_size)
     if(NOT (${deps_size} EQUAL "1"))
@@ -23,14 +23,15 @@ function(add_loader_object name)
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
-        "TARGET_TYPE" "LOADER_OBJECT"
-        "OBJECT_FILES" ${dep_objfile}
+        "TARGET_TYPE" "${OBJECT_LIBRARY_TARGET_TYPE}"
+        "OBJECT_FILES" ""
+        "DEPS" "${fq_dep_name}"
     )
     return()
   endif()
 
   add_object_library(
-    ${name}_objects
+    ${name}.__objects__
     SRCS ${ADD_LOADER_OBJECT_SRC}
     DEPENDS ${ADD_LOADER_OBJECT_DEPENDS}
     COMPILE_OPTIONS ${ADD_LOADER_OBJECT_COMPILE_OPTIONS}
@@ -39,8 +40,8 @@ function(add_loader_object name)
   set(objfile ${LIBC_BUILD_DIR}/lib/${name}.o)
   add_custom_command(
     OUTPUT ${objfile}
-    COMMAND cp $<TARGET_OBJECTS:${fq_target_name}_objects> ${objfile}
-    DEPENDS $<TARGET_OBJECTS:${fq_target_name}_objects>
+    COMMAND cp $<TARGET_OBJECTS:${fq_target_name}.__objects__> ${objfile}
+    DEPENDS $<TARGET_OBJECTS:${fq_target_name}.__objects__>
   )
   add_custom_target(
     ${fq_target_name}
@@ -49,8 +50,9 @@ function(add_loader_object name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
-      "TARGET_TYPE" "LOADER_OBJECT"
-      "OBJECT_FILES" ${objfile}
+      "TARGET_TYPE" "${OBJECT_LIBRARY_TARGET_TYPE}"
+      "OBJECT_FILES" ""
+      "DEPS" "${fq_target_name}.__objects__"
   )
 endfunction()
 

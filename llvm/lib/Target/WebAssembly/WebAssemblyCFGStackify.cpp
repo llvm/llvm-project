@@ -277,11 +277,19 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
 #endif
     }
 
-    // All previously inserted BLOCK/TRY markers should be after the BLOCK
-    // because they are all nested blocks.
+    // If there is a previously placed BLOCK/TRY marker and its corresponding
+    // END marker is before the current BLOCK's END marker, that should be
+    // placed after this BLOCK. Otherwise it should be placed before this BLOCK
+    // marker.
     if (MI.getOpcode() == WebAssembly::BLOCK ||
-        MI.getOpcode() == WebAssembly::TRY)
-      AfterSet.insert(&MI);
+        MI.getOpcode() == WebAssembly::TRY) {
+      if (BeginToEnd[&MI]->getParent()->getNumber() <= MBB.getNumber())
+        AfterSet.insert(&MI);
+#ifndef NDEBUG
+      else
+        BeforeSet.insert(&MI);
+#endif
+    }
 
 #ifndef NDEBUG
     // All END_(BLOCK|LOOP|TRY) markers should be before the BLOCK.
@@ -866,6 +874,10 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   // In new CFG, <destination to branch to, register containing exnref>
   DenseMap<MachineBasicBlock *, unsigned> BrDestToExnReg;
 
+  // Destinations for branches that will be newly added, for which a new
+  // BLOCK/END_BLOCK markers are necessary.
+  SmallVector<MachineBasicBlock *, 8> BrDests;
+
   // Gather possibly throwing calls (i.e., previously invokes) whose current
   // unwind destination is not the same as the original CFG.
   for (auto &MBB : reverse(MF)) {
@@ -1075,6 +1087,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
                         ? DebugLoc()
                         : EHPadLayoutPred->rbegin()->getDebugLoc();
       BuildMI(EHPadLayoutPred, DL, TII.get(WebAssembly::BR)).addMBB(Cont);
+      BrDests.push_back(Cont);
     }
   }
 
@@ -1178,8 +1191,16 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
 
       // Fix predecessor-successor relationship.
       NestedCont->transferSuccessors(MBB);
-      if (EHPad)
+      if (EHPad) {
         NestedCont->removeSuccessor(EHPad);
+        // If EHPad does not have any predecessors left after removing
+        // NextedCont predecessor, remove its successor too, because this EHPad
+        // is not reachable from the entry BB anyway. We can't remove EHPad BB
+        // itself because it can contain 'catch' or 'end', which are necessary
+        // for keeping try-catch-end structure.
+        if (EHPad->pred_empty())
+          EHPad->removeSuccessor(BrDest);
+      }
       MBB->addSuccessor(NestedEHPad);
       MBB->addSuccessor(NestedCont);
       NestedEHPad->addSuccessor(BrDest);
@@ -1211,10 +1232,14 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   // Recompute the dominator tree.
   getAnalysis<MachineDominatorTree>().runOnMachineFunction(MF);
 
-  // Place block markers for newly added branches.
-  SmallVector <MachineBasicBlock *, 8> BrDests;
-  for (auto &P : BrDestToTryRanges)
-    BrDests.push_back(P.first);
+  // Place block markers for newly added branches, if necessary.
+
+  // If we've created an appendix BB and a branch to it, place a block/end_block
+  // marker for that. For some new branches, those branch destination BBs start
+  // with a hoisted end_try marker, so we don't need a new marker there.
+  if (AppendixBB)
+    BrDests.push_back(AppendixBB);
+
   llvm::sort(BrDests,
              [&](const MachineBasicBlock *A, const MachineBasicBlock *B) {
                auto ANum = A->getNumber();

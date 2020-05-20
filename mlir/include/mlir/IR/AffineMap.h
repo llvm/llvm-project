@@ -66,6 +66,11 @@ public:
   static AffineMap getMultiDimIdentityMap(unsigned numDims,
                                           MLIRContext *context);
 
+  /// Returns an identity affine map (d0, ..., dn) -> (dp, ..., dn) on the most
+  /// minor dimensions.
+  static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
+                                       MLIRContext *context);
+
   /// Returns an AffineMap representing a permutation.
   /// The permutation is expressed as a non-empty vector of integers.
   /// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with
@@ -93,6 +98,10 @@ public:
   /// An identity affine map corresponds to an identity affine function on the
   /// dimensional identifiers.
   bool isIdentity() const;
+
+  /// Returns true if the map is a minor identity map, i.e. an identity affine
+  /// map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
+  static bool isMinorIdentity(AffineMap map);
 
   /// Returns true if this affine map is an empty map, i.e., () -> ().
   bool isEmpty() const;
@@ -134,6 +143,16 @@ public:
   /// operands to a constant if possible.
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,
                              SmallVectorImpl<Attribute> &results) const;
+
+  /// Propagates the constant operands into this affine map. Operands are
+  /// allowed to be null, at which point they are treated as non-constant. This
+  /// does not change the number of symbols and dimensions. Returns a new map,
+  /// which may be equal to the old map if no folding happened. If `results` is
+  /// provided and if all expressions in the map were folded to constants,
+  /// `results` will contain the values of these constants.
+  AffineMap
+  partialConstantFold(ArrayRef<Attribute> operandConstants,
+                      SmallVectorImpl<int64_t> *results = nullptr) const;
 
   /// Returns the AffineMap resulting from composing `this` with `map`.
   /// The resulting AffineMap has as many AffineDimExpr as `map` and as many

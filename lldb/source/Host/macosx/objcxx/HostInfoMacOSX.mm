@@ -297,38 +297,78 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   }
 }
 
-std::string HostInfoMacOSX::GetXcodeSDK(XcodeSDK sdk) {
-  std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " +
-                          XcodeSDK::GetSDKNameForType(sdk.GetType()).str();
-  llvm::VersionTuple version = sdk.GetVersion();
-  if (!version.empty())
-    xcrun_cmd += version.getAsString();
+static std::string GetXcodeSDK(XcodeSDK sdk) {
+  XcodeSDK::Info info = sdk.Parse();
+  std::string sdk_name = XcodeSDK::GetCanonicalName(info);
+  auto find_sdk = [](std::string sdk_name) -> std::string {
+    std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " + sdk_name;
+    int status = 0;
+    int signo = 0;
+    std::string output_str;
+    lldb_private::Status error =
+        Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
+                              &output_str, std::chrono::seconds(15));
 
-  int status = 0;
-  int signo = 0;
-  std::string output_str;
-  lldb_private::Status error =
-      Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
-                            &output_str, std::chrono::seconds(15));
+    // Check that xcrun return something useful.
+    if (status != 0 || output_str.empty())
+      return {};
 
-  // Check that xcrun return something useful.
-  if (status != 0 || output_str.empty())
+    // Convert to a StringRef so we can manipulate the string without modifying
+    // the underlying data.
+    llvm::StringRef output(output_str);
+
+    // Remove any trailing newline characters.
+    output = output.rtrim();
+
+    // Strip any leading newline characters and everything before them.
+    const size_t last_newline = output.rfind('\n');
+    if (last_newline != llvm::StringRef::npos)
+      output = output.substr(last_newline + 1);
+
+    return output.str();
+  };
+
+  std::string path = find_sdk(sdk_name);
+  while (path.empty()) {
+    // Try an alternate spelling of the name ("macosx10.9internal").
+    if (info.type == XcodeSDK::Type::MacOSX && !info.version.empty() &&
+        info.internal) {
+      llvm::StringRef fixed(sdk_name);
+      if (fixed.consume_back(".internal"))
+        sdk_name = fixed.str() + "internal";
+      path = find_sdk(sdk_name);
+      if (!path.empty())
+        break;
+    }
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+    LLDB_LOGF(log, "Couldn't find SDK %s on host", sdk_name.c_str());
+
+    // Try without the version.
+    if (!info.version.empty()) {
+      info.version = {};
+      sdk_name = XcodeSDK::GetCanonicalName(info);
+      path = find_sdk(sdk_name);
+      if (!path.empty())
+        break;
+    }
+
+    LLDB_LOGF(log, "Couldn't find any matching SDK on host");
     return {};
-
-  // Convert to a StringRef so we can manipulate the string without modifying
-  // the underlying data.
-  llvm::StringRef output(output_str);
-
-  // Remove any trailing newline characters.
-  output = output.rtrim();
-
-  // Strip any leading newline characters and everything before them.
-  const size_t last_newline = output.rfind('\n');
-  if (last_newline != llvm::StringRef::npos)
-    output = output.substr(last_newline + 1);
+  }
 
   // Whatever is left in output should be a valid path.
-  if (!FileSystem::Instance().Exists(output))
+  if (!FileSystem::Instance().Exists(path))
     return {};
-  return output.str();
+  return path;
+}
+
+llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
+  static llvm::StringMap<std::string> g_sdk_path;
+  static std::mutex g_sdk_path_mutex;
+
+  std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
+  std::string &path = g_sdk_path[sdk.GetString()];
+  if (path.empty())
+    path = GetXcodeSDK(sdk);
+  return path;
 }

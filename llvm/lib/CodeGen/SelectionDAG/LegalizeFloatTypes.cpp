@@ -1173,6 +1173,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FPOW:       ExpandFloatRes_FPOW(N, Lo, Hi); break;
   case ISD::STRICT_FPOWI:
   case ISD::FPOWI:      ExpandFloatRes_FPOWI(N, Lo, Hi); break;
+  case ISD::FREEZE:     ExpandFloatRes_FREEZE(N, Lo, Hi); break;
   case ISD::STRICT_FRINT:
   case ISD::FRINT:      ExpandFloatRes_FRINT(N, Lo, Hi); break;
   case ISD::STRICT_FROUND:
@@ -1464,6 +1465,17 @@ void DAGTypeLegalizer::ExpandFloatRes_FPOWI(SDNode *N,
                                         RTLIB::POWI_F32, RTLIB::POWI_F64,
                                         RTLIB::POWI_F80, RTLIB::POWI_F128,
                                         RTLIB::POWI_PPCF128), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FREEZE(SDNode *N,
+                                             SDValue &Lo, SDValue &Hi) {
+  assert(N->getValueType(0) == MVT::ppcf128 &&
+         "Logic only correct for ppcf128!");
+
+  SDLoc dl(N);
+  GetExpandedFloat(N->getOperand(0), Lo, Hi);
+  Lo = DAG.getNode(ISD::FREEZE, dl, Lo.getValueType(), Lo);
+  Hi = DAG.getNode(ISD::FREEZE, dl, Hi.getValueType(), Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FREM(SDNode *N,

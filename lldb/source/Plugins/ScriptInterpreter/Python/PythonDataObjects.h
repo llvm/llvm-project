@@ -360,15 +360,12 @@ public:
     return !!r;
   }
 
-  llvm::Expected<long long> AsLongLong() {
-    if (!m_py_obj)
-      return nullDeref();
-    assert(!PyErr_Occurred());
-    long long r = PyLong_AsLongLong(m_py_obj);
-    if (PyErr_Occurred())
-      return exception();
-    return r;
-  }
+  llvm::Expected<long long> AsLongLong() const;
+
+  llvm::Expected<long long> AsUnsignedLongLong() const;
+
+  // wraps on overflow, instead of raising an error.
+  llvm::Expected<unsigned long long> AsModuloUnsignedLongLong() const;
 
   llvm::Expected<bool> IsInstance(const PythonObject &cls) {
     if (!m_py_obj || !cls.IsValid())
@@ -398,6 +395,10 @@ template <> llvm::Expected<bool> As<bool>(llvm::Expected<PythonObject> &&obj);
 
 template <>
 llvm::Expected<long long> As<long long>(llvm::Expected<PythonObject> &&obj);
+
+template <>
+llvm::Expected<unsigned long long>
+As<unsigned long long>(llvm::Expected<PythonObject> &&obj);
 
 template <>
 llvm::Expected<std::string> As<std::string>(llvm::Expected<PythonObject> &&obj);
@@ -490,8 +491,6 @@ public:
 
   static bool Check(PyObject *py_obj);
   static void Convert(PyRefType &type, PyObject *&py_obj);
-
-  int64_t GetInteger() const;
 
   void SetInteger(int64_t value);
 

@@ -34,6 +34,9 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
 
 SCUDO_FLAG(bool, zero_contents, false, "Zero chunk contents on allocation.")
 
+SCUDO_FLAG(bool, pattern_fill_contents, false,
+           "Pattern fill chunk contents on allocation.")
+
 SCUDO_FLAG(int, rss_limit_mb, -1,
            "Enforce an upper limit (in megabytes) to the process RSS. The "
            "allocator will terminate or return NULL when allocations are "

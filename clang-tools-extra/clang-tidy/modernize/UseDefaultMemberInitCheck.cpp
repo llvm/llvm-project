@@ -217,7 +217,7 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           isDefaultConstructor(), unless(isInstantiated()),
           forEachConstructorInitializer(
               cxxCtorInitializer(
-                  forField(unless(anyOf(getLangOpts().CPlusPlus2a
+                  forField(unless(anyOf(getLangOpts().CPlusPlus20
                                             ? unless(anything())
                                             : isBitField(),
                                         hasInClassInitializer(anything()),

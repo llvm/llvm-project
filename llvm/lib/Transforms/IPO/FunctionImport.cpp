@@ -1243,10 +1243,12 @@ Expected<bool> FunctionImporter::importFunctions(
                << " from " << SrcModule->getSourceFileName() << "\n";
     }
 
-    if (Mover.move(std::move(SrcModule), GlobalsToImport.getArrayRef(),
-                   [](GlobalValue &, IRMover::ValueAdder) {},
-                   /*IsPerformingImport=*/true))
-      report_fatal_error("Function Import: link error");
+    if (Error Err = Mover.move(
+            std::move(SrcModule), GlobalsToImport.getArrayRef(),
+            [](GlobalValue &, IRMover::ValueAdder) {},
+            /*IsPerformingImport=*/true))
+      report_fatal_error("Function Import: link error: " +
+                         toString(std::move(Err)));
 
     ImportedCount += GlobalsToImport.size();
     NumImportedModules++;

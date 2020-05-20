@@ -229,6 +229,21 @@ Block *Block::getSinglePredecessor() {
   return it == pred_end() ? firstPred : nullptr;
 }
 
+/// If this block has a unique predecessor, i.e., all incoming edges originate
+/// from one block, return it. Otherwise, return null.
+Block *Block::getUniquePredecessor() {
+  auto it = pred_begin(), e = pred_end();
+  if (it == e)
+    return nullptr;
+
+  // Check for any conflicting predecessors.
+  auto *firstPred = *it;
+  for (++it; it != e; ++it)
+    if (*it != firstPred)
+      return nullptr;
+  return firstPred;
+}
+
 //===----------------------------------------------------------------------===//
 // Other
 //===----------------------------------------------------------------------===//

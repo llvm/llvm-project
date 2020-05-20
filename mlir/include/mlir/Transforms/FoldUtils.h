@@ -77,14 +77,14 @@ public:
   void create(OpBuilder &builder, SmallVectorImpl<Value> &results,
               Location location, Args &&... args) {
     // The op needs to be inserted only if the fold (below) fails, or the number
-    // of results of the op is zero (which is treated as an in-place
-    // fold). Using create methods of the builder will insert the op, so not
-    // using it here.
+    // of results produced by the successful folding is zero (which is treated
+    // as an in-place fold). Using create methods of the builder will insert the
+    // op, so not using it here.
     OperationState state(location, OpTy::getOperationName());
-    OpTy::build(&builder, state, std::forward<Args>(args)...);
+    OpTy::build(builder, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
 
-    if (failed(tryToFold(builder, op, results)) || op->getNumResults() == 0) {
+    if (failed(tryToFold(builder, op, results)) || results.empty()) {
       builder.insert(op);
       results.assign(op->result_begin(), op->result_end());
       return;
@@ -118,6 +118,11 @@ public:
 
   /// Clear out any constants cached inside of the folder.
   void clear();
+
+  /// Get or create a constant using the given builder. On success this returns
+  /// the constant operation, nullptr otherwise.
+  Value getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
+                            Attribute value, Type type, Location loc);
 
 private:
   /// This map keeps track of uniqued constants by dialect, attribute, and type.

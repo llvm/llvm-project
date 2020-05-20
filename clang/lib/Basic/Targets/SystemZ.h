@@ -150,6 +150,8 @@ public:
   }
 
   const char *getLongDoubleMangling() const override { return "g"; }
+
+  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

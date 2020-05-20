@@ -58,6 +58,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   printPolicy.SuppressScope = true;
   printPolicy.ConstantArraySizeAsWritten = true;
   printPolicy.UseVoidForZeroParams = false;
+  printPolicy.PrintInjectedClassNameWithArguments = false;
 
   std::string Type = MatchedDecl->getUnderlyingType().getAsString(printPolicy);
   std::string Name = MatchedDecl->getNameAsString();

@@ -70,6 +70,10 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const override;
 
+  unsigned getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const override;
+
   unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const override;
@@ -358,6 +362,15 @@ unsigned SIMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
   return getMachineOpValue(MI, MO, Fixups, STI);
 }
 
+unsigned SIMCCodeEmitter::getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo,
+                                                SmallVectorImpl<MCFixup> &Fixups,
+                                                const MCSubtargetInfo &STI) const {
+  auto Offset = MI.getOperand(OpNo).getImm();
+  // VI only supports 20-bit unsigned offsets.
+  assert(!AMDGPU::isVI(STI) || isUInt<20>(Offset));
+  return Offset;
+}
+
 unsigned
 SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
                                     SmallVectorImpl<MCFixup> &Fixups,
@@ -418,7 +431,13 @@ SIMCCodeEmitter::getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
   // instructions use acc[0:1] modifier bits to distinguish. These bits are
   // encoded as a virtual 9th bit of the register for these operands.
   if (MRI.getRegClass(AMDGPU::AGPR_32RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(Reg))
+      MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_96RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_128RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_160RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_192RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_256RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AGPR_LO16RegClassID).contains(Reg))
     Enc |= 512;
 
   return Enc;

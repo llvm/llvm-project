@@ -111,6 +111,13 @@ public:
     return result;
   }
 
+  constexpr EnumSet operator+(enumerationType v) const {
+    return {*this | EnumSet{v}};
+  }
+  constexpr EnumSet operator-(enumerationType v) const {
+    return {*this & ~EnumSet{v}};
+  }
+
   constexpr bool operator==(const EnumSet &that) const {
     return bitset_ == that.bitset_;
   }

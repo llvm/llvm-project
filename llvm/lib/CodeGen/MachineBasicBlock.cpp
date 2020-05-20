@@ -62,30 +62,39 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
     MCContext &Ctx = MF->getContext();
     auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
 
-    // We emit a non-temporary symbol for every basic block if we have BBLabels
-    // or -- with basic block sections -- when a basic block begins a section.
-    bool BasicBlockSymbols = isBeginSection() || MF->hasBBLabels();
-    auto Delimiter = BasicBlockSymbols ? "." : "_";
     assert(getNumber() >= 0 && "cannot get label for unreachable MBB");
 
-    // With Basic Block Sections, we emit a symbol for every basic block. To
-    // keep the size of strtab small, we choose a unary encoding which can
-    // compress the symbol names significantly.  The basic blocks for function
-    // foo are named a.BB.foo, aa.BB.foo, and so on.
-    if (BasicBlockSymbols) {
+    // We emit a non-temporary symbol for every basic block if we have BBLabels
+    // or -- with basic block sections -- when a basic block begins a section.
+    // With basic block symbols, we use a unary encoding which can
+    // compress the symbol names significantly. For basic block sections where
+    // this block is the first in a cluster, we use a non-temp descriptive name.
+    // Otherwise we fall back to use temp label.
+    if (MF->hasBBLabels()) {
       auto Iter = MF->getBBSectionsSymbolPrefix().begin();
       if (getNumber() < 0 ||
           getNumber() >= (int)MF->getBBSectionsSymbolPrefix().size())
         report_fatal_error("Unreachable MBB: " + Twine(getNumber()));
+      // The basic blocks for function foo are named a.BB.foo, aa.BB.foo, and
+      // so on.
       std::string Prefix(Iter + 1, Iter + getNumber() + 1);
       std::reverse(Prefix.begin(), Prefix.end());
       CachedMCSymbol =
-          Ctx.getOrCreateSymbol(Prefix + Twine(Delimiter) + "BB" +
-                                Twine(Delimiter) + Twine(MF->getName()));
+          Ctx.getOrCreateSymbol(Twine(Prefix) + ".BB." + Twine(MF->getName()));
+    } else if (MF->hasBBSections() && isBeginSection()) {
+      SmallString<5> Suffix;
+      if (SectionID == MBBSectionID::ColdSectionID) {
+        Suffix += ".cold";
+      } else if (SectionID == MBBSectionID::ExceptionSectionID) {
+        Suffix += ".eh";
+      } else {
+        Suffix += "." + std::to_string(SectionID.Number);
+      }
+      CachedMCSymbol = Ctx.getOrCreateSymbol(MF->getName() + Suffix);
     } else {
-      CachedMCSymbol = Ctx.getOrCreateSymbol(
-          Twine(Prefix) + "BB" + Twine(MF->getFunctionNumber()) +
-          Twine(Delimiter) + Twine(getNumber()));
+      CachedMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB" +
+                                             Twine(MF->getFunctionNumber()) +
+                                             "_" + Twine(getNumber()));
     }
   }
   return CachedMCSymbol;
@@ -1252,68 +1261,6 @@ void MachineBasicBlock::replacePhiUsesWith(MachineBasicBlock *Old,
     }
 }
 
-/// Various pieces of code can cause excess edges in the CFG to be inserted.  If
-/// we have proven that MBB can only branch to DestA and DestB, remove any other
-/// MBB successors from the CFG.  DestA and DestB can be null.
-///
-/// Besides DestA and DestB, retain other edges leading to LandingPads
-/// (currently there can be only one; we don't check or require that here).
-/// Note it is possible that DestA and/or DestB are LandingPads.
-bool MachineBasicBlock::CorrectExtraCFGEdges(MachineBasicBlock *DestA,
-                                             MachineBasicBlock *DestB,
-                                             bool IsCond) {
-  // The values of DestA and DestB frequently come from a call to the
-  // 'TargetInstrInfo::analyzeBranch' method. We take our meaning of the initial
-  // values from there.
-  //
-  // 1. If both DestA and DestB are null, then the block ends with no branches
-  //    (it falls through to its successor).
-  // 2. If DestA is set, DestB is null, and IsCond is false, then the block ends
-  //    with only an unconditional branch.
-  // 3. If DestA is set, DestB is null, and IsCond is true, then the block ends
-  //    with a conditional branch that falls through to a successor (DestB).
-  // 4. If DestA and DestB is set and IsCond is true, then the block ends with a
-  //    conditional branch followed by an unconditional branch. DestA is the
-  //    'true' destination and DestB is the 'false' destination.
-
-  bool Changed = false;
-
-  MachineBasicBlock *FallThru = getNextNode();
-
-  if (!DestA && !DestB) {
-    // Block falls through to successor.
-    DestA = FallThru;
-    DestB = FallThru;
-  } else if (DestA && !DestB) {
-    if (IsCond)
-      // Block ends in conditional jump that falls through to successor.
-      DestB = FallThru;
-  } else {
-    assert(DestA && DestB && IsCond &&
-           "CFG in a bad state. Cannot correct CFG edges");
-  }
-
-  // Remove superfluous edges. I.e., those which aren't destinations of this
-  // basic block, duplicate edges, or landing pads.
-  SmallPtrSet<const MachineBasicBlock*, 8> SeenMBBs;
-  MachineBasicBlock::succ_iterator SI = succ_begin();
-  while (SI != succ_end()) {
-    const MachineBasicBlock *MBB = *SI;
-    if (!SeenMBBs.insert(MBB).second ||
-        (MBB != DestA && MBB != DestB && !MBB->isEHPad())) {
-      // This is a superfluous edge, remove it.
-      SI = removeSuccessor(SI);
-      Changed = true;
-    } else {
-      ++SI;
-    }
-  }
-
-  if (Changed)
-    normalizeSuccProbs();
-  return Changed;
-}
-
 /// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc
@@ -1329,8 +1276,8 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
   if (MBBI == instr_begin()) return {};
-  // Skip debug declarations, we don't want a DebugLoc from them.
-  MBBI = skipDebugInstructionsBackward(std::prev(MBBI), instr_begin());
+  // Skip debug instructions, we don't want a DebugLoc from them.
+  MBBI = prev_nodbg(MBBI, instr_begin());
   if (!MBBI->isDebugInstr()) return MBBI->getDebugLoc();
   return {};
 }

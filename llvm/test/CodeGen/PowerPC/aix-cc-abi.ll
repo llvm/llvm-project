@@ -2333,7 +2333,7 @@ define void @caller_mix() {
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 156(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 160(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 164(1)
-; ASM32PWR4-DAG:  bl .mix_floats
+; ASM32PWR4:       bl .mix_floats
 
 ; ASM64PWR4:      mflr 0
 ; ASM64PWR4-DAG:  std 0, 16(1)
@@ -2352,9 +2352,4 @@ define void @caller_mix() {
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 200(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 208(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 216(1)
-; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 224(1)
-; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 232(1)
-; ASM64PWR4-DAG:  bl .mix_floats
-; ASM64PWR4-DAG:  ld [[REGF1:[0-9]+]], 232(1)
-; ASM64PWR4-DAG:  ld [[REGF2:[0-9]+]], 224(1)
-; ASM64PWR4-DAG: blr
+; ASM64PWR4:      bl .mix_floats

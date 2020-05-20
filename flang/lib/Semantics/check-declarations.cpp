@@ -52,7 +52,8 @@ private:
             symbolBeingChecked_->name());
       }
     } else {
-      evaluate::CheckSpecificationExpr(x, messages_, DEREF(scope_));
+      evaluate::CheckSpecificationExpr(
+          x, messages_, DEREF(scope_), context_.intrinsics());
     }
   }
   template <typename A> void CheckSpecExpr(const std::optional<A> &x) {
@@ -283,6 +284,12 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A dummy argument may not have the SAVE attribute"_err_en_US);
     }
   }
+  if (symbol.owner().IsDerivedType() &&
+      (symbol.attrs().test(Attr::CONTIGUOUS) &&
+          !(IsPointer(symbol) && symbol.Rank() > 0))) { // C752
+    messages_.Say(
+        "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
+  }
 }
 
 void CheckHelper::CheckValue(
@@ -384,15 +391,25 @@ void CheckHelper::CheckObjectEntity(
   CheckAssumedTypeEntity(symbol, details);
   symbolBeingChecked_ = nullptr;
   if (!details.coshape().empty()) {
+    bool isDeferredShape{details.coshape().IsDeferredShape()};
     if (IsAllocatable(symbol)) {
-      if (!details.coshape().IsDeferredShape()) { // C827
-        messages_.Say(
-            "ALLOCATABLE coarray must have a deferred coshape"_err_en_US);
+      if (!isDeferredShape) { // C827
+        messages_.Say("'%s' is an ALLOCATABLE coarray and must have a deferred"
+                      " coshape"_err_en_US,
+            symbol.name());
       }
+    } else if (symbol.owner().IsDerivedType()) { // C746
+      std::string deferredMsg{
+          isDeferredShape ? "" : " and have a deferred coshape"};
+      messages_.Say("Component '%s' is a coarray and must have the ALLOCATABLE"
+                    " attribute%s"_err_en_US,
+          symbol.name(), deferredMsg);
     } else {
       if (!details.coshape().IsAssumedSize()) { // C828
         messages_.Say(
-            "Non-ALLOCATABLE coarray must have an explicit coshape"_err_en_US);
+            "Component '%s' is a non-ALLOCATABLE coarray and must have"
+            " an explicit coshape"_err_en_US,
+            symbol.name());
       }
     }
   }
@@ -409,7 +426,8 @@ void CheckHelper::CheckObjectEntity(
             "An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE"_err_en_US);
       }
     }
-    if (InPure() && !IsPointer(symbol) && !IsIntentIn(symbol) &&
+    if (InPure() && !IsStmtFunction(DEREF(innermostSymbol_)) &&
+        !IsPointer(symbol) && !IsIntentIn(symbol) &&
         !symbol.attrs().test(Attr::VALUE)) {
       if (InFunction()) { // C1583
         messages_.Say(
@@ -562,6 +580,12 @@ void CheckHelper::CheckProcEntity(
       messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
     }
   } else if (symbol.owner().IsDerivedType()) {
+    if (!symbol.attrs().test(Attr::POINTER)) { // C756
+      const auto &name{symbol.name()};
+      messages_.Say(name,
+          "Procedure component '%s' must have POINTER attribute"_err_en_US,
+          name);
+    }
     CheckPassArg(symbol, details.interface().symbol(), details);
   }
   if (symbol.attrs().test(Attr::POINTER)) {
@@ -1044,7 +1068,7 @@ void CheckHelper::CheckVolatile(const Symbol &symbol, bool isAssociated,
 
 void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
   CheckConflicting(symbol, Attr::POINTER, Attr::TARGET);
-  CheckConflicting(symbol, Attr::POINTER, Attr::ALLOCATABLE);
+  CheckConflicting(symbol, Attr::POINTER, Attr::ALLOCATABLE); // C751
   CheckConflicting(symbol, Attr::POINTER, Attr::INTRINSIC);
   if (symbol.Corank() > 0) {
     messages_.Say(
@@ -1054,6 +1078,7 @@ void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
 }
 
 // C760 constraints on the passed-object dummy argument
+// C757 constraints on procedure pointer components
 void CheckHelper::CheckPassArg(
     const Symbol &proc, const Symbol *interface, const WithPassArg &details) {
   if (proc.attrs().test(Attr::NOPASS)) {
@@ -1095,7 +1120,7 @@ void CheckHelper::CheckPassArg(
       break;
     }
   }
-  if (!passArgIndex) {
+  if (!passArgIndex) { // C758
     messages_.Say(*passName,
         "'%s' is not a dummy argument of procedure interface '%s'"_err_en_US,
         *passName, interface->name());

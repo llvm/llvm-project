@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve %s -o - | FileCheck %s
 
 define arm_aapcs_vfpcc <16 x i8> @vqneg_test16(<16 x i8> %A) nounwind {
 ; CHECK-LABEL: vqneg_test16:

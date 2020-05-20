@@ -127,6 +127,10 @@ if config.filecheck:
 if config.lldb_libs_dir:
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
 
+if config.enabled_plugins:
+  for plugin in config.enabled_plugins:
+    dotest_cmd += ['--enable-plugin', plugin]
+
 # We don't want to force users passing arguments to lit to use `;` as a
 # separator. We use Python's simple lexical analyzer to turn the args into a
 # list. Pass there arguments last so they can override anything that was

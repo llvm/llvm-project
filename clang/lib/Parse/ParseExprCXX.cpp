@@ -31,10 +31,11 @@ static int SelectDigraphErrorMessage(tok::TokenKind Kind) {
     // template name
     case tok::unknown:             return 0;
     // casts
-    case tok::kw_const_cast:       return 1;
-    case tok::kw_dynamic_cast:     return 2;
-    case tok::kw_reinterpret_cast: return 3;
-    case tok::kw_static_cast:      return 4;
+    case tok::kw_addrspace_cast:   return 1;
+    case tok::kw_const_cast:       return 2;
+    case tok::kw_dynamic_cast:     return 3;
+    case tok::kw_reinterpret_cast: return 4;
+    case tok::kw_static_cast:      return 5;
     default:
       llvm_unreachable("Unknown type for digraph error message.");
   }
@@ -1261,7 +1262,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   ParseScope TemplateParamScope(this, Scope::TemplateParamScope,
                                 /*EnteredScope=*/HasExplicitTemplateParams);
   if (HasExplicitTemplateParams) {
-    Diag(Tok, getLangOpts().CPlusPlus2a
+    Diag(Tok, getLangOpts().CPlusPlus20
                   ? diag::warn_cxx17_compat_lambda_template_parameter_list
                   : diag::ext_lambda_template_parameter_list);
 
@@ -1512,12 +1513,15 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 ///         'reinterpret_cast' '<' type-name '>' '(' expression ')'
 ///         'const_cast' '<' type-name '>' '(' expression ')'
 ///
+/// C++ for OpenCL s2.3.1 adds:
+///         'addrspace_cast' '<' type-name '>' '(' expression ')'
 ExprResult Parser::ParseCXXCasts() {
   tok::TokenKind Kind = Tok.getKind();
   const char *CastName = nullptr; // For error messages
 
   switch (Kind) {
   default: llvm_unreachable("Unknown C++ cast!");
+  case tok::kw_addrspace_cast:   CastName = "addrspace_cast";   break;
   case tok::kw_const_cast:       CastName = "const_cast";       break;
   case tok::kw_dynamic_cast:     CastName = "dynamic_cast";     break;
   case tok::kw_reinterpret_cast: CastName = "reinterpret_cast"; break;
@@ -2152,6 +2156,19 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.SetRangeEnd(Tok.getAnnotationEndLoc());
     ConsumeAnnotationToken();
 
+    DS.Finish(Actions, Policy);
+    return;
+  }
+
+  case tok::kw__ExtInt: {
+    ExprResult ER = ParseExtIntegerArgument();
+    if (ER.isInvalid())
+      DS.SetTypeSpecError();
+    else
+      DS.SetExtIntType(Loc, ER.get(), PrevSpec, DiagID, Policy);
+
+    // Do this here because we have already consumed the close paren.
+    DS.SetRangeEnd(PrevTokLocation);
     DS.Finish(Actions, Policy);
     return;
   }

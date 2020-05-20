@@ -302,7 +302,7 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
 ; Argument is in right place already
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_x:
 ; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v32, 0
+; GCN: v_readlane_b32 s4, v40, 0
 define hidden void @func_indirect_use_workgroup_id_x() #1 {
   call void @use_workgroup_id_x()
   ret void
@@ -310,7 +310,7 @@ define hidden void @func_indirect_use_workgroup_id_x() #1 {
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_y:
 ; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v32, 0
+; GCN: v_readlane_b32 s4, v40, 0
 define hidden void @func_indirect_use_workgroup_id_y() #1 {
   call void @use_workgroup_id_y()
   ret void
@@ -318,7 +318,7 @@ define hidden void @func_indirect_use_workgroup_id_y() #1 {
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_z:
 ; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v32, 0
+; GCN: v_readlane_b32 s4, v40, 0
 define hidden void @func_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
   ret void

@@ -1,0 +1,642 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --macho --reloc %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
+
+# OBJDUMP-VERIFY: Relocation information (__TEXT,__text) 8 entries
+# OBJDUMP-VERIFY-NEXT: address  pcrel length extern type    scattered symbolnum/value
+# OBJDUMP-VERIFY-NEXT: 00000016 False hi/thm n/a    HALFDIF True      0x00000064
+# OBJDUMP-VERIFY-NEXT:          False hi/thm n/a    PAIR    True      0x0000001a half = 0x0046
+# OBJDUMP-VERIFY-NEXT: 00000012 False lo/arm n/a    HALFDIF True      0x00000064
+# OBJDUMP-VERIFY-NEXT:          False lo/arm n/a    PAIR    True      0x0000001a half = 0x0000
+# OBJDUMP-VERIFY-NEXT: 0000000a False hi/thm n/a    HALFDIF True      0x0000005c
+# OBJDUMP-VERIFY-NEXT:          False hi/thm n/a    PAIR    True      0x0000000e half = 0x004a
+# OBJDUMP-VERIFY-NEXT: 00000006 False lo/arm n/a    HALFDIF True      0x0000005c
+# OBJDUMP-VERIFY-NEXT:          False lo/arm n/a    PAIR    True      0x0000000e half = 0x0000
+# OBJDUMP-VERIFY-NEXT: Relocation information (__TEXT,__StaticInit) 13 entries
+# OBJDUMP-VERIFY-NEXT: address  pcrel length extern type    scattered symbolnum/value
+# OBJDUMP-VERIFY-NEXT: 00000028 True  long   False  T_BR22  False     2 (__TEXT,__StaticInit)
+# OBJDUMP-VERIFY-NEXT: 0000001a False hi/thm n/a    HALFDIF True      0x00000064
+# OBJDUMP-VERIFY-NEXT:          False hi/thm n/a    PAIR    True      0x00000042 half = 0x001e
+# OBJDUMP-VERIFY-NEXT: 00000016 False lo/arm n/a    HALFDIF True      0x00000064
+# OBJDUMP-VERIFY-NEXT:          False lo/arm n/a    PAIR    True      0x00000042 half = 0x0000
+# OBJDUMP-VERIFY-NEXT: 0000000e False hi/thm n/a    HALFDIF True      0x00000054
+# OBJDUMP-VERIFY-NEXT:          False hi/thm n/a    PAIR    True      0x00000036 half = 0x001a
+# OBJDUMP-VERIFY-NEXT: 0000000a False lo/arm n/a    HALFDIF True      0x00000054
+# OBJDUMP-VERIFY-NEXT:          False lo/arm n/a    PAIR    True      0x00000036 half = 0x0000
+# OBJDUMP-VERIFY-NEXT: 00000004 False hi/thm n/a    HALFDIF True      0x00000058
+# OBJDUMP-VERIFY-NEXT:          False hi/thm n/a    PAIR    True      0x0000002c half = 0x0028
+# OBJDUMP-VERIFY-NEXT: 00000000 False lo/arm n/a    HALFDIF True      0x00000058
+# OBJDUMP-VERIFY-NEXT:          False lo/arm n/a    PAIR    True      0x0000002c half = 0x0000
+# OBJDUMP-VERIFY-NEXT: Relocation information (__DATA,__data) 1 entries
+# OBJDUMP-VERIFY-NEXT: address  pcrel length extern type    scattered symbolnum/value
+# OBJDUMP-VERIFY-NEXT: 00000008 False long   False  VANILLA False     3 (__DATA,__data)
+# OBJDUMP-VERIFY-NEXT: Relocation information (__DATA,__mod_init_func) 1 entries
+# OBJDUMP-VERIFY-NEXT: address  pcrel length extern type    scattered symbolnum/value
+# OBJDUMP-VERIFY-NEXT: 00000000 False long   False  VANILLA False     2 (__TEXT,__StaticInit)
+
+# RUN: obj2yaml %t | FileCheck %s
+# CHECK:     Sections:
+# CHECK-NEXT:      - sectname:        __text
+# CHECK-NEXT:        segname:         __TEXT
+# CHECK-NEXT:        addr:            0x0000000000000000
+# CHECK-NEXT:        size:            36
+# CHECK-NEXT:        offset:          0x00000220
+# CHECK-NEXT:        align:           1
+# CHECK-NEXT:        reloff:          0x00000284
+# CHECK-NEXT:        nreloc:          8
+# CHECK-NEXT:        flags:           0x80000400
+# CHECK-NEXT:        reserved1:       0x00000000
+# CHECK-NEXT:        reserved2:       0x00000000
+# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:        content:
+# CHECK-NEXT:        relocations:
+# CHECK-NEXT:          - address:         0x00000016
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           100
+# CHECK-NEXT:          - address:         0x00000046
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           26
+# CHECK-NEXT:          - address:         0x00000012
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           100
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           26
+# CHECK-NEXT:          - address:         0x0000000A
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           92
+# CHECK-NEXT:          - address:         0x0000004A
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           14
+# CHECK-NEXT:          - address:         0x00000006
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           92
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           14
+# CHECK-NEXT:      - sectname:        __StaticInit
+# CHECK-NEXT:        segname:         __TEXT
+# CHECK-NEXT:        addr:            0x0000000000000024
+# CHECK-NEXT:        size:            46
+# CHECK-NEXT:        offset:          0x00000244
+# CHECK-NEXT:        align:           1
+# CHECK-NEXT:        reloff:          0x000002C4
+# CHECK-NEXT:        nreloc:          13
+# CHECK-NEXT:        flags:           0x80000400
+# CHECK-NEXT:        reserved1:       0x00000000
+# CHECK-NEXT:        reserved2:       0x00000000
+# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:        content:
+# CHECK-NEXT:        relocations:
+# CHECK-NEXT:          - address:         0x00000028
+# CHECK-NEXT:            symbolnum:       2
+# CHECK-NEXT:            pcrel:           true
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            6
+# CHECK-NEXT:            scattered:       false
+# CHECK-NEXT:            value:           0
+# CHECK-NEXT:          - address:         0x0000001A
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           100
+# CHECK-NEXT:          - address:         0x0000001E
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           66
+# CHECK-NEXT:          - address:         0x00000016
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           100
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           66
+# CHECK-NEXT:          - address:         0x0000000E
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           84
+# CHECK-NEXT:          - address:         0x0000001A
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           54
+# CHECK-NEXT:          - address:         0x0000000A
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           84
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           54
+# CHECK-NEXT:          - address:         0x00000004
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           88
+# CHECK-NEXT:          - address:         0x00000028
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          3
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           44
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            9
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           88
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       0
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            1
+# CHECK-NEXT:            scattered:       true
+# CHECK-NEXT:            value:           44
+# CHECK-NEXT:      - sectname:        __data
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0x0000000000000054
+# CHECK-NEXT:        size:            12
+# CHECK-NEXT:        offset:          0x00000274
+# CHECK-NEXT:        align:           2
+# CHECK-NEXT:        reloff:          0x0000032C
+# CHECK-NEXT:        nreloc:          1
+# CHECK-NEXT:        flags:           0x00000000
+# CHECK-NEXT:        reserved1:       0x00000000
+# CHECK-NEXT:        reserved2:       0x00000000
+# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:        content:
+# CHECK-NEXT:        relocations:
+# CHECK-NEXT:          - address:         0x00000008
+# CHECK-NEXT:            symbolnum:       3
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            0
+# CHECK-NEXT:            scattered:       false
+# CHECK-NEXT:            value:           0
+# CHECK-NEXT:      - sectname:        __common
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0x0000000000000064
+# CHECK-NEXT:        size:            4
+# CHECK-NEXT:        offset:          0x00000000
+# CHECK-NEXT:        align:           2
+# CHECK-NEXT:        reloff:          0x00000000
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x00000001
+# CHECK-NEXT:        reserved1:       0x00000000
+# CHECK-NEXT:        reserved2:       0x00000000
+# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:      - sectname:        __mod_init_func
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0x0000000000000060
+# CHECK-NEXT:        size:            4
+# CHECK-NEXT:        offset:          0x00000280
+# CHECK-NEXT:        align:           2
+# CHECK-NEXT:        reloff:          0x00000334
+# CHECK-NEXT:        nreloc:          1
+# CHECK-NEXT:        flags:           0x00000009
+# CHECK-NEXT:        reserved1:       0x00000000
+# CHECK-NEXT:        reserved2:       0x00000000
+# CHECK-NEXT:        reserved3:       0x00000000
+# CHECK-NEXT:        content:         '48000000'
+# CHECK-NEXT:        relocations:
+# CHECK-NEXT:          - address:         0x00000000
+# CHECK-NEXT:            symbolnum:       2
+# CHECK-NEXT:            pcrel:           false
+# CHECK-NEXT:            length:          2
+# CHECK-NEXT:            extern:          false
+# CHECK-NEXT:            type:            0
+# CHECK-NEXT:            scattered:       false
+# CHECK-NEXT:            value:           0
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x0000000C
+  cpusubtype:      0x00000009
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      516
+  flags:           0x00002000
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         396
+    segname:         ''
+    vmaddr:          0
+    vmsize:          104
+    fileoff:         544
+    filesize:        100
+    maxprot:         7
+    initprot:        7
+    nsects:          5
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            36
+        offset:          0x00000220
+        align:           1
+        reloff:          0x00000284
+        nreloc:          8
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         81B00020009040F24A00C0F200007844006840F24601C0F2000179440968084401B07047
+        relocations:
+          - address:         0x00000016
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           100
+          - address:         0x00000046
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           26
+          - address:         0x00000012
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           100
+          - address:         0x00000000
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           26
+          - address:         0x0000000A
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           92
+          - address:         0x0000004A
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           14
+          - address:         0x00000006
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           92
+          - address:         0x00000000
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           14
+      - sectname:        __StaticInit
+        segname:         __TEXT
+        addr:            0x0000000000000024
+        size:            46
+        offset:          0x00000244
+        align:           1
+        reloff:          0x000002C4
+        nreloc:          13
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         40F22800C0F20000784440F21A01C0F200017944081A40F21E01C0F2000179440860704780B56F46FFF7EAFF80BD
+        relocations:
+          - address:         0x00000028
+            symbolnum:       2
+            pcrel:           true
+            length:          2
+            extern:          false
+            type:            6
+            scattered:       false
+            value:           0
+          - address:         0x0000001A
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           100
+          - address:         0x0000001E
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           66
+          - address:         0x00000016
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           100
+          - address:         0x00000000
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           66
+          - address:         0x0000000E
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           84
+          - address:         0x0000001A
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           54
+          - address:         0x0000000A
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           84
+          - address:         0x00000000
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           54
+          - address:         0x00000004
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           88
+          - address:         0x00000028
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           44
+          - address:         0x00000000
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            9
+            scattered:       true
+            value:           88
+          - address:         0x00000000
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            1
+            scattered:       true
+            value:           44
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000054
+        size:            12
+        offset:          0x00000274
+        align:           2
+        reloff:          0x0000032C
+        nreloc:          1
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         '010000000200000054000000'
+        relocations:
+          - address:         0x00000008
+            symbolnum:       3
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __common
+        segname:         __DATA
+        addr:            0x0000000000000064
+        size:            4
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000001
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __mod_init_func
+        segname:         __DATA
+        addr:            0x0000000000000060
+        size:            4
+        offset:          0x00000280
+        align:           2
+        reloff:          0x00000334
+        nreloc:          1
+        flags:           0x00000009
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         '48000000'
+        relocations:
+          - address:         0x00000000
+            symbolnum:       2
+            pcrel:           false
+            length:          2
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_VERSION_MIN_IPHONEOS
+    cmdsize:         16
+    version:         589824
+    sdk:             0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          828
+    nsyms:           7
+    stroff:          912
+    strsize:         68
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      5
+    iundefsym:       7
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          13
+      n_type:          0x0E
+      n_sect:          2
+      n_desc:          8
+      n_value:         36
+    - n_strx:          36
+      n_type:          0x0E
+      n_sect:          2
+      n_desc:          8
+      n_value:         72
+    - n_strx:          61
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          8
+      n_value:         0
+    - n_strx:          10
+      n_type:          0x0F
+      n_sect:          4
+      n_desc:          0
+      n_value:         100
+    - n_strx:          7
+      n_type:          0x0F
+      n_sect:          3
+      n_desc:          0
+      n_value:         84
+    - n_strx:          4
+      n_type:          0x0F
+      n_sect:          3
+      n_desc:          0
+      n_value:         88
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          3
+      n_desc:          0
+      n_value:         92
+  StringTable:
+    - ''
+    - _z
+    - _y
+    - _x
+    - _w
+    - ___cxx_global_var_init
+    - __GLOBAL__sub_I_main.cpp
+    - _main
+    - ''
+...

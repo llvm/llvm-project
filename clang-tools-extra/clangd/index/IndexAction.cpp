@@ -8,9 +8,9 @@
 
 #include "IndexAction.h"
 #include "Headers.h"
-#include "Logger.h"
 #include "index/Relation.h"
 #include "index/SymbolOrigin.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceLocation.h"

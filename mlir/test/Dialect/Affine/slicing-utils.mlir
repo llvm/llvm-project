@@ -229,7 +229,7 @@ func @slicing_test_2() {
       // BWD: matched: %[[b:.*]] {{.*}} backward static slice:
       // BWD: affine.for {{.*}}
 
-      // affine.for appears in the body of loop.for
+      // affine.for appears in the body of scf.for
       // BWD: affine.for {{.*}}
 
       // affine.for appears as a proper op in the backward slice
@@ -239,10 +239,10 @@ func @slicing_test_2() {
       // BWD: matched: %[[c:.*]] {{.*}} backward static slice:
       // BWD: affine.for {{.*}}
 
-      // affine.for appears in the body of loop.for
+      // affine.for appears in the body of scf.for
       // BWD-NEXT: affine.for {{.*}}
 
-      // affine.for only appears in the body of loop.for
+      // affine.for only appears in the body of scf.for
       // BWD-NOT: affine.for {{.*}}
       %c = "slicing-test-op"(%i0): (index) -> index
     }
@@ -257,9 +257,9 @@ func @slicing_test_3() {
   %f = constant 1.0 : f32
   %c = "slicing-test-op"(%f): (f32) -> index
   // FWD: matched: {{.*}} (f32) -> index forward static slice:
-  // FWD: loop.for {{.*}}
+  // FWD: scf.for {{.*}}
   // FWD: matched: {{.*}} (index, index) -> index forward static slice:
-  loop.for %i2 = %c to %c step %c {
+  scf.for %i2 = %c to %c step %c {
     %d = "slicing-test-op"(%c, %i2): (index, index) -> index
   }
   return

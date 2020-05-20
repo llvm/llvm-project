@@ -229,3 +229,27 @@ define <vscale x 8 x i1> @ueq_8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %
   %y = fcmp ueq <vscale x 8 x half> %x, %x2
   ret <vscale x 8 x i1> %y
 }
+
+define <vscale x 4 x i32> @oeq_4f32_sext(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: oeq_4f32_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ret
+  %y = fcmp oeq <vscale x 4 x float> %x, %x2
+  %r = sext <vscale x 4 x i1> %y to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 4 x i32> @oeq_4f32_zext(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: oeq_4f32_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    ret
+  %y = fcmp oeq <vscale x 4 x float> %x, %x2
+  %r = zext <vscale x 4 x i1> %y to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %r
+}

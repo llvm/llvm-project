@@ -112,7 +112,7 @@ using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
 
 /// This class provides various trait information about a callable object.
 ///   * To access the number of arguments: Traits::num_args
-///   * To access the type of an argument: Traits::arg_t<i>
+///   * To access the type of an argument: Traits::arg_t<Index>
 ///   * To access the type of the result:  Traits::result_t
 template <typename T, bool isClass = std::is_class<T>::value>
 struct function_traits : public function_traits<decltype(&T::operator())> {};
@@ -127,8 +127,8 @@ struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
   using result_t = ReturnType;
 
   /// The type of an argument to this function.
-  template <size_t i>
-  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+  template <size_t Index>
+  using arg_t = typename std::tuple_element<Index, std::tuple<Args...>>::type;
 };
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
@@ -1108,7 +1108,7 @@ public:
   };
 
   indexed_accessor_range_base(iterator begin, iterator end)
-      : base(DerivedT::offset_base(begin.getBase(), begin.getIndex())),
+      : base(offset_base(begin.getBase(), begin.getIndex())),
         count(end.getIndex() - begin.getIndex()) {}
   indexed_accessor_range_base(const iterator_range<iterator> &range)
       : indexed_accessor_range_base(range.begin(), range.end()) {}
@@ -1123,9 +1123,13 @@ public:
   }
 
   /// Compare this range with another.
-  template <typename OtherT> bool operator==(const OtherT &other) {
-    return size() == std::distance(other.begin(), other.end()) &&
+  template <typename OtherT> bool operator==(const OtherT &other) const {
+    return size() ==
+               static_cast<size_t>(std::distance(other.begin(), other.end())) &&
            std::equal(begin(), end(), other.begin());
+  }
+  template <typename OtherT> bool operator!=(const OtherT &other) const {
+    return !(*this == other);
   }
 
   /// Return the size of this range.
@@ -1137,7 +1141,7 @@ public:
   /// Drop the first N elements, and keep M elements.
   DerivedT slice(size_t n, size_t m) const {
     assert(n + m <= size() && "invalid size specifiers");
-    return DerivedT(DerivedT::offset_base(base, n), m);
+    return DerivedT(offset_base(base, n), m);
   }
 
   /// Drop the first n elements.
@@ -1168,6 +1172,15 @@ public:
                                  RangeT, iterator_range<iterator>>::value>>
   operator RangeT() const {
     return RangeT(iterator_range<iterator>(*this));
+  }
+
+  /// Returns the base of this range.
+  const BaseT &getBase() const { return base; }
+
+private:
+  /// Offset the given base by the given amount.
+  static BaseT offset_base(const BaseT &base, size_t n) {
+    return n == 0 ? base : DerivedT::offset_base(base, n);
   }
 
 protected:
@@ -1445,24 +1458,6 @@ inline void sort(Container &&C, Compare Comp) {
 //===----------------------------------------------------------------------===//
 //     Extra additions to <algorithm>
 //===----------------------------------------------------------------------===//
-
-/// For a container of pointers, deletes the pointers and then clears the
-/// container.
-template<typename Container>
-void DeleteContainerPointers(Container &C) {
-  for (auto V : C)
-    delete V;
-  C.clear();
-}
-
-/// In a container of pairs (usually a map) whose second element is a pointer,
-/// deletes the second elements and then clears the container.
-template<typename Container>
-void DeleteContainerSeconds(Container &C) {
-  for (auto &V : C)
-    delete V.second;
-  C.clear();
-}
 
 /// Get the size of a range. This is a wrapper function around std::distance
 /// which is only enabled when the operation is O(1).

@@ -91,15 +91,14 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
                   mlir::PatternRewriter &rewriter) const override {
     // Look through the input of the current transpose.
     mlir::Value transposeInput = op.getOperand();
-    TransposeOp transposeInputOp =
-        llvm::dyn_cast_or_null<TransposeOp>(transposeInput.getDefiningOp());
+    TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
 
     // Input defined by another transpose? If not, no match.
     if (!transposeInputOp)
       return failure();
 
     // Otherwise, we have a redundant transpose. Use the rewriter.
-    rewriter.replaceOp(op, {transposeInputOp.getOperand()}, {transposeInputOp});
+    rewriter.replaceOp(op, {transposeInputOp.getOperand()});
     return success();
   }
 };
@@ -129,8 +128,8 @@ similar way to LLVM:
   pm.addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
 ```
 
-Finally, we can run `toyc-ch3 test/transpose_transpose.toy -emit=mlir -opt` and
-observe our pattern in action:
+Finally, we can run `toyc-ch3 test/Examples/Toy/Ch3/transpose_transpose.toy 
+-emit=mlir -opt` and observe our pattern in action:
 
 ```mlir
 func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
@@ -216,7 +215,7 @@ def FoldConstantReshapeOptPattern : Pat<
 ```
 
 We demonstrate these reshape optimizations using the following
-trivialReshape.toy program:
+trivial_reshape.toy program:
 
 ```c++
 def main() {
@@ -240,8 +239,8 @@ module {
 }
 ```
 
-We can try to run `toyc-ch3 test/trivialReshape.toy -emit=mlir -opt` and observe
-our pattern in action:
+We can try to run `toyc-ch3 test/Examples/Toy/Ch3/trivial_reshape.toy -emit=mlir 
+-opt` and observe our pattern in action:
 
 ```mlir
 module {

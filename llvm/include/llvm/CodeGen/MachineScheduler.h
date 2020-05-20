@@ -186,6 +186,9 @@ struct MachineSchedPolicy {
   // first.
   bool DisableLatencyHeuristic = false;
 
+  // Compute DFSResult for use in scheduling heuristics.
+  bool ComputeDFSResult = false;
+
   MachineSchedPolicy() = default;
 };
 

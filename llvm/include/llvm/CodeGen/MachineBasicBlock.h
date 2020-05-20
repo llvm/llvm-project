@@ -837,16 +837,6 @@ public:
   /// instead of basic block \p Old.
   void replacePhiUsesWith(MachineBasicBlock *Old, MachineBasicBlock *New);
 
-  /// Various pieces of code can cause excess edges in the CFG to be inserted.
-  /// If we have proven that MBB can only branch to DestA and DestB, remove any
-  /// other MBB successors from the CFG. DestA and DestB can be null. Besides
-  /// DestA and DestB, retain other edges leading to LandingPads (currently
-  /// there can be only one; we don't check or require that here). Note it is
-  /// possible that DestA and/or DestB are LandingPads.
-  bool CorrectExtraCFGEdges(MachineBasicBlock *DestA,
-                            MachineBasicBlock *DestB,
-                            bool IsCond);
-
   /// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
   /// and DBG_LABEL instructions.  Return UnknownLoc if there is none.
   DebugLoc findDebugLoc(instr_iterator MBBI);
@@ -1046,7 +1036,7 @@ public:
 template<typename IterT>
 inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
   while (It != End && It->isDebugInstr())
-    It++;
+    ++It;
   return It;
 }
 
@@ -1057,8 +1047,29 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
 template<class IterT>
 inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
   while (It != Begin && It->isDebugInstr())
-    It--;
+    --It;
   return It;
+}
+
+/// Increment \p It, then continue incrementing it while it points to a debug
+/// instruction. A replacement for std::next.
+template <typename IterT> inline IterT next_nodbg(IterT It, IterT End) {
+  return skipDebugInstructionsForward(std::next(It), End);
+}
+
+/// Decrement \p It, then continue decrementing it while it points to a debug
+/// instruction. A replacement for std::prev.
+template <typename IterT> inline IterT prev_nodbg(IterT It, IterT Begin) {
+  return skipDebugInstructionsBackward(std::prev(It), Begin);
+}
+
+/// Construct a range iterator which begins at \p It and moves forwards until
+/// \p End is reached, skipping any debug instructions.
+template <typename IterT>
+inline auto instructionsWithoutDebug(IterT It, IterT End) {
+  return make_filter_range(make_range(It, End), [](const MachineInstr &MI) {
+    return !MI.isDebugInstr();
+  });
 }
 
 } // end namespace llvm

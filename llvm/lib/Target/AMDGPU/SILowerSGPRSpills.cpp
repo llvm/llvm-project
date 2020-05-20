@@ -100,7 +100,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       unsigned Reg = CS.getReg();
 
       MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      const TargetRegisterClass *RC =
+        TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
       TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
                               TRI);
@@ -133,7 +134,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       unsigned Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      const TargetRegisterClass *RC =
+        TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
       TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
       assert(I != RestoreBlock.begin() &&
@@ -206,7 +208,8 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
     for (unsigned I = 0; CSRegs[I]; ++I) {
       unsigned Reg = CSRegs[I];
       if (SavedRegs.test(Reg)) {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        const TargetRegisterClass *RC =
+          TRI->getMinimalPhysRegClass(Reg, MVT::i32);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlignment(*RC),
                                            true);
@@ -226,6 +229,52 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
   }
 
   return false;
+}
+
+static ArrayRef<MCPhysReg> getAllVGPR32(const GCNSubtarget &ST,
+                                        const MachineFunction &MF) {
+  return makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), ST.getMaxNumVGPRs(MF));
+}
+
+// Find lowest available VGPR and use it as VGPR reserved for SGPR spills.
+static bool lowerShiftReservedVGPR(MachineFunction &MF,
+                                   const GCNSubtarget &ST) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  Register LowestAvailableVGPR, ReservedVGPR;
+  ArrayRef<MCPhysReg> AllVGPR32s = getAllVGPR32(ST, MF);
+  for (MCPhysReg Reg : AllVGPR32s) {
+    if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg)) {
+      LowestAvailableVGPR = Reg;
+      break;
+    }
+  }
+
+  if (!LowestAvailableVGPR)
+    return false;
+
+  ReservedVGPR = FuncInfo->VGPRReservedForSGPRSpill;
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  int i = 0;
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
+      if (Reg.VGPR == ReservedVGPR) {
+        MBB.removeLiveIn(ReservedVGPR);
+        MBB.addLiveIn(LowestAvailableVGPR);
+        Optional<int> FI;
+        if (FuncInfo->isCalleeSavedReg(CSRegs, LowestAvailableVGPR))
+          FI = FrameInfo.CreateSpillStackObject(4, Align(4));
+
+        FuncInfo->setSGPRSpillVGPRs(LowestAvailableVGPR, FI, i);
+      }
+      ++i;
+    }
+    MBB.sortUniqueLiveIns();
+  }
+
+  return true;
 }
 
 bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
@@ -267,6 +316,9 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     //
     // This operates under the assumption that only other SGPR spills are users
     // of the frame index.
+
+    lowerShiftReservedVGPR(MF, ST);
+
     for (MachineBasicBlock &MBB : MF) {
       MachineBasicBlock::iterator Next;
       for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
@@ -315,6 +367,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
     }
 
     MadeChange = true;
+  } else if (FuncInfo->VGPRReservedForSGPRSpill) {
+    FuncInfo->removeVGPRForSGPRSpill(FuncInfo->VGPRReservedForSGPRSpill, MF);
   }
 
   SaveBlocks.clear();

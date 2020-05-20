@@ -235,8 +235,9 @@ bool WebAssemblyInstrInfo::reverseBranchCondition(
 ArrayRef<std::pair<int, const char *>>
 WebAssemblyInstrInfo::getSerializableTargetIndices() const {
   static const std::pair<int, const char *> TargetIndices[] = {
-      {WebAssembly::TI_LOCAL_START, "wasm-local-start"},
-      {WebAssembly::TI_GLOBAL_START, "wasm-global-start"},
-      {WebAssembly::TI_OPERAND_STACK_START, "wasm-operator-stack-start"}};
+      {WebAssembly::TI_LOCAL, "wasm-local"},
+      {WebAssembly::TI_GLOBAL_FIXED, "wasm-global-fixed"},
+      {WebAssembly::TI_OPERAND_STACK, "wasm-operand-stack"},
+      {WebAssembly::TI_GLOBAL_RELOC, "wasm-global-reloc"}};
   return makeArrayRef(TargetIndices);
 }

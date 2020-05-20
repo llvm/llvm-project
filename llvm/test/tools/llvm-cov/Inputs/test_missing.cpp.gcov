@@ -1,7 +1,7 @@
         -:    0:Source:srcdir/./nested_dir/../test.cpp
         -:    0:Graph:test_paths.gcno
         -:    0:Data:test_paths.gcda
-        -:    0:Runs:3
+        -:    0:Runs:0
         -:    0:Programs:1
         -:    1:/*EOF*/
         -:    2:/*EOF*/

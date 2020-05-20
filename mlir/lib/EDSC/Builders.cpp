@@ -15,32 +15,25 @@
 using namespace mlir;
 using namespace mlir::edsc;
 
-mlir::edsc::ScopedContext::ScopedContext(OpBuilder &builder, Location location)
-    : builder(builder), location(location),
-      enclosingScopedContext(ScopedContext::getCurrentScopedContext()),
-      nestedBuilder(nullptr) {
+mlir::edsc::ScopedContext::ScopedContext(OpBuilder &b, Location location)
+    : builder(b), guard(builder), location(location),
+      enclosingScopedContext(ScopedContext::getCurrentScopedContext()) {
   getCurrentScopedContext() = this;
 }
 
 /// Sets the insertion point of the builder to 'newInsertPt' for the duration
 /// of the scope. The existing insertion point of the builder is restored on
 /// destruction.
-mlir::edsc::ScopedContext::ScopedContext(OpBuilder &builder,
+mlir::edsc::ScopedContext::ScopedContext(OpBuilder &b,
                                          OpBuilder::InsertPoint newInsertPt,
                                          Location location)
-    : builder(builder), prevBuilderInsertPoint(builder.saveInsertionPoint()),
-      location(location),
-      enclosingScopedContext(ScopedContext::getCurrentScopedContext()),
-      nestedBuilder(nullptr) {
+    : builder(b), guard(builder), location(location),
+      enclosingScopedContext(ScopedContext::getCurrentScopedContext()) {
   getCurrentScopedContext() = this;
   builder.restoreInsertionPoint(newInsertPt);
 }
 
 mlir::edsc::ScopedContext::~ScopedContext() {
-  assert(!nestedBuilder &&
-         "Active NestedBuilder must have been exited at this point!");
-  if (prevBuilderInsertPoint)
-    builder.restoreInsertionPoint(*prevBuilderInsertPoint);
   getCurrentScopedContext() = enclosingScopedContext;
 }
 
@@ -49,7 +42,7 @@ ScopedContext *&mlir::edsc::ScopedContext::getCurrentScopedContext() {
   return context;
 }
 
-OpBuilder &mlir::edsc::ScopedContext::getBuilder() {
+OpBuilder &mlir::edsc::ScopedContext::getBuilderRef() {
   assert(ScopedContext::getCurrentScopedContext() &&
          "Unexpected Null ScopedContext");
   return ScopedContext::getCurrentScopedContext()->builder;
@@ -62,46 +55,15 @@ Location mlir::edsc::ScopedContext::getLocation() {
 }
 
 MLIRContext *mlir::edsc::ScopedContext::getContext() {
-  return getBuilder().getContext();
-}
-
-ValueHandle &mlir::edsc::ValueHandle::operator=(const ValueHandle &other) {
-  assert(t == other.t && "Wrong type capture");
-  assert(!v && "ValueHandle has already been captured, use a new name!");
-  v = other.v;
-  return *this;
-}
-
-ValueHandle ValueHandle::create(StringRef name, ArrayRef<ValueHandle> operands,
-                                ArrayRef<Type> resultTypes,
-                                ArrayRef<NamedAttribute> attributes) {
-  Operation *op =
-      OperationHandle::create(name, operands, resultTypes, attributes);
-  if (op->getNumResults() == 1)
-    return ValueHandle(op->getResult(0));
-  llvm_unreachable("unsupported operation, use an OperationHandle instead");
-}
-
-OperationHandle OperationHandle::create(StringRef name,
-                                        ArrayRef<ValueHandle> operands,
-                                        ArrayRef<Type> resultTypes,
-                                        ArrayRef<NamedAttribute> attributes) {
-  OperationState state(ScopedContext::getLocation(), name);
-  SmallVector<Value, 4> ops(operands.begin(), operands.end());
-  state.addOperands(ops);
-  state.addTypes(resultTypes);
-  for (const auto &attr : attributes) {
-    state.addAttribute(attr.first, attr.second);
-  }
-  return OperationHandle(ScopedContext::getBuilder().createOperation(state));
+  return getBuilderRef().getContext();
 }
 
 BlockHandle mlir::edsc::BlockHandle::create(ArrayRef<Type> argTypes) {
-  auto &currentB = ScopedContext::getBuilder();
+  auto &currentB = ScopedContext::getBuilderRef();
   auto *ib = currentB.getInsertionBlock();
   auto ip = currentB.getInsertionPoint();
   BlockHandle res;
-  res.block = ScopedContext::getBuilder().createBlock(ib->getParent());
+  res.block = ScopedContext::getBuilderRef().createBlock(ib->getParent());
   // createBlock sets the insertion point inside the block.
   // We do not want this behavior when using declarative builders with nesting.
   currentB.setInsertionPoint(ib, ip);
@@ -113,17 +75,15 @@ BlockHandle mlir::edsc::BlockHandle::create(ArrayRef<Type> argTypes) {
 
 BlockHandle mlir::edsc::BlockHandle::createInRegion(Region &region,
                                                     ArrayRef<Type> argTypes) {
-  auto &currentB = ScopedContext::getBuilder();
   BlockHandle res;
   region.push_back(new Block);
   res.block = &region.back();
   // createBlock sets the insertion point inside the block.
   // We do not want this behavior when using declarative builders with nesting.
-  OpBuilder::InsertionGuard g(currentB);
-  currentB.setInsertionPoint(res.block, res.block->begin());
-  for (auto t : argTypes) {
-    res.block->addArgument(t);
-  }
+  OpBuilder::InsertionGuard g(ScopedContext::getBuilderRef());
+  ScopedContext::getBuilderRef().setInsertionPoint(res.block,
+                                                   res.block->begin());
+  res.block->addArguments(argTypes);
   return res;
 }
 
@@ -156,37 +116,32 @@ mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle bh, Append) {
   enter(bh.getBlock());
 }
 
-mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle *bh,
-                                       ArrayRef<ValueHandle *> args) {
+mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle *bh, ArrayRef<Type> types,
+                                       MutableArrayRef<Value> args) {
   assert(!*bh && "BlockHandle already captures a block, use "
                  "the explicit BockBuilder(bh, Append())({}) syntax instead.");
-  SmallVector<Type, 8> types;
-  for (auto *a : args) {
-    assert(!a->hasValue() &&
-           "Expected delayed ValueHandle that has not yet captured.");
-    types.push_back(a->getType());
-  }
+  assert((args.empty() || args.size() == types.size()) &&
+         "if args captures are specified, their number must match the number "
+         "of types");
   *bh = BlockHandle::create(types);
-  for (auto it : llvm::zip(args, bh->getBlock()->getArguments())) {
-    *(std::get<0>(it)) = ValueHandle(std::get<1>(it));
-  }
+  if (!args.empty())
+    for (auto it : llvm::zip(args, bh->getBlock()->getArguments()))
+      std::get<0>(it) = Value(std::get<1>(it));
   enter(bh->getBlock());
 }
 
 mlir::edsc::BlockBuilder::BlockBuilder(BlockHandle *bh, Region &region,
-                                       ArrayRef<ValueHandle *> args) {
+                                       ArrayRef<Type> types,
+                                       MutableArrayRef<Value> args) {
   assert(!*bh && "BlockHandle already captures a block, use "
                  "the explicit BockBuilder(bh, Append())({}) syntax instead.");
-  SmallVector<Type, 8> types;
-  for (auto *a : args) {
-    assert(!a->hasValue() &&
-           "Expected delayed ValueHandle that has not yet captured.");
-    types.push_back(a->getType());
-  }
+  assert((args.empty() || args.size() == types.size()) &&
+         "if args captures are specified, their number must match the number "
+         "of types");
   *bh = BlockHandle::createInRegion(region, types);
-  for (auto it : llvm::zip(args, bh->getBlock()->getArguments())) {
-    *(std::get<0>(it)) = ValueHandle(std::get<1>(it));
-  }
+  if (!args.empty())
+    for (auto it : llvm::zip(args, bh->getBlock()->getArguments()))
+      std::get<0>(it) = Value(std::get<1>(it));
   enter(bh->getBlock());
 }
 

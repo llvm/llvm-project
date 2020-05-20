@@ -27,7 +27,7 @@ class MDNode;
 /// match exactly, they must at least be bitcast compatible. If \p FailureReason
 /// is non-null and the indirect call cannot be promoted, the failure reason
 /// will be stored in it.
-bool isLegalToPromote(CallBase &CB, Function *Callee,
+bool isLegalToPromote(const CallBase &CB, Function *Callee,
                       const char **FailureReason = nullptr);
 
 /// Promote the given indirect call site to unconditionally call \p Callee.

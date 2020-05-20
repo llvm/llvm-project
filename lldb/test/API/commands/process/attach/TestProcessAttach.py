@@ -39,6 +39,7 @@ class ProcessAttachTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
     @expectedFailureNetBSD
+    @skipIfReproducer # Unexpected packet during replay
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""
         newdir = self.getBuildArtifact("newdir")

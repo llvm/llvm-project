@@ -318,6 +318,64 @@ bb:
   ret void
 }
 
+; If the arguments are scalar, its ok to promote.
+define internal i32 @scalar_callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(i32* %X, i32* %Y) #2 {
+; CHECK-LABEL: define {{[^@]+}}@scalar_callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
+; CHECK-SAME: (i32 [[X_VAL:%.*]], i32 [[Y_VAL:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[X_VAL]], [[Y_VAL]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = load i32, i32* %X
+  %B = load i32, i32* %Y
+  %C = add i32 %A, %B
+  ret i32 %C
+}
+
+define i32 @scalar_avx512_legal256_prefer256_call_avx512_legal512_prefer256(i32* %B) #2 {
+; CHECK-LABEL: define {{[^@]+}}@scalar_avx512_legal256_prefer256_call_avx512_legal512_prefer256
+; CHECK-SAME: (i32* [[B:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = alloca i32
+; CHECK-NEXT:    store i32 1, i32* [[A]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, i32* [[A]]
+; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, i32* [[B]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @scalar_callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(i32 [[A_VAL]], i32 [[B_VAL]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = alloca i32
+  store i32 1, i32* %A
+  %C = call i32 @scalar_callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(i32* %A, i32* %B)
+  ret i32 %C
+}
+
+; If the arguments are scalar, its ok to promote.
+define internal i32 @scalar_callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(i32* %X, i32* %Y) #2 {
+; CHECK-LABEL: define {{[^@]+}}@scalar_callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
+; CHECK-SAME: (i32 [[X_VAL:%.*]], i32 [[Y_VAL:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[X_VAL]], [[Y_VAL]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = load i32, i32* %X
+  %B = load i32, i32* %Y
+  %C = add i32 %A, %B
+  ret i32 %C
+}
+
+define i32 @scalar_avx512_legal512_prefer256_call_avx512_legal256_prefer256(i32* %B) #2 {
+; CHECK-LABEL: define {{[^@]+}}@scalar_avx512_legal512_prefer256_call_avx512_legal256_prefer256
+; CHECK-SAME: (i32* [[B:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = alloca i32
+; CHECK-NEXT:    store i32 1, i32* [[A]]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, i32* [[A]]
+; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, i32* [[B]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @scalar_callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(i32 [[A_VAL]], i32 [[B_VAL]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = alloca i32
+  store i32 1, i32* %A
+  %C = call i32 @scalar_callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(i32* %A, i32* %B)
+  ret i32 %C
+}
+
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #5
 

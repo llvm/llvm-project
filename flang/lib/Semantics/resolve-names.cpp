@@ -985,11 +985,16 @@ public:
   void Post(const parser::EndAssociateStmt &);
   void Post(const parser::Association &);
   void Post(const parser::SelectTypeStmt &);
+  void Post(const parser::SelectRankStmt &);
   bool Pre(const parser::SelectTypeConstruct &);
   void Post(const parser::SelectTypeConstruct &);
   bool Pre(const parser::SelectTypeConstruct::TypeCase &);
   void Post(const parser::SelectTypeConstruct::TypeCase &);
+  // Creates Block scopes with neither symbol name nor symbol details.
+  bool Pre(const parser::SelectRankConstruct::RankCase &);
+  void Post(const parser::SelectRankConstruct::RankCase &);
   void Post(const parser::TypeGuardStmt::Guard &);
+  void Post(const parser::SelectRankCaseStmt::Rank &);
   bool Pre(const parser::ChangeTeamStmt &);
   void Post(const parser::EndChangeTeamStmt &);
   void Post(const parser::CoarrayAssociation &);
@@ -1234,7 +1239,7 @@ private:
     // variables on Data-sharing attribute clauses
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
     bool withinConstruct{false};
-    std::size_t associatedLoopLevel{0};
+    std::int64_t associatedLoopLevel{0};
   };
   // back() is the top of the stack
   OmpContext &GetContext() {
@@ -1267,10 +1272,10 @@ private:
     return it != GetContext().objectWithDSA.end();
   }
 
-  void SetContextAssociatedLoopLevel(std::size_t level) {
+  void SetContextAssociatedLoopLevel(std::int64_t level) {
     GetContext().associatedLoopLevel = level;
   }
-  std::size_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
+  std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
 
   Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev, Scope &scope) {
     const auto pair{scope.try_emplace(name, Attrs{}, HostAssocDetails{prev})};
@@ -3666,6 +3671,13 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     if (!symbol) {
       Say(paramName,
           "No definition found for type parameter '%s'"_err_en_US); // C742
+      // No symbol for a type param.  Create one and mark it as containing an
+      // error to improve subsequent semantic processing
+      BeginAttrs();
+      Symbol *typeParam{MakeTypeSymbol(
+          paramName, TypeParamDetails{common::TypeParamAttr::Len})};
+      typeParam->set(Symbol::Flag::Error);
+      EndAttrs();
     } else if (!symbol->has<TypeParamDetails>()) {
       Say2(paramName, "'%s' is not defined as a type parameter"_err_en_US,
           *symbol, "Definition of '%s'"_en_US); // C741
@@ -3679,7 +3691,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
     if (symbol->has<TypeParamDetails>() && !paramNames.count(name)) {
       SayDerivedType(name,
           "'%s' is not a type parameter of this derived type"_err_en_US,
-          currScope()); // C742
+          currScope()); // C741
     }
   }
   Walk(std::get<std::list<parser::Statement<parser::PrivateOrSequence>>>(x.t));
@@ -3820,12 +3832,48 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
       !attrs.HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
     attrs.set(Attr::PRIVATE);
   }
-  if (!attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
-    if (const auto *declType{GetDeclTypeSpec()}) {
-      if (const auto *derived{declType->AsDerived()}) {
+  if (const auto *declType{GetDeclTypeSpec()}) {
+    if (const auto *derived{declType->AsDerived()}) {
+      if (!attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
         if (derivedTypeInfo_.type == &derived->typeSymbol()) { // C744
           Say("Recursive use of the derived type requires "
               "POINTER or ALLOCATABLE"_err_en_US);
+        }
+      }
+      if (!coarraySpec().empty()) { // C747
+        if (IsTeamType(derived)) {
+          Say("A coarray component may not be of type TEAM_TYPE from "
+              "ISO_FORTRAN_ENV"_err_en_US);
+        } else {
+          if (IsIsoCType(derived)) {
+            Say("A coarray component may not be of type C_PTR or C_FUNPTR from "
+                "ISO_C_BINDING"_err_en_US);
+          }
+        }
+      }
+      if (auto it{FindCoarrayUltimateComponent(*derived)}) { // C748
+        std::string ultimateName{it.BuildResultDesignatorName()};
+        // Strip off the leading "%"
+        if (ultimateName.length() > 1) {
+          ultimateName.erase(0, 1);
+          if (attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
+            evaluate::AttachDeclaration(
+                Say(name.source,
+                    "A component with a POINTER or ALLOCATABLE attribute may "
+                    "not "
+                    "be of a type with a coarray ultimate component (named "
+                    "'%s')"_err_en_US,
+                    ultimateName),
+                derived->typeSymbol());
+          }
+          if (!arraySpec().empty() || !coarraySpec().empty()) {
+            evaluate::AttachDeclaration(
+                Say(name.source,
+                    "An array or coarray component may not be of a type with a "
+                    "coarray ultimate component (named '%s')"_err_en_US,
+                    ultimateName),
+                derived->typeSymbol());
+          }
         }
       }
     }
@@ -3865,7 +3913,7 @@ bool DeclarationVisitor::Pre(const parser::ProcComponentDefStmt &) {
   CHECK(!interfaceName_);
   return true;
 }
-void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &) {
+void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &stmt) {
   interfaceName_ = nullptr;
 }
 bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
@@ -4340,9 +4388,8 @@ void DeclarationVisitor::CheckSaveStmts() {
               " common block name '%s'"_err_en_US);
         }
       } else {
-        for (const Symbol &object :
-            symbol->get<CommonBlockDetails>().objects()) {
-          SetSaveAttr(*const_cast<Symbol *>(&object));
+        for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
+          SetSaveAttr(*object);
         }
       }
     }
@@ -4642,7 +4689,7 @@ void DeclarationVisitor::SetType(
       SetType(name,
           currScope().MakeCharacterType(std::move(length), std::move(kind)));
       return;
-    } else {
+    } else { // C753
       Say(name,
           "A length specifier cannot be used to declare the non-character entity '%s'"_err_en_US);
     }
@@ -4741,7 +4788,7 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
     const SourceName &name, Details &&details) {
   Scope &derivedType{currScope()};
   CHECK(derivedType.IsDerivedType());
-  if (auto *symbol{FindInScope(derivedType, name)}) {
+  if (auto *symbol{FindInScope(derivedType, name)}) { // C742
     Say2(name,
         "Type parameter, component, or procedure binding '%s'"
         " already defined in this type"_err_en_US,
@@ -4770,21 +4817,23 @@ bool DeclarationVisitor::OkToAddComponent(
   for (const Scope *scope{&currScope()}; scope;) {
     CHECK(scope->IsDerivedType());
     if (auto *prev{FindInScope(*scope, name)}) {
-      auto msg{""_en_US};
-      if (extends) {
-        msg = "Type cannot be extended as it has a component named"
-              " '%s'"_err_en_US;
-      } else if (prev->test(Symbol::Flag::ParentComp)) {
-        msg = "'%s' is a parent type of this type and so cannot be"
-              " a component"_err_en_US;
-      } else if (scope != &currScope()) {
-        msg = "Component '%s' is already declared in a parent of this"
-              " derived type"_err_en_US;
-      } else {
-        msg = "Component '%s' is already declared in this"
-              " derived type"_err_en_US;
+      if (!prev->test(Symbol::Flag::Error)) {
+        auto msg{""_en_US};
+        if (extends) {
+          msg = "Type cannot be extended as it has a component named"
+                " '%s'"_err_en_US;
+        } else if (prev->test(Symbol::Flag::ParentComp)) {
+          msg = "'%s' is a parent type of this type and so cannot be"
+                " a component"_err_en_US;
+        } else if (scope != &currScope()) {
+          msg = "Component '%s' is already declared in a parent of this"
+                " derived type"_err_en_US;
+        } else {
+          msg = "Component '%s' is already declared in this"
+                " derived type"_err_en_US;
+        }
+        Say2(name, std::move(msg), *prev, "Previous declaration of '%s'"_en_US);
       }
-      Say2(name, std::move(msg), *prev, "Previous declaration of '%s'"_en_US);
       return false;
     }
     if (scope == &currScope() && extends) {
@@ -5098,11 +5147,28 @@ void ConstructVisitor::Post(const parser::SelectTypeStmt &x) {
   }
 }
 
+void ConstructVisitor::Post(const parser::SelectRankStmt &x) {
+  auto &association{GetCurrentAssociation()};
+  if (const std::optional<parser::Name> &name{std::get<1>(x.t)}) {
+    // This isn't a name in the current scope, it is in each SelectRankCaseStmt
+    MakePlaceholder(*name, MiscDetails::Kind::SelectRankAssociateName);
+    association.name = &*name;
+  }
+}
+
 bool ConstructVisitor::Pre(const parser::SelectTypeConstruct::TypeCase &) {
   PushScope(Scope::Kind::Block, nullptr);
   return true;
 }
 void ConstructVisitor::Post(const parser::SelectTypeConstruct::TypeCase &) {
+  PopScope();
+}
+
+bool ConstructVisitor::Pre(const parser::SelectRankConstruct::RankCase &) {
+  PushScope(Scope::Kind::Block, nullptr);
+  return true;
+}
+void ConstructVisitor::Post(const parser::SelectRankConstruct::RankCase &) {
   PopScope();
 }
 
@@ -5114,6 +5180,20 @@ void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {
       symbol->SetType(*type);
     }
     SetAttrsFromAssociation(*symbol);
+  }
+}
+
+void ConstructVisitor::Post(const parser::SelectRankCaseStmt::Rank &x) {
+  if (auto *symbol{MakeAssocEntity()}) {
+    SetTypeFromAssociation(*symbol);
+    SetAttrsFromAssociation(*symbol);
+    if (const auto *init{std::get_if<parser::ScalarIntConstantExpr>(&x.u)}) {
+      MaybeIntExpr expr{EvaluateIntExpr(*init)};
+      if (auto val{evaluate::ToInt64(expr)}) {
+        auto &details{symbol->get<AssocEntityDetails>()};
+        details.set_rank(*val);
+      }
+    }
   }
 }
 
@@ -5499,7 +5579,7 @@ void DeclarationVisitor::CheckInitialDataTarget(
     const Symbol &pointer, const SomeExpr &expr, SourceName source) {
   auto &messages{GetFoldingContext().messages()};
   auto restorer{messages.SetLocation(source)};
-  if (!evaluate::IsInitialDataTarget(expr, messages)) {
+  if (!evaluate::IsInitialDataTarget(expr, &messages)) {
     Say(source,
         "Pointer '%s' cannot be initialized with a reference to a designator with non-constant subscripts"_err_en_US,
         pointer.name());
@@ -6300,6 +6380,15 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case parser::OmpBlockDirective::Directive::Workshare:
     PushContext(beginDir.source, OmpDirective::WORKSHARE);
     break;
+  case parser::OmpBlockDirective::Directive::ParallelWorkshare:
+    PushContext(beginDir.source, OmpDirective::PARALLEL_WORKSHARE);
+    break;
+  case parser::OmpBlockDirective::Directive::TargetTeams:
+    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS);
+    break;
+  case parser::OmpBlockDirective::Directive::TargetParallel:
+    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL);
+    break;
   default:
     // TODO others
     break;
@@ -6446,10 +6535,10 @@ const parser::DoConstruct *OmpAttributeVisitor::GetDoConstructIf(
   return nullptr;
 }
 
-std::size_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
+std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
     const parser::OmpClauseList &x) {
-  std::size_t orderedLevel{0};
-  std::size_t collapseLevel{0};
+  std::int64_t orderedLevel{0};
+  std::int64_t collapseLevel{0};
   for (const auto &clause : x.v) {
     if (const auto *orderedClause{
             std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
@@ -6484,11 +6573,13 @@ std::size_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 //   - The loop iteration variables in the associated do-loops of a simd
 //     construct with multiple associated do-loops are lastprivate.
 //
-// TODO: This assumes that the do-loops association for collapse/ordered
-//       clause has been performed (the number of nested do-loops >= n).
+// TODO: revisit after semantics checks are completed for do-loop association of
+//       collapse and ordered
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     const parser::OpenMPLoopConstruct &x) {
-  std::size_t level{GetContext().associatedLoopLevel};
+  std::int64_t level{GetContext().associatedLoopLevel};
+  if (level <= 0)
+    return;
   Symbol::Flag ivDSA{Symbol::Flag::OmpPrivate};
   if (simdSet.test(GetContext().directive)) {
     if (level == 1) {
@@ -6647,11 +6738,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
               // 2.15.3 When a named common block appears in a list, it has the
               // same meaning as if every explicit member of the common block
               // appeared in the list
-              for (const Symbol &object :
-                  symbol->get<CommonBlockDetails>().objects()) {
-                Symbol &mutableObject{const_cast<Symbol &>(object)};
+              for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
-                        ResolveOmp(mutableObject, ompFlag, currScope())}) {
+                        ResolveOmp(*object, ompFlag, currScope())}) {
                   AddToContextObjectWithDSA(*resolvedObject, ompFlag);
                 }
               }

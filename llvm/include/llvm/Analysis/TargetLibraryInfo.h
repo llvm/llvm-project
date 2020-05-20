@@ -13,8 +13,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -287,11 +287,11 @@ public:
     return Impl->getLibFunc(FDecl, F);
   }
 
-  /// If a callsite does not have the 'nobuiltin' attribute, return if the
+  /// If a callbase does not have the 'nobuiltin' attribute, return if the
   /// called function is a known library function and set F to that function.
-  bool getLibFunc(ImmutableCallSite CS, LibFunc &F) const {
-    return !CS.isNoBuiltin() && CS.getCalledFunction() &&
-           getLibFunc(*(CS.getCalledFunction()), F);
+  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
+    return !CB.isNoBuiltin() && CB.getCalledFunction() &&
+           getLibFunc(*(CB.getCalledFunction()), F);
   }
 
   /// Disables all builtins.
@@ -350,6 +350,7 @@ public:
     case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:

@@ -14,7 +14,6 @@
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PredIteratorCache.h"
 

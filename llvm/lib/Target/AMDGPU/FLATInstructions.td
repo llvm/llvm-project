@@ -1,4 +1,4 @@
-//===-- FLATInstructions.td - FLAT Instruction Defintions -----------------===//
+//===-- FLATInstructions.td - FLAT Instruction Definitions ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -100,7 +100,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
                   !if(ps.is_flat_scratch, 0b01, 0));
 
   // Signed offset. Highest bit ignored for flat and treated as 12-bit
-  // unsigned for flat acceses.
+  // unsigned for flat accesses.
   bits<13> offset;
   bits<1> nv = 0; // XXX - What does this actually do?
 

@@ -15,7 +15,7 @@
 #define SPIRV_LOGICAL_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
                     list<OpTrait> traits = []> :
@@ -854,7 +854,7 @@ def SPV_SelectOp : SPV_Op<"Select",
     SPV_SelectType:$result
   );
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
+  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
                               Value cond, Value trueValue,
                               Value falseValue}]>];
 

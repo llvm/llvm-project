@@ -668,6 +668,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
                                                          SinkAfter, DT)) {
+          AllowedExit.insert(Phi);
           FirstOrderRecurrences.insert(Phi);
           continue;
         }
@@ -768,9 +769,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // Arbitrarily try a vector of 2 elements.
           Type *VecTy = VectorType::get(T, /*NumElements=*/2);
           assert(VecTy && "did not find vectorized version of stored type");
-          const MaybeAlign Alignment = getLoadStoreAlignment(ST);
-          assert(Alignment && "Alignment should be set");
-          if (!TTI->isLegalNTStore(VecTy, *Alignment)) {
+          if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
             reportVectorizationFailure(
                 "nontemporal store instruction cannot be vectorized",
                 "nontemporal store instruction cannot be vectorized",
@@ -785,9 +784,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // supported on the target (arbitrarily try a vector of 2 elements).
           Type *VecTy = VectorType::get(I.getType(), /*NumElements=*/2);
           assert(VecTy && "did not find vectorized version of load type");
-          const MaybeAlign Alignment = getLoadStoreAlignment(LD);
-          assert(Alignment && "Alignment should be set");
-          if (!TTI->isLegalNTLoad(VecTy, *Alignment)) {
+          if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
             reportVectorizationFailure(
                 "nontemporal load instruction cannot be vectorized",
                 "nontemporal load instruction cannot be vectorized",
@@ -982,14 +979,14 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // the memory pointed to can be dereferenced (with the access size implied by
   // the value's type) unconditionally within the loop header without
   // introducing a new fault.
-  SmallPtrSet<Value *, 8> SafePointes;
+  SmallPtrSet<Value *, 8> SafePointers;
 
   // Collect safe addresses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
       for (Instruction &I : *BB)
         if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointes.insert(Ptr);
+          SafePointers.insert(Ptr);
       continue;
     }
 
@@ -1003,7 +1000,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
       if (LI && !mustSuppressSpeculation(*LI) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT))
-        SafePointes.insert(LI->getPointerOperand());
+        SafePointers.insert(LI->getPointerOperand());
     }
   }
 
@@ -1021,7 +1018,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB)) {
-      if (!blockCanBePredicated(BB, SafePointes)) {
+      if (!blockCanBePredicated(BB, SafePointers)) {
         reportVectorizationFailure(
             "Control flow cannot be substituted for a select",
             "control flow cannot be substituted for a select",

@@ -183,8 +183,8 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
   };
 
   struct BaseRegisters {
-    unsigned LoReg = 0;
-    unsigned HiReg = 0;
+    Register LoReg;
+    Register HiReg;
 
     unsigned LoSubReg = 0;
     unsigned HiSubReg = 0;
@@ -201,7 +201,6 @@ private:
   const GCNSubtarget *STM = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
-  const MCSubtargetInfo *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   bool OptimizeAgain;
@@ -209,9 +208,9 @@ private:
   static bool dmasksCanBeCombined(const CombineInfo &CI,
                                   const SIInstrInfo &TII,
                                   const CombineInfo &Paired);
-  static bool offsetsCanBeCombined(CombineInfo &CI, const MCSubtargetInfo &STI,
+  static bool offsetsCanBeCombined(CombineInfo &CI, const GCNSubtarget &STI,
                                    CombineInfo &Paired, bool Modify = false);
-  static bool widthsFit(const GCNSubtarget &STM, const CombineInfo &CI,
+  static bool widthsFit(const GCNSubtarget &STI, const CombineInfo &CI,
                         const CombineInfo &Paired);
   static unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI,
@@ -252,9 +251,9 @@ private:
   mergeTBufferStorePair(CombineInfo &CI, CombineInfo &Paired,
                         const SmallVectorImpl<MachineInstr *> &InstsToMove);
 
-  void updateBaseAndOffset(MachineInstr &I, unsigned NewBase,
+  void updateBaseAndOffset(MachineInstr &I, Register NewBase,
                            int32_t NewOffset) const;
-  unsigned computeBase(MachineInstr &MI, const MemAddress &Addr) const;
+  Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
   Optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
@@ -266,8 +265,11 @@ private:
                                   SmallPtrSet<MachineInstr *, 4> &Promoted) const;
   void addInstToMergeableList(const CombineInfo &CI,
                   std::list<std::list<CombineInfo> > &MergeableInsts) const;
-  bool collectMergeableInsts(MachineBasicBlock &MBB,
-                  std::list<std::list<CombineInfo> > &MergeableInsts) const;
+
+  std::pair<MachineBasicBlock::iterator, bool> collectMergeableInsts(
+      MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
+      MemInfoMap &Visited, SmallPtrSet<MachineInstr *, 4> &AnchorList,
+      std::list<std::list<CombineInfo>> &MergeableInsts) const;
 
 public:
   static char ID;
@@ -593,8 +595,8 @@ static void moveInstsAfter(MachineBasicBlock::iterator I,
 }
 
 static void addDefsUsesToList(const MachineInstr &MI,
-                              DenseSet<unsigned> &RegDefs,
-                              DenseSet<unsigned> &PhysRegUses) {
+                              DenseSet<Register> &RegDefs,
+                              DenseSet<Register> &PhysRegUses) {
   for (const MachineOperand &Op : MI.operands()) {
     if (Op.isReg()) {
       if (Op.isDef())
@@ -616,8 +618,8 @@ static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
 
 // Add MI and its defs to the lists if MI reads one of the defs that are
 // already in the list. Returns true in that case.
-static bool addToListsIfDependent(MachineInstr &MI, DenseSet<unsigned> &RegDefs,
-                                  DenseSet<unsigned> &PhysRegUses,
+static bool addToListsIfDependent(MachineInstr &MI, DenseSet<Register> &RegDefs,
+                                  DenseSet<Register> &PhysRegUses,
                                   SmallVectorImpl<MachineInstr *> &Insts) {
   for (MachineOperand &Use : MI.operands()) {
     // If one of the defs is read, then there is a use of Def between I and the
@@ -711,7 +713,7 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
 
 static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
                                        unsigned ComponentCount,
-                                       const MCSubtargetInfo &STI) {
+                                       const GCNSubtarget &STI) {
   if (ComponentCount > 4)
     return 0;
 
@@ -735,7 +737,7 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
 }
 
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
-                                                const MCSubtargetInfo &STI,
+                                                const GCNSubtarget &STI,
                                                 CombineInfo &Paired,
                                                 bool Modify) {
   assert(CI.InstClass != MIMG);
@@ -861,7 +863,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
     return false;
 
   if (CI.InstClass != MIMG &&
-      (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STI, Paired)))
+      (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STM, Paired)))
     return false;
 
   const unsigned Opc = CI.I->getOpcode();
@@ -878,8 +880,8 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
   if (Swizzled != -1 && CI.I->getOperand(Swizzled).getImm())
     return false;
 
-  DenseSet<unsigned> RegDefsToMove;
-  DenseSet<unsigned> PhysRegUsesToMove;
+  DenseSet<Register> RegDefsToMove;
+  DenseSet<Register> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
   MachineBasicBlock::iterator E = std::next(Paired.I);
@@ -960,7 +962,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
         // this function should only be called on CombineInfo objects that
         // have already been confirmed to be mergeable.
         if (CI.InstClass != MIMG)
-          offsetsCanBeCombined(CI, *STI, Paired, true);
+          offsetsCanBeCombined(CI, *STM, Paired, true);
         return true;
       }
       return false;
@@ -1350,7 +1352,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STI);
+      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -1430,7 +1432,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STI);
+      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -1541,9 +1543,9 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
     case 4:
       return &AMDGPU::SGPR_128RegClass;
     case 8:
-      return &AMDGPU::SReg_256RegClass;
+      return &AMDGPU::SGPR_256RegClass;
     case 16:
-      return &AMDGPU::SReg_512RegClass;
+      return &AMDGPU::SGPR_512RegClass;
     }
   } else {
     switch (CI.Width + Paired.Width) {
@@ -1636,7 +1638,7 @@ SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) const {
 }
 
 // Compute base address using Addr and return the final register.
-unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
+Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
                                            const MemAddress &Addr) const {
   MachineBasicBlock *MBB = MI.getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
@@ -1695,7 +1697,7 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 
 // Update base and offset with the NewBase and NewOffset in MI.
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
-                                               unsigned NewBase,
+                                               Register NewBase,
                                                int32_t NewOffset) const {
   auto Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   Base->setReg(NewBase);
@@ -1907,7 +1909,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
                <<  AnchorAddr.Offset << "\n\n");
 
     // Instead of moving up, just re-compute anchor-instruction's base address.
-    unsigned Base = computeBase(MI, AnchorAddr);
+    Register Base = computeBase(MI, AnchorAddr);
 
     updateBaseAndOffset(MI, Base, MAddr.Offset - AnchorAddr.Offset);
     LLVM_DEBUG(dbgs() << "  After promotion: "; MI.dump(););
@@ -1945,29 +1947,36 @@ void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
   MergeableInsts.emplace_back(1, CI);
 }
 
-bool SILoadStoreOptimizer::collectMergeableInsts(MachineBasicBlock &MBB,
-                 std::list<std::list<CombineInfo> > &MergeableInsts) const {
+std::pair<MachineBasicBlock::iterator, bool>
+SILoadStoreOptimizer::collectMergeableInsts(
+    MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
+    MemInfoMap &Visited, SmallPtrSet<MachineInstr *, 4> &AnchorList,
+    std::list<std::list<CombineInfo>> &MergeableInsts) const {
   bool Modified = false;
-  // Contain the list
-  MemInfoMap Visited;
-  // Contains the list of instructions for which constant offsets are being
-  // promoted to the IMM.
-  SmallPtrSet<MachineInstr *, 4> AnchorList;
 
   // Sort potential mergeable instructions into lists.  One list per base address.
   unsigned Order = 0;
-  for (MachineInstr &MI : MBB.instrs()) {
+  MachineBasicBlock::iterator BlockI = Begin;
+  for (; BlockI != End; ++BlockI) {
+    MachineInstr &MI = *BlockI;
+
     // We run this before checking if an address is mergeable, because it can produce
     // better code even if the instructions aren't mergeable.
     if (promoteConstantOffsetToImm(MI, Visited, AnchorList))
       Modified = true;
 
+    // Don't combine if volatile. We also won't be able to merge across this, so
+    // break the search. We can look after this barrier for separate merges.
+    if (MI.hasOrderedMemoryRef()) {
+      LLVM_DEBUG(dbgs() << "Breaking search on memory fence: " << MI);
+
+      // Search will resume after this instruction in a separate merge list.
+      ++BlockI;
+      break;
+    }
+
     const InstClassEnum InstClass = getInstClass(MI.getOpcode(), *TII);
     if (InstClass == UNKNOWN)
-      continue;
-
-    // Don't combine if volatile.
-    if (MI.hasOrderedMemoryRef())
       continue;
 
     CombineInfo CI;
@@ -1986,7 +1995,7 @@ bool SILoadStoreOptimizer::collectMergeableInsts(MachineBasicBlock &MBB,
   // list try to find an instruction that can be merged with I.  If an instruction
   // is found, it is stored in the Paired field.  If no instructions are found, then
   // the CombineInfo object is deleted from the list.
-  
+
   for (std::list<std::list<CombineInfo>>::iterator I = MergeableInsts.begin(),
                                                    E = MergeableInsts.end(); I != E;) {
 
@@ -2009,7 +2018,7 @@ bool SILoadStoreOptimizer::collectMergeableInsts(MachineBasicBlock &MBB,
     ++I;
   }
 
-  return Modified;
+  return std::make_pair(BlockI, Modified);
 }
 
 // Scan through looking for adjacent LDS operations with constant offsets from
@@ -2152,7 +2161,6 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   TII = STM->getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  STI = &MF.getSubtarget<MCSubtargetInfo>();
 
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -2163,15 +2171,33 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   bool Modified = false;
 
+  // Contains the list of instructions for which constant offsets are being
+  // promoted to the IMM. This is tracked for an entire block at time.
+  SmallPtrSet<MachineInstr *, 4> AnchorList;
+  MemInfoMap Visited;
 
   for (MachineBasicBlock &MBB : MF) {
-    std::list<std::list<CombineInfo> > MergeableInsts;
-    // First pass: Collect list of all instructions we know how to merge.
-    Modified |= collectMergeableInsts(MBB, MergeableInsts);
-    do {
-      OptimizeAgain = false;
-      Modified |= optimizeBlock(MergeableInsts);
-    } while (OptimizeAgain);
+    MachineBasicBlock::iterator SectionEnd;
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
+         I = SectionEnd) {
+      bool CollectModified;
+      std::list<std::list<CombineInfo>> MergeableInsts;
+
+      // First pass: Collect list of all instructions we know how to merge in a
+      // subset of the block.
+      std::tie(SectionEnd, CollectModified) =
+          collectMergeableInsts(I, E, Visited, AnchorList, MergeableInsts);
+
+      Modified |= CollectModified;
+
+      do {
+        OptimizeAgain = false;
+        Modified |= optimizeBlock(MergeableInsts);
+      } while (OptimizeAgain);
+    }
+
+    Visited.clear();
+    AnchorList.clear();
   }
 
   return Modified;

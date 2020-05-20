@@ -8,6 +8,8 @@
 
 %%begin()
 
+namespace __llvm_libc {
+
 __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
   // NOTE: For __builtin_frame_address to work reliably across compilers,
   // architectures and various optimization levels, the TU including this file
@@ -19,3 +21,4 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
          sizeof(uintptr_t) * 2;
 }
 
+} // namespace __llvm_libc

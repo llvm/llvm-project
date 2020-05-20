@@ -242,7 +242,7 @@ func @should_fuse_first_and_second_loops() {
   }
 
   // Should fuse first loop into the second (last loop should not be fused).
-  // Should create private memref '%2' for fused loop.
+  // Should create private memref '%2' for fused scf.
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
@@ -2422,5 +2422,45 @@ func @should_fuse_producer_with_multi_outgoing_edges(%a : memref<1xf32>, %b : me
   // CHECK-NEXT: affine.store %{{.*}}, %[[A]]
   // CHECK-NEXT: affine.load %[[B]]
   // CHECK-NOT: affine.for %{{.*}}
+  // CHECK: return
   return
 }
+
+// -----
+
+// MAXIMAL-LABEL: func @reshape_into_matmul
+func @reshape_into_matmul(%lhs : memref<1024x1024xf32>,
+              %R: memref<16x64x1024xf32>, %out: memref<1024x1024xf32>) {
+  %rhs = alloc() :  memref<1024x1024xf32>
+
+  // Reshape from 3-d to 2-d.
+  affine.for %i0 = 0 to 16 {
+    affine.for %i1 = 0 to 64 {
+      affine.for %k = 0 to 1024 {
+        %v = affine.load %R[%i0, %i1, %k] : memref<16x64x1024xf32>
+        affine.store %v, %rhs[64*%i0 + %i1, %k] : memref<1024x1024xf32>
+      }
+    }
+  }
+
+  // Matmul.
+  affine.for %i = 0 to 1024 {
+    affine.for %j = 0 to 1024 {
+      affine.for %k = 0 to 1024 {
+        %0 = affine.load %rhs[%k, %j] : memref<1024x1024xf32>
+        %1 = affine.load %lhs[%i, %k] : memref<1024x1024xf32>
+        %2 = mulf %1, %0 : f32
+        %3 = affine.load %out[%i, %j] : memref<1024x1024xf32>
+        %4 = addf %3, %2 : f32
+        affine.store %4, %out[%i, %j] : memref<1024x1024xf32>
+      }
+    }
+  }
+  return
+}
+// MAXIMAL-NEXT: alloc
+// MAXIMAL-NEXT: affine.for
+// MAXIMAL-NEXT:   affine.for
+// MAXIMAL-NEXT:     affine.for
+// MAXIMAL-NOT:      affine.for
+// MAXIMAL:      return

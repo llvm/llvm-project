@@ -9,6 +9,7 @@ config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
 config.omp_header_directory = "@LIBOMPTARGET_OPENMP_HEADER_FOLDER@"
 config.omp_host_rtl_directory = "@LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER@"
 config.libomptarget_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
+config.libomptarget_not = "@OPENMP_NOT_EXECUTABLE@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

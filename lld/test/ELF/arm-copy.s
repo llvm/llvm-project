@@ -25,7 +25,7 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x13220
+// CHECK-NEXT:     Address: 0x40220
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 8
 // CHECK-NEXT:     Link:
@@ -35,13 +35,13 @@ _start:
 // CHECK: Relocations [
 // CHECK-NEXT:  Section {{.*}} .rel.dyn {
 // CHECK-NEXT:    Relocation {
-// CHECK-NEXT:      Offset: 0x13220
+// CHECK-NEXT:      Offset: 0x40220
 // CHECK-NEXT:      Type: R_ARM_COPY
 // CHECK-NEXT:      Symbol: y
 // CHECK-NEXT:      Addend: 0x0
 // CHECK-NEXT:    }
 // CHECK-NEXT:    Relocation {
-// CHECK-NEXT:      Offset: 0x13224
+// CHECK-NEXT:      Offset: 0x40224
 // CHECK-NEXT:      Type: R_ARM_COPY
 // CHECK-NEXT:      Symbol: z
 // CHECK-NEXT:      Addend: 0x0
@@ -50,14 +50,14 @@ _start:
 
 // CHECK: Symbols [
 // CHECK:     Name: y
-// CHECK-NEXT:    Value: 0x13220
+// CHECK-NEXT:    Value: 0x40220
 // CHECK-NEXT:    Size: 4
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: Object
 // CHECK-NEXT:    Other:
 // CHECK-NEXT:    Section: .bss
 // CHECK:    Name: z
-// CHECK-NEXT:    Value: 0x13224
+// CHECK-NEXT:    Value: 0x40224
 // CHECK-NEXT:    Size: 4
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: Object
@@ -67,13 +67,13 @@ _start:
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
 // CODE-NEXT: <_start>:
-// S + A = 0x13220 + 0 = 65536 * 1 + 12832
-// CODE-NEXT:   111b4:       movw    r2, #12832
-// CODE-NEXT:   111b8:       movt    r2, #1
-// CODE-NEXT:   111bc:       ldr     r3, [pc, #4]
-// CODE-NEXT:   111c0:       ldr     r3, [r3]
+/// S + A = 0x40220 + 0 = 65536 * 1 + 544
+// CODE-NEXT:   201b4:       movw    r2, #544
+// CODE-NEXT:   201b8:       movt    r2, #4
+// CODE-NEXT:   201bc:       ldr     r3, [pc, #4]
+// CODE-NEXT:   201c0:       ldr     r3, [r3]
 
 
 // RODATA: Contents of section .rodata:
-// S(z) = 0x13004
-// RODATA-NEXT: 101b0 24320100
+/// S(z) = 0x40004
+// RODATA-NEXT: 101b0 24020400

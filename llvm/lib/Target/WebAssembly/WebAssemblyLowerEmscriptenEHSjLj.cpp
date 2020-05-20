@@ -208,7 +208,7 @@
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -259,11 +259,11 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool runSjLjOnFunction(Function &F);
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
-  template <typename CallOrInvoke> Value *wrapInvoke(CallOrInvoke *CI);
+  Value *wrapInvoke(CallBase *CI);
   void wrapTestSetjmp(BasicBlock *BB, DebugLoc DL, Value *Threw,
                       Value *SetjmpTable, Value *SetjmpTableSize, Value *&Label,
                       Value *&LongjmpResult, BasicBlock *&EndBB);
-  template <typename CallOrInvoke> Function *getInvokeWrapper(CallOrInvoke *CI);
+  Function *getInvokeWrapper(CallBase *CI);
 
   bool areAllExceptionsAllowed() const { return EHWhitelistSet.empty(); }
   bool canLongjmp(Module &M, const Value *Callee) const;
@@ -338,7 +338,7 @@ static std::string getSignature(FunctionType *FTy) {
   if (FTy->isVarArg())
     OS << "_...";
   Sig = OS.str();
-  Sig.erase(remove_if(Sig, isspace), Sig.end());
+  Sig.erase(remove_if(Sig, isSpace), Sig.end());
   // When s2wasm parses .s file, a comma means the end of an argument. So a
   // mangled function name can contain any character but a comma.
   std::replace(Sig.begin(), Sig.end(), ',', '.');
@@ -389,15 +389,14 @@ WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
 // %__THREW__.val = __THREW__; __THREW__ = 0;
 // Returns %__THREW__.val, which indicates whether an exception is thrown (or
 // whether longjmp occurred), for future use.
-template <typename CallOrInvoke>
-Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
+Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   LLVMContext &C = CI->getModule()->getContext();
 
   // If we are calling a function that is noreturn, we must remove that
   // attribute. The code we insert here does expect it to return, after we
   // catch the exception.
   if (CI->doesNotReturn()) {
-    if (auto *F = dyn_cast<Function>(CI->getCalledValue()))
+    if (auto *F = CI->getCalledFunction())
       F->removeFnAttr(Attribute::NoReturn);
     CI->removeAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
   }
@@ -413,7 +412,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
   SmallVector<Value *, 16> Args;
   // Put the pointer to the callee as first argument, so it can be called
   // within the invoke wrapper later
-  Args.push_back(CI->getCalledValue());
+  Args.push_back(CI->getCalledOperand());
   Args.append(CI->arg_begin(), CI->arg_end());
   CallInst *NewCall = IRB.CreateCall(getInvokeWrapper(CI), Args);
   NewCall->takeName(CI);
@@ -461,18 +460,10 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
 }
 
 // Get matching invoke wrapper based on callee signature
-template <typename CallOrInvoke>
-Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallOrInvoke *CI) {
+Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
   Module *M = CI->getModule();
   SmallVector<Type *, 16> ArgTys;
-  Value *Callee = CI->getCalledValue();
-  FunctionType *CalleeFTy;
-  if (auto *F = dyn_cast<Function>(Callee))
-    CalleeFTy = F->getFunctionType();
-  else {
-    auto *CalleeTy = cast<PointerType>(Callee->getType())->getElementType();
-    CalleeFTy = cast<FunctionType>(CalleeTy);
-  }
+  FunctionType *CalleeFTy = CI->getFunctionType();
 
   std::string Sig = getSignature(CalleeFTy);
   if (InvokeWrappers.find(Sig) != InvokeWrappers.end())
@@ -765,7 +756,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     LandingPads.insert(II->getLandingPadInst());
     IRB.SetInsertPoint(II);
 
-    bool NeedInvoke = AllowExceptions && canThrow(II->getCalledValue());
+    bool NeedInvoke = AllowExceptions && canThrow(II->getCalledOperand());
     if (NeedInvoke) {
       // Wrap invoke with invoke wrapper and generate preamble/postamble
       Value *Threw = wrapInvoke(II);
@@ -780,7 +771,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
       // call+branch
       SmallVector<Value *, 16> Args(II->arg_begin(), II->arg_end());
       CallInst *NewCall =
-          IRB.CreateCall(II->getFunctionType(), II->getCalledValue(), Args);
+          IRB.CreateCall(II->getFunctionType(), II->getCalledOperand(), Args);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setDebugLoc(II->getDebugLoc());
@@ -1006,7 +997,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
       if (!CI)
         continue;
 
-      const Value *Callee = CI->getCalledValue();
+      const Value *Callee = CI->getCalledOperand();
       if (!canLongjmp(M, Callee))
         continue;
       if (isEmAsmCall(M, Callee))

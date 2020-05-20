@@ -904,29 +904,35 @@ define i32 @test13(i32 %a, i32 %b) nounwind {
 }
 
 define i32 @test14(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: test14:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test14:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    cmpl %esi, %edi
+; GENERIC-NEXT:    adcl $-1, %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test14:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    cmpl %esi, %edi
+; ATOM-NEXT:    adcl $-1, %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test14:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    xorl %eax, %eax
 ; ATHLON-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    setae %al
-; ATHLON-NEXT:    negl %eax
+; ATHLON-NEXT:    adcl $-1, %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test14:
 ; MCU:       # %bb.0:
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    cmpl %edx, %eax
-; MCU-NEXT:    setae %cl
-; MCU-NEXT:    negl %ecx
+; MCU-NEXT:    adcl $-1, %ecx
 ; MCU-NEXT:    movl %ecx, %eax
 ; MCU-NEXT:    retl
   %c = icmp uge i32 %a, %b

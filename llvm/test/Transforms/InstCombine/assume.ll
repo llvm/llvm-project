@@ -525,6 +525,69 @@ not_taken:
   ret i1 %control
 }
 
+
+define void @always_true_assumption() {
+; CHECK-LABEL: @always_true_assumption(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true)
+  ret void
+
+}
+
+; The alloca guarantees that the low bits of %a are zero because of alignment.
+; The assume says the opposite. Make sure we don't crash.
+
+define i64 @PR31809() {
+; CHECK-LABEL: @PR31809(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[T1:%.*]] = ptrtoint i32* [[A]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 false)
+; CHECK-NEXT:    ret i64 [[T1]]
+;
+  %a = alloca i32
+  %t1 = ptrtoint i32* %a to i64
+  %cond = icmp eq i64 %t1, 3
+  call void @llvm.assume(i1 %cond)
+  ret i64 %t1
+}
+
+; Similar to above: there's no way to know which assumption is truthful,
+; so just don't crash.
+
+define i8 @conflicting_assumptions(i8 %x){
+; CHECK-LABEL: @conflicting_assumptions(
+; CHECK-NEXT:    call void @llvm.assume(i1 false)
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 [[X:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i8 5
+;
+  %add = add i8 %x, 1
+  %cond1 = icmp eq i8 %x, 3
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp eq i8 %x, 4
+  call void @llvm.assume(i1 %cond2)
+  ret i8 %add
+}
+
+; Another case of conflicting assumptions. This would crash because we'd
+; try to set more known bits than existed in the known bits struct.
+
+define void @PR36270(i32 %b) {
+; CHECK-LABEL: @PR36270(
+; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    unreachable
+;
+  %B7 = xor i32 -1, 2147483647
+  %and1 = and i32 %b, 3
+  %B12 = lshr i32 %B7, %and1
+  %C1 = icmp ult i32 %and1, %B12
+  tail call void @llvm.assume(i1 %C1)
+  %cmp2 = icmp eq i32 0, %B12
+  tail call void @llvm.assume(i1 %cmp2)
+  unreachable
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

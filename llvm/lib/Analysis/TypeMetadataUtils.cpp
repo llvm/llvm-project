@@ -37,10 +37,10 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     if (isa<BitCastInst>(User)) {
       findCallsAtConstantOffset(DevirtCalls, HasNonCallUses, User, Offset, CI,
                                 DT);
-    } else if (auto CI = dyn_cast<CallInst>(User)) {
-      DevirtCalls.push_back({Offset, CI});
-    } else if (auto II = dyn_cast<InvokeInst>(User)) {
-      DevirtCalls.push_back({Offset, II});
+    } else if (auto *CI = dyn_cast<CallInst>(User)) {
+      DevirtCalls.push_back({Offset, *CI});
+    } else if (auto *II = dyn_cast<InvokeInst>(User)) {
+      DevirtCalls.push_back({Offset, *II});
     } else if (HasNonCallUses) {
       *HasNonCallUses = true;
     }

@@ -65,18 +65,24 @@ Metadata *ProfileSummary::getDetailedSummaryMD(LLVMContext &Context) {
 // "ProfileFormat" and a string representing the format ("InstrProf" or
 // "SampleProfile"). The rest of the elements of the outer MDTuple are specific
 // to the kind of profile summary as returned by getFormatSpecificMD.
-Metadata *ProfileSummary::getMD(LLVMContext &Context) {
+// IsPartialProfile is an optional field and \p AddPartialField will decide
+// whether to add a field for it.
+Metadata *ProfileSummary::getMD(LLVMContext &Context, bool AddPartialField) {
   const char *KindStr[3] = {"InstrProf", "CSInstrProf", "SampleProfile"};
-  Metadata *Components[] = {
-    getKeyValMD(Context, "ProfileFormat", KindStr[PSK]),
-    getKeyValMD(Context, "TotalCount", getTotalCount()),
-    getKeyValMD(Context, "MaxCount", getMaxCount()),
-    getKeyValMD(Context, "MaxInternalCount", getMaxInternalCount()),
-    getKeyValMD(Context, "MaxFunctionCount", getMaxFunctionCount()),
-    getKeyValMD(Context, "NumCounts", getNumCounts()),
-    getKeyValMD(Context, "NumFunctions", getNumFunctions()),
-    getDetailedSummaryMD(Context),
-  };
+  SmallVector<Metadata *, 16> Components;
+  Components.push_back(getKeyValMD(Context, "ProfileFormat", KindStr[PSK]));
+  Components.push_back(getKeyValMD(Context, "TotalCount", getTotalCount()));
+  Components.push_back(getKeyValMD(Context, "MaxCount", getMaxCount()));
+  Components.push_back(
+      getKeyValMD(Context, "MaxInternalCount", getMaxInternalCount()));
+  Components.push_back(
+      getKeyValMD(Context, "MaxFunctionCount", getMaxFunctionCount()));
+  Components.push_back(getKeyValMD(Context, "NumCounts", getNumCounts()));
+  Components.push_back(getKeyValMD(Context, "NumFunctions", getNumFunctions()));
+  if (AddPartialField)
+    Components.push_back(
+        getKeyValMD(Context, "IsPartialProfile", isPartialProfile()));
+  Components.push_back(getDetailedSummaryMD(Context));
   return MDTuple::get(Context, Components);
 }
 
@@ -141,10 +147,11 @@ static bool getSummaryFromMD(MDTuple *MD, SummaryEntryVector &Summary) {
 
 ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   MDTuple *Tuple = dyn_cast_or_null<MDTuple>(MD);
-  if (!Tuple || Tuple->getNumOperands() != 8)
+  if (!Tuple && (Tuple->getNumOperands() < 8 || Tuple->getNumOperands() > 9))
     return nullptr;
 
-  auto &FormatMD = Tuple->getOperand(0);
+  int i = 0;
+  auto &FormatMD = Tuple->getOperand(i++);
   ProfileSummary::Kind SummaryKind;
   if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
                      "SampleProfile"))
@@ -160,27 +167,59 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
 
   uint64_t NumCounts, TotalCount, NumFunctions, MaxFunctionCount, MaxCount,
       MaxInternalCount;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(1)), "TotalCount",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "TotalCount",
               TotalCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(2)), "MaxCount", MaxCount))
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "MaxCount", MaxCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(3)), "MaxInternalCount",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "MaxInternalCount",
               MaxInternalCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(4)), "MaxFunctionCount",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "MaxFunctionCount",
               MaxFunctionCount))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(5)), "NumCounts", NumCounts))
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "NumCounts",
+              NumCounts))
     return nullptr;
-  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(6)), "NumFunctions",
+  if (!getVal(dyn_cast<MDTuple>(Tuple->getOperand(i++)), "NumFunctions",
               NumFunctions))
     return nullptr;
+  // Initialize IsPartialProfile because the field is optional.
+  uint64_t IsPartialProfile = 0;
+
+  // IsPartialProfile is optional so it doesn't matter even if the next val
+  // is not IsPartialProfile.
+  if (getVal(dyn_cast<MDTuple>(Tuple->getOperand(i)), "IsPartialProfile",
+             IsPartialProfile)) {
+    // Need to make sure when IsPartialProfile is presented, we won't step
+    // over the bound of Tuple operand array.
+    if (Tuple->getNumOperands() < 9)
+      return nullptr;
+    i++;
+  }
 
   SummaryEntryVector Summary;
-  if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(7)), Summary))
+  if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(i++)), Summary))
     return nullptr;
   return new ProfileSummary(SummaryKind, std::move(Summary), TotalCount,
                             MaxCount, MaxInternalCount, MaxFunctionCount,
-                            NumCounts, NumFunctions);
+                            NumCounts, NumFunctions, IsPartialProfile);
+}
+
+void ProfileSummary::printSummary(raw_ostream &OS) {
+  OS << "Total functions: " << NumFunctions << "\n";
+  OS << "Maximum function count: " << MaxFunctionCount << "\n";
+  OS << "Maximum block count: " << MaxCount << "\n";
+  OS << "Total number of blocks: " << NumCounts << "\n";
+  OS << "Total count: " << TotalCount << "\n";
+}
+
+void ProfileSummary::printDetailedSummary(raw_ostream &OS) {
+  OS << "Detailed summary:\n";
+  for (auto Entry : DetailedSummary) {
+    OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
+       << " account for "
+       << format("%0.6g", (float)Entry.Cutoff / Scale * 100)
+       << " percentage of the total counts.\n";
+  }
 }

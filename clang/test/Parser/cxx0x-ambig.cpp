@@ -30,7 +30,8 @@ namespace final {
   struct U final _Alignas(4) {}; // expected-error 3{{}} expected-note {{}}
 }
 
-// enum versus bitfield mess.
+// enum versus bitfield. These are always required to be treated as an
+// enum-base, but we disambiguate anyway for better error recovery.
 namespace bitfield {
   enum E {};
 
@@ -44,9 +45,9 @@ namespace bitfield {
   constexpr T a, b, c, d;
 
   struct S1 {
-    enum E : T ( a = 1, b = 2, c = 3, 4 ); // ok, declares a bitfield
+    enum E : T ( a = 1, b = 2, c = 3, 4 ); // expected-error {{ISO C++ only allows ':' in member enumeration declaration to introduce a fixed underlying type, not an anonymous bit-field}}
   };
-  // This could be a bit-field.
+  // Enum definition, not a bit-field.
   struct S2 {
     enum E : T { a = 1, b = 2, c = 3, 4 }; // expected-error {{non-integral type}} expected-error {{expected identifier}}
   };
@@ -79,6 +80,14 @@ namespace bitfield {
   constexpr const U &id(const U &u) { return u; }
   struct S8 {
     enum E : int { a = id(U()) }; // expected-error {{no viable conversion}}
+  };
+
+  // PR26249: Disambiguate 'enum :' as an enum-base always, even if that would
+  // be ill-formed. It cannot be an elaborated-type-specifier.
+  struct S {
+    enum : undeclared_type { v = 0 }; // expected-error {{unknown type name 'undeclared_type'}}
+    enum E : undeclared_type { w = 0 }; // expected-error {{unknown type name 'undeclared_type'}}
+    enum X : undeclared_type { x = 0 }; // expected-error {{unknown type name 'undeclared_type'}}
   };
 }
 

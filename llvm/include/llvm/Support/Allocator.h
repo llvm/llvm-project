@@ -170,7 +170,7 @@ public:
     // If Size is really big, allocate a separate slab for it.
     size_t PaddedSize = SizeToAllocate + Alignment.value() - 1;
     if (PaddedSize > SizeThreshold) {
-      void *NewSlab = Allocator.Allocate(PaddedSize, 0);
+      void *NewSlab = Allocator.Allocate(PaddedSize, alignof(std::max_align_t));
       // We own the new slab and don't want anyone reading anyting other than
       // pieces returned from this method.  So poison the whole slab.
       __asan_poison_memory_region(NewSlab, PaddedSize);
@@ -208,7 +208,7 @@ public:
   // Bump pointer allocators are expected to never free their storage; and
   // clients expect pointers to remain valid for non-dereferencing uses even
   // after deallocation.
-  void Deallocate(const void *Ptr, size_t Size) {
+  void Deallocate(const void *Ptr, size_t Size, size_t /*Alignment*/) {
     __asan_poison_memory_region(Ptr, Size);
   }
 
@@ -332,7 +332,8 @@ private:
   void StartNewSlab() {
     size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
 
-    void *NewSlab = Allocator.Allocate(AllocatedSlabSize, 0);
+    void *NewSlab =
+        Allocator.Allocate(AllocatedSlabSize, alignof(std::max_align_t));
     // We own the new slab and don't want anyone reading anything other than
     // pieces returned from this method.  So poison the whole slab.
     __asan_poison_memory_region(NewSlab, AllocatedSlabSize);
@@ -348,7 +349,7 @@ private:
     for (; I != E; ++I) {
       size_t AllocatedSlabSize =
           computeSlabSize(std::distance(Slabs.begin(), I));
-      Allocator.Deallocate(*I, AllocatedSlabSize);
+      Allocator.Deallocate(*I, AllocatedSlabSize, alignof(std::max_align_t));
     }
   }
 
@@ -357,7 +358,7 @@ private:
     for (auto &PtrAndSize : CustomSizedSlabs) {
       void *Ptr = PtrAndSize.first;
       size_t Size = PtrAndSize.second;
-      Allocator.Deallocate(Ptr, Size);
+      Allocator.Deallocate(Ptr, Size, alignof(std::max_align_t));
     }
   }
 
@@ -434,17 +435,8 @@ void *
 operator new(size_t Size,
              llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
                                         GrowthDelay> &Allocator) {
-  struct S {
-    char c;
-    union {
-      double D;
-      long double LD;
-      long long L;
-      void *P;
-    } x;
-  };
-  return Allocator.Allocate(
-      Size, std::min((size_t)llvm::NextPowerOf2(Size), offsetof(S, x)));
+  return Allocator.Allocate(Size, std::min((size_t)llvm::NextPowerOf2(Size),
+                                           alignof(std::max_align_t)));
 }
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,

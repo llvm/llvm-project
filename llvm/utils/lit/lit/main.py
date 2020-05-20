@@ -13,6 +13,7 @@ import lit.cl_arguments
 import lit.discovery
 import lit.display
 import lit.LitConfig
+import lit.reports
 import lit.run
 import lit.Test
 import lit.util
@@ -57,9 +58,11 @@ def main(builtin_params={}):
                         opts.maxIndividualTestTime))
             lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
 
-    filtered_tests = [t for t in discovered_tests if
+    determine_order(discovered_tests, opts.order)
+
+    selected_tests = [t for t in discovered_tests if
                       opts.filter.search(t.getFullName())]
-    if not filtered_tests:
+    if not selected_tests:
         sys.stderr.write('error: filter did not match any tests '
                          '(of %d discovered).  ' % len(discovered_tests))
         if opts.allow_empty_runs:
@@ -71,38 +74,33 @@ def main(builtin_params={}):
                              'error.\n')
             sys.exit(2)
 
-    determine_order(filtered_tests, opts.order)
-
     if opts.shard:
         (run, shards) = opts.shard
-        filtered_tests = filter_by_shard(filtered_tests, run, shards, lit_config)
-        if not filtered_tests:
+        selected_tests = filter_by_shard(selected_tests, run, shards, lit_config)
+        if not selected_tests:
             sys.stderr.write('warning: shard does not contain any tests.  '
                              'Consider decreasing the number of shards.\n')
             sys.exit(0)
 
-    filtered_tests = filtered_tests[:opts.max_tests]
+    selected_tests = selected_tests[:opts.max_tests]
 
-    opts.workers = min(len(filtered_tests), opts.workers)
+    mark_excluded(discovered_tests, selected_tests)
 
     start = time.time()
-    run_tests(filtered_tests, lit_config, opts, len(discovered_tests))
+    run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
     # TODO(yln): eventually, all functions below should act on discovered_tests
     executed_tests = [
-        t for t in filtered_tests if t.result.code != lit.Test.SKIPPED]
+        t for t in selected_tests if t.result.code != lit.Test.SKIPPED]
 
     if opts.time_tests:
-        print_histogram(executed_tests)
+        print_histogram(discovered_tests)
 
-    print_results(filtered_tests, elapsed, opts)
+    print_results(discovered_tests, elapsed, opts)
 
-    if opts.output_path:
-        #TODO(yln): pass in discovered_tests
-        write_test_results(executed_tests, lit_config, elapsed, opts.output_path)
-    if opts.xunit_output_file:
-        write_test_results_xunit(executed_tests, opts)
+    for report in opts.reports:
+        report.write_results(executed_tests, elapsed)
 
     if lit_config.numErrors:
         sys.stderr.write('\n%d error(s) in tests\n' % lit_config.numErrors)
@@ -111,7 +109,7 @@ def main(builtin_params={}):
     if lit_config.numWarnings:
         sys.stderr.write('\n%d warning(s) in tests\n' % lit_config.numWarnings)
 
-    has_failure = any(t.isFailure() for t in executed_tests)
+    has_failure = any(t.isFailure() for t in discovered_tests)
     if has_failure:
         sys.exit(1)
 
@@ -126,16 +124,14 @@ def create_params(builtin_params, user_params):
 
 
 def print_discovered(tests, show_suites, show_tests):
-    # Suite names are not necessarily unique.  Include object identity in sort
-    # key to avoid mixing tests of different suites.
-    tests.sort(key=lambda t: (t.suite.name, t.suite, t.path_in_suite))
+    tests.sort(key=lit.reports.by_suite_and_test_path)
 
     if show_suites:
         import itertools
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
         print('-- Test Suites --')
-        for suite, suite_iter in tests_by_suite:
-            test_count = sum(1 for _ in suite_iter)
+        for suite, test_iter in tests_by_suite:
+            test_count = sum(1 for _ in test_iter)
             print('  %s - %d tests' % (suite.name, test_count))
             print('    Source Root: %s' % suite.source_root)
             print('    Exec Root  : %s' % suite.exec_root)
@@ -189,15 +185,24 @@ def filter_by_shard(tests, run, shards, lit_config):
     return selected_tests
 
 
+def mark_excluded(discovered_tests, selected_tests):
+    excluded_tests = set(discovered_tests) - set(selected_tests)
+    result = lit.Test.Result(lit.Test.EXCLUDED)
+    for t in excluded_tests:
+        t.setResult(result)
+
+
 def run_tests(tests, lit_config, opts, discovered_tests):
+    workers = min(len(tests), opts.workers)
     display = lit.display.create_display(opts, len(tests), discovered_tests,
-                                         opts.workers)
+                                         workers)
+
     def progress_callback(test):
         display.update(test)
         if opts.order == 'failing-first':
             touch_file(test)
 
-    run = lit.run.Run(tests, lit_config, opts.workers, progress_callback,
+    run = lit.run.Run(tests, lit_config, workers, progress_callback,
                       opts.max_failures, opts.timeout)
 
     display.print_header()
@@ -242,39 +247,46 @@ def execute_in_tmp_dir(run, lit_config):
             try:
                 import shutil
                 shutil.rmtree(tmp_dir)
-            except:
-                # FIXME: Re-try after timeout on Windows.
-                lit_config.warning("Failed to delete temp directory '%s'" % tmp_dir)
+            except Exception as e: 
+                lit_config.warning("Failed to delete temp directory '%s', try upgrading your version of Python to fix this" % tmp_dir)
 
 
 def print_histogram(tests):
-    test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
-    lit.util.printHistogram(test_times, title='Tests')
+    test_times = [(t.getFullName(), t.result.elapsed)
+                  for t in tests if t.result.elapsed]
+    if test_times:
+        lit.util.printHistogram(test_times, title='Tests')
+
+
+def add_result_category(result_code, label):
+    assert isinstance(result_code, lit.Test.ResultCode)
+    category = (result_code, "%s Tests" % label, label)
+    result_codes.append(category)
 
 
 # Status code, summary label, group label
-failure_codes = [
+result_codes = [
+    # Passes
+    (lit.Test.EXCLUDED,    'Excluded Tests',      'Excluded'),
+    (lit.Test.SKIPPED,     'Skipped Tests',       'Skipped'),
+    (lit.Test.UNSUPPORTED, 'Unsupported Tests',   'Unsupported'),
+    (lit.Test.PASS,        'Expected Passes',     ''),
+    (lit.Test.FLAKYPASS,   'Passes With Retry',   ''),
+    (lit.Test.XFAIL,       'Expected Failures',   'Expected Failing'),
+    # Failures
     (lit.Test.UNRESOLVED,  'Unresolved Tests',    'Unresolved'),
     (lit.Test.TIMEOUT,     'Individual Timeouts', 'Timed Out'),
     (lit.Test.FAIL,        'Unexpected Failures', 'Failing'),
     (lit.Test.XPASS,       'Unexpected Passes',   'Unexpected Passing')
 ]
 
-all_codes = [
-    (lit.Test.SKIPPED,     'Skipped Tests',     'Skipped'),
-    (lit.Test.UNSUPPORTED, 'Unsupported Tests', 'Unsupported'),
-    (lit.Test.PASS,        'Expected Passes',   ''),
-    (lit.Test.FLAKYPASS,   'Passes With Retry', ''),
-    (lit.Test.XFAIL,       'Expected Failures', 'Expected Failing'),
-] + failure_codes
-
 
 def print_results(tests, elapsed, opts):
-    tests_by_code = {code: [] for (code, _, _) in all_codes}
+    tests_by_code = {code: [] for (code, _, _) in result_codes}
     for test in tests:
         tests_by_code[test.result.code].append(test)
 
-    for (code, _, group_label) in all_codes:
+    for (code, _, group_label) in result_codes:
         print_group(code, group_label, tests_by_code[code], opts)
 
     print_summary(tests_by_code, opts.quiet, elapsed)
@@ -284,7 +296,7 @@ def print_group(code, label, tests, opts):
     if not tests:
         return
     # TODO(yln): FLAKYPASS? Make this more consistent!
-    if code in {lit.Test.SKIPPED, lit.Test.PASS}:
+    if code in {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.PASS}:
         return
     if (lit.Test.XFAIL == code and not opts.show_xfail) or \
        (lit.Test.UNSUPPORTED == code and not opts.show_unsupported):
@@ -300,7 +312,7 @@ def print_summary(tests_by_code, quiet, elapsed):
     if not quiet:
         print('\nTesting Time: %.2fs' % elapsed)
 
-    codes = failure_codes if quiet else all_codes
+    codes = [c for c in result_codes if not quiet or c.isFailure]
     groups = [(label, len(tests_by_code[code])) for code, label, _ in codes]
     groups = [(label, count) for label, count in groups if count]
     if not groups:
@@ -313,98 +325,3 @@ def print_summary(tests_by_code, quiet, elapsed):
         label = label.ljust(max_label_len)
         count = str(count).rjust(max_count_len)
         print('  %s: %s' % (label, count))
-
-
-def write_test_results(tests, lit_config, elapsed, output_path):
-    # TODO(yln): audit: unexecuted tests
-    # Construct the data we will write.
-    data = {}
-    # Encode the current lit version as a schema version.
-    data['__version__'] = lit.__versioninfo__
-    data['elapsed'] = elapsed
-    # FIXME: Record some information on the lit configuration used?
-    # FIXME: Record information from the individual test suites?
-
-    # Encode the tests.
-    data['tests'] = tests_data = []
-    for test in tests:
-        test_data = {
-            'name' : test.getFullName(),
-            'code' : test.result.code.name,
-            'output' : test.result.output,
-            'elapsed' : test.result.elapsed }
-
-        # Add test metrics, if present.
-        if test.result.metrics:
-            test_data['metrics'] = metrics_data = {}
-            for key, value in test.result.metrics.items():
-                metrics_data[key] = value.todata()
-
-        # Report micro-tests separately, if present
-        if test.result.microResults:
-            for key, micro_test in test.result.microResults.items():
-                # Expand parent test name with micro test name
-                parent_name = test.getFullName()
-                micro_full_name = parent_name + ':' + key
-
-                micro_test_data = {
-                    'name' : micro_full_name,
-                    'code' : micro_test.code.name,
-                    'output' : micro_test.output,
-                    'elapsed' : micro_test.elapsed }
-                if micro_test.metrics:
-                    micro_test_data['metrics'] = micro_metrics_data = {}
-                    for key, value in micro_test.metrics.items():
-                        micro_metrics_data[key] = value.todata()
-
-                tests_data.append(micro_test_data)
-
-        tests_data.append(test_data)
-
-    # Write the output.
-    f = open(output_path, 'w')
-    try:
-        import json
-        json.dump(data, f, indent=2, sort_keys=True)
-        f.write('\n')
-    finally:
-        f.close()
-
-def write_test_results_xunit(tests, opts):
-    # TODO(yln): audit: unexecuted tests
-    from xml.sax.saxutils import quoteattr
-    # Collect the tests, indexed by test suite
-    by_suite = {}
-    for result_test in tests:
-        suite = result_test.suite.config.name
-        if suite not in by_suite:
-            by_suite[suite] = {
-                                'passes'   : 0,
-                                'failures' : 0,
-                                'skipped': 0,
-                                'tests'    : [] }
-        by_suite[suite]['tests'].append(result_test)
-        if result_test.isFailure():
-            by_suite[suite]['failures'] += 1
-        elif result_test.result.code == lit.Test.UNSUPPORTED:
-            by_suite[suite]['skipped'] += 1
-        else:
-            by_suite[suite]['passes'] += 1
-    xunit_output_file = open(opts.xunit_output_file, "w")
-    xunit_output_file.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n")
-    xunit_output_file.write("<testsuites>\n")
-    for suite_name, suite in by_suite.items():
-        safe_suite_name = quoteattr(suite_name.replace(".", "-"))
-        xunit_output_file.write("<testsuite name=" + safe_suite_name)
-        xunit_output_file.write(" tests=\"" + str(suite['passes'] +
-            suite['failures'] + suite['skipped']) + "\"")
-        xunit_output_file.write(" failures=\"" + str(suite['failures']) + "\"")
-        xunit_output_file.write(" skipped=\"" + str(suite['skipped']) +
-            "\">\n")
-
-        for result_test in suite['tests']:
-            result_test.writeJUnitXML(xunit_output_file)
-            xunit_output_file.write("\n")
-        xunit_output_file.write("</testsuite>\n")
-    xunit_output_file.write("</testsuites>")
-    xunit_output_file.close()

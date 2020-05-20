@@ -97,12 +97,13 @@ static cl::opt<bool> EnableLinkOnceODROutlining(
     cl::desc("Enable the machine outliner on linkonceodr functions"),
     cl::init(false));
 
-// Set the number of times to repeatedly apply outlining.
-// Defaults to 1, but more repetitions can save additional size.
-static cl::opt<unsigned>
-    NumRepeat("machine-outline-runs", cl::Hidden,
-              cl::desc("The number of times to apply machine outlining"),
-              cl::init(1));
+/// Number of times to re-run the outliner. This is not the total number of runs
+/// as the outliner will run at least one time. The default value is set to 0,
+/// meaning the outliner will run one time and rerun zero times after that.
+static cl::opt<unsigned> OutlinerReruns(
+    "machine-outliner-reruns", cl::init(0), cl::Hidden,
+    cl::desc(
+        "Number of times to rerun the outliner after the initial outline"));
 
 namespace {
 
@@ -910,11 +911,8 @@ struct MachineOutliner : public ModulePass {
                                           InstructionMapper &Mapper,
                                           unsigned Name);
 
-  /// Calls runOnceOnModule NumRepeat times
+  /// Calls 'doOutline()' 1 + OutlinerReruns times.
   bool runOnModule(Module &M) override;
-
-  /// Calls 'doOutline()'.
-  bool runOnceOnModule(Module &M, unsigned Iter);
 
   /// Construct a suffix tree on the instructions in \p M and outline repeated
   /// strings from that tree.
@@ -1112,13 +1110,10 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Create the function name. This should be unique.
   // FIXME: We should have a better naming scheme. This should be stable,
   // regardless of changes to the outliner's cost model/traversal order.
-  std::string FunctionName;
+  std::string FunctionName = "OUTLINED_FUNCTION_";
   if (OutlineRepeatedNum > 0)
-    FunctionName = ("OUTLINED_FUNCTION_" + Twine(OutlineRepeatedNum + 1) + "_" +
-                    Twine(Name))
-                       .str();
-  else
-    FunctionName = ("OUTLINED_FUNCTION_" + Twine(Name)).str();
+    FunctionName += std::to_string(OutlineRepeatedNum + 1) + "_";
+  FunctionName += std::to_string(Name);
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
@@ -1160,9 +1155,17 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
+  MachineFunction *OriginalMF = FirstCand.front()->getMF();
+  const std::vector<MCCFIInstruction> &Instrs =
+      OriginalMF->getFrameInstructions();
   for (auto I = FirstCand.front(), E = std::next(FirstCand.back()); I != E;
        ++I) {
     MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+    if (I->isCFIInstruction()) {
+      unsigned CFIIndex = NewMI->getOperand(0).getCFIIndex();
+      MCCFIInstruction CFI = Instrs[CFIIndex];
+      (void)MF.addFrameInst(CFI);
+    }
     NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.
@@ -1170,11 +1173,34 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.buildOutlinedFrame(MBB, MF, OF);
-
-  // Outlined functions shouldn't preserve liveness.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
+  // Set normal properties for a late MachineFunction.
+  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
+  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MF.getRegInfo().freezeReservedRegs(MF);
+
+  // Compute live-in set for outlined fn
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  LivePhysRegs LiveIns(TRI);
+  for (auto &Cand : OF.Candidates) {
+    // Figure out live-ins at the first instruction.
+    MachineBasicBlock &OutlineBB = *Cand.front()->getParent();
+    LivePhysRegs CandLiveIns(TRI);
+    CandLiveIns.addLiveOuts(OutlineBB);
+    for (const MachineInstr &MI :
+         reverse(make_range(Cand.front(), OutlineBB.end())))
+      CandLiveIns.stepBackward(MI);
+
+    // The live-in set for the outlined function is the union of the live-ins
+    // from all the outlining points.
+    for (MCPhysReg Reg : make_range(CandLiveIns.begin(), CandLiveIns.end()))
+      LiveIns.addReg(Reg);
+  }
+  addLiveIns(MBB, LiveIns);
+
+  TII.buildOutlinedFrame(MBB, MF, OF);
 
   // If there's a DISubprogram associated with this outlined function, then
   // emit debug info for the outlined function.
@@ -1275,8 +1301,9 @@ bool MachineOutliner::outline(Module &M,
         // implicit Last inst in outlined range  <-- def to the call
         // instruction. Also remove call site information for outlined block
         // of code. The exposed uses need to be copied in the outlined range.
-        for (MachineBasicBlock::reverse_iterator Iter = EndIt.getReverse(),
-             Last = std::next(CallInst.getReverse());
+        for (MachineBasicBlock::reverse_iterator
+                 Iter = EndIt.getReverse(),
+                 Last = std::next(CallInst.getReverse());
              Iter != Last; Iter++) {
           MachineInstr *MI = &*Iter;
           for (MachineOperand &MOP : MI->operands()) {
@@ -1302,10 +1329,10 @@ bool MachineOutliner::outline(Module &M,
         }
 
         for (const Register &I : DefRegs)
-           // If it's a def, add it to the call instruction.
-          CallInst->addOperand(MachineOperand::CreateReg(
-                  I, true, /* isDef = true */
-                  true /* isImp = true */));
+          // If it's a def, add it to the call instruction.
+          CallInst->addOperand(
+              MachineOperand::CreateReg(I, true, /* isDef = true */
+                                        true /* isImp = true */));
 
         for (const Register &I : UseRegs)
           // If it's a exposed use, add it to the call instruction.
@@ -1331,7 +1358,6 @@ bool MachineOutliner::outline(Module &M,
   }
 
   LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
-
   return OutlinedSomething;
 }
 
@@ -1457,19 +1483,31 @@ void MachineOutliner::emitInstrCountChangedRemark(
   }
 }
 
-bool MachineOutliner::runOnceOnModule(Module &M, unsigned Iter) {
+bool MachineOutliner::runOnModule(Module &M) {
   // Check if there's anything in the module. If it's empty, then there's
   // nothing to outline.
   if (M.empty())
     return false;
 
-  OutlineRepeatedNum = Iter;
-
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;
 
+  OutlineRepeatedNum = 0;
   if (!doOutline(M, OutlinedFunctionNum))
     return false;
+
+  for (unsigned I = 0; I < OutlinerReruns; ++I) {
+    OutlinedFunctionNum = 0;
+    OutlineRepeatedNum++;
+    if (!doOutline(M, OutlinedFunctionNum)) {
+      LLVM_DEBUG({
+        dbgs() << "Did not outline on iteration " << I + 2 << " out of "
+               << OutlinerReruns + 1 << "\n";
+      });
+      break;
+    }
+  }
+
   return true;
 }
 
@@ -1526,25 +1564,11 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   if (ShouldEmitSizeRemarks && OutlinedSomething)
     emitInstrCountChangedRemark(M, MMI, FunctionToInstrCount);
 
+  LLVM_DEBUG({
+    if (!OutlinedSomething)
+      dbgs() << "Stopped outlining at iteration " << OutlineRepeatedNum
+             << " because no changes were found.\n";
+  });
+
   return OutlinedSomething;
-}
-
-// Apply machine outlining for NumRepeat times.
-bool MachineOutliner::runOnModule(Module &M) {
-  if (NumRepeat < 1)
-    report_fatal_error("Expect NumRepeat for machine outlining "
-                       "to be greater than or equal to 1!\n");
-
-  bool Changed = false;
-  for (unsigned I = 0; I < NumRepeat; I++) {
-    if (!runOnceOnModule(M, I)) {
-      LLVM_DEBUG(dbgs() << "Stopped outlining at iteration " << I
-                        << " because no changes were found.\n";);
-      return Changed;
-    }
-    Changed = true;
-  }
-  LLVM_DEBUG(dbgs() << "Stopped outlining because iteration is "
-                       "equal to " << NumRepeat << "\n";);
-  return Changed;
 }

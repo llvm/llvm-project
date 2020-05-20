@@ -75,7 +75,7 @@ mutatedBy(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
 
 std::string removeSpace(std::string s) {
   s.erase(std::remove_if(s.begin(), s.end(),
-                         [](char c) { return std::isspace(c); }),
+                         [](char c) { return llvm::isSpace(c); }),
           s.end());
   return s;
 }

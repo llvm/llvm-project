@@ -5,7 +5,7 @@
 # UNSUPPORTED: system-windows
 
 # RUN: %clang_host %p/Inputs/call-asm.c -x assembler-with-cpp %p/Inputs/thread-step-out-ret-addr-check.s -o %t
-# RUN: %lldb %t -s %s -b 2>&1 | FileCheck %s
+# RUN: not %lldb %t -s %s -b 2>&1 | FileCheck %s
 
 breakpoint set -n nonstandard_stub
 # CHECK: Breakpoint 1: where = {{.*}}`nonstandard_stub

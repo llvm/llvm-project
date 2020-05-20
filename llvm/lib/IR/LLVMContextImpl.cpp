@@ -26,6 +26,7 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
     VoidTy(C, Type::VoidTyID),
     LabelTy(C, Type::LabelTyID),
     HalfTy(C, Type::HalfTyID),
+    BFloatTy(C, Type::BFloatTyID),
     FloatTy(C, Type::FloatTyID),
     DoubleTy(C, Type::DoubleTyID),
     MetadataTy(C, Type::MetadataTyID),
@@ -103,21 +104,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   for (auto &CDSConstant : CDSConstants)
     delete CDSConstant.second;
   CDSConstants.clear();
-
-  // Destroy attributes.
-  for (FoldingSetIterator<AttributeImpl> I = AttrsSet.begin(),
-         E = AttrsSet.end(); I != E; ) {
-    FoldingSetIterator<AttributeImpl> Elem = I++;
-    delete &*Elem;
-  }
-
-  // Destroy attribute lists.
-  for (FoldingSetIterator<AttributeListImpl> I = AttrsLists.begin(),
-                                             E = AttrsLists.end();
-       I != E;) {
-    FoldingSetIterator<AttributeListImpl> Elem = I++;
-    delete &*Elem;
-  }
 
   // Destroy attribute node lists.
   for (FoldingSetIterator<AttributeSetNode> I = AttrsSetNodes.begin(),

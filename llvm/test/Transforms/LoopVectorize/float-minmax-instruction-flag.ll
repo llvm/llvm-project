@@ -7,7 +7,7 @@
 define float @minloop(float* nocapture readonly %arg) {
 ; CHECK-LABEL: @minloop(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
@@ -47,7 +47,7 @@ out:                                              ; preds = %loop
 define float @minloopattr(float* nocapture readonly %arg) #0 {
 ; CHECK-LABEL: @minloopattr(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[MINMAX_IDENT_SPLATINSERT:%.*]] = insertelement <4 x float> undef, float [[T]], i32 0
@@ -57,9 +57,6 @@ define float @minloopattr(float* nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> undef, i64 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, float* [[ARG]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, float* [[TMP1]], i32 0
@@ -123,7 +120,7 @@ out:                                              ; preds = %loop
 define float @minloopnovec(float* nocapture readonly %arg) {
 ; CHECK-LABEL: @minloopnovec(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]

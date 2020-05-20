@@ -2008,8 +2008,47 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRanges) {
   ASSERT_TRUE((bool)ErrOrSections);
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
-  VerifyError(*DwarfContext,
-              "error: DW_AT_ranges offset is beyond .debug_ranges bounds:");
+  VerifyError(
+      *DwarfContext,
+      "error: DW_AT_ranges offset is beyond .debug_ranges bounds: 0x00001000");
+}
+
+TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRnglists) {
+  // Create a single compile unit with a DW_AT_ranges whose section offset
+  // isn't valid.
+  const char *yamldata = R"(
+    debug_str:
+      - ''
+      - /tmp/main.c
+    debug_abbrev:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_ranges
+            Form:            DW_FORM_sec_offset
+    debug_info:
+      - Length:
+          TotalLength:     17
+        Version:         5
+        UnitType:        DW_UT_compile
+        AbbrOffset:      0
+        AddrSize:        8
+        Entries:
+          - AbbrCode:        0x00000001
+            Values:
+              - Value:           0x0000000000000001
+              - Value:           0x0000000000001000
+
+  )";
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  ASSERT_TRUE((bool)ErrOrSections);
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext, "error: DW_AT_ranges offset is beyond "
+                             ".debug_rnglists bounds: 0x00001000");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStmtList) {

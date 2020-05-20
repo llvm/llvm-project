@@ -15,7 +15,6 @@
 //  - capturing diagnostics for later access
 //  - running clang-tidy checks checks
 //
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PARSEDAST_H
@@ -25,9 +24,9 @@
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "Headers.h"
-#include "Path.h"
 #include "Preamble.h"
 #include "index/CanonicalIncludes.h"
+#include "support/Path.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Preprocessor.h"
@@ -45,15 +44,14 @@ class SymbolIndex;
 /// Stores and provides access to parsed AST.
 class ParsedAST {
 public:
-  /// Attempts to run Clang and store parsed AST. If \p Preamble is non-null
-  /// it is reused during parsing.
+  /// Attempts to run Clang and store the parsed AST.
+  /// If \p Preamble is non-null it is reused during parsing.
+  /// This function does not check if preamble is valid to reuse.
   static llvm::Optional<ParsedAST>
-  build(llvm::StringRef Version, std::unique_ptr<clang::CompilerInvocation> CI,
+  build(llvm::StringRef Filename, const ParseInputs &Inputs,
+        std::unique_ptr<clang::CompilerInvocation> CI,
         llvm::ArrayRef<Diag> CompilerInvocationDiags,
-        std::shared_ptr<const PreambleData> Preamble,
-        std::unique_ptr<llvm::MemoryBuffer> Buffer,
-        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-        const SymbolIndex *Index, const ParseOptions &Opts);
+        std::shared_ptr<const PreambleData> Preamble);
 
   ParsedAST(ParsedAST &&Other);
   ParsedAST &operator=(ParsedAST &&Other);
@@ -140,15 +138,6 @@ private:
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
 };
-
-/// Build an AST from provided user inputs. This function does not check if
-/// preamble can be reused, as this function expects that \p Preamble is the
-/// result of calling buildPreamble.
-llvm::Optional<ParsedAST>
-buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
-         llvm::ArrayRef<Diag> CompilerInvocationDiags,
-         const ParseInputs &Inputs,
-         std::shared_ptr<const PreambleData> Preamble);
 
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.

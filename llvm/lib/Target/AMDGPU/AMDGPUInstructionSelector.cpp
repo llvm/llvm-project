@@ -2330,6 +2330,8 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
                                                                   *MRI);
   const TargetRegisterClass *DstRC = TRI.getRegClassForTypeOnBank(DstTy, *DstRB,
                                                                   *MRI);
+  if (!SrcRC || !DstRC)
+    return false;
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
       !RBI.constrainGenericRegister(IdxReg, AMDGPU::SReg_32RegClass, *MRI))
@@ -2931,7 +2933,7 @@ AMDGPUInstructionSelector::selectSmrdImm32(MachineOperand &Root) const {
     return None;
 
   const GEPInfo &GEPInfo = AddrInfo[0];
-  unsigned PtrReg = GEPInfo.SgprParts[0];
+  Register PtrReg = GEPInfo.SgprParts[0];
   Optional<int64_t> EncodedImm =
       AMDGPU::getSMRDEncodedLiteralOffset32(STI, GEPInfo.Imm);
   if (!EncodedImm)
@@ -2965,7 +2967,7 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
   // It is OK to select this using a sgpr offset, because we have already
   // failed trying to select this load into one of the _IMM variants since
   // the _IMM Patterns are considered before the _SGPR patterns.
-  unsigned PtrReg = GEPInfo.SgprParts[0];
+  Register PtrReg = GEPInfo.SgprParts[0];
   Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), OffsetReg)
           .addImm(GEPInfo.Imm);

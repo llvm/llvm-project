@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64 -fsyntax-only -verify=silence %s
+// RUN: %clang_cc1 -triple aarch64_be -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple i386 -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple x86_64 -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple ppc64le -fsyntax-only -verify %s

@@ -20,7 +20,6 @@
 namespace llvm {
 
 class AsmPrinter;
-class CompileUnit;
 
 /// An object containing the capability of hashing and adding hash
 /// attributes onto a DIE.

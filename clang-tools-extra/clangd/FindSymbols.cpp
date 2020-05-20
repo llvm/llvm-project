@@ -9,11 +9,11 @@
 
 #include "AST.h"
 #include "FuzzyMatch.h"
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "Quality.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "support/Logger.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"

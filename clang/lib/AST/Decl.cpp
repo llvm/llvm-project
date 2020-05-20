@@ -4410,6 +4410,21 @@ void RecordDecl::setCapturedRecord() {
   addAttr(CapturedRecordAttr::CreateImplicit(getASTContext()));
 }
 
+bool RecordDecl::isOrContainsUnion() const {
+  if (isUnion())
+    return true;
+
+  if (const RecordDecl *Def = getDefinition()) {
+    for (const FieldDecl *FD : Def->fields()) {
+      const RecordType *RT = FD->getType()->getAs<RecordType>();
+      if (RT && RT->getDecl()->isOrContainsUnion())
+        return true;
+    }
+  }
+
+  return false;
+}
+
 RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (hasExternalLexicalStorage() && !hasLoadedFieldsFromExternalStorage())
     LoadFieldsFromExternalStorage();

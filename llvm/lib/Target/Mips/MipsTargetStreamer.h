@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-struct MipsABIFlagsSection;
-
 class MipsTargetStreamer : public MCTargetStreamer {
 public:
   MipsTargetStreamer(MCStreamer &S);

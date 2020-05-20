@@ -1,5 +1,6 @@
 include "config/public_api.td"
 
+include "spec/gnu_ext.td"
 include "spec/linux.td"
 include "spec/posix.td"
 include "spec/stdc.td"
@@ -8,6 +9,13 @@ def SizeT : TypeDecl<"size_t"> {
   let Decl = [{
     #define __need_size_t
     #include <stddef.h>
+  }];
+}
+
+def SSizeT : TypeDecl<"ssize_t"> {
+  let Decl = [{
+    #define __need_ssize_t
+    #include <__posix-types.h>
   }];
 }
 
@@ -109,6 +117,20 @@ def IsNanMacro : MacroDef<"isnan"> {
   }];
 }
 
+def FloatT : TypeDecl<"float_t"> {
+  let Decl = [{
+    #define __need_float_t
+    #include <__llvm-libc-stdc-types.h>
+  }];
+}
+
+def DoubleT : TypeDecl<"double_t"> {
+  let Decl = [{
+    #define __need_double_t
+    #include <__llvm-libc-stdc-types.h>
+  }];
+}
+
 def MathAPI : PublicAPI<"math.h"> {
   let Macros = [
     SimpleMacroDef<"MATH_ERRNO", "1">,
@@ -122,8 +144,19 @@ def MathAPI : PublicAPI<"math.h"> {
     IsInfMacro,
     IsNanMacro,
   ];
+  let TypeDeclarations = [
+    DoubleT,
+    FloatT,
+  ];
   let Functions = [
+   "cosf",
+   "fabs",
+   "fabsf",
+   "expf",
+   "exp2f",
    "round",
+   "sincosf",
+   "sinf",
   ];
 }
 
@@ -259,9 +292,11 @@ def SignalAPI : PublicAPI<"signal.h"> {
   let Functions = [
     "raise",
     "sigaction",
+    "sigdelset",
     "sigprocmask",
     "sigemptyset",
     "sigaddset",
+    "sigfillset",
     "signal",
   ];
 }
@@ -302,5 +337,16 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
     "mtx_unlock",
     "thrd_create",
     "thrd_join",
+  ];
+}
+
+def UniStdAPI : PublicAPI<"unistd.h"> {
+  let TypeDeclarations = [
+    SSizeT,
+    SizeT,
+  ];
+
+  let Functions = [
+    "write",
   ];
 }

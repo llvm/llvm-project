@@ -390,8 +390,9 @@ std::string ToolChain::getCompilerRTPath() const {
   return std::string(Path.str());
 }
 
-std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
-                                     FileType Type) const {
+std::string ToolChain::getCompilerRTBasename(const ArgList &Args,
+                                             StringRef Component, FileType Type,
+                                             bool AddArch) const {
   const llvm::Triple &TT = getTriple();
   bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
@@ -413,18 +414,32 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     break;
   }
 
+  std::string ArchAndEnv;
+  if (AddArch) {
+    StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
+    const char *Env = TT.isAndroid() ? "-android" : "";
+    ArchAndEnv = ("-" + Arch + Env).str();
+  }
+  return (Prefix + Twine("clang_rt.") + Component + ArchAndEnv + Suffix).str();
+}
+
+std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
+                                     FileType Type) const {
+  // Check for runtime files in the new layout without the architecture first.
+  std::string CRTBasename =
+      getCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);
-    llvm::sys::path::append(P, Prefix + Twine("clang_rt.") + Component + Suffix);
+    llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
       return std::string(P.str());
   }
 
-  StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
-  const char *Env = TT.isAndroid() ? "-android" : "";
+  // Fall back to the old expected compiler-rt name if the new one does not
+  // exist.
+  CRTBasename = getCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
   SmallString<128> Path(getCompilerRTPath());
-  llvm::sys::path::append(Path, Prefix + Twine("clang_rt.") + Component + "-" +
-                                    Arch + Env + Suffix);
+  llvm::sys::path::append(Path, CRTBasename);
   return std::string(Path.str());
 }
 
@@ -482,24 +497,20 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
   if (Args.hasArg(options::OPT_noprofilelib))
     return false;
 
-  if (needsGCovInstrumentation(Args) ||
-      Args.hasArg(options::OPT_fprofile_generate) ||
-      Args.hasArg(options::OPT_fprofile_generate_EQ) ||
-      Args.hasArg(options::OPT_fcs_profile_generate) ||
-      Args.hasArg(options::OPT_fcs_profile_generate_EQ) ||
-      Args.hasArg(options::OPT_fprofile_instr_generate) ||
-      Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
-      Args.hasArg(options::OPT_fcreate_profile) ||
-      Args.hasArg(options::OPT_forder_file_instrumentation))
-    return true;
-
-  return false;
+  return Args.hasArg(options::OPT_fprofile_generate) ||
+         Args.hasArg(options::OPT_fprofile_generate_EQ) ||
+         Args.hasArg(options::OPT_fcs_profile_generate) ||
+         Args.hasArg(options::OPT_fcs_profile_generate_EQ) ||
+         Args.hasArg(options::OPT_fprofile_instr_generate) ||
+         Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
+         Args.hasArg(options::OPT_fcreate_profile) ||
+         Args.hasArg(options::OPT_forder_file_instrumentation);
 }
 
 bool ToolChain::needsGCovInstrumentation(const llvm::opt::ArgList &Args) {
-  return Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
-                      false) ||
-         Args.hasArg(options::OPT_coverage);
+  return Args.hasArg(options::OPT_coverage) ||
+         Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
+                      false);
 }
 
 Tool *ToolChain::SelectTool(const JobAction &JA) const {
@@ -749,7 +760,8 @@ void ToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {}
 
 void ToolChain::addProfileRTLibs(const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) const {
-  if (!needsProfileRT(Args)) return;
+  if (!needsProfileRT(Args) && !needsGCovInstrumentation(Args))
+    return;
 
   CmdArgs.push_back(getCompilerRTArgString(Args, "profile"));
 }

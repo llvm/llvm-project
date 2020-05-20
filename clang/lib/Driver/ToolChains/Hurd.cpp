@@ -63,7 +63,19 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
+  GCCInstallation.init(Triple, Args);
+  Multilibs = GCCInstallation.getMultilibs();
+  SelectedMultilib = GCCInstallation.getMultilib();
   std::string SysRoot = computeSysRoot();
+  ToolChain::path_list &PPaths = getProgramPaths();
+
+  Generic_GCC::PushPPaths(PPaths);
+
+  // The selection of paths to try here is designed to match the patterns which
+  // the GCC driver itself uses, as this is part of the GCC-compatible driver.
+  // This was determined by running GCC in a fake filesystem, creating all
+  // possible permutations of these directories, and seeing which ones it added
+  // to the link paths.
   path_list &Paths = getFilePaths();
 
   const std::string OSLibDir = std::string(getOSLibDir(Triple, Args));
@@ -73,8 +85,11 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   ExtraOpts.push_back("--build-id");
 #endif
 
-  // If we are currently running Clang inside of the requested system root, add
-  // its parent library paths to those searched.
+  Generic_GCC::AddMultilibPaths(D, SysRoot, OSLibDir, MultiarchTriple, Paths);
+
+  // Similar to the logic for GCC above, if we currently running Clang inside
+  // of the requested system root, add its parent library paths to
+  // those searched.
   // FIXME: It's not clear whether we should use the driver's installed
   // directory ('Dir' below) or the ResourceDir.
   if (StringRef(D.Dir).startswith(SysRoot)) {
@@ -88,8 +103,11 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   addPathIfExists(D, SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
   addPathIfExists(D, SysRoot + "/usr/lib/../" + OSLibDir, Paths);
 
-  // If we are currently running Clang inside of the requested system root, add
-  // its parent library path to those searched.
+  Generic_GCC::AddMultiarchPaths(D, SysRoot, OSLibDir, Paths);
+
+  // Similar to the logic for GCC above, if we are currently running Clang
+  // inside of the requested system root, add its parent library path to those
+  // searched.
   // FIXME: It's not clear whether we should use the driver's installed
   // directory ('Dir' below) or the ResourceDir.
   if (StringRef(D.Dir).startswith(SysRoot))
@@ -156,6 +174,9 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   // Lacking those, try to detect the correct set of system includes for the
   // target triple.
+
+  AddMultilibIncludeArgs(DriverArgs, CC1Args);
+
   if (getTriple().getArch() == llvm::Triple::x86) {
     std::string Path = SysRoot + "/usr/include/i386-gnu";
     if (D.getVFS().exists(Path))

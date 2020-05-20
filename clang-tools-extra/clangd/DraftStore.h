@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DRAFTSTORE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DRAFTSTORE_H
 
-#include "Path.h"
 #include "Protocol.h"
+#include "support/Path.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
 #include <mutex>

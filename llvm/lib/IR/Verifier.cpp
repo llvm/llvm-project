@@ -397,6 +397,9 @@ public:
   }
 
 private:
+  /// Whether a metadata node is allowed to be, or contain, a DILocation.
+  enum class AreDebugLocsAllowed { No, Yes };
+
   // Verification methods...
   void visitGlobalValue(const GlobalValue &GV);
   void visitGlobalVariable(const GlobalVariable &GV);
@@ -405,7 +408,7 @@ private:
   void visitAliaseeSubExpr(SmallPtrSetImpl<const GlobalAlias *> &Visited,
                            const GlobalAlias &A, const Constant &C);
   void visitNamedMDNode(const NamedMDNode &NMD);
-  void visitMDNode(const MDNode &MD);
+  void visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs);
   void visitMetadataAsValue(const MetadataAsValue &MD, Function *F);
   void visitValueAsMetadata(const ValueAsMetadata &MD, Function *F);
   void visitComdat(const Comdat &C);
@@ -698,8 +701,8 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   // the runtime size. If the global is a struct or an array containing
   // scalable vectors, that will be caught by the isValidElementType methods
   // in StructType or ArrayType instead.
-  if (auto *VTy = dyn_cast<VectorType>(GV.getValueType()))
-    Assert(!VTy->isScalable(), "Globals cannot contain scalable vectors", &GV);
+  Assert(!isa<ScalableVectorType>(GV.getValueType()),
+         "Globals cannot contain scalable vectors", &GV);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
@@ -780,11 +783,11 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
     if (!MD)
       continue;
 
-    visitMDNode(*MD);
+    visitMDNode(*MD, AreDebugLocsAllowed::Yes);
   }
 }
 
-void Verifier::visitMDNode(const MDNode &MD) {
+void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
   // Only visit each node once.  Metadata can be mutually recursive, so this
   // avoids infinite recursion here, as well as being an optimization.
   if (!MDNodes.insert(&MD).second)
@@ -807,8 +810,10 @@ void Verifier::visitMDNode(const MDNode &MD) {
       continue;
     Assert(!isa<LocalAsMetadata>(Op), "Invalid operand for global metadata!",
            &MD, Op);
+    AssertDI(!isa<DILocation>(Op) || AllowLocs == AreDebugLocsAllowed::Yes,
+             "DILocation not allowed within this metadata node", &MD, Op);
     if (auto *N = dyn_cast<MDNode>(Op)) {
-      visitMDNode(*N);
+      visitMDNode(*N, AllowLocs);
       continue;
     }
     if (auto *V = dyn_cast<ValueAsMetadata>(Op)) {
@@ -851,7 +856,7 @@ void Verifier::visitValueAsMetadata(const ValueAsMetadata &MD, Function *F) {
 void Verifier::visitMetadataAsValue(const MetadataAsValue &MDV, Function *F) {
   Metadata *MD = MDV.getMetadata();
   if (auto *N = dyn_cast<MDNode>(MD)) {
-    visitMDNode(*N);
+    visitMDNode(*N, AreDebugLocsAllowed::No);
     return;
   }
 
@@ -1005,6 +1010,11 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
   if (auto *D = N.getRawDiscriminator()) {
     AssertDI(isa<DIDerivedType>(D) && N.getTag() == dwarf::DW_TAG_variant_part,
              "discriminator can only appear on variant part");
+  }
+
+  if (N.getRawDataLocation()) {
+    AssertDI(N.getTag() == dwarf::DW_TAG_array_type,
+             "dataLocation can only appear in array type");
   }
 }
 
@@ -1509,6 +1519,7 @@ void Verifier::visitModuleFlagCGProfileEntry(const MDOperand &MDO) {
 /// Return true if this attribute kind only applies to functions.
 static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   switch (Kind) {
+  case Attribute::NoMerge:
   case Attribute::NoReturn:
   case Attribute::NoSync:
   case Attribute::WillReturn:
@@ -1552,6 +1563,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::SpeculativeLoadHardening:
   case Attribute::Speculatable:
   case Attribute::StrictFP:
+  case Attribute::NullPointerIsValid:
     return true;
   default:
     break;
@@ -1563,7 +1575,8 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
 /// arguments.
 static bool isFuncOrArgAttr(Attribute::AttrKind Kind) {
   return Kind == Attribute::ReadOnly || Kind == Attribute::WriteOnly ||
-         Kind == Attribute::ReadNone || Kind == Attribute::NoFree;
+         Kind == Attribute::ReadNone || Kind == Attribute::NoFree ||
+         Kind == Attribute::Preallocated;
 }
 
 void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
@@ -1614,11 +1627,13 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   unsigned AttrCount = 0;
   AttrCount += Attrs.hasAttribute(Attribute::ByVal);
   AttrCount += Attrs.hasAttribute(Attribute::InAlloca);
+  AttrCount += Attrs.hasAttribute(Attribute::Preallocated);
   AttrCount += Attrs.hasAttribute(Attribute::StructRet) ||
                Attrs.hasAttribute(Attribute::InReg);
   AttrCount += Attrs.hasAttribute(Attribute::Nest);
-  Assert(AttrCount <= 1, "Attributes 'byval', 'inalloca', 'inreg', 'nest', "
-                         "and 'sret' are incompatible!",
+  Assert(AttrCount <= 1,
+         "Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', "
+         "and 'sret' are incompatible!",
          V);
 
   Assert(!(Attrs.hasAttribute(Attribute::InAlloca) &&
@@ -1668,6 +1683,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
            "Attribute 'byval' type does not match parameter!", V);
   }
 
+  if (Attrs.hasAttribute(Attribute::Preallocated)) {
+    Assert(Attrs.getPreallocatedType() ==
+               cast<PointerType>(Ty)->getElementType(),
+           "Attribute 'preallocated' type does not match parameter!", V);
+  }
+
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   Assert(!AttrBuilder(Attrs).overlaps(IncompatibleAttrs),
          "Wrong types for attribute: " +
@@ -1678,8 +1699,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     SmallPtrSet<Type*, 4> Visited;
     if (!PTy->getElementType()->isSized(&Visited)) {
       Assert(!Attrs.hasAttribute(Attribute::ByVal) &&
-                 !Attrs.hasAttribute(Attribute::InAlloca),
-             "Attributes 'byval' and 'inalloca' do not support unsized types!",
+                 !Attrs.hasAttribute(Attribute::InAlloca) &&
+                 !Attrs.hasAttribute(Attribute::Preallocated),
+             "Attributes 'byval', 'inalloca', and 'preallocated' do not "
+             "support unsized types!",
              V);
     }
     if (!isa<PointerType>(PTy->getElementType()))
@@ -1720,9 +1743,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           !RetAttrs.hasAttribute(Attribute::NoFree) &&
           !RetAttrs.hasAttribute(Attribute::Returned) &&
           !RetAttrs.hasAttribute(Attribute::InAlloca) &&
+          !RetAttrs.hasAttribute(Attribute::Preallocated) &&
           !RetAttrs.hasAttribute(Attribute::SwiftSelf) &&
           !RetAttrs.hasAttribute(Attribute::SwiftError)),
-         "Attributes 'byval', 'inalloca', 'nest', 'sret', 'nocapture', 'nofree'"
+         "Attributes 'byval', 'inalloca', 'preallocated', 'nest', 'sret', "
+         "'nocapture', 'nofree', "
          "'returned', 'swiftself', and 'swifterror' do not apply to return "
          "values!",
          V);
@@ -2300,7 +2325,7 @@ void Verifier::visitFunction(const Function &F) {
              "function declaration may not have a !prof attachment", &F);
 
       // Verify the metadata itself.
-      visitMDNode(*I.second);
+      visitMDNode(*I.second, AreDebugLocsAllowed::Yes);
     }
     Assert(!F.hasPersonalityFn(),
            "Function declaration shouldn't have a personality routine", &F);
@@ -2324,6 +2349,7 @@ void Verifier::visitFunction(const Function &F) {
     // Visit metadata attachments.
     for (const auto &I : MDs) {
       // Verify that the attachment is legal.
+      auto AllowLocs = AreDebugLocsAllowed::No;
       switch (I.first) {
       default:
         break;
@@ -2338,6 +2364,7 @@ void Verifier::visitFunction(const Function &F) {
         AssertDI(!AttachedTo || AttachedTo == &F,
                  "DISubprogram attached to more than one function", SP, &F);
         AttachedTo = &F;
+        AllowLocs = AreDebugLocsAllowed::Yes;
         break;
       }
       case LLVMContext::MD_prof:
@@ -2348,7 +2375,7 @@ void Verifier::visitFunction(const Function &F) {
       }
 
       // Verify the metadata itself.
-      visitMDNode(*I.second);
+      visitMDNode(*I.second, AllowLocs);
     }
   }
 
@@ -2859,9 +2886,9 @@ void Verifier::visitPHINode(PHINode &PN) {
 }
 
 void Verifier::visitCallBase(CallBase &Call) {
-  Assert(Call.getCalledValue()->getType()->isPointerTy(),
+  Assert(Call.getCalledOperand()->getType()->isPointerTy(),
          "Called function must be a pointer!", Call);
-  PointerType *FPTy = cast<PointerType>(Call.getCalledValue()->getType());
+  PointerType *FPTy = cast<PointerType>(Call.getCalledOperand()->getType());
 
   Assert(FPTy->getElementType()->isFunctionTy(),
          "Called function is not pointer to function type!", Call);
@@ -2894,14 +2921,22 @@ void Verifier::visitCallBase(CallBase &Call) {
   bool IsIntrinsic = Call.getCalledFunction() &&
                      Call.getCalledFunction()->getName().startswith("llvm.");
 
-  Function *Callee
-    = dyn_cast<Function>(Call.getCalledValue()->stripPointerCasts());
+  Function *Callee =
+      dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
 
   if (Attrs.hasAttribute(AttributeList::FunctionIndex, Attribute::Speculatable)) {
     // Don't allow speculatable on call sites, unless the underlying function
     // declaration is also speculatable.
     Assert(Callee && Callee->isSpeculatable(),
            "speculatable attribute may not apply to call sites", Call);
+  }
+
+  if (Attrs.hasAttribute(AttributeList::FunctionIndex,
+                         Attribute::Preallocated)) {
+    Assert(Call.getCalledFunction()->getIntrinsicID() ==
+               Intrinsic::call_preallocated_arg,
+           "preallocated as a call site attribute can only be on "
+           "llvm.call.preallocated.arg");
   }
 
   // Verify call attributes.
@@ -2949,6 +2984,13 @@ void Verifier::visitCallBase(CallBase &Call) {
       Value *ArgVal = Call.getArgOperand(i);
       Assert(isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal),
              "immarg operand has non-immediate parameter", ArgVal, Call);
+    }
+
+    if (Call.paramHasAttr(i, Attribute::Preallocated)) {
+      Value *ArgVal = Call.getArgOperand(i);
+      Assert(Call.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0,
+             "preallocated operand requires a preallocated bundle", ArgVal,
+             Call);
     }
   }
 
@@ -3020,9 +3062,11 @@ void Verifier::visitCallBase(CallBase &Call) {
       visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one "deopt", at most one "funclet", at
-  // most one "gc-transition", and at most one "cfguardtarget" operand bundle.
+  // most one "gc-transition", at most one "cfguardtarget",
+  // and at most one "preallocated" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
-       FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false;
+       FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
+       FoundPreallocatedBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3047,6 +3091,18 @@ void Verifier::visitCallBase(CallBase &Call) {
       FoundCFGuardTargetBundle = true;
       Assert(BU.Inputs.size() == 1,
              "Expected exactly one cfguardtarget bundle operand", Call);
+    } else if (Tag == LLVMContext::OB_preallocated) {
+      Assert(!FoundPreallocatedBundle, "Multiple preallocated operand bundles",
+             Call);
+      FoundPreallocatedBundle = true;
+      Assert(BU.Inputs.size() == 1,
+             "Expected exactly one preallocated bundle operand", Call);
+      auto Input = dyn_cast<IntrinsicInst>(BU.Inputs.front());
+      Assert(Input &&
+                 Input->getIntrinsicID() == Intrinsic::call_preallocated_setup,
+             "\"preallocated\" argument must be a token from "
+             "llvm.call.preallocated.setup",
+             Call);
     }
   }
 
@@ -3077,8 +3133,9 @@ static bool isTypeCongruent(Type *L, Type *R) {
 
 static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
-      Attribute::StructRet, Attribute::ByVal,     Attribute::InAlloca,
-      Attribute::InReg,     Attribute::SwiftSelf, Attribute::SwiftError};
+      Attribute::StructRet,   Attribute::ByVal,     Attribute::InAlloca,
+      Attribute::InReg,       Attribute::SwiftSelf, Attribute::SwiftError,
+      Attribute::Preallocated};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
     if (Attrs.hasParamAttribute(I, AK))
@@ -3093,6 +3150,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
 
 void Verifier::verifyMustTailCall(CallInst &CI) {
   Assert(!CI.isInlineAsm(), "cannot use musttail call with inline asm", &CI);
+  // FIXME: support musttail + preallocated
+  Assert(!CI.countOperandBundlesOfType(LLVMContext::OB_preallocated),
+         "musttail and preallocated not yet supported", &CI);
 
   // - The caller and callee prototypes must match.  Pointer types of
   //   parameters or return types may differ in pointee type, but not
@@ -3120,7 +3180,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
          "cannot guarantee tail call due to mismatched calling conv", &CI);
 
   // - All ABI-impacting function attributes, such as sret, byval, inreg,
-  //   returned, and inalloca, must match.
+  //   returned, preallocated, and inalloca, must match.
   AttributeList CallerAttrs = F->getAttributes();
   AttributeList CalleeAttrs = CI.getAttributes();
   for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
@@ -4264,12 +4324,23 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     AssertDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
-    visitMDNode(*N);
+    visitMDNode(*N, AreDebugLocsAllowed::Yes);
   }
 
   if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
     verifyFragmentExpression(*DII);
     verifyNotEntryValue(*DII);
+  }
+
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  I.getAllMetadata(MDs);
+  for (auto Attachment : MDs) {
+    unsigned Kind = Attachment.first;
+    auto AllowLocs =
+        (Kind == LLVMContext::MD_dbg || Kind == LLVMContext::MD_loop)
+            ? AreDebugLocsAllowed::Yes
+            : AreDebugLocsAllowed::No;
+    visitMDNode(*Attachment.second, AllowLocs);
   }
 
   InstsInThisBlock.insert(&I);
@@ -4430,6 +4501,71 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(IsValidAlignment(SrcAlignment),
              "incorrect alignment of the source argument", Call);
     }
+    break;
+  }
+  case Intrinsic::call_preallocated_setup: {
+    auto *NumArgs = dyn_cast<ConstantInt>(Call.getArgOperand(0));
+    Assert(NumArgs != nullptr,
+           "llvm.call.preallocated.setup argument must be a constant");
+    bool FoundCall = false;
+    for (User *U : Call.users()) {
+      auto *UseCall = dyn_cast<CallBase>(U);
+      Assert(UseCall != nullptr,
+             "Uses of llvm.call.preallocated.setup must be calls");
+      const Function *Fn = UseCall->getCalledFunction();
+      if (Fn && Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
+        auto *AllocArgIndex = dyn_cast<ConstantInt>(UseCall->getArgOperand(1));
+        Assert(AllocArgIndex != nullptr,
+               "llvm.call.preallocated.alloc arg index must be a constant");
+        auto AllocArgIndexInt = AllocArgIndex->getValue();
+        Assert(AllocArgIndexInt.sge(0) &&
+                   AllocArgIndexInt.slt(NumArgs->getValue()),
+               "llvm.call.preallocated.alloc arg index must be between 0 and "
+               "corresponding "
+               "llvm.call.preallocated.setup's argument count");
+      } else {
+        Assert(!FoundCall, "Can have at most one call corresponding to a "
+                           "llvm.call.preallocated.setup");
+        FoundCall = true;
+        size_t NumPreallocatedArgs = 0;
+        for (unsigned i = 0; i < UseCall->getNumArgOperands(); i++) {
+          if (UseCall->paramHasAttr(i, Attribute::Preallocated)) {
+            ++NumPreallocatedArgs;
+          }
+        }
+        Assert(NumArgs->equalsInt(NumPreallocatedArgs),
+               "llvm.call.preallocated.setup arg size must be equal to number "
+               "of preallocated arguments "
+               "at call site",
+               Call, *UseCall);
+        // getOperandBundle() cannot be called if more than one of the operand
+        // bundle exists. There is already a check elsewhere for this, so skip
+        // here if we see more than one.
+        if (UseCall->countOperandBundlesOfType(LLVMContext::OB_preallocated) >
+            1) {
+          return;
+        }
+        auto PreallocatedBundle =
+            UseCall->getOperandBundle(LLVMContext::OB_preallocated);
+        Assert(PreallocatedBundle,
+               "Use of llvm.call.preallocated.setup outside intrinsics "
+               "must be in \"preallocated\" operand bundle");
+        Assert(PreallocatedBundle->Inputs.front().get() == &Call,
+               "preallocated bundle must have token from corresponding "
+               "llvm.call.preallocated.setup");
+      }
+    }
+    break;
+  }
+  case Intrinsic::call_preallocated_arg: {
+    auto *Token = dyn_cast<CallBase>(Call.getArgOperand(0));
+    Assert(Token && Token->getCalledFunction()->getIntrinsicID() ==
+                        Intrinsic::call_preallocated_setup,
+           "llvm.call.preallocated.arg token argument must be a "
+           "llvm.call.preallocated.setup");
+    Assert(Call.hasFnAttr(Attribute::Preallocated),
+           "llvm.call.preallocated.arg must be called with a \"preallocated\" "
+           "call site attribute");
     break;
   }
   case Intrinsic::gcroot:

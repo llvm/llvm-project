@@ -23,9 +23,9 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 }
 
 // CHECK-LABEL: OpB definitions
-// CHECK: void OpB::build(Builder *odsBuilder, OperationState &odsState, Type y, Value x)
+// CHECK: void OpB::build(OpBuilder &odsBuilder, OperationState &odsState, Type y, Value x)
 // CHECK:   odsState.addTypes(y);
-// CHECK: void OpB::build(Builder *odsBuilder, OperationState &odsState, Value x)
+// CHECK: void OpB::build(OpBuilder &odsBuilder, OperationState &odsState, Value x)
 // CHECK:   odsState.addTypes({x.getType()});
 
 def OpC : NS_Op<"three_normal_result_op", []> {
@@ -33,12 +33,12 @@ def OpC : NS_Op<"three_normal_result_op", []> {
 }
 
 // CHECK-LABEL: OpC definitions
-// CHECK:       void OpC::build(Builder *odsBuilder, OperationState &odsState, Type x, Type resultType1, Type z)
+// CHECK:       void OpC::build(OpBuilder &odsBuilder, OperationState &odsState, Type x, Type resultType1, Type z)
 // CHECK-NEXT:   odsState.addTypes(x)
 // CHECK-NEXT:   odsState.addTypes(resultType1)
 // CHECK-NEXT:   odsState.addTypes(z)
 
-// CHECK:      void OpC::build(Builder *odsBuilder, OperationState &odsState, ArrayRef<Type> resultTypes) {
+// CHECK:      void OpC::build(OpBuilder &odsBuilder, OperationState &odsState, ArrayRef<Type> resultTypes) {
 // CHECK-NEXT:   assert(resultTypes.size() == 3u && "mismatched number of results");
 // CHECK-NEXT:   odsState.addTypes(resultTypes);
 
@@ -49,7 +49,7 @@ def OpD : NS_Op<"type_attr_as_result_type", [FirstAttrDerivedResultType]> {
 }
 
 // CHECK-LABEL: OpD definitions
-// CHECK: void OpD::build(Builder *odsBuilder, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
+// CHECK: void OpD::build(OpBuilder &odsBuilder, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
 // CHECK: odsState.addTypes({attr.second.cast<TypeAttr>().getValue()});
 
 def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
@@ -58,7 +58,7 @@ def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
 }
 
 // CHECK-LABEL: OpE definitions
-// CHECK: void OpE::build(Builder *odsBuilder, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
+// CHECK: void OpE::build(OpBuilder &odsBuilder, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
 // CHECK: odsState.addTypes({attr.second.getType()});
 
 def OpF : NS_Op<"one_variadic_result_op", []> {
@@ -77,7 +77,7 @@ def OpG : NS_Op<"one_normal_and_one_variadic_result_op", []> {
 
 // CHECK-LABEL: OpG definitions
 
-// CHECK:      void OpG::build(Builder *odsBuilder, OperationState &odsState, Type x, ArrayRef<Type> y)
+// CHECK:      void OpG::build(OpBuilder &odsBuilder, OperationState &odsState, Type x, ArrayRef<Type> y)
 // CHECK-NEXT:   odsState.addTypes(x);
 // CHECK-NEXT:   odsState.addTypes(y);
 
@@ -109,5 +109,5 @@ def OpK : NS_Op<"only_input_is_variadic_with_same_value_type_op", [SameOperandsA
   let results = (outs AnyTensor:$result);
 }
 
-// CHECK-LABEL: OpK::build(Builder *odsBuilder, OperationState &odsState, ValueRange input)
+// CHECK-LABEL: OpK::build(OpBuilder &odsBuilder, OperationState &odsState, ValueRange input)
 // CHECK: odsState.addTypes({input.front().getType()});

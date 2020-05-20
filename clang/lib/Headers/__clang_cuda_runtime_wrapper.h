@@ -31,11 +31,17 @@
 // Include some forward declares that must come before cmath.
 #include <__clang_cuda_math_forward_declares.h>
 
+// Define __CUDACC__ early as libstdc++ standard headers with GNU extensions
+// enabled depend on it to avoid using __float128, which is unsupported in
+// CUDA.
+#define __CUDACC__
+
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
+#undef __CUDACC__
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.

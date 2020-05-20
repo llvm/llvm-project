@@ -39,6 +39,12 @@ public:
             StringRef(reinterpret_cast<const char *>(Data.data()), Data.size()),
             IsLittleEndian, AddressSize) {}
 
+  /// Truncating constructor
+  DWARFDataExtractor(const DWARFDataExtractor &Other, size_t Length)
+      : DataExtractor(Other.getData().substr(0, Length), Other.isLittleEndian(),
+                      Other.getAddressSize()),
+        Obj(Other.Obj), Section(Other.Section) {}
+
   /// Extracts the DWARF "initial length" field, which can either be a 32-bit
   /// value smaller than 0xfffffff0, or the value 0xffffffff followed by a
   /// 64-bit length. Returns the actual length, and the DWARF format which is

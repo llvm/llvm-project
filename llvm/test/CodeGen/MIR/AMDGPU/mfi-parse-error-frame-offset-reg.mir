@@ -1,10 +1,9 @@
 # RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
-# CHECK: :7:21: expected a named register
-# CHECK: frameOffsetReg:  ''
 ---
 name: empty_frame_offset_reg
 machineFunctionInfo:
   frameOffsetReg:  ''
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: expected a named register
 body:             |
   bb.0:
 

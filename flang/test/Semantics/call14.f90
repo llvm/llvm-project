@@ -1,9 +1,9 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Test 8.5.18 constraints on the VALUE attribute
 
 module m
   type :: hasCoarray
-    real :: coarray[*]
+    real, allocatable :: coarray[:]
   end type
  contains
   !ERROR: VALUE attribute may apply only to a dummy data object

@@ -113,6 +113,11 @@ New checks
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
 
+- New :doc:`llvmlibc-callee-namespace
+  <clang-tidy/checks/llvmlibc-callee-namespace>` check.
+
+  Checks all calls resolve to functions within ``__llvm_libc`` namespace.
+
 - New :doc:`llvmlibc-implementation-in-namespace
   <clang-tidy/checks/llvmlibc-implementation-in-namespace>` check.
 
@@ -163,8 +168,19 @@ New check aliases
   :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone-reserved-identifier>` was added.
 
+- New alias :doc:`cert-str34-c
+  <clang-tidy/checks/cert-str34-c>` to
+  :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone-signed-char-misuse>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:'readability-identifier-naming
+  <clang-tidy/checks/readability-identifier-naming>` check.
+
+  Now able to rename member references in class template definitions with 
+  explicit access.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability-qualified-auto>` check now supports a
@@ -188,6 +204,11 @@ Renamed checks
 - The 'fuchsia-restrict-system-headers' check was renamed to :doc:`portability-restrict-system-includes
   <clang-tidy/checks/portability-restrict-system-includes>`
 
+Other improvements
+^^^^^^^^^^^^^^^^^^
+
+- For 'run-clang-tidy.py' add option to use alpha checkers from clang-analyzer.
+
 Improvements to include-fixer
 -----------------------------
 
@@ -210,4 +231,3 @@ The improvements are...
 
 Clang-tidy visual studio plugin
 -------------------------------
-

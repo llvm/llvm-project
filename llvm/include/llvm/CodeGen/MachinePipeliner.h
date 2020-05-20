@@ -43,6 +43,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -60,6 +61,7 @@ extern cl::opt<bool> SwpEnableCopyToPhi;
 class MachinePipeliner : public MachineFunctionPass {
 public:
   MachineFunction *MF = nullptr;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
   const InstrItineraryData *InstrItins;
@@ -96,6 +98,7 @@ public:
     AU.addRequired<MachineLoopInfo>();
     AU.addRequired<MachineDominatorTree>();
     AU.addRequired<LiveIntervals>();
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

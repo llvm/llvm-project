@@ -246,7 +246,7 @@ define void @test9() optsize {
 entry:
   %p = alloca i32, align 4
   %q = alloca i32, align 4
-  %s = alloca %struct.s, align 4  
+  %s = alloca %struct.s, align 8
   call void @good(i32 1, i32 2, i32 3, i32 4)
   %pv = ptrtoint i32* %p to i32
   %qv = ptrtoint i32* %q to i32
@@ -407,7 +407,7 @@ declare void @B_func(%struct.B* sret, %struct.B*, i32)
 define void @test14(%struct.A* %a) {
 entry:
   %ref.tmp = alloca %struct.B, align 1
-  %agg.tmp = alloca i64, align 4
+  %agg.tmp = alloca i64, align 8
   %tmpcast = bitcast i64* %agg.tmp to %struct.A*
   %tmp = alloca %struct.B, align 1
   %0 = bitcast %struct.A* %a to i64*

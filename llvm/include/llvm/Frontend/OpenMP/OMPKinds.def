@@ -196,6 +196,8 @@ __OMP_CLAUSE(destroy, OMPDestroyClause)
 __OMP_CLAUSE(detach, OMPDetachClause)
 __OMP_CLAUSE(inclusive, OMPInclusiveClause)
 __OMP_CLAUSE(exclusive, OMPExclusiveClause)
+__OMP_CLAUSE(uses_allocators, OMPUsesAllocatorsClause)
+__OMP_CLAUSE(affinity, OMPAffinityClause)
 
 __OMP_CLAUSE_NO_CLASS(uniform)
 __OMP_CLAUSE_NO_CLASS(device_type)
@@ -389,24 +391,16 @@ __OMP_ATTRS_SET(SetterAttrs,
 #define __OMP_RTL_ATTRS(Name, FnAttrSet, RetAttrSet, ArgAttrSets)              \
   OMP_RTL_ATTRS(OMPRTL_##Name, FnAttrSet, RetAttrSet, ArgAttrSets)
 
-__OMP_RTL_ATTRS(__kmpc_barrier,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_barrier, AttributeSet(), AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_cancel,
                 AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__kmpc_cancel_barrier,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
-__OMP_RTL_ATTRS(__kmpc_flush,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_cancel_barrier, AttributeSet(), AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_flush, AttributeSet(), AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_fork_call, AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__kmpc_omp_taskwait,
-                AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
-                AttributeSet(), {})
+__OMP_RTL_ATTRS(__kmpc_omp_taskwait, AttributeSet(), AttributeSet(), {})
 __OMP_RTL_ATTRS(__kmpc_omp_taskyield,
                 AttributeSet(EnumAttr(InaccessibleMemOrArgMemOnly)),
                 AttributeSet(), {})
@@ -872,6 +866,7 @@ __OMP_DIRECTIVE_CLAUSE(task, 1, ~0, priority)
 __OMP_DIRECTIVE_CLAUSE(task, 1, ~0, in_reduction)
 __OMP_DIRECTIVE_CLAUSE(task, 1, ~0, allocate)
 __OMP_DIRECTIVE_CLAUSE(task, 50, ~0, detach)
+__OMP_DIRECTIVE_CLAUSE(task, 50, ~0, affinity)
 
 __OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, read)
 __OMP_DIRECTIVE_CLAUSE(atomic, 1, ~0, write)
@@ -895,6 +890,7 @@ __OMP_DIRECTIVE_CLAUSE(target, 1, ~0, firstprivate)
 __OMP_DIRECTIVE_CLAUSE(target, 1, ~0, is_device_ptr)
 __OMP_DIRECTIVE_CLAUSE(target, 1, ~0, reduction)
 __OMP_DIRECTIVE_CLAUSE(target, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, unified_address)
 __OMP_DIRECTIVE_CLAUSE(requires, 1, ~0, unified_shared_memory)
@@ -936,6 +932,7 @@ __OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, shared)
 __OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, reduction)
 __OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, is_device_ptr)
 __OMP_DIRECTIVE_CLAUSE(target_parallel, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_parallel, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, device)
@@ -958,6 +955,7 @@ __OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, linear)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, is_device_ptr)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for, 1, ~0, allocate)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_update, 1, ~0, device)
@@ -1195,6 +1193,7 @@ __OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, is_device_ptr)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 1, ~0, allocate)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 50, ~0, nontemporal)
 __OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_parallel_for_simd, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, device)
@@ -1215,6 +1214,7 @@ __OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, reduction)
 __OMP_DIRECTIVE_CLAUSE(target_simd, 1, ~0, allocate)
 __OMP_DIRECTIVE_CLAUSE(target_simd, 50, ~0, nontemporal)
 __OMP_DIRECTIVE_CLAUSE(target_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_simd, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, default)
 __OMP_DIRECTIVE_CLAUSE(teams_distribute, 1, ~0, private)
@@ -1302,6 +1302,7 @@ __OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, reduction)
 __OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, num_teams)
 __OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, thread_limit)
 __OMP_DIRECTIVE_CLAUSE(target_teams, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, device)
@@ -1321,6 +1322,7 @@ __OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, lastprivate)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, collapse)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, dist_schedule)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 1, ~0, allocate)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, device)
@@ -1348,6 +1350,8 @@ __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, proc_bind)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, schedule)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 1, ~0, allocate)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for, 50, ~0,
+                       uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0, device)
@@ -1395,6 +1399,8 @@ __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 1, ~0,
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 50, ~0,
                        nontemporal)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_parallel_for_simd, 50, ~0,
+                       uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, if)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, device)
@@ -1419,6 +1425,7 @@ __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, simdlen)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 1, ~0, allocate)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 50, ~0, nontemporal)
 __OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 50, ~0, order)
+__OMP_DIRECTIVE_CLAUSE(target_teams_distribute_simd, 50, ~0, uses_allocators)
 
 __OMP_DIRECTIVE_CLAUSE(taskgroup, 1, ~0, task_reduction)
 __OMP_DIRECTIVE_CLAUSE(taskgroup, 1, ~0, allocate)

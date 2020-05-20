@@ -183,7 +183,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
 #if defined(EXPENSIVE_CHECKS)
   assert(DT.verify(DominatorTree::VerificationLevel::Full));
 #else
-  assert(DT.verify(DominatorTree::VerificationLevel::Full));
+  assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 #endif // EXPENSIVE_CHECKS
   L->verifyLoop();
 

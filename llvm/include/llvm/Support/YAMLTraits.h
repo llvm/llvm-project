@@ -649,8 +649,8 @@ inline bool isBool(StringRef S) {
 inline QuotingType needsQuotes(StringRef S) {
   if (S.empty())
     return QuotingType::Single;
-  if (isspace(static_cast<unsigned char>(S.front())) ||
-      isspace(static_cast<unsigned char>(S.back())))
+  if (isSpace(static_cast<unsigned char>(S.front())) ||
+      isSpace(static_cast<unsigned char>(S.back())))
     return QuotingType::Single;
   if (isNull(S))
     return QuotingType::Single;
@@ -1157,6 +1157,12 @@ struct ScalarTraits<bool> {
   static void output(const bool &, void* , raw_ostream &);
   static StringRef input(StringRef, void *, bool &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct ScalarTraits<char> {
+  static void output(const char &, void *, raw_ostream &);
+  static StringRef input(StringRef, void *, char &);
+  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 template<>

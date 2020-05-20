@@ -167,7 +167,7 @@ public:
     if (!IsCall)
       return Loc == Other.Loc;
 
-    if (Call->getCalledValue() != Other.Call->getCalledValue())
+    if (Call->getCalledOperand() != Other.Call->getCalledOperand())
       return false;
 
     return Call->arg_size() == Other.Call->arg_size() &&
@@ -203,7 +203,7 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
 
     hash_code hash =
         hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCall()->getCalledValue()));
+                                      MLOC.getCall()->getCalledOperand()));
 
     for (const Value *Arg : MLOC.getCall()->args())
       hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));
@@ -466,7 +466,8 @@ checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
 
       assert(isa<MemoryPhi>(MA));
       Worklist.append(
-          upward_defs_begin({const_cast<MemoryAccess *>(MA), MAP.second}),
+          upward_defs_begin({const_cast<MemoryAccess *>(MA), MAP.second},
+                            MSSA.getDomTree()),
           upward_defs_end());
     }
   }
@@ -595,8 +596,8 @@ template <class AliasAnalysisType> class ClobberWalker {
 
   void addSearches(MemoryPhi *Phi, SmallVectorImpl<ListIndex> &PausedSearches,
                    ListIndex PriorNode) {
-    auto UpwardDefs = make_range(upward_defs_begin({Phi, Paths[PriorNode].Loc}),
-                                 upward_defs_end());
+    auto UpwardDefs = make_range(
+        upward_defs_begin({Phi, Paths[PriorNode].Loc}, DT), upward_defs_end());
     for (const MemoryAccessPair &P : UpwardDefs) {
       PausedSearches.push_back(Paths.size());
       Paths.emplace_back(P.second, P.first, PriorNode);

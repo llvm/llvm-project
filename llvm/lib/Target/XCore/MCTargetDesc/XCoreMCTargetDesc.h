@@ -13,12 +13,6 @@
 #ifndef LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREMCTARGETDESC_H
 #define LLVM_LIB_TARGET_XCORE_MCTARGETDESC_XCOREMCTARGETDESC_H
 
-namespace llvm {
-
-class Target;
-
-} // end namespace llvm
-
 // Defines symbolic names for XCore registers.  This defines a mapping from
 // register name to register number.
 //

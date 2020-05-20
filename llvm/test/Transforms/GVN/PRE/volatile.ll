@@ -61,7 +61,7 @@ entry:
 define i32 @test4(i32* noalias nocapture %p, i32* noalias nocapture %q) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load atomic volatile i32, i32* [[Q:%.*]] seq_cst, align 4
 ; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, i32* [[P]] seq_cst, align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
@@ -160,12 +160,12 @@ exit:
 define i32 @test8(i1 %b, i1 %c, i32* noalias %p, i32* noalias %q) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y1:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[Y1:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[Y1]])
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[Y_PRE:%.*]], [[SKIP_HEADER_CRIT_EDGE:%.*]] ], [ [[Y]], [[HEADER]] ], [ [[Y1]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[Q:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[Y]])
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SKIP:%.*]], label [[HEADER]]
 ; CHECK:       skip:
@@ -197,14 +197,17 @@ exit:
   ret i32 %add
 }
 
+; This test checks that we don't optimize away instructions that are
+; simplified by SimplifyInstruction(), but are not trivially dead.
+
 define i32 @test9(i32* %V) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i32, i32* [[V:%.*]], !range !0
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[LOAD:%.*]] = call i32 undef()
+; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  %load = load volatile i32, i32* %V, !range !0
+  %load = call i32 undef()
   ret i32 %load
 }
 

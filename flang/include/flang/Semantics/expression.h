@@ -21,41 +21,26 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include <map>
 #include <optional>
+#include <type_traits>
 #include <variant>
 
 using namespace Fortran::parser::literals;
 
 namespace Fortran::parser {
 struct SourceLocationFindingVisitor {
-  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> bool Pre(const A &x) {
+    if constexpr (HasSource<A>::value) {
+      source.ExtendToCover(x.source);
+      return false;
+    } else {
+      return true;
+    }
+  }
   template <typename A> void Post(const A &) {}
-  bool Pre(const Expr &x) {
-    source = x.source;
-    return false;
-  }
-  bool Pre(const Designator &x) {
-    source = x.source;
-    return false;
-  }
-  bool Pre(const Call &x) {
-    source = x.source;
-    return false;
-  }
-  bool Pre(const CompilerDirective &x) {
-    source = x.source;
-    return false;
-  }
-  bool Pre(const GenericSpec &x) {
-    source = x.source;
-    return false;
-  }
-  template <typename A> bool Pre(const UnlabeledStatement<A> &stmt) {
-    source = stmt.source;
-    return false;
-  }
-  void Post(const CharBlock &at) { source = at; }
+  void Post(const CharBlock &at) { source.ExtendToCover(at); }
 
   CharBlock source;
 };
@@ -84,11 +69,12 @@ class IntrinsicProcTable;
 
 struct SetExprHelper {
   explicit SetExprHelper(GenericExprWrapper &&expr) : expr_{std::move(expr)} {}
-  void Set(parser::Expr::TypedExpr &x) {
+  void Set(parser::TypedExpr &x) {
     x.reset(new GenericExprWrapper{std::move(expr_)});
   }
   void Set(const parser::Expr &x) { Set(x.typedExpr); }
   void Set(const parser::Variable &x) { Set(x.typedExpr); }
+  void Set(const parser::DataStmtConstant &x) { Set(x.typedExpr); }
   template <typename T> void Set(const common::Indirection<T> &x) {
     Set(x.value());
   }
@@ -144,10 +130,10 @@ public:
   bool CheckIntrinsicKind(TypeCategory, std::int64_t kind);
   bool CheckIntrinsicSize(TypeCategory, std::int64_t size);
 
-  // Manage a set of active array constructor implied DO loops.
-  bool AddAcImpliedDo(parser::CharBlock, int);
-  void RemoveAcImpliedDo(parser::CharBlock);
-  std::optional<int> IsAcImpliedDo(parser::CharBlock) const;
+  // Manage a set of active implied DO loops.
+  bool AddImpliedDo(parser::CharBlock, int);
+  void RemoveImpliedDo(parser::CharBlock);
+  std::optional<int> IsImpliedDo(parser::CharBlock) const;
 
   Expr<SubscriptInteger> AnalyzeKindSelector(common::TypeCategory category,
       const std::optional<parser::KindSelector> &);
@@ -155,6 +141,7 @@ public:
   MaybeExpr Analyze(const parser::Expr &);
   MaybeExpr Analyze(const parser::Variable &);
   MaybeExpr Analyze(const parser::Designator &);
+  MaybeExpr Analyze(const parser::DataStmtConstant &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -234,6 +221,7 @@ public:
   MaybeExpr Analyze(const parser::SignedRealLiteralConstant &);
   MaybeExpr Analyze(const parser::SignedComplexLiteralConstant &);
   MaybeExpr Analyze(const parser::StructureConstructor &);
+  MaybeExpr Analyze(const parser::InitialDataTarget &);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -252,6 +240,7 @@ private:
   MaybeExpr Analyze(const parser::HollerithLiteralConstant &);
   MaybeExpr Analyze(const parser::BOZLiteralConstant &);
   MaybeExpr Analyze(const parser::NamedConstant &);
+  MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::Substring &);
   MaybeExpr Analyze(const parser::ArrayElement &);
   MaybeExpr Analyze(const parser::CoindexedNamedObject &);
@@ -376,7 +365,7 @@ private:
 
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};
-  std::map<parser::CharBlock, int> acImpliedDos_; // values are INTEGER kinds
+  std::map<parser::CharBlock, int> impliedDos_; // values are INTEGER kinds
   bool fatalErrors_{false};
   friend class ArgumentAnalyzer;
 };
@@ -438,6 +427,10 @@ public:
     AnalyzeExpr(context_, x);
     return false;
   }
+  bool Pre(const parser::DataStmtConstant &x) {
+    AnalyzeExpr(context_, x);
+    return false;
+  }
   bool Pre(const parser::CallStmt &x) {
     AnalyzeCallStmt(context_, x);
     return false;
@@ -450,7 +443,6 @@ public:
     AnalyzePointerAssignmentStmt(context_, x);
     return false;
   }
-  bool Pre(const parser::DataStmtConstant &);
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
     AnalyzeExpr(context_, x);

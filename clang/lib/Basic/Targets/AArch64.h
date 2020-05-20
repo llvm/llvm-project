@@ -36,6 +36,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasFP16FML;
   bool HasMTE;
   bool HasTME;
+  bool HasMatMul;
 
   llvm::AArch64::ArchKind ArchKind;
 
@@ -119,6 +120,8 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
   bool hasInt128Type() const override;
+
+  bool hasExtIntType() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

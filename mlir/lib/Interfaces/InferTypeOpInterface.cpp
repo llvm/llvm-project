@@ -24,11 +24,11 @@ namespace mlir {
 LogicalResult mlir::detail::inferReturnTensorTypes(
     function_ref<LogicalResult(
         MLIRContext *, Optional<Location> location, ValueRange operands,
-        ArrayRef<NamedAttribute> attributes, RegionRange regions,
+        DictionaryAttr attributes, RegionRange regions,
         SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
     MLIRContext *context, Optional<Location> location, ValueRange operands,
-    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   SmallVector<ShapedTypeComponents, 2> retComponents;
   if (failed(componentTypeFn(context, location, operands, attributes, regions,
@@ -49,9 +49,9 @@ LogicalResult mlir::detail::inferReturnTensorTypes(
 LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
   SmallVector<Type, 4> inferredReturnTypes;
   auto retTypeFn = cast<InferTypeOpInterface>(op);
-  if (failed(retTypeFn.inferReturnTypes(op->getContext(), op->getLoc(),
-                                        op->getOperands(), op->getAttrs(),
-                                        op->getRegions(), inferredReturnTypes)))
+  if (failed(retTypeFn.inferReturnTypes(
+          op->getContext(), op->getLoc(), op->getOperands(),
+          op->getAttrDictionary(), op->getRegions(), inferredReturnTypes)))
     return failure();
   if (!retTypeFn.isCompatibleReturnTypes(inferredReturnTypes,
                                          op->getResultTypes()))

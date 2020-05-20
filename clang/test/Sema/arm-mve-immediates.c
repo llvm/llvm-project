@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv8.1m.main-arm-none-eabi -fallow-half-arguments-and-returns -target-feature +mve.fp -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -fallow-half-arguments-and-returns -target-feature +mve.fp -verify -fsyntax-only %s
 
 #include <arm_mve.h>
 

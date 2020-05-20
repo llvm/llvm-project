@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Can you have a catch clause of array type that catches anything?
-// UNSUPPORTED: libcxxabi-no-exceptions
+// UNSUPPORTED: no-exceptions
 
 #include <cassert>
 

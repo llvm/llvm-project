@@ -23,7 +23,7 @@ typedef enum {
   FE_TOWARDZERO
 } FE_ROUND_MODE;
 
-FE_ROUND_MODE __fe_getround();
-int __fe_raise_inexact();
+FE_ROUND_MODE __fe_getround(void);
+int __fe_raise_inexact(void);
 
 #endif // FP_MODE_H

@@ -22,12 +22,14 @@ struct {
 
 struct {
   struct {
-    int x;
+    _Atomic int x;
     int y;
   };
 } bar;
 
 void fun(struct { int x; int y; } *param);
+
+_Atomic(unsigned long) aul;
 
 // RUN: c-index-test -test-print-type %s | FileCheck %s
 // CHECK: FunctionDecl=f:3:6 (Definition) [type=int *(int *, char *, FooType, int *, void (*)(int))] [typekind=FunctionProto] [canonicaltype=int *(int *, char *, int, int *, void (*)(int))] [canonicaltypekind=FunctionProto] [resulttype=int *] [resulttypekind=Pointer] [args= [int *] [Pointer] [char *] [Pointer] [FooType] [Typedef] [int [5]] [ConstantArray] [void (*)(int)] [Pointer]] [isPOD=0]
@@ -70,4 +72,7 @@ void fun(struct { int x; int y; } *param);
 // CHECK: StructDecl=:18:1 (Definition) [type=struct (anonymous at {{.*}}print-type.c:18:1)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=0]
 // CHECK: StructDecl=:23:1 (Definition) [type=struct (anonymous at {{.*}}print-type.c:23:1)] [typekind=Record] [isPOD=1] [nbFields=1] [isAnon=1] [isAnonRecDecl=0]
 // CHECK: StructDecl=:24:3 (Definition) [type=struct (anonymous at {{.*}}print-type.c:24:3)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=1]
+// CHECK: FieldDecl=x:25:17 (Definition) [type=_Atomic(int)] [typekind=Atomic] [valuetype=int] [valuetypekind=Int] [isPOD=0] [isAnonRecDecl=0]
+// CHECK: FieldDecl=y:26:9 (Definition) [type=int] [typekind=Int] [isPOD=1] [isAnonRecDecl=0]
 // CHECK: StructDecl=:30:10 (Definition) [type=struct (anonymous at {{.*}}print-type.c:30:10)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1] [isAnonRecDecl=0]
+// CHECK: VarDecl=aul:32:24 [type=_Atomic(unsigned long)] [typekind=Atomic] [valuetype=unsigned long] [valuetypekind=ULong] [isPOD=0] [isAnonRecDecl=0]

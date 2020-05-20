@@ -181,15 +181,15 @@ for processes. Currently MacOS is the only platform that supports this.
 
 ### Loading a Core File
 
-Loading a core file can use the `"attach"` request along with the
-`"attachCommands"` to implement a custom attach:
+This loads the coredump file `/cores/123.core` associated with the program
+`/tmp/a.out`:
 
 ```javascript
 {
-  "name": "Attach to Name (wait)",
+  "name": "Load coredump",
   "type": "lldb-vscode",
   "request": "attach",
-  "attachCommands": ["target create -c /path/to/123.core /path/to/executable"],
-  "stopOnEntry": false
+  "coreFile": "/cores/123.core",
+  "program": "/tmp/a.out"
 }
 ```

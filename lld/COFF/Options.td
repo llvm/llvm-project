@@ -16,6 +16,13 @@ multiclass B<string name, string help_on, string help_off> {
   def _no : F<name#":no">, HelpText<help_off>;
 }
 
+// Same as B<> above, but without help texts, for private undocumented
+// options.
+multiclass B_priv<string name> {
+  def "" : F<name>;
+  def _no : F<name#":no">;
+}
+
 def align   : P<"align", "Section alignment">;
 def aligncomm : P<"aligncomm", "Set common symbol alignment">;
 def alternatename : P<"alternatename", "Define weak alias">;
@@ -184,6 +191,8 @@ def help : F<"help">;
 def help_q : Flag<["/??", "-??", "/?", "-?"], "">, Alias<help>;
 
 // LLD extensions
+defm auto_import : B_priv<"auto-import">;
+defm runtime_pseudo_reloc : B_priv<"runtime-pseudo-reloc">;
 def end_lib : F<"end-lib">,
   HelpText<"Ends group of objects treated as if they were in a library">;
 def exclude_all_symbols : F<"exclude-all-symbols">;

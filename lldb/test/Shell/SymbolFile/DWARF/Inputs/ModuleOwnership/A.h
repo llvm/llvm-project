@@ -18,6 +18,7 @@ typedef enum Enum_e { a = 0 } Enum;
 
 @interface SomeClass {
 }
+@property (readonly) int number;
 @end
 
 template <typename T> struct Template { T field; };

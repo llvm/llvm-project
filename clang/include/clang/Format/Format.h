@@ -153,16 +153,43 @@ struct FormatStyle {
   /// Options for aligning backslashes in escaped newlines.
   EscapedNewlineAlignmentStyle AlignEscapedNewlines;
 
+  /// Different styles for aligning operands.
+  enum OperandAlignmentStyle {
+    /// Do not align operands of binary and ternary expressions.
+    /// The wrapped lines are indented ``ContinuationIndentWidth`` spaces from
+    /// the start of the line.
+    OAS_DontAlign,
+    /// Horizontally align operands of binary and ternary expressions.
+    ///
+    /// Specifically, this aligns operands of a single expression that needs
+    /// to be split over multiple lines, e.g.:
+    /// \code
+    ///   int aaa = bbbbbbbbbbbbbbb +
+    ///             ccccccccccccccc;
+    /// \endcode
+    ///
+    /// When ``BreakBeforeBinaryOperators`` is set, the wrapped operator is
+    /// aligned with the operand on the first line.
+    /// \code
+    ///   int aaa = bbbbbbbbbbbbbbb
+    ///             + ccccccccccccccc;
+    /// \endcode
+    OAS_Align,
+    /// Horizontally align operands of binary and ternary expressions.
+    ///
+    /// This is similar to ``AO_Align``, except when
+    /// ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
+    /// that the wrapped operand is aligned with the operand on the first line.
+    /// \code
+    ///   int aaa = bbbbbbbbbbbbbbb
+    ///           + ccccccccccccccc;
+    /// \endcode
+    OAS_AlignAfterOperator,
+  };
+
   /// If ``true``, horizontally align operands of binary and ternary
   /// expressions.
-  ///
-  /// Specifically, this aligns operands of a single expression that needs to be
-  /// split over multiple lines, e.g.:
-  /// \code
-  ///   int aaa = bbbbbbbbbbbbbbb +
-  ///             ccccccccccccccc;
-  /// \endcode
-  bool AlignOperands;
+  OperandAlignmentStyle AlignOperands;
 
   /// If ``true``, aligns trailing comments.
   /// \code
@@ -220,6 +247,20 @@ struct FormatStyle {
   ///                   int e);
   /// \endcode
   bool AllowAllParametersOfDeclarationOnNextLine;
+
+  /// Allow short enums on a single line.
+  /// \code
+  ///   true:
+  ///   enum { A, B } myEnum;
+  ///
+  ///   false:
+  ///   enum
+  ///   {
+  ///     A,
+  ///     B
+  ///   } myEnum;
+  /// \endcode
+  bool AllowShortEnumsOnASingleLine;
 
   /// Different styles for merging short blocks containing at most one
   /// statement.
@@ -561,6 +602,21 @@ struct FormatStyle {
     TCS_Wrapped,
   };
 
+  /// If set to ``TCS_Wrapped`` will insert trailing commas in container
+  /// literals (arrays and objects) that wrap across multiple lines.
+  /// It is currently only available for JavaScript
+  /// and disabled by default ``TCS_None``.
+  /// ``InsertTrailingCommas`` cannot be used together with ``BinPackArguments``
+  /// as inserting the comma disables bin-packing.
+  /// \code
+  ///   TSC_Wrapped:
+  ///   const someArray = [
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
+  ///   //                        ^ inserted
+  ///   ]
+  /// \endcode
   TrailingCommaStyle InsertTrailingCommas;
 
   /// If ``false``, a function declaration's or function definition's
@@ -1954,6 +2010,17 @@ struct FormatStyle {
     ///    }
     /// \endcode
     SBPO_ControlStatements,
+    /// Same as ``SBPO_ControlStatements`` except this option doesn't apply to
+    /// ForEach macros. This is useful in projects where ForEach macros are 
+    /// treated as function calls instead of control statements. 
+    /// \code
+    ///    void f() {
+    ///      Q_FOREACH(...) {
+    ///        f();
+    ///      }
+    ///    }
+    /// \endcode
+    SBPO_ControlStatementsExceptForEachMacros,
     /// Put a space before opening parentheses only if the parentheses are not
     /// empty i.e. '()'
     /// \code
@@ -2133,7 +2200,7 @@ struct FormatStyle {
     /// appears within a line (e.g. consecutive assignments and declarations).
     UT_ForContinuationAndIndentation,
     /// Use tabs for line continuation and indentation, and spaces for
-    /// alignemnt.
+    /// alignment.
     UT_AlignWithSpaces,
     /// Use tabs whenever we need to fill whitespace that spans at least from
     /// one tab stop to the next one.
@@ -2160,6 +2227,7 @@ struct FormatStyle {
                R.AllowAllConstructorInitializersOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
+           AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&

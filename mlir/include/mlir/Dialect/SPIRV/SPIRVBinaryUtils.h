@@ -30,10 +30,6 @@ constexpr uint32_t kMagicNumber = 0x07230203;
 /// The serializer tool ID registered to the Khronos Group
 constexpr uint32_t kGeneratorNumber = 22;
 
-/// Auto-generated getOpcode<*Op>() specializations
-#define GET_SPIRV_SERIALIZATION_UTILS
-#include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
-
 /// Appends a SPRI-V module header to `header` with the given `version` and
 /// `idBound`.
 void appendModuleHeader(SmallVectorImpl<uint32_t> &header,

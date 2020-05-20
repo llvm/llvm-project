@@ -115,3 +115,22 @@ void g() { f6(/*xxy=*/0, 0); }
 // CHECK-NOTES: [[@LINE-3]]:13: note: 'xxx' declared here
 // CHECK-FIXES: void g() { f6(/*xxy=*/0, 0); }
 }
+
+
+namespace std {
+template <typename T>
+class vector {
+public:
+  void assign(int __n, const T &__val);
+};
+template<typename T>
+void swap(T& __a, T& __b);
+} // namespace std
+namespace ignore_std_functions {
+void test(int a, int b) {
+  std::vector<int> s;
+  // verify the check is not fired on std functions.
+  s.assign(1, /*value=*/2);
+  std::swap(a, /*num=*/b);
+}
+} // namespace ignore_std_functions

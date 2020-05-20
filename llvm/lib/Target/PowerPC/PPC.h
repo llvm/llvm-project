@@ -102,6 +102,11 @@ namespace llvm {
     /// the current instruction address(pc), e.g., var@pcrel. Fixup is VK_PCREL.
     MO_PCREL_FLAG = 4,
 
+    /// MO_GOT_FLAG - If this bit is set the symbol reference is to be computed
+    /// via the GOT. For example when combined with the MO_PCREL_FLAG it should
+    /// produce the relocation @got@pcrel. Fixup is VK_PPC_GOT_PCREL.
+    MO_GOT_FLAG = 8,
+
     /// The next are not flags but distinct values.
     MO_ACCESS_MASK = 0xf00,
 

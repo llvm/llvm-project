@@ -26,6 +26,12 @@ class Pass;
 ModulePass *createMetaRenamerPass();
 
 //===----------------------------------------------------------------------===//
+// createUniqueInternalLinkageNamesPass - Make internal linkage symbol names
+// unique.
+//
+ModulePass *createUniqueInternalLinkageNamesPass();
+
+//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.
@@ -141,6 +147,13 @@ FunctionPass *createUnifyLoopExitsPass();
 // into a natural loop.
 //
 FunctionPass *createFixIrreduciblePass();
-}
+
+//===----------------------------------------------------------------------===//
+//
+// AssumeSimplify - remove redundant assumes and merge assumes in the same
+// BasicBlock when possible.
+//
+FunctionPass *createAssumeSimplifyPass();
+} // namespace llvm
 
 #endif

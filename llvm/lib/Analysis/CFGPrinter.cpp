@@ -42,7 +42,7 @@ static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
 static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
                                          cl::init(false));
 
-static cl::opt<bool> ShowHeatColors("cfg-heat-colors", cl::init(false),
+static cl::opt<bool> ShowHeatColors("cfg-heat-colors", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Show heat colors in CFG"));
 
@@ -77,8 +77,8 @@ static void writeCFGToDotFile(Function &F, BlockFrequencyInfo *BFI,
   errs() << "\n";
 }
 
-static void viewCFG(Function &F, BlockFrequencyInfo *BFI,
-                    BranchProbabilityInfo *BPI, uint64_t MaxFreq,
+static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
+                    const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
                     bool CFGOnly = false) {
   DOTFuncInfo CFGInfo(&F, BFI, BPI, MaxFreq);
   CFGInfo.setHeatColors(ShowHeatColors);
@@ -240,11 +240,14 @@ PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
 /// program, displaying the CFG of the current function.  This depends on there
 /// being a 'dot' and 'gv' program in your path.
 ///
-void Function::viewCFG() const {
+void Function::viewCFG() const { viewCFG(false, nullptr, nullptr); }
+
+void Function::viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
+                       const BranchProbabilityInfo *BPI) const {
   if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
     return;
-  DOTFuncInfo CFGInfo(this);
-  ViewGraph(&CFGInfo, "cfg" + getName());
+  DOTFuncInfo CFGInfo(this, BFI, BPI, BFI ? getMaxFreq(*this, BFI) : 0);
+  ViewGraph(&CFGInfo, "cfg" + getName(), ViewCFGOnly);
 }
 
 /// viewCFGOnly - This function is meant for use from the debugger.  It works
@@ -252,11 +255,11 @@ void Function::viewCFG() const {
 /// into the nodes, just the label.  If you are only interested in the CFG
 /// this can make the graph smaller.
 ///
-void Function::viewCFGOnly() const {
-  if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
-    return;
-  DOTFuncInfo CFGInfo(this);
-  ViewGraph(&CFGInfo, "cfg" + getName(), true);
+void Function::viewCFGOnly() const { viewCFGOnly(nullptr, nullptr); }
+
+void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
+                           const BranchProbabilityInfo *BPI) const {
+  viewCFG(true, BFI, BPI);
 }
 
 FunctionPass *llvm::createCFGPrinterLegacyPassPass() {

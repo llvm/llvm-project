@@ -77,11 +77,11 @@
 ## Prologue with length shorter than parsed.
 # NONFATAL:      debug_line[0x00000081]
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL:      file_names[  2]:
-# NONFATAL-NEXT:            name: "file2"
+# NONFATAL:      file_names[  1]:
+# NONFATAL-NEXT:            name: "file1"
 # NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NEXT:        mod_time: 0x00000002
-# NONFATAL-NEXT:          length: 0x00000006
+# NONFATAL-NEXT:          length: 0x00000003
 # NONFATAL:      0x1122334455667788 {{.*}} 0 end_sequence{{$}}
 
 ## Prologue with length longer than parsed.
@@ -203,7 +203,6 @@
 # ALL-NEXT: warning: failed to parse entry content descriptions because no path was found
 # ALL-NEXT: warning: parsing line table prologue at 0x00000081 found an invalid directory or file table description at 0x000000ba
 # ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
-# ALL-NEXT: warning: parsing line table prologue at 0x00000081 should have ended at 0x000000b9 but it ended at 0x000000ba
 # ALL-NEXT: warning: parsing line table prologue at 0x000000c8 should have ended at 0x00000103 but it ended at 0x00000102
 # OTHER-NEXT: warning: unexpected line op length at offset 0x00000158 expected 0x02 found 0x01
 # OTHER-NEXT: warning: unexpected line op length at offset 0x0000015c expected 0x01 found 0x02
@@ -215,12 +214,11 @@
 # ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
 # ALL-NEXT: warning: parsing line table prologue at 0x000002ae found an invalid directory or file table description at 0x000002e0
 # ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
-# ALL-NEXT: warning: parsing line table prologue at 0x000002ae should have ended at 0x000002d9 but it ended at 0x000002e0
 # ALL-NEXT: warning: parsing line table prologue at 0x000002ec found an invalid directory or file table description at 0x00000315
 # ALL-NEXT: warning: failed to parse directory entry because skipping the form value failed.
 # ALL-NEXT: warning: parsing line table prologue at offset 0x00000332 found opcode base of 0. Assuming no standard opcodes
-# ALL-NEXT: warning: parsing line table prologue at 0x00000361 found an invalid directory or file table description at 0x00000382
+# ALL-NEXT: warning: parsing line table prologue at 0x00000361 found an invalid directory or file table description at 0x00000383
 # ALL-NEXT: warning: include directories table was not null terminated before the end of the prologue
-# ALL-NEXT: warning: parsing line table prologue at 0x00000390 found an invalid directory or file table description at 0x000003bb
+# ALL-NEXT: warning: parsing line table prologue at 0x00000390 found an invalid directory or file table description at 0x000003bf
 # ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
 # ALL-NOT:  warning:

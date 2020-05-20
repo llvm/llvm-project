@@ -1,5 +1,4 @@
-! RUN: %S/test_symbols.sh %s %flang %t
-!OPTIONS: -fopenmp
+! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
 
 ! 2.15.3 Data-Sharing Attribute Clauses
 ! A list item that specifies a given variable may not appear in more than

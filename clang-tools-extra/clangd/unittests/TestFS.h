@@ -13,7 +13,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
 #include "ClangdServer.h"
 #include "GlobalCompilationDatabase.h"
-#include "Path.h"
+#include "support/Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"

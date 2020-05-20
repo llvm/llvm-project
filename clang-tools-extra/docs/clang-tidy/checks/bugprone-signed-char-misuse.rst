@@ -3,6 +3,9 @@
 bugprone-signed-char-misuse
 ===========================
 
+`cert-str34-c` redirects here as an alias for this check. For the CERT alias,
+the `DiagnoseSignedUnsignedCharComparisons` option is set to `0`.
+
 Finds those ``signed char`` -> integer conversions which might indicate a
 programming error. The basic problem with the ``signed char``, that it might
 store the non-ASCII characters as negative values. This behavior can cause a
@@ -31,11 +34,10 @@ It depends on the actual platform whether plain ``char`` is handled as ``signed 
 by default and so it is caught by this check or not. To change the default behavior
 you can use ``-funsigned-char`` and ``-fsigned-char`` compilation options.
 
-Currently, this check is limited to assignments and variable declarations,
-where a ``signed char`` is assigned to an integer variable and to
-equality/inequality comparisons between ``signed char`` and ``unsigned char``.
-There are other use cases where the unexpected value ranges might lead to
-similar bogus behavior.
+Currently, this check warns in the following cases:
+- ``signed char`` is assigned to an integer variable
+- ``signed char`` and ``unsigned char`` are compared with equality/inequality operator
+- ``signed char`` is converted to an integer in the array subscript
 
 See also:
 `STR34-C. Cast characters to unsigned char before converting to larger integer sizes
@@ -109,3 +111,8 @@ so both arguments will have the same type.
   check. This is useful when a typedef introduces an integer alias like
   ``sal_Int8`` or ``int8_t``. In this case, human misinterpretation is not
   an issue.
+
+.. option:: DiagnoseSignedUnsignedCharComparisons
+
+  When nonzero, the check will warn on ``signed char``/``unsigned char`` comparisons,
+  otherwise these comparisons are ignored. By default, this option is set to ``1``.

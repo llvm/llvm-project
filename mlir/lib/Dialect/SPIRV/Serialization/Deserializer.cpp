@@ -62,10 +62,22 @@ namespace {
 struct BlockMergeInfo {
   Block *mergeBlock;
   Block *continueBlock; // nullptr for spv.selection
+  Location loc;
 
-  BlockMergeInfo() : mergeBlock(nullptr), continueBlock(nullptr) {}
-  BlockMergeInfo(Block *m, Block *c = nullptr)
-      : mergeBlock(m), continueBlock(c) {}
+  BlockMergeInfo(Location location)
+      : mergeBlock(nullptr), continueBlock(nullptr), loc(location) {}
+  BlockMergeInfo(Location location, Block *m, Block *c = nullptr)
+      : mergeBlock(m), continueBlock(c), loc(location) {}
+};
+
+/// A struct for containing OpLine instruction information.
+struct DebugLine {
+  uint32_t fileID;
+  uint32_t line;
+  uint32_t col;
+
+  DebugLine(uint32_t fileIDNum, uint32_t lineNum, uint32_t colNum)
+      : fileID(fileIDNum), line(lineNum), col(colNum) {}
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
@@ -233,6 +245,23 @@ private:
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
 
   //===--------------------------------------------------------------------===//
+  // Debug
+  //===--------------------------------------------------------------------===//
+
+  /// Discontinues any source-level location information that might be active
+  /// from a previous OpLine instruction.
+  LogicalResult clearDebugLine();
+
+  /// Creates a FileLineColLoc with the OpLine location information.
+  Location createFileLineColLoc(OpBuilder opBuilder);
+
+  /// Processes a SPIR-V OpLine instruction with the given `operands`.
+  LogicalResult processDebugLine(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpString instruction with the given `operands`.
+  LogicalResult processDebugString(ArrayRef<uint32_t> operands);
+
+  //===--------------------------------------------------------------------===//
   // Control flow
   //===--------------------------------------------------------------------===//
 
@@ -376,6 +405,10 @@ private:
   /// The SPIR-V binary module.
   ArrayRef<uint32_t> binary;
 
+  /// Contains the data of the OpLine instruction which precedes the current
+  /// processing instruction.
+  llvm::Optional<DebugLine> debugLine;
+
   /// The current word offset into the binary module.
   unsigned curOffset = 0;
 
@@ -444,8 +477,11 @@ private:
   // Result <id> to name mapping.
   DenseMap<uint32_t, StringRef> nameMap;
 
+  // Result <id> to debug info mapping.
+  DenseMap<uint32_t, StringRef> debugInfoMap;
+
   // Result <id> to decorations mapping.
-  DenseMap<uint32_t, NamedAttributeList> decorations;
+  DenseMap<uint32_t, MutableDictionaryAttr> decorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;
@@ -521,9 +557,9 @@ Optional<spirv::ModuleOp> Deserializer::collect() { return module; }
 //===----------------------------------------------------------------------===//
 
 spirv::ModuleOp Deserializer::createModuleOp() {
-  Builder builder(context);
+  OpBuilder builder(context);
   OperationState state(unknownLoc, spirv::ModuleOp::getOperationName());
-  spirv::ModuleOp::build(&builder, state);
+  spirv::ModuleOp::build(builder, state);
   return cast<spirv::ModuleOp>(Operation::create(state));
 }
 
@@ -990,8 +1026,9 @@ LogicalResult Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
                      "OpVariable instruction, only ")
            << wordIndex << " of " << operands.size() << " processed";
   }
+  auto loc = createFileLineColLoc(opBuilder);
   auto varOp = opBuilder.create<spirv::GlobalVariableOp>(
-      unknownLoc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
+      loc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
       initializer);
 
   // Decorations.
@@ -1504,8 +1541,13 @@ LogicalResult Deserializer::processBranch(ArrayRef<uint32_t> operands) {
   }
 
   auto *target = getOrCreateBlock(operands[0]);
-  opBuilder.create<spirv::BranchOp>(unknownLoc, target);
+  auto loc = createFileLineColLoc(opBuilder);
+  // The preceding instruction for the OpBranch instruction could be an
+  // OpLoopMerge or an OpSelectionMerge instruction, in this case they will have
+  // the same OpLine information.
+  opBuilder.create<spirv::BranchOp>(loc, target);
 
+  clearDebugLine();
   return success();
 }
 
@@ -1530,12 +1572,16 @@ Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   if (operands.size() == 5) {
     weights = std::make_pair(operands[3], operands[4]);
   }
-
+  // The preceding instruction for the OpBranchConditional instruction could be
+  // an OpSelectionMerge instruction, in this case they will have the same
+  // OpLine information.
+  auto loc = createFileLineColLoc(opBuilder);
   opBuilder.create<spirv::BranchConditionalOp>(
-      unknownLoc, condition, trueBlock,
+      loc, condition, trueBlock,
       /*trueArguments=*/ArrayRef<Value>(), falseBlock,
       /*falseArguments=*/ArrayRef<Value>(), weights);
 
+  clearDebugLine();
   return success();
 }
 
@@ -1579,8 +1625,9 @@ LogicalResult Deserializer::processSelectionMerge(ArrayRef<uint32_t> operands) {
   }
 
   auto *mergeBlock = getOrCreateBlock(operands[0]);
+  auto loc = createFileLineColLoc(opBuilder);
 
-  if (!blockMergeInfo.try_emplace(curBlock, mergeBlock).second) {
+  if (!blockMergeInfo.try_emplace(curBlock, loc, mergeBlock).second) {
     return emitError(
         unknownLoc,
         "a block cannot have more than one OpSelectionMerge instruction");
@@ -1606,8 +1653,10 @@ LogicalResult Deserializer::processLoopMerge(ArrayRef<uint32_t> operands) {
 
   auto *mergeBlock = getOrCreateBlock(operands[0]);
   auto *continueBlock = getOrCreateBlock(operands[1]);
+  auto loc = createFileLineColLoc(opBuilder);
 
-  if (!blockMergeInfo.try_emplace(curBlock, mergeBlock, continueBlock).second) {
+  if (!blockMergeInfo.try_emplace(curBlock, loc, mergeBlock, continueBlock)
+           .second) {
     return emitError(
         unknownLoc,
         "a block cannot have more than one OpLoopMerge instruction");
@@ -1795,7 +1844,6 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
       LLVM_DEBUG(llvm::dbgs()
                  << "[cf] block " << block << " is a function entry block\n");
     }
-
     for (auto &op : *block)
       newBlock->push_back(op.clone(mapper));
   }
@@ -1876,10 +1924,12 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
       if (Block *mappedTo = mapper.lookupOrNull(newMerge))
         newMerge = mappedTo;
 
+      // Keep original location for nested selection/loop ops.
+      Location loc = it->second.loc;
       // The iterator should be erased before adding a new entry into
       // blockMergeInfo to avoid iterator invalidation.
       blockMergeInfo.erase(it);
-      blockMergeInfo.try_emplace(newHeader, newMerge, newContinue);
+      blockMergeInfo.try_emplace(newHeader, loc, newMerge, newContinue);
     }
 
     // The structured selection/loop's entry block does not have arguments.
@@ -1980,17 +2030,67 @@ LogicalResult Deserializer::structurizeControlFlow() {
                  << "[cf] continue block " << continueBlock << ":\n");
       LLVM_DEBUG(continueBlock->print(llvm::dbgs()));
     }
-
     // Erase this case before calling into structurizer, who will update
     // blockMergeInfo.
     blockMergeInfo.erase(blockMergeInfo.begin());
-    if (failed(ControlFlowStructurizer::structurize(unknownLoc, blockMergeInfo,
-                                                    headerBlock, mergeBlock,
-                                                    continueBlock)))
+    if (failed(ControlFlowStructurizer::structurize(mergeInfo.loc,
+                                                    blockMergeInfo, headerBlock,
+                                                    mergeBlock, continueBlock)))
       return failure();
   }
 
   LLVM_DEBUG(llvm::dbgs() << "[cf] completed structurizing control flow\n");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Debug
+//===----------------------------------------------------------------------===//
+
+Location Deserializer::createFileLineColLoc(OpBuilder opBuilder) {
+  if (!debugLine)
+    return unknownLoc;
+
+  auto fileName = debugInfoMap.lookup(debugLine->fileID).str();
+  if (fileName.empty())
+    fileName = "<unknown>";
+  return opBuilder.getFileLineColLoc(opBuilder.getIdentifier(fileName),
+                                     debugLine->line, debugLine->col);
+}
+
+LogicalResult Deserializer::processDebugLine(ArrayRef<uint32_t> operands) {
+  // According to SPIR-V spec:
+  // "This location information applies to the instructions physically
+  // following this instruction, up to the first occurrence of any of the
+  // following: the next end of block, the next OpLine instruction, or the next
+  // OpNoLine instruction."
+  if (operands.size() != 3)
+    return emitError(unknownLoc, "OpLine must have 3 operands");
+  debugLine = DebugLine(operands[0], operands[1], operands[2]);
+  return success();
+}
+
+LogicalResult Deserializer::clearDebugLine() {
+  debugLine = llvm::None;
+  return success();
+}
+
+LogicalResult Deserializer::processDebugString(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 2)
+    return emitError(unknownLoc, "OpString needs at least 2 operands");
+
+  if (!debugInfoMap.lookup(operands[0]).empty())
+    return emitError(unknownLoc,
+                     "duplicate debug string found for result <id> ")
+           << operands[0];
+
+  unsigned wordIndex = 1;
+  StringRef debugString = decodeStringLiteral(operands, wordIndex);
+  if (wordIndex != operands.size())
+    return emitError(unknownLoc,
+                     "unexpected trailing words in OpString instruction");
+
+  debugInfoMap[operands[0]] = debugString;
   return success();
 }
 
@@ -2085,10 +2185,15 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
       return processGlobalVariable(operands);
     }
     break;
+  case spirv::Opcode::OpLine:
+    return processDebugLine(operands);
+  case spirv::Opcode::OpNoLine:
+    return clearDebugLine();
   case spirv::Opcode::OpName:
     return processName(operands);
-  case spirv::Opcode::OpModuleProcessed:
   case spirv::Opcode::OpString:
+    return processDebugString(operands);
+  case spirv::Opcode::OpModuleProcessed:
   case spirv::Opcode::OpSource:
   case spirv::Opcode::OpSourceContinued:
   case spirv::Opcode::OpSourceExtension:

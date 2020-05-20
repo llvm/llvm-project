@@ -629,6 +629,7 @@ void COFFDumper::printFileHeaders() {
     W.printHex   ("TimeDateStamp", FormattedTime, Obj->getTimeDateStamp());
     W.printHex   ("PointerToSymbolTable", Obj->getPointerToSymbolTable());
     W.printNumber("SymbolCount", Obj->getNumberOfSymbols());
+    W.printNumber("StringTableSize", Obj->getStringTableSize());
     W.printNumber("OptionalHeaderSize", Obj->getSizeOfOptionalHeader());
     W.printFlags ("Characteristics", Obj->getCharacteristics(),
                     makeArrayRef(ImageFileCharacteristics));
@@ -730,6 +731,10 @@ void COFFDumper::printCOFFDebugDirectory() {
     W.printHex("SizeOfData", D.SizeOfData);
     W.printHex("AddressOfRawData", D.AddressOfRawData);
     W.printHex("PointerToRawData", D.PointerToRawData);
+    // Ideally, if D.AddressOfRawData == 0, we should try to load the payload
+    // using D.PointerToRawData instead.
+    if (D.AddressOfRawData == 0)
+      continue;
     if (D.Type == COFF::IMAGE_DEBUG_TYPE_CODEVIEW) {
       const codeview::DebugInfo *DebugInfo;
       StringRef PDBFileName;
@@ -1464,21 +1469,25 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
   DictScope D(W, "Symbol");
 
   COFFSymbolRef Symbol = Obj->getCOFFSymbol(Sym);
-  const coff_section *Section;
-  if (std::error_code EC = Obj->getSection(Symbol.getSectionNumber(), Section)) {
-    W.startLine() << "Invalid section number: " << EC.message() << "\n";
+  Expected<const coff_section *> SecOrErr =
+      Obj->getSection(Symbol.getSectionNumber());
+  if (!SecOrErr) {
+    W.startLine() << "Invalid section number: " << Symbol.getSectionNumber()
+                  << "\n";
     W.flush();
+    consumeError(SecOrErr.takeError());
     return;
   }
+  const coff_section *Section = *SecOrErr;
 
   StringRef SymbolName;
-  if (Obj->getSymbolName(Symbol, SymbolName))
-    SymbolName = "";
+  if (Expected<StringRef> SymNameOrErr = Obj->getSymbolName(Symbol))
+    SymbolName = *SymNameOrErr;
 
   StringRef SectionName;
-  if (Expected<StringRef> NameOrErr =
+  if (Expected<StringRef> SecNameOrErr =
           getSectionName(Obj, Symbol.getSectionNumber(), Section))
-    SectionName = *NameOrErr;
+    SectionName = *SecNameOrErr;
 
   W.printString("Name", SymbolName);
   W.printNumber("Value", Symbol.getValue());
@@ -1511,12 +1520,12 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
       if (!Linked)
         reportError(Linked.takeError(), Obj->getFileName());
 
-      StringRef LinkedName;
-      if (std::error_code EC = Obj->getSymbolName(*Linked, LinkedName))
-        reportError(errorCodeToError(EC), Obj->getFileName());
+      Expected<StringRef> LinkedName = Obj->getSymbolName(*Linked);
+      if (!LinkedName)
+        reportError(LinkedName.takeError(), Obj->getFileName());
 
       DictScope AS(W, "AuxWeakExternal");
-      W.printNumber("Linked", LinkedName, Aux->TagIndex);
+      W.printNumber("Linked", *LinkedName, Aux->TagIndex);
       W.printEnum  ("Search", Aux->Characteristics,
                     makeArrayRef(WeakExternalCharacteristics));
 
@@ -1547,16 +1556,14 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
 
       if (Section && Section->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT
           && Aux->Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
-        const coff_section *Assoc;
-        StringRef AssocName = "";
-        if (std::error_code EC = Obj->getSection(AuxNumber, Assoc))
-          reportError(errorCodeToError(EC), Obj->getFileName());
-        Expected<StringRef> Res = getSectionName(Obj, AuxNumber, Assoc);
-        if (!Res)
-          reportError(Res.takeError(), Obj->getFileName());
-        AssocName = *Res;
+        Expected<const coff_section *> Assoc = Obj->getSection(AuxNumber);
+        if (!Assoc)
+          reportError(Assoc.takeError(), Obj->getFileName());
+        Expected<StringRef> AssocName = getSectionName(Obj, AuxNumber, *Assoc);
+        if (!AssocName)
+          reportError(AssocName.takeError(), Obj->getFileName());
 
-        W.printNumber("AssocSection", AssocName, AuxNumber);
+        W.printNumber("AssocSection", *AssocName, AuxNumber);
       }
     } else if (Symbol.isCLRToken()) {
       const coff_aux_clr_token *Aux;
@@ -1568,14 +1575,14 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
       if (!ReferredSym)
         reportError(ReferredSym.takeError(), Obj->getFileName());
 
-      StringRef ReferredName;
-      if (std::error_code EC = Obj->getSymbolName(*ReferredSym, ReferredName))
-        reportError(errorCodeToError(EC), Obj->getFileName());
+      Expected<StringRef> ReferredName = Obj->getSymbolName(*ReferredSym);
+      if (!ReferredName)
+        reportError(ReferredName.takeError(), Obj->getFileName());
 
       DictScope AS(W, "AuxCLRToken");
       W.printNumber("AuxType", Aux->AuxType);
       W.printNumber("Reserved", Aux->Reserved);
-      W.printNumber("SymbolTableIndex", ReferredName, Aux->SymbolTableIndex);
+      W.printNumber("SymbolTableIndex", *ReferredName, Aux->SymbolTableIndex);
 
     } else {
       W.startLine() << "<unhandled auxiliary record>\n";
@@ -1964,11 +1971,11 @@ void COFFDumper::printAddrsig() {
     if (!Sym)
       reportError(Sym.takeError(), Obj->getFileName());
 
-    StringRef SymName;
-    if (std::error_code EC = Obj->getSymbolName(*Sym, SymName))
-      reportError(errorCodeToError(EC), Obj->getFileName());
+    Expected<StringRef> SymName = Obj->getSymbolName(*Sym);
+    if (!SymName)
+      reportError(SymName.takeError(), Obj->getFileName());
 
-    W.printNumber("Sym", SymName, SymIndex);
+    W.printNumber("Sym", *SymName, SymIndex);
     Cur += Size;
   }
 }

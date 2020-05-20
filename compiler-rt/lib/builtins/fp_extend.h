@@ -21,7 +21,7 @@ typedef float src_t;
 typedef uint32_t src_rep_t;
 #define SRC_REP_C UINT32_C
 static const int srcSigBits = 23;
-#define src_rep_t_clz __builtin_clz
+#define src_rep_t_clz clzsi
 
 #elif defined SRC_DOUBLE
 typedef double src_t;

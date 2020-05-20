@@ -231,7 +231,7 @@ void MachObjectWriter::writeSection(const MCAsmLayout &Layout,
   uint64_t Start = W.OS.tell();
   (void) Start;
 
-  writeWithPadding(Section.getSectionName(), 16);
+  writeWithPadding(Section.getName(), 16);
   writeWithPadding(Section.getSegmentName(), 16);
   if (is64Bit()) {
     W.write<uint64_t>(VMAddr);      // address

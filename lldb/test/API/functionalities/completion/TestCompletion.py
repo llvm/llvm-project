@@ -414,3 +414,103 @@ class CommandLineCompletionTestCase(TestBase):
         # No completion for Qu because the candidate is
         # (anonymous namespace)::Quux().
         self.complete_from_to('breakpoint set -n Qu', '')
+
+    @skipIf(archs=no_match(['x86_64']))
+    def test_register_read_and_write_on_x86(self):
+        """Test the completion of the commands register read and write on x86"""
+
+        # The tab completion for "register read/write"  won't work without a running process.
+        self.complete_from_to('register read ',
+                              'register read ')
+        self.complete_from_to('register write ',
+                              'register write ')
+
+        self.build()
+        self.main_source_spec = lldb.SBFileSpec("main.cpp")
+        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+
+        # test cases for register read
+        self.complete_from_to('register read ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register read r',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register read ra',
+                              'register read rax')
+        # register read can take multiple register names as arguments
+        self.complete_from_to('register read rax ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        # complete with prefix '$'
+        self.completions_match('register read $rb',
+                              ['$rbx',
+                               '$rbp'])
+        self.completions_match('register read $ra',
+                              ['$rax'])
+        self.complete_from_to('register read rax $',
+                              ['\$rax',
+                               '\$rbx',
+                               '\$rcx'])
+        self.complete_from_to('register read $rax ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+
+        # test cases for register write
+        self.complete_from_to('register write ',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register write r',
+                              ['rax',
+                               'rbx',
+                               'rcx'])
+        self.complete_from_to('register write ra',
+                              'register write rax')
+        self.complete_from_to('register write rb',
+                              ['rbx',
+                               'rbp'])
+        # register write can only take exact one register name as argument
+        self.complete_from_to('register write rbx ',
+                              [])
+
+    def test_complete_breakpoint_with_ids(self):
+        """These breakpoint subcommands should be completed with a list of breakpoint ids"""
+
+        subcommands = ['enable', 'disable', 'delete', 'modify', 'name add', 'name delete', 'write']
+
+        # The tab completion here is unavailable without a target
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  'breakpoint ' + subcommand + ' ')
+
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+
+        bp = target.BreakpointCreateByName('main', 'a.out')
+        self.assertTrue(bp)
+        self.assertEqual(bp.GetNumLocations(), 1)
+
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  ['1'])
+        
+        bp2 = target.BreakpointCreateByName('Bar', 'a.out')
+        self.assertTrue(bp2)
+        self.assertEqual(bp2.GetNumLocations(), 1)
+
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' ',
+                                  ['1',
+                                   '2'])
+        
+        for subcommand in subcommands:
+            self.complete_from_to('breakpoint ' + subcommand + ' 1 ',
+                                  ['1',
+                                   '2'])
+

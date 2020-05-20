@@ -12,11 +12,11 @@
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
 #include "ExpectedTypes.h"
-#include "Logger.h"
 #include "SourceCode.h"
 #include "SymbolLocation.h"
 #include "URI.h"
 #include "index/SymbolID.h"
+#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -743,7 +743,11 @@ bool SymbolCollector::isSelfContainedHeader(FileID FID) {
     const FileEntry *FE = SM.getFileEntryForID(FID);
     if (!FE)
       return false;
-    if (!PP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
+    // FIXME: Should files that have been #import'd be considered
+    // self-contained? That's really a property of the includer,
+    // not of the file.
+    if (!PP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE) &&
+        !PP->getHeaderSearchInfo().hasFileBeenImported(FE))
       return false;
     // This pattern indicates that a header can't be used without
     // particular preprocessor state, usually set up by another header.

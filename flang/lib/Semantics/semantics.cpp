@@ -25,7 +25,9 @@
 #include "check-omp-structure.h"
 #include "check-purity.h"
 #include "check-return.h"
+#include "check-select-rank.h"
 #include "check-stop.h"
+#include "compute-offsets.h"
 #include "mod-file.h"
 #include "resolve-labels.h"
 #include "resolve-names.h"
@@ -155,12 +157,13 @@ using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
     DataChecker, DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker,
     MiscChecker, NamelistChecker, NullifyChecker, OmpStructureChecker,
-    PurityChecker, ReturnStmtChecker, StopChecker>;
+    PurityChecker, ReturnStmtChecker, SelectRankConstructChecker, StopChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
   ResolveNames(context, program);
   RewriteParseTree(context, program);
+  ComputeOffsets(context);
   CheckDeclarations(context);
   StatementSemanticsPass1{context}.Walk(program);
   StatementSemanticsPass2{context}.Walk(program);
@@ -350,6 +353,12 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
   os << Scope::EnumToString(scope.kind()) << " scope:";
   if (const auto *symbol{scope.symbol()}) {
     os << ' ' << symbol->name();
+  }
+  if (scope.size()) {
+    os << " size=" << scope.size() << " alignment=" << scope.alignment();
+  }
+  if (scope.derivedTypeSpec()) {
+    os << " instantiation of " << *scope.derivedTypeSpec();
   }
   os << '\n';
   ++indent;

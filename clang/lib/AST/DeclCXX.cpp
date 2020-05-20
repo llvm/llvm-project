@@ -667,7 +667,7 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
   if (getLambdaCaptureDefault() != LCD_None ||
       getLambdaData().NumCaptures != 0)
     return false;
-  return getASTContext().getLangOpts().CPlusPlus2a;
+  return getASTContext().getLangOpts().CPlusPlus20;
 }
 
 void CXXRecordDecl::addedMember(Decl *D) {
@@ -783,7 +783,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++20 [dcl.init.aggr]p1:
       //   An aggregate is an array or a class with no user-declared [...]
       //   constructors
-      if (getASTContext().getLangOpts().CPlusPlus2a
+      if (getASTContext().getLangOpts().CPlusPlus20
               ? !Constructor->isImplicit()
               : (Constructor->isUserProvided() || Constructor->isExplicit()))
         data().Aggregate = false;
@@ -1289,7 +1289,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // Base element type of field is a non-class type.
       if (!T->isLiteralType(Context) ||
           (!Field->hasInClassInitializer() && !isUnion() &&
-           !Context.getLangOpts().CPlusPlus2a))
+           !Context.getLangOpts().CPlusPlus20))
         data().DefaultedDefaultConstructorIsConstexpr = false;
 
       // C++11 [class.copy]p23:
@@ -3246,6 +3246,9 @@ APValue &MSGuidDecl::getAsAPValue() const {
       Arr.getArrayInitializedElt(I) =
           APValue(APSInt(APInt(8, PartVal.Part4And5[I]), true));
     }
+    // Register this APValue to be destroyed if necessary. (Note that the
+    // MSGuidDecl destructor is never run.)
+    getASTContext().addDestruction(&APVal);
   }
 
   return APVal;

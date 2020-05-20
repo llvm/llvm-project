@@ -402,7 +402,7 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
   if (!Cont)
     return;
 
-  // At least one of the iterators have recorded positions. If one of them has
+  // At least one of the iterators has recorded positions. If one of them does
   // not then create a new symbol for the offset.
   SymbolRef Sym;
   if (!LPos || !RPos) {
@@ -422,7 +422,7 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
     RPos = getIteratorPosition(State, RVal);
   }
 
-  // We cannot make assumpotions on `UnknownVal`. Let us conjure a symbol
+  // We cannot make assumptions on `UnknownVal`. Let us conjure a symbol
   // instead.
   if (RetVal.isUnknown()) {
     auto &SymMgr = C.getSymbolManager();
@@ -532,8 +532,9 @@ void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C,
     return;
 
   const auto *value = &RHS;
+  SVal val;
   if (auto loc = RHS.getAs<Loc>()) {
-    const auto val = State->getRawSVal(*loc);
+    val = State->getRawSVal(*loc);
     value = &val;
   }
 

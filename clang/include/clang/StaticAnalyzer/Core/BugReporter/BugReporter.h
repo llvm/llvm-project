@@ -589,7 +589,7 @@ private:
   std::vector<BugReportEquivClass *> EQClassesVector;
 
 public:
-  BugReporter(BugReporterData &d) : D(d) {}
+  BugReporter(BugReporterData &d);
   virtual ~BugReporter();
 
   /// Generate and flush diagnostics for all bug reports.
@@ -632,7 +632,7 @@ public:
                        ArrayRef<FixItHint> Fixits = None);
 
 private:
-  llvm::StringMap<BugType *> StrBugTypes;
+  llvm::StringMap<std::unique_ptr<BugType>> StrBugTypes;
 
   /// Returns a BugType that is associated with the given name and
   /// category.

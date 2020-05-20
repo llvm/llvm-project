@@ -73,8 +73,8 @@ ParsedAST TestTU::build() const {
   auto Preamble =
       buildPreamble(testPath(Filename), *CI, Inputs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
-  auto AST = buildAST(testPath(Filename), std::move(CI), Diags.take(), Inputs,
-                      Preamble);
+  auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
+                              Diags.take(), Preamble);
   if (!AST.hasValue()) {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");

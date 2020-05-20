@@ -22,7 +22,6 @@ namespace llvm {
   class ModulePass;
   class TargetMachine;
   class XCoreTargetMachine;
-  class formatted_raw_ostream;
 
   void initializeXCoreLowerThreadLocalPass(PassRegistry &p);
 

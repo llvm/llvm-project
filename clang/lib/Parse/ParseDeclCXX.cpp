@@ -155,7 +155,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     // Normal namespace definition, not a nested-namespace-definition.
   } else if (InlineLoc.isValid()) {
     Diag(InlineLoc, diag::err_inline_nested_namespace_definition);
-  } else if (getLangOpts().CPlusPlus2a) {
+  } else if (getLangOpts().CPlusPlus20) {
     Diag(ExtraNSs[0].NamespaceLoc,
          diag::warn_cxx14_compat_nested_namespace_definition);
     if (FirstNestedInlineLoc.isValid())
@@ -1283,7 +1283,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
   case tok::annot_pragma_ms_pointers_to_members:
     return true;
   case tok::colon:
-    return CouldBeBitfield;     // enum E { ... }   :         2;
+    return CouldBeBitfield ||   // enum E { ... }   :         2;
+           ColonIsSacred;       // _Generic(..., enum E :     2);
   // Microsoft compatibility
   case tok::kw___cdecl:         // struct foo {...} __cdecl      x;
   case tok::kw___fastcall:      // struct foo {...} __fastcall   x;
@@ -1680,7 +1681,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   Sema::TagUseKind TUK;
-  if (DSC == DeclSpecContext::DSC_trailing)
+  if (isDefiningTypeSpecifierContext(DSC) == AllowDefiningTypeSpec::No)
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
            (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
@@ -2787,7 +2788,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
                  !DS.isFriendSpecified()) {
         // It's a default member initializer.
         if (BitfieldSize.get())
-          Diag(Tok, getLangOpts().CPlusPlus2a
+          Diag(Tok, getLangOpts().CPlusPlus20
                         ? diag::warn_cxx17_compat_bitfield_member_init
                         : diag::ext_bitfield_member_init);
         HasInClassInit = Tok.is(tok::equal) ? ICIS_CopyInit : ICIS_ListInit;
@@ -2992,7 +2993,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus2a;
+            << getLangOpts().CPlusPlus20;
       return ExprError();
     }
   }
@@ -3365,6 +3366,14 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     // are complete and we can parse the delayed portions of method
     // declarations and the lexed inline method definitions, along with any
     // delayed attributes.
+
+    // Save the state of Sema.FPFeatures, and change the setting
+    // to the levels specified on the command line.  Previous level
+    // will be restored when the RAII object is destroyed.
+    Sema::FPFeaturesStateRAII SaveFPFeaturesState(Actions);
+    FPOptions fpOptions(getLangOpts());
+    Actions.CurFPFeatures.getFromOpaqueInt(fpOptions.getAsOpaqueInt());
+
     SourceLocation SavedPrevTokLocation = PrevTokLocation;
     ParseLexedPragmas(getCurrentClass());
     ParseLexedAttributes(getCurrentClass());

@@ -59,7 +59,7 @@ public:
   virtual void printNeededLibraries() { }
   virtual void printSectionAsHex(StringRef SectionName) {}
   virtual void printHashTable() { }
-  virtual void printGnuHashTable() { }
+  virtual void printGnuHashTable(const object::ObjectFile *Obj) {}
   virtual void printHashSymbols() {}
   virtual void printLoadName() {}
   virtual void printVersionInfo() {}

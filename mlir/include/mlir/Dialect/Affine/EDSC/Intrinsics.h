@@ -9,7 +9,6 @@
 #define MLIR_DIALECT_AFFINE_EDSC_INTRINSICS_H_
 
 #include "mlir/Dialect/Affine/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
 
 namespace mlir {
 namespace edsc {

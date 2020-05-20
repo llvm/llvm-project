@@ -42,8 +42,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "Config.h"
+#include "ExportTrie.h"
 #include "InputSection.h"
-#include "OutputSegment.h"
+#include "OutputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
@@ -53,10 +55,12 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support::endian;
+using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
@@ -74,7 +78,39 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
   MemoryBufferRef mbref = mb->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take mb ownership
-  return mbref;
+
+  // If this is a regular non-fat file, return it.
+  const char *buf = mbref.getBufferStart();
+  auto *hdr = reinterpret_cast<const MachO::fat_header *>(buf);
+  if (read32be(&hdr->magic) != MachO::FAT_MAGIC)
+    return mbref;
+
+  // Object files and archive files may be fat files, which contains
+  // multiple real files for different CPU ISAs. Here, we search for a
+  // file that matches with the current link target and returns it as
+  // a MemoryBufferRef.
+  auto *arch = reinterpret_cast<const MachO::fat_arch *>(buf + sizeof(*hdr));
+
+  for (uint32_t i = 0, n = read32be(&hdr->nfat_arch); i < n; ++i) {
+    if (reinterpret_cast<const char *>(arch + i + 1) >
+        buf + mbref.getBufferSize()) {
+      error(path + ": fat_arch struct extends beyond end of file");
+      return None;
+    }
+
+    if (read32be(&arch[i].cputype) != target->cpuType ||
+        read32be(&arch[i].cpusubtype) != target->cpuSubtype)
+      continue;
+
+    uint32_t offset = read32be(&arch[i].offset);
+    uint32_t size = read32be(&arch[i].size);
+    if (offset + size > mbref.getBufferSize())
+      error(path + ": slice extends beyond end of file");
+    return MemoryBufferRef(StringRef(buf + offset, size), path.copy(bAlloc));
+  }
+
+  error("unable to find matching architecture in " + path);
+  return None;
 }
 
 static const load_command *findCommand(const mach_header_64 *hdr,
@@ -101,6 +137,7 @@ InputFile::parseSections(ArrayRef<section_64> sections) {
   for (const section_64 &sec : sections) {
     InputSection *isec = make<InputSection>();
     isec->file = this;
+    isec->header = &sec;
     isec->name = StringRef(sec.sectname, strnlen(sec.sectname, 16));
     isec->segname = StringRef(sec.segname, strnlen(sec.segname, 16));
     isec->data = {buf + sec.offset, static_cast<size_t>(sec.size)};
@@ -132,11 +169,14 @@ void InputFile::parseRelocations(const section_64 &sec,
       r.type = rel.r_type;
       r.offset = rel.r_address;
       r.addend = target->getImplicitAddend(buf + sec.offset + r.offset, r.type);
-      if (rel.r_extern)
+      if (rel.r_extern) {
         r.target = symbols[rel.r_symbolnum];
-      else {
-        error("TODO: Non-extern relocations are not supported");
-        continue;
+      } else {
+        if (rel.r_symbolnum == 0 || rel.r_symbolnum > sections.size())
+          fatal("invalid section index in relocation for offset " +
+                std::to_string(r.offset) + " in section " + sec.sectname +
+                " of " + getName());
+        r.target = sections[rel.r_symbolnum - 1];
       }
     }
     relocs.push_back(r);
@@ -155,6 +195,7 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
     sections = parseSections(objSections);
   }
 
+  // TODO: Error on missing LC_SYMTAB?
   if (const load_command *cmd = findCommand(hdr, LC_SYMTAB)) {
     auto *c = reinterpret_cast<const symtab_command *>(cmd);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
@@ -168,7 +209,7 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
 
       // Undefined symbol
       if (!sym.n_sect) {
-        error("TODO: Support undefined symbols");
+        symbols.push_back(symtab->addUndefined(name));
         continue;
       }
 
@@ -196,6 +237,93 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
       ++it;
     }
   }
+}
+
+DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
+    : InputFile(DylibKind, mb) {
+  if (umbrella == nullptr)
+    umbrella = this;
+
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
+
+  // Initialize dylibName.
+  if (const load_command *cmd = findCommand(hdr, LC_ID_DYLIB)) {
+    auto *c = reinterpret_cast<const dylib_command *>(cmd);
+    dylibName = reinterpret_cast<const char *>(cmd) + read32le(&c->dylib.name);
+  } else {
+    error("dylib " + getName() + " missing LC_ID_DYLIB load command");
+    return;
+  }
+
+  // Initialize symbols.
+  if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
+    auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
+    parseTrie(buf + c->export_off, c->export_size,
+              [&](const Twine &name, uint64_t flags) {
+                symbols.push_back(symtab->addDylib(saver.save(name), umbrella));
+              });
+  } else {
+    error("LC_DYLD_INFO_ONLY not found in " + getName());
+    return;
+  }
+
+  if (hdr->flags & MH_NO_REEXPORTED_DYLIBS)
+    return;
+
+  const uint8_t *p =
+      reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
+  for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
+    auto *cmd = reinterpret_cast<const load_command *>(p);
+    p += cmd->cmdsize;
+    if (cmd->cmd != LC_REEXPORT_DYLIB)
+      continue;
+
+    auto *c = reinterpret_cast<const dylib_command *>(cmd);
+    StringRef reexportPath =
+        reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
+    // TODO: Expand @loader_path, @executable_path etc in reexportPath
+    Optional<MemoryBufferRef> buffer = readFile(reexportPath);
+    if (!buffer) {
+      error("unable to read re-exported dylib at " + reexportPath);
+      return;
+    }
+    reexported.push_back(make<DylibFile>(*buffer, umbrella));
+  }
+}
+
+DylibFile::DylibFile() : InputFile(DylibKind, MemoryBufferRef()) {}
+
+DylibFile *DylibFile::createLibSystemMock() {
+  auto *file = make<DylibFile>();
+  file->mb = MemoryBufferRef("", "/usr/lib/libSystem.B.dylib");
+  file->dylibName = "/usr/lib/libSystem.B.dylib";
+  file->symbols.push_back(symtab->addDylib("dyld_stub_binder", file));
+  return file;
+}
+
+ArchiveFile::ArchiveFile(std::unique_ptr<llvm::object::Archive> &&f)
+    : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {
+  for (const object::Archive::Symbol &sym : file->symbols())
+    symtab->addLazy(sym.getName(), this, sym);
+}
+
+void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
+  object::Archive::Child c =
+      CHECK(sym.getMember(), toString(this) +
+                                 ": could not get the member for symbol " +
+                                 sym.getName());
+
+  if (!seen.insert(c.getChildOffset()).second)
+    return;
+
+  MemoryBufferRef mb =
+      CHECK(c.getMemoryBufferRef(),
+            toString(this) +
+                ": could not get the buffer for the member defining symbol " +
+                sym.getName());
+  auto file = make<ObjFile>(mb);
+  sections.insert(sections.end(), file->sections.begin(), file->sections.end());
 }
 
 // Returns "<internal>" or "baz.o".

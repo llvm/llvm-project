@@ -1654,6 +1654,19 @@ protected:
     uint32_t NumElements;
   };
 
+  class ConstantMatrixTypeBitfields {
+    friend class ConstantMatrixType;
+
+    unsigned : NumTypeBits;
+
+    /// Number of rows and columns. Using 20 bits allows supporting very large
+    /// matrixes, while keeping 24 bits to accommodate NumTypeBits.
+    unsigned NumRows : 20;
+    unsigned NumColumns : 20;
+
+    static constexpr uint32_t MaxElementsPerDimension = (1 << 20) - 1;
+  };
+
   class AttributedTypeBitfields {
     friend class AttributedType;
 
@@ -1763,6 +1776,7 @@ protected:
     TypeWithKeywordBitfields TypeWithKeywordBits;
     ElaboratedTypeBitfields ElaboratedTypeBits;
     VectorTypeBitfields VectorTypeBits;
+    ConstantMatrixTypeBitfields ConstantMatrixTypeBits;
     SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     DependentTemplateSpecializationTypeBitfields
@@ -2021,6 +2035,7 @@ public:
   bool isComplexIntegerType() const;            // GCC _Complex integer type.
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
+  bool isConstantMatrixType() const;            // Matrix type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -2101,6 +2116,7 @@ public:
   bool isOCLExtOpaqueType() const;              // Any OpenCL extension type
 
   bool isPipeType() const;                      // OpenCL pipe type
+  bool isExtIntType() const;                    // Extended Int Type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
   /// Determines if this type, which must satisfy
@@ -3389,6 +3405,131 @@ public:
   }
 };
 
+/// Represents a matrix type, as defined in the Matrix Types clang extensions.
+/// __attribute__((matrix_type(rows, columns))), where "rows" specifies
+/// number of rows and "columns" specifies the number of columns.
+class MatrixType : public Type, public llvm::FoldingSetNode {
+protected:
+  friend class ASTContext;
+
+  /// The element type of the matrix.
+  QualType ElementType;
+
+  MatrixType(QualType ElementTy, QualType CanonElementTy);
+
+  MatrixType(TypeClass TypeClass, QualType ElementTy, QualType CanonElementTy,
+             const Expr *RowExpr = nullptr, const Expr *ColumnExpr = nullptr);
+
+public:
+  /// Returns type of the elements being stored in the matrix
+  QualType getElementType() const { return ElementType; }
+
+  /// Valid elements types are the following:
+  /// * an integer type (as in C2x 6.2.5p19), but excluding enumerated types
+  ///   and _Bool
+  /// * the standard floating types float or double
+  /// * a half-precision floating point type, if one is supported on the target
+  static bool isValidElementType(QualType T) {
+    return T->isDependentType() ||
+           (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ConstantMatrix ||
+           T->getTypeClass() == DependentSizedMatrix;
+  }
+};
+
+/// Represents a concrete matrix type with constant number of rows and columns
+class ConstantMatrixType final : public MatrixType {
+protected:
+  friend class ASTContext;
+
+  /// The element type of the matrix.
+  QualType ElementType;
+
+  ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
+                     unsigned NColumns, QualType CanonElementType);
+
+  ConstantMatrixType(TypeClass typeClass, QualType MatrixType, unsigned NRows,
+                     unsigned NColumns, QualType CanonElementType);
+
+public:
+  /// Returns the number of rows in the matrix.
+  unsigned getNumRows() const { return ConstantMatrixTypeBits.NumRows; }
+
+  /// Returns the number of columns in the matrix.
+  unsigned getNumColumns() const { return ConstantMatrixTypeBits.NumColumns; }
+
+  /// Returns the number of elements required to embed the matrix into a vector.
+  unsigned getNumElementsFlattened() const {
+    return ConstantMatrixTypeBits.NumRows * ConstantMatrixTypeBits.NumColumns;
+  }
+
+  /// Returns true if \p NumElements is a valid matrix dimension.
+  static bool isDimensionValid(uint64_t NumElements) {
+    return NumElements > 0 &&
+           NumElements <= ConstantMatrixTypeBitfields::MaxElementsPerDimension;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getElementType(), getNumRows(), getNumColumns(),
+            getTypeClass());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
+                      unsigned NumRows, unsigned NumColumns,
+                      TypeClass TypeClass) {
+    ID.AddPointer(ElementType.getAsOpaquePtr());
+    ID.AddInteger(NumRows);
+    ID.AddInteger(NumColumns);
+    ID.AddInteger(TypeClass);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ConstantMatrix;
+  }
+};
+
+/// Represents a matrix type where the type and the number of rows and columns
+/// is dependent on a template.
+class DependentSizedMatrixType final : public MatrixType {
+  friend class ASTContext;
+
+  const ASTContext &Context;
+  Expr *RowExpr;
+  Expr *ColumnExpr;
+
+  SourceLocation loc;
+
+  DependentSizedMatrixType(const ASTContext &Context, QualType ElementType,
+                           QualType CanonicalType, Expr *RowExpr,
+                           Expr *ColumnExpr, SourceLocation loc);
+
+public:
+  QualType getElementType() const { return ElementType; }
+  Expr *getRowExpr() const { return RowExpr; }
+  Expr *getColumnExpr() const { return ColumnExpr; }
+  SourceLocation getAttributeLoc() const { return loc; }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == DependentSizedMatrix;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, Context, getElementType(), getRowExpr(), getColumnExpr());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      QualType ElementType, Expr *RowExpr, Expr *ColumnExpr);
+};
+
 /// FunctionType - C99 6.7.5.3 - Function Declarators.  This is the common base
 /// class of FunctionNoProtoType and FunctionProtoType.
 class FunctionType : public Type {
@@ -3517,13 +3658,12 @@ public:
     enum { NoReturnMask = 0x20 };
     enum { ProducesResultMask = 0x40 };
     enum { NoCallerSavedRegsMask = 0x80 };
+    enum {
+      RegParmMask =  0x700,
+      RegParmOffset = 8
+    };
     enum { NoCfCheckMask = 0x800 };
     enum { CmseNSCallMask = 0x1000 };
-    enum {
-      RegParmMask = ~(CallConvMask | NoReturnMask | ProducesResultMask |
-                      NoCallerSavedRegsMask | NoCfCheckMask | CmseNSCallMask),
-      RegParmOffset = 8
-    }; // Assumed to be the last field
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -3556,7 +3696,7 @@ public:
     bool getCmseNSCall() const { return Bits & CmseNSCallMask; }
     bool getNoCallerSavedRegs() const { return Bits & NoCallerSavedRegsMask; }
     bool getNoCfCheck() const { return Bits & NoCfCheckMask; }
-    bool getHasRegParm() const { return (Bits >> RegParmOffset) != 0; }
+    bool getHasRegParm() const { return ((Bits & RegParmMask) >> RegParmOffset) != 0; }
 
     unsigned getRegParm() const {
       unsigned RegParm = (Bits & RegParmMask) >> RegParmOffset;
@@ -5604,6 +5744,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID);
   static void Profile(llvm::FoldingSetNodeID &ID,
                       const ObjCTypeParamDecl *OTPDecl,
+                      QualType CanonicalType,
                       ArrayRef<ObjCProtocolDecl *> protocols);
 
   ObjCTypeParamDecl *getDecl() const { return OTPDecl; }
@@ -6127,6 +6268,64 @@ public:
   bool isReadOnly() const { return isRead; }
 };
 
+/// A fixed int type of a specified bitwidth.
+class ExtIntType final : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+  unsigned IsUnsigned : 1;
+  unsigned NumBits : 24;
+
+protected:
+  ExtIntType(bool isUnsigned, unsigned NumBits);
+
+public:
+  bool isUnsigned() const { return IsUnsigned; }
+  bool isSigned() const { return !IsUnsigned; }
+  unsigned getNumBits() const { return NumBits; }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, isUnsigned(), getNumBits());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, bool IsUnsigned,
+                      unsigned NumBits) {
+    ID.AddBoolean(IsUnsigned);
+    ID.AddInteger(NumBits);
+  }
+
+  static bool classof(const Type *T) { return T->getTypeClass() == ExtInt; }
+};
+
+class DependentExtIntType final : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+  const ASTContext &Context;
+  llvm::PointerIntPair<Expr*, 1, bool> ExprAndUnsigned;
+
+protected:
+  DependentExtIntType(const ASTContext &Context, bool IsUnsigned,
+                      Expr *NumBits);
+
+public:
+  bool isUnsigned() const;
+  bool isSigned() const { return !isUnsigned(); }
+  Expr *getNumBitsExpr() const;
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, Context, isUnsigned(), getNumBitsExpr());
+  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      bool IsUnsigned, Expr *NumBitsExpr);
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == DependentExtInt;
+  }
+};
+
 /// A qualifier set is used to build a set of qualifiers.
 class QualifierCollector : public Qualifiers {
 public:
@@ -6546,6 +6745,10 @@ inline bool Type::isExtVectorType() const {
   return isa<ExtVectorType>(CanonicalType);
 }
 
+inline bool Type::isConstantMatrixType() const {
+  return isa<ConstantMatrixType>(CanonicalType);
+}
+
 inline bool Type::isDependentAddressSpaceType() const {
   return isa<DependentAddressSpaceType>(CanonicalType);
 }
@@ -6646,6 +6849,10 @@ inline bool Type::isPipeType() const {
   return isa<PipeType>(CanonicalType);
 }
 
+inline bool Type::isExtIntType() const {
+  return isa<ExtIntType>(CanonicalType);
+}
+
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   inline bool Type::is##Id##Type() const { \
     return isSpecificBuiltinType(BuiltinType::Id); \
@@ -6741,7 +6948,7 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
       !IsEnumDeclScoped(ET->getDecl());
   }
-  return false;
+  return isExtIntType();
 }
 
 inline bool Type::isFixedPointType() const {
@@ -6798,7 +7005,8 @@ inline bool Type::isScalarType() const {
          isa<BlockPointerType>(CanonicalType) ||
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
-         isa<ObjCObjectPointerType>(CanonicalType);
+         isa<ObjCObjectPointerType>(CanonicalType) ||
+         isExtIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -6811,7 +7019,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
 
-  return false;
+  return isExtIntType();
 }
 
 inline bool Type::isBooleanType() const {

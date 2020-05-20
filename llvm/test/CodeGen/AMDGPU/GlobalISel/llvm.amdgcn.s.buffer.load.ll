@@ -173,7 +173,7 @@ define amdgpu_ps <3 x i32> @s_buffer_load_v3i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX6:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX6:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; GFX6:   [[S_BUFFER_LOAD_DWORDX4_SGPR:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = S_BUFFER_LOAD_DWORDX4_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 12, align 4)
-  ; GFX6:   [[COPY5:%[0-9]+]]:sreg_96 = COPY [[S_BUFFER_LOAD_DWORDX4_SGPR]].sub0_sub1_sub2
+  ; GFX6:   [[COPY5:%[0-9]+]]:sgpr_96 = COPY [[S_BUFFER_LOAD_DWORDX4_SGPR]].sub0_sub1_sub2
   ; GFX6:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub0
   ; GFX6:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub1
   ; GFX6:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub2
@@ -197,7 +197,7 @@ define amdgpu_ps <3 x i32> @s_buffer_load_v3i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX7:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX7:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; GFX7:   [[S_BUFFER_LOAD_DWORDX4_SGPR:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = S_BUFFER_LOAD_DWORDX4_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 12, align 4)
-  ; GFX7:   [[COPY5:%[0-9]+]]:sreg_96 = COPY [[S_BUFFER_LOAD_DWORDX4_SGPR]].sub0_sub1_sub2
+  ; GFX7:   [[COPY5:%[0-9]+]]:sgpr_96 = COPY [[S_BUFFER_LOAD_DWORDX4_SGPR]].sub0_sub1_sub2
   ; GFX7:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub0
   ; GFX7:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub1
   ; GFX7:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub2
@@ -221,7 +221,7 @@ define amdgpu_ps <3 x i32> @s_buffer_load_v3i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX8:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; GFX8:   [[S_BUFFER_LOAD_DWORDX4_SGPR:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = S_BUFFER_LOAD_DWORDX4_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 12, align 4)
-  ; GFX8:   [[COPY5:%[0-9]+]]:sreg_96 = COPY [[S_BUFFER_LOAD_DWORDX4_SGPR]].sub0_sub1_sub2
+  ; GFX8:   [[COPY5:%[0-9]+]]:sgpr_96 = COPY [[S_BUFFER_LOAD_DWORDX4_SGPR]].sub0_sub1_sub2
   ; GFX8:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub0
   ; GFX8:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub1
   ; GFX8:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[COPY5]].sub2
@@ -249,7 +249,7 @@ define amdgpu_ps <8 x i32> @s_buffer_load_v8i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX6:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; GFX6:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX6:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX6:   [[S_BUFFER_LOAD_DWORDX8_SGPR:%[0-9]+]]:sreg_256 = S_BUFFER_LOAD_DWORDX8_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 32, align 4)
+  ; GFX6:   [[S_BUFFER_LOAD_DWORDX8_SGPR:%[0-9]+]]:sgpr_256 = S_BUFFER_LOAD_DWORDX8_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 32, align 4)
   ; GFX6:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub0
   ; GFX6:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub1
   ; GFX6:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub2
@@ -292,7 +292,7 @@ define amdgpu_ps <8 x i32> @s_buffer_load_v8i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX7:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; GFX7:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX7:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX7:   [[S_BUFFER_LOAD_DWORDX8_SGPR:%[0-9]+]]:sreg_256 = S_BUFFER_LOAD_DWORDX8_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 32, align 4)
+  ; GFX7:   [[S_BUFFER_LOAD_DWORDX8_SGPR:%[0-9]+]]:sgpr_256 = S_BUFFER_LOAD_DWORDX8_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 32, align 4)
   ; GFX7:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub0
   ; GFX7:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub1
   ; GFX7:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub2
@@ -335,7 +335,7 @@ define amdgpu_ps <8 x i32> @s_buffer_load_v8i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX8:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; GFX8:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX8:   [[S_BUFFER_LOAD_DWORDX8_SGPR:%[0-9]+]]:sreg_256 = S_BUFFER_LOAD_DWORDX8_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 32, align 4)
+  ; GFX8:   [[S_BUFFER_LOAD_DWORDX8_SGPR:%[0-9]+]]:sgpr_256 = S_BUFFER_LOAD_DWORDX8_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 32, align 4)
   ; GFX8:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub0
   ; GFX8:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub1
   ; GFX8:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX8_SGPR]].sub2
@@ -383,7 +383,7 @@ define amdgpu_ps <16 x i32> @s_buffer_load_v16i32(<4 x i32> inreg %rsrc, i32 inr
   ; GFX6:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; GFX6:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX6:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX6:   [[S_BUFFER_LOAD_DWORDX16_SGPR:%[0-9]+]]:sreg_512 = S_BUFFER_LOAD_DWORDX16_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 64, align 4)
+  ; GFX6:   [[S_BUFFER_LOAD_DWORDX16_SGPR:%[0-9]+]]:sgpr_512 = S_BUFFER_LOAD_DWORDX16_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 64, align 4)
   ; GFX6:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub0
   ; GFX6:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub1
   ; GFX6:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub2
@@ -458,7 +458,7 @@ define amdgpu_ps <16 x i32> @s_buffer_load_v16i32(<4 x i32> inreg %rsrc, i32 inr
   ; GFX7:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; GFX7:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX7:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX7:   [[S_BUFFER_LOAD_DWORDX16_SGPR:%[0-9]+]]:sreg_512 = S_BUFFER_LOAD_DWORDX16_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 64, align 4)
+  ; GFX7:   [[S_BUFFER_LOAD_DWORDX16_SGPR:%[0-9]+]]:sgpr_512 = S_BUFFER_LOAD_DWORDX16_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 64, align 4)
   ; GFX7:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub0
   ; GFX7:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub1
   ; GFX7:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub2
@@ -533,7 +533,7 @@ define amdgpu_ps <16 x i32> @s_buffer_load_v16i32(<4 x i32> inreg %rsrc, i32 inr
   ; GFX8:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
   ; GFX8:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX8:   [[S_BUFFER_LOAD_DWORDX16_SGPR:%[0-9]+]]:sreg_512 = S_BUFFER_LOAD_DWORDX16_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 64, align 4)
+  ; GFX8:   [[S_BUFFER_LOAD_DWORDX16_SGPR:%[0-9]+]]:sgpr_512 = S_BUFFER_LOAD_DWORDX16_SGPR [[REG_SEQUENCE]], [[COPY4]], 0, 0 :: (dereferenceable invariant load 64, align 4)
   ; GFX8:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub0
   ; GFX8:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub1
   ; GFX8:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_BUFFER_LOAD_DWORDX16_SGPR]].sub2

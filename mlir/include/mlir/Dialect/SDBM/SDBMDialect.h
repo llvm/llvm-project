@@ -19,6 +19,11 @@ class SDBMDialect : public Dialect {
 public:
   SDBMDialect(MLIRContext *context) : Dialect(getDialectNamespace(), context) {}
 
+  /// Since there are no other virtual methods in this derived class, override
+  /// the destructor so that key methods get defined in the corresponding
+  /// module.
+  ~SDBMDialect() override;
+
   static StringRef getDialectNamespace() { return "sdbm"; }
 
   /// Get the uniquer for SDBM expressions. This should not be used directly.

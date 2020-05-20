@@ -122,7 +122,8 @@ TEST_F(FormatTestSelective, FormatsCommentsLocally) {
             "int b;",
             format("int   a; // comment\n"
                    "// comment 2\n"
-                   "int b;", 28, 0));
+                   "int b;",
+                   28, 0));
   EXPECT_EQ("int aaaaaa; // comment\n"
             "int b;\n"
             "int c; // unrelated comment",
@@ -585,14 +586,13 @@ TEST_F(FormatTestSelective, StopFormattingWhenLeavingScope) {
 
 TEST_F(FormatTestSelective, SelectivelyRequoteJavaScript) {
   Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  EXPECT_EQ(
-      "var x = \"a\";\n"
-      "var x = 'a';\n"
-      "var x = \"a\";",
-      format("var x = \"a\";\n"
-             "var x = \"a\";\n"
-             "var x = \"a\";",
-             20, 0));
+  EXPECT_EQ("var x = \"a\";\n"
+            "var x = 'a';\n"
+            "var x = \"a\";",
+            format("var x = \"a\";\n"
+                   "var x = \"a\";\n"
+                   "var x = \"a\";",
+                   20, 0));
 }
 
 TEST_F(FormatTestSelective, KeepsIndentAfterCommentSectionImport) {

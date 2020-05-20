@@ -18,6 +18,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Errc.h"
@@ -128,6 +129,8 @@ public:
   Symtab *GetSymtab();
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
+  /// Return the Xcode SDK comp_unit was compiled against.
+  virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
@@ -136,12 +139,16 @@ public:
   /// \p comp_unit. Recursively also descends into the referenced external
   /// modules of any encountered compilation unit.
   ///
+  /// This function can be used to traverse Clang -gmodules debug
+  /// information, which is stored in DWARF files separate from the
+  /// object files.
+  ///
   /// \param comp_unit
   ///     When this SymbolFile consists of multiple auxilliary
   ///     SymbolFiles, for example, a Darwin debug map that references
   ///     multiple .o files, comp_unit helps choose the auxilliary
   ///     file. In most other cases comp_unit's symbol file is
-  ///     identiacal with *this.
+  ///     identical with *this.
   ///
   /// \param[in] lambda
   ///     The lambda that should be applied to every function. The lambda can

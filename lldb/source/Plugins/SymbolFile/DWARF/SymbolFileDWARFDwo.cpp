@@ -95,10 +95,10 @@ SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
   return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
 }
 
-size_t SymbolFileDWARFDwo::GetObjCMethodDIEOffsets(
-    lldb_private::ConstString class_name, DIEArray &method_die_offsets) {
-  return GetBaseSymbolFile().GetObjCMethodDIEOffsets(class_name,
-                                                     method_die_offsets);
+void SymbolFileDWARFDwo::GetObjCMethods(
+    lldb_private::ConstString class_name,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 
 UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {

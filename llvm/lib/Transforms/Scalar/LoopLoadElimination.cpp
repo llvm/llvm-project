@@ -377,7 +377,7 @@ public:
 
   /// Determine the pointer alias checks to prove that there are no
   /// intervening stores.
-  SmallVector<RuntimePointerChecking::PointerCheck, 4> collectMemchecks(
+  SmallVector<RuntimePointerCheck, 4> collectMemchecks(
       const SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates) {
 
     SmallPtrSet<Value *, 4> PtrsWrittenOnFwdingPath =
@@ -391,10 +391,10 @@ public:
                    std::mem_fn(&StoreToLoadForwardingCandidate::getLoadPtr));
 
     const auto &AllChecks = LAI.getRuntimePointerChecking()->getChecks();
-    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
+    SmallVector<RuntimePointerCheck, 4> Checks;
 
     copy_if(AllChecks, std::back_inserter(Checks),
-            [&](const RuntimePointerChecking::PointerCheck &Check) {
+            [&](const RuntimePointerCheck &Check) {
               for (auto PtrIdx1 : Check.first->Members)
                 for (auto PtrIdx2 : Check.second->Members)
                   if (needsChecking(PtrIdx1, PtrIdx2, PtrsWrittenOnFwdingPath,
@@ -520,8 +520,7 @@ public:
 
     // Check intervening may-alias stores.  These need runtime checks for alias
     // disambiguation.
-    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks =
-        collectMemchecks(Candidates);
+    SmallVector<RuntimePointerCheck, 4> Checks = collectMemchecks(Candidates);
 
     // Too many checks are likely to outweigh the benefits of forwarding.
     if (Checks.size() > Candidates.size() * CheckPerElim) {
@@ -697,8 +696,8 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  auto &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
-  auto *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
   MemorySSA *MSSA = EnableMSSALoopDependency

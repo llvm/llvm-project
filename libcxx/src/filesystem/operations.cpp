@@ -36,7 +36,7 @@
 #define _LIBCPP_USE_COPYFILE
 #endif
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && _POSIX_TIMERS > 0
 #define _LIBCPP_USE_CLOCK_GETTIME
 #endif
 

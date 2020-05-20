@@ -236,7 +236,7 @@ public:
   }
 
   void *allocate(uptr Size, uptr AlignmentHint = 0, uptr *BlockEnd = nullptr,
-                 bool ZeroContents = false);
+                 FillContentsMode FillContents = NoFill);
 
   void deallocate(void *Ptr);
 
@@ -299,7 +299,8 @@ private:
 // (pending rounding and headers).
 template <class CacheT>
 void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
-                                     uptr *BlockEnd, bool ZeroContents) {
+                                     uptr *BlockEnd,
+                                     FillContentsMode FillContents) {
   DCHECK_GE(Size, AlignmentHint);
   const uptr PageSize = getPageSizeCached();
   const uptr RoundedSize =
@@ -312,8 +313,9 @@ void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
         *BlockEnd = H->BlockEnd;
       void *Ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(H) +
                                            LargeBlock::getHeaderSize());
-      if (ZeroContents)
-        memset(Ptr, 0, H->BlockEnd - reinterpret_cast<uptr>(Ptr));
+      if (FillContents)
+        memset(Ptr, FillContents == ZeroFill ? 0 : PatternFillByte,
+               H->BlockEnd - reinterpret_cast<uptr>(Ptr));
       const uptr BlockSize = H->BlockEnd - reinterpret_cast<uptr>(H);
       {
         ScopedLock L(Mutex);

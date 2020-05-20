@@ -1,5 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
-! OPTIONS: -fopenmp
+! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main
@@ -97,6 +96,12 @@ program main
      a = 3.14
   enddo
   !$omp end teams
+
+  !$omp target teams num_teams(2) defaultmap(tofrom:scalar)
+  do i = 1, N
+      a = 3.14
+  enddo
+  !$omp end target teams
 
   !$omp target map(tofrom:a)
   do i = 1, N

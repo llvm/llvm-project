@@ -3,7 +3,7 @@
 
 // TILE-23004-DAG: #[[strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
 // TILE-20000-DAG: #[[strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
-// TILE-20000-DAG: #[[minmap:.*]] = affine_map<(d0, d1, d2) -> (d0, d1 - d2)>
+// TILE-20000-DAG: #[[minmap:.*]] = affine_map<(d0, d1, d2) -> (2, d1 - d2)>
 // TILE-20000-DAG: #[[subviewstride:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
 
 func @conv_padding(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg1: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg2: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>) {
@@ -24,7 +24,7 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>,
 //   TILE-20000-DAG:   %[[C1:.*]] = constant 1 : index
 //   TILE-20000-DAG:   %[[C2:.*]] = constant 2 : index
 //       TILE-20000:   %[[B:.*]] = dim %[[ARG1]], 0
-//       TILE-20000:   loop.for %[[ivI:.*]] = %[[C0]] to %[[B]] step %[[C2]] {
+//       TILE-20000:   scf.for %[[ivI:.*]] = %[[C0]] to %[[B]] step %[[C2]] {
 //       TILE-20000:     %[[DIM10:.*]] = dim %[[ARG1]], 0
 //       TILE-20000:     %[[EXTENT:.*]] = affine.min #[[minmap]](%[[C2]], %[[DIM10]], %[[ivI]])
 //       TILE-20000:     %[[DIM11:.*]] = dim %[[ARG1]], 1

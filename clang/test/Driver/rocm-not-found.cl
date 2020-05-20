@@ -7,5 +7,7 @@
 // RUN: %clang -### --rocm-path=%s/no-rocm-there -target amdgcn--amdhsa %s 2>&1 | FileCheck %s --check-prefix ERR
 // ERR: cannot find ROCm installation. Provide its path via --rocm-path, or pass -nogpulib.
 
+// Accept nogpulib or nostdlib for OpenCL.
 // RUN: %clang -### -nogpulib --rocm-path=%s/no-rocm-there %s 2>&1 | FileCheck %s --check-prefix OK
+// RUN: %clang -### -nostdlib --rocm-path=%s/no-rocm-there %s 2>&1 | FileCheck %s --check-prefix OK
 // OK-NOT: cannot find ROCm installation.

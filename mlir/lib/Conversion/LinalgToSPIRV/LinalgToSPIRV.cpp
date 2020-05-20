@@ -164,7 +164,7 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   // Get the output element accessed by this reduction.
   Value zero = spirv::ConstantOp::getZero(
-      typeConverter.getIndexType(rewriter.getContext()), loc, &rewriter);
+      typeConverter.getIndexType(rewriter.getContext()), loc, rewriter);
   SmallVector<Value, 1> zeroIndices(originalOutputType.getRank(), zero);
   Value outputElementPtr =
       spirv::getElementPtr(typeConverter, originalOutputType, convertedOutput,
@@ -181,18 +181,18 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
   Value condition = rewriter.create<spirv::GroupNonUniformElectOp>(
       loc, spirv::Scope::Subgroup);
 
-  auto createAtomicOp = [&](OpBuilder *builder) {
+  auto createAtomicOp = [&](OpBuilder &builder) {
 #define CREATE_ATOMIC_BIN_OP(opKind, spvOp)                                    \
   case linalg::RegionMatcher::BinaryOpKind::opKind: {                          \
-    builder->create<spirv::spvOp>(loc, outputElementPtr, spirv::Scope::Device, \
-                                  spirv::MemorySemantics::AcquireRelease,      \
-                                  groupOperation);                             \
+    builder.create<spirv::spvOp>(loc, outputElementPtr, spirv::Scope::Device,  \
+                                 spirv::MemorySemantics::AcquireRelease,       \
+                                 groupOperation);                              \
   } break
     switch (*binaryOpKind) { CREATE_ATOMIC_BIN_OP(IAdd, AtomicIAddOp); }
 #undef CREATE_ATOMIC_BIN_OP
   };
 
-  spirv::SelectionOp::createIfThen(loc, condition, createAtomicOp, &rewriter);
+  spirv::SelectionOp::createIfThen(loc, condition, createAtomicOp, rewriter);
 
   rewriter.eraseOp(genericOp);
   return success();

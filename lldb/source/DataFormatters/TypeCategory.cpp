@@ -112,17 +112,15 @@ bool TypeCategoryImpl::Get(lldb::LanguageType lang,
   if (!IsEnabled() || !IsApplicable(lang))
     return false;
   TypeFilterImpl::SharedPointer filter_sp;
-  bool regex_filter = false;
   // first find both Filter and Synth, and then check which is most recent
 
   if (!GetTypeFiltersContainer()->Get(candidates, filter_sp))
-    regex_filter = GetRegexTypeFiltersContainer()->Get(candidates, filter_sp);
+    GetRegexTypeFiltersContainer()->Get(candidates, filter_sp);
 
-  bool regex_synth = false;
   bool pick_synth = false;
   ScriptedSyntheticChildren::SharedPointer synth;
   if (!GetTypeSyntheticsContainer()->Get(candidates, synth))
-    regex_synth = GetRegexTypeSyntheticsContainer()->Get(candidates, synth);
+    GetRegexTypeSyntheticsContainer()->Get(candidates, synth);
   if (!filter_sp.get() && !synth.get())
     return false;
   else if (!filter_sp.get() && synth.get())

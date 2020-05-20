@@ -64,11 +64,11 @@ public:
   DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
 
   DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-              BranchProbabilityInfo *BPI, uint64_t MaxFreq)
+              const BranchProbabilityInfo *BPI, uint64_t MaxFreq)
       : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq) {
     ShowHeat = false;
-    EdgeWeights = true;
-    RawWeights = true;
+    EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
+    RawWeights = !!BFI;  // Print RawWeights when BFI is available.
   }
 
   const BlockFrequencyInfo *getBFI() { return BFI; }

@@ -156,11 +156,11 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
                 has(ignoringParenImpCasts(integerLiteral(unless(equals(0)))))),
             characterLiteral(), cxxBoolLiteral()));
 
-  Finder->addMatcher(binaryOperator(isComparisonOperator(),
-                                    hasEitherOperand(StringCompareCallExpr),
-                                    hasEitherOperand(InvalidLiteral))
-                         .bind("invalid-comparison"),
-                     this);
+  Finder->addMatcher(
+      binaryOperator(isComparisonOperator(),
+                     hasOperands(StringCompareCallExpr, InvalidLiteral))
+          .bind("invalid-comparison"),
+      this);
 }
 
 void SuspiciousStringCompareCheck::check(

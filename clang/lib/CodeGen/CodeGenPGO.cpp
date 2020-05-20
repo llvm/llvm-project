@@ -1051,8 +1051,7 @@ llvm::MDNode *CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
   if (!PGO.haveRegionCounts())
     return nullptr;
   Optional<uint64_t> CondCount = PGO.getStmtCount(Cond);
-  assert(CondCount.hasValue() && "missing expected loop condition count");
-  if (*CondCount == 0)
+  if (!CondCount || *CondCount == 0)
     return nullptr;
   return createProfileWeights(LoopCount,
                               std::max(*CondCount, LoopCount) - LoopCount);

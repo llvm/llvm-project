@@ -125,8 +125,8 @@ link_directories( ${LLVM_LIBDIR} )
 add_executable( prepare_builtins utils/prepare-builtins.cpp )
 target_compile_options( prepare_builtins PRIVATE ${LLVM_CXX_FLAGS} )
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
-target_link_libraries( prepare_builtins PRIVATE ${LLVM_SYSTEM_LIBS} )
 target_link_libraries( prepare_builtins PRIVATE ${LLVM_LIBS} )
+target_link_libraries( prepare_builtins PRIVATE ${LLVM_SYSTEM_LIBS} )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )

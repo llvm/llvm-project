@@ -76,7 +76,7 @@ static std::string getExprAsString(const clang::Expr &E,
   Text.erase(
       llvm::remove_if(
           Text,
-          [](char C) { return std::isspace(static_cast<unsigned char>(C)); }),
+          [](char C) { return llvm::isSpace(static_cast<unsigned char>(C)); }),
       Text.end());
   return Text;
 }

@@ -67,17 +67,3 @@ entry:
   ret void
 }
 
-; Function Attrs: nounwind
-define void @f_Y0(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; xmm0 SSE register
-; CHECK-LABEL: f_Y0:
-; CHECK:         ## InlineAsm Start
-; CHECK-NEXT:    vpaddq %xmm{{[0-9]+}}, %xmm{{[0-9]+}}, %xmm0
-; CHECK-NEXT:    vpaddq %xmm0, %xmm{{[0-9]+}}, %xmm{{[0-9]+}}
-; CHECK:         ## InlineAsm End
-
-entry:
-  %0 = tail call { <4 x float>, <4 x float> } asm sideeffect "vpaddq $0,$2,$1\0A\09vpaddq $1,$0,$2\0A\09", "=^Yi,=^Y0,^Yi,0,~{dirflag},~{fpsr},~{flags}"(<4 x float> %y, <4 x float> %z)
-  ret void
-}
-

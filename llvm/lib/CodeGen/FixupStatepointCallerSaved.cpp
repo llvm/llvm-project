@@ -57,6 +57,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -82,6 +83,7 @@ static unsigned getRegisterSize(const TargetRegisterInfo &TRI, Register Reg) {
   return TRI.getSpillSize(*RC);
 }
 
+namespace {
 // Cache used frame indexes during statepoint re-write to re-use them in
 // processing next statepoint instruction.
 // Two strategies. One is to preserve the size of spill slot while another one
@@ -282,6 +284,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 bool FixupStatepointCallerSaved::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))

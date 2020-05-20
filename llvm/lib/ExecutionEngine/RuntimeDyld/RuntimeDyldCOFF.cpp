@@ -76,7 +76,7 @@ RuntimeDyldCOFF::loadObject(const object::ObjectFile &O) {
 
 uint64_t RuntimeDyldCOFF::getSymbolOffset(const SymbolRef &Sym) {
   // The value in a relocatable COFF object is the offset.
-  return Sym.getValue();
+  return cantFail(Sym.getValue());
 }
 
 uint64_t RuntimeDyldCOFF::getDLLImportOffset(unsigned SectionID, StubMap &Stubs,

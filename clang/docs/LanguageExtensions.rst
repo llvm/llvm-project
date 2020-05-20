@@ -13,6 +13,7 @@ Clang Language Extensions
    BlockLanguageSpec
    Block-ABI-Apple
    AutomaticReferenceCounting
+   MatrixTypes
 
 Introduction
 ============
@@ -491,6 +492,24 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
 .. [#] While OpenCL and GCC vectors both implement the comparison operator(?:) as a
   'select', they operate somewhat differently. OpenCL selects based on signedness of
   the condition operands, but GCC vectors use normal bool conversions (that is, != 0).
+
+Matrix Types
+============
+
+Clang provides an extension for matrix types, which is currently being
+implemented. See :ref:`the draft specification <matrixtypes>` for more details.
+
+For example, the code below uses the matrix types extension to multiply two 4x4
+float matrices and add the result to a third 4x4 matrix.
+
+.. code-block:: c++
+
+  typedef float m4x4_t __attribute__((matrix_type(4, 4)));
+
+  m4x4_t f(m4x4_t a, m4x4_t b, m4x4_t c) {
+    return a + b * c;
+  }
+
 
 Half-Precision Floating Point
 =============================
@@ -3154,16 +3173,36 @@ at the start of a compound statement (excluding comments). When using within a
 compound statement, the pragma is active within the scope of the compound
 statement.
 
-Currently, only FP contraction can be controlled with the pragma. ``#pragma
-clang fp contract`` specifies whether the compiler should contract a multiply
-and an addition (or subtraction) into a fused FMA operation when supported by
-the target.
+Currently, the following settings can be controlled with this pragma:
+
+``#pragma clang fp reassociate`` allows control over the reassociation
+of floating point expressions. When enabled, this pragma allows the expression
+``x + (y + z)`` to be reassociated as ``(x + y) + z``.
+Reassociation can also occur across multiple statements.
+This pragma can be used to disable reassociation when it is otherwise
+enabled for the translation unit with the ``-fassociative-math`` flag.
+The pragma can take two values: ``on`` and ``off``.
+
+.. code-block:: c++
+
+  float f(float x, float y, float z)
+  {
+    // Enable floating point reassociation across statements
+    #pragma fp reassociate(on)
+    float t = x + y;
+    float v = t + z;
+  }
+
+
+``#pragma clang fp contract`` specifies whether the compiler should
+contract a multiply and an addition (or subtraction) into a fused FMA
+operation when supported by the target.
 
 The pragma can take three values: ``on``, ``fast`` and ``off``.  The ``on``
 option is identical to using ``#pragma STDC FP_CONTRACT(ON)`` and it allows
-fusion as specified the language standard.  The ``fast`` option allows fusiong
+fusion as specified the language standard.  The ``fast`` option allows fusion
 in cases when the language standard does not make this possible (e.g. across
-statements in C)
+statements in C).
 
 .. code-block:: c++
 
@@ -3177,6 +3216,41 @@ statements in C)
 The pragma can also be used with ``off`` which turns FP contraction off for a
 section of the code. This can be useful when fast contraction is otherwise
 enabled for the translation unit with the ``-ffp-contract=fast`` flag.
+
+The ``#pragma float_control`` pragma allows precise floating-point
+semantics and floating-point exception behavior to be specified
+for a section of the source code. This pragma can only appear at file scope or
+at the start of a compound statement (excluding comments). When using within a
+compound statement, the pragma is active within the scope of the compound
+statement.  This pragma is modeled after a Microsoft pragma with the
+same spelling and syntax.  For pragmas specified at file scope, a stack
+is supported so that the ``pragma float_control`` settings can be pushed or popped.
+
+When ``pragma float_control(precise, on)`` is enabled, the section of code
+governed by the pragma uses precise floating point semantics, effectively
+``-ffast-math`` is disabled and ``-ffp-contract=on``
+(fused multiply add) is enabled.
+
+When ``pragma float_control(except, on)`` is enabled, the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-exception-behavior=strict`` is enabled,
+when ``pragma float_control(precise, off)`` is enabled, the section of code
+governed by the pragma behaves as though the command-line option
+``-ffp-exception-behavior=ignore`` is enabled.
+
+The full syntax this pragma supports is
+``float_control(except|precise, on|off [, push])`` and
+``float_control(push|pop)``.
+The ``push`` and ``pop`` forms, including using ``push`` as the optional
+third argument, can only occur at file scope.
+
+.. code-block:: c++
+
+  for(...) {
+    // This block will be compiled with -fno-fast-math and -ffp-contract=on
+    #pragma float_control(precise, on)
+    a = b[i] * c[i] + e;
+  }
 
 Specifying an attribute for multiple declarations (#pragma clang attribute)
 ===========================================================================
@@ -3336,6 +3410,9 @@ Clang supports the following match rules:
 - ``variable(is_global)``: Can be used to apply attributes to global variables
   only.
 
+- ``variable(is_local)``: Can be used to apply attributes to local variables
+  only.
+
 - ``variable(is_parameter)``: Can be used to apply attributes to parameters
   only.
 
@@ -3461,3 +3538,56 @@ Since the size of ``buffer`` can't be known at compile time, Clang will fold
 ``__builtin_object_size(buffer, 0)`` into ``-1``. However, if this was written
 as ``__builtin_dynamic_object_size(buffer, 0)``, Clang will fold it into
 ``size``, providing some extra runtime safety.
+
+Extended Integer Types
+======================
+
+Clang supports a set of extended integer types under the syntax ``_ExtInt(N)``
+where ``N`` is an integer that specifies the number of bits that are used to represent
+the type, including the sign bit. The keyword ``_ExtInt`` is a type specifier, thus
+it can be used in any place a type can, including as a non-type-template-parameter,
+as the type of a bitfield, and as the underlying type of an enumeration.
+
+An extended integer can be declared either signed, or unsigned by using the
+``signed``/``unsigned`` keywords. If no sign specifier is used or if the ``signed``
+keyword is used, the extended integer type is a signed integer and can represent
+negative values.
+
+The ``N`` expression is an integer constant expression, which specifies the number
+of bits used to represent the type, following normal integer representations for
+both signed and unsigned types. Both a signed and unsigned extended integer of the
+same ``N`` value will have the same number of bits in its representation. Many
+architectures don't have a way of representing non power-of-2 integers, so these
+architectures emulate these types using larger integers. In these cases, they are
+expected to follow the 'as-if' rule and do math 'as-if' they were done at the
+specified number of bits.
+
+In order to be consistent with the C language specification, and make the extended
+integer types useful for their intended purpose, extended integers follow the C
+standard integer conversion ranks. An extended integer type has a greater rank than
+any integer type with less precision.  However, they have lower rank than any
+of the built in or other integer types (such as __int128). Usual arithmetic conversions
+also work the same, where the smaller ranked integer is converted to the larger.
+
+The one exception to the C rules for integers for these types is Integer Promotion.
+Unary +, -, and ~ operators typically will promote operands to ``int``. Doing these
+promotions would inflate the size of required hardware on some platforms, so extended
+integer types aren't subject to the integer promotion rules in these cases.
+
+In languages (such as OpenCL) that define shift by-out-of-range behavior as a mask,
+non-power-of-two versions of these types use an unsigned remainder operation to constrain
+the value to the proper range, preventing undefined behavior.
+
+Extended integer types are aligned to the next greatest power-of-2 up to 64 bits.
+The size of these types for the purposes of layout and ``sizeof`` are the number of
+bits aligned to this calculated alignment. This permits the use of these types in
+allocated arrays using common ``sizeof(Array)/sizeof(ElementType)`` pattern.
+
+Extended integer types work with the C _Atomic type modifier, however only precisions
+that are powers-of-2 greater than 8 bit are accepted.
+
+Extended integer types align with existing calling conventions. They have the same size
+and alignment as the smallest basic type that can contain them. Types that are larger
+than 64 bits are handled in the same way as _int128 is handled; they are conceptually
+treated as struct of register size chunks. They number of chunks are the smallest
+number that can contain the types which does not necessarily mean a power-of-2 size.

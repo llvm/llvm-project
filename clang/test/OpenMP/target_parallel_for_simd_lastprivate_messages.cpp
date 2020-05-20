@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
 extern const omp_allocator_handle_t omp_const_mem_alloc;
@@ -101,7 +102,7 @@ int foomain(int argc, char **argv) {
 #pragma omp target parallel for simd lastprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp target parallel for simd allocate(omp_thread_mem_alloc: argc) lastprivate(argc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for simd' directive}}
+#pragma omp target parallel for simd allocate(omp_thread_mem_alloc: argc) lastprivate(argc) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target parallel for simd' directive}} omp50-error {{allocator must be specified in the 'uses_allocators' clause}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target parallel for simd lastprivate(conditional: argc,s) lastprivate(conditional: // omp50-error {{expected expression}} omp45-error 2 {{use of undeclared identifier 'conditional'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error 2 {{calling a private constructor of class 'S6'}} omp50-error {{expected list item of scalar type in 'lastprivate' clause with 'conditional' modifier}}

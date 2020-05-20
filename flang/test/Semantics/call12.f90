@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Test 15.7 C1594 - prohibited assignments in pure subprograms
 
 module used
@@ -15,7 +15,7 @@ module m
     real, pointer :: p
   end type
   type :: hasCoarray
-    real :: co[*]
+    real, allocatable :: co[:]
   end type
  contains
   pure function test(ptr, in, hpd)

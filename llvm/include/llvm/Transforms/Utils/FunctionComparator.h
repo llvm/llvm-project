@@ -332,7 +332,7 @@ private:
   int cmpInlineAsm(const InlineAsm *L, const InlineAsm *R) const;
   int cmpAttrs(const AttributeList L, const AttributeList R) const;
   int cmpRangeMetadata(const MDNode *L, const MDNode *R) const;
-  int cmpOperandBundlesSchema(const Instruction *L, const Instruction *R) const;
+  int cmpOperandBundlesSchema(const CallBase &LCS, const CallBase &RCS) const;
 
   /// Compare two GEPs for equivalent pointer arithmetic.
   /// Parts to be compared for each comparison stage,

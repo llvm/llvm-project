@@ -243,8 +243,8 @@ void ModFileWriter::PutSymbol(
                  [&](const CommonBlockDetails &x) {
                    decls_ << "common/" << symbol.name();
                    char sep = '/';
-                   for (const Symbol &object : x.objects()) {
-                     decls_ << sep << object.name();
+                   for (const auto &object : x.objects()) {
+                     decls_ << sep << object->name();
                      sep = ',';
                    }
                    decls_ << '\n';
@@ -414,36 +414,25 @@ void ModFileWriter::PutUseExtraAttr(
 // Collect the symbols of this scope sorted by their original order, not name.
 // Namelists are an exception: they are sorted after other symbols.
 SymbolVector CollectSymbols(const Scope &scope) {
-  SymbolSet symbols; // to prevent duplicates
   SymbolVector sorted;
   SymbolVector namelist;
-  SymbolVector common;
-  sorted.reserve(scope.size() + scope.commonBlocks().size());
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (!symbol.test(Symbol::Flag::ParentComp)) {
-      if (symbols.insert(symbol).second) {
-        if (symbol.has<NamelistDetails>()) {
-          namelist.push_back(symbol);
-        } else {
-          sorted.push_back(symbol);
-        }
+  std::size_t commonSize{scope.commonBlocks().size()};
+  auto symbols{scope.GetSymbols()};
+  sorted.reserve(symbols.size() + commonSize);
+  for (SymbolRef symbol : symbols) {
+    if (!symbol->test(Symbol::Flag::ParentComp)) {
+      if (symbol->has<NamelistDetails>()) {
+        namelist.push_back(symbol);
+      } else {
+        sorted.push_back(symbol);
       }
     }
   }
+  sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
-    const Symbol &symbol{*pair.second};
-    if (symbols.insert(symbol).second) {
-      common.push_back(symbol);
-    }
+    sorted.push_back(*pair.second);
   }
-  // sort normal symbols, then namelists, then common blocks:
-  auto cursor{sorted.begin()};
-  std::sort(cursor, sorted.end());
-  cursor = sorted.insert(sorted.end(), namelist.begin(), namelist.end());
-  std::sort(cursor, sorted.end());
-  cursor = sorted.insert(sorted.end(), common.begin(), common.end());
-  std::sort(cursor, sorted.end());
+  std::sort(sorted.end() - commonSize, sorted.end());
   return sorted;
 }
 
@@ -844,7 +833,7 @@ void SubprogramSymbolCollector::Collect() {
   for (const auto &pair : scope_) {
     const Symbol &symbol{*pair.second};
     if (const auto *useDetails{symbol.detailsIf<UseDetails>()}) {
-      if (useSet_.count(useDetails->symbol()) > 0) {
+      if (useSet_.count(useDetails->symbol().GetUltimate()) > 0) {
         need_.push_back(symbol);
       }
     }
@@ -886,8 +875,8 @@ void SubprogramSymbolCollector::DoSymbol(
                    }
                  },
                  [this](const CommonBlockDetails &details) {
-                   for (const Symbol &object : details.objects()) {
-                     DoSymbol(object);
+                   for (const auto &object : details.objects()) {
+                     DoSymbol(*object);
                    }
                  },
                  [](const auto &) {},

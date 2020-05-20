@@ -204,7 +204,7 @@ name:            test8
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
 
     $x1 = COPY $x0
     CBNZX $x1, %bb.2
@@ -241,7 +241,7 @@ body:             |
     CBNZX $x0, %bb.2
 
   bb.1:
-    liveins: $x0, $x2
+    liveins: $x0
 
     $x0 = COPY $xzr
     B %bb.3

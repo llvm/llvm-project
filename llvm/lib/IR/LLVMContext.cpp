@@ -68,6 +68,11 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "cfguardtarget operand bundle id drifted!");
   (void)CFGuardTargetEntry;
 
+  auto *PreallocatedEntry = pImpl->getOrInsertBundleTag("preallocated");
+  assert(PreallocatedEntry->second == LLVMContext::OB_preallocated &&
+         "preallocated operand bundle id drifted!");
+  (void)PreallocatedEntry;
+
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
   assert(SingleThreadSSID == SyncScope::SingleThread &&
@@ -275,6 +280,11 @@ void LLVMContext::getMDKindNames(SmallVectorImpl<StringRef> &Names) const {
 
 void LLVMContext::getOperandBundleTags(SmallVectorImpl<StringRef> &Tags) const {
   pImpl->getOperandBundleTags(Tags);
+}
+
+StringMapEntry<uint32_t> *
+LLVMContext::getOrInsertBundleTag(StringRef TagName) const {
+  return pImpl->getOrInsertBundleTag(TagName);
 }
 
 uint32_t LLVMContext::getOperandBundleTagID(StringRef Tag) const {

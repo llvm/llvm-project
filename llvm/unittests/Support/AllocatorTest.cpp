@@ -206,7 +206,7 @@ public:
     return Slab;
   }
 
-  void Deallocate(void *Slab, size_t Size) {
+  void Deallocate(void *Slab, size_t /*Size*/, size_t /*Alignment*/) {
     free(((void**)Slab)[-1]);
   }
 

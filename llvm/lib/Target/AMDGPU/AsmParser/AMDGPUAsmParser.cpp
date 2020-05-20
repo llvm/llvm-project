@@ -278,6 +278,7 @@ public:
            isRegClass(AMDGPU::VReg_96RegClassID) ||
            isRegClass(AMDGPU::VReg_128RegClassID) ||
            isRegClass(AMDGPU::VReg_160RegClassID) ||
+           isRegClass(AMDGPU::VReg_192RegClassID) ||
            isRegClass(AMDGPU::VReg_256RegClassID) ||
            isRegClass(AMDGPU::VReg_512RegClassID) ||
            isRegClass(AMDGPU::VReg_1024RegClassID);
@@ -656,7 +657,7 @@ public:
   bool isSendMsg() const;
   bool isSwizzle() const;
   bool isSMRDOffset8() const;
-  bool isSMRDOffset20() const;
+  bool isSMEMOffset() const;
   bool isSMRDLiteralOffset() const;
   bool isDPP8() const;
   bool isDPPCtrl() const;
@@ -1325,9 +1326,11 @@ private:
   void errorExpTgt();
   OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
+  SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
 
   bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst);
   bool validateEarlyClobberLimitations(const MCInst &Inst);
@@ -1404,7 +1407,7 @@ public:
   AMDGPUOperand::Ptr defaultSLC() const;
 
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
-  AMDGPUOperand::Ptr defaultSMRDOffset20() const;
+  AMDGPUOperand::Ptr defaultSMEMOffset() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
   AMDGPUOperand::Ptr defaultFlatOffset() const;
 
@@ -1915,6 +1918,7 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       case 3: return AMDGPU::VReg_96RegClassID;
       case 4: return AMDGPU::VReg_128RegClassID;
       case 5: return AMDGPU::VReg_160RegClassID;
+      case 6: return AMDGPU::VReg_192RegClassID;
       case 8: return AMDGPU::VReg_256RegClassID;
       case 16: return AMDGPU::VReg_512RegClassID;
       case 32: return AMDGPU::VReg_1024RegClassID;
@@ -1933,7 +1937,10 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       default: return -1;
       case 1: return AMDGPU::SGPR_32RegClassID;
       case 2: return AMDGPU::SGPR_64RegClassID;
+      case 3: return AMDGPU::SGPR_96RegClassID;
       case 4: return AMDGPU::SGPR_128RegClassID;
+      case 5: return AMDGPU::SGPR_160RegClassID;
+      case 6: return AMDGPU::SGPR_192RegClassID;
       case 8: return AMDGPU::SGPR_256RegClassID;
       case 16: return AMDGPU::SGPR_512RegClassID;
     }
@@ -1942,7 +1949,11 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       default: return -1;
       case 1: return AMDGPU::AGPR_32RegClassID;
       case 2: return AMDGPU::AReg_64RegClassID;
+      case 3: return AMDGPU::AReg_96RegClassID;
       case 4: return AMDGPU::AReg_128RegClassID;
+      case 5: return AMDGPU::AReg_160RegClassID;
+      case 6: return AMDGPU::AReg_192RegClassID;
+      case 8: return AMDGPU::AReg_256RegClassID;
       case 16: return AMDGPU::AReg_512RegClassID;
       case 32: return AMDGPU::AReg_1024RegClassID;
     }
@@ -3386,6 +3397,46 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
   return true;
 }
 
+SMLoc AMDGPUAsmParser::getSMEMOffsetLoc(const OperandVector &Operands) const {
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    if (Op.isSMEMOffset())
+      return Op.getStartLoc();
+  }
+  return getLoc();
+}
+
+bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
+                                         const OperandVector &Operands) {
+  if (isCI() || isSI())
+    return true;
+
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & SIInstrFlags::SMRD) == 0)
+    return true;
+
+  auto Opcode = Inst.getOpcode();
+  auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::offset);
+  if (OpNum == -1)
+    return true;
+
+  const auto &Op = Inst.getOperand(OpNum);
+  if (!Op.isImm())
+    return true;
+
+  uint64_t Offset = Op.getImm();
+  bool IsBuffer = AMDGPU::getSMEMIsBuffer(Opcode);
+  if (AMDGPU::isLegalSMRDEncodedUnsignedOffset(getSTI(), Offset) ||
+      AMDGPU::isLegalSMRDEncodedSignedOffset(getSTI(), Offset, IsBuffer))
+    return true;
+
+  Error(getSMEMOffsetLoc(Operands),
+        (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset" :
+                               "expected a 21-bit signed offset");
+
+  return false;
+}
+
 bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
   unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
@@ -3561,6 +3612,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateFlatOffset(Inst, Operands)) {
+    return false;
+  }
+  if (!validateSMEMOffset(Inst, Operands)) {
     return false;
   }
 
@@ -6062,8 +6116,8 @@ bool AMDGPUOperand::isSMRDOffset8() const {
   return isImm() && isUInt<8>(getImm());
 }
 
-bool AMDGPUOperand::isSMRDOffset20() const {
-  return isImm() && isUInt<20>(getImm());
+bool AMDGPUOperand::isSMEMOffset() const {
+  return isImm(); // Offset range is checked later by validator.
 }
 
 bool AMDGPUOperand::isSMRDLiteralOffset() const {
@@ -6076,7 +6130,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset8() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset20() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMEMOffset() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 
@@ -7088,6 +7142,8 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isInterpAttr() ? Match_Success : Match_InvalidOperand;
   case MCK_AttrChan:
     return Operand.isAttrChan() ? Match_Success : Match_InvalidOperand;
+  case MCK_ImmSMEMOffset:
+    return Operand.isSMEMOffset() ? Match_Success : Match_InvalidOperand;
   case MCK_SReg_64:
   case MCK_SReg_64_XEXEC:
     // Null is defined as a 32-bit register but

@@ -4,10 +4,6 @@
 !! See https://llvm.org/LICENSE.txt for license information.
 !! SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-test sinf 10000
-test cosf 10000
-test sincosf_sinf 5000
-test sincosf_cosf 5000
 test tanf 10000
 test expf 10000
 test exp2f 10000

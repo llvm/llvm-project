@@ -13,13 +13,12 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
 
 namespace llvm {
 
-class GlobalValue;
+class MCSymbol;
 class Module;
 
 class RecordStreamer : public MCStreamer {

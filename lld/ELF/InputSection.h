@@ -397,6 +397,11 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 // The list of all input sections.
 extern std::vector<InputSectionBase *> inputSections;
 
+// The set of TOC entries (.toc + addend) for which we should not apply
+// toc-indirect to toc-relative relaxation. const Symbol * refers to the
+// STT_SECTION symbol associated to the .toc input section.
+extern llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
+
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

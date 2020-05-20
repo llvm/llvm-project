@@ -52,8 +52,8 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
       // Match [=!]= with a zero on one side and a string.find on the other.
       binaryOperator(
           hasAnyOperatorName("==", "!="),
-          hasEitherOperand(ignoringParenImpCasts(ZeroLiteral)),
-          hasEitherOperand(ignoringParenImpCasts(StringFind.bind("findexpr"))))
+          hasOperands(ignoringParenImpCasts(ZeroLiteral),
+                      ignoringParenImpCasts(StringFind.bind("findexpr"))))
           .bind("expr"),
       this);
 }

@@ -5,9 +5,9 @@
 
 define i32 @a(i1 zeroext %x, i1 zeroext %y) {
 ; CHECK-LABEL: @a(
-; CHECK-NEXT:    [[CONV3_NEG:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[CONV3_NEG1:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[X:%.*]], i32 2, i32 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[CONV3_NEG]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[CONV3_NEG1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %conv = zext i1 %x to i32
@@ -95,8 +95,8 @@ declare void @use(i64)
 
 define i64 @zext_negate(i1 %A) {
 ; CHECK-LABEL: @zext_negate(
-; CHECK-NEXT:    [[SUB:%.*]] = sext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[EXT_NEG]]
 ;
   %ext = zext i1 %A to i64
   %sub = sub i64 0, %ext
@@ -105,10 +105,10 @@ define i64 @zext_negate(i1 %A) {
 
 define i64 @zext_negate_extra_use(i1 %A) {
 ; CHECK-LABEL: @zext_negate_extra_use(
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sext i1 [[A]] to i64
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[A]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[EXT]])
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    ret i64 [[EXT_NEG]]
 ;
   %ext = zext i1 %A to i64
   %sub = sub i64 0, %ext
@@ -118,8 +118,8 @@ define i64 @zext_negate_extra_use(i1 %A) {
 
 define <2 x i64> @zext_negate_vec(<2 x i1> %A) {
 ; CHECK-LABEL: @zext_negate_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = sext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext <2 x i1> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[EXT_NEG]]
 ;
   %ext = zext <2 x i1> %A to <2 x i64>
   %sub = sub <2 x i64> zeroinitializer, %ext
@@ -128,8 +128,8 @@ define <2 x i64> @zext_negate_vec(<2 x i1> %A) {
 
 define <2 x i64> @zext_negate_vec_undef_elt(<2 x i1> %A) {
 ; CHECK-LABEL: @zext_negate_vec_undef_elt(
-; CHECK-NEXT:    [[SUB:%.*]] = sext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext <2 x i1> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[EXT_NEG]]
 ;
   %ext = zext <2 x i1> %A to <2 x i64>
   %sub = sub <2 x i64> <i64 0, i64 undef>, %ext
@@ -181,8 +181,8 @@ define <2 x i64> @zext_sub_const_vec_undef_elt(<2 x i1> %A) {
 
 define i64 @sext_negate(i1 %A) {
 ; CHECK-LABEL: @sext_negate(
-; CHECK-NEXT:    [[SUB:%.*]] = zext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[EXT_NEG]]
 ;
   %ext = sext i1 %A to i64
   %sub = sub i64 0, %ext
@@ -191,10 +191,10 @@ define i64 @sext_negate(i1 %A) {
 
 define i64 @sext_negate_extra_use(i1 %A) {
 ; CHECK-LABEL: @sext_negate_extra_use(
-; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = zext i1 [[A]] to i64
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[A]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[EXT]])
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    ret i64 [[EXT_NEG]]
 ;
   %ext = sext i1 %A to i64
   %sub = sub i64 0, %ext
@@ -204,8 +204,8 @@ define i64 @sext_negate_extra_use(i1 %A) {
 
 define <2 x i64> @sext_negate_vec(<2 x i1> %A) {
 ; CHECK-LABEL: @sext_negate_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[EXT_NEG]]
 ;
   %ext = sext <2 x i1> %A to <2 x i64>
   %sub = sub <2 x i64> zeroinitializer, %ext
@@ -214,8 +214,8 @@ define <2 x i64> @sext_negate_vec(<2 x i1> %A) {
 
 define <2 x i64> @sext_negate_vec_undef_elt(<2 x i1> %A) {
 ; CHECK-LABEL: @sext_negate_vec_undef_elt(
-; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[EXT_NEG]]
 ;
   %ext = sext <2 x i1> %A to <2 x i64>
   %sub = sub <2 x i64> <i64 0, i64 undef>, %ext
@@ -267,8 +267,8 @@ define <2 x i64> @sext_sub_const_vec_undef_elt(<2 x i1> %A) {
 
 define i8 @sext_sub(i8 %x, i1 %y) {
 ; CHECK-LABEL: @sext_sub(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SEXT_NEG:%.*]] = zext i1 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[SEXT_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[SUB]]
 ;
   %sext = sext i1 %y to i8
@@ -280,8 +280,8 @@ define i8 @sext_sub(i8 %x, i1 %y) {
 
 define <2 x i8> @sext_sub_vec(<2 x i8> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @sext_sub_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[Y:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SEXT_NEG:%.*]] = zext <2 x i1> [[Y:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[SEXT_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
   %sext = sext <2 x i1> %y to <2 x i8>
@@ -293,8 +293,8 @@ define <2 x i8> @sext_sub_vec(<2 x i8> %x, <2 x i1> %y) {
 
 define <2 x i8> @sext_sub_vec_nsw(<2 x i8> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @sext_sub_vec_nsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[Y:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SEXT_NEG:%.*]] = zext <2 x i1> [[Y:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[SEXT_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
   %sext = sext <2 x i1> %y to <2 x i8>
@@ -306,8 +306,8 @@ define <2 x i8> @sext_sub_vec_nsw(<2 x i8> %x, <2 x i1> %y) {
 
 define i8 @sext_sub_nuw(i8 %x, i1 %y) {
 ; CHECK-LABEL: @sext_sub_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SEXT_NEG:%.*]] = zext i1 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[SEXT_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[SUB]]
 ;
   %sext = sext i1 %y to i8
@@ -393,8 +393,8 @@ define i32 @zextbool_sub_uses(i1 %c, i32 %x) {
 
 define <4 x i32> @zextbool_sub_vector(<4 x i1> %c, <4 x i32> %x) {
 ; CHECK-LABEL: @zextbool_sub_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i1> [[C:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[S:%.*]] = add <4 x i32> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = sext <4 x i1> [[C:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[S:%.*]] = add <4 x i32> [[B_NEG]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
   %b = zext <4 x i1> %c to <4 x i32>

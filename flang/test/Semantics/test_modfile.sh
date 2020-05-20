@@ -21,7 +21,7 @@ for src in "$@"; do
   (
     cd $temp
     ls -1 *.mod > prev_files
-    $F18 $F18_OPTIONS $USER_OPTIONS $src
+    $F18 $F18_OPTIONS $src
     ls -1 *.mod | comm -13 prev_files -
   ) > $actual_files
   expected_files=$(sed -n 's/^!Expect: \(.*\)/\1/p' $src | sort)

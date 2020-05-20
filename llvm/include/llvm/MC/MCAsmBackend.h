@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
@@ -24,15 +23,14 @@ class MCAsmLayout;
 class MCAssembler;
 class MCCFIInstruction;
 struct MCFixupKindInfo;
-class MCFragment;
 class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
-class MCRelaxableFragment;
 class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
+class StringRef;
 
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
@@ -163,12 +161,11 @@ public:
 
   /// Relax the instruction in the given fragment to the next wider instruction.
   ///
-  /// \param Inst The instruction to relax, which may be the same as the
-  /// output.
+  /// \param [out] Inst The instruction to relax, which is also the relaxed
+  /// instruction.
   /// \param STI the subtarget information for the associated instruction.
-  /// \param [out] Res On return, the relaxed instruction.
-  virtual void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                                MCInst &Res) const = 0;
+  virtual void relaxInstruction(MCInst &Inst,
+                                const MCSubtargetInfo &STI) const {};
 
   /// @}
 

@@ -35,6 +35,7 @@ class AtosSymbolizer : public SymbolizerTool {
 
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override;
   bool SymbolizeData(uptr addr, DataInfo *info) override;
+  void LateInitialize() override;
 
  private:
   AtosSymbolizerProcess *process_;

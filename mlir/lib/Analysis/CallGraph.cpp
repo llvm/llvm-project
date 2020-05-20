@@ -87,9 +87,8 @@ static void computeCallGraph(Operation *op, CallGraph &cg,
   }
 
   for (Region &region : op->getRegions())
-    for (Block &block : region)
-      for (Operation &nested : block)
-        computeCallGraph(&nested, cg, parentNode, resolveCalls);
+    for (Operation &nested : region.getOps())
+      computeCallGraph(&nested, cg, parentNode, resolveCalls);
 }
 
 CallGraph::CallGraph(Operation *op) : externalNode(/*callableRegion=*/nullptr) {
@@ -179,7 +178,8 @@ void CallGraph::print(raw_ostream &os) const {
     auto *parentOp = callableRegion->getParentOp();
     os << "'" << callableRegion->getParentOp()->getName() << "' - Region #"
        << callableRegion->getRegionNumber();
-    if (auto attrs = parentOp->getAttrList().getDictionary())
+    auto attrs = parentOp->getAttrDictionary();
+    if (!attrs.empty())
       os << " : " << attrs;
   };
 

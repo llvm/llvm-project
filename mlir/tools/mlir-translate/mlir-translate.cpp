@@ -50,9 +50,13 @@ static llvm::cl::opt<bool> verifyDiagnostics(
 namespace mlir {
 // Defined in the test directory, no public header.
 void registerTestRoundtripSPIRV();
+void registerTestRoundtripDebugSPIRV();
 } // namespace mlir
 
-static void registerTestTranslations() { registerTestRoundtripSPIRV(); }
+static void registerTestTranslations() {
+  registerTestRoundtripSPIRV();
+  registerTestRoundtripDebugSPIRV();
+}
 
 int main(int argc, char **argv) {
   registerAllDialects();

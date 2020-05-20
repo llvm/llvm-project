@@ -773,6 +773,19 @@ class Neon_Dot_Intrinsic
 def int_arm_neon_udot : Neon_Dot_Intrinsic;
 def int_arm_neon_sdot : Neon_Dot_Intrinsic;
 
+// v8.6-A Matrix Multiply Intrinsics
+class Neon_MatMul_Intrinsic
+  : Intrinsic<[llvm_anyvector_ty],
+              [LLVMMatchType<0>, llvm_anyvector_ty,
+               LLVMMatchType<1>],
+              [IntrNoMem]>;
+def int_arm_neon_ummla  : Neon_MatMul_Intrinsic;
+def int_arm_neon_smmla  : Neon_MatMul_Intrinsic;
+def int_arm_neon_usmmla : Neon_MatMul_Intrinsic;
+def int_arm_neon_usdot  : Neon_Dot_Intrinsic;
+
+// v8.6-A Bfloat Intrinsics
+
 def int_arm_cls: Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
@@ -1080,7 +1093,7 @@ def int_arm_mve_vmull_poly: Intrinsic<
 
 // The first two parameters are compile-time constants:
 // * Halving: 0 means  halving (vhcaddq), 1 means non-halving (vcaddq) 
-//            instruction. Note: the flag is inverted to match the corresonding
+//            instruction. Note: the flag is inverted to match the corresponding
 //            bit in the instruction encoding
 // * Rotation angle: 0 mean 90 deg, 1 means 180 deg
 defm int_arm_mve_vcaddq : MVEMXPredicated<

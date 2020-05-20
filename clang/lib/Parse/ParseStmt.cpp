@@ -354,13 +354,13 @@ Retry:
 
   case tok::annot_pragma_fp_contract:
     ProhibitAttributes(Attrs);
-    Diag(Tok, diag::err_pragma_fp_contract_scope);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "fp_contract";
     ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_fp:
     ProhibitAttributes(Attrs);
-    Diag(Tok, diag::err_pragma_fp_scope);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "clang fp";
     ConsumeAnnotationToken();
     return StmtError();
 
@@ -368,6 +368,12 @@ Retry:
     ProhibitAttributes(Attrs);
     HandlePragmaFEnvAccess();
     return StmtEmpty();
+
+  case tok::annot_pragma_float_control:
+    ProhibitAttributes(Attrs);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope) << "float_control";
+    ConsumeAnnotationToken();
+    return StmtError();
 
   case tok::annot_pragma_opencl_extension:
     ProhibitAttributes(Attrs);
@@ -936,6 +942,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_fenv_access:
       HandlePragmaFEnvAccess();
+      break;
+    case tok::annot_pragma_float_control:
+      HandlePragmaFloatControl();
       break;
     case tok::annot_pragma_ms_pointers_to_members:
       HandlePragmaMSPointersToMembers();
@@ -1922,7 +1931,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
                                : ForRangeInfo.ColonLoc,
-               getLangOpts().CPlusPlus2a
+               getLangOpts().CPlusPlus20
                    ? diag::warn_cxx17_compat_for_range_init_stmt
                    : diag::ext_for_range_init_stmt)
               << (FirstPart.get() ? FirstPart.get()->getSourceRange()

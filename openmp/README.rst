@@ -130,6 +130,10 @@ Options for all Libraries
   Specify full path to ``FileCheck`` executable for running tests.  The default
   is to search the ``PATH`` and the directory in **OPENMP_LLVM_TOOLS_DIR**.
 
+**OPENMP_NOT_EXECUTABLE** = ``/path/to/not``
+  Specify full path to ``not`` executable for running tests.  The default
+  is to search the ``PATH`` and the directory in **OPENMP_LLVM_TOOLS_DIR**.
+
 Options for ``libomp``
 ----------------------
 

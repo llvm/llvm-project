@@ -66,6 +66,8 @@ MCELFStreamer &RISCVTargetELFStreamer::getStreamer() {
 
 void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}

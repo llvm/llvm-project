@@ -129,7 +129,7 @@ entry:
 ; CHECK-DAG: std 30, -16(1)
 ; CHECK-DAG: mr 30, 1
 ; CHECK-DAG: std 0, 16(1)
-; CHECK-DAG: subfc 0, [[REG3]], [[REG2]]
+; CHECK-DAG: subc 0, [[REG2]], [[REG3]]
 ; CHECK: stdux 1, 1, 0
 
 ; CHECK: .cfi_def_cfa_register r30

@@ -15,10 +15,10 @@
 
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/Dominance.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/Support/MathExtras.h"
@@ -175,7 +175,6 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 
   // Construct the new operation using this memref.
   OperationState state(op->getLoc(), op->getName());
-  state.setOperandListToResizable(op->hasResizableOperandsList());
   state.operands.reserve(op->getNumOperands() + extraIndices.size());
   // Insert the non-memref operands.
   state.operands.append(op->operand_begin(),

@@ -338,7 +338,7 @@ def : PState<"PAN",     0b00100>;
 // v8.2a "User Access Override" extension-specific PStates
 let Requires = [{ {AArch64::FeaturePsUAO} }] in
 def : PState<"UAO",     0b00011>;
-// v8.4a timining insensitivity of data processing instructions
+// v8.4a timing insensitivity of data processing instructions
 let Requires = [{ {AArch64::FeatureDIT} }] in
 def : PState<"DIT",     0b11010>;
 // v8.5a Spectre Mitigation
@@ -1331,7 +1331,6 @@ def : RWSysReg<"PMMIR_EL1", 0b11, 0b000, 0b1001, 0b1110, 0b110>;
 let Requires = [{ {AArch64::FeatureRASv8_4} }] in {
 def : RWSysReg<"ERXPFGCTL_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b101>;
 def : RWSysReg<"ERXPFGCDN_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b110>;
-def : RWSysReg<"ERXTS_EL1",     0b11, 0b000, 0b0101, 0b0101, 0b111>;
 def : RWSysReg<"ERXMISC2_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b010>;
 def : RWSysReg<"ERXMISC3_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b011>;
 def : ROSysReg<"ERXPFGF_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b100>;
@@ -1358,7 +1357,7 @@ def : RWSysReg<"MPAMVPM7_EL2", 0b11, 0b100, 0b1010, 0b0110, 0b111>;
 def : ROSysReg<"MPAMIDR_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b100>;
 } //FeatureMPAM
 
-// v8.4a Activitiy Monitor registers
+// v8.4a Activity Monitor registers
 //                                 Op0   Op1    CRn     CRm     Op2
 let Requires = [{ {AArch64::FeatureAM} }] in {
 def : RWSysReg<"AMCR_EL0",         0b11, 0b011, 0b1101, 0b0010, 0b000>;
@@ -1424,7 +1423,7 @@ def : RWSysReg<"TRFCR_EL2",        0b11, 0b100, 0b0001, 0b0010, 0b001>;
 def : RWSysReg<"TRFCR_EL12",       0b11, 0b101, 0b0001, 0b0010, 0b001>;
 } //FeatureTRACEV8_4
 
-// v8.4a Timining insensitivity of data processing instructions
+// v8.4a Timing insensitivity of data processing instructions
 // DIT: Data Independent Timing instructions
 //                                 Op0   Op1    CRn     CRm     Op2
 let Requires = [{ {AArch64::FeatureDIT} }] in {

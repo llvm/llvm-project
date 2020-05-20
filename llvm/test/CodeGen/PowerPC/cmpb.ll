@@ -123,11 +123,9 @@ entry:
   ret i32 %or55
 
 ; CHECK-LABEL: @test32p1
-; CHECK: li [[REG1:[0-9]+]], 0
-; CHECK: cmpb [[REG4:[0-9]+]], 4, 3
-; CHECK: oris [[REG2:[0-9]+]], [[REG1]], 65287
-; CHECK: ori [[REG3:[0-9]+]], [[REG2]], 65535
-; CHECK: and 3, [[REG4]], [[REG3]]
+; CHECK: cmpb [[REG1:[0-9]+]], 4, 3
+; CHECK: rldicl [[REG2:[0-9]+]], [[REG1]], 40, 5 
+; CHECK: rldicl 3, [[REG2]], 24, 32  
 ; CHECK: blr
 }
 
@@ -147,11 +145,9 @@ entry:
   ret i32 %or37
 
 ; CHECK-LABEL: @test32p2
-; CHECK: li [[REG1:[0-9]+]], 0
-; CHECK: cmpb [[REG4:[0-9]+]], 4, 3
-; CHECK: oris [[REG2:[0-9]+]], [[REG1]], 65280
-; CHECK: ori [[REG3:[0-9]+]], [[REG2]], 65535
-; CHECK: and 3, [[REG4]], [[REG3]]
+; CHECK: cmpb [[REG1:[0-9]+]], 4, 3
+; CHECK: rldicl [[REG2:[0-9]+]], [[REG1]], 40, 8 
+; CHECK: rldicl 3, [[REG2]], 24, 32 
 ; CHECK: blr
 }
 

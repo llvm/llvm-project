@@ -15,7 +15,6 @@
 #define LLVM_OPENMP_CONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 class Type;
@@ -23,6 +22,7 @@ class Module;
 class ArrayType;
 class StructType;
 class PointerType;
+class StringRef;
 class FunctionType;
 
 namespace omp {

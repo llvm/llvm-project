@@ -13,6 +13,52 @@
 
 namespace Fortran::semantics {
 
+static constexpr inline OmpClauseSet doAllowedClauses{OmpClause::PRIVATE,
+    OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE, OmpClause::LINEAR,
+    OmpClause::REDUCTION};
+static constexpr inline OmpClauseSet doAllowedOnceClauses{
+    OmpClause::SCHEDULE, OmpClause::COLLAPSE, OmpClause::ORDERED};
+
+static constexpr inline OmpClauseSet simdAllowedClauses{OmpClause::LINEAR,
+    OmpClause::ALIGNED, OmpClause::PRIVATE, OmpClause::LASTPRIVATE,
+    OmpClause::REDUCTION};
+static constexpr inline OmpClauseSet simdAllowedOnceClauses{
+    OmpClause::COLLAPSE, OmpClause::SAFELEN, OmpClause::SIMDLEN};
+
+static constexpr inline OmpClauseSet parallelAllowedClauses{OmpClause::DEFAULT,
+    OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE, OmpClause::SHARED,
+    OmpClause::COPYIN, OmpClause::REDUCTION};
+static constexpr inline OmpClauseSet parallelAllowedOnceClauses{
+    OmpClause::IF, OmpClause::NUM_THREADS, OmpClause::PROC_BIND};
+
+static constexpr inline OmpClauseSet taskloopAllowedClauses{OmpClause::SHARED,
+    OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE,
+    OmpClause::DEFAULT, OmpClause::UNTIED, OmpClause::MERGEABLE,
+    OmpClause::NOGROUP};
+static constexpr inline OmpClauseSet taskloopAllowedOnceClauses{
+    OmpClause::COLLAPSE, OmpClause::IF, OmpClause::FINAL, OmpClause::PRIORITY};
+static constexpr inline OmpClauseSet taskloopAllowedExclusiveClauses{
+    OmpClause::GRAINSIZE, OmpClause::NUM_TASKS};
+
+static constexpr inline OmpClauseSet distributeAllowedClauses{
+    OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE};
+static constexpr inline OmpClauseSet distributeAllowedOnceClauses{
+    OmpClause::COLLAPSE, OmpClause::DIST_SCHEDULE};
+
+static constexpr inline OmpClauseSet targetAllowedClauses{OmpClause::IF,
+    OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE, OmpClause::MAP,
+    OmpClause::IS_DEVICE_PTR, OmpClause::DEPEND};
+static constexpr inline OmpClauseSet targetAllowedOnceClauses{
+    OmpClause::DEVICE, OmpClause::DEFAULTMAP, OmpClause::NOWAIT};
+
+static constexpr inline OmpClauseSet teamsAllowedClauses{OmpClause::PRIVATE,
+    OmpClause::FIRSTPRIVATE, OmpClause::SHARED, OmpClause::REDUCTION};
+static constexpr inline OmpClauseSet teamsAllowedOnceClauses{
+    OmpClause::NUM_TEAMS, OmpClause::THREAD_LIMIT, OmpClause::DEFAULT};
+
+static constexpr inline OmpClauseSet sectionsAllowedClauses{OmpClause::PRIVATE,
+    OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE, OmpClause::REDUCTION};
+
 std::string OmpStructureChecker::ContextDirectiveAsFortran() {
   auto dir{EnumToString(GetContext().directive)};
   std::replace(dir.begin(), dir.end(), '_', ' ');
@@ -145,26 +191,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
             OmpDirective::MASTER});
 
     PushContext(beginDir.source, OmpDirective::DO);
-    OmpClauseSet allowed{OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE,
-        OmpClause::LASTPRIVATE, OmpClause::LINEAR, OmpClause::REDUCTION};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{
-        OmpClause::SCHEDULE, OmpClause::COLLAPSE, OmpClause::ORDERED};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(doAllowedClauses);
+    SetContextAllowedOnce(doAllowedOnceClauses);
   } break;
 
   // 2.11.1 parallel-do-clause -> parallel-clause |
   //                              do-clause
   case parser::OmpLoopDirective::Directive::ParallelDo: {
     PushContext(beginDir.source, OmpDirective::PARALLEL_DO);
-    OmpClauseSet allowed{OmpClause::DEFAULT, OmpClause::PRIVATE,
-        OmpClause::FIRSTPRIVATE, OmpClause::SHARED, OmpClause::COPYIN,
-        OmpClause::REDUCTION, OmpClause::LASTPRIVATE, OmpClause::LINEAR};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{OmpClause::IF, OmpClause::NUM_THREADS,
-        OmpClause::PROC_BIND, OmpClause::SCHEDULE, OmpClause::COLLAPSE,
-        OmpClause::ORDERED};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(parallelAllowedClauses | doAllowedClauses);
+    SetContextAllowedOnce(parallelAllowedOnceClauses | doAllowedOnceClauses);
   } break;
 
   // 2.8.1 simd-clause -> safelen-clause |
@@ -177,40 +213,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   //                      collapse-clause
   case parser::OmpLoopDirective::Directive::Simd: {
     PushContext(beginDir.source, OmpDirective::SIMD);
-    OmpClauseSet allowed{OmpClause::LINEAR, OmpClause::ALIGNED,
-        OmpClause::PRIVATE, OmpClause::LASTPRIVATE, OmpClause::REDUCTION};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{
-        OmpClause::COLLAPSE, OmpClause::SAFELEN, OmpClause::SIMDLEN};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(simdAllowedClauses);
+    SetContextAllowedOnce(simdAllowedOnceClauses);
   } break;
 
   // 2.8.3 do-simd-clause -> do-clause |
   //                         simd-clause
   case parser::OmpLoopDirective::Directive::DoSimd: {
     PushContext(beginDir.source, OmpDirective::DO_SIMD);
-    OmpClauseSet allowed{OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE,
-        OmpClause::LASTPRIVATE, OmpClause::LINEAR, OmpClause::REDUCTION,
-        OmpClause::ALIGNED};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{OmpClause::SCHEDULE, OmpClause::COLLAPSE,
-        OmpClause::ORDERED, OmpClause::SAFELEN, OmpClause::SIMDLEN};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(doAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(doAllowedOnceClauses | simdAllowedOnceClauses);
   } break;
 
   // 2.11.4 parallel-do-simd-clause -> parallel-clause |
   //                                   do-simd-clause
   case parser::OmpLoopDirective::Directive::ParallelDoSimd: {
     PushContext(beginDir.source, OmpDirective::PARALLEL_DO_SIMD);
-    OmpClauseSet allowed{OmpClause::DEFAULT, OmpClause::PRIVATE,
-        OmpClause::FIRSTPRIVATE, OmpClause::SHARED, OmpClause::COPYIN,
-        OmpClause::REDUCTION, OmpClause::LASTPRIVATE, OmpClause::LINEAR,
-        OmpClause::ALIGNED};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{OmpClause::IF, OmpClause::NUM_THREADS,
-        OmpClause::PROC_BIND, OmpClause::SCHEDULE, OmpClause::COLLAPSE,
-        OmpClause::ORDERED, OmpClause::SAFELEN, OmpClause::SIMDLEN};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(
+        parallelAllowedClauses | doAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(parallelAllowedOnceClauses | doAllowedOnceClauses |
+        simdAllowedOnceClauses);
   } break;
 
   // 2.9.2 taskloop-clause -> if-clause |
@@ -229,32 +251,19 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   //                          nogroup-clause
   case parser::OmpLoopDirective::Directive::Taskloop: {
     PushContext(beginDir.source, OmpDirective::TASKLOOP);
-    OmpClauseSet allowed{OmpClause::SHARED, OmpClause::PRIVATE,
-        OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE, OmpClause::DEFAULT,
-        OmpClause::UNTIED, OmpClause::MERGEABLE, OmpClause::NOGROUP};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{OmpClause::COLLAPSE, OmpClause::IF,
-        OmpClause::FINAL, OmpClause::PRIORITY};
-    SetContextAllowedOnce(allowedOnce);
-    OmpClauseSet allowedExclusive{OmpClause::GRAINSIZE, OmpClause::NUM_TASKS};
-    SetContextAllowedExclusive(allowedExclusive);
+    SetContextAllowed(taskloopAllowedClauses);
+    SetContextAllowedOnce(taskloopAllowedOnceClauses);
+    SetContextAllowedExclusive(taskloopAllowedExclusiveClauses);
   } break;
 
   // 2.9.3 taskloop-simd-clause -> taskloop-clause |
   //                               simd-clause
   case parser::OmpLoopDirective::Directive::TaskloopSimd: {
     PushContext(beginDir.source, OmpDirective::TASKLOOP_SIMD);
-    OmpClauseSet allowed{OmpClause::LINEAR, OmpClause::ALIGNED,
-        OmpClause::SHARED, OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE,
-        OmpClause::LASTPRIVATE, OmpClause::DEFAULT, OmpClause::UNTIED,
-        OmpClause::MERGEABLE, OmpClause::NOGROUP};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{OmpClause::COLLAPSE, OmpClause::SAFELEN,
-        OmpClause::SIMDLEN, OmpClause::IF, OmpClause::FINAL,
-        OmpClause::PRIORITY};
-    SetContextAllowedOnce(allowedOnce);
-    OmpClauseSet allowedExclusive{OmpClause::GRAINSIZE, OmpClause::NUM_TASKS};
-    SetContextAllowedExclusive(allowedExclusive);
+    SetContextAllowed(
+        (taskloopAllowedClauses | simdAllowedClauses) - OmpClause::REDUCTION);
+    SetContextAllowedOnce(taskloopAllowedOnceClauses | simdAllowedOnceClauses);
+    SetContextAllowedExclusive(taskloopAllowedExclusiveClauses);
   } break;
 
   // 2.10.8 distribute-clause -> private-clause |
@@ -264,16 +273,159 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   //                             dist-schedule-clause
   case parser::OmpLoopDirective::Directive::Distribute: {
     PushContext(beginDir.source, OmpDirective::DISTRIBUTE);
-    OmpClauseSet allowed{
-        OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{OmpClause::COLLAPSE, OmpClause::DIST_SCHEDULE};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(distributeAllowedClauses);
+    SetContextAllowedOnce(distributeAllowedOnceClauses);
   } break;
 
-  default:
-    // TODO others
-    break;
+    // 2.10.9 distribute-simd-clause -> distribute-clause |
+    //                                  simd-clause
+  case parser::OmpLoopDirective::Directive::DistributeSimd: {
+    PushContext(beginDir.source, OmpDirective::DISTRIBUTE_SIMD);
+    SetContextAllowed(distributeAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(
+        distributeAllowedOnceClauses | simdAllowedOnceClauses);
+  } break;
+
+    // 2.10.10 distribute-parallel-do-clause -> distribute-clause |
+    //                                          parallel-do-clause
+  case parser::OmpLoopDirective::Directive::DistributeParallelDo: {
+    PushContext(beginDir.source, OmpDirective::DISTRIBUTE_PARALLEL_DO);
+    SetContextAllowed(
+        distributeAllowedClauses | parallelAllowedClauses | doAllowedClauses);
+    SetContextAllowedOnce(distributeAllowedOnceClauses |
+        parallelAllowedOnceClauses | doAllowedOnceClauses);
+  } break;
+
+    // 2.10.11 distribute-parallel-do-simd-clause -> distribute-clause |
+    //                                               parallel-do-simd-clause
+  case parser::OmpLoopDirective::Directive::DistributeParallelDoSimd: {
+    PushContext(beginDir.source, OmpDirective::DISTRIBUTE_PARALLEL_DO_SIMD);
+    SetContextAllowed(distributeAllowedClauses | parallelAllowedClauses |
+        doAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(distributeAllowedOnceClauses |
+        parallelAllowedOnceClauses | doAllowedOnceClauses | simdAllowedClauses);
+  } break;
+
+    // 2.11.6 target-parallel-do-clause -> target-clause |
+    //                                     parallel-do-clause
+  case parser::OmpLoopDirective::Directive::TargetParallelDo: {
+    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL_DO);
+    SetContextAllowed(
+        targetAllowedClauses | parallelAllowedClauses | doAllowedClauses);
+    SetContextAllowedOnce(
+        (targetAllowedOnceClauses | parallelAllowedOnceClauses |
+            doAllowedOnceClauses) -
+        OmpClause::NOWAIT);
+  } break;
+
+    // 2.11.7 target-parallel-do-simd-clause -> target-clause |
+    //                                          parallel-do-simd-clause
+  case parser::OmpLoopDirective::Directive::TargetParallelDoSimd: {
+    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL_DO_SIMD);
+    SetContextAllowed(targetAllowedClauses | parallelAllowedClauses |
+        doAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(
+        (targetAllowedOnceClauses | parallelAllowedOnceClauses |
+            doAllowedOnceClauses | simdAllowedOnceClauses) -
+        OmpClause::NOWAIT);
+  } break;
+
+    // 2.11.8 target-simd-clause -> target-clause |
+    //                              simd-clause
+  case parser::OmpLoopDirective::Directive::TargetSimd: {
+    PushContext(beginDir.source, OmpDirective::TARGET_SIMD);
+    SetContextAllowed(targetAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(targetAllowedOnceClauses | simdAllowedOnceClauses);
+  } break;
+
+    // 2.11.10 teams-distribute-clause -> teams-clause |
+    //                                    distribute-clause
+  case parser::OmpLoopDirective::Directive::TeamsDistribute: {
+    PushContext(beginDir.source, OmpDirective::TEAMS_DISTRIBUTE);
+    SetContextAllowed(teamsAllowedClauses | distributeAllowedClauses);
+    SetContextAllowedOnce(
+        teamsAllowedOnceClauses | distributeAllowedOnceClauses);
+  } break;
+
+    // 2.11.11 teams-distribute-simd-clause -> teams-clause |
+    //                                         distribute-simd-clause
+  case parser::OmpLoopDirective::Directive::TeamsDistributeSimd: {
+    PushContext(beginDir.source, OmpDirective::TEAMS_DISTRIBUTE_SIMD);
+    SetContextAllowed(
+        teamsAllowedClauses | distributeAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses | simdAllowedOnceClauses);
+  } break;
+
+    // 2.11.12 target-teams-distribute-clause -> target-clause |
+    //                                           teams-distribute-clause
+  case parser::OmpLoopDirective::Directive::TargetTeamsDistribute: {
+    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS_DISTRIBUTE);
+    SetContextAllowed(
+        targetAllowedClauses | teamsAllowedClauses | distributeAllowedClauses);
+    SetContextAllowedOnce(targetAllowedOnceClauses | teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses);
+  } break;
+
+    // 2.11.13 target-teams-distribute-simd-clause -> target-clause |
+    //                                                teams-distribute-simd-clause
+  case parser::OmpLoopDirective::Directive::TargetTeamsDistributeSimd: {
+    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS_DISTRIBUTE_SIMD);
+    SetContextAllowed(targetAllowedClauses | teamsAllowedClauses |
+        distributeAllowedClauses | simdAllowedClauses);
+    SetContextAllowed(targetAllowedOnceClauses | teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses | simdAllowedOnceClauses);
+  } break;
+
+    // 2.11.14 teams-distribute-parallel-do-clause -> teams-clause |
+    //                                                distribute-parallel-do-clause
+  case parser::OmpLoopDirective::Directive::TeamsDistributeParallelDo: {
+    PushContext(beginDir.source, OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO);
+    SetContextAllowed(teamsAllowedClauses | distributeAllowedClauses |
+        parallelAllowedClauses | doAllowedClauses);
+    SetContextAllowedOnce(teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses | parallelAllowedOnceClauses |
+        doAllowedOnceClauses);
+  } break;
+
+    // 2.11.15 target-teams-distribute-parallel-do-clause -> target-clause |
+    //                                                       teams-distribute-parallel-do-clause
+  case parser::OmpLoopDirective::Directive::TargetTeamsDistributeParallelDo: {
+    PushContext(
+        beginDir.source, OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO);
+    SetContextAllowed(targetAllowedClauses | teamsAllowedClauses |
+        distributeAllowedClauses | parallelAllowedClauses | doAllowedClauses);
+    SetContextAllowedOnce(targetAllowedOnceClauses | teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses | parallelAllowedOnceClauses |
+        doAllowedOnceClauses);
+  } break;
+
+    // 2.11.16 teams-distribute-parallel-do-clause -> teams-clause |
+    //                                                distribute-parallel-do-simd-clause
+  case parser::OmpLoopDirective::Directive::TeamsDistributeParallelDoSimd: {
+    PushContext(
+        beginDir.source, OmpDirective::TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD);
+    SetContextAllowed(teamsAllowedClauses | distributeAllowedClauses |
+        parallelAllowedClauses | doAllowedClauses | simdAllowedClauses);
+    SetContextAllowedOnce(teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses | parallelAllowedOnceClauses |
+        doAllowedOnceClauses | simdAllowedOnceClauses);
+  } break;
+
+  case parser::OmpLoopDirective::Directive::
+      TargetTeamsDistributeParallelDoSimd: {
+    PushContext(beginDir.source,
+        OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD);
+    SetContextAllowed(targetAllowedClauses | teamsAllowedClauses |
+        distributeAllowedClauses | parallelAllowedClauses | doAllowedClauses |
+        simdAllowedClauses);
+    SetContextAllowedOnce(targetAllowedOnceClauses | teamsAllowedOnceClauses |
+        distributeAllowedOnceClauses | parallelAllowedOnceClauses |
+        doAllowedOnceClauses | simdAllowedOnceClauses);
+  }
+
+  // TODO others
+  break;
   }
 }
 
@@ -320,13 +472,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   case parser::OmpBlockDirective::Directive::Parallel: {
     // reserve for nesting check
     PushContext(beginDir.source, OmpDirective::PARALLEL);
-    OmpClauseSet allowed{OmpClause::DEFAULT, OmpClause::PRIVATE,
-        OmpClause::FIRSTPRIVATE, OmpClause::SHARED, OmpClause::COPYIN,
-        OmpClause::REDUCTION};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{
-        OmpClause::IF, OmpClause::NUM_THREADS, OmpClause::PROC_BIND};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(parallelAllowedClauses);
+    SetContextAllowedOnce(parallelAllowedOnceClauses);
   } break;
   // 2.7.3 single-clause -> private-clause |
   //                        firstprivate-clause
@@ -338,6 +485,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   case parser::OmpBlockDirective::Directive::Workshare:
     PushContext(beginDir.source, OmpDirective::WORKSHARE);
     break;
+  // 2.11.3 parallel-workshare-clause -> parallel-clause
+  case parser::OmpBlockDirective::Directive::ParallelWorkshare: {
+    PushContext(beginDir.source, OmpDirective::PARALLEL_WORKSHARE);
+    SetContextAllowed(parallelAllowedClauses);
+    SetContextAllowedOnce(parallelAllowedOnceClauses);
+  } break;
     // 2.9.1 task-clause -> if-clause |
     //                      final-clause |
     //                      untied-clause |
@@ -369,13 +522,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   //                         depend-clause
   case parser::OmpBlockDirective::Directive::Target: {
     PushContext(beginDir.source, OmpDirective::TARGET);
-    OmpClauseSet allowed{OmpClause::IF, OmpClause::PRIVATE,
-        OmpClause::FIRSTPRIVATE, OmpClause::MAP, OmpClause::IS_DEVICE_PTR,
-        OmpClause::DEPEND};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{
-        OmpClause::DEVICE, OmpClause::DEFAULTMAP, OmpClause::NOWAIT};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(targetAllowedClauses);
+    SetContextAllowedOnce(targetAllowedOnceClauses);
   } break;
   // 2.10.7 teams-clause -> num-teams-clause |
   //                        thread-limit-clause |
@@ -386,12 +534,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   //                        reduction-clause
   case parser::OmpBlockDirective::Directive::Teams: {
     PushContext(beginDir.source, OmpDirective::TEAMS);
-    OmpClauseSet allowed{OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE,
-        OmpClause::SHARED, OmpClause::REDUCTION};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{
-        OmpClause::NUM_TEAMS, OmpClause::THREAD_LIMIT, OmpClause::DEFAULT};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(teamsAllowedClauses);
+    SetContextAllowedOnce(teamsAllowedOnceClauses);
+  } break;
+    // 2.11.9 target-teams -> target-clause |
+    //                        teams-clause
+  case parser::OmpBlockDirective::Directive::TargetTeams: {
+    PushContext(beginDir.source, OmpDirective::TARGET_TEAMS);
+    SetContextAllowed(targetAllowedClauses | teamsAllowedClauses);
+    SetContextAllowedOnce(targetAllowedOnceClauses | teamsAllowedOnceClauses);
   } break;
     // 2.10.1 target-data-clause -> if-clause |
     //                              device-clause |
@@ -409,6 +560,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   case parser::OmpBlockDirective::Directive::Master:
     PushContext(beginDir.source, OmpDirective::MASTER);
     break;
+    // 2.11.5 target-parallel-clause -> target-clause |
+    //                                  parallel-clause
+  case parser::OmpBlockDirective::Directive::TargetParallel: {
+    PushContext(beginDir.source, OmpDirective::TARGET_PARALLEL);
+    SetContextAllowed(
+        (targetAllowedClauses | parallelAllowedClauses) - OmpClause::COPYIN);
+    SetContextAllowedOnce(
+        targetAllowedOnceClauses | parallelAllowedOnceClauses);
+  } break;
   default:
     // TODO others
     break;
@@ -433,19 +593,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   //                          reduction-clause
   case parser::OmpSectionsDirective::Directive::Sections: {
     PushContext(beginDir.source, OmpDirective::SECTIONS);
-    OmpClauseSet allowed{OmpClause::PRIVATE, OmpClause::FIRSTPRIVATE,
-        OmpClause::LASTPRIVATE, OmpClause::REDUCTION};
-    SetContextAllowed(allowed);
+    SetContextAllowed(sectionsAllowedClauses);
   } break;
+    // 2.11.2 -> parallel-sections-clause -> parallel-clause |
+    //                                       sections-clause
   case parser::OmpSectionsDirective::Directive::ParallelSections: {
     PushContext(beginDir.source, OmpDirective::PARALLEL_SECTIONS);
-    OmpClauseSet allowed{OmpClause::DEFAULT, OmpClause::PRIVATE,
-        OmpClause::FIRSTPRIVATE, OmpClause::LASTPRIVATE, OmpClause::SHARED,
-        OmpClause::COPYIN, OmpClause::REDUCTION};
-    SetContextAllowed(allowed);
-    OmpClauseSet allowedOnce{
-        OmpClause::IF, OmpClause::NUM_THREADS, OmpClause::PROC_BIND};
-    SetContextAllowedOnce(allowedOnce);
+    SetContextAllowed(parallelAllowedClauses | sectionsAllowedClauses);
+    SetContextAllowedOnce(parallelAllowedOnceClauses);
   } break;
   }
 }
@@ -913,6 +1068,11 @@ void OmpStructureChecker::Enter(const parser::OmpMapClause &x) {
     const Type &type{std::get<Type>(maptype->t)};
     switch (GetContext().directive) {
     case OmpDirective::TARGET:
+    case OmpDirective::TARGET_TEAMS:
+    case OmpDirective::TARGET_TEAMS_DISTRIBUTE:
+    case OmpDirective::TARGET_TEAMS_DISTRIBUTE_SIMD:
+    case OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO:
+    case OmpDirective::TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO_SIMD:
     case OmpDirective::TARGET_DATA: {
       if (type != Type::To && type != Type::From && type != Type::Tofrom &&
           type != Type::Alloc) {

@@ -996,7 +996,7 @@ define i1 @bool_reduction_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SSE-LABEL: bool_reduction_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpgtw %xmm0, %xmm1
-; SSE-NEXT:    packsswb %xmm0, %xmm1
+; SSE-NEXT:    packsswb %xmm1, %xmm1
 ; SSE-NEXT:    pmovmskb %xmm1, %eax
 ; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    setne %al
@@ -1123,7 +1123,7 @@ define i1 @bool_reduction_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; SSE-NEXT:    pminud %xmm0, %xmm2
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
-; SSE-NEXT:    packsswb %xmm0, %xmm2
+; SSE-NEXT:    packsswb %xmm2, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    setne %al

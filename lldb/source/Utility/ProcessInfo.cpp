@@ -337,6 +337,7 @@ void llvm::yaml::MappingTraits<ProcessInstanceInfo>::mapping(
     IO &io, ProcessInstanceInfo &Info) {
   io.mapRequired("executable", Info.m_executable);
   io.mapRequired("arg0", Info.m_arg0);
+  io.mapRequired("args", Info.m_arguments);
   io.mapRequired("arch", Info.m_arch);
   io.mapRequired("uid", Info.m_uid);
   io.mapRequired("gid", Info.m_gid);

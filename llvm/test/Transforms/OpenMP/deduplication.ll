@@ -104,7 +104,7 @@ m:
 define void @local_and_global_gtid_calls() {
 ; CHECK-LABEL: define {{[^@]+}}@local_and_global_gtid_calls()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @2)
+; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @3)
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR:%.*]] = alloca [[STRUCT_IDENT_T:%.*]], align 8
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])

@@ -93,12 +93,17 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
 
   SymbolFlagsMap SymbolFlags;
   for (auto &Sym : (*Obj)->symbols()) {
+    Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+    if (!SymFlagsOrErr)
+      // TODO: Test this error.
+      return SymFlagsOrErr.takeError();
+
     // Skip symbols not defined in this object file.
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+    if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)
       continue;
 
     // Skip symbols that are not global.
-    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global))
+    if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
       continue;
 
     // Skip symbols that have type SF_File.

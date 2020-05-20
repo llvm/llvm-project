@@ -73,16 +73,16 @@ define i1 @masked_and_notA(i32 %A) {
 
 define i1 @masked_and_notA_slightly_optimized(i32 %A) {
 ; CHECK-LABEL: @masked_and_notA_slightly_optimized(
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[A:%.*]], 7
+; CHECK-NEXT:    [[T0:%.*]] = icmp ugt i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
 ; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TMP0]], [[TST2]]
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[T0]], [[TST2]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
-  %tmp0 = icmp uge i32 %A, 8
+  %t0 = icmp uge i32 %A, 8
   %mask2 = and i32 %A, 39
   %tst2 = icmp ne i32 %mask2, %A
-  %res = and i1 %tmp0, %tst2
+  %res = and i1 %t0, %tst2
   ret i1 %res
 }
 
@@ -102,16 +102,16 @@ define i1 @masked_or_A(i32 %A) {
 
 define i1 @masked_or_A_slightly_optimized(i32 %A) {
 ; CHECK-LABEL: @masked_or_A_slightly_optimized(
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[T0:%.*]] = icmp ult i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
 ; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[TMP0]], [[TST2]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[T0]], [[TST2]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
-  %tmp0 = icmp ult i32 %A, 8
+  %t0 = icmp ult i32 %A, 8
   %mask2 = and i32 %A, 39
   %tst2 = icmp eq i32 %mask2, %A
-  %res = or i1 %tmp0, %tst2
+  %res = or i1 %t0, %tst2
   ret i1 %res
 }
 
@@ -164,11 +164,11 @@ define i1 @fold_mask_cmps_to_false(i32 %x) {
 ; CHECK-LABEL: @fold_mask_cmps_to_false(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 2147483647
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = icmp eq i32 %x, 2147483647
-  %tmp4 = and i1 %tmp3, %tmp2
-  ret i1 %tmp4
+  %t1 = and i32 %x, 2147483647
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = icmp eq i32 %x, 2147483647
+  %t4 = and i1 %t3, %t2
+  ret i1 %t4
 }
 
 ; TODO: This test simplifies to a constant, so the functionality and test could be in InstSimplify.
@@ -177,11 +177,11 @@ define i1 @fold_mask_cmps_to_true(i32 %x) {
 ; CHECK-LABEL: @fold_mask_cmps_to_true(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 2147483647
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = icmp ne i32 %x, 2147483647
-  %tmp4 = or i1 %tmp3, %tmp2
-  ret i1 %tmp4
+  %t1 = and i32 %x, 2147483647
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = icmp ne i32 %x, 2147483647
+  %t4 = or i1 %t3, %t2
+  ret i1 %t4
 }
 
 ; PR32401 - https://bugs.llvm.org/show_bug.cgi?id=32401
@@ -217,19 +217,19 @@ define <2 x i1> @cmpne_bitwise(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i6
 ; ((X & 12) != 0 & (X & 3) == 1) -> no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_0(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp eq i32 %tmp3, 1
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp eq i32 %t3, 1
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 12) != 0 & (X & 7) == 1) -> (X & 15) == 9
@@ -239,30 +239,30 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp eq i32 %tmp3, 1
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp eq i32 %t3, 1
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 14) != 0 & (X & 3) == 1) -> no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 14
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 14
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp eq i32 %tmp3, 1
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 14
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp eq i32 %t3, 1
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 3) != 0 & (X & 7) == 0) -> false
@@ -270,12 +270,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_2(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_2(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 3
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp eq i32 %tmp3, 0
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 3
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 15) != 0 & (X & 7) == 0) -> (X & 15) == 8
@@ -285,75 +285,75 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_3(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp eq i32 %tmp3, 0
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 15) != 0 & (X & 3) == 0) -> no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_3b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_3b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp eq i32 %tmp3, 0
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 255) != 0 & (X & 15) == 8) -> (X & 15) == 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_4(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_4(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 255
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 255
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 15) != 0 & (X & 15) == 8) -> (X & 15) == 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_5(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_5(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 12) != 0 & (X & 15) == 8) -> (X & 15) == 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_6(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_6(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 7) != 0 & (X & 15) == 8) -> false
@@ -361,12 +361,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_7(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_7(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 7
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 7
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 6) != 0 & (X & 15) == 8) -> false
@@ -374,31 +374,31 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_7b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_7b(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 6
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 6
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 12) == 0 | (X & 3) != 1) -> !((X & 12) != 0 & (X & 3) == 1)) ->
 ; no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_0(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp ne i32 %tmp3, 1
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp ne i32 %t3, 1
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 12) == 0 | (X & 7) != 1) -> !((X & 12) != 0 & (X & 7) == 1) ->
@@ -409,31 +409,31 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_1(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp ne i32 %tmp3, 1
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp ne i32 %t3, 1
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 14) == 0 | (X & 3) != 1) -> !((X & 14) != 0 & (X & 3) == 1) ->
 ; no change.
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_1b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_1b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 14
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 14
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp ne i32 %tmp3, 1
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 14
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp ne i32 %t3, 1
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 3) == 0 | (X & 7) != 0) -> !((X & 3) != 0 & (X & 7) == 0) ->
@@ -442,12 +442,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_2(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_2(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 3
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp ne i32 %tmp3, 0
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 3
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 15) == 0 | (X & 7) != 0) -> !((X & 15) != 0 & (X & 7) == 0) ->
@@ -458,79 +458,79 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_3(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp ne i32 %tmp3, 0
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 15) == 0 | (X & 3) != 0) -> !((X & 15) != 0 & (X & 3) == 0) ->
 ; no change.
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_3b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_3b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp ne i32 %tmp3, 0
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 255) == 0 | (X & 15) != 8) -> !(((X & 255) != 0 & (X & 15) == 8)) ->
 ; !((X & 15) == 8) -> ((X & 15) != 8)
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_4(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_4(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 255
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 255
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 15) == 0 | (X & 15) != 8) -> !(((X & 15) != 0 & (X & 15) == 8)) ->
 ; !((X & 15) == 8) -> ((X & 15) != 8)
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_5(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_5(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 12) == 0 | (X & 15) != 8) -> !(((X & 12) != 0 & (X & 15) == 8)) ->
 ; !((X & 15) == 8) -> ((X & 15) != 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_6(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_6(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 7) == 0 | (X & 15) != 8) -> !(((X & 7) != 0 & (X & 15) == 8)) ->
@@ -539,12 +539,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_7(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_7(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 7
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 7
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 ; ((X & 6) == 0 | (X & 15) != 8) -> !(((X & 6) != 0 & (X & 15) == 8)) ->
@@ -553,31 +553,31 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_7b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_7b(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 6
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp2, %tmp4
-  ret i1 %tmp5
+  %t1 = and i32 %x, 6
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t2, %t4
+  ret i1 %t5
 }
 
 
 ; ((X & 12) != 0 & (X & 3) == 1) -> no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_0(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T4]], [[T2]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp eq i32 %tmp3, 1
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp eq i32 %t3, 1
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 12) != 0 & (X & 7) == 1) -> (X & 15) == 9
@@ -587,30 +587,30 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp eq i32 %tmp3, 1
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp eq i32 %t3, 1
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 14) != 0 & (X & 3) == 1) -> no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 14
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T4]], [[T2]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 14
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp eq i32 %tmp3, 1
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 14
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp eq i32 %t3, 1
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 3) != 0 & (X & 7) == 0) -> false
@@ -618,12 +618,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_2(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_2(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 3
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp eq i32 %tmp3, 0
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 3
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 15) != 0 & (X & 7) == 0) -> (X & 15) == 8
@@ -633,75 +633,75 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp eq i32 %tmp3, 0
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 15) != 0 & (X & 3) == 0) -> no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T4]], [[T2]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp eq i32 %tmp3, 0
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp eq i32 %t3, 0
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 255) != 0 & (X & 15) == 8) -> (X & 15) == 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_4(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_4(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 255
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 255
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 15) != 0 & (X & 15) == 8) -> (X & 15) == 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_5(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_5(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 12) != 0 & (X & 15) == 8) -> (X & 15) == 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_6(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_6(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 7) != 0 & (X & 15) == 8) -> false
@@ -709,12 +709,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_7(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_7(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 7
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 7
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 6) != 0 & (X & 15) == 8) -> false
@@ -722,31 +722,31 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_7b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_7b(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp1 = and i32 %x, 6
-  %tmp2 = icmp ne i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp eq i32 %tmp3, 8
-  %tmp5 = and i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 6
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp eq i32 %t3, 8
+  %t5 = and i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 12) == 0 | (X & 3) != 1) -> !((X & 12) != 0 & (X & 3) == 1)) ->
 ; no change
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_0(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = or i1 [[T4]], [[T2]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp ne i32 %tmp3, 1
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp ne i32 %t3, 1
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 12) == 0 | (X & 7) != 1) -> !((X & 12) != 0 & (X & 7) == 1) ->
@@ -757,31 +757,31 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp ne i32 %tmp3, 1
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp ne i32 %t3, 1
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 14) == 0 | (X & 3) != 1) -> !((X & 14) != 0 & (X & 3) == 1) ->
 ; no change.
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 14
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 1
+; CHECK-NEXT:    [[T5:%.*]] = or i1 [[T4]], [[T2]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 14
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp ne i32 %tmp3, 1
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 14
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp ne i32 %t3, 1
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 3) == 0 | (X & 7) != 0) -> !((X & 3) != 0 & (X & 7) == 0) ->
@@ -790,12 +790,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_2(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_2(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 3
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp ne i32 %tmp3, 0
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 3
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 15) == 0 | (X & 7) != 0) -> !((X & 15) != 0 & (X & 7) == 0) ->
@@ -806,79 +806,79 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 7
-  %tmp4 = icmp ne i32 %tmp3, 0
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 7
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 15) == 0 | (X & 3) != 0) -> !((X & 15) != 0 & (X & 3) == 0) ->
 ; no change.
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3b(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3b(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 0
+; CHECK-NEXT:    [[T5:%.*]] = or i1 [[T4]], [[T2]]
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 3
-  %tmp4 = icmp ne i32 %tmp3, 0
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 3
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 255) == 0 | (X & 15) != 8) -> !(((X & 255) != 0 & (X & 15) == 8)) ->
 ; !((X & 15) == 8) -> ((X & 15) != 8)
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_4(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_4(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 255
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 255
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 15) == 0 | (X & 15) != 8) -> !(((X & 15) != 0 & (X & 15) == 8)) ->
 ; !((X & 15) == 8) -> ((X & 15) != 8)
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_5(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_5(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 15
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 15
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 12) == 0 | (X & 15) != 8) -> !(((X & 12) != 0 & (X & 15) == 8)) ->
 ; !((X & 15) == 8) -> ((X & 15) != 8
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_6(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_6(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 8
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T4:%.*]] = icmp ne i32 [[T3]], 8
+; CHECK-NEXT:    ret i1 [[T4]]
 ;
-  %tmp1 = and i32 %x, 12
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 12
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 7) == 0 | (X & 15) != 8) -> !(((X & 7) != 0 & (X & 15) == 8)) ->
@@ -887,12 +887,12 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_7(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_7(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 7
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 7
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }
 
 ; ((X & 6) == 0 | (X & 15) != 8) -> !(((X & 6) != 0 & (X & 15) == 8)) ->
@@ -901,10 +901,10 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_7b(i32 %x) 
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_7b(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp1 = and i32 %x, 6
-  %tmp2 = icmp eq i32 %tmp1, 0
-  %tmp3 = and i32 %x, 15
-  %tmp4 = icmp ne i32 %tmp3, 8
-  %tmp5 = or i1 %tmp4, %tmp2
-  ret i1 %tmp5
+  %t1 = and i32 %x, 6
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = and i32 %x, 15
+  %t4 = icmp ne i32 %t3, 8
+  %t5 = or i1 %t4, %t2
+  ret i1 %t5
 }

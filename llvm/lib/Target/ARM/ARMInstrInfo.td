@@ -159,6 +159,8 @@ def ARMcall_nolink   : SDNode<"ARMISD::CALL_NOLINK", SDT_ARMcall,
 
 def ARMretflag       : SDNode<"ARMISD::RET_FLAG", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def ARMseretflag     : SDNode<"ARMISD::SERET_FLAG", SDTNone,
+                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMintretflag    : SDNode<"ARMISD::INTRET_FLAG", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
@@ -264,7 +266,7 @@ def ARMvrev64    : SDNode<"ARMISD::VREV64", SDTARMVSHUF>;
 def ARMvrev32    : SDNode<"ARMISD::VREV32", SDTARMVSHUF>;
 def ARMvrev16    : SDNode<"ARMISD::VREV16", SDTARMVSHUF>;
 
-def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
+def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVec<1>,
                                          SDTCisVT<2, i32>]>;
 def ARMvgetlaneu : SDNode<"ARMISD::VGETLANEu", SDTARMVGETLN>;
 def ARMvgetlanes : SDNode<"ARMISD::VGETLANEs", SDTARMVGETLN>;
@@ -2819,7 +2821,7 @@ multiclass AI2_ldridx<bit isByte, string opc,
 }
 
 let mayLoad = 1, hasSideEffects = 0 in {
-// FIXME: for LDR_PRE_REG etc. the itineray should be either IIC_iLoad_ru or
+// FIXME: for LDR_PRE_REG etc. the itinerary should be either IIC_iLoad_ru or
 // IIC_iLoad_siu depending on whether it the offset register is shifted.
 defm LDR  : AI2_ldridx<0, "ldr", IIC_iLoad_iu, IIC_iLoad_ru>;
 defm LDRB : AI2_ldridx<1, "ldrb", IIC_iLoad_bh_iu, IIC_iLoad_bh_ru>;
@@ -3100,7 +3102,7 @@ multiclass AI2_stridx<bit isByte, string opc,
 }
 
 let mayStore = 1, hasSideEffects = 0 in {
-// FIXME: for STR_PRE_REG etc. the itineray should be either IIC_iStore_ru or
+// FIXME: for STR_PRE_REG etc. the itinerary should be either IIC_iStore_ru or
 // IIC_iStore_siu depending on whether it the offset register is shifted.
 defm STR  : AI2_stridx<0, "str", IIC_iStore_iu, IIC_iStore_ru>;
 defm STRB : AI2_stridx<1, "strb", IIC_iStore_bh_iu, IIC_iStore_bh_ru>;
@@ -5754,7 +5756,7 @@ def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 3)>,
 //   when we get here from a longjmp(). We force everything out of registers
 //   except for our own input by listing the relevant registers in Defs. By
 //   doing so, we also cause the prologue/epilogue code to actively preserve
-//   all of the callee-saved resgisters, which is exactly what we want.
+//   all of the callee-saved registers, which is exactly what we want.
 //   A constant value is passed in $val, and we use the location as a scratch.
 //
 // These are pseudo-instructions and are lowered to individual MC-insts, so

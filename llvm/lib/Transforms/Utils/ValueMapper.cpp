@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -369,7 +368,8 @@ Value *Mapper::mapValue(const Value *V) {
 
       if (NewTy != IA->getFunctionType())
         V = InlineAsm::get(NewTy, IA->getAsmString(), IA->getConstraintString(),
-                           IA->hasSideEffects(), IA->isAlignStack());
+                           IA->hasSideEffects(), IA->isAlignStack(),
+                           IA->getDialect());
     }
 
     return getVM()[V] = const_cast<Value *>(V);
@@ -888,17 +888,17 @@ void Mapper::remapInstruction(Instruction *I) {
     return;
 
   // If the instruction's type is being remapped, do so now.
-  if (auto CS = CallSite(I)) {
+  if (auto *CB = dyn_cast<CallBase>(I)) {
     SmallVector<Type *, 3> Tys;
-    FunctionType *FTy = CS.getFunctionType();
+    FunctionType *FTy = CB->getFunctionType();
     Tys.reserve(FTy->getNumParams());
     for (Type *Ty : FTy->params())
       Tys.push_back(TypeMapper->remapType(Ty));
-    CS.mutateFunctionType(FunctionType::get(
+    CB->mutateFunctionType(FunctionType::get(
         TypeMapper->remapType(I->getType()), Tys, FTy->isVarArg()));
 
-    LLVMContext &C = CS->getContext();
-    AttributeList Attrs = CS.getAttributes();
+    LLVMContext &C = CB->getContext();
+    AttributeList Attrs = CB->getAttributes();
     for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
       if (Attrs.hasAttribute(i, Attribute::ByVal)) {
         Type *Ty = Attrs.getAttribute(i, Attribute::ByVal).getValueAsType();
@@ -910,7 +910,7 @@ void Mapper::remapInstruction(Instruction *I) {
             C, i, Attribute::getWithByValType(C, TypeMapper->remapType(Ty)));
       }
     }
-    CS.setAttributes(Attrs);
+    CB->setAttributes(Attrs);
     return;
   }
   if (auto *AI = dyn_cast<AllocaInst>(I))

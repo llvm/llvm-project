@@ -9,18 +9,21 @@ add_mlir_dialect_library(MLIRLLVMIR
   DEPENDS
   MLIRLLVMOpsIncGen
   MLIRLLVMConversionsIncGen
-  )
-target_link_libraries(MLIRLLVMIR
-  PUBLIC
-  LLVMAsmParser
-  LLVMCore
-  LLVMSupport
-  LLVMFrontendOpenMP
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  BitReader
+  BitWriter
+  Core
+  FrontendOpenMP
+
+  LINK_LIBS PUBLIC
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIROpenMP
   MLIRIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRSupport
   )
 
@@ -33,15 +36,16 @@ add_mlir_dialect_library(MLIRLLVMAVX512
   DEPENDS
   MLIRLLVMAVX512IncGen
   MLIRLLVMAVX512ConversionsIncGen
-  )
-target_link_libraries(MLIRLLVMAVX512
-  PUBLIC
-  LLVMAsmParser
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  Core
+
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMIR
-  MLIRSideEffects
-  LLVMSupport
-  LLVMCore
+  MLIRSideEffectInterfaces
   )
 
 add_mlir_dialect_library(MLIRNVVMIR
@@ -53,15 +57,16 @@ add_mlir_dialect_library(MLIRNVVMIR
   DEPENDS
   MLIRNVVMOpsIncGen
   MLIRNVVMConversionsIncGen
-  )
-target_link_libraries(MLIRNVVMIR
-  PUBLIC
-  LLVMAsmParser
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  Core
+
+  LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMIR
-  MLIRSideEffects
-  LLVMSupport
-  LLVMCore
+  MLIRSideEffectInterfaces
   )
 
 add_mlir_dialect_library(MLIRROCDLIR
@@ -73,12 +78,14 @@ add_mlir_dialect_library(MLIRROCDLIR
   DEPENDS
   MLIRROCDLOpsIncGen
   MLIRROCDLConversionsIncGen
-  )
-target_link_libraries(MLIRROCDLIR
-  PUBLIC
-  LLVMAsmParser
-  LLVMCore
-  LLVMSupport
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  Core
+
+  LINK_LIBS PUBLIC
   MLIRIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
+  MLIRVectorToLLVM
   )

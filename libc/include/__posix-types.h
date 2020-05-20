@@ -14,3 +14,8 @@
 typedef __INT64_TYPE__ off_t;
 #define __llvm_libc_off_t_defined
 #endif // __need_off_t
+
+#if defined(__need_ssize_t) && !defined(__llvm_libc_ssize_t_defined)
+typedef __INT64_TYPE__ ssize_t;
+#define __llvm_libc_ssize_t_defined
+#endif // __need_ssize_t

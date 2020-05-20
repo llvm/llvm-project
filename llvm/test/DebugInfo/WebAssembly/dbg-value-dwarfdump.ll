@@ -21,11 +21,11 @@ for.body:                                         ; preds = %entry, %for.body
   %a.010 = phi i32 [ %b.011, %for.body ], [ 0, %entry ]
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
 
-; CHECK: DW_OP_WASM_location 0x0 +[[LOCAL_1:[0-9]+]]
+; CHECK: DW_OP_WASM_location 0x0 0x[[LOCAL_1:[0-9]+]]
   call void @llvm.dbg.value(metadata i32 %b.011, metadata !16, metadata !DIExpression()), !dbg !19
 
-; CHECK-NOT: DW_OP_WASM_location 0x0 +[[LOCAL_1]]
-; CHECK: DW_OP_WASM_location 0x0 +[[LOCAL_2:[0-9]+]]
+; CHECK-NOT: DW_OP_WASM_location 0x0 0x[[LOCAL_1]]
+; CHECK: DW_OP_WASM_location 0x0 0x[[LOCAL_2:[0-9]+]]
   %add = add nsw i32 %b.011, %a.010, !dbg !26
   %inc = add nuw nsw i32 %i.09, 1, !dbg !28
   call void @llvm.dbg.value(metadata i32 %add, metadata !16, metadata !DIExpression()), !dbg !19

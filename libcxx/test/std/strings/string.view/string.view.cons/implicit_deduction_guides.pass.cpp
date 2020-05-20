@@ -29,7 +29,7 @@
 int main(int, char**)
 {
   { // Testing (1)
-    // Nothing TODO. Cannot deduce without any arguments.
+    // Nothing to do. Cannot deduce without any arguments.
   }
   { // Testing (2)
     const std::string_view sin("abc");

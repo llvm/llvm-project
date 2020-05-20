@@ -24,6 +24,7 @@ ExternalProject_Add(google-benchmark
         -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
         -DCMAKE_CXX_FLAGS:STRING=${GOOGLE_BENCHMARK_TARGET_FLAGS}
+        -DCMAKE_CXX_STANDARD:STRING=14
         -DCMAKE_BUILD_TYPE:STRING=RELEASE
         -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
         -DBENCHMARK_ENABLE_TESTING:BOOL=OFF)
@@ -69,14 +70,14 @@ function(add_libc_benchmark_unittest target_name)
     POST_BUILD
     COMMAND $<TARGET_FILE:${target_name}>
   )
-  add_dependencies(check-libc-benchmark ${target_name})
+  add_dependencies(libc-benchmark-util-tests ${target_name})
 endfunction()
 
 #==============================================================================
 # Build Google Benchmark for libc
 #==============================================================================
 
-add_custom_target(check-libc-benchmark)
+add_custom_target(libc-benchmark-util-tests)
 
 function(fix_rtti target)
     # TODO: Make this portable and inline with rtti mode from llvm/

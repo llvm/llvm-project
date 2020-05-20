@@ -197,11 +197,11 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
-#pragma omp teams distribute parallel for
+#pragma omp teams distribute parallel for reduction(task,&&:argc)
   for (int k = 0; k < 10; ++k)
     e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for
+// CHECK-NEXT: #pragma omp teams distribute parallel for reduction(task, &&: argc)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
   return (0);

@@ -140,6 +140,27 @@ void OperationFolder::clear() {
   referencedDialects.clear();
 }
 
+/// Get or create a constant using the given builder. On success this returns
+/// the constant operation, nullptr otherwise.
+Value OperationFolder::getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
+                                           Attribute value, Type type,
+                                           Location loc) {
+  OpBuilder::InsertionGuard foldGuard(builder);
+
+  // Use the builder insertion block to find an insertion point for the
+  // constant.
+  auto *insertRegion =
+      getInsertionRegion(interfaces, builder.getInsertionBlock());
+  auto &entry = insertRegion->front();
+  builder.setInsertionPoint(&entry, entry.begin());
+
+  // Get the constant map for the insertion region of this operation.
+  auto &uniquedConstants = foldScopes[insertRegion];
+  Operation *constOp = tryGetOrCreateConstant(uniquedConstants, dialect,
+                                              builder, value, type, loc);
+  return constOp ? constOp->getResult(0) : Value();
+}
+
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(

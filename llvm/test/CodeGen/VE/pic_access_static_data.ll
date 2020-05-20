@@ -47,7 +47,7 @@ define i32 @main() {
 ; CHECK-NEXT:    and %s12, %s12, (32)0
 ; CHECK-NEXT:    sic %s16
 ; CHECK-NEXT:    lea.sl %s12, func@plt_hi(%s16, %s12)
-; CHECK-NEXT:    bsic %lr, (,%s12)
+; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    lea %s0, dst@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(, %s0)
@@ -62,7 +62,7 @@ define i32 @main() {
 ; CHECK-NEXT:    sic %s16
 ; CHECK-NEXT:    lea.sl %s12, printf@plt_hi(%s16, %s12)
 ; CHECK-NEXT:    st %s0, 176(, %s11)
-; CHECK-NEXT:    bsic %lr, (,%s12)
+; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   store i1 true, i1* @src, align 4

@@ -98,6 +98,7 @@
 //===----------------------------------------------------------------------===//
 
 	.globl ASM_SYMBOL(__xray_FunctionEntry)
+	ASM_HIDDEN(__xray_FunctionEntry)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_FunctionEntry)
 # LLVM-MCA-BEGIN __xray_FunctionEntry
@@ -126,6 +127,7 @@ ASM_SYMBOL(__xray_FunctionEntry):
 //===----------------------------------------------------------------------===//
 
 	.globl ASM_SYMBOL(__xray_FunctionExit)
+	ASM_HIDDEN(__xray_FunctionExit)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_FunctionExit)
 # LLVM-MCA-BEGIN __xray_FunctionExit
@@ -166,6 +168,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 //===----------------------------------------------------------------------===//
 
 	.globl ASM_SYMBOL(__xray_FunctionTailExit)
+	ASM_HIDDEN(__xray_FunctionTailExit)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_FunctionTailExit)
 # LLVM-MCA-BEGIN __xray_FunctionTailExit
@@ -192,6 +195,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 //===----------------------------------------------------------------------===//
 
 	.globl ASM_SYMBOL(__xray_ArgLoggerEntry)
+	ASM_HIDDEN(__xray_ArgLoggerEntry)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_ArgLoggerEntry)
 # LLVM-MCA-BEGIN __xray_ArgLoggerEntry
@@ -231,6 +235,7 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
 //===----------------------------------------------------------------------===//
 
 	.global ASM_SYMBOL(__xray_CustomEvent)
+	ASM_HIDDEN(__xray_CustomEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_CustomEvent)
 # LLVM-MCA-BEGIN __xray_CustomEvent
@@ -256,6 +261,7 @@ ASM_SYMBOL(__xray_CustomEvent):
 //===----------------------------------------------------------------------===//
 
 	.global ASM_SYMBOL(__xray_TypedEvent)
+	ASM_HIDDEN(__xray_TypedEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_TypedEvent)
 # LLVM-MCA-BEGIN __xray_TypedEvent

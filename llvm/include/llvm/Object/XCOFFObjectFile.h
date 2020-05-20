@@ -268,7 +268,7 @@ public:
 
   // Interface inherited from base classes.
   void moveSymbolNext(DataRefImpl &Symb) const override;
-  uint32_t getSymbolFlags(DataRefImpl Symb) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
 

@@ -40,10 +40,10 @@ int main(int argc, char **argv) {
 
 // CHECK-LABEL: @main
 // CHECK:       void @__kmpc_taskgroup(%struct.ident_t* @0, i32 [[GTID:%.+]])
-// CHECK:       [[TD1:%.+]] = call i8* @__kmpc_task_reduction_init(i32 [[GTID]], i32 3, i8* %
+// CHECK:       [[TD1:%.+]] = call i8* @__kmpc_taskred_init(i32 [[GTID]], i32 3, i8* %
 // CHECK-NEXT:  store i8* [[TD1]], i8** [[TD1_ADDR:%[^,]+]],
 // CHECK-NEXT:  call void @__kmpc_taskgroup(%struct.ident_t* @0, i32 [[GTID]])
-// CHECK:       [[TD2:%.+]] = call i8* @__kmpc_task_reduction_init(i32 [[GTID]], i32 2, i8* %
+// CHECK:       [[TD2:%.+]] = call i8* @__kmpc_taskred_init(i32 [[GTID]], i32 2, i8* %
 // CHECK-NEXT:  store i8* [[TD2]], i8** [[TD2_ADDR:%[^,]+]],
 // CHECK-NEXT:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i16*, i8**, i8**)* [[OMP_PARALLEL:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i64 %{{.+}}, i16* %{{.+}}, i8** [[TD1_ADDR]], i8** [[TD2_ADDR]])
 // CHECK-NEXT:  call void @__kmpc_end_taskgroup(%struct.ident_t* @0, i32 [[GTID]])

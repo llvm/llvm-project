@@ -17,7 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -53,7 +53,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
 
   // For each argument, keep track of its constant value and whether it is a
   // constant or not.  The bool is driven to true when found to be non-constant.
-  SmallVector<std::pair<Constant*, bool>, 16> ArgumentConstants;
+  SmallVector<PointerIntPair<Constant *, 1, bool>, 16> ArgumentConstants;
   ArgumentConstants.resize(F.arg_size());
 
   unsigned NumNonconstant = 0;
@@ -80,7 +80,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
     for (unsigned i = 0, e = ArgumentConstants.size(); i != e; ++i, ++Arg) {
 
       // If this argument is known non-constant, ignore it.
-      if (ArgumentConstants[i].second)
+      if (ArgumentConstants[i].getInt())
         continue;
 
       Value *V = ACS.getCallArgOperand(i);
@@ -102,13 +102,13 @@ static bool PropagateConstantsIntoArguments(Function &F) {
         if (++NumNonconstant == ArgumentConstants.size())
           return false;
 
-        ArgumentConstants[i].second = true;
+        ArgumentConstants[i].setInt(true);
         continue;
       }
 
-      if (C && ArgumentConstants[i].first == nullptr) {
-        ArgumentConstants[i].first = C;   // First constant seen.
-      } else if (C && ArgumentConstants[i].first == C) {
+      if (C && ArgumentConstants[i].getPointer() == nullptr) {
+        ArgumentConstants[i].setPointer(C); // First constant seen.
+      } else if (C && ArgumentConstants[i].getPointer() == C) {
         // Still the constant value we think it is.
       } else if (V == &*Arg) {
         // Ignore recursive calls passing argument down.
@@ -117,7 +117,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
         // give up on this function.
         if (++NumNonconstant == ArgumentConstants.size())
           return false;
-        ArgumentConstants[i].second = true;
+        ArgumentConstants[i].setInt(true);
       }
     }
   }
@@ -128,11 +128,11 @@ static bool PropagateConstantsIntoArguments(Function &F) {
   Function::arg_iterator AI = F.arg_begin();
   for (unsigned i = 0, e = ArgumentConstants.size(); i != e; ++i, ++AI) {
     // Do we have a constant argument?
-    if (ArgumentConstants[i].second || AI->use_empty() ||
-        AI->hasInAllocaAttr() || (AI->hasByValAttr() && !F.onlyReadsMemory()))
+    if (ArgumentConstants[i].getInt() || AI->use_empty() ||
+        (AI->hasByValAttr() && !F.onlyReadsMemory()))
       continue;
 
-    Value *V = ArgumentConstants[i].first;
+    Value *V = ArgumentConstants[i].getPointer();
     if (!V) V = UndefValue::get(AI->getType());
     AI->replaceAllUsesWith(V);
     ++NumArgumentsProped;
@@ -222,16 +222,15 @@ static bool PropagateConstantReturn(Function &F) {
   // constant.
   bool MadeChange = false;
   for (Use &U : F.uses()) {
-    CallSite CS(U.getUser());
-    Instruction* Call = CS.getInstruction();
+    CallBase *CB = dyn_cast<CallBase>(U.getUser());
 
     // Not a call instruction or a call instruction that's not calling F
     // directly?
-    if (!Call || !CS.isCallee(&U))
+    if (!CB || !CB->isCallee(&U))
       continue;
 
     // Call result not used?
-    if (Call->use_empty())
+    if (CB->use_empty())
       continue;
 
     MadeChange = true;
@@ -241,12 +240,12 @@ static bool PropagateConstantReturn(Function &F) {
       if (Argument *A = dyn_cast<Argument>(New))
         // Was an argument returned? Then find the corresponding argument in
         // the call instruction and use that.
-        New = CS.getArgument(A->getArgNo());
-      Call->replaceAllUsesWith(New);
+        New = CB->getArgOperand(A->getArgNo());
+      CB->replaceAllUsesWith(New);
       continue;
     }
 
-    for (auto I = Call->user_begin(), E = Call->user_end(); I != E;) {
+    for (auto I = CB->user_begin(), E = CB->user_end(); I != E;) {
       Instruction *Ins = cast<Instruction>(*I);
 
       // Increment now, so we can remove the use
@@ -266,7 +265,7 @@ static bool PropagateConstantReturn(Function &F) {
           if (Argument *A = dyn_cast<Argument>(New))
             // Was an argument returned? Then find the corresponding argument in
             // the call instruction and use that.
-            New = CS.getArgument(A->getArgNo());
+            New = CB->getArgOperand(A->getArgNo());
           Ins->replaceAllUsesWith(New);
           Ins->eraseFromParent();
         }

@@ -554,7 +554,7 @@ entry:
   %s2.next.ptr = getelementptr %S2, %S2* %s2, i64 0, i32 1
   %s2.next = load %S2*, %S2** %s2.next.ptr, !tbaa !0
 ; CHECK:      %[[gep:.*]] = getelementptr %S2, %S2* %s2, i64 0, i32 1
-; CHECK-NEXT: %[[next:.*]] = load %S2*, %S2** %[[gep]], !tbaa [[TAG_0]]
+; CHECK-NEXT: %[[next:.*]] = load %S2*, %S2** %[[gep]], align 8, !tbaa [[TAG_0]]
 
   %s2.next.s1.ptr = getelementptr %S2, %S2* %s2.next, i64 0, i32 0
   %s2.next.s1 = load %S1*, %S1** %s2.next.s1.ptr, !tbaa !3
@@ -565,9 +565,9 @@ entry:
   %new.next.ptr = getelementptr %S2, %S2* %new, i64 0, i32 1
   store %S2* %s2.next.next, %S2** %new.next.ptr, !tbaa !9
 ; CHECK-NEXT: %[[gep:.*]] = getelementptr %S2, %S2* %[[next]], i64 0, i32 0
-; CHECK-NEXT: %[[next_s1:.*]] = load %S1*, %S1** %[[gep]], !tbaa [[TAG_3]]
+; CHECK-NEXT: %[[next_s1:.*]] = load %S1*, %S1** %[[gep]], align 8, !tbaa [[TAG_3]]
 ; CHECK-NEXT: %[[gep:.*]] = getelementptr %S2, %S2* %[[next]], i64 0, i32 1
-; CHECK-NEXT: %[[next_next:.*]] = load %S2*, %S2** %[[gep]], !tbaa [[TAG_7]]
+; CHECK-NEXT: %[[next_next:.*]] = load %S2*, %S2** %[[gep]], align 8, !tbaa [[TAG_7]]
 
   %new.s1 = load %S1*, %S1** %new.s1.ptr
   %result1 = insertvalue %S2 undef, %S1* %new.s1, 0

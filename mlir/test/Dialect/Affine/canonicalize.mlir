@@ -54,30 +54,30 @@ func @compose_affine_maps_1dto2d_no_symbols() {
     %x1_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%x0, %x0)
 
     // CHECK: [[I0A:%[0-9]+]] = affine.apply [[MAP0]](%{{.*}})
-    // CHECK-NEXT: load %0{{\[}}[[I0A]], [[I0A]]{{\]}}
+    // CHECK-NEXT: [[V0:%[0-9]+]] = load %0{{\[}}[[I0A]], [[I0A]]{{\]}}
     %v0 = load %0[%x1_0, %x1_1] : memref<4x4xf32>
 
-    // Test load[%y, %y]
+    // Test store[%y, %y]
     %y0 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
     %y1_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%y0, %y0)
     %y1_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%y0, %y0)
 
     // CHECK-NEXT: [[I1A:%[0-9]+]] = affine.apply [[MAP1]](%{{.*}})
-    // CHECK-NEXT: load %0{{\[}}[[I1A]], [[I1A]]{{\]}}
-    %v1 = load %0[%y1_0, %y1_1] : memref<4x4xf32>
+    // CHECK-NEXT: store [[V0]], %0{{\[}}[[I1A]], [[I1A]]{{\]}}
+    store %v0, %0[%y1_0, %y1_1] : memref<4x4xf32>
 
-    // Test load[%x, %y]
+    // Test store[%x, %y]
     %xy_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%x0, %y0)
     %xy_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%x0, %y0)
 
-    // CHECK-NEXT: load %0{{\[}}[[I0A]], [[I1A]]{{\]}}
-    %v2 = load %0[%xy_0, %xy_1] : memref<4x4xf32>
+    // CHECK-NEXT: store [[V0]], %0{{\[}}[[I0A]], [[I1A]]{{\]}}
+    store %v0, %0[%xy_0, %xy_1] : memref<4x4xf32>
 
-    // Test load[%y, %x]
+    // Test store[%y, %x]
     %yx_0 = affine.apply affine_map<(d0, d1) -> (d0)> (%y0, %x0)
     %yx_1 = affine.apply affine_map<(d0, d1) -> (d1)> (%y0, %x0)
-    // CHECK-NEXT: load %0{{\[}}[[I1A]], [[I0A]]{{\]}}
-    %v3 = load %0[%yx_0, %yx_1] : memref<4x4xf32>
+    // CHECK-NEXT: store [[V0]], %0{{\[}}[[I1A]], [[I0A]]{{\]}}
+    store %v0, %0[%yx_0, %yx_1] : memref<4x4xf32>
   }
   return
 }
@@ -92,29 +92,29 @@ func @compose_affine_maps_1dto2d_with_symbols() {
     %x0 = affine.apply affine_map<(d0)[s0] -> (d0 - s0)> (%i0)[%c4]
 
     // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP4]](%{{.*}})
-    // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I0]], [[I0]]{{\]}}
+    // CHECK-NEXT: [[V0:%[0-9]+]] = load %{{[0-9]+}}{{\[}}[[I0]], [[I0]]{{\]}}
     %v0 = load %0[%x0, %x0] : memref<4x4xf32>
 
     // Test load[%x0, %x1] with symbol %c4 captured by '%x0' map.
     %x1 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
     %y1 = affine.apply affine_map<(d0, d1) -> (d0+d1)> (%x0, %x1)
     // CHECK-NEXT: [[I1:%[0-9]+]] = affine.apply [[MAP7]](%{{.*}})
-    // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I1]], [[I1]]{{\]}}
-    %v1 = load %0[%y1, %y1] : memref<4x4xf32>
+    // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I1]], [[I1]]{{\]}}
+    store %v0, %0[%y1, %y1] : memref<4x4xf32>
 
-    // Test load[%x1, %x0] with symbol %c4 captured by '%x0' map.
+    // Test store[%x1, %x0] with symbol %c4 captured by '%x0' map.
     %y2 = affine.apply affine_map<(d0, d1) -> (d0 + d1)> (%x1, %x0)
     // CHECK-NEXT: [[I2:%[0-9]+]] = affine.apply [[MAP7]](%{{.*}})
-    // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I2]], [[I2]]{{\]}}
-    %v2 = load %0[%y2, %y2] : memref<4x4xf32>
+    // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I2]], [[I2]]{{\]}}
+    store %v0, %0[%y2, %y2] : memref<4x4xf32>
 
-    // Test load[%x2, %x0] with symbol %c4 from '%x0' and %c5 from '%x2'
+    // Test store[%x2, %x0] with symbol %c4 from '%x0' and %c5 from '%x2'
     %c5 = constant 5 : index
     %x2 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)> (%i0)[%c5]
     %y3 = affine.apply affine_map<(d0, d1) -> (d0 + d1)> (%x2, %x0)
     // CHECK: [[I3:%[0-9]+]] = affine.apply [[MAP7a]](%{{.*}})
-    // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I3]], [[I3]]{{\]}}
-    %v3 = load %0[%y3, %y3] : memref<4x4xf32>
+    // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I3]], [[I3]]{{\]}}
+    store %v0, %0[%y3, %y3] : memref<4x4xf32>
   }
   return
 }
@@ -175,15 +175,15 @@ func @compose_affine_maps_dependent_loads() {
         // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP9]](%{{.*}})
         // CHECK: [[I1:%[0-9]+]] = affine.apply [[MAP4b]](%{{.*}})
         // CHECK: [[I2:%[0-9]+]] = affine.apply [[MAP10]](%{{.*}})
-        // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I0]], [[I1]]{{\]}}
+        // CHECK-NEXT: [[V0:%[0-9]+]] = load %{{[0-9]+}}{{\[}}[[I0]], [[I1]]{{\]}}
         %v0 = load %0[%x00, %x01] : memref<16x32xf32>
 
-        // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I0]], [[I2]]{{\]}}
-        %v1 = load %0[%x00, %x02] : memref<16x32xf32>
+        // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I0]], [[I2]]{{\]}}
+        store %v0, %0[%x00, %x02] : memref<16x32xf32>
 
         // Swizzle %i0, %i1
-        // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I1]], [[I0]]{{\]}}
-        %v2 = load %0[%x01, %x00] : memref<16x32xf32>
+        // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I1]], [[I0]]{{\]}}
+        store %v0, %0[%x01, %x00] : memref<16x32xf32>
 
         // Swizzle %x00, %x01 and %c3, %c7
         %x10 = affine.apply affine_map<(d0, d1)[s0, s1] -> (d0 * s1)>
@@ -193,18 +193,16 @@ func @compose_affine_maps_dependent_loads() {
 
         // CHECK-NEXT: [[I2A:%[0-9]+]] = affine.apply [[MAP12]](%{{.*}})
         // CHECK-NEXT: [[I2B:%[0-9]+]] = affine.apply [[MAP11]](%{{.*}})
-        // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I2A]], [[I2B]]{{\]}}
-        %v3 = load %0[%x10, %x11] : memref<16x32xf32>
+        // CHECK-NEXT: store [[V0]], %{{[0-9]+}}{{\[}}[[I2A]], [[I2B]]{{\]}}
+        store %v0, %0[%x10, %x11] : memref<16x32xf32>
       }
     }
   }
   return
 }
 
-// CHECK-LABEL: func @compose_affine_maps_diamond_dependency() {
-func @compose_affine_maps_diamond_dependency() {
-  %0 = alloc() : memref<4x4xf32>
-
+// CHECK-LABEL: func @compose_affine_maps_diamond_dependency
+func @compose_affine_maps_diamond_dependency(%arg0: f32, %arg1: memref<4x4xf32>) {
   affine.for %i0 = 0 to 15 {
     %a = affine.apply affine_map<(d0) -> (d0 - 1)> (%i0)
     %b = affine.apply affine_map<(d0) -> (d0 + 7)> (%a)
@@ -213,15 +211,15 @@ func @compose_affine_maps_diamond_dependency() {
     %d1 = affine.apply affine_map<(d0, d1) -> (d1 floordiv 3)> (%b, %c)
     // CHECK: [[I0:%[0-9]+]] = affine.apply [[MAP13A]](%{{.*}})
     // CHECK: [[I1:%[0-9]+]] = affine.apply [[MAP13B]](%{{.*}})
-    // CHECK-NEXT: load %{{[0-9]+}}{{\[}}[[I0]], [[I1]]{{\]}}
-    %v = load %0[%d0, %d1] : memref<4x4xf32>
+    // CHECK-NEXT: store %arg0, %arg1{{\[}}[[I0]], [[I1]]{{\]}}
+    store %arg0, %arg1[%d0, %d1] : memref<4x4xf32>
   }
 
   return
 }
 
 // CHECK-LABEL: func @arg_used_as_dim_and_symbol
-func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index) {
+func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index, %arg2: f32) {
   %c9 = constant 9 : index
   %1 = alloc() : memref<100x100xf32, 1>
   %2 = alloc() : memref<1xi32>
@@ -231,8 +229,8 @@ func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index) {
         (%i0, %i1)[%arg1, %c9]
       %4 = affine.apply affine_map<(d0, d1, d3) -> (d3 - (d0 + d1))>
         (%arg1, %c9, %3)
-      // CHECK: load %{{[0-9]+}}{{\[}}%{{.*}}, %{{.*}}{{\]}}
-      %5 = load %1[%4, %arg1] : memref<100x100xf32, 1>
+      // CHECK: store %arg2, %{{[0-9]+}}{{\[}}%{{.*}}, %{{.*}}{{\]}}
+      store %arg2, %1[%4, %arg1] : memref<100x100xf32, 1>
     }
   }
   return
@@ -252,7 +250,7 @@ func @trivial_maps() {
 
     %3 = affine.apply affine_map<()[] -> (0)>()[]
     store %cst, %0[%3] : memref<10xf32>
-    %4 = load %0[%c0] : memref<10xf32>
+    store %2, %0[%c0] : memref<10xf32>
   }
   return
 }
@@ -483,19 +481,19 @@ func @canonicalize_bounds(%M : index, %N : index) {
 
 // CHECK-LABEL: @compose_into_affine_load_store
 func @compose_into_affine_load_store(%A : memref<1024xf32>, %u : index) {
-  %cf1 = constant 1.0 : f32
   // CHECK: affine.for %[[IV:.*]] = 0 to 1024
   affine.for %i = 0 to 1024 {
     // Make sure the unused operand (%u below) gets dropped as well.
     %idx = affine.apply affine_map<(d0, d1) -> (d0 + 1)> (%i, %u)
-    affine.load %A[%idx] : memref<1024xf32>
-    affine.store %cf1, %A[%idx] : memref<1024xf32>
+    %0 = affine.load %A[%idx] : memref<1024xf32>
+    affine.store %0, %A[%idx] : memref<1024xf32>
     // CHECK-NEXT: affine.load %{{.*}}[%[[IV]] + 1]
-    // CHECK-NEXT: affine.store %cst, %{{.*}}[%[[IV]] + 1]
+    // CHECK-NEXT: affine.store %{{.*}}, %{{.*}}[%[[IV]] + 1]
 
     // Map remains the same, but operand changes on composition.
     %copy = affine.apply affine_map<(d0) -> (d0)> (%i)
-    affine.load %A[%copy] : memref<1024xf32>
+    %1 = affine.load %A[%copy] : memref<1024xf32>
+    "prevent.dce"(%1) : (f32) -> ()
     // CHECK-NEXT: affine.load %{{.*}}[%[[IV]]]
   }
   return

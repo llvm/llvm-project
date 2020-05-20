@@ -4,8 +4,8 @@ RUN: dsymutil -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.mach
 RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
 RUN: llvm-dwarfdump -verify %t.apple.dSYM
 
-RUN: llvm-dwarfdump -debug-names %t.dwarf.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
-RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.apple.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
+RUN: llvm-dwarfdump -debug-names %t.dwarf.dSYM | FileCheck %s -check-prefixes=NAMES,DWARF
+RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.apple.dSYM | FileCheck %s -check-prefixes=NAMES,APPLE
 
 RUN: dsymutil -update -accelerator=Dwarf %t.apple.dSYM
 RUN: dsymutil -update -accelerator=Apple %t.dwarf.dSYM
@@ -13,8 +13,8 @@ RUN: dsymutil -update -accelerator=Apple %t.dwarf.dSYM
 RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
 RUN: llvm-dwarfdump -verify %t.apple.dSYM
 
-RUN: llvm-dwarfdump -debug-names %t.apple.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
-RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.dwarf.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
+RUN: llvm-dwarfdump -debug-names %t.apple.dSYM | FileCheck %s -check-prefixes=NAMES,DWARF
+RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.dwarf.dSYM | FileCheck %s -check-prefixes=NAMES,APPLE
 
 DWARF: .debug_names contents:
 DWARF: Compilation Unit offsets [

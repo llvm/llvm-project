@@ -168,12 +168,12 @@ LLVMType Importer::processType(llvm::Type *type) {
       return nullptr;
     return LLVMType::getArrayTy(elementType, type->getArrayNumElements());
   }
-  case llvm::Type::VectorTyID: {
-    auto *typeVTy = llvm::cast<llvm::VectorType>(type);
-    if (typeVTy->isScalable()) {
-      emitError(unknownLoc) << "scalable vector types not supported";
-      return nullptr;
-    }
+  case llvm::Type::ScalableVectorTyID: {
+    emitError(unknownLoc) << "scalable vector types not supported";
+    return nullptr;
+  }
+  case llvm::Type::FixedVectorTyID: {
+    auto *typeVTy = llvm::cast<llvm::FixedVectorType>(type);
     LLVMType elementType = processType(typeVTy->getElementType());
     if (!elementType)
       return nullptr;
@@ -720,7 +720,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       op = b.create<CallOp>(loc, tys, b.getSymbolRefAttr(callee->getName()),
                             ops);
     } else {
-      Value calledValue = processValue(ci->getCalledValue());
+      Value calledValue = processValue(ci->getCalledOperand());
       if (!calledValue)
         return failure();
       ops.insert(ops.begin(), calledValue);
@@ -766,7 +766,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
                               ops, blocks[ii->getNormalDest()], normalArgs,
                               blocks[ii->getUnwindDest()], unwindArgs);
     } else {
-      ops.insert(ops.begin(), processValue(ii->getCalledValue()));
+      ops.insert(ops.begin(), processValue(ii->getCalledOperand()));
       op = b.create<InvokeOp>(loc, tys, ops, blocks[ii->getNormalDest()],
                               normalArgs, blocks[ii->getUnwindDest()],
                               unwindArgs);
@@ -924,9 +924,7 @@ OwningModuleRef translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
   llvm::SMDiagnostic err;
   std::unique_ptr<llvm::Module> llvmModule =
       llvm::parseIR(*sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), err,
-                    dialect->getLLVMContext(),
-                    /*UpgradeDebugInfo=*/true,
-                    /*DataLayoutString=*/"");
+                    dialect->getLLVMContext());
   if (!llvmModule) {
     std::string errStr;
     llvm::raw_string_ostream errStream(errStr);

@@ -284,7 +284,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse_ldmxcsr :
               Intrinsic<[], [llvm_ptr_ty],
                         [IntrReadMem, IntrArgMemOnly, IntrHasSideEffects,
-                         // FIXME: LDMXCSR does not actualy write to memory,
+                         // FIXME: LDMXCSR does not actually write to memory,
                          // but Fast and DAG Isel both use writing to memory
                          // as a proxy for having side effects.
                          IntrWriteMem]>;
@@ -1275,9 +1275,9 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Vector zero
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx_vzeroall : GCCBuiltin<"__builtin_ia32_vzeroall">,
-        Intrinsic<[], [], []>;
+        Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
   def int_x86_avx_vzeroupper : GCCBuiltin<"__builtin_ia32_vzeroupper">,
-        Intrinsic<[], [], []>;
+        Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
 // SIMD load ops

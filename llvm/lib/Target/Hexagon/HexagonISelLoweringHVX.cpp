@@ -445,10 +445,11 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     ArrayRef<Constant*> Tmp((Constant**)Consts.begin(),
                             (Constant**)Consts.end());
     Constant *CV = ConstantVector::get(Tmp);
-    unsigned Align = HwLen;
-    SDValue CP = LowerConstantPool(DAG.getConstantPool(CV, VecTy, Align), DAG);
+    Align Alignment(HwLen);
+    SDValue CP =
+        LowerConstantPool(DAG.getConstantPool(CV, VecTy, Alignment), DAG);
     return DAG.getLoad(VecTy, dl, DAG.getEntryNode(), CP,
-                       MachinePointerInfo::getConstantPool(MF), Align);
+                       MachinePointerInfo::getConstantPool(MF), Alignment);
   }
 
   // A special case is a situation where the vector is built entirely from
@@ -1090,10 +1091,12 @@ HexagonTargetLowering::compressHvxPred(SDValue VecQ, const SDLoc &dl,
       Tmp.push_back(ConstantInt::get(Int8Ty, 1ull << j));
   }
   Constant *CV = ConstantVector::get(Tmp);
-  unsigned Align = HwLen;
-  SDValue CP = LowerConstantPool(DAG.getConstantPool(CV, ByteTy, Align), DAG);
-  SDValue Bytes = DAG.getLoad(ByteTy, dl, DAG.getEntryNode(), CP,
-      MachinePointerInfo::getConstantPool(MF), Align);
+  Align Alignment(HwLen);
+  SDValue CP =
+      LowerConstantPool(DAG.getConstantPool(CV, ByteTy, Alignment), DAG);
+  SDValue Bytes =
+      DAG.getLoad(ByteTy, dl, DAG.getEntryNode(), CP,
+                  MachinePointerInfo::getConstantPool(MF), Alignment);
 
   // Select the bytes that correspond to true bits in the vector predicate.
   SDValue Sel = DAG.getSelect(dl, VecTy, VecQ, DAG.getBitcast(VecTy, Bytes),
@@ -1562,7 +1565,7 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
     assert(Words.size() % 2 == 0);
     for (unsigned i = 0, e = Words.size(); i < e; i += 2) {
       SDValue C = DAG.getNode(
-          HexagonISD::COMBINE, dl, MVT::i64, {Words[i], Words[i+1]});
+          HexagonISD::COMBINE, dl, MVT::i64, {Words[i+1], Words[i]});
       Combines.push_back(C);
     }
 

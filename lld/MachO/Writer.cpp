@@ -13,6 +13,7 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
@@ -23,7 +24,6 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
-using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
@@ -32,83 +32,64 @@ class LCLinkEdit;
 class LCDyldInfo;
 class LCSymtab;
 
-class LoadCommand {
-public:
-  virtual ~LoadCommand() = default;
-  virtual uint32_t getSize() const = 0;
-  virtual void writeTo(uint8_t *buf) const = 0;
-};
-
 class Writer {
 public:
   Writer() : buffer(errorHandler().outputBuffer) {}
 
+  void scanRelocations();
+  void createOutputSections();
   void createLoadCommands();
-  void assignAddresses();
+  void assignAddresses(OutputSegment *);
+  void createSymtabContents();
 
   void openFile();
-  void writeHeader();
   void writeSections();
 
   void run();
 
-  std::vector<LoadCommand *> loadCommands;
   std::unique_ptr<FileOutputBuffer> &buffer;
-  uint64_t fileSize = 0;
-  uint64_t sizeofCmds = 0;
-  LCLinkEdit *linkEditSeg = nullptr;
-  LCDyldInfo *dyldInfoSeg = nullptr;
-  LCSymtab *symtabSeg = nullptr;
-};
-
-class LCPagezero : public LoadCommand {
-public:
-  uint32_t getSize() const override { return sizeof(segment_command_64); }
-
-  void writeTo(uint8_t *buf) const override {
-    auto *c = reinterpret_cast<segment_command_64 *>(buf);
-    c->cmd = LC_SEGMENT_64;
-    c->cmdsize = getSize();
-    strcpy(c->segname, "__PAGEZERO");
-    c->vmsize = PageSize;
-  }
-};
-
-class LCLinkEdit : public LoadCommand {
-public:
-  uint32_t getSize() const override { return sizeof(segment_command_64); }
-
-  void writeTo(uint8_t *buf) const override {
-    auto *c = reinterpret_cast<segment_command_64 *>(buf);
-    c->cmd = LC_SEGMENT_64;
-    c->cmdsize = getSize();
-    strcpy(c->segname, "__LINKEDIT");
-    c->fileoff = fileOff;
-    c->filesize = contents.size();
-    c->maxprot = VM_PROT_READ | VM_PROT_WRITE;
-    c->initprot = VM_PROT_READ;
-  }
-
-  uint64_t getOffset() const { return fileOff + contents.size(); }
-
+  uint64_t addr = 0;
   uint64_t fileOff = 0;
-  SmallVector<char, 128> contents;
+  MachHeaderSection *headerSection = nullptr;
+  BindingSection *bindingSection = nullptr;
+  LazyBindingSection *lazyBindingSection = nullptr;
+  ExportSection *exportSection = nullptr;
+  StringTableSection *stringTableSection = nullptr;
+  SymtabSection *symtabSection = nullptr;
 };
 
+// LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
 class LCDyldInfo : public LoadCommand {
 public:
+  LCDyldInfo(BindingSection *bindingSection,
+             LazyBindingSection *lazyBindingSection,
+             ExportSection *exportSection)
+      : bindingSection(bindingSection), lazyBindingSection(lazyBindingSection),
+        exportSection(exportSection) {}
+
   uint32_t getSize() const override { return sizeof(dyld_info_command); }
 
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<dyld_info_command *>(buf);
     c->cmd = LC_DYLD_INFO_ONLY;
     c->cmdsize = getSize();
-    c->export_off = exportOff;
-    c->export_size = exportSize;
+    if (bindingSection->isNeeded()) {
+      c->bind_off = bindingSection->fileOff;
+      c->bind_size = bindingSection->getFileSize();
+    }
+    if (lazyBindingSection->isNeeded()) {
+      c->lazy_bind_off = lazyBindingSection->fileOff;
+      c->lazy_bind_size = lazyBindingSection->getFileSize();
+    }
+    if (exportSection->isNeeded()) {
+      c->export_off = exportSection->fileOff;
+      c->export_size = exportSection->getFileSize();
+    }
   }
 
-  uint64_t exportOff = 0;
-  uint64_t exportSize = 0;
+  BindingSection *bindingSection;
+  LazyBindingSection *lazyBindingSection;
+  ExportSection *exportSection;
 };
 
 class LCDysymtab : public LoadCommand {
@@ -128,7 +109,7 @@ public:
 
   uint32_t getSize() const override {
     return sizeof(segment_command_64) +
-           seg->sections.size() * sizeof(section_64);
+           seg->numNonHiddenSections() * sizeof(section_64);
   }
 
   void writeTo(uint8_t *buf) const override {
@@ -138,24 +119,25 @@ public:
     c->cmd = LC_SEGMENT_64;
     c->cmdsize = getSize();
     memcpy(c->segname, name.data(), name.size());
+    c->fileoff = seg->fileOff;
+    c->maxprot = seg->maxProt;
+    c->initprot = seg->initProt;
 
-    InputSection *firstSec = seg->sections.front().second[0];
-    InputSection *lastSec = seg->sections.back().second.back();
+    if (seg->getSections().empty())
+      return;
 
-    // dyld3's MachOLoaded::getSlide() assumes that the __TEXT segment starts
-    // from the beginning of the file (i.e. the header).
-    // TODO: replace this logic by creating a synthetic __TEXT,__mach_header
-    // section instead.
-    c->fileoff = name == "__TEXT" ? 0 : firstSec->addr - ImageBase;
-    c->vmaddr = c->fileoff + ImageBase;
-    c->vmsize = c->filesize = lastSec->addr + lastSec->data.size() - c->vmaddr;
-    c->maxprot = VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE;
-    c->initprot = seg->perms;
-    c->nsects = seg->sections.size();
+    c->vmaddr = seg->firstSection()->addr;
+    c->vmsize =
+        seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
+    c->nsects = seg->numNonHiddenSections();
 
-    for (auto &p : seg->sections) {
+    for (auto &p : seg->getSections()) {
       StringRef s = p.first;
-      std::vector<InputSection *> &sections = p.second;
+      OutputSection *section = p.second;
+      c->filesize += section->getFileSize();
+
+      if (section->isHidden())
+        continue;
 
       auto *sectHdr = reinterpret_cast<section_64 *>(buf);
       buf += sizeof(section_64);
@@ -163,16 +145,11 @@ public:
       memcpy(sectHdr->sectname, s.data(), s.size());
       memcpy(sectHdr->segname, name.data(), name.size());
 
-      sectHdr->addr = sections[0]->addr;
-      sectHdr->offset = sections[0]->addr - ImageBase;
-      sectHdr->align = sections[0]->align;
-      uint32_t maxAlign = 0;
-      for (const InputSection *section : sections)
-        maxAlign = std::max(maxAlign, section->align);
-      sectHdr->align = Log2_32(maxAlign);
-      sectHdr->flags = sections[0]->flags;
-      sectHdr->size = sections.back()->addr + sections.back()->data.size() -
-                      sections[0]->addr;
+      sectHdr->addr = section->addr;
+      sectHdr->offset = section->fileOff;
+      sectHdr->align = Log2_32(section->align);
+      sectHdr->flags = section->flags;
+      sectHdr->size = section->getSize();
     }
   }
 
@@ -188,25 +165,39 @@ class LCMain : public LoadCommand {
     auto *c = reinterpret_cast<entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
-    c->entryoff = config->entry->getVA();
+    c->entryoff = config->entry->getVA() - ImageBase;
     c->stacksize = 0;
   }
 };
 
 class LCSymtab : public LoadCommand {
 public:
+  LCSymtab(SymtabSection *symtabSection, StringTableSection *stringTableSection)
+      : symtabSection(symtabSection), stringTableSection(stringTableSection) {}
+
   uint32_t getSize() const override { return sizeof(symtab_command); }
 
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<symtab_command *>(buf);
     c->cmd = LC_SYMTAB;
     c->cmdsize = getSize();
+    c->symoff = symtabSection->fileOff;
+    c->nsyms = symtabSection->getNumSymbols();
+    c->stroff = stringTableSection->fileOff;
+    c->strsize = stringTableSection->getFileSize();
   }
+
+  SymtabSection *symtabSection = nullptr;
+  StringTableSection *stringTableSection = nullptr;
 };
 
-class LCLoadDylib : public LoadCommand {
+// There are several dylib load commands that share the same structure:
+//   * LC_LOAD_DYLIB
+//   * LC_ID_DYLIB
+//   * LC_REEXPORT_DYLIB
+class LCDylib : public LoadCommand {
 public:
-  LCLoadDylib(StringRef path) : path(path) {}
+  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {}
 
   uint32_t getSize() const override {
     return alignTo(sizeof(dylib_command) + path.size() + 1, 8);
@@ -216,7 +207,7 @@ public:
     auto *c = reinterpret_cast<dylib_command *>(buf);
     buf += sizeof(dylib_command);
 
-    c->cmd = LC_LOAD_DYLIB;
+    c->cmd = type;
     c->cmdsize = getSize();
     c->dylib.name = sizeof(dylib_command);
 
@@ -225,6 +216,7 @@ public:
   }
 
 private:
+  LoadCommandType type;
   StringRef path;
 };
 
@@ -253,55 +245,115 @@ private:
 };
 } // namespace
 
-void Writer::createLoadCommands() {
-  linkEditSeg = make<LCLinkEdit>();
-  dyldInfoSeg = make<LCDyldInfo>();
-  symtabSeg = make<LCSymtab>();
-
-  loadCommands.push_back(linkEditSeg);
-  loadCommands.push_back(dyldInfoSeg);
-  loadCommands.push_back(symtabSeg);
-  loadCommands.push_back(make<LCPagezero>());
-  loadCommands.push_back(make<LCLoadDylinker>());
-  loadCommands.push_back(make<LCDysymtab>());
-  loadCommands.push_back(make<LCMain>());
-  // TODO: dyld requires libSystem to be loaded. libSystem is a universal
-  // binary and we don't have support for that yet, so mock it out here.
-  loadCommands.push_back(make<LCLoadDylib>("/usr/lib/libSystem.B.dylib"));
-
-  for (OutputSegment *seg : outputSegments)
-    if (!seg->sections.empty())
-      loadCommands.push_back(make<LCSegment>(seg->name, seg));
+void Writer::scanRelocations() {
+  for (InputSection *sect : inputSections)
+    for (Reloc &r : sect->relocs)
+      if (auto *s = r.target.dyn_cast<Symbol *>())
+        if (auto *dylibSymbol = dyn_cast<DylibSymbol>(s))
+          target->prepareDylibSymbolRelocation(*dylibSymbol, r.type);
 }
 
-void Writer::assignAddresses() {
-  uint64_t addr = ImageBase + sizeof(mach_header_64);
+void Writer::createLoadCommands() {
+  headerSection->addLoadCommand(
+      make<LCDyldInfo>(bindingSection, lazyBindingSection, exportSection));
+  headerSection->addLoadCommand(
+      make<LCSymtab>(symtabSection, stringTableSection));
+  headerSection->addLoadCommand(make<LCDysymtab>());
 
-  uint64_t size = 0;
-  for (LoadCommand *lc : loadCommands)
-    size += lc->getSize();
-  sizeofCmds = size;
-  addr += size;
-
-  for (OutputSegment *seg : outputSegments) {
-    addr = alignTo(addr, PageSize);
-
-    for (auto &p : seg->sections) {
-      ArrayRef<InputSection *> sections = p.second;
-      for (InputSection *isec : sections) {
-        addr = alignTo(addr, isec->align);
-        isec->addr = addr;
-        addr += isec->data.size();
-      }
-    }
+  switch (config->outputType) {
+  case MH_EXECUTE:
+    headerSection->addLoadCommand(make<LCMain>());
+    headerSection->addLoadCommand(make<LCLoadDylinker>());
+    break;
+  case MH_DYLIB:
+    headerSection->addLoadCommand(
+        make<LCDylib>(LC_ID_DYLIB, config->installName));
+    break;
+  default:
+    llvm_unreachable("unhandled output file type");
   }
 
-  linkEditSeg->fileOff = addr - ImageBase;
+  uint8_t segIndex = 0;
+  for (OutputSegment *seg : outputSegments) {
+    headerSection->addLoadCommand(make<LCSegment>(seg->name, seg));
+    seg->index = segIndex++;
+  }
+
+  uint64_t dylibOrdinal = 1;
+  for (InputFile *file : inputFiles) {
+    if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
+      headerSection->addLoadCommand(
+          make<LCDylib>(LC_LOAD_DYLIB, dylibFile->dylibName));
+      dylibFile->ordinal = dylibOrdinal++;
+
+      if (dylibFile->reexport)
+        headerSection->addLoadCommand(
+            make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
+    }
+  }
+}
+
+void Writer::createOutputSections() {
+  // First, create hidden sections
+  headerSection = make<MachHeaderSection>();
+  bindingSection = make<BindingSection>();
+  lazyBindingSection = make<LazyBindingSection>();
+  stringTableSection = make<StringTableSection>();
+  symtabSection = make<SymtabSection>(*stringTableSection);
+  exportSection = make<ExportSection>();
+
+  switch (config->outputType) {
+  case MH_EXECUTE:
+    make<PageZeroSection>();
+    break;
+  case MH_DYLIB:
+    break;
+  default:
+    llvm_unreachable("unhandled output file type");
+  }
+
+  // Then merge input sections into output sections/segments.
+  for (InputSection *isec : inputSections) {
+    getOrCreateOutputSegment(isec->segname)
+        ->getOrCreateOutputSection(isec->name)
+        ->mergeInput(isec);
+  }
+
+  // Remove unneeded segments and sections.
+  // TODO: Avoid creating unneeded segments in the first place
+  for (auto it = outputSegments.begin(); it != outputSegments.end();) {
+    OutputSegment *seg = *it;
+    seg->removeUnneededSections();
+    if (!seg->isNeeded())
+      it = outputSegments.erase(it);
+    else
+      ++it;
+  }
+}
+
+void Writer::assignAddresses(OutputSegment *seg) {
+  addr = alignTo(addr, PageSize);
+  fileOff = alignTo(fileOff, PageSize);
+  seg->fileOff = fileOff;
+
+  for (auto &p : seg->getSections()) {
+    OutputSection *section = p.second;
+    addr = alignTo(addr, section->align);
+    // We must align the file offsets too to avoid misaligned writes of
+    // structs.
+    fileOff = alignTo(fileOff, section->align);
+    section->addr = addr;
+    section->fileOff = fileOff;
+    section->finalize();
+
+    addr += section->getSize();
+    fileOff += section->getFileSize();
+  }
 }
 
 void Writer::openFile() {
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
-      FileOutputBuffer::create(config->outputFile, fileSize,
+      FileOutputBuffer::create(config->outputFile, fileOff,
                                FileOutputBuffer::F_executable);
 
   if (!bufferOrErr)
@@ -311,45 +363,56 @@ void Writer::openFile() {
     buffer = std::move(*bufferOrErr);
 }
 
-void Writer::writeHeader() {
-  auto *hdr = reinterpret_cast<mach_header_64 *>(buffer->getBufferStart());
-  hdr->magic = MH_MAGIC_64;
-  hdr->cputype = CPU_TYPE_X86_64;
-  hdr->cpusubtype = CPU_SUBTYPE_X86_64_ALL | CPU_SUBTYPE_LIB64;
-  hdr->filetype = MH_EXECUTE;
-  hdr->ncmds = loadCommands.size();
-  hdr->sizeofcmds = sizeofCmds;
-  hdr->flags = MH_NOUNDEFS | MH_DYLDLINK | MH_TWOLEVEL;
-
-  uint8_t *p = reinterpret_cast<uint8_t *>(hdr + 1);
-  for (LoadCommand *lc : loadCommands) {
-    lc->writeTo(p);
-    p += lc->getSize();
+void Writer::writeSections() {
+  uint8_t *buf = buffer->getBufferStart();
+  for (OutputSegment *seg : outputSegments) {
+    for (auto &p : seg->getSections()) {
+      OutputSection *section = p.second;
+      section->writeTo(buf + section->fileOff);
+    }
   }
 }
 
-void Writer::writeSections() {
-  uint8_t *buf = buffer->getBufferStart();
-
-  for (OutputSegment *seg : outputSegments)
-    for (auto &sect : seg->sections)
-      for (InputSection *isec : sect.second)
-        isec->writeTo(buf + isec->addr - ImageBase);
-
-  memcpy(buf + linkEditSeg->fileOff, linkEditSeg->contents.data(),
-         linkEditSeg->contents.size());
-}
-
 void Writer::run() {
+  // dyld requires __LINKEDIT segment to always exist (even if empty).
+  OutputSegment *linkEditSegment =
+      getOrCreateOutputSegment(segment_names::linkEdit);
+
+  scanRelocations();
+  if (in.stubHelper->isNeeded())
+    in.stubHelper->setup();
+
+  // Sort and assign sections to their respective segments. No more sections nor
+  // segments may be created after this method runs.
+  createOutputSections();
+  sortOutputSegmentsAndSections();
+
   createLoadCommands();
-  assignAddresses();
-  fileSize = linkEditSeg->fileOff + linkEditSeg->contents.size();
+
+  // Ensure that segments (and the sections they contain) are allocated
+  // addresses in ascending order, which dyld requires.
+  //
+  // Note that at this point, __LINKEDIT sections are empty, but we need to
+  // determine addresses of other segments/sections before generating its
+  // contents.
+  for (OutputSegment *seg : outputSegments)
+    if (seg != linkEditSegment)
+      assignAddresses(seg);
+
+  // Fill __LINKEDIT contents.
+  bindingSection->finalizeContents();
+  lazyBindingSection->finalizeContents();
+  exportSection->finalizeContents();
+  symtabSection->finalizeContents();
+
+  // Now that __LINKEDIT is filled out, do a proper calculation of its
+  // addresses and offsets.
+  assignAddresses(linkEditSegment);
 
   openFile();
   if (errorCount())
     return;
 
-  writeHeader();
   writeSections();
 
   if (auto e = buffer->commit())
@@ -357,3 +420,11 @@ void Writer::run() {
 }
 
 void macho::writeResult() { Writer().run(); }
+
+void macho::createSyntheticSections() {
+  in.got = make<GotSection>();
+  in.lazyPointers = make<LazyPointerSection>();
+  in.stubs = make<StubsSection>();
+  in.stubHelper = make<StubHelperSection>();
+  in.imageLoaderCache = make<ImageLoaderCacheSection>();
+}

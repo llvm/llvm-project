@@ -10,6 +10,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <string>
 
 namespace __llvm_libc {
 namespace testutils {
@@ -41,6 +42,7 @@ template StreamWrapper &
 template StreamWrapper &
     StreamWrapper::operator<<<unsigned long long>(unsigned long long t);
 template StreamWrapper &StreamWrapper::operator<<<bool>(bool t);
+template StreamWrapper &StreamWrapper::operator<<<std::string>(std::string t);
 
 } // namespace testutils
 } // namespace __llvm_libc

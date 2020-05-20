@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRV.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -21,34 +21,34 @@ using namespace mlir;
 
 namespace {
 
-/// Pattern to convert a loop::ForOp within kernel functions into spirv::LoopOp.
-class ForOpConversion final : public SPIRVOpLowering<loop::ForOp> {
+/// Pattern to convert a scf::ForOp within kernel functions into spirv::LoopOp.
+class ForOpConversion final : public SPIRVOpLowering<scf::ForOp> {
 public:
-  using SPIRVOpLowering<loop::ForOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<scf::ForOp>::SPIRVOpLowering;
 
   LogicalResult
-  matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to convert a loop::IfOp within kernel functions into
+/// Pattern to convert a scf::IfOp within kernel functions into
 /// spirv::SelectionOp.
-class IfOpConversion final : public SPIRVOpLowering<loop::IfOp> {
+class IfOpConversion final : public SPIRVOpLowering<scf::IfOp> {
 public:
-  using SPIRVOpLowering<loop::IfOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<scf::IfOp>::SPIRVOpLowering;
 
   LogicalResult
-  matchAndRewrite(loop::IfOp IfOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::IfOp IfOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to erase a loop::YieldOp.
-class TerminatorOpConversion final : public SPIRVOpLowering<loop::YieldOp> {
+/// Pattern to erase a scf::YieldOp.
+class TerminatorOpConversion final : public SPIRVOpLowering<scf::YieldOp> {
 public:
-  using SPIRVOpLowering<loop::YieldOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<scf::YieldOp>::SPIRVOpLowering;
 
   LogicalResult
-  matchAndRewrite(loop::YieldOp terminatorOp, ArrayRef<Value> operands,
+  matchAndRewrite(scf::YieldOp terminatorOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.eraseOp(terminatorOp);
     return success();
@@ -117,18 +117,18 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// loop::ForOp.
+// scf::ForOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
+ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
                                  ConversionPatternRewriter &rewriter) const {
-  // loop::ForOp can be lowered to the structured control flow represented by
+  // scf::ForOp can be lowered to the structured control flow represented by
   // spirv::LoopOp by making the continue block of the spirv::LoopOp the loop
   // latch and the merge block the exit block. The resulting spirv::LoopOp has a
   // single back edge from the continue to header block, and a single exit from
   // header to merge.
-  loop::ForOpOperandAdaptor forOperands(operands);
+  scf::ForOpOperandAdaptor forOperands(operands);
   auto loc = forOp.getLoc();
   auto loopControl = rewriter.getI32IntegerAttr(
       static_cast<uint32_t>(spirv::LoopControl::None));
@@ -190,16 +190,16 @@ ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
 }
 
 //===----------------------------------------------------------------------===//
-// loop::IfOp.
+// scf::IfOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-IfOpConversion::matchAndRewrite(loop::IfOp ifOp, ArrayRef<Value> operands,
+IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter) const {
-  // When lowering `loop::IfOp` we explicitly create a selection header block
+  // When lowering `scf::IfOp` we explicitly create a selection header block
   // before the control flow diverges and a merge block where control flow
   // subsequently converges.
-  loop::IfOpOperandAdaptor ifOperands(operands);
+  scf::IfOpOperandAdaptor ifOperands(operands);
   auto loc = ifOp.getLoc();
 
   // Create `spv.selection` operation, selection header block and merge block.
@@ -343,6 +343,26 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
   return newFuncOp;
 }
 
+/// Populates `argABI` with spv.interface_var_abi attributes for lowering
+/// gpu.func to spv.func if no arguments have the attributes set
+/// already. Returns failure if any argument has the ABI attribute set already.
+static LogicalResult
+getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
+                   SmallVectorImpl<spirv::InterfaceVarABIAttr> &argABI) {
+  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+    if (funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
+            argIndex, spirv::getInterfaceVarABIAttrName()))
+      return failure();
+    // Vulkan's interface variable requirements needs scalars to be wrapped in a
+    // struct. The struct held in storage buffer.
+    Optional<spirv::StorageClass> sc;
+    if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
+      sc = spirv::StorageClass::StorageBuffer;
+    argABI.push_back(spirv::getInterfaceVarABIAttr(0, argIndex, sc, context));
+  }
+  return success();
+}
+
 LogicalResult GPUFuncOpConversion::matchAndRewrite(
     gpu::GPUFuncOp funcOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -350,22 +370,21 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
     return failure();
 
   SmallVector<spirv::InterfaceVarABIAttr, 4> argABI;
-  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
-    // If the ABI is already specified, use it.
-    auto abiAttr = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
-        argIndex, spirv::getInterfaceVarABIAttrName());
-    if (abiAttr) {
+  if (failed(getDefaultABIAttrs(rewriter.getContext(), funcOp, argABI))) {
+    argABI.clear();
+    for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+      // If the ABI is already specified, use it.
+      auto abiAttr = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
+          argIndex, spirv::getInterfaceVarABIAttrName());
+      if (!abiAttr) {
+        funcOp.emitRemark(
+            "match failure: missing 'spv.interface_var_abi' attribute at "
+            "argument ")
+            << argIndex;
+        return failure();
+      }
       argABI.push_back(abiAttr);
-      continue;
     }
-    // todo(ravishankarm): Use the "default ABI". Remove this in a follow up
-    // CL. Staging this to make this easy to revert in case of breakages out of
-    // tree.
-    Optional<spirv::StorageClass> sc;
-    if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
-      sc = spirv::StorageClass::StorageBuffer;
-    argABI.push_back(
-        spirv::getInterfaceVarABIAttr(0, argIndex, sc, rewriter.getContext()));
   }
 
   auto entryPointAttr = spirv::lookupEntryPointABI(funcOp);

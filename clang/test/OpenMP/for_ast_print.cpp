@@ -168,13 +168,13 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
-#pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(3) schedule(auto) ordered nowait linear(g:-1)
+#pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(3) schedule(auto) ordered nowait linear(g:-1) reduction(task, +:e)
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       for (auto x : arr)
         foo(), (void)x;
   // CHECK-NEXT: #pragma omp parallel
-  // CHECK-NEXT: #pragma omp for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(3) schedule(auto) ordered nowait linear(g: -1)
+  // CHECK-NEXT: #pragma omp for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(3) schedule(auto) ordered nowait linear(g: -1) reduction(task, +: e)
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: for (auto x : arr)

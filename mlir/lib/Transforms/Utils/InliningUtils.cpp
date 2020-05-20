@@ -128,9 +128,11 @@ static bool isLegalToInline(InlinerInterface &interface, Region *src,
 LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
                                  Operation *inlinePoint,
                                  BlockAndValueMapping &mapper,
-                                 ArrayRef<Value> resultsToReplace,
+                                 ValueRange resultsToReplace,
+                                 TypeRange regionResultTypes,
                                  Optional<Location> inlineLoc,
                                  bool shouldCloneInlinedRegion) {
+  assert(resultsToReplace.size() == regionResultTypes.size());
   // We expect the region to have at least one block.
   if (src->empty())
     return failure();
@@ -188,7 +190,8 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
   if (std::next(newBlocks.begin()) == newBlocks.end()) {
     // Have the interface handle the terminator of this block.
     auto *firstBlockTerminator = firstNewBlock->getTerminator();
-    interface.handleTerminator(firstBlockTerminator, resultsToReplace);
+    interface.handleTerminator(firstBlockTerminator,
+                               llvm::to_vector<6>(resultsToReplace));
     firstBlockTerminator->erase();
 
     // Merge the post insert block into the cloned entry block.
@@ -198,9 +201,9 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
   } else {
     // Otherwise, there were multiple blocks inlined. Add arguments to the post
     // insertion block to represent the results to replace.
-    for (Value resultToRepl : resultsToReplace) {
-      resultToRepl.replaceAllUsesWith(
-          postInsertBlock->addArgument(resultToRepl.getType()));
+    for (auto resultToRepl : llvm::enumerate(resultsToReplace)) {
+      resultToRepl.value().replaceAllUsesWith(postInsertBlock->addArgument(
+          regionResultTypes[resultToRepl.index()]));
     }
 
     /// Handle the terminators for each of the new blocks.
@@ -220,8 +223,8 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
 /// in-favor of the region arguments when inlining.
 LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
                                  Operation *inlinePoint,
-                                 ArrayRef<Value> inlinedOperands,
-                                 ArrayRef<Value> resultsToReplace,
+                                 ValueRange inlinedOperands,
+                                 ValueRange resultsToReplace,
                                  Optional<Location> inlineLoc,
                                  bool shouldCloneInlinedRegion) {
   // We expect the region to have at least one block.
@@ -245,7 +248,8 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
 
   // Call into the main region inliner function.
   return inlineRegion(interface, src, inlinePoint, mapper, resultsToReplace,
-                      inlineLoc, shouldCloneInlinedRegion);
+                      resultsToReplace.getTypes(), inlineLoc,
+                      shouldCloneInlinedRegion);
 }
 
 /// Utility function used to generate a cast operation from the given interface,
@@ -350,7 +354,8 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
 
   // Attempt to inline the call.
   if (failed(inlineRegion(interface, src, call, mapper, callResults,
-                          call.getLoc(), shouldCloneInlinedRegion)))
+                          callableResultTypes, call.getLoc(),
+                          shouldCloneInlinedRegion)))
     return cleanupState();
   return success();
 }

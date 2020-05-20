@@ -20,7 +20,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,6 +30,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Parallel.h"
 
 #include <cstdarg>
 #include <map>
@@ -441,21 +441,24 @@ void Writer::populateTargetFeatures() {
   if (!config->checkFeatures)
     return;
 
-  if (disallowed.count("atomics") && config->sharedMemory)
-    error("'atomics' feature is disallowed by " + disallowed["atomics"] +
-          ", so --shared-memory must not be used");
+  if (config->sharedMemory) {
+    if (disallowed.count("shared-mem"))
+      error("--shared-memory is disallowed by " + disallowed["shared-mem"] +
+            " because it was not compiled with 'atomics' or 'bulk-memory' "
+            "features.");
 
-  if (!allowed.count("atomics") && config->sharedMemory)
-    error("'atomics' feature must be used in order to use shared "
-          "memory");
+    for (auto feature : {"atomics", "bulk-memory"})
+      if (!allowed.count(feature))
+        error(StringRef("'") + feature +
+              "' feature must be used in order to use shared memory");
+  }
 
-  if (!allowed.count("bulk-memory") && config->sharedMemory)
-    error("'bulk-memory' feature must be used in order to use shared "
-          "memory");
-
-  if (!allowed.count("bulk-memory") && tlsUsed)
-    error("'bulk-memory' feature must be used in order to use thread-local "
-          "storage");
+  if (tlsUsed) {
+    for (auto feature : {"atomics", "bulk-memory"})
+      if (!allowed.count(feature))
+        error(StringRef("'") + feature +
+              "' feature must be used in order to use thread-local storage");
+  }
 
   // Validate that used features are allowed in output
   if (!inferFeatures) {

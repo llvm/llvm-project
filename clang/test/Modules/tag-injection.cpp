@@ -21,5 +21,5 @@ namespace N {
   };
 }
 
-X x; // expected-error {{definition of 'X' must be imported from module 'X.b' before it is required}}
+X x; // expected-error {{'X' must be defined before it is used}}
 // expected-note@b.h:1 {{here}}

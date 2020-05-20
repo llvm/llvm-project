@@ -54,6 +54,10 @@ and define the desired behavior for each kind of check:
 * ``-fno-sanitize-recover=...``: print a verbose error report and exit the program;
 * ``-fsanitize-trap=...``: execute a trap instruction (doesn't require UBSan run-time support).
 
+Note that the ``trap`` / ``recover`` options do not enable the corresponding
+sanitizer, and in general need to be accompanied by a suitable ``-fsanitize=``
+flag.
+
 For example if you compile/link your program as:
 
 .. code-block:: console
@@ -77,7 +81,9 @@ Available checks are:
      ``true`` nor ``false``.
   -  ``-fsanitize=builtin``: Passing invalid values to compiler builtins.
   -  ``-fsanitize=bounds``: Out of bounds array indexing, in cases
-     where the array bound can be statically determined.
+     where the array bound can be statically determined. The check includes
+     ``-fsanitize=array-bounds`` and ``-fsanitize=local-bounds``. Note that
+     ``-fsanitize=local-bounds`` is not included in ``-fsanitize=undefined``.
   -  ``-fsanitize=enum``: Load of a value of an enumerated type which
      is not in the range of representable values for that enumerated
      type.
@@ -169,7 +175,8 @@ Available checks are:
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
      ``float-divide-by-zero``, ``unsigned-integer-overflow``,
-     ``implicit-conversion``, and the ``nullability-*`` group of checks.
+     ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
+     of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
@@ -198,7 +205,7 @@ You can also use the following check groups:
 Volatile
 --------
 
-The ``null``, ``alignment``, ``object-size``, and ``vptr`` checks do not apply
+The ``null``, ``alignment``, ``object-size``, ``local-bounds``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
 
 Minimal Runtime

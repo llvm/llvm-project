@@ -47,9 +47,10 @@ class ReproducerAttachTestCase(TestBase):
         # Use Popen because pexpect is overkill and spawnSubprocess is
         # asynchronous.
         capture = subprocess.Popen([
-            lldbtest_config.lldbExec, '-b', '--capture', '--capture-path',
-            reproducer, '-o', 'proc att -n {}'.format(exe), '-o',
-            'reproducer generate'
+            lldbtest_config.lldbExec, '-b', '--no-lldbinit', '--no-use-colors']
+            + sum(map(lambda x: ['-O', x], self.setUpCommands()), [])
+            + ['--capture', '--capture-path', reproducer,
+            '-o', 'proc att -n {}'.format(exe), '-o', 'reproducer generate'
         ],
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,

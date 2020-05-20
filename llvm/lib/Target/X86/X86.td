@@ -444,6 +444,13 @@ def FeatureLVIControlFlowIntegrity
           "LFENCE instruction to serialize control flow. Also decompose RET "
           "instructions into a POP+LFENCE+JMP sequence.">;
 
+// Mitigate LVI attacks against data loads
+def FeatureLVILoadHardening
+    : SubtargetFeature<
+          "lvi-load-hardening", "UseLVILoadHardening", "true",
+          "Insert LFENCE instructions to prevent data speculatively injected "
+          "into loads from being used maliciously.">;
+
 // Direct Move instructions.
 def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
                                        "Support movdiri instruction">;
@@ -997,7 +1004,7 @@ def ProcessorFeatures {
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, GenericModel, Features>;
 
-// NOTE: CMPXCHG8B is here for legacy compatbility so that it is only disabled
+// NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.
 def : Proc<"generic",         [FeatureX87, FeatureSlowUAMem16,
                                FeatureCMPXCHG8B, FeatureInsertVZEROUPPER]>;
@@ -1260,6 +1267,7 @@ def : ProcessorModel<"x86-64", SandyBridgeModel, [
   FeatureNOPL,
   Feature64Bit,
   FeatureSlow3OpsLEA,
+  FeatureSlowDivide64,
   FeatureSlowIncDec,
   FeatureMacroFusion,
   FeatureInsertVZEROUPPER

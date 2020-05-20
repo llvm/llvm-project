@@ -10,6 +10,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 
 using namespace lldb_private;
 
@@ -44,6 +45,19 @@ void ClangExternalASTSourceCallbacks::FindExternalLexicalDecls(
     if (tag_decl)
       CompleteType(tag_decl);
   }
+}
+
+bool ClangExternalASTSourceCallbacks::FindExternalVisibleDeclsByName(
+    const clang::DeclContext *DC, clang::DeclarationName Name) {
+  llvm::SmallVector<clang::NamedDecl *, 4> decls;
+  // Objective-C methods are not added into the LookupPtr when they originate
+  // from an external source. SetExternalVisibleDeclsForName() adds them.
+  if (auto *oid = llvm::dyn_cast<clang::ObjCInterfaceDecl>(DC)) {
+    for (auto *omd : oid->methods())
+      if (omd->getDeclName() == Name)
+        decls.push_back(omd);
+  }
+  return !SetExternalVisibleDeclsForName(DC, Name, decls).empty();
 }
 
 OptionalClangModuleID

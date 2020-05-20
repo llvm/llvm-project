@@ -8,6 +8,14 @@ add_llvm_component_library(LLVMJITLink
   MachO_x86_64.cpp
   MachOLinkGraphBuilder.cpp
 
+  ADDITIONAL_HEADER_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/JITLink
+
   DEPENDS
   intrinsics_gen
   )
+
+target_link_libraries(LLVMJITLink
+  PRIVATE
+  LLVMObject
+)

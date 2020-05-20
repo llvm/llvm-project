@@ -80,10 +80,10 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Writer.h"
-#include "lld/Common/Threads.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
@@ -92,9 +92,9 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 namespace {
 template <class ELFT> class ICF {
 public:
@@ -467,9 +467,8 @@ template <class ELFT> void ICF<ELFT>::run() {
   }
 
   // Initially, we use hash values to partition sections.
-  parallelForEach(sections, [&](InputSection *s) {
-    s->eqClass[0] = xxHash64(s->data());
-  });
+  parallelForEach(
+      sections, [&](InputSection *s) { s->eqClass[0] = xxHash64(s->data()); });
 
   for (unsigned cnt = 0; cnt != 2; ++cnt) {
     parallelForEach(sections, [&](InputSection *s) {
@@ -526,15 +525,12 @@ template <class ELFT> void ICF<ELFT>::run() {
 }
 
 // ICF entry point function.
-template <class ELFT> void doIcf() {
+template <class ELFT> void elf::doIcf() {
   llvm::TimeTraceScope timeScope("ICF");
   ICF<ELFT>().run();
 }
 
-template void doIcf<ELF32LE>();
-template void doIcf<ELF32BE>();
-template void doIcf<ELF64LE>();
-template void doIcf<ELF64BE>();
-
-} // namespace elf
-} // namespace lld
+template void elf::doIcf<ELF32LE>();
+template void elf::doIcf<ELF32BE>();
+template void elf::doIcf<ELF64LE>();
+template void elf::doIcf<ELF64BE>();

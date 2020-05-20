@@ -159,8 +159,24 @@ flang_site_config and flang_config. And they can be set as shown bellow:
   <path-to-fortran-test>
 ```
 
-# How to Generate FIR Documentation
+# How to Generate Documentation
 
-If f18 was built with `-DLINK_WITH_FIR=On` (`On` by default), it is possible to
+## Generate FIR Documentation
+If flang was built with `-DLINK_WITH_FIR=On` (`On` by default), it is possible to
 generate FIR language documentation by running `make flang-doc`. This will
-create `docs/Dialect/FIRLangRef.md` in f18 build directory.
+create `docs/Dialect/FIRLangRef.md` in flang build directory.
+
+## Generate Doxygen-based Documentation
+To generate doxygen-style documentation from source code
+- Pass `-DLLVM_ENABLE_DOXYGEN=ON -DFLANG_INCLUDE_DOCS=ON` to the cmake command.
+
+```
+cd ~/llvm-project/build
+cmake -DLLVM_ENABLE_DOXYGEN=ON -DFLANG_INCLUDE_DOCS=ON ../llvm
+make doxygen-flang
+
+It will generate html in
+
+    <build-dir>/tools/flang/docs/doxygen/html # for flang docs
+```
+

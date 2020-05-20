@@ -115,6 +115,7 @@ add_llvm_component_library(LLVMSupport
   LowLevelType.cpp
   ManagedStatic.cpp
   MathExtras.cpp
+  MemAlloc.cpp
   MemoryBuffer.cpp
   MD5.cpp
   NativeFormatting.cpp
@@ -138,7 +139,6 @@ add_llvm_component_library(LLVMSupport
   Statistic.cpp
   StringExtras.cpp
   StringMap.cpp
-  StringPool.cpp
   StringSaver.cpp
   StringRef.cpp
   SymbolRemappingReader.cpp

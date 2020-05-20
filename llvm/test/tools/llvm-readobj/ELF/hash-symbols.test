@@ -298,8 +298,8 @@ ProgramHeaders:
     Flags: [ PF_R, PF_X ]
     VAddr: 0x0
     Sections:
-      - Section: .dynsym
       - Section: .dynstr
+      - Section: .dynsym
       - Section: .dynamic
       - Section: .text.foo
   - Type:  PT_DYNAMIC

@@ -102,9 +102,10 @@ LIT Options
 Command Line Options
 --------------------
 
-To use these options you pass them on the LIT command line as --param NAME or
---param NAME=VALUE. Some options have default values specified during CMake's
-configuration. Passing the option on the command line will override the default.
+To use these options you pass them on the LIT command line as ``--param NAME``
+or ``--param NAME=VALUE``. Some options have default values specified during
+CMake's configuration. Passing the option on the command line will override the
+default.
 
 .. program:: lit
 
@@ -139,8 +140,7 @@ configuration. Passing the option on the command line will override the default.
 .. option:: cxx_library_root=<path/to/lib/>
 
   Specify the directory of the libc++ library to be tested. By default the
-  library folder of the build directory is used. This option cannot be used
-  when use_system_cxx_lib is provided.
+  library folder of the build directory is used.
 
 
 .. option:: cxx_runtime_root=<path/to/lib/>
@@ -155,7 +155,10 @@ configuration. Passing the option on the command line will override the default.
   **Default**: False
 
   Enable or disable testing against the installed version of libc++ library.
-  Note: This does not use the installed headers.
+  This impacts whether the ``with_system_cxx_lib`` Lit feature is defined or
+  not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
+  still be used to specify the path of the library to link to and run against,
+  respectively.
 
 .. option:: use_lit_shell=<bool>
 
@@ -187,12 +190,6 @@ configuration. Passing the option on the command line will override the default.
   Run the tests using the given sanitizer. If LLVM_USE_SANITIZER was given when
   building libc++ then that sanitizer will be used by default.
 
-.. option:: color_diagnostics
-
-  Enable the use of colorized compile diagnostics. If the color_diagnostics
-  option is specified or the environment variable LIBCXX_COLOR_DIAGNOSTICS is
-  present then color diagnostics will be enabled.
-
 .. option:: llvm_unwinder
 
   Enable the use of LLVM unwinder instead of libgcc.
@@ -209,12 +206,6 @@ Environment Variables
 
   Specify the site configuration to use when running the tests.
   Also see `libcxx_site_config`.
-
-.. envvar:: LIBCXX_COLOR_DIAGNOSTICS
-
-  If ``LIBCXX_COLOR_DIAGNOSTICS`` is defined then the test suite will attempt
-  to use color diagnostic outputs from the compiler.
-  Also see `color_diagnostics`.
 
 Writing Tests
 -------------

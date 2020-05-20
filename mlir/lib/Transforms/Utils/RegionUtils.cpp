@@ -12,7 +12,7 @@
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/SideEffects.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -209,7 +209,7 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
 
   // Check to see if we can reason about the successor operands and mutate them.
   BranchOpInterface branchInterface = dyn_cast<BranchOpInterface>(op);
-  if (!branchInterface || !branchInterface.canEraseSuccessorOperand()) {
+  if (!branchInterface) {
     for (Block *successor : op->getSuccessors())
       for (BlockArgument arg : successor->getArguments())
         liveMap.setProvedLive(arg);
@@ -219,7 +219,7 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
   // If we can't reason about the operands to a successor, conservatively mark
   // all arguments as live.
   for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i) {
-    if (!branchInterface.getSuccessorOperands(i))
+    if (!branchInterface.getMutableSuccessorOperands(i))
       for (BlockArgument arg : op->getSuccessor(i)->getArguments())
         liveMap.setProvedLive(arg);
   }
@@ -278,7 +278,8 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
     // since it will promote later operands of the terminator being erased
     // first, reducing the quadratic-ness.
     unsigned succ = succE - succI - 1;
-    Optional<OperandRange> succOperands = branchOp.getSuccessorOperands(succ);
+    Optional<MutableOperandRange> succOperands =
+        branchOp.getMutableSuccessorOperands(succ);
     if (!succOperands)
       continue;
     Block *successor = terminator->getSuccessor(succ);
@@ -288,7 +289,7 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
       // shifting later args when earlier args are erased.
       unsigned arg = argE - argI - 1;
       if (!liveMap.wasProvenLive(successor->getArgument(arg)))
-        branchOp.eraseSuccessorOperand(succ, arg);
+        succOperands->erase(arg);
     }
   }
 }
@@ -367,6 +368,324 @@ static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
 }
 
 //===----------------------------------------------------------------------===//
+// Block Merging
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// BlockEquivalenceData
+
+namespace {
+/// This class contains the information for comparing the equivalencies of two
+/// blocks. Blocks are considered equivalent if they contain the same operations
+/// in the same order. The only allowed divergence is for operands that come
+/// from sources outside of the parent block, i.e. the uses of values produced
+/// within the block must be equivalent.
+///   e.g.,
+/// Equivalent:
+///  ^bb1(%arg0: i32)
+///    return %arg0, %foo : i32, i32
+///  ^bb2(%arg1: i32)
+///    return %arg1, %bar : i32, i32
+/// Not Equivalent:
+///  ^bb1(%arg0: i32)
+///    return %foo, %arg0 : i32, i32
+///  ^bb2(%arg1: i32)
+///    return %arg1, %bar : i32, i32
+struct BlockEquivalenceData {
+  BlockEquivalenceData(Block *block);
+
+  /// Return the order index for the given value that is within the block of
+  /// this data.
+  unsigned getOrderOf(Value value) const;
+
+  /// The block this data refers to.
+  Block *block;
+  /// A hash value for this block.
+  llvm::hash_code hash;
+  /// A map of result producing operations to their relative orders within this
+  /// block. The order of an operation is the number of defined values that are
+  /// produced within the block before this operation.
+  DenseMap<Operation *, unsigned> opOrderIndex;
+};
+} // end anonymous namespace
+
+BlockEquivalenceData::BlockEquivalenceData(Block *block)
+    : block(block), hash(0) {
+  unsigned orderIt = block->getNumArguments();
+  for (Operation &op : *block) {
+    if (unsigned numResults = op.getNumResults()) {
+      opOrderIndex.try_emplace(&op, orderIt);
+      orderIt += numResults;
+    }
+    auto opHash = OperationEquivalence::computeHash(
+        &op, OperationEquivalence::Flags::IgnoreOperands);
+    hash = llvm::hash_combine(hash, opHash);
+  }
+}
+
+unsigned BlockEquivalenceData::getOrderOf(Value value) const {
+  assert(value.getParentBlock() == block && "expected value of this block");
+
+  // Arguments use the argument number as the order index.
+  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+    return arg.getArgNumber();
+
+  // Otherwise, the result order is offset from the parent op's order.
+  OpResult result = value.cast<OpResult>();
+  auto opOrderIt = opOrderIndex.find(result.getDefiningOp());
+  assert(opOrderIt != opOrderIndex.end() && "expected op to have an order");
+  return opOrderIt->second + result.getResultNumber();
+}
+
+//===----------------------------------------------------------------------===//
+// BlockMergeCluster
+
+namespace {
+/// This class represents a cluster of blocks to be merged together.
+class BlockMergeCluster {
+public:
+  BlockMergeCluster(BlockEquivalenceData &&leaderData)
+      : leaderData(std::move(leaderData)) {}
+
+  /// Attempt to add the given block to this cluster. Returns success if the
+  /// block was merged, failure otherwise.
+  LogicalResult addToCluster(BlockEquivalenceData &blockData);
+
+  /// Try to merge all of the blocks within this cluster into the leader block.
+  LogicalResult merge();
+
+private:
+  /// The equivalence data for the leader of the cluster.
+  BlockEquivalenceData leaderData;
+
+  /// The set of blocks that can be merged into the leader.
+  llvm::SmallSetVector<Block *, 1> blocksToMerge;
+
+  /// A set of operand+index pairs that correspond to operands that need to be
+  /// replaced by arguments when the cluster gets merged.
+  std::set<std::pair<int, int>> operandsToMerge;
+
+  /// A map of operations with external uses to a replacement within the leader
+  /// block.
+  DenseMap<Operation *, Operation *> opsToReplace;
+};
+} // end anonymous namespace
+
+LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
+  if (leaderData.hash != blockData.hash)
+    return failure();
+  Block *leaderBlock = leaderData.block, *mergeBlock = blockData.block;
+  if (leaderBlock->getArgumentTypes() != mergeBlock->getArgumentTypes())
+    return failure();
+
+  // A set of operands that mismatch between the leader and the new block.
+  SmallVector<std::pair<int, int>, 8> mismatchedOperands;
+  SmallVector<std::pair<Operation *, Operation *>, 2> newOpsToReplace;
+  auto lhsIt = leaderBlock->begin(), lhsE = leaderBlock->end();
+  auto rhsIt = blockData.block->begin(), rhsE = blockData.block->end();
+  for (int opI = 0; lhsIt != lhsE && rhsIt != rhsE; ++lhsIt, ++rhsIt, ++opI) {
+    // Check that the operations are equivalent.
+    if (!OperationEquivalence::isEquivalentTo(
+            &*lhsIt, &*rhsIt, OperationEquivalence::Flags::IgnoreOperands))
+      return failure();
+
+    // Compare the operands of the two operations. If the operand is within
+    // the block, it must refer to the same operation.
+    auto lhsOperands = lhsIt->getOperands(), rhsOperands = rhsIt->getOperands();
+    for (int operand : llvm::seq<int>(0, lhsIt->getNumOperands())) {
+      Value lhsOperand = lhsOperands[operand];
+      Value rhsOperand = rhsOperands[operand];
+      if (lhsOperand == rhsOperand)
+        continue;
+
+      // Check that these uses are both external, or both internal.
+      bool lhsIsInBlock = lhsOperand.getParentBlock() == leaderBlock;
+      bool rhsIsInBlock = rhsOperand.getParentBlock() == mergeBlock;
+      if (lhsIsInBlock != rhsIsInBlock)
+        return failure();
+      // Let the operands differ if they are defined in a different block. These
+      // will become new arguments if the blocks get merged.
+      if (!lhsIsInBlock) {
+        mismatchedOperands.emplace_back(opI, operand);
+        continue;
+      }
+
+      // Otherwise, these operands must have the same logical order within the
+      // parent block.
+      if (leaderData.getOrderOf(lhsOperand) != blockData.getOrderOf(rhsOperand))
+        return failure();
+    }
+
+    // If the rhs has external uses, it will need to be replaced.
+    if (rhsIt->isUsedOutsideOfBlock(mergeBlock))
+      newOpsToReplace.emplace_back(&*rhsIt, &*lhsIt);
+  }
+  // Make sure that the block sizes are equivalent.
+  if (lhsIt != lhsE || rhsIt != rhsE)
+    return failure();
+
+  // If we get here, the blocks are equivalent and can be merged.
+  operandsToMerge.insert(mismatchedOperands.begin(), mismatchedOperands.end());
+  opsToReplace.insert(newOpsToReplace.begin(), newOpsToReplace.end());
+  blocksToMerge.insert(blockData.block);
+  return success();
+}
+
+/// Returns true if the predecessor terminators of the given block can not have
+/// their operands updated.
+static bool ableToUpdatePredOperands(Block *block) {
+  for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
+    auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
+    if (!branch || !branch.getMutableSuccessorOperands(it.getSuccessorIndex()))
+      return false;
+  }
+  return true;
+}
+
+LogicalResult BlockMergeCluster::merge() {
+  // Don't consider clusters that don't have blocks to merge.
+  if (blocksToMerge.empty())
+    return failure();
+
+  Block *leaderBlock = leaderData.block;
+  if (!operandsToMerge.empty()) {
+    // If the cluster has operands to merge, verify that the predecessor
+    // terminators of each of the blocks can have their successor operands
+    // updated.
+    // TODO: We could try and sub-partition this cluster if only some blocks
+    // cause the mismatch.
+    if (!ableToUpdatePredOperands(leaderBlock) ||
+        !llvm::all_of(blocksToMerge, ableToUpdatePredOperands))
+      return failure();
+
+    // Replace any necessary operations.
+    for (std::pair<Operation *, Operation *> &it : opsToReplace)
+      it.first->replaceAllUsesWith(it.second);
+
+    // Collect the iterators for each of the blocks to merge. We will walk all
+    // of the iterators at once to avoid operand index invalidation.
+    SmallVector<Block::iterator, 2> blockIterators;
+    blockIterators.reserve(blocksToMerge.size() + 1);
+    blockIterators.push_back(leaderBlock->begin());
+    for (Block *mergeBlock : blocksToMerge)
+      blockIterators.push_back(mergeBlock->begin());
+
+    // Update each of the predecessor terminators with the new arguments.
+    SmallVector<SmallVector<Value, 8>, 2> newArguments(
+        1 + blocksToMerge.size(),
+        SmallVector<Value, 8>(operandsToMerge.size()));
+    unsigned curOpIndex = 0;
+    for (auto it : llvm::enumerate(operandsToMerge)) {
+      unsigned nextOpOffset = it.value().first - curOpIndex;
+      curOpIndex = it.value().first;
+
+      // Process the operand for each of the block iterators.
+      for (unsigned i = 0, e = blockIterators.size(); i != e; ++i) {
+        Block::iterator &blockIter = blockIterators[i];
+        std::advance(blockIter, nextOpOffset);
+        auto &operand = blockIter->getOpOperand(it.value().second);
+        newArguments[i][it.index()] = operand.get();
+
+        // Update the operand and insert an argument if this is the leader.
+        if (i == 0)
+          operand.set(leaderBlock->addArgument(operand.get().getType()));
+      }
+    }
+    // Update the predecessors for each of the blocks.
+    auto updatePredecessors = [&](Block *block, unsigned clusterIndex) {
+      for (auto predIt = block->pred_begin(), predE = block->pred_end();
+           predIt != predE; ++predIt) {
+        auto branch = cast<BranchOpInterface>((*predIt)->getTerminator());
+        unsigned succIndex = predIt.getSuccessorIndex();
+        branch.getMutableSuccessorOperands(succIndex)->append(
+            newArguments[clusterIndex]);
+      }
+    };
+    updatePredecessors(leaderBlock, /*clusterIndex=*/0);
+    for (unsigned i = 0, e = blocksToMerge.size(); i != e; ++i)
+      updatePredecessors(blocksToMerge[i], /*clusterIndex=*/i + 1);
+  }
+
+  // Replace all uses of the merged blocks with the leader and erase them.
+  for (Block *block : blocksToMerge) {
+    block->replaceAllUsesWith(leaderBlock);
+    block->erase();
+  }
+  return success();
+}
+
+/// Identify identical blocks within the given region and merge them, inserting
+/// new block arguments as necessary. Returns success if any blocks were merged,
+/// failure otherwise.
+static LogicalResult mergeIdenticalBlocks(Region &region) {
+  if (region.empty() || llvm::hasSingleElement(region))
+    return failure();
+
+  // Identify sets of blocks, other than the entry block, that branch to the
+  // same successors. We will use these groups to create clusters of equivalent
+  // blocks.
+  DenseMap<SuccessorRange, SmallVector<Block *, 1>> matchingSuccessors;
+  for (Block &block : llvm::drop_begin(region, 1))
+    matchingSuccessors[block.getSuccessors()].push_back(&block);
+
+  bool mergedAnyBlocks = false;
+  for (ArrayRef<Block *> blocks : llvm::make_second_range(matchingSuccessors)) {
+    if (blocks.size() == 1)
+      continue;
+
+    SmallVector<BlockMergeCluster, 1> clusters;
+    for (Block *block : blocks) {
+      BlockEquivalenceData data(block);
+
+      // Don't allow merging if this block has any regions.
+      // TODO: Add support for regions if necessary.
+      bool hasNonEmptyRegion = llvm::any_of(*block, [](Operation &op) {
+        return llvm::any_of(op.getRegions(),
+                            [](Region &region) { return !region.empty(); });
+      });
+      if (hasNonEmptyRegion)
+        continue;
+
+      // Try to add this block to an existing cluster.
+      bool addedToCluster = false;
+      for (auto &cluster : clusters)
+        if ((addedToCluster = succeeded(cluster.addToCluster(data))))
+          break;
+      if (!addedToCluster)
+        clusters.emplace_back(std::move(data));
+    }
+    for (auto &cluster : clusters)
+      mergedAnyBlocks |= succeeded(cluster.merge());
+  }
+
+  return success(mergedAnyBlocks);
+}
+
+/// Identify identical blocks within the given regions and merge them, inserting
+/// new block arguments as necessary.
+static LogicalResult mergeIdenticalBlocks(MutableArrayRef<Region> regions) {
+  llvm::SmallSetVector<Region *, 1> worklist;
+  for (auto &region : regions)
+    worklist.insert(&region);
+  bool anyChanged = false;
+  while (!worklist.empty()) {
+    Region *region = worklist.pop_back_val();
+    if (succeeded(mergeIdenticalBlocks(*region))) {
+      worklist.insert(region);
+      anyChanged = true;
+    }
+
+    // Add any nested regions to the worklist.
+    for (Block &block : *region)
+      for (auto &op : block)
+        for (auto &nestedRegion : op.getRegions())
+          worklist.insert(&nestedRegion);
+  }
+
+  return success(anyChanged);
+}
+
+//===----------------------------------------------------------------------===//
 // Region Simplification
 //===----------------------------------------------------------------------===//
 
@@ -375,7 +694,9 @@ static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
 /// elimination, as well as some other DCE. This function returns success if any
 /// of the regions were simplified, failure otherwise.
 LogicalResult mlir::simplifyRegions(MutableArrayRef<Region> regions) {
-  LogicalResult eliminatedBlocks = eraseUnreachableBlocks(regions);
-  LogicalResult eliminatedOpsOrArgs = runRegionDCE(regions);
-  return success(succeeded(eliminatedBlocks) || succeeded(eliminatedOpsOrArgs));
+  bool eliminatedBlocks = succeeded(eraseUnreachableBlocks(regions));
+  bool eliminatedOpsOrArgs = succeeded(runRegionDCE(regions));
+  bool mergedIdenticalBlocks = succeeded(mergeIdenticalBlocks(regions));
+  return success(eliminatedBlocks || eliminatedOpsOrArgs ||
+                 mergedIdenticalBlocks);
 }

@@ -358,7 +358,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
         Twine(getStringTableFragment()
                   ->getContents()[Files[CurFileNum - 1].StringTableOffset]) +
         "' begins");
-    OS.EmitCVFileChecksumOffsetDirective(CurFileNum);
+    OS.emitCVFileChecksumOffsetDirective(CurFileNum);
     OS.emitInt32(EntryCount);
     uint32_t SegmentSize = 12;
     SegmentSize += 8 * EntryCount;

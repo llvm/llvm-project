@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Format.h"
 #include <cassert>
@@ -94,7 +93,7 @@ static DescVector getDescriptions() {
       Desc(Op::Dwarf3, Op::SizeLEB, Op::SizeBlock);
   Descriptions[DW_OP_stack_value] = Desc(Op::Dwarf3);
   Descriptions[DW_OP_WASM_location] =
-      Desc(Op::Dwarf4, Op::SizeLEB, Op::SignedSizeLEB);
+      Desc(Op::Dwarf4, Op::SizeLEB, Op::WasmLocationArg);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);
   Descriptions[DW_OP_addrx] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
@@ -119,14 +118,14 @@ static DWARFExpression::Operation::Description getOpDesc(unsigned OpCode) {
 }
 
 bool DWARFExpression::Operation::extract(DataExtractor Data,
-                                         uint8_t AddressSize, uint64_t Offset) {
+                                         uint8_t AddressSize, uint64_t Offset,
+                                         Optional<DwarfFormat> Format) {
+  EndOffset = Offset;
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
-  if (Desc.Version == Operation::DwarfNA) {
-    EndOffset = Offset;
+  if (Desc.Version == Operation::DwarfNA)
     return false;
-  }
 
   for (unsigned Operand = 0; Operand < 2; ++Operand) {
     unsigned Size = Desc.Op[Operand];
@@ -158,8 +157,10 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       Operands[Operand] = Data.getUnsigned(&Offset, AddressSize);
       break;
     case Operation::SizeRefAddr:
-      // TODO: Add support for 64-bit DWARF format.
-      Operands[Operand] = Data.getU32(&Offset);
+      if (!Format)
+        return false;
+      Operands[Operand] =
+          Data.getUnsigned(&Offset, dwarf::getDwarfOffsetByteSize(*Format));
       break;
     case Operation::SizeLEB:
       if (Signed)
@@ -169,6 +170,19 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       break;
     case Operation::BaseTypeRef:
       Operands[Operand] = Data.getULEB128(&Offset);
+      break;
+    case Operation::WasmLocationArg:
+      assert(Operand == 1);
+      switch (Operands[0]) {
+      case 0: case 1: case 2:
+        Operands[Operand] = Data.getULEB128(&Offset);
+        break;
+      case 3: // global as uint32
+         Operands[Operand] = Data.getU32(&Offset);
+         break;
+      default:
+        return false; // Unknown Wasm location
+      }
       break;
     case Operation::SizeBlock:
       // We need a size, so this cannot be the first operand
@@ -273,6 +287,15 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
         OS << " 0x0";
       else
         prettyPrintBaseTypeRef(U, OS, Operands, Operand);
+    } else if (Size == Operation::WasmLocationArg) {
+      assert(Operand == 1);
+      switch (Operands[0]) {
+      case 0: case 1: case 2:
+      case 3: // global as uint32
+        OS << format(" 0x%" PRIx64, Operands[Operand]);
+        break;
+      default: assert(false);
+      }
     } else if (Size == Operation::SizeBlock) {
       uint64_t Offset = Operands[Operand];
       for (unsigned i = 0; i < Operands[Operand - 1]; ++i)

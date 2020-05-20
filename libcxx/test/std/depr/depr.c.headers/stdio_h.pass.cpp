@@ -156,9 +156,13 @@ int main(int, char**)
     static_assert((std::is_same<decltype(ungetc(0,fp)), int>::value), "");
     static_assert((std::is_same<decltype(fread((void*)0,0,0,fp)), size_t>::value), "");
     static_assert((std::is_same<decltype(fwrite((const void*)arr,1,0,fp)), size_t>::value), "");
+#ifndef _LIBCPP_HAS_NO_FGETPOS_FSETPOS
     static_assert((std::is_same<decltype(fgetpos(fp, &fpos)), int>::value), "");
+#endif
     static_assert((std::is_same<decltype(fseek(fp, 0,0)), int>::value), "");
+#ifndef _LIBCPP_HAS_NO_FGETPOS_FSETPOS
     static_assert((std::is_same<decltype(fsetpos(fp, &fpos)), int>::value), "");
+#endif
     static_assert((std::is_same<decltype(ftell(fp)), long>::value), "");
     static_assert((std::is_same<decltype(rewind(fp)), void>::value), "");
     static_assert((std::is_same<decltype(clearerr(fp)), void>::value), "");

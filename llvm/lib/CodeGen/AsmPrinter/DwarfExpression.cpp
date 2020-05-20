@@ -451,6 +451,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
+    case dwarf::DW_OP_push_object_address:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:
@@ -582,10 +583,10 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitOp(dwarf::DW_OP_and);
 }
 
-void DwarfExpression::addWasmLocation(unsigned Index, int64_t Offset) {
+void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
   assert(LocationKind == Implicit || LocationKind == Unknown);
   LocationKind = Implicit;
   emitOp(dwarf::DW_OP_WASM_location);
   emitUnsigned(Index);
-  emitSigned(Offset);
+  emitUnsigned(Offset);
 }

@@ -10,7 +10,6 @@
 #include "CodeCompletionStrings.h"
 #include "FindSymbols.h"
 #include "FindTarget.h"
-#include "Logger.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -21,7 +20,9 @@
 #include "index/Merge.h"
 #include "index/Relation.h"
 #include "index/SymbolLocation.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
@@ -34,6 +35,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
@@ -48,6 +50,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -137,17 +140,20 @@ SymbolLocation getPreferredLocation(const Location &ASTLoc,
   return Merged.CanonicalDeclaration;
 }
 
-std::vector<const NamedDecl *> getDeclAtPosition(ParsedAST &AST,
-                                                 SourceLocation Pos,
-                                                 DeclRelationSet Relations) {
+std::vector<const NamedDecl *>
+getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
+                  ASTNodeKind *NodeKind = nullptr) {
   unsigned Offset = AST.getSourceManager().getDecomposedSpellingLoc(Pos).second;
   std::vector<const NamedDecl *> Result;
   SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
                             Offset, [&](SelectionTree ST) {
                               if (const SelectionTree::Node *N =
-                                      ST.commonAncestor())
+                                      ST.commonAncestor()) {
+                                if (NodeKind)
+                                  *NodeKind = N->ASTNode.getNodeKind();
                                 llvm::copy(targetDecl(N->ASTNode, Relations),
                                            std::back_inserter(Result));
+                              }
                               return !Result.empty();
                             });
   return Result;
@@ -181,7 +187,7 @@ llvm::Optional<LocatedSymbol> locateFileReferent(const Position &Pos,
                                                  ParsedAST &AST,
                                                  llvm::StringRef MainFilePath) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
-    if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line) {
+    if (!Inc.Resolved.empty() && Inc.HashLine == Pos.line) {
       LocatedSymbol File;
       File.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
       File.PreferredDeclaration = {
@@ -219,7 +225,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
 std::vector<LocatedSymbol>
 locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
                   ParsedAST &AST, llvm::StringRef MainFilePath,
-                  const SymbolIndex *Index) {
+                  const SymbolIndex *Index, ASTNodeKind *NodeKind) {
   const SourceManager &SM = AST.getSourceManager();
   // Results follow the order of Symbols.Decls.
   std::vector<LocatedSymbol> Result;
@@ -248,7 +254,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   // Emit all symbol locations (declaration or definition) from AST.
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
-  for (const NamedDecl *D : getDeclAtPosition(AST, CurLoc, Relations)) {
+  for (const NamedDecl *D :
+       getDeclAtPosition(AST, CurLoc, Relations, NodeKind)) {
     // Special case: void foo() ^override: jump to the overridden method.
     if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
       const InheritableAttr *Attr = D->getAttr<OverrideAttr>();
@@ -315,93 +322,56 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   return Result;
 }
 
-llvm::StringRef wordTouching(llvm::StringRef Code, unsigned Offset) {
-  unsigned B = Offset, E = Offset;
-  while (B > 0 && isIdentifierBody(Code[B - 1]))
-    --B;
-  while (E < Code.size() && isIdentifierBody(Code[E]))
-    ++E;
-  return Code.slice(B, E);
+bool tokenSpelledAt(SourceLocation SpellingLoc, const syntax::TokenBuffer &TB) {
+  auto ExpandedTokens = TB.expandedTokens(
+      TB.sourceManager().getMacroArgExpandedLocation(SpellingLoc));
+  return !ExpandedTokens.empty();
 }
 
-bool isLikelyToBeIdentifier(StringRef Word) {
-  // Word contains underscore.
-  // This handles things like snake_case and MACRO_CASE.
-  if (Word.contains('_')) {
-    return true;
-  }
-  // Word contains capital letter other than at beginning.
-  // This handles things like lowerCamel and UpperCamel.
-  // The check for also containing a lowercase letter is to rule out
-  // initialisms like "HTTP".
-  bool HasLower = Word.find_if(clang::isLowercase) != StringRef::npos;
-  bool HasUpper = Word.substr(1).find_if(clang::isUppercase) != StringRef::npos;
-  if (HasLower && HasUpper) {
-    return true;
-  }
-  // FIXME: There are other signals we could listen for.
-  // Some of these require inspecting the surroundings of the word as well.
-  //   - mid-sentence Capitalization
-  //   - markup like quotes / backticks / brackets / "\p"
-  //   - word has a qualifier (foo::bar)
-  return false;
+llvm::StringRef sourcePrefix(SourceLocation Loc, const SourceManager &SM) {
+  auto D = SM.getDecomposedLoc(Loc);
+  bool Invalid = false;
+  llvm::StringRef Buf = SM.getBufferData(D.first, &Invalid);
+  if (Invalid || D.second > Buf.size())
+    return "";
+  return Buf.substr(0, D.second);
 }
 
-bool tokenSurvivedPreprocessing(SourceLocation Loc,
-                                const syntax::TokenBuffer &TB) {
-  auto WordExpandedTokens =
-      TB.expandedTokens(TB.sourceManager().getMacroArgExpandedLocation(Loc));
-  return !WordExpandedTokens.empty();
+bool isDependentName(ASTNodeKind NodeKind) {
+  return NodeKind.isSame(ASTNodeKind::getFromNodeKind<OverloadExpr>()) ||
+         NodeKind.isSame(
+             ASTNodeKind::getFromNodeKind<CXXDependentScopeMemberExpr>()) ||
+         NodeKind.isSame(
+             ASTNodeKind::getFromNodeKind<DependentScopeDeclRefExpr>());
 }
 
 } // namespace
 
 std::vector<LocatedSymbol>
-locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
-                             SourceLocation Loc,
-                             const std::string &MainFilePath) {
+locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
+                      const SymbolIndex *Index, const std::string &MainFilePath,
+                      ASTNodeKind NodeKind) {
+  // Don't use heuristics if this is a real identifier, or not an
+  // identifier.
+  // Exception: dependent names, because those may have useful textual
+  // matches that AST-based heuristics cannot find.
+  if ((Word.ExpandedToken && !isDependentName(NodeKind)) ||
+      !Word.LikelyIdentifier || !Index)
+    return {};
+  // We don't want to handle words in string literals. It'd be nice to whitelist
+  // comments instead, but they're not retained in TokenBuffer.
+  if (Word.PartOfSpelledToken &&
+      isStringLiteral(Word.PartOfSpelledToken->kind()))
+    return {};
+
   const auto &SM = AST.getSourceManager();
-
-  // Get the raw word at the specified location.
-  unsigned Pos;
-  FileID File;
-  std::tie(File, Pos) = SM.getDecomposedLoc(Loc);
-  llvm::StringRef Code = SM.getBufferData(File);
-  llvm::StringRef Word = wordTouching(Code, Pos);
-  if (Word.empty())
-    return {};
-  unsigned WordOffset = Word.data() - Code.data();
-  SourceLocation WordStart = SM.getComposedLoc(File, WordOffset);
-
-  // Attempt to determine the kind of token that contains the word,
-  // and bail if it's a string literal. Note that we cannot always
-  // determine the token kind (e.g. comments, for which we do want
-  // to activate, are not retained by TokenBuffer).
-  for (syntax::Token T :
-       syntax::spelledTokensTouching(WordStart, AST.getTokens())) {
-    if (T.range(AST.getSourceManager()).touches(WordOffset + Word.size())) {
-      if (isStringLiteral(T.kind()))
-        return {};
-    }
-  }
-
-  // Do not consider tokens that survived preprocessing.
-  // We are erring on the safe side here, as a user may expect to get
-  // accurate (as opposed to textual-heuristic) results for such tokens.
-  // FIXME: Relax this for dependent code.
-  if (tokenSurvivedPreprocessing(WordStart, AST.getTokens()))
-    return {};
-
-  // Additionally filter for signals that the word is likely to be an
-  // identifier. This avoids triggering on e.g. random words in a comment.
-  if (!isLikelyToBeIdentifier(Word))
-    return {};
-
   // Look up the selected word in the index.
   FuzzyFindRequest Req;
-  Req.Query = Word.str();
+  Req.Query = Word.Text.str();
   Req.ProximityPaths = {MainFilePath};
-  Req.Scopes = visibleNamespaces(Code.take_front(Pos), AST.getLangOpts());
+  // Find the namespaces to query by lexing the file.
+  Req.Scopes =
+      visibleNamespaces(sourcePrefix(Word.Location, SM), AST.getLangOpts());
   // FIXME: For extra strictness, consider AnyScope=false.
   Req.AnyScope = true;
   // We limit the results to 3 further below. This limit is to avoid fetching
@@ -416,7 +386,7 @@ locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
     // This is to avoid too many false positives.
     // We could relax this in the future (e.g. to allow for typos) if we make
     // the query more accurate by other means.
-    if (Sym.Name != Word)
+    if (Sym.Name != Word.Text)
       return;
 
     // Exclude constructor results. They have the same name as the class,
@@ -481,6 +451,82 @@ locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
   return Results;
 }
 
+const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
+                                          const syntax::TokenBuffer &TB) {
+  // Don't use heuristics if this is a real identifier.
+  // Unlikely identifiers are OK if they were used as identifiers nearby.
+  if (Word.ExpandedToken)
+    return nullptr;
+  // We don't want to handle words in string literals. It'd be nice to whitelist
+  // comments instead, but they're not retained in TokenBuffer.
+  if (Word.PartOfSpelledToken &&
+      isStringLiteral(Word.PartOfSpelledToken->kind()))
+    return {};
+
+  const SourceManager &SM = TB.sourceManager();
+  // We prefer the closest possible token, line-wise. Backwards is penalized.
+  // Ties are implicitly broken by traversal order (first-one-wins).
+  auto File = SM.getFileID(Word.Location);
+  unsigned WordLine = SM.getSpellingLineNumber(Word.Location);
+  auto Cost = [&](SourceLocation Loc) -> unsigned {
+    assert(SM.getFileID(Loc) == File && "spelled token in wrong file?");
+    unsigned Line = SM.getSpellingLineNumber(Loc);
+    if (Line > WordLine)
+      return 1 + llvm::Log2_64(Line - WordLine);
+    if (Line < WordLine)
+      return 2 + llvm::Log2_64(WordLine - Line);
+    return 0;
+  };
+  const syntax::Token *BestTok = nullptr;
+  // Search bounds are based on word length: 2^N lines forward.
+  unsigned BestCost = Word.Text.size() + 1;
+
+  // Updates BestTok and BestCost if Tok is a good candidate.
+  // May return true if the cost is too high for this token.
+  auto Consider = [&](const syntax::Token &Tok) {
+    if (!(Tok.kind() == tok::identifier && Tok.text(SM) == Word.Text))
+      return false;
+    // No point guessing the same location we started with.
+    if (Tok.location() == Word.Location)
+      return false;
+    // We've done cheap checks, compute cost so we can break the caller's loop.
+    unsigned TokCost = Cost(Tok.location());
+    if (TokCost >= BestCost)
+      return true; // causes the outer loop to break.
+    // Allow locations that might be part of the AST, and macros (even if empty)
+    // but not things like disabled preprocessor sections.
+    if (!(tokenSpelledAt(Tok.location(), TB) || TB.expansionStartingAt(&Tok)))
+      return false;
+    // We already verified this token is an improvement.
+    BestCost = TokCost;
+    BestTok = &Tok;
+    return false;
+  };
+  auto SpelledTokens = TB.spelledTokens(File);
+  // Find where the word occurred in the token stream, to search forward & back.
+  auto *I = llvm::partition_point(SpelledTokens, [&](const syntax::Token &T) {
+    assert(SM.getFileID(T.location()) == SM.getFileID(Word.Location));
+    return T.location() >= Word.Location; // Comparison OK: same file.
+  });
+  // Search for matches after the cursor.
+  for (const syntax::Token &Tok : llvm::makeArrayRef(I, SpelledTokens.end()))
+    if (Consider(Tok))
+      break; // costs of later tokens are greater...
+  // Search for matches before the cursor.
+  for (const syntax::Token &Tok :
+       llvm::reverse(llvm::makeArrayRef(SpelledTokens.begin(), I)))
+    if (Consider(Tok))
+      break;
+
+  if (BestTok)
+    vlog(
+        "Word {0} under cursor {1} isn't a token (after PP), trying nearby {2}",
+        Word.Text, Word.Location.printToString(SM),
+        BestTok->location().printToString(SM));
+
+  return BestTok;
+}
+
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index) {
   const auto &SM = AST.getSourceManager();
@@ -511,12 +557,35 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
       // expansion.)
       return {*std::move(Macro)};
 
-  auto ASTResults =
-      locateASTReferent(*CurLoc, TouchedIdentifier, AST, *MainFilePath, Index);
+  ASTNodeKind NodeKind;
+  auto ASTResults = locateASTReferent(*CurLoc, TouchedIdentifier, AST,
+                                      *MainFilePath, Index, &NodeKind);
   if (!ASTResults.empty())
     return ASTResults;
 
-  return locateSymbolNamedTextuallyAt(AST, Index, *CurLoc, *MainFilePath);
+  // If the cursor can't be resolved directly, try fallback strategies.
+  auto Word =
+      SpelledWord::touching(*CurLoc, AST.getTokens(), AST.getLangOpts());
+  if (Word) {
+    // Is the same word nearby a real identifier that might refer to something?
+    if (const syntax::Token *NearbyIdent =
+            findNearbyIdentifier(*Word, AST.getTokens())) {
+      if (auto Macro = locateMacroReferent(*NearbyIdent, AST, *MainFilePath))
+        return {*std::move(Macro)};
+      ASTResults =
+          locateASTReferent(NearbyIdent->location(), NearbyIdent, AST,
+                            *MainFilePath, Index, /*NodeKind=*/nullptr);
+      if (!ASTResults.empty())
+        return ASTResults;
+    }
+    // No nearby word, or it didn't refer to anything either. Try the index.
+    auto TextualResults =
+        locateSymbolTextually(*Word, AST, Index, *MainFilePath, NodeKind);
+    if (!TextualResults.empty())
+      return TextualResults;
+  }
+
+  return {};
 }
 
 std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
@@ -530,10 +599,23 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
 
   std::vector<DocumentLink> Result;
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
-    if (!Inc.Resolved.empty()) {
-      Result.push_back(DocumentLink(
-          {Inc.R, URIForFile::canonicalize(Inc.Resolved, *MainFilePath)}));
-    }
+    if (Inc.Resolved.empty())
+      continue;
+    auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+    const auto *HashTok = AST.getTokens().spelledTokenAt(HashLoc);
+    assert(HashTok && "got inclusion at wrong offset");
+    const auto *IncludeTok = std::next(HashTok);
+    const auto *FileTok = std::next(IncludeTok);
+    // FileTok->range is not sufficient here, as raw lexing wouldn't yield
+    // correct tokens for angled filenames. Hence we explicitly use
+    // Inc.Written's length.
+    auto FileRange =
+        syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
+            .toCharRange(SM);
+
+    Result.push_back(
+        DocumentLink({halfOpenToRange(SM, FileRange),
+                      URIForFile::canonicalize(Inc.Resolved, *MainFilePath)}));
   }
 
   return Result;

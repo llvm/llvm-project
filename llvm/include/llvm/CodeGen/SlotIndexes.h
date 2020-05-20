@@ -382,13 +382,15 @@ class raw_ostream;
     }
 
     /// Returns the base index for the given instruction.
-    SlotIndex getInstructionIndex(const MachineInstr &MI) const {
+    SlotIndex getInstructionIndex(const MachineInstr &MI,
+                                  bool IgnoreBundle = false) const {
       // Instructions inside a bundle have the same number as the bundle itself.
       auto BundleStart = getBundleStart(MI.getIterator());
       auto BundleEnd = getBundleEnd(MI.getIterator());
       // Use the first non-debug instruction in the bundle to get SlotIndex.
       const MachineInstr &BundleNonDebug =
-          *skipDebugInstructionsForward(BundleStart, BundleEnd);
+          IgnoreBundle ? MI
+                       : *skipDebugInstructionsForward(BundleStart, BundleEnd);
       assert(!BundleNonDebug.isDebugInstr() &&
              "Could not use a debug instruction to query mi2iMap.");
       Mi2IndexMap::const_iterator itr = mi2iMap.find(&BundleNonDebug);
@@ -573,7 +575,11 @@ class raw_ostream;
     /// Removes machine instruction (bundle) \p MI from the mapping.
     /// This should be called before MachineInstr::eraseFromParent() is used to
     /// remove a whole bundle or an unbundled instruction.
-    void removeMachineInstrFromMaps(MachineInstr &MI);
+    /// If \p AllowBundled is set then this can be used on a bundled
+    /// instruction; however, this exists to support handleMoveIntoBundle,
+    /// and in general removeSingleMachineInstrFromMaps should be used instead.
+    void removeMachineInstrFromMaps(MachineInstr &MI,
+                                    bool AllowBundled = false);
 
     /// Removes a single machine instruction \p MI from the mapping.
     /// This should be called before MachineInstr::eraseFromBundle() is used to
@@ -598,14 +604,22 @@ class raw_ostream;
     }
 
     /// Add the given MachineBasicBlock into the maps.
-    void insertMBBInMaps(MachineBasicBlock *mbb) {
+    /// If \p InsertionPoint is specified then the block will be placed
+    /// before the given machine instr, otherwise it will be placed
+    /// before the next block in MachineFunction insertion order.
+    void insertMBBInMaps(MachineBasicBlock *mbb,
+                         MachineInstr *InsertionPoint = nullptr) {
       MachineFunction::iterator nextMBB =
         std::next(MachineFunction::iterator(mbb));
 
       IndexListEntry *startEntry = nullptr;
       IndexListEntry *endEntry = nullptr;
       IndexList::iterator newItr;
-      if (nextMBB == mbb->getParent()->end()) {
+      if (InsertionPoint) {
+        startEntry = createEntry(nullptr, 0);
+        endEntry = getInstructionIndex(*InsertionPoint).listEntry();
+        newItr = indexList.insert(endEntry->getIterator(), startEntry);
+      } else if (nextMBB == mbb->getParent()->end()) {
         startEntry = &indexList.back();
         endEntry = createEntry(nullptr, 0);
         newItr = indexList.insertAfter(startEntry->getIterator(), endEntry);

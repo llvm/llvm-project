@@ -52,23 +52,21 @@ body: |
     ; unable to legalize. This prevents further legalization.
     ; CHECK-LABEL: name: test_sext_trunc_v2s32_to_v2s8_to_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY]](<2 x s32>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC]](<2 x s16>)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
     ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
     ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY2]], 8
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[SEXT_INREG]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C1]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
     ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SEXT_INREG1]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; CHECK: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[BITCAST]](<2 x s16>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s8>) = G_TRUNC %0
     %2:_(<2 x s16>) = G_SEXT %1

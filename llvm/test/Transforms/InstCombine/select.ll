@@ -375,7 +375,7 @@ define i32 @test16_no_null_opt_2(i1 %C, i32* %P) #0 {
   ret i32 %V
 }
 
-attributes #0 = { "null-pointer-is-valid"="true" }
+attributes #0 = { null_pointer_is_valid }
 
 define i1 @test17(i32* %X, i1 %C) {
 ; CHECK-LABEL: @test17(

@@ -1,10 +1,13 @@
 // RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=A! -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
 // RUN: FileCheck -check-prefix=A1a-B_c -input-file %s %s
-// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=REPEAT -check-prefix=REPEAT -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=REPEAT -check-prefix=REPEAT -input-file %s %s 2>&1 | FileCheck -check-prefix=DUPLICATE_PREFIX %s
 // RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=VALID -check-prefix=A! -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
-// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix= -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix= -input-file %s %s 2>&1 | FileCheck -check-prefix=EMPTY_PREFIX %s
 foobar
 ; A1a-B_c: foobar
 
-; BAD_PREFIX: Supplied check-prefix is invalid! Prefixes must be
-  unique and start with a letter and contain only alphanumeric characters, hyphens and underscores
+; BAD_PREFIX: supplied check prefix must start with a letter and contain only alphanumeric characters, hyphens, and underscores: 'A!'
+
+; DUPLICATE_PREFIX: error: supplied check prefix must be unique among check and comment prefixes: 'REPEAT'
+
+; EMPTY_PREFIX: error: supplied check prefix must not be the empty string

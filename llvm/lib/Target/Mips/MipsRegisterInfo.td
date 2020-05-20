@@ -194,23 +194,23 @@ let Namespace = "Mips" in {
 
   // FP control registers.
   foreach I = 0-31 in
-  def FCR#I : MipsReg<#I, ""#I>;
+  def FCR#I : MipsReg<I, ""#I>;
 
   // FP condition code registers.
   foreach I = 0-7 in
-  def FCC#I : MipsReg<#I, "fcc"#I>;
+  def FCC#I : MipsReg<I, "fcc"#I>;
 
   // COP0 registers.
   foreach I = 0-31 in
-  def COP0#I : MipsReg<#I, ""#I>;
+  def COP0#I : MipsReg<I, ""#I>;
 
   // COP2 registers.
   foreach I = 0-31 in
-  def COP2#I : MipsReg<#I, ""#I>;
+  def COP2#I : MipsReg<I, ""#I>;
 
   // COP3 registers.
   foreach I = 0-31 in
-  def COP3#I : MipsReg<#I, ""#I>;
+  def COP3#I : MipsReg<I, ""#I>;
 
   // PC register
   def PC : Register<"pc">;
@@ -222,11 +222,11 @@ let Namespace = "Mips" in {
   def HWR3 : MipsReg<3, "hwr_ccres">;
 
   foreach I = 4-31 in
-  def HWR#I : MipsReg<#I, ""#I>;
+  def HWR#I : MipsReg<I, ""#I>;
 
   // Accum registers
   foreach I = 0-3 in
-  def AC#I : ACCReg<#I, "ac"#I,
+  def AC#I : ACCReg<I, "ac"#I,
                     [!cast<Register>("LO"#I), !cast<Register>("HI"#I)]>;
 
   def AC0_64 : ACCReg<0, "ac0", [LO0_64, HI0_64]>;
@@ -262,7 +262,7 @@ let Namespace = "Mips" in {
   // These registers do not exist, but instructions like `cfcmsa`
   // and `ctcmsa` allows to specify them.
   foreach I = 8-31 in
-  def MSA#I : MipsReg<#I, ""#I>;
+  def MSA#I : MipsReg<I, ""#I>;
 
   // Octeon multiplier and product registers
   def MPL0 : MipsReg<0, "mpl0">;

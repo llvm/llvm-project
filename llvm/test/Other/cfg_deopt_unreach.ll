@@ -12,24 +12,20 @@
 declare i8 @llvm.experimental.deoptimize.i8(...)
 
 define i8 @callee(i1* %c) alwaysinline {
-; NO-FLAGS: [shape=record,label="{%0:\l  %c0 = load volatile i1, i1* %c\l  br i1 %c0, label %lleft, label %lright\l|{<s0>T|<s1>F}}"];
-; DEOPT: [shape=record,label="{%0:\l  %c0 = load volatile i1, i1* %c\l  br i1 %c0, label %lleft, label %lright\l|{<s0>T|<s1>F}}"];
-; UNREACH: [shape=record,label="{%0:\l  %c0 = load volatile i1, i1* %c\l  br i1 %c0, label %lleft, label %lright\l|{<s0>T|<s1>F}}"];
-; BOTH-FLAGS-NOT: [shape=record,label="{%0:\l  %c0 = load volatile i1, i1* %c\l  br i1 %c0, label %lleft, label %lright\l|{<s0>T|<s1>F}}"];
   %c0 = load volatile i1, i1* %c
   br i1 %c0, label %lleft, label %lright
-; NO-FLAGS: [shape=record,label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"];
-; DEOPT-NOT: [shape=record,label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"];
-; UNREACH: [shape=record,label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"];
-; BOTH-FLAGS-NOT: [shape=record,label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"];
+; NO-FLAGS: label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
+; DEOPT-NOT: label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
+; UNREACH: label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
+; BOTH-FLAGS-NOT: label="{lleft:                                            \l  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
 lleft:
   %v0 = call i8(...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(i32 1) ]
   ret i8 %v0
 
-; NO-FLAGS: [shape=record,label="{lright:                                           \l  unreachable\l}"];
-; DEOPT: [shape=record,label="{lright:                                           \l  unreachable\l}"];
-; UNREACH-NOT: [shape=record,label="{lright:                                           \l  unreachable\l}"];
-; BOTH-FLAGS-NOT: [shape=record,label="{lright:                                           \l  unreachable\l}"];
+; NO-FLAGS: label="{lright:                                           \l  unreachable\l}"
+; DEOPT: label="{lright:                                           \l  unreachable\l}"
+; UNREACH-NOT: label="{lright:                                           \l  unreachable\l}"
+; BOTH-FLAGS-NOT: label="{lright:                                           \l  unreachable\l}"
 lright:
   unreachable
 }

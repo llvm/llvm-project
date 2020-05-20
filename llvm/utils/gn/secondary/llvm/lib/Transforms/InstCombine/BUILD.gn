@@ -23,6 +23,7 @@ static_library("InstCombine") {
     "InstCombineCompares.cpp",
     "InstCombineLoadStoreAlloca.cpp",
     "InstCombineMulDivRem.cpp",
+    "InstCombineNegator.cpp",
     "InstCombinePHI.cpp",
     "InstCombineSelect.cpp",
     "InstCombineShifts.cpp",

@@ -19,12 +19,12 @@
 #include "Index.h"
 #include "MemIndex.h"
 #include "Merge.h"
-#include "Path.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
+#include "support/Path.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
@@ -55,30 +55,30 @@ enum class DuplicateHandling {
   Merge,
 };
 
-/// A container of Symbols from several source files. It can be updated
-/// at source-file granularity, replacing all symbols from one file with a new
-/// set.
+/// A container of slabs associated with a key. It can be updated at key
+/// granularity, replacing all slabs belonging to a key with a new set. Keys are
+/// usually file paths/uris.
 ///
-/// This implements a snapshot semantics for symbols in a file. Each update to a
-/// file will create a new snapshot for all symbols in the file. Snapshots are
-/// managed with shared pointers that are shared between this class and the
-/// users. For each file, this class only stores a pointer pointing to the
-/// newest snapshot, and an outdated snapshot is deleted by the last owner of
-/// the snapshot, either this class or the symbol index.
+/// This implements snapshot semantics. Each update will create a new snapshot
+/// for all slabs of the Key. Snapshots are managed with shared pointers that
+/// are shared between this class and the users. For each key, this class only
+/// stores a pointer pointing to the newest snapshot, and an outdated snapshot
+/// is deleted by the last owner of the snapshot, either this class or the
+/// symbol index.
 ///
 /// The snapshot semantics keeps critical sections minimal since we only need
 /// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
-  /// Updates all symbols and refs in a file.
-  /// If either is nullptr, corresponding data for \p Path will be removed.
-  /// If CountReferences is true, \p Refs will be used for counting References
+  /// Updates all slabs associated with the \p Key.
+  /// If either is nullptr, corresponding data for \p Key will be removed.
+  /// If CountReferences is true, \p Refs will be used for counting references
   /// during merging.
-  void update(PathRef Path, std::unique_ptr<SymbolSlab> Slab,
+  void update(llvm::StringRef Key, std::unique_ptr<SymbolSlab> Symbols,
               std::unique_ptr<RefSlab> Refs,
               std::unique_ptr<RelationSlab> Relations, bool CountReferences);
 
-  /// The index keeps the symbols alive.
+  /// The index keeps the slabs alive.
   /// Will count Symbol::References based on number of references in the main
   /// files, while building the index with DuplicateHandling::Merge option.
   std::unique_ptr<SymbolIndex>
@@ -92,12 +92,9 @@ private:
   };
   mutable std::mutex Mutex;
 
-  /// Stores the latest symbol snapshots for all active files.
-  llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSymbols;
-  /// Stores the latest ref snapshots for all active files.
-  llvm::StringMap<RefSlabAndCountReferences> FileToRefs;
-  /// Stores the latest relation snapshots for all active files.
-  llvm::StringMap<std::shared_ptr<RelationSlab>> FileToRelations;
+  llvm::StringMap<std::shared_ptr<SymbolSlab>> SymbolsSnapshot;
+  llvm::StringMap<RefSlabAndCountReferences> RefsSnapshot;
+  llvm::StringMap<std::shared_ptr<RelationSlab>> RelatiosSnapshot;
 };
 
 /// This manages symbols from files and an in-memory index on all symbols.
@@ -159,16 +156,16 @@ SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
 struct FileShardedIndex {
   /// \p HintPath is used to convert file URIs stored in symbols into absolute
   /// paths.
-  explicit FileShardedIndex(IndexFileIn Input, PathRef HintPath);
+  explicit FileShardedIndex(IndexFileIn Input);
 
-  /// Returns absolute paths for all files that has a shard.
-  std::vector<PathRef> getAllFiles() const;
+  /// Returns uris for all files that has a shard.
+  std::vector<llvm::StringRef> getAllSources() const;
 
-  /// Generates index shard for the \p File. Note that this function results in
+  /// Generates index shard for the \p Uri. Note that this function results in
   /// a copy of all the relevant data.
   /// Returned index will always have Symbol/Refs/Relation Slabs set, even if
   /// they are empty.
-  IndexFileIn getShard(PathRef File) const;
+  llvm::Optional<IndexFileIn> getShard(llvm::StringRef Uri) const;
 
 private:
   // Contains all the information that belongs to a single file.
@@ -185,7 +182,7 @@ private:
 
   // Keeps all the information alive.
   const IndexFileIn Index;
-  // Mapping from absolute paths to slab information.
+  // Mapping from URIs to slab information.
   llvm::StringMap<FileShard> Shards;
   // Used to build RefSlabs.
   llvm::DenseMap<const Ref *, SymbolID> RefToSymID;

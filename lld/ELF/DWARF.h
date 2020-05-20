@@ -32,6 +32,10 @@ public:
     f(infoSection);
   }
 
+  const llvm::DWARFSection &getLoclistsSection() const override {
+    return loclistsSection;
+  }
+
   const llvm::DWARFSection &getRangesSection() const override {
     return rangesSection;
   }
@@ -81,6 +85,7 @@ private:
   LLDDWARFSection gnuPubnamesSection;
   LLDDWARFSection gnuPubtypesSection;
   LLDDWARFSection infoSection;
+  LLDDWARFSection loclistsSection;
   LLDDWARFSection rangesSection;
   LLDDWARFSection rnglistsSection;
   LLDDWARFSection strOffsetsSection;

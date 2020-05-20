@@ -434,7 +434,7 @@ This open-hierarchy RTTI support should only be used if your use case requries
 it. Otherwise the standard LLVM RTTI system should be preferred.
 
 .. _`Curiously Recurring Template Idiom`:
-https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
+  https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
 
 E.g.
 

@@ -414,6 +414,9 @@ List removed unused sections.
 List identical folded sections.
 .It Fl -print-map
 Print a link map to the standard output.
+.It Fl -print-archive-stats Ns = Ns Ar file
+Write archive usage statistics to the specified file.
+Print the numbers of members and fetched members for each archive.
 .It Fl -push-state
 Save the current state of
 .Fl -as-needed ,
@@ -529,6 +532,13 @@ Number of threads.
 (default) means all of concurrent threads supported.
 .Cm 1
 disables multi-threading.
+.It Fl -time-trace
+Record time trace.
+.It Fl -time-trace-file Ns = Ns Ar file
+Write time trace output to
+.Ar file .
+.It Fl -time-trace-granularity Ns = Ns Ar value
+Minimum time granularity (in microseconds) traced by time profiler.
 .It Fl -trace
 Print the names of the input files.
 .It Fl -trace-symbol Ns = Ns Ar symbol , Fl y Ar symbol
@@ -574,6 +584,10 @@ Read version script from
 Warn about reverse or cyclic dependencies to or between static archives.
 This can be used to ensure linker invocation remains compatible with
 traditional Unix-like linkers.
+.It Fl -warn-backrefs-exclude Ns = Ns Ar glob
+Glob describing an archive (or an object file within --start-lib)
+which should be ignored for
+.Fl -warn-backrefs
 .It Fl -warn-common
 Warn about duplicate common symbols.
 .It Fl -warn-ifunc-textrel

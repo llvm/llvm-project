@@ -262,12 +262,6 @@ def coverage_notes_file : Separate<["-"], "coverage-notes-file">,
   HelpText<"Emit coverage notes to this filename.">;
 def coverage_notes_file_EQ : Joined<["-"], "coverage-notes-file=">,
   Alias<coverage_notes_file>;
-def coverage_cfg_checksum : Flag<["-"], "coverage-cfg-checksum">,
-  HelpText<"Emit CFG checksum for functions in .gcno files.">;
-def coverage_no_function_names_in_data : Flag<["-"], "coverage-no-function-names-in-data">,
-  HelpText<"Emit function names in .gcda files.">;
-def coverage_exit_block_before_body : Flag<["-"], "coverage-exit-block-before-body">,
-  HelpText<"Emit the exit block before the body blocks in .gcno files.">;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
 def test_coverage : Flag<["-"], "test-coverage">,
@@ -569,6 +563,10 @@ def frecovery_ast : Flag<["-"], "frecovery-ast">,
   HelpText<"Preserve expressions in AST rather than dropping them when "
            "encountering semantic errors">;
 def fno_recovery_ast : Flag<["-"], "fno-recovery-ast">;
+def frecovery_ast_type : Flag<["-"], "frecovery-ast-type">,
+  HelpText<"Preserve the type for recovery expressions when possible "
+          "(experimental)">;
+def fno_recovery_ast_type : Flag<["-"], "fno-recovery-ast-type">;
 
 let Group = Action_Group in {
 
@@ -815,6 +813,9 @@ def fsigned_wchar : Flag<["-"], "fsigned-wchar">,
   HelpText<"Use a signed type for wchar_t">;
 def fno_signed_wchar : Flag<["-"], "fno-signed-wchar">,
   HelpText<"Use an unsigned type for wchar_t">;
+def fcompatibility_qualified_id_block_param_type_checking : Flag<["-"], "fcompatibility-qualified-id-block-type-checking">,
+  HelpText<"Allow using blocks with parameters of more specific type than "
+           "the type system guarantees when a parameter is qualified id">;
 
 // FIXME: Remove these entirely once functionality/tests have been excised.
 def fobjc_gc_only : Flag<["-"], "fobjc-gc-only">, Group<f_Group>,

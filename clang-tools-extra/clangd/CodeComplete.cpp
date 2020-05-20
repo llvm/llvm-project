@@ -26,18 +26,19 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
-#include "Logger.h"
+#include "Hover.h"
 #include "Preamble.h"
 #include "Protocol.h"
 #include "Quality.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
-#include "Threading.h"
-#include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
+#include "support/Logger.h"
+#include "support/Threading.h"
+#include "support/Trace.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/CharInfo.h"
@@ -371,12 +372,19 @@ struct CodeCompletionBuilder {
       S.SnippetSuffix = std::string(C.IndexResult->CompletionSnippetSuffix);
       S.ReturnType = std::string(C.IndexResult->ReturnType);
     }
-    if (ExtractDocumentation && Completion.Documentation.empty()) {
-      if (C.IndexResult)
-        Completion.Documentation = std::string(C.IndexResult->Documentation);
-      else if (C.SemaResult)
-        Completion.Documentation = getDocComment(*ASTCtx, *C.SemaResult,
-                                                 /*CommentsFromHeader=*/false);
+    if (ExtractDocumentation && !Completion.Documentation) {
+      auto SetDoc = [&](llvm::StringRef Doc) {
+        if (!Doc.empty()) {
+          Completion.Documentation.emplace();
+          parseDocumentation(Doc, *Completion.Documentation);
+        }
+      };
+      if (C.IndexResult) {
+        SetDoc(C.IndexResult->Documentation);
+      } else if (C.SemaResult) {
+        SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
+                             /*CommentsFromHeader=*/false));
+      }
     }
   }
 
@@ -1023,6 +1031,7 @@ struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
   const PreambleData &Preamble;
+  const PreamblePatch &Patch;
   llvm::StringRef Contents;
   size_t Offset;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
@@ -1060,7 +1069,6 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   ParseInput.CompileCommand = Input.Command;
   ParseInput.FS = VFS;
   ParseInput.Contents = std::string(Input.Contents);
-  ParseInput.Opts = ParseOptions();
 
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(ParseInput, IgnoreDiags);
@@ -1096,6 +1104,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   PreambleBounds PreambleRegion =
       ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
   bool CompletingInPreamble = PreambleRegion.Size > Input.Offset;
+  Input.Patch.apply(*CI);
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   auto Clang = prepareCompilerInstance(
@@ -1754,8 +1763,10 @@ codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
       SpecFuzzyFind, Opts);
   return (!Preamble || Opts.RunParser == CodeCompleteOptions::NeverParse)
              ? std::move(Flow).runWithoutSema(Contents, *Offset, VFS)
-             : std::move(Flow).run(
-                   {FileName, Command, *Preamble, Contents, *Offset, VFS});
+             : std::move(Flow).run({FileName, Command, *Preamble,
+                                    // We want to serve code completions with
+                                    // low latency, so don't bother patching.
+                                    PreamblePatch(), Contents, *Offset, VFS});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
@@ -1766,7 +1777,7 @@ SignatureHelp signatureHelp(PathRef FileName,
                             const SymbolIndex *Index) {
   auto Offset = positionToOffset(Contents, Pos);
   if (!Offset) {
-    elog("Code completion position was invalid {0}", Offset.takeError());
+    elog("Signature help position was invalid {0}", Offset.takeError());
     return SignatureHelp();
   }
   SignatureHelp Result;
@@ -1775,10 +1786,15 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = false;
-  IncludeStructure PreambleInclusions; // Unused for signatureHelp
+
+  ParseInputs PI;
+  PI.CompileCommand = Command;
+  PI.Contents = Contents.str();
+  PI.FS = std::move(VFS);
+  auto PP = PreamblePatch::create(FileName, PI, Preamble);
   semaCodeComplete(
       std::make_unique<SignatureHelpCollector>(Options, Index, Result), Options,
-      {FileName, Command, Preamble, Contents, *Offset, std::move(VFS)});
+      {FileName, Command, Preamble, PP, Contents, *Offset, std::move(PI.FS)});
   return Result;
 }
 
@@ -1808,6 +1824,21 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   return false;
 }
 
+// FIXME: find a home for this (that can depend on both markup and Protocol).
+static MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
+  MarkupContent Result;
+  Result.kind = Kind;
+  switch (Kind) {
+  case MarkupKind::PlainText:
+    Result.value.append(Doc.asPlainText());
+    break;
+  case MarkupKind::Markdown:
+    Result.value.append(Doc.asMarkdown());
+    break;
+  }
+  return Result;
+}
+
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   const auto *InsertInclude = Includes.empty() ? nullptr : &Includes[0];
@@ -1822,9 +1853,16 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                    ? std::string(llvm::formatv("[{0} overloads]", BundleSize))
                    : ReturnType;
   LSP.deprecated = Deprecated;
-  if (InsertInclude)
-    LSP.detail += "\n" + InsertInclude->Header;
-  LSP.documentation = Documentation;
+  // Combine header information and documentation in LSP `documentation` field.
+  // This is not quite right semantically, but tends to display well in editors.
+  if (InsertInclude || Documentation) {
+    markup::Document Doc;
+    if (InsertInclude)
+      Doc.addParagraph().appendText("From ").appendCode(InsertInclude->Header);
+    if (Documentation)
+      Doc.append(*Documentation);
+    LSP.documentation = renderDoc(Doc, Opts.DocumentationFormat);
+  }
   LSP.sortText = sortText(Score.Total, Name);
   LSP.filterText = Name;
   LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};
@@ -1836,7 +1874,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // is mainly to help LSP clients again, so that changes do not effect each
   // other.
   for (const auto &FixIt : FixIts) {
-    if (isRangeConsecutive(FixIt.range, LSP.textEdit->range)) {
+    if (FixIt.range.end == LSP.textEdit->range.start) {
       LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
       LSP.textEdit->range.start = FixIt.range.start;
     } else {
@@ -1872,6 +1910,44 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   for (const auto &C : R.Completions)
     OS << C << "\n";
   return OS;
+}
+
+// Heuristically detect whether the `Line` is an unterminated include filename.
+bool isIncludeFile(llvm::StringRef Line) {
+  Line = Line.ltrim();
+  if (!Line.consume_front("#"))
+    return false;
+  Line = Line.ltrim();
+  if (!(Line.consume_front("include_next") || Line.consume_front("include") ||
+        Line.consume_front("import")))
+    return false;
+  Line = Line.ltrim();
+  if (Line.consume_front("<"))
+    return Line.count('>') == 0;
+  if (Line.consume_front("\""))
+    return Line.count('"') == 0;
+  return false;
+}
+
+bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
+  // Look at last line before completion point only.
+  Content = Content.take_front(Offset);
+  auto Pos = Content.rfind('\n');
+  if (Pos != llvm::StringRef::npos)
+    Content = Content.substr(Pos + 1);
+
+  // Complete after scope operators.
+  if (Content.endswith(".") || Content.endswith("->") || Content.endswith("::"))
+    return true;
+  // Complete after `#include <` and #include `<foo/`.
+  if ((Content.endswith("<") || Content.endswith("\"") ||
+       Content.endswith("/")) &&
+      isIncludeFile(Content))
+    return true;
+
+  // Complete words. Give non-ascii characters the benefit of the doubt.
+  return !Content.empty() &&
+         (isIdentifierBody(Content.back()) || !llvm::isASCII(Content.back()));
 }
 
 } // namespace clangd

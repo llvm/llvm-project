@@ -49,7 +49,7 @@ Sections:
     Name:            target_features
     Features:
       - Prefix:        DISALLOWED
-        Name:          "atomics"
+        Name:          "shared-mem"
 ...
 
 # NO-SHARED:      - Type:            MEMORY
@@ -57,4 +57,4 @@ Sections:
 # NO-SHARED-NEXT:     - Initial:         0x00000002
 # NO-SHARED-NOT:        Maximum:
 
-# SHARED: 'atomics' feature is disallowed by {{.*}}shared-memory-no-atomics.yaml.tmp1.o, so --shared-memory must not be used{{$}}
+# SHARED: --shared-memory is disallowed by {{.*}}shared-memory-no-atomics.yaml.tmp1.o because it was not compiled with 'atomics' or 'bulk-memory' features.

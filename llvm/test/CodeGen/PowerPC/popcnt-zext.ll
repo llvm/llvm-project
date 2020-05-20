@@ -12,7 +12,7 @@ define i16 @zpop_i8_i16(i8 %x) {
 ; SLOW-LABEL: zpop_i8_i16:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 24
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5
@@ -48,7 +48,7 @@ define i16 @popz_i8_i16(i8 %x) {
 ; SLOW-LABEL: popz_i8_i16:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 24
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5
@@ -77,14 +77,14 @@ define i16 @popz_i8_i16(i8 %x) {
 define i32 @zpop_i8_i32(i8 %x) {
 ; FAST-LABEL: zpop_i8_i32:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 24, 31
+; FAST-NEXT:    clrlwi 3, 3, 24
 ; FAST-NEXT:    popcntw 3, 3
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: zpop_i8_i32:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 24
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5
@@ -120,7 +120,7 @@ define i32 @popz_i8_32(i8 %x) {
 ; SLOW-LABEL: popz_i8_32:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 24
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 85
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5
@@ -149,14 +149,14 @@ define i32 @popz_i8_32(i8 %x) {
 define i32 @zpop_i16_i32(i16 %x) {
 ; FAST-LABEL: zpop_i16_i32:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 16, 31
+; FAST-NEXT:    clrlwi 3, 3, 16
 ; FAST-NEXT:    popcntw 3, 3
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: zpop_i16_i32:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 16
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 21845
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5
@@ -192,7 +192,7 @@ define i32 @popz_i16_32(i16 %x) {
 ; SLOW-LABEL: popz_i16_32:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 16
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 21845
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5
@@ -305,7 +305,7 @@ define i64 @popa_i16_i64(i16 %x) {
 ; SLOW-LABEL: popa_i16_i64:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    clrlwi 5, 3, 16
-; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    rotlwi 3, 3, 31
 ; SLOW-NEXT:    andi. 3, 3, 21845
 ; SLOW-NEXT:    lis 4, 13107
 ; SLOW-NEXT:    subf 3, 3, 5

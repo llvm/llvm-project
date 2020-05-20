@@ -659,10 +659,6 @@ template <typename T>
 bool Designator<T>::operator==(const Designator<T> &that) const {
   return TestVariableEquality(*this, that);
 }
-template <typename T>
-bool Variable<T>::operator==(const Variable<T> &that) const {
-  return u == that.u;
-}
 bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
   return field_ == that.field_ && base_ == that.base_ &&
       dimension_ == that.dimension_;

@@ -1205,12 +1205,12 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "4"], "null-pointer-is-valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
   llvm.return
 }
 
 // CHECK: attributes #[[ATTR_GROUP]] = {
 // CHECK-DAG: noinline
 // CHECK-DAG: alignstack=4
-// CHECK-DAG: "null-pointer-is-valid"
+// CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"

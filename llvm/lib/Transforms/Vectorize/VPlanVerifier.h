@@ -24,9 +24,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 
-#include "VPlan.h"
-
 namespace llvm {
+class VPRegionBlock;
 
 /// Struct with utility functions that can be used to check the consistency and
 /// invariants of a VPlan, including the components of its H-CFG.

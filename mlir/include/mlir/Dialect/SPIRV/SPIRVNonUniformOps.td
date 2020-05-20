@@ -147,7 +147,7 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
   );
 
   let builders = [
-    OpBuilder<[{Builder *builder, OperationState &state, spirv::Scope}]>
+    OpBuilder<[{OpBuilder &builder, OperationState &state, spirv::Scope}]>
   ];
 
   let assemblyFormat = "$execution_scope attr-dict `:` type($result)";

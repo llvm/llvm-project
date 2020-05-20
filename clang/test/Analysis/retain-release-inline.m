@@ -13,6 +13,7 @@
 // It includes the basic definitions for the test cases below.
 //===----------------------------------------------------------------------===//
 #define NULL 0
+#define nil ((id)0)
 typedef unsigned int __darwin_natural_t;
 typedef unsigned long uintptr_t;
 typedef unsigned int uint32_t;
@@ -21,14 +22,14 @@ typedef unsigned int UInt32;
 typedef signed long CFIndex;
 typedef CFIndex CFByteOrder;
 typedef struct {
-    CFIndex location;
-    CFIndex length;
+  CFIndex location;
+  CFIndex length;
 } CFRange;
 static __inline__ __attribute__((always_inline)) CFRange CFRangeMake(CFIndex loc, CFIndex len) {
-    CFRange range;
-    range.location = loc;
-    range.length = len;
-    return range;
+  CFRange range;
+  range.location = loc;
+  range.length = len;
+  return range;
 }
 typedef const void * CFTypeRef;
 typedef const struct __CFString * CFStringRef;
@@ -91,6 +92,7 @@ typedef struct _NSZone NSZone;
 - (BOOL)isEqual:(id)object;
 - (id)retain;
 - (oneway void)release;
+- (Class)class;
 - (id)autorelease;
 - (id)init;
 @end  @protocol NSCopying  - (id)copyWithZone:(NSZone *)zone;
@@ -100,6 +102,7 @@ typedef struct _NSZone NSZone;
 @interface NSObject <NSObject> {}
 + (id)allocWithZone:(NSZone *)zone;
 + (id)alloc;
++ (Class)class;
 - (void)dealloc;
 @end
 @interface NSObject (NSCoderMethods)
@@ -480,4 +483,34 @@ id returnInputParam(id x) {
   [x release];
   [self test_inline_tiny_when_reanalyzing];
 }
+@end
+
+// Original problem: rdar://problem/50739539
+@interface MyClassThatLeaksDuringInit : NSObject
+
++ (MyClassThatLeaksDuringInit *)getAnInstance1;
++ (MyClassThatLeaksDuringInit *)getAnInstance2;
+
+@end
+
+@implementation MyClassThatLeaksDuringInit
+
++ (MyClassThatLeaksDuringInit *)getAnInstance1 {
+  return [[[MyClassThatLeaksDuringInit alloc] init] autorelease]; // expected-warning{{leak}}
+}
+
++ (MyClassThatLeaksDuringInit *)getAnInstance2 {
+  return [[[[self class] alloc] init] autorelease]; // expected-warning{{leak}}
+}
+
+- (instancetype)init {
+  if (1) {
+    return nil;
+  }
+
+  if (nil != (self = [super init])) {
+  }
+  return self;
+}
+
 @end

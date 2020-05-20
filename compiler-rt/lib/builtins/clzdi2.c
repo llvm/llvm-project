@@ -30,6 +30,6 @@ COMPILER_RT_ABI si_int __clzdi2(di_int a) {
   dwords x;
   x.all = a;
   const si_int f = -(x.s.high == 0);
-  return __builtin_clz((x.s.high & ~f) | (x.s.low & f)) +
+  return clzsi((x.s.high & ~f) | (x.s.low & f)) +
          (f & ((si_int)(sizeof(si_int) * CHAR_BIT)));
 }

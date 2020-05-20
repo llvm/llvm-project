@@ -17,6 +17,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <string>
+
 namespace llvm {
 namespace libc_benchmarks {
 
@@ -61,7 +63,7 @@ void Main() {
   size_t Steps = 0;
   for (auto FunctionName : Runner->getFunctionNames()) {
     FunctionMeasurements FM;
-    FM.Name = FunctionName;
+    FM.Name = std::string(FunctionName);
     for (size_t Run = 0; Run < Runs; ++Run) {
       for (uint32_t Size = SR.From; Size <= SR.To; Size += SR.Step) {
         const auto Result = Runner->benchmark(S.Options, FunctionName, Size);

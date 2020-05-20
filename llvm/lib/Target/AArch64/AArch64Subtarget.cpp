@@ -68,6 +68,9 @@ void AArch64Subtarget::initializeProperties() {
   switch (ARMProcFamily) {
   case Others:
     break;
+  case Carmel:
+    CacheLineSize = 64;
+    break;
   case CortexA35:
     break;
   case CortexA53:
@@ -165,6 +168,17 @@ void AArch64Subtarget::initializeProperties() {
     PrefFunctionLogAlignment = 4;
     PrefLoopLogAlignment = 2;
     break;
+  case ThunderX3T110:
+    CacheLineSize = 64;
+    PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 2;
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
+    MaxPrefetchIterationsAhead = 4;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
+    break;
   }
 }
 
@@ -182,6 +196,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
     ReserveXRegister.set(18);
 
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
+  InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
   Legalizer.reset(new AArch64LegalizerInfo(*this));
 
   auto *RBI = new AArch64RegisterBankInfo(*getRegisterInfo());
@@ -197,6 +212,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();
+}
+
+const InlineAsmLowering *AArch64Subtarget::getInlineAsmLowering() const {
+  return InlineAsmLoweringInfo.get();
 }
 
 InstructionSelector *AArch64Subtarget::getInstructionSelector() const {

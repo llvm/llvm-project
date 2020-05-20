@@ -103,7 +103,8 @@ public:
   // they get an error.
   Type();
 
-  void Dump(Stream *s, bool show_context);
+  void Dump(Stream *s, bool show_context,
+            lldb::DescriptionLevel level = lldb::eDescriptionLevelFull);
 
   void DumpTypeName(Stream *s);
 

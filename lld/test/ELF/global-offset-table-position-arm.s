@@ -3,7 +3,7 @@
 // RUN: ld.lld --hash-style=sysv -shared %t -o %t2
 // RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
-// The ARM _GLOBAL_OFFSET_TABLE_ should be defined at the start of the .got
+/// The ARM _GLOBAL_OFFSET_TABLE_ should be defined at the start of the .got
 .globl  a
 .type   a,%object
 .comm   a,4,4
@@ -25,7 +25,7 @@ _start:
 .data
 
 // CHECK:     Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT:     Value: 0x2268
+// CHECK-NEXT:     Value: 0x20268
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None

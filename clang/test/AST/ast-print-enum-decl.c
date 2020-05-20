@@ -103,3 +103,8 @@ struct DeclGroupInMemberList {
   enum T2 { T20 } *p1, *p2;
   // PRINT-NEXT: };
 };
+
+enum fixedEnum : int { fixedEnumerator };
+// PRINT-LABEL: enum fixedEnum : int {
+// PRINT-NEXT: fixedEnumerator
+// PRINT-NEXT: };

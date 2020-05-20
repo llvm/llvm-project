@@ -6,18 +6,23 @@
 define i32 @callee(i32 %arg) nounwind noinline uwtable "function-instrument"="xray-always" "xray-log-args"="1" {
   ret i32 %arg
 }
+; CHECK-LABEL: callee:
+; CHECK-NEXT:  Lfunc_begin0:
+
 ; CHECK-LABEL: Lxray_sleds_start0:
-; CHECK:  .quad {{\.?}}Lxray_sled_0
-; CHECK:  .quad {{_?}}callee
-; CHECK:  .byte 0x03
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
-; CHECK:  .{{(zero|space)}}  13
-; CHECK:  .quad {{\.?}}Lxray_sled_1
-; CHECK:  .quad {{_?}}callee
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
+; CHECK-NEXT:  Ltmp0:
+; CHECK-NEXT:   .quad {{\.?}}Lxray_sled_0-{{\.?}}Ltmp0
+; CHECK-NEXT:   .quad {{\.?}}Lfunc_begin0-({{\.?}}Ltmp0+8)
+; CHECK-NEXT:   .byte 0x03
+; CHECK-NEXT:   .byte 0x01
+; CHECK-NEXT:   .byte 0x02
+; CHECK:        .{{(zero|space)}}  13
+; CHECK:       Ltmp1:
+; CHECK-NEXT:   .quad {{\.?}}Lxray_sled_1-{{\.?}}Ltmp1
+; CHECK-NEXT:   .quad {{\.?}}Lfunc_begin0-({{\.?}}Ltmp1+8)
+; CHECK-NEXT:   .byte 0x01
+; CHECK-NEXT:   .byte 0x01
+; CHECK-NEXT:   .byte 0x02
 ; CHECK:  .{{(zero|space)}}  13
 
 define i32 @caller(i32 %arg) nounwind noinline uwtable "function-instrument"="xray-always" "xray-log-args"="1" {
@@ -25,15 +30,17 @@ define i32 @caller(i32 %arg) nounwind noinline uwtable "function-instrument"="xr
   ret i32 %retval
 }
 ; CHECK-LABEL: Lxray_sleds_start1:
-; CHECK:  .quad {{\.?}}Lxray_sled_2
-; CHECK:  .quad {{_?}}caller
-; CHECK:  .byte 0x03
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
+; CHECK-NEXT:  Ltmp3:
+; CHECK-NEXT:   .quad {{\.?}}Lxray_sled_2-{{\.?}}Ltmp3
+; CHECK-NEXT:   .quad {{\.?}}Lfunc_begin1-({{\.?}}Ltmp3+8)
+; CHECK-NEXT:   .byte 0x03
+; CHECK-NEXT:   .byte 0x01
+; CHECK-NEXT:   .byte 0x02
 ; CHECK:  .{{(zero|space)}}  13
-; CHECK:  .quad {{\.?}}Lxray_sled_3
-; CHECK:  .quad {{_?}}caller
-; CHECK:  .byte 0x02
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
+; CHECK:       Ltmp4:
+; CHECK-NEXT:   .quad {{\.?}}Lxray_sled_3-{{\.?}}Ltmp4
+; CHECK-NEXT:   .quad {{\.?}}Lfunc_begin1-({{\.?}}Ltmp4+8)
+; CHECK-NEXT:   .byte 0x02
+; CHECK-NEXT:   .byte 0x01
+; CHECK-NEXT:   .byte 0x02
 ; CHECK:  .{{(zero|space)}}  13

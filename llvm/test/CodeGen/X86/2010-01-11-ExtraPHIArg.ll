@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs < %s
 ;
-; The lowering of a switch combined with constand folding would leave spurious extra arguments on a PHI instruction.
+; The lowering of a switch combined with constant folding would leave spurious extra arguments on a PHI instruction.
 ;
 target triple = "x86_64-apple-darwin10"
 

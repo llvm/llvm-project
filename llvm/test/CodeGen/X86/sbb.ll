@@ -245,3 +245,107 @@ end:
   ret void
 }
 
+; Cases for PR45700
+define i32 @ult_zext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: ult_zext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %1, %2
+  %5 = zext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @ule_zext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: ule_zext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edx
+; CHECK-NEXT:    sbbl $-1, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ule i32 %1, %2
+  %5 = zext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @ugt_zext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: ugt_zext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edx
+; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ugt i32 %1, %2
+  %5 = zext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @uge_zext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: uge_zext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    sbbl $-1, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp uge i32 %1, %2
+  %5 = zext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @ult_sext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: ult_sext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    sbbl $0, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %1, %2
+  %5 = sext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @ule_sext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: ule_sext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edx
+; CHECK-NEXT:    adcl $-1, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ule i32 %1, %2
+  %5 = sext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @ugt_sext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: ugt_sext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edx
+; CHECK-NEXT:    sbbl $0, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ugt i32 %1, %2
+  %5 = sext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}
+
+define i32 @uge_sext_add(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: uge_sext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %edx, %esi
+; CHECK-NEXT:    adcl $-1, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp uge i32 %1, %2
+  %5 = sext i1 %4 to i32
+  %6 = add nsw i32 %5, %0
+  ret i32 %6
+}

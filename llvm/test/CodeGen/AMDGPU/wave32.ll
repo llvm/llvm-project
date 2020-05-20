@@ -1058,30 +1058,30 @@ declare void @external_void_func_void() #1
 
 ; GFX1064-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GFX1032-NEXT: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]]], -1{{$}}
-; GCN-NEXT: buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT: v_nop
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC0]]
 
-; GCN-NEXT: v_writelane_b32 v32, s33, 2
+; GCN-NEXT: v_writelane_b32 v40, s33, 2
 ; GCN: s_mov_b32 s33, s32
 ; GFX1064: s_add_u32 s32, s32, 0x400
 ; GFX1032: s_add_u32 s32, s32, 0x200
 
 
-; GCN-DAG: v_writelane_b32 v32, s30, 0
-; GCN-DAG: v_writelane_b32 v32, s31, 1
+; GCN-DAG: v_writelane_b32 v40, s30, 0
+; GCN-DAG: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN-DAG: v_readlane_b32 s4, v32, 0
-; GCN-DAG: v_readlane_b32 s5, v32, 1
+; GCN-DAG: v_readlane_b32 s4, v40, 0
+; GCN-DAG: v_readlane_b32 s5, v40, 1
 
 
 ; GFX1064: s_sub_u32 s32, s32, 0x400
 ; GFX1032: s_sub_u32 s32, s32, 0x200
-; GCN: v_readlane_b32 s33, v32, 2
+; GCN: v_readlane_b32 s33, v40, 2
 ; GFX1064: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GFX1032: s_or_saveexec_b32 [[COPY_EXEC1:s[0-9]]], -1{{$}}
-; GCN-NEXT: buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT: v_nop
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC1]]

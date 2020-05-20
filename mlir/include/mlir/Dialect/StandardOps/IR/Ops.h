@@ -20,7 +20,8 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/SideEffects.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/StandardOps/IR/OpsEnums.h.inc"
@@ -46,7 +47,7 @@ public:
   using ConstantOp::ConstantOp;
 
   /// Builds a constant float op producing a float of the specified type.
-  static void build(Builder *builder, OperationState &result,
+  static void build(OpBuilder &builder, OperationState &result,
                     const APFloat &value, FloatType type);
 
   APFloat getValue() { return getAttrOfType<FloatAttr>("value").getValue(); }
@@ -63,12 +64,12 @@ class ConstantIntOp : public ConstantOp {
 public:
   using ConstantOp::ConstantOp;
   /// Build a constant int op producing an integer of the specified width.
-  static void build(Builder *builder, OperationState &result, int64_t value,
+  static void build(OpBuilder &builder, OperationState &result, int64_t value,
                     unsigned width);
 
   /// Build a constant int op producing an integer with the specified type,
   /// which must be an integer type.
-  static void build(Builder *builder, OperationState &result, int64_t value,
+  static void build(OpBuilder &builder, OperationState &result, int64_t value,
                     Type type);
 
   int64_t getValue() { return getAttrOfType<IntegerAttr>("value").getInt(); }
@@ -86,7 +87,7 @@ public:
   using ConstantOp::ConstantOp;
 
   /// Build a constant int op producing an index.
-  static void build(Builder *builder, OperationState &result, int64_t value);
+  static void build(OpBuilder &builder, OperationState &result, int64_t value);
 
   int64_t getValue() { return getAttrOfType<IntegerAttr>("value").getInt(); }
 
@@ -135,7 +136,7 @@ class DmaStartOp
 public:
   using Op::Op;
 
-  static void build(Builder *builder, OperationState &result, Value srcMemRef,
+  static void build(OpBuilder &builder, OperationState &result, Value srcMemRef,
                     ValueRange srcIndices, Value destMemRef,
                     ValueRange destIndices, Value numElements, Value tagMemRef,
                     ValueRange tagIndices, Value stride = nullptr,
@@ -259,7 +260,7 @@ class DmaWaitOp
 public:
   using Op::Op;
 
-  static void build(Builder *builder, OperationState &result, Value tagMemRef,
+  static void build(OpBuilder &builder, OperationState &result, Value tagMemRef,
                     ValueRange tagIndices, Value numElements);
 
   static StringRef getOperationName() { return "std.dma_wait"; }
@@ -285,6 +286,7 @@ public:
   void print(OpAsmPrinter &p);
   LogicalResult fold(ArrayRef<Attribute> cstOperands,
                      SmallVectorImpl<OpFoldResult> &results);
+  LogicalResult verify();
 };
 
 /// Prints dimension and symbol list.
@@ -299,6 +301,44 @@ ParseResult parseDimAndSymbolList(OpAsmParser &parser,
 
 raw_ostream &operator<<(raw_ostream &os, SubViewOp::Range &range);
 
+/// Determines whether MemRefCastOp casts to a more dynamic version of the
+/// source memref. This is useful to to fold a memref_cast into a consuming op
+/// and implement canonicalization patterns for ops in different dialects that
+/// may consume the results of memref_cast operations. Such foldable memref_cast
+/// operations are typically inserted as `view` and `subview` ops are
+/// canonicalized, to preserve the type compatibility of their uses.
+///
+/// Returns true when all conditions are met:
+/// 1. source and result are ranked memrefs with strided semantics and same
+/// element type and rank.
+/// 2. each of the source's size, offset or stride has more static information
+/// than the corresponding result's size, offset or stride.
+///
+/// Example 1:
+/// ```mlir
+///   %1 = memref_cast %0 : memref<8x16xf32> to memref<?x?xf32>
+///   %2 = consumer %1 ... : memref<?x?xf32> ...
+/// ```
+///
+/// may fold into:
+///
+/// ```mlir
+///   %2 = consumer %0 ... : memref<8x16xf32> ...
+/// ```
+///
+/// Example 2:
+/// ```
+///   %1 = memref_cast %0 : memref<?x16xf32, affine_map<(i, j)->(16 * i + j)>>
+///          to memref<?x?xf32>
+///   consumer %1 : memref<?x?xf32> ...
+/// ```
+///
+/// may fold into:
+///
+/// ```
+///   consumer %0 ... : memref<?x16xf32, affine_map<(i, j)->(16 * i + j)>>
+/// ```
+bool canFoldIntoConsumerOp(MemRefCastOp castOp);
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_IR_STANDARDOPS_IR_OPS_H

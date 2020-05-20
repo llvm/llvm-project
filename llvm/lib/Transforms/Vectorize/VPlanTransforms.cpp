@@ -72,7 +72,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
         NewRecipe = new VPWidenGEPRecipe(GEP, OrigLoop);
       } else
-        NewRecipe = new VPWidenRecipe(*Inst);
+        NewRecipe =
+            new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
 
       NewRecipe->insertBefore(Ingredient);
       Ingredient->eraseFromParent();

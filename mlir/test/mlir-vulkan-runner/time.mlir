@@ -13,7 +13,7 @@ module attributes {
 } {
   gpu.module @kernels {
     gpu.func @kernel_add(%arg0 : memref<16384xf32>, %arg1 : memref<16384xf32>, %arg2 : memref<16384xf32>)
-      attributes {gpu.kernel, spv.entry_point_abi = {local_size = dense<[128, 1, 1]>: vector<3xi32>}} {
+      kernel attributes { spv.entry_point_abi = {local_size = dense<[128, 1, 1]>: vector<3xi32> }} {
       %bid = "gpu.block_id"() {dimension = "x"} : () -> index
       %tid = "gpu.thread_id"() {dimension = "x"} : () -> index
       %cst = constant 128 : index
@@ -46,7 +46,7 @@ module attributes {
 
     %cst1 = constant 1 : index
     %cst128 = constant 128 : index
-    "gpu.launch_func"(%cst128, %cst1, %cst1, %cst128, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = "kernel_add", kernel_module = @kernels }
+    "gpu.launch_func"(%cst128, %cst1, %cst1, %cst128, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = @kernels::@kernel_add }
         : (index, index, index, index, index, index, memref<16384xf32>, memref<16384xf32>, memref<16384xf32>) -> ()
     %arg6 = memref_cast %arg5 : memref<?xf32> to memref<*xf32>
     return

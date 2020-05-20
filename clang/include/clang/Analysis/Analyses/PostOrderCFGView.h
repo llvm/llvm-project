@@ -108,7 +108,8 @@ public:
   // Used by AnalyisContext to construct this object.
   static const void *getTag();
 
-  static PostOrderCFGView *create(AnalysisDeclContext &analysisContext);
+  static std::unique_ptr<PostOrderCFGView>
+  create(AnalysisDeclContext &analysisContext);
 };
 
 } // namespace clang

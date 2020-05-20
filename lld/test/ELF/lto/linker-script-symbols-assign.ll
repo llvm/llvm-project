@@ -1,12 +1,12 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 
+; RUN: rm -f %t2.*
 ; RUN: echo "foo = 1;" > %t.script
 ; RUN: ld.lld %t.o -o %t2 --script %t.script -save-temps
+;; Combined module is not empty, but it will be empty after optimization.
+;; Ensure lld still emits empty combined obj in this case.
 ; RUN: llvm-nm %t2.lto.o | count 0
-
-; CHECK-NOT: bar
-; CHECK-NOT: foo
 
 ; RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=VAL
 ; VAL:       Symbol {

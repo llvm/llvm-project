@@ -761,7 +761,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     return false;
 
   bool IsDirect = Func != nullptr;
-  if (!IsDirect && isa<ConstantExpr>(Call->getCalledValue()))
+  if (!IsDirect && isa<ConstantExpr>(Call->getCalledOperand()))
     return false;
 
   FunctionType *FuncTy = Call->getFunctionType();
@@ -847,7 +847,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   unsigned CalleeReg = 0;
   if (!IsDirect) {
-    CalleeReg = getRegForValue(Call->getCalledValue());
+    CalleeReg = getRegForValue(Call->getCalledOperand());
     if (!CalleeReg)
       return false;
   }

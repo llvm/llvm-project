@@ -14,7 +14,7 @@
 #define SPIRV_GLSL_OPS
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // SPIR-V GLSL 4.50 opcode specification.

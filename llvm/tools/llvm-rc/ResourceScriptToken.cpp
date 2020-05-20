@@ -12,6 +12,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "ResourceScriptToken.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -201,7 +202,7 @@ bool Tokenizer::advance(size_t Amount) {
 }
 
 bool Tokenizer::skipWhitespaces() {
-  while (!streamEof() && std::isspace(Data[Pos]))
+  while (!streamEof() && isSpace(Data[Pos]))
     advance();
   return !streamEof();
 }

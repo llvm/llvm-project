@@ -41,6 +41,7 @@ add_executable(expression-test
 )
 
 target_link_libraries(expression-test
+  FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
@@ -64,6 +65,7 @@ add_executable(intrinsics-test
 )
 
 target_link_libraries(intrinsics-test
+  FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
   FortranDecimal
@@ -130,6 +132,7 @@ add_executable(folding-test
 )
 
 target_link_libraries(folding-test
+  FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics

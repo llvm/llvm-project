@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Tests for the last sentence of C1128:
 !A variable-name that is not permitted to appear in a variable definition
 !context shall not appear in a LOCAL or LOCAL_INIT locality-spec.

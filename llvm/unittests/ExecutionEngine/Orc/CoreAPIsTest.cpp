@@ -1008,12 +1008,12 @@ TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
-  ES.setDispatchMaterialization(
-      [&](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
-        if (ExpectNoMoreMaterialization)
-          ADD_FAILURE() << "Unexpected materialization";
-        MU->doMaterialize(JD);
-      });
+  ES.setDispatchMaterialization([&](std::unique_ptr<MaterializationUnit> MU,
+                                    MaterializationResponsibility MR) {
+    if (ExpectNoMoreMaterialization)
+      ADD_FAILURE() << "Unexpected materialization";
+    MU->materialize(std::move(MR));
+  });
 
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
@@ -1186,11 +1186,15 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
   std::thread MaterializationThread;
-  ES.setDispatchMaterialization(
-      [&](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
-        MaterializationThread =
-            std::thread([MU = std::move(MU), &JD] { MU->doMaterialize(JD); });
-      });
+  ES.setDispatchMaterialization([&](std::unique_ptr<MaterializationUnit> MU,
+                                    MaterializationResponsibility MR) {
+    auto SharedMR =
+        std::make_shared<MaterializationResponsibility>(std::move(MR));
+    MaterializationThread =
+        std::thread([MU = std::move(MU), MR = std::move(SharedMR)] {
+          MU->materialize(std::move(*MR));
+        });
+  });
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 

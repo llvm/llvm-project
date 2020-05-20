@@ -21,12 +21,12 @@ imul %ecx, %ecx
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      10
-# CHECK-NEXT: Total Cycles:      27
+# CHECK-NEXT: Total Cycles:      24
 # CHECK-NEXT: Total uOps:        16
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.59
-# CHECK-NEXT: IPC:               0.37
+# CHECK-NEXT: uOps Per Cycle:    0.67
+# CHECK-NEXT: IPC:               0.42
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -74,18 +74,18 @@ imul %ecx, %ecx
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          0123456
+# CHECK-NEXT: Index     0123456789          0123
 
-# CHECK:      [0,0]     DeeeeeeeeeeeER .    .    ..   xaddl	%ecx, (%rsp)
-# CHECK-NEXT: [0,1]     . D=eE-------R .    .    ..   addl	%ecx, %ecx
-# CHECK-NEXT: [0,2]     . D==eE-------R.    .    ..   addl	%ecx, %ecx
-# CHECK-NEXT: [0,3]     .  D==eeeE----R.    .    ..   imull	%ecx, %ecx
-# CHECK-NEXT: [0,4]     .  D=====eeeE--R    .    ..   imull	%ecx, %ecx
-# CHECK-NEXT: [1,0]     .   D=======eeeeeeeeeeeER..   xaddl	%ecx, (%rsp)
-# CHECK-NEXT: [1,1]     .    .D========eE-------R..   addl	%ecx, %ecx
-# CHECK-NEXT: [1,2]     .    .D=========eE-------R.   addl	%ecx, %ecx
-# CHECK-NEXT: [1,3]     .    . D=========eeeE----R.   imull	%ecx, %ecx
-# CHECK-NEXT: [1,4]     .    . D============eeeE--R   imull	%ecx, %ecx
+# CHECK:      [0,0]     DeeeeeeeeeeeER .    .  .   xaddl	%ecx, (%rsp)
+# CHECK-NEXT: [0,1]     . D=eE-------R .    .  .   addl	%ecx, %ecx
+# CHECK-NEXT: [0,2]     . D==eE-------R.    .  .   addl	%ecx, %ecx
+# CHECK-NEXT: [0,3]     .  D==eeeE----R.    .  .   imull	%ecx, %ecx
+# CHECK-NEXT: [0,4]     .  D=====eeeE--R    .  .   imull	%ecx, %ecx
+# CHECK-NEXT: [1,0]     .   D====eeeeeeeeeeeER .   xaddl	%ecx, (%rsp)
+# CHECK-NEXT: [1,1]     .    .D=====eE-------R .   addl	%ecx, %ecx
+# CHECK-NEXT: [1,2]     .    .D======eE-------R.   addl	%ecx, %ecx
+# CHECK-NEXT: [1,3]     .    . D======eeeE----R.   imull	%ecx, %ecx
+# CHECK-NEXT: [1,4]     .    . D=========eeeE--R   imull	%ecx, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -94,12 +94,12 @@ imul %ecx, %ecx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     4.5    0.5    0.0       xaddl	%ecx, (%rsp)
-# CHECK-NEXT: 1.     2     5.5    0.0    7.0       addl	%ecx, %ecx
-# CHECK-NEXT: 2.     2     6.5    0.0    7.0       addl	%ecx, %ecx
-# CHECK-NEXT: 3.     2     6.5    0.0    4.0       imull	%ecx, %ecx
-# CHECK-NEXT: 4.     2     9.5    0.0    2.0       imull	%ecx, %ecx
-# CHECK-NEXT:        2     6.5    0.1    4.0       <total>
+# CHECK-NEXT: 0.     2     3.0    0.5    0.0       xaddl	%ecx, (%rsp)
+# CHECK-NEXT: 1.     2     4.0    0.0    7.0       addl	%ecx, %ecx
+# CHECK-NEXT: 2.     2     5.0    0.0    7.0       addl	%ecx, %ecx
+# CHECK-NEXT: 3.     2     5.0    0.0    4.0       imull	%ecx, %ecx
+# CHECK-NEXT: 4.     2     8.0    0.0    2.0       imull	%ecx, %ecx
+# CHECK-NEXT:        2     5.0    0.1    4.0       <total>
 
 # CHECK:      [1] Code Region
 

@@ -704,7 +704,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);
-  assert(BO->getNumUses() <= 1 &&
+  assert((BO->use_empty() || BO->hasOneUse()) &&
          "distributeExtsAndCloneChain clones each BinaryOperator in "
          "UserChain, so no one should be used more than "
          "once");
@@ -1214,13 +1214,13 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
 
   // Add I to DominatingExprs if it's an add/sub that can't sign overflow.
   if (match(I, m_NSWAdd(m_Value(LHS), m_Value(RHS)))) {
-    if (programUndefinedIfFullPoison(I)) {
+    if (programUndefinedIfPoison(I)) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
       DominatingAdds[Key].push_back(I);
     }
   } else if (match(I, m_NSWSub(m_Value(LHS), m_Value(RHS)))) {
-    if (programUndefinedIfFullPoison(I)) {
+    if (programUndefinedIfPoison(I)) {
       const SCEV *Key =
           SE->getAddExpr(SE->getUnknown(LHS), SE->getUnknown(RHS));
       DominatingSubs[Key].push_back(I);

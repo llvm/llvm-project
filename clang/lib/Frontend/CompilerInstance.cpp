@@ -1576,7 +1576,7 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
           Stack.push_back(M);
           while (!Stack.empty()) {
             Module *Current = Stack.pop_back_val();
-            if (Current->IsMissingRequirement) continue;
+            if (Current->IsUnimportable) continue;
             Current->IsAvailable = true;
             Stack.insert(Stack.end(),
                          Current->submodule_begin(), Current->submodule_end());

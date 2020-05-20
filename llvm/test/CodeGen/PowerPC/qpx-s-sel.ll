@@ -56,7 +56,7 @@ entry:
 ; CHECK-DAG: qvlfiwzx [[REG2:[0-9]+]],
 ; CHECK-DAG: qvfcfidu [[REG3:[0-9]+]], [[REG2]]
 ; CHECK: qvfcmpeq [[REG4:[0-9]+]], [[REG3]], [[REG1]]
-; CHECK: qvflogical 1, 1, [[REG4]], 1
+; CHECK: qvfand 1, 1, [[REG4]]
 ; CHECK: blr
 }
 

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 subroutine s1()
   ! C701 (R701) The type-param-value for a kind type parameter shall be a
   ! constant expression.

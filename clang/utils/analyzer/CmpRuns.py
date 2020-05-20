@@ -39,7 +39,8 @@ import sys
 
 STATS_REGEXP = re.compile(r"Statistics: (\{.+\})", re.MULTILINE | re.DOTALL)
 
-class Colors(object):
+
+class Colors:
     """
     Color for terminal highlight.
     """
@@ -47,18 +48,21 @@ class Colors(object):
     GREEN = '\x1b[6;30;42m'
     CLEAR = '\x1b[0m'
 
-# Information about analysis run:
-# path - the analysis output directory
-# root - the name of the root directory, which will be disregarded when
-# determining the source file name
-class SingleRunInfo(object):
+
+class SingleRunInfo:
+    """
+    Information about analysis run:
+    path - the analysis output directory
+    root - the name of the root directory, which will be disregarded when
+    determining the source file name
+    """
     def __init__(self, path, root="", verboseLog=None):
         self.path = path
         self.root = root.rstrip("/\\")
         self.verboseLog = verboseLog
 
 
-class AnalysisDiagnostic(object):
+class AnalysisDiagnostic:
     def __init__(self, data, report, htmlReport):
         self._data = data
         self._loc = self._data['location']
@@ -80,7 +84,7 @@ class AnalysisDiagnostic(object):
         p = path[0]
         if 'location' in p:
             fIdx = p['location']['file']
-        else: # control edge
+        else:  # control edge
             fIdx = path[0]['edges'][0]['start'][0]['file']
         out = self._report.files[fIdx]
         root = self._report.run.root
@@ -139,14 +143,14 @@ class AnalysisDiagnostic(object):
         return self._data
 
 
-class AnalysisReport(object):
+class AnalysisReport:
     def __init__(self, run, files):
         self.run = run
         self.files = files
         self.diagnostics = []
 
 
-class AnalysisRun(object):
+class AnalysisRun:
     def __init__(self, info):
         self.path = info.path
         self.root = info.root
@@ -303,11 +307,13 @@ def compareResults(A, B, opts):
 
     return res
 
+
 def computePercentile(l, percentile):
     """
     Return computed percentile.
     """
     return sorted(l)[int(round(percentile * len(l) + 0.5)) - 1]
+
 
 def deriveStats(results):
     # Assume all keys are the same in each statistics bucket.
@@ -355,6 +361,7 @@ def compareStats(resultsA, resultsB):
                         report = Colors.RED + report + Colors.CLEAR
             print("\t %s %s" % (kkey, report))
 
+
 def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
                              Stdout=sys.stdout):
     # Load the run results.
@@ -367,7 +374,7 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
 
     # Open the verbose log, if given.
     if opts.verboseLog:
-        auxLog = open(opts.verboseLog, "wb")
+        auxLog = open(opts.verboseLog, "w")
     else:
         auxLog = None
 
@@ -404,6 +411,7 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
         auxLog.close()
 
     return foundDiffs, len(resultsA.diagnostics), len(resultsB.diagnostics)
+
 
 def generate_option_parser():
     parser = OptionParser("usage: %prog [options] [dir A] [dir B]")

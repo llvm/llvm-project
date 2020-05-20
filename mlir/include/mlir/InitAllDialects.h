@@ -22,9 +22,9 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SDBM/SDBMDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
@@ -44,7 +44,7 @@ inline void registerAllDialects() {
     registerDialect<LLVM::LLVMAVX512Dialect>();
     registerDialect<LLVM::LLVMDialect>();
     registerDialect<linalg::LinalgDialect>();
-    registerDialect<loop::LoopOpsDialect>();
+    registerDialect<scf::SCFDialect>();
     registerDialect<omp::OpenMPDialect>();
     registerDialect<quant::QuantizationDialect>();
     registerDialect<spirv::SPIRVDialect>();

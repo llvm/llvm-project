@@ -92,7 +92,7 @@ entry:
 ; GCN-LABEL: {{^}}smrd6:
 ; SICIVI: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, -4
 ; SICIVI: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0
-; GFX9_10: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xfffffffc
+; GFX9_10: s_load_dword s{{[0-9]}}, s{{\[[0-9]+:[0-9]+\]}}, -0x4
 define amdgpu_kernel void @smrd6(i32 addrspace(1)* %out, i32 addrspace(4)* %ptr) #0 {
 entry:
   %tmp = getelementptr i32, i32 addrspace(4)* %ptr, i64 -1
@@ -377,6 +377,7 @@ main_body:
 ; GCN-NEXT: %bb.
 ; SICI-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1
 ; SICI-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x7
+; GFX10-NEXT: s_clause
 ; VIGFX9_10-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x4
 ; VIGFX9_10-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1c
 define amdgpu_ps void @smrd_imm_merged(<4 x i32> inreg %desc) #0 {
@@ -447,6 +448,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}smrd_vgpr_merged:
 ; GCN-NEXT: %bb.
+; GFX10-NEXT: s_clause
 ; GCN-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ; GCN-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
 define amdgpu_ps void @smrd_vgpr_merged(<4 x i32> inreg %desc, i32 %a) #0 {

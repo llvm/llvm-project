@@ -547,6 +547,12 @@ public:
     return (getPointerWidth(0) >= 64) || getTargetOpts().ForceEnableInt128;
   } // FIXME
 
+  /// Determine whether the _ExtInt type is supported on this target. This
+  /// limitation is put into place for ABI reasons.
+  virtual bool hasExtIntType() const {
+    return false;
+  }
+
   /// Determine whether _Float16 is supported on this target.
   virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
 

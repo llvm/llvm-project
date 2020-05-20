@@ -589,6 +589,18 @@ def SFENCE_VMA : RVInstR<0b0001001, 0b000, OPC_SYSTEM, (outs),
 }
 
 //===----------------------------------------------------------------------===//
+// Debug instructions
+//===----------------------------------------------------------------------===//
+
+let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
+def DRET : Priv<"dret", 0b0111101>, Sched<[]> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = 0b10010;
+}
+} // isBarrier = 1, isReturn = 1, isTerminator = 1
+
+//===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 //===----------------------------------------------------------------------===//
 
@@ -784,7 +796,7 @@ def : MnemonicAlias<"sbreak", "ebreak">;
 //
 // Naming convention: For 'generic' pattern classes, we use the naming
 // convention PatTy1Ty2. For pattern classes which offer a more complex
-// expension, prefix the class name, e.g. BccPat.
+// expansion, prefix the class name, e.g. BccPat.
 //===----------------------------------------------------------------------===//
 
 /// Generic pattern classes

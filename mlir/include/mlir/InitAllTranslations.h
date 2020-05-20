@@ -17,10 +17,11 @@
 namespace mlir {
 
 void registerFromLLVMIRTranslation();
+void registerFromSPIRVTranslation();
 void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
 void registerToNVVMIRTranslation();
-void registerToROCLDIRTranslation();
+void registerToROCDLIRTranslation();
 void registerAVX512ToLLVMIRTranslation();
 
 // This function should be called before creating any MLIRContext if one
@@ -29,10 +30,11 @@ void registerAVX512ToLLVMIRTranslation();
 inline void registerAllTranslations() {
   static bool init_once = []() {
     registerFromLLVMIRTranslation();
+    registerFromSPIRVTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
     registerToNVVMIRTranslation();
-    registerToROCLDIRTranslation();
+    registerToROCDLIRTranslation();
     registerAVX512ToLLVMIRTranslation();
     return true;
   }();

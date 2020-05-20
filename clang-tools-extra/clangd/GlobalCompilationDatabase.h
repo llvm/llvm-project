@@ -10,8 +10,8 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
 #include "CompileCommands.h"
-#include "Function.h"
-#include "Path.h"
+#include "support/Function.h"
+#include "support/Path.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"

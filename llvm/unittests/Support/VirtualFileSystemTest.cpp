@@ -2197,8 +2197,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   ScopedFile _cd(TestDirectory + "/c/d", "");
   ScopedDir _e(TestDirectory + "/e");
   ScopedDir _ef(TestDirectory + "/e/f");
-  ScopedDir _g(TestDirectory + "/g");
-  ScopedFile _h(TestDirectory + "/h", "");
+  ScopedFile _g(TestDirectory + "/g", "");
+  ScopedDir _h(TestDirectory + "/h");
 
   vfs::YAMLVFSWriter VFSWriter;
   VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
@@ -2223,8 +2223,8 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   Lower->addRegularFile("//root/c/d");
   Lower->addDirectory("//root/e");
   Lower->addDirectory("//root/e/f");
-  Lower->addDirectory("//root/g");
-  Lower->addRegularFile("//root/h");
+  Lower->addRegularFile("//root/g");
+  Lower->addDirectory("//root/h");
 
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
   ASSERT_TRUE(FS.get() != nullptr);
@@ -2237,4 +2237,104 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   EXPECT_TRUE(FS->exists(_ef.Path));
   EXPECT_TRUE(FS->exists(_g.Path));
   EXPECT_TRUE(FS->exists(_h.Path));
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedFile _ab(TestDirectory + "/a/b", "");
+  ScopedDir _ac(TestDirectory + "/a/c");
+  ScopedFile _acd(TestDirectory + "/a/c/d", "");
+  ScopedFile _ace(TestDirectory + "/a/c/e", "");
+  ScopedFile _acf(TestDirectory + "/a/c/f", "");
+  ScopedDir _ag(TestDirectory + "/a/g");
+  ScopedFile _agh(TestDirectory + "/a/g/h", "");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
+  VFSWriter.addDirectoryMapping(_ac.Path, "//root/a/c");
+  VFSWriter.addFileMapping(_acd.Path, "//root/a/c/d");
+  VFSWriter.addFileMapping(_ace.Path, "//root/a/c/e");
+  VFSWriter.addFileMapping(_acf.Path, "//root/a/c/f");
+  VFSWriter.addDirectoryMapping(_ag.Path, "//root/a/g");
+  VFSWriter.addFileMapping(_agh.Path, "//root/a/g/h");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  EXPECT_TRUE(FS.get() != nullptr);
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedFile _ab(TestDirectory + "/a/b", "");
+  ScopedDir _ac(TestDirectory + "/a/c");
+  ScopedDir _acd(TestDirectory + "/a/c/d");
+  ScopedDir _acde(TestDirectory + "/a/c/d/e");
+  ScopedFile _acdef(TestDirectory + "/a/c/d/e/f", "");
+  ScopedFile _acdeg(TestDirectory + "/a/c/d/e/g", "");
+  ScopedDir _ah(TestDirectory + "/a/h");
+  ScopedFile _ahi(TestDirectory + "/a/h/i", "");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
+  VFSWriter.addDirectoryMapping(_ac.Path, "//root/a/c");
+  VFSWriter.addDirectoryMapping(_acd.Path, "//root/a/c/d");
+  VFSWriter.addDirectoryMapping(_acde.Path, "//root/a/c/d/e");
+  VFSWriter.addFileMapping(_acdef.Path, "//root/a/c/d/e/f");
+  VFSWriter.addFileMapping(_acdeg.Path, "//root/a/c/d/e/g");
+  VFSWriter.addDirectoryMapping(_ahi.Path, "//root/a/h");
+  VFSWriter.addFileMapping(_ahi.Path, "//root/a/h/i");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  EXPECT_TRUE(FS.get() != nullptr);
+}
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedDir _b(TestDirectory + "/b");
+  ScopedDir _c(TestDirectory + "/c");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addDirectoryMapping(_b.Path, "//root/b");
+  VFSWriter.addDirectoryMapping(_c.Path, "//root/c");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  // We didn't add a single file - only directories.
+  EXPECT_TRUE(Buffer.find("'type': 'file'") == std::string::npos);
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  Lower->addDirectory("//root/a");
+  Lower->addDirectory("//root/b");
+  Lower->addDirectory("//root/c");
+  // canaries
+  Lower->addRegularFile("//root/a/a");
+  Lower->addRegularFile("//root/b/b");
+  Lower->addRegularFile("//root/c/c");
+
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  EXPECT_FALSE(FS->exists(_a.Path + "/a"));
+  EXPECT_FALSE(FS->exists(_b.Path + "/b"));
+  EXPECT_FALSE(FS->exists(_c.Path + "/c"));
 }

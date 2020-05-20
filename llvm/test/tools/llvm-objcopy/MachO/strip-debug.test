@@ -3,7 +3,7 @@
 # RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml -o %t
 
 # RUN: llvm-objcopy --strip-debug %t %t.stripped
-# RUN: llvm-readobj --sections %t.stripped | FileCheck /dev/null --check-prefix=NODWARF \
+# RUN: llvm-readobj --sections %t.stripped | FileCheck /dev/null \
 # RUN:   --implicit-check-not='Name: __debug' --implicit-check-not='Name: __apple'
 
 ## Make sure that all symbols are kept.
@@ -23,19 +23,19 @@
 
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section __text {
-# RELOC-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
-# RELOC-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
+# RELOC-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
+# RELOC-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _main
 # RELOC-NEXT:   }
 # DEBUG:        Section __debug_info {
-# DEBUG-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
-# DEBUG-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
-# DEBUG-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
-# DEBUG-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
+# DEBUG-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
+# DEBUG-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
+# DEBUG-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
+# DEBUG-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
 # DEBUG-NEXT:   }
 # RELOC-NEXT:   Section __compact_unwind {
-# RELOC-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
+# RELOC-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
 # RELOC-NEXT:   }
 # DEBUG-NEXT:   Section __debug_line {
-# DEBUG-NEXT:     0x0 0 0 0 X86_64_RELOC_UNSIGNED 0 -
+# DEBUG-NEXT:     0x0 0 0 1 X86_64_RELOC_UNSIGNED 0 _bar
 # DEBUG-NEXT:   }
 # RELOC-NEXT: ]

@@ -1,0 +1,4 @@
+ods_def<BatchMatmulOp>:
+def batch_matmul(A: f32(Batch, M, K), B: f32(Batch, K, N)) -> (C: f32(Batch, M, N)) {
+  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(b, k, n)));
+}

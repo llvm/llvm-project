@@ -61,17 +61,36 @@ Non-comprehensive list of changes in this release
   v8.1-M MVE instruction set. ``<arm_mve.h>`` supports the complete API defined
   in the Arm C Language Extensions.
 
+- For the ARM target, C-language intrinsics ``<arm_cde.h>`` for the CDE
+  instruction set are now provided.
+
+- clang adds support for a set of  extended integer types (``_ExtInt(N)``) that
+  permit non-power of 2 integers, exposing the LLVM integer types. Since a major
+  motivating use case for these types is to limit 'bit' usage, these types don't
+  automatically promote to 'int' when operations are done between two
+  ``ExtInt(N)`` types, instead math occurs at the size of the largest
+  ``ExtInt(N)`` type.
+
+- Users of UBSan, PGO, and coverage on Windows will now need to add clang's
+  library resource directory to their library search path. These features all
+  use runtime libraries, and Clang provides these libraries in its resource
+  directory. For example, if LLVM is installed in ``C:\Program Files\LLVM``,
+  then the profile runtime library will appear at
+  ``C:\Program Files\LLVM\lib\clang\11.0.0\lib\windows\clang_rt.profile-x86_64.lib``.
+  To ensure that the linker can find the appropriate library, users should pass
+  ``/LIBPATH:C:\Program Files\LLVM\lib\clang\11.0.0\lib\windows`` to the
+  linker. If the user links the program with the ``clang`` or ``clang-cl``
+  drivers, the driver will pass this flag for them.
 
 New Compiler Flags
 ------------------
-
 
 - -fstack-clash-protection will provide a protection against the stack clash
   attack for x86 architecture through automatic probing of each page of
   allocated stack.
 
 - -ffp-exception-behavior={ignore,maytrap,strict} allows the user to specify
-  the floating-point exception behavior.  The default setting is ``ignore``.
+  the floating-point exception behavior. The default setting is ``ignore``.
 
 - -ffp-model={precise,strict,fast} provides the user an umbrella option to
   simplify access to the many single purpose floating point options. The default
@@ -90,11 +109,11 @@ Modified Compiler Flags
 
 - -fno-common has been enabled as the default for all targets.  Therefore, C
   code that uses tentative definitions as definitions of a variable in multiple
-  translation units will trigger multiple-definition linker errors.  Generally,
-  this occurs when the use of the ``extern`` keyword is neglected in the declaration
-  of a variable in a header file. In some cases, no specific translation unit
-  provides a definition of the variable. The previous behavior can be restored by
-  specifying ``-fcommon``.
+  translation units will trigger multiple-definition linker errors. Generally,
+  this occurs when the use of the ``extern`` keyword is neglected in the
+  declaration of a variable in a header file. In some cases, no specific
+  translation unit provides a definition of the variable. The previous
+  behavior can be restored by specifying ``-fcommon``.
 - -Wasm-ignored-qualifier (ex. `asm const ("")`) has been removed and replaced
   with an error (this matches a recent change in GCC-9).
 - -Wasm-file-asm-volatile (ex. `asm volatile ("")` at global scope) has been
@@ -102,6 +121,15 @@ Modified Compiler Flags
 - Duplicate qualifiers on asm statements (ex. `asm volatile volatile ("")`) no
   longer produces a warning via -Wduplicate-decl-specifier, but now an error
   (this matches GCC's behavior).
+- The deprecated argument ``-f[no-]sanitize-recover`` has changed to mean
+  ``-f[no-]sanitize-recover=all`` instead of
+  ``-f[no-]sanitize-recover=undefined,integer`` and is no longer deprecated.
+- The argument to ``-f[no-]sanitize-trap=...`` is now optional and defaults to
+  ``all``.
+- ``-fno-char8_t`` now disables the ``char8_t`` keyword, not just the use of
+  ``char8_t`` as the character type of ``u8`` literals. This restores the
+  Clang 8 behavior that regressed in Clang 9 and 10.
+- -print-targets has been added to print the registered targets.
 
 New Pragmas in Clang
 --------------------
@@ -147,7 +175,7 @@ C++ Language Changes in Clang
   Previous versions of Clang rejected some constructs of this form
   (specifically, where the linkage of the type happened to be computed
   before the parser reached the typedef name); those cases are still rejected
-  in Clang 11.  In addition, cases that previous versions of Clang did not
+  in Clang 11. In addition, cases that previous versions of Clang did not
   reject now produce an extension warning. This warning can be disabled with
   the warning flag ``-Wno-non-c-typedef-for-linkage``.
 
@@ -178,7 +206,6 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-
 OpenCL C Language Changes in Clang
 ----------------------------------
 
@@ -186,7 +213,6 @@ OpenCL C Language Changes in Clang
 
 ABI Changes in Clang
 --------------------
-
 
 OpenMP Support in Clang
 -----------------------
@@ -205,14 +231,17 @@ These are major API changes that have happened since the 10.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
-
 Build System Changes
 --------------------
 
 These are major changes to the build system that have happened since the 10.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
-- ...
+- clang-tidy and clang-include-fixer are no longer compiled into libclang by
+  default. You can set ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=ON`` to undo that,
+  but it's expected that that setting will go away eventually. If this is
+  something you need, please reach out to the mailing list to discuss possible
+  ways forward.
 
 AST Matchers
 ------------
@@ -222,14 +251,10 @@ AST Matchers
 clang-format
 ------------
 
-
 - Option ``IndentCaseBlocks`` has been added to support treating the block
   following a switch case label as a scope block which gets indented itself.
   It helps avoid having the closing bracket align with the switch statement's
   closing bracket (when ``IndentCaseLabels`` is ``false``).
-
-- Option ``ObjCBreakBeforeNestedBlockParam`` has been added to optionally apply
-  linebreaks for function arguments declarations before nested blocks.
 
   .. code-block:: c++
 
@@ -244,6 +269,9 @@ clang-format
         plop();
       }
     }
+
+- Option ``ObjCBreakBeforeNestedBlockParam`` has been added to optionally apply
+  linebreaks for function arguments declarations before nested blocks.
 
 - Option ``InsertTrailingCommas`` can be set to ``TCS_Wrapped`` to insert
   trailing commas in container literals (arrays and objects) that wrap across
@@ -283,7 +311,6 @@ Static Analyzer
 
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
-
 
 Core Analysis Improvements
 ==========================

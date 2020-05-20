@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H
 
-#include "Path.h"
 #include "Protocol.h"
+#include "support/Path.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/ArrayRef.h"

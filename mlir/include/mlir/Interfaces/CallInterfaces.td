@@ -34,7 +34,8 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
     InterfaceMethod<[{
         Returns the callee of this call-like operation. A `callee` is either a
         reference to a symbol, via SymbolRefAttr, or a reference to a defined
-        SSA value.
+        SSA value. If the reference is an SSA value, the SSA value corresponds
+        to a region of a lambda-like operation.
       }],
       "CallInterfaceCallable", "getCallableForCallee"
     >,

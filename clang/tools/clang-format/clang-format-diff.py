@@ -13,9 +13,13 @@ This script reads input from a unified diff and reformats all the changed
 lines. This is useful to reformat all the lines touched by a specific patch.
 Example usage for git/svn users:
 
-  git diff -U0 --no-color HEAD^ | clang-format-diff.py -p1 -i
+  git diff -U0 --no-color --relative HEAD^ | clang-format-diff.py -p1 -i
   svn diff --diff-cmd=diff -x-U0 | clang-format-diff.py -i
 
+It should be noted that the filename contained in the diff is used unmodified
+to determine the source file to update. Users calling this script directly
+should be careful to ensure that the path in the diff is correct relative to the
+current working directory.
 """
 from __future__ import absolute_import, division, print_function
 
@@ -52,8 +56,8 @@ def main():
   parser.add_argument('-v', '--verbose', action='store_true',
                       help='be more verbose, ineffective without -i')
   parser.add_argument('-style',
-                      help='formatting style to apply (LLVM, Google, Chromium, '
-                      'Mozilla, WebKit)')
+                      help='formatting style to apply (LLVM, GNU, Google, Chromium, '
+                      'Microsoft, Mozilla, WebKit)')
   parser.add_argument('-binary', default='clang-format',
                       help='location of binary to use for clang-format')
   args = parser.parse_args()

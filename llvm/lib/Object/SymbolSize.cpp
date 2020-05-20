@@ -61,8 +61,11 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
   unsigned SymNum = 0;
   for (symbol_iterator I = O.symbol_begin(), E = O.symbol_end(); I != E; ++I) {
     SymbolRef Sym = *I;
-    uint64_t Value = Sym.getValue();
-    Addresses.push_back({I, Value, SymNum, getSymbolSectionID(O, Sym)});
+    Expected<uint64_t> ValueOrErr = Sym.getValue();
+    if (!ValueOrErr)
+      // TODO: Actually report errors helpfully.
+      report_fatal_error(ValueOrErr.takeError());
+    Addresses.push_back({I, *ValueOrErr, SymNum, getSymbolSectionID(O, Sym)});
     ++SymNum;
   }
   for (SectionRef Sec : O.sections()) {

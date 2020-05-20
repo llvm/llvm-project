@@ -475,3 +475,24 @@ void use() {
 #endif // __cplusplus >= 201103L
 }
 }
+
+namespace rdar60092165 {
+template <class T> void f() {
+  typedef T first_type __attribute__((vector_size(sizeof(T) * 4)));
+  typedef T second_type __attribute__((vector_size(sizeof(T) * 4)));
+
+  second_type st;
+}
+}
+
+namespace PR45780 {
+enum E { Value = 15 };
+void use(char16 c) {
+  E e;
+  c &Value;   // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
+  c == Value; // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
+  e | c;      // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
+  e != c;     // expected-error{{cannot convert between scalar type 'PR45780::E' and vector type 'char16'}}
+}
+
+} // namespace PR45780

@@ -450,7 +450,7 @@ class DebugCommunication(object):
     def request_attach(self, program=None, pid=None, waitFor=None, trace=None,
                        initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None,
-                       attachCommands=None):
+                       attachCommands=None, coreFile=None):
         args_dict = {}
         if pid is not None:
             args_dict['pid'] = pid
@@ -471,6 +471,8 @@ class DebugCommunication(object):
             args_dict['exitCommands'] = exitCommands
         if attachCommands:
             args_dict['attachCommands'] = attachCommands
+        if coreFile:
+            args_dict['coreFile'] = coreFile
         command_dict = {
             'command': 'attach',
             'type': 'request',

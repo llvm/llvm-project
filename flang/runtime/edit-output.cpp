@@ -396,8 +396,8 @@ bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
   case 'B':
   case 'O':
   case 'Z':
-    return EditIntegerOutput(
-        io_, edit, decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw);
+    return EditIntegerOutput(io_, edit,
+        decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw());
   case 'G':
     return Edit(EditForGOutput(edit));
   default:

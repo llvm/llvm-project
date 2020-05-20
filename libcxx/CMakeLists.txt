@@ -41,11 +41,33 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
 endif()
 
 if (LIBCXX_STANDALONE_BUILD)
-  include(FindPythonInterp)
-  if( NOT PYTHONINTERP_FOUND )
-    message(WARNING "Failed to find python interpreter. "
-                    "The libc++ test suite will be disabled.")
-    set(LLVM_INCLUDE_TESTS OFF)
+  if(CMAKE_VERSION VERSION_LESS 3.12)
+    include(FindPythonInterp)
+    if( NOT PYTHONINTERP_FOUND )
+      message(WARNING "Failed to find python interpreter. "
+                      "The libc++ test suite will be disabled.")
+      set(LLVM_INCLUDE_TESTS OFF)
+    else()
+      add_executable(Python3::Interpreter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    endif()
+  else()
+    find_package(Python3 COMPONENTS Interpreter)
+    if(NOT Python3_Interpreter_FOUND)
+      message(WARNING "Python3 not found, using python2 as a fallback")
+      find_package(Python2 COMPONENTS Interpreter REQUIRED)
+      if(Python2_VERSION VERSION_LESS 2.7)
+        message(SEND_ERROR "Python 2.7 or newer is required")
+      endif()
+
+      # Treat python2 as python3
+      add_executable(Python3::Interpreter IMPORTED)
+      set_target_properties(Python3::Interpreter PROPERTIES
+        IMPORTED_LOCATION ${Python2_EXECUTABLE})
+      set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
+    endif()
   endif()
 endif()
 
@@ -190,7 +212,7 @@ set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
       AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"
       AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"
-      AND PYTHONINTERP_FOUND
+      AND Python3_EXECUTABLE
       AND LIBCXX_ENABLE_SHARED)
     set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
 endif()
@@ -349,7 +371,7 @@ endif()
 # Warn users that LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
   message(WARNING "LIBCXX_ENABLE_STATIC_ABI_LIBRARY is an experimental option")
-  if (LIBCXX_ENABLE_STATIC AND NOT PYTHONINTERP_FOUND)
+  if (LIBCXX_ENABLE_STATIC AND NOT Python3_EXECUTABLE)
     message(FATAL_ERROR "LIBCXX_ENABLE_STATIC_ABI_LIBRARY requires python but it was not found.")
   endif()
 endif()
@@ -682,6 +704,8 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
       append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Thread")
       append_flags(SANITIZER_FLAGS -fsanitize=thread)
+    elseif (USE_SANITIZER STREQUAL "DataFlow")
+      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
     else()
       message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
     endif()
@@ -733,6 +757,8 @@ function(cxx_link_system_libraries target)
     if (LIBCXX_BUILTINS_LIBRARY)
       target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
     endif()
+  elseif (LIBCXX_HAS_GCC_LIB)
+    target_link_libraries(${target} PRIVATE gcc)
   elseif (LIBCXX_HAS_GCC_S_LIB)
     target_link_libraries(${target} PRIVATE gcc_s)
   endif()

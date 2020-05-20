@@ -20,8 +20,6 @@
 
 namespace llvm {
 
-class TargetInstrInfo;
-
 struct XCoreRegisterInfo : public XCoreGenRegisterInfo {
 public:
   XCoreRegisterInfo();

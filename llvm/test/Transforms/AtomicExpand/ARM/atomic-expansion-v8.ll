@@ -91,9 +91,13 @@ define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 ; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i8(i8* %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 %1 to i8
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i8 [[OLDVAL]], %desired
-; CHECK: br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
+; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
+
+; CHECK: [[FENCED_STORE]]:
+; CHECK-NEXT: br label %[[TRY_STORE:.*]]
 
 ; CHECK: [[TRY_STORE]]:
+; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i8 [ [[OLDVAL]], %[[FENCED_STORE]] ]
 ; CHECK: [[NEWVAL32:%.*]] = zext i8 %newval to i32
 ; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.stlex.p0i8(i32 [[NEWVAL32]], i8* %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
@@ -104,16 +108,19 @@ define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 ; CHECK: br label %[[DONE:.*]]
 
 ; CHECK: [[NO_STORE_BB]]:
+; CHECK-NEXT: [[LOADED_NOSTORE:%.*]] = phi i8 [ [[OLDVAL]], %[[LOOP]] ]
 ; CHECK-NEXT: call void @llvm.arm.clrex()
 ; CHECK-NEXT: br label %[[FAILURE_BB:.*]]
 
 ; CHECK: [[FAILURE_BB]]:
+; CHECK-NEXT: [[LOADED_FAILURE:%.*]] = phi i8 [ [[LOADED_NOSTORE]], %[[NO_STORE_BB]] ]
 ; CHECK-NOT: fence_cst
 ; CHECK: br label %[[DONE]]
 
 ; CHECK: [[DONE]]:
+; CHECK: [[LOADED_EXIT:%.*]] = phi i8 [ [[LOADED_TRYSTORE]], %[[SUCCESS_BB]] ], [ [[LOADED_FAILURE]], %[[FAILURE_BB]] ]
 ; CHECK: [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
-; CHECK: ret i8 [[OLDVAL]]
+; CHECK: ret i8 [[LOADED_EXIT]]
 
   %pairold = cmpxchg i8* %ptr, i8 %desired, i8 %newval seq_cst seq_cst
   %old = extractvalue { i8, i1 } %pairold, 0
@@ -129,9 +136,13 @@ define i16 @test_cmpxchg_i16_seqcst_monotonic(i16* %ptr, i16 %desired, i16 %newv
 ; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 %1 to i16
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i16 [[OLDVAL]], %desired
-; CHECK: br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
+; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
+
+; CHECK: [[FENCED_STORE]]:
+; CHECK-NEXT: br label %[[TRY_STORE:.*]]
 
 ; CHECK: [[TRY_STORE]]:
+; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i16 [ [[OLDVAL]], %[[FENCED_STORE]] ]
 ; CHECK: [[NEWVAL32:%.*]] = zext i16 %newval to i32
 ; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.stlex.p0i16(i32 [[NEWVAL32]], i16* %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
@@ -142,16 +153,20 @@ define i16 @test_cmpxchg_i16_seqcst_monotonic(i16* %ptr, i16 %desired, i16 %newv
 ; CHECK: br label %[[DONE:.*]]
 
 ; CHECK: [[NO_STORE_BB]]:
+; The PHI is not required.
+; CHECK-NEXT: [[LOADED_NOSTORE:%.*]] = phi i16 [ [[OLDVAL]], %[[LOOP]] ]
 ; CHECK-NEXT: call void @llvm.arm.clrex()
 ; CHECK-NEXT: br label %[[FAILURE_BB:.*]]
 
 ; CHECK: [[FAILURE_BB]]:
+; CHECK-NEXT: [[LOADED_FAILURE:%.*]] = phi i16 [ [[LOADED_NOSTORE]], %[[NO_STORE_BB]] ]
 ; CHECK-NOT: fence
 ; CHECK: br label %[[DONE]]
 
 ; CHECK: [[DONE]]:
+; CHECK: [[LOADED_EXIT:%.*]] = phi i16 [ [[LOADED_TRYSTORE]], %[[SUCCESS_BB]] ], [ [[LOADED_FAILURE]], %[[FAILURE_BB]] ]
 ; CHECK: [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
-; CHECK: ret i16 [[OLDVAL]]
+; CHECK: ret i16 [[LOADED_EXIT]]
 
   %pairold = cmpxchg i16* %ptr, i16 %desired, i16 %newval seq_cst monotonic
   %old = extractvalue { i16, i1 } %pairold, 0
@@ -166,9 +181,13 @@ define i32 @test_cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %desired, i32 %newva
 ; CHECK: [[LOOP]]:
 ; CHECK: [[OLDVAL:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* %ptr)
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i32 [[OLDVAL]], %desired
-; CHECK: br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
+; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
+
+; CHECK: [[FENCED_STORE]]:
+; CHECK-NEXT: br label %[[TRY_STORE:.*]]
 
 ; CHECK: [[TRY_STORE]]:
+; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i32 [ [[OLDVAL]], %[[FENCED_STORE]] ]
 ; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.strex.p0i32(i32 %newval, i32* %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[LOOP]]
@@ -178,16 +197,19 @@ define i32 @test_cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %desired, i32 %newva
 ; CHECK: br label %[[DONE:.*]]
 
 ; CHECK: [[NO_STORE_BB]]:
+; CHECK-NEXT: [[LOADED_NOSTORE:%.*]] = phi i32 [ [[OLDVAL]], %[[LOOP]] ]
 ; CHECK-NEXT: call void @llvm.arm.clrex()
 ; CHECK-NEXT: br label %[[FAILURE_BB:.*]]
 
 ; CHECK: [[FAILURE_BB]]:
+; CHECK-NEXT: [[LOADED_FAILURE:%.*]] = phi i32 [ [[LOADED_NOSTORE]], %[[NO_STORE_BB]] ]
 ; CHECK-NOT: fence_cst
 ; CHECK: br label %[[DONE]]
 
 ; CHECK: [[DONE]]:
+; CHECK: [[LOADED_EXIT:%.*]] = phi i32 [ [[LOADED_TRYSTORE]], %[[SUCCESS_BB]] ], [ [[LOADED_FAILURE]], %[[FAILURE_BB]] ]
 ; CHECK: [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
-; CHECK: ret i32 [[OLDVAL]]
+; CHECK: ret i32 [[LOADED_EXIT]]
 
   %pairold = cmpxchg i32* %ptr, i32 %desired, i32 %newval acquire acquire
   %old = extractvalue { i32, i1 } %pairold, 0
@@ -209,9 +231,13 @@ define i64 @test_cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %desired, i64 %n
 ; CHECK: [[HI64:%.*]] = shl i64 [[HI64_TMP]], 32
 ; CHECK: [[OLDVAL:%.*]] = or i64 [[LO64]], [[HI64]]
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i64 [[OLDVAL]], %desired
-; CHECK: br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
+; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
+
+; CHECK: [[FENCED_STORE]]:
+; CHECK-NEXT: br label %[[TRY_STORE:.*]]
 
 ; CHECK: [[TRY_STORE]]:
+; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i64 [ [[OLDVAL]], %[[FENCED_STORE]] ]
 ; CHECK: [[NEWLO:%.*]] = trunc i64 %newval to i32
 ; CHECK: [[NEWHI_TMP:%.*]] = lshr i64 %newval, 32
 ; CHECK: [[NEWHI:%.*]] = trunc i64 [[NEWHI_TMP]] to i32
@@ -225,16 +251,19 @@ define i64 @test_cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %desired, i64 %n
 ; CHECK: br label %[[DONE:.*]]
 
 ; CHECK: [[NO_STORE_BB]]:
+; CHECK-NEXT: [[LOADED_NOSTORE:%.*]] = phi i64 [ [[OLDVAL]], %[[LOOP]] ]
 ; CHECK-NEXT: call void @llvm.arm.clrex()
 ; CHECK-NEXT: br label %[[FAILURE_BB:.*]]
 
 ; CHECK: [[FAILURE_BB]]:
+; CHECK-NEXT: [[LOADED_FAILURE:%.*]] = phi i64 [ [[LOADED_NOSTORE]], %[[NO_STORE_BB]] ]
 ; CHECK-NOT: fence_cst
 ; CHECK: br label %[[DONE]]
 
 ; CHECK: [[DONE]]:
+; CHECK: [[LOADED_EXIT:%.*]] = phi i64 [ [[LOADED_TRYSTORE]], %[[SUCCESS_BB]] ], [ [[LOADED_FAILURE]], %[[FAILURE_BB]] ]
 ; CHECK: [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
-; CHECK: ret i64 [[OLDVAL]]
+; CHECK: ret i64 [[LOADED_EXIT]]
 
   %pairold = cmpxchg i64* %ptr, i64 %desired, i64 %newval monotonic monotonic
   %old = extractvalue { i64, i1 } %pairold, 0

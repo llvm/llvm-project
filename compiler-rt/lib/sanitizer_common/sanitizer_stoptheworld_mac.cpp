@@ -160,7 +160,11 @@ PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
   }
 
   internal_memcpy(buffer, &regs, sizeof(regs));
+#if defined(__aarch64__) && defined(arm_thread_state64_get_sp)
+  *sp = arm_thread_state64_get_sp(regs);
+#else
   *sp = regs.SP_REG;
+#endif
 
   // On x86_64 and aarch64, we must account for the stack redzone, which is 128
   // bytes.

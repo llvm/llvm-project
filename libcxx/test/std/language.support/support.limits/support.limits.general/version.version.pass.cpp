@@ -38,7 +38,7 @@
     __cpp_lib_destroying_delete                    201806L [C++2a]
     __cpp_lib_enable_shared_from_this              201603L [C++17]
     __cpp_lib_endian                               201907L [C++2a]
-    __cpp_lib_erase_if                             201811L [C++2a]
+    __cpp_lib_erase_if                             202002L [C++2a]
     __cpp_lib_exchange_function                    201304L [C++14]
     __cpp_lib_execution                            201603L [C++17]
     __cpp_lib_filesystem                           201703L [C++17]
@@ -85,6 +85,7 @@
     __cpp_lib_shared_ptr_arrays                    201611L [C++17]
     __cpp_lib_shared_ptr_weak_type                 201606L [C++17]
     __cpp_lib_shared_timed_mutex                   201402L [C++14]
+    __cpp_lib_span                                 202002L [C++2a]
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
     __cpp_lib_three_way_comparison                 201711L [C++2a]
@@ -389,6 +390,10 @@
 
 # ifdef __cpp_lib_shared_timed_mutex
 #   error "__cpp_lib_shared_timed_mutex should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_string_udls
@@ -782,6 +787,10 @@
 #   ifdef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -1381,6 +1390,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_span
+#   error "__cpp_lib_span should not be defined before c++2a"
+# endif
+
 # ifndef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should be defined in c++17"
 # endif
@@ -1718,8 +1731,8 @@
 # ifndef __cpp_lib_erase_if
 #   error "__cpp_lib_erase_if should be defined in c++2a"
 # endif
-# if __cpp_lib_erase_if != 201811L
-#   error "__cpp_lib_erase_if should have the value 201811L in c++2a"
+# if __cpp_lib_erase_if != 202002L
+#   error "__cpp_lib_erase_if should have the value 202002L in c++2a"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -2114,6 +2127,13 @@
 #   ifdef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_span
+#   error "__cpp_lib_span should be defined in c++2a"
+# endif
+# if __cpp_lib_span != 202002L
+#   error "__cpp_lib_span should have the value 202002L in c++2a"
 # endif
 
 # ifndef __cpp_lib_string_udls

@@ -256,12 +256,15 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
 void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionAction Action,
                                    PragmaClangSectionKind SecKind, StringRef SecName) {
   PragmaClangSection *CSec;
+  int SectionFlags = ASTContext::PSF_Read;
   switch (SecKind) {
     case PragmaClangSectionKind::PCSK_BSS:
       CSec = &PragmaClangBSSSection;
+      SectionFlags |= ASTContext::PSF_Write | ASTContext::PSF_ZeroInit;
       break;
     case PragmaClangSectionKind::PCSK_Data:
       CSec = &PragmaClangDataSection;
+      SectionFlags |= ASTContext::PSF_Write;
       break;
     case PragmaClangSectionKind::PCSK_Rodata:
       CSec = &PragmaClangRodataSection;
@@ -271,6 +274,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
       break;
     case PragmaClangSectionKind::PCSK_Text:
       CSec = &PragmaClangTextSection;
+      SectionFlags |= ASTContext::PSF_Execute;
       break;
     default:
       llvm_unreachable("invalid clang section kind");
@@ -280,6 +284,9 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
     CSec->Valid = false;
     return;
   }
+
+  if (UnifySection(SecName, SectionFlags, PragmaLoc))
+    return;
 
   CSec->Valid = true;
   CSec->SectionName = std::string(SecName);
@@ -407,6 +414,69 @@ void Sema::ActOnPragmaDetectMismatch(SourceLocation Loc, StringRef Name,
   Consumer.HandleTopLevelDecl(DeclGroupRef(PDMD));
 }
 
+void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
+                                   PragmaMsStackAction Action,
+                                   PragmaFloatControlKind Value) {
+  auto NewValue = FpPragmaStack.CurrentValue;
+  FPOptions NewFPFeatures(NewValue);
+  if ((Action == PSK_Push_Set || Action == PSK_Push || Action == PSK_Pop) &&
+      !(CurContext->isTranslationUnit()) && !CurContext->isNamespace()) {
+    // Push and pop can only occur at file or namespace scope.
+    Diag(Loc, diag::err_pragma_fc_pp_scope);
+    return;
+  }
+  switch (Value) {
+  default:
+    llvm_unreachable("invalid pragma float_control kind");
+  case PFC_Precise:
+    CurFPFeatures.setFPPreciseEnabled(true);
+    NewValue = CurFPFeatures.getAsOpaqueInt();
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
+    break;
+  case PFC_NoPrecise:
+    if (CurFPFeatures.getExceptionMode() == LangOptions::FPE_Strict)
+      Diag(Loc, diag::err_pragma_fc_noprecise_requires_noexcept);
+    else if (CurFPFeatures.allowFEnvAccess())
+      Diag(Loc, diag::err_pragma_fc_noprecise_requires_nofenv);
+    else
+      CurFPFeatures.setFPPreciseEnabled(false);
+    NewValue = CurFPFeatures.getAsOpaqueInt();
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
+    break;
+  case PFC_Except:
+    if (!isPreciseFPEnabled())
+      Diag(Loc, diag::err_pragma_fc_except_requires_precise);
+    else
+      CurFPFeatures.setExceptionMode(LangOptions::FPE_Strict);
+    NewValue = CurFPFeatures.getAsOpaqueInt();
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
+    break;
+  case PFC_NoExcept:
+    CurFPFeatures.setExceptionMode(LangOptions::FPE_Ignore);
+    NewValue = CurFPFeatures.getAsOpaqueInt();
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewValue);
+    break;
+  case PFC_Push:
+    if (FpPragmaStack.Stack.empty()) {
+      FpPragmaStack.Act(Loc, Sema::PSK_Set, StringRef(),
+                        CurFPFeatures.getAsOpaqueInt());
+    }
+    FpPragmaStack.Act(Loc, Sema::PSK_Push_Set, StringRef(),
+                      NewFPFeatures.getAsOpaqueInt());
+    break;
+  case PFC_Pop:
+    if (FpPragmaStack.Stack.empty()) {
+      Diag(Loc, diag::warn_pragma_pop_failed) << "float_control"
+                                              << "stack empty";
+      return;
+    }
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures.getAsOpaqueInt());
+    NewValue = FpPragmaStack.CurrentValue;
+    CurFPFeatures.getFromOpaqueInt(NewValue);
+    break;
+  }
+}
+
 void Sema::ActOnPragmaMSPointersToMembers(
     LangOptions::PragmaMSPointersToMembersKind RepresentationMethod,
     SourceLocation PragmaLoc) {
@@ -464,42 +534,49 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
 bool Sema::UnifySection(StringRef SectionName,
                         int SectionFlags,
                         DeclaratorDecl *Decl) {
-  auto Section = Context.SectionInfos.find(SectionName);
-  if (Section == Context.SectionInfos.end()) {
+  SourceLocation PragmaLocation;
+  if (auto A = Decl->getAttr<SectionAttr>())
+    if (A->isImplicit())
+      PragmaLocation = A->getLocation();
+  auto SectionIt = Context.SectionInfos.find(SectionName);
+  if (SectionIt == Context.SectionInfos.end()) {
     Context.SectionInfos[SectionName] =
-        ASTContext::SectionInfo(Decl, SourceLocation(), SectionFlags);
+        ASTContext::SectionInfo(Decl, PragmaLocation, SectionFlags);
     return false;
   }
   // A pre-declared section takes precedence w/o diagnostic.
-  if (Section->second.SectionFlags == SectionFlags ||
-      !(Section->second.SectionFlags & ASTContext::PSF_Implicit))
+  const auto &Section = SectionIt->second;
+  if (Section.SectionFlags == SectionFlags ||
+      ((SectionFlags & ASTContext::PSF_Implicit) &&
+       !(Section.SectionFlags & ASTContext::PSF_Implicit)))
     return false;
-  auto OtherDecl = Section->second.Decl;
-  Diag(Decl->getLocation(), diag::err_section_conflict)
-      << Decl << OtherDecl;
-  Diag(OtherDecl->getLocation(), diag::note_declared_at)
-      << OtherDecl->getName();
-  if (auto A = Decl->getAttr<SectionAttr>())
-    if (A->isImplicit())
-      Diag(A->getLocation(), diag::note_pragma_entered_here);
-  if (auto A = OtherDecl->getAttr<SectionAttr>())
-    if (A->isImplicit())
-      Diag(A->getLocation(), diag::note_pragma_entered_here);
+  Diag(Decl->getLocation(), diag::err_section_conflict) << Decl << Section;
+  if (Section.Decl)
+    Diag(Section.Decl->getLocation(), diag::note_declared_at)
+        << Section.Decl->getName();
+  if (PragmaLocation.isValid())
+    Diag(PragmaLocation, diag::note_pragma_entered_here);
+  if (Section.PragmaSectionLocation.isValid())
+    Diag(Section.PragmaSectionLocation, diag::note_pragma_entered_here);
   return true;
 }
 
 bool Sema::UnifySection(StringRef SectionName,
                         int SectionFlags,
                         SourceLocation PragmaSectionLocation) {
-  auto Section = Context.SectionInfos.find(SectionName);
-  if (Section != Context.SectionInfos.end()) {
-    if (Section->second.SectionFlags == SectionFlags)
+  auto SectionIt = Context.SectionInfos.find(SectionName);
+  if (SectionIt != Context.SectionInfos.end()) {
+    const auto &Section = SectionIt->second;
+    if (Section.SectionFlags == SectionFlags)
       return false;
-    if (!(Section->second.SectionFlags & ASTContext::PSF_Implicit)) {
+    if (!(Section.SectionFlags & ASTContext::PSF_Implicit)) {
       Diag(PragmaSectionLocation, diag::err_section_conflict)
-          << "this" << "a prior #pragma section";
-      Diag(Section->second.PragmaSectionLocation,
-           diag::note_pragma_entered_here);
+          << "this" << Section;
+      if (Section.Decl)
+        Diag(Section.Decl->getLocation(), diag::note_declared_at)
+            << Section.Decl->getName();
+      if (Section.PragmaSectionLocation.isValid())
+        Diag(Section.PragmaSectionLocation, diag::note_pragma_entered_here);
       return true;
     }
   }
@@ -926,39 +1003,44 @@ void Sema::ActOnPragmaVisibility(const IdentifierInfo* VisType,
   }
 }
 
-void Sema::ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC) {
+void Sema::ActOnPragmaFPContract(LangOptions::FPModeKind FPC) {
   switch (FPC) {
-  case LangOptions::FPC_On:
-    FPFeatures.setAllowFPContractWithinStatement();
+  case LangOptions::FPM_On:
+    CurFPFeatures.setAllowFPContractWithinStatement();
     break;
-  case LangOptions::FPC_Fast:
-    FPFeatures.setAllowFPContractAcrossStatement();
+  case LangOptions::FPM_Fast:
+    CurFPFeatures.setAllowFPContractAcrossStatement();
     break;
-  case LangOptions::FPC_Off:
-    FPFeatures.setDisallowFPContract();
+  case LangOptions::FPM_Off:
+    CurFPFeatures.setDisallowFPContract();
     break;
   }
+}
+
+void Sema::ActOnPragmaFPReassociate(bool IsEnabled) {
+  CurFPFeatures.setAllowAssociativeMath(IsEnabled);
 }
 
 void Sema::setRoundingMode(llvm::RoundingMode FPR) {
-  FPFeatures.setRoundingMode(FPR);
+  CurFPFeatures.setRoundingMode(FPR);
 }
 
 void Sema::setExceptionMode(LangOptions::FPExceptionModeKind FPE) {
-  FPFeatures.setExceptionMode(FPE);
+  CurFPFeatures.setExceptionMode(FPE);
 }
 
-void Sema::ActOnPragmaFEnvAccess(LangOptions::FEnvAccessModeKind FPC) {
-  switch (FPC) {
-  case LangOptions::FEA_On:
-    FPFeatures.setAllowFEnvAccess();
-    break;
-  case LangOptions::FEA_Off:
-    FPFeatures.setDisallowFEnvAccess();
-    break;
-  }
+void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
+  if (IsEnabled) {
+    // Verify Microsoft restriction:
+    // You can't enable fenv_access unless precise semantics are enabled.
+    // Precise semantics can be enabled either by the float_control
+    // pragma, or by using the /fp:precise or /fp:strict compiler options
+    if (!isPreciseFPEnabled())
+      Diag(Loc, diag::err_pragma_fenv_requires_precise);
+    CurFPFeatures.setAllowFEnvAccess();
+  } else
+    CurFPFeatures.setDisallowFEnvAccess();
 }
-
 
 void Sema::PushNamespaceVisibilityAttr(const VisibilityAttr *Attr,
                                        SourceLocation Loc) {

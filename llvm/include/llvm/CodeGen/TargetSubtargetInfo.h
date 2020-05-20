@@ -29,6 +29,7 @@
 namespace llvm {
 
 class CallLowering;
+class InlineAsmLowering;
 class InstrItineraryData;
 struct InstrStage;
 class InstructionSelector;
@@ -101,6 +102,10 @@ public:
     return nullptr;
   }
   virtual const CallLowering *getCallLowering() const { return nullptr; }
+
+  virtual const InlineAsmLowering *getInlineAsmLowering() const {
+    return nullptr;
+  }
 
   // FIXME: This lets targets specialize the selector by subtarget (which lets
   // us do things like a dedicated avx512 selector).  However, we might want
@@ -224,9 +229,13 @@ public:
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
                                    unsigned NumRegionInstrs) const {}
 
-  // Perform target specific adjustments to the latency of a schedule
+  // Perform target-specific adjustments to the latency of a schedule
   // dependency.
-  virtual void adjustSchedDependency(SUnit *def, SUnit *use, SDep &dep) const {}
+  // If a pair of operands is associated with the schedule dependency, DefOpIdx
+  // and UseOpIdx are the indices of the operands in Def and Use, respectively.
+  // Otherwise, either may be -1.
+  virtual void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
+                                     int UseOpIdx, SDep &Dep) const {}
 
   // For use with PostRAScheduling: get the anti-dependence breaking that should
   // be performed before post-RA scheduling.

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <regex>
-// UNSUPPORTED: libcpp-no-exceptions
+// UNSUPPORTED: no-exceptions
 // UNSUPPORTED: c++98, c++03
 
 // template <class BidirectionalIterator, class Allocator, class charT, class traits>

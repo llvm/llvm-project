@@ -98,20 +98,23 @@ define void @local_load_v3i1(i32 addrspace(1)* %out, i32 addrspace(1)* %in, <3 x
 ; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    movb (%rdx), %al
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shrb $2, %cl
-; CHECK-NEXT:    movzbl %al, %r15d
-; CHECK-NEXT:    shrb %al
-; CHECK-NEXT:    movzbl %al, %ebx
-; CHECK-NEXT:    movzbl %cl, %ebp
+; CHECK-NEXT:    shrb %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    shrb $2, %dl
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %ebp
+; CHECK-NEXT:    movzbl %dl, %r15d
+; CHECK-NEXT:    movzbl %cl, %ebx
 ; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    movl %r15d, %esi
+; CHECK-NEXT:    movl %ebp, %esi
 ; CHECK-NEXT:    movl %ebx, %edx
-; CHECK-NEXT:    movl %ebp, %ecx
+; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    callq masked_load_v3
 ; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    movl %r15d, %esi
+; CHECK-NEXT:    movl %ebp, %esi
 ; CHECK-NEXT:    movl %ebx, %edx
-; CHECK-NEXT:    movl %ebp, %ecx
+; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    callq masked_store4_v3
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx

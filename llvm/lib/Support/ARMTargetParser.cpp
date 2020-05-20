@@ -13,6 +13,7 @@
 
 #include "llvm/Support/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include <cctype>
 
 using namespace llvm;

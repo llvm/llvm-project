@@ -1,10 +1,10 @@
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops %s -S -o - | \
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -S -o - | \
 ; RUN:     FileCheck %s
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi %s -o - | \
+; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi %s -o - | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-LLC
 ; RUN: opt -mtriple=thumbv8.1m.main -loop-unroll -unroll-remainder=false -S < %s | \
 ; RUN:     llc -mtriple=thumbv8.1m.main | FileCheck %s --check-prefix=CHECK-UNROLL
-; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops \
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops \
 ; RUN:     -pass-remarks-analysis=hardware-loops  %s -S -o - 2>&1 | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-REMARKS
 

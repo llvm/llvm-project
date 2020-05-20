@@ -620,8 +620,16 @@ protected:
       RegularExpression regexp(m_options.m_func_regexp);
       if (llvm::Error err = regexp.GetError()) {
         result.AppendErrorWithFormat(
-            "Function name regular expression could not be compiled: \"%s\"",
+            "Function name regular expression could not be compiled: %s",
             llvm::toString(std::move(err)).c_str());
+        // Check if the incorrect regex looks like a globbing expression and
+        // warn the user about it.
+        if (!m_options.m_func_regexp.empty()) {
+          if (m_options.m_func_regexp[0] == '*' ||
+              m_options.m_func_regexp[0] == '?')
+            result.AppendWarning(
+                "Function name regex does not accept glob patterns.");
+        }
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
@@ -811,6 +819,14 @@ public:
 
   ~CommandObjectBreakpointModify() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_options; }
 
 protected:
@@ -876,6 +892,14 @@ public:
   }
 
   ~CommandObjectBreakpointEnable() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -984,6 +1008,14 @@ the second re-enables the first location.");
   }
 
   ~CommandObjectBreakpointDisable() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1363,6 +1395,14 @@ public:
 
   ~CommandObjectBreakpointDelete() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_options; }
 
   class CommandOptions : public Options {
@@ -1730,6 +1770,14 @@ public:
 
   ~CommandObjectBreakpointNameAdd() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
@@ -1808,6 +1856,14 @@ public:
   }
 
   ~CommandObjectBreakpointNameDelete() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
   Options *GetOptions() override { return &m_option_group; }
 
@@ -1978,14 +2034,7 @@ public:
                             "Read and set the breakpoints previously saved to "
                             "a file with \"breakpoint write\".  ",
                             nullptr),
-        m_options() {
-    CommandArgumentEntry arg;
-    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
-                                      eArgTypeBreakpointIDRange);
-    // Add the entry for the first argument for this command to the object's
-    // arguments vector.
-    m_arguments.push_back(arg);
-  }
+        m_options() {}
 
   ~CommandObjectBreakpointRead() override = default;
 
@@ -2106,6 +2155,14 @@ public:
   }
 
   ~CommandObjectBreakpointWrite() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
+        request, nullptr);
+  }
 
   Options *GetOptions() override { return &m_options; }
 

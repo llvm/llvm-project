@@ -103,11 +103,11 @@ bool EVT::isExtended2048BitVector() const {
 }
 
 bool EVT::isExtendedFixedLengthVector() const {
-  return isExtendedVector() && !cast<VectorType>(LLVMTy)->isScalable();
+  return isExtendedVector() && isa<FixedVectorType>(LLVMTy);
 }
 
 bool EVT::isExtendedScalableVector() const {
-  return isExtendedVector() && cast<VectorType>(LLVMTy)->isScalable();
+  return isExtendedVector() && isa<ScalableVectorType>(LLVMTy);
 }
 
 EVT EVT::getExtendedVectorElementType() const {
@@ -254,6 +254,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v2f64:   return VectorType::get(Type::getDoubleTy(Context), 2);
   case MVT::v4f64:   return VectorType::get(Type::getDoubleTy(Context), 4);
   case MVT::v8f64:   return VectorType::get(Type::getDoubleTy(Context), 8);
+  case MVT::v16f64:  return VectorType::get(Type::getDoubleTy(Context), 16);
   case MVT::nxv1i1:
     return VectorType::get(Type::getInt1Ty(Context), 1, /*Scalable=*/ true);
   case MVT::nxv2i1:
@@ -362,7 +363,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
   case Type::PointerTyID:   return MVT(MVT::iPTR);
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     return getVectorVT(
       getVT(VTy->getElementType(), /*HandleUnknown=*/ false),
@@ -380,7 +382,8 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
     return MVT::getVT(Ty, HandleUnknown);
   case Type::IntegerTyID:
     return getIntegerVT(Ty->getContext(), cast<IntegerType>(Ty)->getBitWidth());
-  case Type::VectorTyID: {
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     return getVectorVT(Ty->getContext(),
                        getEVT(VTy->getElementType(), /*HandleUnknown=*/ false),

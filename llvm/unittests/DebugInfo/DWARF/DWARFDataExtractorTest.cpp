@@ -146,4 +146,70 @@ TEST(DWARFDataExtractorTest, getInitialLength) {
             std::make_tuple(0x0001020304050607, dwarf::DWARF64, 12));
 }
 
+TEST(DWARFDataExtractorTest, Truncation) {
+  StringRef Yaml = R"(
+!ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_386
+Sections:
+  - Name:     .text
+    Type:     SHT_PROGBITS
+    Size:     0x80
+  - Name:     .debug_line
+    Type:     SHT_PROGBITS
+    Content:  '616263640000000065666768'
+  - Name:     .rel.debug_line
+    Type:     SHT_REL
+    Info:     .debug_line
+    Relocations:
+      - Offset:   4
+        Symbol:   f
+        Type:     R_386_32
+Symbols:
+  - Name:     f
+    Type:     STT_SECTION
+    Section:  .text
+    Value:    0x42
+)";
+  SmallString<0> Storage;
+  std::unique_ptr<object::ObjectFile> Obj = yaml::yaml2ObjectFile(
+      Storage, Yaml, [](const Twine &Err) { errs() << Err; });
+  ASSERT_TRUE(Obj);
+  std::unique_ptr<DWARFContext> Ctx = DWARFContext::create(*Obj);
+  const DWARFObject &DObj = Ctx->getDWARFObj();
+  ASSERT_EQ(12u, DObj.getLineSection().Data.size());
+
+  DWARFDataExtractor Data(DObj, DObj.getLineSection(), Obj->isLittleEndian(),
+                          Obj->getBytesInAddress());
+  DataExtractor::Cursor C(0);
+  EXPECT_EQ(0x64636261u, Data.getRelocatedAddress(C));
+  EXPECT_EQ(0x42u, Data.getRelocatedAddress(C));
+  EXPECT_EQ(0x68676665u, Data.getRelocatedAddress(C));
+  EXPECT_THAT_ERROR(C.takeError(), Succeeded());
+
+  C = DataExtractor::Cursor{0};
+  DWARFDataExtractor Truncated8(Data, 8);
+  EXPECT_EQ(0x64636261u, Truncated8.getRelocatedAddress(C));
+  EXPECT_EQ(0x42u, Truncated8.getRelocatedAddress(C));
+  EXPECT_EQ(0x0u, Truncated8.getRelocatedAddress(C));
+  EXPECT_THAT_ERROR(C.takeError(),
+                    FailedWithMessage("unexpected end of data at offset 0x8"));
+
+  C = DataExtractor::Cursor{0};
+  DWARFDataExtractor Truncated6(Data, 6);
+  EXPECT_EQ(0x64636261u, Truncated6.getRelocatedAddress(C));
+  EXPECT_EQ(0x0u, Truncated6.getRelocatedAddress(C));
+  EXPECT_THAT_ERROR(C.takeError(),
+                    FailedWithMessage("unexpected end of data at offset 0x4"));
+
+  C = DataExtractor::Cursor{0};
+  DWARFDataExtractor Truncated2(Data, 2);
+  EXPECT_EQ(0x0u, Truncated2.getRelocatedAddress(C));
+  EXPECT_THAT_ERROR(C.takeError(),
+                    FailedWithMessage("unexpected end of data at offset 0x0"));
+}
+
 } // namespace

@@ -928,7 +928,7 @@ def spe2dis : Operand<iPTR> {   // SPE displacement where the imm is 2-aligned.
 }
 
 // A single-register address. This is used with the SjLj
-// pseudo-instructions which tranlates to LD/LWZ.  These instructions requires
+// pseudo-instructions which translates to LD/LWZ.  These instructions requires
 // G8RC_NOX0 registers.
 def memr : Operand<iPTR> {
   let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg);
@@ -965,11 +965,11 @@ def iaddrX16 : ComplexPattern<iPTR, 2, "SelectAddrImmX16",  [], []>;  // "stxv"
 
 // Below forms are all x-form addressing mode, use three different ones so we
 // can make a accurate check for x-form instructions in ISEL.
-// x-form addressing mode whose associated diplacement form is D.
+// x-form addressing mode whose associated displacement form is D.
 def xaddr  : ComplexPattern<iPTR, 2, "SelectAddrIdx",     [], []>;    // "stbx"
-// x-form addressing mode whose associated diplacement form is DS.
+// x-form addressing mode whose associated displacement form is DS.
 def xaddrX4 : ComplexPattern<iPTR, 2, "SelectAddrIdxX4",    [], []>;  // "stdx"
-// x-form addressing mode whose associated diplacement form is DQ.
+// x-form addressing mode whose associated displacement form is DQ.
 def xaddrX16 : ComplexPattern<iPTR, 2, "SelectAddrIdxX16",   [], []>; // "stxvx"
 
 def xoaddr : ComplexPattern<iPTR, 2, "SelectAddrIdxOnly",[], []>;
@@ -2576,10 +2576,10 @@ let Uses = [RM] in {
 
   defm FSQRT  : XForm_26r<63, 22, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fsqrt", "$frD, $frB", IIC_FPSqrtD,
-                          [(set f64:$frD, (fsqrt f64:$frB))]>;
+                          [(set f64:$frD, (any_fsqrt f64:$frB))]>;
   defm FSQRTS : XForm_26r<59, 22, (outs f4rc:$frD), (ins f4rc:$frB),
                           "fsqrts", "$frD, $frB", IIC_FPSqrtS,
-                          [(set f32:$frD, (fsqrt f32:$frB))]>;
+                          [(set f32:$frD, (any_fsqrt f32:$frB))]>;
   }
   }
 }
@@ -3001,40 +3001,40 @@ let isCommutable = 1 in {
   defm FMADD : AForm_1r<63, 29, 
                       (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                       "fmadd", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
-                      [(set f64:$FRT, (fma f64:$FRA, f64:$FRC, f64:$FRB))]>;
+                      [(set f64:$FRT, (any_fma f64:$FRA, f64:$FRC, f64:$FRB))]>;
   defm FMADDS : AForm_1r<59, 29,
                       (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRC, f4rc:$FRB),
                       "fmadds", "$FRT, $FRA, $FRC, $FRB", IIC_FPGeneral,
-                      [(set f32:$FRT, (fma f32:$FRA, f32:$FRC, f32:$FRB))]>;
+                      [(set f32:$FRT, (any_fma f32:$FRA, f32:$FRC, f32:$FRB))]>;
   defm FMSUB : AForm_1r<63, 28,
                       (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                       "fmsub", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set f64:$FRT,
-                            (fma f64:$FRA, f64:$FRC, (fneg f64:$FRB)))]>;
+                            (any_fma f64:$FRA, f64:$FRC, (fneg f64:$FRB)))]>;
   defm FMSUBS : AForm_1r<59, 28,
                       (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRC, f4rc:$FRB),
                       "fmsubs", "$FRT, $FRA, $FRC, $FRB", IIC_FPGeneral,
                       [(set f32:$FRT,
-                            (fma f32:$FRA, f32:$FRC, (fneg f32:$FRB)))]>;
+                            (any_fma f32:$FRA, f32:$FRC, (fneg f32:$FRB)))]>;
   defm FNMADD : AForm_1r<63, 31,
                       (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                       "fnmadd", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
                       [(set f64:$FRT,
-                            (fneg (fma f64:$FRA, f64:$FRC, f64:$FRB)))]>;
+                            (fneg (any_fma f64:$FRA, f64:$FRC, f64:$FRB)))]>;
   defm FNMADDS : AForm_1r<59, 31,
                       (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRC, f4rc:$FRB),
                       "fnmadds", "$FRT, $FRA, $FRC, $FRB", IIC_FPGeneral,
                       [(set f32:$FRT,
-                            (fneg (fma f32:$FRA, f32:$FRC, f32:$FRB)))]>;
+                            (fneg (any_fma f32:$FRA, f32:$FRC, f32:$FRB)))]>;
   defm FNMSUB : AForm_1r<63, 30,
                       (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
                       "fnmsub", "$FRT, $FRA, $FRC, $FRB", IIC_FPFused,
-                      [(set f64:$FRT, (fneg (fma f64:$FRA, f64:$FRC,
+                      [(set f64:$FRT, (fneg (any_fma f64:$FRA, f64:$FRC,
                                                  (fneg f64:$FRB))))]>;
   defm FNMSUBS : AForm_1r<59, 30,
                       (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRC, f4rc:$FRB),
                       "fnmsubs", "$FRT, $FRA, $FRC, $FRB", IIC_FPGeneral,
-                      [(set f32:$FRT, (fneg (fma f32:$FRA, f32:$FRC,
+                      [(set f32:$FRT, (fneg (any_fma f32:$FRA, f32:$FRC,
                                                  (fneg f32:$FRB))))]>;
 } // isCommutable
 }
@@ -5068,8 +5068,11 @@ def RotateInsertByte1 {
   dag Left = (RLWIMI RotateInsertByte3.Left, Swap4.Bits, 8, 24, 31);
 }
 
-def : Pat<(i32 (bitreverse i32:$A)),
-  (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
+// Clear the upper half of the register when in 64-bit mode
+let Predicates = [In64BitMode] in
+def : Pat<(i32 (bitreverse i32:$A)), (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
+let Predicates = [In32BitMode] in
+def : Pat<(i32 (bitreverse i32:$A)), RotateInsertByte1.Left>;
 
 // Fast 64-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):

@@ -9,10 +9,9 @@
 ; DEFAULT: s_load_dwordx4
 ; DEFAULT: s_waitcnt lgkmcnt(0)
 ; DEFAULT: buffer_load_format_xyzw
-; DEFAULT: s_waitcnt vmcnt(0)
 ; DEFAULT: buffer_load_format_xyzw
-; DEFAULT: s_waitcnt vmcnt(0)
-; DEFAULT: exp
+; DEFAULT-DAG: s_waitcnt vmcnt(0)
+; DEFAULT-DAG: exp
 ; DEFAULT: exp
 ; DEFAULT-NEXT: s_endpgm
 define amdgpu_vs void @main(<16 x i8> addrspace(4)* inreg %arg, <16 x i8> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, <16 x i8> addrspace(4)* inreg %arg3, <16 x i8> addrspace(4)* inreg %arg4, i32 inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, float addrspace(4)* inreg %constptr) #0 {

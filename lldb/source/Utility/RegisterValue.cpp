@@ -810,7 +810,7 @@ bool RegisterValue::operator==(const RegisterValue &rhs) const {
       if (buffer.length != rhs.buffer.length)
         return false;
       else {
-        uint8_t length = buffer.length;
+        uint16_t length = buffer.length;
         if (length > kMaxRegisterByteSize)
           length = kMaxRegisterByteSize;
         return memcmp(buffer.bytes, rhs.buffer.bytes, length) == 0;

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DraftStore.h"
-#include "Logger.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "llvm/Support/Errc.h"
 
 namespace clang {

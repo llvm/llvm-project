@@ -479,7 +479,6 @@ TEST_F(CleanUpReplacementsTest, NoNewLineAtTheEndOfCodeMultipleInsertions) {
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
-
 TEST_F(CleanUpReplacementsTest, FormatCorrectLineWhenHeadersAreInserted) {
   std::string Code = "\n"
                      "int x;\n"

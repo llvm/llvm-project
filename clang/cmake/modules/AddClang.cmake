@@ -45,7 +45,7 @@ endmacro()
 
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN"
+    "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -81,7 +81,10 @@ macro(add_clang_library name)
       ${ARG_ADDITIONAL_HEADERS} # It may contain unparsed unknown args.
       )
   endif()
-  if(ARG_SHARED)
+
+  if(ARG_SHARED AND ARG_STATIC)
+    set(LIBTYPE SHARED STATIC)
+  elseif(ARG_SHARED)
     set(LIBTYPE SHARED)
   else()
     # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
@@ -99,38 +102,45 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
-  if(TARGET ${name})
-    target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
-
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ARG_INSTALL_WITH_TOOLCHAIN)
-      set(export_to_clangtargets)
-      if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-        set(export_to_clangtargets EXPORT ClangTargets)
-        set_property(GLOBAL PROPERTY CLANG_HAS_EXPORTS True)
-      endif()
-
-      install(TARGETS ${name}
-        COMPONENT ${name}
-        ${export_to_clangtargets}
-        LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        RUNTIME DESTINATION bin)
-
-      if (NOT LLVM_ENABLE_IDE)
-        add_llvm_install_targets(install-${name}
-                                 DEPENDS ${name}
-                                 COMPONENT ${name})
-      endif()
-
-      set_property(GLOBAL APPEND PROPERTY CLANG_LIBS ${name})
-    endif()
-    set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
-  else()
-    # Add empty "phony" target
-    add_custom_target(${name})
+  set(libs ${name})
+  if(ARG_SHARED AND ARG_STATIC)
+    list(APPEND libs ${name}_static)
   endif()
+
+  foreach(lib ${libs})
+    if(TARGET ${lib})
+      target_link_libraries(${lib} INTERFACE ${LLVM_COMMON_LIBS})
+
+      if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ARG_INSTALL_WITH_TOOLCHAIN)
+        set(export_to_clangtargets)
+        if(${lib} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+            "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+            NOT LLVM_DISTRIBUTION_COMPONENTS)
+          set(export_to_clangtargets EXPORT ClangTargets)
+          set_property(GLOBAL PROPERTY CLANG_HAS_EXPORTS True)
+        endif()
+
+        install(TARGETS ${lib}
+          COMPONENT ${lib}
+          ${export_to_clangtargets}
+          LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+          ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+          RUNTIME DESTINATION bin)
+
+        if (NOT LLVM_ENABLE_IDE)
+          add_llvm_install_targets(install-${lib}
+                                   DEPENDS ${lib}
+                                   COMPONENT ${lib})
+        endif()
+
+        set_property(GLOBAL APPEND PROPERTY CLANG_LIBS ${lib})
+      endif()
+      set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${lib})
+    else()
+      # Add empty "phony" target
+      add_custom_target(${lib})
+    endif()
+  endforeach()
 
   set_target_properties(${name} PROPERTIES FOLDER "Clang libraries")
   set_clang_windows_version_resource_properties(${name})

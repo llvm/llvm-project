@@ -36,7 +36,7 @@ class Configuration(LibcxxConfiguration):
     def configure_features(self):
         super(Configuration, self).configure_features()
         if not self.get_lit_bool('enable_exceptions', True):
-            self.config.available_features.add('libcxxabi-no-exceptions')
+            self.config.available_features.add('no-exceptions')
         if self.get_lit_bool('arm_ehabi', False):
             self.config.available_features.add('libunwind-arm-ehabi')
 

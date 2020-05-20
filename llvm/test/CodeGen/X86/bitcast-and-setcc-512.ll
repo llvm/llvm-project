@@ -27,7 +27,7 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; SSE-NEXT:    packssdw %xmm9, %xmm8
 ; SSE-NEXT:    packssdw %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm0, %xmm8
-; SSE-NEXT:    packsswb %xmm0, %xmm8
+; SSE-NEXT:    packsswb %xmm8, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
@@ -123,7 +123,7 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double>
 ; SSE-NEXT:    packssdw %xmm9, %xmm8
 ; SSE-NEXT:    packssdw %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm4, %xmm8
-; SSE-NEXT:    packsswb %xmm0, %xmm8
+; SSE-NEXT:    packsswb %xmm8, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq

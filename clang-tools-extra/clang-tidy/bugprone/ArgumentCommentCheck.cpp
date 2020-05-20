@@ -19,6 +19,13 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace bugprone {
+namespace {
+AST_MATCHER(Decl, isFromStdNamespace) {
+  if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
+    return D->isStdNamespace();
+  return false;
+}
+} // namespace
 
 ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
@@ -54,10 +61,18 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                // don't check them against NewCallback's parameter names.
                // FIXME: Make this configurable.
                unless(hasDeclaration(functionDecl(
-                   hasAnyName("NewCallback", "NewPermanentCallback")))))
+                   hasAnyName("NewCallback", "NewPermanentCallback")))),
+               // Ignore APIs from the standard library, since their names are
+               // not specified by the standard, and standard library
+               // implementations in practice have to use reserved names to
+               // avoid conflicts with same-named macros.
+               unless(hasDeclaration(isFromStdNamespace())))
           .bind("expr"),
       this);
-  Finder->addMatcher(cxxConstructExpr().bind("expr"), this);
+  Finder->addMatcher(
+      cxxConstructExpr(unless(hasDeclaration(isFromStdNamespace())))
+          .bind("expr"),
+      this);
 }
 
 static std::vector<std::pair<SourceLocation, StringRef>>

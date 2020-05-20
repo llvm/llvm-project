@@ -4976,21 +4976,21 @@ __m256i test_mm512_maskz_cvt_roundps_ph(__mmask16 __U, __m512  __A)
 __m512 test_mm512_cvt_roundph_ps(__m256i __A)
 {
     // CHECK-LABEL: @test_mm512_cvt_roundph_ps
-    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512(
     return _mm512_cvt_roundph_ps(__A, _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_mask_cvt_roundph_ps(__m512 __W, __mmask16 __U, __m256i __A)
 {
     // CHECK-LABEL: @test_mm512_mask_cvt_roundph_ps
-    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512(
     return _mm512_mask_cvt_roundph_ps(__W, __U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_maskz_cvt_roundph_ps(__mmask16 __U, __m256i __A)
 {
     // CHECK-LABEL: @test_mm512_maskz_cvt_roundph_ps
-    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512(
     return _mm512_maskz_cvt_roundph_ps(__U, __A, _MM_FROUND_NO_EXC);
 }
 

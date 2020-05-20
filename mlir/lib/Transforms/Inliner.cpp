@@ -16,7 +16,7 @@
 #include "PassDetail.h"
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/SideEffects.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -30,50 +30,6 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 // Symbol Use Tracking
 //===----------------------------------------------------------------------===//
-
-/// Returns true if this operation can be discarded if it is a symbol and has no
-/// uses. 'allUsesVisible' corresponds to if the parent symbol table is hidden
-/// from above.
-static bool canDiscardSymbolOnUseEmpty(Operation *op, bool allUsesVisible) {
-  if (!SymbolTable::isSymbol(op))
-    return false;
-
-  // TODO: This is essentially the same logic from SymbolDCE. Remove this when
-  // we have a 'Symbol' interface.
-  // Private symbols are always initially considered dead.
-  SymbolTable::Visibility visibility = SymbolTable::getSymbolVisibility(op);
-  if (visibility == mlir::SymbolTable::Visibility::Private)
-    return true;
-  // We only include nested visibility here if all uses are visible.
-  if (allUsesVisible && visibility == SymbolTable::Visibility::Nested)
-    return true;
-  // Otherwise, public symbols are never removable.
-  return false;
-}
-
-/// Walk all of the symbol table operations nested with 'op' along with a
-/// boolean signifying if the symbols within can be treated as if all uses are
-/// visible. The provided callback is invoked with the symbol table operation,
-/// and a boolean signaling if all of the uses within the symbol table are
-/// visible.
-static void walkSymbolTables(Operation *op, bool allSymUsesVisible,
-                             function_ref<void(Operation *, bool)> callback) {
-  if (op->hasTrait<OpTrait::SymbolTable>()) {
-    allSymUsesVisible = allSymUsesVisible || !SymbolTable::isSymbol(op) ||
-                        SymbolTable::getSymbolVisibility(op) ==
-                            SymbolTable::Visibility::Private;
-    callback(op, allSymUsesVisible);
-  } else {
-    // Otherwise if 'op' is not a symbol table, any nested symbols are
-    // guaranteed to be hidden.
-    allSymUsesVisible = true;
-  }
-
-  for (Region &region : op->getRegions())
-    for (Block &block : region)
-      for (Operation &nested : block)
-        walkSymbolTables(&nested, allSymUsesVisible, callback);
-}
 
 /// Walk all of the used symbol callgraph nodes referenced with the given op.
 static void walkReferencedSymbolNodes(
@@ -166,23 +122,25 @@ CGUseList::CGUseList(Operation *op, CallGraph &cg) {
 
   // Walk each of the symbol tables looking for discardable callgraph nodes.
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
-    for (Block &block : symbolTableOp->getRegion(0)) {
-      for (Operation &op : block) {
-        // If this is a callgraph operation, check to see if it is discardable.
-        if (auto callable = dyn_cast<CallableOpInterface>(&op)) {
-          if (auto *node = cg.lookupNode(callable.getCallableRegion())) {
-            if (canDiscardSymbolOnUseEmpty(&op, allUsesVisible))
-              discardableSymNodeUses.try_emplace(node, 0);
-            continue;
+    for (Operation &op : symbolTableOp->getRegion(0).getOps()) {
+      // If this is a callgraph operation, check to see if it is discardable.
+      if (auto callable = dyn_cast<CallableOpInterface>(&op)) {
+        if (auto *node = cg.lookupNode(callable.getCallableRegion())) {
+          SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(&op);
+          if (symbol && (allUsesVisible || symbol.isPrivate()) &&
+              symbol.canDiscardOnUseEmpty()) {
+            discardableSymNodeUses.try_emplace(node, 0);
           }
+          continue;
         }
-        // Otherwise, check for any referenced nodes. These will be always-live.
-        walkReferencedSymbolNodes(&op, cg, alwaysLiveNodes,
-                                  [](CallGraphNode *, Operation *) {});
       }
+      // Otherwise, check for any referenced nodes. These will be always-live.
+      walkReferencedSymbolNodes(&op, cg, alwaysLiveNodes,
+                                [](CallGraphNode *, Operation *) {});
     }
   };
-  walkSymbolTables(op, /*allSymUsesVisible=*/!op->getBlock(), walkFn);
+  SymbolTable::walkSymbolTables(op, /*allSymUsesVisible=*/!op->getBlock(),
+                                walkFn);
 
   // Drop the use information for any discardable nodes that are always live.
   for (auto &it : alwaysLiveNodes)
@@ -224,7 +182,7 @@ void CGUseList::eraseNode(CallGraphNode *node) {
 bool CGUseList::isDead(CallGraphNode *node) const {
   // If the parent operation isn't a symbol, simply check normal SSA deadness.
   Operation *nodeOp = node->getCallableRegion()->getParentOp();
-  if (!SymbolTable::isSymbol(nodeOp))
+  if (!isa<SymbolOpInterface>(nodeOp))
     return MemoryEffectOpInterface::hasNoEffect(nodeOp) && nodeOp->use_empty();
 
   // Otherwise, check the number of symbol uses.
@@ -235,7 +193,7 @@ bool CGUseList::isDead(CallGraphNode *node) const {
 bool CGUseList::hasOneUseAndDiscardable(CallGraphNode *node) const {
   // If this isn't a symbol node, check for side-effects and SSA use count.
   Operation *nodeOp = node->getCallableRegion()->getParentOp();
-  if (!SymbolTable::isSymbol(nodeOp))
+  if (!isa<SymbolOpInterface>(nodeOp))
     return MemoryEffectOpInterface::hasNoEffect(nodeOp) && nodeOp->hasOneUse();
 
   // Otherwise, check the number of symbol uses.
@@ -455,12 +413,16 @@ inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   // here as more calls may be added during inlining.
   bool inlinedAnyCalls = false;
   for (unsigned i = 0; i != calls.size(); ++i) {
-    ResolvedCall &it = calls[i];
+    ResolvedCall it = calls[i];
+    bool doInline = shouldInline(it);
     LLVM_DEBUG({
-      llvm::dbgs() << "* Considering inlining call: ";
+      if (doInline)
+        llvm::dbgs() << "* Inlining call: ";
+      else
+        llvm::dbgs() << "* Not inlining call: ";
       it.call.dump();
     });
-    if (!shouldInline(it))
+    if (!doInline)
       continue;
     CallOpInterface call = it.call;
     Region *targetRegion = it.targetNode->getCallableRegion();
@@ -518,7 +480,8 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
 
     // We also won't apply canonicalizations for nodes that are not
     // isolated. This avoids potentially mutating the regions of nodes defined
-    // above, this is also a stipulation of the 'applyPatternsGreedily' driver.
+    // above, this is also a stipulation of the 'applyPatternsAndFoldGreedily'
+    // driver.
     auto *region = node->getCallableRegion();
     if (!region->getParentOp()->isKnownIsolatedFromAbove())
       continue;
@@ -531,22 +494,27 @@ static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
   // NOTE: This is simple now, because we don't enable canonicalizing nodes
   // within children. When we remove this restriction, this logic will need to
   // be reworked.
-  ParallelDiagnosticHandler canonicalizationHandler(context);
-  llvm::parallel::for_each_n(
-      llvm::parallel::par, /*Begin=*/size_t(0),
-      /*End=*/nodesToCanonicalize.size(), [&](size_t index) {
-        // Set the order for this thread so that diagnostics will be properly
-        // ordered.
-        canonicalizationHandler.setOrderIDForThread(index);
+  if (context->isMultithreadingEnabled()) {
+    ParallelDiagnosticHandler canonicalizationHandler(context);
+    llvm::parallelForEachN(
+        /*Begin=*/0, /*End=*/nodesToCanonicalize.size(), [&](size_t index) {
+          // Set the order for this thread so that diagnostics will be properly
+          // ordered.
+          canonicalizationHandler.setOrderIDForThread(index);
 
-        // Apply the canonicalization patterns to this region.
-        auto *node = nodesToCanonicalize[index];
-        applyPatternsAndFoldGreedily(*node->getCallableRegion(), canonPatterns);
+          // Apply the canonicalization patterns to this region.
+          auto *node = nodesToCanonicalize[index];
+          applyPatternsAndFoldGreedily(*node->getCallableRegion(),
+                                       canonPatterns);
 
-        // Make sure to reset the order ID for the diagnostic handler, as this
-        // thread may be used in a different context.
-        canonicalizationHandler.eraseOrderIDForThread();
-      });
+          // Make sure to reset the order ID for the diagnostic handler, as this
+          // thread may be used in a different context.
+          canonicalizationHandler.eraseOrderIDForThread();
+        });
+  } else {
+    for (CallGraphNode *node : nodesToCanonicalize)
+      applyPatternsAndFoldGreedily(*node->getCallableRegion(), canonPatterns);
+  }
 
   // Recompute the uses held by each of the nodes.
   for (CallGraphNode *node : nodesToCanonicalize)

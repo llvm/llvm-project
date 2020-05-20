@@ -12,7 +12,8 @@ int main(int argc, char const **argv) {
   std::string directory_name(::dirname(buf));
 
   std::string other_program = directory_name + "/secondprog";
-  execve(other_program.c_str(), const_cast<char *const *>(argv), nullptr);
+  argv[0] = other_program.c_str();
+  execv(argv[0], const_cast<char *const *>(argv));
   perror("execve");
   abort();
 }

@@ -17,6 +17,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
         self.assertPacketLogContains(["qProcessInfo", "qfThreadInfo"])
 
+    @skipIfReproducer # Unexpected packet during replay
     def test_attach_fail(self):
         error_msg = "mock-error-msg"
 

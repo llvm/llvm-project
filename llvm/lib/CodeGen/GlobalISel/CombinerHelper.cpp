@@ -402,7 +402,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
                                        ? TargetOpcode::G_SEXT
                                        : TargetOpcode::G_ZEXT;
   Preferred = {LLT(), PreferredOpcode, nullptr};
-  for (auto &UseMI : MRI.use_instructions(LoadValue.getReg())) {
+  for (auto &UseMI : MRI.use_nodbg_instructions(LoadValue.getReg())) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ANYEXT) {
@@ -533,7 +533,10 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
-bool CombinerHelper::isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI) {
+bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
+                                   const MachineInstr &UseMI) {
+  assert(!DefMI.isDebugInstr() && !UseMI.isDebugInstr() &&
+         "shouldn't consider debug uses");
   assert(DefMI.getParent() == UseMI.getParent());
   if (&DefMI == &UseMI)
     return false;
@@ -546,7 +549,10 @@ bool CombinerHelper::isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI) {
   llvm_unreachable("Block must contain instructions");
 }
 
-bool CombinerHelper::dominates(MachineInstr &DefMI, MachineInstr &UseMI) {
+bool CombinerHelper::dominates(const MachineInstr &DefMI,
+                               const MachineInstr &UseMI) {
+  assert(!DefMI.isDebugInstr() && !UseMI.isDebugInstr() &&
+         "shouldn't consider debug uses");
   if (MDT)
     return MDT->dominates(&DefMI, &UseMI);
   else if (DefMI.getParent() != UseMI.getParent())
@@ -573,7 +579,7 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
 
   LLVM_DEBUG(dbgs() << "Searching for post-indexing opportunity for: " << MI);
 
-  for (auto &Use : MRI.use_instructions(Base)) {
+  for (auto &Use : MRI.use_nodbg_instructions(Base)) {
     if (Use.getOpcode() != TargetOpcode::G_PTR_ADD)
       continue;
 
@@ -600,7 +606,8 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
     // forming an indexed one.
 
     bool MemOpDominatesAddrUses = true;
-    for (auto &PtrAddUse : MRI.use_instructions(Use.getOperand(0).getReg())) {
+    for (auto &PtrAddUse :
+         MRI.use_nodbg_instructions(Use.getOperand(0).getReg())) {
       if (!dominates(MI, PtrAddUse)) {
         MemOpDominatesAddrUses = false;
         break;
@@ -635,7 +642,7 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
 
   Addr = MI.getOperand(1).getReg();
   MachineInstr *AddrDef = getOpcodeDef(TargetOpcode::G_PTR_ADD, Addr, MRI);
-  if (!AddrDef || MRI.hasOneUse(Addr))
+  if (!AddrDef || MRI.hasOneNonDBGUse(Addr))
     return false;
 
   Base = AddrDef->getOperand(1).getReg();
@@ -673,7 +680,7 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
   // FIXME: check whether all uses of the base pointer are constant PtrAdds.
   // That might allow us to end base's liveness here by adjusting the constant.
 
-  for (auto &UseMI : MRI.use_instructions(Addr)) {
+  for (auto &UseMI : MRI.use_nodbg_instructions(Addr)) {
     if (!dominates(MI, UseMI)) {
       LLVM_DEBUG(dbgs() << "    Skipping, does not dominate all addr uses.");
       return false;
@@ -785,7 +792,7 @@ bool CombinerHelper::matchElideBrByInvertingCond(MachineInstr &MI) {
 
   MachineInstr *CmpMI = MRI.getVRegDef(BrCond->getOperand(0).getReg());
   if (!CmpMI || CmpMI->getOpcode() != TargetOpcode::G_ICMP ||
-      !MRI.hasOneUse(CmpMI->getOperand(0).getReg()))
+      !MRI.hasOneNonDBGUse(CmpMI->getOperand(0).getReg()))
     return false;
   return true;
 }
@@ -912,9 +919,6 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
     APInt SplatVal = APInt::getSplat(NumBits, Scalar);
     return MIB.buildConstant(Ty, SplatVal).getReg(0);
   }
-  // FIXME: for vector types create a G_BUILD_VECTOR.
-  if (Ty.isVector())
-    return Register();
 
   // Extend the byte value to the larger type, and then multiply by a magic
   // value 0x010101... in order to replicate it across every byte.
@@ -926,7 +930,10 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
     Val = MIB.buildMul(ExtType, ZExt, MagicMI).getReg(0);
   }
 
-  assert(ExtType == Ty && "Vector memset value type not supported yet");
+  // For vector types create a G_BUILD_VECTOR.
+  if (Ty.isVector())
+    Val = MIB.buildSplatVector(Ty, Val).getReg(0);
+
   return Val;
 }
 
@@ -1577,6 +1584,12 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
 bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) {
   return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
          canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
+                       MRI);
+}
+
+bool CombinerHelper::matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) {
+  return matchConstantOp(MI.getOperand(OpIdx), 0) &&
+         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(OpIdx).getReg(),
                        MRI);
 }
 

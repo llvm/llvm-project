@@ -26,8 +26,6 @@ define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, ha
 ; PACKED-NEXT:    s_mov_b32 s5, s7
 ; PACKED-NEXT:    s_mov_b32 s6, s8
 ; PACKED-NEXT:    s_mov_b32 s7, s9
-; PACKED-NEXT:    s_nop 0
-; PACKED-NEXT:    s_nop 0
 ; PACKED-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x1 unorm
 ; PACKED-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.f16.i32(half %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -59,8 +57,6 @@ define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; PACKED-NEXT:    s_mov_b32 s5, s7
 ; PACKED-NEXT:    s_mov_b32 s6, s8
 ; PACKED-NEXT:    s_mov_b32 s7, s9
-; PACKED-NEXT:    s_nop 0
-; PACKED-NEXT:    s_nop 0
 ; PACKED-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x3 unorm
 ; PACKED-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v2f16.i32(<2 x half> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -102,8 +98,6 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; PACKED-NEXT:    s_mov_b32 s5, s7
 ; PACKED-NEXT:    s_mov_b32 s6, s8
 ; PACKED-NEXT:    s_mov_b32 s7, s9
-; PACKED-NEXT:    s_nop 0
-; PACKED-NEXT:    s_nop 0
 ; PACKED-NEXT:    image_store v[2:3], v[0:1], s[0:7] dmask:0xf unorm
 ; PACKED-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f16.i32(<4 x half> %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)

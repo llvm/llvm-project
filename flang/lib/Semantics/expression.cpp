@@ -184,6 +184,8 @@ private:
   std::optional<ActualArgument> AnalyzeExpr(const parser::Expr &);
   bool AreConformable() const;
   const Symbol *FindBoundOp(parser::CharBlock, int passIndex);
+  void AddAssignmentConversion(
+      const DynamicType &lhsType, const DynamicType &rhsType);
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
   std::optional<DynamicType> GetType(std::size_t) const;
   int GetRank(std::size_t) const;
@@ -708,7 +710,7 @@ static std::optional<Expr<SomeInteger>> MakeBareTypeParamInquiry(
 
 // Names and named constants
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
-  if (std::optional<int> kind{IsAcImpliedDo(n.source)}) {
+  if (std::optional<int> kind{IsImpliedDo(n.source)}) {
     return AsMaybeExpr(ConvertToKind<TypeCategory::Integer>(
         *kind, AsExpr(ImpliedDoIndex{n.source})));
   } else if (context_.HasError(n) || !n.symbol) {
@@ -744,6 +746,14 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::NamedConstant &n) {
     Say(n.v.source, "must be a constant"_err_en_US); // C718
   }
   return std::nullopt;
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::NullInit &x) {
+  return Expr<SomeType>{NullPointer{}};
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::InitialDataTarget &x) {
+  return Analyze(x.value());
 }
 
 // Substring references
@@ -1302,7 +1312,7 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
             if (const auto dynamicType{DynamicType::From(symbol)}) {
               kind = dynamicType->kind();
             }
-            if (exprAnalyzer_.AddAcImpliedDo(name, kind)) {
+            if (exprAnalyzer_.AddImpliedDo(name, kind)) {
               std::optional<Expr<IntType>> lower{
                   GetSpecificIntExpr<IntType::kind>(bounds.lower)};
               std::optional<Expr<IntType>> upper{
@@ -1322,7 +1332,7 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
                 values_.Push(ImpliedDo<SomeType>{name, std::move(*lower),
                     std::move(*upper), std::move(*stride), std::move(v)});
               }
-              exprAnalyzer_.RemoveAcImpliedDo(name);
+              exprAnalyzer_.RemoveImpliedDo(name);
             } else {
               exprAnalyzer_.SayAt(name,
                   "Implied DO index is active in surrounding implied DO loop "
@@ -2084,13 +2094,14 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     }
     semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
         context_.FindScope(callSite), treatExternalAsImplicit);
-    if (!chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
+    const Symbol *procSymbol{proc.GetSymbol()};
+    if (procSymbol && !IsPureProcedure(*procSymbol)) {
       if (const semantics::Scope *
           pure{semantics::FindPureProcedureContaining(
               context_.FindScope(callSite))}) {
         Say(callSite,
             "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-            DEREF(proc.GetSymbol()).name(), DEREF(pure->symbol()).name());
+            procSymbol->name(), DEREF(pure->symbol()).name());
       }
     }
   }
@@ -2423,37 +2434,33 @@ static void FixMisparsedFunctionReference(
   }
 }
 
-// Common handling of parser::Expr and parser::Variable
+// Common handling of parse tree node types that retain the
+// representation of the analyzed expression.
 template <typename PARSED>
 MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
-  if (!x.typedExpr) {
-    FixMisparsedFunctionReference(context_, x.u);
-    MaybeExpr result;
-    if (AssumedTypeDummy(x)) { // C710
-      Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
-    } else {
-      if constexpr (std::is_same_v<PARSED, parser::Expr>) {
-        // Analyze the expression in a specified source position context for
-        // better error reporting.
-        auto restorer{GetContextualMessages().SetLocation(x.source)};
-        result = evaluate::Fold(foldingContext_, Analyze(x.u));
-      } else {
-        result = Analyze(x.u);
-      }
-    }
-    x.typedExpr.reset(new GenericExprWrapper{std::move(result)});
-    if (!x.typedExpr->v) {
-      if (!context_.AnyFatalError()) {
-        std::string buf;
-        llvm::raw_string_ostream dump{buf};
-        parser::DumpTree(dump, x);
-        Say("Internal error: Expression analysis failed on: %s"_err_en_US,
-            dump.str());
-      }
-      fatalErrors_ = true;
-    }
+  if (x.typedExpr) {
+    return x.typedExpr->v;
   }
-  return x.typedExpr->v;
+  if constexpr (std::is_same_v<PARSED, parser::Expr> ||
+      std::is_same_v<PARSED, parser::Variable>) {
+    FixMisparsedFunctionReference(context_, x.u);
+  }
+  if (AssumedTypeDummy(x)) { // C710
+    Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
+  } else if (MaybeExpr result{evaluate::Fold(foldingContext_, Analyze(x.u))}) {
+    SetExpr(x, std::move(*result));
+    return x.typedExpr->v;
+  }
+  ResetExpr(x);
+  if (!context_.AnyFatalError()) {
+    std::string buf;
+    llvm::raw_string_ostream dump{buf};
+    parser::DumpTree(dump, x);
+    Say("Internal error: Expression analysis failed on: %s"_err_en_US,
+        dump.str());
+  }
+  fatalErrors_ = true;
+  return std::nullopt;
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
@@ -2464,6 +2471,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Variable &variable) {
   auto restorer{GetContextualMessages().SetLocation(variable.GetSource())};
   return ExprOrVariable(variable);
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
+  auto restorer{GetContextualMessages().SetLocation(x.source)};
+  return ExprOrVariable(x);
 }
 
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
@@ -2536,21 +2548,21 @@ bool ExpressionAnalyzer::CheckIntrinsicSize(
   return false;
 }
 
-bool ExpressionAnalyzer::AddAcImpliedDo(parser::CharBlock name, int kind) {
-  return acImpliedDos_.insert(std::make_pair(name, kind)).second;
+bool ExpressionAnalyzer::AddImpliedDo(parser::CharBlock name, int kind) {
+  return impliedDos_.insert(std::make_pair(name, kind)).second;
 }
 
-void ExpressionAnalyzer::RemoveAcImpliedDo(parser::CharBlock name) {
-  auto iter{acImpliedDos_.find(name)};
-  if (iter != acImpliedDos_.end()) {
-    acImpliedDos_.erase(iter);
+void ExpressionAnalyzer::RemoveImpliedDo(parser::CharBlock name) {
+  auto iter{impliedDos_.find(name)};
+  if (iter != impliedDos_.end()) {
+    impliedDos_.erase(iter);
   }
 }
 
-std::optional<int> ExpressionAnalyzer::IsAcImpliedDo(
+std::optional<int> ExpressionAnalyzer::IsImpliedDo(
     parser::CharBlock name) const {
-  auto iter{acImpliedDos_.find(name)};
-  if (iter != acImpliedDos_.cend()) {
+  auto iter{impliedDos_.find(name)};
+  if (iter != impliedDos_.cend()) {
     return {iter->second};
   } else {
     return std::nullopt;
@@ -2799,6 +2811,9 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   Tristate isDefined{
       semantics::IsDefinedAssignment(lhsType, lhsRank, rhsType, rhsRank)};
   if (isDefined == Tristate::No) {
+    if (lhsType && rhsType) {
+      AddAssignmentConversion(*lhsType, *rhsType);
+    }
     return std::nullopt; // user-defined assignment not allowed for these args
   }
   auto restorer{context_.GetContextualMessages().SetLocation(source_)};
@@ -2929,6 +2944,19 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
   return result;
 }
 
+// If there is an implicit conversion between intrinsic types, make it explicit
+void ArgumentAnalyzer::AddAssignmentConversion(
+    const DynamicType &lhsType, const DynamicType &rhsType) {
+  if (lhsType.category() == rhsType.category() &&
+      lhsType.kind() == rhsType.kind()) {
+    // no conversion necessary
+  } else if (auto rhsExpr{evaluate::ConvertToType(lhsType, MoveExpr(1))}) {
+    actuals_[1] = ActualArgument{*rhsExpr};
+  } else {
+    actuals_[1] = std::nullopt;
+  }
+}
+
 std::optional<DynamicType> ArgumentAnalyzer::GetType(std::size_t i) const {
   return i < actuals_.size() ? actuals_[i].value().GetType() : std::nullopt;
 }
@@ -3027,17 +3055,4 @@ bool ExprChecker::Walk(const parser::Program &program) {
   parser::Walk(program, *this);
   return !context_.AnyFatalError();
 }
-
-bool ExprChecker::Pre(const parser::DataStmtConstant &x) {
-  std::visit(common::visitors{
-                 [&](const parser::NullInit &) {},
-                 [&](const parser::InitialDataTarget &y) {
-                   AnalyzeExpr(context_, y.value());
-                 },
-                 [&](const auto &y) { AnalyzeExpr(context_, y); },
-             },
-      x.u);
-  return false;
-}
-
 } // namespace Fortran::semantics

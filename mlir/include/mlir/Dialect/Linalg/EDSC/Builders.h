@@ -18,7 +18,6 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/EDSC/Builders.h"
-#include "mlir/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 
@@ -27,26 +26,25 @@ class AffineForOp;
 class BlockArgument;
 class SubViewOp;
 
-namespace loop {
+namespace scf {
 class ParallelOp;
-} // namespace loop
+} // namespace scf
 
 namespace edsc {
 class AffineLoopNestBuilder;
 class ParallelLoopNestBuilder;
 
-/// A LoopRangeBuilder is a generic NestedBuilder for loop.for operations.
+/// A LoopRangeBuilder is a generic NestedBuilder for scf.for operations.
 /// More specifically it is meant to be used as a temporary object for
 /// representing any nested MLIR construct that is "related to" an mlir::Value
 /// (for now an induction variable).
 class LoopRangeBuilder : public NestedBuilder {
 public:
-  /// Constructs a new loop.for and captures the associated induction
-  /// variable. A ValueHandle pointer is passed as the first argument and is the
+  /// Constructs a new scf.for and captures the associated induction
+  /// variable. A Value pointer is passed as the first argument and is the
   /// *only* way to capture the loop induction variable.
-  LoopRangeBuilder(ValueHandle *iv, ValueHandle range);
-  LoopRangeBuilder(ValueHandle *iv, Value range);
-  LoopRangeBuilder(ValueHandle *iv, SubViewOp::Range range);
+  LoopRangeBuilder(Value *iv, Value range);
+  LoopRangeBuilder(Value *iv, SubViewOp::Range range);
 
   LoopRangeBuilder(const LoopRangeBuilder &) = delete;
   LoopRangeBuilder(LoopRangeBuilder &&) = default;
@@ -57,31 +55,28 @@ public:
   /// The only purpose of this operator is to serve as a sequence point so that
   /// the evaluation of `fun` (which build IR snippets in a scoped fashion) is
   /// scoped within a LoopRangeBuilder.
-  ValueHandle operator()(std::function<void(void)> fun = nullptr);
+  Value operator()(std::function<void(void)> fun = nullptr);
 };
 
-/// Helper class to sugar building loop.for loop nests from ranges.
+/// Helper class to sugar building scf.for loop nests from ranges.
 /// This is similar to edsc::AffineLoopNestBuilder except it works on ranges
-/// directly. In the current implementation it produces loop.for operations.
+/// directly. In the current implementation it produces scf.for operations.
 class LoopNestRangeBuilder {
 public:
-  LoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
-                       ArrayRef<edsc::ValueHandle> ranges);
-  LoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
-                       ArrayRef<Value> ranges);
-  LoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+  LoopNestRangeBuilder(MutableArrayRef<Value> ivs, ArrayRef<Value> ranges);
+  LoopNestRangeBuilder(MutableArrayRef<Value> ivs,
                        ArrayRef<SubViewOp::Range> ranges);
-  edsc::ValueHandle operator()(std::function<void(void)> fun = nullptr);
+  Value operator()(std::function<void(void)> fun = nullptr);
 
 private:
   SmallVector<LoopRangeBuilder, 4> loops;
 };
 
-/// Helper template class for building loop.for and affine.loop nests from
+/// Helper template class for building scf.for and affine.loop nests from
 /// ranges.
 template <typename LoopTy> class GenericLoopNestRangeBuilder {
 public:
-  GenericLoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+  GenericLoopNestRangeBuilder(MutableArrayRef<Value> ivs,
                               ArrayRef<Value> ranges);
   void operator()(std::function<void(void)> fun = nullptr) { (*builder)(fun); }
 
@@ -90,7 +85,7 @@ private:
       typename std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
                                   AffineLoopNestBuilder, LoopNestRangeBuilder>;
   using BuilderType =
-      typename std::conditional_t<std::is_same<LoopTy, loop::ParallelOp>::value,
+      typename std::conditional_t<std::is_same<LoopTy, scf::ParallelOp>::value,
                                   ParallelLoopNestBuilder,
                                   LoopOrAffineLoopBuilder>;
 
@@ -124,7 +119,6 @@ Operation *makeGenericLinalgOp(
 
 namespace ops {
 using edsc::StructuredIndexed;
-using edsc::ValueHandle;
 
 //===----------------------------------------------------------------------===//
 // EDSC builders for linalg generic operations.
@@ -160,7 +154,7 @@ void macRegionBuilder(ArrayRef<BlockArgument> args);
 /// with in-place semantics and parallelism.
 
 /// Unary pointwise operation (with broadcast) entry point.
-using UnaryPointwiseOpBuilder = function_ref<Value(ValueHandle)>;
+using UnaryPointwiseOpBuilder = function_ref<Value(Value)>;
 Operation *linalg_generic_pointwise(UnaryPointwiseOpBuilder unaryOp,
                                     StructuredIndexed I, StructuredIndexed O);
 
@@ -171,7 +165,7 @@ Operation *linalg_generic_pointwise_tanh(StructuredIndexed I,
                                          StructuredIndexed O);
 
 /// Binary pointwise operation (with broadcast) entry point.
-using BinaryPointwiseOpBuilder = function_ref<Value(ValueHandle, ValueHandle)>;
+using BinaryPointwiseOpBuilder = function_ref<Value(Value, Value)>;
 Operation *linalg_generic_pointwise(BinaryPointwiseOpBuilder binaryOp,
                                     StructuredIndexed I1, StructuredIndexed I2,
                                     StructuredIndexed O);
@@ -202,7 +196,7 @@ using MatmulRegionBuilder = function_ref<void(ArrayRef<BlockArgument> args)>;
 ///    |  C(m, n) += A(m, k) * B(k, n)
 /// ```
 Operation *
-linalg_generic_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC,
+linalg_generic_matmul(Value vA, Value vB, Value vC,
                       MatmulRegionBuilder regionBuilder = macRegionBuilder);
 
 /// Build a linalg.generic, under the current ScopedContext, at the current
@@ -214,7 +208,7 @@ linalg_generic_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC,
 /// ```
 /// and returns the tensor `C`.
 Operation *
-linalg_generic_matmul(ValueHandle vA, ValueHandle vB, RankedTensorType tC,
+linalg_generic_matmul(Value vA, Value vB, RankedTensorType tC,
                       MatmulRegionBuilder regionBuilder = mulRegionBuilder);
 
 /// Build a linalg.generic, under the current ScopedContext, at the current
@@ -226,8 +220,7 @@ linalg_generic_matmul(ValueHandle vA, ValueHandle vB, RankedTensorType tC,
 /// ```
 /// and returns the tensor `D`.
 Operation *
-linalg_generic_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC,
-                      RankedTensorType tD,
+linalg_generic_matmul(Value vA, Value vB, Value vC, RankedTensorType tD,
                       MatmulRegionBuilder regionBuilder = macRegionBuilder);
 
 template <typename Container>
@@ -260,8 +253,8 @@ linalg_generic_matmul(Container values,
 /// For now `...` must be empty (i.e. only 2-D convolutions are supported).
 ///
 // TODO(ntv) Extend convolution rank with some template magic.
-Operation *linalg_generic_conv_nhwc(ValueHandle vI, ValueHandle vW,
-                                    ValueHandle vO, ArrayRef<int> strides = {},
+Operation *linalg_generic_conv_nhwc(Value vI, Value vW, Value vO,
+                                    ArrayRef<int> strides = {},
                                     ArrayRef<int> dilations = {});
 
 template <typename Container>
@@ -295,8 +288,7 @@ Operation *linalg_generic_conv_nhwc(Container values,
 /// For now `...` must be empty (i.e. only 2-D convolutions are supported).
 ///
 // TODO(ntv) Extend convolution rank with some template magic.
-Operation *linalg_generic_dilated_conv_nhwc(ValueHandle vI, ValueHandle vW,
-                                            ValueHandle vO,
+Operation *linalg_generic_dilated_conv_nhwc(Value vI, Value vW, Value vO,
                                             int depth_multiplier = 1,
                                             ArrayRef<int> strides = {},
                                             ArrayRef<int> dilations = {});

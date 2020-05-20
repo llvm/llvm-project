@@ -5940,6 +5940,9 @@ basic_regex<_CharT, _Traits>::__search(
         match_results<const _CharT*, _Allocator>& __m,
         regex_constants::match_flag_type __flags) const
 {
+    if (__flags & regex_constants::match_prev_avail)
+        __flags &= ~(regex_constants::match_not_bol | regex_constants::match_not_bow);
+
     __m.__init(1 + mark_count(), __first, __last,
                                     __flags & regex_constants::__no_update_pos);
     if (__match_at_start(__first, __last, __m, __flags,

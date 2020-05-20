@@ -24,9 +24,12 @@ StringRef SideEffect::getBaseEffectName() const {
   return def->getValueAsString("baseEffectName");
 }
 
+StringRef SideEffect::getInterfaceTrait() const {
+  return def->getValueAsString("interfaceTrait");
+}
+
 StringRef SideEffect::getResource() const {
-  auto value = def->getValueAsString("resource");
-  return value.empty() ? "::mlir::SideEffects::DefaultResource" : value;
+  return def->getValueAsString("resource");
 }
 
 bool SideEffect::classof(const Operator::VariableDecorator *var) {

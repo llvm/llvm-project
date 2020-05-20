@@ -1167,7 +1167,7 @@ public:
   bool defaultedDefaultConstructorIsConstexpr() const {
     return data().DefaultedDefaultConstructorIsConstexpr &&
            (!isUnion() || hasInClassInitializer() || !hasVariantMembers() ||
-            getLangOpts().CPlusPlus2a);
+            getLangOpts().CPlusPlus20);
   }
 
   /// Determine whether this class has a constexpr default constructor.
@@ -1259,7 +1259,7 @@ public:
   /// would be constexpr.
   bool defaultedDestructorIsConstexpr() const {
     return data().DefaultedDestructorIsConstexpr &&
-           getLangOpts().CPlusPlus2a;
+           getLangOpts().CPlusPlus20;
   }
 
   /// Determine whether this class has a constexpr destructor.
@@ -1357,7 +1357,7 @@ public:
   /// Only in C++17 and beyond, are lambdas literal types.
   bool isLiteral() const {
     const LangOptions &LangOpts = getLangOpts();
-    return (LangOpts.CPlusPlus2a ? hasConstexprDestructor()
+    return (LangOpts.CPlusPlus20 ? hasConstexprDestructor()
                                           : hasTrivialDestructor()) &&
            (!isLambda() || LangOpts.CPlusPlus17) &&
            !hasNonLiteralTypeFieldsOrBases() &&

@@ -22,9 +22,9 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
   for (InputSectionBase *sec : obj->getSections()) {
     if (!sec)
@@ -36,6 +36,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_gnu_pubnames", &gnuPubnamesSection)
                 .Case(".debug_gnu_pubtypes", &gnuPubtypesSection)
                 .Case(".debug_info", &infoSection)
+                .Case(".debug_loclists", &loclistsSection)
                 .Case(".debug_ranges", &rangesSection)
                 .Case(".debug_rnglists", &rnglistsSection)
                 .Case(".debug_str_offsets", &strOffsetsSection)
@@ -118,10 +119,7 @@ Optional<RelocAddrEntry> LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s,
   return findAux(*sec.sec, pos, sec.sec->template rels<ELFT>());
 }
 
-template class LLDDwarfObj<ELF32LE>;
-template class LLDDwarfObj<ELF32BE>;
-template class LLDDwarfObj<ELF64LE>;
-template class LLDDwarfObj<ELF64BE>;
-
-} // namespace elf
-} // namespace lld
+template class elf::LLDDwarfObj<ELF32LE>;
+template class elf::LLDDwarfObj<ELF32BE>;
+template class elf::LLDDwarfObj<ELF64LE>;
+template class elf::LLDDwarfObj<ELF64BE>;

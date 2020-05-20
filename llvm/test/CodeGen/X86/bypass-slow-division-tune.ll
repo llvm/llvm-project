@@ -66,8 +66,19 @@ define i64 @div64(i64 %a, i64 %b) {
 ; X64-LABEL: div64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    orq %rsi, %rcx
+; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    je .LBB1_1
+; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB1_1:
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    # kill: def $eax killed $eax def $rax
 ; X64-NEXT:    retq
 ;
 ; SLM-LABEL: div64:
@@ -178,8 +189,19 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; X64-LABEL: div64_hugews:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    orq %rsi, %rcx
+; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    je .LBB4_1
+; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB4_1:
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    # kill: def $eax killed $eax def $rax
 ; X64-NEXT:    retq
 ;
 ; SLM-LABEL: div64_hugews:

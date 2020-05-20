@@ -15,9 +15,16 @@
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t1.lds -o /dev/null
 
 ## A backward reference from %t1.o to %t2.a
+## Warn unless the archive is excluded by --warn-backrefs-exclude
 # RUN: ld.lld --fatal-warnings %t2.a %t1.o -o /dev/null
 # RUN: ld.lld --warn-backrefs %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --warn-backrefs %t2.a '-(' %t1.o '-)' -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --warn-backrefs --warn-backrefs-exclude='*3.a' %t2.a %t1.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a' %t2.a %t1.o -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude '*2.a' \
+# RUN:   --warn-backrefs-exclude not_exist %t2.a %t1.o -o /dev/null
+## Without --warn-backrefs, --warn-backrefs-exclude is ignored.
+# RUN: ld.lld --fatal-warnings --warn-backrefs-exclude=not_exist %t2.a %t1.o -o /dev/null
 
 ## Placing the definition and the backward reference in a group can suppress the warning.
 # RUN: echo 'GROUP("%t2.a" "%t1.o")' > %t2.lds
@@ -28,14 +35,17 @@
 # RUN: echo 'GROUP("%t2.a")' > %t3.lds
 # RUN: ld.lld --warn-backrefs %t3.lds %t1.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: ld.lld --fatal-warnings --warn-backrefs '-(' %t3.lds %t1.o '-)' -o /dev/null
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude='*2.a' -o /dev/null %t3.lds %t1.o
 ## If a lazy definition appears after the backward reference, don't warn.
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t3.lds %t1.o %t3.lds -o /dev/null
 
 # CHECK: warning: backward reference detected: foo in {{.*}}1.o refers to {{.*}}2.a
 
 ## A backward reference from %t1.o to %t2.o
+## --warn-backrefs-exclude= applies to --start-lib covered object files.
 # RUN: ld.lld --warn-backrefs --start-lib %t2.o --end-lib %t1.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck --check-prefix=OBJECT %s
+# RUN: ld.lld --fatal-warnings --warn-backrefs --warn-backrefs-exclude=%/t2.o --start-lib %/t2.o --end-lib %t1.o -o /dev/null
 ## If a lazy definition appears after the backward reference, don't warn.
 # RUN: ld.lld --fatal-warnings --warn-backrefs --start-lib %t2.o --end-lib %t1.o --start-lib %t2.o --end-lib -o /dev/null
 
@@ -67,6 +77,9 @@
 
 ## In GNU gold, --export-dynamic-symbol does not make a backward reference.
 # RUN: ld.lld --fatal-warnings --warn-backrefs --export-dynamic-symbol foo %t2.a %t1.o -o /dev/null
+
+# RUN: not ld.lld --warn-backrefs-exclude='[' 2>&1 | FileCheck --check-prefix=INVALID %s
+# INVALID: error: --warn-backrefs-exclude: invalid glob pattern: [
 
 .globl _start, foo
 _start:

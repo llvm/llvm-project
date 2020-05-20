@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc -debugify-and-strip-all-safe < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 
 ; marked as external to prevent possible optimizations
 @a = external global i32

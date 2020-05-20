@@ -16,6 +16,17 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_null_allocator;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
+
 void foo() {}
 
 struct S {
@@ -133,7 +144,7 @@ T tmain(T argc) {
     foo();
 // CHECK: #pragma omp target teams distribute simd
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
-// CHECK-NEXT: foo();  
+// CHECK-NEXT: foo();
 #pragma omp target teams distribute simd private(b), firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
     for (int k = 0; k < 10; ++k)
       e += d + argc;
@@ -198,14 +209,14 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #ifdef OMP5
-#pragma omp target teams distribute simd safelen(clen-1) aligned(arr:N+6) if(simd:argc) nontemporal(argc, c, d) order(concurrent)
+#pragma omp target teams distribute simd safelen(clen-1) aligned(arr:N+6) if(simd:argc) nontemporal(argc, c, d) order(concurrent) allocate(omp_low_lat_mem_alloc:e) firstprivate(e) uses_allocators(omp_low_lat_mem_alloc)
 #else
 #pragma omp target teams distribute simd safelen(clen-1) aligned(arr:N+6)
 #endif // OMP5
   for (int k = 0; k < 10; ++k)
     e += d + argc + arr[k];
 // OMP45: #pragma omp target teams distribute simd safelen(clen - 1) aligned(arr: N + 6)
-// OMP50: #pragma omp target teams distribute simd safelen(clen - 1) aligned(arr: N + 6) if(simd: argc) nontemporal(argc,c,d) order(concurrent)
+// OMP50: #pragma omp target teams distribute simd safelen(clen - 1) aligned(arr: N + 6) if(simd: argc) nontemporal(argc,c,d) order(concurrent) allocate(omp_low_lat_mem_alloc: e) firstprivate(e) uses_allocators(omp_low_lat_mem_alloc)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc + arr[k];
   return (0);

@@ -17,8 +17,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
@@ -73,15 +73,6 @@ public:
     ValueStack.back()[V] = C;
   }
 
-  /// Given call site return callee and list of its formal arguments
-  Function *getCalleeWithFormalArgs(CallSite &CS,
-                                    SmallVector<Constant *, 8> &Formals);
-
-  /// Given call site and callee returns list of callee formal argument
-  /// values converting them when necessary
-  bool getFormalParams(CallSite &CS, Function *F,
-                       SmallVector<Constant *, 8> &Formals);
-
   /// Casts call result to a type of bitcast call expression
   Constant *castCallResultIfNeeded(Value *CallExpr, Constant *RV);
 
@@ -94,6 +85,15 @@ public:
   }
 
 private:
+  /// Given call site return callee and list of its formal arguments
+  Function *getCalleeWithFormalArgs(CallBase &CB,
+                                    SmallVectorImpl<Constant *> &Formals);
+
+  /// Given call site and callee returns list of callee formal argument
+  /// values converting them when necessary
+  bool getFormalParams(CallBase &CB, Function *F,
+                       SmallVectorImpl<Constant *> &Formals);
+
   Constant *ComputeLoadResult(Constant *P);
 
   /// As we compute SSA register values, we store their contents here. The back

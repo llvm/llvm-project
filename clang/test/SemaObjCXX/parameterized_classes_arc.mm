@@ -13,7 +13,7 @@ __attribute__((objc_root_class))
 
 @interface PC1<T> : NSObject
 - (T) get;
-- (void) set: (T) v;
+- (void) set: (T) v; // expected-note 4{{passing argument to}}
 @end
 
 void test1a(PC1<__weak id> *obj) { // expected-error {{type argument '__weak id' cannot be qualified with '__weak'}}
@@ -34,17 +34,17 @@ void test1c(PC1<id> *obj) {
 // Test that this doesn't completely kill downstream type-checking.
 void test1d(PC1<__weak Forward*> *obj) { // expected-error {{type argument 'Forward *__weak' cannot be qualified with '__weak'}}
   Forward2 *x = [obj get]; // expected-error {{cannot initialize}}
-  [obj set: x];
+  [obj set: x]; // expected-error {{cannot initialize a parameter of type 'Forward *' with an lvalue of type 'Forward2 *__strong'}}
 }
 
 void test1e(PC1<__strong Forward*> *obj) { // expected-error {{type argument 'Forward *__strong' cannot be qualified with '__strong'}}
   Forward2 *x = [obj get]; // expected-error {{cannot initialize}}
-  [obj set: x];
+  [obj set: x]; // expected-error {{cannot initialize a parameter of type 'Forward *'}}
 }
 
 void test1f(PC1<Forward*> *obj) {
   Forward2 *x = [obj get]; // expected-error {{cannot initialize}}
-  [obj set: x];
+  [obj set: x]; // expected-error {{cannot initialize a parameter of type 'Forward *'}}
 }
 
 // Typedefs are fine, just silently ignore them.
@@ -57,7 +57,7 @@ void test1g(PC1<StrongID> *obj) {
 typedef __strong Forward *StrongForward;
 void test1h(PC1<StrongForward> *obj) {
   Forward2 *x = [obj get]; // expected-error {{cannot initialize}}
-  [obj set: x];
+  [obj set: x]; // expected-error {{cannot initialize a parameter of type 'Forward *'}}
 }
 
 // These aren't really ARC-specific, but they're the same basic idea.

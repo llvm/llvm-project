@@ -662,18 +662,19 @@ public:
   SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
-  SDValue getConstantPool(const Constant *C, EVT VT, unsigned Align = 0,
+  SDValue getConstantPool(const Constant *C, EVT VT, MaybeAlign Align = None,
                           int Offs = 0, bool isT = false,
                           unsigned TargetFlags = 0);
-  SDValue getTargetConstantPool(const Constant *C, EVT VT, unsigned Align = 0,
-                                int Offset = 0, unsigned TargetFlags = 0) {
+  SDValue getTargetConstantPool(const Constant *C, EVT VT,
+                                MaybeAlign Align = None, int Offset = 0,
+                                unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
   SDValue getConstantPool(MachineConstantPoolValue *C, EVT VT,
-                          unsigned Align = 0, int Offs = 0, bool isT=false,
-                          unsigned TargetFlags = 0);
+                          MaybeAlign Align = None, int Offs = 0,
+                          bool isT = false, unsigned TargetFlags = 0);
   SDValue getTargetConstantPool(MachineConstantPoolValue *C, EVT VT,
-                                unsigned Align = 0, int Offset = 0,
+                                MaybeAlign Align = None, int Offset = 0,
                                 unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
@@ -1594,6 +1595,9 @@ public:
 
   void dump() const;
 
+  /// Create a stack temporary based on the size in bytes and the alignment
+  SDValue CreateStackTemporary(TypeSize Bytes, Align Alignment);
+
   /// Create a stack temporary, suitable for holding the specified value type.
   /// If minAlign is specified, the slot size will have at least that alignment.
   SDValue CreateStackTemporary(EVT VT, unsigned minAlign = 1);
@@ -1830,6 +1834,12 @@ public:
   /// Compute the VTs needed for the low/hi parts of a type
   /// which is split (or expanded) into two not necessarily identical pieces.
   std::pair<EVT, EVT> GetSplitDestVTs(const EVT &VT) const;
+
+  /// Compute the VTs needed for the low/hi parts of a type, dependent on an
+  /// enveloping VT that has been split into two identical pieces. Sets the
+  /// HisIsEmpty flag when hi type has zero storage size.
+  std::pair<EVT, EVT> GetDependentSplitDestVTs(const EVT &VT, const EVT &EnvVT,
+                                               bool *HiIsEmpty) const;
 
   /// Split the vector with EXTRACT_SUBVECTOR using the provides
   /// VTs and return the low/high part.

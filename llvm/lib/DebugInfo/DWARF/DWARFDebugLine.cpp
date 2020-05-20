@@ -106,15 +106,18 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
                                     DIDumpOptions DumpOptions) const {
   if (!totalLengthIsValid())
     return;
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(FormParams.Format);
   OS << "Line table prologue:\n"
-     << format("    total_length: 0x%8.8" PRIx64 "\n", TotalLength)
+     << format("    total_length: 0x%0*" PRIx64 "\n", OffsetDumpWidth,
+               TotalLength)
      << format("         version: %u\n", getVersion());
   if (!versionIsSupported(getVersion()))
     return;
   if (getVersion() >= 5)
     OS << format("    address_size: %u\n", getAddressSize())
        << format(" seg_select_size: %u\n", SegSelectorSize);
-  OS << format(" prologue_length: 0x%8.8" PRIx64 "\n", PrologueLength)
+  OS << format(" prologue_length: 0x%0*" PRIx64 "\n", OffsetDumpWidth,
+               PrologueLength)
      << format(" min_inst_length: %u\n", MinInstLength)
      << format(getVersion() >= 4 ? "max_ops_per_inst: %u\n" : "", MaxOpsPerInst)
      << format(" default_is_stmt: %u\n", DefaultIsStmt)
@@ -169,46 +172,47 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
                      DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
-  bool Terminated = false;
-  while (*OffsetPtr < EndPrologueOffset) {
-    StringRef S = DebugLineData.getCStrRef(OffsetPtr);
-    if (S.empty()) {
-      Terminated = true;
-      break;
+  while (true) {
+    Error Err = Error::success();
+    StringRef S = DebugLineData.getCStrRef(OffsetPtr, &Err);
+    if (Err || *OffsetPtr > EndPrologueOffset) {
+      consumeError(std::move(Err));
+      return createStringError(errc::invalid_argument,
+                               "include directories table was not null "
+                               "terminated before the end of the prologue");
     }
+    if (S.empty())
+      break;
     DWARFFormValue Dir =
         DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, S.data());
     IncludeDirectories.push_back(Dir);
   }
 
-  if (!Terminated)
-    return createStringError(errc::invalid_argument,
-                             "include directories table was not null "
-                             "terminated before the end of the prologue");
-
-  Terminated = false;
-  while (*OffsetPtr < EndPrologueOffset) {
-    StringRef Name = DebugLineData.getCStrRef(OffsetPtr);
-    if (Name.empty()) {
-      Terminated = true;
-      break;
-    }
-    DWARFDebugLine::FileNameEntry FileEntry;
-    FileEntry.Name =
-        DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, Name.data());
-    FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
-    FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
-    FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
-    FileNames.push_back(FileEntry);
-  }
-
   ContentTypes.HasModTime = true;
   ContentTypes.HasLength = true;
 
-  if (!Terminated)
-    return createStringError(errc::invalid_argument,
-                             "file names table was not null terminated before "
-                             "the end of the prologue");
+  while (true) {
+    Error Err = Error::success();
+    StringRef Name = DebugLineData.getCStrRef(OffsetPtr, &Err);
+    if (!Err && *OffsetPtr <= EndPrologueOffset && Name.empty())
+      break;
+
+    DWARFDebugLine::FileNameEntry FileEntry;
+    FileEntry.Name =
+        DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, Name.data());
+    FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr, &Err);
+    FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr, &Err);
+    FileEntry.Length = DebugLineData.getULEB128(OffsetPtr, &Err);
+
+    if (Err || *OffsetPtr > EndPrologueOffset) {
+      consumeError(std::move(Err));
+      return createStringError(
+          errc::invalid_argument,
+          "file names table was not null terminated before "
+          "the end of the prologue");
+    }
+    FileNames.push_back(FileEntry);
+  }
 
   return Error::success();
 }
@@ -402,7 +406,13 @@ Error DWARFDebugLine::Prologue::parse(
     }
   }
 
-  auto ReportInvalidDirFileTable = [&](Error E) {
+  Error E =
+      getVersion() >= 5
+          ? parseV5DirFileTables(DebugLineData, OffsetPtr, FormParams, Ctx, U,
+                                 ContentTypes, IncludeDirectories, FileNames)
+          : parseV2DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
+                                 ContentTypes, IncludeDirectories, FileNames);
+  if (E) {
     RecoverableErrorHandler(joinErrors(
         createStringError(
             errc::invalid_argument,
@@ -411,21 +421,8 @@ Error DWARFDebugLine::Prologue::parse(
             " 0x%8.8" PRIx64,
             PrologueOffset, *OffsetPtr),
         std::move(E)));
-    // Skip to the end of the prologue, since the chances are that the parser
-    // did not read the whole table. This prevents the length check below from
-    // executing.
-    if (*OffsetPtr < EndPrologueOffset)
-      *OffsetPtr = EndPrologueOffset;
-  };
-  if (getVersion() >= 5) {
-    if (Error E =
-            parseV5DirFileTables(DebugLineData, OffsetPtr, FormParams, Ctx, U,
-                                 ContentTypes, IncludeDirectories, FileNames))
-      ReportInvalidDirFileTable(std::move(E));
-  } else if (Error E = parseV2DirFileTables(DebugLineData, OffsetPtr,
-                                            EndPrologueOffset, ContentTypes,
-                                            IncludeDirectories, FileNames))
-    ReportInvalidDirFileTable(std::move(E));
+    return Error::success();
+  }
 
   if (*OffsetPtr != EndPrologueOffset) {
     RecoverableErrorHandler(createStringError(
@@ -735,6 +732,7 @@ Error DWARFDebugLine::LineTable::parse(
 
   ParsingState State(this, DebugLineOffset, RecoverableErrorHandler);
 
+  *OffsetPtr = DebugLineOffset + Prologue.getLength();
   while (*OffsetPtr < EndOffset) {
     if (OS)
       *OS << format("0x%08.08" PRIx64 ": ", *OffsetPtr);

@@ -150,6 +150,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_detach:
   case OMPC_inclusive:
   case OMPC_exclusive:
+  case OMPC_uses_allocators:
+  case OMPC_affinity:
     break;
   }
 
@@ -239,6 +241,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_detach:
   case OMPC_inclusive:
   case OMPC_exclusive:
+  case OMPC_uses_allocators:
+  case OMPC_affinity:
     break;
   }
 
@@ -1302,6 +1306,89 @@ OMPExclusiveClause *OMPExclusiveClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPExclusiveClause(N);
 }
 
+void OMPUsesAllocatorsClause::setAllocatorsData(
+    ArrayRef<OMPUsesAllocatorsClause::Data> Data) {
+  assert(Data.size() == NumOfAllocators &&
+         "Size of allocators data is not the same as the preallocated buffer.");
+  for (unsigned I = 0, E = Data.size(); I < E; ++I) {
+    const OMPUsesAllocatorsClause::Data &D = Data[I];
+    getTrailingObjects<Expr *>()[I * static_cast<int>(ExprOffsets::Total) +
+                                 static_cast<int>(ExprOffsets::Allocator)] =
+        D.Allocator;
+    getTrailingObjects<Expr *>()[I * static_cast<int>(ExprOffsets::Total) +
+                                 static_cast<int>(
+                                     ExprOffsets::AllocatorTraits)] =
+        D.AllocatorTraits;
+    getTrailingObjects<
+        SourceLocation>()[I * static_cast<int>(ParenLocsOffsets::Total) +
+                          static_cast<int>(ParenLocsOffsets::LParen)] =
+        D.LParenLoc;
+    getTrailingObjects<
+        SourceLocation>()[I * static_cast<int>(ParenLocsOffsets::Total) +
+                          static_cast<int>(ParenLocsOffsets::RParen)] =
+        D.RParenLoc;
+  }
+}
+
+OMPUsesAllocatorsClause::Data
+OMPUsesAllocatorsClause::getAllocatorData(unsigned I) const {
+  OMPUsesAllocatorsClause::Data Data;
+  Data.Allocator =
+      getTrailingObjects<Expr *>()[I * static_cast<int>(ExprOffsets::Total) +
+                                   static_cast<int>(ExprOffsets::Allocator)];
+  Data.AllocatorTraits =
+      getTrailingObjects<Expr *>()[I * static_cast<int>(ExprOffsets::Total) +
+                                   static_cast<int>(
+                                       ExprOffsets::AllocatorTraits)];
+  Data.LParenLoc = getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(ParenLocsOffsets::Total) +
+                        static_cast<int>(ParenLocsOffsets::LParen)];
+  Data.RParenLoc = getTrailingObjects<
+      SourceLocation>()[I * static_cast<int>(ParenLocsOffsets::Total) +
+                        static_cast<int>(ParenLocsOffsets::RParen)];
+  return Data;
+}
+
+OMPUsesAllocatorsClause *
+OMPUsesAllocatorsClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                                SourceLocation LParenLoc, SourceLocation EndLoc,
+                                ArrayRef<OMPUsesAllocatorsClause::Data> Data) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *, SourceLocation>(
+      static_cast<int>(ExprOffsets::Total) * Data.size(),
+      static_cast<int>(ParenLocsOffsets::Total) * Data.size()));
+  auto *Clause = new (Mem)
+      OMPUsesAllocatorsClause(StartLoc, LParenLoc, EndLoc, Data.size());
+  Clause->setAllocatorsData(Data);
+  return Clause;
+}
+
+OMPUsesAllocatorsClause *
+OMPUsesAllocatorsClause::CreateEmpty(const ASTContext &C, unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *, SourceLocation>(
+      static_cast<int>(ExprOffsets::Total) * N,
+      static_cast<int>(ParenLocsOffsets::Total) * N));
+  return new (Mem) OMPUsesAllocatorsClause(N);
+}
+
+OMPAffinityClause *
+OMPAffinityClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                          SourceLocation LParenLoc, SourceLocation ColonLoc,
+                          SourceLocation EndLoc, Expr *Modifier,
+                          ArrayRef<Expr *> Locators) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(Locators.size() + 1));
+  auto *Clause = new (Mem)
+      OMPAffinityClause(StartLoc, LParenLoc, ColonLoc, EndLoc, Locators.size());
+  Clause->setModifier(Modifier);
+  Clause->setVarRefs(Locators);
+  return Clause;
+}
+
+OMPAffinityClause *OMPAffinityClause::CreateEmpty(const ASTContext &C,
+                                                  unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
+  return new (Mem) OMPAffinityClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1882,6 +1969,40 @@ void OMPClausePrinter::VisitOMPExclusiveClause(OMPExclusiveClause *Node) {
     VisitOMPClauseList(Node, '(');
     OS << ")";
   }
+}
+
+void OMPClausePrinter::VisitOMPUsesAllocatorsClause(
+    OMPUsesAllocatorsClause *Node) {
+  if (Node->getNumberOfAllocators() == 0)
+    return;
+  OS << "uses_allocators(";
+  for (unsigned I = 0, E = Node->getNumberOfAllocators(); I < E; ++I) {
+    OMPUsesAllocatorsClause::Data Data = Node->getAllocatorData(I);
+    Data.Allocator->printPretty(OS, nullptr, Policy);
+    if (Data.AllocatorTraits) {
+      OS << "(";
+      Data.AllocatorTraits->printPretty(OS, nullptr, Policy);
+      OS << ")";
+    }
+    if (I < E - 1)
+      OS << ",";
+  }
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPAffinityClause(OMPAffinityClause *Node) {
+  if (Node->varlist_empty())
+    return;
+  OS << "affinity";
+  char StartSym = '(';
+  if (Expr *Modifier = Node->getModifier()) {
+    OS << "(";
+    Modifier->printPretty(OS, nullptr, Policy);
+    OS << " :";
+    StartSym = ' ';
+  }
+  VisitOMPClauseList(Node, StartSym);
+  OS << ")";
 }
 
 void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,

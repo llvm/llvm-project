@@ -14,7 +14,7 @@ entry:
 
 ; CHECK-LABEL: @crbitsoff
 ; CHECK-NO-ISEL-LABEL: @crbitsoff
-; CHECK-DAG: cmplwi {{[0-9]+}}, 3, 0
+; CHECK-DAG: cmplwi 3, 0
 ; CHECK-DAG: li [[REG2:[0-9]+]], 1
 ; CHECK-DAG: cntlzw [[REG3:[0-9]+]],
 ; CHECK: isel [[REG4:[0-9]+]], 0, [[REG2]]

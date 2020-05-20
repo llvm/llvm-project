@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -104,14 +105,14 @@ unsigned TargetInstrInfo::getInlineAsmLength(
       AtInsnStart = false;
     }
 
-    if (AtInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
+    if (AtInsnStart && !isSpace(static_cast<unsigned char>(*Str))) {
       unsigned AddLength = MaxInstLength;
       if (strncmp(Str, ".space", 6) == 0) {
         char *EStr;
         int SpaceSize;
         SpaceSize = strtol(Str + 6, &EStr, 10);
         SpaceSize = SpaceSize < 0 ? 0 : SpaceSize;
-        while (*EStr != '\n' && std::isspace(static_cast<unsigned char>(*EStr)))
+        while (*EStr != '\n' && isSpace(static_cast<unsigned char>(*EStr)))
           ++EStr;
         if (*EStr == '\0' || *EStr == '\n' ||
             isAsmComment(EStr, MAI)) // Successfully parsed .space argument
@@ -1320,6 +1321,62 @@ bool TargetInstrInfo::getInsertSubregInputs(
   InsertedReg.SubReg = MOInsertedReg.getSubReg();
   InsertedReg.SubIdx = (unsigned)MOSubIdx.getImm();
   return true;
+}
+
+// Returns a MIRPrinter comment for this machine operand.
+std::string TargetInstrInfo::createMIROperandComment(
+    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
+    const TargetRegisterInfo *TRI) const {
+
+  if (!MI.isInlineAsm())
+    return "";
+
+  std::string Flags;
+  raw_string_ostream OS(Flags);
+
+  if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+    // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
+    unsigned ExtraInfo = Op.getImm();
+    bool First = true;
+    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo)) {
+      if (!First)
+        OS << " ";
+      First = false;
+      OS << Info;
+    }
+
+    return OS.str();
+  }
+
+  int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
+  if (FlagIdx < 0 || (unsigned)FlagIdx != OpIdx)
+    return "";
+
+  assert(Op.isImm() && "Expected flag operand to be an immediate");
+  // Pretty print the inline asm operand descriptor.
+  unsigned Flag = Op.getImm();
+  unsigned Kind = InlineAsm::getKind(Flag);
+  OS << InlineAsm::getKindName(Kind);
+
+  unsigned RCID = 0;
+  if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
+      InlineAsm::hasRegClassConstraint(Flag, RCID)) {
+    if (TRI) {
+      OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
+    } else
+      OS << ":RC" << RCID;
+  }
+
+  if (InlineAsm::isMemKind(Flag)) {
+    unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
+    OS << ":" << InlineAsm::getMemConstraintName(MCID);
+  }
+
+  unsigned TiedTo = 0;
+  if (InlineAsm::isUseOperandTiedToDef(Flag, TiedTo))
+    OS << " tiedto:$" << TiedTo;
+
+  return OS.str();
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() {}

@@ -14,6 +14,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cerrno>
@@ -195,12 +196,7 @@ LockFileManager::LockFileManager(StringRef FileName)
     }
 
     raw_fd_ostream Out(UniqueLockFileID, /*shouldClose=*/true);
-    Out << HostID << ' ';
-#if LLVM_ON_UNIX
-    Out << getpid();
-#else
-    Out << "1";
-#endif
+    Out << HostID << ' ' << sys::Process::getProcessId();
     Out.close();
 
     if (Out.has_error()) {

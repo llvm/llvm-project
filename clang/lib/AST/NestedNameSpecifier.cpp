@@ -311,6 +311,14 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
       // Print the template argument list.
       printTemplateArgumentList(OS, SpecType->template_arguments(),
                                 InnerPolicy);
+    } else if (const auto *DepSpecType =
+                   dyn_cast<DependentTemplateSpecializationType>(T)) {
+      // Print the template name without its corresponding
+      // nested-name-specifier.
+      OS << DepSpecType->getIdentifier()->getName();
+      // Print the template argument list.
+      printTemplateArgumentList(OS, DepSpecType->template_arguments(),
+                                InnerPolicy);
     } else {
       // Print the type normally
       QualType(T, 0).print(OS, InnerPolicy);
@@ -456,13 +464,14 @@ static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
     unsigned NewCapacity = std::max(
         (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
         (unsigned)(BufferSize + (End - Start)));
-    char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
-    if (Buffer) {
-      memcpy(NewBuffer, Buffer, BufferSize);
-      if (BufferCapacity)
-        free(Buffer);
+    if (!BufferCapacity) {
+      char *NewBuffer = static_cast<char *>(llvm::safe_malloc(NewCapacity));
+      if (Buffer)
+        memcpy(NewBuffer, Buffer, BufferSize);
+      Buffer = NewBuffer;
+    } else {
+      Buffer = static_cast<char *>(llvm::safe_realloc(Buffer, NewCapacity));
     }
-    Buffer = NewBuffer;
     BufferCapacity = NewCapacity;
   }
   assert(Buffer && Start && End && End > Start && "Illegal memory buffer copy");

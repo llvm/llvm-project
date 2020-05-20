@@ -1,4 +1,4 @@
-// RUN: mlir-opt -disable-pass-threading -test-spirv-op-availability %s | FileCheck %s
+// RUN: mlir-opt -mlir-disable-threading -test-spirv-op-availability %s | FileCheck %s
 
 // CHECK-LABEL: iadd
 func @iadd(%arg: i32) -> i32 {

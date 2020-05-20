@@ -18,7 +18,7 @@
 
 // Returns: count of 1 bits
 
-COMPILER_RT_ABI si_int __popcountdi2(di_int a);
+COMPILER_RT_ABI int __popcountdi2(di_int a);
 
 int naive_popcount(di_int a)
 {
@@ -30,8 +30,8 @@ int naive_popcount(di_int a)
 
 int test__popcountdi2(di_int a)
 {
-    si_int x = __popcountdi2(a);
-    si_int expected = naive_popcount(a);
+    int x = __popcountdi2(a);
+    int expected = naive_popcount(a);
     if (x != expected)
         printf("error in __popcountdi2(0x%llX) = %d, expected %d\n",
                a, x, expected);

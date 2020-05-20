@@ -72,11 +72,15 @@ class SizeClassAllocator64 {
   void Init(s32 release_to_os_interval_ms) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
     if (kUsingConstantSpaceBeg) {
+      CHECK(IsAligned(kSpaceBeg, SizeClassMap::kMaxSize));
       CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize,
                                              PrimaryAllocatorName, kSpaceBeg));
     } else {
-      NonConstSpaceBeg = address_range.Init(TotalSpaceSize,
-                                            PrimaryAllocatorName);
+      // Combined allocator expects that an 2^N allocation is always aligned to
+      // 2^N. For this to work, the start of the space needs to be aligned as
+      // high as the largest size class (which also needs to be a power of 2).
+      NonConstSpaceBeg = address_range.InitAligned(
+          TotalSpaceSize, SizeClassMap::kMaxSize, PrimaryAllocatorName);
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
@@ -220,7 +224,7 @@ class SizeClassAllocator64 {
 
   // Test-only.
   void TestOnlyUnmap() {
-    UnmapWithCallbackOrDie(SpaceBeg(), kSpaceSize + AdditionalSize());
+    UnmapWithCallbackOrDie((uptr)address_range.base(), address_range.size());
   }
 
   static void FillMemoryProfile(uptr start, uptr rss, bool file, uptr *stats,

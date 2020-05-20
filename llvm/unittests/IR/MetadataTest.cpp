@@ -1186,7 +1186,7 @@ typedef MetadataTest DIEnumeratorTest;
 TEST_F(DIEnumeratorTest, get) {
   auto *N = DIEnumerator::get(Context, 7, false, "name");
   EXPECT_EQ(dwarf::DW_TAG_enumerator, N->getTag());
-  EXPECT_EQ(7, N->getValue());
+  EXPECT_EQ(7, N->getValue().getSExtValue());
   EXPECT_FALSE(N->isUnsigned());
   EXPECT_EQ("name", N->getName());
   EXPECT_EQ(N, DIEnumerator::get(Context, 7, false, "name"));
@@ -1197,6 +1197,15 @@ TEST_F(DIEnumeratorTest, get) {
 
   TempDIEnumerator Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
+TEST_F(DIEnumeratorTest, getWithLargeValues) {
+  auto *N = DIEnumerator::get(Context, APInt::getMaxValue(128), false, "val");
+  EXPECT_EQ(128U, N->getValue().countPopulation());
+  EXPECT_EQ(N,
+            DIEnumerator::get(Context, APInt::getMaxValue(128), false, "val"));
+  EXPECT_NE(N,
+            DIEnumerator::get(Context, APInt::getMinValue(128), false, "val"));
 }
 
 typedef MetadataTest DIBasicTypeTest;
@@ -1612,6 +1621,69 @@ TEST_F(DICompositeTypeTest, variant_part) {
   EXPECT_NE(Other, NoDisc);
 
   EXPECT_EQ(N->getDiscriminator(), Discriminator);
+}
+
+TEST_F(DICompositeTypeTest, dynamicArray) {
+  unsigned Tag = dwarf::DW_TAG_array_type;
+  StringRef Name = "some name";
+  DIFile *File = getFile();
+  unsigned Line = 1;
+  DILocalScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
+  uint64_t SizeInBits = 32;
+  uint32_t AlignInBits = 32;
+  uint64_t OffsetInBits = 4;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(3);
+  unsigned RuntimeLang = 6;
+  StringRef Identifier = "some id";
+  DIType *Type = getDerivedType();
+  Metadata *DlVar1 = DILocalVariable::get(Context, Scope, "dl_var1", File, 8,
+                                       Type, 2, Flags, 8);
+  Metadata *DlVar2 = DILocalVariable::get(Context, Scope, "dl_var2", File, 8,
+                                       Type, 2, Flags, 8);
+  uint64_t Elements1[] = {dwarf::DW_OP_push_object_address, dwarf::DW_OP_deref};
+  Metadata *DataLocation1 = DIExpression::get(Context, Elements1);
+
+  uint64_t Elements2[] = {dwarf::DW_OP_constu, 0};
+  Metadata *DataLocation2 = DIExpression::get(Context, Elements2);
+
+  auto *N1 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DlVar1);
+
+  auto *Same1 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DlVar1);
+
+  auto *Other1 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DlVar2);
+
+  EXPECT_EQ(N1, Same1);
+  EXPECT_NE(Same1, Other1);
+  EXPECT_EQ(N1->getDataLocation(), DlVar1);
+
+  auto *N2 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1);
+
+  auto *Same2 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1);
+
+  auto *Other2 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation2);
+
+  EXPECT_EQ(N2, Same2);
+  EXPECT_NE(Same2, Other2);
+  EXPECT_EQ(N2->getDataLocationExp(), DataLocation1);
 }
 
 typedef MetadataTest DISubroutineTypeTest;
@@ -2053,32 +2125,41 @@ TEST_F(DINamespaceTest, get) {
 typedef MetadataTest DIModuleTest;
 
 TEST_F(DIModuleTest, get) {
+  DIFile *File = getFile();
   DIScope *Scope = getFile();
   StringRef Name = "module";
   StringRef ConfigMacro = "-DNDEBUG";
   StringRef Includes = "-I.";
   StringRef APINotes = "/tmp/m.apinotes";
+  unsigned LineNo = 4;
 
-  auto *N = DIModule::get(Context, Scope, Name, ConfigMacro, Includes, APINotes);
+  auto *N = DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
+                          APINotes, LineNo);
 
   EXPECT_EQ(dwarf::DW_TAG_module, N->getTag());
+  EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Name, N->getName());
   EXPECT_EQ(ConfigMacro, N->getConfigurationMacros());
   EXPECT_EQ(Includes, N->getIncludePath());
   EXPECT_EQ(APINotes, N->getAPINotesFile());
-  EXPECT_EQ(
-      N, DIModule::get(Context, Scope, Name, ConfigMacro, Includes, APINotes));
-  EXPECT_NE(N, DIModule::get(Context, getFile(), Name, ConfigMacro, Includes,
-                             APINotes));
-  EXPECT_NE(N, DIModule::get(Context, Scope, "other", ConfigMacro, Includes,
-                             APINotes));
-  EXPECT_NE(N,
-            DIModule::get(Context, Scope, Name, "other", Includes, APINotes));
-  EXPECT_NE(
-      N, DIModule::get(Context, Scope, Name, ConfigMacro, "other", APINotes));
-  EXPECT_NE(
-      N, DIModule::get(Context, Scope, Name, ConfigMacro, Includes, "other"));
+  EXPECT_EQ(LineNo, N->getLineNo());
+  EXPECT_EQ(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
+                             APINotes, LineNo));
+  EXPECT_NE(N, DIModule::get(Context, getFile(), getFile(), Name, ConfigMacro,
+                             Includes, APINotes, LineNo));
+  EXPECT_NE(N, DIModule::get(Context, File, Scope, "other", ConfigMacro,
+                             Includes, APINotes, LineNo));
+  EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, "other", Includes,
+                             APINotes, LineNo));
+  EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, "other",
+                             APINotes, LineNo));
+  EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
+                             "other", LineNo));
+  EXPECT_NE(N, DIModule::get(Context, getFile(), Scope, Name, ConfigMacro,
+                             Includes, APINotes, LineNo));
+  EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
+                             APINotes, 5));
 
   TempDIModule Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

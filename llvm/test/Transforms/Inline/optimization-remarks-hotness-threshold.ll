@@ -5,6 +5,10 @@
 ; RUN:    -pass-remarks-with-hotness -pass-remarks-hotness-threshold=1 2>&1 | \
 ; RUN:    FileCheck -allow-empty -check-prefix=THRESHOLD %s
 
+; RUN: opt < %s -S -passes=inliner-wrapper -pass-remarks-output=%t -pass-remarks=inline \
+; RUN:    -pass-remarks-with-hotness -pass-remarks-hotness-threshold=1 2>&1 | \
+; RUN:    FileCheck -allow-empty -check-prefix=THRESHOLD %s
+
 ; Check that when any threshold is specified we ignore remarks with no
 ; hotness -- these are blocks that have not been executed during training.
 

@@ -14,6 +14,7 @@
 #include "MCTargetDesc/VEInstPrinter.h"
 #include "MCTargetDesc/VEMCExpr.h"
 #include "MCTargetDesc/VETargetStreamer.h"
+#include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
 #include "VEInstrInfo.h"
 #include "VETargetMachine.h"
@@ -87,9 +88,12 @@ static void emitSIC(MCStreamer &OutStreamer, MCOperand &RD,
 static void emitBSIC(MCStreamer &OutStreamer, MCOperand &R1, MCOperand &R2,
                      const MCSubtargetInfo &STI) {
   MCInst BSICInst;
-  BSICInst.setOpcode(VE::BSIC);
+  BSICInst.setOpcode(VE::BSICrii);
   BSICInst.addOperand(R1);
   BSICInst.addOperand(R2);
+  MCOperand czero = MCOperand::createImm(0);
+  BSICInst.addOperand(czero);
+  BSICInst.addOperand(czero);
   OutStreamer.emitInstruction(BSICInst, STI);
 }
 

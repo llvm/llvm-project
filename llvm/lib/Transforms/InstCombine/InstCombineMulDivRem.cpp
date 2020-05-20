@@ -96,19 +96,21 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
 
 /// A helper routine of InstCombiner::visitMul().
 ///
-/// If C is a scalar/vector of known powers of 2, then this function returns
-/// a new scalar/vector obtained from logBase2 of C.
+/// If C is a scalar/fixed width vector of known powers of 2, then this
+/// function returns a new scalar/fixed width vector obtained from logBase2
+/// of C.
 /// Return a null pointer otherwise.
 static Constant *getLogBase2(Type *Ty, Constant *C) {
   const APInt *IVal;
   if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
     return ConstantInt::get(Ty, IVal->logBase2());
 
-  if (!Ty->isVectorTy())
+  // FIXME: We can extract pow of 2 of splat constant for scalable vectors.
+  if (!isa<FixedVectorType>(Ty))
     return nullptr;
 
   SmallVector<Constant *, 4> Elts;
-  for (unsigned I = 0, E = cast<VectorType>(Ty)->getNumElements(); I != E;
+  for (unsigned I = 0, E = cast<FixedVectorType>(Ty)->getNumElements(); I != E;
        ++I) {
     Constant *Elt = C->getAggregateElement(I);
     if (!Elt)
@@ -273,6 +275,15 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
       if (!match(Mul, m_Mul(m_Value(), m_Value())))
         return BinaryOperator::CreateAdd(Builder.CreateMul(X, Op1), Mul);
     }
+  }
+
+  // abs(X) * abs(X) -> X * X
+  // nabs(X) * nabs(X) -> X * X
+  if (Op0 == Op1) {
+    Value *X, *Y;
+    SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
+    if (SPF == SPF_ABS || SPF == SPF_NABS)
+      return BinaryOperator::CreateMul(X, X);
   }
 
   // -X * C --> X * -C

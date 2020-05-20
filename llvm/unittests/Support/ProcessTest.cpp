@@ -21,6 +21,16 @@ namespace {
 using namespace llvm;
 using namespace sys;
 
+TEST(ProcessTest, GetProcessIdTest) {
+  const Process::Pid pid = Process::getProcessId();
+
+#ifdef _WIN32
+  EXPECT_EQ((DWORD)pid, ::GetCurrentProcessId());
+#else
+  EXPECT_EQ(pid, ::getpid());
+#endif
+}
+
 TEST(ProcessTest, GetRandomNumberTest) {
   const unsigned r1 = Process::GetRandomNumber();
   const unsigned r2 = Process::GetRandomNumber();

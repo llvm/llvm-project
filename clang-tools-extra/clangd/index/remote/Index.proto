@@ -1,0 +1,69 @@
+//===--- Index.proto - Remote index Protocol Buffers definition -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+syntax = "proto3";
+
+package clang.clangd.remote;
+
+service SymbolIndex {
+  rpc Lookup(LookupRequest) returns (stream LookupReply) {}
+
+  rpc FuzzyFind(FuzzyFindRequest) returns (stream FuzzyFindReply) {}
+
+  rpc Refs(RefsRequest) returns (stream RefsReply) {}
+}
+
+message LookupRequest { repeated string ids = 1; }
+
+// The response is a stream of symbol messages and the terminating message
+// indicating the end of stream.
+message LookupReply {
+  oneof kind {
+    Symbol stream_result = 1;
+    bool final_result = 2;
+  }
+}
+
+message FuzzyFindRequest {
+  string query = 1;
+  repeated string scopes = 2;
+  bool any_scope = 3;
+  uint32 limit = 4;
+  bool resricted_for_code_completion = 5;
+  repeated string proximity_paths = 6;
+  repeated string preferred_types = 7;
+}
+
+// The response is a stream of symbol messages, and one terminating has_more
+// message.
+message FuzzyFindReply {
+  oneof kind {
+    Symbol stream_result = 1;
+    bool final_result = 2; // HasMore
+  }
+}
+
+message RefsRequest {
+  repeated string ids = 1;
+  uint32 filter = 2;
+  uint32 limit = 3;
+}
+
+// The response is a stream of reference messages, and one terminating has_more
+// message.
+message RefsReply {
+  oneof kind {
+    Ref stream_result = 1;
+    bool final_result = 2; // HasMore
+  }
+}
+
+// FIXME(kirillbobyrev): Properly serialize symbols and refs instead of passing
+// YAML.
+message Ref { string yaml_serialization = 1; }
+message Symbol { string yaml_serialization = 1; }

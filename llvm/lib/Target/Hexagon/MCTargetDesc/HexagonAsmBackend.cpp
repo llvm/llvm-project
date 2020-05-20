@@ -22,6 +22,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include <sstream>
@@ -650,11 +651,12 @@ public:
     llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override {
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
            "Hexagon relaxInstruction only works on bundles");
 
+    MCInst Res;
     Res.setOpcode(Hexagon::BUNDLE);
     Res.addOperand(MCOperand::createImm(Inst.getOperand(0).getImm()));
     // Copy the results into the bundle.
@@ -678,6 +680,8 @@ public:
       // now copy over the original instruction(the one we may have extended)
       Res.addOperand(MCOperand::createInst(I.getInst()));
     }
+
+    Inst = std::move(Res);
     (void)Update;
     assert(Update && "Didn't find relaxation target");
   }

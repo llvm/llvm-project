@@ -9,13 +9,15 @@
 #ifndef TEST_OPS
 #define TEST_OPS
 
+include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -195,10 +197,20 @@ def I64EnumAttrOp : TEST_Op<"i64_enum_attr"> {
   let results = (outs I32:$val);
 }
 
+def SomeStructAttr : StructAttr<"SomeStructAttr", Test_Dialect, [
+  StructFieldAttr<"some_field", I64Attr>,
+  StructFieldAttr<"some_other_field", I64Attr>
+]> {}
+
+def StructAttrOp : TEST_Op<"struct_attr"> {
+  let arguments = (ins SomeStructAttr:$the_struct_attr);
+  let results = (outs);
+}
 
 def IntAttrOp : TEST_Op<"int_attrs"> {
   let arguments = (ins
     AnyI32Attr:$any_i32_attr,
+    IndexAttr:$index_attr,
     UI32Attr:$ui32_attr,
     SI32Attr:$si32_attr
   );
@@ -232,6 +244,21 @@ def RankedIntElementsAttrOp : TEST_Op<"ranked_int_elements_attr"> {
   let arguments = (ins
       RankedI32ElementsAttr<[2]>:$vector_i32_attr,
       RankedI64ElementsAttr<[4, 8]>:$matrix_i64_attr
+  );
+}
+
+def DerivedTypeAttrOp : TEST_Op<"derived_type_attr", []> {
+  let results = (outs AnyTensor:$output);
+  DerivedTypeAttr element_dtype =
+    DerivedTypeAttr<"return getElementTypeOrSelf(output().getType());">;
+  DerivedAttr size = DerivedAttr<"int",
+    "return output().getType().cast<ShapedType>().getSizeInBits();",
+    "$_builder.getI32IntegerAttr($_self)">;
+}
+
+def StringElementsAttrOp : TEST_Op<"string_elements_attr"> {
+  let arguments = (ins
+      StringElementsAttr:$scalar_string_attr
   );
 }
 
@@ -707,6 +734,17 @@ def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
   let results = (outs I32);
 }
 
+def TestOpInPlaceFoldAnchor : TEST_Op<"op_in_place_fold_anchor"> {
+  let arguments = (ins I32);
+  let results = (outs I32);
+}
+
+def TestOpInPlaceFold : TEST_Op<"op_in_place_fold"> {
+  let arguments = (ins I32:$op, I32Attr:$attr);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (Symbol Binding)
 
@@ -721,9 +759,9 @@ def OpSymbolBindingB : TEST_Op<"symbol_binding_b", []> {
 
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, Value operand",
+      "OpBuilder &builder, OperationState &state, Value operand",
       [{
-        state.types.assign({builder->getIntegerType(32)});
+        state.types.assign({builder.getIntegerType(32)});
         state.addOperands({operand});
       }]>
   ];
@@ -833,10 +871,10 @@ def TwoResultOp : TEST_Op<"two_result"> {
 
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, IntegerAttr kind",
+      "OpBuilder &builder, OperationState &state, IntegerAttr kind",
       [{
-        auto i32 = builder->getIntegerType(32);
-        auto f32 = builder->getF32Type();
+        auto i32 = builder.getIntegerType(32);
+        auto f32 = builder.getF32Type();
         state.types.assign({i32, f32});
         state.addAttribute("kind", kind);
       }]>
@@ -989,9 +1027,9 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // result type. So need to provide a builder not requiring result types.
   let builders = [
     OpBuilder<
-      "Builder *builder, OperationState &state, IntegerAttr count",
+      "OpBuilder &builder, OperationState &state, IntegerAttr count",
       [{
-        auto i32Type = builder->getIntegerType(32);
+        auto i32Type = builder.getIntegerType(32);
         state.addTypes(i32Type); // $output1
         SmallVector<Type, 4> types(count.getInt(), i32Type);
         state.addTypes(types); // $output2
@@ -1073,7 +1111,7 @@ def TestRecursiveRewriteOp : TEST_Op<"recursive_rewrite"> {
 //===----------------------------------------------------------------------===//
 
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
-def TestReturnOp : TEST_Op<"return", [Terminator]>,
+def TestReturnOp : TEST_Op<"return", [ReturnLike, Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 def TestCastOp : TEST_Op<"cast">,
   Arguments<(ins Variadic<AnyType>)>, Results<(outs AnyType)>;
@@ -1107,6 +1145,17 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins Index);
+  let regions = (region SizedRegion<1>:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
+def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
+  let summary =  "affine scope operation";
+  let description = [{
+    Test op that defines a new affine scope.
+  }];
+
   let regions = (region SizedRegion<1>:$region);
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
@@ -1165,9 +1214,15 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+// Test that we elide optional attributes that are within the syntax.
+def FormatOptAttrOp : TEST_Op<"format_opt_attr_op"> {
+  let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
+  let assemblyFormat = "(`(`$opt_attr^`)`)? attr-dict";
+}
+
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
-  let arguments = (ins I64Attr:$attr);
+  let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
   let assemblyFormat = "attr-dict-with-keyword";
 }
 
@@ -1240,6 +1295,16 @@ def FormatOptionalOperandResultBOp : FormatOptionalOperandResultOpBase<"b", [{
   (`(` $optional^ `:` type($optional) `)`)? `:` type($optional_res)
   (`[` $variadic^ `]`)? attr-dict
 }]>;
+
+def FormatTwoVariadicOperandsNoBuildableTypeOp
+    : TEST_Op<"format_two_variadic_operands_no_buildable_type_op",
+              [AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$a,
+                       Variadic<AnyType>:$b);
+  let assemblyFormat = [{
+    `(` $a `:` type($a) `)` `->` `(` $b `:` type($b) `)`  attr-dict
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Test SideEffects

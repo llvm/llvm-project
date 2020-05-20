@@ -156,7 +156,7 @@ foreach Index = 32-63 in {
   def VSX#Index : VSXReg<Index, "vs"#Index>;
 }
 
-// The reprsentation of r0 when treated as the constant 0.
+// The representation of r0 when treated as the constant 0.
 def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
 def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
 

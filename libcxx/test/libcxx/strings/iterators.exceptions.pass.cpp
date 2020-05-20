@@ -27,7 +27,7 @@
 #ifndef TEST_HAS_NO_EXCEPTIONS
 static const bool expected = false;
 #else
-// Under libcpp-no-exceptions all noexcept expressions are trivially true, so
+// Under -fno-exceptions all noexcept expressions are trivially true, so
 // any check for a noexcept returning false must actually check for it being
 // true.
 static const bool expected = true;

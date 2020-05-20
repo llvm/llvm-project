@@ -48,9 +48,8 @@
 #include <numeric>
 
 using namespace llvm;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 struct Edge {
@@ -265,9 +264,6 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 // This first builds a call graph based on the profile data then merges sections
 // according to the C³ heuristic. All clusters are then sorted by a density
 // metric to further improve locality.
-DenseMap<const InputSectionBase *, int> computeCallGraphProfileOrder() {
+DenseMap<const InputSectionBase *, int> elf::computeCallGraphProfileOrder() {
   return CallGraphSort().run();
 }
-
-} // namespace elf
-} // namespace lld

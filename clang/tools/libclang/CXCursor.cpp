@@ -491,6 +491,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_CXXFunctionalCastExpr;
     break;
 
+  case Stmt::CXXAddrspaceCastExprClass:
+    K = CXCursor_CXXAddrspaceCastExpr;
+    break;
+
   case Stmt::CXXTypeidExprClass:
     K = CXCursor_CXXTypeidExpr;
     break;

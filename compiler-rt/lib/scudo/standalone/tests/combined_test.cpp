@@ -115,7 +115,44 @@ template <class Config> static void testAllocator() {
       void *P = Allocator->allocate(Size, Origin, 1U << MinAlignLog, true);
       EXPECT_NE(P, nullptr);
       for (scudo::uptr I = 0; I < Size; I++)
-        EXPECT_EQ((reinterpret_cast<char *>(P))[I], 0);
+        ASSERT_EQ((reinterpret_cast<char *>(P))[I], 0);
+      memset(P, 0xaa, Size);
+      Allocator->deallocate(P, Origin, Size);
+    }
+  }
+  Allocator->releaseToOS();
+
+  // Ensure that specifying ZeroContents returns a zero'd out block.
+  Allocator->setFillContents(scudo::ZeroFill);
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
+      const scudo::uptr Size = (1U << SizeLog) + Delta * 128U;
+      void *P = Allocator->allocate(Size, Origin, 1U << MinAlignLog, false);
+      EXPECT_NE(P, nullptr);
+      for (scudo::uptr I = 0; I < Size; I++)
+        ASSERT_EQ((reinterpret_cast<char *>(P))[I], 0);
+      memset(P, 0xaa, Size);
+      Allocator->deallocate(P, Origin, Size);
+    }
+  }
+  Allocator->releaseToOS();
+
+  // Ensure that specifying PatternOrZeroFill returns a pattern-filled block in
+  // the primary allocator, and either pattern or zero filled block in the
+  // secondary.
+  Allocator->setFillContents(scudo::PatternOrZeroFill);
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
+      const scudo::uptr Size = (1U << SizeLog) + Delta * 128U;
+      void *P = Allocator->allocate(Size, Origin, 1U << MinAlignLog, false);
+      EXPECT_NE(P, nullptr);
+      for (scudo::uptr I = 0; I < Size; I++) {
+        unsigned char V = (reinterpret_cast<unsigned char *>(P))[I];
+        if (AllocatorT::PrimaryT::canAllocate(Size))
+          ASSERT_EQ(V, scudo::PatternFillByte);
+        else
+          ASSERT_TRUE(V == scudo::PatternFillByte || V == 0);
+      }
       memset(P, 0xaa, Size);
       Allocator->deallocate(P, Origin, Size);
     }

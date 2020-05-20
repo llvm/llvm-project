@@ -16,14 +16,16 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
 // Returns a symbol for an error message.
 static std::string demangle(StringRef symName) {
   if (elf::config->demangle)
@@ -31,7 +33,7 @@ static std::string demangle(StringRef symName) {
   return std::string(symName);
 }
 
-std::string toString(const elf::Symbol &sym) {
+std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = demangle(name);
 
@@ -43,11 +45,10 @@ std::string toString(const elf::Symbol &sym) {
   return ret;
 }
 
-std::string toELFString(const Archive::Symbol &b) {
+std::string lld::toELFString(const Archive::Symbol &b) {
   return demangle(b.getName());
 }
 
-namespace elf {
 Defined *ElfSym::bss;
 Defined *ElfSym::etext1;
 Defined *ElfSym::etext2;
@@ -63,7 +64,7 @@ Defined *ElfSym::relaIpltStart;
 Defined *ElfSym::relaIpltEnd;
 Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
-DenseMap<const Symbol *, const InputFile *> backwardReferences;
+DenseMap<const Symbol *, const InputFile *> elf::backwardReferences;
 
 static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
   switch (sym.kind()) {
@@ -300,7 +301,7 @@ bool Symbol::includeInDynsym() const {
 }
 
 // Print out a log message for --trace-symbol.
-void printTraceSymbol(const Symbol *sym) {
+void elf::printTraceSymbol(const Symbol *sym) {
   std::string s;
   if (sym->isUndefined())
     s = ": reference to ";
@@ -316,7 +317,7 @@ void printTraceSymbol(const Symbol *sym) {
   message(toString(sym->file) + s + sym->getName());
 }
 
-void maybeWarnUnorderableSymbol(const Symbol *sym) {
+void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
   if (!config->warnSymbolOrdering)
     return;
 
@@ -348,7 +349,7 @@ void maybeWarnUnorderableSymbol(const Symbol *sym) {
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
-bool computeIsPreemptible(const Symbol &sym) {
+bool elf::computeIsPreemptible(const Symbol &sym) {
   assert(!sym.isLocal());
 
   // Only symbols with default visibility that appear in dynsym can be
@@ -374,7 +375,7 @@ bool computeIsPreemptible(const Symbol &sym) {
   return true;
 }
 
-void reportBackrefs() {
+void elf::reportBackrefs() {
   for (auto &it : backwardReferences) {
     const Symbol &sym = *it.first;
     warn("backward reference detected: " + sym.getName() + " in " +
@@ -514,6 +515,17 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // group assignment rule simulates the traditional linker's semantics.
     bool backref = config->warnBackrefs && other.file &&
                    file->groupId < other.file->groupId;
+    if (backref) {
+      // Some libraries have known problems and can cause noise. Filter them out
+      // with --warn-backrefs-exclude=.
+      StringRef name =
+          !file->archiveName.empty() ? file->archiveName : file->getName();
+      for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
+        if (pat.match(name)) {
+          backref = false;
+          break;
+        }
+    }
     fetch();
 
     // We don't report backward references to weak symbols as they can be
@@ -716,6 +728,3 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     binding = bind;
   }
 }
-
-} // namespace elf
-} // namespace lld

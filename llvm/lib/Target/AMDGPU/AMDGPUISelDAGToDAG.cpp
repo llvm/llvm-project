@@ -647,29 +647,6 @@ MachineSDNode *AMDGPUDAGToDAGISel::buildSMovImm64(SDLoc &DL, uint64_t Imm,
   return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, VT, Ops);
 }
 
-static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
-  switch (NumVectorElts) {
-  case 1:
-    return AMDGPU::SReg_32RegClassID;
-  case 2:
-    return AMDGPU::SReg_64RegClassID;
-  case 3:
-    return AMDGPU::SGPR_96RegClassID;
-  case 4:
-    return AMDGPU::SGPR_128RegClassID;
-  case 5:
-    return AMDGPU::SGPR_160RegClassID;
-  case 8:
-    return AMDGPU::SReg_256RegClassID;
-  case 16:
-    return AMDGPU::SReg_512RegClassID;
-  case 32:
-    return AMDGPU::SReg_1024RegClassID;
-  }
-
-  llvm_unreachable("invalid vector size");
-}
-
 void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   EVT VT = N->getValueType(0);
   unsigned NumVectorElts = VT.getVectorNumElements();
@@ -797,7 +774,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     }
 
     assert(VT.getVectorElementType().bitsEq(MVT::i32));
-    unsigned RegClassID = selectSGPRVectorRegClassID(NumVectorElts);
+    unsigned RegClassID =
+        SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32)->getID();
     SelectBuildVector(N, RegClassID);
     return;
   }
@@ -1061,24 +1039,51 @@ void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   SDValue CI = N->getOperand(2);
 
-  unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::V_ADDC_U32_e64
-                                                 : AMDGPU::V_SUBB_U32_e64;
-  CurDAG->SelectNodeTo(
-      N, Opc, N->getVTList(),
-      {LHS, RHS, CI, CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+  if (N->isDivergent()) {
+    unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::V_ADDC_U32_e64
+                                                   : AMDGPU::V_SUBB_U32_e64;
+    CurDAG->SelectNodeTo(
+        N, Opc, N->getVTList(),
+        {LHS, RHS, CI,
+         CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+  } else {
+    unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::S_ADD_CO_PSEUDO
+                                                   : AMDGPU::S_SUB_CO_PSEUDO;
+    CurDAG->SelectNodeTo(N, Opc, N->getVTList(), {LHS, RHS, CI});
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   // The name of the opcodes are misleading. v_add_i32/v_sub_i32 have unsigned
   // carry out despite the _i32 name. These were renamed in VI to _U32.
   // FIXME: We should probably rename the opcodes here.
-  unsigned Opc = N->getOpcode() == ISD::UADDO ?
-    AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+  bool IsAdd = N->getOpcode() == ISD::UADDO;
+  bool IsVALU = N->isDivergent();
 
-  CurDAG->SelectNodeTo(
-      N, Opc, N->getVTList(),
-      {N->getOperand(0), N->getOperand(1),
-       CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+  for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end(); UI != E;
+       ++UI)
+    if (UI.getUse().getResNo() == 1) {
+      if ((IsAdd && (UI->getOpcode() != ISD::ADDCARRY)) ||
+          (!IsAdd && (UI->getOpcode() != ISD::SUBCARRY))) {
+        IsVALU = true;
+        break;
+      }
+    }
+
+  if (IsVALU) {
+    unsigned Opc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+
+    CurDAG->SelectNodeTo(
+        N, Opc, N->getVTList(),
+        {N->getOperand(0), N->getOperand(1),
+         CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+  } else {
+    unsigned Opc = N->getOpcode() == ISD::UADDO ? AMDGPU::S_UADDO_PSEUDO
+                                                : AMDGPU::S_USUBO_PSEUDO;
+
+    CurDAG->SelectNodeTo(N, Opc, N->getVTList(),
+                         {N->getOperand(0), N->getOperand(1)});
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
@@ -1897,7 +1902,9 @@ bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
     // (add n0, c0)
     // Don't peel off the offset (c0) if doing so could possibly lead
     // the base (n0) to be negative.
-    if (C1->getSExtValue() <= 0 || CurDAG->SignBitIsZero(N0)) {
+    // (or n0, |c0|) can never change a sign given isBaseWithConstantOffset.
+    if (C1->getSExtValue() <= 0 || CurDAG->SignBitIsZero(N0) ||
+        (Index->getOpcode() == ISD::OR && C1->getSExtValue() >= 0)) {
       Base = N0;
       Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i32);
       return true;

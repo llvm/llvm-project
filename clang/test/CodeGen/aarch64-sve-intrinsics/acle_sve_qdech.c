@@ -10,154 +10,106 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
+int32_t test_svqdech_n_s32(int32_t op)
+{
+  // CHECK-LABEL: test_svqdech_n_s32
+  // CHECK: %[[INTRINSIC:.*]] = call i32 @llvm.aarch64.sve.sqdech.n32(i32 %op, i32 31, i32 1)
+  // CHECK: ret i32 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_n_s32,,)(op, 1);
+}
+
+int32_t test_svqdech_n_s32_1(int32_t op)
+{
+  // CHECK-LABEL: test_svqdech_n_s32_1
+  // CHECK: %[[INTRINSIC:.*]] = call i32 @llvm.aarch64.sve.sqdech.n32(i32 %op, i32 31, i32 16)
+  // CHECK: ret i32 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_n_s32,,)(op, 16);
+}
+
+int64_t test_svqdech_n_s64(int64_t op)
+{
+  // CHECK-LABEL: test_svqdech_n_s64
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.sqdech.n64(i64 %op, i32 31, i32 1)
+  // CHECK: ret i64 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_n_s64,,)(op, 1);
+}
+
+uint32_t test_svqdech_n_u32(uint32_t op)
+{
+  // CHECK-LABEL: test_svqdech_n_u32
+  // CHECK: %[[INTRINSIC:.*]] = call i32 @llvm.aarch64.sve.uqdech.n32(i32 %op, i32 31, i32 16)
+  // CHECK: ret i32 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_n_u32,,)(op, 16);
+}
+
+uint64_t test_svqdech_n_u64(uint64_t op)
+{
+  // CHECK-LABEL: test_svqdech_n_u64
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.uqdech.n64(i64 %op, i32 31, i32 1)
+  // CHECK: ret i64 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_n_u64,,)(op, 1);
+}
+
+int32_t test_svqdech_pat_n_s32(int32_t op)
+{
+  // CHECK-LABEL: test_svqdech_pat_n_s32
+  // CHECK: %[[INTRINSIC:.*]] = call i32 @llvm.aarch64.sve.sqdech.n32(i32 %op, i32 10, i32 16)
+  // CHECK: ret i32 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech_pat,_n_s32,,)(op, SV_VL32, 16);
+}
+
+int64_t test_svqdech_pat_n_s64(int64_t op)
+{
+  // CHECK-LABEL: test_svqdech_pat_n_s64
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.sqdech.n64(i64 %op, i32 11, i32 1)
+  // CHECK: ret i64 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech_pat,_n_s64,,)(op, SV_VL64, 1);
+}
+
+uint32_t test_svqdech_pat_n_u32(uint32_t op)
+{
+  // CHECK-LABEL: test_svqdech_pat_n_u32
+  // CHECK: %[[INTRINSIC:.*]] = call i32 @llvm.aarch64.sve.uqdech.n32(i32 %op, i32 12, i32 16)
+  // CHECK: ret i32 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech_pat,_n_u32,,)(op, SV_VL128, 16);
+}
+
+uint64_t test_svqdech_pat_n_u64(uint64_t op)
+{
+  // CHECK-LABEL: test_svqdech_pat_n_u64
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.uqdech.n64(i64 %op, i32 13, i32 1)
+  // CHECK: ret i64 %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech_pat,_n_u64,,)(op, SV_VL256, 1);
+}
+
+svint16_t test_svqdech_s16(svint16_t op)
+{
+  // CHECK-LABEL: test_svqdech_s16
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.sqdech.nxv8i16(<vscale x 8 x i16> %op, i32 31, i32 16)
+  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_s16,,)(op, 16);
+}
+
+svuint16_t test_svqdech_u16(svuint16_t op)
+{
+  // CHECK-LABEL: test_svqdech_u16
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 31, i32 1)
+  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
+  return SVE_ACLE_FUNC(svqdech,_u16,,)(op, 1);
+}
+
 svint16_t test_svqdech_pat_s16(svint16_t op)
 {
   // CHECK-LABEL: test_svqdech_pat_s16
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.sqdech.nxv8i16(<vscale x 8 x i16> %op, i32 0, i32 1)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.sqdech.nxv8i16(<vscale x 8 x i16> %op, i32 29, i32 16)
   // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return svqdech_pat_s16(op, SV_POW2, 1);
+  return SVE_ACLE_FUNC(svqdech_pat,_s16,,)(op, SV_MUL4, 16);
 }
 
-svint16_t test_svqdech_pat_s16_all(svint16_t op)
+svuint16_t test_svqdech_pat_u16(svuint16_t op)
 {
-  // CHECK-LABEL: test_svqdech_pat_s16_all
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.sqdech.nxv8i16(<vscale x 8 x i16> %op, i32 31, i32 16)
+  // CHECK-LABEL: test_svqdech_pat_u16
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 30, i32 1)
   // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return svqdech_pat_s16(op, SV_ALL, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_pow2(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_pow2
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 0, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_POW2, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl1(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl1
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 1, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL1, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl2(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl2
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 2, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL2, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl3(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl3
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 3, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL3, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl4(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl4
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 4, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL4, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl5(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl5
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 5, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL5, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl6(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl6
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 6, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL6, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl7(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl7
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 7, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL7, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl8(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl8
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 8, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL8, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl16(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl16
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 9, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL16, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl32(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl32
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 10, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL32, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl64(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl64
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 11, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL64, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl128(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl128
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 12, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL128, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_vl256(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_vl256
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 13, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_VL256, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_mul4(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_mul4
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 29, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_MUL4, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_mul3(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_mul3
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 30, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_MUL3, 16);
-}
-
-svuint16_t test_svqdech_pat_u16_all(svuint16_t op)
-{
-  // CHECK-LABEL: test_svqdech_pat_u16_all
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.uqdech.nxv8i16(<vscale x 8 x i16> %op, i32 31, i32 16)
-  // CHECK: ret <vscale x 8 x i16> %[[INTRINSIC]]
-  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_ALL, 16);
+  return SVE_ACLE_FUNC(svqdech_pat,_u16,,)(op, SV_MUL3, 1);
 }

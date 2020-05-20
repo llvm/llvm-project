@@ -2390,6 +2390,7 @@ ProgramStateManager &PathSensitiveBugReporter::getStateManager() const {
   return Eng.getStateManager();
 }
 
+BugReporter::BugReporter(BugReporterData &d) : D(d) {}
 BugReporter::~BugReporter() {
   // Make sure reports are flushed.
   assert(StrBugTypes.empty() &&
@@ -2410,7 +2411,7 @@ void BugReporter::FlushReports() {
   // EmitBasicReport.
   // FIXME: There are leaks from checkers that assume that the BugTypes they
   // create will be destroyed by the BugReporter.
-  llvm::DeleteContainerSeconds(StrBugTypes);
+  StrBugTypes.clear();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3263,8 +3264,8 @@ BugType *BugReporter::getBugTypeForName(CheckerNameRef CheckName,
   SmallString<136> fullDesc;
   llvm::raw_svector_ostream(fullDesc) << CheckName.getName() << ":" << name
                                       << ":" << category;
-  BugType *&BT = StrBugTypes[fullDesc];
+  std::unique_ptr<BugType> &BT = StrBugTypes[fullDesc];
   if (!BT)
-    BT = new BugType(CheckName, name, category);
-  return BT;
+    BT = std::make_unique<BugType>(CheckName, name, category);
+  return BT.get();
 }

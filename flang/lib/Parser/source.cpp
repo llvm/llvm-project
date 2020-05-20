@@ -127,12 +127,19 @@ bool SourceFile::ReadStandardInput(llvm::raw_ostream &error) {
 }
 
 void SourceFile::ReadFile() {
-  if (buf_->getBuffer().size() == 0) {
-    Close();
-    buf_ = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(1);
-    buf_->getBuffer()[0] = '\n';
-  }
   buf_end_ = RemoveCarriageReturns(buf_->getBuffer());
+  if (content().size() == 0 || content().back() != '\n') {
+    // Don't bother to copy if we have spare memory
+    if (content().size() >= buf_->getBufferSize()) {
+      auto tmp_buf{llvm::WritableMemoryBuffer::getNewUninitMemBuffer(
+          content().size() + 1)};
+      llvm::copy(content(), tmp_buf->getBufferStart());
+      Close();
+      buf_ = std::move(tmp_buf);
+    }
+    buf_end_++;
+    buf_->getBuffer()[buf_end_ - 1] = '\n';
+  }
   IdentifyPayload();
   RecordLineStarts();
 }

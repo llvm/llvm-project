@@ -1536,7 +1536,10 @@ private:
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);
 
+    LI.removeBlock(FC1GuardBlock);
     LI.removeBlock(FC1.Preheader);
+    LI.removeBlock(FC0.ExitBlock);
+    DTU.deleteBB(FC1GuardBlock);
     DTU.deleteBB(FC1.Preheader);
     DTU.deleteBB(FC0.ExitBlock);
     DTU.flush();

@@ -138,6 +138,8 @@ public:
     // We can write more stricter checks later.
     return CPU.find('t') != std::string::npos;
   }
+
+  bool hasExtIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

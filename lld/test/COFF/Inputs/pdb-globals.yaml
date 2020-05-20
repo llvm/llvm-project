@@ -1,5 +1,5 @@
 # // YAML Generated from the following source code:
-# // Compile with clang-cl /Z7 /GS- /c t.obj pdb-globals.cpp
+# // Compile with clang-cl /Z7 /GS- /c a.cpp && obj2yaml a.obj >pdb-globals.yaml
 #
 # void *__purecall = 0;
 #
@@ -27,12 +27,21 @@
 # // S_UDT
 # typedef HelloPoint HelloPointTypedef;
 #
+# // S_GTHREAD32
+# thread_local int GlobalTLS = 254;
+#
+# // S_LTHREAD32
+# static thread_local int StaticTLS = 22;
+#
 # int main(int argc, char **argv) {
 #   HelloPointTypedef P;
 #   int N = P.X + P.Y + P.Z;
 #   N += LocalFunc() + GlobalFunc();
 #   N += *GlobalVar;
 #   N += ConstexprVar;
+#   N += GlobalTLS;
+#   N += StaticTLS;
+#   return N;
 # }
 
 
@@ -44,20 +53,32 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
-    SectionData:     5589E5B82B0000005DC3660F1F4400005589E583EC208B450C8B4D088D55F4894DEC89D18945E8E8000000008B4DF4034DF8034DFC894DF08945E4E8000000008945E0E80000000031C98B55E001C20355F08955F0A1000000008B000345F08945F08B45F083C0128945F089C883C4205DC366666666662E0F1F8400000000005589E5B82A0000005DC3
+    SectionData:     5589E5B82B0000005DC3660F1F4400005589E583EC248B450C8B4D08C745FC000000008D55F0894DE889D18945E4E8000000008B4DF08B55F401D18B55F801D1894DEC8945E0E8000000008945DCE8000000008B4DDC01C18B45EC01C88945ECA1000000008B008B4DEC01C1894DEC8B45EC83C0128945ECA100000000648B0D000000008B04818B88000000008B55EC01CA8955EC8B80000000000345EC8945EC8B45EC83C4245DC30F1F80000000005589E5B82A0000005DC3
     Relocations:
-      - VirtualAddress:  40
+      - VirtualAddress:  47
         SymbolName:      '??0HelloPoint@@QAE@XZ'
         Type:            IMAGE_REL_I386_REL32
-      - VirtualAddress:  60
+      - VirtualAddress:  71
         SymbolName:      '?LocalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_REL32
-      - VirtualAddress:  68
+      - VirtualAddress:  79
         SymbolName:      '?GlobalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_REL32
-      - VirtualAddress:  86
+      - VirtualAddress:  97
         SymbolName:      '?GlobalVar@@3PBHB'
         Type:            IMAGE_REL_I386_DIR32
+      - VirtualAddress:  121
+        SymbolName:      __tls_index
+        Type:            IMAGE_REL_I386_DIR32
+      - VirtualAddress:  128
+        SymbolName:      __tls_array
+        Type:            IMAGE_REL_I386_DIR32
+      - VirtualAddress:  137
+        SymbolName:      '?GlobalTLS@@3HA'
+        Type:            IMAGE_REL_I386_SECREL
+      - VirtualAddress:  151
+        SymbolName:      _StaticTLS
+        Type:            IMAGE_REL_I386_SECREL
   - Name:            .data
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     Alignment:       4
@@ -74,11 +95,15 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
-    SectionData:     5589E550894DFC8B4DFCC70103000000C7410404000000C741080500000089C883C4045DC3
+    SectionData:     5589E550894DFC8B45FCC70003000000C7400404000000C740080500000083C4045DC3
   - Name:            .rdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
     SectionData:     '11000000'
+  - Name:            '.tls$'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     FE00000016000000
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
     Alignment:       1
@@ -86,7 +111,7 @@ sections:
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     04000000F10000002F0000002D003C1101000000070006000000000000007017000000000000636C616E672076657273696F6E20362E302E30200000F100000036000000300047110000000000000000000000000A00000000000000000000000210000000000000000000476C6F62616C46756E630002004F110000F20000002000000000000000000000000A0000000000000001000000140000000000000010000000F1000000B60000002A00471100000000000000000000000062000000000000000000000006100000000000000000006D61696E000D003E1174000000010061726763001200451116000000080000001F000000000053000D003E11031000000100617267760012004511160000000C0000001F000000000053000A003E1107100000000050001200451116000000F4FFFFFF1F000000000053000A003E117400000000004E001200451116000000F0FFFFFF1F0000000000530002004F110000F200000050000000000000000000000062000000000000000700000044000000000000001E0000000F0000001F0000001C000000200000002800000021000000450000002200000052000000230000005B00000024000000F1000000350000002F0046110000000000000000000000000A00000000000000000000000F100000000000000000004C6F63616C46756E630002004F11000000F20000002000000000000000000000000A000000000000000100000014000000000000000D000000F10000004B00000017000D11030400000000000000005F5F7075726563616C6C0016000D1111100000000000000000476C6F62616C5661720018000C1110100000000000000000436F6E7374616E745661720000F10000002D000000180008110710000048656C6C6F506F696E745479706564656600110008110910000048656C6C6F506F696E7400000000F4000000080000000100000000000000F30000003800000000643A5C7372635C6C6C766D2D6D6F6E6F5C6C6C645C746573745C636F66665C696E707574735C7064622D676C6F62616C732E6370700000
+    SectionData:     04000000F10000008400000082003C110100000007000B00000000000000F82A000000000000636C616E672076657273696F6E2031312E302E30202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A6563742E6769742066356231333031636538353735663664383265383730333161316135343835633333363337613933290000F50000006400000000000000000000000A0000000000000000000000000000001E000000030000000400000001000000090000000000000000000000000000004B00000002000400000000000300000007000000000000000000000000000000890000000000040000000000F100000058000000320047110000000000000000000000000A00000000000000000000000210000000000000000000476C6F62616C46756E630000001E0012100400000000000000000000000000000000000000000000800200000002004F11F20000002000000000000000000000000A000000000000000100000014000000000000000D000000F5000000640000000000000000000000990000000000000008000000000000001E000000060000000400000001000000980000000000000008000000000000004B00000005000400000000000300000096000000000000000800000000000000890000000300040000000000F1000000C80000002A00471100000000000000000000000099000000000000000000000006100000000000000000006D61696E001E001210280000000000000000000000000000000000000000000080020000000E003E117400000001006172676300000E0042110800000029000000000080000E003E110310000001006172677600000E0042110C00000029000000000080000A003E1109100000000050000E004211F0FFFFFF29000000000080000A003E117400000000004E000E004211ECFFFFFF290000000000800002004F11F200000060000000000000000000000099000000000000000900000054000000000000002300000019000000240000002300000025000000360000002600000050000000270000005F000000280000006800000029000000850000002A000000910000002B000000F50000006400000000000000000000000A0000000000000000000000000000001E000000030000000400000001000000090000000000000000000000000000004B00000002000400000000000300000007000000000000000000000000000000890000000000040000000000F100000058000000320046110000000000000000000000000A000000000000000000000010100000000000000000004C6F63616C46756E63000000001E0012100400000000000000000000000000000000000000000000800200000002004F11F20000002000000000000000000000000A000000000000000100000014000000000000000A000000F1000000980000001A000D11030400000000000000005F5F7075726563616C6C0000000016000D1112100000000000000000476C6F62616C566172001600131174000000000000000000476C6F62616C544C530016000711111000001200436F6E73746578707256617200001A000C1111100000000000000000436F6E7374616E745661720000001600121174000000000000000000537461746963544C5300F1000000300000001A0008110910000048656C6C6F506F696E7454797065646566000000120008110910000048656C6C6F506F696E740000F4000000180000000100000010017753D4B71F317402F33D3EEEBECB620E0000F3000000C800000000463A5C6C6C766D2D70726F6A6563745C5F5F746573745C612E63707000245430202E7261536561726368203D202465697020245430205E203D2024657370202454302034202B203D2000245430202E7261536561726368203D202465697020245430205E203D2024657370202454302034202B203D2024656270202454302034202D205E203D200024543020246562702034202B203D202465697020245430205E203D2024657370202454302034202B203D2024656270202454302034202D205E203D20000000F10000000800000006004C1115100000
     Subsections:
       - !Symbols
         Records:
@@ -94,15 +119,43 @@ sections:
             Compile3Sym:
               Flags:           [  ]
               Machine:         Pentium3
-              FrontendMajor:   6
+              FrontendMajor:   11
               FrontendMinor:   0
               FrontendBuild:   0
               FrontendQFE:     0
-              BackendMajor:    6000
+              BackendMajor:    11000
               BackendMinor:    0
               BackendBuild:    0
               BackendQFE:      0
-              Version:         'clang version 6.0.0 '
+              Version:         'clang version 11.0.0 (https://github.com/llvm/llvm-project.git f5b1301ce8575f6d82e87031a1a5485c33637a93)'
+      - !FrameData
+        Frames:
+          - CodeSize:        10
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      3
+            RvaStart:        0
+            SavedRegsSize:   0
+          - CodeSize:        9
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      2
+            RvaStart:        1
+            SavedRegsSize:   4
+          - CodeSize:        7
+            FrameFunc:       '$T0 $ebp 4 + = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      0
+            RvaStart:        3
+            SavedRegsSize:   4
+      - !Symbols
+        Records:
           - Kind:            S_GPROC32_ID
             ProcSym:
               CodeSize:        10
@@ -111,63 +164,266 @@ sections:
               FunctionType:    4098
               Flags:           [  ]
               DisplayName:     GlobalFunc
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 4
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
           - Kind:            S_PROC_ID_END
-            ScopeEndSym:
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        10
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        'F:\llvm-project\__test\a.cpp'
+            Lines:
+              - Offset:          0
+                LineStart:       13
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+      - !FrameData
+        Frames:
+          - CodeSize:        153
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      8
+            PrologSize:      6
+            RvaStart:        0
+            SavedRegsSize:   0
+          - CodeSize:        152
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      8
+            PrologSize:      5
+            RvaStart:        1
+            SavedRegsSize:   4
+          - CodeSize:        150
+            FrameFunc:       '$T0 $ebp 4 + = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      8
+            PrologSize:      3
+            RvaStart:        3
+            SavedRegsSize:   4
+      - !Symbols
+        Records:
           - Kind:            S_GPROC32_ID
             ProcSym:
-              CodeSize:        98
+              CodeSize:        153
               DbgStart:        0
               DbgEnd:          0
               FunctionType:    4102
               Flags:           [  ]
               DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
           - Kind:            S_LOCAL
             LocalSym:
               Type:            116
               Flags:           [ IsParameter ]
               VarName:         argc
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          8
+              Range:
+                OffsetStart:     41
+                ISectStart:      0
+                Range:           128
+              Gaps:            []
           - Kind:            S_LOCAL
             LocalSym:
               Type:            4099
               Flags:           [ IsParameter ]
               VarName:         argv
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          12
+              Range:
+                OffsetStart:     41
+                ISectStart:      0
+                Range:           128
+              Gaps:            []
           - Kind:            S_LOCAL
             LocalSym:
-              Type:            4103
+              Type:            4105
               Flags:           [  ]
               VarName:         P
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          -16
+              Range:
+                OffsetStart:     41
+                ISectStart:      0
+                Range:           128
+              Gaps:            []
           - Kind:            S_LOCAL
             LocalSym:
               Type:            116
               Flags:           [  ]
               VarName:         N
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          -20
+              Range:
+                OffsetStart:     41
+                ISectStart:      0
+                Range:           128
+              Gaps:            []
           - Kind:            S_PROC_ID_END
-            ScopeEndSym:
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        153
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        'F:\llvm-project\__test\a.cpp'
+            Lines:
+              - Offset:          0
+                LineStart:       35
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          25
+                LineStart:       36
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          35
+                LineStart:       37
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          54
+                LineStart:       38
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          80
+                LineStart:       39
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          95
+                LineStart:       40
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          104
+                LineStart:       41
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          133
+                LineStart:       42
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          145
+                LineStart:       43
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+      - !FrameData
+        Frames:
+          - CodeSize:        10
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      3
+            RvaStart:        0
+            SavedRegsSize:   0
+          - CodeSize:        9
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      2
+            RvaStart:        1
+            SavedRegsSize:   4
+          - CodeSize:        7
+            FrameFunc:       '$T0 $ebp 4 + = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      0
+            RvaStart:        3
+            SavedRegsSize:   4
+      - !Symbols
+        Records:
           - Kind:            S_LPROC32_ID
             ProcSym:
               CodeSize:        10
               DbgStart:        0
               DbgEnd:          0
-              FunctionType:    4111
+              FunctionType:    4112
               Flags:           [  ]
               DisplayName:     LocalFunc
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 4
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
           - Kind:            S_PROC_ID_END
-            ScopeEndSym:
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        10
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        'F:\llvm-project\__test\a.cpp'
+            Lines:
+              - Offset:          0
+                LineStart:       10
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+      - !Symbols
+        Records:
           - Kind:            S_GDATA32
             DataSym:
               Type:            1027
               DisplayName:     __purecall
           - Kind:            S_GDATA32
             DataSym:
-              Type:            4113
+              Type:            4114
               DisplayName:     GlobalVar
+          - Kind:            S_GTHREAD32
+            ThreadLocalDataSym:
+              Type:            116
+              DisplayName:     GlobalTLS
+          - Kind:            S_CONSTANT
+            ConstantSym:
+              Type:            4113
+              Value:           18
+              Name:            ConstexprVar
           - Kind:            S_LDATA32
             DataSym:
-              Type:            4112
+              Type:            4113
               DisplayName:     ConstantVar
+          - Kind:            S_LTHREAD32
+            ThreadLocalDataSym:
+              Type:            116
+              DisplayName:     StaticTLS
+      - !Symbols
+        Records:
           - Kind:            S_UDT
             UDTSym:
-              Type:            4103
+              Type:            4105
               UDTName:         HelloPointTypedef
           - Kind:            S_UDT
             UDTSym:
@@ -175,95 +431,126 @@ sections:
               UDTName:         HelloPoint
       - !FileChecksums
         Checksums:
-          - FileName:        'd:\src\llvm-mono\lld\test\coff\inputs\pdb-globals.cpp'
-            Kind:            None
-            Checksum:        ''
+          - FileName:        'F:\llvm-project\__test\a.cpp'
+            Kind:            MD5
+            Checksum:        7753D4B71F317402F33D3EEEBECB620E
       - !StringTable
         Strings:
-          - 'd:\src\llvm-mono\lld\test\coff\inputs\pdb-globals.cpp'
+          - 'F:\llvm-project\__test\a.cpp'
+          - '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = '
+          - '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+          - '$T0 $ebp 4 + = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
           - ''
+          - ''
+      - !Symbols
+        Records:
+          - Kind:            S_BUILDINFO
+            BuildInfoSym:
+              BuildId:         4117
     Relocations:
-      - VirtualAddress:  100
+      - VirtualAddress:  152
+        SymbolName:      '?GlobalFunc@@YAHXZ'
+        Type:            IMAGE_REL_I386_DIR32NB
+      - VirtualAddress:  292
         SymbolName:      '?GlobalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  104
+      - VirtualAddress:  296
         SymbolName:      '?GlobalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  132
+      - VirtualAddress:  356
         SymbolName:      '?GlobalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  136
+      - VirtualAddress:  360
         SymbolName:      '?GlobalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  204
+      - VirtualAddress:  396
+        SymbolName:      _main
+        Type:            IMAGE_REL_I386_DIR32NB
+      - VirtualAddress:  536
         SymbolName:      _main
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  208
+      - VirtualAddress:  540
         SymbolName:      _main
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  243
-        SymbolName:      .text
+      - VirtualAddress:  604
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  247
-        SymbolName:      .text
+      - VirtualAddress:  608
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  278
-        SymbolName:      .text
+      - VirtualAddress:  636
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  282
-        SymbolName:      .text
+      - VirtualAddress:  640
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  310
-        SymbolName:      .text
+      - VirtualAddress:  664
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  314
-        SymbolName:      .text
+      - VirtualAddress:  668
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  342
-        SymbolName:      .text
+      - VirtualAddress:  692
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  346
-        SymbolName:      .text
+      - VirtualAddress:  696
+        SymbolTableIndex: 0
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  364
+      - VirtualAddress:  712
         SymbolName:      _main
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  368
+      - VirtualAddress:  716
         SymbolName:      _main
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  484
+      - VirtualAddress:  816
+        SymbolName:      '?LocalFunc@@YAHXZ'
+        Type:            IMAGE_REL_I386_DIR32NB
+      - VirtualAddress:  956
         SymbolName:      '?LocalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  488
+      - VirtualAddress:  960
         SymbolName:      '?LocalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  516
+      - VirtualAddress:  1020
         SymbolName:      '?LocalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  520
+      - VirtualAddress:  1024
         SymbolName:      '?LocalFunc@@YAHXZ'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  564
+      - VirtualAddress:  1068
         SymbolName:      '?__purecall@@3PAXA'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  568
+      - VirtualAddress:  1072
         SymbolName:      '?__purecall@@3PAXA'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  589
+      - VirtualAddress:  1096
         SymbolName:      '?GlobalVar@@3PBHB'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  593
+      - VirtualAddress:  1100
         SymbolName:      '?GlobalVar@@3PBHB'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  613
+      - VirtualAddress:  1120
+        SymbolName:      '?GlobalTLS@@3HA'
+        Type:            IMAGE_REL_I386_SECREL
+      - VirtualAddress:  1124
+        SymbolName:      '?GlobalTLS@@3HA'
+        Type:            IMAGE_REL_I386_SECTION
+      - VirtualAddress:  1168
         SymbolName:      _ConstantVar
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  617
+      - VirtualAddress:  1172
         SymbolName:      _ConstantVar
+        Type:            IMAGE_REL_I386_SECTION
+      - VirtualAddress:  1196
+        SymbolName:      _StaticTLS
+        Type:            IMAGE_REL_I386_SECREL
+      - VirtualAddress:  1200
+        SymbolName:      _StaticTLS
         Type:            IMAGE_REL_I386_SECTION
   - Name:            '.debug$T'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
+    SectionData:     0400000006000112000000000E000810740000000000000000100000160001160000000001100000476C6F62616C46756E6300F10A000210700400000A8000000E0001120200000074000000031000000E0008107400000000000200041000001200011600000000051000006D61696E00F3F2F13200051500008002000000000000000000000000000048656C6C6F506F696E74002E3F415548656C6C6F506F696E74404000F2F1260003120D15030074000000000058000D15030074000000040059000D1503007400000008005A0032000515030002020810000000000000000000000C0048656C6C6F506F696E74002E3F415548656C6C6F506F696E74404000F2F12600051600000000463A5C6C6C766D2D70726F6A6563745C5F5F746573745C612E63707000F3F2F10E000616091000000A100000030000000A000210071000000A8400001A00091003000000071000000C1000000B020000001000000000000016000216071000000D10000048656C6C6F506F696E7400F10A000210071000000A8000001600011600000000011000004C6F63616C46756E6300F2F10A000110740000000100F2F10A000210111000000A8000001E00051600000000463A5C6C6C766D2D70726F6A6563745C5F5F7465737400F10E00051600000000612E63707000F2F11A00031605001310000000000000141000000000000000000000F2F1
     Types:
       - Kind:            LF_ARGLIST
         ArgList:
@@ -332,7 +619,7 @@ sections:
       - Kind:            LF_STRUCTURE
         Class:
           MemberCount:     3
-          Options:         [ None, HasUniqueName ]
+          Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
           FieldList:       4104
           Name:            HelloPoint
           UniqueName:      '.?AUHelloPoint@@'
@@ -342,23 +629,23 @@ sections:
       - Kind:            LF_STRING_ID
         StringId:
           Id:              0
-          String:          'd:\src\llvm-mono\lld\test\coff\inputs\pdb-globals.cpp'
+          String:          'F:\llvm-project\__test\a.cpp'
       - Kind:            LF_UDT_SRC_LINE
         UdtSourceLine:
           UDT:             4105
           SourceFile:      4106
-          LineNumber:      6
+          LineNumber:      3
       - Kind:            LF_POINTER
         Pointer:
           ReferentType:    4103
-          Attrs:           32778
+          Attrs:           33802
       - Kind:            LF_MFUNCTION
         MemberFunction:
           ReturnType:      3
           ClassType:       4103
           ThisType:        4108
           CallConv:        ThisCall
-          Options:         [ None ]
+          Options:         [ None, Constructor ]
           ParameterCount:  0
           ArgumentList:    4096
           ThisPointerAdjustment: 0
@@ -367,6 +654,10 @@ sections:
           ClassType:       4103
           FunctionType:    4109
           Name:            HelloPoint
+      - Kind:            LF_POINTER
+        Pointer:
+          ReferentType:    4103
+          Attrs:           32778
       - Kind:            LF_FUNC_ID
         FuncId:
           ParentScope:     0
@@ -378,47 +669,121 @@ sections:
           Modifiers:       [ None, Const ]
       - Kind:            LF_POINTER
         Pointer:
-          ReferentType:    4112
+          ReferentType:    4113
           Attrs:           32778
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          'F:\llvm-project\__test'
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          a.cpp
+      - Kind:            LF_BUILDINFO
+        BuildInfo:
+          ArgIndices:      [ 4115, 0, 4116, 0, 0 ]
+  - Name:            .llvm_addrsig
+    Characteristics: [ IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     181A211B
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     04000000F1000000650000003C0047110000000000000000000000002500000000000000000000000E1000000000000000000048656C6C6F506F696E743A3A48656C6C6F506F696E74000D003E110C100000010074686973001200451116000000FCFFFFFF0A00000000001B0002004F11000000F20000004000000000000000000000002500000000000000050000003400000000000000060000000A00000007000000100000000800000017000000090000001E00000006000000
+    SectionData:     04000000F5000000640000000000000000000000230000000000000000000000000000001E000000040000000400000001000000220000000000000000000000000000004B00000003000400000000000300000020000000000000000000000000000000890000000100040000000000F1000000840000003E0047110000000000000000000000002300000000000000000000000E1000000000000000000048656C6C6F506F696E743A3A48656C6C6F506F696E740000001E001210080000000000000000000000000000000000000000000080020000000E003E110F10000001007468697300000E004211FCFFFFFF0A0000000000190002004F11F2000000200000000000000000000000230000000000000001000000140000000000000003000000
     Subsections:
+      - !FrameData
+        Frames:
+          - CodeSize:        35
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      4
+            RvaStart:        0
+            SavedRegsSize:   0
+          - CodeSize:        34
+            FrameFunc:       '$T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      3
+            RvaStart:        1
+            SavedRegsSize:   4
+          - CodeSize:        32
+            FrameFunc:       '$T0 $ebp 4 + = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = '
+            LocalSize:       0
+            MaxStackSize:    0
+            ParamsSize:      0
+            PrologSize:      1
+            RvaStart:        3
+            SavedRegsSize:   4
       - !Symbols
         Records:
           - Kind:            S_GPROC32_ID
             ProcSym:
-              CodeSize:        37
+              CodeSize:        35
               DbgStart:        0
               DbgEnd:          0
               FunctionType:    4110
               Flags:           [  ]
               DisplayName:     'HelloPoint::HelloPoint'
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 8
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
           - Kind:            S_LOCAL
             LocalSym:
-              Type:            4108
+              Type:            4111
               Flags:           [ IsParameter ]
               VarName:         this
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          -4
+              Range:
+                OffsetStart:     10
+                ISectStart:      0
+                Range:           25
+              Gaps:            []
           - Kind:            S_PROC_ID_END
-            ScopeEndSym:
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        35
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        'F:\llvm-project\__test\a.cpp'
+            Lines:
+              - Offset:          0
+                LineStart:       3
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
     Relocations:
-      - VirtualAddress:  44
+      - VirtualAddress:  12
+        SymbolName:      '??0HelloPoint@@QAE@XZ'
+        Type:            IMAGE_REL_I386_DIR32NB
+      - VirtualAddress:  152
         SymbolName:      '??0HelloPoint@@QAE@XZ'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  48
+      - VirtualAddress:  156
         SymbolName:      '??0HelloPoint@@QAE@XZ'
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  101
-        SymbolName:      .text
+      - VirtualAddress:  240
+        SymbolTableIndex: 6
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  105
-        SymbolName:      .text
+      - VirtualAddress:  244
+        SymbolTableIndex: 6
         Type:            IMAGE_REL_I386_SECTION
-      - VirtualAddress:  124
+      - VirtualAddress:  260
         SymbolName:      '??0HelloPoint@@QAE@XZ'
         Type:            IMAGE_REL_I386_SECREL
-      - VirtualAddress:  128
+      - VirtualAddress:  264
         SymbolName:      '??0HelloPoint@@QAE@XZ'
         Type:            IMAGE_REL_I386_SECTION
 symbols:
@@ -429,10 +794,10 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          138
-      NumberOfRelocations: 4
+      Length:          186
+      NumberOfRelocations: 8
       NumberOfLinenumbers: 0
-      CheckSum:        3215092891
+      CheckSum:        1040942742
       Number:          1
   - Name:            .data
     Value:           0
@@ -465,10 +830,10 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          37
+      Length:          35
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        77530982
+      CheckSum:        163193057
       Number:          4
       Selection:       IMAGE_COMDAT_SELECT_ANY
   - Name:            '??0HelloPoint@@QAE@XZ'
@@ -489,9 +854,21 @@ symbols:
       NumberOfLinenumbers: 0
       CheckSum:        3903140090
       Number:          5
-  - Name:            .drectve
+  - Name:            '.tls$'
     Value:           0
     SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2677214779
+      Number:          6
+  - Name:            .drectve
+    Value:           0
+    SectionNumber:   7
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
@@ -500,44 +877,56 @@ symbols:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        149686238
-      Number:          6
-  - Name:            '.debug$S'
-    Value:           0
-    SectionNumber:   7
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          768
-      NumberOfRelocations: 26
-      NumberOfLinenumbers: 0
-      CheckSum:        2940884584
       Number:          7
   - Name:            '.debug$S'
-    Value:           0
-    SectionNumber:   9
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          188
-      NumberOfRelocations: 6
-      NumberOfLinenumbers: 0
-      CheckSum:        1246640575
-      Number:          4
-      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
-  - Name:            '.debug$T'
     Value:           0
     SectionNumber:   8
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          452
+      Length:          1524
+      NumberOfRelocations: 33
+      NumberOfLinenumbers: 0
+      CheckSum:        2820308868
+      Number:          8
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   11
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          292
+      NumberOfRelocations: 7
+      NumberOfLinenumbers: 0
+      CheckSum:        1908290216
+      Number:          4
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            '.debug$T'
+    Value:           0
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          516
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        2561906059
-      Number:          8
+      CheckSum:        2634718357
+      Number:          9
+  - Name:            .llvm_addrsig
+    Value:           0
+    SectionNumber:   10
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2196145625
+      Number:          10
   - Name:            '@feat.00'
     Value:           1
     SectionNumber:   -1
@@ -557,7 +946,7 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            '?LocalFunc@@YAHXZ'
-    Value:           128
+    Value:           176
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
@@ -568,6 +957,30 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __tls_index
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __tls_array
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?GlobalTLS@@3HA'
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            _StaticTLS
+    Value:           4
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
   - Name:            '?__purecall@@3PAXA'
     Value:           0
     SectionNumber:   3
@@ -580,4 +993,11 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .file
+    Value:           0
+    SectionNumber:   -2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_FILE
+    File:            a.cpp
 ...

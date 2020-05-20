@@ -7,6 +7,9 @@
 // CHECK: dense<[1.000000e+01, 5.000000e+00]> : tensor<2xf64>
 "foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<2xf64>} : () -> ()
 
+// CHECK: dense<(1.000000e+01,5.000000e+00)> : tensor<2xcomplex<f64>>
+"foo.op"() {dense.attr = dense<"0x0000000000002440000000000000144000000000000024400000000000001440"> : tensor<2xcomplex<f64>>} : () -> ()
+
 // CHECK: dense<[1.000000e+01, 5.000000e+00]> : tensor<2xbf16>
 "foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<2xbf16>} : () -> ()
 
@@ -19,11 +22,6 @@
 
 // expected-error@+1 {{elements hex string only contains hex digits}}
 "foo.op"() {dense.attr = dense<"0x0000000000002440000000000000144X"> : tensor<2xf64>} : () -> ()
-
-// -----
-
-// expected-error@+1 {{expected floating-point or integer element type, got '!unknown<"">'}}
-"foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<2x!unknown<"">>} : () -> ()
 
 // -----
 

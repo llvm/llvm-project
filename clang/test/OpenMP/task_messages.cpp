@@ -48,7 +48,6 @@ int foo() {
   S1 s1;
 // expected-error@+1 2 {{call to deleted constructor of 'S1'}}
 #pragma omp task
-// expected-note@+1 2 {{predetermined as a firstprivate in a task construct here}}
   ++s1;
 #pragma omp task default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp task default(shared)

@@ -11,7 +11,7 @@
 ; CHECK-NEXT:                DW_AT_low_pc
 ; CHECK-NEXT:                DW_AT_high_pc
 ;; Check that we fall back to the default frame base (the global)
-; CHECK-NEXT:                DW_AT_frame_base	(DW_OP_WASM_location 0x1 +0, DW_OP_stack_value)
+; CHECK-NEXT:                DW_AT_frame_base	(DW_OP_WASM_location_int 0x3 0x0, DW_OP_stack_value)
 
 ; TODO: Find a more-reduced test case for The fix in WebAssemblyRegColoring
 

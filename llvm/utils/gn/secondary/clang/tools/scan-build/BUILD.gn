@@ -19,13 +19,13 @@ copy("bin") {
 
 copy("libexec") {
   sources = [
-    "libexec/ccc-analyzer",
     "libexec/c++-analyzer",
+    "libexec/ccc-analyzer",
   ]
   if (host_os == "win") {
     sources += [
-      "libexec/ccc-analyzer.bat",
       "libexec/c++-analyzer.bat",
+      "libexec/ccc-analyzer.bat",
     ]
   }
   outputs = [ "$root_build_dir/libexec/{{source_file_part}}" ]
@@ -38,8 +38,8 @@ copy("man") {
 
 copy("share") {
   sources = [
-    "share/scan-build/sorttable.js",
     "share/scan-build/scanview.css",
+    "share/scan-build/sorttable.js",
   ]
   outputs = [ "$root_build_dir/share/scan-build/{{source_file_part}}" ]
 }

@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_VE_INSTPRINTER_VEINSTPRINTER_H
 #define LLVM_LIB_TARGET_VE_INSTPRINTER_VEINSTPRINTER_H
 
+#include "VEMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
@@ -32,7 +33,8 @@ public:
                        const MCSubtargetInfo &, raw_ostream &);
   void printInstruction(const MCInst *, uint64_t, const MCSubtargetInfo &,
                         raw_ostream &);
-  static const char *getRegisterName(unsigned RegNo);
+  static const char *getRegisterName(unsigned RegNo,
+                                     unsigned AltIdx = VE::NoRegAltName);
 
   void printOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &OS);
@@ -48,6 +50,8 @@ public:
   void printMImmOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                         raw_ostream &OS);
   void printCCOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                      raw_ostream &OS);
+  void printRDOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                       raw_ostream &OS);
 };
 } // namespace llvm

@@ -70,3 +70,12 @@ entry:
   ret <16 x float> %0
 }
 
+define <16 x float> @testZMM0() {
+entry:
+; CHECK: vpternlogd $255, %zmm0, %zmm0, %zmm0
+  %zmm0 = alloca <16 x float>, align 64
+  %0 = call <16 x float> asm "vpternlogd $$255, $0, $0, $0", "=^Yz,~{dirflag},~{fpsr},~{flags}"()
+  store <16 x float> %0, <16 x float>* %zmm0, align 64
+  %1 = load <16 x float>, <16 x float>* %zmm0, align 64
+  ret <16 x float> %1
+}

@@ -1,5 +1,5 @@
-# RUN: llc -mtriple arm-- -run-pass=regbankselect %s -o - | FileCheck %s
-# RUN: llc -mtriple thumbv7-- -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -debugify-and-strip-all-safe=0 -mtriple arm-- -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -debugify-and-strip-all-safe=0 -mtriple thumbv7-- -run-pass=regbankselect %s -o - | FileCheck %s
 --- |
   define void @test_add_s32() { ret void }
   define void @test_sub_s32() { ret void }

@@ -38,8 +38,6 @@ class DWARFCache;
 std::string toString(const elf::InputFile *f);
 
 namespace elf {
-class InputFile;
-class InputSectionBase;
 
 using llvm::object::Archive;
 
@@ -326,6 +324,9 @@ public:
   // more than once.)
   void fetch(const Archive::Symbol &sym);
 
+  size_t getMemberCount() const;
+  size_t getFetchedMemberCount() const { return seen.size(); }
+
 private:
   std::unique_ptr<Archive> file;
   llvm::DenseSet<uint64_t> seen;
@@ -387,6 +388,7 @@ inline bool isBitcode(MemoryBufferRef mb) {
 
 std::string replaceThinLTOSuffix(StringRef path);
 
+extern std::vector<ArchiveFile *> archiveFiles;
 extern std::vector<BinaryFile *> binaryFiles;
 extern std::vector<BitcodeFile *> bitcodeFiles;
 extern std::vector<LazyObjFile *> lazyObjFiles;

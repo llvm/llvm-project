@@ -77,6 +77,60 @@ struct SampleProfTest : ::testing::Test {
     OS->close();
   }
 
+  // Verify profile summary is consistent in the roundtrip to and from
+  // Metadata. \p AddPartialField is to choose whether the Metadata
+  // contains the IsPartialProfile field which is optional.
+  void verifyProfileSummary(ProfileSummary &Summary, Module &M,
+                            const bool AddPartialField) {
+    LLVMContext &Context = M.getContext();
+    const bool IsPartialProfile = Summary.isPartialProfile();
+    auto VerifySummary = [IsPartialProfile](ProfileSummary &Summary) mutable {
+      ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
+      ASSERT_EQ(137392u, Summary.getTotalCount());
+      ASSERT_EQ(8u, Summary.getNumCounts());
+      ASSERT_EQ(4u, Summary.getNumFunctions());
+      ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
+      ASSERT_EQ(60351u, Summary.getMaxCount());
+      ASSERT_EQ(IsPartialProfile, Summary.isPartialProfile());
+
+      uint32_t Cutoff = 800000;
+      auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
+        return PE.Cutoff == Cutoff;
+      };
+      std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
+      auto EightyPerc = find_if(Details, Predicate);
+      Cutoff = 900000;
+      auto NinetyPerc = find_if(Details, Predicate);
+      Cutoff = 950000;
+      auto NinetyFivePerc = find_if(Details, Predicate);
+      Cutoff = 990000;
+      auto NinetyNinePerc = find_if(Details, Predicate);
+      ASSERT_EQ(60000u, EightyPerc->MinCount);
+      ASSERT_EQ(12557u, NinetyPerc->MinCount);
+      ASSERT_EQ(12557u, NinetyFivePerc->MinCount);
+      ASSERT_EQ(610u, NinetyNinePerc->MinCount);
+    };
+    VerifySummary(Summary);
+
+    // Test that conversion of summary to and from Metadata works.
+    Metadata *MD = Summary.getMD(Context, AddPartialField);
+    ASSERT_TRUE(MD);
+    ProfileSummary *PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    VerifySummary(*PS);
+    delete PS;
+
+    // Test that summary can be attached to and read back from module.
+    M.eraseNamedMetadata(M.getOrInsertModuleFlagsMetadata());
+    M.setProfileSummary(MD, ProfileSummary::PSK_Sample);
+    MD = M.getProfileSummary(/* IsCS */ false);
+    ASSERT_TRUE(MD);
+    PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    VerifySummary(*PS);
+    delete PS;
+  }
+
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
     SmallVector<char, 128> ProfilePath;
     ASSERT_TRUE(NoError(llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath)));
@@ -214,51 +268,16 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);
     ASSERT_EQ(437u, CTMap.get()[StringviewRep]);
 
-    auto VerifySummary = [](ProfileSummary &Summary) mutable {
-      ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
-      ASSERT_EQ(137392u, Summary.getTotalCount());
-      ASSERT_EQ(8u, Summary.getNumCounts());
-      ASSERT_EQ(4u, Summary.getNumFunctions());
-      ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
-      ASSERT_EQ(60351u, Summary.getMaxCount());
-
-      uint32_t Cutoff = 800000;
-      auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
-        return PE.Cutoff == Cutoff;
-      };
-      std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
-      auto EightyPerc = find_if(Details, Predicate);
-      Cutoff = 900000;
-      auto NinetyPerc = find_if(Details, Predicate);
-      Cutoff = 950000;
-      auto NinetyFivePerc = find_if(Details, Predicate);
-      Cutoff = 990000;
-      auto NinetyNinePerc = find_if(Details, Predicate);
-      ASSERT_EQ(60000u, EightyPerc->MinCount);
-      ASSERT_EQ(12557u, NinetyPerc->MinCount);
-      ASSERT_EQ(12557u, NinetyFivePerc->MinCount);
-      ASSERT_EQ(610u, NinetyNinePerc->MinCount);
-    };
 
     ProfileSummary &Summary = Reader->getSummary();
-    VerifySummary(Summary);
+    Summary.setPartialProfile(true);
+    verifyProfileSummary(Summary, M, true);
 
-    // Test that conversion of summary to and from Metadata works.
-    Metadata *MD = Summary.getMD(Context);
-    ASSERT_TRUE(MD);
-    ProfileSummary *PS = ProfileSummary::getFromMD(MD);
-    ASSERT_TRUE(PS);
-    VerifySummary(*PS);
-    delete PS;
+    Summary.setPartialProfile(false);
+    verifyProfileSummary(Summary, M, true);
 
-    // Test that summary can be attached to and read back from module.
-    M.setProfileSummary(MD, ProfileSummary::PSK_Sample);
-    MD = M.getProfileSummary(/* IsCS */ false);
-    ASSERT_TRUE(MD);
-    PS = ProfileSummary::getFromMD(MD);
-    ASSERT_TRUE(PS);
-    VerifySummary(*PS);
-    delete PS;
+    Summary.setPartialProfile(false);
+    verifyProfileSummary(Summary, M, false);
   }
 
   void addFunctionSamples(StringMap<FunctionSamples> *Smap, const char *Fname,

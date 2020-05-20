@@ -72,12 +72,14 @@ add_mlir_dialect_library(FooOps
 	DEPENDS
 	MLIRFooOpsIncGen
 	MLIRFooTransformsIncGen
-	)
-target_link_libraries(FooOps
-	PUBLIC
+
+	LINK_COMPONENTS
+	Core
+
+	LINK_LIBS PUBLIC
 	BarOps
 	<some-other-library>
-	)
+   )
 
 ```
 
@@ -99,8 +101,15 @@ corresponding IncGen targets.  The PUBLIC link dependency is
 sufficient.  Also note that we avoid using add_dependencies
 explicitly, since the dependencies need to be available to the
 underlying add_llvm_library() call, allowing it to correctly create
-new targets with the same sources.
+new targets with the same sources.  However, dialects that depend on
+LLVM IR may need to depend on the LLVM 'intrinsics_gen' target to
+ensure that tablegen'd LLVM header files have been generated.
 
+In addition, linkage to MLIR libraries is specified using the
+LINK_LIBS descriptor and linkage to LLVM libraries is specified using
+the LINK_COMPONENTS descriptor.  This allows cmake infrastructure to
+generate new library targets with correct linkage, in particular, when
+BUILD_SHARED_LIBS=on or LLVM_LINK_LLVM_DYLIB=on are specified.
 
 
 # Dialect Conversions
@@ -134,11 +143,10 @@ using target_link_libraries() and the PUBLIC keyword.  For instance:
 add_mlir_conversion_library(MLIRBarToFoo
 	BarToFoo.cpp
 
-   ADDITIONAL_HEADER_DIRS
-   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/BarToFoo
-	)
-target_link_libraries(MLIRBarToFoo
-	PUBLIC
+        ADDITIONAL_HEADER_DIRS
+        ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/BarToFoo
+
+   LINK_LIBS PUBLIC
 	BarOps
 	FooOps
 	)
@@ -157,3 +165,10 @@ MLIR_CONVERSION_LIBS global property:
 get_property(dialect_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 
 ```
+
+Note that it is only necessary to specify a PUBLIC dependence against
+dialects to generate compile-time and link-time dependencies, and it
+is not necessary to explicitly depend on the dialects' IncGen targets.
+However, conversions that directly include LLVM IR header files may
+need to depend on the LLVM 'intrinsics_gen' target to ensure that
+tablegen'd LLVM header files have been generated.

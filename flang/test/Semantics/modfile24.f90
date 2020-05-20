@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %f18 %t
+! RUN: %S/test_modfile.sh %s %t %f18
 ! Test declarations with coarray-spec
 
 ! Different ways of declaring the same coarray.
@@ -36,8 +36,8 @@ end
 ! coarray-spec in components and with non-constants bounds
 module m3
   type t
-    real :: c[1:10,1:*]
-    complex, codimension[5,*] :: d
+    real, allocatable :: c[:,:]
+    complex, allocatable, codimension[:,:] :: d
   end type
   real, allocatable :: e[:,:,:]
 contains
@@ -50,8 +50,8 @@ end
 !Expect: m3.mod
 !module m3
 ! type::t
-!  real(4)::c[1_8:10_8,1_8:*]
-!  complex(4)::d[1_8:5_8,1_8:*]
+!  real(4),allocatable::c[:,:]
+!  complex(4),allocatable::d[:,:]
 ! end type
 ! real(4),allocatable::e[:,:,:]
 !contains

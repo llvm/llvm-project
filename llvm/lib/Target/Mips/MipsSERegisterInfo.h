@@ -17,7 +17,6 @@
 #include "MipsRegisterInfo.h"
 
 namespace llvm {
-class MipsSEInstrInfo;
 
 class MipsSERegisterInfo : public MipsRegisterInfo {
 public:

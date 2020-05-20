@@ -114,6 +114,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  void emitFunctionHeaderComment() override;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AsmPrinter::getAnalysisUsage(AU);
     AU.setPreservesAll();
@@ -241,6 +243,13 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->SwitchSection(Cur);
 }
 
+void AArch64AsmPrinter::emitFunctionHeaderComment() {
+  const AArch64FunctionInfo *FI = MF->getInfo<AArch64FunctionInfo>();
+  Optional<std::string> OutlinerString = FI->getOutliningStyle();
+  if (OutlinerString != None)
+    OutStreamer->GetCommentOS() << ' ' << OutlinerString;
+}
+
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
 {
   const Function &F = MF->getFunction();
@@ -304,7 +313,7 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
 
   OutStreamer->emitLabel(Target);
-  recordSled(CurSled, MI, Kind);
+  recordSled(CurSled, MI, Kind, 2);
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
