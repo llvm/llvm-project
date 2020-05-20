@@ -140,7 +140,18 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/amd_comgr.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
 
-file(GLOB SOURCES "src/*.cpp")
+set(SOURCES
+  src/comgr-compiler.cpp
+  src/comgr.cpp
+  src/comgr-device-libs.cpp
+  src/comgr-disassembly.cpp
+  src/comgr-elfdump.cpp
+  src/comgr-env.cpp
+  src/comgr-metadata.cpp
+  src/comgr-objdump.cpp
+  src/comgr-signal.cpp
+  src/comgr-symbol.cpp)
+
 if(COMGR_BUILD_SHARED_LIBS)
   add_library(amd_comgr SHARED ${SOURCES})
 else()
