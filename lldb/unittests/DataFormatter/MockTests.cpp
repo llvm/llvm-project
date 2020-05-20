@@ -9,7 +9,6 @@
 #include "lldb/DataFormatters/Mock.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -37,6 +36,5 @@ TEST(DataFormatterMockTest, NSDate) {
   EXPECT_EQ(formatDateValue(std::numeric_limits<time_t>::max()), llvm::None);
   EXPECT_EQ(formatDateValue(std::numeric_limits<time_t>::min()), llvm::None);
 
-  EXPECT_TRUE(
-      llvm::StringRef(*formatDateValue(0)).startswith("2001-01-01 00:00:00"));
+  EXPECT_EQ(*formatDateValue(0), "2001-01-01 00:00:00 UTC");
 }
