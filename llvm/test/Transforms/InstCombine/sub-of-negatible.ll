@@ -947,3 +947,59 @@ define i4 @negate_extractelement_extrause(<2 x i4> %x, i32 %y, i4 %z) {
   %t2 = sub i4 %z, %t1
   ret i4 %t2
 }
+
+; `insertelement` is negatible if both source vector and element-to-be-inserted are negatible.
+define <2 x i4> @negate_insertelement(<2 x i4> %src, i4 %a, i32 %x, <2 x i4> %b) {
+; CHECK-LABEL: @negate_insertelement(
+; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i4> zeroinitializer, [[SRC:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub i4 0, [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x i4> [[T0]], i4 [[T1]], i32 [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = sub <2 x i4> [[B:%.*]], [[T2]]
+; CHECK-NEXT:    ret <2 x i4> [[T3]]
+;
+  %t0 = sub <2 x i4> zeroinitializer, %src
+  %t1 = sub i4 zeroinitializer, %a
+  %t2 = insertelement <2 x i4> %t0, i4 %t1, i32 %x
+  %t3 = sub <2 x i4> %b, %t2
+  ret <2 x i4> %t3
+}
+define <2 x i4> @negate_insertelement_extrause(<2 x i4> %src, i4 %a, i32 %x, <2 x i4> %b) {
+; CHECK-LABEL: @negate_insertelement_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i4> zeroinitializer, [[SRC:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub i4 0, [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x i4> [[T0]], i4 [[T1]], i32 [[X:%.*]]
+; CHECK-NEXT:    call void @use_v2i4(<2 x i4> [[T2]])
+; CHECK-NEXT:    [[T3:%.*]] = sub <2 x i4> [[B:%.*]], [[T2]]
+; CHECK-NEXT:    ret <2 x i4> [[T3]]
+;
+  %t0 = sub <2 x i4> zeroinitializer, %src
+  %t1 = sub i4 zeroinitializer, %a
+  %t2 = insertelement <2 x i4> %t0, i4 %t1, i32 %x
+  call void @use_v2i4(<2 x i4> %t2)
+  %t3 = sub <2 x i4> %b, %t2
+  ret <2 x i4> %t3
+}
+define <2 x i4> @negate_insertelement_nonnegatible_base(<2 x i4> %src, i4 %a, i32 %x, <2 x i4> %b) {
+; CHECK-LABEL: @negate_insertelement_nonnegatible_base(
+; CHECK-NEXT:    [[T1:%.*]] = sub i4 0, [[A:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x i4> [[SRC:%.*]], i4 [[T1]], i32 [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = sub <2 x i4> [[B:%.*]], [[T2]]
+; CHECK-NEXT:    ret <2 x i4> [[T3]]
+;
+  %t1 = sub i4 zeroinitializer, %a
+  %t2 = insertelement <2 x i4> %src, i4 %t1, i32 %x
+  %t3 = sub <2 x i4> %b, %t2
+  ret <2 x i4> %t3
+}
+define <2 x i4> @negate_insertelement_nonnegatible_insert(<2 x i4> %src, i4 %a, i32 %x, <2 x i4> %b) {
+; CHECK-LABEL: @negate_insertelement_nonnegatible_insert(
+; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i4> zeroinitializer, [[SRC:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x i4> [[T0]], i4 [[A:%.*]], i32 [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = sub <2 x i4> [[B:%.*]], [[T2]]
+; CHECK-NEXT:    ret <2 x i4> [[T3]]
+;
+  %t0 = sub <2 x i4> zeroinitializer, %src
+  %t2 = insertelement <2 x i4> %t0, i4 %a, i32 %x
+  %t3 = sub <2 x i4> %b, %t2
+  ret <2 x i4> %t3
+}
