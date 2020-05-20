@@ -91,10 +91,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                              "sub", "x = 1", "y = 2", "z = 3",
                              "swift struct c member"])
         self.expect("expr typedef", substrs=["x = 5", "y = 6"])
-        # FIXME: lookup fails for:
-        #   a.union.unsafeMutableAddressor : __C.DoubleLongUnion
-        self.expect("expr union", error=True)
-        #self.expect("expr union", substrs=["(DoubleLongUnion)", "long_val = 42"])
+        self.expect("expr union", substrs=["(DoubleLongUnion)", "long_val = 42"])
         self.expect("expr fromSubmodule",
                     substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
         process.Clear()
