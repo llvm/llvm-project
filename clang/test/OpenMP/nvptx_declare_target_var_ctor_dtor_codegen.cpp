@@ -91,11 +91,11 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* dereferenceable{{[^,]*}}
+// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
 // DEVICE: [[C:%.+]] = load i32, i32* [[C_ADDR]],
 // DEVICE: store i32 [[C]], i32* %
 
-// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-11]](i32* dereferenceable{{.*}})
+// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-11]](i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // HOST: [[C:%.*]] = load i32, i32* @[[C_ADDR]],
 // HOST: store i32 [[C]], i32* %
 

@@ -53,9 +53,9 @@ public:
   test_class& __regcall operator+=(const test_class&){
     return *this;
   }
-  // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc dereferenceable(4) %class.test_class* @_ZN10test_classpLERKS_
-  // CHECK-WIN64-DAG: define linkonce_odr dso_local x86_regcallcc dereferenceable(4) %class.test_class* @"??Ytest_class@@QEAwAEAV0@AEBV0@@Z"
-  // CHECK-WIN32-DAG: define linkonce_odr dso_local x86_regcallcc dereferenceable(4) %class.test_class* @"??Ytest_class@@QAwAAV0@ABV0@@Z"
+  // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc nonnull align 4 dereferenceable(4) %class.test_class* @_ZN10test_classpLERKS_
+  // CHECK-WIN64-DAG: define linkonce_odr dso_local x86_regcallcc nonnull align 4 dereferenceable(4) %class.test_class* @"??Ytest_class@@QEAwAEAV0@AEBV0@@Z"
+  // CHECK-WIN32-DAG: define linkonce_odr dso_local x86_regcallcc nonnull align 4 dereferenceable(4) %class.test_class* @"??Ytest_class@@QAwAAV0@ABV0@@Z"
   void __regcall do_thing(){}
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_class20__regcall3__do_thingEv
   // CHECK-WIN64-DAG: define linkonce_odr dso_local x86_regcallcc void @"?do_thing@test_class@@QEAwXXZ"

@@ -170,6 +170,6 @@ inline HasVTable &useStaticLocal() {
 void useit() {
   useStaticLocal();
 }
-// CHECK: define linkonce_odr dereferenceable(8) %"struct.test4::HasVTable"* @_ZN5test414useStaticLocalEv()
+// CHECK: define linkonce_odr nonnull align 8 dereferenceable(8) %"struct.test4::HasVTable"* @_ZN5test414useStaticLocalEv()
 // CHECK: ret %"struct.test4::HasVTable"*{{.*}} @_ZZN5test414useStaticLocalEvE3obj
 }

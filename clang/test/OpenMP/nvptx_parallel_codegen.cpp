@@ -341,7 +341,7 @@ int bar(int n){
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
 
-// CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})
+// CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // CHECK:  [[CC:%.+]] = alloca i32,
 // CHECK:  [[MASK:%.+]] = call i32 @__kmpc_warp_active_thread_mask(){{$}}
 // CHECK:  [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
