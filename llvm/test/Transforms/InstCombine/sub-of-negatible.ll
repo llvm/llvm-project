@@ -951,10 +951,8 @@ define i4 @negate_extractelement_extrause(<2 x i4> %x, i32 %y, i4 %z) {
 ; `insertelement` is negatible if both source vector and element-to-be-inserted are negatible.
 define <2 x i4> @negate_insertelement(<2 x i4> %src, i4 %a, i32 %x, <2 x i4> %b) {
 ; CHECK-LABEL: @negate_insertelement(
-; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i4> zeroinitializer, [[SRC:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = sub i4 0, [[A:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x i4> [[T0]], i4 [[T1]], i32 [[X:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = sub <2 x i4> [[B:%.*]], [[T2]]
+; CHECK-NEXT:    [[T2_NEG:%.*]] = insertelement <2 x i4> [[SRC:%.*]], i4 [[A:%.*]], i32 [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = add <2 x i4> [[T2_NEG]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[T3]]
 ;
   %t0 = sub <2 x i4> zeroinitializer, %src
