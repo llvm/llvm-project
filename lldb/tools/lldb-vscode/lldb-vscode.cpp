@@ -174,7 +174,6 @@ void SendThreadExitedEvent(lldb::tid_t tid) {
 void SendTerminatedEvent() {
   if (!g_vsc.sent_terminated_event) {
     g_vsc.sent_terminated_event = true;
-    g_vsc.RunTerminateCommands();
     // Send a "terminated" event
     llvm::json::Object event(CreateEventObject("terminated"));
     g_vsc.SendJSON(llvm::json::Value(std::move(event)));
@@ -530,7 +529,6 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.pre_run_commands = GetStrings(arguments, "preRunCommands");
   g_vsc.stop_commands = GetStrings(arguments, "stopCommands");
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
-  g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   llvm::StringRef core_file = GetString(arguments, "coreFile");
   g_vsc.stop_at_entry =
@@ -774,6 +772,7 @@ void request_disconnect(const llvm::json::Object &request) {
   bool terminateDebuggee = GetBoolean(arguments, "terminateDebuggee", false);
   lldb::SBProcess process = g_vsc.target.GetProcess();
   auto state = process.GetState();
+
   switch (state) {
   case lldb::eStateInvalid:
   case lldb::eStateUnloaded:
@@ -1366,7 +1365,6 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.pre_run_commands = GetStrings(arguments, "preRunCommands");
   g_vsc.stop_commands = GetStrings(arguments, "stopCommands");
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
-  g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto launchCommands = GetStrings(arguments, "launchCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
