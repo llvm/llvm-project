@@ -14,14 +14,14 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 
-#include "llvm/DebugInfo/DIContext.h"
-#include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace llvm {
 struct DILineInfo;
 class DIInliningInfo;
 struct DIGlobal;
 struct DILocal;
+class raw_ostream;
 
 namespace symbolize {
 
