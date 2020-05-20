@@ -1062,8 +1062,6 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
     if (action == nullptr) {
       LLDB_LOG(log, "no action specified for pid {0} tid {1}", GetID(),
                thread->GetID());
-      // Make sure we reset the stop reason for all the threads.
-      static_cast<NativeThreadLinux &>(*thread).ResetStopReason();
       continue;
     }
 
