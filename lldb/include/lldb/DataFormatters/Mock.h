@@ -1,4 +1,4 @@
-//===-- Utilities.h ---------------------------------------------*- C++ -*-===//
+//===-- Mock.h --------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_LANGUAGE_OBJC_UTILITIES_H
-#define LLDB_PLUGINS_LANGUAGE_OBJC_UTILITIES_H
+#ifndef LLDB_DATAFORMATTERS_MOCK_H
+#define LLDB_DATAFORMATTERS_MOCK_H
 
 namespace lldb_private {
 
@@ -23,4 +23,4 @@ bool FormatDateValue(double date_value, Stream &stream);
 } // namespace formatters
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_LANGUAGE_OBJC_UTILITIES_H
+#endif // LLDB_DATAFORMATTERS_MOCK_H
