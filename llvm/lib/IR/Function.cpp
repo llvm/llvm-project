@@ -114,12 +114,6 @@ bool Argument::hasInAllocaAttr() const {
   return hasAttribute(Attribute::InAlloca);
 }
 
-bool Argument::hasPreallocatedAttr() const {
-  if (!getType()->isPointerTy())
-    return false;
-  return hasAttribute(Attribute::Preallocated);
-}
-
 bool Argument::hasPassPointeeByValueAttr() const {
   if (!getType()->isPointerTy()) return false;
   AttributeList Attrs = getParent()->getAttributes();

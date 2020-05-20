@@ -789,9 +789,8 @@ def CC_X86_32_Vector_Darwin : CallingConv<[
 /// CC_X86_32_Common - In all X86-32 calling conventions, extra integers and FP
 /// values are spilled on the stack.
 def CC_X86_32_Common : CallingConv<[
-  // Handles byval/preallocated parameters.
+  // Handles byval parameters.
   CCIfByVal<CCPassByVal<4, 4>>,
-  CCIfPreallocated<CCPassByVal<4, 4>>,
 
   // The first 3 float or double arguments, if marked 'inreg' and if the call
   // is not a vararg call and if SSE2 is available, are passed in SSE registers.

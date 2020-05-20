@@ -4455,8 +4455,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     AAValueSimplifyImpl::initialize(A);
     if (!getAnchorScope() || getAnchorScope()->isDeclaration())
       indicatePessimisticFixpoint();
-    if (hasAttr({Attribute::InAlloca, Attribute::Preallocated,
-                 Attribute::StructRet, Attribute::Nest},
+    if (hasAttr({Attribute::InAlloca, Attribute::StructRet, Attribute::Nest},
                 /* IgnoreSubsumingPositions */ true))
       indicatePessimisticFixpoint();
 
@@ -5696,7 +5695,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
     // TODO: From readattrs.ll: "inalloca parameters are always
     //                           considered written"
-    if (hasAttr({Attribute::InAlloca, Attribute::Preallocated})) {
+    if (hasAttr({Attribute::InAlloca})) {
       removeKnownBits(NO_WRITES);
       removeAssumedBits(NO_WRITES);
     }

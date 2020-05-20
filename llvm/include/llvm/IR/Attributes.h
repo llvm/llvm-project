@@ -623,9 +623,6 @@ public:
   /// Return the byval type for the specified function parameter.
   Type *getParamByValType(unsigned ArgNo) const;
 
-  /// Return the preallocated type for the specified function parameter.
-  Type *getParamPreallocatedType(unsigned ArgNo) const;
-
   /// Get the stack alignment.
   MaybeAlign getStackAlignment(unsigned Index) const;
 

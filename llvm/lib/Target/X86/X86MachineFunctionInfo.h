@@ -13,8 +13,6 @@
 #ifndef LLVM_LIB_TARGET_X86_X86MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_X86_X86MACHINEFUNCTIONINFO_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
@@ -105,13 +103,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// True if this function has WIN_ALLOCA instructions.
   bool HasWinAlloca = false;
 
-  /// True if this function has any preallocated calls.
-  bool HasPreallocatedCall = false;
-
-  ValueMap<const Value *, size_t> PreallocatedIds;
-  SmallVector<size_t, 0> PreallocatedStackSizes;
-  SmallVector<SmallVector<size_t, 4>, 0> PreallocatedArgOffsets;
-
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
   /// that must be forwarded to every musttail call.
@@ -193,36 +184,6 @@ public:
 
   bool hasWinAlloca() const { return HasWinAlloca; }
   void setHasWinAlloca(bool v) { HasWinAlloca = v; }
-
-  bool hasPreallocatedCall() const { return HasPreallocatedCall; }
-  void setHasPreallocatedCall(bool v) { HasPreallocatedCall = v; }
-
-  size_t getPreallocatedIdForCallSite(const Value *CS) {
-    auto Insert = PreallocatedIds.insert({CS, PreallocatedIds.size()});
-    if (Insert.second) {
-      PreallocatedStackSizes.push_back(0);
-      PreallocatedArgOffsets.emplace_back();
-    }
-    return Insert.first->second;
-  }
-
-  void setPreallocatedStackSize(size_t Id, size_t StackSize) {
-    PreallocatedStackSizes[Id] = StackSize;
-  }
-
-  size_t getPreallocatedStackSize(const size_t Id) {
-    assert(PreallocatedStackSizes[Id] != 0 && "stack size not set");
-    return PreallocatedStackSizes[Id];
-  }
-
-  void setPreallocatedArgOffsets(size_t Id, ArrayRef<size_t> AO) {
-    PreallocatedArgOffsets[Id].assign(AO.begin(), AO.end());
-  }
-
-  const ArrayRef<size_t> getPreallocatedArgOffsets(const size_t Id) {
-    assert(!PreallocatedArgOffsets[Id].empty() && "arg offsets not set");
-    return PreallocatedArgOffsets[Id];
-  }
 };
 
 } // End llvm namespace

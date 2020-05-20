@@ -627,22 +627,18 @@ static bool CantUseSP(const MachineFrameInfo &MFI) {
 }
 
 bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  if (X86FI->hasPreallocatedCall())
-    return true;
+   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
+   if (!EnableBasePointer)
+     return false;
 
-  if (!EnableBasePointer)
-    return false;
-
-  // When we need stack realignment, we can't address the stack from the frame
-  // pointer.  When we have dynamic allocas or stack-adjusting inline asm, we
-  // can't address variables from the stack pointer.  MS inline asm can
-  // reference locals while also adjusting the stack pointer.  When we can't
-  // use both the SP and the FP, we need a separate base pointer register.
-  bool CantUseFP = needsStackRealignment(MF);
-  return CantUseFP && CantUseSP(MFI);
+   // When we need stack realignment, we can't address the stack from the frame
+   // pointer.  When we have dynamic allocas or stack-adjusting inline asm, we
+   // can't address variables from the stack pointer.  MS inline asm can
+   // reference locals while also adjusting the stack pointer.  When we can't
+   // use both the SP and the FP, we need a separate base pointer register.
+   bool CantUseFP = needsStackRealignment(MF);
+   return CantUseFP && CantUseSP(MFI);
 }
 
 bool X86RegisterInfo::canRealignStack(const MachineFunction &MF) const {
