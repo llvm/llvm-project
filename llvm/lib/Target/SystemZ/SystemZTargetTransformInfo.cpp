@@ -1151,26 +1151,10 @@ static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy) {
   return -1;
 }
 
-int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                          ArrayRef<Value *> Args,
-                                          FastMathFlags FMF, unsigned VF,
-                                          TTI::TargetCostKind CostKind,
-                                          const Instruction *I) {
-  int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
+int SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                          TTI::TargetCostKind CostKind) {
+  int Cost = getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType());
   if (Cost != -1)
     return Cost;
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
-}
-
-int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                          ArrayRef<Type *> Tys,
-                                          FastMathFlags FMF,
-                                          unsigned ScalarizationCostPassed,
-                                          TTI::TargetCostKind CostKind,
-                                          const Instruction *I) {
-  int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
-  if (Cost != -1)
-    return Cost;
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed, CostKind, I);
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }

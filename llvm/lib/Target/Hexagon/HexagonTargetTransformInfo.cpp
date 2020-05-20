@@ -131,26 +131,14 @@ unsigned HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
   return BaseT::getCallInstrCost(F, RetTy, Tys, CostKind);
 }
 
-unsigned HexagonTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                               ArrayRef<Value *> Args,
-                                               FastMathFlags FMF, unsigned VF,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
-}
-
-unsigned HexagonTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                               ArrayRef<Type *> Tys,
-                                               FastMathFlags FMF,
-                                               unsigned ScalarizationCostPassed,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
-  if (ID == Intrinsic::bswap) {
-    std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, RetTy);
+unsigned
+HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                      TTI::TargetCostKind CostKind) {
+  if (ICA.getID() == Intrinsic::bswap) {
+    std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, ICA.getReturnType());
     return LT.first + 2;
   }
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed, CostKind, I);
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 unsigned HexagonTTIImpl::getAddressComputationCost(Type *Tp,
