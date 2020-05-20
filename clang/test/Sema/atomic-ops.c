@@ -99,7 +99,8 @@ _Static_assert(__atomic_always_lock_free(8, &i64), "");
 #define _AS2 __attribute__((address_space(2)))
 
 void f(_Atomic(int) *i, const _Atomic(int) *ci,
-       _Atomic(int*) *p, _Atomic(float) *d,
+       _Atomic(int*) *p, _Atomic(float) *f, _Atomic(double) *d,
+       _Atomic(long double) *ld,
        int *I, const int *CI,
        int **P, float *D, struct S *s1, struct S *s2) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
@@ -114,7 +115,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   __c11_atomic_load(i, memory_order_seq_cst);
   __c11_atomic_load(p, memory_order_seq_cst);
-  __c11_atomic_load(d, memory_order_seq_cst);
+  __c11_atomic_load(f, memory_order_seq_cst);
   __c11_atomic_load(ci, memory_order_seq_cst);
 
   int load_n_1 = __atomic_load_n(I, memory_order_relaxed);
@@ -137,7 +138,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   __c11_atomic_store(i, 1, memory_order_seq_cst);
   __c11_atomic_store(p, 1, memory_order_seq_cst); // expected-warning {{incompatible integer to pointer conversion}}
-  (int)__c11_atomic_store(d, 1, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
+  (int)__c11_atomic_store(f, 1, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
 
   __atomic_store_n(I, 4, memory_order_release);
   __atomic_store_n(I, 4.0, memory_order_release);
@@ -166,20 +167,22 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   __c11_atomic_fetch_add(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_add(p, 1, memory_order_seq_cst);
-  __c11_atomic_fetch_add(d, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or pointer}}
+  __c11_atomic_fetch_add(f, 1.0f, memory_order_seq_cst);
+  __c11_atomic_fetch_add(d, 1.0, memory_order_seq_cst);
+  __c11_atomic_fetch_add(ld, 1.0, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
 
-  __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer or pointer}}
+  __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_sub(I, 3, memory_order_seq_cst);
   __atomic_fetch_sub(P, 3, memory_order_seq_cst);
-  __atomic_fetch_sub(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or pointer}}
-  __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or pointer}}
+  __atomic_fetch_sub(D, 3, memory_order_seq_cst);
+  __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_min(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
   __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
   __atomic_fetch_max(p, 3);                       // expected-error {{too few arguments to function call, expected 3, have 2}}
 
   __c11_atomic_fetch_and(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_and(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer}}
-  __c11_atomic_fetch_and(d, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer}}
+  __c11_atomic_fetch_and(f, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer}}
 
   __atomic_fetch_and(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer}}
   __atomic_fetch_or(I, 3, memory_order_seq_cst);
@@ -189,12 +192,12 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   _Bool cmpexch_1 = __c11_atomic_compare_exchange_strong(i, I, 1, memory_order_seq_cst, memory_order_seq_cst);
   _Bool cmpexch_2 = __c11_atomic_compare_exchange_strong(p, P, (int*)1, memory_order_seq_cst, memory_order_seq_cst);
-  _Bool cmpexch_3 = __c11_atomic_compare_exchange_strong(d, I, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{incompatible pointer types}}
+  _Bool cmpexch_3 = __c11_atomic_compare_exchange_strong(f, I, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{incompatible pointer types}}
   (void)__c11_atomic_compare_exchange_strong(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
 
   _Bool cmpexchw_1 = __c11_atomic_compare_exchange_weak(i, I, 1, memory_order_seq_cst, memory_order_seq_cst);
   _Bool cmpexchw_2 = __c11_atomic_compare_exchange_weak(p, P, (int*)1, memory_order_seq_cst, memory_order_seq_cst);
-  _Bool cmpexchw_3 = __c11_atomic_compare_exchange_weak(d, I, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{incompatible pointer types}}
+  _Bool cmpexchw_3 = __c11_atomic_compare_exchange_weak(f, I, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{incompatible pointer types}}
   (void)__c11_atomic_compare_exchange_weak(i, CI, 1, memory_order_seq_cst, memory_order_seq_cst); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
 
   _Bool cmpexch_4 = __atomic_compare_exchange_n(I, I, 5, 1, memory_order_seq_cst, memory_order_seq_cst);

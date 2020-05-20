@@ -4698,9 +4698,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
     // gcc does not enforce these rules for GNU atomics, but we do so for sanity.
-    if (IsAddSub && !ValType->isIntegerType()
-        && !ValType->isPointerType()) {
-      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_or_ptr)
+    if (IsAddSub && !ValType->isIntegerType() && !ValType->isPointerType() &&
+        (!ValType->isFloatingType() ||
+         !Context.getTargetInfo().isFPAtomicFetchAddSubSupported(
+             Context.getFloatTypeSemantics(ValType)))) {
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_ptr_or_fp)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
@@ -4827,7 +4829,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         // passed by address. For the rest, GNU uses by-address and C11 uses
         // by-value.
         assert(Form != Load);
-        if (Form == Init || (Form == Arithmetic && ValType->isIntegerType()))
+        if (Form == Init || (Form == Arithmetic && ValType->isIntegerType()) ||
+            (IsAddSub && ValType->isFloatingType()))
           Ty = ValType;
         else if (Form == Copy || Form == Xchg) {
           if (IsPassedByAddress) {
