@@ -2107,25 +2107,47 @@ public:
 ///   applied to a non-complex value, the former returns its operand and the
 ///   later returns zero in the type of the operand.
 ///
-class UnaryOperator : public Expr {
+class UnaryOperator final
+    : public Expr,
+      private llvm::TrailingObjects<UnaryOperator, FPOptions> {
   Stmt *Val;
+
+  size_t numTrailingObjects(OverloadToken<FPOptions>) const {
+    return UnaryOperatorBits.HasFPFeatures ? 1 : 0;
+  }
+
+  FPOptions &getTrailingFPFeatures() {
+    assert(UnaryOperatorBits.HasFPFeatures);
+    return *getTrailingObjects<FPOptions>();
+  }
+
+  const FPOptions &getTrailingFPFeatures() const {
+    assert(UnaryOperatorBits.HasFPFeatures);
+    return *getTrailingObjects<FPOptions>();
+  }
 
 public:
   typedef UnaryOperatorKind Opcode;
 
-  UnaryOperator(Expr *input, Opcode opc, QualType type, ExprValueKind VK,
-                ExprObjectKind OK, SourceLocation l, bool CanOverflow)
-      : Expr(UnaryOperatorClass, type, VK, OK), Val(input) {
-    UnaryOperatorBits.Opc = opc;
-    UnaryOperatorBits.CanOverflow = CanOverflow;
-    UnaryOperatorBits.Loc = l;
-    setDependence(computeDependence(this));
-  }
+protected:
+  UnaryOperator(const ASTContext &Ctx, Expr *input, Opcode opc, QualType type,
+                ExprValueKind VK, ExprObjectKind OK, SourceLocation l,
+                bool CanOverflow, FPOptions FPFeatures);
 
   /// Build an empty unary operator.
-  explicit UnaryOperator(EmptyShell Empty) : Expr(UnaryOperatorClass, Empty) {
+  explicit UnaryOperator(bool HasFPFeatures, EmptyShell Empty)
+      : Expr(UnaryOperatorClass, Empty) {
     UnaryOperatorBits.Opc = UO_AddrOf;
+    UnaryOperatorBits.HasFPFeatures = HasFPFeatures;
   }
+
+public:
+  static UnaryOperator *CreateEmpty(const ASTContext &C, bool hasFPFeatures);
+
+  static UnaryOperator *Create(const ASTContext &C, Expr *input, Opcode opc,
+                               QualType type, ExprValueKind VK,
+                               ExprObjectKind OK, SourceLocation l,
+                               bool CanOverflow, FPOptions FPFeatures);
 
   Opcode getOpcode() const {
     return static_cast<Opcode>(UnaryOperatorBits.Opc);
@@ -2147,6 +2169,18 @@ public:
   /// can overflow.
   bool canOverflow() const { return UnaryOperatorBits.CanOverflow; }
   void setCanOverflow(bool C) { UnaryOperatorBits.CanOverflow = C; }
+
+  // Get the FP contractability status of this operator. Only meaningful for
+  // operations on floating point types.
+  bool isFPContractableWithinStatement(const LangOptions &LO) const {
+    return getFPFeatures(LO).allowFPContractWithinStatement();
+  }
+
+  // Get the FENV_ACCESS status of this operator. Only meaningful for
+  // operations on floating point types.
+  bool isFEnvAccessOn(const LangOptions &LO) const {
+    return getFPFeatures(LO).allowFEnvAccess();
+  }
 
   /// isPostfix - Return true if this is a postfix operation, like x++.
   static bool isPostfix(Opcode Op) {
@@ -2214,6 +2248,30 @@ public:
   const_child_range children() const {
     return const_child_range(&Val, &Val + 1);
   }
+
+  /// Is FPFeatures in Trailing Storage?
+  bool hasStoredFPFeatures() const { return UnaryOperatorBits.HasFPFeatures; }
+
+protected:
+  /// Get FPFeatures from trailing storage
+  FPOptions getStoredFPFeatures() const { return getTrailingFPFeatures(); }
+
+  /// Set FPFeatures in trailing storage, used only by Serialization
+  void setStoredFPFeatures(FPOptions F) { getTrailingFPFeatures() = F; }
+
+public:
+  // Get the FP features status of this operator. Only meaningful for
+  // operations on floating point types.
+  FPOptions getFPFeatures(const LangOptions &LO) const {
+    if (UnaryOperatorBits.HasFPFeatures)
+      return getStoredFPFeatures();
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+
+  friend TrailingObjects;
+  friend class ASTReader;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
 };
 
 /// Helper class for OffsetOfExpr.

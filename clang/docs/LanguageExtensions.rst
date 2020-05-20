@@ -3197,6 +3197,41 @@ The pragma can also be used with ``off`` which turns FP contraction off for a
 section of the code. This can be useful when fast contraction is otherwise
 enabled for the translation unit with the ``-ffp-contract=fast`` flag.
 
+The ``#pragma float_control`` pragma allows precise floating-point
+semantics and floating-point exception behavior to be specified
+for a section of the source code. This pragma can only appear at file scope or
+at the start of a compound statement (excluding comments). When using within a
+compound statement, the pragma is active within the scope of the compound
+statement.  This pragma is modeled after a Microsoft pragma with the
+same spelling and syntax.  For pragmas specified at file scope, a stack
+is supported so that the ``pragma float_control`` settings can be pushed or popped.
+
+When ``pragma float_control(precise, on)`` is enabled, the section of code
+governed by the pragma uses precise floating point semantics, effectively
+``-ffast-math`` is disabled and ``-ffp-contract=on``
+(fused multiply add) is enabled.
+
+When ``pragma float_control(except, on)`` is enabled, the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-exception-behavior=strict`` is enabled,
+when ``pragma float_control(precise, off)`` is enabled, the section of code
+governed by the pragma behaves as though the command-line option
+``-ffp-exception-behavior=ignore`` is enabled.
+
+The full syntax this pragma supports is
+``float_control(except|precise, on|off [, push])`` and
+``float_control(push|pop)``.
+The ``push`` and ``pop`` forms, including using ``push`` as the optional
+third argument, can only occur at file scope.
+
+.. code-block:: c++
+
+  for(...) {
+    // This block will be compiled with -fno-fast-math and -ffp-contract=on
+    #pragma float_control(precise, on)
+    a = b[i] * c[i] + e;
+  }
+
 Specifying an attribute for multiple declarations (#pragma clang attribute)
 ===========================================================================
 

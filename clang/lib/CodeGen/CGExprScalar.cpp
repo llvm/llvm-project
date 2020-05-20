@@ -217,7 +217,14 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
 /// Update the FastMathFlags of LLVM IR from the FPOptions in LangOptions.
 static void updateFastMathFlags(llvm::FastMathFlags &FMF,
                                 FPOptions FPFeatures) {
-  FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement());
+  FMF.setAllowReassoc(FPFeatures.allowAssociativeMath());
+  FMF.setNoNaNs(FPFeatures.noHonorNaNs());
+  FMF.setNoInfs(FPFeatures.noHonorInfs());
+  FMF.setNoSignedZeros(FPFeatures.noSignedZeros());
+  FMF.setAllowReciprocal(FPFeatures.allowReciprocalMath());
+  FMF.setApproxFunc(FPFeatures.allowApproximateFunctions());
+  FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement() ||
+                       FPFeatures.allowFPContractWithinStatement());
 }
 
 /// Propagate fast-math flags from \p Op to the instruction in \p V.
@@ -228,6 +235,25 @@ static Value *propagateFMFlags(Value *V, const BinOpInfo &Op) {
     I->setFastMathFlags(FMF);
   }
   return V;
+}
+
+static void setBuilderFlagsFromFPFeatures(CGBuilderTy &Builder,
+                                          CodeGenFunction &CGF,
+                                          FPOptions FPFeatures) {
+  auto NewRoundingBehavior = FPFeatures.getRoundingMode();
+  Builder.setDefaultConstrainedRounding(NewRoundingBehavior);
+  auto NewExceptionBehavior =
+      ToConstrainedExceptMD(FPFeatures.getExceptionMode());
+  Builder.setDefaultConstrainedExcept(NewExceptionBehavior);
+  auto FMF = Builder.getFastMathFlags();
+  updateFastMathFlags(FMF, FPFeatures);
+  Builder.setFastMathFlags(FMF);
+  assert((CGF.CurFuncDecl == nullptr || Builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(CGF.CurFuncDecl) ||
+          isa<CXXDestructorDecl>(CGF.CurFuncDecl) ||
+          (NewExceptionBehavior == llvm::fp::ebIgnore &&
+           NewRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
 }
 
 class ScalarExprEmitter
@@ -744,6 +770,9 @@ public:
       return EmitOverflowCheckedBinOp(Ops);
 
     if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
+      //  Preserve the old values
+      llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+      setBuilderFlagsFromFPFeatures(Builder, CGF, Ops.FPFeatures);
       Value *V = Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul");
       return propagateFMFlags(V, Ops);
     }
@@ -2333,13 +2362,14 @@ Value *ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
 //===----------------------------------------------------------------------===//
 
 static BinOpInfo createBinOpInfoFromIncDec(const UnaryOperator *E,
-                                           llvm::Value *InVal, bool IsInc) {
+                                           llvm::Value *InVal, bool IsInc,
+                                           FPOptions FPFeatures) {
   BinOpInfo BinOp;
   BinOp.LHS = InVal;
   BinOp.RHS = llvm::ConstantInt::get(InVal->getType(), 1, false);
   BinOp.Ty = E->getType();
   BinOp.Opcode = IsInc ? BO_Add : BO_Sub;
-  // FIXME: once UnaryOperator carries FPFeatures, copy it here.
+  BinOp.FPFeatures = FPFeatures;
   BinOp.E = E;
   return BinOp;
 }
@@ -2359,7 +2389,8 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   case LangOptions::SOB_Trapping:
     if (!E->canOverflow())
       return Builder.CreateNSWAdd(InVal, Amount, Name);
-    return EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(E, InVal, IsInc));
+    return EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
+        E, InVal, IsInc, E->getFPFeatures(CGF.getLangOpts())));
   }
   llvm_unreachable("Unknown SignedOverflowBehaviorTy");
 }
@@ -2505,8 +2536,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
     } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
                CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) {
-      value =
-          EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(E, value, isInc));
+      value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
+          E, value, isInc, E->getFPFeatures(CGF.getLangOpts())));
     } else {
       llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
@@ -2706,7 +2737,7 @@ Value *ScalarExprEmitter::VisitUnaryMinus(const UnaryOperator *E) {
   BinOp.LHS = llvm::Constant::getNullValue(BinOp.RHS->getType());
   BinOp.Ty = E->getType();
   BinOp.Opcode = BO_Sub;
-  // FIXME: once UnaryOperator carries FPFeatures, copy it here.
+  BinOp.FPFeatures = E->getFPFeatures(CGF.getLangOpts());
   BinOp.E = E;
   return EmitSub(BinOp);
 }
@@ -2723,9 +2754,12 @@ Value *ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
     Value *Oper = Visit(E->getSubExpr());
     Value *Zero = llvm::Constant::getNullValue(Oper->getType());
     Value *Result;
-    if (Oper->getType()->isFPOrFPVectorTy())
+    if (Oper->getType()->isFPOrFPVectorTy()) {
+      llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+      setBuilderFlagsFromFPFeatures(Builder, CGF,
+                                    E->getFPFeatures(CGF.getLangOpts()));
       Result = Builder.CreateFCmp(llvm::CmpInst::FCMP_OEQ, Oper, Zero, "cmp");
-    else
+    } else
       Result = Builder.CreateICmp(llvm::CmpInst::ICMP_EQ, Oper, Zero, "cmp");
     return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
   }
@@ -3134,7 +3168,10 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   }
 
   if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
-    llvm::Value *Val = Builder.CreateFDiv(Ops.LHS, Ops.RHS, "div");
+    llvm::Value *Val;
+    llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+    setBuilderFlagsFromFPFeatures(Builder, CGF, Ops.FPFeatures);
+    Val = Builder.CreateFDiv(Ops.LHS, Ops.RHS, "div");
     if (CGF.getLangOpts().OpenCL &&
         !CGF.CGM.getCodeGenOpts().CorrectlyRoundedDivSqrt) {
       // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5ulp
@@ -3506,6 +3543,8 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
     return EmitOverflowCheckedBinOp(op);
 
   if (op.LHS->getType()->isFPOrFPVectorTy()) {
+    llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+    setBuilderFlagsFromFPFeatures(Builder, CGF, op.FPFeatures);
     // Try to form an fmuladd.
     if (Value *FMulAdd = tryEmitFMulAdd(op, CGF, Builder))
       return FMulAdd;
@@ -3688,6 +3727,8 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
       return EmitOverflowCheckedBinOp(op);
 
     if (op.LHS->getType()->isFPOrFPVectorTy()) {
+      llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+      setBuilderFlagsFromFPFeatures(Builder, CGF, op.FPFeatures);
       // Try to form an fmuladd.
       if (Value *FMulAdd = tryEmitFMulAdd(op, CGF, Builder, true))
         return FMulAdd;
@@ -4014,6 +4055,8 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     if (BOInfo.isFixedPointOp()) {
       Result = EmitFixedPointBinOp(BOInfo);
     } else if (LHS->getType()->isFPOrFPVectorTy()) {
+      llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+      setBuilderFlagsFromFPFeatures(Builder, CGF, BOInfo.FPFeatures);
       if (!IsSignaling)
         Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
       else
@@ -4166,6 +4209,9 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     Value *RHS = Visit(E->getRHS());
     Value *Zero = llvm::ConstantAggregateZero::get(LHS->getType());
     if (LHS->getType()->isFPOrFPVectorTy()) {
+      llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+      setBuilderFlagsFromFPFeatures(Builder, CGF,
+                                    E->getFPFeatures(CGF.getLangOpts()));
       LHS = Builder.CreateFCmp(llvm::CmpInst::FCMP_UNE, LHS, Zero, "cmp");
       RHS = Builder.CreateFCmp(llvm::CmpInst::FCMP_UNE, RHS, Zero, "cmp");
     } else {
@@ -4250,6 +4296,9 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
     Value *RHS = Visit(E->getRHS());
     Value *Zero = llvm::ConstantAggregateZero::get(LHS->getType());
     if (LHS->getType()->isFPOrFPVectorTy()) {
+      llvm::IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+      setBuilderFlagsFromFPFeatures(Builder, CGF,
+                                    E->getFPFeatures(CGF.getLangOpts()));
       LHS = Builder.CreateFCmp(llvm::CmpInst::FCMP_UNE, LHS, Zero, "cmp");
       RHS = Builder.CreateFCmp(llvm::CmpInst::FCMP_UNE, RHS, Zero, "cmp");
     } else {
