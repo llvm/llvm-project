@@ -729,6 +729,9 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
   if (parseGNUAsmQualifierListOpt(GAQ))
     return StmtError();
 
+  if (GAQ.isGoto() && getLangOpts().SpeculativeLoadHardening)
+    Diag(Loc, diag::warn_slh_does_not_support_asm_goto);
+
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
