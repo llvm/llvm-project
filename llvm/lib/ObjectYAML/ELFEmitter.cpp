@@ -428,8 +428,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
 
   size_t SecNdx = -1;
   for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks) {
-    if (auto S = dyn_cast<ELFYAML::Fill>(D.get())) {
-      S->ShOffset = alignToOffset(CBA, /*Align=*/1, /*Offset=*/None);
+    if (ELFYAML::Fill *S = dyn_cast<ELFYAML::Fill>(D.get())) {
+      S->Offset = alignToOffset(CBA, /*Align=*/1, S->Offset);
       writeFill(*S, CBA);
       LocationCounter += S->Size;
       continue;
@@ -755,7 +755,7 @@ ELFState<ELFT>::getPhdrFragments(const ELFYAML::ProgramHeader &Phdr,
     }
 
     if (ELFYAML::Fill *Fill = NameToFill.lookup(SecName.Section)) {
-      Ret.push_back({Fill->ShOffset, Fill->Size, llvm::ELF::SHT_PROGBITS,
+      Ret.push_back({*Fill->Offset, Fill->Size, llvm::ELF::SHT_PROGBITS,
                      /*ShAddrAlign=*/1});
       continue;
     }
