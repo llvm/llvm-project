@@ -412,7 +412,7 @@ namespace Test13 {
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
   // CHECK: ret %"struct.Test13::D"*
 
-  // WIN64-LABEL: define weak_odr dso_local dereferenceable(8) %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
+  // WIN64-LABEL: define weak_odr dso_local nonnull align 8 dereferenceable(8) %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
   //    This adjustment.
   // WIN64: getelementptr inbounds i8, i8* {{.*}}, i64 -12
   //    Call implementation.

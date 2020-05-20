@@ -3545,37 +3545,27 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
-  /// Returns whether computing the negated form of the specified expression is
-  /// more expensive, the same cost or cheaper.
-  virtual NegatibleCost getNegatibleCost(SDValue Op, SelectionDAG &DAG,
-                                         bool LegalOperations, bool ForCodeSize,
-                                         unsigned Depth = 0) const;
-
-  /// If getNegatibleCost returns Neutral/Cheaper, return the newly negated
-  /// expression.
-  virtual SDValue negateExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
-                                   bool OptForSize, unsigned Depth = 0) const;
-
   /// Return the newly negated expression if the cost is not expensive and
   /// set the cost in \p Cost to indicate that if it is cheaper or neutral to
   /// do the negation.
-  SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
-                               bool OptForSize, NegatibleCost &Cost,
-                               unsigned Depth = 0) const {
-    Cost = getNegatibleCost(Op, DAG, LegalOps, OptForSize, Depth);
-    if (Cost != NegatibleCost::Expensive)
-      return negateExpression(Op, DAG, LegalOps, OptForSize, Depth);
-    return SDValue();
-  }
+  virtual SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                       bool LegalOps, bool OptForSize,
+                                       NegatibleCost &Cost,
+                                       unsigned Depth = 0) const;
 
   /// This is the helper function to return the newly negated expression only
   /// when the cost is cheaper.
   SDValue getCheaperNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                       bool LegalOps, bool OptForSize,
                                       unsigned Depth = 0) const {
-    if (getNegatibleCost(Op, DAG, LegalOps, OptForSize, Depth) ==
-        NegatibleCost::Cheaper)
-      return negateExpression(Op, DAG, LegalOps, OptForSize, Depth);
+    NegatibleCost Cost = NegatibleCost::Expensive;
+    SDValue Neg =
+        getNegatedExpression(Op, DAG, LegalOps, OptForSize, Cost, Depth);
+    if (Neg && Cost == NegatibleCost::Cheaper)
+      return Neg;
+    // Remove the new created node to avoid the side effect to the DAG.
+    if (Neg && Neg.getNode()->use_empty())
+      DAG.RemoveDeadNode(Neg.getNode());
     return SDValue();
   }
 

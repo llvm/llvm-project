@@ -5958,3 +5958,57 @@ CodeGenModule::createOpenCLIntToSamplerConversion(const Expr *E,
                                 "__translate_sampler_initializer"),
                                 {C});
 }
+
+CharUnits CodeGenModule::getNaturalPointeeTypeAlignment(
+    QualType T, LValueBaseInfo *BaseInfo, TBAAAccessInfo *TBAAInfo) {
+  return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo, TBAAInfo,
+                                 /* forPointeeType= */ true);
+}
+
+CharUnits CodeGenModule::getNaturalTypeAlignment(QualType T,
+                                                 LValueBaseInfo *BaseInfo,
+                                                 TBAAAccessInfo *TBAAInfo,
+                                                 bool forPointeeType) {
+  if (TBAAInfo)
+    *TBAAInfo = getTBAAAccessInfo(T);
+
+  // Honor alignment typedef attributes even on incomplete types.
+  // We also honor them straight for C++ class types, even as pointees;
+  // there's an expressivity gap here.
+  if (auto TT = T->getAs<TypedefType>()) {
+    if (auto Align = TT->getDecl()->getMaxAlignment()) {
+      if (BaseInfo)
+        *BaseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
+      return getContext().toCharUnitsFromBits(Align);
+    }
+  }
+
+  if (BaseInfo)
+    *BaseInfo = LValueBaseInfo(AlignmentSource::Type);
+
+  CharUnits Alignment;
+  if (T->isIncompleteType()) {
+    Alignment = CharUnits::One(); // Shouldn't be used, but pessimistic is best.
+  } else {
+    // For C++ class pointees, we don't know whether we're pointing at a
+    // base or a complete object, so we generally need to use the
+    // non-virtual alignment.
+    const CXXRecordDecl *RD;
+    if (forPointeeType && (RD = T->getAsCXXRecordDecl())) {
+      Alignment = getClassPointerAlignment(RD);
+    } else {
+      Alignment = getContext().getTypeAlignInChars(T);
+      if (T.getQualifiers().hasUnaligned())
+        Alignment = CharUnits::One();
+    }
+
+    // Cap to the global maximum type alignment unless the alignment
+    // was somehow explicit on the type.
+    if (unsigned MaxAlign = getLangOpts().MaxTypeAlign) {
+      if (Alignment.getQuantity() > MaxAlign &&
+          !getContext().isAlignmentRequired(T))
+        Alignment = CharUnits::fromQuantity(MaxAlign);
+    }
+  }
+  return Alignment;
+}

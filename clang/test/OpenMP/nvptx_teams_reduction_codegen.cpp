@@ -756,7 +756,7 @@ int bar(int n){
   //
   // CHECK: [[EXIT]]
 
-  // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i16* dereferenceable{{.+}})
+  // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* nonnull align {{[0-9]+}} dereferenceable{{.+}}, i16* nonnull align {{[0-9]+}} dereferenceable{{.+}})
   //
   // CHECK: store i32 0, i32* [[A:%.+]], align
   // CHECK: store i16 -32768, i16* [[B:%.+]], align

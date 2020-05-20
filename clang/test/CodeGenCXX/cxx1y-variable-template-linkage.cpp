@@ -25,7 +25,7 @@ template <typename T> T t = 42;
 
 int mode;
 
-// CHECK-DAG: define internal dereferenceable(4) i32* @_ZL3foov(
+// CHECK-DAG: define internal nonnull align 4 dereferenceable(4) i32* @_ZL3foov(
 static const int &foo() {
    struct Foo { };
 
@@ -59,20 +59,20 @@ static const int &foo() {
 
 
 #if !__has_feature(cxx_exceptions) // File A
-// CHECKA-DAG: define dereferenceable(4) i32* @_Z3barv(
+// CHECKA-DAG: define nonnull align 4 dereferenceable(4) i32* @_Z3barv(
 const int &bar() {
-	// CHECKA-DAG: call dereferenceable(4) i32* @_ZL3foov()
+	// CHECKA-DAG: call nonnull align 4 dereferenceable(4) i32* @_ZL3foov()
 	return foo();
 }
 
 #else // File B
 
-// CHECKB-DAG: declare dereferenceable(4) i32* @_Z3barv(
+// CHECKB-DAG: declare nonnull align 4 dereferenceable(4) i32* @_Z3barv(
 const int &bar();
 
 int main() {
-	// CHECKB-DAG: call dereferenceable(4) i32* @_Z3barv()
-	// CHECKB-DAG: call dereferenceable(4) i32* @_ZL3foov()
+	// CHECKB-DAG: call nonnull align 4 dereferenceable(4) i32* @_Z3barv()
+	// CHECKB-DAG: call nonnull align 4 dereferenceable(4) i32* @_ZL3foov()
 	&bar() == &foo() ? throw 0 : (void)0; // Should not throw exception at runtime.
 }
 

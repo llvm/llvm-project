@@ -728,7 +728,7 @@ LogicalResult VulkanRuntime::createComputeCommandBuffer() {
                           descriptorSets.data(), 0, 0);
   // Get a timestamp before invoking the compute shader.
   if (queryPool != VK_NULL_HANDLE)
-    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                         queryPool, 0);
   vkCmdDispatch(commandBuffer, numWorkGroups.x, numWorkGroups.y,
                 numWorkGroups.z);
