@@ -14,12 +14,12 @@
 #define LLVM_CODEGEN_PSEUDOSOURCEVALUE_H
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ValueMap.h"
 #include <map>
 
 namespace llvm {
 
+class GlobalValue;
 class MachineFrameInfo;
 class MachineMemOperand;
 class MIRFormatter;
