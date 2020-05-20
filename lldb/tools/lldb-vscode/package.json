@@ -152,13 +152,8 @@
 							},
 							"exitCommands": {
 									"type": "array",
-									"description": "Commands executed when the program exits.",
+									"description": "Commands executed at the end of debugging session.",
 									"default": []
-							},
-							"terminateCommands": {
-								"type": "array",
-								"description": "Commands executed at the end of debugging session.",
-								"default": []
 							}
 						}
 					},

@@ -61,19 +61,17 @@ static SmallVector<Value, 4> permuteIvs(ArrayRef<Value> ivs,
 // Creates a number of ranges equal to the number of results in `map`.
 // The returned ranges correspond to the loop ranges, in the proper order, for
 // which new loops will be created.
-static SmallVector<Value, 4> emitLoopRanges(OpBuilder &b, Location loc,
-                                            AffineMap map,
-                                            ArrayRef<Value> allViewSizes);
-SmallVector<Value, 4> emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
-                                     ArrayRef<Value> allViewSizes) {
+static SmallVector<SubViewOp::Range, 4>
+emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
+               ArrayRef<Value> allViewSizes) {
   // Apply `map` to get view sizes in loop order.
   auto sizes = applyMapToValues(b, loc, map, allViewSizes);
   // Create a new range with the applied tile sizes.
   ScopedContext scope(b, loc);
-  SmallVector<Value, 4> res;
+  SmallVector<SubViewOp::Range, 4> res;
   for (unsigned idx = 0, e = map.getNumResults(); idx < e; ++idx) {
-    res.push_back(
-        linalg_range(std_constant_index(0), sizes[idx], std_constant_index(1)));
+    res.push_back(SubViewOp::Range{std_constant_index(0), sizes[idx],
+                                   std_constant_index(1)});
   }
   return res;
 }
@@ -498,7 +496,7 @@ public:
   using IndexedValueTy =
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineIndexedValue, StdIndexedValue>::type;
-  static void doit(ConcreteOpTy linalgOp, ArrayRef<Value> loopRanges,
+  static void doit(ConcreteOpTy linalgOp, ArrayRef<SubViewOp::Range> loopRanges,
                    MutableArrayRef<Value> allIvs) {
     GenericLoopNestRangeBuilder<LoopTy>(allIvs, loopRanges)([&] {
       SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
@@ -517,7 +515,7 @@ class GenerateLoopNest<scf::ParallelOp, ConcreteOpTy> {
 public:
   using IndexedValueTy = StdIndexedValue;
 
-  static void doit(ConcreteOpTy linalgOp, ArrayRef<Value> loopRanges,
+  static void doit(ConcreteOpTy linalgOp, ArrayRef<SubViewOp::Range> loopRanges,
                    MutableArrayRef<Value> allIvs) {
     // Only generate scf.parallel for outer consecutive "parallel"
     // iterator_types.

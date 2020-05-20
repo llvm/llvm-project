@@ -1,7 +1,7 @@
 ## Check how the GNU Hash section is dumped with --gnu-hash-table.
 
-# RUN: yaml2obj --docnum=1 -D MASKWORDS=2 -D NBUCKETS=3 %s -o %t.x64
-# RUN: yaml2obj --docnum=2 %s -o %t.x32
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=2 -D NBUCKETS=3 %s -o %t.x64
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -D MASKWORDS=2 -D NBUCKETS=3 -o %t.x32
 
 # RUN: llvm-readobj --gnu-hash-table %t.x64 | FileCheck %s
 # RUN: llvm-readelf --gnu-hash-table %t.x64 | FileCheck %s
@@ -21,10 +21,10 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
-  Machine: EM_X86_64
+  Machine: [[MACHINE]]
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
@@ -64,50 +64,9 @@ ProgramHeaders:
       - Section: .gnu.hash
       - Section: .dynamic
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name:  .gnu.hash
-    Type:  SHT_GNU_HASH
-    Flags: [ SHF_ALLOC ]
-    Header:
-      SymNdx: 0x1
-      Shift2: 0x2
-    BloomFilter: [0x3, 0x4]
-    HashBuckets: [0x5, 0x6, 0x7]
-    HashValues:  [0x8, 0x9, 0xA, 0xB]
-  - Name:  .dynamic
-    Type:  SHT_DYNAMIC
-    Flags: [ SHF_ALLOC ]
-    Link:  .dynstr
-    Entries:
-      - Tag:   DT_GNU_HASH
-        Value: 0x0
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols:
-  - Name:    aaa
-    Binding: STB_GLOBAL
-  - Name:    bbb
-    Binding: STB_GLOBAL
-  - Name:    ccc
-    Binding: STB_GLOBAL
-  - Name:    ddd
-    Binding: STB_GLOBAL
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
-
 ## Check we report a warning if there is no dynamic symbol section in the object.
 
-# RUN: yaml2obj --docnum=3 %s -o %t.nodynsym
+# RUN: yaml2obj --docnum=2 %s -o %t.nodynsym
 # RUN: llvm-readobj --gnu-hash-table %t.nodynsym 2>&1 | FileCheck %s -DFILE=%t.nodynsym --check-prefix=NODYNSYM
 # RUN: llvm-readelf --gnu-hash-table %t.nodynsym 2>&1 | FileCheck %s -DFILE=%t.nodynsym --check-prefix=NODYNSYM
 
@@ -155,7 +114,7 @@ ProgramHeaders:
 ## Check what we do when the index of the first symbol in the dynamic symbol table
 ## included in the hash table is larger than the number of dynamic symbols.
 
-# RUN: yaml2obj --docnum=4 %s -o %t.brokensymndx
+# RUN: yaml2obj --docnum=3 %s -o %t.brokensymndx
 # RUN: llvm-readobj --gnu-hash-table %t.brokensymndx 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t.brokensymndx --check-prefix=SYMNDX
 # RUN: llvm-readelf --gnu-hash-table %t.brokensymndx 2>&1 \
@@ -209,7 +168,7 @@ ProgramHeaders:
 ## Check we emit a warning when the dynamic symbol table is empty.
 ## A valid dynamic symbol table should have at least one symbol: the symbol with index 0.
 
-# RUN: yaml2obj --docnum=5 %s -o %t.emptydynsym
+# RUN: yaml2obj --docnum=4 %s -o %t.emptydynsym
 # RUN: llvm-readobj --gnu-hash-table %t.emptydynsym 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t.emptydynsym --check-prefix=EMPTY-DYNSYM
 # RUN: llvm-readelf --gnu-hash-table %t.emptydynsym 2>&1 \
@@ -270,7 +229,7 @@ ProgramHeaders:
 ## which is one larger than the index of the last dynamic symbol.
 ## For empty tables however, this value is unimportant and can be ignored.
 
-# RUN: yaml2obj --docnum=6 %s -o %t.empty
+# RUN: yaml2obj --docnum=5 %s -o %t.empty
 # RUN: llvm-readobj --gnu-hash-table %t.empty 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t.empty --check-prefix=EMPTY --implicit-check-not="warning:"
 # RUN: llvm-readelf --gnu-hash-table %t.empty 2>&1 \
@@ -322,14 +281,14 @@ ProgramHeaders:
 ## Check we report a proper warning when a hash table goes past the end of the file.
 
 ## Case A: the 'nbuckets' field is set so that the table goes past the end of the file.
-# RUN: yaml2obj --docnum=1 -D MASKWORDS=4294967295 -D NBUCKETS=3 %s -o %t.err.maskwords
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=4294967295 -D NBUCKETS=3 %s -o %t.err.maskwords
 # RUN: llvm-readobj --gnu-hash-table %t.err.maskwords 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err.maskwords -DMASKWORDS=4294967295 -DNBUCKETS=3 --check-prefix=ERR
 # RUN: llvm-readelf --gnu-hash-table %t.err.maskwords 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err.maskwords -DMASKWORDS=4294967295 -DNBUCKETS=3 --check-prefix=ERR
 
 ## Case B: the 'maskwords' field is set so that the table goes past the end of the file.
-# RUN: yaml2obj --docnum=1 -D MASKWORDS=2 -D NBUCKETS=4294967295 %s -o %t.err.nbuckets
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 -D MASKWORDS=2 -D NBUCKETS=4294967295 %s -o %t.err.nbuckets
 # RUN: llvm-readobj --gnu-hash-table %t.err.nbuckets 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err.nbuckets -DMASKWORDS=2 -DNBUCKETS=4294967295 --check-prefix=ERR
 # RUN: llvm-readelf --gnu-hash-table %t.err.nbuckets 2>&1 | \

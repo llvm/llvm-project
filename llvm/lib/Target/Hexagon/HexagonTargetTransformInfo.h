@@ -107,16 +107,8 @@ public:
                                             unsigned VF);
   unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys,
                             TTI::TargetCostKind CostKind);
-  unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Value *> Args, FastMathFlags FMF,
-                                 unsigned VF,
-                                 TTI::TargetCostKind CostKind,
-                                 const Instruction *I);
-  unsigned getIntrinsicInstrCost(
-    Intrinsic::ID ID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
-    unsigned ScalarizationCostPassed = UINT_MAX,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr);
+  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind);
   unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
             const SCEV *S);
   unsigned getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,

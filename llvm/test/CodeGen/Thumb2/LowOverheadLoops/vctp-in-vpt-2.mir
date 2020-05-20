@@ -118,24 +118,16 @@ body:             |
   ; CHECK: bb.1.bb3:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r12 = t2ADDri renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $r12 = t2BICri killed renamable $r12, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $vpr = VMSR_P0 killed $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
   ; CHECK:   $r3 = tMOVr $r0, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.bb9:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   liveins: $lr, $r0, $r1, $r3
   ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
-  ; CHECK:   MVE_VPST 4, implicit $vpr
-  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
-  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
-  ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   MVE_VPST 8, implicit $vpr
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
   ; CHECK:   MVE_VPST 4, implicit $vpr
   ; CHECK:   renamable $vpr = MVE_VCMPi32r renamable $q0, $zr, 1, 1, killed renamable $vpr
   ; CHECK:   renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4)
@@ -143,7 +135,7 @@ body:             |
   ; CHECK:   MVE_VPST 8, implicit $vpr
   ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4)
   ; CHECK:   $r0 = tMOVr $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.bb27:
   ; CHECK:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
   ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc

@@ -297,6 +297,42 @@ clang-format
           bar();
         });
 
+- Option ``AlignConsecutiveBitFields`` has been added to align bit field
+  declarations across multiple adjacent lines
+
+  .. code-block:: c++
+
+      true:
+        bool aaa  : 1;
+        bool a    : 1;
+        bool bb   : 1;
+
+      false:
+        bool aaa : 1;
+        bool a : 1;
+        bool bb : 1;
+
+- Option ``BraceWrapping.BeforeWhile`` has been added to allow wrapping
+  before the ```while`` in a do..while loop. By default the value is (``false``)
+
+  In previous releases ``IndentBraces`` implied ``BraceWrapping.BeforeWhile``.
+  If using a Custom BraceWrapping style you may need to now set 
+  ``BraceWrapping.BeforeWhile`` to (``true``) to be explicit.
+
+  .. code-block:: c++
+
+      true:
+      do {
+        foo();
+      }
+      while(1);
+
+      false:
+      do {
+        foo();
+      } while(1);
+
+
 libclang
 --------
 

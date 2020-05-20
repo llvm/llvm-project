@@ -319,6 +319,10 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
 
 /// Update PHI nodes in this BasicBlock before removal of predecessor \p Pred.
 /// Note that this function does not actually remove the predecessor.
+///
+/// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
+/// zero or one incoming values, and don't simplify PHIs with all incoming
+/// values the same.
 void BasicBlock::removePredecessor(BasicBlock *Pred,
                                    bool KeepOneInputPHIs) {
   // Use hasNUsesOrMore to bound the cost of this assertion for complex CFGs.
@@ -334,16 +338,16 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
   // Update all PHI nodes.
   for (iterator II = begin(); isa<PHINode>(II);) {
     PHINode *PN = cast<PHINode>(II++);
-    PN->removeIncomingValue(Pred);
-    // If we have a single predecessor, removeIncomingValue erased the PHI node
-    // itself.
-    // FIXME in practice "KeepOneInputPHIs" means "KeepConstantPHIs" and some
-    // callers seem to rely on that.
-    if (NumPreds > 1 && !KeepOneInputPHIs) {
-      if (Value *PNV = PN->hasConstantValue()) {
-        // Replace the PHI node with its constant value.
-        PN->replaceAllUsesWith(PNV);
-        PN->eraseFromParent();
+    PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
+    if (!KeepOneInputPHIs) {
+      // If we have a single predecessor, removeIncomingValue erased the PHI
+      // node itself.
+      if (NumPreds > 1) {
+        if (Value *PNV = PN->hasConstantValue()) {
+          // Replace the PHI node with its constant value.
+          PN->replaceAllUsesWith(PNV);
+          PN->eraseFromParent();
+        }
       }
     }
   }

@@ -16,6 +16,8 @@
 namespace mlir {
 namespace linalg {
 
+struct LinalgTilingOptions;
+
 //===----------------------------------------------------------------------===//
 // Transformations exposed as function calls.
 //===----------------------------------------------------------------------===//
@@ -34,10 +36,6 @@ struct TiledLinalgOp {
 /// An empty vector is interpreted as the identity permutation and the
 /// transformation returns early.
 ///
-/// When non-null, the optional pointer `folder` is used to call into the
-/// `createAndFold` builder method. If `folder` is null, the regular `create`
-/// method is called.
-///
 /// Returns a struct containing the tiled loops in the specified order
 /// and the cloned op if successful, llvm::None otherwise.
 ///
@@ -46,26 +44,7 @@ struct TiledLinalgOp {
 /// integers, in the range 0..`tileSizes.size()` without duplications
 /// (i.e. `[1,1,2]` is an invalid permutation).
 Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     ArrayRef<Value> tileSizes,
-                                     ArrayRef<unsigned> interchangeVector = {},
-                                     OperationFolder *folder = nullptr);
-Optional<TiledLinalgOp>
-tileLinalgOpToParallelLoops(OpBuilder &b, LinalgOp op,
-                            ArrayRef<Value> tileSizes,
-                            ArrayRef<unsigned> interchangeVector = {},
-                            OperationFolder *folder = nullptr);
-
-/// Performs standalone tiling of a single LinalgOp by constant `tileSizes`.
-/// See `tileLinalgOp(... ArrayRef<Value> tileSizes,)` for more details
-Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
-                                     ArrayRef<int64_t> tileSizes,
-                                     ArrayRef<unsigned> interchangeVector = {},
-                                     OperationFolder *folder = nullptr);
-Optional<TiledLinalgOp>
-tileLinalgOpToParallelLoops(OpBuilder &b, LinalgOp op,
-                            ArrayRef<int64_t> tileSizes,
-                            ArrayRef<unsigned> interchangeVector = {},
-                            OperationFolder *folder = nullptr);
+                                     const LinalgTilingOptions &options);
 
 /// Interchanges the `iterator_types` and `iterator_maps` dimensions of `op`.
 /// This is an in-place transformation controlled by `interchangeVector`.
@@ -203,15 +182,34 @@ private:
 enum class LinalgTilingLoopType {
   Loops = 0,
   AffineLoops = 1,
-  ParallelLoops = 2
+  ParallelLoops = 2,
 };
+using TileSizeComputationFunction =
+    std::function<SmallVector<Value, 4>(OpBuilder &, Operation *)>;
 struct LinalgTilingOptions {
-  /// The tile sizes by which to tile.
-  SmallVector<int64_t, 4> tileSizes{};
-  LinalgTilingOptions &setTileSizes(ArrayRef<int64_t> ts) {
-    tileSizes.assign(ts.begin(), ts.end());
+  /// Computation function that returns the tile sizes for each operation.
+  /// Delayed construction of constant tile sizes should occur to interoperate
+  /// with folding.
+  TileSizeComputationFunction tileSizeComputationFunction = nullptr;
+  LinalgTilingOptions &
+  setTileSizeComputationFunction(TileSizeComputationFunction &fun) {
+    tileSizeComputationFunction = fun;
     return *this;
   }
+  /// Set the `tileSizeComputationFunction` to return the values `ts`. The
+  /// values must not fold away when tiling. Otherwise, use a more robust
+  /// `tileSizeComputationFunction`.
+  LinalgTilingOptions &setTileSizes(ValueRange ts) {
+    tileSizeComputationFunction = [&](OpBuilder &, Operation *) {
+      return SmallVector<Value, 4>(ts.begin(), ts.end());
+    };
+    return *this;
+  }
+  /// Convenience function to set the `tileSizeComputationFunction` to a
+  /// function that computes tile sizes at the point they are needed. Allows
+  /// proper interaction with folding.
+  LinalgTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
+
   /// The interchange vector to reorder the tiled loops.
   SmallVector<unsigned, 4> interchangeVector{};
   LinalgTilingOptions &setInterchange(ArrayRef<unsigned> interchange) {
@@ -225,6 +223,12 @@ struct LinalgTilingOptions {
     return *this;
   }
 };
+
+/// Canonicalization patterns relevant to apply after tiling patterns. These are
+/// applied automatically by the tiling pass but need to be applied manually
+/// when tiling is called programmatically.
+OwningRewritePatternList
+getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 
 struct LinalgBaseTilingPattern : public RewritePattern {
   LinalgBaseTilingPattern(StringRef opName, MLIRContext *context,

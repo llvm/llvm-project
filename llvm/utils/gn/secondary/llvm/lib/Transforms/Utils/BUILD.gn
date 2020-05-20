@@ -62,6 +62,7 @@ static_library("Utils") {
     "SSAUpdater.cpp",
     "SSAUpdaterBulk.cpp",
     "SanitizerStats.cpp",
+    "ScalarEvolutionExpander.cpp",
     "SimplifyCFG.cpp",
     "SimplifyIndVar.cpp",
     "SimplifyLibCalls.cpp",

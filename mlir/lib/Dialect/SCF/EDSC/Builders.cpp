@@ -67,8 +67,7 @@ mlir::edsc::LoopNestBuilder::LoopNestBuilder(Value *iv, Value lb, Value ub,
   loops.emplace_back(makeLoopBuilder(iv, lb, ub, step, noArgs, {}));
 }
 
-Operation::result_range
-mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
+ValueRange mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
     std::function<void(void)> fun) {
   if (fun)
     fun();
@@ -76,7 +75,9 @@ mlir::edsc::LoopNestBuilder::LoopNestBuilder::operator()(
   for (auto &lit : reverse(loops))
     lit({});
 
-  return loops[0].getOp()->getResults();
+  if (!loops.empty())
+    return loops[0].getOp()->getResults();
+  return {};
 }
 
 LoopBuilder mlir::edsc::makeParallelLoopBuilder(MutableArrayRef<Value> ivs,

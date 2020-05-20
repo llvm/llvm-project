@@ -372,6 +372,10 @@ public:
 
   /// Update PHI nodes in this BasicBlock before removal of predecessor \p Pred.
   /// Note that this function does not actually remove the predecessor.
+  ///
+  /// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
+  /// zero or one incoming values, and don't simplify PHIs with all incoming
+  /// values the same.
   void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
 
   bool canSplitPredecessors() const;

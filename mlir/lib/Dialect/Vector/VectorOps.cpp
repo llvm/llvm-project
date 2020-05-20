@@ -470,6 +470,16 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getPositionAttrName(), positionAttr);
 }
 
+// Convenience builder which assumes the values are constant indices.
+void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
+                              Value source, ValueRange position) {
+  SmallVector<int64_t, 4> positionConstants =
+      llvm::to_vector<4>(llvm::map_range(position, [](Value pos) {
+        return pos.getDefiningOp<ConstantIndexOp>().getValue();
+      }));
+  build(builder, result, source, positionConstants);
+}
+
 static void print(OpAsmPrinter &p, vector::ExtractOp op) {
   p << op.getOperationName() << " " << op.vector() << op.position();
   p.printOptionalAttrDict(op.getAttrs(), {"position"});
@@ -737,6 +747,16 @@ void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
   auto positionAttr = getVectorSubscriptAttr(builder, position);
   result.addTypes(dest.getType());
   result.addAttribute(getPositionAttrName(), positionAttr);
+}
+
+// Convenience builder which assumes the values are constant indices.
+void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
+                     Value dest, ValueRange position) {
+  SmallVector<int64_t, 4> positionConstants =
+      llvm::to_vector<4>(llvm::map_range(position, [](Value pos) {
+        return pos.getDefiningOp<ConstantIndexOp>().getValue();
+      }));
+  build(builder, result, source, dest, positionConstants);
 }
 
 static LogicalResult verify(InsertOp op) {

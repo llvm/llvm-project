@@ -1778,6 +1778,34 @@ static void reinsertVectorIndexAdd(MachineIRBuilder &B,
   IdxUseInstr.getOperand(OpIdx).setReg(Add.getReg(0));
 }
 
+/// Implement extending a 32-bit value to a 64-bit value. \p Lo32Reg is the
+/// original 32-bit source value (to be inserted in the low part of the combined
+/// 64-bit result), and \p Hi32Reg is the high half of the combined 64-bit
+/// value.
+static void extendLow32IntoHigh32(MachineIRBuilder &B,
+                                  Register Hi32Reg, Register Lo32Reg,
+                                  unsigned ExtOpc,
+                                  const RegisterBank &RegBank,
+                                  bool IsBooleanSrc = false) {
+  if (ExtOpc == AMDGPU::G_ZEXT) {
+    B.buildConstant(Hi32Reg, 0);
+  } else if (ExtOpc == AMDGPU::G_SEXT) {
+    if (IsBooleanSrc) {
+      // If we know the original source was an s1, the high half is the same as
+      // the low.
+      B.buildCopy(Hi32Reg, Lo32Reg);
+    } else {
+      // Replicate sign bit from 32-bit extended part.
+      auto ShiftAmt = B.buildConstant(LLT::scalar(32), 31);
+      B.getMRI()->setRegBank(ShiftAmt.getReg(0), RegBank);
+      B.buildAShr(Hi32Reg, Lo32Reg, ShiftAmt);
+    }
+  } else {
+    assert(ExtOpc == AMDGPU::G_ANYEXT && "not an integer extension");
+    B.buildUndef(Hi32Reg);
+  }
+}
+
 void AMDGPURegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -2237,26 +2265,19 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
         // breakdowns supported.
         DstTy.getSizeInBits() == 64 &&
         SrcTy.getSizeInBits() <= 32) {
-      const LLT S32 = LLT::scalar(32);
       SmallVector<Register, 2> DefRegs(OpdMapper.getVRegs(0));
 
       // Extend to 32-bit, and then extend the low half.
       if (Signed) {
         // TODO: Should really be buildSExtOrCopy
         B.buildSExtOrTrunc(DefRegs[0], SrcReg);
-
-        // Replicate sign bit from 32-bit extended part.
-        auto ShiftAmt = B.buildConstant(S32, 31);
-        MRI.setRegBank(ShiftAmt.getReg(0), *SrcBank);
-        B.buildAShr(DefRegs[1], DefRegs[0], ShiftAmt);
       } else if (Opc == AMDGPU::G_ZEXT) {
         B.buildZExtOrTrunc(DefRegs[0], SrcReg);
-        B.buildConstant(DefRegs[1], 0);
       } else {
         B.buildAnyExtOrTrunc(DefRegs[0], SrcReg);
-        B.buildUndef(DefRegs[1]);
       }
 
+      extendLow32IntoHigh32(B, DefRegs[1], DefRegs[0], Opc, *SrcBank);
       MRI.setRegBank(DstReg, *SrcBank);
       MI.eraseFromParent();
       return;
@@ -2266,7 +2287,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
 
     // It is not legal to have a legalization artifact with a VCC source. Rather
-    // than introducing a copy, insert the selcet we would have to select the
+    // than introducing a copy, insert the select we would have to select the
     // copy to.
     if (SrcBank == &AMDGPU::VCCRegBank) {
       SmallVector<Register, 2> DefRegs(OpdMapper.getVRegs(0));
@@ -2289,7 +2310,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
       if (DstSize > 32) {
         B.buildSelect(DefRegs[0], SrcReg, True, False);
-        B.buildCopy(DefRegs[1], DefRegs[0]);
+        extendLow32IntoHigh32(B, DefRegs[1], DefRegs[0], Opc, *SrcBank, true);
       } else if (DstSize < 32) {
         auto Sel = B.buildSelect(SelType, SrcReg, True, False);
         MRI.setRegBank(Sel.getReg(0), *DstBank);

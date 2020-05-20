@@ -309,10 +309,6 @@ void VSCode::RunExitCommands() {
   RunLLDBCommands("Running exitCommands:", exit_commands);
 }
 
-void VSCode::RunTerminateCommands() {
-  RunLLDBCommands("Running terminateCommands:", terminate_commands);
-}
-
 lldb::SBTarget VSCode::CreateTargetFromArguments(
     const llvm::json::Object &arguments,
     lldb::SBError &error) {

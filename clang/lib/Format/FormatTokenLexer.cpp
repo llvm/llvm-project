@@ -74,6 +74,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeLessLess())
     return;
+  if (tryMergeForEach())
+    return;
 
   if (Style.isCSharp()) {
     if (tryMergeCSharpKeywordVariables())
@@ -356,6 +358,28 @@ bool FormatTokenLexer::tryTransformCSharpForEach() {
 
   Identifier->setType(TT_ForEachMacro);
   Identifier->Tok.setKind(tok::kw_for);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeForEach() {
+  if (Tokens.size() < 2)
+    return false;
+  auto &For = *(Tokens.end() - 2);
+  auto &Each = *(Tokens.end() - 1);
+  if (!For->is(tok::kw_for))
+    return false;
+  if (!Each->is(tok::identifier))
+    return false;
+  if (Each->TokenText != "each")
+    return false;
+
+  For->setType(TT_ForEachMacro);
+  For->Tok.setKind(tok::kw_for);
+
+  For->TokenText = StringRef(For->TokenText.begin(),
+                             Each->TokenText.end() - For->TokenText.begin());
+  For->ColumnWidth += Each->ColumnWidth;
+  Tokens.erase(Tokens.end() - 1);
   return true;
 }
 

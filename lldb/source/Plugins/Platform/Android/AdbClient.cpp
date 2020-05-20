@@ -141,7 +141,7 @@ Status AdbClient::Connect() {
   if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
     port = env_port;
   }
-  std::string uri = "connect://localhost:" + port;
+  std::string uri = "connect://127.0.0.1:" + port;
   m_conn->Connect(uri.c_str(), &error);
 
   return error;

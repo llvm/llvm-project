@@ -23,10 +23,8 @@ RUN: %lldb -x -b -f %t.foo -- bar -baz --quux | FileCheck %s --check-prefix DASH
 DASH: Current executable set to {{.*}}foo
 DASH: target.run-args "bar" "-baz" "--quux"
 
-RUN: %lldb -x -b %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefix UNKNOWN
-RUN: %lldb -x -b -f %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefix UNKNOWN
+RUN: not %lldb -x -b %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefix UNKNOWN
+RUN: not %lldb -x -b -f %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefix UNKNOWN
 
-UNKNOWN: warning: ignoring unknown option: -baz
-UNKNOWN: warning: ignoring unknown option: --quux
-UNKNOWN: Current executable set to {{.*}}foo
-UNKNOWN: target.run-args "bar"
+UNKNOWN: error: unknown option: -baz
+UNKNOWN: error: unknown option: --quux

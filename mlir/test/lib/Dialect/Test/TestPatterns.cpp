@@ -281,6 +281,23 @@ struct TestUndoBlockArgReplace : public ConversionPattern {
   }
 };
 
+/// A rewrite pattern that tests the undo mechanism when erasing a block.
+struct TestUndoBlockErase : public ConversionPattern {
+  TestUndoBlockErase(MLIRContext *ctx)
+      : ConversionPattern("test.undo_block_erase", /*benefit=*/1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    Block *secondBlock = &*std::next(op->getRegion(0).begin());
+    rewriter.setInsertionPointToStart(secondBlock);
+    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    rewriter.eraseBlock(secondBlock);
+    rewriter.updateRootInPlace(op, [] {});
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
 
@@ -443,6 +460,18 @@ struct TestBoundedRecursiveRewrite
   /// The conversion target handles bounding the recursion of this pattern.
   bool hasBoundedRewriteRecursion() const final { return true; }
 };
+
+struct TestNestedOpCreationUndoRewrite
+    : public OpRewritePattern<IllegalOpWithRegionAnchor> {
+  using OpRewritePattern<IllegalOpWithRegionAnchor>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IllegalOpWithRegionAnchor op,
+                                PatternRewriter &rewriter) const final {
+    // rewriter.replaceOpWithNewOp<IllegalOpWithRegion>(op);
+    rewriter.replaceOpWithNewOp<IllegalOpWithRegion>(op);
+    return success();
+  };
+};
 } // namespace
 
 namespace {
@@ -492,14 +521,14 @@ struct TestLegalizePatternDriver
     TestTypeConverter converter;
     mlir::OwningRewritePatternList patterns;
     populateWithGenerated(&getContext(), &patterns);
-    patterns.insert<TestRegionRewriteBlockMovement, TestRegionRewriteUndo,
-                    TestCreateBlock, TestCreateIllegalBlock,
-                    TestUndoBlockArgReplace, TestPassthroughInvalidOp,
-                    TestSplitReturnType, TestChangeProducerTypeI32ToF32,
-                    TestChangeProducerTypeF32ToF64,
-                    TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-                    TestNonRootReplacement, TestBoundedRecursiveRewrite>(
-        &getContext());
+    patterns.insert<
+        TestRegionRewriteBlockMovement, TestRegionRewriteUndo, TestCreateBlock,
+        TestCreateIllegalBlock, TestUndoBlockArgReplace, TestUndoBlockErase,
+        TestPassthroughInvalidOp, TestSplitReturnType,
+        TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
+        TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
+        TestNonRootReplacement, TestBoundedRecursiveRewrite,
+        TestNestedOpCreationUndoRewrite>(&getContext());
     patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
