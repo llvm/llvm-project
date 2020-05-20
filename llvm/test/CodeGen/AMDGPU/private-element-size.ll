@@ -113,7 +113,7 @@ entry:
   %gep.index = getelementptr inbounds i32, i32 addrspace(1)* %index.array, i64 %idxprom
   %index.load = load i32, i32 addrspace(1)* %gep.index
   %index = and i32 %index.load, 2
-  %alloca = alloca [2 x <8 x i32>], align 16, addrspace(5)
+  %alloca = alloca [2 x <8 x i32>], align 32, addrspace(5)
   %gep0 = getelementptr inbounds [2 x <8 x i32>], [2 x <8 x i32>] addrspace(5)* %alloca, i32 0, i32 0
   %gep1 = getelementptr inbounds [2 x <8 x i32>], [2 x <8 x i32>] addrspace(5)* %alloca, i32 0, i32 1
   store <8 x i32> zeroinitializer, <8 x i32> addrspace(5)* %gep0

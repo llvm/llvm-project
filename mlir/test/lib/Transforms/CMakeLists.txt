@@ -19,7 +19,7 @@ add_mlir_library(MLIRTestTransforms
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
-  TestVectorToLoopsConversion.cpp
+  TestVectorToSCFConversion.cpp
   TestVectorTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR
@@ -39,13 +39,13 @@ add_mlir_library(MLIRTestTransforms
   MLIRGPUtoCUDATransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
-  MLIRLoopOps
+  MLIRSCF
   MLIRGPU
   MLIRPass
-  MLIRStandardToStandard
+  MLIRStandardOpsTransforms
   MLIRTestDialect
   MLIRTransformUtils
-  MLIRVectorToLoops
+  MLIRVectorToSCF
   MLIRVector
   )
 

@@ -662,7 +662,9 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
   }
 
   if (const auto *FD = llvm::dyn_cast<FieldDecl>(&ND)) {
-    const auto *Record = FD->getParent()->getDefinition();
+    const auto *Record = FD->getParent();
+    if (Record)
+      Record = Record->getDefinition();
     if (Record && !Record->isDependentType()) {
       uint64_t OffsetBits = Ctx.getFieldOffset(FD);
       if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType())) {

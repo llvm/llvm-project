@@ -665,7 +665,7 @@ void FlatAffineConstraints::addInductionVarOrTerminalSymbol(Value id) {
   // Add top level symbol.
   addSymbolId(getNumSymbolIds(), id);
   // Check if the symbol is a constant.
-  if (auto constOp = dyn_cast_or_null<ConstantIndexOp>(id.getDefiningOp()))
+  if (auto constOp = id.getDefiningOp<ConstantIndexOp>())
     setIdToConstant(id, constOp.getValue());
 }
 

@@ -68,7 +68,9 @@
 // a: scalar of element type (splat to vector type)
 // R: scalar of 1/2 width element type (splat to vector type)
 // r: scalar of 1/4 width element type (splat to vector type)
+// @: unsigned scalar of 1/4 width element type (splat to vector type)
 // e: 1/2 width unsigned elements, 2x element count
+// b: 1/4 width unsigned elements, 4x element count
 // h: 1/2 width elements, 2x element count
 // q: 1/4 width elements, 4x element count
 // o: 4x width elements, 1/4 element count
@@ -195,6 +197,7 @@ def IsInsertOp1SVALL          : FlagType<0x04000000>; // Inserts SV_ALL as the s
 def IsPrefetch                : FlagType<0x08000000>; // Contiguous prefetches.
 def IsGatherPrefetch          : FlagType<0x10000000>;
 def ReverseCompare            : FlagType<0x20000000>; // Compare operands must be swapped.
+def ReverseUSDOT              : FlagType<0x40000000>; // Unsigned/signed operands must be swapped.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -626,6 +629,13 @@ def SVDUPQ_8  : SInst<"svdupq[_n]_{d}", "dssssssssssssssss",  "cUc", MergeNone>;
 def SVDUPQ_16 : SInst<"svdupq[_n]_{d}", "dssssssss",  "sUsh", MergeNone>;
 def SVDUPQ_32 : SInst<"svdupq[_n]_{d}", "dssss",  "iUif", MergeNone>;
 def SVDUPQ_64 : SInst<"svdupq[_n]_{d}", "dss",  "lUld", MergeNone>;
+
+def SVDUP   : SInst<"svdup[_n]_{d}", "ds",   "csilUcUsUiUlhfd", MergeNone,    "aarch64_sve_dup_x">;
+def SVDUP_M : SInst<"svdup[_n]_{d}", "ddPs", "csilUcUsUiUlhfd", MergeOp1,     "aarch64_sve_dup">;
+def SVDUP_X : SInst<"svdup[_n]_{d}", "dPs",  "csilUcUsUiUlhfd", MergeAnyExp,  "aarch64_sve_dup">;
+def SVDUP_Z : SInst<"svdup[_n]_{d}", "dPs",  "csilUcUsUiUlhfd", MergeZeroExp, "aarch64_sve_dup">;
+
+def SVINDEX : SInst<"svindex_{d}",   "dss",  "csilUcUsUiUl",    MergeNone,    "aarch64_sve_index">;
 
 // Integer arithmetic
 
@@ -1061,7 +1071,11 @@ def SVCLASTA_N   : SInst<"svclasta[_n_{d}]",  "sPsd", "csilUcUsUiUlhfd", MergeNo
 def SVCLASTB     : SInst<"svclastb[_{d}]",    "dPdd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_clastb">;
 def SVCLASTB_N   : SInst<"svclastb[_n_{d}]",  "sPsd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_clastb_n">;
 def SVCOMPACT    : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd",        MergeNone, "aarch64_sve_compact">;
-//  SVDUP_LANE    (to land in D78750)
+// Note: svdup_lane is implemented using the intrinsic for TBL to represent a
+// splat of any possible lane. It is upto LLVM to pick a more efficient
+// instruction such as DUP (indexed) if the lane index fits the range of the
+// instruction's immediate.
+def SVDUP_LANE   : SInst<"svdup_lane[_{d}]",  "ddL",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl">;
 def SVDUPQ_LANE  : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_dupq_lane">;
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [], [ImmCheck<2, ImmCheckExtract, 1>]>;
 def SVLASTA      : SInst<"svlasta[_{d}]",     "sPd",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_lasta">;
@@ -1104,6 +1118,7 @@ def SVDUPQ_B8      : SInst<"svdupq[_n]_{d}",  "Pssssssssssssssss",  "Pc", MergeN
 def SVDUPQ_B16     : SInst<"svdupq[_n]_{d}", "Pssssssss",  "Ps", MergeNone>;
 def SVDUPQ_B32     : SInst<"svdupq[_n]_{d}", "Pssss",  "Pi", MergeNone>;
 def SVDUPQ_B64     : SInst<"svdupq[_n]_{d}", "Pss",  "Pl", MergeNone>;
+def SVDUP_N_B      : SInst<"svdup[_n]_{d}",  "Ps", "PcPsPiPl", MergeNone>;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1222,6 +1237,29 @@ def SVQINCP_N_S32 : SInst<"svqincp[_n_s32]_{d}", "kkP", "PcPsPiPl", MergeNone, "
 def SVQINCP_N_S64 : SInst<"svqincp[_n_s64]_{d}", "llP", "PcPsPiPl", MergeNone, "aarch64_sve_sqincp_n64">;
 def SVQINCP_N_U32 : SInst<"svqincp[_n_u32]_{d}", "mmP", "PcPsPiPl", MergeNone, "aarch64_sve_uqincp_n32">;
 def SVQINCP_N_U64 : SInst<"svqincp[_n_u64]_{d}", "nnP", "PcPsPiPl", MergeNone, "aarch64_sve_uqincp_n64">;
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_INT8)" in {
+def SVMLLA_S32   : SInst<"svmmla[_s32]",   "ddqq","i",  MergeNone, "aarch64_sve_smmla">;
+def SVMLLA_U32   : SInst<"svmmla[_u32]",   "ddqq","Ui", MergeNone, "aarch64_sve_ummla">;
+def SVUSMLLA_S32 : SInst<"svusmmla[_s32]", "ddbq","i",  MergeNone, "aarch64_sve_usmmla">;
+
+def SVUSDOT_S    : SInst<"svusdot[_s32]",    "ddbq", "i",       MergeNone, "aarch64_sve_usdot">;
+def SVUSDOT_N_S  : SInst<"svusdot[_n_s32]",  "ddbr", "i",       MergeNone, "aarch64_sve_usdot">;
+def SVSUDOT_S    : SInst<"svsudot[_s32]",    "ddqb", "i",       MergeNone, "aarch64_sve_usdot", [ReverseUSDOT]>;
+def SVSUDOT_N_S  : SInst<"svsudot[_n_s32]",  "ddq@", "i",       MergeNone, "aarch64_sve_usdot", [ReverseUSDOT]>;
+
+def SVUSDOT_LANE_S : SInst<"svusdot_lane[_s32]",  "ddbqi",  "i",   MergeNone, "aarch64_sve_usdot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+def SVSUDOT_LANE_S : SInst<"svsudot_lane[_s32]",  "ddqbi",  "i",   MergeNone, "aarch64_sve_sudot_lane", [], [ImmCheck<3, ImmCheckLaneIndexDot, 2>]>;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP32)" in {
+def SVMLLA_F32 : SInst<"svmmla[_f32]", "dddd","f", MergeNone, "aarch64_sve_fmmla">;
+}
+
+let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {
+def SVMLLA_F64 : SInst<"svmmla[_f64]", "dddd","d", MergeNone, "aarch64_sve_fmmla">;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 WhileGE/GT
@@ -1480,6 +1518,11 @@ def SVSHLLB_S_N : SInst<"svshllb[_n_{d}]", "dhi", "sil",    MergeNone, "aarch64_
 def SVSHLLB_U_N : SInst<"svshllb[_n_{d}]", "dhi", "UsUiUl", MergeNone, "aarch64_sve_ushllb", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
 def SVSHLLT_S_N : SInst<"svshllt[_n_{d}]", "dhi", "sil",    MergeNone, "aarch64_sve_sshllt", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
 def SVSHLLT_U_N : SInst<"svshllt[_n_{d}]", "dhi", "UsUiUl", MergeNone, "aarch64_sve_ushllt", [], [ImmCheck<1, ImmCheckShiftLeft,  0>]>;
+
+def SVMOVLB_S_N : SInst<"svmovlb[_{d}]", "dh",  "sil",    MergeNone>;
+def SVMOVLB_U_N : SInst<"svmovlb[_{d}]", "dh",  "UsUiUl", MergeNone>;
+def SVMOVLT_S_N : SInst<"svmovlt[_{d}]", "dh",  "sil",    MergeNone>;
+def SVMOVLT_U_N : SInst<"svmovlt[_{d}]", "dh",  "UsUiUl", MergeNone>;
 
 def SVMLALB_S_LANE : SInst<"svmlalb_lane[_{d}]",   "ddhhi", "il",   MergeNone, "aarch64_sve_smlalb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
 def SVMLALB_U_LANE : SInst<"svmlalb_lane[_{d}]",   "ddhhi", "UiUl", MergeNone, "aarch64_sve_umlalb_lane",   [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;

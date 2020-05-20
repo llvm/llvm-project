@@ -1,8 +1,10 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, x86
 
 // Test various interesting cases for AST reconstruction.
-// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s 
+// RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 \
+// RUN:   -Xclang -fkeep-static-consts -c /Fo%t.obj -- %s
+// RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/nested-types.lldbinit 2>&1 | FileCheck %s
 

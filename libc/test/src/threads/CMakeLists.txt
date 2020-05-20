@@ -9,8 +9,6 @@ add_libc_unittest(
   DEPENDS
     libc.include.threads
     libc.src.errno.__errno_location
-    libc.src.sys.mman.munmap
-    libc.src.sys.mman.mmap
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
 )
@@ -24,8 +22,6 @@ add_libc_unittest(
   DEPENDS
     libc.include.threads
     libc.src.errno.__errno_location
-    libc.src.sys.mman.mmap
-    libc.src.sys.mman.munmap
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock

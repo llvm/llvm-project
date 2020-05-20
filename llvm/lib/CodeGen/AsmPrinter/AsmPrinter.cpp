@@ -1845,7 +1845,7 @@ void AsmPrinter::emitConstantPool() {
   SmallVector<SectionCPs, 4> CPSections;
   for (unsigned i = 0, e = CP.size(); i != e; ++i) {
     const MachineConstantPoolEntry &CPE = CP[i];
-    unsigned Align = CPE.getAlignment();
+    unsigned Align = CPE.getAlign().value();
 
     SectionKind Kind = CPE.getSectionKind(&getDataLayout());
 
@@ -1896,8 +1896,7 @@ void AsmPrinter::emitConstantPool() {
       MachineConstantPoolEntry CPE = CP[CPI];
 
       // Emit inter-object padding for alignment.
-      unsigned AlignMask = CPE.getAlignment() - 1;
-      unsigned NewOffset = (Offset + AlignMask) & ~AlignMask;
+      unsigned NewOffset = alignTo(Offset, CPE.getAlign());
       OutStreamer->emitZeros(NewOffset - Offset);
 
       Type *Ty = CPE.getType();
@@ -2918,7 +2917,7 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
       const DataLayout &DL = MF->getDataLayout();
       SectionKind Kind = CPE.getSectionKind(&DL);
       const Constant *C = CPE.Val.ConstVal;
-      unsigned Align = CPE.Alignment;
+      unsigned Align = CPE.Alignment.value();
       if (const MCSectionCOFF *S = dyn_cast<MCSectionCOFF>(
               getObjFileLowering().getSectionForConstant(DL, Kind, C, Align))) {
         if (MCSymbol *Sym = S->getCOMDATSymbol()) {

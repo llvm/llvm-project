@@ -289,6 +289,12 @@ void IOHandlerEditline::Deactivate() {
   m_delegate.IOHandlerDeactivated(*this);
 }
 
+void IOHandlerEditline::TerminalSizeChanged() {
+#if LLDB_ENABLE_LIBEDIT
+  m_editline_up->TerminalSizeChanged();
+#endif
+}
+
 // Split out a line from the buffer, if there is a full one to get.
 static Optional<std::string> SplitLine(std::string &line_buffer) {
   size_t pos = line_buffer.find('\n');

@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 module m
 ! C755 The same proc-component-attr-spec shall not appear more than once in a 
 ! given proc-component-def-stmt.
@@ -24,6 +24,8 @@ module m
     procedure(passNopassProc), pass, pointer, nopass :: passNopassField
     !WARNING: Attribute 'POINTER' cannot be used more than once
     procedure(pointerProc), pointer, public, pointer :: pointerField
+    !ERROR: Procedure component 'nonpointerfield' must have POINTER attribute
+    procedure(publicProc), public :: nonpointerField
   contains
     procedure :: noPassProc
     procedure :: passProc

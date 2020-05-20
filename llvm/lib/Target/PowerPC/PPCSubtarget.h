@@ -143,6 +143,7 @@ protected:
   bool VectorsUseTwoUnits;
   bool UsePPCPreRASchedStrategy;
   bool UsePPCPostRASchedStrategy;
+  bool PredictableSelectIsExpensive;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -394,6 +395,10 @@ public:
   }
 
   bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }
+
+  bool isPredictableSelectIsExpensive() const {
+    return PredictableSelectIsExpensive;
+  }
 };
 } // End llvm namespace
 

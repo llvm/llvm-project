@@ -13,7 +13,7 @@
 #ifndef AVX512_OPS
 #define AVX512_OPS
 
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // AVX512 dialect definition

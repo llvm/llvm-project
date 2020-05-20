@@ -1,5 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
-! OPTIONS: -fopenmp
+! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
 
 ! Check OpenMP 2.17 Nesting of Regions
 

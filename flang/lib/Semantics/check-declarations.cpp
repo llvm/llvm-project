@@ -33,10 +33,7 @@ public:
 
   void Check() { Check(context_.globalScope()); }
   void Check(const ParamValue &, bool canBeAssumed);
-  void Check(const Bound &bound) {
-    CheckSpecExpr(
-        bound.GetExplicit(), evaluate::SpecificationExprContext::BOUND);
-  }
+  void Check(const Bound &bound) { CheckSpecExpr(bound.GetExplicit()); }
   void Check(const ShapeSpec &spec) {
     Check(spec.lbound());
     Check(spec.ubound());
@@ -47,9 +44,7 @@ public:
   void Check(const Scope &);
 
 private:
-  template <typename A>
-  void CheckSpecExpr(
-      const A &x, const evaluate::SpecificationExprContext specExprContext) {
+  template <typename A> void CheckSpecExpr(const A &x) {
     if (symbolBeingChecked_ && IsSaved(*symbolBeingChecked_)) {
       if (!evaluate::IsConstantExpr(x)) {
         messages_.Say(
@@ -58,22 +53,18 @@ private:
       }
     } else {
       evaluate::CheckSpecificationExpr(
-          x, messages_, DEREF(scope_), context_.intrinsics(), specExprContext);
+          x, messages_, DEREF(scope_), context_.intrinsics());
     }
   }
-  template <typename A>
-  void CheckSpecExpr(const std::optional<A> &x,
-      const evaluate::SpecificationExprContext specExprContext) {
+  template <typename A> void CheckSpecExpr(const std::optional<A> &x) {
     if (x) {
-      CheckSpecExpr(*x, specExprContext);
+      CheckSpecExpr(*x);
     }
   }
-  template <typename A>
-  void CheckSpecExpr(
-      A &x, const evaluate::SpecificationExprContext specExprContext) {
+  template <typename A> void CheckSpecExpr(A &x) {
     x = Fold(foldingContext_, std::move(x));
     const A &constx{x};
-    CheckSpecExpr(constx, specExprContext);
+    CheckSpecExpr(constx);
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
   void CheckVolatile(
@@ -141,8 +132,7 @@ void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
           " external function result"_err_en_US);
     }
   } else {
-    CheckSpecExpr(
-        value.GetExplicit(), evaluate::SpecificationExprContext::TYPE_PARAM);
+    CheckSpecExpr(value.GetExplicit());
   }
 }
 
@@ -293,6 +283,12 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A dummy argument may not have the SAVE attribute"_err_en_US);
     }
+  }
+  if (symbol.owner().IsDerivedType() &&
+      (symbol.attrs().test(Attr::CONTIGUOUS) &&
+          !(IsPointer(symbol) && symbol.Rank() > 0))) { // C752
+    messages_.Say(
+        "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
   }
 }
 
@@ -584,6 +580,12 @@ void CheckHelper::CheckProcEntity(
       messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
     }
   } else if (symbol.owner().IsDerivedType()) {
+    if (!symbol.attrs().test(Attr::POINTER)) { // C756
+      const auto &name{symbol.name()};
+      messages_.Say(name,
+          "Procedure component '%s' must have POINTER attribute"_err_en_US,
+          name);
+    }
     CheckPassArg(symbol, details.interface().symbol(), details);
   }
   if (symbol.attrs().test(Attr::POINTER)) {
@@ -1066,7 +1068,7 @@ void CheckHelper::CheckVolatile(const Symbol &symbol, bool isAssociated,
 
 void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
   CheckConflicting(symbol, Attr::POINTER, Attr::TARGET);
-  CheckConflicting(symbol, Attr::POINTER, Attr::ALLOCATABLE);
+  CheckConflicting(symbol, Attr::POINTER, Attr::ALLOCATABLE); // C751
   CheckConflicting(symbol, Attr::POINTER, Attr::INTRINSIC);
   if (symbol.Corank() > 0) {
     messages_.Say(
@@ -1076,6 +1078,7 @@ void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
 }
 
 // C760 constraints on the passed-object dummy argument
+// C757 constraints on procedure pointer components
 void CheckHelper::CheckPassArg(
     const Symbol &proc, const Symbol *interface, const WithPassArg &details) {
   if (proc.attrs().test(Attr::NOPASS)) {
@@ -1117,7 +1120,7 @@ void CheckHelper::CheckPassArg(
       break;
     }
   }
-  if (!passArgIndex) {
+  if (!passArgIndex) { // C758
     messages_.Say(*passName,
         "'%s' is not a dummy argument of procedure interface '%s'"_err_en_US,
         *passName, interface->name());

@@ -10,6 +10,8 @@ syntax = "proto3";
 
 package clang.clangd.remote;
 
+// Semantics of SymbolIndex match clangd::SymbolIndex with all required
+// structures corresponding to their clangd::* counterparts.
 service SymbolIndex {
   rpc Lookup(LookupRequest) returns (stream LookupReply) {}
 
@@ -34,7 +36,7 @@ message FuzzyFindRequest {
   repeated string scopes = 2;
   bool any_scope = 3;
   uint32 limit = 4;
-  bool resricted_for_code_completion = 5;
+  bool restricted_for_code_completion = 5;
   repeated string proximity_paths = 6;
   repeated string preferred_types = 7;
 }
@@ -63,7 +65,49 @@ message RefsReply {
   }
 }
 
-// FIXME(kirillbobyrev): Properly serialize symbols and refs instead of passing
-// YAML.
-message Ref { string yaml_serialization = 1; }
-message Symbol { string yaml_serialization = 1; }
+message Symbol {
+  string id = 1;
+  SymbolInfo info = 2;
+  string name = 3;
+  SymbolLocation definition = 4;
+  string scope = 5;
+  SymbolLocation canonical_declarattion = 6;
+  int32 references = 7;
+  uint32 origin = 8;
+  string signature = 9;
+  string template_specialization_args = 10;
+  string completion_snippet_suffix = 11;
+  string documentation = 12;
+  string return_type = 13;
+  string type = 14;
+  repeated HeaderWithReferences headers = 15;
+  uint32 flags = 16;
+}
+
+message Ref {
+  SymbolLocation location = 1;
+  uint32 kind = 2;
+}
+
+message SymbolInfo {
+  uint32 kind = 1;
+  uint32 subkind = 2;
+  uint32 language = 3;
+  uint32 properties = 4;
+}
+
+message SymbolLocation {
+  Position start = 1;
+  Position end = 2;
+  string file_uri = 3;
+}
+
+message Position {
+  uint32 line = 1;
+  uint32 column = 2;
+}
+
+message HeaderWithReferences {
+  string header = 1;
+  uint32 references = 2;
+}

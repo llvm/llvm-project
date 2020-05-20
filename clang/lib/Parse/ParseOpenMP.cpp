@@ -2668,6 +2668,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_nontemporal:
   case OMPC_inclusive:
   case OMPC_exclusive:
+  case OMPC_affinity:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
     break;
   case OMPC_uses_allocators:
@@ -3275,7 +3276,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                          getOpenMPClauseName(Kind).data()))
     return true;
 
-  bool DependWithIterator = false;
+  bool HasIterator = false;
   bool NeedRParenForLinear = false;
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);
@@ -3321,7 +3322,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         // iterators-definition ]
         // where iterator-specifier is [ iterator-type ] identifier =
         // range-specification
-        DependWithIterator = true;
+        HasIterator = true;
         EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
         ExprResult IteratorRes = ParseOpenMPIteratorsExpr();
         Data.DepModOrTailExpr = IteratorRes.get();
@@ -3440,12 +3441,24 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           ConsumeToken();
       }
     }
-  } else if (Kind == OMPC_allocate) {
+  } else if (Kind == OMPC_allocate ||
+             (Kind == OMPC_affinity && Tok.is(tok::identifier) &&
+              PP.getSpelling(Tok) == "iterator")) {
     // Handle optional allocator expression followed by colon delimiter.
     ColonProtectionRAIIObject ColonRAII(*this);
     TentativeParsingAction TPA(*this);
-    ExprResult Tail =
-        Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    // OpenMP 5.0, 2.10.1, task Construct.
+    // where aff-modifier is one of the following:
+    // iterator(iterators-definition)
+    ExprResult Tail;
+    if (Kind == OMPC_allocate) {
+      Tail = ParseAssignmentExpression();
+    } else {
+      HasIterator = true;
+      EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
+      Tail = ParseOpenMPIteratorsExpr();
+    }
+    Tail = Actions.CorrectDelayedTyposInExpr(Tail);
     Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
                                        /*DiscardedValue=*/false);
     if (Tail.isUsable()) {
@@ -3454,8 +3467,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         Data.ColonLoc = ConsumeToken();
         TPA.Commit();
       } else {
-        // colon not found, no allocator specified, parse only list of
-        // variables.
+        // Colon not found, parse only list of variables.
         TPA.Revert();
       }
     } else {
@@ -3524,7 +3536,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   if (!T.consumeClose())
     Data.RLoc = T.getCloseLocation();
   // Exit from scope when the iterator is used in depend clause.
-  if (DependWithIterator)
+  if (HasIterator)
     ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_map && Vars.empty()) ||
          (MustHaveTail && !Data.DepModOrTailExpr) || InvalidReductionId ||

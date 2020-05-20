@@ -19,10 +19,29 @@
 
 namespace llvm {
 class FileCollectorFileSystem;
-/// Collects files into a directory and generates a mapping that can be used by
-/// the VFS.
+
+/// Captures file system interaction and generates data to be later replayed
+/// with the RedirectingFileSystem.
+///
+/// For any file that gets accessed we eventually create:
+/// - a copy of the file inside Root
+/// - a record in RedirectingFileSystem mapping that maps:
+///   current real path -> path to the copy in Root
+///
+/// That intent is that later when the mapping is used by RedirectingFileSystem
+/// it simulates the state of FS that we collected.
+///
+/// We generate file copies and mapping lazily - see writeMapping and copyFiles.
+/// We don't try to capture the state of the file at the exact time when it's
+/// accessed. Files might get changed, deleted ... we record only the "final"
+/// state.
+///
+/// In order to preserve the relative topology of files we use their real paths
+/// as relative paths inside of the Root.
 class FileCollector {
 public:
+  /// \p Root is the directory where collected files are will be stored.
+  /// \p OverlayRoot is VFS mapping root.
   /// \p Root directory gets created in copyFiles unless it already exists.
   FileCollector(std::string Root, std::string OverlayRoot);
 
@@ -39,8 +58,8 @@ public:
   /// removed after it was added to the mapping.
   std::error_code copyFiles(bool StopOnError = true);
 
-  /// Create a VFS that collects all the paths that might be looked at by the
-  /// file system accesses.
+  /// Create a VFS that uses \p Collector to collect files accessed via \p
+  /// BaseFS.
   static IntrusiveRefCntPtr<vfs::FileSystem>
   createCollectorVFS(IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
                      std::shared_ptr<FileCollector> Collector);
@@ -73,11 +92,11 @@ protected:
   /// Synchronizes access to Seen, VFSWriter and SymlinkMap.
   std::mutex Mutex;
 
-  /// The root directory where files are copied.
-  std::string Root;
+  /// The directory where collected files are copied to in copyFiles().
+  const std::string Root;
 
   /// The root directory where the VFS overlay lives.
-  std::string OverlayRoot;
+  const std::string OverlayRoot;
 
   /// Tracks already seen files so they can be skipped.
   StringSet<> Seen;

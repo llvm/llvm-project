@@ -23,7 +23,7 @@ add_mlir_dialect_library(MLIRLLVMIR
   MLIRControlFlowInterfaces
   MLIROpenMP
   MLIRIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRSupport
   )
 
@@ -45,7 +45,7 @@ add_mlir_dialect_library(MLIRLLVMAVX512
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   )
 
 add_mlir_dialect_library(MLIRNVVMIR
@@ -66,7 +66,7 @@ add_mlir_dialect_library(MLIRNVVMIR
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   )
 
 add_mlir_dialect_library(MLIRROCDLIR
@@ -86,6 +86,6 @@ add_mlir_dialect_library(MLIRROCDLIR
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRVectorToLLVM
   )

@@ -223,3 +223,21 @@ UNKNOWN_ARG: error: unknown argument: --foo
 
 RUN: not ld.lld -m i386pep 2>&1 | FileCheck -check-prefix NO_INPUT_FILES %s
 NO_INPUT_FILES: error: no input files
+
+RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix ENABLE_AUTO_IMPORT %s
+RUN: ld.lld -### -m i386pep foo.o --disable-auto-import --enable-auto-import | FileCheck -check-prefix ENABLE_AUTO_IMPORT %s
+RUN: ld.lld -### -m i386pep foo.o -enable-auto-import | FileCheck -check-prefix ENABLE_AUTO_IMPORT %s
+ENABLE_AUTO_IMPORT: -auto-import{{ }}
+
+RUN: ld.lld -### -m i386pep foo.o --disable-auto-import | FileCheck -check-prefix DISABLE_AUTO_IMPORT %s
+RUN: ld.lld -### -m i386pep foo.o -disable-auto-import | FileCheck -check-prefix DISABLE_AUTO_IMPORT %s
+DISABLE_AUTO_IMPORT: -auto-import:no
+
+RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix ENABLE_RUNTIME_PSEUDO_RELOC %s
+RUN: ld.lld -### -m i386pep foo.o --disable-runtime-pseudo-reloc --enable-runtime-pseudo-reloc | FileCheck -check-prefix ENABLE_RUNTIME_PSEUDO_RELOC %s
+RUN: ld.lld -### -m i386pep foo.o -enable-runtime-pseudo-reloc | FileCheck -check-prefix ENABLE_RUNTIME_PSEUDO_RELOC %s
+ENABLE_RUNTIME_PSEUDO_RELOC: -runtime-pseudo-reloc{{ }}
+
+RUN: ld.lld -### -m i386pep foo.o --disable-runtime-pseudo-reloc | FileCheck -check-prefix DISABLE_RUNTIME_PSEUDO_RELOC %s
+RUN: ld.lld -### -m i386pep foo.o -disable-runtime-pseudo-reloc | FileCheck -check-prefix DISABLE_RUNTIME_PSEUDO_RELOC %s
+DISABLE_RUNTIME_PSEUDO_RELOC: -runtime-pseudo-reloc:no

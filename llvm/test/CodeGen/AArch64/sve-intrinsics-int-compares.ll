@@ -74,6 +74,42 @@ define <vscale x 4 x i1> @cmpeq_wide_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
   ret <vscale x 4 x i1> %out
 }
 
+define <vscale x 16 x i1> @cmpeq_ir_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmpeq_ir_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmpeq p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT: ret
+  %out = icmp eq <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmpeq_ir_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmpeq_ir_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmpeq p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = icmp eq <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpeq_ir_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmpeq_ir_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmpeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT: ret
+  %out = icmp eq <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmpeq_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmpeq_ir_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpeq p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: ret
+  %out = icmp eq <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
 ;
 ; CMPGE
 ;
@@ -146,6 +182,78 @@ define <vscale x 4 x i1> @cmpge_wide_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
                                                                      <vscale x 4 x i32> %a,
                                                                      <vscale x 2 x i64> %b)
   ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmpge_ir_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmpge_ir_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmpge p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT: ret
+  %out = icmp sge <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmpge_ir_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmpge_ir_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmpge p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = icmp sge <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpge_ir_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmpge_ir_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmpge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT: ret
+  %out = icmp sge <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmpge_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmpge_ir_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpge p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: ret
+  %out = icmp sge <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmpge_ir_comm_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmpge_ir_comm_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmpge p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT: ret
+  %out = icmp sle <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmpge_ir_comm_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmpge_ir_comm_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmpge p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT: ret
+  %out = icmp sle <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpge_ir_comm_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmpge_ir_comm_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmpge p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT: ret
+  %out = icmp sle <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmpge_ir_comm_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmpge_ir_comm_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpge p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT: ret
+  %out = icmp sle <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
 }
 
 ;
@@ -222,6 +330,78 @@ define <vscale x 4 x i1> @cmpgt_wide_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
   ret <vscale x 4 x i1> %out
 }
 
+define <vscale x 16 x i1> @cmpgt_ir_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmpgt_ir_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmpgt p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT: ret
+  %out = icmp sgt <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmpgt_ir_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmpgt_ir_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmpgt p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = icmp sgt <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpgt_ir_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmpgt_ir_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmpgt p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT: ret
+  %out = icmp sgt <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmpgt_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmpgt_ir_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpgt p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: ret
+  %out = icmp sgt <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmpgt_ir_comm_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmpgt_ir_comm_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmpgt p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT: ret
+  %out = icmp slt <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmpgt_ir_comm_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmpgt_ir_comm_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmpgt p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT: ret
+  %out = icmp slt <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpgt_ir_comm_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmpgt_ir_comm_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmpgt p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT: ret
+  %out = icmp slt <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmpgt_ir_comm_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmpgt_ir_comm_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpgt p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT: ret
+  %out = icmp slt <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
 ;
 ; CMPHI
 ;
@@ -296,6 +476,78 @@ define <vscale x 4 x i1> @cmphi_wide_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
   ret <vscale x 4 x i1> %out
 }
 
+define <vscale x 16 x i1> @cmphi_ir_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmphi_ir_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmphi p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT: ret
+  %out = icmp ugt <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmphi_ir_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmphi_ir_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmphi p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = icmp ugt <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmphi_ir_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmphi_ir_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmphi p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT: ret
+  %out = icmp ugt <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmphi_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmphi_ir_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmphi p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: ret
+  %out = icmp ugt <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmphi_ir_comm_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmphi_ir_comm_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT: ret
+  %out = icmp ult <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmphi_ir_comm_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmphi_ir_comm_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmphi p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT: ret
+  %out = icmp ult <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmphi_ir_comm_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmphi_ir_comm_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmphi p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT: ret
+  %out = icmp ult <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmphi_ir_comm_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmphi_ir_comm_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmphi p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT: ret
+  %out = icmp ult <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
 ;
 ; CMPHS
 ;
@@ -368,6 +620,78 @@ define <vscale x 4 x i1> @cmphs_wide_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
                                                                      <vscale x 4 x i32> %a,
                                                                      <vscale x 2 x i64> %b)
   ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmphs_ir_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmphs_ir_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmphs p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT: ret
+  %out = icmp uge <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmphs_ir_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmphs_ir_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmphs p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = icmp uge <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmphs_ir_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmphs_ir_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmphs p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT: ret
+  %out = icmp uge <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmphs_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmphs_ir_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmphs p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: ret
+  %out = icmp uge <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmphs_ir_comm_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmphs_ir_comm_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmphs p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT: ret
+  %out = icmp ule <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmphs_ir_comm_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmphs_ir_comm_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmphs p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT: ret
+  %out = icmp ule <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmphs_ir_comm_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmphs_ir_comm_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmphs p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT: ret
+  %out = icmp ule <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmphs_ir_comm_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmphs_ir_comm_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmphs p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT: ret
+  %out = icmp ule <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
 }
 
 ;
@@ -578,6 +902,42 @@ define <vscale x 4 x i1> @cmpne_wide_s(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
                                                                      <vscale x 4 x i32> %a,
                                                                      <vscale x 2 x i64> %b)
   ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 16 x i1> @cmpne_ir_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cmpne_ir_b:
+; CHECK: ptrue p0.b
+; CHECK-NEXT: cmpne p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT: ret
+  %out = icmp ne <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i1> %out
+}
+
+define <vscale x 8 x i1> @cmpne_ir_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cmpne_ir_h:
+; CHECK: ptrue p0.h
+; CHECK-NEXT: cmpne p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT: ret
+  %out = icmp ne <vscale x 8 x i16> %a, %b
+  ret <vscale x 8 x i1> %out
+}
+
+define <vscale x 4 x i1> @cmpne_ir_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cmpne_ir_s:
+; CHECK: ptrue p0.s
+; CHECK-NEXT: cmpne p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT: ret
+  %out = icmp ne <vscale x 4 x i32> %a, %b
+  ret <vscale x 4 x i1> %out
+}
+
+define <vscale x 2 x i1> @cmpne_ir_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cmpne_ir_d:
+; CHECK: ptrue p0.d
+; CHECK-NEXT: cmpne p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT: ret
+  %out = icmp ne <vscale x 2 x i64> %a, %b
+  ret <vscale x 2 x i1> %out
 }
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)

@@ -276,6 +276,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 %additive
 ; GFX1064-LABEL: add_i32_uniform:
 ; GFX1064:       ; %bb.0: ; %entry
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], exec
+; GFX1064-NEXT:    s_clause 0x1
 ; GFX1064-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1064-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
@@ -310,6 +311,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 %additive
 ;
 ; GFX1032-LABEL: add_i32_uniform:
 ; GFX1032:       ; %bb.0: ; %entry
+; GFX1032-NEXT:    s_clause 0x1
 ; GFX1032-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1032-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GFX1032-NEXT:    s_mov_b32 s2, exec_lo
@@ -494,8 +496,8 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -733,8 +735,8 @@ define amdgpu_kernel void @add_i32_varying_gfx1032(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -972,8 +974,8 @@ define amdgpu_kernel void @add_i32_varying_gfx1064(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -1827,6 +1829,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 %subitive
 ; GFX1064-LABEL: sub_i32_uniform:
 ; GFX1064:       ; %bb.0: ; %entry
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], exec
+; GFX1064-NEXT:    s_clause 0x1
 ; GFX1064-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1064-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
@@ -1861,6 +1864,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 %subitive
 ;
 ; GFX1032-LABEL: sub_i32_uniform:
 ; GFX1032:       ; %bb.0: ; %entry
+; GFX1032-NEXT:    s_clause 0x1
 ; GFX1032-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1032-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GFX1032-NEXT:    s_mov_b32 s2, exec_lo
@@ -2045,8 +2049,8 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_add_nc_u32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -2780,8 +2784,8 @@ define amdgpu_kernel void @and_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_and_b32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -3018,8 +3022,8 @@ define amdgpu_kernel void @or_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_or_b32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -3257,8 +3261,8 @@ define amdgpu_kernel void @xor_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_xor_b32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -3493,8 +3497,8 @@ define amdgpu_kernel void @max_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_max_i32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -3913,8 +3917,8 @@ define amdgpu_kernel void @min_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_min_i32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -4336,8 +4340,8 @@ define amdgpu_kernel void @umax_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_max_u32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16
@@ -4754,8 +4758,8 @@ define amdgpu_kernel void @umin_i32_varying(i32 addrspace(1)* %out) {
 ; GFX1064-NEXT:    v_readlane_b32 s2, v2, 31
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX1064-NEXT:    v_min_u32_dpp v2, v3, v2 quad_perm:[0,1,2,3] row_mask:0xc bank_mask:0xf
-; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1064-NEXT:    v_readlane_b32 s2, v2, 15
 ; GFX1064-NEXT:    v_readlane_b32 s3, v2, 31
 ; GFX1064-NEXT:    v_readlane_b32 s6, v2, 47
 ; GFX1064-NEXT:    v_writelane_b32 v1, s2, 16

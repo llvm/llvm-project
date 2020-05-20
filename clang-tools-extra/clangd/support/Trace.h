@@ -108,10 +108,17 @@ public:
 /// Create an instance of EventTracer that produces an output in the Trace Event
 /// format supported by Chrome's trace viewer (chrome://tracing).
 ///
+/// FIXME: Metrics are not recorded, some could become counter events.
+///
 /// The format is documented here:
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
 std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
                                               bool Pretty = false);
+
+/// Create an instance of EventTracer that outputs metric measurements as CSV.
+///
+/// Trace spans and instant events are ignored.
+std::unique_ptr<EventTracer> createCSVMetricTracer(llvm::raw_ostream &OS);
 
 /// Records a single instant event, associated with the current thread.
 void log(const llvm::Twine &Name);

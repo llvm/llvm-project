@@ -8,8 +8,6 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// ALLOW_RETRIES: 2
-
 // This test uses the POSIX header <sys/time.h> which Windows doesn't provide
 // UNSUPPORTED: windows
 
@@ -38,34 +36,33 @@ void sig_action(int) {}
 
 int main(int, char**)
 {
-    int ec;
-    struct sigaction action;
-    action.sa_handler = &sig_action;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
+  int ec;
+  struct sigaction action;
+  action.sa_handler = &sig_action;
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0;
 
-    ec = sigaction(SIGALRM, &action, nullptr);
-    assert(!ec);
+  ec = sigaction(SIGALRM, &action, nullptr);
+  assert(!ec);
 
-    struct itimerval it;
-    std::memset(&it, 0, sizeof(itimerval));
-    it.it_value.tv_sec = 0;
-    it.it_value.tv_usec = 250000;
-    // This will result in a SIGALRM getting fired resulting in the nanosleep
-    // inside sleep_for getting EINTR.
-    ec = setitimer(ITIMER_REAL, &it, nullptr);
-    assert(!ec);
+  struct itimerval it;
+  std::memset(&it, 0, sizeof(itimerval));
+  it.it_value.tv_sec = 0;
+  it.it_value.tv_usec = 250000;
+  // This will result in a SIGALRM getting fired resulting in the nanosleep
+  // inside sleep_for getting EINTR.
+  ec = setitimer(ITIMER_REAL, &it, nullptr);
+  assert(!ec);
 
-    typedef std::chrono::system_clock Clock;
-    typedef Clock::time_point time_point;
-    std::chrono::milliseconds ms(500);
-    time_point t0 = Clock::now();
-    std::this_thread::sleep_for(ms);
-    time_point t1 = Clock::now();
-    std::chrono::nanoseconds ns = (t1 - t0) - ms;
-    std::chrono::nanoseconds err = 5 * ms / 100;
-    // The time slept is within 5% of 500ms
-    assert(std::abs(ns.count()) < err.count());
+  typedef std::chrono::system_clock Clock;
+  typedef Clock::time_point time_point;
+  std::chrono::milliseconds ms(500);
+  time_point t0 = Clock::now();
+  std::this_thread::sleep_for(ms);
+  time_point t1 = Clock::now();
+  // NOTE: Operating systems are (by default) best effort and therefore we may
+  // have slept longer, perhaps much longer than we requested.
+  assert(t1 - t0 >= ms);
 
   return 0;
 }

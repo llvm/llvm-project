@@ -39,10 +39,10 @@ entry:
 ; CHECK-NEXT: %res4 = load volatile i8, i8* %ptr1, align 1
   %res4 = load volatile i8, i8* %ptr1, align 1
 
-; CHECK-NEXT: %res5 = load i8, i8* %ptr1, !nontemporal !0
+; CHECK-NEXT: %res5 = load i8, i8* %ptr1, align 1, !nontemporal !0
   %res5 = load i8, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: %res6 = load volatile i8, i8* %ptr1, !nontemporal !0
+; CHECK-NEXT: %res6 = load volatile i8, i8* %ptr1, align 1, !nontemporal !0
   %res6 = load volatile i8, i8* %ptr1, !nontemporal !0
 
 ; CHECK-NEXT: %res7 = load i8, i8* %ptr1, align 1, !nontemporal !0
@@ -51,10 +51,10 @@ entry:
 ; CHECK-NEXT: %res8 = load volatile i8, i8* %ptr1, align 1, !nontemporal !0
   %res8 = load volatile i8, i8* %ptr1, align 1, !nontemporal !0
 
-; CHECK-NEXT: %res9 = load i8, i8* %ptr1, !invariant.load !1
+; CHECK-NEXT: %res9 = load i8, i8* %ptr1, align 1, !invariant.load !1
   %res9 = load i8, i8* %ptr1, !invariant.load !1
 
-; CHECK-NEXT: %res10 = load volatile i8, i8* %ptr1, !invariant.load !1
+; CHECK-NEXT: %res10 = load volatile i8, i8* %ptr1, align 1, !invariant.load !1
   %res10 = load volatile i8, i8* %ptr1, !invariant.load !1
 
 ; CHECK-NEXT: %res11 = load i8, i8* %ptr1, align 1, !invariant.load !1
@@ -150,10 +150,10 @@ entry:
 ; CHECK-NEXT: store volatile i8 2, i8* %ptr1, align 1
   store volatile i8 2, i8* %ptr1, align 1
 
-; CHECK-NEXT: store i8 2, i8* %ptr1, !nontemporal !0
+; CHECK-NEXT: store i8 2, i8* %ptr1, align 1, !nontemporal !0
   store i8 2, i8* %ptr1, !nontemporal !0
 
-; CHECK-NEXT: store volatile i8 2, i8* %ptr1, !nontemporal !0
+; CHECK-NEXT: store volatile i8 2, i8* %ptr1, align 1, !nontemporal !0
   store volatile i8 2, i8* %ptr1, !nontemporal !0
 
 ; CHECK-NEXT: store i8 2, i8* %ptr1, align 1, !nontemporal !0

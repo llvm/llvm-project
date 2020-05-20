@@ -142,6 +142,13 @@ set(LLD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLD_INCLUDE_DIR ${LLD_SOURCE_DIR}/include )
 set(LLD_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+set(LLD_VENDOR ${PACKAGE_VENDOR} CACHE STRING
+  "Vendor-specific text for showing with version information.")
+
+if(LLD_VENDOR)
+  add_definitions(-DLLD_VENDOR="${LLD_VENDOR}")
+endif()
+
 # Compute the LLD version from the LLVM version.
 string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" LLD_VERSION
   ${PACKAGE_VERSION})
@@ -219,3 +226,5 @@ add_subdirectory(ELF)
 add_subdirectory(MachO)
 add_subdirectory(MinGW)
 add_subdirectory(wasm)
+
+add_subdirectory(cmake/modules)

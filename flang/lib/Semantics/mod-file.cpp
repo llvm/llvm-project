@@ -833,7 +833,7 @@ void SubprogramSymbolCollector::Collect() {
   for (const auto &pair : scope_) {
     const Symbol &symbol{*pair.second};
     if (const auto *useDetails{symbol.detailsIf<UseDetails>()}) {
-      if (useSet_.count(useDetails->symbol()) > 0) {
+      if (useSet_.count(useDetails->symbol().GetUltimate()) > 0) {
         need_.push_back(symbol);
       }
     }

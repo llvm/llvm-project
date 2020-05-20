@@ -496,13 +496,32 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   path.append(ext.begin(), ext.end());
 }
 
+static bool starts_with(StringRef Path, StringRef Prefix,
+                        Style style = Style::native) {
+  // Windows prefix matching : case and separator insensitive
+  if (real_style(style) == Style::windows) {
+    if (Path.size() < Prefix.size())
+      return false;
+    for (size_t I = 0, E = Prefix.size(); I != E; ++I) {
+      bool SepPath = is_separator(Path[I], style);
+      bool SepPrefix = is_separator(Prefix[I], style);
+      if (SepPath != SepPrefix)
+        return false;
+      if (!SepPath && toLower(Path[I]) != toLower(Prefix[I]))
+        return false;
+    }
+    return true;
+  }
+  return Path.startswith(Prefix);
+}
+
 bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
-                         StringRef NewPrefix) {
+                         StringRef NewPrefix, Style style) {
   if (OldPrefix.empty() && NewPrefix.empty())
     return false;
 
   StringRef OrigPath(Path.begin(), Path.size());
-  if (!OrigPath.startswith(OldPrefix))
+  if (!starts_with(OrigPath, OldPrefix, style))
     return false;
 
   // If prefixes have the same size we can simply copy the new one over.

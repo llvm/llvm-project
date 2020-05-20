@@ -532,6 +532,13 @@ Number of threads.
 (default) means all of concurrent threads supported.
 .Cm 1
 disables multi-threading.
+.It Fl -time-trace
+Record time trace.
+.It Fl -time-trace-file Ns = Ns Ar file
+Write time trace output to
+.Ar file .
+.It Fl -time-trace-granularity Ns = Ns Ar value
+Minimum time granularity (in microseconds) traced by time profiler.
 .It Fl -trace
 Print the names of the input files.
 .It Fl -trace-symbol Ns = Ns Ar symbol , Fl y Ar symbol

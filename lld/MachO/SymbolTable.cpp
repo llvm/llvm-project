@@ -56,6 +56,8 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
 
   if (wasInserted)
     replaceSymbol<Undefined>(s, name);
+  else if (LazySymbol *lazy = dyn_cast<LazySymbol>(s))
+    lazy->fetchArchiveMember();
   return s;
 }
 
@@ -64,8 +66,21 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  if (wasInserted)
+  if (wasInserted || isa<Undefined>(s))
     replaceSymbol<DylibSymbol>(s, file, name);
+  return s;
+}
+
+Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
+                             const llvm::object::Archive::Symbol &sym) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name);
+
+  if (wasInserted)
+    replaceSymbol<LazySymbol>(s, file, sym);
+  else if (isa<Undefined>(s))
+    file->fetch(sym);
   return s;
 }
 

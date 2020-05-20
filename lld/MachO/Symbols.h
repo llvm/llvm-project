@@ -35,6 +35,7 @@ public:
     DefinedKind,
     UndefinedKind,
     DylibKind,
+    LazyKind,
   };
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
@@ -77,6 +78,22 @@ public:
 
   DylibFile *file;
   uint32_t gotIndex = UINT32_MAX;
+  uint32_t stubsIndex = UINT32_MAX;
+  uint32_t lazyBindOffset = UINT32_MAX;
+};
+
+class LazySymbol : public Symbol {
+public:
+  LazySymbol(ArchiveFile *file, const llvm::object::Archive::Symbol &sym)
+      : Symbol(LazyKind, sym.getName()), file(file), sym(sym) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
+
+  void fetchArchiveMember();
+
+private:
+  ArchiveFile *file;
+  const llvm::object::Archive::Symbol sym;
 };
 
 inline uint64_t Symbol::getVA() const {
@@ -89,6 +106,7 @@ union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
   alignas(DylibSymbol) char c[sizeof(DylibSymbol)];
+  alignas(LazySymbol) char d[sizeof(LazySymbol)];
 };
 
 template <typename T, typename... ArgT>

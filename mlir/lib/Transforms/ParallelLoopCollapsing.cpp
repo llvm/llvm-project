@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -24,7 +24,7 @@ struct ParallelLoopCollapsing
   void runOnOperation() override {
     Operation *module = getOperation();
 
-    module->walk([&](loop::ParallelOp op) {
+    module->walk([&](scf::ParallelOp op) {
       // The common case for GPU dialect will be simplifying the ParallelOp to 3
       // arguments, so we do that here to simplify things.
       llvm::SmallVector<std::vector<unsigned>, 3> combinedLoops;

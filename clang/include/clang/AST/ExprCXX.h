@@ -366,7 +366,8 @@ public:
 /// This abstract class is inherited by all of the classes
 /// representing "named" casts: CXXStaticCastExpr for \c static_cast,
 /// CXXDynamicCastExpr for \c dynamic_cast, CXXReinterpretCastExpr for
-/// reinterpret_cast, and CXXConstCastExpr for \c const_cast.
+/// reinterpret_cast, CXXConstCastExpr for \c const_cast and
+/// CXXAddrspaceCastExpr for addrspace_cast (in OpenCL).
 class CXXNamedCastExpr : public ExplicitCastExpr {
 private:
   // the location of the casting op
@@ -412,6 +413,7 @@ public:
     case CXXDynamicCastExprClass:
     case CXXReinterpretCastExprClass:
     case CXXConstCastExprClass:
+    case CXXAddrspaceCastExprClass:
       return true;
     default:
       return false;
@@ -566,6 +568,41 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXConstCastExprClass;
+  }
+};
+
+/// A C++ addrspace_cast expression (currently only enabled for OpenCL).
+///
+/// This expression node represents a cast between pointers to objects in
+/// different address spaces e.g.,
+/// \c addrspace_cast<global int*>(PtrToGenericInt).
+///
+/// A addrspace_cast can cast address space type qualifiers but does not change
+/// the underlying value.
+class CXXAddrspaceCastExpr final
+    : public CXXNamedCastExpr,
+      private llvm::TrailingObjects<CXXAddrspaceCastExpr, CXXBaseSpecifier *> {
+  CXXAddrspaceCastExpr(QualType ty, ExprValueKind VK, CastKind Kind, Expr *op,
+                       TypeSourceInfo *writtenTy, SourceLocation l,
+                       SourceLocation RParenLoc, SourceRange AngleBrackets)
+      : CXXNamedCastExpr(CXXAddrspaceCastExprClass, ty, VK, Kind, op, 0,
+                         writtenTy, l, RParenLoc, AngleBrackets) {}
+
+  explicit CXXAddrspaceCastExpr(EmptyShell Empty)
+      : CXXNamedCastExpr(CXXAddrspaceCastExprClass, Empty, 0) {}
+
+public:
+  friend class CastExpr;
+  friend TrailingObjects;
+
+  static CXXAddrspaceCastExpr *
+  Create(const ASTContext &Context, QualType T, ExprValueKind VK, CastKind Kind,
+         Expr *Op, TypeSourceInfo *WrittenTy, SourceLocation L,
+         SourceLocation RParenLoc, SourceRange AngleBrackets);
+  static CXXAddrspaceCastExpr *CreateEmpty(const ASTContext &Context);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXAddrspaceCastExprClass;
   }
 };
 

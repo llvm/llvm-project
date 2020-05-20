@@ -21,8 +21,8 @@
 
 using namespace mlir;
 using ReturnOpConverter =
-    NonVoidToVoidReturnOpConverter<mlir::ReturnOp, mlir::ReturnOp,
-                                   linalg::CopyOp>;
+    NoBufferOperandsReturnOpConverter<mlir::ReturnOp, mlir::ReturnOp,
+                                      linalg::CopyOp>;
 
 namespace {
 /// A pattern to convert Generic Linalg operations which work on tensors to
@@ -131,30 +131,6 @@ struct ConvertLinalgOnTensorsToBuffers
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(
         Optional<ConversionTarget::DynamicLegalityCallbackFn>(
             isLegalOperation));
-
-    // TODO: Considering the following dynamic legality checks, the current
-    // implementation of FunctionAndBlockSignatureConverter of Buffer Assignment
-    // will convert the function signature incorrectly. This converter moves
-    // all the return values of the function to the input argument list without
-    // considering the return value types and creates a void function. However,
-    // the NonVoidToVoidReturnOpConverter doesn't change the return operation if
-    // its operands are not tensors. The following example leaves the IR in a
-    // broken state.
-    //
-    // @function(%arg0: f32, %arg1: tensor<4xf32>) -> (f32, f32) {
-    //    %0 = mulf %arg0, %arg0 : f32
-    //    return %0, %0 : f32, f32
-    // }
-    //
-    // broken IR after conversion:
-    //
-    // func @function(%arg0: f32, %arg1: memref<4xf32>, f32, f32) {
-    //    %0 = mulf %arg0, %arg0 : f32
-    //    return %0, %0 : f32, f32
-    // }
-    //
-    // This issue must be fixed in FunctionAndBlockSignatureConverter and
-    // NonVoidToVoidReturnOpConverter.
 
     // Mark Standard Return operations illegal as long as one operand is tensor.
     target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {

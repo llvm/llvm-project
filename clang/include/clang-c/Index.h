@@ -2052,58 +2052,62 @@ enum CXCursorKind {
    */
   CXCursor_CXXFunctionalCastExpr = 128,
 
+  /** OpenCL's addrspace_cast<> expression.
+   */
+  CXCursor_CXXAddrspaceCastExpr = 129,
+
   /** A C++ typeid expression (C++ [expr.typeid]).
    */
-  CXCursor_CXXTypeidExpr = 129,
+  CXCursor_CXXTypeidExpr = 130,
 
   /** [C++ 2.13.5] C++ Boolean Literal.
    */
-  CXCursor_CXXBoolLiteralExpr = 130,
+  CXCursor_CXXBoolLiteralExpr = 131,
 
   /** [C++0x 2.14.7] C++ Pointer Literal.
    */
-  CXCursor_CXXNullPtrLiteralExpr = 131,
+  CXCursor_CXXNullPtrLiteralExpr = 132,
 
   /** Represents the "this" expression in C++
    */
-  CXCursor_CXXThisExpr = 132,
+  CXCursor_CXXThisExpr = 133,
 
   /** [C++ 15] C++ Throw Expression.
    *
    * This handles 'throw' and 'throw' assignment-expression. When
    * assignment-expression isn't present, Op will be null.
    */
-  CXCursor_CXXThrowExpr = 133,
+  CXCursor_CXXThrowExpr = 134,
 
   /** A new expression for memory allocation and constructor calls, e.g:
    * "new CXXNewExpr(foo)".
    */
-  CXCursor_CXXNewExpr = 134,
+  CXCursor_CXXNewExpr = 135,
 
   /** A delete expression for memory deallocation and destructor calls,
    * e.g. "delete[] pArray".
    */
-  CXCursor_CXXDeleteExpr = 135,
+  CXCursor_CXXDeleteExpr = 136,
 
   /** A unary expression. (noexcept, sizeof, or other traits)
    */
-  CXCursor_UnaryExpr = 136,
+  CXCursor_UnaryExpr = 137,
 
   /** An Objective-C string literal i.e. @"foo".
    */
-  CXCursor_ObjCStringLiteral = 137,
+  CXCursor_ObjCStringLiteral = 138,
 
   /** An Objective-C \@encode expression.
    */
-  CXCursor_ObjCEncodeExpr = 138,
+  CXCursor_ObjCEncodeExpr = 139,
 
   /** An Objective-C \@selector expression.
    */
-  CXCursor_ObjCSelectorExpr = 139,
+  CXCursor_ObjCSelectorExpr = 140,
 
   /** An Objective-C \@protocol expression.
    */
-  CXCursor_ObjCProtocolExpr = 140,
+  CXCursor_ObjCProtocolExpr = 141,
 
   /** An Objective-C "bridged" cast expression, which casts between
    * Objective-C pointers and C pointers, transferring ownership in the process.
@@ -2112,7 +2116,7 @@ enum CXCursorKind {
    *   NSString *str = (__bridge_transfer NSString *)CFCreateString();
    * \endcode
    */
-  CXCursor_ObjCBridgedCastExpr = 141,
+  CXCursor_ObjCBridgedCastExpr = 142,
 
   /** Represents a C++0x pack expansion that produces a sequence of
    * expressions.
@@ -2127,7 +2131,7 @@ enum CXCursorKind {
    * }
    * \endcode
    */
-  CXCursor_PackExpansionExpr = 142,
+  CXCursor_PackExpansionExpr = 143,
 
   /** Represents an expression that computes the length of a parameter
    * pack.
@@ -2139,7 +2143,7 @@ enum CXCursorKind {
    * };
    * \endcode
    */
-  CXCursor_SizeOfPackExpr = 143,
+  CXCursor_SizeOfPackExpr = 144,
 
   /* Represents a C++ lambda expression that produces a local function
    * object.
@@ -2153,37 +2157,37 @@ enum CXCursorKind {
    * }
    * \endcode
    */
-  CXCursor_LambdaExpr = 144,
+  CXCursor_LambdaExpr = 145,
 
   /** Objective-c Boolean Literal.
    */
-  CXCursor_ObjCBoolLiteralExpr = 145,
+  CXCursor_ObjCBoolLiteralExpr = 146,
 
   /** Represents the "self" expression in an Objective-C method.
    */
-  CXCursor_ObjCSelfExpr = 146,
+  CXCursor_ObjCSelfExpr = 147,
 
   /** OpenMP 4.0 [2.4, Array Section].
    */
-  CXCursor_OMPArraySectionExpr = 147,
+  CXCursor_OMPArraySectionExpr = 148,
 
   /** Represents an @available(...) check.
    */
-  CXCursor_ObjCAvailabilityCheckExpr = 148,
+  CXCursor_ObjCAvailabilityCheckExpr = 149,
 
   /**
    * Fixed point literal
    */
-  CXCursor_FixedPointLiteral = 149,
+  CXCursor_FixedPointLiteral = 150,
 
   /** OpenMP 5.0 [2.1.4, Array Shaping].
    */
-  CXCursor_OMPArrayShapingExpr = 150,
+  CXCursor_OMPArrayShapingExpr = 151,
 
   /**
    * OpenMP 5.0 [2.1.6 Iterators]
    */
-  CXCursor_OMPIteratorExpr = 151,
+  CXCursor_OMPIteratorExpr = 152,
 
   CXCursor_LastExpr = CXCursor_OMPIteratorExpr,
 

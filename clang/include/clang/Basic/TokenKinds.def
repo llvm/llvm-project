@@ -574,11 +574,12 @@ KEYWORD(__builtin_astype            , KEYOPENCLC | KEYOPENCLCXX)
 KEYWORD(vec_step                    , KEYOPENCLC | KEYALTIVEC | KEYZVECTOR)
 #define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC | KEYOPENCLCXX)
 #include "clang/Basic/OpenCLImageTypes.def"
+KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
+// C++ for OpenCL s2.3.1: addrspace_cast operator
+KEYWORD(addrspace_cast              , KEYOPENCLCXX)
 
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)
-
-KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
 
 // Borland Extensions.
 KEYWORD(__pascal                    , KEYALL)

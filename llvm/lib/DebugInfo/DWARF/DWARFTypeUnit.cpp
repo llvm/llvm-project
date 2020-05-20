@@ -20,16 +20,18 @@ using namespace llvm;
 void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   DWARFDie TD = getDIEForOffset(getTypeOffset() + getOffset());
   const char *Name = TD.getName(DINameKind::ShortName);
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(getFormat());
 
   if (DumpOpts.SummarizeTypes) {
     OS << "name = '" << Name << "'"
        << " type_signature = " << format("0x%016" PRIx64, getTypeHash())
-       << " length = " << format("0x%08" PRIx64, getLength()) << '\n';
+       << " length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())
+       << '\n';
     return;
   }
 
   OS << format("0x%08" PRIx64, getOffset()) << ": Type Unit:"
-     << " length = " << format("0x%08" PRIx64, getLength())
+     << " length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())
      << " version = " << format("0x%04x", getVersion());
   if (getVersion() >= 5)
     OS << " unit_type = " << dwarf::UnitTypeString(getUnitType());

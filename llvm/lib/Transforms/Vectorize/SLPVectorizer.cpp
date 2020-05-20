@@ -3540,7 +3540,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Load: {
       // Cost of wide load - cost of scalar loads.
-      MaybeAlign alignment(cast<LoadInst>(VL0)->getAlignment());
+      Align alignment = cast<LoadInst>(VL0)->getAlign();
       int ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Load, ScalarTy, alignment, 0,
                                CostKind, VL0);
@@ -3563,7 +3563,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       bool IsReorder = !E->ReorderIndices.empty();
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
-      MaybeAlign Alignment(SI->getAlignment());
+      Align Alignment = SI->getAlign();
       int ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Store, ScalarTy, Alignment, 0,
                                CostKind, VL0);
@@ -4401,7 +4401,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       setInsertPointAfterBundle(E);
 
       LoadInst *LI = cast<LoadInst>(VL0);
-      Type *ScalarLoadTy = LI->getType();
       unsigned AS = LI->getPointerAddressSpace();
 
       Value *VecPtr = Builder.CreateBitCast(LI->getPointerOperand(),
@@ -4414,9 +4413,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (getTreeEntry(PO))
         ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
 
-      Align Alignment = DL->getValueOrABITypeAlignment(LI->getAlign(),
-                                                       ScalarLoadTy);
-      LI = Builder.CreateAlignedLoad(VecTy, VecPtr, Alignment);
+      LI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
       Value *V = propagateMetadata(LI, E->Scalars);
       if (IsReorder) {
         SmallVector<int, 4> Mask;
@@ -4437,7 +4434,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       bool IsReorder = !E->ReorderIndices.empty();
       auto *SI = cast<StoreInst>(
           IsReorder ? E->Scalars[E->ReorderIndices.front()] : VL0);
-      unsigned Alignment = SI->getAlignment();
       unsigned AS = SI->getPointerAddressSpace();
 
       setInsertPointAfterBundle(E);
@@ -4453,7 +4449,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *ScalarPtr = SI->getPointerOperand();
       Value *VecPtr = Builder.CreateBitCast(
           ScalarPtr, VecValue->getType()->getPointerTo(AS));
-      StoreInst *ST = Builder.CreateStore(VecValue, VecPtr);
+      StoreInst *ST = Builder.CreateAlignedStore(VecValue, VecPtr,
+                                                 SI->getAlign());
 
       // The pointer operand uses an in-tree scalar, so add the new BitCast to
       // ExternalUses to make sure that an extract will be generated in the
@@ -4461,10 +4458,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (getTreeEntry(ScalarPtr))
         ExternalUses.push_back(ExternalUser(ScalarPtr, cast<User>(VecPtr), 0));
 
-      if (!Alignment)
-        Alignment = DL->getABITypeAlignment(SI->getValueOperand()->getType());
-
-      ST->setAlignment(Align(Alignment));
       Value *V = propagateMetadata(ST, E->Scalars);
       if (NeedToShuffleReuses) {
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),

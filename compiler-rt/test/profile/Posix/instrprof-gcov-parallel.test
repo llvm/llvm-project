@@ -1,5 +1,4 @@
-# Work around PR45673 until the test code is fixed
-# ALLOW_RETRIES: 2
+UNSUPPORTED: host-byteorder-big-endian
 
 RUN: mkdir -p %t.d
 RUN: cd %t.d

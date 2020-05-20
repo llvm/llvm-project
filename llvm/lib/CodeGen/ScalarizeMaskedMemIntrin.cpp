@@ -43,6 +43,7 @@ namespace {
 
 class ScalarizeMaskedMemIntrin : public FunctionPass {
   const TargetTransformInfo *TTI = nullptr;
+  const DataLayout *DL = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -814,6 +815,7 @@ bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
   bool EverMadeChange = false;
 
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  DL = &F.getParent()->getDataLayout();
 
   bool MadeChange = true;
   while (MadeChange) {
@@ -871,18 +873,23 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
       scalarizeMaskedStore(CI, ModifiedDT);
       return true;
     case Intrinsic::masked_gather: {
-      unsigned Alignment =
+      unsigned AlignmentInt =
           cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      if (TTI->isLegalMaskedGather(CI->getType(), MaybeAlign(Alignment)))
+      Type *LoadTy = CI->getType();
+      Align Alignment =
+          DL->getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), LoadTy);
+      if (TTI->isLegalMaskedGather(LoadTy, Alignment))
         return false;
       scalarizeMaskedGather(CI, ModifiedDT);
       return true;
     }
     case Intrinsic::masked_scatter: {
-      unsigned Alignment =
+      unsigned AlignmentInt =
           cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      if (TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType(),
-                                    MaybeAlign(Alignment)))
+      Type *StoreTy = CI->getArgOperand(0)->getType();
+      Align Alignment =
+          DL->getValueOrABITypeAlignment(MaybeAlign(AlignmentInt), StoreTy);
+      if (TTI->isLegalMaskedScatter(StoreTy, Alignment))
         return false;
       scalarizeMaskedScatter(CI, ModifiedDT);
       return true;

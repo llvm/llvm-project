@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 subroutine s1(x, y)
   !ERROR: Array pointer 'x' must have deferred shape or assumed rank
   real, pointer :: x(1:)  ! C832

@@ -630,6 +630,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddHIPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA,
                      *this);
 
+  Args.AddAllArgs(CmdArgs, options::OPT_T);
+
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }

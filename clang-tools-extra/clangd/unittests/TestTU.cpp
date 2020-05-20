@@ -57,6 +57,7 @@ ParseInputs TestTU::inputs() const {
   Inputs.FS = buildTestFS(Files);
   Inputs.Opts = ParseOptions();
   Inputs.Opts.BuildRecoveryAST = true;
+  Inputs.Opts.PreserveRecoveryASTType = true;
   Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
   Inputs.Opts.ClangTidyOpts.WarningsAsErrors = ClangTidyWarningsAsErrors;
   Inputs.Index = ExternalIndex;
@@ -111,6 +112,11 @@ SymbolSlab TestTU::headerSymbols() const {
   return std::get<0>(indexHeaderSymbols(/*Version=*/"null", AST.getASTContext(),
                                         AST.getPreprocessorPtr(),
                                         AST.getCanonicalIncludes()));
+}
+
+RefSlab TestTU::headerRefs() const {
+  auto AST = build();
+  return std::get<1>(indexMainDecls(AST));
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {

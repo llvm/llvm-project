@@ -483,7 +483,12 @@ function(llvm_add_library name)
         "PUBLIC;PRIVATE"
         ${ARG_LINK_LIBS})
       foreach(link_lib ${LINK_LIBS_ARG_PUBLIC})
-        if(TARGET ${link_lib})
+        if(LLVM_PTHREAD_LIB)
+          # Can't specify a dependence on -lpthread
+          if(NOT ${link_lib} STREQUAL ${LLVM_PTHREAD_LIB})
+            add_dependencies(${obj_name} ${link_lib})
+          endif()
+        else()
           add_dependencies(${obj_name} ${link_lib})
         endif()
       endforeach()
@@ -1496,16 +1501,10 @@ endfunction()
 # path. Since this uses __file__, it has to be emitted into python files that
 # use it and can't be in a lit module. Use with make_paths_relative().
 string(CONCAT LLVM_LIT_PATH_FUNCTION
-  # Lit converts config paths to lower case in discovery.py, before
-  # loading the config. This causes __file__ to be all lower-case (including
-  # the drive letter), but several clang tests pass -include %s and a
-  # clang warning checks that passed case matches on-disk cache. So it's
-  # important that this restores the on-disk case of the prefix.
   "# Allow generated file to be relocatable.\n"
   "def path(p):\n"
   "    if not p: return ''\n"
-  "    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
-  "    return p\n"
+  "    return os.path.join(os.path.dirname(os.path.abspath(__file__)), p)\n"
   )
 
 # This function provides an automatic way to 'configure'-like generate a file

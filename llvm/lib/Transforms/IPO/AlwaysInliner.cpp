@@ -36,11 +36,10 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   // Add inline assumptions during code generation.
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
-      [&](Function &F) -> AssumptionCache & {
+  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  InlineFunctionInfo IFI(/*cg=*/nullptr, &GetAssumptionCache);
+  InlineFunctionInfo IFI(/*cg=*/nullptr, GetAssumptionCache);
 
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;

@@ -224,9 +224,19 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
 LogicalResult OperationVerifier::verifyDominance(Region &region) {
   // Verify the dominance of each of the held operations.
   for (auto &block : region)
-    for (auto &op : block)
-      if (failed(verifyDominance(op)))
-        return failure();
+    // Dominance is only reachable inside reachable blocks.
+    if (domInfo->isReachableFromEntry(&block))
+      for (auto &op : block) {
+        if (failed(verifyDominance(op)))
+          return failure();
+      }
+    else
+      // Verify the dominance of each of the nested blocks within this
+      // operation, even if the operation itself is not reachable.
+      for (auto &op : block)
+        for (auto &region : op.getRegions())
+          if (failed(verifyDominance(region)))
+            return failure();
   return success();
 }
 

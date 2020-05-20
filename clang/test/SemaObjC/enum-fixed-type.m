@@ -23,8 +23,8 @@ enum Color { Red, Green, Blue };
 struct X { 
   enum Color : 4;
   enum Color field1: 4;
-  enum Other : Integer field2; // c-warning {{only permitted as a standalone}}
-  enum Other : Integer field3 : 4; // c-warning {{only permitted as a standalone}}
+  enum Other : Integer field2; // c-error {{only permitted as a standalone}}
+  enum Other : Integer field3 : 4; // c-error {{only permitted as a standalone}}
   enum  : Integer { Blah, Blarg } field4 : 4;
 };
 

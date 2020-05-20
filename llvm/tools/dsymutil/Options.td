@@ -107,6 +107,7 @@ def output: Separate<["-", "--"], "o">,
   HelpText<"Specify the output file. Defaults to <input file>.dwarf">,
   Group<grp_general>;
 def: Separate<["--", "-"], "out">,
+  MetaVarName<"<filename>">,
   Alias<output>,
   HelpText<"Alias for -o">,
   Group<grp_general>;
@@ -159,7 +160,7 @@ def threads: Separate<["--", "-"], "num-threads">,
   HelpText<"Specifies the maximum number of simultaneous threads to use when linking multiple architectures.">,
   Group<grp_general>;
 def: Separate<["-"], "j">,
-  Alias<threads>,
+  MetaVarName<"<threads>">,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;
 

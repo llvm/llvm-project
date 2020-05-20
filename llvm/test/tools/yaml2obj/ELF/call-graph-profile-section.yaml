@@ -142,12 +142,12 @@ Sections:
         Weight: 10
 ## Case 2: Test we can refer to symbols with suffixes.
       - From:   foo
-        To:     'foo [1]'
+        To:     'foo (1)'
         Weight: 30
 Symbols:
   - Name: foo
   - Name: bar
-  - Name: 'foo [1]'
+  - Name: 'foo (1)'
 
 ## Check we can describe SHT_LLVM_CALL_GRAPH_PROFILE sections using the "Content" tag.
 # RUN: yaml2obj --docnum=5 %s -o %t.content

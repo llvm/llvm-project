@@ -26,8 +26,8 @@ define double @foo_fmf(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmul 0, 0, 2
 ; CHECK-NEXT:    fmul 1, 1, 0
 ; CHECK-NEXT:    blr
-  %x = call fast double @llvm.sqrt.f64(double %b)
-  %r = fdiv fast double %a, %x
+  %x = call arcp reassoc double @llvm.sqrt.f64(double %b)
+  %r = fdiv arcp reassoc double %a, %x
   ret double %r
 }
 
@@ -48,8 +48,8 @@ define double @no_estimate_refinement_f64(double %a, double %b) #0 {
 ; CHECK-NEXT:    frsqrte 0, 2
 ; CHECK-NEXT:    fmul 1, 1, 0
 ; CHECK-NEXT:    blr
-  %x = call fast double @llvm.sqrt.f64(double %b)
-  %r = fdiv fast double %a, %x
+  %x = call arcp reassoc double @llvm.sqrt.f64(double %b)
+  %r = fdiv arcp reassoc double %a, %x
   ret double %r
 }
 
@@ -67,9 +67,9 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-NEXT:    fmuls 0, 0, 2
 ; CHECK-NEXT:    fmul 1, 1, 0
 ; CHECK-NEXT:    blr
-  %x = call fast float @llvm.sqrt.f32(float %b)
+  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
   %y = fpext float %x to double
-  %r = fdiv fast double %a, %y
+  %r = fdiv reassoc arcp double %a, %y
   ret double %r
 }
 
@@ -104,9 +104,9 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-NEXT:    frsp 0, 0
 ; CHECK-NEXT:    fmuls 1, 1, 0
 ; CHECK-NEXT:    blr
-  %x = call fast double @llvm.sqrt.f64(double %b)
+  %x = call reassoc arcp double @llvm.sqrt.f64(double %b)
   %y = fptrunc double %x to float
-  %r = fdiv fast float %a, %y
+  %r = fdiv reassoc arcp float %a, %y
   ret float %r
 }
 
@@ -137,8 +137,8 @@ define float @goo_fmf(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmuls 0, 0, 2
 ; CHECK-NEXT:    fmuls 1, 1, 0
 ; CHECK-NEXT:    blr
-  %x = call fast float @llvm.sqrt.f32(float %b)
-  %r = fdiv fast float %a, %x
+  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
+  %r = fdiv reassoc arcp float %a, %x
   ret float %r
 }
 
@@ -159,8 +159,8 @@ define float @no_estimate_refinement_f32(float %a, float %b) #0 {
 ; CHECK-NEXT:    frsqrtes 0, 2
 ; CHECK-NEXT:    fmuls 1, 1, 0
 ; CHECK-NEXT:    blr
-  %x = call fast float @llvm.sqrt.f32(float %b)
-  %r = fdiv fast float %a, %x
+  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
+  %r = fdiv reassoc arcp float %a, %x
   ret float %r
 }
 
@@ -184,9 +184,9 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-NEXT:    fmadds 0, 1, 0, 4
 ; CHECK-NEXT:    fmuls 1, 3, 0
 ; CHECK-NEXT:    blr
-  %x = call fast float @llvm.sqrt.f32(float %a)
-  %y = fmul fast float %x, %b
-  %z = fdiv fast float %c, %y
+  %x = call reassoc arcp float @llvm.sqrt.f32(float %a)
+  %y = fmul reassoc float %x, %b
+  %z = fdiv reassoc arcp float %c, %y
   ret float %z
 }
 
@@ -223,8 +223,8 @@ define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vmaddfp 3, 5, 3, 4
 ; CHECK-NEXT:    vmaddfp 2, 2, 3, 4
 ; CHECK-NEXT:    blr
-  %x = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
-  %r = fdiv fast <4 x float> %a, %x
+  %x = call reassoc arcp <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
+  %r = fdiv reassoc arcp <4 x float> %a, %x
   ret <4 x float> %r
 }
 
@@ -275,7 +275,7 @@ define double @foo2_fmf(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fnmsub 1, 2, 3, 1
 ; CHECK-NEXT:    fmadd 1, 0, 1, 3
 ; CHECK-NEXT:    blr
-  %r = fdiv fast double %a, %b
+  %r = fdiv reassoc arcp nsz double %a, %b
   ret double %r
 }
 
@@ -296,7 +296,7 @@ define float @goo2_fmf(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fnmsubs 1, 2, 3, 1
 ; CHECK-NEXT:    fmadds 1, 0, 1, 3
 ; CHECK-NEXT:    blr
-  %r = fdiv fast float %a, %b
+  %r = fdiv reassoc arcp float %a, %b
   ret float %r
 }
 
@@ -322,7 +322,7 @@ define <4 x float> @hoo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vmaddfp 2, 3, 4, 2
 ; CHECK-NEXT:    vmaddfp 2, 5, 2, 4
 ; CHECK-NEXT:    blr
-  %r = fdiv fast <4 x float> %a, %b
+  %r = fdiv reassoc arcp <4 x float> %a, %b
   ret <4 x float> %r
 }
 
@@ -383,7 +383,7 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-NEXT:    addis 3, 2, .LCPI20_3@toc@ha
 ; CHECK-NEXT:    lfs 1, .LCPI20_3@toc@l(3)
 ; CHECK-NEXT:    blr
-  %r = call fast double @llvm.sqrt.f64(double %a)
+  %r = call reassoc ninf afn double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 
@@ -419,7 +419,7 @@ define float @goo3_fmf(float %a) nounwind {
 ; CHECK-NEXT:    addis 3, 2, .LCPI22_3@toc@ha
 ; CHECK-NEXT:    lfs 1, .LCPI22_3@toc@l(3)
 ; CHECK-NEXT:    blr
-  %r = call fast float @llvm.sqrt.f32(float %a)
+  %r = call reassoc ninf afn float @llvm.sqrt.f32(float %a)
   ret float %r
 }
 
@@ -452,7 +452,7 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-NEXT:    vcmpeqfp 2, 2, 0
 ; CHECK-NEXT:    vsel 2, 3, 0, 2
 ; CHECK-NEXT:    blr
-  %r = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+  %r = call reassoc ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
   ret <4 x float> %r
 }
 

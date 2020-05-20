@@ -120,6 +120,9 @@ public:
     /// If true, turn on the `-frecovery-ast` clang flag.
     bool BuildRecoveryAST = false;
 
+    /// If true, turn on the `-frecovery-ast-type` clang flag.
+    bool PreserveRecoveryASTType = false;
+
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
     /// FIXME: If not set, should use the current working directory.
@@ -349,6 +352,8 @@ private:
 
   // If true, preserve expressions in AST for broken code.
   bool BuildRecoveryAST = false;
+  // If true, preserve the type for recovery AST.
+  bool PreserveRecoveryASTType = false;
 
   std::function<bool(const Tweak &)> TweakFilter;
 

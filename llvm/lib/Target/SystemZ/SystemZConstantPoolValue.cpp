@@ -25,13 +25,12 @@ SystemZConstantPoolValue::Create(const GlobalValue *GV,
   return new SystemZConstantPoolValue(GV, Modifier);
 }
 
-int SystemZConstantPoolValue::
-getExistingMachineCPValue(MachineConstantPool *CP, unsigned Alignment) {
-  unsigned AlignMask = Alignment - 1;
+int SystemZConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
+                                                        Align Alignment) {
   const std::vector<MachineConstantPoolEntry> &Constants = CP->getConstants();
   for (unsigned I = 0, E = Constants.size(); I != E; ++I) {
     if (Constants[I].isMachineConstantPoolEntry() &&
-        (Constants[I].getAlignment() & AlignMask) == 0) {
+        Constants[I].getAlign() >= Alignment) {
       auto *ZCPV =
         static_cast<SystemZConstantPoolValue *>(Constants[I].Val.MachineCPVal);
       if (ZCPV->GV == GV && ZCPV->Modifier == Modifier)

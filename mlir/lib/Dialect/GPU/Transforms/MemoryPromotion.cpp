@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LoopOps/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -79,18 +79,20 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
 
   // Produce the loop nest with copies.
   SmallVector<Value, 8> ivs(lbs.size());
-  LoopNestBuilder(ivs, lbs, ubs, steps)([&]() {
+  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
+    ivs.assign(loopIvs.begin(), loopIvs.end());
     auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
     StdIndexedValue fromHandle(from), toHandle(to);
     toHandle(activeIvs) = fromHandle(activeIvs);
   });
+  ivs[0].getParentBlock()->dump();
 
   // Map the innermost loops to threads in reverse order.
   for (auto en :
        llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();
-    auto loop = cast<loop::ForOp>(v.getParentRegion()->getParentOp());
+    auto loop = cast<scf::ForOp>(v.getParentRegion()->getParentOp());
     mapLoopToProcessorIds(loop, {threadIds[en.index()]},
                           {blockDims[en.index()]});
   }

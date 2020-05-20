@@ -162,6 +162,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     }
 
     dwarf::DwarfFormat Format = Contribution->getFormat();
+    int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
     uint16_t Version = Contribution->getVersion();
     uint64_t ContributionHeader = Contribution->Base;
     // In DWARF v5 there is a contribution header that immediately precedes
@@ -198,7 +199,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
       OS << format("0x%8.8" PRIx64 ": ", Offset);
       uint64_t StringOffset =
           StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
-      OS << format("%8.8" PRIx64 " ", StringOffset);
+      OS << format("%0*" PRIx64 " ", OffsetDumpWidth, StringOffset);
       const char *S = StrData.getCStr(&StringOffset);
       if (S)
         OS << format("\"%s\"", S);
@@ -263,7 +264,10 @@ std::unique_ptr<DWARFDebugMacro>
 DWARFContext::parseMacroOrMacinfo(MacroSecType SectionType) {
   auto Macro = std::make_unique<DWARFDebugMacro>();
   auto ParseAndDump = [&](DWARFDataExtractor &Data, bool IsMacro) {
-    if (Error Err = Macro->parse(getStringExtractor(), Data, IsMacro)) {
+    // FIXME: Add support for debug_macro.dwo section.
+    if (Error Err = IsMacro ? Macro->parseMacro(compile_units(),
+                                                getStringExtractor(), Data)
+                            : Macro->parseMacinfo(Data)) {
       RecoverableErrorHandler(std::move(Err));
       Macro = nullptr;
     }
@@ -433,13 +437,23 @@ void DWARFContext::dump(
     }
   }
 
-  if (const auto *Off = shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
-                                   DObj->getFrameSection().Data))
-    getDebugFrame()->dump(OS, getRegisterInfo(), *Off);
+  if (const Optional<uint64_t> *Off =
+          shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
+                     DObj->getFrameSection().Data)) {
+    if (Expected<const DWARFDebugFrame *> DF = getDebugFrame())
+      (*DF)->dump(OS, getRegisterInfo(), *Off);
+    else
+      RecoverableErrorHandler(DF.takeError());
+  }
 
-  if (const auto *Off = shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
-                                   DObj->getEHFrameSection().Data))
-    getEHFrame()->dump(OS, getRegisterInfo(), *Off);
+  if (const Optional<uint64_t> *Off =
+          shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
+                     DObj->getEHFrameSection().Data)) {
+    if (Expected<const DWARFDebugFrame *> DF = getEHFrame())
+      (*DF)->dump(OS, getRegisterInfo(), *Off);
+    else
+      RecoverableErrorHandler(DF.takeError());
+  }
 
   if (shouldDump(Explicit, ".debug_macro", DIDT_ID_DebugMacro,
                  DObj->getMacroSection().Data)) {
@@ -788,7 +802,7 @@ const DWARFDebugAranges *DWARFContext::getDebugAranges() {
   return Aranges.get();
 }
 
-const DWARFDebugFrame *DWARFContext::getDebugFrame() {
+Expected<const DWARFDebugFrame *> DWARFContext::getDebugFrame() {
   if (DebugFrame)
     return DebugFrame.get();
 
@@ -803,19 +817,25 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
   DWARFDataExtractor debugFrameData(*DObj, DObj->getFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(getArch(), false /* IsEH */));
-  DebugFrame->parse(debugFrameData);
+  auto DF = std::make_unique<DWARFDebugFrame>(getArch(), /*IsEH=*/false);
+  if (Error E = DF->parse(debugFrameData))
+    return std::move(E);
+
+  DebugFrame.swap(DF);
   return DebugFrame.get();
 }
 
-const DWARFDebugFrame *DWARFContext::getEHFrame() {
+Expected<const DWARFDebugFrame *> DWARFContext::getEHFrame() {
   if (EHFrame)
     return EHFrame.get();
 
   DWARFDataExtractor debugFrameData(*DObj, DObj->getEHFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(getArch(), true /* IsEH */));
-  DebugFrame->parse(debugFrameData);
+
+  auto DF = std::make_unique<DWARFDebugFrame>(getArch(), /*IsEH=*/true);
+  if (Error E = DF->parse(debugFrameData))
+    return std::move(E);
+  DebugFrame.swap(DF);
   return DebugFrame.get();
 }
 

@@ -21,6 +21,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -191,7 +192,7 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   EVT DstTy = TLI->getValueType(DL, Dst);
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
 
   // The extend of a load is free
   if (I && isa<LoadInst>(I->getOperand(0))) {
@@ -229,18 +230,53 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
 
+  // NEON vector operations that can extend their inputs.
+  if ((ISD == ISD::SIGN_EXTEND || ISD == ISD::ZERO_EXTEND) &&
+      I && I->hasOneUse() && ST->hasNEON() && SrcTy.isVector()) {
+    static const TypeConversionCostTblEntry NEONDoubleWidthTbl[] = {
+      // vaddl
+      { ISD::ADD, MVT::v4i32, MVT::v4i16, 0 },
+      { ISD::ADD, MVT::v8i16, MVT::v8i8,  0 },
+      // vsubl
+      { ISD::SUB, MVT::v4i32, MVT::v4i16, 0 },
+      { ISD::SUB, MVT::v8i16, MVT::v8i8,  0 },
+      // vmull
+      { ISD::MUL, MVT::v4i32, MVT::v4i16, 0 },
+      { ISD::MUL, MVT::v8i16, MVT::v8i8,  0 },
+      // vshll
+      { ISD::SHL, MVT::v4i32, MVT::v4i16, 0 },
+      { ISD::SHL, MVT::v8i16, MVT::v8i8,  0 },
+    };
+
+    auto *User = cast<Instruction>(*I->user_begin());
+    int UserISD = TLI->InstructionOpcodeToISD(User->getOpcode());
+    if (auto *Entry = ConvertCostTableLookup(NEONDoubleWidthTbl, UserISD,
+                                             DstTy.getSimpleVT(),
+                                             SrcTy.getSimpleVT())) {
+      return Entry->Cost;
+    }
+  }
+
   // Some arithmetic, load and store operations have specific instructions
   // to cast up/down their types automatically at no extra cost.
   // TODO: Get these tables to know at least what the related operations are.
   static const TypeConversionCostTblEntry NEONVectorConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 0 },
-    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 0 },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 1 },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 1 },
     { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 1 },
     { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 1 },
     { ISD::TRUNCATE,    MVT::v4i32, MVT::v4i64, 0 },
     { ISD::TRUNCATE,    MVT::v4i16, MVT::v4i32, 1 },
 
     // The number of vmovl instructions for the extension.
+    { ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8,  1 },
+    { ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8,  1 },
+    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8,  2 },
+    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8,  2 },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i8,  3 },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i8,  3 },
+    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i16, 2 },
+    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i16, 2 },
     { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16, 3 },
     { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i16, 3 },
     { ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i8, 3 },
@@ -422,7 +458,7 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   int BaseCost = ST->hasMVEIntegerOps() && Src->isVectorTy()
                      ? ST->getMVEVectorCostFactor()
                      : 1;
-  return BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
+  return BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
 }
 
 int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
@@ -455,7 +491,7 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     // result anyway.
     return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index),
                     ST->getMVEVectorCostFactor()) *
-           cast<VectorType>(ValTy)->getNumElements() / 2;
+           cast<FixedVectorType>(ValTy)->getNumElements() / 2;
   }
 
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
@@ -515,11 +551,28 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
+bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    // If a VCTP is part of a chain, it's already profitable and shouldn't be
+    // optimized, else LSR may block tail-predication.
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::arm_mve_vctp8:
+    case Intrinsic::arm_mve_vctp16:
+    case Intrinsic::arm_mve_vctp32:
+    case Intrinsic::arm_mve_vctp64:
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
 bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment) {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
-  if (auto *VecTy = dyn_cast<VectorType>(DataTy)) {
+  if (auto *VecTy = dyn_cast<FixedVectorType>(DataTy)) {
     // Don't support v2i1 yet.
     if (VecTy->getNumElements() == 2)
       return false;
@@ -801,7 +854,7 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     return LT.first * BaseCost;
 
   // Else this is expand, assume that we need to scalarize this op.
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
     unsigned Num = VTy->getNumElements();
     unsigned Cost = getArithmeticInstrCost(Opcode, Ty->getScalarType(),
                                            CostKind);
@@ -845,8 +898,9 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
 
   if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits &&
       !UseMaskForCond && !UseMaskForGaps) {
-    unsigned NumElts = cast<VectorType>(VecTy)->getNumElements();
-    auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
+    unsigned NumElts = cast<FixedVectorType>(VecTy)->getNumElements();
+    auto *SubVecTy =
+        FixedVectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
@@ -882,7 +936,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          Alignment, CostKind, I);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
-  VectorType *VTy = cast<VectorType>(DataTy);
+  auto *VTy = cast<FixedVectorType>(DataTy);
 
   // TODO: Splitting, once we do that.
 
@@ -1423,7 +1477,8 @@ bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   case Instruction::ICmp:
   case Instruction::Add:
     return ScalarBits < 64 &&
-           (ScalarBits * cast<VectorType>(Ty)->getNumElements()) % 128 == 0;
+           (ScalarBits * cast<FixedVectorType>(Ty)->getNumElements()) % 128 ==
+               0;
   default:
     llvm_unreachable("Unhandled reduction opcode");
   }

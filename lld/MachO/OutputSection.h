@@ -24,8 +24,14 @@ class OutputSegment;
 // linker with the same segment / section name.
 class OutputSection {
 public:
-  OutputSection(StringRef name) : name(name) {}
+  enum Kind {
+    MergedKind,
+    SyntheticKind,
+  };
+
+  OutputSection(Kind kind, StringRef name) : name(name), sectionKind(kind) {}
   virtual ~OutputSection() = default;
+  Kind kind() const { return sectionKind; }
 
   // These accessors will only be valid after finalizing the section.
   uint64_t getSegmentOffset() const;
@@ -60,6 +66,9 @@ public:
   uint64_t fileOff = 0;
   uint32_t align = 1;
   uint32_t flags = 0;
+
+private:
+  Kind sectionKind;
 };
 
 class OutputSectionComparator {

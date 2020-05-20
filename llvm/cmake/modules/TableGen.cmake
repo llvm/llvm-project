@@ -53,6 +53,15 @@ function(tablegen project ofn)
       list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
     endif()
   endif()
+  # Comments are only useful for Debug builds. Omit them if the backend
+  # supports it.
+  if (NOT (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" OR
+           uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO"))
+    list(FIND ARGN "-gen-dag-isel" idx)
+    if (NOT idx EQUAL -1)
+      list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
+    endif()
+  endif()
 
   # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
   # a possibility of generated tables being consumed by MSVC, generate arrays of

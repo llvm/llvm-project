@@ -1050,9 +1050,26 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
           VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))
     return replaceInstUsesWith(IE, V);
 
+  // If the scalar is bitcast and inserted into undef, do the insert in the
+  // source type followed by bitcast.
+  // TODO: Generalize for insert into any constant, not just undef?
+  Value *ScalarSrc;
+  if (match(VecOp, m_Undef()) &&
+      match(ScalarOp, m_OneUse(m_BitCast(m_Value(ScalarSrc)))) &&
+      (ScalarSrc->getType()->isIntegerTy() ||
+       ScalarSrc->getType()->isFloatingPointTy())) {
+    // inselt undef, (bitcast ScalarSrc), IdxOp -->
+    //   bitcast (inselt undef, ScalarSrc, IdxOp)
+    Type *ScalarTy = ScalarSrc->getType();
+    Type *VecTy = VectorType::get(ScalarTy, IE.getType()->getElementCount());
+    UndefValue *NewUndef = UndefValue::get(VecTy);
+    Value *NewInsElt = Builder.CreateInsertElement(NewUndef, ScalarSrc, IdxOp);
+    return new BitCastInst(NewInsElt, IE.getType());
+  }
+
   // If the vector and scalar are both bitcast from the same element type, do
   // the insert in that source type followed by bitcast.
-  Value *VecSrc, *ScalarSrc;
+  Value *VecSrc;
   if (match(VecOp, m_BitCast(m_Value(VecSrc))) &&
       match(ScalarOp, m_BitCast(m_Value(ScalarSrc))) &&
       (VecOp->hasOneUse() || ScalarOp->hasOneUse()) &&

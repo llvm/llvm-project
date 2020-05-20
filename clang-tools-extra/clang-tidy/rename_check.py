@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
-#===- rename_check.py - clang-tidy check renamer -------------*- python -*--===#
+#===- rename_check.py - clang-tidy check renamer ------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+#===-----------------------------------------------------------------------===#
 
 import argparse
 import glob
@@ -25,6 +25,7 @@ def replaceInFileRegex(fileName, sFrom, sTo):
   print("Replacing '%s' -> '%s' in '%s'..." % (sFrom, sTo, fileName))
   with open(fileName, "w") as f:
     f.write(txt)
+
 
 def replaceInFile(fileName, sFrom, sTo):
   if sFrom == sTo:
@@ -66,6 +67,7 @@ def fileRename(fileName, sFrom, sTo):
   os.rename(fileName, newFileName)
   return newFileName
 
+
 def deleteMatchingLines(fileName, pattern):
   lines = None
   with open(fileName, "r") as f:
@@ -82,6 +84,7 @@ def deleteMatchingLines(fileName, pattern):
 
   return True
 
+
 def getListOfFiles(clang_tidy_path):
   files = glob.glob(os.path.join(clang_tidy_path, '*'))
   for dirname in files:
@@ -93,8 +96,9 @@ def getListOfFiles(clang_tidy_path):
                                   'clang-tidy', 'checks', '*'))
   return [filename for filename in files if os.path.isfile(filename)]
 
-# Adapts the module's CMakelist file. Returns 'True' if it could add a new entry
-# and 'False' if the entry already existed.
+
+# Adapts the module's CMakelist file. Returns 'True' if it could add a new
+# entry and 'False' if the entry already existed.
 def adapt_cmake(module_path, check_name_camel):
   filename = os.path.join(module_path, 'CMakeLists.txt')
   with open(filename, 'r') as f:
@@ -177,7 +181,6 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
   with open(filename, 'wb') as f:
     note_added = False
     header_found = False
-    next_header_found = False
     add_note_here = False
 
     for line in lines:
@@ -191,7 +194,6 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
             add_note_here = True
 
         if match_next:
-          next_header_found = True
           add_note_here = True
 
         if match:
@@ -312,6 +314,7 @@ def main():
   os.system(os.path.join(clang_tidy_path, 'add_new_check.py')
             + ' --update-docs')
   add_release_notes(clang_tidy_path, args.old_check_name, args.new_check_name)
+
 
 if __name__ == '__main__':
   main()

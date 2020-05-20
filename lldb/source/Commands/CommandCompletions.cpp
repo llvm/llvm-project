@@ -57,6 +57,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
       {eVariablePathCompletion, CommandCompletions::VariablePath},
       {eRegisterCompletion, CommandCompletions::Registers},
+      {eBreakpointCompletion, CommandCompletions::Breakpoints},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -548,5 +549,36 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
     request.TryCompleteCurrentArg(reg_prefix + reg_info->name,
                                   reg_info->alt_name);
+  }
+}
+
+void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
+                                     CompletionRequest &request,
+                                     SearchFilter *searcher) {
+  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  if (!target)
+    return;
+
+  const BreakpointList &breakpoints = target->GetBreakpointList();
+
+  std::unique_lock<std::recursive_mutex> lock;
+  target->GetBreakpointList().GetListMutex(lock);
+
+  size_t num_breakpoints = breakpoints.GetSize();
+  if (num_breakpoints == 0)
+    return;
+
+  for (size_t i = 0; i < num_breakpoints; ++i) {
+    lldb::BreakpointSP bp = breakpoints.GetBreakpointAtIndex(i);
+
+    StreamString s;
+    bp->GetDescription(&s, lldb::eDescriptionLevelBrief);
+    llvm::StringRef bp_info = s.GetString();
+
+    const size_t colon_pos = bp_info.find_first_of(':');
+    if (colon_pos != llvm::StringRef::npos)
+      bp_info = bp_info.drop_front(colon_pos + 2);
+
+    request.TryCompleteCurrentArg(std::to_string(bp->GetID()), bp_info);
   }
 }

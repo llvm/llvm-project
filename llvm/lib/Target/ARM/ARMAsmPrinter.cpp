@@ -73,6 +73,16 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
   } else {
     OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }
+
+  // Emit symbol for CMSE non-secure entry point
+  if (AFI->isCmseNSEntryFunction()) {
+    MCSymbol *S =
+        OutContext.getOrCreateSymbol("__acle_se_" + CurrentFnSym->getName());
+    emitLinkage(&MF->getFunction(), S);
+    OutStreamer->emitSymbolAttribute(S, MCSA_ELF_TypeFunction);
+    OutStreamer->emitLabel(S);
+  }
+
   OutStreamer->emitLabel(CurrentFnSym);
 }
 

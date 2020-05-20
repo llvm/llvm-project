@@ -5,9 +5,9 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 define void @test1(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[Q:%.*]], i64 4), "nonnull"(i32* [[Q]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 4), "nonnull"(i32* [[P]]) ]
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[Q:%.*]], i64 4), "nonnull"(i32* [[Q]]), "align"(i32* [[Q]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P:%.*]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %DEAD = load i32, i32* %Q

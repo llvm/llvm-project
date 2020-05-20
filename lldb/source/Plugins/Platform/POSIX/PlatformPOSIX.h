@@ -37,10 +37,6 @@ public:
 
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
-  lldb_private::Status ResolveExecutable(
-      const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-      const lldb_private::FileSpecList *module_search_paths_ptr) override;
-
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
                          lldb_private::Debugger &debugger,
                          lldb_private::Target *target, // Can be nullptr, if

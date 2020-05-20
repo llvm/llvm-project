@@ -262,9 +262,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
 
-  // Recovery expression currently only works for C++.
-  if (CI->getLangOpts()->CPlusPlus)
-    CI->getLangOpts()->RecoveryAST = Inputs.Opts.BuildRecoveryAST;
   // This is on-by-default in windows to allow parsing SDK headers, but it
   // breaks many features. Disable it for the main-file (not preamble).
   CI->getLangOpts()->DelayedTemplateParsing = false;
@@ -314,18 +311,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         std::string CheckName = CTContext->getCheckName(Info.getID());
         bool IsClangTidyDiag = !CheckName.empty();
         if (IsClangTidyDiag) {
-          // Check for warning-as-error.
-          // We deliberately let this take precedence over suppression comments
-          // to match clang-tidy's behaviour.
-          if (DiagLevel == DiagnosticsEngine::Warning &&
-              CTContext->treatAsError(CheckName)) {
-            return DiagnosticsEngine::Error;
-          }
-
           // Check for suppression comment. Skip the check for diagnostics not
           // in the main file, because we don't want that function to query the
           // source buffer for preamble files. For the same reason, we ask
           // shouldSuppressDiagnostic to avoid I/O.
+          // We let suppression comments take precedence over warning-as-error
+          // to match clang-tidy's behaviour.
           bool IsInsideMainFile =
               Info.hasSourceManager() &&
               isInsideMainFile(Info.getLocation(), Info.getSourceManager());
@@ -333,6 +324,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
               tidy::shouldSuppressDiagnostic(DiagLevel, Info, *CTContext,
                                              /*AllowIO=*/false)) {
             return DiagnosticsEngine::Ignored;
+          }
+
+          // Check for warning-as-error.
+          if (DiagLevel == DiagnosticsEngine::Warning &&
+              CTContext->treatAsError(CheckName)) {
+            return DiagnosticsEngine::Error;
           }
         }
       }

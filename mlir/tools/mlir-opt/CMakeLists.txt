@@ -10,24 +10,30 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   )
 
+if(MLIR_INCLUDE_TESTS)
+  set(test_libs
+    MLIRAffineTransformsTestPasses
+    MLIRSPIRVTestPasses
+    MLIRTestDialect
+    MLIRTestIR
+    MLIRTestPass
+    MLIRTestTransforms
+    )
+endif()
+
 set(LIBS
   ${dialect_libs}
   ${conversion_libs}
+  ${test_libs}
   MLIRLoopAnalysis
-  MLIRAffineTransformsTestPasses
   MLIRAnalysis
   MLIRDialect
   MLIREDSC
   MLIROptLib
   MLIRParser
   MLIRPass
-  MLIRSPIRVTestPasses
   MLIRTransforms
   MLIRTransformUtils
-  MLIRTestDialect
-  MLIRTestIR
-  MLIRTestPass
-  MLIRTestTransforms
   MLIRSupport
   MLIRIR
   )
@@ -52,4 +58,4 @@ add_llvm_tool(mlir-opt
 target_link_libraries(mlir-opt PRIVATE ${LIBS})
 llvm_update_compile_flags(mlir-opt)
 
-mlir_check_link_libraries(mlir-opt)
+mlir_check_all_link_libraries(mlir-opt)

@@ -79,20 +79,21 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
 void DWARFListTableHeader::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
     OS << format("0x%8.8" PRIx64 ": ", HeaderOffset);
-  OS << format(
-      "%s list header: length = 0x%8.8" PRIx64 ", version = 0x%4.4" PRIx16 ", "
-      "addr_size = 0x%2.2" PRIx8 ", seg_size = 0x%2.2" PRIx8
-      ", offset_entry_count = "
-      "0x%8.8" PRIx32 "\n",
-      ListTypeString.data(), HeaderData.Length, HeaderData.Version,
-      HeaderData.AddrSize, HeaderData.SegSize, HeaderData.OffsetEntryCount);
+  int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);
+  OS << format("%s list header: length = 0x%0*" PRIx64
+               ", version = 0x%4.4" PRIx16 ", addr_size = 0x%2.2" PRIx8
+               ", seg_size = 0x%2.2" PRIx8
+               ", offset_entry_count = 0x%8.8" PRIx32 "\n",
+               ListTypeString.data(), OffsetDumpWidth, HeaderData.Length,
+               HeaderData.Version, HeaderData.AddrSize, HeaderData.SegSize,
+               HeaderData.OffsetEntryCount);
 
   if (HeaderData.OffsetEntryCount > 0) {
     OS << "offsets: [";
     for (const auto &Off : Offsets) {
-      OS << format("\n0x%8.8" PRIx64, Off);
+      OS << format("\n0x%0*" PRIx64, OffsetDumpWidth, Off);
       if (DumpOpts.Verbose)
-        OS << format(" => 0x%8.8" PRIx64,
+        OS << format(" => 0x%08" PRIx64,
                      Off + HeaderOffset + getHeaderSize(Format));
     }
     OS << "\n]\n";

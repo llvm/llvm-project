@@ -33,7 +33,7 @@ define i32 @reload(%struct.rtx_def* %first, i32 %global, %struct.FILE* %dumpfile
 ; USE_ASSUME:       cond_next2943:
 ; USE_ASSUME-NEXT:    br i1 false, label [[BB2982_PREHEADER:%.*]], label [[BB2928]]
 ; USE_ASSUME:       bb2982.preheader:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* @n_spills, i64 4), "dereferenceable"(i32* @n_spills, i64 4), "nonnull"(i32* @n_spills) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* @n_spills, i64 4), "nonnull"(i32* @n_spills), "align"(i32* @n_spills, i64 4) ]
 ; USE_ASSUME-NEXT:    store i8 undef, i8* null
 ; USE_ASSUME-NEXT:    ret i32 undef
 ;

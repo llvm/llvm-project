@@ -1,4 +1,4 @@
-; RUN: opt -attributor  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=5 -S < %s | FileCheck %s
+; RUN: opt -attributor  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_async.ll but with a personality which
 ; indicates that the exception handler *cannot* catch asynchronous exceptions.

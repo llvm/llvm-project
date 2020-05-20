@@ -21,9 +21,9 @@ func @conv(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg1: 
 //       TILE-23004:   %[[B:.*]] = dim %{{.*}}, 0 : memref<?x?x?x?xf32, #[[strided4D]]>
 //       TILE-23004:   %[[PaddedInput0:.*]] = dim %{{.*}}, 1 : memref<?x?x?x?xf32, #[[strided4D]]>
 //       TILE-23004:   %[[X0:.*]] = dim %{{.*}}, 1 : memref<?x?x?x?xf32, #[[strided4D]]>
-//       TILE-23004:   loop.for %[[ivI:.*]] = %{{.*}} to %[[B]] step %{{.*}} {
-//       TILE-23004:     loop.for %[[ivJ:.*]] = %{{.*}} to %[[X0]] step %{{.*}} {
-//       TILE-23004:       loop.for %[[ivK:.*]] = %{{.*}} to %[[Q]] step %{{.*}} {
+//       TILE-23004:   scf.for %[[ivI:.*]] = %{{.*}} to %[[B]] step %{{.*}} {
+//       TILE-23004:     scf.for %[[ivJ:.*]] = %{{.*}} to %[[X0]] step %{{.*}} {
+//       TILE-23004:       scf.for %[[ivK:.*]] = %{{.*}} to %[[Q]] step %{{.*}} {
 //       TILE-23004:         %[[Z0:.*]] = dim %{{.*}}, 0 : memref<?x?x?x?xf32, #[[strided4D]]>
 //       TILE-23004:         %[[Z1:.*]] = dim %{{.*}}, 1 : memref<?x?x?x?xf32, #[[strided4D]]>
 //       TILE-23004:         %[[Z2:.*]] = dim %{{.*}}, 2 : memref<?x?x?x?xf32, #[[strided4D]]>

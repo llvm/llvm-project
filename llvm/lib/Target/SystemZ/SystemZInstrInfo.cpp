@@ -993,33 +993,36 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineBasicBlock::iterator InsertPt, int FrameIndex,
     LiveIntervals *LIS, VirtRegMap *VRM) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Size = MFI.getObjectSize(FrameIndex);
   unsigned Opcode = MI.getOpcode();
 
-  if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
-    if (LIS != nullptr && (Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
-        isInt<8>(MI.getOperand(2).getImm()) && !MI.getOperand(3).getReg()) {
+  // Check CC liveness if new instruction introduces a dead def of CC.
+  MCRegUnitIterator CCUnit(SystemZ::CC, TRI);
+  SlotIndex MISlot = SlotIndex();
+  LiveRange *CCLiveRange = nullptr;
+  bool CCLiveAtMI = true;
+  if (LIS) {
+    MISlot = LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
+    CCLiveRange = &LIS->getRegUnit(*CCUnit);
+    CCLiveAtMI = CCLiveRange->liveAt(MISlot);
+  }
+  ++CCUnit;
+  assert(!CCUnit.isValid() && "CC only has one reg unit.");
 
-      // Check CC liveness, since new instruction introduces a dead
-      // def of CC.
-      MCRegUnitIterator CCUnit(SystemZ::CC, TRI);
-      LiveRange &CCLiveRange = LIS->getRegUnit(*CCUnit);
-      ++CCUnit;
-      assert(!CCUnit.isValid() && "CC only has one reg unit.");
-      SlotIndex MISlot =
-          LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
-      if (!CCLiveRange.liveAt(MISlot)) {
-        // LA(Y) %reg, CONST(%reg) -> AGSI %mem, CONST
-        MachineInstr *BuiltMI = BuildMI(*InsertPt->getParent(), InsertPt,
-                                        MI.getDebugLoc(), get(SystemZ::AGSI))
-                                    .addFrameIndex(FrameIndex)
-                                    .addImm(0)
-                                    .addImm(MI.getOperand(2).getImm());
-        BuiltMI->findRegisterDefOperand(SystemZ::CC)->setIsDead(true);
-        CCLiveRange.createDeadDef(MISlot, LIS->getVNInfoAllocator());
-        return BuiltMI;
-      }
+  if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
+    if (!CCLiveAtMI && (Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
+        isInt<8>(MI.getOperand(2).getImm()) && !MI.getOperand(3).getReg()) {
+      // LA(Y) %reg, CONST(%reg) -> AGSI %mem, CONST
+      MachineInstr *BuiltMI = BuildMI(*InsertPt->getParent(), InsertPt,
+                                      MI.getDebugLoc(), get(SystemZ::AGSI))
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addImm(MI.getOperand(2).getImm());
+      BuiltMI->findRegisterDefOperand(SystemZ::CC)->setIsDead(true);
+      CCLiveRange->createDeadDef(MISlot, LIS->getVNInfoAllocator());
+      return BuiltMI;
     }
     return nullptr;
   }
@@ -1173,16 +1176,51 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   }
 
   // If the spilled operand is the final one or the instruction is
-  // commutable, try to change <INSN>R into <INSN>.
+  // commutable, try to change <INSN>R into <INSN>.  Don't introduce a def of
+  // CC if it is live and MI does not define it.
   unsigned NumOps = MI.getNumExplicitOperands();
   int MemOpcode = SystemZ::getMemOpcode(Opcode);
-  if (MemOpcode == -1)
+  if (MemOpcode == -1 ||
+      (CCLiveAtMI && !MI.definesRegister(SystemZ::CC) &&
+       get(MemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)))
     return nullptr;
+
+  // Check if all other vregs have a usable allocation in the case of vector
+  // to FP conversion.
+  const MCInstrDesc &MCID = MI.getDesc();
+  for (unsigned I = 0, E = MCID.getNumOperands(); I != E; ++I) {
+    const MCOperandInfo &MCOI = MCID.OpInfo[I];
+    if (MCOI.OperandType != MCOI::OPERAND_REGISTER || I == OpNum)
+      continue;
+    const TargetRegisterClass *RC = TRI->getRegClass(MCOI.RegClass);
+    if (RC == &SystemZ::VR32BitRegClass || RC == &SystemZ::VR64BitRegClass) {
+      Register Reg = MI.getOperand(I).getReg();
+      Register PhysReg = Register::isVirtualRegister(Reg)
+                             ? (VRM ? VRM->getPhys(Reg) : Register())
+                             : Reg;
+      if (!PhysReg ||
+          !(SystemZ::FP32BitRegClass.contains(PhysReg) ||
+            SystemZ::FP64BitRegClass.contains(PhysReg) ||
+            SystemZ::VF128BitRegClass.contains(PhysReg)))
+        return nullptr;
+    }
+  }
+  // Fused multiply and add/sub need to have the same dst and accumulator reg.
+  bool FusedFPOp = (Opcode == SystemZ::WFMADB || Opcode == SystemZ::WFMASB ||
+                    Opcode == SystemZ::WFMSDB || Opcode == SystemZ::WFMSSB);
+  if (FusedFPOp) {
+    Register DstReg = VRM->getPhys(MI.getOperand(0).getReg());
+    Register AccReg = VRM->getPhys(MI.getOperand(3).getReg());
+    if (OpNum == 0 || OpNum == 3 || DstReg != AccReg)
+      return nullptr;
+  }
 
   // Try to swap compare operands if possible.
   bool NeedsCommute = false;
   if ((MI.getOpcode() == SystemZ::CR || MI.getOpcode() == SystemZ::CGR ||
-       MI.getOpcode() == SystemZ::CLR || MI.getOpcode() == SystemZ::CLGR) &&
+       MI.getOpcode() == SystemZ::CLR || MI.getOpcode() == SystemZ::CLGR ||
+       MI.getOpcode() == SystemZ::WFCDB || MI.getOpcode() == SystemZ::WFCSB ||
+       MI.getOpcode() == SystemZ::WFKDB || MI.getOpcode() == SystemZ::WFKSB) &&
       OpNum == 0 && prepareCompareSwapOperands(MI))
     NeedsCommute = true;
 
@@ -1218,7 +1256,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     }
   }
 
-  if ((OpNum == NumOps - 1) || NeedsCommute) {
+  if ((OpNum == NumOps - 1) || NeedsCommute || FusedFPOp) {
     const MCInstrDesc &MemDesc = get(MemOpcode);
     uint64_t AccessBytes = SystemZII::getAccessSize(MemDesc.TSFlags);
     assert(AccessBytes != 0 && "Size of access should be known");
@@ -1229,6 +1267,11 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     if (MI.isCompare()) {
       assert(NumOps == 2 && "Expected 2 register operands for a compare.");
       MIB.add(MI.getOperand(NeedsCommute ? 1 : 0));
+    }
+    else if (FusedFPOp) {
+      MIB.add(MI.getOperand(0));
+      MIB.add(MI.getOperand(3));
+      MIB.add(MI.getOperand(OpNum == 1 ? 2 : 1));
     }
     else {
       MIB.add(MI.getOperand(0));
@@ -1247,8 +1290,29 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       MIB.addImm(CCValid);
       MIB.addImm(NeedsCommute ? CCMask ^ CCValid : CCMask);
     }
+    if (MIB->definesRegister(SystemZ::CC) &&
+        (!MI.definesRegister(SystemZ::CC) ||
+         MI.registerDefIsDead(SystemZ::CC))) {
+      MIB->addRegisterDead(SystemZ::CC, TRI);
+      if (CCLiveRange)
+        CCLiveRange->createDeadDef(MISlot, LIS->getVNInfoAllocator());
+    }
+    // Constrain the register classes if converted from a vector opcode. The
+    // allocated regs are in an FP reg-class per previous check above.
+    for (const MachineOperand &MO : MIB->operands())
+      if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
+        unsigned Reg = MO.getReg();
+        if (MRI.getRegClass(Reg) == &SystemZ::VR32BitRegClass)
+          MRI.setRegClass(Reg, &SystemZ::FP32BitRegClass);
+        else if (MRI.getRegClass(Reg) == &SystemZ::VR64BitRegClass)
+          MRI.setRegClass(Reg, &SystemZ::FP64BitRegClass);
+        else if (MRI.getRegClass(Reg) == &SystemZ::VR128BitRegClass)
+          MRI.setRegClass(Reg, &SystemZ::VF128BitRegClass);
+      }
+
     transferDeadCC(&MI, MIB);
     transferMIFlag(&MI, MIB, MachineInstr::NoSWrap);
+    transferMIFlag(&MI, MIB, MachineInstr::NoFPExcept);
     return MIB;
   }
 

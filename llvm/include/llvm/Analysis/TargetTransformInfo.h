@@ -519,6 +519,9 @@ public:
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) const;
 
+  /// \returns true if LSR should not optimize a chain that includes \p I.
+  bool isProfitableLSRChainElement(Instruction *I) const;
+
   /// Return true if the target can fuse a compare and branch.
   /// Loop-strength-reduction (LSR) uses that knowledge to adjust its cost
   /// calculation for the instructions in a loop.
@@ -539,9 +542,9 @@ public:
   bool shouldFavorBackedgeIndex(const Loop *L) const;
 
   /// Return true if the target supports masked store.
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) const;
+  bool isLegalMaskedStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked load.
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) const;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports nontemporal store.
   bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -549,9 +552,9 @@ public:
   bool isLegalNTLoad(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports masked scatter.
-  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) const;
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked gather.
-  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) const;
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports masked compress store.
   bool isLegalMaskedCompressStore(Type *DataType) const;
@@ -928,7 +931,7 @@ public:
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index = -1) const;
 
   /// \return The cost of Load and Store instructions.
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+  int getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                       unsigned AddressSpace,
                       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                       const Instruction *I = nullptr) const;
@@ -1233,18 +1236,19 @@ public:
                                      Instruction *I) = 0;
   virtual bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                              TargetTransformInfo::LSRCost &C2) = 0;
+  virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                           LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                           TargetLibraryInfo *LibInfo) = 0;
   virtual bool shouldFavorPostInc() const = 0;
   virtual bool shouldFavorBackedgeIndex(const Loop *L) const = 0;
-  virtual bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) = 0;
-  virtual bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) = 0;
+  virtual bool isLegalMaskedStore(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
-  virtual bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) = 0;
-  virtual bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) = 0;
+  virtual bool isLegalMaskedScatter(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedGather(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
   virtual bool isLegalMaskedExpandLoad(Type *DataType) = 0;
   virtual bool hasDivRemOp(Type *DataType, bool IsSigned) = 0;
@@ -1352,7 +1356,7 @@ public:
                                  const Instruction *I) = 0;
   virtual int getVectorInstrCost(unsigned Opcode, Type *Val,
                                  unsigned Index) = 0;
-  virtual int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+  virtual int getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                               unsigned AddressSpace,
                               TTI::TargetCostKind CostKind,
                               const Instruction *I) = 0;
@@ -1542,6 +1546,9 @@ public:
                      TargetTransformInfo::LSRCost &C2) override {
     return Impl.isLSRCostLess(C1, C2);
   }
+  bool isProfitableLSRChainElement(Instruction *I) override {
+    return Impl.isProfitableLSRChainElement(I);
+  }
   bool canMacroFuseCmp() override { return Impl.canMacroFuseCmp(); }
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
                   DominatorTree *DT, AssumptionCache *AC,
@@ -1552,10 +1559,10 @@ public:
   bool shouldFavorBackedgeIndex(const Loop *L) const override {
     return Impl.shouldFavorBackedgeIndex(L);
   }
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) override {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedStore(DataType, Alignment);
   }
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) override {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedLoad(DataType, Alignment);
   }
   bool isLegalNTStore(Type *DataType, Align Alignment) override {
@@ -1564,10 +1571,10 @@ public:
   bool isLegalNTLoad(Type *DataType, Align Alignment) override {
     return Impl.isLegalNTLoad(DataType, Alignment);
   }
-  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) override {
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedScatter(DataType, Alignment);
   }
-  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) override {
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedGather(DataType, Alignment);
   }
   bool isLegalMaskedCompressStore(Type *DataType) override {
@@ -1780,7 +1787,7 @@ public:
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
   }
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+  int getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                       unsigned AddressSpace, TTI::TargetCostKind CostKind,
                       const Instruction *I) override {
     return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,

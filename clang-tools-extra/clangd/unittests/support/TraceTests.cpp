@@ -11,6 +11,7 @@
 #include "support/Trace.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Threading.h"
@@ -22,7 +23,10 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using testing::_;
+using testing::ElementsAre;
 using testing::SizeIs;
+using testing::StartsWith;
 
 MATCHER_P(StringNode, Val, "") {
   if (arg->getType() != llvm::yaml::Node::NK_Scalar) {
@@ -136,6 +140,50 @@ TEST(MetricsTracer, LatencyTest) {
     EXPECT_THAT(Tracer.takeMetric(MetricName, OpName), SizeIs(0));
   }
   EXPECT_THAT(Tracer.takeMetric(MetricName, OpName), SizeIs(1));
+}
+
+class CSVMetricsTracerTest : public ::testing::Test {
+protected:
+  CSVMetricsTracerTest()
+      : OS(Output), Tracer(trace::createCSVMetricTracer(OS)), Session(*Tracer) {
+  }
+  trace::Metric Dist = {"dist", trace::Metric::Distribution, "lbl"};
+  trace::Metric Counter = {"cnt", trace::Metric::Counter};
+
+  std::vector<std::string> outputLines() {
+    // Deliberately don't flush output stream, the tracer should do that.
+    // This is important when clangd crashes.
+    llvm::SmallVector<llvm::StringRef, 4> Lines;
+    llvm::StringRef(Output).split(Lines, "\r\n");
+    return {Lines.begin(), Lines.end()};
+  }
+
+  std::string Output;
+  llvm::raw_string_ostream OS;
+  std::unique_ptr<trace::EventTracer> Tracer;
+  trace::Session Session;
+};
+
+TEST_F(CSVMetricsTracerTest, RecordsValues) {
+  Dist.record(1, "x");
+  Counter.record(1, "");
+  Dist.record(2, "y");
+
+  ASSERT_THAT(outputLines(),
+              ElementsAre("Kind,Metric,Label,Value,Timestamp",
+                          StartsWith("d,dist,x,1.000000e+00,"),
+                          StartsWith("c,cnt,,1.000000e+00,"),
+                          StartsWith("d,dist,y,2.000000e+00,"), ""));
+}
+
+TEST_F(CSVMetricsTracerTest, Escaping) {
+  Dist.record(1, ",");
+  Dist.record(1, "a\"b");
+  Dist.record(1, "a\nb");
+
+  EXPECT_THAT(outputLines(), ElementsAre(_, StartsWith(R"(d,dist,",",1)"),
+                                         StartsWith(R"(d,dist,"a""b",1)"),
+                                         StartsWith("d,dist,\"a\nb\",1"), ""));
 }
 
 } // namespace

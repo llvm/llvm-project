@@ -1,6 +1,10 @@
-file(GLOB globbed *.c *.cpp)
 add_mlir_library(MLIRPass
-  ${globbed}
+  IRPrinting.cpp
+  Pass.cpp
+  PassManagerOptions.cpp
+  PassRegistry.cpp
+  PassStatistics.cpp
+  PassTiming.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Pass

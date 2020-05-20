@@ -138,3 +138,33 @@ define <4 x float> @foo6(<4 x i32> %a0, <4 x i32> %a1) {
   %6 = uitofp <4 x i32> %5 to <4 x float>
   ret <4 x float> %6
 }
+
+define <4 x float> @foo7(<4 x i64> %a) {
+; CHECK-LABEL: LCPI7_0:
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   255                     ## 0xff
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   255                     ## 0xff
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   255                     ## 0xff
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   255                     ## 0xff
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-NEXT:  .byte   0                       ## 0x0
+; CHECK-LABEL: foo7:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %b = and <4 x i64> %a, <i64 4278255360, i64 4278255360, i64 4278255360, i64 4278255360>
+  %c = and <4 x i64> %b, <i64 65535, i64 65535, i64 65535, i64 65535>
+  %d = uitofp <4 x i64> %c to <4 x float>
+  ret <4 x float> %d
+}

@@ -151,6 +151,8 @@ public:
     return ST->getMaxInterleaveFactor();
   }
 
+  bool isProfitableLSRChainElement(Instruction *I);
+
   bool isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment);
 
   bool isLegalMaskedStore(Type *DataTy, MaybeAlign Alignment) {

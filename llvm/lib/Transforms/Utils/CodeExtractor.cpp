@@ -874,6 +874,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoAlias:
       case Attribute::NoBuiltin:
       case Attribute::NoCapture:
+      case Attribute::NoMerge:
       case Attribute::NoReturn:
       case Attribute::NoSync:
       case Attribute::None:
@@ -910,6 +911,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
       case Attribute::NoUnwind:
+      case Attribute::NullPointerIsValid:
       case Attribute::OptForFuzzing:
       case Attribute::OptimizeNone:
       case Attribute::OptimizeForSize:
@@ -1132,8 +1134,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
-      StoreInst *SI = new StoreInst(StructValues[i], GEP);
-      codeReplacer->getInstList().push_back(SI);
+      new StoreInst(StructValues[i], GEP, codeReplacer);
     }
   }
 

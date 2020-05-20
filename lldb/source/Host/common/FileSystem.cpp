@@ -487,7 +487,11 @@ void FileSystem::Collect(const FileSpec &file_spec) {
 }
 
 void FileSystem::Collect(const llvm::Twine &file) {
-  if (m_collector && !llvm::sys::fs::is_directory(file)) {
+  if (!m_collector)
+    return;
+
+  if (llvm::sys::fs::is_directory(file))
+    m_collector->addDirectory(file);
+  else
     m_collector->addFile(file);
-  }
 }

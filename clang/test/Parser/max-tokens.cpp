@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DMAX_TOKENS          -fmax-tokens=2
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DMAX_TOKENS_OVERRIDE -fmax-tokens=9
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wmax-tokens
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wmax-tokens -DMAX_TOKENS          -fmax-tokens=2
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wmax-tokens -DMAX_TOKENS_OVERRIDE -fmax-tokens=9
 
 int x, y, z;
 

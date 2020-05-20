@@ -16,7 +16,7 @@ declare void @use(i32 *)
 ; CHECK-NEXT: ret void
 
 ; CHECK-LABEL: ret2:
-; CHECK-NEXT: %[[p2:.*]] = load i32*, i32** %ptr, !nonnull !0
+; CHECK-NEXT: %[[p2:.*]] = load i32*, i32** %ptr, align 4, !nonnull !0
 ; CHECK: tail call void @use(i32* %[[p2]])
 ; CHECK-NEXT: ret void
 define void @test1(i32** %ptr, i1 %c) {
@@ -49,13 +49,13 @@ ret2:
 ; loaded value.
 ; CHECK-LABEL: @test2(
 ; CHECK-LABEL: d3.thread:
-; CHECK-NEXT: %[[p1:.*]] = load i32*, i32** %ptr, !nonnull !0
+; CHECK-NEXT: %[[p1:.*]] = load i32*, i32** %ptr, align 4, !nonnull !0
 ; CHECK-NEXT: store i32 1, i32* %[[p1]]
 ; CHECK-NEXT: br label %ret1
 
 ; CHECK-LABEL: d3:
 ; CHECK-NEXT: %[[p_cmp:.*]] = load i32*, i32** %ptr
-; CHECK-NEXT: %[[p2:.*]] = load i32*, i32** %ptr, !nonnull !0
+; CHECK-NEXT: %[[p2:.*]] = load i32*, i32** %ptr, align 4, !nonnull !0
 ; CHECK-NEXT: store i32 1, i32* %[[p2]]
 ; CHECK-NEXT: icmp eq i32* %[[p_cmp]], null
 define void @test2(i32** %ptr, i1 %c) {

@@ -295,6 +295,16 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   else
     add("-opt:noref");
 
+  if (args.hasFlag(OPT_enable_auto_import, OPT_disable_auto_import, true))
+    add("-auto-import");
+  else
+    add("-auto-import:no");
+  if (args.hasFlag(OPT_enable_runtime_pseudo_reloc,
+                   OPT_disable_runtime_pseudo_reloc, true))
+    add("-runtime-pseudo-reloc");
+  else
+    add("-runtime-pseudo-reloc:no");
+
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();
     if (s == "all")

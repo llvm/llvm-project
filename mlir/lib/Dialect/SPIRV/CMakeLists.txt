@@ -32,7 +32,7 @@ add_mlir_dialect_library(MLIRSPIRV
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRParser
-  MLIRSideEffects
+  MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTransforms
   )

@@ -23,7 +23,7 @@ OPTIONS
  Specify the desired type of accelerator table. Valid options are 'Apple',
  'Dwarf' and 'Default'.
 
-.. option:: --arch=<arch>
+.. option:: --arch <arch>
 
  Link DWARF debug information only for specified CPU architecture types.
  Architectures may be specified by name. When using this option, an error will
@@ -37,19 +37,22 @@ OPTIONS
  Dump the *executable*'s debug-map (the list of the object files containing the
  debug information) in YAML format and exit. Not DWARF link will take place.
 
-.. option:: -f, --flat
+.. option:: --flat, -f
 
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
  executable name unless the output file is specified using the ``-o`` option.
 
-.. option:: -h, --help
+.. option:: --help, -h
 
  Print this help output.
 
-.. option:: -j <n>, --num-threads=<n>
+.. option:: --minimize, -z
 
- Specifies the maximum number (``n``) of simultaneous threads to use when
- linking multiple architectures.
+ When used when creating a dSYM file, this option will suppress the emission of
+ the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
+ dsymutil currently has better equivalents: .apple_names and .apple_types. When
+ used in conjunction with ``--update`` option, this option will cause redundant
+ accelerator tables to be removed.
 
 .. option:: --no-odr
 
@@ -63,17 +66,22 @@ OPTIONS
 
  Don't check the timestamp for swiftmodule files.
 
-.. option:: --object-prefix-map=<prefix=remapped>
+.. option:: --num-threads <threads>, -j <threads>
+
+ Specifies the maximum number (``n``) of simultaneous threads to use when
+ linking multiple architectures.
+
+.. option:: --object-prefix-map <prefix=remapped>
 
  Remap object file paths (but no source paths) before processing.  Use
  this for Clang objects where the module cache location was remapped using
  ``-fdebug-prefix-map``; to help dsymutil find the Clang module cache.
 
-.. option:: --oso-prepend-path=<path>
+.. option:: --oso-prepend-path <path>
 
  Specifies a ``path`` to prepend to all debug symbol object file paths.
 
-.. option:: -o <filename>, --out <filename>
+.. option:: --out <filename>, -o <filename>
 
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
@@ -138,14 +146,6 @@ OPTIONS
 .. option:: -y
 
  Treat *executable* as a YAML debug-map rather than an executable.
-
-.. option:: -z, --minimize
-
- When used when creating a dSYM file, this option will suppress the emission of
- the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types. When
- used in conjunction with ``--update`` option, this option will cause redundant
- accelerator tables to be removed.
 
 EXIT STATUS
 -----------

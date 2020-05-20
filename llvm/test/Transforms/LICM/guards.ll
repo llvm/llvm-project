@@ -118,7 +118,7 @@ define void @test3(i1 %cond, i32* %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    store i32 0, i32* [[PTR]]
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label [[LOOP]]

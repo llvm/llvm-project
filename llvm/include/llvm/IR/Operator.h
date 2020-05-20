@@ -547,13 +547,24 @@ public:
 
   /// Accumulate the constant address offset of this GEP if possible.
   ///
-  /// This routine accepts an APInt into which it will accumulate the constant
-  /// offset of this GEP if the GEP is in fact constant. If the GEP is not
-  /// all-constant, it returns false and the value of the offset APInt is
-  /// undefined (it is *not* preserved!). The APInt passed into this routine
-  /// must be at exactly as wide as the IntPtr type for the address space of the
-  /// base GEP pointer.
-  bool accumulateConstantOffset(const DataLayout &DL, APInt &Offset) const;
+  /// This routine accepts an APInt into which it will try to accumulate the
+  /// constant offset of this GEP.
+  ///
+  /// If \p ExternalAnalysis is provided it will be used to calculate a offset
+  /// when a operand of GEP is not constant.
+  /// For example, for a value \p ExternalAnalysis might try to calculate a
+  /// lower bound. If \p ExternalAnalysis is successful, it should return true.
+  ///
+  /// If the \p ExternalAnalysis returns false or the value returned by \p
+  /// ExternalAnalysis results in a overflow/underflow, this routine returns
+  /// false and the value of the offset APInt is undefined (it is *not*
+  /// preserved!).
+  ///
+  /// The APInt passed into this routine must be at exactly as wide as the
+  /// IntPtr type for the address space of the base GEP pointer.
+  bool accumulateConstantOffset(
+      const DataLayout &DL, APInt &Offset,
+      function_ref<bool(Value &, APInt &)> ExternalAnalysis = nullptr) const;
 };
 
 class PtrToIntOperator

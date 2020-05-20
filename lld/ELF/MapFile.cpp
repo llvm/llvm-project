@@ -33,9 +33,9 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace lld;
+using namespace lld::elf;
 
-namespace lld {
-namespace elf {
 using SymbolMapTy = DenseMap<const SectionBase *, SmallVector<Defined *, 4>>;
 
 static constexpr char indent8[] = "        ";          // 8 spaces
@@ -138,7 +138,7 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
   }
 }
 
-void writeMapFile() {
+void elf::writeMapFile() {
   if (config->mapFile.empty())
     return;
 
@@ -227,7 +227,7 @@ static void print(StringRef a, StringRef b) {
 //
 // In this case, strlen is defined by libc.so.6 and used by other two
 // files.
-void writeCrossReferenceTable() {
+void elf::writeCrossReferenceTable() {
   if (!config->cref)
     return;
 
@@ -259,7 +259,7 @@ void writeCrossReferenceTable() {
   }
 }
 
-void writeArchiveStats() {
+void elf::writeArchiveStats() {
   if (config->printArchiveStats.empty())
     return;
 
@@ -276,6 +276,3 @@ void writeArchiveStats() {
     os << f->getMemberCount() << '\t' << f->getFetchedMemberCount() << '\t'
        << f->getName() << '\n';
 }
-
-} // namespace elf
-} // namespace lld

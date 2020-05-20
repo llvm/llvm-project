@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -24,7 +24,7 @@ static unsigned getNestingDepth(Operation *op) {
   Operation *currOp = op;
   unsigned depth = 0;
   while ((currOp = currOp->getParentOp())) {
-    if (isa<loop::ForOp>(currOp))
+    if (isa<scf::ForOp>(currOp))
       depth++;
   }
   return depth;
@@ -43,8 +43,8 @@ public:
 
   void runOnFunction() override {
     FuncOp func = getFunction();
-    SmallVector<loop::ForOp, 4> loops;
-    func.walk([&](loop::ForOp forOp) {
+    SmallVector<scf::ForOp, 4> loops;
+    func.walk([&](scf::ForOp forOp) {
       if (getNestingDepth(forOp) == loopDepth)
         loops.push_back(forOp);
     });

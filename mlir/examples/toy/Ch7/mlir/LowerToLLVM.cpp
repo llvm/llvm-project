@@ -16,12 +16,12 @@
 #include "toy/Passes.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -68,7 +68,7 @@ public:
       auto upperBound = rewriter.create<ConstantIndexOp>(loc, memRefShape[i]);
       auto step = rewriter.create<ConstantIndexOp>(loc, 1);
       auto loop =
-          rewriter.create<loop::ForOp>(loc, lowerBound, upperBound, step);
+          rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
       loop.getBody()->clear();
       loopIvs.push_back(loop.getInductionVar());
 
@@ -79,7 +79,7 @@ public:
       if (i != e - 1)
         rewriter.create<CallOp>(loc, printfRef, rewriter.getIntegerType(32),
                                 newLineCst);
-      rewriter.create<loop::YieldOp>(loc);
+      rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointToStart(loop.getBody());
     }
 

@@ -16,10 +16,7 @@
 #include "ubsan_type_hash.h"
 
 #include "sanitizer_common/sanitizer_common.h"
-
-#if __has_feature(ptrauth_calls)
-#include <ptrauth.h>
-#endif
+#include "sanitizer_common/sanitizer_ptrauth.h"
 
 // The following are intended to be binary compatible with the definitions
 // given in the Itanium ABI. We make no attempt to be ODR-compatible with
@@ -198,9 +195,7 @@ struct VtablePrefix {
   std::type_info *TypeInfo;
 };
 VtablePrefix *getVtablePrefix(void *Vtable) {
-#if __has_feature(ptrauth_calls)
   Vtable = ptrauth_auth_data(Vtable, ptrauth_key_cxx_vtable_pointer, 0);
-#endif
   VtablePrefix *Vptr = reinterpret_cast<VtablePrefix*>(Vtable);
   VtablePrefix *Prefix = Vptr - 1;
   if (!IsAccessibleMemoryRange((uptr)Prefix, sizeof(VtablePrefix)))

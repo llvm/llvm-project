@@ -12,6 +12,7 @@
 #include "llvm-c/Target.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

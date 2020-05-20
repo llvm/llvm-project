@@ -1,0 +1,21 @@
+# UNSUPPORTED: system-freebsd
+
+# Test that ProcessInfo is correctly serialized by comparing the output of
+# 'platform process list -v' during capture and replay. The test assumes that
+# there's at least two processes.
+
+# RUN: %lldb -x -b -o 'platform process list -v' -o 'reproducer generate' --capture --capture-path %t.repro > %t.log
+# RUN: %lldb --replay %t.repro >> %t.log
+# RUN: cat %t.log | FileCheck %s
+
+# CHECK: [[PROCS:[0-9]+]] matching processes were found
+# CHECK: PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE                         ARGUMENTS
+# CHECK-NEXT: ====== ====== ========== ========== ========== ========== ============================== ============================
+# CHECK-NEXT: [[PID0:[0-9]+]] [[PROC0:.*]]
+# CHECK-NEXT: [[PID1:[0-9]+]] [[PROC1:.*]]
+# CHECK: Reproducer written to
+# CHECK: [[PROCS]] matching processes were found
+# CHECK: PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE                         ARGUMENTS
+# CHECK-NEXT: ====== ====== ========== ========== ========== ========== ============================== ============================
+# CHECK-NEXT: [[PID0]] [[PROC0]]
+# CHECK-NEXT: [[PID1]] [[PROC1]]

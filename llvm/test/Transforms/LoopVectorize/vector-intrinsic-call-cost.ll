@@ -3,9 +3,6 @@
 ; CHECK-LABEL: @test_fshl
 ; CHECK-LABEL: vector.body:
 ; CHECK-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK-NEXT:    %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-; CHECK-NEXT:    %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    %0 = add i32 %index, 0
 ; CHECK-NEXT:    %1 = call <4 x i16> @llvm.fshl.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i16> <i16 15, i16 15, i16 15, i16 15>)
 ; CHECK-NEXT:    %index.next = add i32 %index, 4

@@ -21,11 +21,11 @@ define internal void @test(i32** %X) !dbg !2 {
 define internal void @test_byval(%struct.pair* byval %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval
 ; CHECK-SAME: (i32 [[P_0:%.*]], i32 [[P_1:%.*]])
-; CHECK-NEXT:    [[P:%.*]] = alloca [[STRUCT_PAIR:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = alloca [[STRUCT_PAIR:%.*]], align 8
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_PAIR]], %struct.pair* [[P]], i32 0, i32 0
-; CHECK-NEXT:    store i32 [[P_0]], i32* [[DOT0]]
+; CHECK-NEXT:    store i32 [[P_0]], i32* [[DOT0]], align 4
 ; CHECK-NEXT:    [[DOT1:%.*]] = getelementptr [[STRUCT_PAIR]], %struct.pair* [[P]], i32 0, i32 1
-; CHECK-NEXT:    store i32 [[P_1]], i32* [[DOT1]]
+; CHECK-NEXT:    store i32 [[P_1]], i32* [[DOT1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   ret void

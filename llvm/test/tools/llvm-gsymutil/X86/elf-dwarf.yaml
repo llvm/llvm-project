@@ -571,7 +571,7 @@ Symbols:
   - Name:            main.cpp
     Type:            STT_FILE
     Index:           SHN_ABS
-  - Name:            'crtstuff.c [1]'
+  - Name:            'crtstuff.c (1)'
     Type:            STT_FILE
     Index:           SHN_ABS
   - Name:            __FRAME_END__

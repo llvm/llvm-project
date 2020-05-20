@@ -36,9 +36,8 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class AVR final : public TargetInfo {
@@ -73,10 +72,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *getAVRTargetInfo() {
+TargetInfo *elf::getAVRTargetInfo() {
   static AVR target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

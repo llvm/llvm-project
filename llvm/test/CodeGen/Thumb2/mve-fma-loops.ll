@@ -10,15 +10,13 @@ define arm_aapcs_vfpcc void @fmas1(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vfma.f32 q3, q2, q1
-; CHECK-NEXT:    vstrw.32 q3, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vfmas.f32 q1, q0, r12
+; CHECK-NEXT:    vstrw.32 q1, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -127,14 +125,13 @@ define arm_aapcs_vfpcc void @fma1(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
-; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
+; CHECK-NEXT:    vfma.f32 q1, q0, r12
+; CHECK-NEXT:    vstrw.32 q1, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -245,14 +242,12 @@ define arm_aapcs_vfpcc void @fmss1(float* nocapture readonly %x, float* nocaptur
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    eor r12, r12, #-2147483648
-; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vfma.f32 q3, q2, q1
-; CHECK-NEXT:    vstrw.32 q3, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vfmas.f32 q1, q0, r12
+; CHECK-NEXT:    vstrw.32 q1, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -487,13 +482,12 @@ define arm_aapcs_vfpcc void @fms1(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    eor r12, r12, #-2147483648
-; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
-; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
+; CHECK-NEXT:    vfma.f32 q1, q0, r12
+; CHECK-NEXT:    vstrw.32 q1, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -604,15 +598,14 @@ define arm_aapcs_vfpcc void @fms3(float* nocapture readonly %x, float* nocapture
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    vdup.32 q0, r12
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
-; CHECK-NEXT:    vneg.f32 q1, q1
-; CHECK-NEXT:    vfma.f32 q1, q2, q0
-; CHECK-NEXT:    vstrw.32 q1, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vneg.f32 q0, q0
+; CHECK-NEXT:    vfma.f32 q0, q1, r12
+; CHECK-NEXT:    vstrw.32 q0, [r2], #16
 ; CHECK-NEXT:    letp lr, .LBB10_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}

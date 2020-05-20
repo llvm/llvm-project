@@ -37,7 +37,6 @@ class DefaultTargetInfo(object):
 
     def add_cxx_compile_flags(self, flags): pass
     def add_cxx_link_flags(self, flags): pass
-    def configure_env(self, env): pass
     def allow_cxxabi_link(self): return True
     def use_lit_shell_default(self): return False
 
@@ -156,21 +155,6 @@ class DarwinLocalTI(DefaultTargetInfo):
 
     def add_cxx_link_flags(self, flags):
         flags += ['-lSystem']
-
-    def configure_env(self, env):
-        library_paths = []
-        # Configure the library path for libc++
-        if self.full_config.cxx_runtime_root:
-            library_paths += [self.full_config.cxx_runtime_root]
-        elif self.full_config.use_system_cxx_lib:
-            if (os.path.isdir(str(self.full_config.use_system_cxx_lib))):
-                library_paths += [self.full_config.use_system_cxx_lib]
-
-        # Configure the abi library path
-        if self.full_config.abi_library_root:
-            library_paths += [self.full_config.abi_library_root]
-        if library_paths:
-            env['DYLD_LIBRARY_PATH'] = ':'.join(library_paths)
 
     def allow_cxxabi_link(self):
         # Don't link libc++abi explicitly on OS X because the symbols

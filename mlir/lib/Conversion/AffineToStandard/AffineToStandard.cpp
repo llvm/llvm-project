@@ -15,8 +15,9 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/LoopOps/LoopOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -27,6 +28,7 @@
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
+using namespace mlir::vector;
 
 namespace {
 /// Visit affine expressions recursively and build the sequence of operations
@@ -332,7 +334,7 @@ public:
 
   LogicalResult matchAndRewrite(AffineTerminatorOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<loop::YieldOp>(op);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
     return success();
   }
 };
@@ -347,7 +349,7 @@ public:
     Value lowerBound = lowerAffineLowerBound(op, rewriter);
     Value upperBound = lowerAffineUpperBound(op, rewriter);
     Value step = rewriter.create<ConstantIndexOp>(loc, op.getStep());
-    auto f = rewriter.create<loop::ForOp>(loc, lowerBound, upperBound, step);
+    auto f = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
     f.region().getBlocks().clear();
     rewriter.inlineRegionBefore(op.region(), f.region(), f.region().end());
     rewriter.eraseOp(op);
@@ -392,7 +394,7 @@ public:
                 : rewriter.create<ConstantIntOp>(loc, /*value=*/1, /*width=*/1);
 
     bool hasElseRegion = !op.elseRegion().empty();
-    auto ifOp = rewriter.create<loop::IfOp>(loc, cond, hasElseRegion);
+    auto ifOp = rewriter.create<scf::IfOp>(loc, cond, hasElseRegion);
     rewriter.inlineRegionBefore(op.thenRegion(), &ifOp.thenRegion().back());
     ifOp.thenRegion().back().erase();
     if (hasElseRegion) {
@@ -556,6 +558,51 @@ public:
   }
 };
 
+/// Apply the affine map from an 'affine.vector_load' operation to its operands,
+/// and feed the results to a newly created 'vector.transfer_read' operation
+/// (which replaces the original 'affine.vector_load').
+class AffineVectorLoadLowering : public OpRewritePattern<AffineVectorLoadOp> {
+public:
+  using OpRewritePattern<AffineVectorLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineVectorLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    // Expand affine map from 'affineVectorLoadOp'.
+    SmallVector<Value, 8> indices(op.getMapOperands());
+    auto resultOperands =
+        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    if (!resultOperands)
+      return failure();
+
+    // Build vector.transfer_read memref[expandedMap.results].
+    rewriter.replaceOpWithNewOp<TransferReadOp>(
+        op, op.getVectorType(), op.getMemRef(), *resultOperands);
+    return success();
+  }
+};
+
+/// Apply the affine map from an 'affine.vector_store' operation to its
+/// operands, and feed the results to a newly created 'vector.transfer_write'
+/// operation (which replaces the original 'affine.vector_store').
+class AffineVectorStoreLowering : public OpRewritePattern<AffineVectorStoreOp> {
+public:
+  using OpRewritePattern<AffineVectorStoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineVectorStoreOp op,
+                                PatternRewriter &rewriter) const override {
+    // Expand affine map from 'affineVectorStoreOp'.
+    SmallVector<Value, 8> indices(op.getMapOperands());
+    auto maybeExpandedMap =
+        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    if (!maybeExpandedMap)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TransferWriteOp>(
+        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
+    return success();
+  }
+};
+
 } // end namespace
 
 void mlir::populateAffineToStdConversionPatterns(
@@ -576,13 +623,24 @@ void mlir::populateAffineToStdConversionPatterns(
   // clang-format on
 }
 
+void mlir::populateAffineToVectorConversionPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+  // clang-format off
+  patterns.insert<
+      AffineVectorLoadLowering,
+      AffineVectorStoreLowering>(ctx);
+  // clang-format on
+}
+
 namespace {
 class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     populateAffineToStdConversionPatterns(patterns, &getContext());
+    populateAffineToVectorConversionPatterns(patterns, &getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<loop::LoopOpsDialect, StandardOpsDialect>();
+    target
+        .addLegalDialect<scf::SCFDialect, StandardOpsDialect, VectorDialect>();
     if (failed(applyPartialConversion(getFunction(), target, patterns)))
       signalPassFailure();
   }

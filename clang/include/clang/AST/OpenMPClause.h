@@ -7252,6 +7252,107 @@ public:
   }
 };
 
+/// This represents clause 'affinity' in the '#pragma omp task'-based
+/// directives.
+///
+/// \code
+/// #pragma omp task affinity(iterator(i = 0:n) : ([3][n])a, b[:n], c[i])
+/// \endcode
+/// In this example directive '#pragma omp task' has clause 'affinity' with the
+/// affinity modifer 'iterator(i = 0:n)' and locator items '([3][n])a', 'b[:n]'
+/// and 'c[i]'.
+class OMPAffinityClause final
+    : public OMPVarListClause<OMPAffinityClause>,
+      private llvm::TrailingObjects<OMPAffinityClause, Expr *> {
+  friend class OMPClauseReader;
+  friend OMPVarListClause;
+  friend TrailingObjects;
+
+  /// Location of ':' symbol.
+  SourceLocation ColonLoc;
+
+  /// Build clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param ColonLoc Location of ':'.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of locators asssociated with the clause.
+  OMPAffinityClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation ColonLoc, SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause<OMPAffinityClause>(llvm::omp::OMPC_affinity, StartLoc,
+                                            LParenLoc, EndLoc, N) {}
+
+  /// Build an empty clause.
+  /// \param N Number of locators asssociated with the clause.
+  ///
+  explicit OMPAffinityClause(unsigned N)
+      : OMPVarListClause<OMPAffinityClause>(llvm::omp::OMPC_affinity,
+                                            SourceLocation(), SourceLocation(),
+                                            SourceLocation(), N) {}
+
+  /// Sets the affinity modifier for the clause, if any.
+  void setModifier(Expr *E) {
+    getTrailingObjects<Expr *>()[varlist_size()] = E;
+  }
+
+  /// Sets the location of ':' symbol.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
+
+public:
+  /// Creates clause with a modifier a list of locator items.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param ColonLoc Location of ':'.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Locators List of locator items.
+  static OMPAffinityClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation EndLoc, Expr *Modifier,
+                                   ArrayRef<Expr *> Locators);
+
+  /// Creates an empty clause with the place for \p N locator items.
+  ///
+  /// \param C AST context.
+  /// \param N The number of locator items.
+  static OMPAffinityClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// Gets affinity modifier.
+  Expr *getModifier() { return getTrailingObjects<Expr *>()[varlist_size()]; }
+  Expr *getModifier() const {
+    return getTrailingObjects<Expr *>()[varlist_size()];
+  }
+
+  /// Gets the location of ':' symbol.
+  SourceLocation getColonLoc() const { return ColonLoc; }
+
+  // Iterators
+  child_range children() {
+    int Offset = getModifier() ? 1 : 0;
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end() + Offset));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPAffinityClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_affinity;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>

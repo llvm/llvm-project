@@ -315,6 +315,9 @@ uint32_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint32_t term_width) {
+  if (auto handler_sp = m_io_handler_stack.Top())
+    handler_sp->TerminalSizeChanged();
+
   const uint32_t idx = ePropertyTerminalWidth;
   return m_collection_sp->SetPropertyAtIndexAsSInt64(nullptr, idx, term_width);
 }

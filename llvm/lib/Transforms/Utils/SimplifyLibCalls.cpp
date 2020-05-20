@@ -1563,9 +1563,14 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
     return emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10, LibFunc_exp10f,
                                 LibFunc_exp10l, B, Attrs);
 
-  // pow(n, x) -> exp2(log2(n) * x)
-  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && Pow->hasNoInfs() &&
-      BaseF->isFiniteNonZero() && !BaseF->isNegative()) {
+  // pow(x, y) -> exp2(log2(x) * y)
+  if (Pow->hasApproxFunc() && Pow->hasNoNaNs() && BaseF->isFiniteNonZero() &&
+      !BaseF->isNegative()) {
+    // pow(1, inf) is defined to be 1 but exp2(log2(1) * inf) evaluates to NaN.
+    // Luckily optimizePow has already handled the x == 1 case.
+    assert(!match(Base, m_FPOne()) &&
+           "pow(1.0, y) should have been simplified earlier!");
+
     Value *Log = nullptr;
     if (Ty->isFloatTy())
       Log = ConstantFP::get(Ty, std::log2(BaseF->convertToFloat()));

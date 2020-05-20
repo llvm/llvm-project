@@ -1,3 +1,4 @@
+UNSUPPORTED: host-byteorder-big-endian
 # This test fails on Mac (https://bugs.llvm.org/show_bug.cgi?id=38134)
 XFAIL: darwin
 

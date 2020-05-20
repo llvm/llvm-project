@@ -69,6 +69,8 @@ public:
   IndexType getIndexType();
 
   IntegerType getI1Type();
+  IntegerType getI32Type();
+  IntegerType getI64Type();
   IntegerType getIntegerType(unsigned width);
   IntegerType getIntegerType(unsigned width, bool isSigned);
   FunctionType getFunctionType(ArrayRef<Type> inputs, ArrayRef<Type> results);
@@ -128,6 +130,7 @@ public:
   DenseIntElementsAttr getI64TensorAttr(ArrayRef<int64_t> values);
 
   ArrayAttr getAffineMapArrayAttr(ArrayRef<AffineMap> values);
+  ArrayAttr getBoolArrayAttr(ArrayRef<bool> values);
   ArrayAttr getI32ArrayAttr(ArrayRef<int32_t> values);
   ArrayAttr getI64ArrayAttr(ArrayRef<int64_t> values);
   ArrayAttr getIndexArrayAttr(ArrayRef<int64_t> values);

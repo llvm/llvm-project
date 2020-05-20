@@ -21,12 +21,12 @@ func @linalg_generic_sum(%lhs: memref<2x2xf32>,
 // CHECK-DAG: %[[C2:.*]] = constant 2
 // CHECK-DAG: %[[C0:.*]] = constant 0
 // CHECK-DAG: %[[C1:.*]] = constant 1
-// CHECK: loop.parallel (%[[I:.*]], %[[J:.*]]) = {{.*}}
+// CHECK: scf.parallel (%[[I:.*]], %[[J:.*]]) = {{.*}}
 // CHECK:   %[[LHS_ELEM:.*]] = load %[[LHS]][%[[I]], %[[J]]]
 // CHECK:   %[[RHS_ELEM:.*]] = load %[[RHS]][%[[I]], %[[J]]]
 // CHECK:   %[[SUM:.*]] = addf %[[LHS_ELEM]], %[[RHS_ELEM]] : f32
 // CHECK:   store %[[SUM]], %{{.*}}[%[[I]], %[[J]]]
-// CHECK:   loop.yield
+// CHECK:   scf.yield
 
 // -----
 
@@ -55,8 +55,8 @@ func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
 //   CHECK-DAG: %[[D1:.*]] = dim %{{.*}}, 1
 //   CHECK-DAG: %[[D2:.*]] = dim %{{.*}}, 2
 //   CHECK-DAG: %[[D3:.*]] = dim %{{.*}}, 3
-//       CHECK: loop.parallel (%[[IV0:.*]], %[[IV1:.*]]) = (%[[C0]], %[[C0]]) to (%[[D0]], %[[D1]]) step (%[[C1]], %[[C1]])
-//       CHECK:   loop.for %[[IV2:.*]] = %[[C0]] to %[[D2]] step %[[C1]]
-//       CHECK:     loop.for %[[IV3:.*]] = %[[C0]] to %[[D3]] step %[[C1]]
+//       CHECK: scf.parallel (%[[IV0:.*]], %[[IV1:.*]]) = (%[[C0]], %[[C0]]) to (%[[D0]], %[[D1]]) step (%[[C1]], %[[C1]])
+//       CHECK:   scf.for %[[IV2:.*]] = %[[C0]] to %[[D2]] step %[[C1]]
+//       CHECK:     scf.for %[[IV3:.*]] = %[[C0]] to %[[D3]] step %[[C1]]
 //       CHECK:       load %{{.*}}[%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
 //       CHECK:       store %{{.*}}, %{{.*}}[%[[IV0]], %[[IV1]], %[[IV3]]]

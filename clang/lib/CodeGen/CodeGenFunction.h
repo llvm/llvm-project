@@ -3920,10 +3920,14 @@ public:
   llvm::ScalableVectorType *getSVEPredType(SVETypeFlags TypeFlags);
   llvm::Value *EmitSVEAllTruePred(SVETypeFlags TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
+  llvm::Value *EmitSVEDupX(llvm::Value *Scalar, llvm::Type *Ty);
   llvm::Value *EmitSVEReinterpret(llvm::Value *Val, llvm::Type *Ty);
   llvm::Value *EmitSVEPMull(SVETypeFlags TypeFlags,
                             llvm::SmallVectorImpl<llvm::Value *> &Ops,
                             unsigned BuiltinID);
+  llvm::Value *EmitSVEMovl(SVETypeFlags TypeFlags,
+                           llvm::ArrayRef<llvm::Value *> Ops,
+                           unsigned BuiltinID);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred,
                                     llvm::ScalableVectorType *VTy);
   llvm::Value *EmitSVEGatherLoad(SVETypeFlags TypeFlags,

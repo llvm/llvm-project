@@ -859,6 +859,16 @@ def warn_pragma_pack_pop_identifier_and_alignment : Warning<
   "specifying both a name and alignment to 'pop' is undefined">;
 def warn_pragma_pop_failed : Warning<"#pragma %0(pop, ...) failed: %1">,
   InGroup<IgnoredPragmas>;
+def err_pragma_fc_pp_scope : Error<
+  "'#pragma float_control push/pop' can only appear at file scope or namespace scope">;
+def err_pragma_fc_noprecise_requires_nofenv : Error<
+  "'#pragma float_control(precise, off)' is illegal when fenv_access is enabled">;
+def err_pragma_fc_except_requires_precise : Error<
+  "'#pragma float_control(except, on)' is illegal when precise is disabled">;
+def err_pragma_fc_noprecise_requires_noexcept : Error<
+  "'#pragma float_control(precise, off)' is illegal when except is enabled">;
+def err_pragma_fenv_requires_precise : Error<
+  "'#pragma STDC FENV_ACCESS ON' is illegal when precise is disabled">;
 def warn_cxx_ms_struct :
   Warning<"ms_struct may not produce Microsoft-compatible layouts for classes "
           "with base classes or virtual functions">,
@@ -1580,6 +1590,9 @@ def err_exception_spec_cycle : Error<
   "exception specification of %0 uses itself">;
 def err_exception_spec_incomplete_type : Error<
   "exception specification needed for member of incomplete class %0">;
+def warn_wasm_dynamic_exception_spec_ignored : ExtWarn<
+  "dynamic exception specifications with types are currently ignored in wasm">,
+  InGroup<WebAssemblyExceptionSpec>;
 
 // C++ access checking
 def err_class_redeclared_with_different_access : Error<
@@ -2377,9 +2390,6 @@ def err_enum_redeclare_fixed_mismatch : Error<
   "enumeration previously declared with %select{non|}0fixed underlying type">;
 def err_enum_redeclare_scoped_mismatch : Error<
   "enumeration previously declared as %select{un|}0scoped">;
-def err_enum_class_reference : Error<
-  "reference to %select{|scoped }0enumeration must use 'enum' "
-  "not 'enum class'">;
 def err_only_enums_have_underlying_types : Error<
   "only enumeration types have underlying types">;
 def err_underlying_type_of_incomplete_enum : Error<
@@ -2767,6 +2777,7 @@ def err_attribute_too_many_arguments : Error<
 def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
+def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
 def err_attribute_requires_positive_integer : Error<
@@ -2870,8 +2881,8 @@ def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
   "vector size not an integral multiple of component size">;
-def err_attribute_zero_size : Error<"zero vector size">;
-def err_attribute_size_too_large : Error<"vector size too large">;
+def err_attribute_zero_size : Error<"zero %0 size">;
+def err_attribute_size_too_large : Error<"%0 size too large">;
 def err_typecheck_vector_not_convertable_implict_truncation : Error<
    "cannot convert between %select{scalar|vector}0 type %1 and vector type"
    " %2 as implicit conversion would cause truncation">;
@@ -4213,13 +4224,13 @@ def err_ovl_no_conversion_in_cast : Error<
   "cannot convert %1 to %2 without a conversion operator">;
 def err_ovl_no_viable_conversion_in_cast : Error<
   "no matching conversion for %select{|static_cast|reinterpret_cast|"
-  "dynamic_cast|C-style cast|functional-style cast}0 from %1 to %2">;
+  "dynamic_cast|C-style cast|functional-style cast|}0 from %1 to %2">;
 def err_ovl_ambiguous_conversion_in_cast : Error<
   "ambiguous conversion for %select{|static_cast|reinterpret_cast|"
-  "dynamic_cast|C-style cast|functional-style cast}0 from %1 to %2">;
+  "dynamic_cast|C-style cast|functional-style cast|}0 from %1 to %2">;
 def err_ovl_deleted_conversion_in_cast : Error<
   "%select{|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from %1 to %2 uses deleted function">;
+  "functional-style cast|}0 from %1 to %2 uses deleted function">;
 def err_ovl_ambiguous_init : Error<"call to constructor of %0 is ambiguous">;
 def err_ref_init_ambiguous : Error<
   "reference initialization of type %0 with initializer of type %1 is ambiguous">;
@@ -6835,34 +6846,34 @@ def err_bad_cstyle_cast_overload : Error<
 
 
 def err_bad_cxx_cast_generic : Error<
-  "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from %1 to %2 is not allowed">;
+  "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|"
+  "C-style cast|functional-style cast|addrspace_cast}0 from %1 to %2 is not allowed">;
 def err_bad_cxx_cast_unrelated_class : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from %1 to %2, which are not related by "
+  "functional-style cast|}0 from %1 to %2, which are not related by "
   "inheritance, is not allowed">;
 def note_type_incomplete : Note<"%0 is incomplete">;
 def err_bad_cxx_cast_rvalue : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from rvalue to reference type %2">;
+  "functional-style cast|addrspace_cast}0 from rvalue to reference type %2">;
 def err_bad_cxx_cast_bitfield : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from bit-field lvalue to reference type %2">;
+  "functional-style cast|}0 from bit-field lvalue to reference type %2">;
 def err_bad_cxx_cast_qualifiers_away : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from %1 to %2 casts away qualifiers">;
+  "functional-style cast|}0 from %1 to %2 casts away qualifiers">;
 def err_bad_cxx_cast_addr_space_mismatch : Error<
-  "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from %1 to %2 converts between mismatching address"
+  "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|"
+  "C-style cast|functional-style cast|addrspace_cast}0 from %1 to %2 converts between mismatching address"
   " spaces">;
 def ext_bad_cxx_cast_qualifiers_away_incoherent : ExtWarn<
   "ISO C++ does not allow "
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
-  "functional-style cast}0 from %1 to %2 because it casts away qualifiers, "
+  "functional-style cast|}0 from %1 to %2 because it casts away qualifiers, "
   "even though the source and destination types are unrelated">,
   SFINAEFailure, InGroup<DiagGroup<"cast-qual-unrelated">>;
 def err_bad_const_cast_dest : Error<
-  "%select{const_cast||||C-style cast|functional-style cast}0 to %2, "
+  "%select{const_cast||||C-style cast|functional-style cast|}0 to %2, "
   "which is not a reference, pointer-to-object, or pointer-to-data-member">;
 def ext_cast_fn_obj : Extension<
   "cast between pointer-to-function and pointer-to-object is an extension">;
@@ -6875,13 +6886,13 @@ def warn_cxx98_compat_cast_fn_obj : Warning<
 def err_bad_reinterpret_cast_small_int : Error<
   "cast from pointer to smaller type %2 loses information">;
 def err_bad_cxx_cast_vector_to_scalar_different_size : Error<
-  "%select{||reinterpret_cast||C-style cast|}0 from vector %1 "
+  "%select{||reinterpret_cast||C-style cast||}0 from vector %1 "
   "to scalar %2 of different size">;
 def err_bad_cxx_cast_scalar_to_vector_different_size : Error<
-  "%select{||reinterpret_cast||C-style cast|}0 from scalar %1 "
+  "%select{||reinterpret_cast||C-style cast||}0 from scalar %1 "
   "to vector %2 of different size">;
 def err_bad_cxx_cast_vector_to_vector_different_size : Error<
-  "%select{||reinterpret_cast||C-style cast|}0 from vector %1 "
+  "%select{||reinterpret_cast||C-style cast||}0 from vector %1 "
   "to vector %2 of different size">;
 def warn_bad_cxx_cast_nested_pointer_addr_space : Warning<
   "%select{reinterpret_cast|C-style cast}0 from %1 to %2 "
@@ -6898,7 +6909,7 @@ def err_bad_static_cast_pointer_nonpointer : Error<
 def err_bad_static_cast_member_pointer_nonmp : Error<
   "cannot cast from type %1 to member pointer type %2">;
 def err_bad_cxx_cast_member_pointer_size : Error<
-  "cannot %select{||reinterpret_cast||C-style cast|}0 from member pointer "
+  "cannot %select{||reinterpret_cast||C-style cast||}0 from member pointer "
   "type %1 to member pointer type %2 of different size">;
 def err_bad_reinterpret_cast_reference : Error<
   "reinterpret_cast of a %0 to %1 needs its address, which is not allowed">;
@@ -10734,10 +10745,15 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_builtin_matrix_disabled: Error<
+  "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
+
 def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;
 def err_preserve_field_info_not_const: Error<
   "__builtin_preserve_field_info argument %0 not a constant">;
+def err_btf_type_id_not_const: Error<
+  "__builtin_btf_type_id argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;

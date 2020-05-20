@@ -247,9 +247,8 @@ def execute_in_tmp_dir(run, lit_config):
             try:
                 import shutil
                 shutil.rmtree(tmp_dir)
-            except:
-                # FIXME: Re-try after timeout on Windows.
-                lit_config.warning("Failed to delete temp directory '%s'" % tmp_dir)
+            except Exception as e: 
+                lit_config.warning("Failed to delete temp directory '%s', try upgrading your version of Python to fix this" % tmp_dir)
 
 
 def print_histogram(tests):

@@ -1170,32 +1170,32 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    lsr.w lr, r0, #3
 ; CHECK-NEXT:    wls lr, lr, .LBB7_12
 ; CHECK-NEXT:  @ %bb.10:
-; CHECK-NEXT:    vldrw.u32 q3, [q1, #16]
 ; CHECK-NEXT:    vldr s0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vldrw.u32 q0, [q1, #16]
 ; CHECK-NEXT:  .LBB7_11: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [q1, #24]
+; CHECK-NEXT:    vldrw.u32 q3, [q1, #24]
 ; CHECK-NEXT:    vldrw.u32 q4, [q1, #8]
-; CHECK-NEXT:    vadd.f32 q6, q2, q3
-; CHECK-NEXT:    vsub.f32 q2, q2, q3
-; CHECK-NEXT:    vadd.f32 q5, q4, q0
-; CHECK-NEXT:    vsub.f32 q0, q4, q0
-; CHECK-NEXT:    vsub.f32 q7, q6, q5
-; CHECK-NEXT:    vcadd.f32 q4, q2, q0, #270
+; CHECK-NEXT:    vsub.f32 q6, q2, q0
+; CHECK-NEXT:    vadd.f32 q0, q2, q0
+; CHECK-NEXT:    vsub.f32 q5, q4, q3
+; CHECK-NEXT:    vadd.f32 q3, q4, q3
+; CHECK-NEXT:    vcadd.f32 q7, q6, q5, #270
+; CHECK-NEXT:    vsub.f32 q2, q0, q3
+; CHECK-NEXT:    vmul.f32 q7, q7, r0
+; CHECK-NEXT:    vadd.f32 q3, q0, q3
 ; CHECK-NEXT:    vstrw.32 q7, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vcadd.f32 q7, q2, q0, #90
-; CHECK-NEXT:    vadd.f32 q0, q6, q5
+; CHECK-NEXT:    vcadd.f32 q7, q6, q5, #90
+; CHECK-NEXT:    vmul.f32 q4, q2, r0
 ; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
-; CHECK-NEXT:    vmul.f32 q0, q0, r0
-; CHECK-NEXT:    vldrw.u32 q3, [q1, #16]
-; CHECK-NEXT:    vstrw.32 q0, [q1, #-64]
-; CHECK-NEXT:    vldrw.u32 q5, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    vmul.f32 q0, q4, r0
-; CHECK-NEXT:    vmul.f32 q4, q7, r0
-; CHECK-NEXT:    vmul.f32 q5, q5, r0
-; CHECK-NEXT:    vstrw.32 q5, [q1, #-56]
-; CHECK-NEXT:    vstrw.32 q4, [q1, #-48]
-; CHECK-NEXT:    vstrw.32 q0, [q1, #-40]
+; CHECK-NEXT:    vmul.f32 q5, q7, r0
+; CHECK-NEXT:    vmul.f32 q3, q3, r0
+; CHECK-NEXT:    vldrw.u32 q0, [q1, #16]
+; CHECK-NEXT:    vstrw.32 q3, [q1, #-64]
+; CHECK-NEXT:    vstrw.32 q4, [q1, #-56]
+; CHECK-NEXT:    vstrw.32 q5, [q1, #-48]
+; CHECK-NEXT:    vldrw.u32 q3, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q3, [q1, #-40]
 ; CHECK-NEXT:    le lr, .LBB7_11
 ; CHECK-NEXT:  .LBB7_12:
 ; CHECK-NEXT:    add sp, #56

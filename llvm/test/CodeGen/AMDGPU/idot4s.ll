@@ -119,6 +119,7 @@ define amdgpu_kernel void @idot4_acc32(<4 x i8> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: idot4_acc32:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -641,6 +642,7 @@ define amdgpu_kernel void @idot4_multiuse_mul1(<4 x i8> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: idot4_multiuse_mul1:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
@@ -839,6 +841,7 @@ define amdgpu_kernel void @idot4_acc32_vecMul(<4 x i8> addrspace(1)* %src1,
 ;
 ; GFX10-DL-LABEL: idot4_acc32_vecMul:
 ; GFX10-DL:       ; %bb.0: ; %entry
+; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi

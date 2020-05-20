@@ -158,6 +158,19 @@ TEST_F(TargetDeclTest, Recovery) {
   EXPECT_DECLS("UnresolvedLookupExpr", "int f()", "int f(int, int)");
 }
 
+TEST_F(TargetDeclTest, RecoveryType) {
+  Code = R"cpp(
+    // error-ok: testing behavior on broken code
+    struct S { int member; };
+    S overloaded(int);
+    void foo() {
+      // No overload matches, but we have recovery-expr with the correct type.
+      overloaded().[[member]];
+    }
+  )cpp";
+  EXPECT_DECLS("MemberExpr", "int member");
+}
+
 TEST_F(TargetDeclTest, UsingDecl) {
   Code = R"cpp(
     namespace foo {
@@ -773,6 +786,14 @@ TEST_F(FindExplicitReferencesTest, All) {
         "6: targets = {a::b::S}\n"
         "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
         "8: targets = {y}, decl\n"},
+       {R"cpp(
+         void foo() {
+           $0^ten: // PRINT "HELLO WORLD!"
+           goto $1^ten;
+         }
+       )cpp",
+       "0: targets = {ten}, decl\n"
+       "1: targets = {ten}\n"},
        // Simple templates.
        {R"cpp(
           template <class T> struct vector { using value_type = T; };

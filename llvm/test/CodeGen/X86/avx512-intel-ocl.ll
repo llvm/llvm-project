@@ -77,7 +77,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    popq %r13
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
-  %y = alloca <16 x float>, align 16
+  %y = alloca <16 x float>, align 64
   %x = fadd <16 x float> %a, %b
   %1 = call intel_ocl_bicc <16 x float> @func_float16_ptr(<16 x float> %x, <16 x float>* %y)
   %2 = load <16 x float>, <16 x float>* %y, align 16
@@ -158,7 +158,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    popq %r13
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
-  %y = alloca <16 x float>, align 16
+  %y = alloca <16 x float>, align 64
   %x = fadd <16 x float> %a, %b
   %1 = call intel_ocl_bicc <16 x float> @func_float16_ptr(<16 x float> %x, <16 x float>* %y)
   %2 = load <16 x float>, <16 x float>* %y, align 16

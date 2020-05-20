@@ -51,8 +51,8 @@ define internal i32 @caller(i32* %B) {
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV]]
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32
 ; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A]], align 1
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[B_PRIV]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A]], align 4
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[B_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 [[TMP2]], i32 [[TMP3]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[C]]
 ;
@@ -79,7 +79,7 @@ define i32 @callercaller() {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callercaller()
 ; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32
 ; IS__TUNIT_NPM-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32 [[TMP1]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;

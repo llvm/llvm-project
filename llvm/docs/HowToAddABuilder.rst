@@ -81,7 +81,8 @@ Here are the steps you can follow to do so:
    buildbot documentation for help.  You may want to restart your computer
    to see if it works.
 
-#. Send a patch which adds your build slave and your builder to zorg.
+#. Send a patch which adds your build slave and your builder to
+   `zorg <https://github.com/llvm/llvm-zorg>`_.
 
    * slaves are added to ``buildbot/osuosl/master/config/slaves.py``
    * builders are added to ``buildbot/osuosl/master/config/builders.py``

@@ -144,13 +144,17 @@ endif()
 
 if(LLVM_BUILD_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS
-    Bye
     Kaleidoscope-Ch3
     Kaleidoscope-Ch4
     Kaleidoscope-Ch5
     Kaleidoscope-Ch6
     Kaleidoscope-Ch7
     )
+  if (NOT WIN32)
+    list(APPEND LLVM_TEST_DEPENDS
+      Bye
+      )
+  endif()
 endif()
 
 if(TARGET ocaml_llvm)

@@ -166,6 +166,8 @@ public:
                     C2.ScaleCost, C2.ImmCost, C2.SetupCost);
   }
 
+  bool isProfitableLSRChainElement(Instruction *I) { return false; }
+
   bool canMacroFuseCmp() { return false; }
 
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
@@ -178,11 +180,9 @@ public:
 
   bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
 
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
-    return false;
-  }
+  bool isLegalMaskedStore(Type *DataType, Align Alignment) { return false; }
 
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) { return false; }
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment) { return false; }
 
   bool isLegalNTStore(Type *DataType, Align Alignment) {
     // By default, assume nontemporal memory stores are available for stores
@@ -198,13 +198,9 @@ public:
     return Alignment >= DataSize && isPowerOf2_32(DataSize);
   }
 
-  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) {
-    return false;
-  }
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) { return false; }
 
-  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) {
-    return false;
-  }
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) { return false; }
 
   bool isLegalMaskedCompressStore(Type *DataType) { return false; }
 
@@ -439,7 +435,7 @@ public:
     return 1;
   }
 
-  unsigned getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+  unsigned getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                            unsigned AddressSpace, TTI::TargetCostKind CostKind,
                            const Instruction *I) const {
     return 1;
@@ -871,12 +867,9 @@ public:
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
     case Instruction::Trunc:
-      if (getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free ||
-          TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
-        return TTI::TCC_Free;
-      break;
     case Instruction::BitCast:
-      if (getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) == TTI::TCC_Free)
+      if (TargetTTI->getCastInstrCost(Opcode, Ty, OpTy, CostKind, I) ==
+          TTI::TCC_Free)
         return TTI::TCC_Free;
       break;
     case Instruction::FPExt:

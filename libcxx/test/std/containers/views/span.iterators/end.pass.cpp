@@ -22,52 +22,38 @@ template <class Span>
 constexpr bool testConstexprSpan(Span s)
 {
     bool ret = true;
-    typename Span::iterator e        = s. end();
-    typename Span::const_iterator ce = s.cend();
+    typename Span::iterator e = s.end();
     if (s.empty())
     {
-        ret = ret &&  ( e ==  s.begin());
-        ret = ret &&  (ce == s.cbegin());
+        ret = ret &&  (e == s.begin());
     }
     else
     {
-    	typename Span::const_pointer last = &*(s.cbegin() + s.size() - 1);
-        ret = ret &&  ( e !=  s.begin());
-        ret = ret &&  (ce != s.cbegin());
+        typename Span::const_pointer last = &*(s.begin() + s.size() - 1);
+        ret = ret &&  (e != s.begin());
         ret = ret &&  (&*( e-1) == last);
-        ret = ret &&  (&*(ce-1) == last);
     }
 
-    ret = ret &&  (static_cast<size_t>( e -  s.begin()) == s.size());
-    ret = ret &&  (static_cast<size_t>(ce - s.cbegin()) == s.size());
-
-    ret = ret &&  (e == ce);
+    ret = ret &&  (static_cast<size_t>(e - s.begin()) == s.size());
     return ret;
 }
 
 template <class Span>
 void testRuntimeSpan(Span s)
 {
-    typename Span::iterator e        = s. end();
-    typename Span::const_iterator ce = s.cend();
+    typename Span::iterator e = s.end();
     if (s.empty())
     {
-        assert( e ==  s.begin());
-        assert(ce == s.cbegin());
+        assert(e == s.begin());
     }
     else
     {
-    	typename Span::const_pointer last = &*(s.cbegin() + s.size() - 1);
-        assert( e !=  s.begin());
-        assert(ce != s.cbegin());
-        assert( &*( e-1) == last);
-        assert( &*(ce-1) == last);
+        typename Span::const_pointer last = &*(s.begin() + s.size() - 1);
+        assert(e != s.begin());
+        assert(&*( e-1) == last);
     }
 
-    assert(static_cast<size_t>( e -  s.begin()) == s.size());
-    assert(static_cast<size_t>(ce - s.cbegin()) == s.size());
-
-    assert(e == ce);
+    assert(static_cast<size_t>(e - s.begin()) == s.size());
 }
 
 

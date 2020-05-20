@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %flang %t
+! RUN: %S/test_symbols.sh %s %t %f18
 ! Old-style "*length" specifiers (R723)
 
 !DEF: /f1 (Function) Subprogram CHARACTER(1_8,1)

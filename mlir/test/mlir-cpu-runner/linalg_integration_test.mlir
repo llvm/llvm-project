@@ -1,29 +1,26 @@
-// RUN: mlir-opt %s -convert-linalg-to-llvm \
+// RUN: mlir-opt %s -convert-linalg-to-std -convert-linalg-to-llvm \
 // RUN: | mlir-cpu-runner -e dot -entry-point-result=f32 -shared-libs=%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm \
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-std -convert-linalg-to-llvm \
 // RUN: | mlir-cpu-runner -e dot -entry-point-result=f32 -shared-libs=%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -convert-linalg-to-llvm \
+// RUN: mlir-opt %s -convert-linalg-to-std -convert-linalg-to-llvm \
 // RUN: | mlir-cpu-runner -e matmul -entry-point-result=f32 -shared-libs=%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm \
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-std -convert-linalg-to-llvm \
 // RUN: | mlir-cpu-runner -e matmul -entry-point-result=f32 -shared-libs=%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -linalg-promote-subviews -convert-linalg-to-loops -convert-linalg-to-llvm \
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -linalg-promote-subviews -convert-linalg-to-loops -convert-linalg-to-std -convert-linalg-to-llvm \
 // RUN: | mlir-cpu-runner -e matmul -entry-point-result=f32 -shared-libs=%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -linalg-promote-subviews -convert-linalg-to-llvm \
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -linalg-promote-subviews -convert-linalg-to-std -convert-linalg-to-llvm \
 // RUN: | mlir-cpu-runner -e matmul -entry-point-result=f32 -shared-libs=%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext \
 // RUN: | FileCheck %s
-
-#strided1D = affine_map<(d0) -> (d0)>
-#strided2D = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
 
 // Creates and returns a 1-D buffer of size %s filled with the value %f
 func @alloc_filled_f32(%s : index, %f : f32) -> memref<?xi8> {
@@ -32,8 +29,8 @@ func @alloc_filled_f32(%s : index, %f : f32) -> memref<?xi8> {
   %c4 = constant 4 : index
   %s4 = muli %s, %c4: index
   %buf = alloc(%s4) {alignment = 256} : memref<?xi8>
-  %V = view %buf[%s][] : memref<?xi8> to memref<?xf32, #strided1D>
-  linalg.fill(%V, %f) : memref<?xf32, #strided1D>, f32
+  %V = view %buf[%c0][%s] : memref<?xi8> to memref<?xf32>
+  linalg.fill(%V, %f) : memref<?xf32>, f32
   return %buf : memref<?xi8>
 }
 
@@ -50,11 +47,11 @@ func @dot() -> f32 {
   %bB = call @alloc_filled_f32(%c16, %f1) : (index, f32) -> (memref<?xi8>)
   %bC = call @alloc_filled_f32(%c1, %f10) : (index, f32) -> (memref<?xi8>)
 
-  %A = view %bA[%c16][] : memref<?xi8> to memref<?xf32, #strided1D>
-  %B = view %bB[%c16][] : memref<?xi8> to memref<?xf32, #strided1D>
-  %C = view %bC[][] : memref<?xi8> to memref<f32>
+  %A = view %bA[%c0][%c16] : memref<?xi8> to memref<?xf32>
+  %B = view %bB[%c0][%c16] : memref<?xi8> to memref<?xf32>
+  %C = view %bC[%c0][] : memref<?xi8> to memref<f32>
 
-  linalg.dot(%A, %B, %C) : memref<?xf32, #strided1D>, memref<?xf32, #strided1D>, memref<f32>
+  linalg.dot(%A, %B, %C) : memref<?xf32>, memref<?xf32>, memref<f32>
   %res = load %C[] : memref<f32>
 
   dealloc %bC : memref<?xi8>
@@ -82,12 +79,12 @@ func @matmul() -> f32 {
   %bB = call @alloc_filled_f32(%c160, %f1) : (index, f32) -> (memref<?xi8>)
   %bC = call @alloc_filled_f32(%c100, %f10) : (index, f32) -> (memref<?xi8>)
 
-  %A = view %bA[][%c10, %c16] : memref<?xi8> to memref<?x?xf32, #strided2D>
-  %B = view %bB[][%c16, %c10] : memref<?xi8> to memref<?x?xf32, #strided2D>
-  %C = view %bC[][%c10, %c10] : memref<?xi8> to memref<?x?xf32, #strided2D>
+  %A = view %bA[%c0][%c10, %c16] : memref<?xi8> to memref<?x?xf32>
+  %B = view %bB[%c0][%c16, %c10] : memref<?xi8> to memref<?x?xf32>
+  %C = view %bC[%c0][%c10, %c10] : memref<?xi8> to memref<?x?xf32>
 
-  linalg.matmul(%A, %B, %C) : memref<?x?xf32, #strided2D>, memref<?x?xf32, #strided2D>, memref<?x?xf32, #strided2D>
-  %res = load %C[%c6, %c7] : memref<?x?xf32, #strided2D>
+  linalg.matmul(%A, %B, %C) : memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  %res = load %C[%c6, %c7] : memref<?x?xf32>
 
   dealloc %bC : memref<?xi8>
   dealloc %bB : memref<?xi8>

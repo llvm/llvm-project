@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the attribute used for driving conversion from loop.parallel to
+// Defines the attribute used for driving conversion from scf.parallel to
 // gpu.launch operations
 //
 //===----------------------------------------------------------------------===//
@@ -30,7 +30,7 @@ def ProcessorAttr : I64EnumAttr<"Processor", "processor for loop mapping", [
   let cppNamespace = "::mlir::gpu";
 }
 
-// Attribute that drives conversion of a loop.parallel to gpu.launch
+// Attribute that drives conversion of a scf.parallel to gpu.launch
 // operation.
 // processor: the hardware id to map to.
 // map : An affine map that is used to pre-process hardware ids before

@@ -261,6 +261,10 @@ bool TargetTransformInfo::isLSRCostLess(LSRCost &C1, LSRCost &C2) const {
   return TTIImpl->isLSRCostLess(C1, C2);
 }
 
+bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {
+  return TTIImpl->isProfitableLSRChainElement(I);
+}
+
 bool TargetTransformInfo::canMacroFuseCmp() const {
   return TTIImpl->canMacroFuseCmp();
 }
@@ -281,12 +285,12 @@ bool TargetTransformInfo::shouldFavorBackedgeIndex(const Loop *L) const {
 }
 
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType,
-                                             MaybeAlign Alignment) const {
+                                             Align Alignment) const {
   return TTIImpl->isLegalMaskedStore(DataType, Alignment);
 }
 
 bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType,
-                                            MaybeAlign Alignment) const {
+                                            Align Alignment) const {
   return TTIImpl->isLegalMaskedLoad(DataType, Alignment);
 }
 
@@ -300,12 +304,12 @@ bool TargetTransformInfo::isLegalNTLoad(Type *DataType, Align Alignment) const {
 }
 
 bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
-                                              MaybeAlign Alignment) const {
+                                              Align Alignment) const {
   return TTIImpl->isLegalMaskedGather(DataType, Alignment);
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
-                                               MaybeAlign Alignment) const {
+                                               Align Alignment) const {
   return TTIImpl->isLegalMaskedScatter(DataType, Alignment);
 }
 
@@ -654,8 +658,7 @@ int TargetTransformInfo::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                         MaybeAlign Alignment,
-                                         unsigned AddressSpace,
+                                         Align Alignment, unsigned AddressSpace,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I) const {
   assert((I == nullptr || I->getOpcode() == Opcode) &&
@@ -1241,14 +1244,12 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::Store: {
     const StoreInst *SI = cast<StoreInst>(I);
     Type *ValTy = SI->getValueOperand()->getType();
-    return getMemoryOpCost(I->getOpcode(), ValTy,
-                           MaybeAlign(SI->getAlignment()),
+    return getMemoryOpCost(I->getOpcode(), ValTy, SI->getAlign(),
                            SI->getPointerAddressSpace(), CostKind, I);
   }
   case Instruction::Load: {
     const LoadInst *LI = cast<LoadInst>(I);
-    return getMemoryOpCost(I->getOpcode(), I->getType(),
-                           MaybeAlign(LI->getAlignment()),
+    return getMemoryOpCost(I->getOpcode(), I->getType(), LI->getAlign(),
                            LI->getPointerAddressSpace(), CostKind, I);
   }
   case Instruction::ZExt:

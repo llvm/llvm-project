@@ -8,6 +8,15 @@
 # RUN:   @executable_path/libhello.dylib %t/libhello.o -o %t/libhello.dylib
 # RUN: lld -flavor darwinnew -dylib -install_name \
 # RUN:   @executable_path/libgoodbye.dylib %t/libgoodbye.o -o %t/libgoodbye.dylib
+
+## Make sure we are using the export trie and not the symbol table when linking
+## against these dylibs.
+# RUN: llvm-strip %t/libhello.dylib
+# RUN: llvm-strip %t/libgoodbye.dylib
+# RUN: llvm-nm %t/libhello.dylib 2>&1 | FileCheck %s --check-prefix=NOSYM
+# RUN: llvm-nm %t/libgoodbye.dylib 2>&1 | FileCheck %s --check-prefix=NOSYM
+# NOSYM: no symbols
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink.o
 # RUN: lld -flavor darwinnew -o %t/dylink -Z -L%t -lhello -lgoodbye %t/dylink.o
 # RUN: llvm-objdump --bind -d %t/dylink | FileCheck %s

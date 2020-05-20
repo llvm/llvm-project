@@ -13,6 +13,11 @@ multiclass EEq<string name, string help> {
     HelpText<help>;
 }
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 // For options whose names are multiple letters, either one dash or
 // two can precede the option name except those that start with 'o'.
 class F<string name>: Flag<["--", "-"], name>;
@@ -55,7 +60,7 @@ defm compress_debug_sections:
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
-defm optimize_bb_jumps: B<"optimize-bb-jumps",
+defm optimize_bb_jumps: BB<"optimize-bb-jumps",
     "Remove direct jumps at the end to the next basic block",
     "Do not remove any direct jumps at the end to the next basic block (default)">;
 
@@ -86,11 +91,11 @@ defm allow_shlib_undefined: B<"allow-shlib-undefined",
     "Allow unresolved references in shared libraries (default when linking a shared library)",
     "Do not allow unresolved references in shared libraries (default when linking an executable)">;
 
-defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
+defm apply_dynamic_relocs: BB<"apply-dynamic-relocs",
     "Apply link-time values for dynamic relocations",
     "Do not apply link-time values for dynamic relocations (default)">;
 
-defm dependent_libraries: B<"dependent-libraries",
+defm dependent_libraries: BB<"dependent-libraries",
     "Process dependent library specifiers from input files (default)",
     "Ignore dependent library specifiers from input files">;
 
@@ -101,7 +106,7 @@ defm as_needed: B<"as-needed",
 defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 
-defm call_graph_profile_sort: B<"call-graph-profile-sort",
+defm call_graph_profile_sort: BB<"call-graph-profile-sort",
     "Reorder sections with call graph profile (default)",
     "Do not reorder sections with call graph profile">;
 
@@ -168,7 +173,7 @@ def error_unresolved_symbols: F<"error-unresolved-symbols">,
 
 defm exclude_libs: Eq<"exclude-libs", "Exclude static libraries from automatic export">;
 
-defm execute_only: B<"execute-only",
+defm execute_only: BB<"execute-only",
     "Mark executable sections unreadable",
     "Mark executable sections readable (default)">;
 
@@ -200,11 +205,11 @@ defm gc_sections: B<"gc-sections",
     "Enable garbage collection of unused sections",
     "Disable garbage collection of unused sections (default)">;
 
-defm gdb_index: B<"gdb-index",
+defm gdb_index: BB<"gdb-index",
     "Generate .gdb_index section",
     "Do not generate .gdb_index section (default)">;
 
-defm gnu_unique: B<"gnu-unique",
+defm gnu_unique: BB<"gnu-unique",
   "Enable STB_GNU_UNIQUE symbol binding (default)",
   "Disable STB_GNU_UNIQUE symbol binding">;
 
@@ -244,7 +249,7 @@ defm merge_exidx_entries: B<"merge-exidx-entries",
     "Enable merging .ARM.exidx entries (default)",
     "Disable merging .ARM.exidx entries">;
 
-defm mmap_output_file: B<"mmap-output-file",
+defm mmap_output_file: BB<"mmap-output-file",
     "Mmap the output file for writing (default)",
     "Do not mmap the output file for writing">;
 
@@ -288,7 +293,7 @@ defm pack_dyn_relocs:
   Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;
 
-defm use_android_relr_tags: B<"use-android-relr-tags",
+defm use_android_relr_tags: BB<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
     "Use SHT_RELR / DT_RELR* tags (default)">;
 
@@ -325,7 +330,7 @@ def print_map: F<"print-map">,
 
 defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
 
-defm rosegment: B<"rosegment",
+defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
   "Do not put read-only non-executable sections in their own segment">;
 
@@ -417,7 +422,7 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 
 defm version_script: Eq<"version-script", "Read a version script">;
 
-defm warn_backrefs: B<"warn-backrefs",
+defm warn_backrefs: BB<"warn-backrefs",
     "Warn about backward symbol references to fetch archive members",
     "Do not warn about backward symbol references to fetch archive members (default)">;
 
@@ -431,11 +436,11 @@ defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;
 
-defm warn_ifunc_textrel: B<"warn-ifunc-textrel",
+defm warn_ifunc_textrel: BB<"warn-ifunc-textrel",
     "Warn about using ifunc symbols with text relocations",
     "Do not warn about using ifunc symbols with text relocations (default)">;
 
-defm warn_symbol_ordering: B<"warn-symbol-ordering",
+defm warn_symbol_ordering: BB<"warn-symbol-ordering",
     "Warn about problems with the symbol ordering file (default)",
     "Do not warn about problems with the symbol ordering file">;
 
@@ -533,7 +538,7 @@ def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
 def save_temps: F<"save-temps">;
 def lto_basicblock_sections: JJ<"lto-basicblock-sections=">,
   HelpText<"Enable basic block sections for LTO">;
-defm lto_unique_bb_section_names: B<"lto-unique-bb-section-names",
+defm lto_unique_bb_section_names: BB<"lto-unique-bb-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
 def shuffle_sections: JJ<"shuffle-sections=">, MetaVarName<"<seed>">,

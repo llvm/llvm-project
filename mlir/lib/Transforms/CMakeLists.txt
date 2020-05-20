@@ -31,7 +31,7 @@ add_mlir_library(MLIRTransforms
   MLIRAffineOps
   MLIRAnalysis
   MLIRLoopLikeInterface
-  MLIRLoopOps
+  MLIRSCF
   MLIRPass
   MLIRTransformUtils
   MLIRVector

@@ -16,7 +16,7 @@ class MLIRContext;
 class OwningRewritePatternList;
 
 /// Collect a set of patterns to convert from the Vector dialect to itself.
-/// Should be merged with populateVectorToLoopsLoweringPattern.
+/// Should be merged with populateVectorToSCFLoweringPattern.
 void populateVectorToVectorConversionPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns,
     ArrayRef<int64_t> coarseVectorShape = {},
@@ -65,7 +65,7 @@ namespace vector {
 // This will be extended in the future to support more advanced use cases than
 // simple pointwise ops.
 SmallVector<Value, 1>
-unrollSingleResultOpMatchingType(PatternRewriter &builder, Operation *op,
+unrollSingleResultOpMatchingType(OpBuilder &builder, Operation *op,
                                  ArrayRef<int64_t> targetShape);
 
 } // namespace vector

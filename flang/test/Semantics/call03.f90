@@ -1,4 +1,4 @@
-! RUN: %B/test/Semantics/test_errors.sh %s %flang %t
+! RUN: %S/test_errors.sh %s %t %f18
 ! Test 15.5.2.4 constraints and restrictions for non-POINTER non-ALLOCATABLE
 ! dummy arguments.
 

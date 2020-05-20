@@ -5033,6 +5033,18 @@ Example matches a (matcher = binaryOperator(hasLHS()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperands0')"><a name="hasOperands0Anchor">hasOperands</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;  Matcher1, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;  Matcher2</td></tr>
+<tr><td colspan="4" class="doc" id="hasOperands0"><pre>Matches if both matchers match with opposite sides of the binary operator.
+
+Example matcher = binaryOperator(hasOperands(integerLiteral(equals(1),
+                                             integerLiteral(equals(2)))
+  1 + 2 // Match
+  2 + 1 // Match
+  1 + 1 // No match
+  2 + 2 // No match
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasRHS0')"><a name="hasRHS0Anchor">hasRHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasRHS0"><pre>Matches the right hand side of binary operator expressions.
 

@@ -1,5 +1,5 @@
 ! Tests -fget-definition with INCLUDE
-!RUN: %S/test_any.sh %s %flang %t
+!RUN: %S/test_any.sh %s %t %f18
 INCLUDE "Inputs/getdefinition03-b.f90"
 
 program main

@@ -37,6 +37,7 @@
 #include "ExportTrie.h"
 #include "Symbols.h"
 
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -230,6 +231,58 @@ size_t TrieBuilder::build() {
 void TrieBuilder::writeTo(uint8_t *buf) const {
   for (TrieNode *node : nodes)
     node->writeTo(buf);
+}
+
+namespace {
+
+// Parse a serialized trie and invoke a callback for each entry.
+class TrieParser {
+public:
+  TrieParser(const uint8_t *buf, size_t size, const TrieEntryCallback &callback)
+      : start(buf), end(start + size), callback(callback) {}
+
+  void parse(const uint8_t *buf, const Twine &cumulativeString);
+
+  void parse() { parse(start, ""); }
+
+  const uint8_t *start;
+  const uint8_t *end;
+  const TrieEntryCallback &callback;
+};
+
+} // namespace
+
+void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
+  if (buf >= end)
+    fatal("Node offset points outside export section");
+
+  unsigned ulebSize;
+  uint64_t terminalSize = decodeULEB128(buf, &ulebSize);
+  buf += ulebSize;
+  uint64_t flags = 0;
+  size_t offset;
+  if (terminalSize != 0) {
+    flags = decodeULEB128(buf, &ulebSize);
+    callback(cumulativeString, flags);
+  }
+  buf += terminalSize;
+  uint8_t numEdges = *buf++;
+  for (uint8_t i = 0; i < numEdges; ++i) {
+    const char *cbuf = reinterpret_cast<const char *>(buf);
+    StringRef substring = StringRef(cbuf, strnlen(cbuf, end - buf));
+    buf += substring.size() + 1;
+    offset = decodeULEB128(buf, &ulebSize);
+    buf += ulebSize;
+    parse(start + offset, cumulativeString + substring);
+  }
+}
+
+void parseTrie(const uint8_t *buf, size_t size,
+               const TrieEntryCallback &callback) {
+  if (size == 0)
+    return;
+
+  TrieParser(buf, size, callback).parse();
 }
 
 } // namespace macho

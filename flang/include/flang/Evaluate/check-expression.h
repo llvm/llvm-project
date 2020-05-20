@@ -43,37 +43,28 @@ bool IsInitialDataTarget(
 // (10.1.11(2), C1010).  Constant expressions are always valid
 // specification expressions.
 
-// There are two contexts where specification expressions appear -- array
-// bounds and type param expressions.  We need to differentiate them because
-// additional checks are required for array bounds expressions in declarations
-// of derived type components (see C750).
-ENUM_CLASS(SpecificationExprContext, TYPE_PARAM, BOUND)
-
 template <typename A>
 void CheckSpecificationExpr(const A &, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &,
-    SpecificationExprContext);
+    const semantics::Scope &, const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeType>> &x, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &,
-    SpecificationExprContext);
+    const semantics::Scope &, const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeInteger>> &x, parser::ContextualMessages &,
-    const semantics::Scope &, const IntrinsicProcTable &,
-    SpecificationExprContext);
+    const semantics::Scope &, const IntrinsicProcTable &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &x,
     parser::ContextualMessages &, const semantics::Scope &,
-    const IntrinsicProcTable &, SpecificationExprContext);
+    const IntrinsicProcTable &);
 
 // Simple contiguity (9.5.4)
 template <typename A>

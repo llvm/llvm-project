@@ -2911,13 +2911,15 @@ class UnaryVRIaGeneric<string mnemonic, bits<16> opcode, ImmOpWithPattern imm>
 
 class UnaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m4 = 0,
-                bits<4> m5 = 0>
+                bits<4> m5 = 0, string fp_mnemonic = "">
   : InstVRRa<opcode, (outs tr1.op:$V1), (ins tr2.op:$V2),
              mnemonic#"\t$V1, $V2",
              [(set (tr1.vt tr1.op:$V1), (operator (tr2.vt tr2.op:$V2)))]> {
   let M3 = type;
   let M4 = m4;
   let M5 = m5;
+  let OpKey = fp_mnemonic#!subst("VR", "FP", !cast<string>(tr1.op));
+  let OpType = "reg";
 }
 
 class UnaryVRRaGeneric<string mnemonic, bits<16> opcode, bits<4> m4 = 0,
@@ -3627,7 +3629,7 @@ multiclass BinaryExtraVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
 
 class BinaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m5 = 0,
-                 bits<4> m6 = 0>
+                 bits<4> m6 = 0, string fp_mnemonic = "">
   : InstVRRc<opcode, (outs tr1.op:$V1), (ins tr2.op:$V2, tr2.op:$V3),
              mnemonic#"\t$V1, $V2, $V3",
              [(set (tr1.vt tr1.op:$V1), (operator (tr2.vt tr2.op:$V2),
@@ -3635,6 +3637,8 @@ class BinaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M4 = type;
   let M5 = m5;
   let M6 = m6;
+  let OpKey = fp_mnemonic#"MemFold"#!subst("VR", "FP", !cast<string>(tr1.op));
+  let OpType = "reg";
 }
 
 class BinaryVRRcGeneric<string mnemonic, bits<16> opcode, bits<4> m5 = 0,
@@ -3986,7 +3990,7 @@ multiclass CompareSIPair<string mnemonic, bits<8> siOpcode, bits<16> siyOpcode,
 }
 
 class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
-                  TypedReg tr, bits<4> type>
+                  TypedReg tr, bits<4> type, string fp_mnemonic = "">
   : InstVRRa<opcode, (outs), (ins tr.op:$V1, tr.op:$V2),
              mnemonic#"\t$V1, $V2",
              [(set CC, (operator (tr.vt tr.op:$V1), (tr.vt tr.op:$V2)))]> {
@@ -3994,6 +3998,8 @@ class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M3 = type;
   let M4 = 0;
   let M5 = 0;
+  let OpKey = fp_mnemonic#!subst("VR", "FP", !cast<string>(tr.op));
+  let OpType = "reg";
 }
 
 class CompareVRRaGeneric<string mnemonic, bits<16> opcode>
@@ -4407,7 +4413,8 @@ multiclass TernaryExtraVRRdGeneric<string mnemonic, bits<16> opcode> {
 }
 
 class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
-                  TypedReg tr1, TypedReg tr2, bits<4> m5 = 0, bits<4> type = 0>
+                  TypedReg tr1, TypedReg tr2, bits<4> m5 = 0, bits<4> type = 0,
+                  string fp_mnemonic = "">
   : InstVRRe<opcode, (outs tr1.op:$V1),
              (ins tr2.op:$V2, tr2.op:$V3, tr1.op:$V4),
              mnemonic#"\t$V1, $V2, $V3, $V4",
@@ -4416,6 +4423,8 @@ class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                                                   (tr1.vt tr1.op:$V4)))]> {
   let M5 = m5;
   let M6 = type;
+  let OpKey = fp_mnemonic#"MemFold"#!subst("VR", "FP", !cast<string>(tr1.op));
+  let OpType = "reg";
 }
 
 class TernaryVRReFloatGeneric<string mnemonic, bits<16> opcode>
@@ -4785,6 +4794,26 @@ class MemFoldPseudo<string mnemonic, RegisterOperand cls, bits<5> bytes,
     let hasNoSchedulingInfo = 1;
 }
 
+// Same as MemFoldPseudo but for mapping a W... vector instruction
+class MemFoldPseudo_FP<string mnemonic, RegisterOperand cls, bits<5> bytes,
+                    AddressingMode mode>
+  : MemFoldPseudo<mnemonic, cls, bytes, mode> {
+    let OpKey = mnemonic#"r"#"MemFold"#cls;
+}
+
+class MemFoldPseudo_FPTern<string mnemonic, RegisterOperand cls, bits<5> bytes,
+                           AddressingMode mode>
+  : Pseudo<(outs cls:$R1), (ins cls:$R2, cls:$R3, mode:$XBD2), []> {
+    let OpKey = mnemonic#"r"#"MemFold"#cls;
+    let OpType = "mem";
+    let MemKey = mnemonic#cls;
+    let MemType = "pseudo";
+    let mayLoad = 1;
+    let AccessBytes = bytes;
+    let HasIndex = 1;
+    let hasNoSchedulingInfo = 1;
+}
+
 // Same as MemFoldPseudo but for Load On Condition with CC operands.
 class MemFoldPseudo_CondMove<string mnemonic, RegisterOperand cls, bits<5> bytes,
                              AddressingMode mode>
@@ -5072,7 +5101,6 @@ multiclass BinaryRXYAndPseudo<string mnemonic, bits<16> opcode,
                               SDPatternOperator operator, RegisterOperand cls,
                               SDPatternOperator load, bits<5> bytes,
                               AddressingMode mode = bdxaddr20only> {
-
   def "" : BinaryRXY<mnemonic, opcode, operator, cls, load, bytes, mode> {
     let MemKey = mnemonic#cls;
     let MemType = "target";
@@ -5097,6 +5125,27 @@ multiclass BinaryRXPairAndPseudo<string mnemonic, bits<8> rxOpcode,
                          bytes, bdxaddr20pair>;
   }
   def _MemFoldPseudo : MemFoldPseudo<mnemonic, cls, bytes, bdxaddr12pair>;
+}
+
+multiclass BinaryRXEAndPseudo<string mnemonic, bits<16> opcode,
+                              SDPatternOperator operator, RegisterOperand cls,
+                              SDPatternOperator load, bits<5> bytes> {
+  def "" : BinaryRXE<mnemonic, opcode, operator, cls, load, bytes> {
+    let MemKey = mnemonic#cls;
+    let MemType = "target";
+  }
+  def _MemFoldPseudo : MemFoldPseudo_FP<mnemonic, cls, bytes, bdxaddr12pair>;
+}
+
+multiclass TernaryRXFAndPseudo<string mnemonic, bits<16> opcode,
+                               SDPatternOperator operator, RegisterOperand cls1,
+                               RegisterOperand cls2, SDPatternOperator load,
+                               bits<5> bytes> {
+  def "" : TernaryRXF<mnemonic, opcode, operator, cls1, cls2, load, bytes> {
+    let MemKey = mnemonic#cls1;
+    let MemType = "target";
+  }
+  def _MemFoldPseudo : MemFoldPseudo_FPTern<mnemonic, cls1, bytes, bdxaddr12pair>;
 }
 
 multiclass CondUnaryRSYPairAndMemFold<string mnemonic, bits<16> opcode,
