@@ -129,21 +129,16 @@ void MCDwarfLineEntry::Make(MCObjectStreamer *MCOS, MCSection *Section) {
 //
 // This helper routine returns an expression of End - Start + IntVal .
 //
-static inline const MCExpr *MakeStartMinusEndExpr(const MCStreamer &MCOS,
+static inline const MCExpr *MakeStartMinusEndExpr(MCContext &Ctx,
                                                   const MCSymbol &Start,
                                                   const MCSymbol &End,
                                                   int IntVal) {
   MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *Res =
-    MCSymbolRefExpr::create(&End, Variant, MCOS.getContext());
-  const MCExpr *RHS =
-    MCSymbolRefExpr::create(&Start, Variant, MCOS.getContext());
-  const MCExpr *Res1 =
-    MCBinaryExpr::create(MCBinaryExpr::Sub, Res, RHS, MCOS.getContext());
-  const MCExpr *Res2 =
-    MCConstantExpr::create(IntVal, MCOS.getContext());
-  const MCExpr *Res3 =
-    MCBinaryExpr::create(MCBinaryExpr::Sub, Res1, Res2, MCOS.getContext());
+  const MCExpr *Res = MCSymbolRefExpr::create(&End, Variant, Ctx);
+  const MCExpr *RHS = MCSymbolRefExpr::create(&Start, Variant, Ctx);
+  const MCExpr *Res1 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res, RHS, Ctx);
+  const MCExpr *Res2 = MCConstantExpr::create(IntVal, Ctx);
+  const MCExpr *Res3 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res1, Res2, Ctx);
   return Res3;
 }
 
@@ -479,8 +474,8 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // The first 4 bytes is the total length of the information for this
   // compilation unit (not including these 4 bytes for the length).
-  emitAbsValue(*MCOS,
-               MakeStartMinusEndExpr(*MCOS, *LineStartSym, *LineEndSym, 4), 4);
+  emitAbsValue(
+      *MCOS, MakeStartMinusEndExpr(context, *LineStartSym, *LineEndSym, 4), 4);
 
   // Next 2 bytes is the Version.
   unsigned LineTableVersion = context.getDwarfVersion();
@@ -503,7 +498,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Length of the prologue, is the next 4 bytes.  This is actually the length
   // from after the length word, to the end of the prologue.
   emitAbsValue(*MCOS,
-               MakeStartMinusEndExpr(*MCOS, *LineStartSym, *ProEndSym,
+               MakeStartMinusEndExpr(context, *LineStartSym, *ProEndSym,
                                      (PreHeaderLengthBytes + 4)),
                4);
 
@@ -925,8 +920,8 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
 
     const MCExpr *Addr = MCSymbolRefExpr::create(
       StartSymbol, MCSymbolRefExpr::VK_None, context);
-    const MCExpr *Size = MakeStartMinusEndExpr(*MCOS,
-      *StartSymbol, *EndSymbol, 0);
+    const MCExpr *Size =
+        MakeStartMinusEndExpr(context, *StartSymbol, *EndSymbol, 0);
     MCOS->emitValue(Addr, AddrSize);
     emitAbsValue(*MCOS, Size, AddrSize);
   }
@@ -957,7 +952,8 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
 
   // The 4 byte total length of the information for this compilation unit, not
   // including these 4 bytes.
-  const MCExpr *Length = MakeStartMinusEndExpr(*MCOS, *InfoStart, *InfoEnd, 4);
+  const MCExpr *Length =
+      MakeStartMinusEndExpr(context, *InfoStart, *InfoEnd, 4);
   emitAbsValue(*MCOS, Length, 4);
 
   // The 2 byte DWARF version.
@@ -1132,7 +1128,7 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
       const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
           StartSymbol, MCSymbolRefExpr::VK_None, context);
       const MCExpr *SectionSize =
-          MakeStartMinusEndExpr(*MCOS, *StartSymbol, *EndSymbol, 0);
+          MakeStartMinusEndExpr(context, *StartSymbol, *EndSymbol, 0);
       MCOS->emitInt8(dwarf::DW_RLE_start_length);
       MCOS->emitValue(SectionStartAddr, AddrSize);
       MCOS->emitULEB128Value(SectionSize);
@@ -1155,7 +1151,7 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
 
       // Emit a range list entry spanning this section.
       const MCExpr *SectionSize =
-          MakeStartMinusEndExpr(*MCOS, *StartSymbol, *EndSymbol, 0);
+          MakeStartMinusEndExpr(context, *StartSymbol, *EndSymbol, 0);
       MCOS->emitIntValue(0, AddrSize);
       emitAbsValue(*MCOS, SectionSize, AddrSize);
     }
@@ -1550,8 +1546,8 @@ void FrameEmitterImpl::EmitCompactUnwind(const MCDwarfFrameInfo &Frame) {
   Streamer.emitSymbolValue(Frame.Begin, Size);
 
   // Range Length
-  const MCExpr *Range = MakeStartMinusEndExpr(Streamer, *Frame.Begin,
-                                              *Frame.End, 0);
+  const MCExpr *Range =
+      MakeStartMinusEndExpr(Context, *Frame.Begin, *Frame.End, 0);
   emitAbsValue(Streamer, Range, 4);
 
   // Compact Encoding
@@ -1600,7 +1596,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
 
   // Length
   const MCExpr *Length =
-      MakeStartMinusEndExpr(Streamer, *sectionStart, *sectionEnd, 4);
+      MakeStartMinusEndExpr(context, *sectionStart, *sectionEnd, 4);
   emitAbsValue(Streamer, Length, 4);
 
   // CIE ID
@@ -1716,7 +1712,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   CFAOffset = InitialCFAOffset;
 
   // Length
-  const MCExpr *Length = MakeStartMinusEndExpr(Streamer, *fdeStart, *fdeEnd, 0);
+  const MCExpr *Length = MakeStartMinusEndExpr(context, *fdeStart, *fdeEnd, 0);
   emitAbsValue(Streamer, Length, 4);
 
   Streamer.emitLabel(fdeStart);
@@ -1725,11 +1721,11 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   const MCAsmInfo *asmInfo = context.getAsmInfo();
   if (IsEH) {
     const MCExpr *offset =
-        MakeStartMinusEndExpr(Streamer, cieStart, *fdeStart, 0);
+        MakeStartMinusEndExpr(context, cieStart, *fdeStart, 0);
     emitAbsValue(Streamer, offset, 4);
   } else if (!asmInfo->doesDwarfUseRelocationsAcrossSections()) {
     const MCExpr *offset =
-        MakeStartMinusEndExpr(Streamer, SectionStart, cieStart, 0);
+        MakeStartMinusEndExpr(context, SectionStart, cieStart, 0);
     emitAbsValue(Streamer, offset, 4);
   } else {
     Streamer.emitSymbolValue(&cieStart, 4,
@@ -1744,7 +1740,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 
   // PC Range
   const MCExpr *Range =
-      MakeStartMinusEndExpr(Streamer, *frame.Begin, *frame.End, 0);
+      MakeStartMinusEndExpr(context, *frame.Begin, *frame.End, 0);
   emitAbsValue(Streamer, Range, PCSize);
 
   if (IsEH) {
