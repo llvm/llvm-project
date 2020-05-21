@@ -6487,7 +6487,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
 
     // Add a CFI saying the stack was moved 16 B down.
     int64_t StackPosEntry =
-        MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, 16));
+        MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, -16));
     BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
         .addCFIIndex(StackPosEntry)
         .setMIFlags(MachineInstr::FrameSetup);
@@ -6495,7 +6495,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
     // Add a CFI saying that the LR that we want to find is now 16 B higher than
     // before.
     int64_t LRPosEntry =
-        MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, DwarfReg, 16));
+        MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, DwarfReg, -16));
     BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
         .addCFIIndex(LRPosEntry)
         .setMIFlags(MachineInstr::FrameSetup);

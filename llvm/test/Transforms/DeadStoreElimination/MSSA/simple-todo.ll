@@ -58,6 +58,16 @@ define void @test9_2(%struct.x* inalloca  %a) nounwind  {
   ret void
 }
 
+; Test for preallocated handling.
+define void @test9_3(%struct.x* preallocated(%struct.x)  %a) nounwind  {
+; CHECK-LABEL: @test9_3(
+; CHECK-NEXT:    ret void
+;
+  %tmp2 = getelementptr %struct.x, %struct.x* %a, i32 0, i32 0
+  store i32 1, i32* %tmp2, align 4
+  ret void
+}
+
 ; DSE should delete the dead trampoline.
 declare void @test11f()
 define void @test11() {

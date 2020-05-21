@@ -17,6 +17,7 @@ static_library("Utils") {
     "CallGraphUpdater.cpp",
     "CallPromotionUtils.cpp",
     "CanonicalizeAliases.cpp",
+    "CanonicalizeFreezeInLoops.cpp",
     "CloneFunction.cpp",
     "CloneModule.cpp",
     "CodeExtractor.cpp",

@@ -127,6 +127,12 @@ HANDLE_TARGET_OPCODE(PATCHPOINT)
 /// additionally expand this pseudo after register allocation.
 HANDLE_TARGET_OPCODE(LOAD_STACK_GUARD)
 
+/// These are used to support call sites that must have the stack adjusted
+/// before the call (e.g. to initialize an argument passed by value).
+/// See llvm.call.preallocated.{setup,arg} in the LangRef for more details.
+HANDLE_TARGET_OPCODE(PREALLOCATED_SETUP)
+HANDLE_TARGET_OPCODE(PREALLOCATED_ARG)
+
 /// Call instruction with associated vm state for deoptimization and list
 /// of live pointers for relocation by the garbage collector.  It is
 /// intended to support garbage collection with fully precise relocating

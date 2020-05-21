@@ -7,7 +7,7 @@ define void @test_extern_weak() {
   ; DARWIN-LABEL: name: test_extern_weak
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN:   BL @extern_weak_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; DARWIN:   BL @extern_weak_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; DARWIN:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN:   RET_ReallyLR
   tail call void @extern_weak_fn()

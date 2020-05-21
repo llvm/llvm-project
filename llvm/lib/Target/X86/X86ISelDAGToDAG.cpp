@@ -5552,6 +5552,39 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case ISD::PREALLOCATED_SETUP: {
+    auto *MFI = CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+    auto CallId = MFI->getPreallocatedIdForCallSite(
+        cast<SrcValueSDNode>(Node->getOperand(1))->getValue());
+    SDValue Chain = Node->getOperand(0);
+    SDValue CallIdValue = CurDAG->getTargetConstant(CallId, dl, MVT::i32);
+    MachineSDNode *New = CurDAG->getMachineNode(
+        TargetOpcode::PREALLOCATED_SETUP, dl, MVT::Other, CallIdValue, Chain);
+    ReplaceUses(SDValue(Node, 0), SDValue(New, 0)); // Chain
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case ISD::PREALLOCATED_ARG: {
+    auto *MFI = CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+    auto CallId = MFI->getPreallocatedIdForCallSite(
+        cast<SrcValueSDNode>(Node->getOperand(1))->getValue());
+    SDValue Chain = Node->getOperand(0);
+    SDValue CallIdValue = CurDAG->getTargetConstant(CallId, dl, MVT::i32);
+    SDValue ArgIndex = Node->getOperand(2);
+    SDValue Ops[3];
+    Ops[0] = CallIdValue;
+    Ops[1] = ArgIndex;
+    Ops[2] = Chain;
+    MachineSDNode *New = CurDAG->getMachineNode(
+        TargetOpcode::PREALLOCATED_ARG, dl,
+        CurDAG->getVTList(TLI->getPointerTy(CurDAG->getDataLayout()),
+                          MVT::Other),
+        Ops);
+    ReplaceUses(SDValue(Node, 0), SDValue(New, 0)); // Arg pointer
+    ReplaceUses(SDValue(Node, 1), SDValue(New, 1)); // Chain
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   }
 
   SelectCode(Node);

@@ -58,8 +58,8 @@ body:             |
 # CHECK: name:            OUTLINED_FUNCTION_0
 # CHECK: bb.0:
 # CHECK: liveins: $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $d15, $d8, $d9, $d10, $d11, $d12, $d13, $d14, $lr
-# CHECK-DAG: frame-setup CFI_INSTRUCTION def_cfa_offset -16
-# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, 16
+# CHECK-DAG: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
 # CHECK-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
 # CHECK-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
 # CHECK-NEXT: $w17 = ORRWri $wzr, 1

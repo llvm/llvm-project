@@ -14,46 +14,10 @@
 ; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT15:[0-9]+]], s[[S_ELT15]]
 ; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT0:[0-9]+]], s[[S_ELT0]]
 
-; GCN-DAG: v_add_u32_e32 [[IDX1:v[0-9]+]], 1, [[IDX0]]
+; GCN: v_cmp_eq_u32_e32
+; GCN-COUNT-32: v_cndmask_b32
 
-; GCN: [[LOOP0:BB[0-9]+_[0-9]+]]:
-; GCN-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
-; GCN: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
-; GCN: s_and_saveexec_b64 vcc, vcc
-
-; MOVREL: s_mov_b32 m0, [[READLANE]]
-; MOVREL-NEXT: v_movreld_b32_e32 v[[VEC_ELT0]], [[INS0]]
-
-; IDXMODE: s_set_gpr_idx_on [[READLANE]], gpr_idx(DST)
-; IDXMODE-NEXT: v_mov_b32_e32 v[[VEC_ELT0]], [[INS0]]
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN-NEXT: s_xor_b64 exec, exec, vcc
-; GCN: s_cbranch_execnz [[LOOP0]]
-
-; FIXME: Redundant copy
-; GCN: s_mov_b64 exec, [[MASK:s\[[0-9]+:[0-9]+\]]]
-
-; GCN: s_mov_b64 [[MASK]], exec
-
-; GCN: [[LOOP1:BB[0-9]+_[0-9]+]]:
-; GCN-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX1]]
-; GCN: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX1]]
-; GCN: s_and_saveexec_b64 vcc, vcc
-
-; MOVREL: s_mov_b32 m0, [[READLANE]]
-; MOVREL-NEXT: v_movreld_b32_e32 v{{[0-9]+}}, 63
-
-; IDXMODE: s_set_gpr_idx_on [[READLANE]], gpr_idx(DST)
-; IDXMODE-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 63
-; IDXMODE: s_set_gpr_idx_off
-
-; GCN-NEXT: s_xor_b64 exec, exec, vcc
-; GCN: s_cbranch_execnz [[LOOP1]]
-
-; GCN: buffer_store_dwordx4 v{{\[}}[[VEC_ELT0]]:
-
-; GCN: buffer_store_dword [[INS0]]
+; GCN-COUNT-4: buffer_store_dwordx4
 define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(<16 x i32> addrspace(1)* %out0, <16 x i32> addrspace(1)* %out1, i32 addrspace(1)* %in, <16 x i32> %vec0) #0 {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1

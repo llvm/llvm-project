@@ -47,9 +47,9 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBCommunication>(R);
   RegisterMethods<SBCompileUnit>(R);
   RegisterMethods<SBData>(R);
-  RegisterMethods<SBInputReader>(R);
   RegisterMethods<SBDebugger>(R);
   RegisterMethods<SBDeclaration>(R);
+  RegisterMethods<SBEnvironment>(R);
   RegisterMethods<SBError>(R);
   RegisterMethods<SBEvent>(R);
   RegisterMethods<SBExecutionContext>(R);
@@ -60,6 +60,7 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBFrame>(R);
   RegisterMethods<SBFunction>(R);
   RegisterMethods<SBHostOS>(R);
+  RegisterMethods<SBInputReader>(R);
   RegisterMethods<SBInstruction>(R);
   RegisterMethods<SBInstructionList>(R);
   RegisterMethods<SBLanguageRuntime>(R);
@@ -70,9 +71,9 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBMemoryRegionInfoList>(R);
   RegisterMethods<SBModule>(R);
   RegisterMethods<SBModuleSpec>(R);
+  RegisterMethods<SBPlatform>(R);
   RegisterMethods<SBPlatformConnectOptions>(R);
   RegisterMethods<SBPlatformShellCommand>(R);
-  RegisterMethods<SBPlatform>(R);
   RegisterMethods<SBProcess>(R);
   RegisterMethods<SBProcessInfo>(R);
   RegisterMethods<SBQueue>(R);
@@ -97,8 +98,8 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBTypeFilter>(R);
   RegisterMethods<SBTypeFormat>(R);
   RegisterMethods<SBTypeNameSpecifier>(R);
-  RegisterMethods<SBTypeSummaryOptions>(R);
   RegisterMethods<SBTypeSummary>(R);
+  RegisterMethods<SBTypeSummaryOptions>(R);
   RegisterMethods<SBTypeSynthetic>(R);
   RegisterMethods<SBUnixSignals>(R);
   RegisterMethods<SBValue>(R);

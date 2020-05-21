@@ -447,7 +447,7 @@ determinePointerReadAttrs(Argument *A,
   SmallPtrSet<Use *, 32> Visited;
 
   // inalloca arguments are always clobbered by the call.
-  if (A->hasInAllocaAttr())
+  if (A->hasInAllocaAttr() || A->hasPreallocatedAttr())
     return Attribute::None;
 
   bool IsRead = false;

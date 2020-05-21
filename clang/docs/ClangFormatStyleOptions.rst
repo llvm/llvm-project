@@ -151,6 +151,9 @@ the configuration (without a prefix: ``Auto``).
   * ``Microsoft``
     A style complying with `Microsoft's style guide
     <https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017>`_
+  * ``GNU``
+    A style complying with the `GNU coding standards
+    <https://www.gnu.org/prep/standards/standards.html>`_
 
 .. START_FORMAT_STYLE_OPTIONS
 
@@ -1738,6 +1741,52 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+**IndentExternBlock** (``IndentExternBlockStyle``)
+  IndentExternBlockStyle is the type of indenting of extern blocks.
+
+  Possible values:
+
+  * ``IEBS_AfterExternBlock`` (in configuration: ``AfterExternBlock``)
+    Backwards compatible with AfterExternBlock's indenting.
+
+    .. code-block:: c++
+
+       IndentExternBlock: AfterExternBlock
+       BraceWrapping.AfterExternBlock: true
+       extern "C"
+       {
+           void foo();
+       }
+
+
+    .. code-block:: c++
+
+       IndentExternBlock: AfterExternBlock
+       BraceWrapping.AfterExternBlock: false
+       extern "C" {
+       void foo();
+       }
+
+  * ``IEBS_NoIndent`` (in configuration: ``NoIndent``)
+    Does not indent extern blocks.
+
+    .. code-block:: c++
+
+        extern "C" {
+        void foo();
+        }
+
+  * ``IEBS_Indent`` (in configuration: ``Indent``)
+    Indents extern blocks.
+
+    .. code-block:: c++
+
+        extern "C" {
+          void foo();
+        }
+
+
 
 **IndentGotoLabels** (``bool``)
   Indent goto labels.

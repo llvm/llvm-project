@@ -437,6 +437,8 @@ clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
   return clippedScalarAccessExprs;
 }
 
+namespace mlir {
+  
 template <typename TransferOpTy>
 VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
     VectorTransferToSCFOptions options, MLIRContext *context)
@@ -622,10 +624,13 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   return success();
 }
 
-void mlir::populateVectorToSCFConversionPatterns(
+void populateVectorToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context,
     const VectorTransferToSCFOptions &options) {
   patterns.insert<VectorTransferRewriter<vector::TransferReadOp>,
                   VectorTransferRewriter<vector::TransferWriteOp>>(options,
                                                                    context);
 }
+
+} // namespace mlir
+

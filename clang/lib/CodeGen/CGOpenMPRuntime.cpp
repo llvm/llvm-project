@@ -4836,11 +4836,16 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
                       C.getDeclAlign(OriginalVD)),
               SharedRefLValue.getType(), LValueBaseInfo(AlignmentSource::Decl),
               SharedRefLValue.getTBAAInfo());
+        } else if (CGF.LambdaCaptureFields.count(
+                       Pair.second.Original->getCanonicalDecl()) > 0 ||
+                   dyn_cast_or_null<BlockDecl>(CGF.CurCodeDecl)) {
+          SharedRefLValue = CGF.EmitLValue(Pair.second.OriginalRef);
         } else {
+          // Processing for implicitly captured variables.
           InlinedOpenMPRegionRAII Region(
               CGF, [](CodeGenFunction &, PrePostActionTy &) {}, OMPD_unknown,
               /*HasCancel=*/false);
-          SharedRefLValue =  CGF.EmitLValue(Pair.second.OriginalRef);
+          SharedRefLValue = CGF.EmitLValue(Pair.second.OriginalRef);
         }
         if (Type->isArrayType()) {
           // Initialize firstprivate array.

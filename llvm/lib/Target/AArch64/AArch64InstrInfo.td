@@ -2485,8 +2485,8 @@ def : InstAlias<"prfm $Rt, [$Rn]", (PRFMui prfop:$Rt, GPR64sp:$Rn, 0)>;
 def alignedglobal : PatLeaf<(iPTR iPTR:$label), [{
   if (auto *G = dyn_cast<GlobalAddressSDNode>(N)) {
     const DataLayout &DL = MF->getDataLayout();
-    MaybeAlign Align = G->getGlobal()->getPointerAlignment(DL);
-    return Align && *Align >= 4 && G->getOffset() % 4 == 0;
+    Align Align = G->getGlobal()->getPointerAlignment(DL);
+    return Align >= 4 && G->getOffset() % 4 == 0;
   }
   if (auto *C = dyn_cast<ConstantPoolSDNode>(N))
     return C->getAlign() >= 4 && C->getOffset() % 4 == 0;

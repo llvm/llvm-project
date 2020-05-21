@@ -1204,6 +1204,8 @@ void MallocChecker::checkOwnershipAttr(const CallEvent &Call,
   if (!CE)
     return;
   const FunctionDecl *FD = C.getCalleeDecl(CE);
+  if (!FD)
+    return;
   if (ShouldIncludeOwnershipAnnotatedFunctions ||
       ChecksEnabled[CK_MismatchedDeallocatorChecker]) {
     // Check all the attributes, if there are any.

@@ -1108,6 +1108,8 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
 }
 
 void LinkerDriver::link(ArrayRef<const char *> argsArr) {
+  ScopedTimer rootTimer(Timer::root());
+
   // Needed for LTO.
   InitializeAllTargetInfos();
   InitializeAllTargets();
@@ -1166,7 +1168,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   config->showSummary = args.hasArg(OPT_summary);
 
-  ScopedTimer t(Timer::root());
   // Handle --version, which is an lld extension. This option is a bit odd
   // because it doesn't start with "/", but we deliberately chose "--" to
   // avoid conflict with /version and for compatibility with clang-cl.
@@ -2042,7 +2043,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   writeResult();
 
   // Stop early so we can print the results.
-  Timer::root().stop();
+  rootTimer.stop();
   if (config->showTiming)
     Timer::root().print();
 }
