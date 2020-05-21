@@ -350,20 +350,6 @@ that appears to be capable of returning to its caller.
   }];
 }
 
-def NoMergeDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-If a statement is marked ``nomerge`` and contains call experessions, those call
-expressions inside the statement will not be merged during optimization. This 
-attribute can be used to prevent the optimizer from obscuring the source
-location of certain calls. For example, it will prevent tail merging otherwise
-identical code sequences that raise an exception or terminate the program. Tail
-merging normally reduces the precision of source location information, making
-stack traces less useful for debugging. This attribute gives the user control
-over the tradeoff between code size and debug information precision.
-  }];
-}
-
 def AssertCapabilityDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "assert_capability, assert_shared_capability";
