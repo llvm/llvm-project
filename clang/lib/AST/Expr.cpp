@@ -2915,7 +2915,9 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     auto SR = E->getSourceRange();
 
     if (auto *C = dyn_cast<CXXConstructExpr>(E)) {
-      if (C->getNumArgs() == 1) {
+      auto NumArgs = C->getNumArgs();
+      if (NumArgs == 1 ||
+          (NumArgs > 1 && isa<CXXDefaultArgExpr>(C->getArg(1)))) {
         Expr *A = C->getArg(0);
         if (A->getSourceRange() == SR || !isa<CXXTemporaryObjectExpr>(C))
           E = A;

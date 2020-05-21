@@ -258,6 +258,71 @@ TemplateArgument
             19u);
 }
 
+TEST(Traverse, IgnoreUnlessSpelledInSourceVars) {
+
+  auto AST = buildASTFromCode(R"cpp(
+
+struct String
+{
+    String(const char*, int = -1) {}
+};
+
+void stringConstruct()
+{
+    String s = "foo";
+    s = "bar";
+}
+
+)cpp");
+
+  {
+    auto FN =
+        ast_matchers::match(functionDecl(hasName("stringConstruct")).bind("fn"),
+                            AST->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<Decl>("fn")),
+              R"cpp(
+FunctionDecl 'stringConstruct'
+`-CompoundStmt
+  |-DeclStmt
+  | `-VarDecl 's'
+  |   `-ExprWithCleanups
+  |     `-CXXConstructExpr
+  |       `-MaterializeTemporaryExpr
+  |         `-ImplicitCastExpr
+  |           `-CXXConstructExpr
+  |             |-ImplicitCastExpr
+  |             | `-StringLiteral
+  |             `-CXXDefaultArgExpr
+  `-ExprWithCleanups
+    `-CXXOperatorCallExpr
+      |-ImplicitCastExpr
+      | `-DeclRefExpr 'operator='
+      |-DeclRefExpr 's'
+      `-MaterializeTemporaryExpr
+        `-CXXConstructExpr
+          |-ImplicitCastExpr
+          | `-StringLiteral
+          `-CXXDefaultArgExpr
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<Decl>("fn")),
+              R"cpp(
+FunctionDecl 'stringConstruct'
+`-CompoundStmt
+  |-DeclStmt
+  | `-VarDecl 's'
+  |   `-StringLiteral
+  `-CXXOperatorCallExpr
+    |-DeclRefExpr 'operator='
+    |-DeclRefExpr 's'
+    `-StringLiteral
+)cpp");
+  }
+}
+
 TEST(Traverse, IgnoreUnlessSpelledInSourceStructs) {
   auto AST = buildASTFromCode(R"cpp(
 
