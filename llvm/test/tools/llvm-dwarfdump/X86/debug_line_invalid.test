@@ -284,6 +284,6 @@
 # ALL-NEXT: warning: include directories table was not null terminated before the end of the prologue
 # ALL-NEXT: warning: parsing line table prologue at 0x00000390 found an invalid directory or file table description at 0x000003bf
 # ALL-NEXT: warning: file names table was not null terminated before the end of the prologue
-# OTHER-NEXT: warning: unexpected line op length at offset 0x00000411 expected 0x09 found 0x01
+# OTHER-NEXT: warning:  unexpected end of data at offset 0x419 while reading [0x412, 0x41a)
 # OTHER-NEXT: warning: last sequence in debug line table at offset 0x000003c9 is not terminated
 # ALL-NOT:  warning:
