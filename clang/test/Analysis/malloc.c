@@ -2,7 +2,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
-// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator.h"
@@ -1842,6 +1842,10 @@ variable 'buf', which is not memory allocated by malloc() [unix.Malloc]}}
     /* Handle error */
   }
 }
+
+(*crash_a)();
+// A CallEvent without a corresponding FunctionDecl.
+crash_b() { crash_a(); } // no-crash
 
 // ----------------------------------------------------------------------------
 // False negatives.
