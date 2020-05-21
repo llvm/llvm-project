@@ -2903,7 +2903,7 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
              !qual_type->getAs<clang::TypedefType>();
     case swift::ClangTypeKind::Tag:
       return !qual_type->isStructureOrClassType() &&
-             !qual_type->isEnumeralType();
+             !qual_type->isEnumeralType() && !qual_type->isUnionType();
     case swift::ClangTypeKind::ObjCProtocol:
       // Not implemented since Objective-C protocols aren't yet
       // described in DWARF.
