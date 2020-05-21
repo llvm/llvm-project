@@ -1108,7 +1108,7 @@ The ``HALF`` record (code 10) adds a ``half`` (16-bit floating point) type to
 the type table.
 
 TYPE_CODE_BFLOAT Record
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 ``[BFLOAT]``
 
