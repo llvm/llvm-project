@@ -23,7 +23,7 @@ namespace llvm {
 
   /// getDefaultMaxUsesToExploreForCaptureTracking - Return default value of
   /// the maximal number of uses to explore before giving up. It is used by
-  /// PointerMayBeCaptured family analysys.
+  /// PointerMayBeCaptured family analysis.
   unsigned getDefaultMaxUsesToExploreForCaptureTracking();
 
   /// PointerMayBeCaptured - Return true if this pointer value may be captured
