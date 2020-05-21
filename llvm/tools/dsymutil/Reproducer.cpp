@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Path.h"
-#include <Reproducer.h>
+#include "Reproducer.h"
 
 using namespace llvm;
 using namespace llvm::dsymutil;
