@@ -169,7 +169,7 @@ public:
   bool contains(key_type_ref K) { return (bool) find(K); }
 
   /// foreach - A member template the accepts invokes operator() on a functor
-  ///  object (specifed by Callback) for every node/subtree in the tree.
+  ///  object (specified by Callback) for every node/subtree in the tree.
   ///  Nodes are visited using an inorder traversal.
   template <typename Callback>
   void foreach(Callback& C) {
@@ -183,7 +183,7 @@ public:
   }
 
   /// validateTree - A utility method that checks that the balancing and
-  ///  ordering invariants of the tree are satisifed.  It is a recursive
+  ///  ordering invariants of the tree are satisfied.  It is a recursive
   ///  method that returns the height of the tree, which is then consumed
   ///  by the enclosing validateTree call.  External callers should ignore the
   ///  return value.  An invalid tree will cause an assertion to fire in
@@ -450,7 +450,7 @@ protected:
 
   //===--------------------------------------------------===//
   // "createNode" is used to generate new tree roots that link
-  // to other trees.  The functon may also simply move links
+  // to other trees.  The function may also simply move links
   // in an existing root if that root is still marked mutable.
   // This is necessary because otherwise our balancing code
   // would leak memory as it would create nodes that are
