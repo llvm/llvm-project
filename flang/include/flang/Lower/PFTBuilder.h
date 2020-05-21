@@ -372,9 +372,6 @@ struct Variable {
   bool isPointer() const { return pointer; }
   bool isTarget() const { return target; }
   int getDepth() const { return depth; }
-  void setHeapAlloc(bool to = true) { heapAlloc = to; }
-  void setPointer(bool to = true) { pointer = to; }
-  void setTarget(bool to = true) { target = to; }
 
   void setHeapAlloc(bool to = true) { heapAlloc = to; }
   void setPointer(bool to = true) { pointer = to; }
