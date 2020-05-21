@@ -30,6 +30,8 @@ public:
   bool Scalable; // If true, NumElements is a multiple of 'Min' determined
                  // at runtime rather than compile time.
 
+  ElementCount() = default;
+
   ElementCount(unsigned Min, bool Scalable)
   : Min(Min), Scalable(Scalable) {}
 

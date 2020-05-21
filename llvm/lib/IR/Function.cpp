@@ -754,6 +754,12 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
                       SmallVectorImpl<Intrinsic::IITDescriptor> &OutputTable) {
   using namespace Intrinsic;
 
+  bool IsScalableVector = false;
+  if (NextElt > 0) {
+    IIT_Info LastInfo = IIT_Info(Infos[NextElt - 1]);
+    IsScalableVector = (LastInfo == IIT_SCALABLE_VEC);
+  }
+
   IIT_Info Info = IIT_Info(Infos[NextElt++]);
   unsigned StructElts = 2;
 
@@ -804,43 +810,43 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 128));
     return;
   case IIT_V1:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 1));
+    OutputTable.push_back(IITDescriptor::getVector(1, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V2:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 2));
+    OutputTable.push_back(IITDescriptor::getVector(2, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V4:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 4));
+    OutputTable.push_back(IITDescriptor::getVector(4, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V8:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 8));
+    OutputTable.push_back(IITDescriptor::getVector(8, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V16:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 16));
+    OutputTable.push_back(IITDescriptor::getVector(16, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V32:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 32));
+    OutputTable.push_back(IITDescriptor::getVector(32, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V64:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 64));
+    OutputTable.push_back(IITDescriptor::getVector(64, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V128:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 128));
+    OutputTable.push_back(IITDescriptor::getVector(128, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V512:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 512));
+    OutputTable.push_back(IITDescriptor::getVector(512, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V1024:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Vector, 1024));
+    OutputTable.push_back(IITDescriptor::getVector(1024, IsScalableVector));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_PTR:
@@ -935,8 +941,6 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   }
   case IIT_SCALABLE_VEC: {
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::ScalableVecArgument,
-                                             0));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   }
@@ -1008,7 +1012,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.Integer_Width);
   case IITDescriptor::Vector:
-    return VectorType::get(DecodeFixedType(Infos, Tys, Context),D.Vector_Width);
+    return VectorType::get(DecodeFixedType(Infos, Tys, Context),
+                           D.Vector_Width);
   case IITDescriptor::Pointer:
     return PointerType::get(DecodeFixedType(Infos, Tys, Context),
                             D.Pointer_AddressSpace);
@@ -1081,10 +1086,6 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::VecOfAnyPtrsToElt:
     // Return the overloaded type (which determines the pointers address space)
     return Tys[D.getOverloadArgNumber()];
-  case IITDescriptor::ScalableVecArgument: {
-    auto *Ty = cast<FixedVectorType>(DecodeFixedType(Infos, Tys, Context));
-    return ScalableVectorType::get(Ty->getElementType(), Ty->getNumElements());
-  }
   }
   llvm_unreachable("unhandled");
 }
@@ -1187,10 +1188,8 @@ static bool matchIntrinsicType(
     case IITDescriptor::Quad: return !Ty->isFP128Ty();
     case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
     case IITDescriptor::Vector: {
-      // FIXME: We shouldn't be assuming all Vector types are fixed width.
-      // This will be fixed soon in another future patch.
-      FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
-      return !VT || VT->getNumElements() != D.Vector_Width ||
+      VectorType *VT = dyn_cast<VectorType>(Ty);
+      return !VT || VT->getElementCount() != D.Vector_Width ||
              matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
                                 DeferredChecks, IsDeferredCheck);
     }
@@ -1362,16 +1361,6 @@ static bool matchIntrinsicType(
         return Ty != NewTy;
       }
       return true;
-    }
-    case IITDescriptor::ScalableVecArgument: {
-      if (!isa<ScalableVectorType>(Ty))
-        return true;
-      ScalableVectorType *STy = cast<ScalableVectorType>(Ty);
-      unsigned MinElts = STy->getMinNumElements();
-      FixedVectorType *FVTy =
-          FixedVectorType::get(STy->getElementType(), MinElts);
-      return matchIntrinsicType(FVTy, Infos, ArgTys, DeferredChecks,
-                                IsDeferredCheck);
     }
     case IITDescriptor::VecOfBitcastsToInt: {
       if (D.getArgumentNumber() >= ArgTys.size())
