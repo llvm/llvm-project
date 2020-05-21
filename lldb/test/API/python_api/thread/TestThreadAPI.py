@@ -37,6 +37,7 @@ class ThreadAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.run_to_address(self.exe_name)
 
+    @skipIfAsan # The output looks different under ASAN.
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])
@@ -131,7 +132,6 @@ class ThreadAPITestCase(TestBase):
         self.expect(stop_description, exe=False,
                     startstr='breakpoint')
 
-    @skipIfAsan # The output looks different under ASAN.
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
         exe = self.getBuildArtifact(exe_name)
