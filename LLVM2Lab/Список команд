@@ -1,0 +1,13 @@
+﻿Список команд:
+
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ ../llvm-project/llvm/build/bin/clang++ -O0 -emit-llvm -S -c main.cpp -o /dev/stdout | sed 's/ optnone//g' > main.ll
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ ../llvm-project/llvm/build/bin/clang++ main.ll -o main
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ time ./main
+
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ ../llvm-project/llvm/build/bin/opt -load ../llvm-project/llvm/build/lib/LLVMPractice.so -practice < main.ll -S -o mainOPT.ll
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ ../llvm-project/llvm/build/bin/clang++ mainOPT.ll -o mainOPT
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ time ./mainOPT
+
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ ../llvm-project/llvm/build/bin/opt --sroa < mainOPT.ll -S -o sroa.ll
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ ../llvm-project/llvm/build/bin/clang++ sroa.ll -o mainSROA
+aizenfrog@aizenfrog-MS-7A38:~/Projects/LLVM2Lab$ time ./mainSROA
