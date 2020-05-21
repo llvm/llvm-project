@@ -606,8 +606,11 @@ bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs,
   }
   // Compare operands.
   bool ignoreOperands = flags & Flags::IgnoreOperands;
-  if (ignoreOperands)
-    return true;
+  if (ignoreOperands) {
+    // Ignore the operand values, but cannot ignore their types.
+    return std::equal(lhs->operand_type_begin(), lhs->operand_type_end(),
+                      rhs->operand_type_begin());
+  }
   // TODO: Allow commutative operations to have different ordering.
   return std::equal(lhs->operand_begin(), lhs->operand_end(),
                     rhs->operand_begin());
