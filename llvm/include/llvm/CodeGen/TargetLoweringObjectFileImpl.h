@@ -53,7 +53,7 @@ public:
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
@@ -116,7 +116,7 @@ public:
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 
   /// The mach-o version of this method defaults to returning a stub reference.
   const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
@@ -182,7 +182,7 @@ public:
   /// information, return a section that it should be placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
@@ -244,7 +244,7 @@ public:
   /// placed in.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
-                                   unsigned &Align) const override;
+                                   Align &Alignment) const override;
 
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalObject *GO);
 
