@@ -231,11 +231,6 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
   return false;
 }
 
-static ArrayRef<MCPhysReg> getAllVGPR32(const GCNSubtarget &ST,
-                                        const MachineFunction &MF) {
-  return makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), ST.getMaxNumVGPRs(MF));
-}
-
 // Find lowest available VGPR and use it as VGPR reserved for SGPR spills.
 static bool lowerShiftReservedVGPR(MachineFunction &MF,
                                    const GCNSubtarget &ST) {
@@ -243,7 +238,7 @@ static bool lowerShiftReservedVGPR(MachineFunction &MF,
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   Register LowestAvailableVGPR, ReservedVGPR;
-  ArrayRef<MCPhysReg> AllVGPR32s = getAllVGPR32(ST, MF);
+  ArrayRef<MCPhysReg> AllVGPR32s = ST.getRegisterInfo()->getAllVGPR32(MF);
   for (MCPhysReg Reg : AllVGPR32s) {
     if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg)) {
       LowestAvailableVGPR = Reg;
