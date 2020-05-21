@@ -1282,6 +1282,11 @@ def FallThrough : StmtAttr {
   let Documentation = [FallthroughDocs];
 }
 
+def NoMerge : StmtAttr {
+  let Spellings = [Clang<"nomerge">];
+  let Documentation = [NoMergeDocs];
+}
+
 def FastCall : DeclOrTypeAttr {
   let Spellings = [GCC<"fastcall">, Keyword<"__fastcall">,
                    Keyword<"_fastcall">];
