@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Module.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -70,6 +71,54 @@ TEST(ModuleTest, randomNumberGenerator) {
 
   EXPECT_TRUE(std::equal(RandomStreams[0].begin(), RandomStreams[0].end(),
                          RandomStreams[1].begin()));
+}
+
+TEST(ModuleTest, setModuleFlag) {
+  LLVMContext Context;
+  Module M("M", Context);
+  StringRef Key = "Key";
+  Metadata *Val1 = MDString::get(Context, "Val1");
+  Metadata *Val2 = MDString::get(Context, "Val2");
+  EXPECT_EQ(nullptr, M.getModuleFlag(Key));
+  M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  EXPECT_EQ(Val1, M.getModuleFlag(Key));
+  M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
+  EXPECT_EQ(Val2, M.getModuleFlag(Key));
+}
+
+const char *IRString = R"IR(
+  !llvm.module.flags = !{!0}
+
+  !0 = !{i32 1, !"ProfileSummary", !1}
+  !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+  !2 = !{!"ProfileFormat", !"SampleProfile"}
+  !3 = !{!"TotalCount", i64 10000}
+  !4 = !{!"MaxCount", i64 10}
+  !5 = !{!"MaxInternalCount", i64 1}
+  !6 = !{!"MaxFunctionCount", i64 1000}
+  !7 = !{!"NumCounts", i64 200}
+  !8 = !{!"NumFunctions", i64 3}
+  !9 = !{!"DetailedSummary", !10}
+  !10 = !{!11, !12, !13}
+  !11 = !{i32 10000, i64 1000, i32 1}
+  !12 = !{i32 990000, i64 300, i32 10}
+  !13 = !{i32 999999, i64 5, i32 100}
+)IR";
+
+TEST(ModuleTest, setProfileSummary) {
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(IRString, Err, Context);
+  auto *PS = ProfileSummary::getFromMD(M->getProfileSummary(/*IsCS*/ false));
+  EXPECT_NE(nullptr, PS);
+  EXPECT_EQ(false, PS->isPartialProfile());
+  PS->setPartialProfile(true);
+  M->setProfileSummary(PS->getMD(Context), ProfileSummary::PSK_Sample);
+  delete PS;
+  PS = ProfileSummary::getFromMD(M->getProfileSummary(/*IsCS*/ false));
+  EXPECT_NE(nullptr, PS);
+  EXPECT_EQ(true, PS->isPartialProfile());
+  delete PS;
 }
 
 } // end namespace

@@ -156,6 +156,11 @@ public:
   /// converted result in MFB.
   static bool isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB);
 
+  /// Check if the given module flag metadata represents a valid module flag,
+  /// and store the flag behavior, the key string and the value metadata.
+  static bool isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
+                                MDString *&Key, Metadata *&Val);
+
   struct ModuleFlagEntry {
     ModFlagBehavior Behavior;
     MDString *Key;
@@ -493,10 +498,12 @@ public:
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
   void addModuleFlag(MDNode *Node);
+  /// Like addModuleFlag but replaces the old module flag if it already exists.
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
 
-/// @}
-/// @name Materialization
-/// @{
+  /// @}
+  /// @name Materialization
+  /// @{
 
   /// Sets the GVMaterializer to GVM. This module must not yet have a
   /// Materializer. To reset the materializer for a module that already has one,

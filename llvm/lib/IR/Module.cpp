@@ -283,6 +283,20 @@ bool Module::isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB) {
   return false;
 }
 
+bool Module::isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
+                               MDString *&Key, Metadata *&Val) {
+  if (ModFlag.getNumOperands() < 3)
+    return false;
+  if (!isValidModFlagBehavior(ModFlag.getOperand(0), MFB))
+    return false;
+  MDString *K = dyn_cast_or_null<MDString>(ModFlag.getOperand(1));
+  if (!K)
+    return false;
+  Key = K;
+  Val = ModFlag.getOperand(2);
+  return true;
+}
+
 /// getModuleFlagsMetadata - Returns the module flags in the provided vector.
 void Module::
 getModuleFlagsMetadata(SmallVectorImpl<ModuleFlagEntry> &Flags) const {
@@ -291,13 +305,11 @@ getModuleFlagsMetadata(SmallVectorImpl<ModuleFlagEntry> &Flags) const {
 
   for (const MDNode *Flag : ModFlags->operands()) {
     ModFlagBehavior MFB;
-    if (Flag->getNumOperands() >= 3 &&
-        isValidModFlagBehavior(Flag->getOperand(0), MFB) &&
-        dyn_cast_or_null<MDString>(Flag->getOperand(1))) {
+    MDString *Key = nullptr;
+    Metadata *Val = nullptr;
+    if (isValidModuleFlag(*Flag, MFB, Key, Val)) {
       // Check the operands of the MDNode before accessing the operands.
       // The verifier will actually catch these failures.
-      MDString *Key = cast<MDString>(Flag->getOperand(1));
-      Metadata *Val = Flag->getOperand(2);
       Flags.push_back(ModuleFlagEntry(MFB, Key, Val));
     }
   }
@@ -356,6 +368,23 @@ void Module::addModuleFlag(MDNode *Node) {
          isa<MDString>(Node->getOperand(1)) &&
          "Invalid operand types for module flag!");
   getOrInsertModuleFlagsMetadata()->addOperand(Node);
+}
+
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           Metadata *Val) {
+  NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
+  // Replace the flag if it already exists.
+  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
+    MDNode *Flag = ModFlags->getOperand(I);
+    ModFlagBehavior MFB;
+    MDString *K = nullptr;
+    Metadata *V = nullptr;
+    if (isValidModuleFlag(*Flag, MFB, K, V) && K->getString() == Key) {
+      Flag->replaceOperandWith(2, Val);
+      return;
+    }
+  }
+  addModuleFlag(Behavior, Key, Val);
 }
 
 void Module::setDataLayout(StringRef Desc) {
@@ -547,9 +576,9 @@ void Module::setCodeModel(CodeModel::Model CL) {
 
 void Module::setProfileSummary(Metadata *M, ProfileSummary::Kind Kind) {
   if (Kind == ProfileSummary::PSK_CSInstr)
-    addModuleFlag(ModFlagBehavior::Error, "CSProfileSummary", M);
+    setModuleFlag(ModFlagBehavior::Error, "CSProfileSummary", M);
   else
-    addModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
+    setModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
 }
 
 Metadata *Module::getProfileSummary(bool IsCS) {
