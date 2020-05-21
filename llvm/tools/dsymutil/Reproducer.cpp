@@ -81,4 +81,5 @@ Reproducer::createReproducer(ReproducerMode Mode, StringRef Root) {
   case ReproducerMode::Off:
     return std::make_unique<Reproducer>();
   }
+  llvm_unreachable("All cases handled above.");
 }
