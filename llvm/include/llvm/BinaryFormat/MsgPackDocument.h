@@ -62,6 +62,8 @@ protected:
   };
 
 public:
+  // Default constructor gives an empty node with no associated Document. All
+  // you can do with it is "isEmpty()".
   DocNode() : KindAndDoc(nullptr) {}
 
   // Type methods
@@ -70,8 +72,10 @@ public:
   bool isScalar() const { return !isMap() && !isArray(); }
   bool isString() const { return getKind() == Type::String; }
 
-  // Accessors
-  bool isEmpty() const { return !KindAndDoc; }
+  // Accessors. isEmpty() returns true for both a default-constructed DocNode
+  // that has no associated Document, and the result of getEmptyNode(), which
+  // does have an associated document.
+  bool isEmpty() const { return !KindAndDoc || getKind() == Type::Empty; }
   Type getKind() const { return KindAndDoc->Kind; }
   Document *getDocument() const { return KindAndDoc->Doc; }
 
@@ -146,10 +150,10 @@ public:
   friend bool operator<(const DocNode &Lhs, const DocNode &Rhs) {
     // This has to cope with one or both of the nodes being default-constructed,
     // such that KindAndDoc is not set.
+    if (Rhs.isEmpty())
+      return false;
     if (Lhs.KindAndDoc != Rhs.KindAndDoc) {
-      if (!Rhs.KindAndDoc)
-        return false;
-      if (!Lhs.KindAndDoc)
+      if (Lhs.isEmpty())
         return true;
       return (unsigned)Lhs.getKind() < (unsigned)Rhs.getKind();
     }
@@ -222,14 +226,15 @@ public:
   // Array access methods.
   size_t size() const { return Array->size(); }
   bool empty() const { return !size(); }
+  DocNode &back() const { return Array->back(); }
   ArrayTy::iterator begin() { return Array->begin(); }
   ArrayTy::iterator end() { return Array->end(); }
   void push_back(DocNode N) {
-    assert(N.getDocument() == getDocument());
+    assert(N.isEmpty() || N.getDocument() == getDocument());
     Array->push_back(N);
   }
 
-  /// Element access. This extends the array if necessary.
+  /// Element access. This extends the array if necessary, with empty nodes.
   DocNode &operator[](size_t Index);
 };
 
@@ -247,7 +252,7 @@ class Document {
   DocNode Root;
 
   // The KindAndDocument structs pointed to by nodes in the document.
-  KindAndDocument KindAndDocs[size_t(Type::Extension) + 1];
+  KindAndDocument KindAndDocs[size_t(Type::Empty) + 1];
 
   // Whether YAML output uses hex for UInt.
   bool HexMode = false;
@@ -255,7 +260,7 @@ class Document {
 public:
   Document() {
     clear();
-    for (unsigned T = 0; T != size_t(Type::Extension) + 1; ++T)
+    for (unsigned T = 0; T != unsigned(Type::Empty) + 1; ++T)
       KindAndDocs[T] = {this, Type(T)};
   }
 
@@ -263,7 +268,13 @@ public:
   DocNode &getRoot() { return Root; }
 
   /// Restore the Document to an empty state.
-  void clear() { getRoot() = getNode(); }
+  void clear() { getRoot() = getEmptyNode(); }
+
+  /// Create an empty node associated with this Document.
+  DocNode getEmptyNode() {
+    auto N = DocNode(&KindAndDocs[size_t(Type::Empty)]);
+    return N;
+  }
 
   /// Create a nil node associated with this Document.
   DocNode getNode() {
@@ -345,15 +356,35 @@ public:
     return N.getArray();
   }
 
-  /// Read a MsgPack document from a binary MsgPack blob.
-  /// The blob data must remain valid for the lifetime of this Document (because
-  /// a string object in the document contains a StringRef into the original
-  /// blob).
-  /// If Multi, then this sets root to an array and adds top-level objects to
-  /// it. If !Multi, then it only reads a single top-level object, even if there
-  /// are more, and sets root to that.
-  /// Returns false if failed due to illegal format.
-  bool readFromBlob(StringRef Blob, bool Multi);
+  /// Read a document from a binary msgpack blob, merging into anything already
+  /// in the Document. The blob data must remain valid for the lifetime of this
+  /// Document (because a string object in the document contains a StringRef
+  /// into the original blob). If Multi, then this sets root to an array and
+  /// adds top-level objects to it. If !Multi, then it only reads a single
+  /// top-level object, even if there are more, and sets root to that. Returns
+  /// false if failed due to illegal format or merge error.
+  ///
+  /// The Merger arg is a callback function that is called when the merge has a
+  /// conflict, that is, it is trying to set an item that is already set. If the
+  /// conflict cannot be resolved, the callback function returns -1. If the
+  /// conflict can be resolved, the callback returns a non-negative number and
+  /// sets *DestNode to the resolved node. The returned non-negative number is
+  /// significant only for an array node; it is then the array index to start
+  /// populating at. That allows Merger to choose whether to merge array
+  /// elements (returns 0) or append new elements (returns existing size).
+  ///
+  /// If SrcNode is an array or map, the resolution must be that *DestNode is an
+  /// array or map respectively, although it could be the array or map
+  /// (respectively) that was already there. MapKey is the key if *DestNode is a
+  /// map entry, a nil node otherwise.
+  ///
+  /// The default for Merger is to disallow any conflict.
+  bool readFromBlob(
+      StringRef Blob, bool Multi,
+      function_ref<int(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
+          Merger = [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+            return -1;
+          });
 
   /// Write a MsgPack document to a binary MsgPack blob.
   void writeToBlob(std::string &Blob);
