@@ -43,24 +43,27 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
-  if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
-    return CSR_Win_AArch64_CFGuard_Check_SaveList;
-  if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows())
-    return CSR_Win_AArch64_AAPCS_SaveList;
+
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
     return CSR_AArch64_NoRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
+
+  // Darwin has its own CSR_AArch64_AAPCS_SaveList, which means most CSR save
+  // lists depending on that will need to have their Darwin variant as well.
+  if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
+    return getDarwinCalleeSavedRegs(MF);
+
+  if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
+    return CSR_Win_AArch64_CFGuard_Check_SaveList;
+  if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows())
+    return CSR_Win_AArch64_AAPCS_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
     return CSR_AArch64_AAVPCS_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
     return CSR_AArch64_SVE_AAPCS_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
-    return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
-           CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
-           CSR_AArch64_CXX_TLS_Darwin_SaveList;
   if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
       MF->getFunction().getAttributes().hasAttrSomewhere(
@@ -68,9 +71,35 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_SaveList;
-  if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
-    return CSR_Darwin_AArch64_AAPCS_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
+}
+
+const MCPhysReg *
+AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
+  assert(MF && "Invalid MachineFunction pointer.");
+  assert(MF->getSubtarget<AArch64Subtarget>().isTargetDarwin() &&
+         "Invalid subtarget for getDarwinCalleeSavedRegs");
+
+  if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
+    report_fatal_error(
+        "Calling convention CFGuard_Check is unsupported on Darwin.");
+  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
+    return CSR_Darwin_AArch64_AAVPCS_SaveList;
+  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
+    report_fatal_error(
+        "Calling convention SVE_VectorCall is unsupported on Darwin.");
+  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
+    return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR()
+               ? CSR_Darwin_AArch64_CXX_TLS_PE_SaveList
+               : CSR_Darwin_AArch64_CXX_TLS_SaveList;
+  if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
+          ->supportSwiftError() &&
+      MF->getFunction().getAttributes().hasAttrSomewhere(
+          Attribute::SwiftError))
+    return CSR_Darwin_AArch64_AAPCS_SwiftError_SaveList;
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
+    return CSR_Darwin_AArch64_RT_MostRegs_SaveList;
+  return CSR_Darwin_AArch64_AAPCS_SaveList;
 }
 
 const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
@@ -78,7 +107,7 @@ const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
   assert(MF && "Invalid MachineFunction pointer.");
   if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
       MF->getInfo<AArch64FunctionInfo>()->isSplitCSR())
-    return CSR_AArch64_CXX_TLS_Darwin_ViaCopy_SaveList;
+    return CSR_Darwin_AArch64_CXX_TLS_ViaCopy_SaveList;
   return nullptr;
 }
 
@@ -113,6 +142,32 @@ AArch64RegisterInfo::getSubClassWithSubReg(const TargetRegisterClass *RC,
 }
 
 const uint32_t *
+AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
+                                                CallingConv::ID CC) const {
+  assert(MF.getSubtarget<AArch64Subtarget>().isTargetDarwin() &&
+         "Invalid subtarget for getDarwinCallPreservedMask");
+
+  if (CC == CallingConv::CXX_FAST_TLS)
+    return CSR_Darwin_AArch64_CXX_TLS_RegMask;
+  if (CC == CallingConv::AArch64_VectorCall)
+    return CSR_Darwin_AArch64_AAVPCS_RegMask;
+  if (CC == CallingConv::AArch64_SVE_VectorCall)
+    report_fatal_error(
+        "Calling convention SVE_VectorCall is unsupported on Darwin.");
+  if (CC == CallingConv::CFGuard_Check)
+    report_fatal_error(
+        "Calling convention CFGuard_Check is unsupported on Darwin.");
+  if (MF.getSubtarget<AArch64Subtarget>()
+          .getTargetLowering()
+          ->supportSwiftError() &&
+      MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+    return CSR_Darwin_AArch64_AAPCS_SwiftError_RegMask;
+  if (CC == CallingConv::PreserveMost)
+    return CSR_Darwin_AArch64_RT_MostRegs_RegMask;
+  return CSR_Darwin_AArch64_AAPCS_RegMask;
+}
+
+const uint32_t *
 AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
   bool SCS = MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
@@ -121,9 +176,14 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return SCS ? CSR_AArch64_NoRegs_SCS_RegMask : CSR_AArch64_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
     return SCS ? CSR_AArch64_AllRegs_SCS_RegMask : CSR_AArch64_AllRegs_RegMask;
-  if (CC == CallingConv::CXX_FAST_TLS)
-    return SCS ? CSR_AArch64_CXX_TLS_Darwin_SCS_RegMask
-               : CSR_AArch64_CXX_TLS_Darwin_RegMask;
+
+  // All the following calling conventions are handled differently on Darwin.
+  if (MF.getSubtarget<AArch64Subtarget>().isTargetDarwin()) {
+    if (SCS)
+      report_fatal_error("ShadowCallStack attribute not supported on Darwin.");
+    return getDarwinCallPreservedMask(MF, CC);
+  }
+
   if (CC == CallingConv::AArch64_VectorCall)
     return SCS ? CSR_AArch64_AAVPCS_SCS_RegMask : CSR_AArch64_AAVPCS_RegMask;
   if (CC == CallingConv::AArch64_SVE_VectorCall)
@@ -145,7 +205,7 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
 const uint32_t *AArch64RegisterInfo::getTLSCallPreservedMask() const {
   if (TT.isOSDarwin())
-    return CSR_AArch64_TLS_Darwin_RegMask;
+    return CSR_Darwin_AArch64_TLS_RegMask;
 
   assert(TT.isOSBinFormatELF() && "Invalid target");
   return CSR_AArch64_TLS_ELF_RegMask;
@@ -186,6 +246,8 @@ AArch64RegisterInfo::getThisReturnPreservedMask(const MachineFunction &MF,
   // In case that the calling convention does not use the same register for
   // both, the function should return NULL (does not currently apply)
   assert(CC != CallingConv::GHC && "should not be GHC calling convention.");
+  if (MF.getSubtarget<AArch64Subtarget>().isTargetDarwin())
+    return CSR_Darwin_AArch64_AAPCS_ThisReturn_RegMask;
   return CSR_AArch64_AAPCS_ThisReturn_RegMask;
 }
 

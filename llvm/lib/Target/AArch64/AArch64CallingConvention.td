@@ -377,12 +377,6 @@ def CSR_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                            D8,  D9,  D10, D11,
                                            D12, D13, D14, D15)>;
 
-// Darwin puts the frame-record at the top of the callee-save area.
-def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
-                                           X23, X24, X25, X26, X27, X28,
-                                           D8,  D9,  D10, D11,
-                                           D12, D13, D14, D15)>;
-
 // Win64 has unwinding codes for an (FP,LR) pair, save_fplr and save_fplr_x.
 // We put FP before LR, so that frame lowering logic generates (FP,LR) pairs,
 // and not (LR,FP) pairs.
@@ -421,33 +415,7 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
 def CSR_AArch64_AAPCS_ThisReturn : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X0)>;
 
 def CSR_AArch64_AAPCS_SwiftError
-    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X21)>;
-
-// The function used by Darwin to obtain the address of a thread-local variable
-// guarantees more than a normal AAPCS function. x16 and x17 are used on the
-// fast path for calculation, but other registers except X0 (argument/return)
-// and LR (it is a call, after all) are preserved.
-def CSR_AArch64_TLS_Darwin
-    : CalleeSavedRegs<(add (sub (sequence "X%u", 1, 28), X16, X17),
-                           FP,
-                           (sequence "Q%u", 0, 31))>;
-
-// We can only handle a register pair with adjacent registers, the register pair
-// should belong to the same class as well. Since the access function on the
-// fast path calls a function that follows CSR_AArch64_TLS_Darwin,
-// CSR_AArch64_CXX_TLS_Darwin should be a subset of CSR_AArch64_TLS_Darwin.
-def CSR_AArch64_CXX_TLS_Darwin
-    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS,
-                           (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
-                           (sequence "D%u", 0, 31))>;
-
-// CSRs that are handled by prologue, epilogue.
-def CSR_AArch64_CXX_TLS_Darwin_PE
-    : CalleeSavedRegs<(add LR, FP)>;
-
-// CSRs that are handled explicitly via copies.
-def CSR_AArch64_CXX_TLS_Darwin_ViaCopy
-    : CalleeSavedRegs<(sub CSR_AArch64_CXX_TLS_Darwin, LR, FP)>;
+    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X21)>;
 
 // The ELF stub used for TLS-descriptor access saves every feasible
 // register. Only X0 and LR are clobbered.
@@ -472,14 +440,57 @@ def CSR_AArch64_StackProbe_Windows
                            (sequence "X%u", 18, 28), FP, SP,
                            (sequence "Q%u", 0, 31))>;
 
+// Darwin variants of AAPCS.
+// Darwin puts the frame-record at the top of the callee-save area.
+def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
+                                                X23, X24, X25, X26, X27, X28,
+                                                D8,  D9,  D10, D11,
+                                                D12, D13, D14, D15)>;
+
+def CSR_Darwin_AArch64_AAVPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21,
+                                                 X22, X23, X24, X25, X26, X27,
+                                                 X28, (sequence "Q%u", 8, 23))>;
+def CSR_Darwin_AArch64_AAPCS_ThisReturn
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X0)>;
+
+def CSR_Darwin_AArch64_AAPCS_SwiftError
+    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X21)>;
+
+// The function used by Darwin to obtain the address of a thread-local variable
+// guarantees more than a normal AAPCS function. x16 and x17 are used on the
+// fast path for calculation, but other registers except X0 (argument/return)
+// and LR (it is a call, after all) are preserved.
+def CSR_Darwin_AArch64_TLS
+    : CalleeSavedRegs<(add (sub (sequence "X%u", 1, 28), X16, X17),
+                           FP,
+                           (sequence "Q%u", 0, 31))>;
+
+// We can only handle a register pair with adjacent registers, the register pair
+// should belong to the same class as well. Since the access function on the
+// fast path calls a function that follows CSR_Darwin_AArch64_TLS,
+// CSR_Darwin_AArch64_CXX_TLS should be a subset of CSR_Darwin_AArch64_TLS.
+def CSR_Darwin_AArch64_CXX_TLS
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS,
+                           (sub (sequence "X%u", 1, 28), X15, X16, X17, X18),
+                           (sequence "D%u", 0, 31))>;
+
+// CSRs that are handled by prologue, epilogue.
+def CSR_Darwin_AArch64_CXX_TLS_PE
+    : CalleeSavedRegs<(add LR, FP)>;
+
+// CSRs that are handled explicitly via copies.
+def CSR_Darwin_AArch64_CXX_TLS_ViaCopy
+    : CalleeSavedRegs<(sub CSR_Darwin_AArch64_CXX_TLS, LR, FP)>;
+
+def CSR_Darwin_AArch64_RT_MostRegs
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
+
 // Variants of the standard calling conventions for shadow call stack.
 // These all preserve x18 in addition to any other registers.
 def CSR_AArch64_NoRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_NoRegs, X18)>;
 def CSR_AArch64_AllRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AllRegs, X18)>;
-def CSR_AArch64_CXX_TLS_Darwin_SCS
-    : CalleeSavedRegs<(add CSR_AArch64_CXX_TLS_Darwin, X18)>;
 def CSR_AArch64_AAPCS_SwiftError_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS_SwiftError, X18)>;
 def CSR_AArch64_RT_MostRegs_SCS
