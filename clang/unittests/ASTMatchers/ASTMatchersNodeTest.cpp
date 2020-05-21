@@ -374,7 +374,8 @@ TEST(Matcher, OverloadedOperatorCall) {
 
 TEST(Matcher, ThisPointerType) {
   StatementMatcher MethodOnY =
-    cxxMemberCallExpr(thisPointerType(recordDecl(hasName("Y"))));
+      traverse(ast_type_traits::TK_AsIs,
+               cxxMemberCallExpr(thisPointerType(recordDecl(hasName("Y")))));
 
   EXPECT_TRUE(
     matches("class Y { public: void x(); }; void z() { Y y; y.x(); }",
@@ -579,7 +580,8 @@ TEST(ParmVarDecl, MatchesParmVars) {
 }
 
 TEST(Matcher, ConstructorCall) {
-  StatementMatcher Constructor = cxxConstructExpr();
+  StatementMatcher Constructor =
+      traverse(ast_type_traits::TK_AsIs, cxxConstructExpr());
 
   EXPECT_TRUE(
     matches("class X { public: X(); }; void x() { X x; }", Constructor));
@@ -605,7 +607,8 @@ TEST(Matcher, ThisExpr) {
 }
 
 TEST(Matcher, BindTemporaryExpression) {
-  StatementMatcher TempExpression = cxxBindTemporaryExpr();
+  StatementMatcher TempExpression =
+      traverse(ast_type_traits::TK_AsIs, cxxBindTemporaryExpr());
 
   std::string ClassString = "class string { public: string(); ~string(); }; ";
 
@@ -638,36 +641,33 @@ TEST(Matcher, BindTemporaryExpression) {
 TEST(MaterializeTemporaryExpr, MatchesTemporary) {
   std::string ClassString =
     "class string { public: string(); int length(); }; ";
+  StatementMatcher TempExpression =
+      traverse(ast_type_traits::TK_AsIs, materializeTemporaryExpr());
 
-  EXPECT_TRUE(
-    matches(ClassString +
-              "string GetStringByValue();"
-                "void FunctionTakesString(string s);"
-                "void run() { FunctionTakesString(GetStringByValue()); }",
-            materializeTemporaryExpr()));
+  EXPECT_TRUE(matches(
+      ClassString + "string GetStringByValue();"
+                    "void FunctionTakesString(string s);"
+                    "void run() { FunctionTakesString(GetStringByValue()); }",
+      TempExpression));
 
-  EXPECT_TRUE(
-    notMatches(ClassString +
-                 "string* GetStringPointer(); "
-                   "void FunctionTakesStringPtr(string* s);"
-                   "void run() {"
-                   "  string* s = GetStringPointer();"
-                   "  FunctionTakesStringPtr(GetStringPointer());"
-                   "  FunctionTakesStringPtr(s);"
-                   "}",
-               materializeTemporaryExpr()));
+  EXPECT_TRUE(notMatches(ClassString +
+                             "string* GetStringPointer(); "
+                             "void FunctionTakesStringPtr(string* s);"
+                             "void run() {"
+                             "  string* s = GetStringPointer();"
+                             "  FunctionTakesStringPtr(GetStringPointer());"
+                             "  FunctionTakesStringPtr(s);"
+                             "}",
+                         TempExpression));
 
-  EXPECT_TRUE(
-    matches(ClassString +
-                 "string GetStringByValue();"
-                   "void run() { int k = GetStringByValue().length(); }",
-               materializeTemporaryExpr()));
+  EXPECT_TRUE(matches(ClassString +
+                          "string GetStringByValue();"
+                          "void run() { int k = GetStringByValue().length(); }",
+                      TempExpression));
 
-  EXPECT_TRUE(
-    notMatches(ClassString +
-                 "string GetStringByValue();"
-                   "void run() { GetStringByValue(); }",
-               materializeTemporaryExpr()));
+  EXPECT_TRUE(notMatches(ClassString + "string GetStringByValue();"
+                                       "void run() { GetStringByValue(); }",
+                         TempExpression));
 }
 
 TEST(Matcher, NewExpression) {
@@ -893,12 +893,12 @@ TEST(Matcher, ConditionalOperator) {
 }
 
 TEST(Matcher, BinaryConditionalOperator) {
-  StatementMatcher AlwaysOne = binaryConditionalOperator(
-    hasCondition(implicitCastExpr(
-      has(
-        opaqueValueExpr(
-          hasSourceExpression((integerLiteral(equals(1)))))))),
-    hasFalseExpression(integerLiteral(equals(0))));
+  StatementMatcher AlwaysOne =
+      traverse(ast_type_traits::TK_AsIs,
+               binaryConditionalOperator(
+                   hasCondition(implicitCastExpr(has(opaqueValueExpr(
+                       hasSourceExpression((integerLiteral(equals(1)))))))),
+                   hasFalseExpression(integerLiteral(equals(0)))));
 
   EXPECT_TRUE(matches("void x() { 1 ?: 0; }", AlwaysOne));
 
@@ -953,9 +953,11 @@ TEST(CastExpression, MatchesExplicitCasts) {
 }
 TEST(CastExpression, MatchesImplicitCasts) {
   // This test creates an implicit cast from int to char.
-  EXPECT_TRUE(matches("char c = 0;", castExpr()));
+  EXPECT_TRUE(
+      matches("char c = 0;", traverse(ast_type_traits::TK_AsIs, castExpr())));
   // This test creates an implicit cast from lvalue to rvalue.
-  EXPECT_TRUE(matches("char c = 0, d = c;", castExpr()));
+  EXPECT_TRUE(matches("char c = 0, d = c;",
+                      traverse(ast_type_traits::TK_AsIs, castExpr())));
 }
 
 TEST(CastExpression, DoesNotMatchNonCasts) {
@@ -1039,13 +1041,16 @@ TEST(CStyleCast, DoesNotMatchOtherCasts) {
 TEST(ImplicitCast, MatchesSimpleCase) {
   // This test creates an implicit const cast.
   EXPECT_TRUE(matches("int x = 0; const int y = x;",
-                      varDecl(hasInitializer(implicitCastExpr()))));
+                      traverse(ast_type_traits::TK_AsIs,
+                               varDecl(hasInitializer(implicitCastExpr())))));
   // This test creates an implicit cast from int to char.
   EXPECT_TRUE(matches("char c = 0;",
-                      varDecl(hasInitializer(implicitCastExpr()))));
+                      traverse(ast_type_traits::TK_AsIs,
+                               varDecl(hasInitializer(implicitCastExpr())))));
   // This test creates an implicit array-to-pointer cast.
   EXPECT_TRUE(matches("int arr[6]; int *p = arr;",
-                      varDecl(hasInitializer(implicitCastExpr()))));
+                      traverse(ast_type_traits::TK_AsIs,
+                               varDecl(hasInitializer(implicitCastExpr())))));
 }
 
 TEST(ImplicitCast, DoesNotMatchIncorrectly) {
@@ -1085,11 +1090,13 @@ TEST(DeclarationStatement, MatchesVariableDeclarationStatements) {
 
 TEST(ExprWithCleanups, MatchesExprWithCleanups) {
   EXPECT_TRUE(matches("struct Foo { ~Foo(); };"
-                        "const Foo f = Foo();",
-                      varDecl(hasInitializer(exprWithCleanups()))));
+                      "const Foo f = Foo();",
+                      traverse(ast_type_traits::TK_AsIs,
+                               varDecl(hasInitializer(exprWithCleanups())))));
   EXPECT_FALSE(matches("struct Foo { }; Foo a;"
                        "const Foo f = a;",
-                       varDecl(hasInitializer(exprWithCleanups()))));
+                       traverse(ast_type_traits::TK_AsIs,
+                                varDecl(hasInitializer(exprWithCleanups())))));
 }
 
 TEST(InitListExpression, MatchesInitListExpression) {
@@ -1114,14 +1121,18 @@ TEST(CXXStdInitializerListExpression, MatchesCXXStdInitializerListExpression) {
                            "struct A {"
                            "  A(std::initializer_list<int>) {}"
                            "};";
-  EXPECT_TRUE(matches(code + "A a{0};",
-                      cxxConstructExpr(has(cxxStdInitializerListExpr()),
-                                       hasDeclaration(cxxConstructorDecl(
-                                           ofClass(hasName("A")))))));
-  EXPECT_TRUE(matches(code + "A a = {0};",
-                      cxxConstructExpr(has(cxxStdInitializerListExpr()),
-                                       hasDeclaration(cxxConstructorDecl(
-                                           ofClass(hasName("A")))))));
+  EXPECT_TRUE(
+      matches(code + "A a{0};",
+              traverse(ast_type_traits::TK_AsIs,
+                       cxxConstructExpr(has(cxxStdInitializerListExpr()),
+                                        hasDeclaration(cxxConstructorDecl(
+                                            ofClass(hasName("A"))))))));
+  EXPECT_TRUE(
+      matches(code + "A a = {0};",
+              traverse(ast_type_traits::TK_AsIs,
+                       cxxConstructExpr(has(cxxStdInitializerListExpr()),
+                                        hasDeclaration(cxxConstructorDecl(
+                                            ofClass(hasName("A"))))))));
 
   EXPECT_TRUE(notMatches("int a[] = { 1, 2 };", cxxStdInitializerListExpr()));
   EXPECT_TRUE(notMatches("struct B { int x, y; }; B b = { 5, 6 };",
@@ -1195,19 +1206,25 @@ TEST(ExceptionHandling, SimpleCases) {
 }
 
 TEST(ParenExpression, SimpleCases) {
-  EXPECT_TRUE(matches("int i = (3);", parenExpr()));
-  EXPECT_TRUE(matches("int i = (3 + 7);", parenExpr()));
-  EXPECT_TRUE(notMatches("int i = 3;", parenExpr()));
+  EXPECT_TRUE(
+      matches("int i = (3);", traverse(ast_type_traits::TK_AsIs, parenExpr())));
+  EXPECT_TRUE(matches("int i = (3 + 7);",
+                      traverse(ast_type_traits::TK_AsIs, parenExpr())));
+  EXPECT_TRUE(notMatches("int i = 3;",
+                         traverse(ast_type_traits::TK_AsIs, parenExpr())));
   EXPECT_TRUE(notMatches("int foo() { return 1; }; int a = foo();",
-                         parenExpr()));
+                         traverse(ast_type_traits::TK_AsIs, parenExpr())));
 }
 
 TEST(ParenExpression, IgnoringParens) {
-  EXPECT_FALSE(matches("const char* str = (\"my-string\");",
-                       implicitCastExpr(hasSourceExpression(stringLiteral()))));
-  EXPECT_TRUE(matches(
+  EXPECT_FALSE(matches(
       "const char* str = (\"my-string\");",
-      implicitCastExpr(hasSourceExpression(ignoringParens(stringLiteral())))));
+      traverse(ast_type_traits::TK_AsIs,
+               implicitCastExpr(hasSourceExpression(stringLiteral())))));
+  EXPECT_TRUE(matches("const char* str = (\"my-string\");",
+                      traverse(ast_type_traits::TK_AsIs,
+                               implicitCastExpr(hasSourceExpression(
+                                   ignoringParens(stringLiteral()))))));
 }
 
 TEST(TypeMatching, MatchesTypes) {
