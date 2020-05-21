@@ -151,3 +151,26 @@ llvm.func @rocdl.xdlops(%arg0 : !llvm.float, %arg1 : !llvm.float,
 
   llvm.return %r0 : !llvm<"<32 x float>">
 }
+
+llvm.func @rocdl.mubuf(%rsrc : !llvm<"<4 x i32>">, %vindex : !llvm.i32,
+                       %offset : !llvm.i32, %glc : !llvm.i1,
+                       %slc : !llvm.i1, %vdata1 : !llvm<"<1 x float>">,
+                       %vdata2 : !llvm<"<2 x float>">, %vdata4 : !llvm<"<4 x float>">) {
+  // CHECK-LABEL: rocdl.mubuf
+  // CHECK: call <1 x float> @llvm.amdgcn.buffer.load.v1f32(<4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
+  %r1 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<1 x float>">
+  // CHECK: call <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
+  %r2 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<2 x float>">
+  // CHECK: call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
+  %r4 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<4 x float>">
+
+  // CHECK: call void @llvm.amdgcn.buffer.store.v1f32(<1 x float> %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
+  rocdl.buffer.store %vdata1, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<1 x float>">
+  // CHECK: call void @llvm.amdgcn.buffer.store.v2f32(<2 x float> %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
+  rocdl.buffer.store %vdata2, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<2 x float>">
+  // CHECK: call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
+  rocdl.buffer.store %vdata4, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<4 x float>">
+
+  llvm.return
+}
+
