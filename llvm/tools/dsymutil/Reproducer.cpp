@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Path.h"
 #include "Reproducer.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::dsymutil;
@@ -64,17 +64,19 @@ Reproducer::createReproducer(ReproducerMode Mode, StringRef Root) {
   switch (Mode) {
   case ReproducerMode::Generate: {
     std::error_code EC;
-    auto Repro = std::make_unique<ReproducerGenerate>(EC);
+    std::unique_ptr<Reproducer> Repro =
+        std::make_unique<ReproducerGenerate>(EC);
     if (EC)
       return errorCodeToError(EC);
-    return Repro;
+    return std::move(Repro);
   }
   case ReproducerMode::Use: {
     std::error_code EC;
-    auto Repro = std::make_unique<ReproducerUse>(Root, EC);
+    std::unique_ptr<Reproducer> Repro =
+        std::make_unique<ReproducerUse>(Root, EC);
     if (EC)
       return errorCodeToError(EC);
-    return Repro;
+    return std::move(Repro);
   }
   case ReproducerMode::Off:
     return std::make_unique<Reproducer>();
