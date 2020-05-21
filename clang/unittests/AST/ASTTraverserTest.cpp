@@ -273,6 +273,15 @@ void stringConstruct()
     s = "bar";
 }
 
+struct C1 {};
+struct C2 { operator C1(); };
+
+void conversionOperator()
+{
+    C2* c2;
+    C1 c1 = (*c2);
+}
+
 )cpp");
 
   {
@@ -319,6 +328,37 @@ FunctionDecl 'stringConstruct'
     |-DeclRefExpr 'operator='
     |-DeclRefExpr 's'
     `-StringLiteral
+)cpp");
+  }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("conversionOperator"),
+                     hasDescendant(varDecl(hasName("c1")).bind("var"))),
+        AST->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<Decl>("var")),
+              R"cpp(
+VarDecl 'c1'
+`-ExprWithCleanups
+  `-CXXConstructExpr
+    `-MaterializeTemporaryExpr
+      `-ImplicitCastExpr
+        `-CXXMemberCallExpr
+          `-MemberExpr
+            `-ParenExpr
+              `-UnaryOperator
+                `-ImplicitCastExpr
+                  `-DeclRefExpr 'c2'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<Decl>("var")),
+              R"cpp(
+VarDecl 'c1'
+`-UnaryOperator
+  `-DeclRefExpr 'c2'
 )cpp");
   }
 }
