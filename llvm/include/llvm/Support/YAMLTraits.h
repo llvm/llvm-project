@@ -1159,12 +1159,6 @@ struct ScalarTraits<bool> {
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
-template <> struct ScalarTraits<char> {
-  static void output(const char &, void *, raw_ostream &);
-  static StringRef input(StringRef, void *, char &);
-  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
-};
-
 template<>
 struct ScalarTraits<StringRef> {
   static void output(const StringRef &, void *, raw_ostream &);
