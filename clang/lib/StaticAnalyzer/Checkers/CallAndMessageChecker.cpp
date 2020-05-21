@@ -60,6 +60,25 @@ public:
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
+  ProgramStateRef checkFunctionPointerCall(const CallExpr *CE,
+                                           CheckerContext &C,
+                                           ProgramStateRef State) const;
+
+  ProgramStateRef checkCXXMethodCall(const CXXInstanceCall *CC,
+                                     CheckerContext &C,
+                                     ProgramStateRef State) const;
+
+  ProgramStateRef checkParameterCount(const CallEvent &Call, CheckerContext &C,
+                                      ProgramStateRef State) const;
+
+  ProgramStateRef checkCXXDeallocation(const CXXDeallocatorCall *DC,
+                                       CheckerContext &C,
+                                       ProgramStateRef State) const;
+
+  ProgramStateRef checkArgInitializedness(const CallEvent &Call,
+                                          CheckerContext &C,
+                                          ProgramStateRef State) const;
+
 private:
   bool PreVisitProcessArg(CheckerContext &C, SVal V, SourceRange ArgRange,
                           const Expr *ArgEx, int ArgumentNumber,
@@ -309,123 +328,131 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
   return false;
 }
 
-void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
-                                         CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  if (const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr())) {
-    const Expr *Callee = CE->getCallee()->IgnoreParens();
-    const LocationContext *LCtx = C.getLocationContext();
-    SVal L = State->getSVal(Callee, LCtx);
+ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
+    const CallExpr *CE, CheckerContext &C, ProgramStateRef State) const {
 
-    if (L.isUndef()) {
-      if (!BT_call_undef)
-        BT_call_undef.reset(new BuiltinBug(
-            this, "Called function pointer is an uninitialized pointer value"));
-      emitBadCall(BT_call_undef.get(), C, Callee);
-      return;
-    }
+  const Expr *Callee = CE->getCallee()->IgnoreParens();
+  const LocationContext *LCtx = C.getLocationContext();
+  SVal L = State->getSVal(Callee, LCtx);
 
-    ProgramStateRef StNonNull, StNull;
-    std::tie(StNonNull, StNull) =
-        State->assume(L.castAs<DefinedOrUnknownSVal>());
-
-    if (StNull && !StNonNull) {
-      if (!BT_call_null)
-        BT_call_null.reset(new BuiltinBug(
-            this, "Called function pointer is null (null dereference)"));
-      emitBadCall(BT_call_null.get(), C, Callee);
-      return;
-    }
-
-    State = StNonNull;
+  if (L.isUndef()) {
+    if (!BT_call_undef)
+      BT_call_undef.reset(new BuiltinBug(
+          this, "Called function pointer is an uninitialized pointer value"));
+    emitBadCall(BT_call_undef.get(), C, Callee);
+    return nullptr;
   }
 
-  // If this is a call to a C++ method, check if the callee is null or
-  // undefined.
-  if (const CXXInstanceCall *CC = dyn_cast<CXXInstanceCall>(&Call)) {
-    SVal V = CC->getCXXThisVal();
-    if (V.isUndef()) {
-      if (!BT_cxx_call_undef)
-        BT_cxx_call_undef.reset(
-            new BuiltinBug(this, "Called C++ object pointer is uninitialized"));
-      emitBadCall(BT_cxx_call_undef.get(), C, CC->getCXXThisExpr());
-      return;
-    }
+  ProgramStateRef StNonNull, StNull;
+  std::tie(StNonNull, StNull) = State->assume(L.castAs<DefinedOrUnknownSVal>());
 
-    ProgramStateRef StNonNull, StNull;
-    std::tie(StNonNull, StNull) =
-        State->assume(V.castAs<DefinedOrUnknownSVal>());
-
-    if (StNull && !StNonNull) {
-      if (!BT_cxx_call_null)
-        BT_cxx_call_null.reset(
-            new BuiltinBug(this, "Called C++ object pointer is null"));
-      emitBadCall(BT_cxx_call_null.get(), C, CC->getCXXThisExpr());
-      return;
-    }
-
-    State = StNonNull;
+  if (StNull && !StNonNull) {
+    if (!BT_call_null)
+      BT_call_null.reset(new BuiltinBug(
+          this, "Called function pointer is null (null dereference)"));
+    emitBadCall(BT_call_null.get(), C, Callee);
+    return nullptr;
   }
+
+  return StNonNull;
+}
+
+ProgramStateRef CallAndMessageChecker::checkParameterCount(
+    const CallEvent &Call, CheckerContext &C, ProgramStateRef State) const {
+
+  // If we have a function or block declaration, we can make sure we pass
+  // enough parameters.
+  unsigned Params = Call.parameters().size();
+  if (Call.getNumArgs() >= Params)
+    return State;
+
+  ExplodedNode *N = C.generateErrorNode();
+  if (!N)
+    return nullptr;
+
+  LazyInit_BT("Function call with too few arguments", BT_call_few_args);
+
+  SmallString<512> Str;
+  llvm::raw_svector_ostream os(Str);
+  if (isa<AnyFunctionCall>(Call)) {
+    os << "Function ";
+  } else {
+    assert(isa<BlockCall>(Call));
+    os << "Block ";
+  }
+  os << "taking " << Params << " argument" << (Params == 1 ? "" : "s")
+     << " is called with fewer (" << Call.getNumArgs() << ")";
+
+  C.emitReport(
+      std::make_unique<PathSensitiveBugReport>(*BT_call_few_args, os.str(), N));
+  return nullptr;
+}
+
+ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
+    const CXXInstanceCall *CC, CheckerContext &C, ProgramStateRef State) const {
+
+  SVal V = CC->getCXXThisVal();
+  if (V.isUndef()) {
+    if (!BT_cxx_call_undef)
+      BT_cxx_call_undef.reset(
+          new BuiltinBug(this, "Called C++ object pointer is uninitialized"));
+    emitBadCall(BT_cxx_call_undef.get(), C, CC->getCXXThisExpr());
+    return nullptr;
+  }
+
+  ProgramStateRef StNonNull, StNull;
+  std::tie(StNonNull, StNull) = State->assume(V.castAs<DefinedOrUnknownSVal>());
+
+  if (StNull && !StNonNull) {
+    if (!BT_cxx_call_null)
+      BT_cxx_call_null.reset(
+          new BuiltinBug(this, "Called C++ object pointer is null"));
+    emitBadCall(BT_cxx_call_null.get(), C, CC->getCXXThisExpr());
+    return nullptr;
+  }
+
+  return StNonNull;
+}
+
+ProgramStateRef
+CallAndMessageChecker::checkCXXDeallocation(const CXXDeallocatorCall *DC,
+                                            CheckerContext &C,
+                                            ProgramStateRef State) const {
+  const CXXDeleteExpr *DE = DC->getOriginExpr();
+  assert(DE);
+  SVal Arg = C.getSVal(DE->getArgument());
+  if (!Arg.isUndef())
+    return State;
+
+  StringRef Desc;
+  ExplodedNode *N = C.generateErrorNode();
+  if (!N)
+    return nullptr;
+  if (!BT_cxx_delete_undef)
+    BT_cxx_delete_undef.reset(
+        new BuiltinBug(this, "Uninitialized argument value"));
+  if (DE->isArrayFormAsWritten())
+    Desc = "Argument to 'delete[]' is uninitialized";
+  else
+    Desc = "Argument to 'delete' is uninitialized";
+  BugType *BT = BT_cxx_delete_undef.get();
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Desc, N);
+  bugreporter::trackExpressionValue(N, DE, *R);
+  C.emitReport(std::move(R));
+  return nullptr;
+}
+
+ProgramStateRef CallAndMessageChecker::checkArgInitializedness(
+    const CallEvent &Call, CheckerContext &C, ProgramStateRef State) const {
 
   const Decl *D = Call.getDecl();
-  if (D && (isa<FunctionDecl>(D) || isa<BlockDecl>(D))) {
-    // If we have a function or block declaration, we can make sure we pass
-    // enough parameters.
-    unsigned Params = Call.parameters().size();
-    if (Call.getNumArgs() < Params) {
-      ExplodedNode *N = C.generateErrorNode();
-      if (!N)
-        return;
-
-      LazyInit_BT("Function call with too few arguments", BT_call_few_args);
-
-      SmallString<512> Str;
-      llvm::raw_svector_ostream os(Str);
-      if (isa<FunctionDecl>(D)) {
-        os << "Function ";
-      } else {
-        assert(isa<BlockDecl>(D));
-        os << "Block ";
-      }
-      os << "taking " << Params << " argument"
-         << (Params == 1 ? "" : "s") << " is called with fewer ("
-         << Call.getNumArgs() << ")";
-
-      C.emitReport(std::make_unique<PathSensitiveBugReport>(*BT_call_few_args,
-                                                            os.str(), N));
-    }
-  }
-
-  if (const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call)) {
-    const CXXDeleteExpr *DE = DC->getOriginExpr();
-    assert(DE);
-    SVal Arg = C.getSVal(DE->getArgument());
-    if (Arg.isUndef()) {
-      StringRef Desc;
-      ExplodedNode *N = C.generateErrorNode();
-      if (!N)
-        return;
-      if (!BT_cxx_delete_undef)
-        BT_cxx_delete_undef.reset(
-            new BuiltinBug(this, "Uninitialized argument value"));
-      if (DE->isArrayFormAsWritten())
-        Desc = "Argument to 'delete[]' is uninitialized";
-      else
-        Desc = "Argument to 'delete' is uninitialized";
-      BugType *BT = BT_cxx_delete_undef.get();
-      auto R = std::make_unique<PathSensitiveBugReport>(*BT, Desc, N);
-      bugreporter::trackExpressionValue(N, DE, *R);
-      C.emitReport(std::move(R));
-      return;
-    }
-  }
 
   // Don't check for uninitialized field values in arguments if the
   // caller has a body that is available and we have the chance to inline it.
   // This is a hack, but is a reasonable compromise betweens sometimes warning
   // and sometimes not depending on if we decide to inline a function.
   const bool checkUninitFields =
-    !(C.getAnalysisManager().shouldInlineCall() && (D && D->getBody()));
+      !(C.getAnalysisManager().shouldInlineCall() && (D && D->getBody()));
 
   std::unique_ptr<BugType> *BT;
   if (isa<ObjCMethodCall>(Call))
@@ -436,13 +463,45 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   for (unsigned i = 0, e = Call.getNumArgs(); i != e; ++i) {
     const ParmVarDecl *ParamDecl = nullptr;
-    if(FD && i < FD->getNumParams())
+    if (FD && i < FD->getNumParams())
       ParamDecl = FD->getParamDecl(i);
     if (PreVisitProcessArg(C, Call.getArgSVal(i), Call.getArgSourceRange(i),
                            Call.getArgExpr(i), i, checkUninitFields, Call, *BT,
                            ParamDecl))
-      return;
+      return nullptr;
   }
+  return State;
+}
+
+void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
+                                         CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  if (const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr()))
+    State = checkFunctionPointerCall(CE, C, State);
+
+  if (!State)
+    return;
+
+  if (Call.getDecl())
+    State = checkParameterCount(Call, C, State);
+
+  if (!State)
+    return;
+
+  if (const auto *CC = dyn_cast<CXXInstanceCall>(&Call))
+    State = checkCXXMethodCall(CC, C, State);
+
+  if (!State)
+    return;
+
+  if (const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call))
+    State = checkCXXDeallocation(DC, C, State);
+
+  if (!State)
+    return;
+
+  State = checkArgInitializedness(Call, C, State);
 
   // If we make it here, record our assumptions about the callee.
   C.addTransition(State);
