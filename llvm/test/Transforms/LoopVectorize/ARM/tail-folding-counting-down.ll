@@ -292,7 +292,7 @@ while.end:
 ;
 define dso_local void @sgt_for_loop(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) local_unnamed_addr #0 {
 ; COMMON-LABEL: @sgt_for_loop(
-; COMMON :      vector.body:
+; COMMON:       vector.body:
 ; CHECK-PREFER: masked.load
 ; CHECK-PREFER: masked.load
 ; CHECK-PREFER: masked.store
