@@ -168,16 +168,14 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov q1, q4
 ; CHECK-NEXT:    vmov s1, r7
 ; CHECK-NEXT:    vmov.32 q1[1], r6
-; CHECK-NEXT:    mov.w r10, #0
-; CHECK-NEXT:    vmov.32 q1[2], r5
 ; CHECK-NEXT:    vmov.32 q5[0], r7
+; CHECK-NEXT:    vmov.32 q1[2], r5
+; CHECK-NEXT:    vmov s9, r4
 ; CHECK-NEXT:    vmov.32 q1[3], r4
-; CHECK-NEXT:    strd r0, r10, [sp, #24]
+; CHECK-NEXT:    vdup.32 q6, r7
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #76]
 ; CHECK-NEXT:    vmov q1, q5
-; CHECK-NEXT:    vmov s9, r4
 ; CHECK-NEXT:    vmov.32 q1[1], r7
-; CHECK-NEXT:    vdup.32 q6, r7
 ; CHECK-NEXT:    vmov.f32 s2, s1
 ; CHECK-NEXT:    vmov.f32 s8, s0
 ; CHECK-NEXT:    vmov.32 q1[2], r6
@@ -185,6 +183,7 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov q7, q6
 ; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    mov.w r8, #4
+; CHECK-NEXT:    mov.w r10, #0
 ; CHECK-NEXT:    vmov.32 q1[3], r4
 ; CHECK-NEXT:    vmov.32 q3[0], r4
 ; CHECK-NEXT:    vmov.32 q7[1], r4
@@ -192,6 +191,7 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov.f32 s11, s3
 ; CHECK-NEXT:    movs r1, #64
 ; CHECK-NEXT:    strh.w r8, [sp, #390]
+; CHECK-NEXT:    strd r0, r10, [sp, #24]
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #44]
 ; CHECK-NEXT:    str r0, [r0]
 ; CHECK-NEXT:    vstrw.32 q2, [r0]
