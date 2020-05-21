@@ -13,11 +13,11 @@ define void @patatino(i64 %n, i64 %i, %struct.S* %p) !dbg !7 {
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[I:%.*]], metadata !19, metadata !DIExpression()), !dbg !24
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata %struct.S* [[P:%.*]], metadata !20, metadata !DIExpression()), !dbg !25
 ; CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[P]], i64 [[N]], i32 0, !dbg !26
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata !2, metadata !21, metadata !DIExpression()), !dbg !27
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 undef, metadata !21, metadata !DIExpression()), !dbg !27
 ; CHECK-NEXT:    [[Y3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 [[N]], i32 1, !dbg !28
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[X1]] to <2 x i64>*, !dbg !26
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8, !dbg !26, !tbaa !29
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata !2, metadata !22, metadata !DIExpression()), !dbg !33
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 undef, metadata !22, metadata !DIExpression()), !dbg !33
 ; CHECK-NEXT:    [[X5:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 [[I]], i32 0, !dbg !34
 ; CHECK-NEXT:    [[Y7:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 [[I]], i32 1, !dbg !35
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[X5]] to <2 x i64>*, !dbg !36
