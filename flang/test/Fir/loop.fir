@@ -4,18 +4,20 @@
 
 // CHECK-LABEL: @x
 func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
+  // CHECK: [[LOOP:[0-9]+]]:
   // CHECK: %[[COND:.*]] = icmp slt i64
   // CHECK: br i1 %[[COND]]
   fir.do_loop %iv = %lb to %ub step %step unordered {
-    // CHECK: br i1 %
+    // expect following conditional blocks to get fused
+    // CHECK: select i1 %
     fir.if %b {
       // CHECK: store i64
       fir.store %iv to %addr : !fir.ref<index>
     } else {
       %zero = constant 0 : index
-      // CHECK: store i64
       fir.store %zero to %addr : !fir.ref<index>
     }
+    // CHECK: br label %[[LOOP]]
   }
   // CHECK: ret void
   return
