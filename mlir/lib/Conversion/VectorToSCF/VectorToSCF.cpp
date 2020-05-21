@@ -437,15 +437,17 @@ clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
   return clippedScalarAccessExprs;
 }
 
+namespace mlir {
+  
 template <typename TransferOpTy>
-mlir::VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
+VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
     VectorTransferToSCFOptions options, MLIRContext *context)
     : RewritePattern(TransferOpTy::getOperationName(), 1, context),
       options(options) {}
 
 /// Used for staging the transfer in a local buffer.
 template <typename TransferOpTy>
-MemRefType mlir::VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
+MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
     TransferOpTy transfer) const {
   auto vectorType = transfer.getVectorType();
   return MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
@@ -496,7 +498,7 @@ MemRefType mlir::VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
 
 /// Performs the rewrite.
 template <>
-LogicalResult mlir::VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
+LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   using namespace mlir::edsc::op;
 
@@ -569,7 +571,7 @@ LogicalResult mlir::VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
 /// TODO(ntv): implement alternatives to clipping.
 /// TODO(ntv): support non-data-parallel operations.
 template <>
-LogicalResult mlir::VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
+LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   using namespace edsc::op;
 
@@ -622,10 +624,13 @@ LogicalResult mlir::VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   return success();
 }
 
-void mlir::populateVectorToSCFConversionPatterns(
+void populateVectorToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context,
     const VectorTransferToSCFOptions &options) {
   patterns.insert<VectorTransferRewriter<vector::TransferReadOp>,
                   VectorTransferRewriter<vector::TransferWriteOp>>(options,
                                                                    context);
 }
+
+} // namespace mlir
+
