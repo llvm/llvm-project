@@ -41,14 +41,6 @@ class GoogleTest(TestFormat):
             litConfig.warning(
                 "unable to discover google-tests in %r: %s. Process output: %s"
                 % (path, sys.exc_info()[1], exc.output))
-            # This doesn't look like a valid gtest file.  This can
-            # have a number of causes, none of them good.  For
-            # instance, we could have created a broken executable.
-            # Alternatively, someone has cruft in their test
-            # directory.  If we don't return a test here, then no
-            # failures will get reported, so return a dummy test name
-            # so that the failure is reported later.
-            yield 'failed_to_discover_tests_from_gtest'
             return
 
         nested_tests = []
