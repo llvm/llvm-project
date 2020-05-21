@@ -229,7 +229,8 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
                                              SelectionDAGBuilder &Builder) {
   SDValue Incoming = Builder.getValue(IncomingValue);
 
-  if (isa<ConstantSDNode>(Incoming) || isa<FrameIndexSDNode>(Incoming)) {
+  if (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
+      isa<FrameIndexSDNode>(Incoming)) {
     // We won't need to spill this, so no need to check for previously
     // allocated stack slots
     return;
@@ -387,13 +388,16 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
   // doing it here would be a small compile time win at most.
   SDValue Chain = Builder.getRoot();
 
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
-    // If the original value was a constant, make sure it gets recorded as
-    // such in the stackmap.  This is required so that the consumer can
-    // parse any internal format to the deopt state.  It also handles null
-    // pointers and other constant pointers in GC states.  Note the constant
-    // vectors do not appear to actually hit this path and that anything larger
-    // than an i64 value (not type!) will fail asserts here.
+  // If the original value was a constant, make sure it gets recorded as
+  // such in the stackmap.  This is required so that the consumer can
+  // parse any internal format to the deopt state.  It also handles null
+  // pointers and other constant pointers in GC states.  Note the constant
+  // vectors do not appear to actually hit this path and that anything larger
+  // than an i64 value (not type!) will fail asserts here.
+  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Incoming)) {
+    pushStackMapConstant(Ops, Builder,
+                         C->getValueAPF().bitcastToAPInt().getZExtValue());
+  } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
     pushStackMapConstant(Ops, Builder, C->getSExtValue());
   } else if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
     // This handles allocas as arguments to the statepoint (this is only

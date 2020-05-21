@@ -672,6 +672,168 @@ entry:
   ret void
 }
 
+define i32 addrspace(1)*  @test_fpconst_deopt(i32 addrspace(1)* %in) gc "statepoint-example" {
+; CHECK-LABEL: test_fpconst_deopt:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, (%rsp)
+; CHECK-NEXT:    nopl 8(%rax,%rax)
+; CHECK-NEXT:  Ltmp18:
+; CHECK-NEXT:    movq (%rsp), %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+    %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2, i32 5, void ()* nonnull @bar, i32 0, i32 0, i32 0, i32 20,
+    float 0x40421A1CA0000000, float 0x40459A1CA0000000, float 0x40401A1CA0000000, float 0x40479A1CA0000000, float 0x403C343940000000,
+    float 0x403E343940000000, float 0x40469A1CA0000000, float 0x40489A1CA0000000, float 0x404A9A1CA0000000, float 0x40499A1CA0000000,
+    float 0xC05FCD2F20000000, float 0xC05C0D2F20000000, float 0xC060269780000000, float 0xC05B8D2F20000000, float 0xC060669780000000,
+    float 0xC05B0D2F20000000, float 0xC060A69780000000, float 0xC05A8D2F20000000, float 0xC060E69780000000, float 0x40439A1CA0000000, i32 addrspace(1)* %in)
+    %out = call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 27, i32 27)
+    ret i32 addrspace(1)* %out
+}
+; CHECK-LABEL: __LLVM_StackMaps:
+; CHECK: .long   Ltmp18-_test_fpconst_deopt
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	25
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	0
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	0
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	20
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1108398309
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1110233317
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1107349733
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1111281893
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1105306058
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1106354634
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1110757605
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1111806181
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1112854757
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1112330469
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	0
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	2
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	3
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	4
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	5
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	6
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	7
+; CHECK: .byte	5
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	8
+; CHECK: .byte	4
+; CHECK: .byte	0
+; CHECK: .short	8
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .long	1109184741
+
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
 
