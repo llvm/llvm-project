@@ -17,9 +17,6 @@ config.suffixes =  []
 config.test_source_root = os.path.join(config.flang_obj_root, 'unittests')
 config.test_exec_root = config.test_source_root
 
-# testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.GoogleTest(config.llvm_build_mode, 'Tests')
-
 # Tweak the PATH to include the tools dir.
 path = os.path.pathsep.join((config.flang_tools_dir, config.llvm_tools_dir, config.environment['PATH']))
 config.environment['PATH'] = path
@@ -28,5 +25,11 @@ path = os.path.pathsep.join((config.flang_libs_dir, config.llvm_libs_dir,
                               config.environment.get('LD_LIBRARY_PATH','')))
 config.environment['LD_LIBRARY_PATH'] = path
 
+# Propagate LLVM_SRC_ROOT into the environment.
+config.environment['LLVM_SRC_ROOT'] = config.llvm_src_root
+
 # Propagate PYTHON_EXECUTABLE into the environment
 #config.environment['PYTHON_EXECUTABLE'] = sys.executable
+
+# testFormat: The test format to use to interpret tests.
+config.test_format = lit.formats.GoogleTest(config.llvm_build_mode, 'Tests')
