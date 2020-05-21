@@ -31,6 +31,14 @@ static Metadata *getKeyValMD(LLVMContext &Context, const char *Key,
   return MDTuple::get(Context, Ops);
 }
 
+static Metadata *getKeyFPValMD(LLVMContext &Context, const char *Key,
+                               double Val) {
+  Type *DoubleTy = Type::getDoubleTy(Context);
+  Metadata *Ops[2] = {MDString::get(Context, Key),
+                      ConstantAsMetadata::get(ConstantFP::get(DoubleTy, Val))};
+  return MDTuple::get(Context, Ops);
+}
+
 // Return an MDTuple with two elements. The first element is a string Key and
 // the second is a string Value.
 static Metadata *getKeyValMD(LLVMContext &Context, const char *Key,
@@ -67,7 +75,10 @@ Metadata *ProfileSummary::getDetailedSummaryMD(LLVMContext &Context) {
 // to the kind of profile summary as returned by getFormatSpecificMD.
 // IsPartialProfile is an optional field and \p AddPartialField will decide
 // whether to add a field for it.
-Metadata *ProfileSummary::getMD(LLVMContext &Context, bool AddPartialField) {
+// PartialProfileRatio is an optional field and \p AddPartialProfileRatioField
+// will decide whether to add a field for it.
+Metadata *ProfileSummary::getMD(LLVMContext &Context, bool AddPartialField,
+                                bool AddPartialProfileRatioField) {
   const char *KindStr[3] = {"InstrProf", "CSInstrProf", "SampleProfile"};
   SmallVector<Metadata *, 16> Components;
   Components.push_back(getKeyValMD(Context, "ProfileFormat", KindStr[PSK]));
@@ -82,24 +93,43 @@ Metadata *ProfileSummary::getMD(LLVMContext &Context, bool AddPartialField) {
   if (AddPartialField)
     Components.push_back(
         getKeyValMD(Context, "IsPartialProfile", isPartialProfile()));
+  if (AddPartialProfileRatioField)
+    Components.push_back(getKeyFPValMD(Context, "PartialProfileRatio",
+                                       getPartialProfileRatio()));
   Components.push_back(getDetailedSummaryMD(Context));
   return MDTuple::get(Context, Components);
 }
 
-// Parse an MDTuple representing (Key, Val) pair.
-static bool getVal(MDTuple *MD, const char *Key, uint64_t &Val) {
+// Get the value metadata for the input MD/Key.
+static ConstantAsMetadata *getValMD(MDTuple *MD, const char *Key) {
   if (!MD)
-    return false;
+    return nullptr;
   if (MD->getNumOperands() != 2)
-    return false;
+    return nullptr;
   MDString *KeyMD = dyn_cast<MDString>(MD->getOperand(0));
   ConstantAsMetadata *ValMD = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
   if (!KeyMD || !ValMD)
-    return false;
+    return nullptr;
   if (!KeyMD->getString().equals(Key))
-    return false;
-  Val = cast<ConstantInt>(ValMD->getValue())->getZExtValue();
-  return true;
+    return nullptr;
+  return ValMD;
+}
+
+// Parse an MDTuple representing (Key, Val) pair.
+static bool getVal(MDTuple *MD, const char *Key, uint64_t &Val) {
+  if (auto *ValMD = getValMD(MD, Key)) {
+    Val = cast<ConstantInt>(ValMD->getValue())->getZExtValue();
+    return true;
+  }
+  return false;
+}
+
+static bool getVal(MDTuple *MD, const char *Key, double &Val) {
+  if (auto *ValMD = getValMD(MD, Key)) {
+    Val = cast<ConstantFP>(ValMD->getValue())->getValueAPF().convertToDouble();
+    return true;
+  }
+  return false;
 }
 
 // Check if an MDTuple represents a (Key, Val) pair.
@@ -163,7 +193,7 @@ static bool getOptionalVal(MDTuple *Tuple, unsigned &Idx, const char *Key,
 
 ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   MDTuple *Tuple = dyn_cast_or_null<MDTuple>(MD);
-  if (!Tuple || Tuple->getNumOperands() < 8 || Tuple->getNumOperands() > 9)
+  if (!Tuple || Tuple->getNumOperands() < 8 || Tuple->getNumOperands() > 10)
     return nullptr;
 
   unsigned I = 0;
@@ -205,13 +235,17 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
   uint64_t IsPartialProfile = 0;
   if (!getOptionalVal(Tuple, I, "IsPartialProfile", IsPartialProfile))
     return nullptr;
+  double PartialProfileRatio = 0;
+  if (!getOptionalVal(Tuple, I, "PartialProfileRatio", PartialProfileRatio))
+    return nullptr;
 
   SummaryEntryVector Summary;
   if (!getSummaryFromMD(dyn_cast<MDTuple>(Tuple->getOperand(I++)), Summary))
     return nullptr;
   return new ProfileSummary(SummaryKind, std::move(Summary), TotalCount,
                             MaxCount, MaxInternalCount, MaxFunctionCount,
-                            NumCounts, NumFunctions, IsPartialProfile);
+                            NumCounts, NumFunctions, IsPartialProfile,
+                            PartialProfileRatio);
 }
 
 void ProfileSummary::printSummary(raw_ostream &OS) {
