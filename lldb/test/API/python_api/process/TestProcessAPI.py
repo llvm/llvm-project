@@ -24,6 +24,7 @@ class ProcessAPITestCase(TestBase):
             "// Set break point at this line and check variable 'my_char'.")
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBProcess::ReadMemory is not instrumented.
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
         self.build()
@@ -122,6 +123,7 @@ class ProcessAPITestCase(TestBase):
                 "Result from SBProcess.ReadUnsignedFromMemory() does not match our expected output")
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test_write_memory(self):
         """Test Python SBProcess.WriteMemory() API."""
         self.build()
@@ -181,6 +183,7 @@ class ProcessAPITestCase(TestBase):
             startstr=b'a')
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test_access_my_int(self):
         """Test access 'my_int' using Python SBProcess.GetByteOrder() and other APIs."""
         self.build()
