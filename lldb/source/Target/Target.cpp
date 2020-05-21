@@ -3712,11 +3712,11 @@ public:
 };
 
 // TargetProperties
-#define LLDB_PROPERTIES_experimental
+#define LLDB_PROPERTIES_target_experimental
 #include "TargetProperties.inc"
 
 enum {
-#define LLDB_PROPERTIES_experimental
+#define LLDB_PROPERTIES_target_experimental
 #include "TargetPropertiesEnum.inc"
 };
 
@@ -3730,7 +3730,7 @@ public:
 TargetExperimentalProperties::TargetExperimentalProperties()
     : Properties(OptionValuePropertiesSP(
           new TargetExperimentalOptionValueProperties())) {
-  m_collection_sp->Initialize(g_experimental_properties);
+  m_collection_sp->Initialize(g_target_experimental_properties);
 }
 
 // TargetProperties
@@ -3843,32 +3843,6 @@ bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
         nullptr, ePropertySwiftCreateModuleContextsInParallel, true);
   else
     return true;
-}
-
-bool TargetProperties::GetOSPluginReportsAllThreads() const {
-  const bool fail_value = true;
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (!exp_values)
-    return fail_value;
-    
-  return 
-      exp_values->GetPropertyAtIndexAsBoolean(nullptr, 
-                                              ePropertyOSPluginReportsAllThreads,
-                                              fail_value);
-}
-
-void TargetProperties::SetOSPluginReportsAllThreads(bool does_report) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    exp_values->SetPropertyAtIndexAsBoolean(nullptr, 
-                                            ePropertyOSPluginReportsAllThreads,
-                                            does_report);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
