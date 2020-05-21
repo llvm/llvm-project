@@ -164,6 +164,16 @@ def: Separate<["-"], "j">,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;
 
+def gen_reproducer: F<"gen-reproducer">,
+  HelpText<"Generate a reproducer consisting of the input object files.">,
+  Group<grp_general>;
+
+def use_reproducer: Separate<["--", "-"], "use-reproducer">,
+  MetaVarName<"<path>">,
+  HelpText<"Use the object files from the given reproducer path.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "use-reproducer=">, Alias<use_reproducer>;
+
 def remarks_prepend_path: Separate<["--", "-"], "remarks-prepend-path">,
   MetaVarName<"<path>">,
   HelpText<"Specify a directory to prepend to the paths of the external remark files.">,
