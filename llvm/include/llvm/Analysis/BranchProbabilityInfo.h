@@ -121,6 +121,7 @@ public:
   raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
                                     const BasicBlock *Dst) const;
 
+protected:
   /// Set the raw edge probability for the given edge.
   ///
   /// This allows a pass to explicitly set the edge probability for an edge. It
@@ -129,6 +130,15 @@ public:
   /// probabilities are calculated carefully before using!
   void setEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors,
                           BranchProbability Prob);
+
+public:
+  /// Set the raw probabilities for all edges from the given block.
+  ///
+  /// This allows a pass to explicitly set edge probabilities for a block. It
+  /// can be used when updating the CFG to update the branch probability
+  /// information.
+  void setEdgeProbability(const BasicBlock *Src,
+                          const SmallVectorImpl<BranchProbability> &Probs);
 
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
