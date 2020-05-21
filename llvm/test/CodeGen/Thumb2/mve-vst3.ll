@@ -24,8 +24,8 @@ define void @vst3_v2i32(<2 x i32> *%src, <6 x i32> *%dst) {
 ; CHECK-NEXT:    vmov.f32 s9, s6
 ; CHECK-NEXT:    vmov.f32 s10, s0
 ; CHECK-NEXT:    vmov.f32 s11, s5
-; CHECK-NEXT:    strd r2, r0, [r1, #16]
 ; CHECK-NEXT:    vstrw.32 q2, [r1]
+; CHECK-NEXT:    strd r2, r0, [r1, #16]
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %s1 = getelementptr <2 x i32>, <2 x i32>* %src, i32 0

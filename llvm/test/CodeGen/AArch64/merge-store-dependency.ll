@@ -19,11 +19,11 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:    mov x19, x8
 ; A53-NEXT:    mov w0, w1
 ; A53-NEXT:    mov w9, #256
+; A53-NEXT:    stp x2, x3, [x8, #32]
+; A53-NEXT:    mov x2, x8
 ; A53-NEXT:    str q0, [x19, #16]!
 ; A53-NEXT:    str w1, [x19]
 ; A53-NEXT:    mov w1, #4
-; A53-NEXT:    stp x2, x3, [x8, #32]
-; A53-NEXT:    mov x2, x8
 ; A53-NEXT:    str q0, [x8]
 ; A53-NEXT:    strh w9, [x8, #24]
 ; A53-NEXT:    str wzr, [x8, #20]
