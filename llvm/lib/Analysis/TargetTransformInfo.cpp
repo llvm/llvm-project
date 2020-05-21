@@ -236,11 +236,6 @@ int TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
   return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, CostKind);
 }
 
-int TargetTransformInfo::getExtCost(const Instruction *I,
-                                    const Value *Src) const {
-  return TTIImpl->getExtCost(I, Src);
-}
-
 int TargetTransformInfo::getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                                           ArrayRef<const Value *> Arguments,
                                           const User *U,
