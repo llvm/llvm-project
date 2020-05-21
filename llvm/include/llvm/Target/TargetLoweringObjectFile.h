@@ -87,9 +87,8 @@ public:
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
-                                           SectionKind Kind,
-                                           const Constant *C,
-                                           unsigned &Align) const;
+                                           SectionKind Kind, const Constant *C,
+                                           Align &Alignment) const;
 
   virtual MCSection *
   getSectionForMachineBasicBlock(const Function &F,
