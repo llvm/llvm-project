@@ -70,8 +70,9 @@ BindableMatcher<clang::Stmt> SignedCharMisuseCheck::charCastExpression(
   // We catch any type of casts to an integer. We need to have these cast
   // expressions explicitly to catch only those casts which are direct children
   // of the checked expressions. (e.g. assignment, declaration).
-  return expr(anyOf(ImplicitCastExpr, CStyleCastExpr, StaticCastExpr,
-                    FunctionalCastExpr));
+  return traverse(ast_type_traits::TK_AsIs,
+                  expr(anyOf(ImplicitCastExpr, CStyleCastExpr, StaticCastExpr,
+                             FunctionalCastExpr)));
 }
 
 void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {

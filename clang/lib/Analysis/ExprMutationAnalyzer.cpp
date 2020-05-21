@@ -280,13 +280,15 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
   const auto AsNonConstRefReturn = returnStmt(hasReturnValue(
                                                 maybeEvalCommaExpr(equalsNode(Exp))));
 
-  const auto Matches =
-      match(findAll(stmt(anyOf(AsAssignmentLhs, AsIncDecOperand, AsNonConstThis,
-                               AsAmpersandOperand, AsPointerFromArrayDecay,
-                               AsOperatorArrowThis, AsNonConstRefArg,
-                               AsLambdaRefCaptureInit, AsNonConstRefReturn))
-                        .bind("stmt")),
-            Stm, Context);
+  const auto Matches = match(
+      traverse(
+          ast_type_traits::TK_AsIs,
+          findAll(stmt(anyOf(AsAssignmentLhs, AsIncDecOperand, AsNonConstThis,
+                             AsAmpersandOperand, AsPointerFromArrayDecay,
+                             AsOperatorArrowThis, AsNonConstRefArg,
+                             AsLambdaRefCaptureInit, AsNonConstRefReturn))
+                      .bind("stmt"))),
+      Stm, Context);
   return selectFirst<Stmt>("stmt", Matches);
 }
 
@@ -385,12 +387,15 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
   const auto IsInstantiated = hasDeclaration(isInstantiated());
   const auto FuncDecl = hasDeclaration(functionDecl().bind("func"));
   const auto Matches = match(
-      findAll(expr(anyOf(callExpr(NonConstRefParam, IsInstantiated, FuncDecl,
+      traverse(
+          ast_type_traits::TK_AsIs,
+          findAll(
+              expr(anyOf(callExpr(NonConstRefParam, IsInstantiated, FuncDecl,
                                   unless(callee(namedDecl(hasAnyName(
                                       "::std::move", "::std::forward"))))),
                          cxxConstructExpr(NonConstRefParam, IsInstantiated,
                                           FuncDecl)))
-                  .bind(NodeID<Expr>::value)),
+                  .bind(NodeID<Expr>::value))),
       Stm, Context);
   for (const auto &Nodes : Matches) {
     const auto *Exp = Nodes.getNodeAs<Expr>(NodeID<Expr>::value);

@@ -503,12 +503,12 @@ define void @conv_v8f16_to_i128( <8 x half> %a, i128* %store ) {
 ; CHECK-NEXT:    vmov.32 r3, d16[1]
 ; CHECK-NEXT:    vmov.32 r1, d16[0]
 ; CHECK-NEXT:    subs r12, r12, #1
+; CHECK-NEXT:    str r12, [r0, #12]
 ; CHECK-NEXT:    sbcs r2, r2, #0
+; CHECK-NEXT:    str r2, [r0, #8]
 ; CHECK-NEXT:    sbcs r3, r3, #0
 ; CHECK-NEXT:    sbc r1, r1, #0
 ; CHECK-NEXT:    stm r0, {r1, r3}
-; CHECK-NEXT:    str r2, [r0, #8]
-; CHECK-NEXT:    str r12, [r0, #12]
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:

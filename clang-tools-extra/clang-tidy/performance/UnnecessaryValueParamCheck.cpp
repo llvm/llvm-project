@@ -41,12 +41,13 @@ bool isReferencedOutsideOfCallExpr(const FunctionDecl &Function,
 
 bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
                          ASTContext &Context) {
-  auto Matches =
-      match(decl(forEachDescendant(declRefExpr(
-                equalsNode(&DeclRef),
-                unless(hasAncestor(stmt(anyOf(forStmt(), cxxForRangeStmt(),
-                                              whileStmt(), doStmt()))))))),
-            Decl, Context);
+  auto Matches = match(
+      traverse(ast_type_traits::TK_AsIs,
+               decl(forEachDescendant(declRefExpr(
+                   equalsNode(&DeclRef),
+                   unless(hasAncestor(stmt(anyOf(forStmt(), cxxForRangeStmt(),
+                                                 whileStmt(), doStmt())))))))),
+      Decl, Context);
   return Matches.empty();
 }
 
@@ -82,16 +83,20 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
                            matchers::matchesAnyListedName(AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
-      functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
-                   unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                   has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                   unless(isInstantiated()), decl().bind("functionDecl")),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
+                       unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
+                       has(typeLoc(forEach(ExpensiveValueParamDecl))),
+                       unless(isInstantiated()), decl().bind("functionDecl"))),
       this);
 }
 
 void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
+
+  TraversalKindScope RAII(*Result.Context, ast_type_traits::TK_AsIs);
 
   FunctionParmMutationAnalyzer &Analyzer =
       MutationAnalyzers.try_emplace(Function, *Function, *Result.Context)

@@ -100,6 +100,8 @@ public:
     return llvm::DenormalMode::getPreserveSign();
   }
 
+  bool useRelaxRelocations() const override { return true; }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

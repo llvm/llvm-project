@@ -30,14 +30,16 @@ void IntegerDivisionCheck::registerMatchers(MatchFinder *Finder) {
             callExpr(IntType), explicitCastExpr(IntType), UnaryOperators);
 
   Finder->addMatcher(
-      binaryOperator(
-          hasOperatorName("/"), hasLHS(expr(IntType)), hasRHS(expr(IntType)),
-          hasAncestor(
-              castExpr(hasCastKind(CK_IntegralToFloating)).bind("FloatCast")),
-          unless(hasAncestor(
-              expr(Exceptions,
-                   hasAncestor(castExpr(equalsBoundNode("FloatCast")))))))
-          .bind("IntDiv"),
+      traverse(ast_type_traits::TK_AsIs,
+               binaryOperator(
+                   hasOperatorName("/"), hasLHS(expr(IntType)),
+                   hasRHS(expr(IntType)),
+                   hasAncestor(castExpr(hasCastKind(CK_IntegralToFloating))
+                                   .bind("FloatCast")),
+                   unless(hasAncestor(expr(
+                       Exceptions,
+                       hasAncestor(castExpr(equalsBoundNode("FloatCast")))))))
+                   .bind("IntDiv")),
       this);
 }
 

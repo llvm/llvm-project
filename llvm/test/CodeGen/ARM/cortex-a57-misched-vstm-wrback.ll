@@ -5,7 +5,7 @@
 ; We need second, post-ra scheduling to have VSTM instruction combined from single-stores
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       schedule starting
-; CHECK:       VSTMDIA_UPD
+; CHECK:       SU(2):{{.*}}VSTMDIA_UPD
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 4
 ; CHECK:       Successors:

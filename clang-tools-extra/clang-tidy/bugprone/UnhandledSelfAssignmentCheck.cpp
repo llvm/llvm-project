@@ -52,8 +52,9 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
   // In the non-template case, we can search for the copy constructor call.
   const auto HasNonTemplateSelfCopy = cxxMethodDecl(
       ofClass(cxxRecordDecl(unless(hasAncestor(classTemplateDecl())))),
-      hasDescendant(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
-          isCopyConstructor(), ofClass(equalsBoundNode("class")))))));
+      traverse(ast_type_traits::TK_AsIs,
+               hasDescendant(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+                   isCopyConstructor(), ofClass(equalsBoundNode("class"))))))));
 
   // In the template case, we need to handle two separate cases: 1) a local
   // variable is created with the copy, 2) copy is created only as a temporary

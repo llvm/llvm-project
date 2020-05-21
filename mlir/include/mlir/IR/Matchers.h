@@ -72,7 +72,7 @@ template <typename AttrT> struct constant_op_binder {
     SmallVector<OpFoldResult, 1> foldedOp;
     LogicalResult result = op->fold(/*operands=*/llvm::None, foldedOp);
     (void)result;
-    assert(succeeded(result) && "expected constant to be foldable");
+    assert(succeeded(result) && "expected ConstantLike op to be foldable");
 
     if (auto attr = foldedOp.front().get<Attribute>().dyn_cast<AttrT>()) {
       if (bind_value)
