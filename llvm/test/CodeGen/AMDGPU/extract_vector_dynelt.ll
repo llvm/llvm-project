@@ -48,6 +48,24 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}double5_extelt:
+; GCN-NOT: buffer_
+; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
+; GCN-DAG: v_cmp_eq_u32_e64 [[C2:[^,]+]], [[IDX]], 2
+; GCN-DAG: v_cmp_eq_u32_e64 [[C3:[^,]+]], [[IDX]], 3
+; GCN-DAG: v_cmp_eq_u32_e64 [[C4:[^,]+]], [[IDX]], 4
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C2]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C3]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C4]]
+; GCN: store_dwordx2 v[{{[0-9:]+}}]
+define amdgpu_kernel void @double5_extelt(double addrspace(1)* %out, i32 %sel) {
+entry:
+  %ext = extractelement <5 x double> <double 0.01, double 1.01, double 2.01, double 4.01, double 5.01>, i32 %sel
+  store double %ext, double addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}half4_extelt:
 ; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x40003c00
