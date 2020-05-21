@@ -414,8 +414,6 @@ void Writer::assignAddresses(OutputSegment *seg) {
   for (auto &p : seg->getSections()) {
     OutputSection *section = p.second;
     addr = alignTo(addr, section->align);
-    // We must align the file offsets too to avoid misaligned writes of
-    // structs.
     fileOff = alignTo(fileOff, section->align);
     section->addr = addr;
     section->fileOff = fileOff;

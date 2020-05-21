@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "ExportTrie.h"
 #include "InputFiles.h"
+#include "MachOStructs.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -281,7 +282,7 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
 }
 
 size_t SymtabSection::getSize() const {
-  return symbols.size() * sizeof(nlist_64);
+  return symbols.size() * sizeof(structs::nlist_64);
 }
 
 void SymtabSection::finalizeContents() {
@@ -292,7 +293,7 @@ void SymtabSection::finalizeContents() {
 }
 
 void SymtabSection::writeTo(uint8_t *buf) const {
-  auto *nList = reinterpret_cast<nlist_64 *>(buf);
+  auto *nList = reinterpret_cast<structs::nlist_64 *>(buf);
   for (const SymtabEntry &entry : symbols) {
     nList->n_strx = entry.strx;
     // TODO support other symbol types
