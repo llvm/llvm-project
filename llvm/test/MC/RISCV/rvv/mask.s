@@ -140,8 +140,8 @@ vid.v v8
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 a4 08 52 <unknown>
 
-vmcpy.m v8, v4
-# CHECK-INST: vmcpy.m v8, v4
+vmmv.m v8, v4
+# CHECK-INST: vmmv.m v8, v4
 # CHECK-ENCODING: [0x57,0x24,0x42,0x66]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 24 42 66 <unknown>
