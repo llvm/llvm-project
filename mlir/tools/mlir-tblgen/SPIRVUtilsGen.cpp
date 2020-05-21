@@ -508,6 +508,11 @@ static void emitAttributeSerialization(const Attribute &attr,
        << formatv("  {0}.push_back(static_cast<uint32_t>("
                   "attr.cast<IntegerAttr>().getValue().getZExtValue()));\n",
                   operandList);
+  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "TypeAttr") {
+    os << tabs
+       << formatv("  {0}.push_back(static_cast<uint32_t>("
+                  "getTypeID(attr.cast<TypeAttr>().getValue())));\n",
+                  operandList);
   } else {
     PrintFatalError(
         loc,
@@ -765,6 +770,11 @@ static void emitAttributeDeserialization(const Attribute &attr,
     os << tabs
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getI32IntegerAttr({2}[{3}++])));\n",
+                  attrList, attrName, words, wordIndex);
+  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "TypeAttr") {
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
   } else {
     PrintFatalError(
