@@ -38,7 +38,6 @@ class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
 class BranchInst;
-class CallBase;
 class Function;
 class GlobalValue;
 class IntrinsicInst;
@@ -121,12 +120,10 @@ class IntrinsicCostAttributes {
 public:
   IntrinsicCostAttributes(const IntrinsicInst &I);
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
+  IntrinsicCostAttributes(Intrinsic::ID Id, CallInst &CI,
                           unsigned Factor);
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
+  IntrinsicCostAttributes(Intrinsic::ID Id, CallInst &CI,
                           unsigned Factor, unsigned ScalarCost);
 
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
@@ -144,7 +141,7 @@ public:
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                           ArrayRef<Type *> Tys);
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
                           ArrayRef<Value *> Args);
 
   Intrinsic::ID getID() const { return IID; }
@@ -290,6 +287,18 @@ public:
   /// FIXME: It would be nice to base the bonus values on something more
   /// scientific. A target may has no bonus on vector instructions.
   int getInlinerVectorBonusPercent() const;
+
+  /// Estimate the cost of an intrinsic when lowered.
+  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                       ArrayRef<Type *> ParamTys,
+                       const User *U = nullptr,
+                       TTI::TargetCostKind CostKind = TCK_SizeAndLatency) const;
+
+  /// Estimate the cost of an intrinsic when lowered.
+  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                       ArrayRef<const Value *> Arguments,
+                       const User *U = nullptr,
+                       TTI::TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
   /// \return the expected cost of a memcpy, which could e.g. depend on the
   /// source/destination type and alignment and the number of bytes copied.
@@ -1222,6 +1231,13 @@ public:
                          TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
+  virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                               ArrayRef<Type *> ParamTys, const User *U,
+                               enum TargetCostKind CostKind) = 0;
+  virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                               ArrayRef<const Value *> Arguments,
+                               const User *U,
+                               enum TargetCostKind CostKind) = 0;
   virtual int getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
@@ -1478,6 +1494,18 @@ public:
   }
   int getInlinerVectorBonusPercent() override {
     return Impl.getInlinerVectorBonusPercent();
+  }
+  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                       ArrayRef<Type *> ParamTys,
+                       const User *U = nullptr,
+                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) override {
+    return Impl.getIntrinsicCost(IID, RetTy, ParamTys, U, CostKind);
+  }
+  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                       ArrayRef<const Value *> Arguments,
+                       const User *U = nullptr,
+                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) override {
+    return Impl.getIntrinsicCost(IID, RetTy, Arguments, U, CostKind);
   }
   int getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
