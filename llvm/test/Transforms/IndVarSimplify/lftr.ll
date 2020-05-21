@@ -159,7 +159,7 @@ define i32 @quadratic_sgt_loopdec() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[I]], i32 1)
+; CHECK-NEXT:    [[I_NEXT]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[I]], i32 1)
 ; CHECK-NEXT:    store i32 [[I]], i32* @A
 ; CHECK-NEXT:    [[I2:%.*]] = mul i32 [[I]], [[I]]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[I2]], 0
@@ -172,7 +172,7 @@ entry:
 
 loop:
   %i = phi i32 [ 10, %entry ], [ %i.next, %loop ]
-  %i.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %i, i32 1)
+  %i.next = call i32 @llvm.loop.decrement.reg.i32(i32 %i, i32 1)
   store i32 %i, i32* @A
   %i2 = mul i32 %i, %i
   %c = icmp sgt i32 %i2, 0
@@ -657,5 +657,5 @@ exit:
 }
 
 
-declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
+declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 

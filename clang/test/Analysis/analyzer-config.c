@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ConfigDumper > %t 2>&1
 // RUN: FileCheck --input-file=%t %s --match-full-lines
 
-// CHECK: [config]
+// CHECK:      [config]
 // CHECK-NEXT: add-pop-up-notes = true
 // CHECK-NEXT: aggressive-binary-operation-simplification = false
 // CHECK-NEXT: alpha.clone.CloneChecker:IgnoredFilesPattern = ""
@@ -30,6 +30,14 @@
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
+// CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
+// CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
+// CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true
+// CHECK-NEXT: core.CallAndMessage:CXXThisMethodCall = true
+// CHECK-NEXT: core.CallAndMessage:FunctionPointer = true
+// CHECK-NEXT: core.CallAndMessage:NilReceiver = true
+// CHECK-NEXT: core.CallAndMessage:ParameterCount = true
+// CHECK-NEXT: core.CallAndMessage:UndefReceiver = true
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: crosscheck-with-z3 = false
 // CHECK-NEXT: ctu-dir = ""

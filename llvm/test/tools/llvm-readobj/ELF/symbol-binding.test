@@ -1,5 +1,5 @@
-# Show that llvm-readobj can print symbol bindings correctly for both LLVM and
-# GNU styles, including for symbol bindings that are not recognised.
+# COM: Show that llvm-readobj can print symbol bindings correctly for both LLVM and
+# COM: GNU styles, including for symbol bindings that are not recognised.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --symbols --dyn-symbols %t | FileCheck %s --check-prefix=LLVM

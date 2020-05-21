@@ -3,31 +3,31 @@
 
 define i32 @casts_no_users() {
 ; CHECK-LABEL: 'casts_no_users'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r0 = sext i1 undef to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r1 = zext i1 undef to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r2 = sext i1 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r3 = zext i1 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r4 = sext i1 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r5 = zext i1 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r6 = sext i1 undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r0 = sext i1 undef to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r1 = zext i1 undef to i8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r2 = sext i1 undef to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r3 = zext i1 undef to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r4 = sext i1 undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r5 = zext i1 undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r6 = sext i1 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r7 = zext i1 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r8 = trunc i8 undef to i1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r9 = sext i8 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r10 = zext i8 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r11 = sext i8 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r12 = zext i8 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r13 = sext i8 undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r9 = sext i8 undef to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r10 = zext i8 undef to i16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r11 = sext i8 undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r12 = zext i8 undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r13 = sext i8 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r14 = zext i8 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r15 = trunc i16 undef to i1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r16 = trunc i16 undef to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r17 = sext i16 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r18 = zext i16 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r19 = sext i16 undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r17 = sext i16 undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r18 = zext i16 undef to i32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r19 = sext i16 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r20 = zext i16 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r21 = trunc i32 undef to i1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r22 = trunc i32 undef to i8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r23 = trunc i32 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r24 = sext i32 undef to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r24 = sext i32 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r25 = zext i32 undef to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r26 = trunc i64 undef to i1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r27 = trunc i64 undef to i8

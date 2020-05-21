@@ -24,7 +24,7 @@ define dso_local void @foo(i32* noalias nocapture %A, i32* noalias nocapture rea
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, i32* [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, i32* [[LSR_IV14]], i32 4
-; CHECK-NEXT:    [[TMP5]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP5]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
@@ -55,7 +55,7 @@ vector.body:
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep12 = getelementptr i32, i32* %lsr.iv11, i32 4
   %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
-  %3 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %3 = call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
   %4 = icmp ne i32 %3, 0
   br i1 %4, label %vector.body, label %for.cond.cleanup
 
@@ -86,7 +86,7 @@ define dso_local void @foo2(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, i32* [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, i32* [[LSR_IV14]], i32 4
-; CHECK-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP2]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
@@ -111,7 +111,7 @@ vector.body:
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep12 = getelementptr i32, i32* %lsr.iv11, i32 4
   %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
-  %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %2 = call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
   %3 = icmp ne i32 %2, 0
   br i1 %3, label %vector.body, label %for.cond.cleanup
 
@@ -146,7 +146,7 @@ define dso_local void @foo3(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, i32* [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, i32* [[LSR_IV14]], i32 4
-; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
@@ -179,7 +179,7 @@ vector.body:
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep12 = getelementptr i32, i32* %lsr.iv11, i32 4
   %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
-  %3 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %3 = call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
   %4 = icmp ne i32 %3, 0
   br i1 %4, label %vector.body, label %for.cond.cleanup
 
@@ -215,7 +215,7 @@ define dso_local void @foo4(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, i32* [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, i32* [[LSR_IV14]], i32 4
-; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
@@ -248,7 +248,7 @@ vector.body:
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep12 = getelementptr i32, i32* %lsr.iv11, i32 4
   %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
-  %3 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %3 = call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
   %4 = icmp ne i32 %3, 0
   br i1 %4, label %vector.body, label %for.cond.cleanup
 
@@ -282,7 +282,7 @@ define dso_local void @foo5(i32* noalias nocapture %A, i32* noalias nocapture re
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, i32* [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, i32* [[LSR_IV14]], i32 4
-; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP0]], i32 1)
+; CHECK-NEXT:    [[TMP3]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP0]], i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
@@ -315,7 +315,7 @@ vector.body:
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep12 = getelementptr i32, i32* %lsr.iv11, i32 4
   %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
-  %3 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %3 = call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
   %4 = icmp ne i32 %3, 0
   br i1 %4, label %vector.body, label %for.cond.cleanup
 
@@ -325,5 +325,5 @@ for.cond.cleanup:
 
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #1
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
-declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 , i32 )
+declare i32 @llvm.loop.decrement.reg.i32(i32 , i32 )
 declare void @llvm.set.loop.iterations.i32(i32)

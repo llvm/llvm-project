@@ -31,9 +31,10 @@ using namespace mlir;
 // Create a call to llvm intrinsic
 static llvm::Value *createIntrinsicCall(llvm::IRBuilder<> &builder,
                                         llvm::Intrinsic::ID intrinsic,
-                                        ArrayRef<llvm::Value *> args = {}) {
+                                        ArrayRef<llvm::Value *> args = {},
+                                        ArrayRef<llvm::Type *> tys = {}) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *fn = llvm::Intrinsic::getDeclaration(module, intrinsic);
+  llvm::Function *fn = llvm::Intrinsic::getDeclaration(module, intrinsic, tys);
   return builder.CreateCall(fn, args);
 }
 

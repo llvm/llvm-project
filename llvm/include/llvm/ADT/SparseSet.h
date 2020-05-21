@@ -79,7 +79,7 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
   }
 };
 
-/// SparseSet - Fast set implmentation for objects that can be identified by
+/// SparseSet - Fast set implementation for objects that can be identified by
 /// small unsigned keys.
 ///
 /// SparseSet allocates memory proportional to the size of the key universe, so

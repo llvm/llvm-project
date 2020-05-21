@@ -19,15 +19,15 @@
 # RUN:     | llvm-objdump -d --mattr=+a - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-S-OBJ %s
 
-# The following check prefixes are used in this test:
-# CHECK-S                 Match the .s output with aliases enabled
-# CHECK-S-NOALIAS         Match the .s output with aliases disabled
-# CHECK-OBJ               Match the objdumped object output with aliases enabled
-# CHECK-OBJ-NOALIAS       Match the objdumped object output with aliases enabled
-# CHECK-S-OBJ             Match both the .s and objdumped object output with
-#                         aliases enabled
-# CHECK-S-OBJ-NOALIAS     Match both the .s and objdumped object output with
-#                         aliases disabled
+# COM: The following check prefixes are used in this test:
+# COM: CHECK-S                 Match the .s output with aliases enabled
+# COM: CHECK-S-NOALIAS         Match the .s output with aliases disabled
+# COM: CHECK-OBJ               Match the objdumped object output with aliases enabled
+# COM: CHECK-OBJ-NOALIAS       Match the objdumped object output with aliases enabled
+# COM: CHECK-S-OBJ             Match both the .s and objdumped object output with
+# COM:                         aliases enabled
+# COM: CHECK-S-OBJ-NOALIAS     Match both the .s and objdumped object output with
+# COM:                         aliases disabled
 
 # The below tests for lr.w, sc.w and amo*.w, using `0(reg)` are actually
 # implemented using a custom parser, but we test them as if they're aliases.

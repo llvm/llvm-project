@@ -1713,6 +1713,18 @@ static LogicalResult verify(TupleOp op) { return success(); }
 // TransposeOp
 //===----------------------------------------------------------------------===//
 
+void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
+                                Value vector, ArrayRef<int64_t> transp) {
+  VectorType vt = vector.getType().cast<VectorType>();
+  SmallVector<int64_t, 4> transposedShape(vt.getRank());
+  for (unsigned i = 0; i < transp.size(); ++i)
+    transposedShape[i] = vt.getShape()[transp[i]];
+
+  result.addOperands(vector);
+  result.addTypes(VectorType::get(transposedShape, vt.getElementType()));
+  result.addAttribute(getTranspAttrName(), builder.getI64ArrayAttr(transp));
+}
+
 // Eliminates transpose operations, which produce values identical to their
 // input values. This happens when the dimensions of the input vector remain in
 // their original order after the transpose operation.

@@ -475,9 +475,7 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
 
   Function *DecFunc =
       Intrinsic::getDeclaration(M, Intrinsic::loop_decrement_reg,
-                                { EltsRem->getType(), EltsRem->getType(),
-                                  LoopDecrement->getType()
-                                });
+                                { EltsRem->getType() });
   Value *Ops[] = { EltsRem, LoopDecrement };
   Value *Call = CondBuilder.CreateCall(DecFunc, Ops);
 

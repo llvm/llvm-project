@@ -277,6 +277,17 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}double5_inselt:
+; GCN-NOT: v_movrel
+; GCN-NOT: buffer_
+; GCN-COUNT-10: v_cndmask_b32
+define amdgpu_kernel void @double5_inselt(<5 x double> addrspace(1)* %out, <5 x double> %vec, i32 %sel) {
+entry:
+  %v = insertelement <5 x double> %vec, double 1.000000e+00, i32 %sel
+  store <5 x double> %v, <5 x double> addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}double8_inselt:
 ; GCN-NOT: v_cndmask
 ; GCN-NOT: buffer_

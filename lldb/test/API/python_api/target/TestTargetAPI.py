@@ -122,6 +122,7 @@ class TargetAPITestCase(TestBase):
         self.assertEqual(data_section.name, data_section2.name)
 
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # SBTarget::ReadMemory is not instrumented.
     def test_read_memory(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -214,16 +215,18 @@ class TargetAPITestCase(TestBase):
         self.expect(my_global_var.GetValue(), exe=False,
                     startstr="'X'")
 
-        # While we are at it, let's also exercise the similar
-        # SBModule.FindGlobalVariables() API.
-        for m in target.module_iter():
-            if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
-                value_list = m.FindGlobalVariables(
-                    target, 'my_global_var_of_char_type', 3)
-                self.assertTrue(value_list.GetSize() == 1)
-                self.assertTrue(
-                    value_list.GetValueAtIndex(0).GetValue() == "'X'")
-                break
+
+        if not configuration.is_reproducer():
+            # While we are at it, let's also exercise the similar
+            # SBModule.FindGlobalVariables() API.
+            for m in target.module_iter():
+                if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
+                    value_list = m.FindGlobalVariables(
+                        target, 'my_global_var_of_char_type', 3)
+                    self.assertTrue(value_list.GetSize() == 1)
+                    self.assertTrue(
+                        value_list.GetValueAtIndex(0).GetValue() == "'X'")
+                    break
 
     def find_compile_units(self, exe):
         """Exercise SBTarget.FindCompileUnits() API."""
@@ -285,6 +288,7 @@ class TargetAPITestCase(TestBase):
     @not_remote_testsuite_ready
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    @skipIfReproducer # Inferior doesn't run during replay.
     def test_launch_new_process_and_redirect_stdout(self):
         """Exercise SBTaget.Launch() API with redirected stdout."""
         self.build()

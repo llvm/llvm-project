@@ -144,7 +144,7 @@ function(add_entrypoint_object target_name)
     ${objects_target_name}
     BEFORE
     PRIVATE
-      -fpie ${LLVM_CXX_STD_default}
+      -fpie ${LLVM_CXX_STD_default} -ffreestanding
   )
   target_include_directories(
     ${objects_target_name}
@@ -217,8 +217,16 @@ function(add_entrypoint_object target_name)
       #     X warnings generated.
       # Until this is fixed upstream, we use -fno-caret-diagnostics to surpress
       # these.
-      COMMAND $<TARGET_FILE:clang-tidy> "--extra-arg=-fno-caret-diagnostics" --quiet
+      COMMAND $<TARGET_FILE:clang-tidy>
+              "--extra-arg=-fno-caret-diagnostics" --quiet
               # Path to directory containing compile_commands.json
+              -p ${PROJECT_BINARY_DIR}
+              ${ADD_ENTRYPOINT_OBJ_SRCS}
+      # We run restrict-system-libc-headers with --system-headers to prevent
+      # transitive inclusion through compler provided headers.
+      COMMAND $<TARGET_FILE:clang-tidy> --system-headers
+              --checks="-*,llvmlibc-restrict-system-libc-headers"
+              --quiet
               -p ${PROJECT_BINARY_DIR}
               ${ADD_ENTRYPOINT_OBJ_SRCS}
       # We have two options for running commands, add_custom_command and

@@ -3885,12 +3885,12 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   if (Func->getSubprogram())
     return;
 
-  // Do not emit a declaration subprogram for a builtin or if call site info
-  // isn't required. Also, elide declarations for functions with reserved names,
-  // as call site-related features aren't interesting in this case (& also, the
-  // compiler may emit calls to these functions without debug locations, which
-  // makes the verifier complain).
-  if (CalleeDecl->getBuiltinID() != 0 ||
+  // Do not emit a declaration subprogram for a builtin, a function with nodebug
+  // attribute, or if call site info isn't required. Also, elide declarations
+  // for functions with reserved names, as call site-related features aren't
+  // interesting in this case (& also, the compiler may emit calls to these
+  // functions without debug locations, which makes the verifier complain).
+  if (CalleeDecl->getBuiltinID() != 0 || CalleeDecl->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
     return;
   if (const auto *Id = CalleeDecl->getIdentifier())

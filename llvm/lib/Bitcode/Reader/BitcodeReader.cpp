@@ -152,8 +152,7 @@ static bool convertToString(ArrayRef<uint64_t> Record, unsigned Idx,
   if (Idx > Record.size())
     return true;
 
-  for (unsigned i = Idx, e = Record.size(); i != e; ++i)
-    Result += (char)Record[i];
+  Result.append(Record.begin() + Idx, Record.end());
   return false;
 }
 

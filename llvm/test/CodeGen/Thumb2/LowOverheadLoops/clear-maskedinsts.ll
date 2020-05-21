@@ -33,7 +33,7 @@ define hidden i32 @_Z4loopPiPjiS0_i(i32* noalias nocapture readonly %s1, i32* no
 ; CHECK-NEXT:    [[TMP7]] = sub i32 [[TMP5]], 4
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[BROADCAST_SPLAT72]], <4 x i32>* [[LSR_IV911]], i32 4, <4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[SCEVGEP10]] = getelementptr i32, i32* [[LSR_IV9]], i32 4
-; CHECK-NEXT:    [[TMP8]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP4]], i32 1)
+; CHECK-NEXT:    [[TMP8]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP4]], i32 1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       vector.body75:
@@ -59,7 +59,7 @@ define hidden i32 @_Z4loopPiPjiS0_i(i32* noalias nocapture readonly %s1, i32* no
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP4]] = getelementptr i32, i32* [[LSR_IV3]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP7]] = getelementptr i32, i32* [[LSR_IV6]], i32 4
-; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP10]], i32 1)
+; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP10]], i32 1)
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY75]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -104,7 +104,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %broadcast.splat72, <4 x i32>* %lsr.iv911, i32 4, <4 x i1> %7)
   %index.next = add i32 %index, 4
   %scevgep10 = getelementptr i32, i32* %lsr.iv9, i32 4
-  %8 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %4, i32 1)
+  %8 = call i32 @llvm.loop.decrement.reg.i32(i32 %4, i32 1)
   %9 = icmp ne i32 %8, 0
   br i1 %9, label %vector.body, label %for.cond.cleanup
 
@@ -131,7 +131,7 @@ vector.body75:                                    ; preds = %vector.body75, %vec
   %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
   %scevgep4 = getelementptr i32, i32* %lsr.iv3, i32 4
   %scevgep7 = getelementptr i32, i32* %lsr.iv6, i32 4
-  %15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %10, i32 1)
+  %15 = call i32 @llvm.loop.decrement.reg.i32(i32 %10, i32 1)
   %16 = icmp ne i32 %15, 0
   br i1 %16, label %vector.body75, label %for.cond.cleanup
 
@@ -142,4 +142,4 @@ declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg,
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
 declare <4 x i32> @llvm.usub.sat.v4i32(<4 x i32>, <4 x i32>)
 declare void @llvm.set.loop.iterations.i32(i32)
-declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
+declare i32 @llvm.loop.decrement.reg.i32(i32, i32)

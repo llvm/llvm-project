@@ -21,7 +21,7 @@ entry:
 ; CHECK: br label %while.body
 
 ; CHECK-REGDEC: [[REM:%[^ ]+]] = phi i32 [ [[COUNT]], %while.body.preheader ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
-; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
+; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK-REGDEC: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-REGDEC: br i1 [[CMP]], label %while.body, label %while.end
 
@@ -47,7 +47,7 @@ while.end:
 ; CHECK: br label %while.body
 
 ; CHECK-REGDEC: [[REM:%[^ ]+]] = phi i32 [ [[COUNT]], %while.body.preheader ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
-; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
+; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK-REGDEC: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-REGDEC: br i1 [[CMP]], label %while.body, label %while.end
 
@@ -92,7 +92,7 @@ while.end:
 ; CHECK: br label %while.body
 
 ; CHECK-REGDEC: [[REM:%[^ ]+]] = phi i32 [ [[COUNT]], %while.body.preheader ], [ [[LOOP_DEC:%[^ ]+]], %while.body ]
-; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
+; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK-REGDEC: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-REGDEC: br i1 [[CMP]], label %while.body, label %while.end
 
@@ -200,7 +200,7 @@ while.end:
 ; CHECK-DEC: [[LOOP_DEC:%[^ ]+]] = call i1 @llvm.loop.decrement.i32(i32 1)
 
 ; CHECK-REGDEC: [[REM:%[^ ]+]] = phi i32 [ %N, %while.cond1.preheader.us ], [ [[LOOP_DEC:%[^ ]+]], %while.body3.us ]
-; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
+; CHECK-REGDEC: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[REM]], i32 1)
 ; CHECK-REGDEC: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-REGDEC: br i1 [[CMP]], label %while.body3.us, label %while.cond1.while.end_crit_edge.us
 

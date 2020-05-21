@@ -1434,7 +1434,7 @@ def int_loop_decrement :
 // may be optimised.
 def int_loop_decrement_reg :
   Intrinsic<[llvm_anyint_ty],
-            [llvm_anyint_ty, llvm_anyint_ty], [IntrNoDuplicate]>;
+            [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoDuplicate]>;
 
 //===----- Intrinsics that are used to provide predicate information -----===//
 

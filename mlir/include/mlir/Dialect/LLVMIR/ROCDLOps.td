@@ -135,5 +135,51 @@ def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8">;
 def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8">;
 def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8">;
 
+//===---------------------------------------------------------------------===//
+// Vector buffer load/store intrinsics
+
+def ROCDL_MubufLoadOp :
+  ROCDL_Op<"buffer.load">, 
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$rsrc,
+                 LLVM_Type:$vindex,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$glc,
+                 LLVM_Type:$slc)>{
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc, 
+          $slc}, {$_resultType});
+  }];
+  let parser = [{ return parseROCDLMubufLoadOp(parser, result); }];
+  let printer = [{ 
+    Operation *op = this->getOperation();
+    p << op->getName() << " " << op->getOperands()
+      << " : " << op->getResultTypes();
+  }];
+}
+
+def ROCDL_MubufStoreOp :
+  ROCDL_Op<"buffer.store">, 
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$vindex,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$glc,
+                 LLVM_Type:$slc)>{
+  string llvmBuilder = [{
+    auto vdataType = op.vdata().getType().cast<LLVM::LLVMType>()
+                       .getUnderlyingType();
+    createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex, 
+          $offset, $glc, $slc}, {vdataType});
+  }];
+  let parser = [{ return parseROCDLMubufStoreOp(parser, result); }];
+  let printer = [{ 
+    Operation *op = this->getOperation();
+    p << op->getName() << " " << op->getOperands()
+      << " : " << vdata().getType();
+  }];
+}
 
 #endif // ROCDLIR_OPS
