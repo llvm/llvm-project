@@ -489,9 +489,12 @@ void LoopConvertCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void LoopConvertCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(makeArrayLoopMatcher(), this);
-  Finder->addMatcher(makeIteratorLoopMatcher(), this);
-  Finder->addMatcher(makePseudoArrayLoopMatcher(), this);
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs, makeArrayLoopMatcher()),
+                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs, makeIteratorLoopMatcher()), this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs, makePseudoArrayLoopMatcher()), this);
 }
 
 /// Given the range of a single declaration, such as:
@@ -897,6 +900,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // Find out which qualifiers we have to use in the loop range.
+  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
   const UsageResult &Usages = Finder.getUsages();
   determineRangeDescriptor(Context, Nodes, Loop, FixerKind, ContainerExpr,
                            Usages, Descriptor);

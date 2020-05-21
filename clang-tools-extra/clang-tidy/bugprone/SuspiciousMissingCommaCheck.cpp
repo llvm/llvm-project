@@ -22,6 +22,8 @@ bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
                                      const StringLiteral *Lit) {
   // String literals surrounded by parentheses are assumed to be on purpose.
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
+
+  TraversalKindScope RAII(*Ctx, ast_type_traits::TK_AsIs);
   auto Parents = Ctx->getParents(*Lit);
   if (Parents.size() == 1 && Parents[0].get<ParenExpr>() != nullptr)
     return true;

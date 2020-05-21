@@ -96,11 +96,13 @@ void RedundantStringCStrCheck::registerMatchers(
   // Detect redundant 'c_str()' calls through a string constructor.
   // If CxxConstructExpr is the part of some CallExpr we need to
   // check that matched ParamDecl of the ancestor CallExpr is not rvalue.
-  Finder->addMatcher(cxxConstructExpr(StringConstructorExpr,
-                                      hasArgument(0, StringCStrCallExpr),
-                                      unless(hasParent(materializeTemporaryExpr(
-                                          unless(isBoundToLValue()))))),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxConstructExpr(StringConstructorExpr,
+                                hasArgument(0, StringCStrCallExpr),
+                                unless(hasParent(materializeTemporaryExpr(
+                                    unless(isBoundToLValue())))))),
+      this);
 
   // Detect: 's == str.c_str()'  ->  's == str'
   Finder->addMatcher(
@@ -153,20 +155,22 @@ void RedundantStringCStrCheck::registerMatchers(
 
   // Detect redundant 'c_str()' calls through a StringRef constructor.
   Finder->addMatcher(
-      cxxConstructExpr(
-          // Implicit constructors of these classes are overloaded
-          // wrt. string types and they internally make a StringRef
-          // referring to the argument.  Passing a string directly to
-          // them is preferred to passing a char pointer.
-          hasDeclaration(cxxMethodDecl(hasAnyName(
-              "::llvm::StringRef::StringRef", "::llvm::Twine::Twine"))),
-          argumentCountIs(1),
-          // The only argument must have the form x.c_str() or p->c_str()
-          // where the method is string::c_str().  StringRef also has
-          // a constructor from string which is more efficient (avoids
-          // strlen), so we can construct StringRef from the string
-          // directly.
-          hasArgument(0, StringCStrCallExpr)),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxConstructExpr(
+              // Implicit constructors of these classes are overloaded
+              // wrt. string types and they internally make a StringRef
+              // referring to the argument.  Passing a string directly to
+              // them is preferred to passing a char pointer.
+              hasDeclaration(cxxMethodDecl(hasAnyName(
+                  "::llvm::StringRef::StringRef", "::llvm::Twine::Twine"))),
+              argumentCountIs(1),
+              // The only argument must have the form x.c_str() or p->c_str()
+              // where the method is string::c_str().  StringRef also has
+              // a constructor from string which is more efficient (avoids
+              // strlen), so we can construct StringRef from the string
+              // directly.
+              hasArgument(0, StringCStrCallExpr))),
       this);
 }
 

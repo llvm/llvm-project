@@ -47,16 +47,19 @@ void ImplicitConversionInLoopCheck::registerMatchers(MatchFinder *Finder) {
   // CXXOperatorCallExpr, so it should not get caught by the
   // cxxOperatorCallExpr() matcher.
   Finder->addMatcher(
-      cxxForRangeStmt(hasLoopVariable(
-          varDecl(
-              hasType(qualType(references(qualType(isConstQualified())))),
-              hasInitializer(
-                  expr(anyOf(hasDescendant(
-                                 cxxOperatorCallExpr().bind("operator-call")),
-                             hasDescendant(unaryOperator(hasOperatorName("*"))
-                                               .bind("operator-call"))))
-                      .bind("init")))
-              .bind("faulty-var"))),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxForRangeStmt(hasLoopVariable(
+              varDecl(
+                  hasType(qualType(references(qualType(isConstQualified())))),
+                  hasInitializer(
+                      expr(anyOf(
+                               hasDescendant(
+                                   cxxOperatorCallExpr().bind("operator-call")),
+                               hasDescendant(unaryOperator(hasOperatorName("*"))
+                                                 .bind("operator-call"))))
+                          .bind("init")))
+                  .bind("faulty-var")))),
       this);
 }
 
