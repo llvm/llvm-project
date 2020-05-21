@@ -296,18 +296,6 @@ public:
     return BaseT::getGEPCost(PointeeType, Ptr, Operands);
   }
 
-  int getExtCost(const Instruction *I, const Value *Src) {
-    if (getTLI()->isExtFree(I))
-      return TargetTransformInfo::TCC_Free;
-
-    if (isa<ZExtInst>(I) || isa<SExtInst>(I))
-      if (const LoadInst *LI = dyn_cast<LoadInst>(Src))
-        if (getTLI()->isExtLoad(LI, I, DL))
-          return TargetTransformInfo::TCC_Free;
-
-    return TargetTransformInfo::TCC_Basic;
-  }
-
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<const Value *> Arguments, const User *U,
                             TTI::TargetCostKind CostKind) {
@@ -725,11 +713,21 @@ public:
           SrcSize == DstSize)
         return 0;
       break;
+    case Instruction::FPExt:
+      if (I && getTLI()->isExtFree(I))
+        return 0;
+      break;
     case Instruction::ZExt:
       if (TLI->isZExtFree(SrcLT.second, DstLT.second))
         return 0;
       LLVM_FALLTHROUGH;
-    case Instruction::SExt: {
+    case Instruction::SExt:
+      if (!I)
+        break;
+
+      if (getTLI()->isExtFree(I))
+        return 0;
+
       // If this is a zext/sext of a load, return 0 if the corresponding
       // extending load exists on target.
       if (I && isa<LoadInst>(I->getOperand(0))) {
@@ -741,7 +739,6 @@ public:
           return 0;
       }
       break;
-    }
     case Instruction::AddrSpaceCast:
       if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
                                    Dst->getPointerAddressSpace()))

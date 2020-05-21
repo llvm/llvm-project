@@ -759,7 +759,7 @@ int PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                  const Instruction *I) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
-  int Cost = BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind);
+  int Cost = BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
   return vectorCostAdjustment(Cost, Opcode, Dst, Src);
 }
 

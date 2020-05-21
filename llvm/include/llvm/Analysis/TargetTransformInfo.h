@@ -268,9 +268,6 @@ public:
                  ArrayRef<const Value *> Operands,
                  TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
-  /// Estimate the cost of a EXT operation when lowered.
-  int getExtCost(const Instruction *I, const Value *Src) const;
-
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
   /// targets where calls are unusually expensive.
@@ -1232,7 +1229,6 @@ public:
   virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
                          ArrayRef<const Value *> Operands,
                          TTI::TargetCostKind CostKind) = 0;
-  virtual int getExtCost(const Instruction *I, const Value *Src) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
@@ -1492,9 +1488,6 @@ public:
                  ArrayRef<const Value *> Operands,
                  enum TargetTransformInfo::TargetCostKind CostKind) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands);
-  }
-  int getExtCost(const Instruction *I, const Value *Src) override {
-    return Impl.getExtCost(I, Src);
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();
