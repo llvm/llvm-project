@@ -26,6 +26,7 @@ add_llvm_tool(dsymutil
   DwarfLinkerForBinary.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
+  Reproducer.cpp
   SymbolMap.cpp
 
   DEPENDS
