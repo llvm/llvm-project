@@ -5408,6 +5408,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_to:
       case OMPC_from:
       case OMPC_use_device_ptr:
+      case OMPC_use_device_addr:
       case OMPC_is_device_ptr:
       case OMPC_nontemporal:
       case OMPC_order:
@@ -10165,12 +10166,18 @@ StmtResult Sema::ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
 
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
 
-  // OpenMP [2.10.1, Restrictions, p. 97]
-  // At least one map clause must appear on the directive.
-  if (!hasClauses(Clauses, OMPC_map, OMPC_use_device_ptr)) {
+  // OpenMP [2.12.2, target data Construct, Restrictions]
+  // At least one map, use_device_addr or use_device_ptr clause must appear on
+  // the directive.
+  if (!hasClauses(Clauses, OMPC_map, OMPC_use_device_ptr) &&
+      (LangOpts.OpenMP < 50 || !hasClauses(Clauses, OMPC_use_device_addr))) {
+    StringRef Expected;
+    if (LangOpts.OpenMP < 50)
+      Expected = "'map' or 'use_device_ptr'";
+    else
+      Expected = "'map', 'use_device_ptr', or 'use_device_addr'";
     Diag(StartLoc, diag::err_omp_no_clause_for_directive)
-        << "'map' or 'use_device_ptr'"
-        << getOpenMPDirectiveName(OMPD_target_data);
+        << Expected << getOpenMPDirectiveName(OMPD_target_data);
     return StmtError();
   }
 
@@ -11535,6 +11542,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_to:
   case OMPC_from:
   case OMPC_use_device_ptr:
+  case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
@@ -12289,6 +12297,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_to:
   case OMPC_from:
   case OMPC_use_device_ptr:
+  case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
@@ -12731,6 +12740,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_to:
   case OMPC_from:
   case OMPC_use_device_ptr:
+  case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
@@ -12956,6 +12966,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_to:
   case OMPC_from:
   case OMPC_use_device_ptr:
+  case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
@@ -13195,6 +13206,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_to:
   case OMPC_from:
   case OMPC_use_device_ptr:
+  case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_atomic_default_mem_order:
   case OMPC_device_type:
@@ -13405,6 +13417,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     break;
   case OMPC_use_device_ptr:
     Res = ActOnOpenMPUseDevicePtrClause(VarList, Locs);
+    break;
+  case OMPC_use_device_addr:
+    Res = ActOnOpenMPUseDeviceAddrClause(VarList, Locs);
     break;
   case OMPC_is_device_ptr:
     Res = ActOnOpenMPIsDevicePtrClause(VarList, Locs);
@@ -18387,6 +18402,54 @@ OMPClause *Sema::ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
   return OMPUseDevicePtrClause::Create(
       Context, Locs, MVLI.ProcessedVarList, PrivateCopies, Inits,
       MVLI.VarBaseDeclarations, MVLI.VarComponents);
+}
+
+OMPClause *Sema::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
+                                                const OMPVarListLocTy &Locs) {
+  MappableVarListInfo MVLI(VarList);
+
+  for (Expr *RefExpr : VarList) {
+    assert(RefExpr && "NULL expr in OpenMP use_device_addr clause.");
+    SourceLocation ELoc;
+    SourceRange ERange;
+    Expr *SimpleRefExpr = RefExpr;
+    auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange,
+                              /*AllowArraySection=*/true);
+    if (Res.second) {
+      // It will be analyzed later.
+      MVLI.ProcessedVarList.push_back(RefExpr);
+    }
+    ValueDecl *D = Res.first;
+    if (!D)
+      continue;
+    auto *VD = dyn_cast<VarDecl>(D);
+
+    // If required, build a capture to implement the privatization initialized
+    // with the current list item value.
+    DeclRefExpr *Ref = nullptr;
+    if (!VD)
+      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
+    MVLI.ProcessedVarList.push_back(VD ? RefExpr->IgnoreParens() : Ref);
+
+    // We need to add a data sharing attribute for this variable to make sure it
+    // is correctly captured. A variable that shows up in a use_device_addr has
+    // similar properties of a first private variable.
+    DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
+
+    // Create a mappable component for the list item. List items in this clause
+    // only need a component.
+    MVLI.VarBaseDeclarations.push_back(D);
+    MVLI.VarComponents.emplace_back();
+    MVLI.VarComponents.back().push_back(
+        OMPClauseMappableExprCommon::MappableComponent(SimpleRefExpr, D));
+  }
+
+  if (MVLI.ProcessedVarList.empty())
+    return nullptr;
+
+  return OMPUseDeviceAddrClause::Create(Context, Locs, MVLI.ProcessedVarList,
+                                        MVLI.VarBaseDeclarations,
+                                        MVLI.VarComponents);
 }
 
 OMPClause *Sema::ActOnOpenMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
