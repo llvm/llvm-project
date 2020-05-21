@@ -40,7 +40,7 @@ define void @mat_vec_sext_i16(i16** nocapture readonly %A, i16* nocapture readon
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul nsw <4 x i32> [[TMP12]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP14]] = add nsw <4 x i32> [[TMP13]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP5]], i32 1)
+; CHECK-NEXT:    [[TMP15]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP5]], i32 1)
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK]]
 ; CHECK:       middle.block:
@@ -97,7 +97,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %tmp13 = mul nsw <4 x i32> %tmp12, %tmp9
   %tmp14 = add nsw <4 x i32> %tmp13, %vec.phi
   %index.next = add i32 %index, 4
-  %tmp15 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp5, i32 1)
+  %tmp15 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp5, i32 1)
   %tmp16 = icmp ne i32 %tmp15, 0
   br i1 %tmp16, label %vector.body, label %middle.block
 
@@ -150,7 +150,7 @@ define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nsw <4 x i32> [[WIDE_MASKED_LOAD29]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP12]] = add nsw <4 x i32> [[VEC_PHI]], [[TMP11]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP13]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[TMP5]], i32 1)
+; CHECK-NEXT:    [[TMP13]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP5]], i32 1)
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK]]
 ; CHECK:       middle.block:
@@ -205,7 +205,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %tmp11 = mul nsw <4 x i32> %wide.masked.load29, %wide.masked.load
   %tmp12 = add nsw <4 x i32> %vec.phi, %tmp11
   %index.next = add i32 %index, 4
-  %tmp13 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp5, i32 1)
+  %tmp13 = call i32 @llvm.loop.decrement.reg.i32(i32 %tmp5, i32 1)
   %tmp14 = icmp ne i32 %tmp13, 0
   br i1 %tmp14, label %vector.body, label %middle.block
 
@@ -234,7 +234,7 @@ declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>) #1
 declare void @llvm.set.loop.iterations.i32(i32) #2
 
 ; Function Attrs: noduplicate nounwind
-declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
+declare i32 @llvm.loop.decrement.reg.i32(i32, i32) #2
 
 attributes #0 = { argmemonly nounwind readonly willreturn }
 attributes #1 = { nounwind readnone willreturn }
