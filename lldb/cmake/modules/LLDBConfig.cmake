@@ -317,7 +317,6 @@ if (APPLE)
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
   include_directories(AFTER "${CMAKE_OSX_SYSROOT}/usr/include/libxml2")
-  include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
 if( WIN32 AND NOT CYGWIN )
