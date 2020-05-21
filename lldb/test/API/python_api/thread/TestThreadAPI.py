@@ -138,6 +138,7 @@ class ThreadAPITestCase(TestBase):
         # Test that we can pass in a much larger size and still get the right output.
         self.assertEqual("breakpoint 1.1", thread.GetStopDescription(len('breakpoint 1.1') + 100))
 
+    @skipIfAsan # The output looks different under ASAN.
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
         exe = self.getBuildArtifact(exe_name)
