@@ -189,6 +189,19 @@ public:
   /// not rely on S having a lifetime beyond this call. Tag is "" or a YAML tag.
   StringRef fromString(StringRef S, StringRef Tag = "");
 
+  /// Convenience assignment operators. This only works if the destination
+  /// DocNode has an associated Document, i.e. it was not constructed using the
+  /// default constructor. The string one does not copy, so the string must
+  /// remain valid for the lifetime of the Document. Use fromString to avoid
+  /// that restriction.
+  DocNode &operator=(const char *Val) { return *this = StringRef(Val); }
+  DocNode &operator=(StringRef Val);
+  DocNode &operator=(bool Val);
+  DocNode &operator=(int Val);
+  DocNode &operator=(unsigned Val);
+  DocNode &operator=(int64_t Val);
+  DocNode &operator=(uint64_t Val);
+
 private:
   // Private constructor setting KindAndDoc, used by methods in Document.
   DocNode(const KindAndDocument *KindAndDoc) : KindAndDoc(KindAndDoc) {}
@@ -210,11 +223,21 @@ public:
   MapTy::iterator end() { return Map->end(); }
   MapTy::iterator find(DocNode Key) { return Map->find(Key); }
   MapTy::iterator find(StringRef Key);
+  MapTy::iterator erase(MapTy::const_iterator I) { return Map->erase(I); }
+  size_t erase(DocNode Key) { return Map->erase(Key); }
+  MapTy::iterator erase(MapTy::const_iterator First,
+                        MapTy::const_iterator Second) {
+    return Map->erase(First, Second);
+  }
   /// Member access. The string data must remain valid for the lifetime of the
   /// Document.
   DocNode &operator[](StringRef S);
-  /// Member access.
+  /// Member access, with convenience versions for an integer key.
   DocNode &operator[](DocNode Key);
+  DocNode &operator[](int Key);
+  DocNode &operator[](unsigned Key);
+  DocNode &operator[](int64_t Key);
+  DocNode &operator[](uint64_t Key);
 };
 
 /// A DocNode that is an array.
