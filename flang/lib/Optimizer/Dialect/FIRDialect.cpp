@@ -14,8 +14,36 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 using namespace fir;
+
+namespace {
+/// This class defines the interface for handling inlining of FIR calls.
+struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  /// This hook checks to see if the operation `op` is legal to inline into the
+  /// given region `reg`.
+  bool isLegalToInline(mlir::Operation *op, mlir::Region *reg,
+                       mlir::BlockAndValueMapping &map) const final {
+    return fir::canLegallyInline(op, reg, map);
+  }
+
+  /// This hook is called when a terminator operation has been inlined.
+  /// We handle the return (a Fortran FUNCTION) by replacing the values
+  /// previously returned by the call operation with the operands of the
+  /// return.
+  void handleTerminator(mlir::Operation *op,
+                        llvm::ArrayRef<mlir::Value> valuesToRepl) const final {
+    auto returnOp = cast<mlir::ReturnOp>(op);
+    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    for (const auto &it : llvm::enumerate(returnOp.getOperands()))
+      valuesToRepl[it.index()].replaceAllUsesWith(it.value());
+  }
+};
+} // namespace
 
 fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
     : mlir::Dialect("fir", ctx, mlir::TypeID::get<FIROpsDialect>()) {
@@ -25,6 +53,7 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
 #define GET_OP_LIST
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
       >();
+  addInterfaces<FIRInlinerInterface>();
 }
 
 // anchor the class vtable to this compilation unit

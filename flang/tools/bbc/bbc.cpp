@@ -221,7 +221,7 @@ static void convertFortranSourceToMLIR(
   mlir::PassManager pm(mlirModule.getContext());
   mlir::applyPassManagerCLOptions(pm);
   pm.addPass(fir::createPromoteToAffinePass());
-  pm.addPass(fir::createLowerToLoopPass());
+  pm.addPass(fir::createLowerToScfPass());
   pm.addPass(fir::createControlFlowLoweringPass());
   pm.addPass(mlir::createLowerToCFGPass());
   // pm.addPass(fir::createMemToRegPass());
