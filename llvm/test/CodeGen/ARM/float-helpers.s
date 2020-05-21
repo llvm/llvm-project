@@ -12,24 +12,24 @@
 ; floating-point helper functions to always use the base AAPCS (soft-float)
 ; calling convention.
 
-; In this test we cover the following configurations:
-; CHECK-SOFT -mfloat-abi=soft
-;     * expect no use of floating point instructions
-;     * expect to use __aeabi_ helper function in each function
-; CHECK-SOFTFP -mfloat-abi=softfp
-;     * all functions use base AAPCS
-;     * floating point instructions permitted, so __aeabi_ helpers only
-;       expected when there is no available instruction.
-; CHECK-HARDFP-SP -mfloat-abi=hardfp (single precision instructions)
-;     * all non Runtime ABI helper functions use AAPCS VFP
-;     * floating point instructions permitted, so __aeabi_ helpers only
-;       expected when there is no available instruction.
-; CHECK-HARDFP-DP -mfloat-abi=hardfp (double precision instructions)
-; CHECK-HARDFP-SPONLY -mfloat-abi=hardfp (double precision but single
-;                      precision only FPU)
-;     * as CHECK-HARDFP-SP, but we split up the double precision helper
-;       functions so we can test a single precision only FPU, which has to use
-;       helper function for all double precision operations.
+; COM: In this test we cover the following configurations:
+; COM:  CHECK-SOFT -mfloat-abi=soft
+; COM:      * expect no use of floating point instructions
+; COM:      * expect to use __aeabi_ helper function in each function
+; COM:  CHECK-SOFTFP -mfloat-abi=softfp
+; COM:      * all functions use base AAPCS
+; COM:      * floating point instructions permitted, so __aeabi_ helpers only
+; COM:        expected when there is no available instruction.
+; COM:  CHECK-HARDFP-SP -mfloat-abi=hardfp (single precision instructions)
+; COM:      * all non Runtime ABI helper functions use AAPCS VFP
+; COM:      * floating point instructions permitted, so __aeabi_ helpers only
+; COM:        expected when there is no available instruction.
+; COM:  CHECK-HARDFP-DP -mfloat-abi=hardfp (double precision instructions)
+; COM:  CHECK-HARDFP-SPONLY -mfloat-abi=hardfp (double precision but single
+; COM:                       precision only FPU)
+; COM:      * as CHECK-HARDFP-SP, but we split up the double precision helper
+; COM:        functions so we can test a single precision only FPU, which has to use
+; COM:        helper function for all double precision operations.
 
 ; In all cases we must use base AAPCS when calling a helper function from
 ; section 4.1.2.

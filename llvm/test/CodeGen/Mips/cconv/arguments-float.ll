@@ -46,14 +46,14 @@ entry:
 }
 
 ; ALL-LABEL: double_args:
-; We won't test the way the global address is calculated in this test. This is
-; just to get the register number for the other checks.
+; COM: We won't test the way the global address is calculated in this test. This is
+; COM: just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
 ; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(doubles)
 
-; The first four arguments are the same in O32/N32/N64.
-; The first argument is floating point but soft-float is enabled so floating
-; point registers are not used.
+; COM: The first four arguments are the same in O32/N32/N64.
+; COM: The first argument is floating point but soft-float is enabled so floating
+; COM: point registers are not used.
 ; O32-DAG:           sw $4, 8([[R2]])
 ; O32-DAG:           sw $5, 12([[R2]])
 ; NEW-DAG:           sd $4, 8([[R2]])
@@ -62,7 +62,7 @@ entry:
 ; O32-DAG:           sw $7, 20([[R2]])
 ; NEW-DAG:           sd $5, 16([[R2]])
 
-; O32 has run out of argument registers and starts using the stack
+; COM: O32 has run out of argument registers and starts using the stack
 ; O32-DAG:           lw [[R3:\$([0-9]+|gp)]], 16($sp)
 ; O32-DAG:           lw [[R4:\$([0-9]+|gp)]], 20($sp)
 ; O32-DAG:           sw [[R3]], 24([[R2]])
@@ -134,18 +134,18 @@ entry:
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
 ; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(floats)
 
-; The first four arguments are the same in O32/N32/N64.
-; The first argument is floating point but soft-float is enabled so floating
-; point registers are not used.
-; MD00305 and GCC disagree on this one. MD00305 says that floats are treated
-; as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
-; aligned and occupying one slot. We'll use GCC's definition.
+; COM: The first four arguments are the same in O32/N32/N64.
+; COM: The first argument is floating point but soft-float is enabled so floating
+; COM: point registers are not used.
+; COM: MD00305 and GCC disagree on this one. MD00305 says that floats are treated
+; COM: as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
+; COM: aligned and occupying one slot. We'll use GCC's definition.
 ; ALL-DAG:           sw $4, 4([[R2]])
 ; ALL-DAG:           sw $5, 8([[R2]])
 ; ALL-DAG:           sw $6, 12([[R2]])
 ; ALL-DAG:           sw $7, 16([[R2]])
 
-; O32 has run out of argument registers and starts using the stack
+; COM: O32 has run out of argument registers and starts using the stack
 ; O32-DAG:           lw [[R3:\$[0-9]+]], 16($sp)
 ; O32-DAG:           sw [[R3]], 20([[R2]])
 ; NEW-DAG:           sw $8, 20([[R2]])
@@ -162,7 +162,7 @@ entry:
 ; O32-DAG:           sw [[R3]], 32([[R2]])
 ; NEW-DAG:           sw $11, 32([[R2]])
 
-; N32/N64 have run out of registers and start using the stack too
+; COM: N32/N64 have run out of registers and start using the stack too
 ; O32-DAG:           lw [[R3:\$[0-9]+]], 32($sp)
 ; O32-DAG:           sw [[R3]], 36([[R2]])
 ; NEW-DAG:           lw [[R3:\$[0-9]+]], 0($sp)
@@ -185,11 +185,11 @@ entry:
 ; SYM32-DAG:           addiu  [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
 ; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(doubles)
 
-; The first four arguments are the same in O32/N32/N64.
-; The first argument isn't floating point so floating point registers are not
-; used.
-; The second slot is insufficiently aligned for double on O32 so it is skipped.
-; Also, double occupies two slots on O32 and only one for N32/N64.
+; COM: The first four arguments are the same in O32/N32/N64.
+; COM: The first argument isn't floating point so floating point registers are not
+; COM: used.
+; COM: The second slot is insufficiently aligned for double on O32 so it is skipped.
+; COM: Also, double occupies two slots on O32 and only one for N32/N64.
 ; ALL-DAG:           sb $4, 1([[R1]])
 ; O32-DAG:           sw $6, 8([[R2]])
 ; O32-DAG:           sw $7, 12([[R2]])
@@ -213,11 +213,11 @@ entry:
 ; SYM64-DAG:         daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(floats)
 
 
-; The first four arguments are the same in O32/N32/N64.
-; The first argument isn't floating point so floating point registers are not
-; used.
-; MD00305 and GCC disagree on this one. MD00305 says that floats are treated
-; as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
-; aligned and occupying one slot. We'll use GCC's definition.
+; COM: The first four arguments are the same in O32/N32/N64.
+; COM: The first argument isn't floating point so floating point registers are not
+; COM: used.
+; COM: MD00305 and GCC disagree on this one. MD00305 says that floats are treated
+; COM: as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
+; COM: aligned and occupying one slot. We'll use GCC's definition.
 ; ALL-DAG:           sb $4, 1([[R1]])
 ; ALL-DAG:           sw $5, 4([[R2]])

@@ -58,7 +58,7 @@ entry:
 ; O32-DAG:           sdc1 $f14, 16([[R2]])
 ; NEW-DAG:           sdc1 $f13, 16([[R2]])
 
-; O32 has run out of argument registers and starts using the stack
+; COM: O32 has run out of argument registers and starts using the stack
 ; O32-DAG:           ldc1 [[F1:\$f[0-9]+]], 16($sp)
 ; O32-DAG:           sdc1 [[F1]], 24([[R2]])
 ; NEW-DAG:           sdc1 $f14, 24([[R2]])
@@ -121,10 +121,10 @@ entry:
 ; O32-DAG:           swc1 $f14, 8([[R1]])
 ; NEW-DAG:           swc1 $f13, 8([[R1]])
 
-; O32 has run out of argument registers and (in theory) starts using the stack
-; I've yet to find a reference in the documentation about this but GCC uses up
-; the remaining two argument slots in the GPR's first. We'll do the same for
-; compatibility.
+; COM: O32 has run out of argument registers and (in theory) starts using the stack
+; COM: I've yet to find a reference in the documentation about this but GCC uses up
+; COM: the remaining two argument slots in the GPR's first. We'll do the same for
+; COM: compatibility.
 ; O32-DAG:           mtc1 $6, $f0
 ; O32-DAG:           swc1 $f0, 12([[R1]])
 ; NEW-DAG:           swc1 $f14, 12([[R1]])
@@ -132,7 +132,7 @@ entry:
 ; O32-DAG:           swc1 $f0, 16([[R1]])
 ; NEW-DAG:           swc1 $f15, 16([[R1]])
 
-; O32 is definitely out of registers now and switches to the stack.
+; COM: O32 is definitely out of registers now and switches to the stack.
 ; O32-DAG:           lwc1 [[F1:\$f[0-9]+]], 16($sp)
 ; O32-DAG:           swc1 [[F1]], 20([[R1]])
 ; NEW-DAG:           swc1 $f16, 20([[R1]])
@@ -146,7 +146,7 @@ entry:
 ; O32-DAG:           swc1 [[F1]], 32([[R1]])
 ; NEW-DAG:           swc1 $f19, 32([[R1]])
 
-; N32/N64 have run out of registers and start using the stack too
+; COM: N32/N64 have run out of registers and start using the stack too
 ; O32-DAG:           lwc1 [[F1:\$f[0-9]+]], 32($sp)
 ; O32-DAG:           swc1 [[F1]], 36([[R1]])
 ; NEW-DAG:           lwc1 [[F1:\$f[0-9]+]], 0($sp)
@@ -173,10 +173,10 @@ entry:
 ; The first argument is the same in O32/N32/N64.
 ; ALL-DAG:           sb $4, 1([[R1]])
 
-; The first argument isn't floating point so floating point registers are not
-; used in O32, but N32/N64 will still use them.
-; The second slot is insufficiently aligned for double on O32 so it is skipped.
-; Also, double occupies two slots on O32 and only one for N32/N64.
+; COM: The first argument isn't floating point so floating point registers are not
+; COM: used in O32, but N32/N64 will still use them.
+; COM: The second slot is insufficiently aligned for double on O32 so it is skipped.
+; COM: Also, double occupies two slots on O32 and only one for N32/N64.
 ; O32LE-DAG:           mtc1 $6, [[F1:\$f[0-9]*[02468]+]]
 ; O32LE-DAG:           mtc1 $7, [[F2:\$f[0-9]*[13579]+]]
 ; O32BE-DAG:           mtc1 $6, [[F2:\$f[0-9]*[13579]+]]
@@ -204,11 +204,11 @@ entry:
 ; The first argument is the same in O32/N32/N64.
 ; ALL-DAG:           sb $4, 1([[R1]])
 
-; The first argument isn't floating point so floating point registers are not
-; used in O32, but N32/N64 will still use them.
-; MD00305 and GCC disagree on this one. MD00305 says that floats are treated
-; as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
-; aligned and occupying one slot. We'll use GCC's definition.
+; COM: The first argument isn't floating point so floating point registers are not
+; COM: used in O32, but N32/N64 will still use them.
+; COM: MD00305 and GCC disagree on this one. MD00305 says that floats are treated
+; COM: as 8-byte aligned and occupy two slots on O32. GCC is treating them as 4-byte
+; COM: aligned and occupying one slot. We'll use GCC's definition.
 ; O32-DAG:           mtc1 $5, $f0
 ; O32-DAG:           swc1 $f0, 4([[R2]])
 ; NEW-DAG:           swc1 $f13, 4([[R2]])

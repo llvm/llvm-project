@@ -49,7 +49,7 @@
 ; ASM:         movl    $2, {{.*}}
 ; ASM:         movl    $3, {{.*}}
 
-; ASM that store-to-push conversion fires.
+; COM: ASM that store-to-push conversion fires.
 ; ASM:         pushl
 ; ASM-NEXT:    pushl
 ; ASM-NEXT:    calll   "?f@@YAXAAH0@Z"
