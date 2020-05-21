@@ -1058,24 +1058,24 @@ TEST(Entropic, UpdateFrequency) {
   // Create input corpus with default entropic configuration
   struct EntropicOptions Entropic = {true, 0xFF, 100};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
-  InputInfo *II = new InputInfo();
+  std::unique_ptr<InputInfo> II(new InputInfo());
 
   C->AddRareFeature(FeatIdx1);
-  C->UpdateFeatureFrequency(II, FeatIdx1);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx1);
   EXPECT_EQ(II->FeatureFreqs.size(), One);
   C->AddRareFeature(FeatIdx2);
-  C->UpdateFeatureFrequency(II, FeatIdx1);
-  C->UpdateFeatureFrequency(II, FeatIdx2);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx1);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx2);
   EXPECT_EQ(II->FeatureFreqs.size(), Two);
   EXPECT_EQ(II->FeatureFreqs[0].second, 2);
   EXPECT_EQ(II->FeatureFreqs[1].second, 1);
 
   C->AddRareFeature(FeatIdx3);
   C->AddRareFeature(FeatIdx4);
-  C->UpdateFeatureFrequency(II, FeatIdx3);
-  C->UpdateFeatureFrequency(II, FeatIdx3);
-  C->UpdateFeatureFrequency(II, FeatIdx3);
-  C->UpdateFeatureFrequency(II, FeatIdx4);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx3);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx3);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx3);
+  C->UpdateFeatureFrequency(II.get(), FeatIdx4);
 
   for (Index = 1; Index < II->FeatureFreqs.size(); Index++)
     EXPECT_LT(II->FeatureFreqs[Index - 1].first, II->FeatureFreqs[Index].first);
@@ -1095,7 +1095,7 @@ TEST(Entropic, ComputeEnergy) {
   const double Precision = 0.01;
   struct EntropicOptions Entropic = {true, 0xFF, 100};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
-  InputInfo *II = new InputInfo();
+  std::unique_ptr<InputInfo> II(new InputInfo());
   Vector<std::pair<uint32_t, uint16_t>> FeatureFreqs = {{1, 3}, {2, 3}, {3, 3}};
   II->FeatureFreqs = FeatureFreqs;
   II->NumExecutedMutations = 0;

@@ -16,7 +16,7 @@ return:
 declare void @bar()
 
 ;USE: !0 = !{i32 1, !"ProfileSummary", !1}
-;USE: !1 = !{!2, !3, !4, !5, !6, !7, !8, !9, !10}
+;USE: !1 = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11}
 ;USE: !2 = !{!"ProfileFormat", !"InstrProf"}
 ;USE: !3 = !{!"TotalCount", i64 0}
 
