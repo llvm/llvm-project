@@ -21,58 +21,15 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
-mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv, Value range) {
-  assert(range.getType() && "expected !linalg.range type");
-  assert(range.getDefiningOp() && "need operations to extract range parts");
-  auto rangeOp = cast<RangeOp>(range.getDefiningOp());
-  auto lb = rangeOp.min();
-  auto ub = rangeOp.max();
-  auto step = rangeOp.step();
-  ForOp forOp = OperationBuilder<ForOp>(lb, ub, step);
-  *iv = forOp.getInductionVar();
-  auto *body = forOp.getBody();
-  enter(body);
-}
-
-mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(Value *iv,
-                                               SubViewOp::Range range) {
-  ForOp forOp = OperationBuilder<ForOp>(range.offset, range.size, range.stride);
-  *iv = forOp.getInductionVar();
-  auto *body = forOp.getBody();
-  enter(body);
-}
-
-Value mlir::edsc::LoopRangeBuilder::operator()(std::function<void(void)> fun) {
-  if (fun)
-    fun();
-  exit();
-  return Value();
-}
-
-mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
-  loops.reserve(ranges.size());
-  for (unsigned i = 0, e = ranges.size(); i < e; ++i)
-    loops.emplace_back(&ivs[i], ranges[i]);
-  assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
-}
-
-mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
-  loops.reserve(ranges.size());
-  for (unsigned i = 0, e = ranges.size(); i < e; ++i)
-    loops.emplace_back(&ivs[i], ranges[i]);
-  assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
-}
-
-Value LoopNestRangeBuilder::LoopNestRangeBuilder::operator()(
-    std::function<void(void)> fun) {
-  if (fun)
-    fun();
-  for (auto &lit : reverse(loops)) {
-    lit({});
+static void unpackRanges(ArrayRef<SubViewOp::Range> ranges,
+                         SmallVectorImpl<Value> &lbs,
+                         SmallVectorImpl<Value> &ubs,
+                         SmallVectorImpl<Value> &steps) {
+  for (SubViewOp::Range range : ranges) {
+    lbs.emplace_back(range.offset);
+    ubs.emplace_back(range.size);
+    steps.emplace_back(range.stride);
   }
-  return Value();
 }
 
 namespace mlir {
@@ -80,39 +37,33 @@ namespace edsc {
 
 template <>
 GenericLoopNestRangeBuilder<scf::ForOp>::GenericLoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
-  builder = std::make_unique<LoopNestRangeBuilder>(ivs, ranges);
+    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
+  SmallVector<Value, 4> lbs, ubs, steps;
+  unpackRanges(ranges, lbs, ubs, steps);
+  builder = std::make_unique<LoopNestBuilder>(ivs, lbs, ubs, steps);
 }
 
 template <>
 GenericLoopNestRangeBuilder<AffineForOp>::GenericLoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
-  SmallVector<Value, 4> lbs;
-  SmallVector<Value, 4> ubs;
-  SmallVector<int64_t, 4> steps;
-  for (Value range : ranges) {
-    assert(range.getType() && "expected linalg.range type");
-    assert(range.getDefiningOp() && "need operations to extract range parts");
-    RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
-    lbs.emplace_back(rangeOp.min());
-    ubs.emplace_back(rangeOp.max());
-    steps.emplace_back(rangeOp.step());
+    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
+  SmallVector<Value, 4> lbs, ubs, steps;
+  unpackRanges(ranges, lbs, ubs, steps);
+  SmallVector<int64_t, 4> constantSteps;
+  constantSteps.reserve(steps.size());
+  for (Value v : steps) {
+    auto op = v.getDefiningOp<ConstantIndexOp>();
+    assert(op && "Affine loops require constant steps");
+    constantSteps.push_back(op.getValue());
   }
-  builder = std::make_unique<AffineLoopNestBuilder>(ivs, lbs, ubs, steps);
+  builder =
+      std::make_unique<AffineLoopNestBuilder>(ivs, lbs, ubs, constantSteps);
 }
 
 template <>
 GenericLoopNestRangeBuilder<scf::ParallelOp>::GenericLoopNestRangeBuilder(
-    MutableArrayRef<Value> ivs, ArrayRef<Value> ranges) {
+    MutableArrayRef<Value> ivs, ArrayRef<SubViewOp::Range> ranges) {
   SmallVector<Value, 4> lbs, ubs, steps;
-  for (Value range : ranges) {
-    assert(range.getType() && "expected linalg.range type");
-    assert(range.getDefiningOp() && "need operations to extract range parts");
-    RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
-    lbs.emplace_back(rangeOp.min());
-    ubs.emplace_back(rangeOp.max());
-    steps.emplace_back(rangeOp.step());
-  }
+  unpackRanges(ranges, lbs, ubs, steps);
   builder = std::make_unique<ParallelLoopNestBuilder>(ivs, lbs, ubs, steps);
 }
 

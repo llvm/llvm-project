@@ -513,9 +513,9 @@ entry:
                                  i32 4, label %case_e ], !prof !9
 ; CHECK: edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
 ; CHECK: edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6aaaaaa9 / 0x80000000 = 83.33% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x0aaaaaa9 / 0x80000000 = 8.33%
-; CHECK: edge entry -> case_e probability is 0x0aaaaaa9 / 0x80000000 = 8.33%
+; CHECK: edge entry -> case_c probability is 0x6aaaaaaa / 0x80000000 = 83.33% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x0aaaaaaa / 0x80000000 = 8.33%
+; CHECK: edge entry -> case_e probability is 0x0aaaaaaa / 0x80000000 = 8.33%
 
 case_a:
   unreachable

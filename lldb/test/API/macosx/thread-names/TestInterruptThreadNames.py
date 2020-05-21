@@ -14,6 +14,7 @@ class TestInterruptThreadNames(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
+    @skipIfReproducer # While loop with non fixed number of iterations.
     def test_with_python_api(self):
         """Test that we get thread names when interrupting a process."""
         self.build()

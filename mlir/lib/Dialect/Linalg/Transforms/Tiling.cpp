@@ -38,8 +38,9 @@ using folded_affine_min = FoldedValueBuilder<AffineMinOp>;
 #define DEBUG_TYPE "linalg-tiling"
 
 static bool isZero(Value v) {
-  return isa_and_nonnull<ConstantIndexOp>(v.getDefiningOp()) &&
-         cast<ConstantIndexOp>(v.getDefiningOp()).getValue() == 0;
+  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
+    return cst.getValue() == 0;
+  return false;
 }
 
 using LoopIndexToRangeIndexMap = DenseMap<int, int>;
@@ -55,11 +56,11 @@ using LoopIndexToRangeIndexMap = DenseMap<int, int>;
 // indices of newly created loops.
 static std::tuple<SmallVector<SubViewOp::Range, 4>, LoopIndexToRangeIndexMap>
 makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
-                    ArrayRef<Value> allViewSizes, ArrayRef<Value> allTileSizes,
-                    OperationFolder *folder) {
+                    ArrayRef<Value> allViewSizes,
+                    ArrayRef<Value> allTileSizes) {
   assert(allTileSizes.size() == map.getNumResults());
   // Apply `map` to get view sizes in loop order.
-  auto viewSizes = applyMapToValues(b, loc, map, allViewSizes, folder);
+  auto viewSizes = applyMapToValues(b, loc, map, allViewSizes);
   SmallVector<Value, 4> tileSizes(allTileSizes.begin(), allTileSizes.end());
 
   // Traverse the tile sizes, which are in loop order, erase zeros everywhere.
@@ -76,10 +77,9 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
 
   // Create a new range with the applied tile sizes.
   SmallVector<SubViewOp::Range, 4> res;
-  for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
-    res.push_back(SubViewOp::Range{folded_std_constant_index(folder, 0),
-                                   viewSizes[idx], tileSizes[idx]});
-  }
+  for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx)
+    res.push_back(SubViewOp::Range{std_constant_index(0), viewSizes[idx],
+                                   tileSizes[idx]});
   return std::make_tuple(res, loopIndexToRangeIndex);
 }
 
@@ -222,10 +222,11 @@ static bool isTiled(AffineMap map, ArrayRef<Value> tileSizes) {
   return false;
 }
 
-static SmallVector<Value, 4>
-makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
-               ArrayRef<Value> ivs, ArrayRef<Value> tileSizes,
-               ArrayRef<Value> viewSizes, OperationFolder *folder) {
+static SmallVector<Value, 4> makeTiledViews(OpBuilder &b, Location loc,
+                                            LinalgOp linalgOp,
+                                            ArrayRef<Value> ivs,
+                                            ArrayRef<Value> tileSizes,
+                                            ArrayRef<Value> viewSizes) {
   assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
@@ -240,8 +241,7 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
   SmallVector<Value, 8> lbs, subViewSizes;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     bool isTiled = !isZero(tileSizes[idx]);
-    lbs.push_back(isTiled ? ivs[idxIvs++]
-                          : (Value)folded_std_constant_index(folder, 0));
+    lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)std_constant_index(0));
     subViewSizes.push_back(isTiled ? tileSizes[idx] : viewSizes[idx]);
   }
 
@@ -270,18 +270,18 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
     strides.reserve(rank);
     for (unsigned r = 0; r < rank; ++r) {
       if (!isTiled(map.getSubMap({r}), tileSizes)) {
-        offsets.push_back(folded_std_constant_index(folder, 0));
+        offsets.push_back(std_constant_index(0));
         sizes.push_back(std_dim(view, r));
-        strides.push_back(folded_std_constant_index(folder, 1));
+        strides.push_back(std_constant_index(1));
         continue;
       }
 
       // Tiling creates a new slice at the proper index, the slice step is 1
       // (i.e. the slice view does not subsample, stepping occurs in the loop).
       auto m = map.getSubMap({r});
-      auto offset = applyMapToValues(b, loc, m, lbs, folder).front();
+      auto offset = applyMapToValues(b, loc, m, lbs).front();
       offsets.push_back(offset);
-      auto size = applyMapToValues(b, loc, m, subViewSizes, folder).front();
+      auto size = applyMapToValues(b, loc, m, subViewSizes).front();
 
       // The size of the subview should be trimmed to avoid out-of-bounds
       // accesses, unless we statically know the subview size divides the view
@@ -297,64 +297,64 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
              getAffineDimExpr(/*position=*/1, b.getContext()) -
                  getAffineDimExpr(/*position=*/2, b.getContext())},
             b.getContext());
-        auto d = folded_std_dim(folder, view, r);
-        size = folded_affine_min(folder, b.getIndexType(), minMap,
-                                 ValueRange{size, d, offset});
+        auto d = std_dim(view, r);
+        size =
+            affine_min(b.getIndexType(), minMap, ValueRange{size, d, offset});
       }
 
       sizes.push_back(size);
-      strides.push_back(folded_std_constant_index(folder, 1));
+      strides.push_back(std_constant_index(1));
     }
 
     res.push_back(b.create<SubViewOp>(loc, view, offsets, sizes, strides));
   }
-
-  // Traverse the mins/maxes and erase those that don't have uses left.
-  // This is a special type of folding that we only apply when `folder` is
-  // defined.
-  if (folder)
-    for (auto v : llvm::concat<Value>(lbs, subViewSizes))
-      if (v.use_empty())
-        v.getDefiningOp()->erase();
 
   return res;
 }
 
 template <typename LoopTy>
 Optional<TiledLinalgOp> static tileLinalgOpImpl(
-    OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
-    ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
+    OpBuilder &b, LinalgOp op, const LinalgTilingOptions &options) {
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(op);
+  ScopedContext scope(b, op.getLoc());
+
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   // 1. Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of
   // adjusting affine maps to account for missing dimensions.
-  assert(op.getNumParallelLoops() + op.getNumReductionLoops() +
-                 op.getNumWindowLoops() ==
-             tileSizes.size() &&
-         "expected matching number of tile sizes and loops");
+  auto nLoops = op.getNumLoops();
+  SmallVector<Value, 4> tileSizeVector =
+      options.tileSizeComputationFunction(b, op);
+  if (tileSizeVector.size() < nLoops) {
+    auto zero = std_constant_index(0);
+    tileSizeVector.append(nLoops - tileSizeVector.size(), zero);
+  }
+
+  ArrayRef<Value> tileSizes = tileSizeVector;
+  // Initial tile sizes may be too big, only take the first nLoops.
+  tileSizes = tileSizes.take_front(nLoops);
+
+  if (llvm::all_of(tileSizes, isZero))
+    return llvm::None;
 
   if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
     // For conv op only support tiling along batch dimension (which is the first
     // loop).
-    if (convOp.padding() &&
-        !llvm::all_of(tileSizes.drop_front(),
-                      [](Value val) { return isZero(val); }))
+    if (convOp.padding() && !llvm::all_of(tileSizes.drop_front(), isZero))
       return llvm::None;
   }
 
   // If interchangeVector is empty, use the identity. Build the permutation map
   // otherwise.
-  auto invPermutationMap = AffineMap::getMultiDimIdentityMap(
-      tileSizes.size(), ScopedContext::getContext());
-  if (!interchangeVector.empty())
+  auto invPermutationMap =
+      AffineMap::getMultiDimIdentityMap(tileSizes.size(), b.getContext());
+  if (!options.interchangeVector.empty())
     invPermutationMap = inversePermutation(AffineMap::getPermutationMap(
-        interchangeVector, ScopedContext::getContext()));
+        options.interchangeVector, b.getContext()));
   if (!invPermutationMap)
     return llvm::None;
 
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(op);
-  ScopedContext scope(b, op.getLoc());
   // 2. Build the tiled loop ranges.
   auto viewSizes = getViewSizes(b, op);
   // The flattened loopToOperandRangesMaps is expected to be an invertible
@@ -368,22 +368,15 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
 
   SmallVector<SubViewOp::Range, 4> loopRanges;
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
-  std::tie(loopRanges, loopIndexToRangeIndex) =
-      makeTiledLoopRanges(b, scope.getLocation(), viewSizesToLoopsMap,
-                          viewSizes, tileSizes, folder);
-  if (!interchangeVector.empty())
-    applyPermutationToVector(loopRanges, interchangeVector);
+  std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
+      b, scope.getLocation(), viewSizesToLoopsMap, viewSizes, tileSizes);
+  if (!options.interchangeVector.empty())
+    applyPermutationToVector(loopRanges, options.interchangeVector);
 
   // 3. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs(loopRanges.size());
-  // Convert SubViewOp::Range to linalg_range.
-  SmallVector<Value, 4> linalgRanges;
-  for (auto &range : loopRanges) {
-    linalgRanges.push_back(
-        linalg_range(range.offset, range.size, range.stride));
-  }
-  GenericLoopNestRangeBuilder<LoopTy>(ivs, linalgRanges)([&] {
+  GenericLoopNestRangeBuilder<LoopTy>(ivs, loopRanges)([&] {
     auto &b = ScopedContext::getBuilderRef();
     auto loc = ScopedContext::getLocation();
     SmallVector<Value, 4> ivValues(ivs.begin(), ivs.end());
@@ -393,11 +386,10 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
     // assuming that loopRanges have previously been permuted by
     // (i,j,k)->(k,i,j) So this permutation should be the inversePermutation of
     // that one: (d0,d1,d2)->(d2,d0,d1)
-    if (!interchangeVector.empty())
-      ivValues = applyMapToValues(b, loc, invPermutationMap, ivValues, folder);
+    if (!options.interchangeVector.empty())
+      ivValues = applyMapToValues(b, loc, invPermutationMap, ivValues);
 
-    auto views =
-        makeTiledViews(b, loc, op, ivValues, tileSizes, viewSizes, folder);
+    auto views = makeTiledViews(b, loc, op, ivValues, tileSizes, viewSizes);
     auto operands = getAssumedNonViewOperands(op);
     views.append(operands.begin(), operands.end());
     res = op.clone(b, loc, views);
@@ -413,102 +405,106 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
     loops.push_back(iv.cast<BlockArgument>().getOwner()->getParentOp());
     assert(loops.back() && "no owner found for induction variable!");
   }
-
   return TiledLinalgOp{res, loops};
 }
 
-template <typename LoopTy>
-static Optional<TiledLinalgOp>
-tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
-                 ArrayRef<unsigned> interchangeVector,
-                 OperationFolder *folder) {
-  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
-  if (tileSizes.empty())
-    return llvm::None;
-
-  // The following uses the convention that "tiling by zero" skips tiling a
-  // particular dimension. This convention is significantly simpler to handle
-  // instead of adjusting affine maps to account for missing dimensions.
-  auto nLoops = op.getNumParallelLoops() + op.getNumReductionLoops() +
-                op.getNumWindowLoops();
-  tileSizes = tileSizes.take_front(nLoops);
-  // If only 0 tilings are left, then return.
-  if (llvm::all_of(tileSizes, [](int64_t v) { return v == 0; }))
-    return llvm::None;
-
-  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // For conv op only support tiling along batch dimension (which is the first
-    // loop).
-    if (convOp.padding() && !llvm::all_of(tileSizes.drop_front(),
-                                          [](int64_t val) { return val == 0; }))
-      return llvm::None;
-  }
-
-  // Create a builder for tile size constants.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(op);
-  ScopedContext scope(b, op.getLoc());
-
-  // Materialize concrete tile size values to pass the generic tiling function.
-  SmallVector<Value, 8> tileSizeValues;
-  tileSizeValues.reserve(tileSizes.size());
-  for (auto ts : tileSizes)
-    tileSizeValues.push_back(folded_std_constant_index(folder, ts));
-  // Pad tile sizes with zero values to enforce our convention.
-  if (tileSizeValues.size() < nLoops) {
-    for (unsigned i = tileSizeValues.size(); i < nLoops; ++i)
-      tileSizeValues.push_back(folded_std_constant_index(folder, 0));
-  }
-
-  return tileLinalgOpImpl<LoopTy>(b, op, tileSizeValues, interchangeVector,
-                                  folder);
-}
-
 Optional<TiledLinalgOp>
-mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
-                           ArrayRef<unsigned> interchangeVector,
-                           OperationFolder *folder) {
-  return tileLinalgOpImpl<scf::ForOp>(b, op, tileSizes, interchangeVector,
-                                      folder);
+mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
+                           const LinalgTilingOptions &options) {
+  if (options.loopType == LinalgTilingLoopType::Loops)
+    return tileLinalgOpImpl<scf::ForOp>(b, op, options);
+  if (options.loopType == LinalgTilingLoopType::ParallelLoops)
+    return tileLinalgOpImpl<scf::ParallelOp>(b, op, options);
+  // TODO: Impl tiling to affine loops when it makes sense.
+  return llvm::None;
 }
 
-Optional<TiledLinalgOp> mlir::linalg::tileLinalgOpToParallelLoops(
-    OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
-    ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
-  return tileLinalgOpImpl<scf::ParallelOp>(b, op, tileSizes, interchangeVector,
-                                           folder);
+namespace {
+/// Helper classes for type list expansion.
+template <typename... OpTypes>
+class CanonicalizationPatternList;
+
+template <>
+class CanonicalizationPatternList<> {
+public:
+  static void insert(OwningRewritePatternList &patterns, MLIRContext *ctx) {}
+};
+
+template <typename OpTy, typename... OpTypes>
+class CanonicalizationPatternList<OpTy, OpTypes...> {
+public:
+  static void insert(OwningRewritePatternList &patterns, MLIRContext *ctx) {
+    OpTy::getCanonicalizationPatterns(patterns, ctx);
+    CanonicalizationPatternList<OpTypes...>::insert(patterns, ctx);
+  }
+};
+
+/// Helper classes for type list expansion.
+template <typename... OpTypes>
+class RewritePatternList;
+
+template <>
+class RewritePatternList<> {
+public:
+  static void insert(OwningRewritePatternList &patterns,
+                     const LinalgTilingOptions &options, MLIRContext *ctx) {}
+};
+
+template <typename OpTy, typename... OpTypes>
+class RewritePatternList<OpTy, OpTypes...> {
+public:
+  static void insert(OwningRewritePatternList &patterns,
+                     const LinalgTilingOptions &options, MLIRContext *ctx) {
+    patterns.insert<LinalgTilingPattern<OpTy>>(ctx, options,
+                                               LinalgMarker({}, "tiled"));
+    RewritePatternList<OpTypes...>::insert(patterns, options, ctx);
+  }
+};
+} // namespace
+
+OwningRewritePatternList
+mlir::linalg::getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx) {
+  OwningRewritePatternList patterns;
+  AffineApplyOp::getCanonicalizationPatterns(patterns, ctx);
+  AffineForOp::getCanonicalizationPatterns(patterns, ctx);
+  AffineMinOp::getCanonicalizationPatterns(patterns, ctx);
+  AffineMaxOp::getCanonicalizationPatterns(patterns, ctx);
+  scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
+  scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
+  ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
+  SubViewOp::getCanonicalizationPatterns(patterns, ctx);
+  ViewOp::getCanonicalizationPatterns(patterns, ctx);
+  CanonicalizationPatternList<
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+      >::insert(patterns, ctx);
+  return patterns;
 }
 
-Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
-    OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
-    ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
-  return tileLinalgOpImpl<scf::ForOp>(b, op, tileSizes, interchangeVector,
-                                      folder);
+/// Populate the given list with patterns that apply Linalg tiling.
+static void insertTilingPatterns(OwningRewritePatternList &patterns,
+                                 const LinalgTilingOptions &options,
+                                 MLIRContext *ctx) {
+  RewritePatternList<
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+      >::insert(patterns, options, ctx);
 }
 
-Optional<TiledLinalgOp> mlir::linalg::tileLinalgOpToParallelLoops(
-    OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
-    ArrayRef<unsigned> interchangeVector, OperationFolder *folder) {
-  return tileLinalgOpImpl<scf::ParallelOp>(b, op, tileSizes, interchangeVector,
-                                           folder);
-}
-
-template <typename LoopTy>
-static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
-  OpBuilder b(f);
-  OperationFolder folder(f.getContext());
-  f.walk([tileSizes, &b, &folder](LinalgOp op) {
-    if (!op.hasBufferSemantics())
-      return;
-    auto opLoopsPair = tileLinalgOpImpl<LoopTy>(
-        b, op, tileSizes, /*interchangeVector=*/{}, &folder);
-    // If tiling occurred successfully, erase old op.
-    if (opLoopsPair)
-      op.erase();
-  });
-  f.walk([](LinalgOp op) {
-    if (isOpTriviallyDead(op))
-      op.erase();
+static void applyTilingToLoopPatterns(LinalgTilingLoopType loopType,
+                                      FuncOp funcOp,
+                                      ArrayRef<int64_t> tileSizes) {
+  auto options =
+      LinalgTilingOptions().setTileSizes(tileSizes).setLoopType(loopType);
+  MLIRContext *ctx = funcOp.getContext();
+  OwningRewritePatternList patterns;
+  insertTilingPatterns(patterns, options, ctx);
+  applyPatternsAndFoldGreedily(funcOp, patterns);
+  applyPatternsAndFoldGreedily(funcOp,
+                               getLinalgTilingCanonicalizationPatterns(ctx));
+  // Drop the marker.
+  funcOp.walk([](LinalgOp op) {
+    op.removeAttr(LinalgTransforms::kLinalgTransformMarker);
   });
 }
 
@@ -518,7 +514,8 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   LinalgTilingPass(ArrayRef<int64_t> sizes) { tileSizes = sizes; }
 
   void runOnFunction() override {
-    tileLinalgOps<scf::ForOp>(getFunction(), tileSizes);
+    applyTilingToLoopPatterns(LinalgTilingLoopType::Loops, getFunction(),
+                              tileSizes);
   }
 };
 
@@ -530,7 +527,8 @@ struct LinalgTilingToParallelLoopsPass
   }
 
   void runOnFunction() override {
-    tileLinalgOps<scf::ParallelOp>(getFunction(), tileSizes);
+    applyTilingToLoopPatterns(LinalgTilingLoopType::ParallelLoops,
+                              getFunction(), tileSizes);
   }
 };
 

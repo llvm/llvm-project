@@ -295,6 +295,28 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
     return Builder.CreateShuffleVector(NegOp0, NegOp1, Shuf->getShuffleMask(),
                                        I->getName() + ".neg");
   }
+  case Instruction::ExtractElement: {
+    // `extractelement` is negatible if source operand is negatible.
+    auto *EEI = cast<ExtractElementInst>(I);
+    Value *NegVector = visit(EEI->getVectorOperand(), Depth + 1);
+    if (!NegVector) // Early return.
+      return nullptr;
+    return Builder.CreateExtractElement(NegVector, EEI->getIndexOperand(),
+                                        I->getName() + ".neg");
+  }
+  case Instruction::InsertElement: {
+    // `insertelement` is negatible if both the source vector and
+    // element-to-be-inserted are negatible.
+    auto *IEI = cast<InsertElementInst>(I);
+    Value *NegVector = visit(IEI->getOperand(0), Depth + 1);
+    if (!NegVector) // Early return.
+      return nullptr;
+    Value *NegNewElt = visit(IEI->getOperand(1), Depth + 1);
+    if (!NegNewElt) // Early return.
+      return nullptr;
+    return Builder.CreateInsertElement(NegVector, NegNewElt, IEI->getOperand(2),
+                                       I->getName() + ".neg");
+  }
   case Instruction::Trunc: {
     // `trunc` is negatible if its operand is negatible.
     Value *NegOp = visit(I->getOperand(0), Depth + 1);

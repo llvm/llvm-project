@@ -38,6 +38,7 @@ class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
 class BranchInst;
+class CallBase;
 class Function;
 class GlobalValue;
 class IntrinsicInst;
@@ -103,6 +104,65 @@ struct HardwareLoopInfo {
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);
   bool canAnalyze(LoopInfo &LI);
+};
+
+class IntrinsicCostAttributes {
+  const IntrinsicInst *II = nullptr;
+  Type *RetTy = nullptr;
+  Intrinsic::ID IID;
+  SmallVector<Type *, 4> ParamTys;
+  SmallVector<Value *, 4> Arguments;
+  FastMathFlags FMF;
+  unsigned VF = 1;
+  // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
+  // arguments and the return value will be computed based on types.
+  unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
+
+public:
+  IntrinsicCostAttributes(const IntrinsicInst &I);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
+                          unsigned Factor);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
+                          unsigned Factor, unsigned ScalarCost);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                          ArrayRef<Type *> Tys, FastMathFlags Flags);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                          ArrayRef<Type *> Tys, FastMathFlags Flags,
+                          unsigned ScalarCost);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                          ArrayRef<Type *> Tys, FastMathFlags Flags,
+                          unsigned ScalarCost,
+                          const IntrinsicInst *I);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                          ArrayRef<Type *> Tys);
+
+  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                          ArrayRef<Value *> Args);
+
+  Intrinsic::ID getID() const { return IID; }
+  const IntrinsicInst *getInst() const { return II; }
+  Type *getReturnType() const { return RetTy; }
+  unsigned getVectorFactor() const { return VF; }
+  FastMathFlags getFlags() const { return FMF; }
+  unsigned getScalarizationCost() const { return ScalarizationCost; }
+  const SmallVectorImpl<Value *> &getArgs() const { return Arguments; }
+  const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
+
+  bool isTypeBasedOnly() const {
+    return Arguments.empty();
+  }
+
+  bool skipScalarizationCost() const {
+    return ScalarizationCost != std::numeric_limits<unsigned>::max();
+  }
 };
 
 class TargetTransformInfo;
@@ -211,9 +271,6 @@ public:
                  ArrayRef<const Value *> Operands,
                  TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
-  /// Estimate the cost of a EXT operation when lowered.
-  int getExtCost(const Instruction *I, const Value *Src) const;
-
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
   /// targets where calls are unusually expensive.
@@ -233,18 +290,6 @@ public:
   /// FIXME: It would be nice to base the bonus values on something more
   /// scientific. A target may has no bonus on vector instructions.
   int getInlinerVectorBonusPercent() const;
-
-  /// Estimate the cost of an intrinsic when lowered.
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<Type *> ParamTys,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TCK_SizeAndLatency) const;
-
-  /// Estimate the cost of an intrinsic when lowered.
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<const Value *> Arguments,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
   /// \return the expected cost of a memcpy, which could e.g. depend on the
   /// source/destination type and alignment and the number of bytes copied.
@@ -994,25 +1039,9 @@ public:
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
-  /// 3. scalar instruction which is to be vectorized with VF.
-  /// I is the optional original context instruction holding the call to the
-  /// intrinsic
-  int getIntrinsicInstrCost(
-    Intrinsic::ID ID, Type *RetTy, ArrayRef<Value *> Args,
-    FastMathFlags FMF, unsigned VF = 1,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr) const;
-
-  /// \returns The cost of Intrinsic instructions. Types analysis only.
-  /// If ScalarizationCostPassed is UINT_MAX, the cost of scalarizing the
-  /// arguments and the return value will be computed based on types.
-  /// I is the optional original context instruction holding the call to the
-  /// intrinsic
-  int getIntrinsicInstrCost(
-    Intrinsic::ID ID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
-    unsigned ScalarizationCostPassed = UINT_MAX,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-    const Instruction *I = nullptr) const;
+  /// 3. scalar instruction which is to be vectorized.
+  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                            TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
   int getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
@@ -1191,16 +1220,8 @@ public:
   virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
                          ArrayRef<const Value *> Operands,
                          TTI::TargetCostKind CostKind) = 0;
-  virtual int getExtCost(const Instruction *I, const Value *Src) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
-  virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                               ArrayRef<Type *> ParamTys, const User *U,
-                               enum TargetCostKind CostKind) = 0;
-  virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                               ArrayRef<const Value *> Arguments,
-                               const User *U,
-                               enum TargetCostKind CostKind) = 0;
   virtual int getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
@@ -1382,16 +1403,8 @@ public:
   virtual int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                                      bool IsPairwiseForm, bool IsUnsigned,
                                      TTI::TargetCostKind CostKind) = 0;
-  virtual int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                    ArrayRef<Type *> Tys, FastMathFlags FMF,
-                                    unsigned ScalarizationCostPassed,
-                                    TTI::TargetCostKind CostKind,
-                                    const Instruction *I) = 0;
-  virtual int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                    ArrayRef<Value *> Args, FastMathFlags FMF,
-                                    unsigned VF,
-                                    TTI::TargetCostKind CostKind,
-                                    const Instruction *I) = 0;
+  virtual int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                    TTI::TargetCostKind CostKind) = 0;
   virtual int getCallInstrCost(Function *F, Type *RetTy,
                                ArrayRef<Type *> Tys,
                                TTI::TargetCostKind CostKind) = 0;
@@ -1460,26 +1473,11 @@ public:
                  enum TargetTransformInfo::TargetCostKind CostKind) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands);
   }
-  int getExtCost(const Instruction *I, const Value *Src) override {
-    return Impl.getExtCost(I, Src);
-  }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();
   }
   int getInlinerVectorBonusPercent() override {
     return Impl.getInlinerVectorBonusPercent();
-  }
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<Type *> ParamTys,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) override {
-    return Impl.getIntrinsicCost(IID, RetTy, ParamTys, U, CostKind);
-  }
-  int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                       ArrayRef<const Value *> Arguments,
-                       const User *U = nullptr,
-                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) override {
-    return Impl.getIntrinsicCost(IID, RetTy, Arguments, U, CostKind);
   }
   int getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
@@ -1828,19 +1826,9 @@ public:
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsPairwiseForm, IsUnsigned,
                                        CostKind);
   }
-  int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy, ArrayRef<Type *> Tys,
-                            FastMathFlags FMF, unsigned ScalarizationCostPassed,
-                            TTI::TargetCostKind CostKind,
-                            const Instruction *I) override {
-    return Impl.getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed, CostKind, I);
-  }
-  int getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                            ArrayRef<Value *> Args, FastMathFlags FMF,
-                            unsigned VF,
-                            TTI::TargetCostKind CostKind,
-                            const Instruction *I) override {
-    return Impl.getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, CostKind, I);
+  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getIntrinsicInstrCost(ICA, CostKind);
   }
   int getCallInstrCost(Function *F, Type *RetTy,
                        ArrayRef<Type *> Tys,

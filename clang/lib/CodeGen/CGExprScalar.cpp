@@ -223,8 +223,7 @@ static void updateFastMathFlags(llvm::FastMathFlags &FMF,
   FMF.setNoSignedZeros(FPFeatures.noSignedZeros());
   FMF.setAllowReciprocal(FPFeatures.allowReciprocalMath());
   FMF.setApproxFunc(FPFeatures.allowApproximateFunctions());
-  FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement() ||
-                       FPFeatures.allowFPContractWithinStatement());
+  FMF.setAllowContract(FPFeatures.allowFPContractAcrossStatement());
 }
 
 /// Propagate fast-math flags from \p Op to the instruction in \p V.

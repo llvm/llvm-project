@@ -6,7 +6,7 @@ declare void @simple_fn()
 define void @tail_call() {
   ; COMMON-LABEL: name: tail_call
   ; COMMON: bb.1 (%ir-block.0):
-  ; COMMON:   TCRETURNdi @simple_fn, 0, csr_aarch64_aapcs, implicit $sp
+  ; COMMON:   TCRETURNdi @simple_fn, 0, csr{{.*}}aarch64_aapcs, implicit $sp
   tail call void @simple_fn()
   ret void
 }
@@ -18,7 +18,7 @@ define void @indirect_tail_call(void()* %func) {
   ; COMMON: bb.1 (%ir-block.0):
   ; COMMON:   liveins: $x0
   ; COMMON:   [[COPY:%[0-9]+]]:tcgpr64(p0) = COPY $x0
-  ; COMMON:   TCRETURNri [[COPY]](p0), 0, csr_aarch64_aapcs, implicit $sp
+  ; COMMON:   TCRETURNri [[COPY]](p0), 0, csr{{.*}}aarch64_aapcs, implicit $sp
   tail call void %func()
   ret void
 }
@@ -30,7 +30,7 @@ define void @test_outgoing_args(i32 %a) {
   ; COMMON:   liveins: $w0
   ; COMMON:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; COMMON:   $w0 = COPY [[COPY]](s32)
-  ; COMMON:   TCRETURNdi @outgoing_args_fn, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0
+  ; COMMON:   TCRETURNdi @outgoing_args_fn, 0, csr{{.*}}aarch64_aapcs, implicit $sp, implicit $w0
   tail call void @outgoing_args_fn(i32 %a)
   ret void
 }
@@ -44,7 +44,7 @@ define void @test_outgoing_stack_args([8 x <2 x double>], <4 x half> %arg) {
   ; COMMON:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; COMMON:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
   ; COMMON:   $d0 = COPY [[LOAD]](<4 x s16>)
-  ; COMMON:   TCRETURNdi @outgoing_stack_args_fn, 0, csr_aarch64_aapcs, implicit $sp, implicit $d0
+  ; COMMON:   TCRETURNdi @outgoing_stack_args_fn, 0, csr{{.*}}aarch64_aapcs, implicit $sp, implicit $d0
   tail call void @outgoing_stack_args_fn(<4 x half> %arg)
   ret void
 }
@@ -70,7 +70,7 @@ declare i32 @nonvoid_ret()
 define i32 @test_nonvoid_ret() {
   ; COMMON-LABEL: name: test_nonvoid_ret
   ; COMMON: bb.1 (%ir-block.0):
-  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
+  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr{{.*}}aarch64_aapcs, implicit $sp
   %call = tail call i32 @nonvoid_ret()
   ret i32 %call
 }
@@ -85,7 +85,7 @@ define void @test_varargs() {
   ; COMMON:   $w0 = COPY [[C]](s32)
   ; COMMON:   $d0 = COPY [[C1]](s64)
   ; COMMON:   $x1 = COPY [[C2]](s64)
-  ; COMMON:   TCRETURNdi @varargs, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; COMMON:   TCRETURNdi @varargs, 0, csr{{.*}}aarch64_aapcs, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   tail call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12)
   ret void
 }
@@ -96,7 +96,7 @@ define void @test_varargs() {
 define void @test_varargs_2() {
   ; DARWIN-LABEL: name: test_varargs_2
   ; DARWIN-NOT: TCRETURNdi @varargs
-  ; DARWIN:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; DARWIN:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN:   RET_ReallyLR
 
@@ -121,7 +121,7 @@ define void @test_varargs_2() {
 define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN-LABEL: name: test_varargs_3
   ; DARWIN-NOT: TCRETURNdi @varargs
-  ; DARWIN:   BL @varargs, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; DARWIN:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN:   RET_ReallyLR
 
@@ -172,7 +172,7 @@ define void @test_byval(i8* byval %ptr) {
   ; COMMON:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; COMMON:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
   ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   BL @simple_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; COMMON:   BL @simple_fn, csr{{.*}}aarch64_aapcs, implicit-def $lr, implicit $sp
   ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; COMMON:   RET_ReallyLR
   tail call void @simple_fn()
@@ -186,7 +186,7 @@ define void @test_inreg(i8* inreg %ptr) {
   ; COMMON:   liveins: $x0
   ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   BL @simple_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; COMMON:   BL @simple_fn, csr{{.*}}aarch64_aapcs, implicit-def $lr, implicit $sp
   ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; COMMON:   RET_ReallyLR
   tail call void @simple_fn()
@@ -197,7 +197,7 @@ declare fastcc void @fast_fn()
 define void @test_mismatched_caller() {
   ; COMMON-LABEL: name: test_mismatched_caller
   ; COMMON: bb.1 (%ir-block.0):
-  ; COMMON:   TCRETURNdi @fast_fn, 0, csr_aarch64_aapcs, implicit $sp
+  ; COMMON:   TCRETURNdi @fast_fn, 0, csr{{.*}}aarch64_aapcs, implicit $sp
   tail call fastcc void @fast_fn()
   ret void
 }
@@ -207,7 +207,7 @@ declare void @llvm.assume(i1)
 define void @test_assume() local_unnamed_addr {
   ; COMMON-LABEL: name: test_assume
   ; COMMON: bb.1.entry:
-  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
+  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr{{.*}}aarch64_aapcs, implicit $sp
 entry:
   %x = tail call i32 @nonvoid_ret()
   %y = icmp ne i32 %x, 0
@@ -222,7 +222,7 @@ define void @test_lifetime() local_unnamed_addr {
   ; COMMON: bb.1.entry:
   ; COMMON:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.t
   ; COMMON:   LIFETIME_START %stack.0.t
-  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
+  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr{{.*}}aarch64_aapcs, implicit $sp
 entry:
   %t = alloca i8, align 1
   call void @llvm.lifetime.start.p0i8(i64 1, i8* %t)
@@ -242,11 +242,11 @@ define hidden swiftcc i64 @swiftself_indirect_tail(i64* swiftself %arg) {
   ; COMMON:   liveins: $x20
   ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x20
   ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   BL @pluto, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; COMMON:   BL @pluto, csr{{.*}}aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
   ; COMMON:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; COMMON:   $x20 = COPY [[COPY]](p0)
-  ; COMMON:   TCRETURNri [[COPY1]](p0), 0, csr_aarch64_aapcs, implicit $sp, implicit $x20
+  ; COMMON:   TCRETURNri [[COPY1]](p0), 0, csr{{.*}}aarch64_aapcs, implicit $sp, implicit $x20
   %tmp = call i8* @pluto()
   %tmp1 = bitcast i8* %tmp to i64 (i64*)*
   %tmp2 = tail call swiftcc i64 %tmp1(i64* swiftself %arg)
@@ -262,7 +262,7 @@ define void @foo(i32*) {
   ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; COMMON:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; COMMON:   $x0 = COPY [[C]](p0)
-  ; COMMON:   TCRETURNdi @must_callee, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0
+  ; COMMON:   TCRETURNdi @must_callee, 0, csr{{.*}}aarch64_aapcs, implicit $sp, implicit $x0
   musttail call void @must_callee(i8* null)
   ret void
 }

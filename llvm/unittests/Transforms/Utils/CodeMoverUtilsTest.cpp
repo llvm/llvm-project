@@ -11,11 +11,11 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

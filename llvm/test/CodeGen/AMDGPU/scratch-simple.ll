@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,SIVI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx803 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI,SIVI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX9_10 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -filetype=obj < %s | llvm-readobj -r | FileCheck --check-prefix=RELS %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W32,GFX9_10 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W64,GFX9_10 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,SIVI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx803 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI,SIVI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX9_10 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -filetype=obj -amdgpu-use-divergent-register-indexing < %s | llvm-readobj -r | FileCheck --check-prefix=RELS %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W32,GFX9_10 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W64,GFX9_10 %s
 
 ; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD0 0x0
 ; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD1 0x0

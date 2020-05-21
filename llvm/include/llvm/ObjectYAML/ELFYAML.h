@@ -161,6 +161,7 @@ struct Chunk {
 
   ChunkKind Kind;
   StringRef Name;
+  Optional<llvm::yaml::Hex64> Offset;
 
   Chunk(ChunkKind K) : Kind(K) {}
   virtual ~Chunk();
@@ -173,7 +174,6 @@ struct Section : public Chunk {
   StringRef Link;
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
-  Optional<llvm::yaml::Hex64> Offset;
 
   // Usually sections are not created implicitly, but loaded from YAML.
   // When they are, this flag is used to signal about that.
@@ -212,11 +212,6 @@ struct Section : public Chunk {
 struct Fill : Chunk {
   Optional<yaml::BinaryRef> Pattern;
   llvm::yaml::Hex64 Size;
-
-  // We have to remember the offset of the fill, because it does not have
-  // a corresponding section header, unlike a section. We might need this
-  // information when writing the output.
-  uint64_t ShOffset;
 
   Fill() : Chunk(ChunkKind::Fill) {}
 

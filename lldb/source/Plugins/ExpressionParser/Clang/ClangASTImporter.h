@@ -102,8 +102,8 @@ public:
   // Namespace maps
   //
 
-  typedef std::vector<std::pair<lldb::ModuleSP, CompilerDeclContext>>
-      NamespaceMap;
+  typedef std::pair<lldb::ModuleSP, CompilerDeclContext> NamespaceMapItem;
+  typedef std::vector<NamespaceMapItem> NamespaceMap;
   typedef std::shared_ptr<NamespaceMap> NamespaceMapSP;
 
   void RegisterNamespaceMap(const clang::NamespaceDecl *decl,

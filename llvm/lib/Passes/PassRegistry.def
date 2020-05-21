@@ -316,6 +316,7 @@ LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #ifndef LOOP_PASS
 #define LOOP_PASS(NAME, CREATE_PASS)
 #endif
+LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("licm", LICMPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())

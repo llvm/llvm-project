@@ -296,42 +296,6 @@ public:
     return BaseT::getGEPCost(PointeeType, Ptr, Operands);
   }
 
-  int getExtCost(const Instruction *I, const Value *Src) {
-    if (getTLI()->isExtFree(I))
-      return TargetTransformInfo::TCC_Free;
-
-    if (isa<ZExtInst>(I) || isa<SExtInst>(I))
-      if (const LoadInst *LI = dyn_cast<LoadInst>(Src))
-        if (getTLI()->isExtLoad(LI, I, DL))
-          return TargetTransformInfo::TCC_Free;
-
-    return TargetTransformInfo::TCC_Basic;
-  }
-
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<const Value *> Arguments, const User *U,
-                            TTI::TargetCostKind CostKind) {
-    return BaseT::getIntrinsicCost(IID, RetTy, Arguments, U, CostKind);
-  }
-
-  unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<Type *> ParamTys, const User *U,
-                            TTI::TargetCostKind CostKind) {
-    if (IID == Intrinsic::cttz) {
-      if (getTLI()->isCheapToSpeculateCttz())
-        return TargetTransformInfo::TCC_Basic;
-      return TargetTransformInfo::TCC_Expensive;
-    }
-
-    if (IID == Intrinsic::ctlz) {
-      if (getTLI()->isCheapToSpeculateCtlz())
-        return TargetTransformInfo::TCC_Basic;
-      return TargetTransformInfo::TCC_Expensive;
-    }
-
-    return BaseT::getIntrinsicCost(IID, RetTy, ParamTys, U, CostKind);
-  }
-
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
                                             unsigned &JumpTableSize,
                                             ProfileSummaryInfo *PSI,
@@ -725,11 +689,21 @@ public:
           SrcSize == DstSize)
         return 0;
       break;
+    case Instruction::FPExt:
+      if (I && getTLI()->isExtFree(I))
+        return 0;
+      break;
     case Instruction::ZExt:
       if (TLI->isZExtFree(SrcLT.second, DstLT.second))
         return 0;
       LLVM_FALLTHROUGH;
-    case Instruction::SExt: {
+    case Instruction::SExt:
+      if (!I)
+        break;
+
+      if (getTLI()->isExtFree(I))
+        return 0;
+
       // If this is a zext/sext of a load, return 0 if the corresponding
       // extending load exists on target.
       if (I && isa<LoadInst>(I->getOperand(0))) {
@@ -741,7 +715,6 @@ public:
           return 0;
       }
       break;
-    }
     case Instruction::AddrSpaceCast:
       if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
                                    Dst->getPointerAddressSpace()))
@@ -1091,16 +1064,43 @@ public:
   }
 
   /// Get intrinsic cost based on arguments.
-  unsigned getIntrinsicInstrCost(
-      Intrinsic::ID IID, Type *RetTy, ArrayRef<Value *> Args,
-      FastMathFlags FMF, unsigned VF = 1,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) {
+  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind) {
 
+    Intrinsic::ID IID = ICA.getID();
+    auto *ConcreteTTI = static_cast<T *>(this);
+
+    // Special case some scalar intrinsics.
+    if (CostKind != TTI::TCK_RecipThroughput) {
+      switch (IID) {
+      default:
+        break;
+      case Intrinsic::cttz:
+        if (getTLI()->isCheapToSpeculateCttz())
+          return TargetTransformInfo::TCC_Basic;
+        break;
+      case Intrinsic::ctlz:
+        if (getTLI()->isCheapToSpeculateCtlz())
+          return TargetTransformInfo::TCC_Basic;
+        break;
+      case Intrinsic::memcpy:
+        return ConcreteTTI->getMemcpyCost(ICA.getInst());
+      }
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+    }
+
+    // TODO: Combine these two logic paths.
+    if (ICA.isTypeBasedOnly())
+      return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
+
+    const IntrinsicInst *I = ICA.getInst();
+    const SmallVectorImpl<Value *> &Args = ICA.getArgs();
+    FastMathFlags FMF = ICA.getFlags();
+    Type *RetTy = ICA.getReturnType();
+    unsigned VF = ICA.getVectorFactor();
     unsigned RetVF =
         (RetTy->isVectorTy() ? cast<VectorType>(RetTy)->getNumElements() : 1);
     assert((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
-    auto *ConcreteTTI = static_cast<T *>(this);
 
     switch (IID) {
     default: {
@@ -1127,9 +1127,9 @@ public:
         ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
       }
 
-      return ConcreteTTI->getIntrinsicInstrCost(IID, RetTy, Types, FMF,
-                                                ScalarizationCost, CostKind,
-                                                I);
+      IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF,
+                                    ScalarizationCost, I);
+      return ConcreteTTI->getIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::masked_scatter: {
       assert(VF == 1 && "Can't vectorize types here.");
@@ -1161,9 +1161,10 @@ public:
     case Intrinsic::experimental_vector_reduce_fmax:
     case Intrinsic::experimental_vector_reduce_fmin:
     case Intrinsic::experimental_vector_reduce_umax:
-    case Intrinsic::experimental_vector_reduce_umin:
-      return getIntrinsicInstrCost(IID, RetTy, Args[0]->getType(), FMF, 1,
-                                   CostKind, I);
+    case Intrinsic::experimental_vector_reduce_umin: {
+      IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
+      return getIntrinsicInstrCost(Attrs, CostKind);
+    }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
       Value *X = Args[0];
@@ -1213,12 +1214,18 @@ public:
   /// If ScalarizationCostPassed is std::numeric_limits<unsigned>::max(), the
   /// cost of scalarizing the arguments and the return value will be computed
   /// based on types.
-  unsigned getIntrinsicInstrCost(
-      Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
-      unsigned ScalarizationCostPassed = std::numeric_limits<unsigned>::max(),
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) {
+  unsigned getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                          TTI::TargetCostKind CostKind) {
+
     auto *ConcreteTTI = static_cast<T *>(this);
+
+    Intrinsic::ID IID = ICA.getID();
+    Type *RetTy = ICA.getReturnType();
+    const SmallVectorImpl<Type *> &Tys = ICA.getArgTypes();
+    FastMathFlags FMF = ICA.getFlags();
+    unsigned ScalarizationCostPassed = ICA.getScalarizationCost();
+    bool SkipScalarizationCost = ICA.skipScalarizationCost();
+
     auto *VecOpTy = Tys.empty() ? nullptr : dyn_cast<VectorType>(Tys[0]);
 
     SmallVector<unsigned, 2> ISDs;
@@ -1230,7 +1237,7 @@ public:
       unsigned ScalarCalls = 1;
       Type *ScalarRetTy = RetTy;
       if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
-        if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
+        if (!SkipScalarizationCost)
           ScalarizationCost = getScalarizationOverhead(RetVTy, true, false);
         ScalarCalls = std::max(ScalarCalls, RetVTy->getNumElements());
         ScalarRetTy = RetTy->getScalarType();
@@ -1239,7 +1246,7 @@ public:
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         Type *Ty = Tys[i];
         if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-          if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
+          if (!SkipScalarizationCost)
             ScalarizationCost += getScalarizationOverhead(VTy, false, true);
           ScalarCalls = std::max(ScalarCalls, VTy->getNumElements());
           Ty = Ty->getScalarType();
@@ -1249,9 +1256,9 @@ public:
       if (ScalarCalls == 1)
         return 1; // Return cost of a scalar intrinsic. Assume it to be cheap.
 
+      IntrinsicCostAttributes ScalarAttrs(IID, ScalarRetTy, ScalarTys, FMF);
       unsigned ScalarCost =
-          ConcreteTTI->getIntrinsicInstrCost(IID, ScalarRetTy, ScalarTys, FMF,
-                                             CostKind);
+          ConcreteTTI->getIntrinsicInstrCost(ScalarAttrs, CostKind);
 
       return ScalarCalls * ScalarCost + ScalarizationCost;
     }
@@ -1397,9 +1404,9 @@ public:
       // SatMax -> Overflow && SumDiff < 0
       // SatMin -> Overflow && SumDiff >= 0
       unsigned Cost = 0;
-      Cost += ConcreteTTI->getIntrinsicInstrCost(
-          OverflowOp, OpTy, {RetTy, RetTy}, FMF, ScalarizationCostPassed,
-          CostKind);
+      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
+                                    ScalarizationCostPassed);
+      Cost += ConcreteTTI->getIntrinsicInstrCost(Attrs, CostKind);
       Cost += ConcreteTTI->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy,
                                               CondTy, CostKind);
       Cost += 2 * ConcreteTTI->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
@@ -1416,9 +1423,9 @@ public:
                                      : Intrinsic::usub_with_overflow;
 
       unsigned Cost = 0;
-      Cost += ConcreteTTI->getIntrinsicInstrCost(
-          OverflowOp, OpTy, {RetTy, RetTy}, FMF, ScalarizationCostPassed,
-          CostKind);
+      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
+                                    ScalarizationCostPassed);
+      Cost += ConcreteTTI->getIntrinsicInstrCost(Attrs, CostKind);
       Cost += ConcreteTTI->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
                                               CondTy, CostKind);
       return Cost;
@@ -1580,22 +1587,22 @@ public:
                                                  CostKind) +
              ConcreteTTI->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy,
                                                  CostKind);
-    if (IID == Intrinsic::experimental_constrained_fmuladd)
-      return ConcreteTTI->getIntrinsicCost(
-                 Intrinsic::experimental_constrained_fmul, RetTy, Tys, nullptr,
-                 CostKind) +
-             ConcreteTTI->getIntrinsicCost(
-                 Intrinsic::experimental_constrained_fadd, RetTy, Tys, nullptr,
-                 CostKind);
+    if (IID == Intrinsic::experimental_constrained_fmuladd) {
+      IntrinsicCostAttributes FMulAttrs(
+        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
+      IntrinsicCostAttributes FAddAttrs(
+        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
+      return ConcreteTTI->getIntrinsicInstrCost(FMulAttrs, CostKind) +
+             ConcreteTTI->getIntrinsicInstrCost(FAddAttrs, CostKind);
+    }
 
     // Else, assume that we need to scalarize this intrinsic. For math builtins
     // this will emit a costly libcall, adding call overhead and spills. Make it
     // very expensive.
     if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
-      unsigned ScalarizationCost =
-          ((ScalarizationCostPassed != std::numeric_limits<unsigned>::max())
-               ? ScalarizationCostPassed
-               : getScalarizationOverhead(RetVTy, true, false));
+      unsigned ScalarizationCost = SkipScalarizationCost ?
+        ScalarizationCostPassed : getScalarizationOverhead(RetVTy, true, false);
+
       unsigned ScalarCalls = RetVTy->getNumElements();
       SmallVector<Type *, 4> ScalarTys;
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
@@ -1604,11 +1611,11 @@ public:
           Ty = Ty->getScalarType();
         ScalarTys.push_back(Ty);
       }
-      unsigned ScalarCost = ConcreteTTI->getIntrinsicInstrCost(
-          IID, RetTy->getScalarType(), ScalarTys, FMF, CostKind);
+      IntrinsicCostAttributes Attrs(IID, RetTy->getScalarType(), ScalarTys, FMF);
+      unsigned ScalarCost = ConcreteTTI->getIntrinsicInstrCost(Attrs, CostKind);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
-          if (ScalarizationCostPassed == std::numeric_limits<unsigned>::max())
+          if (!ICA.skipScalarizationCost())
             ScalarizationCost += getScalarizationOverhead(VTy, false, true);
           ScalarCalls = std::max(ScalarCalls, VTy->getNumElements());
         }

@@ -504,7 +504,7 @@ void PPCPassConfig::addPreRegAlloc() {
     // PPCTLSDynamicCallPass uses LiveIntervals which previously dependent on
     // LiveVariables. This (unnecessary) dependency has been removed now,
     // however a stage-2 clang build fails without LiveVariables computed here.
-    addPass(&LiveVariablesID, false);
+    addPass(&LiveVariablesID);
     addPass(createPPCTLSDynamicCallPass());
   }
   if (EnableExtraTOCRegDeps)
@@ -531,9 +531,9 @@ void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCEarlyReturnPass(), false);
+    addPass(createPPCEarlyReturnPass());
   // Must run branch selection immediately preceding the asm printer.
-  addPass(createPPCBranchSelectionPass(), false);
+  addPass(createPPCBranchSelectionPass());
 }
 
 TargetTransformInfo

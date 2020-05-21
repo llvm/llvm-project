@@ -3247,13 +3247,9 @@ getVectorCallCosts(CallInst *CI, VectorType *VecTy, TargetTransformInfo *TTI,
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.
-  FastMathFlags FMF;
-  if (auto *FPMO = dyn_cast<FPMathOperator>(CI))
-    FMF = FPMO->getFastMathFlags();
-
-  SmallVector<Value *, 4> Args(CI->arg_operands());
-  int IntrinsicCost = TTI->getIntrinsicInstrCost(ID, CI->getType(), Args, FMF,
-                                                 VecTy->getNumElements());
+  IntrinsicCostAttributes CostAttrs(ID, *CI, VecTy->getNumElements());
+  int IntrinsicCost =
+    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
 
   auto Shape =
       VFShape::get(*CI, {static_cast<unsigned>(VecTy->getNumElements()), false},
@@ -3584,16 +3580,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
       // Calculate the cost of the scalar and vector calls.
-      SmallVector<Type *, 4> ScalarTys;
-      for (unsigned op = 0, opc = CI->getNumArgOperands(); op != opc; ++op)
-        ScalarTys.push_back(CI->getArgOperand(op)->getType());
-
-      FastMathFlags FMF;
-      if (auto *FPMO = dyn_cast<FPMathOperator>(CI))
-        FMF = FPMO->getFastMathFlags();
-
-      int ScalarEltCost =
-          TTI->getIntrinsicInstrCost(ID, ScalarTy, ScalarTys, FMF, 1, CostKind);
+      IntrinsicCostAttributes CostAttrs(ID, *CI, 1, 1);
+      int ScalarEltCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }

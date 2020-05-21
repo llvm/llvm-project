@@ -189,9 +189,9 @@ define double @reassociate_muls_double(double %x0, double %x1, double %x2, doubl
 define i32 @reassociate_mullw(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; FIXPOINT-LABEL: reassociate_mullw:
 ; FIXPOINT:       # %bb.0:
-; FIXPOINT:       mullw 3, 3, 4
-; FIXPOINT:       mullw 3, 3, 5
-; FIXPOINT:       mullw 3, 3, 6
+; FIXPOINT:       mullw [[REG0:[0-9]+]], 3, 4
+; FIXPOINT:       mullw [[REG1:[0-9]+]], 5, 6
+; FIXPOINT:       mullw 3, [[REG0]], [[REG1]]
 ; FIXPOINT-NEXT:  blr
 
   %t0 = mul i32 %x0, %x1
@@ -203,9 +203,9 @@ define i32 @reassociate_mullw(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 define i64 @reassociate_mulld(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 ; FIXPOINT-LABEL: reassociate_mulld:
 ; FIXPOINT:       # %bb.0:
-; FIXPOINT:       mulld 3, 3, 4
-; FIXPOINT:       mulld 3, 3, 5
-; FIXPOINT:       mulld 3, 3, 6
+; FIXPOINT:       mulld [[REG0:[0-9]+]], 3, 4
+; FIXPOINT:       mulld [[REG1:[0-9]+]], 5, 6
+; FIXPOINT:       mulld 3, [[REG0]], [[REG1]]
 ; FIXPOINT-NEXT:  blr
 
   %t0 = mul i64 %x0, %x1

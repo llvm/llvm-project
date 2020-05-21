@@ -79,17 +79,12 @@ namespace impl {
 /// is empty, insert a new block first. `buildTerminatorOp` should return the
 /// terminator operation to insert.
 void ensureRegionTerminator(
-    Region &region, Location loc,
-    function_ref<Operation *(OpBuilder &)> buildTerminatorOp);
-/// Templated version that fills the generates the provided operation type.
-template <typename OpTy>
-void ensureRegionTerminator(Region &region, Builder &builder, Location loc) {
-  ensureRegionTerminator(region, loc, [&](OpBuilder &b) {
-    OperationState state(loc, OpTy::getOperationName());
-    OpTy::build(b, state);
-    return Operation::create(state);
-  });
-}
+    Region &region, OpBuilder &builder, Location loc,
+    function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp);
+void ensureRegionTerminator(
+    Region &region, Builder &builder, Location loc,
+    function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp);
+
 } // namespace impl
 
 /// This is the concrete base class that holds the operation pointer and has
@@ -1077,6 +1072,15 @@ public:
 template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
   template <typename ConcreteType>
   class Impl : public TraitBase<ConcreteType, Impl> {
+  private:
+    /// Builds a terminator operation without relying on OpBuilder APIs to avoid
+    /// cyclic header inclusion.
+    static Operation *buildTerminator(OpBuilder &builder, Location loc) {
+      OperationState state(loc, TerminatorOpType::getOperationName());
+      TerminatorOpType::build(builder, state);
+      return Operation::create(state);
+    }
+
   public:
     static LogicalResult verifyTrait(Operation *op) {
       for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
@@ -1112,10 +1116,19 @@ template <typename TerminatorOpType> struct SingleBlockImplicitTerminator {
     }
 
     /// Ensure that the given region has the terminator required by this trait.
+    /// If OpBuilder is provided, use it to build the terminator and notify the
+    /// OpBuilder litsteners accoridngly. If only a Builder is provided, locally
+    /// construct an OpBuilder with no listeners; this should only be used if no
+    /// OpBuilder is available at the call site, e.g., in the parser.
     static void ensureTerminator(Region &region, Builder &builder,
                                  Location loc) {
-      ::mlir::impl::template ensureRegionTerminator<TerminatorOpType>(
-          region, builder, loc);
+      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
+                                           buildTerminator);
+    }
+    static void ensureTerminator(Region &region, OpBuilder &builder,
+                                 Location loc) {
+      ::mlir::impl::ensureRegionTerminator(region, builder, loc,
+                                           buildTerminator);
     }
 
     Block *getBody(unsigned idx = 0) {

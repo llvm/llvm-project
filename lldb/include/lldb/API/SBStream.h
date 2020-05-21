@@ -37,6 +37,8 @@ public:
 
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
+  void Print(const char *str);
+
   void RedirectToFile(const char *path, bool append);
 
   void RedirectToFile(lldb::SBFile file);

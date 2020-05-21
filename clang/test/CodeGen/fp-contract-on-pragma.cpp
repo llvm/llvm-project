@@ -3,7 +3,7 @@
 // Is FP_CONTRACT honored in a simple case?
 float fp_contract_1(float a, float b, float c) {
 // CHECK: _Z13fp_contract_1fff
-// CHECK: tail call contract float @llvm.fmuladd
+// CHECK: tail call float @llvm.fmuladd
 #pragma clang fp contract(on)
   return a * b + c;
 }
@@ -31,7 +31,7 @@ T template_muladd(T a, T b, T c) {
 
 float fp_contract_3(float a, float b, float c) {
   // CHECK: _Z13fp_contract_3fff
-  // CHECK: tail call contract float @llvm.fmuladd
+  // CHECK: tail call float @llvm.fmuladd
   return template_muladd<float>(a, b, c);
 }
 
@@ -45,13 +45,13 @@ class fp_contract_4 {
 
 template class fp_contract_4<int>;
 // CHECK: _ZN13fp_contract_4IiE6methodEfff
-// CHECK: tail call contract float @llvm.fmuladd
+// CHECK: tail call float @llvm.fmuladd
 
 // Check file-scoped FP_CONTRACT
 #pragma clang fp contract(on)
 float fp_contract_5(float a, float b, float c) {
   // CHECK: _Z13fp_contract_5fff
-  // CHECK: tail call contract float @llvm.fmuladd
+  // CHECK: tail call float @llvm.fmuladd
   return a * b + c;
 }
 
@@ -69,8 +69,8 @@ float fp_contract_6(float a, float b, float c) {
 
 float fp_contract_7(float a, float b, float c) {
 // CHECK: _Z13fp_contract_7fff
-// CHECK:  %[[M:.+]] = fmul contract float %b, 2.000000e+00
-// CHECK-NEXT: fsub contract float %[[M]], %c
+// CHECK:  %[[M:.+]] = fmul float %b, 2.000000e+00
+// CHECK-NEXT: fsub float %[[M]], %c
 #pragma clang fp contract(on)
   return (a = 2 * b) - c;
 }

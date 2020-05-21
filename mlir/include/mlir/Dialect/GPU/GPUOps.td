@@ -161,10 +161,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   ];
 
   let extraClassDeclaration = [{
-    /// Adds a workgroup attribution of the MemRef type with the given shape and
-    /// element type.
-    Value addWorkgroupAttribution(ArrayRef<int64_t> shape, Type elementType);
-
     /// Returns `true` if the GPU function defined by this Op is a kernel, i.e.
     /// it is intended to be launched from host.
     bool isKernel() {
@@ -198,24 +194,30 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
       return {begin, end};
     }
 
-    // Adds a new block argument that corresponds to buffers located in
-    // workgroup memory.
-    BlockArgument addWorkgroupAttribution(Type type) {
-      auto attrName = getNumWorkgroupAttributionsAttrName();
-      auto attr = getAttrOfType<IntegerAttr>(attrName);
-      setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
-      return getBody().front().insertArgument(
-          getType().getNumInputs() + attr.getInt(), type);
-    }
+    /// Adds a new block argument that corresponds to buffers located in
+    /// workgroup memory.
+    BlockArgument addWorkgroupAttribution(Type type);
 
+    /// Returns the number of buffers located in the private memory.
+    unsigned getNumPrivateAttributions() {
+      return getOperation()->getNumOperands() - getType().getNumInputs() -
+          getNumWorkgroupAttributions();
+    }
+ 
     /// Returns a list of block arguments that correspond to buffers located in
     /// the private memory.
     ArrayRef<BlockArgument> getPrivateAttributions() {
+      // Buffers on the private memory always come after buffers on the workgroup
+      // memory.
       auto begin =
           std::next(getBody().front().args_begin(),
                     getType().getNumInputs() + getNumWorkgroupAttributions());
       return {begin, getBody().front().args_end()};
     }
+
+    /// Adds a new block argument that corresponds to buffers located in
+    /// private memory.
+    BlockArgument addPrivateAttribution(Type type);
 
     /// Returns the name of the attribute containing the number of buffers
     /// located in the workgroup memory.

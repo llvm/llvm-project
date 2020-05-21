@@ -350,7 +350,7 @@ public:
     Value upperBound = lowerAffineUpperBound(op, rewriter);
     Value step = rewriter.create<ConstantIndexOp>(loc, op.getStep());
     auto f = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
-    f.region().getBlocks().clear();
+    rewriter.eraseBlock(f.getBody());
     rewriter.inlineRegionBefore(op.region(), f.region(), f.region().end());
     rewriter.eraseOp(op);
     return success();
@@ -396,10 +396,10 @@ public:
     bool hasElseRegion = !op.elseRegion().empty();
     auto ifOp = rewriter.create<scf::IfOp>(loc, cond, hasElseRegion);
     rewriter.inlineRegionBefore(op.thenRegion(), &ifOp.thenRegion().back());
-    ifOp.thenRegion().back().erase();
+    rewriter.eraseBlock(&ifOp.thenRegion().back());
     if (hasElseRegion) {
       rewriter.inlineRegionBefore(op.elseRegion(), &ifOp.elseRegion().back());
-      ifOp.elseRegion().back().erase();
+      rewriter.eraseBlock(&ifOp.elseRegion().back());
     }
 
     // Ok, we're done!

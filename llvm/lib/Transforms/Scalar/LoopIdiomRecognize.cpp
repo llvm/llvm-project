@@ -56,7 +56,6 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -94,6 +93,7 @@
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1535,7 +1535,7 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
 
-  const Value *Args[] =
+  Value *Args[] =
       {InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
                         : ConstantInt::getFalse(InitX->getContext())};
 
@@ -1544,9 +1544,11 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   uint32_t HeaderSize =
       std::distance(InstWithoutDebugIt.begin(), InstWithoutDebugIt.end());
 
+  IntrinsicCostAttributes Attrs(IntrinID, InitX->getType(), Args);
+  int Cost =
+    TTI->getIntrinsicInstrCost(Attrs, TargetTransformInfo::TCK_SizeAndLatency);
   if (HeaderSize != IdiomCanonicalSize &&
-      TTI->getIntrinsicCost(IntrinID, InitX->getType(), Args) >
-          TargetTransformInfo::TCC_Basic)
+      Cost > TargetTransformInfo::TCC_Basic)
     return false;
 
   transformLoopToCountable(IntrinID, PH, CntInst, CntPhi, InitX, DefX,

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-scf-to-std %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-std %s | FileCheck %s
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  br ^bb1(%{{.*}} : index)
@@ -397,4 +397,18 @@ func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
     }
   }
   return %0#0, %0#1 : f32, i64
+}
+
+// Check that the conversion is not overly conservative wrt unknown ops, i.e.
+// that the presence of unknown ops does not prevent the conversion from being
+// applied.
+// CHECK-LABEL: @unknown_op_inside_loop
+func @unknown_op_inside_loop(%arg0: index, %arg1: index, %arg2: index) {
+  // CHECK-NOT: scf.for
+  scf.for %i = %arg0 to %arg1 step %arg2 {
+    // CHECK: unknown.op
+    "unknown.op"() : () -> ()
+    scf.yield
+  }
+  return
 }

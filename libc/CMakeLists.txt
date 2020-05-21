@@ -26,7 +26,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
     add_custom_target(lint-libc)
   else()
     message(FATAL_ERROR "
-      'clang' and 'clang-tools-extra' are required in LLVM_LIBC_ENABLE_PROJECTS to
+      'clang' and 'clang-tools-extra' are required in LLVM_ENABLE_PROJECTS to
       lint llvm-libc. The linting step performs important checks to help prevent
       the introduction of subtle bugs, but it may increase build times.
 
