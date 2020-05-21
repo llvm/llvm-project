@@ -6522,6 +6522,7 @@ On exit from a function:
       VGPR216-223
       VGPR232-239
       VGPR248-255
+
         *Except the argument registers, the VGPR cloberred and the preserved
         registers are intermixed at regular intervals in order to
         get a better occupancy.*
