@@ -28,3 +28,4 @@ RUN: not %lldb -x -b -f %t.foo bar -baz --quux 2>&1 | FileCheck %s --check-prefi
 
 UNKNOWN: error: unknown option: -baz
 UNKNOWN: error: unknown option: --quux
+UNKNOWN: Use 'lldb --help' for a complete list of options.
