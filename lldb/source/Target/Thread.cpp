@@ -271,7 +271,7 @@ lldb::StackFrameSP Thread::GetSelectedFrame() {
   StackFrameListSP stack_frame_list_sp(GetStackFrameList());
   StackFrameSP frame_sp = stack_frame_list_sp->GetFrameAtIndex(
       stack_frame_list_sp->GetSelectedFrameIndex());
-  FunctionOptimizationWarning(frame_sp.get());
+  FrameSelectedCallback(frame_sp.get());
   return frame_sp;
 }
 
@@ -280,7 +280,7 @@ uint32_t Thread::SetSelectedFrame(lldb_private::StackFrame *frame,
   uint32_t ret_value = GetStackFrameList()->SetSelectedFrame(frame);
   if (broadcast)
     BroadcastSelectedFrameChange(frame->GetStackID());
-  FunctionOptimizationWarning(frame);
+  FrameSelectedCallback(frame);
   return ret_value;
 }
 
@@ -290,7 +290,7 @@ bool Thread::SetSelectedFrameByIndex(uint32_t frame_idx, bool broadcast) {
     GetStackFrameList()->SetSelectedFrame(frame_sp.get());
     if (broadcast)
       BroadcastSelectedFrameChange(frame_sp->GetStackID());
-    FunctionOptimizationWarning(frame_sp.get());
+    FrameSelectedCallback(frame_sp.get());
     return true;
   } else
     return false;
@@ -314,7 +314,7 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
 
       bool show_frame_info = true;
       bool show_source = !already_shown;
-      FunctionOptimizationWarning(frame_sp.get());
+      FrameSelectedCallback(frame_sp.get());
       return frame_sp->GetStatus(output_stream, show_frame_info, show_source);
     }
     return false;
@@ -322,9 +322,11 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
     return false;
 }
 
-void Thread::FunctionOptimizationWarning(StackFrame *frame) {
-  if (frame && frame->HasDebugInformation() &&
-      GetProcess()->GetWarningsOptimization()) {
+void Thread::FrameSelectedCallback(StackFrame *frame) {
+  if (!frame)
+    return;
+
+  if (frame->HasDebugInformation() && GetProcess()->GetWarningsOptimization()) {
     SymbolContext sc =
         frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
     GetProcess()->PrintWarningOptimization(sc);
