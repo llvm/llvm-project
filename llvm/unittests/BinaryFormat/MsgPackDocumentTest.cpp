@@ -21,7 +21,7 @@ TEST(MsgPackDocument, TestReadInt) {
   ASSERT_EQ(Doc.getRoot().getInt(), 0);
 }
 
-TEST(MsgPackDocument, TestReadArray) {
+TEST(MsgPackDocument, TestReadMergeArray) {
   Document Doc;
   bool Ok = Doc.readFromBlob(StringRef("\x92\xd0\x01\xc0"), /*Multi=*/false);
   ASSERT_TRUE(Ok);
@@ -33,9 +33,64 @@ TEST(MsgPackDocument, TestReadArray) {
   ASSERT_EQ(SI.getInt(), 1);
   auto SN = A[1];
   ASSERT_EQ(SN.getKind(), Type::Nil);
+
+  Ok = Doc.readFromBlob(StringRef("\x91\xd0\x2a"), /*Multi=*/false,
+                        [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+                          // Allow array, merging into existing elements, ORing
+                          // ints.
+                          if (DestNode->getKind() == Type::Int &&
+                              SrcNode.getKind() == Type::Int) {
+                            *DestNode = DestNode->getDocument()->getNode(
+                                DestNode->getInt() | SrcNode.getInt());
+                            return 0;
+                          }
+                          return DestNode->isArray() && SrcNode.isArray() ? 0
+                                                                          : -1;
+                        });
+  ASSERT_TRUE(Ok);
+  A = Doc.getRoot().getArray();
+  ASSERT_EQ(A.size(), 2u);
+  SI = A[0];
+  ASSERT_EQ(SI.getKind(), Type::Int);
+  ASSERT_EQ(SI.getInt(), 43);
+  SN = A[1];
+  ASSERT_EQ(SN.getKind(), Type::Nil);
 }
 
-TEST(MsgPackDocument, TestReadMap) {
+TEST(MsgPackDocument, TestReadAppendArray) {
+  Document Doc;
+  bool Ok = Doc.readFromBlob(StringRef("\x92\xd0\x01\xc0"), /*Multi=*/false);
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(Doc.getRoot().getKind(), Type::Array);
+  auto A = Doc.getRoot().getArray();
+  ASSERT_EQ(A.size(), 2u);
+  auto SI = A[0];
+  ASSERT_EQ(SI.getKind(), Type::Int);
+  ASSERT_EQ(SI.getInt(), 1);
+  auto SN = A[1];
+  ASSERT_EQ(SN.getKind(), Type::Nil);
+
+  Ok = Doc.readFromBlob(StringRef("\x91\xd0\x2a"), /*Multi=*/false,
+                        [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+                          // Allow array, appending after existing elements
+                          return DestNode->isArray() && SrcNode.isArray()
+                                     ? DestNode->getArray().size()
+                                     : -1;
+                        });
+  ASSERT_TRUE(Ok);
+  A = Doc.getRoot().getArray();
+  ASSERT_EQ(A.size(), 3u);
+  SI = A[0];
+  ASSERT_EQ(SI.getKind(), Type::Int);
+  ASSERT_EQ(SI.getInt(), 1);
+  SN = A[1];
+  ASSERT_EQ(SN.getKind(), Type::Nil);
+  SI = A[2];
+  ASSERT_EQ(SI.getKind(), Type::Int);
+  ASSERT_EQ(SI.getInt(), 42);
+}
+
+TEST(MsgPackDocument, TestReadMergeMap) {
   Document Doc;
   bool Ok = Doc.readFromBlob(StringRef("\x82\xa3"
                                        "foo"
@@ -53,6 +108,68 @@ TEST(MsgPackDocument, TestReadMap) {
   auto BarS = M["bar"];
   ASSERT_EQ(BarS.getKind(), Type::Int);
   ASSERT_EQ(BarS.getInt(), 2);
+
+  Ok = Doc.readFromBlob(StringRef("\x82\xa3"
+                                  "foz"
+                                  "\xd0\x03\xa3"
+                                  "baz"
+                                  "\xd0\x04"),
+                        /*Multi=*/false,
+                        [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
+                          return DestNode->isMap() && SrcNode.isMap() ? 0 : -1;
+                        });
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(M.size(), 4u);
+  FooS = M["foo"];
+  ASSERT_EQ(FooS.getKind(), Type::Int);
+  ASSERT_EQ(FooS.getInt(), 1);
+  BarS = M["bar"];
+  ASSERT_EQ(BarS.getKind(), Type::Int);
+  ASSERT_EQ(BarS.getInt(), 2);
+  auto FozS = M["foz"];
+  ASSERT_EQ(FozS.getKind(), Type::Int);
+  ASSERT_EQ(FozS.getInt(), 3);
+  auto BazS = M["baz"];
+  ASSERT_EQ(BazS.getKind(), Type::Int);
+  ASSERT_EQ(BazS.getInt(), 4);
+
+  Ok = Doc.readFromBlob(
+      StringRef("\x82\xa3"
+                "foz"
+                "\xd0\x06\xa3"
+                "bay"
+                "\xd0\x08"),
+      /*Multi=*/false, [](DocNode *Dest, DocNode Src, DocNode MapKey) {
+        // Merger function that merges two ints by ORing their values, as long
+        // as the map key is "foz".
+        if (Src.isMap())
+          return Dest->isMap();
+        if (Src.isArray())
+          return Dest->isArray();
+        if (MapKey.isString() && MapKey.getString() == "foz" &&
+            Dest->getKind() == Type::Int && Src.getKind() == Type::Int) {
+          *Dest = Src.getDocument()->getNode(Dest->getInt() | Src.getInt());
+          return true;
+        }
+        return false;
+      });
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(M.size(), 5u);
+  FooS = M["foo"];
+  ASSERT_EQ(FooS.getKind(), Type::Int);
+  ASSERT_EQ(FooS.getInt(), 1);
+  BarS = M["bar"];
+  ASSERT_EQ(BarS.getKind(), Type::Int);
+  ASSERT_EQ(BarS.getInt(), 2);
+  FozS = M["foz"];
+  ASSERT_EQ(FozS.getKind(), Type::Int);
+  ASSERT_EQ(FozS.getInt(), 7);
+  BazS = M["baz"];
+  ASSERT_EQ(BazS.getKind(), Type::Int);
+  ASSERT_EQ(BazS.getInt(), 4);
+  auto BayS = M["bay"];
+  ASSERT_EQ(BayS.getKind(), Type::Int);
+  ASSERT_EQ(BayS.getInt(), 8);
 }
 
 TEST(MsgPackDocument, TestWriteInt) {
