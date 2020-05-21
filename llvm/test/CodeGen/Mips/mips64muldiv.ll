@@ -3,10 +3,10 @@
 ; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck %s -check-prefixes=ALL,ACC
 ; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck %s -check-prefixes=ALL,GPR
 
-; FileCheck prefixes:
-;   ALL - All targets
-;   ACC - Targets with accumulator based mul/div (i.e. pre-MIPS32r6)
-;   GPR - Targets with register based mul/div (i.e. MIPS32r6)
+; COM: FileCheck prefixes:
+; COM:  ALL - All targets
+; COM:  ACC - Targets with accumulator based mul/div (i.e. pre-MIPS32r6)
+; COM:  GPR - Targets with register based mul/div (i.e. MIPS32r6)
 
 define i64 @m0(i64 %a0, i64 %a1) nounwind readnone {
 entry:

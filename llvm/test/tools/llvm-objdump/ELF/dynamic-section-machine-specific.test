@@ -1,6 +1,6 @@
 ## In this test we test how machine-specific dynamic tags are dumped.
 
-## Case 1: Test that hexagon machine-specific tags can be dumped.
+## COM: Case 1: Test that hexagon machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=1 -o %t.hex %s
 # RUN: llvm-objdump -p %t.hex | FileCheck %s --check-prefix=HEXAGON
 
@@ -35,8 +35,8 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-## Case 2: Test that MIPS machine-specific tags can be dumped.
-##         MIPS has a few long tag names. Show that we indent columns properly.
+## COM: Case 2: Test that MIPS machine-specific tags can be dumped.
+## COM:         MIPS has a few long tag names. Show that we indent columns properly.
 # RUN: yaml2obj --docnum=2 -o %t.mips %s
 # RUN: llvm-objdump -p %t.mips | FileCheck %s  --strict-whitespace --match-full-lines --check-prefix=MIPS
 
@@ -197,7 +197,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-## Case 3: Test that PPC machine-specific tags can be dumped.
+## COM: Case 3: Test that PPC machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=3 -o %t.ppc %s
 # RUN: llvm-objdump -p %t.ppc | FileCheck %s --check-prefix=PPC
 
@@ -229,7 +229,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-## Case 4: Test that PPC64 machine-specific tags can be dumped.
+## COM: Case 4: Test that PPC64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=4 -o %t.ppc64 %s
 # RUN: llvm-objdump -p %t.ppc64 | FileCheck %s --check-prefix=PPC64
 
@@ -258,7 +258,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-## Case 5: Test that AARCH64 machine-specific tags can be dumped.
+## COM: Case 5: Test that AARCH64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=5 -o %t.aarch64 %s
 # RUN: llvm-objdump -p %t.aarch64 | FileCheck %s --check-prefix=AARCH64
 

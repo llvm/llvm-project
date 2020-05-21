@@ -5,7 +5,7 @@
 ; Check constant loads of every 128-bit and 256-bit vector type
 ; for size optimization using splat ops available with AVX and AVX2.
 
-; There is no AVX broadcast from double to 128-bit vector because movddup has been around since SSE3 (grrr).
+; COM: There is no AVX broadcast from double to 128-bit vector because movddup has been around since SSE3 (grrr).
 define <2 x double> @splat_v2f64(<2 x double> %x) #0 {
 ; CHECK-LABEL: splat_v2f64:
 ; CHECK:       # %bb.0:
@@ -88,8 +88,9 @@ define <8 x float> @splat_v8f32_pgso(<8 x float> %x) !prof !14 {
   ret <8 x float> %add
 }
 
-; AVX can't do integer splats, so fake it: use vmovddup to splat 64-bit value.
-; We also generate vmovddup for AVX2 because it's one byte smaller than vpbroadcastq.
+; COM: AVX can't do integer splats, so fake it: use vmovddup to splat 64-bit
+; COM: value. We also generate vmovddup for AVX2 because it's one byte smaller
+; COM: than vpbroadcastq.
 define <2 x i64> @splat_v2i64(<2 x i64> %x) #1 {
 ; AVX-LABEL: splat_v2i64:
 ; AVX:       # %bb.0:
@@ -124,8 +125,8 @@ define <2 x i64> @splat_v2i64_pgso(<2 x i64> %x) !prof !14 {
   ret <2 x i64> %add
 }
 
-; AVX can't do 256-bit integer ops, so we split this into two 128-bit vectors,
-; and then we fake it: use vmovddup to splat 64-bit value.
+; COM: AVX can't do 256-bit integer ops, so we split this into two 128-bit
+; COM: vectors, and then we fake it: use vmovddup to splat 64-bit value.
 define <4 x i64> @splat_v4i64(<4 x i64> %x) #0 {
 ; AVX-LABEL: splat_v4i64:
 ; AVX:       # %bb.0:
@@ -166,7 +167,7 @@ define <4 x i64> @splat_v4i64_pgso(<4 x i64> %x) !prof !14 {
   ret <4 x i64> %add
 }
 
-; AVX can't do integer splats, so fake it: use vbroadcastss to splat 32-bit value.
+; COM: AVX can't do integer splats, so fake it: use vbroadcastss to splat 32-bit value.
 define <4 x i32> @splat_v4i32(<4 x i32> %x) #1 {
 ; AVX-LABEL: splat_v4i32:
 ; AVX:       # %bb.0:
@@ -199,7 +200,7 @@ define <4 x i32> @splat_v4i32_pgso(<4 x i32> %x) !prof !14 {
   ret <4 x i32> %add
 }
 
-; AVX can't do integer splats, so fake it: use vbroadcastss to splat 32-bit value.
+; COM: AVX can't do integer splats, so fake it: use vbroadcastss to splat 32-bit value.
 define <8 x i32> @splat_v8i32(<8 x i32> %x) #0 {
 ; AVX-LABEL: splat_v8i32:
 ; AVX:       # %bb.0:
@@ -238,7 +239,7 @@ define <8 x i32> @splat_v8i32_pgso(<8 x i32> %x) !prof !14 {
   ret <8 x i32> %add
 }
 
-; AVX can't do integer splats, and there's no broadcast fakery for 16-bit. Could use pshuflw, etc?
+; COM: AVX can't do integer splats, and there's no broadcast fakery for 16-bit. Could use pshuflw, etc?
 define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 ; AVX-LABEL: splat_v8i16:
 ; AVX:       # %bb.0:
@@ -269,7 +270,7 @@ define <8 x i16> @splat_v8i16_pgso(<8 x i16> %x) !prof !14 {
   ret <8 x i16> %add
 }
 
-; AVX can't do integer splats, and there's no broadcast fakery for 16-bit. Could use pshuflw, etc?
+; COM: AVX can't do integer splats, and there's no broadcast fakery for 16-bit. Could use pshuflw, etc?
 define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX-LABEL: splat_v16i16:
 ; AVX:       # %bb.0:
@@ -308,7 +309,7 @@ define <16 x i16> @splat_v16i16_pgso(<16 x i16> %x) !prof !14 {
   ret <16 x i16> %add
 }
 
-; AVX can't do integer splats, and there's no broadcast fakery for 8-bit. Could use pshufb, etc?
+; COM: AVX can't do integer splats, and there's no broadcast fakery for 8-bit. Could use pshufb, etc?
 define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 ; AVX-LABEL: splat_v16i8:
 ; AVX:       # %bb.0:
@@ -339,7 +340,7 @@ define <16 x i8> @splat_v16i8_pgso(<16 x i8> %x) !prof !14 {
   ret <16 x i8> %add
 }
 
-; AVX can't do integer splats, and there's no broadcast fakery for 8-bit. Could use pshufb, etc?
+; COM: AVX can't do integer splats, and there's no broadcast fakery for 8-bit. Could use pshufb, etc?
 define <32 x i8> @splat_v32i8(<32 x i8> %x) #0 {
 ; AVX-LABEL: splat_v32i8:
 ; AVX:       # %bb.0:
@@ -378,9 +379,9 @@ define <32 x i8> @splat_v32i8_pgso(<32 x i8> %x) !prof !14 {
   ret <32 x i8> %add
 }
 
-; PR23259: Verify that ISel doesn't crash with a 'fatal error in backend'
-; due to a missing AVX pattern to select a v2i64 X86ISD::BROADCAST of a
-; loadi64 with multiple uses.
+; COM: PR23259: Verify that ISel doesn't crash with a 'fatal error in backend'
+; COM: due to a missing AVX pattern to select a v2i64 X86ISD::BROADCAST of a
+; COM: loadi64 with multiple uses.
 
 @A = common global <3 x i64> zeroinitializer, align 32
 

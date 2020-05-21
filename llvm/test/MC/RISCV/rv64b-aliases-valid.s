@@ -9,11 +9,11 @@
 # RUN:     | llvm-objdump -d -r --mattr=+experimental-b - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 
-# The following check prefixes are used in this test:
-# CHECK-S-OBJ            Match both the .s and objdumped object output with
-#                        aliases enabled
-# CHECK-S-OBJ-NOALIAS    Match both the .s and objdumped object output with
-#                        aliases disabled
+# COM: The following check prefixes are used in this test:
+# COM: CHECK-S-OBJ            Match both the .s and objdumped object output with
+# COM:                        aliases enabled
+# COM: CHECK-S-OBJ-NOALIAS    Match both the .s and objdumped object output with
+# COM:                        aliases disabled
 
 # CHECK-S-OBJ-NOALIAS: andi t0, t1, 255
 # CHECK-S-OBJ: zext.b t0, t1
