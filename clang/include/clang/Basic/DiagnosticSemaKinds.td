@@ -2762,10 +2762,6 @@ def warn_auto_var_is_id : Warning<
   InGroup<DiagGroup<"auto-var-id">>;
 
 // Attributes
-def warn_nomerge_attribute_ignored_in_stmt: Warning<
-  "%0 attribute is ignored because there exists no call expression inside the "
-  "statement">, 
-  InGroup<IgnoredAttributes>;
 def err_nsobject_attribute : Error<
   "'NSObject' attribute is for pointer types only">;
 def err_attributes_are_not_compatible : Error<

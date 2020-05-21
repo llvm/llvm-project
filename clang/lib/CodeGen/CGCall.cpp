@@ -4822,12 +4822,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::StrictFP);
 
-  // Add call-site nomerge attribute if exists.
-  if (InNoMergeAttributedStmt)
-    Attrs =
-      Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
-                         llvm::Attribute::NoMerge);
-
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
