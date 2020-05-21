@@ -63,20 +63,7 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(const IntrinsicInst &I) :
    FMF = FPMO->getFastMathFlags();
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
-                                                 const CallBase &CI) :
-  II(dyn_cast<IntrinsicInst>(&CI)),  RetTy(CI.getType()), IID(Id) {
-
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
-    FMF = FPMO->getFastMathFlags();
-
-  FunctionType *FTy =
-    CI.getCalledFunction()->getFunctionType();
-  ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
-}
-
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
-                                                 const CallBase &CI,
+IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, CallInst &CI,
                                                  unsigned Factor) :
     RetTy(CI.getType()), IID(Id), VF(Factor) {
 
@@ -89,8 +76,7 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
   ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
-                                                 const CallBase &CI,
+IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, CallInst &CI,
                                                  unsigned Factor,
                                                  unsigned ScalarCost) :
     RetTy(CI.getType()), IID(Id), VF(Factor), ScalarizationCost(ScalarCost) {
@@ -248,6 +234,15 @@ int TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
                                     ArrayRef<const Value *> Operands,
                                     TTI::TargetCostKind CostKind) const {
   return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, CostKind);
+}
+
+int TargetTransformInfo::getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
+                                          ArrayRef<const Value *> Arguments,
+                                          const User *U,
+                                          TTI::TargetCostKind CostKind) const {
+  int Cost = TTIImpl->getIntrinsicCost(IID, RetTy, Arguments, U, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
 }
 
 unsigned TargetTransformInfo::getEstimatedNumberOfCaseClusters(
@@ -1421,7 +1416,11 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     return TTIImpl->getShuffleCost(SK_PermuteTwoSrc, Ty, 0, nullptr);
   }
   case Instruction::Call:
-    return getUserCost(I, CostKind);
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      IntrinsicCostAttributes CostAttrs(*II);
+      return getIntrinsicInstrCost(CostAttrs, CostKind);
+    }
+    return -1;
   default:
     // We don't have any information on this instruction.
     return -1;
