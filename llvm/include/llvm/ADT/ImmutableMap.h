@@ -70,33 +70,14 @@ public:
   using TreeTy = ImutAVLTree<ValInfo>;
 
 protected:
-  TreeTy* Root;
+  IntrusiveRefCntPtr<TreeTy> Root;
 
 public:
   /// Constructs a map from a pointer to a tree root.  In general one
   /// should use a Factory object to create maps instead of directly
   /// invoking the constructor, but there are cases where make this
   /// constructor public is useful.
-  explicit ImmutableMap(const TreeTy* R) : Root(const_cast<TreeTy*>(R)) {
-    if (Root) { Root->retain(); }
-  }
-
-  ImmutableMap(const ImmutableMap &X) : Root(X.Root) {
-    if (Root) { Root->retain(); }
-  }
-
-  ~ImmutableMap() {
-    if (Root) { Root->release(); }
-  }
-
-  ImmutableMap &operator=(const ImmutableMap &X) {
-    if (Root != X.Root) {
-      if (X.Root) { X.Root->retain(); }
-      if (Root) { Root->release(); }
-      Root = X.Root;
-    }
-    return *this;
-  }
+  explicit ImmutableMap(const TreeTy *R) : Root(const_cast<TreeTy *>(R)) {}
 
   class Factory {
     typename TreeTy::Factory F;
@@ -115,12 +96,12 @@ public:
 
     LLVM_NODISCARD ImmutableMap add(ImmutableMap Old, key_type_ref K,
                                     data_type_ref D) {
-      TreeTy *T = F.add(Old.Root, std::pair<key_type,data_type>(K,D));
+      TreeTy *T = F.add(Old.Root.get(), std::pair<key_type, data_type>(K, D));
       return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
     }
 
     LLVM_NODISCARD ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
-      TreeTy *T = F.remove(Old.Root,K);
+      TreeTy *T = F.remove(Old.Root.get(), K);
       return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
     }
 
@@ -134,19 +115,20 @@ public:
   }
 
   bool operator==(const ImmutableMap &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root) : Root == RHS.Root;
+    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
   }
 
   bool operator!=(const ImmutableMap &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root) : Root != RHS.Root;
+    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
+                            : Root != RHS.Root;
   }
 
   TreeTy *getRoot() const {
     if (Root) { Root->retain(); }
-    return Root;
+    return Root.get();
   }
 
-  TreeTy *getRootWithoutRetain() const { return Root; }
+  TreeTy *getRootWithoutRetain() const { return Root.get(); }
 
   void manualRetain() {
     if (Root) Root->retain();
@@ -217,7 +199,7 @@ public:
     data_type_ref getData() const { return (*this)->second; }
   };
 
-  iterator begin() const { return iterator(Root); }
+  iterator begin() const { return iterator(Root.get()); }
   iterator end() const { return iterator(); }
 
   data_type* lookup(key_type_ref K) const {
@@ -243,7 +225,7 @@ public:
   unsigned getHeight() const { return Root ? Root->getHeight() : 0; }
 
   static inline void Profile(FoldingSetNodeID& ID, const ImmutableMap& M) {
-    ID.AddPointer(M.Root);
+    ID.AddPointer(M.Root.get());
   }
 
   inline void Profile(FoldingSetNodeID& ID) const {
@@ -266,7 +248,7 @@ public:
   using FactoryTy = typename TreeTy::Factory;
 
 protected:
-  TreeTy *Root;
+  IntrusiveRefCntPtr<TreeTy> Root;
   FactoryTy *Factory;
 
 public:
@@ -274,44 +256,12 @@ public:
   /// should use a Factory object to create maps instead of directly
   /// invoking the constructor, but there are cases where make this
   /// constructor public is useful.
-  explicit ImmutableMapRef(const TreeTy *R, FactoryTy *F)
-      : Root(const_cast<TreeTy *>(R)), Factory(F) {
-    if (Root) {
-      Root->retain();
-    }
-  }
+  ImmutableMapRef(const TreeTy *R, FactoryTy *F)
+      : Root(const_cast<TreeTy *>(R)), Factory(F) {}
 
-  explicit ImmutableMapRef(const ImmutableMap<KeyT, ValT> &X,
-                           typename ImmutableMap<KeyT, ValT>::Factory &F)
-    : Root(X.getRootWithoutRetain()),
-      Factory(F.getTreeFactory()) {
-    if (Root) { Root->retain(); }
-  }
-
-  ImmutableMapRef(const ImmutableMapRef &X) : Root(X.Root), Factory(X.Factory) {
-    if (Root) {
-      Root->retain();
-    }
-  }
-
-  ~ImmutableMapRef() {
-    if (Root)
-      Root->release();
-  }
-
-  ImmutableMapRef &operator=(const ImmutableMapRef &X) {
-    if (Root != X.Root) {
-      if (X.Root)
-        X.Root->retain();
-
-      if (Root)
-        Root->release();
-
-      Root = X.Root;
-      Factory = X.Factory;
-    }
-    return *this;
-  }
+  ImmutableMapRef(const ImmutableMap<KeyT, ValT> &X,
+                  typename ImmutableMap<KeyT, ValT>::Factory &F)
+      : Root(X.getRootWithoutRetain()), Factory(F.getTreeFactory()) {}
 
   static inline ImmutableMapRef getEmptyMap(FactoryTy *F) {
     return ImmutableMapRef(0, F);
@@ -326,12 +276,13 @@ public:
   }
 
   ImmutableMapRef add(key_type_ref K, data_type_ref D) const {
-    TreeTy *NewT = Factory->add(Root, std::pair<key_type, data_type>(K, D));
+    TreeTy *NewT =
+        Factory->add(Root.get(), std::pair<key_type, data_type>(K, D));
     return ImmutableMapRef(NewT, Factory);
   }
 
   ImmutableMapRef remove(key_type_ref K) const {
-    TreeTy *NewT = Factory->remove(Root, K);
+    TreeTy *NewT = Factory->remove(Root.get(), K);
     return ImmutableMapRef(NewT, Factory);
   }
 
@@ -340,15 +291,16 @@ public:
   }
 
   ImmutableMap<KeyT, ValT> asImmutableMap() const {
-    return ImmutableMap<KeyT, ValT>(Factory->getCanonicalTree(Root));
+    return ImmutableMap<KeyT, ValT>(Factory->getCanonicalTree(Root.get()));
   }
 
   bool operator==(const ImmutableMapRef &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root) : Root == RHS.Root;
+    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
   }
 
   bool operator!=(const ImmutableMapRef &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root) : Root != RHS.Root;
+    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
+                            : Root != RHS.Root;
   }
 
   bool isEmpty() const { return !Root; }
@@ -377,7 +329,7 @@ public:
     data_type_ref getData() const { return (*this)->second; }
   };
 
-  iterator begin() const { return iterator(Root); }
+  iterator begin() const { return iterator(Root.get()); }
   iterator end() const { return iterator(); }
 
   data_type *lookup(key_type_ref K) const {
