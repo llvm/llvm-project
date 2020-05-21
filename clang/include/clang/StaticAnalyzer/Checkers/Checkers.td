@@ -122,14 +122,70 @@ def FuchsiaAlpha : Package<"fuchsia">, ParentPackage<Alpha>;
 
 let ParentPackage = Core in {
 
-def DereferenceChecker : Checker<"NullDereference">,
-  HelpText<"Check for dereferences of null pointers">,
+def CallAndMessageModeling : Checker<"CallAndMessageModeling">,
+  HelpText<"Responsible for essential modeling and assumptions after a "
+           "function/method call. For instance, if we can't reason about the "
+           "nullability of the implicit this parameter after a method call, "
+           "this checker conservatively assumes it to be non-null">,
   Documentation<HasDocumentation>;
 
 def CallAndMessageChecker : Checker<"CallAndMessage">,
   HelpText<"Check for logical errors for function calls and Objective-C "
            "message expressions (e.g., uninitialized arguments, null function "
            "pointers)">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "FunctionPointer",
+                  "Check whether a called function pointer is null or "
+                  "undefined",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ParameterCount",
+                  "Check whether a function was called with the appropriate "
+                  "number of arguments",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "CXXThisMethodCall",
+                  "Check whether the implicit this parameter is null or "
+                  "undefined upon a method call",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "CXXDeallocationArg",
+                  "Check whether the argument of operator delete is undefined",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ArgInitializedness",
+                  "Check whether any of the pass-by-value parameters is "
+                  "undefined",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ArgPointeeInitializedness",
+                  "Check whether the pointee of a pass-by-reference or "
+                  "pass-by-pointer is undefined",
+                  "false",
+                  InAlpha>,
+    CmdLineOption<Boolean,
+                  "NilReceiver",
+                  "Check whether the reciever in the message expression is nil",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "UndefReceiver",
+                  "Check whether the reciever in the message expression is "
+                  "undefined",
+                  "true",
+                  Released>,
+  ]>,
+  Documentation<HasDocumentation>,
+  Dependencies<[CallAndMessageModeling]>;
+
+def DereferenceChecker : Checker<"NullDereference">,
+  HelpText<"Check for dereferences of null pointers">,
   Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
@@ -211,13 +267,6 @@ def SizeofPointerChecker : Checker<"SizeofPtr">,
   HelpText<"Warn about unintended use of sizeof() on pointer expressions">,
   Documentation<HasAlphaDocumentation>;
 
-def CallAndMessageUnInitRefArg : Checker<"CallAndMessageUnInitRefArg">,
-  HelpText<"Check for logical errors for function calls and Objective-C "
-           "message expressions (e.g., uninitialized arguments, null function "
-           "pointers, and pointer to undefined variables)">,
-  Dependencies<[CallAndMessageChecker]>,
-  Documentation<HasAlphaDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
@@ -295,7 +344,7 @@ let ParentPackage = APIModeling in {
 
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Improve modeling of the C standard library functions">,
-  Dependencies<[NonNullParamChecker, CallAndMessageChecker]>,
+  Dependencies<[NonNullParamChecker, CallAndMessageModeling]>,
   CheckerOptions<[
     CmdLineOption<Boolean,
                   "DisplayLoadedSummaries",

@@ -1,5 +1,14 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,core,alpha.core.CallAndMessageUnInitRefArg -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,core,alpha.core.CallAndMessageUnInitRefArg -analyzer-output=text -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-output=text -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
+
+// RUN: %clang_analyze_cc1 -analyzer-output=text -verify %s \
+// RUN:   -DTEST_INLINABLE_ALLOCATORS \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
+
 // Passing uninitialized const data to unknown function
 
 #include "Inputs/system-header-simulator-cxx.h"
