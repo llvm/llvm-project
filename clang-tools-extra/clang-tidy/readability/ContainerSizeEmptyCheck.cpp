@@ -39,18 +39,20 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                       .bind("empty")))
               .bind("container")))))));
 
-  const auto WrongUse = anyOf(
-      hasParent(binaryOperator(
-                    isComparisonOperator(),
-                    hasEitherOperand(ignoringImpCasts(anyOf(
-                        integerLiteral(equals(1)), integerLiteral(equals(0))))))
-                    .bind("SizeBinaryOp")),
-      hasParent(implicitCastExpr(
-          hasImplicitDestinationType(booleanType()),
-          anyOf(
-              hasParent(unaryOperator(hasOperatorName("!")).bind("NegOnSize")),
-              anything()))),
-      hasParent(explicitCastExpr(hasDestinationType(booleanType()))));
+  const auto WrongUse = traverse(
+      ast_type_traits::TK_AsIs,
+      anyOf(
+          hasParent(binaryOperator(isComparisonOperator(),
+                                   hasEitherOperand(ignoringImpCasts(
+                                       anyOf(integerLiteral(equals(1)),
+                                             integerLiteral(equals(0))))))
+                        .bind("SizeBinaryOp")),
+          hasParent(implicitCastExpr(
+              hasImplicitDestinationType(booleanType()),
+              anyOf(hasParent(
+                        unaryOperator(hasOperatorName("!")).bind("NegOnSize")),
+                    anything()))),
+          hasParent(explicitCastExpr(hasDestinationType(booleanType())))));
 
   Finder->addMatcher(
       cxxMemberCallExpr(on(expr(anyOf(hasType(ValidContainer),

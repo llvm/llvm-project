@@ -31,13 +31,15 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
       cxxBindTemporaryExpr(unless(has(ignoringParenImpCasts(callExpr()))))
           .bind("temp");
   Finder->addMatcher(
-      exprWithCleanups(unless(isInTemplateInstantiation()),
-                       hasParent(compoundStmt().bind("compound")),
-                       hasType(cxxRecordDecl(hasNonTrivialDestructor())),
-                       anyOf(has(ignoringParenImpCasts(BindTemp)),
-                             has(ignoringParenImpCasts(cxxFunctionalCastExpr(
-                                 has(ignoringParenImpCasts(BindTemp)))))))
-          .bind("expr"),
+      traverse(ast_type_traits::TK_AsIs,
+               exprWithCleanups(
+                   unless(isInTemplateInstantiation()),
+                   hasParent(compoundStmt().bind("compound")),
+                   hasType(cxxRecordDecl(hasNonTrivialDestructor())),
+                   anyOf(has(ignoringParenImpCasts(BindTemp)),
+                         has(ignoringParenImpCasts(cxxFunctionalCastExpr(
+                             has(ignoringParenImpCasts(BindTemp)))))))
+                   .bind("expr")),
       this);
 }
 

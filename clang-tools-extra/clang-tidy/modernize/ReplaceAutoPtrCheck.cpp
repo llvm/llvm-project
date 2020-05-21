@@ -123,9 +123,11 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
                           callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
                           hasArgument(1, MovableArgumentMatcher)),
       this);
-  Finder->addMatcher(cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
-                                      hasArgument(0, MovableArgumentMatcher)),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
+                                hasArgument(0, MovableArgumentMatcher))),
+      this);
 }
 
 void ReplaceAutoPtrCheck::registerPPCallbacks(const SourceManager &SM,

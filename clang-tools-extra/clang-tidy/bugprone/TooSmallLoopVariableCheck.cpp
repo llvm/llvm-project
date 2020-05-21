@@ -59,9 +59,10 @@ void TooSmallLoopVariableCheck::registerMatchers(MatchFinder *Finder) {
 
   // We need to catch only those comparisons which contain any integer cast.
   StatementMatcher LoopVarConversionMatcher =
-      implicitCastExpr(hasImplicitDestinationType(isInteger()),
-                       has(ignoringParenImpCasts(LoopVarMatcher)))
-          .bind(LoopVarCastName);
+      traverse(ast_type_traits::TK_AsIs,
+               implicitCastExpr(hasImplicitDestinationType(isInteger()),
+                                has(ignoringParenImpCasts(LoopVarMatcher)))
+                   .bind(LoopVarCastName));
 
   // We are interested in only those cases when the loop bound is a variable
   // value (not const, enum, etc.).
