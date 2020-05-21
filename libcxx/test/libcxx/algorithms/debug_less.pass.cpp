@@ -14,8 +14,13 @@
 
 // __debug_less checks that a comparator actually provides a strict-weak ordering.
 
+#include <chrono> // Include before defining _LIBCPP_ASSERT: cannot throw in a function marked noexcept.
+
 struct DebugException {};
 
+#ifdef _LIBCPP_ASSERT
+#undef _LIBCPP_ASSERT
+#endif
 #define _LIBCPP_DEBUG 0
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : throw ::DebugException())
 
