@@ -181,3 +181,96 @@ TEST(BasicBlockUtils, SplitIndirectBrCriticalEdge) {
   EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 0u));
   EXPECT_EQ(BranchProbability(1, 2), BPI.getEdgeProbability(SplitBB, 1u));
 }
+
+TEST(BasicBlockUtils, SetEdgeProbability) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(
+      C, "define void @edge_probability(i32 %0) {\n"
+         "entry:\n"
+         "switch i32 %0, label %LD [\n"
+         "  i32 700, label %L0\n"
+         "  i32 701, label %L1\n"
+         "  i32 702, label %L2\n"
+         "  i32 703, label %L3\n"
+         "  i32 704, label %L4\n"
+         "  i32 705, label %L5\n"
+         "  i32 706, label %L6\n"
+         "  i32 707, label %L7\n"
+         "  i32 708, label %L8\n"
+         "  i32 709, label %L9\n"
+         "  i32 710, label %L10\n"
+         "  i32 711, label %L11\n"
+         "  i32 712, label %L12\n"
+         "  i32 713, label %L13\n"
+         "  i32 714, label %L14\n"
+         "  i32 715, label %L15\n"
+         "  i32 716, label %L16\n"
+         "  i32 717, label %L17\n"
+         "  i32 718, label %L18\n"
+         "  i32 719, label %L19\n"
+         "], !prof !{!\"branch_weights\", i32 1, i32 1, i32 1, i32 1, i32 1, "
+         "i32 451, i32 1, i32 12, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, "
+         "i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1}\n"
+         "LD:\n"
+         "  unreachable\n"
+         "L0:\n"
+         "  ret void\n"
+         "L1:\n"
+         "  ret void\n"
+         "L2:\n"
+         "  ret void\n"
+         "L3:\n"
+         "  ret void\n"
+         "L4:\n"
+         "  ret void\n"
+         "L5:\n"
+         "  ret void\n"
+         "L6:\n"
+         "  ret void\n"
+         "L7:\n"
+         "  ret void\n"
+         "L8:\n"
+         "  ret void\n"
+         "L9:\n"
+         "  ret void\n"
+         "L10:\n"
+         "  ret void\n"
+         "L11:\n"
+         "  ret void\n"
+         "L12:\n"
+         "  ret void\n"
+         "L13:\n"
+         "  ret void\n"
+         "L14:\n"
+         "  ret void\n"
+         "L15:\n"
+         "  ret void\n"
+         "L16:\n"
+         "  ret void\n"
+         "L17:\n"
+         "  ret void\n"
+         "L18:\n"
+         "  ret void\n"
+         "L19:\n"
+         "  ret void\n"
+         "}\n");
+
+  auto *F = M->getFunction("edge_probability");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI);
+
+  auto Block = [&F](StringRef BBName) -> const BasicBlock & {
+    for (auto &BB : *F)
+      if (BB.getName() == BBName)
+        return BB;
+    llvm_unreachable("Block not found");
+  };
+
+  // Check that the unreachable block has the minimal probability.
+  const BasicBlock &EntryBB = Block("entry");
+  const BasicBlock &UnreachableBB = Block("LD");
+  EXPECT_EQ(BranchProbability::getRaw(1),
+            BPI.getEdgeProbability(&EntryBB, &UnreachableBB));
+}
