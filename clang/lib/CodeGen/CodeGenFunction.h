@@ -595,9 +595,6 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
-  /// True if the current statement has nomerge attribute.
-  bool InNoMergeAttributedStmt = false;
-
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
 
