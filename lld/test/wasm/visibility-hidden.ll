@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -o %t.o %s
-; RUN: llc -filetype=obj %S/Inputs/hidden.ll -o %t2.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hidden.s -o %t2.o
 ; RUN: rm -f %t2.a
 ; RUN: llvm-ar rcs %t2.a %t2.o
 

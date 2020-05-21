@@ -3,7 +3,7 @@
 ; stack size of 512.  This means (since the stack grows down) the stack pointer
 ; global should be initialized to 512.
 
-RUN: llc -filetype=obj %p/Inputs/start.ll -o %t.o
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
 RUN: wasm-ld -z stack-size=512 --stack-first --export=__data_end --export=__heap_base -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s
 
