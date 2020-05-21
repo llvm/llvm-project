@@ -1216,13 +1216,19 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
 // Collect information about PHI nodes which can be transformed in
 // rewriteLoopExitValues.
 struct RewritePhi {
-  PHINode *PN;
-  unsigned Ith;   // Ith incoming value.
-  Value *Val;     // Exit value after expansion.
-  bool HighCost;  // High Cost when expansion.
+  PHINode *PN;               // For which PHI node is this replacement?
+  unsigned Ith;              // For which incoming value?
+  const SCEV *ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
+  Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
+  bool HighCost;               // Is this expansion a high-cost?
 
-  RewritePhi(PHINode *P, unsigned I, Value *V, bool H)
-      : PN(P), Ith(I), Val(V), HighCost(H) {}
+  Value *Expansion = nullptr;
+  bool ValidRewrite = false;
+
+  RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
+             bool H)
+      : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
+        HighCost(H) {}
 };
 
 // Check whether it is possible to delete the loop after rewriting exit
@@ -1255,6 +1261,8 @@ static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet)
     // phase later. Skip it in the loop invariant check below.
     bool found = false;
     for (const RewritePhi &Phi : RewritePhiSet) {
+      if (!Phi.ValidRewrite)
+        continue;
       unsigned i = Phi.Ith;
       if (Phi.PN == P && (Phi.PN)->getIncomingValue(i) == Incoming) {
         found = true;
@@ -1372,42 +1380,66 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
             !isa<SCEVUnknown>(ExitValue) && hasHardUserWithinLoop(L, Inst))
           continue;
 
+        // Check if expansions of this SCEV would count as being high cost.
         bool HighCost = Rewriter.isHighCostExpansion(
             ExitValue, L, SCEVCheapExpansionBudget, TTI, Inst);
-        Value *ExitVal = Rewriter.expandCodeFor(ExitValue, PN->getType(), Inst);
 
-        LLVM_DEBUG(dbgs() << "rewriteLoopExitValues: AfterLoopVal = "
-                          << *ExitVal << '\n' << "  LoopVal = " << *Inst
-                          << "\n");
-
-        if (!isValidRewrite(SE, Inst, ExitVal)) {
-          DeadInsts.push_back(ExitVal);
-          continue;
-        }
-
-#ifndef NDEBUG
-        // If we reuse an instruction from a loop which is neither L nor one of
-        // its containing loops, we end up breaking LCSSA form for this loop by
-        // creating a new use of its instruction.
-        if (auto *ExitInsn = dyn_cast<Instruction>(ExitVal))
-          if (auto *EVL = LI->getLoopFor(ExitInsn->getParent()))
-            if (EVL != L)
-              assert(EVL->contains(L) && "LCSSA breach detected!");
-#endif
+        // Note that we must not perform expansions until after
+        // we query *all* the costs, because if we perform temporary expansion
+        // inbetween, one that we might not intend to keep, said expansion
+        // *may* affect cost calculation of the the next SCEV's we'll query,
+        // and next SCEV may errneously get smaller cost.
 
         // Collect all the candidate PHINodes to be rewritten.
-        RewritePhiSet.emplace_back(PN, i, ExitVal, HighCost);
+        RewritePhiSet.emplace_back(PN, i, ExitValue, Inst, HighCost);
       }
     }
   }
+
+  // Now that we've done preliminary filtering and billed all the SCEV's,
+  // we can perform the last sanity check - the expansion must be valid.
+  for (RewritePhi &Phi : RewritePhiSet) {
+    Phi.Expansion = Rewriter.expandCodeFor(Phi.ExpansionSCEV, Phi.PN->getType(),
+                                           Phi.ExpansionPoint);
+
+    LLVM_DEBUG(dbgs() << "rewriteLoopExitValues: AfterLoopVal = "
+                      << *(Phi.Expansion) << '\n'
+                      << "  LoopVal = " << *(Phi.ExpansionPoint) << "\n");
+
+    // FIXME: isValidRewrite() is a hack. it should be an assert, eventually.
+    Phi.ValidRewrite = isValidRewrite(SE, Phi.ExpansionPoint, Phi.Expansion);
+    if (!Phi.ValidRewrite) {
+      DeadInsts.push_back(Phi.Expansion);
+      continue;
+    }
+
+#ifndef NDEBUG
+    // If we reuse an instruction from a loop which is neither L nor one of
+    // its containing loops, we end up breaking LCSSA form for this loop by
+    // creating a new use of its instruction.
+    if (auto *ExitInsn = dyn_cast<Instruction>(Phi.Expansion))
+      if (auto *EVL = LI->getLoopFor(ExitInsn->getParent()))
+        if (EVL != L)
+          assert(EVL->contains(L) && "LCSSA breach detected!");
+#endif
+  }
+
+  // TODO: after isValidRewrite() is an assertion, evaluate whether
+  // it is beneficial to change how we calculate high-cost:
+  // if we have SCEV 'A' which we know we will expand, should we calculate
+  // the cost of other SCEV's after expanding SCEV 'A',
+  // thus potentially giving cost bonus to those other SCEV's?
 
   bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet);
   int NumReplaced = 0;
 
   // Transformation.
   for (const RewritePhi &Phi : RewritePhiSet) {
+    if (!Phi.ValidRewrite)
+      continue;
+
     PHINode *PN = Phi.PN;
-    Value *ExitVal = Phi.Val;
+    Value *ExitVal = Phi.Expansion;
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
