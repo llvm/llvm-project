@@ -326,7 +326,7 @@ void ExportSection::writeBody() {
 }
 
 bool StartSection::isNeeded() const {
-  return !config->relocatable && numSegments && config->sharedMemory;
+  return !config->relocatable && hasInitializedSegments && config->sharedMemory;
 }
 
 void StartSection::writeBody() {
