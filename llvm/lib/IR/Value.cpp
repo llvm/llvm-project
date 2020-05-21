@@ -738,16 +738,16 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
   return DerefBytes;
 }
 
-MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
+Align Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
   if (auto *GO = dyn_cast<GlobalObject>(this)) {
     if (isa<Function>(GO)) {
-      const MaybeAlign FunctionPtrAlign = DL.getFunctionPtrAlign();
+      Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
       switch (DL.getFunctionPtrAlignType()) {
       case DataLayout::FunctionPtrAlignType::Independent:
         return FunctionPtrAlign;
       case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-        return std::max(FunctionPtrAlign, MaybeAlign(GO->getAlignment()));
+        return std::max(FunctionPtrAlign, GO->getAlign().valueOrOne());
       }
       llvm_unreachable("Unhandled FunctionPtrAlignType");
     }
@@ -760,13 +760,13 @@ MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
           // it the preferred alignment. Otherwise, we have to assume that it
           // may only have the minimum ABI alignment.
           if (GVar->isStrongDefinitionForLinker())
-            return MaybeAlign(DL.getPreferredAlignment(GVar));
+            return Align(DL.getPreferredAlignment(GVar));
           else
             return DL.getABITypeAlign(ObjectType);
         }
       }
     }
-    return Alignment;
+    return Alignment.valueOrOne();
   } else if (const Argument *A = dyn_cast<Argument>(this)) {
     const MaybeAlign Alignment = A->getParamAlign();
     if (!Alignment && A->hasStructRetAttr()) {
@@ -775,25 +775,18 @@ MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
       if (EltTy->isSized())
         return DL.getABITypeAlign(EltTy);
     }
-    return Alignment;
+    return Alignment.valueOrOne();
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
-    const MaybeAlign Alignment = AI->getAlign();
-    if (!Alignment) {
-      Type *AllocatedType = AI->getAllocatedType();
-      if (AllocatedType->isSized())
-        return MaybeAlign(DL.getPrefTypeAlignment(AllocatedType));
-    }
-    return Alignment;
+    return AI->getAlign();
   } else if (const auto *Call = dyn_cast<CallBase>(this)) {
-    const MaybeAlign Alignment = Call->getRetAlign();
+    MaybeAlign Alignment = Call->getRetAlign();
     if (!Alignment && Call->getCalledFunction())
-      return MaybeAlign(
-          Call->getCalledFunction()->getAttributes().getRetAlignment());
-    return Alignment;
+      Alignment = Call->getCalledFunction()->getAttributes().getRetAlignment();
+    return Alignment.valueOrOne();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
-      return MaybeAlign(CI->getLimitedValue());
+      return Align(CI->getLimitedValue());
     }
   } else if (auto *CstPtr = dyn_cast<Constant>(this)) {
     if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
@@ -807,7 +800,7 @@ MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
                        : Value::MaximumAlignment);
     }
   }
-  return llvm::None;
+  return Align(1);
 }
 
 const Value *Value::DoPHITranslation(const BasicBlock *CurBB,
