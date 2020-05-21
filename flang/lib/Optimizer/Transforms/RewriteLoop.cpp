@@ -25,7 +25,7 @@ using namespace fir;
 
 namespace {
 
-// Conversion to the MLIR scf dialect
+// Conversion to the SCF dialect.
 //
 // FIR loops that cannot be converted to the affine dialect will remain as
 // `fir.do_loop` operations.  These can be converted to `scf.for` operations.
@@ -53,8 +53,8 @@ public:
   }
 };
 
-/// Convert `fir.where` to `scf.if`
-class ScfWhereConv : public mlir::OpRewritePattern<fir::WhereOp> {
+/// Convert `fir.if` to `scf.if`
+class ScfIfConv : public mlir::OpRewritePattern<fir::WhereOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
@@ -77,7 +77,7 @@ public:
   }
 };
 
-/// Replace FirEndOp with TerminatorOp
+/// Convert `fir.result` to `scf.yield`
 class ScfResultConv : public mlir::OpRewritePattern<fir::ResultOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -166,7 +166,7 @@ public:
   }
 };
 
-/// Convert `fir.do_loop` and `fir.if` to `scf.for` and `scf.if`.
+/// Convert FIR structured control flow ops to SCF ops.
 class ScfDialectConversion
     : public mlir::PassWrapper<ScfDialectConversion, mlir::FunctionPass> {
 public:
@@ -179,7 +179,7 @@ public:
     patterns1.insert<ScfIterWhileConv>(context);
 
     mlir::OwningRewritePatternList patterns2;
-    patterns2.insert<ScfLoopConv, ScfWhereConv, ScfResultConv>(context);
+    patterns2.insert<ScfLoopConv, ScfIfConv, ScfResultConv>(context);
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
                            mlir::scf::SCFDialect, mlir::StandardOpsDialect>();
@@ -196,14 +196,14 @@ public:
     if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
                                                   std::move(patterns2)))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
-                      "error in converting to MLIR scf dialect\n");
+                      "error in converting to scf dialect\n");
       signalPassFailure();
     }
   }
 };
 } // namespace
 
-/// Convert `fir.do_loop` and `fir.if` to `scf.for` and `scf.if`.  This
+/// Convert FIR's structured control flow ops to SCF ops.  This
 /// conversion enables the `createLowerToCFGPass` to transform these to CFG
 /// form.
 std::unique_ptr<mlir::Pass> fir::createLowerToScfPass() {
