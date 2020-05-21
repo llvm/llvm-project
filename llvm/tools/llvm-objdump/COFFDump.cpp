@@ -679,11 +679,9 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
            << "0x" << format("%08x", unsigned(Symbol->getValue())) << " "
            << Name;
     if (Demangle && Name.startswith("?")) {
-      char *DemangledSymbol = nullptr;
-      size_t Size = 0;
       int Status = -1;
-      DemangledSymbol =
-          microsoftDemangle(Name.data(), DemangledSymbol, &Size, &Status);
+      char *DemangledSymbol =
+          microsoftDemangle(Name.data(), nullptr, nullptr, nullptr, &Status);
 
       if (Status == 0 && DemangledSymbol) {
         outs() << " (" << StringRef(DemangledSymbol) << ")";
