@@ -25,6 +25,7 @@ executable("dsymutil") {
     "DwarfLinkerForBinary.cpp",
     "MachODebugMapParser.cpp",
     "MachOUtils.cpp",
+    "Reproducer.cpp",
     "SymbolMap.cpp",
     "dsymutil.cpp",
   ]

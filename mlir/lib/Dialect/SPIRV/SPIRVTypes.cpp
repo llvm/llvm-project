@@ -196,8 +196,8 @@ unsigned CompositeType::getNumElements() const {
   case spirv::TypeKind::Array:
     return cast<ArrayType>().getNumElements();
   case spirv::TypeKind::CooperativeMatrix:
-    return cast<CooperativeMatrixNVType>().getRows() *
-           cast<CooperativeMatrixNVType>().getColumns();
+    llvm_unreachable(
+        "invalid to query number of elements of spirv::CooperativeMatrix type");
   case spirv::TypeKind::RuntimeArray:
     llvm_unreachable(
         "invalid to query number of elements of spirv::RuntimeArray type");
@@ -207,6 +207,16 @@ unsigned CompositeType::getNumElements() const {
     return cast<VectorType>().getNumElements();
   default:
     llvm_unreachable("invalid composite type");
+  }
+}
+
+bool CompositeType::hasCompileTimeKnownNumElements() const {
+  switch (getKind()) {
+  case TypeKind::CooperativeMatrix:
+  case TypeKind::RuntimeArray:
+    return false;
+  default:
+    return true;
   }
 }
 
