@@ -1,5 +1,4 @@
 ! RUN: bbc -o - %s | FileCheck %s
-! XFAIL: *
 
 subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   integer i, j, k, ii, jj, kk
@@ -18,19 +17,22 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   ! CHECK-LABEL: BeginExternalListOutput
   ! CHECK-DAG: fir.load %arg3 :
   ! CHECK-DAG: %[[i1:.*]] = subi %{{.*}}, %[[one:c1.*]] :
-  ! CHECK-DAG: fir.load %arg4 :
-  ! CHECK-DAG: %[[j1:.*]] = subi %{{.*}}, %[[one]] :
+  ! CHECK: fir.load %arg4 :
+  ! CHECK: %[[j1:.*]] = subi %{{.*}}, %[[one]] :
   ! CHECK: fir.coordinate_of %arg6, %[[i1]], %[[j1]] :
   ! CHECK-LABEL: EndIoStatement
   print *, a1(ii,jj)
   ! CHECK-LABEL: BeginExternalListOutput
+  ! CHECK: fir.coordinate_of %{{[0-9]+}}, %{{[0-9]+}} : {{.*}} -> !fir.ref<i32>
   ! CHECK-LABEL: EndIoStatement
   print *, a2(ii,jj)
   ! CHECK-LABEL: BeginExternalListOutput
   ! CHECK-DAG: fir.load %arg3 :
-  ! CHECK-DAG: %[[i2:.*]] = subi %{{.*}}, %c2{{.*}} :
+  ! CHECK-DAG: %[[cc2:.*]] = fir.convert %c2{{.*}} :
+  ! CHECK: %[[i2:.*]] = subi %{{.*}}, %[[cc2]] :
   ! CHECK-DAG: fir.load %arg4 :
-  ! CHECK-DAG: %[[j2:.*]] = subi %{{.*}}, %c3{{.*}} :
+  ! CHECK-DAG: %[[cc3:.*]] = fir.convert %c3{{.*}} :
+  ! CHECK: %[[j2:.*]] = subi %{{.*}}, %[[cc3]] :
   ! CHECK: fir.coordinate_of %arg8, %[[i2]], %[[j2]] :
   ! CHECK-LABEL: EndIoStatement
   print *, a3(ii,jj)
