@@ -622,16 +622,16 @@ TEST(FriendDecl, InstantiationSourceRange) {
       friendDecl(hasParent(cxxRecordDecl(isTemplateInstantiation())))));
 }
 
-TEST(ObjCMessageExpr, CXXConstructExprRange) {
-  RangeVerifier<CXXConstructExpr> Verifier;
+TEST(ObjCMessageExpr, ParenExprRange) {
+  RangeVerifier<ParenExpr> Verifier;
   Verifier.expectRange(5, 25, 5, 27);
-  EXPECT_TRUE(Verifier.match(
-      "struct A { int a; };\n"
-      "@interface B {}\n"
-      "+ (void) f1: (A)arg;\n"
-      "@end\n"
-      "void f2() { A a; [B f1: (a)]; }\n",
-      cxxConstructExpr(), Lang_OBJCXX));
+  EXPECT_TRUE(Verifier.match("struct A { int a; };\n"
+                             "@interface B {}\n"
+                             "+ (void) f1: (A)arg;\n"
+                             "@end\n"
+                             "void f2() { A a; [B f1: (a)]; }\n",
+                             traverse(ast_type_traits::TK_AsIs, parenExpr()),
+                             Lang_OBJCXX));
 }
 
 TEST(FunctionDecl, FunctionDeclWithThrowSpecification) {

@@ -302,12 +302,18 @@ TEST(DeclarationMatcher, MatchNot) {
 }
 
 TEST(CastExpression, HasCastKind) {
-  EXPECT_TRUE(matches("char *p = 0;",
-              castExpr(hasCastKind(CK_NullToPointer))));
-  EXPECT_TRUE(notMatches("char *p = 0;",
-              castExpr(hasCastKind(CK_DerivedToBase))));
-  EXPECT_TRUE(matches("char *p = 0;",
-              implicitCastExpr(hasCastKind(CK_NullToPointer))));
+  EXPECT_TRUE(
+      matches("char *p = 0;",
+              traverse(ast_type_traits::TK_AsIs,
+                       varDecl(has(castExpr(hasCastKind(CK_NullToPointer)))))));
+  EXPECT_TRUE(notMatches(
+      "char *p = 0;",
+      traverse(ast_type_traits::TK_AsIs,
+               varDecl(has(castExpr(hasCastKind(CK_DerivedToBase)))))));
+  EXPECT_TRUE(matches(
+      "char *p = 0;",
+      traverse(ast_type_traits::TK_AsIs,
+               varDecl(has(implicitCastExpr(hasCastKind(CK_NullToPointer)))))));
 }
 
 TEST(DeclarationMatcher, HasDescendant) {
@@ -1380,8 +1386,9 @@ TEST(Matcher, MatchesOverridingMethod) {
 }
 
 TEST(Matcher, ConstructorArgument) {
-  StatementMatcher Constructor = cxxConstructExpr(
-    hasArgument(0, declRefExpr(to(varDecl(hasName("y"))))));
+  auto Constructor = traverse(
+      ast_type_traits::TK_AsIs,
+      cxxConstructExpr(hasArgument(0, declRefExpr(to(varDecl(hasName("y")))))));
 
   EXPECT_TRUE(
     matches("class X { public: X(int); }; void x() { int y; X x(y); }",
@@ -1396,15 +1403,18 @@ TEST(Matcher, ConstructorArgument) {
     notMatches("class X { public: X(int); }; void x() { int z; X x(z); }",
                Constructor));
 
-  StatementMatcher WrongIndex = cxxConstructExpr(
-    hasArgument(42, declRefExpr(to(varDecl(hasName("y"))))));
+  StatementMatcher WrongIndex =
+      traverse(ast_type_traits::TK_AsIs,
+               cxxConstructExpr(
+                   hasArgument(42, declRefExpr(to(varDecl(hasName("y")))))));
   EXPECT_TRUE(
     notMatches("class X { public: X(int); }; void x() { int y; X x(y); }",
                WrongIndex));
 }
 
 TEST(Matcher, ConstructorArgumentCount) {
-  StatementMatcher Constructor1Arg = cxxConstructExpr(argumentCountIs(1));
+  auto Constructor1Arg =
+      traverse(ast_type_traits::TK_AsIs, cxxConstructExpr(argumentCountIs(1)));
 
   EXPECT_TRUE(
     matches("class X { public: X(int); }; void x() { X x(0); }",
@@ -1421,8 +1431,9 @@ TEST(Matcher, ConstructorArgumentCount) {
 }
 
 TEST(Matcher, ConstructorListInitialization) {
-  StatementMatcher ConstructorListInit =
-    cxxConstructExpr(isListInitialization());
+  auto ConstructorListInit =
+      traverse(ast_type_traits::TK_AsIs,
+               varDecl(has(cxxConstructExpr(isListInitialization()))));
 
   EXPECT_TRUE(
     matches("class X { public: X(int); }; void x() { X x{0}; }",
