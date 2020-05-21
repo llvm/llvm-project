@@ -101,6 +101,7 @@
 ; GCN-O1-NEXT:         Infer address spaces
 ; GCN-O1-NEXT:     AMDGPU Kernel Attributes
 ; GCN-O1-NEXT:     FunctionPass Manager
+; GCN-O1-NEXT:       AMDGPU Promote Alloca to vector
 ; GCN-O1-NEXT:       Dominator Tree Construction
 ; GCN-O1-NEXT:       SROA
 ; GCN-O1-NEXT:       Basic Alias Analysis (stateless AA impl)
@@ -401,6 +402,7 @@
 ; GCN-O2-NEXT:         Infer address spaces
 ; GCN-O2-NEXT:     AMDGPU Kernel Attributes
 ; GCN-O2-NEXT:     FunctionPass Manager
+; GCN-O2-NEXT:       AMDGPU Promote Alloca to vector
 ; GCN-O2-NEXT:       Dominator Tree Construction
 ; GCN-O2-NEXT:       SROA
 ; GCN-O2-NEXT:       Basic Alias Analysis (stateless AA impl)
@@ -752,6 +754,7 @@
 ; GCN-O3-NEXT:         Infer address spaces
 ; GCN-O3-NEXT:     AMDGPU Kernel Attributes
 ; GCN-O3-NEXT:     FunctionPass Manager
+; GCN-O3-NEXT:       AMDGPU Promote Alloca to vector
 ; GCN-O3-NEXT:       Dominator Tree Construction
 ; GCN-O3-NEXT:       SROA
 ; GCN-O3-NEXT:       Basic Alias Analysis (stateless AA impl)
