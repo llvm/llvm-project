@@ -358,7 +358,22 @@ public:
   /// Emits a `load` when converting to a Value.
   operator Value() const { return Load(value, indices); }
 
+  /// Returns the base memref.
   Value getBase() const { return value; }
+
+  /// Returns the underlying memref.
+  MemRefType getMemRefType() const {
+    return value.getType().template cast<MemRefType>();
+  }
+
+  /// Returns the underlying MemRef elemental type cast as `T`.
+  template <typename T>
+  T getElementalTypeAs() const {
+    return value.getType()
+        .template cast<MemRefType>()
+        .getElementType()
+        .template cast<T>();
+  }
 
   /// Arithmetic operator overloadings.
   Value operator+(Value e);

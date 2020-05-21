@@ -1385,6 +1385,9 @@ def Vector_TransposeOp :
                           [c, f] ]
     ```
   }];
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value vector, "
+    "ArrayRef<int64_t> transp">];
   let extraClassDeclaration = [{
     VectorType getVectorType() {
       return vector().getType().cast<VectorType>();
@@ -1393,6 +1396,7 @@ def Vector_TransposeOp :
       return result().getType().cast<VectorType>();
     }
     void getTransp(SmallVectorImpl<int64_t> &results);
+    static StringRef getTranspAttrName() { return "transp"; }
   }];
   let assemblyFormat = [{
     $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
