@@ -85,6 +85,8 @@ using namespace clang::driver::options;
 namespace COMGR {
 
 namespace {
+static constexpr llvm::StringLiteral LinkerJobName = "amdgpu::Linker";
+
 /// \brief Helper class for representing a single invocation of the assembler.
 struct AssemblerInvocation {
   /// @name Target Options
@@ -327,7 +329,7 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags, raw_ostream &DiagOS) {
+                             DiagnosticsEngine &Diags, raw_ostream &LogS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -344,10 +346,10 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
   SourceMgr SrcMgr;
   SrcMgr.setDiagHandler(
-      [](const SMDiagnostic &SMDiag, void *DiagOS) {
-        SMDiag.print("", *(raw_ostream *)DiagOS, /* ShowColors */ false);
+      [](const SMDiagnostic &SMDiag, void *LogS) {
+        SMDiag.print("", *(raw_ostream *)LogS, /* ShowColors */ false);
       },
-      &DiagOS);
+      &LogS);
 
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*Buffer), SMLoc());
@@ -572,18 +574,9 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-InProcessDriver::InProcessDriver(raw_ostream &DiagOS)
-    : DiagOS(DiagOS), DiagOpts(new DiagnosticOptions()),
-      DiagClient(new TextDiagnosticPrinter(DiagOS, &*DiagOpts)),
-      Diags(DiagID, DiagOpts, DiagClient),
-      TheDriver(new Driver("", "", Diags)) {
-  TheDriver->setTitle("AMDGPU Code Object Manager");
-  TheDriver->setCheckInputsExist(false);
-}
-
 static void logArgv(raw_ostream &OS, StringRef ProgramName,
                     ArrayRef<const char *> Argv) {
-  OS << "COMGR::InProcessDriver::Execute argv: " << ProgramName;
+  OS << "COMGR::executeInProcessDriver argv: " << ProgramName;
   for (size_t I = 0; I < Argv.size(); ++I)
     // Skip the first argument, which we replace with ProgramName, and the last
     // argument, which is a null terminator.
@@ -592,8 +585,35 @@ static void logArgv(raw_ostream &OS, StringRef ProgramName,
   OS << '\n';
 }
 
-amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
-  std::unique_ptr<Compilation> C(TheDriver->BuildCompilation(Args));
+amd_comgr_status_t
+AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
+  // A DiagnosticsEngine is required at several points:
+  //  * By the Driver in order to diagnose option parsing.
+  //  * By the CompilerInvocation in order to diagnose option parsing.
+  //  * By the CompilerInstance in order to diagnose everything else.
+  // It is a chicken-and-egg problem in that you need some form of diagnostics
+  // in order to diagnose options which further influence diagnostics. The code
+  // here is mostly copy-and-pasted from driver.cpp/cc1_main.cpp/various Clang
+  // tests to try to approximate the same behavior as running the `clang`
+  // executable.
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
+  unsigned MissingArgIndex, MissingArgCount;
+  InputArgList ArgList = getDriverOptTable().ParseArgs(
+      Args.slice(1), MissingArgIndex, MissingArgCount);
+  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs. Any
+  // errors that would be diagnosed here will also be diagnosed later, when the
+  // DiagnosticsEngine actually exists.
+  (void)ParseDiagnosticArgs(*DiagOpts, ArgList);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(LogS, &*DiagOpts);
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  ProcessWarningOptions(Diags, *DiagOpts, /*ReportDiags=*/false);
+  Driver TheDriver("", "", Diags);
+  TheDriver.setTitle("AMDGPU Code Object Manager");
+  TheDriver.setCheckInputsExist(false);
+
+  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
   if (!C)
     return C->containsError() ? AMD_COMGR_STATUS_ERROR
                               : AMD_COMGR_STATUS_SUCCESS;
@@ -613,33 +633,35 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
 
     if (Argv[1] == StringRef("-cc1")) {
       if (env::shouldEmitVerboseLogs())
-        logArgv(DiagOS, "clang", Argv);
+        logArgv(LogS, "clang", Argv);
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-      Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
-      Clang->setVerboseOutputStream(DiagOS);
-      if (!Clang->hasDiagnostics())
+      Clang->setVerboseOutputStream(LogS);
+      if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
+                                              Diags))
         return AMD_COMGR_STATUS_ERROR;
-      if (!CompilerInvocation::CreateFromArgs(
-              Clang->getInvocation(), Argv,
-              Clang->getDiagnostics()))
+      // Internally this call refers to the invocation created above, so at
+      // this point the DiagnosticsEngine should accurately reflect all user
+      // requested configuration from Argv.
+      Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
+      if (!Clang->hasDiagnostics())
         return AMD_COMGR_STATUS_ERROR;
       if (!ExecuteCompilerInvocation(Clang.get()))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Argv[1] == StringRef("-cc1as")) {
       if (env::shouldEmitVerboseLogs())
-        logArgv(DiagOS, "clang", Argv);
+        logArgv(LogS, "clang", Argv);
       Argv.erase(Argv.begin() + 1);
       AssemblerInvocation Asm;
       if (!AssemblerInvocation::CreateFromArgs(Asm, Argv, Diags))
         return AMD_COMGR_STATUS_ERROR;
       if (auto Status = parseLLVMOptions(Asm.LLVMArgs))
         return Status;
-      if (ExecuteAssembler(Asm, Diags, DiagOS))
+      if (ExecuteAssembler(Asm, Diags, LogS))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Job.getCreator().getName() == LinkerJobName) {
       if (env::shouldEmitVerboseLogs())
-        logArgv(DiagOS, "lld", Argv);
-      if (auto Status = linkWithLLD(Arguments, DiagOS, DiagOS))
+        logArgv(LogS, "lld", Argv);
+      if (auto Status = linkWithLLD(Arguments, LogS, LogS))
         return Status;
     } else {
       return AMD_COMGR_STATUS_ERROR;
@@ -731,9 +753,7 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
   if (CompileOOP && getLanguage() == AMD_COMGR_LANGUAGE_HIP)
     return executeOutOfProcessHIPCompilation(Argv);
 
-  InProcessDriver TheDriver(LogS);
-
-  return TheDriver.execute(Argv);
+  return executeInProcessDriver(Argv);
 }
 
 amd_comgr_status_t
@@ -1111,9 +1131,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
   Args.push_back("-o");
   Args.push_back(OutputFilePath.c_str());
 
-  InProcessDriver TheDriver(LogS);
-
-  if (auto Status = TheDriver.execute(Args))
+  if (auto Status = executeInProcessDriver(Args))
     return Status;
 
   if (auto Status = inputFromFile(Output, OutputFilePath))

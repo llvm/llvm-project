@@ -40,6 +40,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef __GNUC__
 #define NORETURN _Noreturn
@@ -214,6 +215,78 @@ amd_comgr_status_t printEntry(amd_comgr_metadata_node_t key,
 
   free(keybuf);
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+void checkLogs(const char *id, amd_comgr_data_set_t dataSet,
+               const char *expected) {
+  amd_comgr_status_t status;
+
+  size_t count;
+  status =
+      amd_comgr_action_data_count(dataSet, AMD_COMGR_DATA_KIND_LOG, &count);
+  checkError(status, "amd_comgr_action_data_count");
+
+  for (size_t i = 0; i < count; i++) {
+    amd_comgr_data_t data;
+    status = amd_comgr_action_data_get_data(dataSet, AMD_COMGR_DATA_KIND_LOG, i,
+                                            &data);
+    checkError(status, "amd_comgr_action_data_get_data");
+
+    size_t size;
+    status = amd_comgr_get_data(data, &size, NULL);
+    checkError(status, "amd_comgr_get_data");
+
+    char *bytes = malloc(size + 1);
+    if (!bytes)
+      fail("malloc");
+    status = amd_comgr_get_data(data, &size, bytes);
+    checkError(status, "amd_comgr_get_data");
+    bytes[size] = '\0';
+
+    if (!strstr(bytes, expected)) {
+      printf("%s failed: expected substring \"%s\" not found in log:\n%s", id,
+             expected, bytes);
+      exit(1);
+    }
+
+    free(bytes);
+
+    status = amd_comgr_release_data(data);
+    checkError(status, "amd_comgr_release_data");
+  }
+}
+
+// FIXME: This should probably be defined by Comgr
+const char *dataKindString(amd_comgr_data_kind_t dataKind) {
+  static const char *strings[AMD_COMGR_DATA_KIND_FATBIN + 1] = {
+      [AMD_COMGR_DATA_KIND_UNDEF] = "AMD_COMGR_DATA_KIND_UNDEF",
+      [AMD_COMGR_DATA_KIND_SOURCE] = "AMD_COMGR_DATA_KIND_SOURCE",
+      [AMD_COMGR_DATA_KIND_INCLUDE] = "AMD_COMGR_DATA_KIND_INCLUDE",
+      [AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER] =
+          "AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER",
+      [AMD_COMGR_DATA_KIND_DIAGNOSTIC] = "AMD_COMGR_DATA_KIND_DIAGNOSTIC",
+      [AMD_COMGR_DATA_KIND_LOG] = "AMD_COMGR_DATA_KIND_LOG",
+      [AMD_COMGR_DATA_KIND_BC] = "AMD_COMGR_DATA_KIND_BC",
+      [AMD_COMGR_DATA_KIND_RELOCATABLE] = "AMD_COMGR_DATA_KIND_RELOCATABLE",
+      [AMD_COMGR_DATA_KIND_EXECUTABLE] = "AMD_COMGR_DATA_KIND_EXECUTABLE",
+      [AMD_COMGR_DATA_KIND_BYTES] = "AMD_COMGR_DATA_KIND_BYTES",
+      [AMD_COMGR_DATA_KIND_FATBIN] = "AMD_COMGR_DATA_KIND_FATBIN",
+  };
+  return strings[dataKind];
+}
+
+void checkCount(const char *id, amd_comgr_data_set_t dataSet,
+                amd_comgr_data_kind_t dataKind, size_t expected) {
+  amd_comgr_status_t status;
+
+  size_t count;
+  status =
+      amd_comgr_action_data_count(dataSet, dataKind, &count);
+  checkError(status, "checkCount:amd_comgr_action_data_count");
+
+  if (count != expected)
+    fail("%s failed: produced %zu %s objects (expected %zu)\n", id, count,
+         dataKindString(dataKind), expected);
 }
 
 #endif // COMGR_TEST_COMMON_H

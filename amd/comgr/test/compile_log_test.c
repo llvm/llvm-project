@@ -39,45 +39,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void checkLogs(const char *id, amd_comgr_data_set_t dataSet,
-               const char *expected) {
-  amd_comgr_status_t status;
-
-  size_t count;
-  status =
-      amd_comgr_action_data_count(dataSet, AMD_COMGR_DATA_KIND_LOG, &count);
-  checkError(status, "amd_comgr_action_data_count");
-
-  for (size_t i = 0; i < count; i++) {
-    amd_comgr_data_t data;
-    status = amd_comgr_action_data_get_data(dataSet, AMD_COMGR_DATA_KIND_LOG, i,
-                                            &data);
-    checkError(status, "amd_comgr_action_data_get_data");
-
-    size_t size;
-    status = amd_comgr_get_data(data, &size, NULL);
-    checkError(status, "amd_comgr_get_data");
-
-    char *bytes = malloc(size + 1);
-    if (!bytes)
-      fail("malloc");
-    status = amd_comgr_get_data(data, &size, bytes);
-    checkError(status, "amd_comgr_get_data");
-    bytes[size] = '\0';
-
-    if (!strstr(bytes, expected)) {
-      printf("%s failed: expected substring \"%s\" not found in log:\n%s", id,
-             expected, bytes);
-      exit(1);
-    }
-
-    free(bytes);
-
-    status = amd_comgr_release_data(data);
-    checkError(status, "amd_comgr_release_data");
-  }
-}
-
 int main(int argc, char *argv[]) {
   amd_comgr_data_t dataCL, dataASM, dataBC, dataReloc;
   amd_comgr_data_set_t dataSetOut, dataSetCL, dataSetASM, dataSetBC,

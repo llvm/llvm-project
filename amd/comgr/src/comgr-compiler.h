@@ -47,21 +47,6 @@
 
 namespace COMGR {
 
-class InProcessDriver {
-  llvm::raw_ostream &DiagOS;
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
-  clang::TextDiagnosticPrinter *DiagClient;
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID;
-  clang::DiagnosticsEngine Diags;
-  std::unique_ptr<clang::driver::Driver> TheDriver;
-
-  const std::string LinkerJobName = "amdgpu::Linker";
-
-public:
-  InProcessDriver(llvm::raw_ostream &DiagOS);
-  amd_comgr_status_t execute(llvm::ArrayRef<const char *> Args);
-};
-
 /// Manages executing Compiler-related actions.
 ///
 /// @warning No more than one public method should be called on a constructed
@@ -139,6 +124,8 @@ class AMDGPUCompiler {
   amd_comgr_status_t addCompilationFlags();
   amd_comgr_status_t
   executeOutOfProcessHIPCompilation(llvm::ArrayRef<const char *> Args);
+
+  amd_comgr_status_t executeInProcessDriver(llvm::ArrayRef<const char *> Args);
 
 public:
   AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet,
