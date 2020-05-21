@@ -2558,6 +2558,43 @@ TEST_F(FormatTest, FormatsExternC) {
                Style);
 }
 
+TEST_F(FormatTest, IndentExternBlockStyle) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentWidth = 2;
+
+  Style.IndentExternBlock = FormatStyle::IEBS_Indent;
+  verifyFormat("extern \"C\" { /*9*/\n}", Style);
+  verifyFormat("extern \"C\" {\n"
+               "  int foo10();\n"
+               "}",
+               Style);
+
+  Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
+  verifyFormat("extern \"C\" { /*11*/\n}", Style);
+  verifyFormat("extern \"C\" {\n"
+               "int foo12();\n"
+               "}",
+               Style);
+
+  Style.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterExternBlock = true;
+  verifyFormat("extern \"C\"\n{ /*13*/\n}", Style);
+  verifyFormat("extern \"C\"\n{\n"
+               "  int foo14();\n"
+               "}",
+               Style);
+
+  Style.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterExternBlock = false;
+  verifyFormat("extern \"C\" { /*15*/\n}", Style);
+  verifyFormat("extern \"C\" {\n"
+               "int foo16();\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsInlineASM) {
   verifyFormat("asm(\"xyz\" : \"=a\"(a), \"=d\"(b) : \"a\"(data));");
   verifyFormat("asm(\"nop\" ::: \"memory\");");
@@ -13845,6 +13882,18 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: true",
               AllowShortIfStatementsOnASingleLine,
               FormatStyle::SIS_WithoutElse);
+
+  Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
+  CHECK_PARSE("IndentExternBlock: AfterExternBlock", IndentExternBlock,
+              FormatStyle::IEBS_AfterExternBlock);
+  CHECK_PARSE("IndentExternBlock: Indent", IndentExternBlock,
+              FormatStyle::IEBS_Indent);
+  CHECK_PARSE("IndentExternBlock: NoIndent", IndentExternBlock,
+              FormatStyle::IEBS_NoIndent);
+  CHECK_PARSE("IndentExternBlock: true", IndentExternBlock,
+              FormatStyle::IEBS_Indent);
+  CHECK_PARSE("IndentExternBlock: false", IndentExternBlock,
+              FormatStyle::IEBS_NoIndent);
 
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.

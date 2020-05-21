@@ -1113,11 +1113,16 @@ void UnwrappedLineParser::parseStructuralElement() {
     if (FormatTok->Tok.is(tok::string_literal)) {
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
-        if (Style.BraceWrapping.AfterExternBlock) {
-          addUnwrappedLine();
-          parseBlock(/*MustBeDeclaration=*/true);
+        if (!Style.IndentExternBlock) {
+          if (Style.BraceWrapping.AfterExternBlock) {
+            addUnwrappedLine();
+          }
+          parseBlock(/*MustBeDeclaration=*/true,
+                     /*AddLevel=*/Style.BraceWrapping.AfterExternBlock);
         } else {
-          parseBlock(/*MustBeDeclaration=*/true, /*AddLevel=*/false);
+          parseBlock(/*MustBeDeclaration=*/true,
+                     /*AddLevel=*/Style.IndentExternBlock ==
+                         FormatStyle::IEBS_Indent);
         }
         addUnwrappedLine();
         return;
