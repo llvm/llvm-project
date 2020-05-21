@@ -1,0 +1,43 @@
+## Show that SIGINT and similar signals don't cause crash messages to be
+## reported.
+# RUN: %python %s wrapper llvm-symbolizer 2> %t.err
+# RUN: count 0 < %t.err
+
+import os
+import signal
+import subprocess
+import sys
+import time
+
+def run_symbolizer():
+    proc = subprocess.Popen([sys.argv[2]], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    # Write then read some output to ensure the process has started fully.
+    proc.stdin.write(b'foo\n')
+    proc.stdin.flush()
+    proc.stdout.readline()
+    # Windows handles signals differently.
+    if os.name == 'nt':
+        os.kill(0, signal.CTRL_BREAK_EVENT)
+    else:
+        proc.send_signal(signal.SIGINT)
+
+# On Windows, this function spawns the subprocess in its own (hidden) console,
+# so that signals do not interfere with the calling test. This isn't necessary
+# on other systems.
+def run_wrapper():
+    args = [sys.executable, __file__, 'symbolizer'] + sys.argv[2:]
+    if os.name == 'nt':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        proc = subprocess.Popen(args,
+                                stderr=sys.stderr,
+                                startupinfo=startupinfo,
+                                creationflags=subprocess.CREATE_NEW_CONSOLE)
+    else:
+        proc = subprocess.Popen(args,
+                                stderr=subprocess.PIPE)
+
+if sys.argv[1] == 'wrapper':
+    run_wrapper()
+else:
+    run_symbolizer()
