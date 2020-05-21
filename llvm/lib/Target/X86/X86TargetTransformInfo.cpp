@@ -2699,6 +2699,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
 
 int X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
   if (ICA.isTypeBasedOnly())
     return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
@@ -3931,6 +3934,9 @@ int X86TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *SrcVTy, Value *Ptr, bool VariableMask,
     unsigned Alignment, TTI::TargetCostKind CostKind,
     const Instruction *I = nullptr) {
+
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   unsigned VF = cast<VectorType>(SrcVTy)->getNumElements();
