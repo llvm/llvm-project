@@ -235,10 +235,11 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
 // This function does not list all associative and commutative operations, but
 // only those worth feeding through the machine combiner in an attempt to
 // reduce the critical path. Mostly, this means floating-point operations,
-// because they have high latencies (compared to other operations, such and
+// because they have high latencies(>=5) (compared to other operations, such as
 // and/or, which are also associative and commutative, but have low latencies).
 bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   switch (Inst.getOpcode()) {
+  // Floating point:
   // FP Add:
   case PPC::FADD:
   case PPC::FADDS:
@@ -267,6 +268,13 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case PPC::QVFMULSs:
     return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
            Inst.getFlag(MachineInstr::MIFlag::FmNsz);
+  // Fixed point:
+  // Multiply:
+  case PPC::MULHD:
+  case PPC::MULLD:
+  case PPC::MULHW:
+  case PPC::MULLW:
+    return true;
   default:
     return false;
   }
