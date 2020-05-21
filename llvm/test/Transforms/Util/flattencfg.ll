@@ -29,7 +29,7 @@ exit:                               ; preds = %entry, %b0, %b1
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %0 = fcmp ult float %a
 ; CHECK-NEXT:    %1 = fcmp ult float %b
-; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = or i1 %0, %1
+; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = and i1 %0, %1
 ; CHECK-NEXT:    br i1 [[COND]], label %bb4, label %bb3
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label %bb4
@@ -82,5 +82,136 @@ bb2:                                              ; preds = %bb1
 
 bb3:                                              ; preds = %bb2, %bb1
   %check_badref = phi i32 [ 17, %bb1 ], [ 11, %bb2 ]
+  ret void
+}
+
+
+@g = global i32 0, align 4
+
+; CHECK-LABEL: @test_then
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    %cmp.x = icmp ne i32 %x, 0
+; CHECK-NEXT:    %cmp.y = icmp ne i32 %y, 0
+; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = or i1 %cmp.x, %cmp.y
+; CHECK-NEXT:    br i1 [[COND]], label %if.then.y, label %exit
+; CHECK:       if.then.y:
+; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    br label %exit
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+define void @test_then(i32 %x, i32 %y, i32 %z) {
+entry.x:
+  %cmp.x = icmp ne i32 %x, 0
+  br i1 %cmp.x, label %if.then.x, label %entry.y
+
+if.then.x:
+  store i32 %z, i32* @g, align 4
+  br label %entry.y
+
+entry.y:
+  %cmp.y = icmp ne i32 %y, 0
+  br i1 %cmp.y, label %if.then.y, label %exit
+
+if.then.y:
+  store i32 %z, i32* @g, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: @test_else
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    %cmp.x = icmp eq i32 %x, 0
+; CHECK-NEXT:    %cmp.y = icmp eq i32 %y, 0
+; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = and i1 %cmp.x, %cmp.y
+; CHECK-NEXT:    br i1 [[COND]], label %exit, label %if.else.y
+; CHECK:       if.else.y:
+; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    br label %exit
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+define void @test_else(i32 %x, i32 %y, i32 %z) {
+entry.x:
+  %cmp.x = icmp eq i32 %x, 0
+  br i1 %cmp.x, label %entry.y, label %if.else.x
+
+if.else.x:
+  store i32 %z, i32* @g, align 4
+  br label %entry.y
+
+entry.y:
+  %cmp.y = icmp eq i32 %y, 0
+  br i1 %cmp.y, label %exit, label %if.else.y
+
+if.else.y:
+  store i32 %z, i32* @g, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: @test_combine_and
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    %cmp.x = icmp eq i32 %x, 0
+; CHECK-NEXT:    %cmp.y = icmp eq i32 %y, 0
+; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = and i1 %cmp.x, %cmp.y
+; CHECK-NEXT:    br i1 [[COND]], label %exit, label %if.then.y
+; CHECK:       if.then.y:
+; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    br label %exit
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+define void @test_combine_and(i32 %x, i32 %y, i32 %z) {
+entry.x:
+  %cmp.x = icmp eq i32 %x, 0
+  br i1 %cmp.x, label %entry.y, label %if.else.x
+
+if.else.x:
+  store i32 %z, i32* @g, align 4
+  br label %entry.y
+
+entry.y:
+  %cmp.y = icmp ne i32 %y, 0
+  br i1 %cmp.y, label %if.then.y, label %exit
+
+if.then.y:
+  store i32 %z, i32* @g, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: @test_combine_or
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    %cmp.x = icmp ne i32 %x, 0
+; CHECK-NEXT:    %cmp.y = icmp ne i32 %y, 0
+; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = or i1 %cmp.x, %cmp.y
+; CHECK-NEXT:    br i1 [[COND]], label %if.else.y, label %exit
+; CHECK:       if.else.y:
+; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    br label %exit
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+define void @test_combine_or(i32 %x, i32 %y, i32 %z) {
+entry.x:
+  %cmp.x = icmp ne i32 %x, 0
+  br i1 %cmp.x, label %if.then.x, label %entry.y
+
+if.then.x:
+  store i32 %z, i32* @g, align 4
+  br label %entry.y
+
+entry.y:
+  %cmp.y = icmp eq i32 %y, 0
+  br i1 %cmp.y, label %exit, label %if.else.y
+
+if.else.y:
+  store i32 %z, i32* @g, align 4
+  br label %exit
+
+exit:
   ret void
 }
