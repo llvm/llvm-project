@@ -2,7 +2,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX10 %s
 
 #
-# GFX9 tests
+# COM: GFX9 tests
 #
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz
@@ -780,7 +780,7 @@ body:             |
 
 
 #
-# GFX10 tests
+# COM: GFX10 tests
 #
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_x_xyz

@@ -245,17 +245,17 @@
 
 ; V6:   .eabi_attribute 6, 6
 ; V6:   .eabi_attribute 8, 1
-;; We assume round-to-nearest by default (matches GCC)
+; COM: We assume round-to-nearest by default (matches GCC)
 ; V6-NOT:   .eabi_attribute 27
 ; V6-NOT:    .eabi_attribute 36
 ; V6-NOT:    .eabi_attribute 42
 ; V6-NOT:  .eabi_attribute 44
 ; V6-NOT:    .eabi_attribute 68
 ; V6-NOT:   .eabi_attribute 19
-;; The default choice made by llc is for a V6 CPU without an FPU.
-;; This is not an interesting detail, but for such CPUs, the default intention is to use
-;; software floating-point support. The choice is not important for targets without
-;; FPU support!
+; COM: The default choice made by llc is for a V6 CPU without an FPU.
+; COM: This is not an interesting detail, but for such CPUs, the default intention is to use
+; COM: software floating-point support. The choice is not important for targets without
+; COM: FPU support!
 ; V6:   .eabi_attribute 20, 1
 ; V6:   .eabi_attribute 21, 1
 ; V6-NOT:   .eabi_attribute 22
@@ -266,16 +266,16 @@
 ; V6:    .eabi_attribute 38, 1
 
 ; V6-FAST-NOT:   .eabi_attribute 19
-;; Despite the V6 CPU having no FPU by default, we chose to flush to
-;; positive zero here. There's no hardware support doing this, but the
-;; fast maths software library might.
+; COM: Despite the V6 CPU having no FPU by default, we chose to flush to
+; COM: positive zero here. There's no hardware support doing this, but the
+; COM: fast maths software library might.
 ; V6-FAST-NOT:   .eabi_attribute 20
 ; V6-FAST-NOT:   .eabi_attribute 21
 ; V6-FAST-NOT:   .eabi_attribute 22
 ; V6-FAST:   .eabi_attribute 23, 1
 
-;; We emit 6, 12 for both v6-M and v6S-M, technically this is incorrect for
-;; V6-M, however we don't model the OS extension so this is fine.
+; COM: We emit 6, 12 for both v6-M and v6S-M, technically this is incorrect for
+; COM: V6-M, however we don't model the OS extension so this is fine.
 ; V6M:  .eabi_attribute 6, 12
 ; V6M:  .eabi_attribute 7, 77
 ; V6M:  .eabi_attribute 8, 0
@@ -286,10 +286,10 @@
 ; V6M-NOT:  .eabi_attribute 44
 ; V6M-NOT:  .eabi_attribute 68
 ; V6M-NOT:   .eabi_attribute 19
-;; The default choice made by llc is for a V6M CPU without an FPU.
-;; This is not an interesting detail, but for such CPUs, the default intention is to use
-;; software floating-point support. The choice is not important for targets without
-;; FPU support!
+; COM: The default choice made by llc is for a V6M CPU without an FPU.
+; COM: This is not an interesting detail, but for such CPUs, the default intention is to use
+; COM: software floating-point support. The choice is not important for targets without
+; COM: FPU support!
 ; V6M:  .eabi_attribute 20, 1
 ; V6M:   .eabi_attribute 21, 1
 ; V6M-NOT:   .eabi_attribute 22
@@ -300,9 +300,9 @@
 ; V6M:  .eabi_attribute 38, 1
 
 ; V6M-FAST-NOT:   .eabi_attribute 19
-;; Despite the V6M CPU having no FPU by default, we chose to flush to
-;; positive zero here. There's no hardware support doing this, but the
-;; fast maths software library might.
+; COM: Despite the V6M CPU having no FPU by default, we chose to flush to
+; COM: positive zero here. There's no hardware support doing this, but the
+; COM: fast maths software library might.
 ; V6M-FAST-NOT:  .eabi_attribute 20
 ; V6M-FAST-NOT:   .eabi_attribute 21
 ; V6M-FAST-NOT:   .eabi_attribute 22
@@ -319,7 +319,7 @@
 ; ARM1156T2F-S-NOT:    .eabi_attribute 44
 ; ARM1156T2F-S-NOT:    .eabi_attribute 68
 ; ARM1156T2F-S-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; ARM1156T2F-S: .eabi_attribute 20, 1
 ; ARM1156T2F-S: .eabi_attribute 21, 1
 ; ARM1156T2F-S-NOT: .eabi_attribute 22
@@ -330,9 +330,9 @@
 ; ARM1156T2F-S: .eabi_attribute 38, 1
 
 ; ARM1156T2F-S-FAST-NOT:   .eabi_attribute 19
-;; V6 cores default to flush to positive zero (value 0). Note that value 2 is also equally
-;; valid for this core, it's an implementation defined question as to which of 0 and 2 you
-;; select. LLVM historically picks 0.
+; COM: V6 cores default to flush to positive zero (value 0). Note that value 2 is also equally
+; COM: valid for this core, it's an implementation defined question as to which of 0 and 2 you
+; COM: select. LLVM historically picks 0.
 ; ARM1156T2F-S-FAST-NOT: .eabi_attribute 20
 ; ARM1156T2F-S-FAST-NOT:   .eabi_attribute 21
 ; ARM1156T2F-S-FAST-NOT:   .eabi_attribute 22
@@ -348,10 +348,10 @@
 ; V7M-NOT:  .eabi_attribute 44
 ; V7M-NOT:  .eabi_attribute 68
 ; V7M-NOT:   .eabi_attribute 19
-;; The default choice made by llc is for a V7M CPU without an FPU.
-;; This is not an interesting detail, but for such CPUs, the default intention is to use
-;; software floating-point support. The choice is not important for targets without
-;; FPU support!
+; COM: The default choice made by llc is for a V7M CPU without an FPU.
+; COM: This is not an interesting detail, but for such CPUs, the default intention is to use
+; COM: software floating-point support. The choice is not important for targets without
+; COM: FPU support!
 ; V7M:  .eabi_attribute 20, 1
 ; V7M: .eabi_attribute 21, 1
 ; V7M-NOT: .eabi_attribute 22
@@ -362,9 +362,9 @@
 ; V7M:  .eabi_attribute 38, 1
 
 ; V7M-FAST-NOT:   .eabi_attribute 19
-;; Despite the V7M CPU having no FPU by default, we chose to flush
-;; preserving sign. This matches what the hardware would do in the
-;; architecture revision were to exist on the current target.
+; COM: Despite the V7M CPU having no FPU by default, we chose to flush
+; COM: preserving sign. This matches what the hardware would do in the
+; COM: architecture revision were to exist on the current target.
 ; V7M-FAST:  .eabi_attribute 20, 2
 ; V7M-FAST-NOT:   .eabi_attribute 21
 ; V7M-FAST-NOT:   .eabi_attribute 22
@@ -378,7 +378,7 @@
 ; V7-NOT:    .eabi_attribute 44
 ; V7-NOT:    .eabi_attribute 68
 ; V7-NOT:   .eabi_attribute 19
-;; In safe-maths mode we default to an IEEE 754 compliant choice.
+; COM: In safe-maths mode we default to an IEEE 754 compliant choice.
 ; V7: .eabi_attribute 20, 1
 ; V7: .eabi_attribute 21, 1
 ; V7-NOT: .eabi_attribute 22
@@ -389,8 +389,8 @@
 ; V7: .eabi_attribute 38, 1
 
 ; V7-FAST-NOT:   .eabi_attribute 19
-;; The default CPU does have an FPU and it must be VFPv3 or better, so it flushes
-;; denormals to zero preserving the sign.
+; COM: The default CPU does have an FPU and it must be VFPv3 or better, so it flushes
+; COM: denormals to zero preserving the sign.
 ; V7-FAST: .eabi_attribute 20, 2
 ; V7-FAST-NOT:   .eabi_attribute 21
 ; V7-FAST-NOT:   .eabi_attribute 22
@@ -423,7 +423,7 @@
 ; V8: .eabi_attribute 23, 3
 
 ; V8-FAST-NOT:   .eabi_attribute 19
-;; The default does have an FPU, and for V8-A, it flushes preserving sign.
+; COM: The default does have an FPU, and for V8-A, it flushes preserving sign.
 ; V8-FAST: .eabi_attribute 20, 2
 ; V8-FAST-NOT: .eabi_attribute 21
 ; V8-FAST-NOT: .eabi_attribute 22
@@ -536,17 +536,17 @@
 ; CORTEX-A7-FPUV4: .eabi_attribute      68, 3
 
 ; Tag_ABI_FP_denormal
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A7-CHECK: .eabi_attribute      20, 1
-;; The A7 has VFPv3 support by default, so flush preserving sign.
+; COM: The A7 has VFPv3 support by default, so flush preserving sign.
 ; CORTEX-A7-CHECK-FAST: .eabi_attribute 20, 2
 ; CORTEX-A7-NOFPU: .eabi_attribute      20, 1
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; CORTEX-A7-NOFPU-FAST: .eabi_attribute 20, 2
 ; CORTEX-A7-FPUV4: .eabi_attribute      20, 1
-;; The VFPv4 FPU flushes preserving sign.
+; COM: The VFPv4 FPU flushes preserving sign.
 ; CORTEX-A7-FPUV4-FAST: .eabi_attribute 20, 2
 
 ; Tag_ABI_FP_exceptions
@@ -589,7 +589,7 @@
 ; CORTEX-A5-DEFAULT-NOT:        .eabi_attribute 44
 ; CORTEX-A5-DEFAULT:        .eabi_attribute 68, 1
 ; CORTEX-A5-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A5-DEFAULT:        .eabi_attribute 20, 1
 ; CORTEX-A5-DEFAULT:        .eabi_attribute 21, 1
 ; CORTEX-A5-DEFAULT-NOT:        .eabi_attribute 22
@@ -598,8 +598,8 @@
 ; CORTEX-A5-DEFAULT:        .eabi_attribute 25, 1
 
 ; CORTEX-A5-DEFAULT-FAST-NOT:   .eabi_attribute 19
-;; The A5 defaults to a VFPv4 FPU, so it flushed preserving the sign when -ffast-math
-;; is given.
+; COM: The A5 defaults to a VFPv4 FPU, so it flushed preserving the sign when -ffast-math
+; COM: is given.
 ; CORTEX-A5-DEFAULT-FAST:        .eabi_attribute 20, 2
 ; CORTEX-A5-DEFAULT-FAST-NOT: .eabi_attribute 21
 ; CORTEX-A5-DEFAULT-FAST-NOT: .eabi_attribute 22
@@ -613,7 +613,7 @@
 ; CORTEX-A5-NONEON:        .fpu    vfpv4-d16
 ; CORTEX-A5-NONEON:        .eabi_attribute 42, 1
 ; CORTEX-A5-NONEON:        .eabi_attribute 68, 1
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A5-NONEON:        .eabi_attribute 20, 1
 ; CORTEX-A5-NONEON:        .eabi_attribute 21, 1
 ; CORTEX-A5-NONEON-NOT:    .eabi_attribute 22
@@ -622,8 +622,8 @@
 ; CORTEX-A5-NONEON:        .eabi_attribute 25, 1
 
 ; CORTEX-A5-NONEON-FAST-NOT:   .eabi_attribute 19
-;; The A5 defaults to a VFPv4 FPU, so it flushed preserving sign when -ffast-math
-;; is given.
+; COM: The A5 defaults to a VFPv4 FPU, so it flushed preserving sign when -ffast-math
+; COM: is given.
 ; CORTEX-A5-NONEON-FAST:        .eabi_attribute 20, 2
 ; CORTEX-A5-NONEON-FAST-NOT: .eabi_attribute 21
 ; CORTEX-A5-NONEON-FAST-NOT: .eabi_attribute 22
@@ -638,7 +638,7 @@
 ; CORTEX-A5-NOFPU:        .eabi_attribute 42, 1
 ; CORTEX-A5-NOFPU:        .eabi_attribute 68, 1
 ; CORTEX-A5-NOFPU-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A5-NOFPU:        .eabi_attribute 20, 1
 ; CORTEX-A5-NOFPU:        .eabi_attribute 21, 1
 ; CORTEX-A5-NOFPU-NOT:    .eabi_attribute 22
@@ -647,9 +647,9 @@
 ; CORTEX-A5-NOFPU:        .eabi_attribute 25, 1
 
 ; CORTEX-A5-NOFPU-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; CORTEX-A5-NOFPU-FAST: .eabi_attribute 20, 2
 ; CORTEX-A5-NOFPU-FAST-NOT: .eabi_attribute 21
 ; CORTEX-A5-NOFPU-FAST-NOT: .eabi_attribute 22
@@ -667,7 +667,7 @@
 ; CORTEX-A8-SOFT-NOT:  .eabi_attribute 44
 ; CORTEX-A8-SOFT:  .eabi_attribute 68, 1
 ; CORTEX-A8-SOFT-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A8-SOFT:  .eabi_attribute 20, 1
 ; CORTEX-A8-SOFT:  .eabi_attribute 21, 1
 ; CORTEX-A8-SOFT-NOT:  .eabi_attribute 22
@@ -689,7 +689,7 @@
 ; CORTEX-A9-SOFT-NOT:  .eabi_attribute 44
 ; CORTEX-A9-SOFT:  .eabi_attribute 68, 1
 ; CORTEX-A9-SOFT-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A9-SOFT:  .eabi_attribute 20, 1
 ; CORTEX-A9-SOFT:  .eabi_attribute 21, 1
 ; CORTEX-A9-SOFT-NOT:  .eabi_attribute 22
@@ -701,8 +701,8 @@
 
 ; CORTEX-A8-SOFT-FAST-NOT:   .eabi_attribute 19
 ; CORTEX-A9-SOFT-FAST-NOT:   .eabi_attribute 19
-;; The A9 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The A9 defaults to a VFPv3 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-A8-SOFT-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A9-SOFT-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A5-SOFT-FAST-NOT: .eabi_attribute 21
@@ -720,7 +720,7 @@
 ; CORTEX-A8-HARD-NOT:  .eabi_attribute 42, 1
 ; CORTEX-A8-HARD:  .eabi_attribute 68, 1
 ; CORTEX-A8-HARD-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A8-HARD:  .eabi_attribute 20, 1
 ; CORTEX-A8-HARD:  .eabi_attribute 21, 1
 ; CORTEX-A8-HARD-NOT:  .eabi_attribute 22
@@ -743,7 +743,7 @@
 ; CORTEX-A9-HARD:  .eabi_attribute 42, 1
 ; CORTEX-A9-HARD:  .eabi_attribute 68, 1
 ; CORTEX-A9-HARD-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A9-HARD:  .eabi_attribute 20, 1
 ; CORTEX-A9-HARD:  .eabi_attribute 21, 1
 ; CORTEX-A9-HARD-NOT:  .eabi_attribute 22
@@ -754,16 +754,16 @@
 ; CORTEX-A9-HARD:  .eabi_attribute 38, 1
 
 ; CORTEX-A8-HARD-FAST-NOT:   .eabi_attribute 19
-;; The A8 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The A8 defaults to a VFPv3 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-A8-HARD-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A8-HARD-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A8-HARD-FAST-NOT:  .eabi_attribute 22
 ; CORTEX-A8-HARD-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A9-HARD-FAST-NOT:   .eabi_attribute 19
-;; The A9 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The A9 defaults to a VFPv3 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-A9-HARD-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A9-HARD-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A9-HARD-FAST-NOT:  .eabi_attribute 22
@@ -779,7 +779,7 @@
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 44, 2
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 68, 3
 ; CORTEX-A12-DEFAULT-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 20, 1
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 21, 1
 ; CORTEX-A12-DEFAULT-NOT:  .eabi_attribute 22
@@ -788,8 +788,8 @@
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 25, 1
 
 ; CORTEX-A12-DEFAULT-FAST-NOT:   .eabi_attribute 19
-;; The A12 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The A12 defaults to a VFPv3 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-A12-DEFAULT-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A12-HARD-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A12-HARD-FAST-NOT:  .eabi_attribute 22
@@ -805,7 +805,7 @@
 ; CORTEX-A12-NOFPU:  .eabi_attribute 44, 2
 ; CORTEX-A12-NOFPU:  .eabi_attribute 68, 3
 ; CORTEX-A12-NOFPU-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A12-NOFPU:  .eabi_attribute 20, 1
 ; CORTEX-A12-NOFPU:  .eabi_attribute 21, 1
 ; CORTEX-A12-NOFPU-NOT:  .eabi_attribute 22
@@ -814,9 +814,9 @@
 ; CORTEX-A12-NOFPU:  .eabi_attribute 25, 1
 
 ; CORTEX-A12-NOFPU-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; CORTEX-A12-NOFPU-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A12-NOFPU-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A12-NOFPU-FAST-NOT:  .eabi_attribute 22
@@ -834,7 +834,7 @@
 ; CORTEX-A15: .eabi_attribute 44, 2
 ; CORTEX-A15: .eabi_attribute 68, 3
 ; CORTEX-A15-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A15: .eabi_attribute 20, 1
 ; CORTEX-A15: .eabi_attribute 21, 1
 ; CORTEX-A15-NOT: .eabi_attribute 22
@@ -845,8 +845,8 @@
 ; CORTEX-A15: .eabi_attribute 38, 1
 
 ; CORTEX-A15-FAST-NOT:   .eabi_attribute 19
-;; The A15 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The A15 defaults to a VFPv3 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-A15-FAST: .eabi_attribute 20, 2
 ; CORTEX-A15-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A15-FAST-NOT:  .eabi_attribute 22
@@ -862,7 +862,7 @@
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 44, 2
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 68, 3
 ; CORTEX-A17-DEFAULT-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 20, 1
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 21, 1
 ; CORTEX-A17-DEFAULT-NOT:  .eabi_attribute 22
@@ -871,8 +871,8 @@
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 25, 1
 
 ; CORTEX-A17-FAST-NOT:   .eabi_attribute 19
-;; The A17 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The A17 defaults to a VFPv3 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-A17-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A17-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A17-FAST-NOT:  .eabi_attribute 22
@@ -888,7 +888,7 @@
 ; CORTEX-A17-NOFPU:  .eabi_attribute 44, 2
 ; CORTEX-A17-NOFPU:  .eabi_attribute 68, 3
 ; CORTEX-A17-NOFPU-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A17-NOFPU:  .eabi_attribute 20, 1
 ; CORTEX-A17-NOFPU:  .eabi_attribute 21, 1
 ; CORTEX-A17-NOFPU-NOT:  .eabi_attribute 22
@@ -897,9 +897,9 @@
 ; CORTEX-A17-NOFPU:  .eabi_attribute 25, 1
 
 ; CORTEX-A17-NOFPU-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; CORTEX-A17-NOFPU-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A17-NOFPU-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A17-NOFPU-FAST-NOT:  .eabi_attribute 22
@@ -923,7 +923,7 @@
 ; CORTEX-M0-NOT:  .eabi_attribute 44
 ; CORTEX-M0-NOT:  .eabi_attribute 68
 ; CORTEX-M0-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M0:  .eabi_attribute 20, 1
 ; CORTEX-M0:  .eabi_attribute 21, 1
 ; CORTEX-M0-NOT:  .eabi_attribute 22
@@ -934,11 +934,11 @@
 ; CORTEX-M0:  .eabi_attribute 38, 1
 
 ; CORTEX-M0-FAST-NOT:   .eabi_attribute 19
-;; Despite the M0 CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
+; COM: Despite the M0 CPU having no FPU in this scenario, we chose to
+; COM: flush to positive zero here. There's no hardware support doing
+; COM: this, but the fast maths software library might and such behaviour
+; COM: would match hardware support on this architecture revision if it
+; COM: existed.
 ; CORTEX-M0-FAST-NOT:  .eabi_attribute 20
 ; CORTEX-M0-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M0-FAST-NOT:  .eabi_attribute 22
@@ -955,7 +955,7 @@
 ; CORTEX-M0PLUS-NOT:  .eabi_attribute 44
 ; CORTEX-M0PLUS-NOT:  .eabi_attribute 68
 ; CORTEX-M0PLUS-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M0PLUS:  .eabi_attribute 20, 1
 ; CORTEX-M0PLUS:  .eabi_attribute 21, 1
 ; CORTEX-M0PLUS-NOT:  .eabi_attribute 22
@@ -966,11 +966,11 @@
 ; CORTEX-M0PLUS:  .eabi_attribute 38, 1
 
 ; CORTEX-M0PLUS-FAST-NOT:   .eabi_attribute 19
-;; Despite the M0+ CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
+; COM: Despite the M0+ CPU having no FPU in this scenario, we chose to
+; COM: flush to positive zero here. There's no hardware support doing
+; COM: this, but the fast maths software library might and such behaviour
+; COM: would match hardware support on this architecture revision if it
+; COM: existed.
 ; CORTEX-M0PLUS-FAST-NOT:  .eabi_attribute 20
 ; CORTEX-M0PLUS-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M0PLUS-FAST-NOT:  .eabi_attribute 22
@@ -987,7 +987,7 @@
 ; CORTEX-M1-NOT:  .eabi_attribute 44
 ; CORTEX-M1-NOT:  .eabi_attribute 68
 ; CORTEX-M1-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M1:  .eabi_attribute 20, 1
 ; CORTEX-M1:  .eabi_attribute 21, 1
 ; CORTEX-M1-NOT:  .eabi_attribute 22
@@ -998,11 +998,11 @@
 ; CORTEX-M1:  .eabi_attribute 38, 1
 
 ; CORTEX-M1-FAST-NOT:   .eabi_attribute 19
-;; Despite the M1 CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
+; COM: Despite the M1 CPU having no FPU in this scenario, we chose to
+; COM: flush to positive zero here. There's no hardware support doing
+; COM: this, but the fast maths software library might and such behaviour
+; COM: would match hardware support on this architecture revision if it
+; COM: existed.
 ; CORTEX-M1-FAST-NOT:  .eabi_attribute 20
 ; CORTEX-M1-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M1-FAST-NOT:  .eabi_attribute 22
@@ -1018,7 +1018,7 @@
 ; SC000-NOT:  .eabi_attribute 44
 ; SC000-NOT:  .eabi_attribute 68
 ; SC000-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; SC000:  .eabi_attribute 20, 1
 ; SC000:  .eabi_attribute 21, 1
 ; SC000-NOT:  .eabi_attribute 22
@@ -1029,11 +1029,11 @@
 ; SC000:  .eabi_attribute 38, 1
 
 ; SC000-FAST-NOT:   .eabi_attribute 19
-;; Despite the SC000 CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
+; COM: Despite the SC000 CPU having no FPU in this scenario, we chose to
+; COM: flush to positive zero here. There's no hardware support doing
+; COM: this, but the fast maths software library might and such behaviour
+; COM: would match hardware support on this architecture revision if it
+; COM: existed.
 ; SC000-FAST-NOT:  .eabi_attribute 20
 ; SC000-FAST-NOT:  .eabi_attribute 21
 ; SC000-FAST-NOT:  .eabi_attribute 22
@@ -1050,7 +1050,7 @@
 ; CORTEX-M3-NOT:  .eabi_attribute 44
 ; CORTEX-M3-NOT:  .eabi_attribute 68
 ; CORTEX-M3-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M3:  .eabi_attribute 20, 1
 ; CORTEX-M3:  .eabi_attribute 21, 1
 ; CORTEX-M3-NOT:  .eabi_attribute 22
@@ -1061,9 +1061,9 @@
 ; CORTEX-M3:  .eabi_attribute 38, 1
 
 ; CORTEX-M3-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; CORTEX-M3-FAST:  .eabi_attribute 20, 2
 ; CORTEX-M3-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M3-FAST-NOT:  .eabi_attribute 22
@@ -1080,7 +1080,7 @@
 ; SC300-NOT:  .eabi_attribute 44
 ; SC300-NOT:  .eabi_attribute 68
 ; SC300-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; SC300:  .eabi_attribute 20, 1
 ; SC300:  .eabi_attribute 21, 1
 ; SC300-NOT:  .eabi_attribute 22
@@ -1091,9 +1091,9 @@
 ; SC300:  .eabi_attribute 38, 1
 
 ; SC300-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; SC300-FAST:  .eabi_attribute 20, 2
 ; SC300-FAST-NOT:  .eabi_attribute 21
 ; SC300-FAST-NOT:  .eabi_attribute 22
@@ -1111,7 +1111,7 @@
 ; CORTEX-M4-SOFT-NOT:  .eabi_attribute 44
 ; CORTEX-M4-SOFT-NOT:  .eabi_attribute 68
 ; CORTEX-M4-SOFT-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M4-SOFT:  .eabi_attribute 20, 1
 ; CORTEX-M4-SOFT:  .eabi_attribute 21, 1
 ; CORTEX-M4-SOFT-NOT:  .eabi_attribute 22
@@ -1122,8 +1122,8 @@
 ; CORTEX-M4-SOFT:  .eabi_attribute 38, 1
 
 ; CORTEX-M4-SOFT-FAST-NOT:   .eabi_attribute 19
-;; The M4 defaults to a VFPv4 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The M4 defaults to a VFPv4 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-M4-SOFT-FAST:  .eabi_attribute 20, 2
 ; CORTEX-M4-SOFT-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M4-SOFT-FAST-NOT:  .eabi_attribute 22
@@ -1141,7 +1141,7 @@
 ; CORTEX-M4-HARD-NOT:  .eabi_attribute 44
 ; CORTEX-M4-HARD-NOT:  .eabi_attribute 68
 ; CORTEX-M4-HARD-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M4-HARD:  .eabi_attribute 20, 1
 ; CORTEX-M4-HARD:  .eabi_attribute 21, 1
 ; CORTEX-M4-HARD-NOT:  .eabi_attribute 22
@@ -1152,8 +1152,8 @@
 ; CORTEX-M4-HARD:  .eabi_attribute 38, 1
 
 ; CORTEX-M4-HARD-FAST-NOT:   .eabi_attribute 19
-;; The M4 defaults to a VFPv4 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
+; COM: The M4 defaults to a VFPv4 FPU, so it flushes preserving the sign when
+; COM: -ffast-math is specified.
 ; CORTEX-M4-HARD-FAST:  .eabi_attribute 20, 2
 ; CORTEX-M4-HARD-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M4-HARD-FAST-NOT:  .eabi_attribute 22
@@ -1174,7 +1174,7 @@
 ; CORTEX-M7-NOT:  .eabi_attribute 44
 ; CORTEX-M7:  .eabi_attribute 17, 1
 ; CORTEX-M7-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M7:  .eabi_attribute 20, 1
 ; CORTEX-M7:  .eabi_attribute 21, 1
 ; CORTEX-M7-NOT:  .eabi_attribute 22
@@ -1185,11 +1185,11 @@
 ; CORTEX-M7:  .eabi_attribute 14, 0
 
 ; CORTEX-M7-NOFPU-FAST-NOT:   .eabi_attribute 19
-;; The M7 has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The M7 has the ARMv8 FP unit, which always flushes preserving sign.
 ; CORTEX-M7-FAST:  .eabi_attribute 20, 2
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
+; COM: Despite there being no FPU, we chose to flush to zero preserving
+; COM: sign. This matches what the hardware would do for this architecture
+; COM: revision.
 ; CORTEX-M7-NOFPU-FAST: .eabi_attribute 20, 2
 ; CORTEX-M7-NOFPU-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-M7-NOFPU-FAST-NOT:  .eabi_attribute 22
@@ -1206,7 +1206,7 @@
 ; CORTEX-R4-NOT:  .eabi_attribute 44
 ; CORTEX-R4-NOT:  .eabi_attribute 68
 ; CORTEX-R4-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-R4:  .eabi_attribute 20, 1
 ; CORTEX-R4:  .eabi_attribute 21, 1
 ; CORTEX-R4-NOT:  .eabi_attribute 22
@@ -1228,7 +1228,7 @@
 ; CORTEX-R4F-NOT:  .eabi_attribute 44
 ; CORTEX-R4F-NOT:  .eabi_attribute 68
 ; CORTEX-R4F-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-R4F:  .eabi_attribute 20, 1
 ; CORTEX-R4F:  .eabi_attribute 21, 1
 ; CORTEX-R4F-NOT:  .eabi_attribute 22
@@ -1250,7 +1250,7 @@
 ; CORTEX-R5-NOT:  .eabi_attribute 42
 ; CORTEX-R5-NOT:  .eabi_attribute 68
 ; CORTEX-R5-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-R5:  .eabi_attribute 20, 1
 ; CORTEX-R5:  .eabi_attribute 21, 1
 ; CORTEX-R5-NOT:  .eabi_attribute 22
@@ -1261,7 +1261,7 @@
 ; CORTEX-R5:  .eabi_attribute 38, 1
 
 ; CORTEX-R5-FAST-NOT:   .eabi_attribute 19
-;; The R5 has the VFPv3 FP unit, which always flushes preserving sign.
+; COM: The R5 has the VFPv3 FP unit, which always flushes preserving sign.
 ; CORTEX-R5-FAST:  .eabi_attribute 20, 2
 ; CORTEX-R5-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-R5-FAST-NOT:  .eabi_attribute 22
@@ -1278,7 +1278,7 @@
 ; CORTEX-R7:  .eabi_attribute 44, 2
 ; CORTEX-R7-NOT:  .eabi_attribute 68
 ; CORTEX-R7-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-R7:  .eabi_attribute 20, 1
 ; CORTEX-R7:  .eabi_attribute 21, 1
 ; CORTEX-R7-NOT:  .eabi_attribute 22
@@ -1289,7 +1289,7 @@
 ; CORTEX-R7:  .eabi_attribute 38, 1
 
 ; CORTEX-R7-FAST-NOT:   .eabi_attribute 19
-;; The R7 has the VFPv3 FP unit, which always flushes preserving sign.
+; COM: The R7 has the VFPv3 FP unit, which always flushes preserving sign.
 ; CORTEX-R7-FAST:  .eabi_attribute 20, 2
 ; CORTEX-R7-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-R7-FAST-NOT:  .eabi_attribute 22
@@ -1306,7 +1306,7 @@
 ; CORTEX-R8:  .eabi_attribute 44, 2
 ; CORTEX-R8-NOT:  .eabi_attribute 68
 ; CORTEX-R8-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-R8:  .eabi_attribute 20, 1
 ; CORTEX-R8:  .eabi_attribute 21, 1
 ; CORTEX-R8-NOT:  .eabi_attribute 22
@@ -1317,7 +1317,7 @@
 ; CORTEX-R8:  .eabi_attribute 38, 1
 
 ; CORTEX-R8-FAST-NOT:   .eabi_attribute 19
-;; The R8 has the VFPv3 FP unit, which always flushes preserving sign.
+; COM: The R8 has the VFPv3 FP unit, which always flushes preserving sign.
 ; CORTEX-R8-FAST:  .eabi_attribute 20, 2
 ; CORTEX-R8-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-R8-FAST-NOT:  .eabi_attribute 22
@@ -1336,7 +1336,7 @@
 ; CORTEX-A32-NOT:  .eabi_attribute 44
 ; CORTEX-A32:  .eabi_attribute 68, 3
 ; CORTEX-A32-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A32:  .eabi_attribute 20, 1
 ; CORTEX-A32:  .eabi_attribute 21, 1
 ; CORTEX-A32-NOT:  .eabi_attribute 22
@@ -1347,7 +1347,7 @@
 ; CORTEX-A32:  .eabi_attribute 38, 1
 
 ; CORTEX-A32-FAST-NOT:   .eabi_attribute 19
-;; The A32 has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The A32 has the ARMv8 FP unit, which always flushes preserving sign.
 ; CORTEX-A32-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A32-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A32-FAST-NOT:  .eabi_attribute 22
@@ -1362,7 +1362,7 @@
 ; CORTEX-M23:  .eabi_attribute 34, 0
 ; CORTEX-M23-NOT:  .eabi_attribute 44
 ; CORTEX-M23:  .eabi_attribute 17, 1
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M23-NOT:   .eabi_attribute 19
 ; CORTEX-M23:  .eabi_attribute 20, 1
 ; CORTEX-M23:  .eabi_attribute 21, 1
@@ -1385,7 +1385,7 @@
 ; CORTEX-M33:  .eabi_attribute 46, 1
 ; CORTEX-M33:  .eabi_attribute 34, 1
 ; CORTEX-M33:  .eabi_attribute 17, 1
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-M23-NOT:   .eabi_attribute 19
 ; CORTEX-M33:  .eabi_attribute 20, 1
 ; CORTEX-M33:  .eabi_attribute 21, 1
@@ -1436,7 +1436,7 @@
 ; CORTEX-A35-NOT:  .eabi_attribute 44
 ; CORTEX-A35:  .eabi_attribute 68, 3
 ; CORTEX-A35-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A35:  .eabi_attribute 20, 1
 ; CORTEX-A35:  .eabi_attribute 21, 1
 ; CORTEX-A35-NOT:  .eabi_attribute 22
@@ -1447,7 +1447,7 @@
 ; CORTEX-A35:  .eabi_attribute 38, 1
 
 ; CORTEX-A35-FAST-NOT:   .eabi_attribute 19
-;; The A35 has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The A35 has the ARMv8 FP unit, which always flushes preserving sign.
 ; CORTEX-A35-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A35-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A35-FAST-NOT:  .eabi_attribute 22
@@ -1466,7 +1466,7 @@
 ; CORTEX-A53-NOT:  .eabi_attribute 44
 ; CORTEX-A53:  .eabi_attribute 68, 3
 ; CORTEX-A53-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A53:  .eabi_attribute 20, 1
 ; CORTEX-A53:  .eabi_attribute 21, 1
 ; CORTEX-A53-NOT:  .eabi_attribute 22
@@ -1477,7 +1477,7 @@
 ; CORTEX-A53:  .eabi_attribute 38, 1
 
 ; CORTEX-A53-FAST-NOT:   .eabi_attribute 19
-;; The A53 has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The A53 has the ARMv8 FP unit, which always flushes preserving sign.
 ; CORTEX-A53-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A53-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A53-FAST-NOT:  .eabi_attribute 22
@@ -1496,7 +1496,7 @@
 ; CORTEX-A57-NOT:  .eabi_attribute 44
 ; CORTEX-A57:  .eabi_attribute 68, 3
 ; CORTEX-A57-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A57:  .eabi_attribute 20, 1
 ; CORTEX-A57:  .eabi_attribute 21, 1
 ; CORTEX-A57-NOT:  .eabi_attribute 22
@@ -1507,7 +1507,7 @@
 ; CORTEX-A57:  .eabi_attribute 38, 1
 
 ; CORTEX-A57-FAST-NOT:   .eabi_attribute 19
-;; The A57 has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The A57 has the ARMv8 FP unit, which always flushes preserving sign.
 ; CORTEX-A57-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A57-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A57-FAST-NOT:  .eabi_attribute 22
@@ -1526,7 +1526,7 @@
 ; CORTEX-A72-NOT:  .eabi_attribute 44
 ; CORTEX-A72:  .eabi_attribute 68, 3
 ; CORTEX-A72-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A72:  .eabi_attribute 20, 1
 ; CORTEX-A72:  .eabi_attribute 21, 1
 ; CORTEX-A72-NOT:  .eabi_attribute 22
@@ -1537,7 +1537,7 @@
 ; CORTEX-A72:  .eabi_attribute 38, 1
 
 ; CORTEX-A72-FAST-NOT:   .eabi_attribute 19
-;; The A72 has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The A72 has the ARMv8 FP unit, which always flushes preserving sign.
 ; CORTEX-A72-FAST:  .eabi_attribute 20, 2
 ; CORTEX-A72-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A72-FAST-NOT:  .eabi_attribute 22
@@ -1556,7 +1556,7 @@
 ; CORTEX-A73-NOT: .eabi_attribute 44
 ; CORTEX-A73:  .eabi_attribute 68, 3
 ; CORTEX-A73-NOT: .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; CORTEX-A73:  .eabi_attribute 20, 1
 ; CORTEX-A73:  .eabi_attribute 21, 1
 ; CORTEX-A73-NOT:  .eabi_attribute 22
@@ -1568,7 +1568,7 @@
 ; CORTEX-A73:  .eabi_attribute 14, 0
 
 ; EXYNOS-FAST-NOT:   .eabi_attribute 19
-;; The Exynos processors have the ARMv8 FP unit, which always flushes preserving sign.
+; COM: The Exynos processors have the ARMv8 FP unit, which always flushes preserving sign.
 ; EXYNOS-FAST:  .eabi_attribute 20, 2
 ; EXYNOS-FAST-NOT:  .eabi_attribute 21
 ; EXYNOS-FAST-NOT:  .eabi_attribute 22
@@ -1587,7 +1587,7 @@
 ; EXYNOS-M3-NOT:  .eabi_attribute 44
 ; EXYNOS-M3:  .eabi_attribute 68, 3
 ; EXYNOS-M3-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; EXYNOS-M3:  .eabi_attribute 20, 1
 ; EXYNOS-M3:  .eabi_attribute 21, 1
 ; EXYNOS-M3-NOT:  .eabi_attribute 22
@@ -1610,7 +1610,7 @@
 ; EXYNOS-M4-NOT:  .eabi_attribute 44
 ; EXYNOS-M4:  .eabi_attribute 68, 3
 ; EXYNOS-M4-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; EXYNOS-M4:  .eabi_attribute 20, 1
 ; EXYNOS-M4:  .eabi_attribute 21, 1
 ; EXYNOS-M4-NOT:  .eabi_attribute 22
@@ -1633,7 +1633,7 @@
 ; EXYNOS-M5-NOT:  .eabi_attribute 44
 ; EXYNOS-M5:  .eabi_attribute 68, 3
 ; EXYNOS-M5-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; EXYNOS-M5:  .eabi_attribute 20, 1
 ; EXYNOS-M5:  .eabi_attribute 21, 1
 ; EXYNOS-M5-NOT:  .eabi_attribute 22
@@ -1661,7 +1661,7 @@
 ; GENERIC-ARMV8_1-A-NOT:  .eabi_attribute 44
 ; GENERIC-ARMV8_1-A:  .eabi_attribute 68, 3
 ; GENERIC-ARMV8_1-A-NOT:   .eabi_attribute 19
-;; We default to IEEE 754 compliance
+; COM: We default to IEEE 754 compliance
 ; GENERIC-ARMV8_1-A:  .eabi_attribute 20, 1
 ; GENERIC-ARMV8_1-A:  .eabi_attribute 21, 1
 ; GENERIC-ARMV8_1-A-NOT:  .eabi_attribute 22
@@ -1672,7 +1672,7 @@
 ; GENERIC-ARMV8_1-A:  .eabi_attribute 38, 1
 
 ; GENERIC-ARMV8_1-A-FAST-NOT:   .eabi_attribute 19
-;; GENERIC-ARMV8_1-A has the ARMv8 FP unit, which always flushes preserving sign.
+; COM: GENERIC-ARMV8_1-A has the ARMv8 FP unit, which always flushes preserving sign.
 ; GENERIC-ARMV8_1-A-FAST:  .eabi_attribute 20, 2
 ; GENERIC-ARMV8_1-A-FAST-NOT:  .eabi_attribute 21
 ; GENERIC-ARMV8_1-A-FAST-NOT:  .eabi_attribute 22

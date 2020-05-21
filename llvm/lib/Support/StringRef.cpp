@@ -106,19 +106,13 @@ unsigned StringRef::edit_distance(llvm::StringRef Other,
 //===----------------------------------------------------------------------===//
 
 std::string StringRef::lower() const {
-  std::string Result(size(), char());
-  for (size_type i = 0, e = size(); i != e; ++i) {
-    Result[i] = toLower(Data[i]);
-  }
-  return Result;
+  return std::string(map_iterator(begin(), toLower),
+                     map_iterator(end(), toLower));
 }
 
 std::string StringRef::upper() const {
-  std::string Result(size(), char());
-  for (size_type i = 0, e = size(); i != e; ++i) {
-    Result[i] = toUpper(Data[i]);
-  }
-  return Result;
+  return std::string(map_iterator(begin(), toUpper),
+                     map_iterator(end(), toUpper));
 }
 
 //===----------------------------------------------------------------------===//
