@@ -132,8 +132,8 @@ endif:
 ; GCN: s_wqm_b64 exec, exec
 ; GCN: image_sample
 ; GCN: v_add_f32_e32
-; KILL: s_and_b64 exec, exec, [[ORIG]]
 ; GCN: image_sample
+; KILL: s_and_b64 exec, exec, [[ORIG]]
 define amdgpu_ps <4 x float> @wqm_kill_to_demote1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) #2 {
 .entry:
   %z.cmp = fcmp olt float %z, 0.0
@@ -191,8 +191,8 @@ define amdgpu_ps <4 x float> @wqm_kill_to_demote2(<8 x i32> inreg %rsrc, <4 x i3
 ; DEMOTE: s_and_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], vcc
 ; GCN: image_sample
 ; GCN: v_add_f32_e32
-; DEMOTE: s_and_b64 exec, exec, [[LIVE]]
 ; GCN: image_sample
+; DEMOTE: s_and_b64 exec, exec, [[LIVE]]
 define amdgpu_ps <4 x float> @wqm_kill_to_demote3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) #3 {
 .entry:
   %z.cmp = fcmp olt float %z, 0.0

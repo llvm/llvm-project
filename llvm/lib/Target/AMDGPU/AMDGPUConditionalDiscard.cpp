@@ -37,7 +37,7 @@
 ///   %cond = icmp eq i32 %a, %b
 ///   %nonkill = not i1 %cond
 ///   call void @llvm.amdgcn.kill(i1 %nonkill)
-///   br label %cont_block
+///   br i1 %cond, %other, %cont_block
 /// ...
 ///
 /// The transformation is useful, because removing basic blocks simplifies CFG
@@ -143,16 +143,11 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
     if (!PredBranchInst || !PredBranchInst->isConditional())
       return;
 
-    BasicBlock *LiveBlock = nullptr;
     auto *Cond = PredBranchInst->getCondition();
-
     if (PredBranchInst->getSuccessor(0) == &BB) {
       // The old kill block could only be reached if
       // the condition was true - negate the condition.
       Cond = BinaryOperator::CreateNot(Cond, "", PredTerminator);
-      LiveBlock = PredBranchInst->getSuccessor(1);
-    } else {
-      LiveBlock = PredBranchInst->getSuccessor(0);
     }
 
     auto *NewKill = cast<CallInst>(KillCand->clone());
@@ -165,12 +160,25 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
     NewKill->setArgOperand(0, Cond);
     NewKill->insertBefore(PredTerminator);
 
-    KillBlocksToRemove.push_back(&BB);
+    KillCand->eraseFromParent();
 
-    // Change the branch to an unconditional one, targeting the live block.
-    auto *NewBranchInst = BranchInst::Create(LiveBlock, PredBranchInst);
-    NewBranchInst->copyMetadata(*PredBranchInst);
-    PredBranchInst->eraseFromParent();
+    // Try removing the old kill block.
+    if (BB.sizeWithoutDebug() == 1) {
+      auto *OldKillBlockBranchInst = dyn_cast<BranchInst>(BB.getTerminator());
+
+      if (!OldKillBlockBranchInst->isConditional()) {
+        auto *OldKillBlockSucc = OldKillBlockBranchInst->getSuccessor(0);
+
+        // Change the branch to point to the old kill block successor instead
+        // of old kill block. This is necessary to remove the old kill block.
+        if (PredBranchInst->getSuccessor(0) == &BB)
+          PredBranchInst->setSuccessor(0, OldKillBlockSucc);
+        else
+          PredBranchInst->setSuccessor(1, OldKillBlockSucc);
+
+        KillBlocksToRemove.push_back(&BB);
+      }
+    }
   }
 }
 
