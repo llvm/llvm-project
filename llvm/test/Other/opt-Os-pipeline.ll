@@ -240,7 +240,6 @@
 ; CHECK-NEXT:       SLP Vectorizer
 ; CHECK-NEXT:       Optimize scalar/vector ops
 ; CHECK-NEXT:       Early CSE
-; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Combine redundant instructions
 ; CHECK-NEXT:       Canonicalize natural loops

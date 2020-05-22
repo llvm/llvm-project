@@ -598,7 +598,6 @@
 ; GCN-O2-NEXT:       SLP Vectorizer
 ; GCN-O2-NEXT:       Optimize scalar/vector ops
 ; GCN-O2-NEXT:       Early CSE
-; GCN-O2-NEXT:       Function Alias Analysis Results
 ; GCN-O2-NEXT:       Optimization Remark Emitter
 ; GCN-O2-NEXT:       Combine redundant instructions
 ; GCN-O2-NEXT:       Canonicalize natural loops
@@ -952,7 +951,6 @@
 ; GCN-O3-NEXT:       SLP Vectorizer
 ; GCN-O3-NEXT:       Optimize scalar/vector ops
 ; GCN-O3-NEXT:       Early CSE
-; GCN-O3-NEXT:       Function Alias Analysis Results
 ; GCN-O3-NEXT:       Optimization Remark Emitter
 ; GCN-O3-NEXT:       Combine redundant instructions
 ; GCN-O3-NEXT:       Canonicalize natural loops

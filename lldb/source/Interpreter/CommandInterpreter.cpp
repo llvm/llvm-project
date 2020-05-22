@@ -1620,6 +1620,11 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
                                        "expression '%s'",
                                        expr_str.c_str());
         break;
+      case eExpressionThreadVanished:
+        error.SetErrorStringWithFormat(
+            "expression thread vanished for the expression '%s'",
+            expr_str.c_str());
+        break;
       }
     }
   }
