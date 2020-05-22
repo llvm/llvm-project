@@ -21,7 +21,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
@@ -138,14 +137,18 @@ void ento::createHTMLDiagnosticConsumer(
     const std::string &OutputDir, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
-  if (OutputDir.empty()) {
-    PP.getDiagnostics().Report(diag::err_analyzer_missing_output_loc)
-      << "html" << "directory";
+  // FIXME: HTML is currently our default output type, but if the output
+  // directory isn't specified, it acts like if it was in the minimal text
+  // output mode. This doesn't make much sense, we should have the minimal text
+  // as our default. In the case of backward compatibility concerns, this could
+  // be preserved with -analyzer-config-compatibility-mode=true.
+  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputDir, PP, CTU);
+
+  // TODO: Emit an error here.
+  if (OutputDir.empty())
     return;
-  }
 
   C.push_back(new HTMLDiagnostics(AnalyzerOpts, OutputDir, PP, true));
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputDir, PP, CTU);
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -153,11 +156,9 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
     const std::string &OutputDir, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
-  if (OutputDir.empty()) {
-    PP.getDiagnostics().Report(diag::err_analyzer_missing_output_loc)
-      << "html-single-file" << "directory";
+  // TODO: Emit an error here.
+  if (OutputDir.empty())
     return;
-  }
 
   C.push_back(new HTMLDiagnostics(AnalyzerOpts, OutputDir, PP, false));
   createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, OutputDir, PP, CTU);
@@ -167,13 +168,6 @@ void ento::createPlistHTMLDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &prefix, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-
-  if (prefix.empty()) {
-    PP.getDiagnostics().Report(diag::err_analyzer_missing_output_loc)
-      << "plist-html" << "directory";
-    return;
-  }
-
   createHTMLDiagnosticConsumer(
       AnalyzerOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
       CTU);
