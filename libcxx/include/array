@@ -194,8 +194,19 @@ struct _LIBCPP_TEMPLATE_VIS array
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     const_reference operator[](size_type __n) const _NOEXCEPT {return __elems_[__n];}
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX14       reference at(size_type __n);
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference at(size_type __n) const;
+    _LIBCPP_CONSTEXPR_AFTER_CXX14 reference at(size_type __n)
+    {
+        if (__n >= _Size)
+            __throw_out_of_range("array::at");
+        return __elems_[__n];
+    }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference at(size_type __n) const
+    {
+        if (__n >= _Size)
+            __throw_out_of_range("array::at");
+        return __elems_[__n];
+    }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference front()             _NOEXCEPT {return __elems_[0];}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference front() const _NOEXCEPT {return __elems_[0];}
@@ -207,28 +218,6 @@ struct _LIBCPP_TEMPLATE_VIS array
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     const value_type* data() const _NOEXCEPT {return __elems_;}
 };
-
-
-template <class _Tp, size_t _Size>
-_LIBCPP_CONSTEXPR_AFTER_CXX14
-typename array<_Tp, _Size>::reference
-array<_Tp, _Size>::at(size_type __n)
-{
-    if (__n >= _Size)
-        __throw_out_of_range("array::at");
-
-    return __elems_[__n];
-}
-
-template <class _Tp, size_t _Size>
-_LIBCPP_CONSTEXPR_AFTER_CXX11
-typename array<_Tp, _Size>::const_reference
-array<_Tp, _Size>::at(size_type __n) const
-{
-    if (__n >= _Size)
-        __throw_out_of_range("array::at");
-    return __elems_[__n];
-}
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
