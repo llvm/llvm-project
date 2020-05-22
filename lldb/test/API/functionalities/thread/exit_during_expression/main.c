@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static unsigned int g_timeout = 200;
+static unsigned int g_timeout = 100000;
 
 int function_to_call() {
 
