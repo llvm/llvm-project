@@ -132,7 +132,7 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr64 = COPY $x0
   ; CHECK:   %negative_one:gpr64 = MOVi64imm -1
-  ; CHECK:   $xzr = SUBSXrr %negative_one, %copy, implicit-def $nzcv
+  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %negative_one, %copy, implicit-def $nzcv
   ; CHECK:   Bcc 12, %bb.1, implicit $nzcv
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
