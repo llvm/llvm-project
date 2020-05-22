@@ -986,10 +986,6 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   OptimizePM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
-  // Enhance/cleanup vector code.
-  OptimizePM.addPass(VectorCombinePass());
-  OptimizePM.addPass(EarlyCSEPass());
-
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.
   OptimizePM.addPass(LoopLoadEliminationPass());
@@ -1016,6 +1012,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   if (PTO.SLPVectorization)
     OptimizePM.addPass(SLPVectorizerPass());
 
+  // Enhance/cleanup vector code.
+  OptimizePM.addPass(VectorCombinePass());
+  OptimizePM.addPass(EarlyCSEPass());
   OptimizePM.addPass(InstCombinePass());
 
   // Unroll small loops to hide loop backedge latency and saturate any parallel
