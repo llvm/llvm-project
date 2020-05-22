@@ -496,8 +496,8 @@ public:
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction createDefCfaOffset(MCSymbol *L, int Offset) {
-    return MCCFIInstruction(OpDefCfaOffset, L, 0, -Offset, "");
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset) {
+    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, "");
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but

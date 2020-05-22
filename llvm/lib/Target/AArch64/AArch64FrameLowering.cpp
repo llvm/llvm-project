@@ -994,11 +994,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
         MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
           // Encode the stack size of the leaf function.
-          unsigned CFIIndex = MF.addFrameInst(
-              MCCFIInstruction::createDefCfaOffset(FrameLabel, -NumBytes));
-          BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-              .addCFIIndex(CFIIndex)
-              .setMIFlags(MachineInstr::FrameSetup);
+        unsigned CFIIndex = MF.addFrameInst(
+            MCCFIInstruction::cfiDefCfaOffset(FrameLabel, NumBytes));
+        BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlags(MachineInstr::FrameSetup);
       }
     }
 
@@ -1357,7 +1357,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     } else {
       // Encode the stack size of the leaf function.
       unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createDefCfaOffset(nullptr, -MFI.getStackSize()));
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, MFI.getStackSize()));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
