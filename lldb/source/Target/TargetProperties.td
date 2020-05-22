@@ -204,6 +204,9 @@ let Definition = "process" in {
   def WarningOptimization: Property<"optimization-warnings", "Boolean">,
     DefaultTrue,
     Desc<"If true, warn when stopped in code that is optimized where stepping and variable availability may not behave as expected.">;
+  def WarningUnsupportedLanguage: Property<"unsupported-language-warnings", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, warn when stopped in code that is written in a source language that LLDB does not support.">;
   def StopOnExec: Property<"stop-on-exec", "Boolean">,
     Global,
     DefaultTrue,
