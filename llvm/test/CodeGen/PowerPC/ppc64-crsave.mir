@@ -11,9 +11,8 @@
 # RUN: -run-pass=prologepilog --verify-machineinstrs < %s | \
 # RUN: FileCheck %s --check-prefixes=CHECK,SAVEALL
 
-# COM: TODO FIXME: We only check the save and restores of the callee saved gpr
-# COM:             for ELF becuase AIX callee saved registers haven't been
-# COM:             properly implemented yet.
+# TODO FIXME: We only check the save and restores of the callee saved gpr for
+# ELF becuase AIX callee saved registers haven't been properly implemented yet.
 
 ---
 name:            CRAllSave
@@ -78,8 +77,8 @@ body:             |
     ; Verify the proper live-ins have been added in the prologue.
     ; CHECK:    liveins: $x3, $x14, $cr2
 
-    ; COM: ELF V2 ABI allows saving only the clobbered cr fields,
-    ; COM: whereas the other ABIs do not.
+    ; ELF V2 ABI allows saving only the clobbered cr fields,
+    ; whereas the other ABIs do not.
     ; SAVEONE:     $x12 = MFOCRF8 killed $cr2
     ; SAVEALL:     $x12 = MFCR8 implicit killed $cr2
 

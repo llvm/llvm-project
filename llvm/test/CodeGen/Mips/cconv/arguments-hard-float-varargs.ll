@@ -18,14 +18,14 @@
 ; RUN: llc -march=mips64el -relocation-model=static -target-abi n64 < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,SYM64,N64,NEW,NEWLE %s
 
-; COM: Test the effect of varargs on floating point types in the non-variable part
-; COM: of the argument list as specified by section 2 of the MIPSpro N32 Handbook.
+; Test the effect of varargs on floating point types in the non-variable part
+; of the argument list as specified by section 2 of the MIPSpro N32 Handbook.
 ;
-; COM: N32/N64 are almost identical in this area so many of their checks have been
-; COM: combined into the 'NEW' prefix (the N stands for New).
+; N32/N64 are almost identical in this area so many of their checks have been
+; combined into the 'NEW' prefix (the N stands for New).
 ;
-; COM: On O32, varargs prevents all FPU argument register usage. This contradicts
-; COM: the N32 handbook, but agrees with the SYSV ABI and GCC's behaviour.
+; On O32, varargs prevents all FPU argument register usage. This contradicts
+; the N32 handbook, but agrees with the SYSV ABI and GCC's behaviour.
 
 @floats = global [11 x float] zeroinitializer
 @doubles = global [11 x double] zeroinitializer
@@ -52,8 +52,8 @@ entry:
 ; SYM32-DAG:         addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
 ; SYM64-DAG:         daddiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
 
-; COM: O32 forbids using floating point registers for the non-variable portion.
-; COM: N32/N64 allow it.
+; O32 forbids using floating point registers for the non-variable portion.
+; N32/N64 allow it.
 ; O32BE-DAG:         mtc1 $5, [[FTMP1:\$f[0-9]*[02468]+]]
 ; O32BE-DAG:         mtc1 $4, [[FTMP2:\$f[0-9]*[13579]+]]
 ; O32LE-DAG:         mtc1 $4, [[FTMP1:\$f[0-9]*[02468]+]]
@@ -72,10 +72,10 @@ entry:
 ; NEW-DAG:           sd $10, 48($sp)
 ; NEW-DAG:           sd $11, 56($sp)
 
-; COM: Get the varargs pointer
-; COM: O32 has 4 bytes padding, 4 bytes for the varargs pointer, and 8 bytes reserved
-; COM: for arguments 1 and 2.
-; COM: N32/N64 has 8 bytes for the varargs pointer, and no reserved area.
+; Get the varargs pointer
+; O32 has 4 bytes padding, 4 bytes for the varargs pointer, and 8 bytes reserved
+; for arguments 1 and 2.
+; N32/N64 has 8 bytes for the varargs pointer, and no reserved area.
 ; O32-DAG:           addiu [[VAPTR:\$[0-9]+]], $sp, 16
 ; O32-DAG:           sw [[VAPTR]], 4($sp)
 ; N32-DAG:           addiu [[VAPTR:\$[0-9]+]], $sp, 8
@@ -133,11 +133,11 @@ entry:
 ; NEW-DAG:           sd $11, 56($sp)
 
 ; Get the varargs pointer
-; COM: O32 has 4 bytes padding, 4 bytes for the varargs pointer, and should have 8
-; COM: bytes reserved for arguments 1 and 2 (the first float arg) but as discussed in
-; COM: arguments-float.ll, GCC doesn't agree with MD00305 and treats floats as 4
-; COM: bytes so we only have 12 bytes total.
-; COM: N32/N64 has 8 bytes for the varargs pointer, and no reserved area.
+; O32 has 4 bytes padding, 4 bytes for the varargs pointer, and should have 8
+; bytes reserved for arguments 1 and 2 (the first float arg) but as discussed in
+; arguments-float.ll, GCC doesn't agree with MD00305 and treats floats as 4
+; bytes so we only have 12 bytes total.
+; N32/N64 has 8 bytes for the varargs pointer, and no reserved area.
 ; O32-DAG:           addiu [[VAPTR:\$[0-9]+]], $sp, 12
 ; O32-DAG:           sw [[VAPTR]], 4($sp)
 ; N32-DAG:           addiu [[VAPTR:\$[0-9]+]], $sp, 8

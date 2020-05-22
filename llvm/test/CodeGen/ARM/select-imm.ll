@@ -181,7 +181,7 @@ entry:
 define void @t8(i32 %a) {
 entry:
 
-; COM: ARM scheduler emits icmp/zext before both calls, so isn't relevant
+; ARM scheduler emits icmp/zext before both calls, so isn't relevant
 
 ; ARMT2-LABEL: t8:
 ; ARMT2: bl t7
@@ -214,7 +214,7 @@ entry:
 define void @t9(i8* %a, i8 %b) {
 entry:
 
-; COM: ARM scheduler emits icmp/zext before both calls, so isn't relevant
+; ARM scheduler emits icmp/zext before both calls, so isn't relevant
 
 ; ARMT2-LABEL: t9:
 ; ARMT2: bl f

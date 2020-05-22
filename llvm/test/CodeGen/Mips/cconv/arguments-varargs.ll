@@ -26,8 +26,8 @@ define void @fn_i16_dotdotdot_i16(i16 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i16_dotdotdot_i16:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room
-; COM: for the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -45,12 +45,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 12 due to the 4 bytes used to store local
-; COM: variables, 4 bytes padding to maintain stack alignment, and the 4 byte
-; COM: slot for the first fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 12 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
+; fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 12
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -75,11 +75,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just
-; COM: set up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due
-; COM: to byte order.
+; Load the first argument from the variable portion.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 
 ; NEW-LE-DAG:    lw [[ARG1:\$[0-9]+]], 0([[VA]])
@@ -141,8 +141,8 @@ define void @fn_i16_dotdotdot_i32(i16 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i16_dotdotdot_i32:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM; the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -160,12 +160,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 12 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
-; COM: fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 12 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
+; fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 12
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -190,11 +190,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 
 ; NEW-LE-DAG:    lw [[ARG1:\$[0-9]+]], 0([[VA]])
@@ -256,8 +256,8 @@ define void @fn_i16_dotdotdot_i64(i16 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i16_dotdotdot_i64:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -275,12 +275,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 12 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
-; COM: fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 12 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
+; fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 12
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -308,11 +308,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion and copy it to the global.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion and copy it to the global.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 8([[GV]])
@@ -378,8 +378,8 @@ define void @fn_i32_dotdotdot_i16(i32 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i32_dotdotdot_i16:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu [[SP:\$sp]], $sp, -64
@@ -397,12 +397,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 12 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
-; COM: fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 12 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
+; fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 12
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -427,11 +427,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 
 ; NEW-LE-DAG:    lw [[ARG1:\$[0-9]+]], 0([[VA]])
@@ -493,8 +493,8 @@ define void @fn_i32_dotdotdot_i32(i32 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i32_dotdotdot_i32:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -512,12 +512,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 12 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
-; COM: fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 12 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
+; fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 12
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -542,11 +542,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 
 ; NEW-LE-DAG:    lw [[ARG1:\$[0-9]+]], 0([[VA]])
@@ -608,8 +608,8 @@ define void @fn_i32_dotdotdot_i64(i32 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i32_dotdotdot_i64:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -627,12 +627,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 12 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
-; COM: fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 12 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the 4 byte slot for the first
+; fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 12
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -644,7 +644,7 @@ entry:
 
 ; ALL: teqi $zero, 1
 
-; COM: Increment [[VA]] (and realign pointer for O32)
+; Increment [[VA]] (and realign pointer for O32)
 ; O32:           lw [[VA:\$[0-9]+]], 0([[SP]])
 ; O32-DAG:       addiu [[VA_TMP0:\$[0-9]+]], [[VA]], 7
 ; O32-DAG:       addiu [[VA_TMP1:\$[0-9]+]], $zero, -8
@@ -660,11 +660,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion and copy it to the global.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion and copy it to the global.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 8([[GV]])
@@ -730,8 +730,8 @@ define void @fn_i64_dotdotdot_i16(i64 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i64_dotdotdot_i16:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu [[SP:\$sp]], $sp, -64
@@ -748,12 +748,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 16 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the two 4 byte slots for the
-; COM: first fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 16 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the two 4 byte slots for the
+; first fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 16
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -778,11 +778,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 
 ; NEW-LE-DAG:    lw [[ARG1:\$[0-9]+]], 0([[VA]])
@@ -844,8 +844,8 @@ define void @fn_i64_dotdotdot_i32(i64 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i64_dotdotdot_i32:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -862,12 +862,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 16 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the two 4 byte slots for the
-; COM: first fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 16 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the two 4 byte slots for the
+; first fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 16
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -892,11 +892,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 
 ; NEW-LE-DAG:    lw [[ARG1:\$[0-9]+]], 0([[VA]])
@@ -958,8 +958,8 @@ define void @fn_i64_dotdotdot_i64(i64 %a, ...) {
 entry:
 ; ALL-LABEL: fn_i64_dotdotdot_i64:
 
-; COM: Set up the stack with an 8-byte local area. N32/N64 must also make room for
-; COM: the argument save area (56 bytes).
+; Set up the stack with an 8-byte local area. N32/N64 must also make room for
+; the argument save area (56 bytes).
 ; O32:           addiu  [[SP:\$sp]], $sp, -8
 ; N32:           addiu  [[SP:\$sp]], $sp, -64
 ; N64:           daddiu  [[SP:\$sp]], $sp, -64
@@ -976,12 +976,12 @@ entry:
 ; NEW-DAG:       sd $6, 16([[SP]])
 ; NEW-DAG:       sd $5, 8([[SP]])
 
-; COM: Initialize variable argument pointer.
-; COM: For O32, the offset is 16 due to the 4 bytes used to store local variables,
-; COM: 4 bytes padding to maintain stack alignment, and the two 4 byte slots for the
-; COM: first fixed argument.
-; COM: For N32/N64, it is only 8 since the fixed arguments do not reserve stack
-; COM: space.
+; Initialize variable argument pointer.
+; For O32, the offset is 16 due to the 4 bytes used to store local variables,
+; 4 bytes padding to maintain stack alignment, and the two 4 byte slots for the
+; first fixed argument.
+; For N32/N64, it is only 8 since the fixed arguments do not reserve stack
+; space.
 ; O32-DAG:       addiu [[VA:\$[0-9]+]], [[SP]], 16
 ; O32-DAG:       sw [[VA]], 0([[SP]])
 
@@ -1009,11 +1009,11 @@ entry:
 ; N64-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 8
 ; N64-DAG:       sd [[VA2]], 0([[SP]])
 
-; COM: Load the first argument from the variable portion and copy it to the global.
-; COM: This has used the stack pointer directly rather than the [[VA]] we just set
-; COM: up.
-; COM: Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
-; COM: order.
+; Load the first argument from the variable portion and copy it to the global.
+; This has used the stack pointer directly rather than the [[VA]] we just set
+; up.
+; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
+; order.
 ; O32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 ; O32-DAG:       sw [[ARG1]], 8([[GV]])

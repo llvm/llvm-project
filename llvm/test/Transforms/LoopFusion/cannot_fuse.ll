@@ -3,7 +3,7 @@
 
 @B = common global [1024 x i32] zeroinitializer, align 16
 
-; Check that the two candidates for fusion are placed into separate candidate
+; CHECK that the two candidates for fusion are placed into separate candidate
 ; sets because they are not control flow equivalent.
 
 ; CHECK: Performing Loop Fusion on function non_cfe

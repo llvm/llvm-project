@@ -240,9 +240,9 @@ define amdgpu_kernel void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, floa
 }
 
 ; FUNC-LABEL: {{^}}fp_to_uint_f32_to_i16:
-; COM: The reason different instructions are used on SI and VI is because for
-; COM: SI fp_to_uint is legalized by the type legalizer and for VI it is
-; COM: legalized by the dag legalizer and they legalize fp_to_uint differently.
+; The reason different instructions are used on SI and VI is because for
+; SI fp_to_uint is legalized by the type legalizer and for VI it is
+; legalized by the dag legalizer and they legalize fp_to_uint differently.
 ; SI: v_cvt_u32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
 ; VI: v_cvt_i32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
 ; GCN: buffer_store_short [[VAL]]
