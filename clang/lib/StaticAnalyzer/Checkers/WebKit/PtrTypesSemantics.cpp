@@ -114,7 +114,7 @@ bool isUncountedPtr(const Type *T) {
 bool isGetterOfRefCounted(const CXXMethodDecl *M) {
   assert(M);
 
-  if (auto *calleeMethodDecl = dyn_cast<CXXMethodDecl>(M)) {
+  if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
     auto methodName = safeGetName(M);
