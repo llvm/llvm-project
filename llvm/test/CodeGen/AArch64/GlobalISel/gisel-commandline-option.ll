@@ -61,7 +61,7 @@
 ; ENABLED-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  RegBankSelect
+; ENABLED:  RegBankSelect
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Localizer
 ; VERIFY-O0-NEXT:   Verify generated machine code

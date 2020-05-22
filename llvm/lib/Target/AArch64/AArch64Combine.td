@@ -23,3 +23,8 @@ def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
                                            fconstant_to_constant]> {
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
 }
+
+def AArch64PostLegalizerCombinerHelper: GICombinerHelper<
+  "AArch64GenPostLegalizerCombinerHelper", [erase_undef_store]> {
+  let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
+}
