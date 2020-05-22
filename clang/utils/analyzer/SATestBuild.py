@@ -633,7 +633,7 @@ class TestProjectThread(threading.Thread):
 
                 self.tasks_queue.task_done()
 
-            except CalledProcessError:
+            except BaseException:
                 self.failure_flag.set()
                 raise
 
