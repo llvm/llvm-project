@@ -24,7 +24,8 @@ def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
 }
 
-def AArch64PostLegalizerCombinerHelper: GICombinerHelper<
-  "AArch64GenPostLegalizerCombinerHelper", [erase_undef_store]> {
+def AArch64PostLegalizerCombinerHelper
+    : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
+                       [erase_undef_store, combines_for_extload]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
