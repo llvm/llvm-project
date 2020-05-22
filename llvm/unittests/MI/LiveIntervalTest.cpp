@@ -45,7 +45,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 
   TargetOptions Options;
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine("AMDGPU", "", "", Options, None, None,
+      T->createTargetMachine("AMDGPU", "gfx900", "", Options, None, None,
                              CodeGenOpt::Aggressive)));
 }
 
