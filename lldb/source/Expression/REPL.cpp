@@ -388,6 +388,11 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             error_sp->Printf("error: stopped for debug -- %s\n",
                              error.AsCString());
             break;
+          case lldb::eExpressionThreadVanished:
+            // Shoulnd't happen???
+            error_sp->Printf("error: expression thread vanished -- %s\n",
+                             error.AsCString());
+            break;
           }
         }
 
