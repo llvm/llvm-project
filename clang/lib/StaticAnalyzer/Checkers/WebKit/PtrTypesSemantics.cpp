@@ -55,7 +55,7 @@ const CXXRecordDecl *isRefCountable(const CXXBaseSpecifier *Base) {
     return nullptr;
 
   return hasPublicRefAndDeref(R) ? R : nullptr;
-};
+}
 
 bool isRefCountable(const CXXRecordDecl *R) {
   assert(R);
