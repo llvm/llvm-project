@@ -544,14 +544,9 @@ static inline bool isGlobalMemoryObject(AAResults *AA, MachineInstr *MI) {
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
   if (SUa->getInstr()->mayAlias(AAForDep, *SUb->getInstr(), UseTBAA)) {
-    LLVM_DEBUG(dbgs() << "Adding chain dependency\n  from: " << *SUb->getInstr()
-                      << "  to:   " << *SUa->getInstr());
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);
-  } else {
-    LLVM_DEBUG(dbgs() << "Not adding chain dependency\n  from: "
-                      << *SUb->getInstr() << "  to:   " << *SUa->getInstr());
   }
 }
 
