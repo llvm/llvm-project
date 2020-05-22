@@ -218,7 +218,13 @@ public:
 
   const ProcInterface &interface() const { return interface_; }
   ProcInterface &interface() { return interface_; }
-  void set_interface(const ProcInterface &interface) { interface_ = interface; }
+  void set_interface(const ProcInterface &interface) {
+    CHECK(!IsInterfaceSet());
+    interface_ = interface;
+  }
+  bool IsInterfaceSet() {
+    return interface_.symbol() != nullptr || interface_.type() != nullptr;
+  }
   inline bool HasExplicitInterface() const;
 
   // Be advised: !init().has_value() => uninitialized pointer,
