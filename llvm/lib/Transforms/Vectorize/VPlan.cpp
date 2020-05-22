@@ -441,7 +441,9 @@ void VPlan::execute(VPTransformState *State) {
     IRBuilder<> Builder(State->CFG.PrevBB->getTerminator());
     auto *TCMO = Builder.CreateSub(TC, ConstantInt::get(TC->getType(), 1),
                                    "trip.count.minus.1");
-    Value *VTCMO = Builder.CreateVectorSplat(State->VF, TCMO, "broadcast");
+    auto VF = State->VF;
+    Value *VTCMO =
+        VF == 1 ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
     for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part)
       State->set(BackedgeTakenCount, VTCMO, Part);
   }
@@ -809,12 +811,17 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *CanonicalIV = State.CanonicalIV;
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Value *VStart = Builder.CreateVectorSplat(State.VF, CanonicalIV, "broadcast");
+  auto VF = State.VF;
+  Value *VStart = VF == 1
+                      ? CanonicalIV
+                      : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
     SmallVector<Constant *, 8> Indices;
-    for (unsigned Lane = 0, VF = State.VF; Lane < VF; ++Lane)
+    for (unsigned Lane = 0; Lane < VF; ++Lane)
       Indices.push_back(ConstantInt::get(STy, Part * VF + Lane));
-    Constant *VStep = ConstantVector::get(Indices);
+    // If VF == 1, there is only one iteration in the loop above, thus the
+    // element pushed back into Indices is ConstantInt::get(STy, Part)
+    Constant *VStep = VF == 1 ? Indices.back() : ConstantVector::get(Indices);
     // Add the consecutive indices to the vector value.
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
     State.set(getVPValue(), CanonicalVectorIV, Part);
