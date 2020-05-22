@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -300,6 +301,8 @@ void jitLink(std::unique_ptr<JITLinkContext> Ctx) {
   switch (Magic) {
   case file_magic::macho_object:
     return jitLink_MachO(std::move(Ctx));
+  case file_magic::elf_relocatable:
+    return jitLink_ELF(std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported file format"));
   };
