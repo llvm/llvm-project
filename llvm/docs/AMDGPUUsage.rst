@@ -6674,12 +6674,12 @@ after the source language arguments in the following order:
 
 The input and result arguments are assigned in order in the following manner:
 
-..note::
+.. note::
 
   There are likely some errors and omissions in the following description that
   need correction.
 
-  ..TODO::
+  .. TODO::
 
     Check the clang source code to decipher how function arguments and return
     results are handled. Also see the AMDGPU specific values used.
@@ -6727,7 +6727,7 @@ describes how the AMDGPU implements function calls:
 4.  No CFI is currently generated. See
     :ref:`amdgpu-dwarf-call-frame-information`.
 
-    ..note::
+    .. note::
 
       CFI will be generated that defines the CFA as the unswizzled address
       relative to the wave scratch base in the unswizzled private address space
@@ -6752,7 +6752,7 @@ describes how the AMDGPU implements function calls:
     from SP. Then SP is incremented to account for the known frame size before
     the call and decremented after the call.
 
-    ..note::
+    .. note::
 
       The CFI will reflect the changed calculation needed to compute the CFA
       from SP.
@@ -6761,7 +6761,7 @@ describes how the AMDGPU implements function calls:
     emergency spill slot. Buffer instructions are used for stack accesses and
     not the ``flat_scratch`` instruction.
 
-    ..TODO::
+    .. TODO::
 
       Explain when the emergency spill slot is used.
 
