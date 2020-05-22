@@ -43,12 +43,12 @@ def get_dpu_from_command(command, debugger, target):
         addr = int(command, 16)
     except ValueError:
         success, addr = get_value_from_command(debugger, command, 16)
-        if not(success) and not(re.match(r'.*\..*\..*\..*', command) is None):
+        if not(success) and not(re.match(r'.*\..*\..*', command) is None):
             dpus = dpu_list(debugger, None, None, None)
             addr = next((dpu[0] for dpu in dpus
                          if (command ==
                              str(dpu[1]) + "." + str(dpu[2]) + "." +
-                             str(dpu[3]) + "." + str(dpu[4]))),
+                             str(dpu[3]))),
                         0)
     if addr == 0:
         print("Could not interpret command '" + command + "'")
