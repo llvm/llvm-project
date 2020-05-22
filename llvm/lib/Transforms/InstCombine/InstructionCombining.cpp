@@ -3302,6 +3302,11 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
   if (I->mayReadFromMemory()) {
+    // We don't want to do any sophisticated alias analysis, so we only check
+    // the instructions after I in I's parent block if we try to sink to its
+    // successor block.
+    if (DestBlock->getUniquePredecessor() != I->getParent())
+      return false;
     for (BasicBlock::iterator Scan = I->getIterator(),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
@@ -3419,7 +3424,8 @@ bool InstCombiner::run() {
       }
     }
 
-    // See if we can trivially sink this instruction to a successor basic block.
+    // See if we can trivially sink this instruction to its user if we can
+    // prove that the successor is not executed more frequently than our block.
     if (EnableCodeSinking)
       if (Use *SingleUse = I->getSingleUndroppableUse()) {
         BasicBlock *BB = I->getParent();
@@ -3435,7 +3441,20 @@ bool InstCombiner::run() {
         if (UserParent != BB) {
           // See if the user is one of our successors that has only one
           // predecessor, so that we don't have to split the critical edge.
-          if (UserParent->getUniquePredecessor() == BB) {
+          bool ShouldSink = UserParent->getUniquePredecessor() == BB;
+          // Another option where we can sink is a block that ends with a
+          // terminator that does not pass control to other block (such as
+          // return or unreachable). In this case:
+          //   - I dominates the User (by SSA form);
+          //   - the User will be executed at most once.
+          // So sinking I down to User is always profitable or neutral.
+          if (!ShouldSink) {
+            auto *Term = UserParent->getTerminator();
+            ShouldSink = isa<ReturnInst>(Term) || isa<UnreachableInst>(Term);
+          }
+          if (ShouldSink) {
+            assert(DT.dominates(BB, UserParent) &&
+                   "Dominance relation broken?");
             // Okay, the CFG is simple enough, try to sink this instruction.
             if (TryToSinkInstruction(I, UserParent)) {
               LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');

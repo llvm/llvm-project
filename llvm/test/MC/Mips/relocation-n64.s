@@ -11,14 +11,14 @@
 // Test that we produce the correct relocation.
 // FIXME: move more relocation only tests here.
 
-// COM: Check prefixes:
-// COM: RELOC - Check the relocation in the object.
-// COM: FIXUP - Check the fixup on the instruction.
-// COM: ENCBE - Check the big-endian encoding on the instruction.
-// COM: ENCLE - Check the little-endian encoding on the instruction.
-// COM: ????? - Placeholder. Relocation is defined but the way of generating it is
-// COM:         unknown.
-// COM: FIXME - Placeholder. Generation method is known but doesn't work.
+// Check prefixes:
+// RELOC - Check the relocation in the object.
+// FIXUP - Check the fixup on the instruction.
+// ENCBE - Check the big-endian encoding on the instruction.
+// ENCLE - Check the little-endian encoding on the instruction.
+// ????? - Placeholder. Relocation is defined but the way of generating it is
+//         unknown.
+// FIXME - Placeholder. Generation method is known but doesn't work.
 
 // DATA-LABEL: Name: .text
 // DATA:       SectionData (

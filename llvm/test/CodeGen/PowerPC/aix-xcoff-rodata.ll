@@ -20,7 +20,7 @@
 @const_chrarray = constant [4 x i8] c"abcd", align 1
 @const_dblarr = constant [4 x double] [double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00], align 8
 
-; CHECK:               .csect .rodata[RO], 5
+; CHECK:               .csect .rodata[RO],5
 ; CHECK-NEXT:          .globl  const_ivar
 ; CHECK-NEXT:          .align  2
 ; CHECK-NEXT:  const_ivar:

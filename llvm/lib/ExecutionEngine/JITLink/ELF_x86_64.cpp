@@ -352,31 +352,28 @@ void jitLink_ELF_x86_64(std::unique_ptr<JITLinkContext> Ctx) {
 }
 
 StringRef getELFX86RelocationKindName(Edge::Kind R) {
-  switch (R) {
-    //     case R_AMD64_NONE:
-    //         return "None";
-    //   case R_AMD64_PC32:
-    //   case R_AMD64_GOT32:
-    //   caseR_AMD64_PLT32,
-    //   R_AMD64_COPY,
-    //   R_AMD64_GLOB_DAT,
-    //   R_AMD64_JUMP_SLOT,
-    //   R_AMD64_RELATIVE,
-    //   R_AMD64_GOTPCREL,
-    //   R_AMD64_32,
-    //   R_AMD64_32S,
-    //   R_AMD64_16,
-    //   R_AMD64_PC16,
-    //   R_AMD64_8,
-    //   R_AMD64_PC8,
-    //   R_AMD64_PC64,
-    //   R_AMD64_GOTOFF64,
-    //   R_AMD64_GOTPC32,
-    //   R_AMD64_SIZE32,
-    //   R_AMD64_SIZE64
-  default:
-    return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
-  }
+  // case R_AMD64_NONE:
+  //   return "None";
+  // case R_AMD64_PC32:
+  // case R_AMD64_GOT32:
+  // case R_AMD64_PLT32,
+  // R_AMD64_COPY,
+  // R_AMD64_GLOB_DAT,
+  // R_AMD64_JUMP_SLOT,
+  // R_AMD64_RELATIVE,
+  // R_AMD64_GOTPCREL,
+  // R_AMD64_32,
+  // R_AMD64_32S,
+  // R_AMD64_16,
+  // R_AMD64_PC16,
+  // R_AMD64_8,
+  // R_AMD64_PC8,
+  // R_AMD64_PC64,
+  // R_AMD64_GOTOFF64,
+  // R_AMD64_GOTPC32,
+  // R_AMD64_SIZE32,
+  // R_AMD64_SIZE64
+  return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
 } // end namespace jitlink
 } // end namespace llvm

@@ -8,9 +8,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=CHECK,X64,AVX,X64-AVX,AVX1,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,X64,AVX,X64-AVX,AVX512,X64-AVX512
 
-; COM: Ensure that the backend no longer emits unnecessary vector insert
-; COM: instructions immediately after SSE scalar fp instructions like addss or
-; COM: mulss.
+; Ensure that the backend no longer emits unnecessary vector insert
+; instructions immediately after SSE scalar fp instructions
+; like addss or mulss.
 
 define <4 x float> @test_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_add_ss:
@@ -635,8 +635,8 @@ define <2 x double> @blend_div_sd(<2 x double> %a, double %b) {
   ret <2 x double> %shuf
 }
 
-; COM: Ensure that the backend selects SSE/AVX scalar fp instructions
-; COM: from a packed fp instruction plus a vector insert.
+; Ensure that the backend selects SSE/AVX scalar fp instructions
+; from a packed fp instruction plus a vector insert.
 
 define <4 x float> @insert_test_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test_add_ss:

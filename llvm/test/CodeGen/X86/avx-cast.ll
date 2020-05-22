@@ -24,7 +24,7 @@ define <4 x double> @castB(<2 x double> %m) nounwind uwtable readnone ssp {
   ret <4 x double> %shuffle.i
 }
 
-; COM: AVX2 is needed for integer types.
+; AVX2 is needed for integer types.
 
 define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castC:

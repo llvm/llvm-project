@@ -243,7 +243,7 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   switch (I->getOpcode()) {
   case Instruction::PHI: {
     // `phi` is negatible if all the incoming values are negatible.
-    PHINode *PHI = cast<PHINode>(I);
+    auto *PHI = cast<PHINode>(I);
     SmallVector<Value *, 4> NegatedIncomingValues(PHI->getNumOperands());
     for (auto I : zip(PHI->incoming_values(), NegatedIncomingValues)) {
       if (!(std::get<1>(I) = visit(std::get<0>(I), Depth + 1))) // Early return.
@@ -285,7 +285,7 @@ LLVM_NODISCARD Value *Negator::visit(Value *V, unsigned Depth) {
   }
   case Instruction::ShuffleVector: {
     // `shufflevector` is negatible if both operands are negatible.
-    ShuffleVectorInst *Shuf = cast<ShuffleVectorInst>(I);
+    auto *Shuf = cast<ShuffleVectorInst>(I);
     Value *NegOp0 = visit(I->getOperand(0), Depth + 1);
     if (!NegOp0) // Early return.
       return nullptr;

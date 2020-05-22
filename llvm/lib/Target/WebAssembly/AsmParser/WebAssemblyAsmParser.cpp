@@ -442,7 +442,7 @@ public:
     Name = StringRef(NameLoc.getPointer(), Name.size());
 
     // WebAssembly has instructions with / in them, which AsmLexer parses
-    // as seperate tokens, so if we find such tokens immediately adjacent (no
+    // as separate tokens, so if we find such tokens immediately adjacent (no
     // whitespace), expand the name to include them:
     for (;;) {
       auto &Sep = Lexer.getTok();
@@ -700,7 +700,7 @@ public:
       // WebAssemblyAsmPrinter::EmitFunctionBodyStart.
       // TODO: would be good to factor this into a common function, but the
       // assembler and backend really don't share any common code, and this code
-      // parses the locals seperately.
+      // parses the locals separately.
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;

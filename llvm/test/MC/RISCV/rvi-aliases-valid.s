@@ -19,15 +19,15 @@
 # RUN:     | llvm-objdump -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-S-OBJ %s
 
-# COM: The following check prefixes are used in this test:
-# COM: CHECK-S                 Match the .s output with aliases enabled
-# COM: CHECK-S-NOALIAS         Match the .s output with aliases disabled
-# COM: CHECK-OBJ               Match the objdumped object output with aliases enabled
-# COM: CHECK-OBJ-NOALIAS       Match the objdumped object output with aliases enabled
-# COM: CHECK-S-OBJ             Match both the .s and objdumped object output with
-# COM:                         aliases enabled
-# COM: CHECK-S-OBJ-NOALIAS     Match both the .s and objdumped object output with
-# COM:                         aliases disabled
+# The following check prefixes are used in this test:
+# CHECK-S                 Match the .s output with aliases enabled
+# CHECK-S-NOALIAS         Match the .s output with aliases disabled
+# CHECK-OBJ               Match the objdumped object output with aliases enabled
+# CHECK-OBJ-NOALIAS       Match the objdumped object output with aliases enabled
+# CHECK-S-OBJ             Match both the .s and objdumped object output with
+#                         aliases enabled
+# CHECK-S-OBJ-NOALIAS     Match both the .s and objdumped object output with
+#                         aliases disabled
 
 # TODO la
 # TODO lb lh lw

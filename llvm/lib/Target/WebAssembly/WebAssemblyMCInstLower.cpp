@@ -318,7 +318,7 @@ static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
   // Remove all uses of stackified registers to bring the instruction format
   // into its final stack form used thruout MC, and transition opcodes to
   // their _S variant.
-  // We do this seperate from the above code that still may need these
+  // We do this separate from the above code that still may need these
   // registers for e.g. call_indirect signatures.
   // See comments in lib/Target/WebAssembly/WebAssemblyInstrFormats.td for
   // details.
