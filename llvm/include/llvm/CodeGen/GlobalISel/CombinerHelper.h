@@ -205,6 +205,9 @@ public:
   /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
   bool matchUndefShuffleVectorMask(MachineInstr &MI);
 
+  /// Return true if a G_STORE instruction \p MI is storing an undef value.
+  bool matchUndefStore(MachineInstr &MI);
+
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   bool replaceInstWithFConstant(MachineInstr &MI, double C);
 
@@ -233,6 +236,9 @@ public:
 
   /// Check if operand \p OpIdx is zero.
   bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx);
+
+  /// Erase \p MI
+  bool eraseInst(MachineInstr &MI);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

@@ -25,6 +25,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -608,6 +609,13 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 }
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
+  bool nomerge = false;
+  for (const auto *A : S.getAttrs())
+    if (A->getKind() == attr::NoMerge) {
+      nomerge = true;
+      break;
+    }
+  SaveAndRestore<bool> save_nomerge(InNoMergeAttributedStmt, nomerge);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
