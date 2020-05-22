@@ -1,5 +1,5 @@
-## COM: Show that all RISCV specific section types are properly printed for both
-## COM: LLVM and GNU styles.
+## Show that all RISCV specific section types are properly printed for both
+## LLVM and GNU styles.
 
 # RUN: yaml2obj %s -o %t-riscv.o
 # RUN: llvm-readobj --section-headers %t-riscv.o | FileCheck %s --check-prefix=LLVM

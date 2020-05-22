@@ -6,10 +6,10 @@
 ; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
 ; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
 
-; COM: Prefixes:
-; COM:   ALL      - All
-; COM:   MIPS32-GT-R1 - MIPS64r1 and above (does not include MIPS64's)
-; COM:   MIPS64-GT-R1 - MIPS64r1 and above
+; Prefixes:
+;   ALL      - All
+;   MIPS32-GT-R1 - MIPS64r1 and above (does not include MIPS64's)
+;   MIPS64-GT-R1 - MIPS64r1 and above
 
 define i32 @ctlz_i32(i32 signext %X) nounwind readnone {
 entry:

@@ -919,8 +919,8 @@ entry:
 ; Verify that fptosi(%x) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
-; COM: FIXME: The SSE/AVX code does not raise an invalid exception for all
-; COM:        value sthat don't fit in i8.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i8.
 define i8 @f20s8(double %x) #0 {
 ; X87-LABEL: f20s8:
 ; X87:       # %bb.0: # %entry
@@ -966,8 +966,8 @@ entry:
 ; Verify that fptosi(%x) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
-; COM: FIXME: The SSE/AVX code does not raise an invalid exception for all
-; COM:        values that don't fit in i16.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i16.
 define i16 @f20s16(double %x) #0 {
 ; X87-LABEL: f20s16:
 ; X87:       # %bb.0: # %entry
@@ -1188,11 +1188,11 @@ entry:
   ret i128 %result
 }
 
-; COM: Verify that fptoui(%x) isn't simplified when the rounding mode is
-; COM: unknown.
-; COM: Verify that no gross errors happen.
-; COM: FIXME: The SSE/AVX code does not raise an invalid exception for all values
-; COM:        that don't fit in i8.
+; Verify that fptoui(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i8.
 define i8 @f20u8(double %x) #0 {
 ; X87-LABEL: f20u8:
 ; X87:       # %bb.0: # %entry
@@ -1237,8 +1237,8 @@ entry:
 ; Verify that fptoui(%x) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
-; COM: FIXME: The SSE/AVX code does not raise an invalid exception for all
-; COM:        values that don't fit in i16.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i16.
 define i16 @f20u16(double %x) #0 {
 ; X87-LABEL: f20u16:
 ; X87:       # %bb.0: # %entry
@@ -1285,8 +1285,8 @@ entry:
 ; Verify that fptoui(%x) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
-; COM: FIXME: The X87/SSE/AVX1 code does not raise an invalid exception for all
-; COM:        values that don't fit in i32. The AVX512 code does.
+; FIXME: The X87/SSE/AVX1 code does not raise an invalid exception for all
+; values that don't fit in i32. The AVX512 code does.
 define i32 @f20u(double %x) #0 {
 ; X87-LABEL: f20u:
 ; X87:       # %bb.0: # %entry

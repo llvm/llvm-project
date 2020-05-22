@@ -6,7 +6,7 @@
 
 // CHECK: .quad 3
 
-// COM: MSVC does AShr.
+// MSVC does AShr.
 // MSVC: .quad -1
 
 .quad (~0 >> 62)

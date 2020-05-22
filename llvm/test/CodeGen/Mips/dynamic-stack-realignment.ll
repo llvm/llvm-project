@@ -65,7 +65,7 @@ entry:
 declare void @helper_02(i32, i32, i32, i32,
                         i32, i32, i32, i32, i32*)
 
-; COM: N32/N64 ABIs
+; N32/N64 ABIs
 define void @func_02() {
 entry:
 ; GP64-LABEL: func_02:
@@ -108,7 +108,7 @@ entry:
 
 declare void @helper_03(i32, i32, i32, i32, i32*, i32*)
 
-; COM: O32 ABI
+; O32 ABI
 define void @func_03(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32* %b) {
 entry:
 ; GP32-LABEL: func_03:
@@ -130,7 +130,7 @@ entry:
 declare void @helper_04(i32, i32, i32, i32,
                         i32, i32, i32, i32, i32*, i32*)
 
-; COM: N32/N64 ABIs
+; N32/N64 ABIs
 define void @func_04(i32 %p0, i32 %p1, i32 %p2, i32 %p3,
                      i32 %p4, i32 %p5, i32 %p6, i32 %p7,
                      i32* %b) {
@@ -153,7 +153,7 @@ entry:
 
 ; Check dynamic stack realignment in functions with variable-sized objects.
 
-; COM: O32 ABI
+; O32 ABI
 define void @func_05(i32 %sz) {
 entry:
 ; GP32-LABEL: func_05:
@@ -194,7 +194,7 @@ entry:
   ret void
 }
 
-; COM: N32/N64 ABIs
+; N32/N64 ABIs
 define void @func_06(i32 %sz) {
 entry:
 ; GP64-LABEL: func_06:
@@ -262,7 +262,7 @@ entry:
   ret void
 }
 
-; COM: N32/N64 ABIs
+; N32/N64 ABIs
 define void @func_08(i32 %p0, i32 %p1, i32 %p2, i32 %p3,
                      i32 %p4, i32 %p5, i32 %p6, i32 %p7,
                      i32 %sz) {
