@@ -4,8 +4,8 @@
 ; RUN: llc -march=mips64 -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
 ; RUN: llc -march=mips64el -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
 
-; COM: Test the fp128 returns for N32/N64 and all byte orders as specified by
-; COM: section 5 of MD00305 (MIPS ABIs Described).
+; Test the fp128 returns for N32/N64 and all byte orders as specified by
+; section 5 of MD00305 (MIPS ABIs Described).
 ;
 ; O32 is not tested because long double is the same as double on O32.
 ;

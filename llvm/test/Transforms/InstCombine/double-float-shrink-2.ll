@@ -95,8 +95,8 @@ define float @test_shrink_libcall_trunc(float %C) {
   ret float %F
 }
 
-; COM: This is replaced with the intrinsic, which does the right thing on CHECK
-; COM: platforms.
+; This is replaced with the intrinsic, which does the right thing on
+; CHECK platforms.
 define float @test_shrink_libcall_fabs(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_fabs(
 ; CHECK-NEXT:    [[F:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])

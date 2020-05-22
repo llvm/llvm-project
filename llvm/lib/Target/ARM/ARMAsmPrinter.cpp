@@ -1106,7 +1106,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     // 1) for Thumb1 code we sometimes materialize the constant via constpool
     //    load.
     // 2) for Thumb2 execute only code we materialize the constant via
-    //    immediate constants in 2 seperate instructions (MOVW/MOVT).
+    //    immediate constants in 2 separate instructions (MOVW/MOVT).
     SrcReg = ~0U;
     DstReg = MI->getOperand(0).getReg();
     break;

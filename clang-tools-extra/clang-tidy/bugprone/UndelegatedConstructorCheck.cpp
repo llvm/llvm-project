@@ -55,14 +55,16 @@ void UndelegatedConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // instantiations to reduce the number of duplicated warnings.
 
   Finder->addMatcher(
-      compoundStmt(
-          hasParent(
-              cxxConstructorDecl(ofClass(cxxRecordDecl().bind("parent")))),
-          forEach(ignoringTemporaryExpr(
-              cxxConstructExpr(hasDeclaration(cxxConstructorDecl(ofClass(
+      traverse(
+          ast_type_traits::TK_AsIs,
+          compoundStmt(hasParent(cxxConstructorDecl(
+                           ofClass(cxxRecordDecl().bind("parent")))),
+                       forEach(ignoringTemporaryExpr(
+                           cxxConstructExpr(
+                               hasDeclaration(cxxConstructorDecl(ofClass(
                                    cxxRecordDecl(baseOfBoundNode("parent"))))))
-                  .bind("construct"))),
-          unless(isInTemplateInstantiation())),
+                               .bind("construct"))),
+                       unless(isInTemplateInstantiation()))),
       this);
 }
 

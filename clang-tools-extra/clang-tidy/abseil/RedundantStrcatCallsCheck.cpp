@@ -64,11 +64,12 @@ const clang::CallExpr* ProcessArgument(const Expr* Arg,
   static const auto* const Strcat = new auto(hasName("::absl::StrCat"));
   const auto IsStrcat = cxxBindTemporaryExpr(
       has(callExpr(callee(functionDecl(*Strcat))).bind("StrCat")));
-  if (const auto* SubStrcatCall = selectFirst<const CallExpr>(
+  if (const auto *SubStrcatCall = selectFirst<const CallExpr>(
           "StrCat",
-          match(stmt(anyOf(
-                    cxxConstructExpr(IsAlphanum, hasArgument(0, IsStrcat)),
-                    IsStrcat)),
+          match(stmt(traverse(ast_type_traits::TK_AsIs,
+                              anyOf(cxxConstructExpr(IsAlphanum,
+                                                     hasArgument(0, IsStrcat)),
+                                    IsStrcat))),
                 *Arg->IgnoreParenImpCasts(), *Result.Context))) {
     RemoveCallLeaveArgs(SubStrcatCall, CheckResult);
     return SubStrcatCall;

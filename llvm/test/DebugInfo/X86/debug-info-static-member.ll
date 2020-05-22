@@ -101,9 +101,9 @@ attributes #1 = { nounwind readnone }
 !32 = !DILocation(line: 21, scope: !26)
 !33 = !DILocation(line: 22, scope: !26)
 
-; COM: PRESENT verifies that static member declarations have these attributes:
-; COM: external, declaration, accessibility, and either DW_AT_linkage_name (for
-; COM: variables) or DW_AT_const_value (for constants).
+; PRESENT verifies that static member declarations have these attributes:
+; external, declaration, accessibility, and either DW_AT_linkage_name
+; (for variables) or DW_AT_const_value (for constants).
 ;
 ; PRESENT:      .debug_info contents:
 ; PRESENT:      DW_TAG_variable
@@ -204,9 +204,9 @@ attributes #1 = { nounwind readnone }
 ; DARWINP-NEXT: DW_AT_location
 ; DARWINP-NEXT: DW_AT_linkage_name {{.*}} "_ZN1C1cE"
 
-; COM: ABSENT verifies that static member declarations do not have either
-; COM: DW_AT_location or DW_AT_data_member_location; also, variables do not
-; COM: have DW_AT_const_value and constants do not have DW_AT_linkage_name.
+; ABSENT verifies that static member declarations do not have either
+; DW_AT_location or DW_AT_data_member_location; also, variables do not
+; have DW_AT_const_value and constants do not have DW_AT_linkage_name.
 ;
 ; ABSENT:      .debug_info contents:
 ; ABSENT:      DW_TAG_member

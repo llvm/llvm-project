@@ -5,19 +5,15 @@
 target triple = "x86_64--"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; FIXME: This should only need 2 'or' instructions.
-
 define i32 @ext_ext_or_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @ext_ext_or_reduction_v4i32(
 ; CHECK-NEXT:    [[Z:%.*]] = and <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[Z]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP6]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i32> [[Z]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = or <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %z = and <4 x i32> %x, %y
   %z0 = extractelement <4 x i32> %z, i32 0

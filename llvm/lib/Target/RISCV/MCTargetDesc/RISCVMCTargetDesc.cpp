@@ -94,6 +94,10 @@ static MCTargetStreamer *createRISCVAsmTargetStreamer(MCStreamer &S,
   return new RISCVTargetAsmStreamer(S, OS);
 }
 
+static MCTargetStreamer *createRISCVNullTargetStreamer(MCStreamer &S) {
+  return new RISCVTargetStreamer(S);
+}
+
 namespace {
 
 class RISCVMCInstrAnalysis : public MCInstrAnalysis {
@@ -148,5 +152,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
 
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createRISCVAsmTargetStreamer);
+    // Register the null target streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T,
+                                               createRISCVNullTargetStreamer);
   }
 }

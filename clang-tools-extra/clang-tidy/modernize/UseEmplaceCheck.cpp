@@ -109,10 +109,12 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       anyOf(has(MakeTuple), has(MakeTupleCtor),
             HasConstructExpr, has(cxxFunctionalCastExpr(HasConstructExpr))));
 
-  Finder->addMatcher(cxxMemberCallExpr(CallPushBack, has(SoughtParam),
-                                       unless(isInTemplateInstantiation()))
-                         .bind("call"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxMemberCallExpr(CallPushBack, has(SoughtParam),
+                                 unless(isInTemplateInstantiation()))
+                   .bind("call")),
+      this);
 }
 
 void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {

@@ -12,17 +12,17 @@
 ; RUN: llc -march=mips64 -mcpu=mips64r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
 ; RUN: llc -march=mips64 -mcpu=mips64r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,NOCHECK
 
-; COM: FileCheck Prefixes:
-; COM:   ALL - All targets
-; COM:   ACC32 - Accumulator based multiply/divide on 32-bit targets
-; COM:   ACC64 - Same as ACC32 but only for 64-bit targets
-; COM:   GPR32 - GPR based multiply/divide on 32-bit targets
-; COM:   GPR64 - Same as GPR32 but only for 64-bit targets
-; COM:   ACC32-TRAP - Same as TRAP and ACC32 combined
-; COM:   ACC64-TRAP - Same as TRAP and ACC64 combined
-; COM:   GPR32-TRAP - Same as TRAP and GPR32 combined
-; COM:   GPR64-TRAP - Same as TRAP and GPR64 combined
-; COM:   NOCHECK - Division by zero will not be detected
+; FileCheck Prefixes:
+;   ALL - All targets
+;   ACC32 - Accumulator based multiply/divide on 32-bit targets
+;   ACC64 - Same as ACC32 but only for 64-bit targets
+;   GPR32 - GPR based multiply/divide on 32-bit targets
+;   GPR64 - Same as GPR32 but only for 64-bit targets
+;   ACC32-TRAP - Same as TRAP and ACC32 combined
+;   ACC64-TRAP - Same as TRAP and ACC64 combined
+;   GPR32-TRAP - Same as TRAP and GPR32 combined
+;   GPR64-TRAP - Same as TRAP and GPR64 combined
+;   NOCHECK - Division by zero will not be detected
 
 @g0 = common global i32 0, align 4
 @g1 = common global i32 0, align 4

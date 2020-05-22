@@ -9,6 +9,7 @@ CHECK: -accelerator
 CHECK: -arch <arch>
 CHECK: -dump-debug-map
 CHECK: -flat
+CHECK: -gen-reproducer
 CHECK: -help
 CHECK: -minimize
 CHECK: -no-odr
@@ -28,6 +29,7 @@ CHECK: -symtab
 CHECK: {{-S}}
 CHECK: -toolchain
 CHECK: -update
+CHECK: -use-reproducer <path>
 CHECK: -verbose
 CHECK: -verify
 CHECK: {{-y}}

@@ -49,9 +49,11 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
       varDecl(HasReferenceOrPointerTypeOrIsAllowed,
               unless(hasInitializer(expr(hasDescendant(expr(anyOf(
                   materializeTemporaryExpr(), IteratorReturnsValueType)))))));
-  Finder->addMatcher(cxxForRangeStmt(hasLoopVariable(LoopVar.bind("loopVar")))
-                         .bind("forRange"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxForRangeStmt(hasLoopVariable(LoopVar.bind("loopVar")))
+                   .bind("forRange")),
+      this);
 }
 
 void ForRangeCopyCheck::check(const MatchFinder::MatchResult &Result) {

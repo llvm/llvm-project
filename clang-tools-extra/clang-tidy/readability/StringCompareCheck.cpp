@@ -31,10 +31,12 @@ void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
       callee(memberExpr().bind("str1")));
 
   // First and second case: cast str.compare(str) to boolean.
-  Finder->addMatcher(implicitCastExpr(hasImplicitDestinationType(booleanType()),
-                                      has(StrCompare))
-                         .bind("match1"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               implicitCastExpr(hasImplicitDestinationType(booleanType()),
+                                has(StrCompare))
+                   .bind("match1")),
+      this);
 
   // Third and fourth case: str.compare(str) == 0 and str.compare(str) != 0.
   Finder->addMatcher(

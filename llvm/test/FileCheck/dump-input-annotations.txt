@@ -408,11 +408,11 @@
 ; RUN: echo 'CHECK-DAG: def' >> %t.chk
 
 ; Prefixes used here:
-; COM: DAG    = quiet, -v, or -vv
-; COM: DAG-Q  = quiet
-; COM: DAG-V  = -v or -vv (-vv implies -v)
-; COM: DAG-VQ = -v and not -vv
-; COM: DAG-VV = -vv
+; DAG    = quiet, -v, or -vv
+; DAG-Q  = quiet
+; DAG-V  = -v or -vv (-vv implies -v)
+; DAG-VQ = -v and not -vv
+; DAG-VV = -vv
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \

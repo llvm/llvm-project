@@ -29,13 +29,15 @@ MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
 
 void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxConstructorDecl(
-          unless(isImplicit()), isMoveConstructor(),
-          hasAnyConstructorInitializer(
-              cxxCtorInitializer(
-                  withInitializer(cxxConstructExpr(hasDeclaration(
-                      cxxConstructorDecl(isCopyConstructor()).bind("ctor")))))
-                  .bind("move-init"))),
+      traverse(ast_type_traits::TK_AsIs,
+               cxxConstructorDecl(
+                   unless(isImplicit()), isMoveConstructor(),
+                   hasAnyConstructorInitializer(
+                       cxxCtorInitializer(
+                           withInitializer(cxxConstructExpr(hasDeclaration(
+                               cxxConstructorDecl(isCopyConstructor())
+                                   .bind("ctor")))))
+                           .bind("move-init")))),
       this);
 }
 

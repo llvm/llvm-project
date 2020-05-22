@@ -2931,8 +2931,10 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
 
   Flags = StrengthenNoWrapFlags(this, scMulExpr, Ops, Flags);
 
-  // Limit recursion calls depth.
-  if (Depth > MaxArithDepth || hasHugeExpression(Ops))
+  // Limit recursion calls depth, but fold all-constant expressions.
+  // `Ops` is sorted, so it's enough to check just last one.
+  if ((Depth > MaxArithDepth || hasHugeExpression(Ops)) &&
+      !isa<SCEVConstant>(Ops.back()))
     return getOrCreateMulExpr(Ops, Flags);
 
   if (SCEV *S = std::get<0>(findExistingSCEVInCache(scMulExpr, Ops))) {

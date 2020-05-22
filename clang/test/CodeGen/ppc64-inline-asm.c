@@ -37,3 +37,16 @@ double test_fmax(double x, double y) {
 // CHECK-LABEL: double @test_fmax(double %x, double %y)
 // CHECK: call double asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ws,^ws,^ws"(double %x, double %y)
 }
+
+void testZ(void *addr) {
+  asm volatile ("dcbz %y0\n" :: "Z"(*(unsigned char *)addr) : "memory");
+// CHECK-LABEL: void @testZ(i8* %addr)
+// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(i8* %addr)
+}
+
+void testZwOff(void *addr, long long off) {
+  asm volatile ("dcbz %y0\n" :: "Z"(*(unsigned char *)(addr + off)) : "memory");
+// CHECK-LABEL: void @testZwOff(i8* %addr, i64 %off)
+// CHECK: %[[VAL:[^ ]+]] = getelementptr i8, i8* %addr, i64 %off
+// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(i8* %[[VAL]])
+}

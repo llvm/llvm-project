@@ -1,5 +1,5 @@
-# COM: Show that all regular section types are properly printed for both LLVM and
-# COM: GNU styles.
+# Show that all regular section types are properly printed for both LLVM and
+# GNU styles.
 
 # RUN: yaml2obj %s -o %t-basic.o
 # RUN: llvm-readobj --section-headers %t-basic.o | FileCheck %s --check-prefix=LLVM

@@ -32,11 +32,14 @@ void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
   const auto End = hasArgument(1, expr());
   const auto RandomFunc = hasArgument(2, expr().bind("randomFunc"));
   Finder->addMatcher(
-      callExpr(anyOf(allOf(Begin, End, argumentCountIs(2)),
-                     allOf(Begin, End, RandomFunc, argumentCountIs(3))),
-               hasDeclaration(functionDecl(hasName("::std::random_shuffle"))),
-               has(implicitCastExpr(has(declRefExpr().bind("name")))))
-          .bind("match"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          callExpr(
+              anyOf(allOf(Begin, End, argumentCountIs(2)),
+                    allOf(Begin, End, RandomFunc, argumentCountIs(3))),
+              hasDeclaration(functionDecl(hasName("::std::random_shuffle"))),
+              has(implicitCastExpr(has(declRefExpr().bind("name")))))
+              .bind("match")),
       this);
 }
 

@@ -54,12 +54,12 @@ static void applyFConstantToConstant(MachineInstr &MI) {
 }
 
 #define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
-#include "AArch64GenGICombiner.inc"
+#include "AArch64GenPreLegalizeGICombiner.inc"
 #undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 
 namespace {
 #define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
-#include "AArch64GenGICombiner.inc"
+#include "AArch64GenPreLegalizeGICombiner.inc"
 #undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
 
 class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
@@ -119,7 +119,7 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
 }
 
 #define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
-#include "AArch64GenGICombiner.inc"
+#include "AArch64GenPreLegalizeGICombiner.inc"
 #undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
 
 // Pass boilerplate

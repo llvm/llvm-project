@@ -89,9 +89,9 @@ define <4 x i32> @test4(<4 x i32> %a) {
   ret <4 x i32> %shl
 }
 
-; COM: If we have AVX/SSE2 but not AVX2, verify that the following shift is
-; COM: split into two pmullw instructions. With AVX2, the test case below would
-; COM: produce a single vpmullw.
+; If we have AVX/SSE2 but not AVX2, verify that the following shift is split
+; into two pmullw instructions. With AVX2, the test case below would produce
+; a single vpmullw.
 
 define <16 x i16> @test5(<16 x i16> %a) {
 ; SSE-LABEL: test5:
@@ -109,9 +109,9 @@ define <16 x i16> @test5(<16 x i16> %a) {
   ret <16 x i16> %shl
 }
 
-; COM: If we have AVX/SSE4.1 but not AVX2, verify that the following shift is
-; COM: split into two pmulld instructions. With AVX2, the test case below would
-; COM: produce a single vpsllvd instead.
+; If we have AVX/SSE4.1 but not AVX2, verify that the following shift is split
+; into two pmulld instructions. With AVX2, the test case below would produce
+; a single vpsllvd instead.
 
 define <8 x i32> @test6(<8 x i32> %a) {
 ; SSE2-LABEL: test6:
@@ -148,9 +148,9 @@ define <8 x i32> @test6(<8 x i32> %a) {
   ret <8 x i32> %shl
 }
 
-; COM: With AVX2 and AVX512, the test case below should produce a sequence of
-; COM: two vpmullw instructions. On SSE2 instead, we split the shift in four
-; COM: parts and then we convert each part into a pmullw.
+; With AVX2 and AVX512, the test case below should produce a sequence of
+; two vpmullw instructions. On SSE2 instead, we split the shift in four
+; parts and then we convert each part into a pmullw.
 
 define <32 x i16> @test7(<32 x i16> %a) {
 ; SSE-LABEL: test7:
@@ -183,8 +183,8 @@ define <32 x i16> @test7(<32 x i16> %a) {
   ret <32 x i16> %shl
 }
 
-; COM: Similar to test7; the difference is that with AVX512 support we only
-; COM: produce a single vpsllvd/vpsllvq instead of a pair of vpsllvd/vpsllvq.
+; Similar to test7; the difference is that with AVX512 support
+; we only produce a single vpsllvd/vpsllvq instead of a pair of vpsllvd/vpsllvq.
 
 define <16 x i32> @test8(<16 x i32> %a) {
 ; SSE2-LABEL: test8:
@@ -243,8 +243,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
   ret <16 x i32> %shl
 }
 
-; COM: The shift from 'test9' gets shifted separately and blended if we don't
-; COM: have AVX2/AVX512f support.
+; The shift from 'test9' gets shifted separately and blended if we don't have AVX2/AVX512f support.
 
 define <8 x i64> @test9(<8 x i64> %a) {
 ; SSE2-LABEL: test9:

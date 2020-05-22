@@ -420,7 +420,7 @@ void ModuloScheduleExpander::generateExistingPhis(
     unsigned NewReg = 0;
     unsigned AccessStage = (LoopValStage != -1) ? LoopValStage : StageScheduled;
     // In the epilog, we may need to look back one stage to get the correct
-    // Phi name because the epilog and prolog blocks execute the same stage.
+    // Phi name, because the epilog and prolog blocks execute the same stage.
     // The correct name is from the previous block only when the Phi has
     // been completely scheduled prior to the epilog, and Phi value is not
     // needed in multiple stages.

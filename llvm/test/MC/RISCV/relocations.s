@@ -3,10 +3,10 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
 # RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s
 
-# COM: Check prefixes:
-# COM: RELOC - Check the relocation in the object.
-# COM: FIXUP - Check the fixup on the instruction.
-# COM: INSTR - Check the instruction is handled properly by the ASMPrinter
+# Check prefixes:
+# RELOC - Check the relocation in the object.
+# FIXUP - Check the fixup on the instruction.
+# INSTR - Check the instruction is handled properly by the ASMPrinter
 
 .long foo
 # RELOC: R_RISCV_32 foo

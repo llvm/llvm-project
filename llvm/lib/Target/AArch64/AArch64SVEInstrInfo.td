@@ -1560,37 +1560,69 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
   defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
 
-  multiclass unpred_store<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
-    def _fi : Pat<(store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
-                       (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+  multiclass unpred_store<PatFrag Store, ValueType Ty, Instruction RegImmInst,
+                          Instruction PTrue> {
+    def : Pat<(Store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
+              (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
 
-    def _default : Pat<(store (Ty ZPR:$val), GPR64:$base),
-                       (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
+    def : Pat<(Store (Ty ZPR:$val), GPR64:$base),
+              (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
   }
 
-  defm Pat_ST1B        : unpred_store<nxv16i8, ST1B_IMM, PTRUE_B>;
-  defm Pat_ST1H        : unpred_store<nxv8i16, ST1H_IMM, PTRUE_H>;
-  defm Pat_ST1W        : unpred_store<nxv4i32, ST1W_IMM, PTRUE_S>;
-  defm Pat_ST1D        : unpred_store<nxv2i64, ST1D_IMM, PTRUE_D>;
-  defm Pat_ST1H_float16: unpred_store<nxv8f16, ST1H_IMM, PTRUE_H>;
-  defm Pat_ST1W_float  : unpred_store<nxv4f32, ST1W_IMM, PTRUE_S>;
-  defm Pat_ST1D_double : unpred_store<nxv2f64, ST1D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv16i8,   ST1B_IMM, PTRUE_B>;
+  defm : unpred_store< truncstorevi8, nxv8i16, ST1B_H_IMM, PTRUE_H>;
+  defm : unpred_store< truncstorevi8, nxv4i32, ST1B_S_IMM, PTRUE_S>;
+  defm : unpred_store< truncstorevi8, nxv2i64, ST1B_D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv8i16,   ST1H_IMM, PTRUE_H>;
+  defm : unpred_store<truncstorevi16, nxv4i32, ST1H_S_IMM, PTRUE_S>;
+  defm : unpred_store<truncstorevi16, nxv2i64, ST1H_D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv4i32,   ST1W_IMM, PTRUE_S>;
+  defm : unpred_store<truncstorevi32, nxv2i64, ST1W_D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv2i64,   ST1D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv8f16,   ST1H_IMM, PTRUE_H>;
+  defm : unpred_store<         store, nxv4f16, ST1H_S_IMM, PTRUE_S>;
+  defm : unpred_store<         store, nxv2f16, ST1H_D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv4f32,   ST1W_IMM, PTRUE_S>;
+  defm : unpred_store<         store, nxv4f32, ST1W_D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv2f64,   ST1D_IMM, PTRUE_D>;
 
-  multiclass unpred_load<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
-    def _fi : Pat<(Ty (load  (am_sve_fi GPR64sp:$base, simm4s1:$offset))),
-                  (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+  multiclass unpred_load<PatFrag Load, ValueType Ty, Instruction RegImmInst,
+                         Instruction PTrue> {
+    def : Pat<(Ty (Load  (am_sve_fi GPR64sp:$base, simm4s1:$offset))),
+              (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
 
-    def _default : Pat<(Ty (load GPR64:$base)),
-                       (RegImmInst (PTrue 31), GPR64:$base, (i64 0))>;
+    def : Pat<(Ty (Load GPR64:$base)),
+              (RegImmInst (PTrue 31), GPR64:$base, (i64 0))>;
   }
 
-  defm Pat_LD1B        : unpred_load<nxv16i8, LD1B_IMM, PTRUE_B>;
-  defm Pat_LD1H        : unpred_load<nxv8i16, LD1H_IMM, PTRUE_H>;
-  defm Pat_LD1W        : unpred_load<nxv4i32, LD1W_IMM, PTRUE_S>;
-  defm Pat_LD1D        : unpred_load<nxv2i64, LD1D_IMM, PTRUE_D>;
-  defm Pat_LD1H_float16: unpred_load<nxv8f16, LD1H_IMM, PTRUE_H>;
-  defm Pat_LD1W_float  : unpred_load<nxv4f32, LD1W_IMM, PTRUE_S>;
-  defm Pat_LD1D_double : unpred_load<nxv2f64, LD1D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv16i8,    LD1B_IMM, PTRUE_B>;
+  defm : unpred_load< zextloadvi8, nxv8i16,  LD1B_H_IMM, PTRUE_H>;
+  defm : unpred_load< zextloadvi8, nxv4i32,  LD1B_S_IMM, PTRUE_S>;
+  defm : unpred_load< zextloadvi8, nxv2i64,  LD1B_D_IMM, PTRUE_D>;
+  defm : unpred_load<  extloadvi8, nxv8i16,  LD1B_H_IMM, PTRUE_H>;
+  defm : unpred_load<  extloadvi8, nxv4i32,  LD1B_S_IMM, PTRUE_S>;
+  defm : unpred_load<  extloadvi8, nxv2i64,  LD1B_D_IMM, PTRUE_D>;
+  defm : unpred_load< sextloadvi8, nxv8i16, LD1SB_H_IMM, PTRUE_H>;
+  defm : unpred_load< sextloadvi8, nxv4i32, LD1SB_S_IMM, PTRUE_S>;
+  defm : unpred_load< sextloadvi8, nxv2i64, LD1SB_D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv8i16,    LD1H_IMM, PTRUE_H>;
+  defm : unpred_load<zextloadvi16, nxv4i32,  LD1H_S_IMM, PTRUE_S>;
+  defm : unpred_load<zextloadvi16, nxv2i64,  LD1H_D_IMM, PTRUE_D>;
+  defm : unpred_load< extloadvi16, nxv4i32,  LD1H_S_IMM, PTRUE_S>;
+  defm : unpred_load< extloadvi16, nxv2i64,  LD1H_D_IMM, PTRUE_D>;
+  defm : unpred_load<sextloadvi16, nxv4i32, LD1SH_S_IMM, PTRUE_S>;
+  defm : unpred_load<sextloadvi16, nxv2i64, LD1SH_D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv4i32,    LD1W_IMM, PTRUE_S>;
+  defm : unpred_load<zextloadvi32, nxv2i64,  LD1W_D_IMM, PTRUE_D>;
+  defm : unpred_load< extloadvi32, nxv2i64,  LD1W_D_IMM, PTRUE_D>;
+  defm : unpred_load<sextloadvi32, nxv2i64, LD1SW_D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv2i64,    LD1D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv8f16,    LD1H_IMM, PTRUE_H>;
+  defm : unpred_load<        load, nxv4f16,  LD1H_S_IMM, PTRUE_S>;
+  defm : unpred_load<        load, nxv2f16,  LD1H_D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv4f32,    LD1W_IMM, PTRUE_S>;
+  defm : unpred_load<        load, nxv2f32,  LD1W_D_IMM, PTRUE_D>;
+  defm : unpred_load<        load, nxv2f64,    LD1D_IMM, PTRUE_D>;
 
   multiclass unpred_store_predicate<ValueType Ty, Instruction Store> {
     def _fi : Pat<(store (Ty PPR:$val), (am_sve_fi GPR64sp:$base, simm9:$offset)),

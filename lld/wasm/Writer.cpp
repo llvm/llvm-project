@@ -54,6 +54,9 @@ public:
 private:
   void openFile();
 
+  bool needsPassiveInitialization(const OutputSegment *segment);
+  bool hasPassiveInitializedSegments();
+
   void createInitMemoryFunction();
   void createApplyRelocationsFunction();
   void createCallCtorsFunction();
@@ -729,6 +732,18 @@ static void createFunction(DefinedFunction *func, StringRef bodyContent) {
   cast<SyntheticFunction>(func->function)->setBody(body);
 }
 
+bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
+  return segment->initFlags & WASM_SEGMENT_IS_PASSIVE &&
+         segment->name != ".tdata" && !segment->isBss;
+}
+
+bool Writer::hasPassiveInitializedSegments() {
+  return std::find_if(segments.begin(), segments.end(),
+                      [this](const OutputSegment *s) {
+                        return this->needsPassiveInitialization(s);
+                      }) != segments.end();
+}
+
 void Writer::createInitMemoryFunction() {
   LLVM_DEBUG(dbgs() << "createInitMemoryFunction\n");
   assert(WasmSym::initMemoryFlag);
@@ -738,7 +753,7 @@ void Writer::createInitMemoryFunction() {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
 
-    if (segments.size()) {
+    if (hasPassiveInitializedSegments()) {
       // Initialize memory in a thread-safe manner. The thread that successfully
       // increments the flag from 0 to 1 is is responsible for performing the
       // memory initialization. Other threads go sleep on the flag until the
@@ -804,7 +819,7 @@ void Writer::createInitMemoryFunction() {
 
       // Did increment 0, so conditionally initialize passive data segments
       for (const OutputSegment *s : segments) {
-        if (s->initFlags & WASM_SEGMENT_IS_PASSIVE && s->name != ".tdata") {
+        if (needsPassiveInitialization(s)) {
           // destination address
           writeI32Const(os, s->startVA, "destination address");
           // source segment offset
@@ -838,7 +853,7 @@ void Writer::createInitMemoryFunction() {
 
       // Unconditionally drop passive data segments
       for (const OutputSegment *s : segments) {
-        if (s->initFlags & WASM_SEGMENT_IS_PASSIVE && s->name != ".tdata") {
+        if (needsPassiveInitialization(s)) {
           // data.drop instruction
           writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
           writeUleb128(os, WASM_OPCODE_DATA_DROP, "data.drop");
@@ -983,7 +998,7 @@ void Writer::createSyntheticSections() {
   out.eventSec = make<EventSection>();
   out.globalSec = make<GlobalSection>();
   out.exportSec = make<ExportSection>();
-  out.startSec = make<StartSection>(segments.size());
+  out.startSec = make<StartSection>(hasPassiveInitializedSegments());
   out.elemSec = make<ElemSection>();
   out.dataCountSec = make<DataCountSection>(segments);
   out.linkingSec = make<LinkingSection>(initFunctions, segments);

@@ -54,6 +54,7 @@ StmtMatcher withEnclosingCompound(ExprMatcher Matcher) {
 bool isMutated(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
   const auto *const S = selectFirst<Stmt>("stmt", Results);
   const auto *const E = selectFirst<Expr>("expr", Results);
+  TraversalKindScope RAII(AST->getASTContext(), ast_type_traits::TK_AsIs);
   return ExprMutationAnalyzer(*S, AST->getASTContext()).isMutated(E);
 }
 

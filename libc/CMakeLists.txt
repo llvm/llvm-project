@@ -19,6 +19,27 @@ string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
 
 set(LIBC_TARGET_MACHINE ${CMAKE_SYSTEM_PROCESSOR})
 
+# Check --print-resource-dir to find the compiler resource dir if this flag
+# is supported by the compiler.
+execute_process(
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+  RESULT_VARIABLE COMMAND_RETURN_CODE
+  OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+)
+# Retrieve the host compiler's resource dir.
+if(COMMAND_RETURN_CODE EQUAL 0)
+  set(COMPILER_RESOURCE_DIR
+    "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
+  )
+  message(STATUS "Set COMPILER_RESOURCE_DIR to
+                  ${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+else()
+  set(COMPILER_RESOURCE_DIR OFF)
+  message(STATUS "COMPILER_RESOURCE_DIR not set
+                  --print-resource-dir not supported by host compiler")
+endif()
+
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" ON)
 if(LLVM_LIBC_ENABLE_LINTING)
   if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS

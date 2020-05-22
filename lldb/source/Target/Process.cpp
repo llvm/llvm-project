@@ -4652,13 +4652,27 @@ GetExpressionTimeout(const EvaluateExpressionOptions &options,
 }
 
 static llvm::Optional<ExpressionResults>
-HandleStoppedEvent(Thread &thread, const ThreadPlanSP &thread_plan_sp,
+HandleStoppedEvent(lldb::tid_t thread_id, const ThreadPlanSP &thread_plan_sp,
                    RestorePlanState &restorer, const EventSP &event_sp,
                    EventSP &event_to_broadcast_sp,
-                   const EvaluateExpressionOptions &options, bool handle_interrupts) {
+                   const EvaluateExpressionOptions &options,
+                   bool handle_interrupts) {
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP | LIBLLDB_LOG_PROCESS);
 
-  ThreadPlanSP plan = thread.GetCompletedPlan();
+  ThreadSP thread_sp = thread_plan_sp->GetTarget()
+                           .GetProcessSP()
+                           ->GetThreadList()
+                           .FindThreadByID(thread_id);
+  if (!thread_sp) {
+    LLDB_LOG(log,
+             "The thread on which we were running the "
+             "expression: tid = {0}, exited while "
+             "the expression was running.",
+             thread_id);
+    return eExpressionThreadVanished;
+  }
+
+  ThreadPlanSP plan = thread_sp->GetCompletedPlan();
   if (plan == thread_plan_sp && plan->PlanSucceeded()) {
     LLDB_LOG(log, "execution completed successfully");
 
@@ -4668,7 +4682,7 @@ HandleStoppedEvent(Thread &thread, const ThreadPlanSP &thread_plan_sp,
     return eExpressionCompleted;
   }
 
-  StopInfoSP stop_info_sp = thread.GetStopInfo();
+  StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
   if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint &&
       stop_info_sp->ShouldNotify(event_sp.get())) {
     LLDB_LOG(log, "stopped for breakpoint: {0}.", stop_info_sp->GetDescription());
@@ -4729,6 +4743,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                                  "RunThreadPlan called with invalid thread.");
     return eExpressionSetupError;
   }
+
+  // Record the thread's id so we can tell when a thread we were using
+  // to run the expression exits during the expression evaluation.
+  lldb::tid_t expr_thread_id = thread->GetID();
 
   // We need to change some of the thread plan attributes for the thread plan
   // runner.  This will restore them when we are done:
@@ -4874,7 +4892,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       LLDB_LOGF(log,
                 "Process::RunThreadPlan(): Resuming thread %u - 0x%4.4" PRIx64
                 " to run thread plan \"%s\".",
-                thread->GetIndexID(), thread->GetID(), s.GetData());
+                thread_idx_id, expr_thread_id, s.GetData());
     }
 
     bool got_event;
@@ -5074,33 +5092,23 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
             switch (stop_state) {
             case lldb::eStateStopped: {
-              // We stopped, figure out what we are going to do now.
-              ThreadSP thread_sp =
-                  GetThreadList().FindThreadByIndexID(thread_idx_id);
-              if (!thread_sp) {
-                // Ooh, our thread has vanished.  Unlikely that this was
-                // successful execution...
-                LLDB_LOGF(log,
-                          "Process::RunThreadPlan(): execution completed "
-                          "but our thread (index-id=%u) has vanished.",
-                          thread_idx_id);
-                return_value = eExpressionInterrupted;
-              } else if (Process::ProcessEventData::GetRestartedFromEvent(
-                             event_sp.get())) {
+              if (Process::ProcessEventData::GetRestartedFromEvent(
+                      event_sp.get())) {
                 // If we were restarted, we just need to go back up to fetch
                 // another event.
-                if (log) {
-                  LLDB_LOGF(log, "Process::RunThreadPlan(): Got a stop and "
-                                 "restart, so we'll continue waiting.");
-                }
+                LLDB_LOGF(log, "Process::RunThreadPlan(): Got a stop and "
+                               "restart, so we'll continue waiting.");
                 keep_going = true;
                 do_resume = false;
                 handle_running_event = true;
               } else {
                 const bool handle_interrupts = true;
                 return_value = *HandleStoppedEvent(
-                    *thread, thread_plan_sp, thread_plan_restorer, event_sp,
-                    event_to_broadcast_sp, options, handle_interrupts);
+                    expr_thread_id, thread_plan_sp, thread_plan_restorer,
+                    event_sp, event_to_broadcast_sp, options,
+                    handle_interrupts);
+                if (return_value == eExpressionThreadVanished)
+                  keep_going = false;
               }
             } break;
 
@@ -5222,8 +5230,9 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 // job.  Check that here:
                 const bool handle_interrupts = false;
                 if (auto result = HandleStoppedEvent(
-                        *thread, thread_plan_sp, thread_plan_restorer, event_sp,
-                        event_to_broadcast_sp, options, handle_interrupts)) {
+                        expr_thread_id, thread_plan_sp, thread_plan_restorer,
+                        event_sp, event_to_broadcast_sp, options,
+                        handle_interrupts)) {
                   return_value = *result;
                   back_to_top = false;
                   break;
@@ -5293,6 +5302,13 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       }
       if (old_state != eStateInvalid)
         m_public_state.SetValueNoLock(old_state);
+    }
+
+    // If our thread went away on us, we need to get out of here without
+    // doing any more work.  We don't have to clean up the thread plan, that
+    // will have happened when the Thread was destroyed.
+    if (return_value == eExpressionThreadVanished) {
+      return return_value;
     }
 
     if (return_value != eExpressionCompleted && log) {
@@ -5483,7 +5499,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 }
 
 const char *Process::ExecutionResultAsCString(ExpressionResults result) {
-  const char *result_name;
+  const char *result_name = "<unknown>";
 
   switch (result) {
   case eExpressionCompleted:
@@ -5513,6 +5529,8 @@ const char *Process::ExecutionResultAsCString(ExpressionResults result) {
   case eExpressionStoppedForDebug:
     result_name = "eExpressionStoppedForDebug";
     break;
+  case eExpressionThreadVanished:
+    result_name = "eExpressionThreadVanished";
   }
   return result_name;
 }

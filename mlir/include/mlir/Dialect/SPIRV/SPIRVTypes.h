@@ -134,9 +134,15 @@ public:
   /// Returns true if the given vector type is valid for the SPIR-V dialect.
   static bool isValid(VectorType);
 
+  /// Return the number of elements of the type. This should only be called if
+  /// hasCompileTimeKnownNumElements is true.
   unsigned getNumElements() const;
 
   Type getElementType(unsigned) const;
+
+  /// Return true if the number of elements is known at compile time and is not
+  /// implementation dependent.
+  bool hasCompileTimeKnownNumElements() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<spirv::StorageClass> storage = llvm::None);
@@ -334,7 +340,7 @@ public:
 
 // SPIR-V cooperative matrix type
 class CooperativeMatrixNVType
-    : public Type::TypeBase<CooperativeMatrixNVType, SPIRVType,
+    : public Type::TypeBase<CooperativeMatrixNVType, CompositeType,
                             detail::CooperativeMatrixTypeStorage> {
 public:
   using Base::Base;

@@ -1374,6 +1374,33 @@ double freed, or use after freed. This check attempts to find such problems.
    zx_handle_close(sb);
  }
 
+WebKit
+^^^^^^
+
+WebKit is an open-source web browser engine available for macOS, iOS and Linux.
+This section describes checkers that can find issues in WebKit codebase.
+
+Most of the checkers focus on memory management for which WebKit uses custom implementation of reference counted smartpointers.
+Checker are formulated in terms related to ref-counting:
+* *Ref-counted type* is either ``Ref<T>`` or ``RefPtr<T>``.
+* *Ref-countable type* is any type that implements ``ref()`` and ``deref()`` methods as ``RefPtr<>`` is a template (i. e. relies on duck typing).
+* *Uncounted type* is ref-countable but not ref-counted type.
+
+.. _webkit-RefCntblBaseVirtualDtor:
+
+webkit.RefCntblBaseVirtualDtor
+""""""""""""""""""""""""""""""""""""
+All uncounted types used as base classes must have a virtual destructor.
+
+Ref-counted types hold their ref-countable data by a raw pointer and allow implicit upcasting from ref-counted pointer to derived type to ref-counted pointer to base type. This might lead to an object of (dynamic) derived type being deleted via pointer to the base class type which C++ standard defines as UB in case the base class doesn't have virtual destructor ``[expr.delete]``.
+
+.. code-block:: cpp
+ struct RefCntblBase {
+   void ref() {}
+   void deref() {}
+ };
+
+ struct Derived : RefCntblBase { }; // warn
 
 .. _alpha-checkers:
 

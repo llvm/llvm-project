@@ -39,12 +39,14 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   //   i = 0.5;
   //   void f(int); f(0.5);
   Finder->addMatcher(
-      implicitCastExpr(hasImplicitDestinationType(builtinType()),
-                       hasSourceExpression(hasType(builtinType())),
-                       unless(hasSourceExpression(IsCeilFloorCallExpr)),
-                       unless(hasParent(castExpr())),
-                       unless(isInTemplateInstantiation()))
-          .bind("cast"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          implicitCastExpr(hasImplicitDestinationType(builtinType()),
+                           hasSourceExpression(hasType(builtinType())),
+                           unless(hasSourceExpression(IsCeilFloorCallExpr)),
+                           unless(hasParent(castExpr())),
+                           unless(isInTemplateInstantiation()))
+              .bind("cast")),
       this);
 
   // Binary operators:

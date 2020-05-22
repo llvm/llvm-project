@@ -46,6 +46,7 @@ template <typename M> TestMatch matchCode(StringRef Code, M Matcher) {
   ASTContext &Context = ASTUnit->getASTContext();
   assert(!Context.getDiagnostics().hasErrorOccurred() && "Compilation error");
 
+  TraversalKindScope RAII(Context, ast_type_traits::TK_AsIs);
   auto Matches = ast_matchers::match(Matcher, Context);
   // We expect a single, exact match.
   assert(Matches.size() != 0 && "no matches found");

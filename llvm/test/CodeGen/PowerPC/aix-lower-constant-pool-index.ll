@@ -45,7 +45,7 @@ entry:
 ; 64LARGE-MIR: renamable $x[[REG2:[0-9]+]] = LDtocL %const.0, killed renamable $x[[REG1]], implicit $x2 :: (load 8 from got)
 ; 64LARGE-MIR: renamable $f[[REG3:[0-9]+]] = LFS 0, killed renamable $x[[REG2]] :: (load 4 from constant-pool)
 
-; 32SMALL-ASM:         .csect .rodata[RO], 2
+; 32SMALL-ASM:         .csect .rodata[RO],2
 ; 32SMALL-ASM:         .align  2
 ; 32SMALL-ASM: .LCPI0_0:
 ; 32SMALL-ASM:         .long  0x40b00000
@@ -54,7 +54,7 @@ entry:
 ; 32SMALL-ASM:         lfs 1, 0([[REG1]])
 ; 32SMALL-ASM:         blr
 
-; 32LARGE-ASM:         .csect .rodata[RO], 2
+; 32LARGE-ASM:         .csect .rodata[RO],2
 ; 32LARGE-ASM:         .align  2
 ; 32LARGE-ASM: .LCPI0_0:
 ; 32LARGE-ASM:         .long   0x40b00000
@@ -64,7 +64,7 @@ entry:
 ; 32LARGE-ASM:         lfs 1, 0([[REG2]])
 ; 32LARGE-ASM:         blr
 
-; 64SMALL-ASM:         .csect .rodata[RO], 2
+; 64SMALL-ASM:         .csect .rodata[RO],2
 ; 64SMALL-ASM:         .align  2
 ; 64SMALL-ASM: .LCPI0_0:
 ; 64SMALL-ASM:         .long   0x40b00000
@@ -73,7 +73,7 @@ entry:
 ; 64SMALL-ASM:         lfs 1, 0([[REG1]])
 ; 64SMALL-ASM:         blr
 
-; 64LARGE-ASM:         .csect .rodata[RO], 2
+; 64LARGE-ASM:         .csect .rodata[RO],2
 ; 64LARGE-ASM:         .align  2
 ; 64LARGE-ASM: .LCPI0_0:
 ; 64LARGE-ASM:         .long   0x40b00000

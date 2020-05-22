@@ -127,6 +127,10 @@ if config.filecheck:
 if config.lldb_libs_dir:
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
 
+if 'lldb-repro-capture' in config.available_features or \
+    'lldb-repro-replay' in config.available_features:
+  dotest_cmd += ['--skip-category=lldb-vscode']
+
 if config.enabled_plugins:
   for plugin in config.enabled_plugins:
     dotest_cmd += ['--enable-plugin', plugin]

@@ -33,17 +33,19 @@ void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           .bind("construct");
 
   Finder->addMatcher(
-      cxxConstructorDecl(
-          unless(isDelegatingConstructor()),
-          ofClass(unless(
-              anyOf(isUnion(), ast_matchers::isTemplateInstantiation()))),
-          forEachConstructorInitializer(
-              cxxCtorInitializer(
-                  isWritten(), withInitializer(ignoringImplicit(Construct)),
-                  unless(forField(hasType(isConstQualified()))),
-                  unless(forField(hasParent(recordDecl(isUnion())))))
-                  .bind("init")))
-          .bind("constructor"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxConstructorDecl(
+              unless(isDelegatingConstructor()),
+              ofClass(unless(
+                  anyOf(isUnion(), ast_matchers::isTemplateInstantiation()))),
+              forEachConstructorInitializer(
+                  cxxCtorInitializer(
+                      isWritten(), withInitializer(ignoringImplicit(Construct)),
+                      unless(forField(hasType(isConstQualified()))),
+                      unless(forField(hasParent(recordDecl(isUnion())))))
+                      .bind("init")))
+              .bind("constructor")),
       this);
 }
 
