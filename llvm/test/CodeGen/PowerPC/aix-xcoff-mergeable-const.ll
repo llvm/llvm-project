@@ -22,7 +22,7 @@ entry:
   ret i32 0
 }
 
-;CHECK:         .csect .rodata[RO], 4
+;CHECK:         .csect .rodata[RO],4
 ;CHECK-NEXT:         .align  4
 ;CHECK-NEXT: .L__const.main.cnst32:
 ;CHECK-NEXT:         .llong  4611686018427387954

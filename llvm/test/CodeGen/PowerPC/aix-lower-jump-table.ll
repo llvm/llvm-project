@@ -96,7 +96,7 @@
 ; 32SMALL-ASM: LBB0_6:
 ; 32SMALL-ASM: 	    li 3, 0
 ; 32SMALL-ASM: 	    blr
-; 32SMALL-ASM: 	    .csect .rodata[RO], 2
+; 32SMALL-ASM: 	    .csect .rodata[RO],2
 ; 32SMALL-ASM: 	    .align  2
 ; 32SMALL-ASM: .LJTI0_0:
 ; 32SMALL-ASM: 	    .long   LBB0_2-.LJTI0_0
@@ -123,7 +123,7 @@
 ; 32LARGE-ASM: LBB0_6:
 ; 32LARGE-ASM:      li 3, 0
 ; 32LARGE-ASM:      blr
-; 32LARGE-ASM:      .csect .rodata[RO], 2
+; 32LARGE-ASM:      .csect .rodata[RO],2
 ; 32LARGE-ASM:      .align  2
 ; 32LARGE-ASM: .LJTI0_0:
 ; 32LARGE-ASM:      .long   LBB0_2-.LJTI0_0
@@ -149,7 +149,7 @@
 ; 64SMALL-ASM: LBB0_6:
 ; 64SMALL-ASM:      li 3, 0
 ; 64SMALL-ASM:      blr
-; 64SMALL-ASM:      .csect .rodata[RO], 2
+; 64SMALL-ASM:      .csect .rodata[RO],2
 ; 64SMALL-ASM:      .align  2
 ; 64SMALL-ASM: .LJTI0_0:
 ; 64SMALL-ASM:      .long   LBB0_2-.LJTI0_0
@@ -176,7 +176,7 @@
 ; 64LARGE-ASM: LBB0_6:
 ; 64LARGE-ASM:      li 3, 0
 ; 64LARGE-ASM:      blr
-; 64LARGE-ASM:      .csect .rodata[RO], 2
+; 64LARGE-ASM:      .csect .rodata[RO],2
 ; 64LARGE-ASM:      .align  2
 ; 64LARGE-ASM: .LJTI0_0:
 ; 64LARGE-ASM:      .long   LBB0_2-.LJTI0_0

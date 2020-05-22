@@ -25,21 +25,21 @@ entry:
   ret i8 %1
 }
 
-; CHECK:   .csect .rodata.str2.2[RO], 2
+; CHECK:   .csect .rodata.str2.2[RO],2
 ; CHECK-NEXT:   .align  1
 ; CHECK-NEXT: .Lmagic16:
 ; CHECK-NEXT:   .short  264                     # 0x108
 ; CHECK-NEXT:   .short  272                     # 0x110
 ; CHECK-NEXT:   .short  213                     # 0xd5
 ; CHECK-NEXT:   .short  0                       # 0x0
-; CHECK-NEXT:   .csect .rodata.str4.4[RO], 2
+; CHECK-NEXT:   .csect .rodata.str4.4[RO],2
 ; CHECK-NEXT:   .align  2
 ; CHECK-NEXT: .Lmagic32:
 ; CHECK-NEXT:   .long   464                     # 0x1d0
 ; CHECK-NEXT:   .long   472                     # 0x1d8
 ; CHECK-NEXT:   .long   413                     # 0x19d
 ; CHECK-NEXT:   .long   0                       # 0x0
-; CHECK-NEXT:   .csect .rodata.str1.1[RO], 2
+; CHECK-NEXT:   .csect .rodata.str1.1[RO],2
 ; CHECK-NEXT: .LstrA:
 ; CHECK-NEXT: .byte   104
 ; CHECK-NEXT: .byte   101

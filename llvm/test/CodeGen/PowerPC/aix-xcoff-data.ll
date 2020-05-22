@@ -38,10 +38,10 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:      .csect .text[PR], 2
+; CHECK:      .csect .text[PR],2
 ; CHECK-NEXT:  .file
 
-; CHECK:      .csect .data[RW], 5
+; CHECK:      .csect .data[RW],5
 ; CHECK-NEXT: .globl  ivar
 ; CHECK-NEXT: .align  2
 ; CHECK-NEXT: ivar:
