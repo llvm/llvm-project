@@ -21,21 +21,22 @@ def runCmd(Command, **kwargs):
 
 
 def updateReferenceResults(ProjName, ProjBuildMode):
-    ProjDir = SATestBuild.getProjectDir(ProjName)
+    ProjInfo = SATestBuild.ProjectInfo(ProjName, ProjBuildMode)
+    ProjTester = SATestBuild.ProjectTester(ProjInfo)
+    ProjDir = ProjTester.get_project_dir()
 
-    RefResultsPath = os.path.join(
-        ProjDir,
-        SATestBuild.getSBOutputDirName(IsReferenceBuild=True))
-    CreatedResultsPath = os.path.join(
-        ProjDir,
-        SATestBuild.getSBOutputDirName(IsReferenceBuild=False))
+    ProjTester.is_reference_build = True
+    RefResultsPath = os.path.join(ProjDir, ProjTester.get_output_dir())
+
+    ProjTester.is_reference_build = False
+    CreatedResultsPath = os.path.join(ProjDir, ProjTester.get_output_dir())
 
     if not os.path.exists(CreatedResultsPath):
         print("New results not found, was SATestBuild.py "
               "previously run?", file=sys.stderr)
         sys.exit(1)
 
-    BuildLogPath = SATestBuild.getBuildLogPath(RefResultsPath)
+    BuildLogPath = SATestBuild.get_build_log_path(RefResultsPath)
     Dirname = os.path.dirname(os.path.abspath(BuildLogPath))
     runCmd("mkdir -p '%s'" % Dirname)
     with open(BuildLogPath, "w+") as PBuildLogFile:
@@ -50,13 +51,13 @@ def updateReferenceResults(ProjName, ProjBuildMode):
                stdout=PBuildLogFile)
 
         # Run cleanup script.
-        SATestBuild.runCleanupScript(ProjDir, PBuildLogFile)
+        SATestBuild.run_cleanup_script(ProjDir, PBuildLogFile)
 
-        SATestBuild.normalizeReferenceResults(
+        SATestBuild.normalize_reference_results(
             ProjDir, RefResultsPath, ProjBuildMode)
 
         # Clean up the generated difference results.
-        SATestBuild.cleanupReferenceResults(RefResultsPath)
+        SATestBuild.cleanup_reference_results(RefResultsPath)
 
         runCmd('git add "%s"' % (RefResultsPath,), stdout=PBuildLogFile)
 
@@ -69,8 +70,8 @@ def main(argv):
               file=sys.stderr)
         sys.exit(1)
 
-    with SATestBuild.projectFileHandler() as f:
-        for (ProjName, ProjBuildMode) in SATestBuild.iterateOverProjects(f):
+    with open(SATestBuild.get_project_map_path(), "r") as f:
+        for ProjName, ProjBuildMode in SATestBuild.get_projects(f):
             updateReferenceResults(ProjName, int(ProjBuildMode))
 
 
