@@ -3658,6 +3658,13 @@ def : Pat<(f32 (extloadf16 xoaddr:$src)),
           (f32 (COPY_TO_REGCLASS (XSCVHPDP (LXSIHZX xoaddr:$src)), VSSRC))>;
 def : Pat<(truncstoref16 f32:$src, xoaddr:$dst),
           (STXSIHX (XSCVDPHP (COPY_TO_REGCLASS $src, VSFRC)), xoaddr:$dst)>;
+def : Pat<(f64 (f16_to_fp i32:$A)),
+          (f64 (XSCVHPDP (MTVSRWZ $A)))>;
+def : Pat<(f32 (f16_to_fp i32:$A)),
+          (f32 (COPY_TO_REGCLASS (XSCVHPDP (MTVSRWZ $A)), VSSRC))>;
+def : Pat<(i32 (fp_to_f16 f32:$A)),
+          (i32 (MFVSRWZ (XSCVDPHP (COPY_TO_REGCLASS $A, VSFRC))))>;
+def : Pat<(i32 (fp_to_f16 f64:$A)), (i32 (MFVSRWZ (XSCVDPHP $A)))>;
 
 // Vector sign extensions
 def : Pat<(f64 (PPCVexts f64:$A, 1)),
