@@ -86,6 +86,7 @@ public:
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
+  bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
@@ -390,7 +391,7 @@ public:
   };
 
   /// Process warning types.
-  enum Warnings { eWarningsOptimization = 1 };
+  enum Warnings { eWarningsOptimization = 1, eWarningsUnsupportedLanguage = 2 };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to access the process
@@ -1318,6 +1319,12 @@ public:
   ///     A SymbolContext with eSymbolContextFunction and eSymbolContextModule
   ///     pre-computed.
   void PrintWarningOptimization(const SymbolContext &sc);
+
+  /// Print a user-visible warning about a function written in a
+  /// language that this version of LLDB doesn't support.
+  ///
+  /// \see PrintWarningOptimization
+  void PrintWarningUnsupportedLanguage(const SymbolContext &sc);
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
