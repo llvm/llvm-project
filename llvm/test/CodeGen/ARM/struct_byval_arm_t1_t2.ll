@@ -12,17 +12,17 @@
 ;RUN: cat %t | FileCheck %s --check-prefix=T1POST
 ;RUN: cat %t | FileCheck %s --check-prefix=V8MBASE
 
-; COM: This file contains auto generated tests for the lowering of passing structs
-; COM: byval in the arm backend. We have tests for both packed and unpacked
-; COM: structs at varying alignments. Each test is run for arm, thumb2 and thumb1.
-; COM: We check for the strings in the generated object code using llvm-objdump
-; COM: because it provides better assurance that we are generating instructions
-; COM: for the correct architecture. Otherwise we could accidentally generate an
-; COM: ARM instruction for THUMB1 and wouldn't detect it because the assembly
-; COM: code representation is the same, but the object code would be generated
-; COM: incorrectly. For each test we check for the label, a load instruction of the
-; COM: correct form, a branch if it will be generated with a loop, and the leftover
-; COM: cleanup if the number of bytes does not divide evenly by the store size
+;This file contains auto generated tests for the lowering of passing structs
+;byval in the arm backend. We have tests for both packed and unpacked
+;structs at varying alignments. Each test is run for arm, thumb2 and thumb1.
+;We check for the strings in the generated object code using llvm-objdump
+;because it provides better assurance that we are generating instructions
+;for the correct architecture. Otherwise we could accidentally generate an
+;ARM instruction for THUMB1 and wouldn't detect it because the assembly
+;code representation is the same, but the object code would be generated
+;incorrectly. For each test we check for the label, a load instruction of the
+;correct form, a branch if it will be generated with a loop, and the leftover
+;cleanup if the number of bytes does not divide evenly by the store size
 
 %struct.A = type <{ [ 10 x i32 ] }> ; 40 bytes
 declare void @use_A(%struct.A* byval)
