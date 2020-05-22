@@ -23,72 +23,81 @@
 // generated operator would be ill-formed; like in the case of a struct with a
 // const member.
 #if TEST_STD_VER < 11
-#define TEST_NOT_COPY_ASSIGNABLE(T) ((void)0)
+#   define TEST_NOT_COPY_ASSIGNABLE(T) ((void)0)
 #else
-#define TEST_NOT_COPY_ASSIGNABLE(T) static_assert(!std::is_copy_assignable<T>::value, "")
+#   define TEST_NOT_COPY_ASSIGNABLE(T) static_assert(!std::is_copy_assignable<T>::value, "")
 #endif
 
 struct NoDefault {
-  NoDefault(int) {}
+    TEST_CONSTEXPR NoDefault(int) { }
 };
 
-int main(int, char**) {
-  {
-    typedef double T;
-    typedef std::array<T, 3> C;
-    C c = {1.1, 2.2, 3.3};
-    C c2 = c;
-    c2 = c;
-    static_assert(std::is_copy_constructible<C>::value, "");
-    static_assert(std::is_copy_assignable<C>::value, "");
-  }
-  {
-    typedef double T;
-    typedef std::array<const T, 3> C;
-    C c = {1.1, 2.2, 3.3};
-    C c2 = c;
-    ((void)c2);
-    static_assert(std::is_copy_constructible<C>::value, "");
-    TEST_NOT_COPY_ASSIGNABLE(C);
-  }
-  {
-    typedef double T;
-    typedef std::array<T, 0> C;
-    C c = {};
-    C c2 = c;
-    c2 = c;
-    static_assert(std::is_copy_constructible<C>::value, "");
-    static_assert(std::is_copy_assignable<C>::value, "");
-  }
-  {
-    // const arrays of size 0 should disable the implicit copy assignment operator.
-    typedef double T;
-    typedef std::array<const T, 0> C;
-    C c = {{}};
-    C c2 = c;
-    ((void)c2);
-    static_assert(std::is_copy_constructible<C>::value, "");
-    TEST_NOT_COPY_ASSIGNABLE(C);
-  }
-  {
-    typedef NoDefault T;
-    typedef std::array<T, 0> C;
-    C c = {};
-    C c2 = c;
-    c2 = c;
-    static_assert(std::is_copy_constructible<C>::value, "");
-    static_assert(std::is_copy_assignable<C>::value, "");
-  }
-  {
-    typedef NoDefault T;
-    typedef std::array<const T, 0> C;
-    C c = {{}};
-    C c2 = c;
-    ((void)c2);
-    static_assert(std::is_copy_constructible<C>::value, "");
-    TEST_NOT_COPY_ASSIGNABLE(C);
-  }
+TEST_CONSTEXPR_CXX14 bool tests()
+{
+    {
+        typedef double T;
+        typedef std::array<T, 3> C;
+        C c = {1.1, 2.2, 3.3};
+        C c2 = c;
+        c2 = c;
+        static_assert(std::is_copy_constructible<C>::value, "");
+        static_assert(std::is_copy_assignable<C>::value, "");
+    }
+    {
+        typedef double T;
+        typedef std::array<const T, 3> C;
+        C c = {1.1, 2.2, 3.3};
+        C c2 = c;
+        ((void)c2);
+        static_assert(std::is_copy_constructible<C>::value, "");
+        TEST_NOT_COPY_ASSIGNABLE(C);
+    }
+    {
+        typedef double T;
+        typedef std::array<T, 0> C;
+        C c = {};
+        C c2 = c;
+        c2 = c;
+        static_assert(std::is_copy_constructible<C>::value, "");
+        static_assert(std::is_copy_assignable<C>::value, "");
+    }
+    {
+        // const arrays of size 0 should disable the implicit copy assignment operator.
+        typedef double T;
+        typedef std::array<const T, 0> C;
+        C c = {{}};
+        C c2 = c;
+        ((void)c2);
+        static_assert(std::is_copy_constructible<C>::value, "");
+        TEST_NOT_COPY_ASSIGNABLE(C);
+    }
+    {
+        typedef NoDefault T;
+        typedef std::array<T, 0> C;
+        C c = {};
+        C c2 = c;
+        c2 = c;
+        static_assert(std::is_copy_constructible<C>::value, "");
+        static_assert(std::is_copy_assignable<C>::value, "");
+    }
+    {
+        typedef NoDefault T;
+        typedef std::array<const T, 0> C;
+        C c = {{}};
+        C c2 = c;
+        ((void)c2);
+        static_assert(std::is_copy_constructible<C>::value, "");
+        TEST_NOT_COPY_ASSIGNABLE(C);
+    }
 
+    return true;
+}
 
-  return 0;
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER >= 14
+    static_assert(tests(), "");
+#endif
+    return 0;
 }

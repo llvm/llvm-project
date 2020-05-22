@@ -21,7 +21,8 @@ __cpp_lib_allocator_traits_is_always_equal              201411L <memory> <scoped
                                                                 <unordered_map> <unordered_set>
 __cpp_lib_any                                           201606L <any>
 __cpp_lib_apply                                         201603L <tuple>
-__cpp_lib_array_constexpr                               201603L <iterator> <array>
+__cpp_lib_array_constexpr                               201811L <iterator> <array>
+                                                        201603L // C++17
 __cpp_lib_as_const                                      201510L <utility>
 __cpp_lib_atomic_is_always_lock_free                    201603L <atomic>
 __cpp_lib_atomic_ref                                    201806L <atomic>
@@ -212,6 +213,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #endif
 
 #if _LIBCPP_STD_VER > 17
+# undef  __cpp_lib_array_constexpr
+# define __cpp_lib_array_constexpr                      201811L
 # if !defined(_LIBCPP_HAS_NO_THREADS)
 // #   define __cpp_lib_atomic_ref                         201806L
 # endif
