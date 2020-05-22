@@ -46,6 +46,7 @@ void registerTestLoopPermutationPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
 void registerTestConvertGPUKernelToCubinPass();
+void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
@@ -112,6 +113,9 @@ void registerTestPasses() {
   registerTestConstantFold();
 #if MLIR_CUDA_CONVERSIONS_ENABLED
   registerTestConvertGPUKernelToCubinPass();
+#endif
+#if MLIR_ROCM_CONVERSIONS_ENABLED
+  registerTestConvertGPUKernelToHsacoPass();
 #endif
   registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
