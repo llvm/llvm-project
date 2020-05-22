@@ -45,7 +45,6 @@ variable. It should contain a comma separated list.
 import CmpRuns
 import SATestUtils
 
-from subprocess import CalledProcessError, check_call
 import argparse
 import csv
 import glob
@@ -59,59 +58,33 @@ import sys
 import threading
 import time
 
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+from queue import Queue
+from subprocess import CalledProcessError, check_call
+from typing import (cast, Dict, Iterable, IO, List, NamedTuple, Tuple,
+                    TYPE_CHECKING)
+
 
 ###############################################################################
 # Helper functions.
 ###############################################################################
 
-Local = threading.local()
-Local.stdout = sys.stdout
-Local.stderr = sys.stderr
+LOCAL = threading.local()
+LOCAL.stdout = sys.stdout
+LOCAL.stderr = sys.stderr
+
+
+def stderr(message: str):
+    LOCAL.stderr.write(message)
+
+
+def stdout(message: str):
+    LOCAL.stdout.write(message)
+
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
-
-class StreamToLogger:
-    def __init__(self, logger, log_level=logging.INFO):
-        self.logger = logger
-        self.log_level = log_level
-
-    def write(self, buf):
-        # Rstrip in order not to write an extra newline.
-        self.logger.log(self.log_level, buf.rstrip())
-
-    def flush(self):
-        pass
-
-    def fileno(self):
-        return 0
-
-
-def getProjectMapPath():
-    ProjectMapPath = os.path.join(os.path.abspath(os.curdir),
-                                  ProjectMapFile)
-    if not os.path.exists(ProjectMapPath):
-        Local.stdout.write("Error: Cannot find the Project Map file " +
-                           ProjectMapPath +
-                           "\nRunning script for the wrong directory?\n")
-        sys.exit(1)
-    return ProjectMapPath
-
-
-def getProjectDir(ID):
-    return os.path.join(os.path.abspath(os.curdir), ID)
-
-
-def getSBOutputDirName(IsReferenceBuild):
-    if IsReferenceBuild:
-        return SBOutputDirReferencePrefix + SBOutputDirName
-    else:
-        return SBOutputDirName
 
 ###############################################################################
 # Configuration setup.
@@ -120,62 +93,61 @@ def getSBOutputDirName(IsReferenceBuild):
 
 # Find Clang for static analysis.
 if 'CC' in os.environ:
-    Clang = os.environ['CC']
+    CLANG = os.environ['CC']
 else:
-    Clang = SATestUtils.which("clang", os.environ['PATH'])
-if not Clang:
-    print("Error: cannot find 'clang' in PATH")
+    CLANG = SATestUtils.which("clang", os.environ['PATH'])
+if not CLANG:
+    stderr("Error: cannot find 'clang' in PATH")
     sys.exit(1)
 
 # Number of jobs.
-MaxJobs = int(math.ceil(multiprocessing.cpu_count() * 0.75))
+MAX_JOBS = int(math.ceil(multiprocessing.cpu_count() * 0.75))
 
 # Project map stores info about all the "registered" projects.
-ProjectMapFile = "projectMap.csv"
+PROJECT_MAP_FILE = "projectMap.csv"
 
 # Names of the project specific scripts.
 # The script that downloads the project.
-DownloadScript = "download_project.sh"
+DOWNLOAD_SCRIPT = "download_project.sh"
 # The script that needs to be executed before the build can start.
-CleanupScript = "cleanup_run_static_analyzer.sh"
+CLEANUP_SCRIPT = "cleanup_run_static_analyzer.sh"
 # This is a file containing commands for scan-build.
-BuildScript = "run_static_analyzer.cmd"
+BUILD_SCRIPT = "run_static_analyzer.cmd"
 
 # A comment in a build script which disables wrapping.
-NoPrefixCmd = "#NOPREFIX"
+NO_PREFIX_CMD = "#NOPREFIX"
 
 # The log file name.
-LogFolderName = "Logs"
-BuildLogName = "run_static_analyzer.log"
+LOG_DIR_NAME = "Logs"
+BUILD_LOG_NAME = "run_static_analyzer.log"
 # Summary file - contains the summary of the failures. Ex: This info can be be
 # displayed when buildbot detects a build failure.
-NumOfFailuresInSummary = 10
-FailuresSummaryFileName = "failures.txt"
+NUM_OF_FAILURES_IN_SUMMARY = 10
 
 # The scan-build result directory.
-SBOutputDirName = "ScanBuildResults"
-SBOutputDirReferencePrefix = "Ref"
+OUTPUT_DIR_NAME = "ScanBuildResults"
+REF_PREFIX = "Ref"
 
 # The name of the directory storing the cached project source. If this
 # directory does not exist, the download script will be executed.
 # That script should create the "CachedSource" directory and download the
 # project source into it.
-CachedSourceDirName = "CachedSource"
+CACHED_SOURCE_DIR_NAME = "CachedSource"
 
 # The name of the directory containing the source code that will be analyzed.
 # Each time a project is analyzed, a fresh copy of its CachedSource directory
 # will be copied to the PatchedSource directory and then the local patches
-# in PatchfileName will be applied (if PatchfileName exists).
-PatchedSourceDirName = "PatchedSource"
+# in PATCHFILE_NAME will be applied (if PATCHFILE_NAME exists).
+PATCHED_SOURCE_DIR_NAME = "PatchedSource"
 
 # The name of the patchfile specifying any changes that should be applied
 # to the CachedSource before analyzing.
-PatchfileName = "changes_for_analyzer.patch"
+PATCHFILE_NAME = "changes_for_analyzer.patch"
 
 # The list of checkers used during analyzes.
 # Currently, consists of all the non-experimental checkers, plus a few alpha
 # checkers we don't want to regress on.
-Checkers = ",".join([
+CHECKERS = ",".join([
     "alpha.unix.SimpleStream",
     "alpha.security.taint",
     "cplusplus.NewDeleteLeaks",
@@ -188,327 +160,486 @@ Checkers = ",".join([
     "nullability"
 ])
 
-Verbose = 0
+VERBOSE = 0
+
+
+class StreamToLogger:
+    def __init__(self, logger: logging.Logger,
+                 log_level: int = logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+
+    def write(self, message: str):
+        # Rstrip in order not to write an extra newline.
+        self.logger.log(self.log_level, message.rstrip())
+
+    def flush(self):
+        pass
+
+    def fileno(self) -> int:
+        return 0
+
 
 ###############################################################################
 # Test harness logic.
 ###############################################################################
 
 
-def runCleanupScript(Dir, PBuildLogFile):
+def get_project_map_path(should_exist: bool = True) -> str:
+    project_map_path = os.path.join(os.path.abspath(os.curdir),
+                                    PROJECT_MAP_FILE)
+
+    if should_exist and not os.path.exists(project_map_path):
+        stderr(f"Error: Cannot find the project map file {project_map_path}"
+               f"\nRunning script for the wrong directory?\n")
+        sys.exit(1)
+
+    return project_map_path
+
+
+def run_cleanup_script(directory: str, build_log_file: IO):
     """
     Run pre-processing script if any.
     """
-    Cwd = os.path.join(Dir, PatchedSourceDirName)
-    ScriptPath = os.path.join(Dir, CleanupScript)
-    SATestUtils.runScript(ScriptPath, PBuildLogFile, Cwd,
-                          Stdout=Local.stdout, Stderr=Local.stderr)
+    cwd = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+    script_path = os.path.join(directory, CLEANUP_SCRIPT)
+
+    SATestUtils.runScript(script_path, build_log_file, cwd,
+                          Stdout=LOCAL.stdout, Stderr=LOCAL.stderr)
 
 
-def runDownloadScript(Dir, PBuildLogFile):
-    """
-    Run the script to download the project, if it exists.
-    """
-    ScriptPath = os.path.join(Dir, DownloadScript)
-    SATestUtils.runScript(ScriptPath, PBuildLogFile, Dir,
-                          Stdout=Local.stdout, Stderr=Local.stderr)
-
-
-def downloadAndPatch(Dir, PBuildLogFile):
+def download_and_patch(directory: str, build_log_file: IO):
     """
     Download the project and apply the local patchfile if it exists.
     """
-    CachedSourceDirPath = os.path.join(Dir, CachedSourceDirName)
+    cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
 
     # If the we don't already have the cached source, run the project's
     # download script to download it.
-    if not os.path.exists(CachedSourceDirPath):
-        runDownloadScript(Dir, PBuildLogFile)
-        if not os.path.exists(CachedSourceDirPath):
-            Local.stderr.write("Error: '%s' not found after download.\n" % (
-                               CachedSourceDirPath))
+    if not os.path.exists(cached_source):
+        download(directory, build_log_file)
+        if not os.path.exists(cached_source):
+            stderr(f"Error: '{cached_source}' not found after download.\n")
             exit(1)
 
-    PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
+    patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
 
     # Remove potentially stale patched source.
-    if os.path.exists(PatchedSourceDirPath):
-        shutil.rmtree(PatchedSourceDirPath)
+    if os.path.exists(patched_source):
+        shutil.rmtree(patched_source)
 
     # Copy the cached source and apply any patches to the copy.
-    shutil.copytree(CachedSourceDirPath, PatchedSourceDirPath, symlinks=True)
-    applyPatch(Dir, PBuildLogFile)
+    shutil.copytree(cached_source, patched_source, symlinks=True)
+    apply_patch(directory, build_log_file)
 
 
-def applyPatch(Dir, PBuildLogFile):
-    PatchfilePath = os.path.join(Dir, PatchfileName)
-    PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
-    if not os.path.exists(PatchfilePath):
-        Local.stdout.write("  No local patches.\n")
+def download(directory: str, build_log_file: IO):
+    """
+    Run the script to download the project, if it exists.
+    """
+    script_path = os.path.join(directory, DOWNLOAD_SCRIPT)
+    SATestUtils.runScript(script_path, build_log_file, directory,
+                          Stdout=LOCAL.stdout, Stderr=LOCAL.stderr)
+
+
+def apply_patch(directory: str, build_log_file: IO):
+    patchfile_path = os.path.join(directory, PATCHFILE_NAME)
+    patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+
+    if not os.path.exists(patchfile_path):
+        stdout("  No local patches.\n")
         return
 
-    Local.stdout.write("  Applying patch.\n")
+    stdout("  Applying patch.\n")
     try:
-        check_call("patch -p1 < '%s'" % (PatchfilePath),
-                   cwd=PatchedSourceDirPath,
-                   stderr=PBuildLogFile,
-                   stdout=PBuildLogFile,
+        check_call(f"patch -p1 < '{patchfile_path}'",
+                   cwd=patched_source,
+                   stderr=build_log_file,
+                   stdout=build_log_file,
                    shell=True)
-    except:
-        Local.stderr.write("Error: Patch failed. See %s for details.\n" % (
-            PBuildLogFile.name))
-        sys.exit(1)
 
-
-def generateAnalyzerConfig(Args):
-    Out = "serialize-stats=true,stable-report-filename=true"
-    if Args.extra_analyzer_config:
-        Out += "," + Args.extra_analyzer_config
-    return Out
-
-
-def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
-    """
-    Build the project with scan-build by reading in the commands and
-    prefixing them with the scan-build options.
-    """
-    BuildScriptPath = os.path.join(Dir, BuildScript)
-    if not os.path.exists(BuildScriptPath):
-        Local.stderr.write(
-            "Error: build script is not defined: %s\n" % BuildScriptPath)
-        sys.exit(1)
-
-    AllCheckers = Checkers
-    if 'SA_ADDITIONAL_CHECKERS' in os.environ:
-        AllCheckers = AllCheckers + ',' + os.environ['SA_ADDITIONAL_CHECKERS']
-
-    # Run scan-build from within the patched source directory.
-    SBCwd = os.path.join(Dir, PatchedSourceDirName)
-
-    SBOptions = "--use-analyzer '%s' " % Clang
-    SBOptions += "-plist-html -o '%s' " % SBOutputDir
-    SBOptions += "-enable-checker " + AllCheckers + " "
-    SBOptions += "--keep-empty "
-    SBOptions += "-analyzer-config '%s' " % generateAnalyzerConfig(Args)
-
-    if Args.override_compiler:
-        SBOptions += "--override-compiler "
-
-    ExtraEnv = {}
-    try:
-        SBCommandFile = open(BuildScriptPath, "r")
-        SBPrefix = "scan-build " + SBOptions + " "
-        for Command in SBCommandFile:
-            Command = Command.strip()
-            if len(Command) == 0:
-                continue
-
-            # Custom analyzer invocation specified by project.
-            # Communicate required information using environment variables
-            # instead.
-            if Command == NoPrefixCmd:
-                SBPrefix = ""
-                ExtraEnv['OUTPUT'] = SBOutputDir
-                ExtraEnv['CC'] = Clang
-                ExtraEnv['ANALYZER_CONFIG'] = generateAnalyzerConfig(Args)
-                continue
-
-            if Command.startswith("#"):
-                continue
-
-            # If using 'make', auto imply a -jX argument
-            # to speed up analysis.  xcodebuild will
-            # automatically use the maximum number of cores.
-            if (Command.startswith("make ") or Command == "make") and \
-                    "-j" not in Command:
-                Command += " -j%d" % MaxJobs
-            SBCommand = SBPrefix + Command
-
-            if Verbose == 1:
-                Local.stdout.write("  Executing: %s\n" % (SBCommand,))
-            check_call(SBCommand, cwd=SBCwd,
-                       stderr=PBuildLogFile,
-                       stdout=PBuildLogFile,
-                       env=dict(os.environ, **ExtraEnv),
-                       shell=True)
     except CalledProcessError:
-        Local.stderr.write("Error: scan-build failed. Its output was: \n")
-        PBuildLogFile.seek(0)
-        shutil.copyfileobj(PBuildLogFile, Local.stderr)
+        stderr(f"Error: Patch failed. "
+               f"See {build_log_file.name} for details.\n")
         sys.exit(1)
 
 
-def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
+class ProjectInfo(NamedTuple):
     """
-    Run analysis on a set of preprocessed files.
+    Information about a project and settings for its analysis.
     """
-    if os.path.exists(os.path.join(Dir, BuildScript)):
-        Local.stderr.write(
-            "Error: The preprocessed files project should not contain %s\n" % (
-                BuildScript))
-        raise Exception()
+    name: str
+    build_mode: int
+    override_compiler: bool = False
+    extra_analyzer_config: str = ""
+    is_reference_build: bool = False
+    strictness: int = 0
 
-    CmdPrefix = Clang + " --analyze "
 
-    CmdPrefix += "--analyzer-output plist "
-    CmdPrefix += " -Xclang -analyzer-checker=" + Checkers
-    CmdPrefix += " -fcxx-exceptions -fblocks "
-    CmdPrefix += " -Xclang -analyzer-config -Xclang %s "\
-        % generateAnalyzerConfig(Args)
+# typing package doesn't have a separate type for Queue, but has a generic stub
+# We still want to have a type-safe checked project queue, for this reason,
+# we specify generic type for mypy.
+#
+# It is a common workaround for this situation:
+# https://mypy.readthedocs.io/en/stable/common_issues.html#using-classes-that-are-generic-in-stubs-but-not-at-runtime
+if TYPE_CHECKING:
+    ProjectQueue = Queue[ProjectInfo]  # this is only processed by mypy
+else:
+    ProjectQueue = Queue  # this will be executed at runtime
 
-    if (Mode == 2):
-        CmdPrefix += "-std=c++11 "
 
-    PlistPath = os.path.join(Dir, SBOutputDir, "date")
-    FailPath = os.path.join(PlistPath, "failures")
-    os.makedirs(FailPath)
+class RegressionTester:
+    """
+    A component aggregating all of the project testing.
+    """
+    def __init__(self, jobs: int, override_compiler: bool,
+                 extra_analyzer_config: str, regenerate: bool,
+                 strictness: bool):
+        self.jobs = jobs
+        self.override_compiler = override_compiler
+        self.extra_analyzer_config = extra_analyzer_config
+        self.regenerate = regenerate
+        self.strictness = strictness
 
-    for FullFileName in glob.glob(Dir + "/*"):
-        FileName = os.path.basename(FullFileName)
-        Failed = False
+    def test_all(self) -> bool:
+        projects_to_test: List[ProjectInfo] = []
 
-        # Only run the analyzes on supported files.
-        if SATestUtils.hasNoExtension(FileName):
-            continue
-        if not SATestUtils.isValidSingleInputFile(FileName):
-            Local.stderr.write(
-                "Error: Invalid single input file %s.\n" % (FullFileName,))
+        with open(get_project_map_path(), "r") as map_file:
+            validate_project_file(map_file)
+
+            # Test the projects.
+            for proj_name, proj_build_mode in get_projects(map_file):
+                projects_to_test.append(
+                    ProjectInfo(proj_name, int(proj_build_mode),
+                                self.override_compiler,
+                                self.extra_analyzer_config,
+                                self.regenerate, self.strictness))
+        if self.jobs <= 1:
+            return self._single_threaded_test_all(projects_to_test)
+        else:
+            return self._multi_threaded_test_all(projects_to_test)
+
+    def _single_threaded_test_all(self,
+                                  projects_to_test: List[ProjectInfo]) -> bool:
+        """
+        Run all projects.
+        :return: whether tests have passed.
+        """
+        success = True
+        for project_info in projects_to_test:
+            tester = ProjectTester(project_info)
+            success &= tester.test()
+        return success
+
+    def _multi_threaded_test_all(self,
+                                 projects_to_test: List[ProjectInfo]) -> bool:
+        """
+        Run each project in a separate thread.
+
+        This is OK despite GIL, as testing is blocked
+        on launching external processes.
+
+        :return: whether tests have passed.
+        """
+        tasks_queue = ProjectQueue()
+
+        for project_info in projects_to_test:
+            tasks_queue.put(project_info)
+
+        results_differ = threading.Event()
+        failure_flag = threading.Event()
+
+        for _ in range(self.jobs):
+            T = TestProjectThread(tasks_queue, results_differ, failure_flag)
+            T.start()
+
+        # Required to handle Ctrl-C gracefully.
+        while tasks_queue.unfinished_tasks:
+            time.sleep(0.1)  # Seconds.
+            if failure_flag.is_set():
+                stderr("Test runner crashed\n")
+                sys.exit(1)
+        return not results_differ.is_set()
+
+
+class ProjectTester:
+    """
+    A component aggregating testing for one project.
+    """
+    def __init__(self, project_info: ProjectInfo):
+        self.project_name = project_info.name
+        self.build_mode = project_info.build_mode
+        self.override_compiler = project_info.override_compiler
+        self.extra_analyzer_config = project_info.extra_analyzer_config
+        self.is_reference_build = project_info.is_reference_build
+        self.strictness = project_info.strictness
+
+    def test(self) -> bool:
+        """
+        Test a given project.
+        :return tests_passed: Whether tests have passed according
+        to the :param strictness: criteria.
+        """
+        stdout(f" \n\n--- Building project {self.project_name}\n")
+
+        start_time = time.time()
+
+        project_dir = self.get_project_dir()
+        if VERBOSE == 1:
+            stdout(f"  Build directory: {project_dir}.\n")
+
+        # Set the build results directory.
+        output_dir = self.get_output_dir()
+        output_dir = os.path.join(project_dir, output_dir)
+
+        self.build(project_dir, output_dir)
+        check_build(output_dir)
+
+        if self.is_reference_build:
+            cleanup_reference_results(output_dir)
+            passed = True
+        else:
+            passed = run_cmp_results(project_dir, self.strictness)
+
+        stdout(f"Completed tests for project {self.project_name} "
+               f"(time: {time.time() - start_time:.2f}).\n")
+
+        return passed
+
+    def get_project_dir(self) -> str:
+        return os.path.join(os.path.abspath(os.curdir), self.project_name)
+
+    def get_output_dir(self) -> str:
+        if self.is_reference_build:
+            return REF_PREFIX + OUTPUT_DIR_NAME
+        else:
+            return OUTPUT_DIR_NAME
+
+    def build(self, directory: str, output_dir: str):
+        time_start = time.time()
+
+        build_log_path = get_build_log_path(output_dir)
+
+        stdout(f"Log file: {build_log_path}\n")
+        stdout(f"Output directory: {output_dir}\n")
+
+        remove_log_file(output_dir)
+
+        # Clean up scan build results.
+        if os.path.exists(output_dir):
+            if VERBOSE == 1:
+                stdout(f"  Removing old results: {output_dir}\n")
+
+            shutil.rmtree(output_dir)
+
+        assert(not os.path.exists(output_dir))
+        os.makedirs(os.path.join(output_dir, LOG_DIR_NAME))
+
+        # Build and analyze the project.
+        with open(build_log_path, "w+") as build_log_file:
+            if self.build_mode == 1:
+                download_and_patch(directory, build_log_file)
+                run_cleanup_script(directory, build_log_file)
+                self.scan_build(directory, output_dir, build_log_file)
+            else:
+                self.analyze_preprocessed(directory, output_dir)
+
+            if self.is_reference_build:
+                run_cleanup_script(directory, build_log_file)
+                normalize_reference_results(directory, output_dir,
+                                            self.build_mode)
+
+        stdout(f"Build complete (time: {time.time() - time_start:.2f}). "
+               f"See the log for more details: {build_log_path}\n")
+
+    def scan_build(self, directory: str, output_dir: str, build_log_file: IO):
+        """
+        Build the project with scan-build by reading in the commands and
+        prefixing them with the scan-build options.
+        """
+        build_script_path = os.path.join(directory, BUILD_SCRIPT)
+        if not os.path.exists(build_script_path):
+            stderr(f"Error: build script is not defined: "
+                   f"{build_script_path}\n")
+            sys.exit(1)
+
+        all_checkers = CHECKERS
+        if 'SA_ADDITIONAL_CHECKERS' in os.environ:
+            all_checkers = (all_checkers + ',' +
+                            os.environ['SA_ADDITIONAL_CHECKERS'])
+
+        # Run scan-build from within the patched source directory.
+        cwd = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+
+        options = f"--use-analyzer '{CLANG}' "
+        options += f"-plist-html -o '{output_dir}' "
+        options += f"-enable-checker {all_checkers} "
+        options += "--keep-empty "
+        options += f"-analyzer-config '{self.generate_config()}' "
+
+        if self.override_compiler:
+            options += "--override-compiler "
+
+        extra_env: Dict[str, str] = {}
+        try:
+            command_file = open(build_script_path, "r")
+            command_prefix = "scan-build " + options + " "
+
+            for command in command_file:
+                command = command.strip()
+
+                if len(command) == 0:
+                    continue
+
+                # Custom analyzer invocation specified by project.
+                # Communicate required information using environment variables
+                # instead.
+                if command == NO_PREFIX_CMD:
+                    command_prefix = ""
+                    extra_env['OUTPUT'] = output_dir
+                    extra_env['CC'] = CLANG
+                    extra_env['ANALYZER_CONFIG'] = self.generate_config()
+                    continue
+
+                if command.startswith("#"):
+                    continue
+
+                # If using 'make', auto imply a -jX argument
+                # to speed up analysis.  xcodebuild will
+                # automatically use the maximum number of cores.
+                if (command.startswith("make ") or command == "make") and \
+                        "-j" not in command:
+                    command += f" -j{MAX_JOBS}"
+
+                command_to_run = command_prefix + command
+
+                if VERBOSE == 1:
+                    stdout(f"  Executing: {command_to_run}\n")
+
+                check_call(command_to_run, cwd=cwd,
+                           stderr=build_log_file,
+                           stdout=build_log_file,
+                           env=dict(os.environ, **extra_env),
+                           shell=True)
+
+        except CalledProcessError:
+            stderr("Error: scan-build failed. Its output was: \n")
+            build_log_file.seek(0)
+            shutil.copyfileobj(build_log_file, LOCAL.stderr)
+            sys.exit(1)
+
+    def analyze_preprocessed(self, directory: str, output_dir: str):
+        """
+        Run analysis on a set of preprocessed files.
+        """
+        if os.path.exists(os.path.join(directory, BUILD_SCRIPT)):
+            stderr(f"Error: The preprocessed files project "
+                   f"should not contain {BUILD_SCRIPT}\n")
             raise Exception()
 
-        # Build and call the analyzer command.
-        OutputOption = "-o '%s.plist' " % os.path.join(PlistPath, FileName)
-        Command = CmdPrefix + OutputOption + ("'%s'" % FileName)
-        LogFile = open(os.path.join(FailPath, FileName + ".stderr.txt"), "w+")
-        try:
-            if Verbose == 1:
-                Local.stdout.write("  Executing: %s\n" % (Command,))
-            check_call(Command, cwd=Dir, stderr=LogFile,
-                       stdout=LogFile,
-                       shell=True)
-        except CalledProcessError as e:
-            Local.stderr.write("Error: Analyzes of %s failed. "
-                               "See %s for details."
-                               "Error code %d.\n" % (
-                                   FullFileName, LogFile.name, e.returncode))
-            Failed = True
-        finally:
-            LogFile.close()
+        prefix = CLANG + " --analyze "
 
-        # If command did not fail, erase the log file.
-        if not Failed:
-            os.remove(LogFile.name)
+        prefix += "--analyzer-output plist "
+        prefix += " -Xclang -analyzer-checker=" + CHECKERS
+        prefix += " -fcxx-exceptions -fblocks "
+        prefix += " -Xclang -analyzer-config "
+        prefix += f"-Xclang {self.generate_config()} "
 
+        if self.build_mode == 2:
+            prefix += "-std=c++11 "
 
-def getBuildLogPath(SBOutputDir):
-    return os.path.join(SBOutputDir, LogFolderName, BuildLogName)
+        plist_path = os.path.join(directory, output_dir, "date")
+        fail_path = os.path.join(plist_path, "failures")
+        os.makedirs(fail_path)
 
+        for full_file_name in glob.glob(directory + "/*"):
+            file_name = os.path.basename(full_file_name)
+            failed = False
 
-def removeLogFile(SBOutputDir):
-    BuildLogPath = getBuildLogPath(SBOutputDir)
-    # Clean up the log file.
-    if (os.path.exists(BuildLogPath)):
-        RmCommand = "rm '%s'" % BuildLogPath
-        if Verbose == 1:
-            Local.stdout.write("  Executing: %s\n" % (RmCommand,))
-        check_call(RmCommand, shell=True)
-
-
-def buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
-    TBegin = time.time()
-
-    BuildLogPath = getBuildLogPath(SBOutputDir)
-    Local.stdout.write("Log file: %s\n" % (BuildLogPath,))
-    Local.stdout.write("Output directory: %s\n" % (SBOutputDir, ))
-
-    removeLogFile(SBOutputDir)
-
-    # Clean up scan build results.
-    if (os.path.exists(SBOutputDir)):
-        RmCommand = "rm -r '%s'" % SBOutputDir
-        if Verbose == 1:
-            Local.stdout.write("  Executing: %s\n" % (RmCommand,))
-            check_call(RmCommand, shell=True, stdout=Local.stdout,
-                       stderr=Local.stderr)
-    assert(not os.path.exists(SBOutputDir))
-    os.makedirs(os.path.join(SBOutputDir, LogFolderName))
-
-    # Build and analyze the project.
-    with open(BuildLogPath, "w+") as PBuildLogFile:
-        if (ProjectBuildMode == 1):
-            downloadAndPatch(Dir, PBuildLogFile)
-            runCleanupScript(Dir, PBuildLogFile)
-            runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile)
-        else:
-            runAnalyzePreprocessed(Args, Dir, SBOutputDir, ProjectBuildMode)
-
-        if IsReferenceBuild:
-            runCleanupScript(Dir, PBuildLogFile)
-            normalizeReferenceResults(Dir, SBOutputDir, ProjectBuildMode)
-
-    Local.stdout.write("Build complete (time: %.2f). "
-                       "See the log for more details: %s\n" % (
-                           (time.time() - TBegin), BuildLogPath))
-
-
-def normalizeReferenceResults(Dir, SBOutputDir, ProjectBuildMode):
-    """
-    Make the absolute paths relative in the reference results.
-    """
-    for (DirPath, Dirnames, Filenames) in os.walk(SBOutputDir):
-        for F in Filenames:
-            if (not F.endswith('plist')):
+            # Only run the analyzes on supported files.
+            if SATestUtils.hasNoExtension(file_name):
                 continue
-            Plist = os.path.join(DirPath, F)
-            Data = plistlib.readPlist(Plist)
-            PathPrefix = Dir
-            if (ProjectBuildMode == 1):
-                PathPrefix = os.path.join(Dir, PatchedSourceDirName)
-            Paths = [SourceFile[len(PathPrefix) + 1:]
-                     if SourceFile.startswith(PathPrefix)
-                     else SourceFile for SourceFile in Data['files']]
-            Data['files'] = Paths
+            if not SATestUtils.isValidSingleInputFile(file_name):
+                stderr(f"Error: Invalid single input file {full_file_name}.\n")
+                raise Exception()
 
-            # Remove transient fields which change from run to run.
-            for Diag in Data['diagnostics']:
-                if 'HTMLDiagnostics_files' in Diag:
-                    Diag.pop('HTMLDiagnostics_files')
-            if 'clang_version' in Data:
-                Data.pop('clang_version')
+            # Build and call the analyzer command.
+            plist_basename = os.path.join(plist_path, file_name)
+            output_option = f"-o '{plist_basename}.plist' "
+            command = f"{prefix}{output_option}'{file_name}'"
 
-            plistlib.writePlist(Data, Plist)
+            log_path = os.path.join(fail_path, file_name + ".stderr.txt")
+            with open(log_path, "w+") as log_file:
+                try:
+                    if VERBOSE == 1:
+                        stdout(f"  Executing: {command}\n")
 
+                    check_call(command, cwd=directory, stderr=log_file,
+                               stdout=log_file, shell=True)
 
-def CleanUpEmptyPlists(SBOutputDir):
-    """
-    A plist file is created for each call to the analyzer(each source file).
-    We are only interested on the once that have bug reports,
-    so delete the rest.
-    """
-    for F in glob.glob(SBOutputDir + "/*/*.plist"):
-        P = os.path.join(SBOutputDir, F)
+                except CalledProcessError as e:
+                    stderr(f"Error: Analyzes of {full_file_name} failed. "
+                           f"See {log_file.name} for details. "
+                           f"Error code {e.returncode}.\n")
+                    failed = True
 
-        try:
-            Data = plistlib.readPlist(P)
-            # Delete empty reports.
-            if not Data['files']:
-                os.remove(P)
-                continue
-        except plistlib.InvalidFileException as e:
-            print('Error parsing plist file %s: %s' % (P, str(e)))
-            continue
+                # If command did not fail, erase the log file.
+                if not failed:
+                    os.remove(log_file.name)
+
+    def generate_config(self) -> str:
+        out = "serialize-stats=true,stable-report-filename=true"
+
+        if self.extra_analyzer_config:
+            out += "," + self.extra_analyzer_config
+
+        return out
 
 
-def CleanUpEmptyFolders(SBOutputDir):
-    """
-    Remove empty folders from results, as git would not store them.
-    """
-    Subfolders = glob.glob(SBOutputDir + "/*")
-    for Folder in Subfolders:
-        if not os.listdir(Folder):
-            os.removedirs(Folder)
+class TestProjectThread(threading.Thread):
+    def __init__(self, tasks_queue: ProjectQueue,
+                 results_differ: threading.Event,
+                 failure_flag: threading.Event):
+        """
+        :param results_differ: Used to signify that results differ from
+               the canonical ones.
+        :param failure_flag: Used to signify a failure during the run.
+        """
+        self.args = args
+        self.tasks_queue = tasks_queue
+        self.results_differ = results_differ
+        self.failure_flag = failure_flag
+        super().__init__()
+
+        # Needed to gracefully handle interrupts with Ctrl-C
+        self.daemon = True
+
+    def run(self):
+        while not self.tasks_queue.empty():
+            try:
+                project_info = self.tasks_queue.get()
+
+                Logger = logging.getLogger(project_info.name)
+                LOCAL.stdout = StreamToLogger(Logger, logging.INFO)
+                LOCAL.stderr = StreamToLogger(Logger, logging.ERROR)
+
+                tester = ProjectTester(project_info)
+                if not tester.test():
+                    self.results_differ.set()
+
+                self.tasks_queue.task_done()
+
+            except CalledProcessError:
+                self.failure_flag.set()
+                raise
 
 
-def checkBuild(SBOutputDir):
+###############################################################################
+# Utility functions.
+###############################################################################
+
+
+def check_build(output_dir: str):
     """
     Given the scan-build output directory, checks if the build failed
     (by searching for the failures directories). If there are failures, it
@@ -516,303 +647,270 @@ def checkBuild(SBOutputDir):
 
     """
     # Check if there are failures.
-    Failures = glob.glob(SBOutputDir + "/*/failures/*.stderr.txt")
-    TotalFailed = len(Failures)
-    if TotalFailed == 0:
-        CleanUpEmptyPlists(SBOutputDir)
-        CleanUpEmptyFolders(SBOutputDir)
-        Plists = glob.glob(SBOutputDir + "/*/*.plist")
-        Local.stdout.write(
-            "Number of bug reports (non-empty plist files) produced: %d\n" %
-            len(Plists))
+    failures = glob.glob(output_dir + "/*/failures/*.stderr.txt")
+    total_failed = len(failures)
+
+    if total_failed == 0:
+        clean_up_empty_plists(output_dir)
+        clean_up_empty_folders(output_dir)
+
+        plists = glob.glob(output_dir + "/*/*.plist")
+        stdout(f"Number of bug reports "
+               f"(non-empty plist files) produced: {len(plists)}\n")
         return
 
-    Local.stderr.write("Error: analysis failed.\n")
-    Local.stderr.write("Total of %d failures discovered.\n" % TotalFailed)
-    if TotalFailed > NumOfFailuresInSummary:
-        Local.stderr.write(
-            "See the first %d below.\n" % NumOfFailuresInSummary)
-        # TODO: Add a line "See the results folder for more."
+    stderr("Error: analysis failed.\n")
+    stderr(f"Total of {total_failed} failures discovered.\n")
 
-    Idx = 0
-    for FailLogPathI in Failures:
-        if Idx >= NumOfFailuresInSummary:
+    if total_failed > NUM_OF_FAILURES_IN_SUMMARY:
+        stderr(f"See the first {NUM_OF_FAILURES_IN_SUMMARY} below.\n")
+
+    for index, failed_log_path in enumerate(failures, start=1):
+        if index >= NUM_OF_FAILURES_IN_SUMMARY:
             break
-        Idx += 1
-        Local.stderr.write("\n-- Error #%d -----------\n" % Idx)
-        with open(FailLogPathI, "r") as FailLogI:
-            shutil.copyfileobj(FailLogI, Local.stdout)
+
+        stderr(f"\n-- Error #{index} -----------\n")
+
+        with open(failed_log_path, "r") as failed_log:
+            shutil.copyfileobj(failed_log, LOCAL.stdout)
+
+    if total_failed > NUM_OF_FAILURES_IN_SUMMARY:
+        stderr("See the results folder for more.")
 
     sys.exit(1)
 
 
-def runCmpResults(Dir, Strictness=0):
-    """
-    Compare the warnings produced by scan-build.
-    Strictness defines the success criteria for the test:
-      0 - success if there are no crashes or analyzer failure.
-      1 - success if there are no difference in the number of reported bugs.
-      2 - success if all the bug reports are identical.
-
-    :return success: Whether tests pass according to the Strictness
-    criteria.
-    """
-    TestsPassed = True
-    TBegin = time.time()
-
-    RefDir = os.path.join(Dir, SBOutputDirReferencePrefix + SBOutputDirName)
-    NewDir = os.path.join(Dir, SBOutputDirName)
-
-    # We have to go one level down the directory tree.
-    RefList = glob.glob(RefDir + "/*")
-    NewList = glob.glob(NewDir + "/*")
-
-    # Log folders are also located in the results dir, so ignore them.
-    RefLogDir = os.path.join(RefDir, LogFolderName)
-    if RefLogDir in RefList:
-        RefList.remove(RefLogDir)
-    NewList.remove(os.path.join(NewDir, LogFolderName))
-
-    if len(RefList) != len(NewList):
-        print("Mismatch in number of results folders: %s vs %s" % (
-            RefList, NewList))
-        sys.exit(1)
-
-    # There might be more then one folder underneath - one per each scan-build
-    # command (Ex: one for configure and one for make).
-    if (len(RefList) > 1):
-        # Assume that the corresponding folders have the same names.
-        RefList.sort()
-        NewList.sort()
-
-    # Iterate and find the differences.
-    NumDiffs = 0
-    for P in zip(RefList, NewList):
-        RefDir = P[0]
-        NewDir = P[1]
-
-        assert(RefDir != NewDir)
-        if Verbose == 1:
-            Local.stdout.write("  Comparing Results: %s %s\n" % (
-                               RefDir, NewDir))
-
-        PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
-        Opts, Args = CmpRuns.generate_option_parser().parse_args(
-            ["--rootA", "", "--rootB", PatchedSourceDirPath])
-        # Scan the results, delete empty plist files.
-        NumDiffs, ReportsInRef, ReportsInNew = \
-            CmpRuns.dumpScanBuildResultsDiff(RefDir, NewDir, Opts,
-                                             deleteEmpty=False,
-                                             Stdout=Local.stdout)
-        if (NumDiffs > 0):
-            Local.stdout.write("Warning: %s differences in diagnostics.\n"
-                               % NumDiffs)
-        if Strictness >= 2 and NumDiffs > 0:
-            Local.stdout.write("Error: Diffs found in strict mode (2).\n")
-            TestsPassed = False
-        elif Strictness >= 1 and ReportsInRef != ReportsInNew:
-            Local.stdout.write("Error: The number of results are different " +
-                               " strict mode (1).\n")
-            TestsPassed = False
-
-    Local.stdout.write("Diagnostic comparison complete (time: %.2f).\n" % (
-                       time.time() - TBegin))
-    return TestsPassed
-
-
-def cleanupReferenceResults(SBOutputDir):
+def cleanup_reference_results(output_dir: str):
     """
     Delete html, css, and js files from reference results. These can
     include multiple copies of the benchmark source and so get very large.
     """
-    Extensions = ["html", "css", "js"]
-    for E in Extensions:
-        for F in glob.glob("%s/*/*.%s" % (SBOutputDir, E)):
-            P = os.path.join(SBOutputDir, F)
-            RmCommand = "rm '%s'" % P
-            check_call(RmCommand, shell=True)
+    extensions = ["html", "css", "js"]
+
+    for extension in extensions:
+        for file_to_rm in glob.glob(f"{output_dir}/*/*.{extension}"):
+            file_to_rm = os.path.join(output_dir, file_to_rm)
+            os.remove(file_to_rm)
 
     # Remove the log file. It leaks absolute path names.
-    removeLogFile(SBOutputDir)
+    remove_log_file(output_dir)
 
 
-class TestProjectThread(threading.Thread):
-    def __init__(self, Args, TasksQueue, ResultsDiffer, FailureFlag):
-        """
-        :param ResultsDiffer: Used to signify that results differ from
-        the canonical ones.
-        :param FailureFlag: Used to signify a failure during the run.
-        """
-        self.Args = Args
-        self.TasksQueue = TasksQueue
-        self.ResultsDiffer = ResultsDiffer
-        self.FailureFlag = FailureFlag
-        super().__init__()
-
-        # Needed to gracefully handle interrupts with Ctrl-C
-        self.daemon = True
-
-    def run(self):
-        while not self.TasksQueue.empty():
-            try:
-                ProjArgs = self.TasksQueue.get()
-                Logger = logging.getLogger(ProjArgs[0])
-                Local.stdout = StreamToLogger(Logger, logging.INFO)
-                Local.stderr = StreamToLogger(Logger, logging.ERROR)
-                if not testProject(Args, *ProjArgs):
-                    self.ResultsDiffer.set()
-                self.TasksQueue.task_done()
-            except:
-                self.FailureFlag.set()
-                raise
-
-
-def testProject(Args, ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
+def run_cmp_results(directory: str, strictness: int = 0) -> bool:
     """
-    Test a given project.
-    :return TestsPassed: Whether tests have passed according
-    to the :param Strictness: criteria.
+    Compare the warnings produced by scan-build.
+    strictness defines the success criteria for the test:
+      0 - success if there are no crashes or analyzer failure.
+      1 - success if there are no difference in the number of reported bugs.
+      2 - success if all the bug reports are identical.
+
+    :return success: Whether tests pass according to the strictness
+    criteria.
     """
-    Local.stdout.write(" \n\n--- Building project %s\n" % (ID,))
+    tests_passed = True
+    start_time = time.time()
 
-    TBegin = time.time()
+    ref_dir = os.path.join(directory, REF_PREFIX + OUTPUT_DIR_NAME)
+    new_dir = os.path.join(directory, OUTPUT_DIR_NAME)
 
-    Dir = getProjectDir(ID)
-    if Verbose == 1:
-        Local.stdout.write("  Build directory: %s.\n" % (Dir,))
+    # We have to go one level down the directory tree.
+    ref_list = glob.glob(ref_dir + "/*")
+    new_list = glob.glob(new_dir + "/*")
 
-    # Set the build results directory.
-    RelOutputDir = getSBOutputDirName(IsReferenceBuild)
-    SBOutputDir = os.path.join(Dir, RelOutputDir)
+    # Log folders are also located in the results dir, so ignore them.
+    ref_log_dir = os.path.join(ref_dir, LOG_DIR_NAME)
+    if ref_log_dir in ref_list:
+        ref_list.remove(ref_log_dir)
+    new_list.remove(os.path.join(new_dir, LOG_DIR_NAME))
 
-    buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild)
+    if len(ref_list) != len(new_list):
+        stderr(f"Mismatch in number of results folders: "
+               f"{ref_list} vs {new_list}")
+        sys.exit(1)
 
-    checkBuild(SBOutputDir)
+    # There might be more then one folder underneath - one per each scan-build
+    # command (Ex: one for configure and one for make).
+    if len(ref_list) > 1:
+        # Assume that the corresponding folders have the same names.
+        ref_list.sort()
+        new_list.sort()
 
-    if IsReferenceBuild:
-        cleanupReferenceResults(SBOutputDir)
-        TestsPassed = True
-    else:
-        TestsPassed = runCmpResults(Dir, Strictness)
+    # Iterate and find the differences.
+    num_diffs = 0
+    for ref_dir, new_dir in zip(ref_list, new_list):
+        assert(ref_dir != new_dir)
 
-    Local.stdout.write("Completed tests for project %s (time: %.2f).\n" % (
-                       ID, (time.time() - TBegin)))
-    return TestsPassed
+        if VERBOSE == 1:
+            stdout(f"  Comparing Results: {ref_dir} {new_dir}\n")
+
+        patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+
+        # TODO: get rid of option parser invocation here
+        opts, args = CmpRuns.generate_option_parser().parse_args(
+            ["--rootA", "", "--rootB", patched_source])
+        # Scan the results, delete empty plist files.
+        num_diffs, reports_in_ref, reports_in_new = \
+            CmpRuns.dumpScanBuildResultsDiff(ref_dir, new_dir, opts,
+                                             deleteEmpty=False,
+                                             Stdout=LOCAL.stdout)
+
+        if num_diffs > 0:
+            stdout(f"Warning: {num_diffs} differences in diagnostics.\n")
+
+        if strictness >= 2 and num_diffs > 0:
+            stdout("Error: Diffs found in strict mode (2).\n")
+            tests_passed = False
+
+        elif strictness >= 1 and reports_in_ref != reports_in_new:
+            stdout("Error: The number of results are different "
+                   " strict mode (1).\n")
+            tests_passed = False
+
+    stdout(f"Diagnostic comparison complete "
+           f"(time: {time.time() - start_time:.2f}).\n")
+
+    return tests_passed
 
 
-def projectFileHandler():
-    return open(getProjectMapPath(), "r")
-
-
-def iterateOverProjects(PMapFile):
+def normalize_reference_results(directory: str, output_dir: str,
+                                build_mode: int):
     """
-    Iterate over all projects defined in the project file handler `PMapFile`
+    Make the absolute paths relative in the reference results.
+    """
+    for dir_path, _, filenames in os.walk(output_dir):
+        for filename in filenames:
+            if not filename.endswith('plist'):
+                continue
+
+            plist = os.path.join(dir_path, filename)
+            data = plistlib.readPlist(plist)
+            path_prefix = directory
+
+            if build_mode == 1:
+                path_prefix = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
+
+            paths = [source[len(path_prefix) + 1:]
+                     if source.startswith(path_prefix) else source
+                     for source in data['files']]
+            data['files'] = paths
+
+            # Remove transient fields which change from run to run.
+            for diagnostic in data['diagnostics']:
+                if 'HTMLDiagnostics_files' in diagnostic:
+                    diagnostic.pop('HTMLDiagnostics_files')
+
+            if 'clang_version' in data:
+                data.pop('clang_version')
+
+            plistlib.writePlist(data, plist)
+
+
+def get_build_log_path(output_dir: str) -> str:
+    return os.path.join(output_dir, LOG_DIR_NAME, BUILD_LOG_NAME)
+
+
+def remove_log_file(output_dir: str):
+    build_log_path = get_build_log_path(output_dir)
+
+    # Clean up the log file.
+    if os.path.exists(build_log_path):
+        if VERBOSE == 1:
+            stdout(f"  Removing log file: {build_log_path}\n")
+
+        os.remove(build_log_path)
+
+
+def clean_up_empty_plists(output_dir: str):
+    """
+    A plist file is created for each call to the analyzer(each source file).
+    We are only interested on the once that have bug reports,
+    so delete the rest.
+    """
+    for plist in glob.glob(output_dir + "/*/*.plist"):
+        plist = os.path.join(output_dir, plist)
+
+        try:
+            data = plistlib.readPlist(plist)
+            # Delete empty reports.
+            if not data['files']:
+                os.remove(plist)
+                continue
+
+        except plistlib.InvalidFileException as e:
+            stderr(f"Error parsing plist file {plist}: {str(e)}")
+            continue
+
+
+def clean_up_empty_folders(output_dir: str):
+    """
+    Remove empty folders from results, as git would not store them.
+    """
+    subdirs = glob.glob(output_dir + "/*")
+    for subdir in subdirs:
+        if not os.listdir(subdir):
+            os.removedirs(subdir)
+
+
+def get_projects(map_file: IO) -> Iterable[Tuple[str, str]]:
+    """
+    Iterate over all projects defined in the project file handler `map_file`
     from the start.
     """
-    PMapFile.seek(0)
-    for ProjectInfo in csv.reader(PMapFile):
-        if (SATestUtils.isCommentCSVLine(ProjectInfo)):
+    map_file.seek(0)
+    # TODO: csv format is not very readable, change it to JSON
+    for project_info in csv.reader(map_file):
+        if (SATestUtils.isCommentCSVLine(project_info)):
             continue
-        yield ProjectInfo
+        # suppress mypy error
+        yield cast(Tuple[str, str], project_info)
 
 
-def validateProjectFile(PMapFile):
+def validate_project_file(map_file: IO):
     """
     Validate project file.
     """
-    for ProjectInfo in iterateOverProjects(PMapFile):
-        if len(ProjectInfo) != 2:
-            print("Error: Rows in the ProjectMapFile should have 2 entries.")
-            raise Exception()
-        if ProjectInfo[1] not in ('0', '1', '2'):
-            print("Error: Second entry in the ProjectMapFile should be 0"
-                  " (single file), 1 (project), or 2(single file c++11).")
+    for project_info in get_projects(map_file):
+        if len(project_info) != 2:
+            stderr("Error: Rows in the project map file "
+                   "should have 2 entries.")
             raise Exception()
 
-
-def singleThreadedTestAll(Args, ProjectsToTest):
-    """
-    Run all projects.
-    :return: whether tests have passed.
-    """
-    Success = True
-    for ProjArgs in ProjectsToTest:
-        Success &= testProject(Args, *ProjArgs)
-    return Success
+        if project_info[1] not in ('0', '1', '2'):
+            stderr("Error: Second entry in the project map file should be 0"
+                   " (single file), 1 (project), or 2(single file c++11).")
+            raise Exception()
 
 
-def multiThreadedTestAll(Args, ProjectsToTest, Jobs):
-    """
-    Run each project in a separate thread.
-
-    This is OK despite GIL, as testing is blocked
-    on launching external processes.
-
-    :return: whether tests have passed.
-    """
-    TasksQueue = queue.Queue()
-
-    for ProjArgs in ProjectsToTest:
-        TasksQueue.put(ProjArgs)
-
-    ResultsDiffer = threading.Event()
-    FailureFlag = threading.Event()
-
-    for i in range(Jobs):
-        T = TestProjectThread(Args, TasksQueue, ResultsDiffer, FailureFlag)
-        T.start()
-
-    # Required to handle Ctrl-C gracefully.
-    while TasksQueue.unfinished_tasks:
-        time.sleep(0.1)  # Seconds.
-        if FailureFlag.is_set():
-            Local.stderr.write("Test runner crashed\n")
-            sys.exit(1)
-    return not ResultsDiffer.is_set()
-
-
-def testAll(Args):
-    ProjectsToTest = []
-
-    with projectFileHandler() as PMapFile:
-        validateProjectFile(PMapFile)
-
-        # Test the projects.
-        for (ProjName, ProjBuildMode) in iterateOverProjects(PMapFile):
-            ProjectsToTest.append((ProjName,
-                                  int(ProjBuildMode),
-                                  Args.regenerate,
-                                  Args.strictness))
-    if Args.jobs <= 1:
-        return singleThreadedTestAll(Args, ProjectsToTest)
-    else:
-        return multiThreadedTestAll(Args, ProjectsToTest, Args.jobs)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Parse command line arguments.
     Parser = argparse.ArgumentParser(
-        description='Test the Clang Static Analyzer.')
-    Parser.add_argument('--strictness', dest='strictness', type=int, default=0,
-                        help='0 to fail on runtime errors, 1 to fail when the \
-                             number of found bugs are different from the \
-                             reference, 2 to fail on any difference from the \
-                             reference. Default is 0.')
-    Parser.add_argument('-r', dest='regenerate', action='store_true',
-                        default=False, help='Regenerate reference output.')
-    Parser.add_argument('--override-compiler', action='store_true',
-                        default=False, help='Call scan-build with \
-                        --override-compiler option.')
-    Parser.add_argument('-j', '--jobs', dest='jobs', type=int,
+        description="Test the Clang Static Analyzer.")
+
+    Parser.add_argument("--strictness", dest="strictness", type=int, default=0,
+                        help="0 to fail on runtime errors, 1 to fail when the "
+                        "number of found bugs are different from the "
+                        "reference, 2 to fail on any difference from the "
+                        "reference. Default is 0.")
+    Parser.add_argument("-r", dest="regenerate", action="store_true",
+                        default=False, help="Regenerate reference output.")
+    Parser.add_argument("--override-compiler", action="store_true",
+                        default=False, help="Call scan-build with "
+                        "--override-compiler option.")
+    Parser.add_argument("-j", "--jobs", dest="jobs", type=int,
                         default=0,
-                        help='Number of projects to test concurrently')
-    Parser.add_argument('--extra-analyzer-config',
-                        dest='extra_analyzer_config', type=str,
+                        help="Number of projects to test concurrently")
+    Parser.add_argument("--extra-analyzer-config",
+                        dest="extra_analyzer_config", type=str,
                         default="",
                         help="Arguments passed to to -analyzer-config")
-    Args = Parser.parse_args()
 
-    TestsPassed = testAll(Args)
-    if not TestsPassed:
-        print("ERROR: Tests failed.")
+    args = Parser.parse_args()
+
+    tester = RegressionTester(args.jobs, args.override_compiler,
+                              args.extra_analyzer_config, args.regenerate,
+                              args.strictness)
+    tests_passed = tester.test_all()
+
+    if not tests_passed:
+        stderr("ERROR: Tests failed.")
         sys.exit(42)
