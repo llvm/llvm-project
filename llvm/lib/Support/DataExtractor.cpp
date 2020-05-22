@@ -206,7 +206,10 @@ static T getLEB128(StringRef Data, uint64_t *OffsetPtr, Error *Err,
       Decoder(Bytes.data() + *OffsetPtr, &bytes_read, Bytes.end(), &error);
   if (error) {
     if (Err)
-      *Err = createStringError(errc::illegal_byte_sequence, error);
+      *Err = createStringError(errc::illegal_byte_sequence,
+                               "unable to decode LEB128 at offset 0x%8.8" PRIx64
+                               ": %s",
+                               *OffsetPtr, error);
     return T();
   }
   *OffsetPtr += bytes_read;
