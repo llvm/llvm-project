@@ -8,17 +8,17 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMBV7-NEXT:    .pad #44
 ; THUMBV7-NEXT:    sub sp, #44
-; THUMBV7-NEXT:    str r0, [sp, #40] @ 4-byte Spill
-; THUMBV7-NEXT:    movs r0, #0
 ; THUMBV7-NEXT:    ldrd r4, r7, [sp, #88]
 ; THUMBV7-NEXT:    mov r5, r3
-; THUMBV7-NEXT:    strd r0, r0, [sp, #8]
+; THUMBV7-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMBV7-NEXT:    movs r0, #0
+; THUMBV7-NEXT:    strd r4, r7, [sp]
 ; THUMBV7-NEXT:    mov r1, r3
+; THUMBV7-NEXT:    strd r0, r0, [sp, #8]
 ; THUMBV7-NEXT:    mov r6, r2
 ; THUMBV7-NEXT:    mov r0, r2
 ; THUMBV7-NEXT:    movs r2, #0
 ; THUMBV7-NEXT:    movs r3, #0
-; THUMBV7-NEXT:    strd r4, r7, [sp]
 ; THUMBV7-NEXT:    bl __multi3
 ; THUMBV7-NEXT:    strd r1, r0, [sp, #32] @ 8-byte Folded Spill
 ; THUMBV7-NEXT:    strd r3, r2, [sp, #24] @ 8-byte Folded Spill
