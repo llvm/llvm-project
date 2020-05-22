@@ -1730,8 +1730,19 @@ void CodeGenFunction::EmitOMPInnerLoop(
   auto CondBlock = createBasicBlock("omp.inner.for.cond");
   EmitBlock(CondBlock);
   const SourceRange R = S.getSourceRange();
-  LoopStack.push(CondBlock, SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()));
+
+  // If attributes are attached, push to the basic block with them.
+  const auto &OMPED = cast<OMPExecutableDirective>(S);
+  const CapturedStmt *ICS = OMPED.getInnermostCapturedStmt();
+  const Stmt *SS = ICS->getCapturedStmt();
+  const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(SS);
+  if (AS)
+    LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(),
+                   AS->getAttrs(), SourceLocToDebugLoc(R.getBegin()),
+                   SourceLocToDebugLoc(R.getEnd()));
+  else
+    LoopStack.push(CondBlock, SourceLocToDebugLoc(R.getBegin()),
+                   SourceLocToDebugLoc(R.getEnd()));
 
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
