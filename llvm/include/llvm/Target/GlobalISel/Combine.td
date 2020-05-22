@@ -224,12 +224,21 @@ def binop_right_to_zero: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
+// Erase stores of undef values.
+def erase_undef_store : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_STORE):$root,
+    [{ return Helper.matchUndefStore(*${root}); }]),
+  (apply [{ return Helper.eraseInst(*${root}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
-                                     propagate_undef_shuffle_mask]>;
+                                     propagate_undef_shuffle_mask,
+                                     erase_undef_store]>;
 
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
