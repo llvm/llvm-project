@@ -560,8 +560,6 @@ private:
     builder->restoreInsertionPoint(pair.first);
   }
 
-  void genFIR(const Fortran::parser::WhereStmt &) { TODO(); }
-
   void genFIR(const Fortran::parser::ComputedGotoStmt &stmt) {
     auto &eval = getEval();
     mlir::Value selectExpr = genExprValue(*Fortran::semantics::GetExpr(
@@ -577,8 +575,6 @@ private:
     builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
                                    blockList);
   }
-
-  void genFIR(const Fortran::parser::ForallStmt &) { TODO(); }
 
   void genFIR(const Fortran::parser::ArithmeticIfStmt &stmt) {
     auto &eval = getEval();
@@ -1362,6 +1358,10 @@ private:
         },
         assign.u);
   }
+
+  void genFIR(const Fortran::parser::WhereStmt &) { TODO(); }
+
+  void genFIR(const Fortran::parser::ForallStmt &) { TODO(); }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
     genAssignment(*stmt.typedAssignment->v);
