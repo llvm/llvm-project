@@ -499,3 +499,15 @@ void pr34943() {
     clang_analyzer_numTimesReached(); // expected-warning {{6}}
   }
 }
+
+void parm_by_value_as_loop_counter(int i) {
+  for (i = 0; i < 10; ++i) {
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+  }
+}
+
+void parm_by_ref_as_loop_counter(int &i) {
+  for (i = 0; i < 10; ++i) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+  }
+}
