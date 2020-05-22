@@ -1342,6 +1342,10 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 def HasP9Altivec : Predicate<"PPCSubTarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
 
+// Vector Multiply-Sum
+def VMSUMUDM : VA1a_Int_Ty3<35, "vmsumudm", int_ppc_altivec_vmsumudm,
+                            v1i128, v2i64, v1i128>;
+
 // i8 element comparisons.
 def VCMPNEB   : VCMP   <  7, "vcmpneb $vD, $vA, $vB"  , v16i8>;
 def VCMPNEB_rec  : VCMPo  <  7, "vcmpneb. $vD, $vA, $vB" , v16i8>;
