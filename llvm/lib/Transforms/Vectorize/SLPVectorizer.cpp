@@ -2365,6 +2365,7 @@ BoUpSLP::~BoUpSLP() {
            "trying to erase instruction with users.");
     Pair.getFirst()->eraseFromParent();
   }
+  assert(!verifyFunction(*F, &dbgs()));
 }
 
 void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
@@ -5743,7 +5744,6 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   if (Changed) {
     R.optimizeGatherSequence();
     LLVM_DEBUG(dbgs() << "SLP: vectorized \"" << F.getName() << "\"\n");
-    LLVM_DEBUG(verifyFunction(F));
   }
   return Changed;
 }
