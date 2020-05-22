@@ -13,6 +13,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include <array>
 #include <list>
 #include <optional>
@@ -760,4 +761,30 @@ inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
 using SymbolSet = std::set<SymbolRef>;
 
 } // namespace Fortran::semantics
+
+// Define required  info so that SymbolRef can be used inside llvm::DenseMap.
+namespace llvm {
+template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
+  static inline Fortran::semantics::SymbolRef getEmptyKey() {
+    auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
+    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
+  }
+
+  static inline Fortran::semantics::SymbolRef getTombstoneKey() {
+    auto ptr =
+        DenseMapInfo<const Fortran::semantics::Symbol *>::getTombstoneKey();
+    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
+  }
+
+  static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
+    return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
+        &sym.get());
+  }
+
+  static bool isEqual(const Fortran::semantics::SymbolRef &LHS,
+      const Fortran::semantics::SymbolRef &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 #endif // FORTRAN_SEMANTICS_SYMBOL_H_
